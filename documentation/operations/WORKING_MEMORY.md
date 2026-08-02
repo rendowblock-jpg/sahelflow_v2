@@ -12,20 +12,22 @@
 > **Governance transition:** PR #199 merged at `991c61ac882497fdda01af3ac04f06978146bbda`
 > **Active implementation package:** Native multi-shop authority
 > **Active branch:** `agent/native-multi-shop-authority`
+> **Active PR:** #200 — `Phase 2: establish native multi-shop authority`
 > **Exact branch base:** `991c61ac882497fdda01af3ac04f06978146bbda`
+> **Code-bearing checkpoint head:** `e8436aaefd85be3233caa179958d7401e18d9880`
 > **Active implementation agent:** ChatGPT Web Agentic Coding Agent
 > **Founder selection recorded:** 2026-08-02
-> **Current session purpose:** Task 1 Level 1 gate closure; Task 2 remains blocked
+> **Current session purpose:** Phase 2 exit checkpoint, review closure and protected merge
 
-Live GitHub is authority. Re-read protected `main`, this branch, open PRs, checks,
-issue #164 and the active documentation authorities before relying on copied
-state.
+Live GitHub is authority. Re-read protected `main`, PR #200, its exact head,
+selected checks, review threads and issue #164 before relying on copied state. A
+later documentation-only closure commit may advance the PR head beyond the
+code-bearing checkpoint SHA above; only the live exact head can authorize merge.
 
 ## Founder execution instruction
 
-The Founder approved the permanent operating model on 2026-08-02 and selected the
-Web Agent as the sole active implementation agent for the native multi-shop
-package:
+The Founder selected the Web Agent as the sole active implementation agent for the
+native multi-shop package and approved this permanent operating model:
 
 - one active implementation agent at a time;
 - complete phase/package reconnaissance before production edits;
@@ -35,330 +37,185 @@ package:
 - Level 2 Phase Checkpoint before phase closure;
 - Level 3 Major Full Checkpoint at Phase 2 exit because native lifecycle,
   identity, licensing, migrations and destructive data authority are involved;
-- exact-head consolidated adversarial review and one repair batch;
-- complete class-AAA frontend behavior across AR/FR/EN, RTL, accessibility,
-  visual states and low-end performance;
+- one frozen-head adversarial review and one consolidated repair batch;
+- zero known P0/P1 before closure;
 - the complete Phase 0–9 scope is preserved; this is not an MVP reduction.
 
-## Protected closures
+## Protected closures before this package
 
-### Phase 1 plus identity/Teams
+- PR #195 merged the repaired Phase 1 Golden COD boundary plus durable
+  identity/Teams at `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
+  Implementation head `ddec67a36b8000be91562b33a2bd4d6aceb5e443` passed CI
+  `30734100436`.
+- PR #197 merged signed licensing at
+  `04d4c51831c6e043ab39a614a7e947e6b27d01e6`. Implementation head
+  `25abbedd176429cf25e657217726d833e3c62a10` passed CI `30744598944`.
+- PR #199 merged single-agent AAA governance at
+  `991c61ac882497fdda01af3ac04f06978146bbda`. Exact head
+  `58f12a24bfce1654e8894ede62880c2458a6808f` passed CI `30750832310`.
 
-PR #195 merged at `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
-Implementation head `ddec67a36b8000be91562b33a2bd4d6aceb5e443` passed CI
-`30734100436`. This is protected-source closure, not current installed or Stable
-proof.
-
-### Signed licensing
-
-PR #197 merged at `04d4c51831c6e043ab39a614a7e947e6b27d01e6`.
-Implementation head `25abbedd176429cf25e657217726d833e3c62a10` passed CI
-`30744598944`; all review threads were resolved. Windows artifact and installed
-licensing behavior remain Phase 2 exit evidence.
-
-### Single-agent AAA governance
-
-PR #199 merged at `991c61ac882497fdda01af3ac04f06978146bbda`.
-Exact head `58f12a24bfce1654e8894ede62880c2458a6808f` passed CI
-`30750832310`, including authority/version, documentation audit, TypeScript,
-ESLint, complete Vitest, Prisma generation/deploy/status, coverage, production
-dependency audit, repository inventory and the Required PR gate.
+These are protected-source facts, not a new release, Founder acceptance or Stable
+claim.
 
 ## Current repository truth
 
-- PR #200 is open from `agent/native-multi-shop-authority` to protected `main` and
-  is the sole active implementation package;
-- the exact PR head and checks must be re-read from live GitHub because the branch
-  advances during coherent Task 1 repair commits;
-- the branch contains the frozen lifecycle contract, authenticated command-frame
-  interoperability proof and Task 1 CI gates;
-- no native registry, database or runtime lifecycle mutation has landed; Task 2
-  remains blocked until the complete Task 1 Level 1 gate succeeds;
-- the remote repository retains many historical `agent/*` branches; branch names
-  alone are not execution authority;
-- PR #200 reconciles the stale PR #199-open and branch-not-created transition
-  wording in the existing entry and current-state authorities; that reconciliation
-  is proposed source until the PR merges.
+PR #200 is open, non-draft and mergeable from
+`agent/native-multi-shop-authority` to protected `main`. It is the sole active
+implementation package. Its code-bearing checkpoint head is
+`e8436aaefd85be3233caa179958d7401e18d9880`; merge authority requires the final
+live PR head, all selected exact-head checks and all P0/P1 review threads.
 
-## Reconnaissance result
+The package now implements the native multi-shop outcome rather than only a Task 1
+contract:
 
-The audit covered the complete applicable native multi-shop surface:
-
-- Tauri startup, child containment, runtime generations, shutdown and readiness;
-- native registry import/validation, workspace/installation identity and shop
-  incarnation;
-- all-shop migration compatibility, snapshots, interruption recovery and exact
-  database-file identity;
-- process-bound `ShopContext`, Prisma write fencing and business command shop
+- the browser submits authenticated typed intent and receives a pending-operation
+  receipt; it does not write the registry or relaunch the process;
+- installation-root HMAC binds operation payload, expected registry revision,
+  workspace/installation, person/member/device/session authority, policy and
+  revocation state, signed entitlement revision and shop slots, migration-set
+  identity and exact current/target shop incarnations;
+- one authenticated durable lifecycle journal owns requested, authorized,
+  quiescing, runtime-stopped, staged, registry-committing, committed,
+  runtime-starting, ready, completed, compensating, recovered, blocked and
+  manual-recovery-required states;
+- Rust composes the existing migration coordinator, runtime supervisor and exact
+  process `ShopContext`; it does not introduce a second registry or restart
   authority;
-- durable person/member/device/session identity and exact shop grants;
-- signed licensing projection and `shopSlots` entitlement;
-- shop list/create/switch/delete APIs and Zustand/topbar callers;
-- backup creation and production-blocked restore;
-- tests, risk classification, Windows lanes and installed evidence;
-- AR/FR/EN, RTL, keyboard/status behavior and low-end constraints.
+- switch performs planned runtime stop, compare-and-swap registry advancement,
+  exact target authority startup, authenticated readiness and prior-authority
+  compensation;
+- create provisions a contained SQLite database from the exact packaged migration
+  set and enforces signed slot authority;
+- rename preserves stable shop ID, incarnation and database identity;
+- archive retains an authenticated manifest and verified SQLite snapshot;
+- recover authenticates the archive, verifies its digest, rejects collisions,
+  enforces slots and restores the original stable identity;
+- destructive delete requires owner installation authority, recent
+  reauthentication, exact target confirmation and retained deleted-rescue
+  evidence;
+- startup recovery reconciles an interrupted operation only to exact prior or
+  exact committed authority;
+- generic browser process authority and `process:default` are removed;
+- temporary TypeScript registry mutation paths are no longer production
+  authority.
 
-The strongest existing primitives are the Rust migration coordinator, runtime
-supervisor, exact process `ShopContext`, durable identity authority, signed
-licensing authority and installed Windows verification infrastructure. The package
-must compose those primitives. It must not create a second registry, identity,
-licensing or restart authority.
+## Frozen lifecycle authority
 
-## Adopted research decision
+Every consequential request is bound to the exact installation, actor, session,
+entitlement, migration set and registry revision. Operation-specific create,
+rename, archive, recover and delete payloads are part of the authenticated command
+and journal. Delete confirmation and reauthentication timestamp are MAC-bound and
+validated against the target and command window.
 
-The native host is the sole shop-lifecycle transaction authority.
+No operation reports success before authenticated runtime readiness. Stale
+revision, lost grant, changed policy/revocation state, changed entitlement,
+exhausted slots, changed migration identity, archive collision, containment
+uncertainty or failed compensation blocks the operation rather than guessing.
 
-The browser submits typed intent and renders state. It does not write the registry,
-select database paths, mutate process environment or call a generic process
-relaunch after an API mutation.
+## Separated adversarial review
 
-The adopted implementation uses:
+The frozen review found and repaired two concrete P1 interruption defects:
 
-- narrow typed Tauri commands and explicit capability permissions;
-- one durable authenticated lifecycle journal;
-- the existing Rust registry and migration coordinator as storage authority;
-- the existing runtime-generation supervisor for quiesce, restart and readiness;
-- SQLite Online Backup snapshots for live/valuable database preservation;
-- exact integrity, foreign-key, migration-set and file-identity validation;
-- durable same-volume replacement and compensation through the existing native
-  replacement helpers;
-- explicit AR/FR/EN status, progress, conflict, failure and recovery projections.
+1. a crash after archive/delete registry commit but before live database removal
+   could leave an unregistered live SQLite database;
+2. a recover operation could remove its archive after readiness but before the
+   terminal journal write, causing startup reconciliation to require evidence that
+   had correctly been consumed.
 
-Primary revalidation sources:
+The repair authenticates committed archive/delete evidence, removes any leftover
+unregistered live database, permits exact committed recover finalization without
+archive residue and retains prior-authority cleanup for uncommitted work. Dedicated
+Rust integration tests simulate both interruption windows. The native source gate
+executes them on Linux, and the Windows Rust parity lane executes both switch and
+mutation integration contracts on Windows.
 
-- Tauri 2 commands: https://v2.tauri.app/develop/calling-rust/
-- Tauri process permissions: https://v2.tauri.app/plugin/process/
-- SQLite Online Backup API: https://www.sqlite.org/backup.html
-- SQLite backup contract: https://www.sqlite.org/c3ref/backup_finish.html
-- SQLite WAL locking: https://www.sqlite.org/walformat.html
-- Windows `ReplaceFileW`: https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-replacefilew
-- Windows `FlushFileBuffers`: https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-flushfilebuffers
-- WCAG 2.2: https://www.w3.org/TR/WCAG22/
-
-Revalidate when the pinned Tauri major, SQLite/rusqlite major, Windows replacement
-implementation or accessibility target changes.
+The review also closed the earlier P1 concerns about operation payload journaling,
+delete proof binding and persisted `ready` recovery. This separated pass is not an
+independent security review.
 
 ## Consolidated Phase 2 Problem Register
 
-### NS-P1-001 — stale transition authority
+### Closed P1 root causes
 
-Protected `main` contains PR #199-open and branch-not-created wording after PR #199
-merged and the native branch was created. This contradicts live GitHub and must be
-reconciled in the active package.
+- **NS-P1-001 stale execution frontier:** PR #200 and its branch are now recorded
+  as the active package.
+- **NS-P1-002 split lifecycle authority:** registry/database/runtime mutation is
+  native; browser mutation and generic relaunch authority are removed.
+- **NS-P1-003 missing durable transaction:** authenticated lifecycle journal,
+  exact transitions, compensation and startup reconciliation are implemented.
+- **NS-P1-004 cross-shop administration:** owner installation authority and
+  non-owner exact shop grants are enforced without exposing a target database to
+  the old process.
+- **NS-P1-005 unsigned slot behavior:** create/recover enforce signed `shopSlots`.
+- **NS-P1-006 broad WebView process authority:** `process:default` is removed.
+- **NS-P1-007 inconsistent delete ceremony:** exact target confirmation and recent
+  owner reauthentication are authenticated and validated.
+- **NS-P1-008 missing lifecycle outcomes:** create, rename, switch, archive,
+  recover and delete are implemented through one native host.
+- **NS-P1-009 weak archive semantics:** authenticated metadata, original identity,
+  digest verification, collision handling and recoverability are implemented.
+- **NS-P1-010 interruption gaps:** exact prior/committed recovery and the two
+  adversarial interruption repairs are integration-tested.
 
-### NS-P1-002 — split lifecycle authority
+### Non-blocking follow-up
 
-Rust owns startup, migrations, process containment and exact active-shop
-selection. TypeScript still contains temporary registry mutation functions.
-Production create, switch, delete and restore intentionally fail with
-`*_SUPERVISOR_REQUIRED`. One native authority must replace the split.
+- **NS-P2-001 branch hygiene:** numerous historical branches remain. Cleanup is
+  deferred until this package and reconstruction evidence are protected.
+- **NS-P2-002 native module consolidation:** the mutation engine is split across
+  focused include fragments because connector writes could not safely replace one
+  very large file. Consolidation is maintainability work and must not reopen the
+  proven authority boundary without a coherent package.
+- Phase 3 provider, inbox, AI and automation work remains outside this package.
 
-### NS-P1-003 — no durable lifecycle state machine
+No known P0/P1 remains in the reviewed source. The final exact-head Windows and MSI
+checkpoint remains the only closure uncertainty.
 
-There is no journaled operation covering authorization, expected registry
-revision, quiesce, database staging, registry commit, authority refresh, runtime
-start, authenticated readiness and compensation after interruption.
+## Evidence frontier
 
-### NS-P1-004 — target-shop administration needs installation-level authorization
+The code-bearing checkpoint has source proof for:
 
-Ordinary business authorization correctly rejects a resource shop different from
-the current process shop. Native switching and recovery need a separate
-installation-level ceremony that proves the durable member has a target-shop grant
-without exposing the target shop database to the old process.
-
-### NS-P1-005 — licensing slots are not lifecycle authority
-
-The signed entitlement exposes exact `shopSlots`, but temporary shop creation uses
-a hard-coded maximum of ten. Create/recover must enforce signed slot authority and
-preserve the five-included/up-to-ten commercial contract.
-
-### NS-P1-006 — browser restart authority is over-broad
-
-The current shop store mutates through HTTP and then calls generic Tauri
-`relaunch()`. The main WebView has `process:default`, which grants both exit and
-restart. The native package must replace this with narrow lifecycle commands and
-remove browser restart authority when no other required journey uses it.
-
-### NS-P1-007 — current delete journey is inconsistent
-
-The API requires `{ confirm: "DELETE" }`, while the Zustand caller sends no body.
-The current temporary journey cannot complete even outside production. Native
-archive/delete ceremonies replace this flow rather than patching the old path.
-
-### NS-P1-008 — required lifecycle outcomes are absent
-
-Rename, archive, recover, lifecycle health, operation progress, interruption
-recovery, entitlement status and destructive owner reauthentication are not
-implemented as complete journeys.
-
-### NS-P1-009 — archive/recovery semantics are not authoritative
-
-Temporary deletion moves a database into a timestamped quarantine filename but
-has no authenticated manifest, original registry identity, incarnation rules,
-retention state, recoverability proof or slot accounting.
-
-### NS-P1-010 — installed evidence is incomplete
-
-Phase 2 still requires one exact source to prove licensing plus create, rename,
-switch, archive, recover and delete across clean install, upgrade, interruption,
-reopen, process cleanup and preserved AppData/registry/databases/keys.
-
-### NS-P2-001 — repository branch hygiene
-
-Historical remote branches are numerous. Cleanup is deferred until the active
-package and evidence refs are protected; branch deletion must not remove retained
-reconstruction evidence accidentally.
-
-### NS-P2-002 — stale comments and localized fallback copy
-
-Some shop code comments still describe `app-meta.json`, and browser fallback
-errors are hard-coded in French. Remove stale authority language and route all
-visible lifecycle copy through AR/FR/EN translations.
-
-## Frozen lifecycle contract
-
-Every lifecycle request contains or derives:
-
-- operation ID and operation type;
-- exact expected registry revision;
-- workspace and installation identity;
-- current and target shop ID/incarnation where applicable;
-- exact durable person/member/device/session identity;
-- target-shop grant and current policy/revocation authority;
-- signed entitlement identity, revision and shop-slot limit;
-- migration-set SHA-256 and exact database-file identity;
-- recent owner reauthentication proof for destructive deletion;
-- correlation and diagnostic identity without secrets or seller PII.
-
-The durable stages are:
-
-```text
-requested
-→ authorized
-→ quiescing
-→ runtime-stopped
-→ staged
-→ registry-committing
-→ committed
-→ runtime-starting
-→ ready
-→ completed
-```
-
-Failure states are explicit:
-
-```text
-compensating
-→ recovered
-or
-blocked
-→ manual-recovery-required
-```
-
-No operation reports success before the new exact authority reaches authenticated
-readiness. A stale expected revision, lost grant, changed entitlement or changed
-migration identity fails before mutation.
-
-## Coherent implementation tasks
-
-### Task 1 — authority reconciliation and native contract surface
-
-- reconcile stale transition wording in existing authority owners;
-- introduce the native lifecycle types, journal schema and validation core;
-- add focused pure Rust tests for input, state transitions, stale revision,
-  containment and recovery classification;
-- make no registry mutation yet.
-
-### Task 2 — native switch transaction
-
-- authorize current actor and target grant;
-- stop the current runtime generation safely;
-- atomically advance active-shop registry authority;
-- refresh exact native authority;
-- launch the new runtime and prove authenticated readiness;
-- compensate or block safely after failure;
-- replace the browser HTTP-plus-generic-relaunch path.
-
-### Task 3 — create and rename
-
-- enforce signed shop slots;
-- provision from the exact migration-set template;
-- validate database identity and health before registry publication;
-- add rename without changing stable shop ID, incarnation or database identity;
-- provide complete localized UI states.
-
-### Task 4 — archive and recover
-
-- quiesce when the active shop is affected;
-- create authenticated archive metadata and verified database snapshot/state;
-- remove the shop from active registry authority without data loss;
-- recover with original stable identity or an explicitly defined new incarnation
-  after collision/replacement;
-- enforce slot and grant rules.
-
-### Task 5 — destructive delete and legacy removal
-
-- require owner authority, recent reauthentication and exact typed confirmation;
-- retain the defined rescue/retention evidence before irreversible removal;
-- remove or make read-only temporary TypeScript registry mutations, direct API
-  switching and generic browser relaunch authority;
-- close stale comments, copy and tests.
-
-### Task 6 — Phase 2 checkpoint
-
-- complete Level 2 source/database/browser/native checkpoint;
-- complete risk-triggered Level 3 Windows/Rust/signed-MSI/install/upgrade/reopen/
-  preserved-data/licensing/shop-lifecycle evidence;
-- freeze exact head, complete one adversarial pass and one consolidated repair
-  batch;
-- close Phase 2 only with zero known P0/P1.
-
-## Non-goals for the ordinary source package
-
-- no application version bump or release publication;
-- no Founder AppData, registry, database, key or installed application mutation;
-- no Phase 3 provider/automation expansion;
-- no Phase 4 cloud backup or replacement-install recovery claim beyond the exact
-  lifecycle preservation required by this package;
-- no browser/PWA destructive shop administration;
-- no new permanent masterplan, gap report or handoff document.
-
-## Validation cadence
-
-### Level 1 — after each coherent task
-
-- repository diff/cleanliness review;
 - authority/version and documentation audit;
-- Prisma generation/validation/migration checks where applicable;
-- TypeScript;
-- ESLint;
-- complete Vitest;
-- Rust format/check/tests for native changes;
-- targeted browser and Windows checks selected by risk.
+- TypeScript, ESLint and complete Vitest;
+- Prisma generation, migration deployment/status and database tests;
+- coverage and production dependency audit;
+- Rust 1.77 lifecycle tests and strict Clippy;
+- canonical Rust formatting;
+- real Tauri switch and mutation interruption contracts;
+- Linux Tauri release compilation.
 
-### Level 2 — Phase 2 checkpoint
+The required Phase 2 Level 3 checkpoint additionally selects:
 
-Complete source/database/integration/migration suites, production build, affected
-journeys, permission/shop isolation, AR/FR/EN/RTL/accessibility, performance,
-native/Windows lanes, legacy-removal and unresolved-problem audit.
+- Windows database, standalone runtime and contained launcher;
+- Windows containment stress, full Rust library suite, switch integration,
+  mutation interruption integration, strict Clippy and release compilation;
+- ephemeral MSI build/install, authenticated launch, close/reopen and hydrated
+  WebView proof.
 
-### Level 3 — Phase 2 exit
-
-Exact-source Windows release, Rust parity, signed MSI, clean install, in-place
-upgrade, authenticated readiness, close/reopen, process cleanup, preserved
-AppData/registry/databases/keys, licensing expiry/activation/transfer/recovery,
-native shop lifecycle, migration interruption, recovery and deterministic
-evidence.
+These combined lanes prove native lifecycle behavior on Windows plus installed
+runtime behavior. They do not claim that the installed UI harness manually clicks
+every lifecycle journey. No source, Windows, installed or phase verdict may be
+copied from a superseded head.
 
 ## Exact next action
 
-Finish the complete Task 1 Level 1 gate on the exact live PR #200 head. After
-authority/documentation, Rust 1.77, stable Tauri, ordinary source quality and every
-selected CI lane succeed, implement Task 2 — native switch transaction — only.
-Do not begin create, rename, archive, recover or delete until the switch task gate
-passes.
+Use this self-healing sequence:
 
-## Protected local boundaries
+1. If PR #200 is still open, re-read its exact head and require successful Native
+   source contract plus every selected CI lane, including Windows standalone,
+   Windows Rust lifecycle parity, installed MSI and Required PR gate.
+2. Repair only an exact reported failure; do not broaden scope or weaken gates.
+3. Confirm all P0/P1 review threads are resolved, including the Working Memory
+   frontier thread.
+4. Merge PR #200 only with its expected exact head and without a version bump,
+   release publication or Founder acceptance claim.
+5. Re-read protected `main` after merge.
+6. Begin Phase 3 — durable providers, inbox, AI and automations — with a separate
+   audit-first reconnaissance and one consolidated Problem Register. Do not begin
+   Phase 3 product implementation inside PR #200.
+
+Issue #164 remains the Phase 0–9 execution epic and is not closed by Phase 2.
+
+## Protected local boundaries and non-claims
 
 - preserve the Founder Windows checkout and unrelated local work;
 - preserve
@@ -366,5 +223,7 @@ passes.
 - preserve the unrelated modified
   `src/lib/identity/__tests__/session-authority.test.ts`;
 - preserve canonical AppData, registry, shop databases, migrations and keys;
-- no version bump, release, MSI installation or premature Phase 2/Stable claim is
-  authorized during ordinary source work.
+- no application version bump;
+- no release or MSI publication;
+- no Founder acceptance or Stable claim;
+- no Phase 3 implementation in this package.
