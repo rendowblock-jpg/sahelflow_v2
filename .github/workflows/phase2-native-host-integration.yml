@@ -6,6 +6,7 @@ on:
       - agent/native-multi-shop-authority
     paths:
       - scripts/apply-native-lifecycle-host-integration.mjs
+      - scripts/apply-native-lifecycle-host-integration.trigger
 
 permissions:
   contents: write
