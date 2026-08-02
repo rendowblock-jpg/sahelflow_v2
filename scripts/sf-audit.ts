@@ -86,13 +86,13 @@ function normalizeLink(rawTarget: string): string | null {
   }
 }
 
-function normalized(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
-
 function contentOf(relativePath: string): string {
   const absolutePath = resolve(repoRoot, relativePath);
   return existsSync(absolutePath) ? readFileSync(absolutePath, "utf8") : "";
+}
+
+function normalized(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 const markdownFiles = walk(repoRoot);
@@ -230,93 +230,80 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "AGENTS.md",
     [
-      "FD-028",
-      "Phase 0–9",
-      "Founder execution-granularity decision",
-      "Sole-agent review rule",
-      "CI read-only",
-      "agent/phases1-4-completion-program",
-      "Phase 2A.1 — setup and session authority",
-      "Phase 2A.2 — durable owner identity kernel",
-      "Phase 2A.3 — revocation and policy freshness",
-      "Phase 2A.4 — multi-member roles, invitations and per-shop permissions",
-      "Exact next outcome — PR #195 protected merge decision",
+      "one active implementation agent at a time",
+      "Current verified frontier",
+      "Single-agent rule",
+      "Audit-first rule",
+      "Level 1 — Task Gate",
+      "Level 2 — Phase Checkpoint",
+      "Level 3 — Major Full Checkpoint",
+      "native multi-shop",
     ],
   ],
   [
     "documentation/README.md",
     [
-      "FD-028",
-      "Phase 0–9",
-      "Research-first rule",
-      "1.0.0-internal.13",
-      "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
-      "**Active package:** Native multi-shop authority",
-      "Protected `main` now includes the repaired Phase 1 and Teams boundary through PR",
+      "single-agent AAA governance reset",
+      "Problem Register",
+      "Phase 2 — identity, authorization, licensing and multi-shop",
       "Signed licensing is protected source through PR #197",
+      "whole-product AAA UI/UX and frontend transformation",
     ],
   ],
   [
     "documentation/product/DECISIONS.md",
     [
       "## FD-028",
-      "Superseded execution structure",
-      "Research-first requirement",
-      "Definition of completion",
-      "without TPM or Secure Boot",
+      "## FD-029",
+      "Whole-product AAA rule",
+      "The Founder decides whether the Web Agent or Desktop Agent is active",
     ],
   ],
   [
     "documentation/system/ROADMAP.md",
     [
-      "**Phase 0 status:** Complete",
-      "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
-      "**Active package:** Native multi-shop authority",
-      "# Phase 1 — Canonical Golden COD business core",
-      "## Result — protected-source closed through PR #195",
-      "# Phase 2 — Identity, authorization, licensing and multi-shop",
-      "### Package 2A.1 — setup and session authority — closed",
-      "### Package 2A.2 — durable owner identity kernel — closed",
-      "### Package 2A.3 — revocation and policy freshness — closed",
-      "### Package 2A.4 — multi-member roles, invitations and per-shop permissions — closed",
-      "## Teams and permissions completion — protected-source closed through PR #195",
+      "Current session:** governance reset",
+      "one active implementation agent at a time",
+      "Level 1 — Task Gate",
+      "Level 2 — Phase Checkpoint",
+      "Level 3 — Major Full Checkpoint",
+      "# Phase 5 — Whole-product AAA UI/UX",
       "# Phase 9 — Certification, representative beta and Stable",
     ],
   ],
   [
     "documentation/system/CURRENT_STATE.md",
     [
-      "**Published release:** `1.0.0-internal.13`",
-      "**Founder-installed release:** Internal.13",
-      "Windows profile fingerprint SHA-256",
-      "Commerce checkpoint safety",
+      "Latest protected source closures",
+      "Signed licensing — PR #197",
+      "single-agent governance reset",
+      "Native multi-shop remains the final Phase 2 implementation package",
+      "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
     ],
   ],
   [
     "documentation/operations/WORKFLOW.md",
     [
-      "## 3. Research-to-implementation gate",
-      "GitHub Actions for builds",
-      "No-research-drift rule",
-      "latest.json` is public updater metadata",
+      "one active implementation agent; audit-first; batch remediation; tiered CI",
+      "Complete phase/package audit",
+      "Phase Problem Register",
+      "Level 1 — Task Gate",
+      "Frozen review and batch repair",
+      "Level 2 — Phase Checkpoint",
+      "Level 3 — Major Full Checkpoint",
+      "Whole-product AAA frontend program",
+      "file-level hook failure",
     ],
   ],
   [
     "documentation/operations/WORKING_MEMORY.md",
     [
-      "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
-      "**Active package:** Native multi-shop authority",
-      "**Active PR:** none until the native multi-shop package opens",
-      "Phase 0 remains complete",
-      "Phase 1 — protected-source closed through PR #195",
-      "Phase 2A.1 result — setup and session authority closed",
-      "Phase 2A.2 result — durable owner identity kernel closed",
-      "Phase 2A.3 result — revocation and policy freshness closed",
-      "Phase 2A.4 result — multi-member roles, invitations and per-shop permissions closed",
-      "Teams and permissions completion — protected-source closed through PR #195",
-      "Phase 2 licensing result — protected-source closed through PR #197",
-      "Exact execution order",
-      "**Execution epic:** issue #164",
+      "Founder execution instruction",
+      "agent/single-agent-aaa-operating-model",
+      "Single-agent AAA operating model and truth reconciliation",
+      "Governance discrepancies being corrected",
+      "native multi-shop",
+      "the complete Phase 0–9 scope is preserved",
     ],
   ],
   [
@@ -326,6 +313,14 @@ const semanticRequirements: Array<[string, string[]]> = [
       "No-AI-slop frontend rule",
       "Research-to-implementation gate",
       "NIST SP 800-218",
+    ],
+  ],
+  [
+    "scripts/sf-verify.ts",
+    [
+      "file-level failure: import, collection, setup or hook",
+      "failureMessage?: string",
+      ".sf-vitest-failures.txt",
     ],
   ],
 ];
@@ -343,105 +338,76 @@ for (const [relativePath, markers] of semanticRequirements) {
   }
 }
 
-const activePhaseFiles = [
+const expectedPhase = "Phase 2 — identity, authorization, licensing and multi-shop";
+for (const relativePath of [
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
+  "documentation/system/CURRENT_STATE.md",
   "documentation/operations/WORKING_MEMORY.md",
-] as const;
-const expectedPhase = "Phase 2 — identity, authorization, licensing and multi-shop";
-const expectedPackage = "Native multi-shop authority";
-
-for (const relativePath of activePhaseFiles) {
+]) {
   const content = contentOf(relativePath);
   if (!content) continue;
-  const phase = /^> \*\*Active phase:\*\* (.+)$/m.exec(content)?.[1]?.trim();
-  const activePackage = /^> \*\*Active package:\*\* (.+)$/m.exec(content)?.[1]?.trim();
+  const phase = /^> \*\*Active product phase:\*\* (.+)$/m.exec(content)?.[1]?.trim();
   if (phase !== expectedPhase) {
     findings.push({
       kind: "drift",
       file: relativePath,
-      detail: `active phase must be '${expectedPhase}', found '${phase ?? "missing"}'`,
+      detail: `active product phase must be '${expectedPhase}', found '${phase ?? "missing"}'`,
     });
   }
-  if (activePackage !== expectedPackage) {
+}
+
+const expectedApplicationMerge = "04d4c51831c6e043ab39a614a7e947e6b27d01e6";
+for (const relativePath of [
+  "AGENTS.md",
+  "documentation/README.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/system/CURRENT_STATE.md",
+  "documentation/operations/WORKING_MEMORY.md",
+]) {
+  const content = contentOf(relativePath);
+  if (content && !content.includes(expectedApplicationMerge)) {
     findings.push({
       kind: "drift",
       file: relativePath,
-      detail: `active package must be '${expectedPackage}', found '${activePackage ?? "missing"}'`,
+      detail: "latest application-changing protected merge is missing",
     });
   }
 }
 
 const staleMarkers: Array<[string, string]> = [
-  ["AGENTS.md", "Exact next outcome — Phase 2A.4"],
-  ["documentation/system/ROADMAP.md", "Package 2A.4 — multi-member roles, invitations and per-shop permissions — active"],
-  ["documentation/operations/WORKING_MEMORY.md", "Active package — Phase 2A.4 member authority"],
-  ["documentation/README.md", "It does not yet claim durable Person"],
-  ["documentation/system/ROADMAP.md", "Package 2A.3 — revocation and policy freshness — active"],
-  ["documentation/operations/WORKING_MEMORY.md", "Active package — Phase 2A.3 revocation and policy freshness"],
-  ["AGENTS.md", "Exact next outcome — Phase 2A.3"],
-  ["documentation/system/ROADMAP.md", "Package 2A.1 — setup and session authority — active"],
-  ["documentation/system/ROADMAP.md", "Package 2A.2 — durable identity kernel — next"],
-  ["documentation/README.md", "**Active phase:** Phase 1 closure repair"],
-  ["documentation/system/ROADMAP.md", "**Active phase:** Phase 1 closure repair"],
-  ["documentation/operations/WORKING_MEMORY.md", "**Active phase:** Phase 1 closure repair"],
-  ["AGENTS.md", "Keep one active Phase 1 closure frontier"],
-  ["AGENTS.md", "The compressed program uses four planned sessions"],
-  ["AGENTS.md", "Next implementation branch: `agent/phase1-manual-confirmation`"],
+  ["AGENTS.md", "Protected `main`: `522ab1642545803c7a9b6c320fe72cceb320e558`"],
+  ["AGENTS.md", "Draft PR #195 is unmerged"],
+  ["AGENTS.md", "Exact next outcome — PR #195 protected merge decision"],
+  ["documentation/system/CURRENT_STATE.md", "Licensing still contains self-issued trial behavior"],
+  ["documentation/system/CURRENT_STATE.md", "Teams and permissions | Missing/fragmentary"],
+  ["documentation/operations/WORKFLOW.md", "core authority WIP 1"],
+  ["documentation/operations/WORKFLOW.md", "seller vertical WIP 2"],
+  ["documentation/operations/WORKING_MEMORY.md", "Active PR:** draft PR #197"],
+  ["documentation/operations/WORKING_MEMORY.md", "Protected main:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`"],
+  ["documentation/README.md", "Active package:** Signed licensing and entitlement authority"],
+  ["documentation/system/ROADMAP.md", "Active package:** Signed licensing and entitlement authority"],
 ];
 
 for (const [relativePath, marker] of staleMarkers) {
-  if (contentOf(relativePath).includes(marker)) {
+  const content = contentOf(relativePath);
+  if (content.includes(marker)) {
     findings.push({
       kind: "drift",
       file: relativePath,
-      detail: `stale continuity marker remains active: ${marker}`,
+      detail: `stale authority remains active: ${marker}`,
     });
   }
 }
 
-const currentOwnedDocuments = [
-  "README.md",
-  "AGENTS.md",
-  "documentation/README.md",
-  "documentation/system/ROADMAP.md",
-  "documentation/system/CURRENT_STATE.md",
-  "documentation/operations/WORKFLOW.md",
-  "documentation/operations/WORKING_MEMORY.md",
-  "documentation/research/RESEARCH.md",
-];
-const obsoleteSessionPatterns = [
-  /^#{2,4}\s+session\s+[1-4]\b.*$/gim,
-  /^#{2,4}\s+session\s+map\b.*$/gim,
-  /^#{2,4}\s+.*\bfour[- ]session\b.*\b(?:execution|overlay|program|map)\b.*$/gim,
-];
-
-for (const relativePath of currentOwnedDocuments) {
-  const content = contentOf(relativePath);
-  for (const pattern of obsoleteSessionPatterns) {
-    pattern.lastIndex = 0;
-    const match = pattern.exec(content);
-    if (match) {
-      findings.push({
-        kind: "drift",
-        file: relativePath,
-        detail: `obsolete session execution heading remains active: ${match[0].trim()}`,
-      });
-    }
+if (findings.length > 0) {
+  for (const finding of findings) {
+    console.error(`${finding.kind.toUpperCase()} ${finding.file}: ${finding.detail}`);
   }
+  console.error(`Documentation authority audit failed with ${findings.length} finding(s).`);
+  process.exit(1);
 }
 
 console.log(
-  `SahelFlow authority audit: ${activeDocumentationFiles.length} active documentation files; ${markdownFiles.length} active repository Markdown files scanned.`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities).`,
 );
-
-if (findings.length > 0) {
-  for (const finding of findings) {
-    console.error(`${finding.kind.toUpperCase()}: ${finding.file}: ${finding.detail}`);
-  }
-  process.exitCode = 1;
-} else {
-  console.log(
-    "PASS: FD-028 authorities, source-closed Teams boundary, protected merge decision, shared scripts and relative links are coherent.",
-  );
-}
