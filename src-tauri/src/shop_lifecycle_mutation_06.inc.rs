@@ -141,12 +141,15 @@ fn cleanup_uncommitted_artifacts(
             }
         }
         ShopLifecyclePayload::Recover { archive_id } => {
-            if let Ok((_, archive)) = read_archive(app_data_dir, archive_id, installation_root) {
-                if !registry.shops.iter().any(|shop| shop.id == archive.shop.id) {
+            match read_archive(app_data_dir, archive_id, installation_root) {
+                Ok((_, archive))
+                    if !registry.shops.iter().any(|shop| shop.id == archive.shop.id) =>
+                {
                     remove_sqlite_file_set(
                         &app_data_dir.join("shops").join(&archive.shop.database_file),
                     )?;
                 }
+                Ok(_) | Err(_) => {}
             }
         }
         ShopLifecyclePayload::Archive | ShopLifecyclePayload::Delete { .. } => {
