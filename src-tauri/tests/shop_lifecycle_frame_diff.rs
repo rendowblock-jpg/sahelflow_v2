@@ -1,4 +1,7 @@
 #![allow(dead_code)]
+// The probe includes the production module, whose internal unit tests precede
+// this test-only frame inspection helper.
+#![allow(clippy::items_after_test_module)]
 
 #[path = "../src/shop_lifecycle.rs"]
 mod shop_lifecycle;
