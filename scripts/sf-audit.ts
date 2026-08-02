@@ -403,6 +403,37 @@ for (const [relativePath, marker] of staleMarkers) {
   }
 }
 
+const currentOwnedDocuments = [
+  "README.md",
+  "AGENTS.md",
+  "documentation/README.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/system/CURRENT_STATE.md",
+  "documentation/operations/WORKFLOW.md",
+  "documentation/operations/WORKING_MEMORY.md",
+  "documentation/research/RESEARCH.md",
+];
+const obsoleteSessionPatterns = [
+  /^#{2,4}\s+session\s+[1-4]\b.*$/gim,
+  /^#{2,4}\s+session\s+map\b.*$/gim,
+  /^#{2,4}\s+.*\bfour[- ]session\b.*\b(?:execution|overlay|program|map)\b.*$/gim,
+];
+
+for (const relativePath of currentOwnedDocuments) {
+  const content = contentOf(relativePath);
+  for (const pattern of obsoleteSessionPatterns) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(content);
+    if (match) {
+      findings.push({
+        kind: "drift",
+        file: relativePath,
+        detail: `obsolete session execution heading remains active: ${match[0].trim()}`,
+      });
+    }
+  }
+}
+
 if (findings.length > 0) {
   for (const finding of findings) {
     console.error(`${finding.kind.toUpperCase()} ${finding.file}: ${finding.detail}`);
