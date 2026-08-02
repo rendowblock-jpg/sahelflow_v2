@@ -1,3 +1,11 @@
+fn expected_archive_status(payload: &ShopLifecyclePayload) -> Option<ArchiveStatus> {
+    match payload {
+        ShopLifecyclePayload::Archive => Some(ArchiveStatus::Archived),
+        ShopLifecyclePayload::Delete { .. } => Some(ArchiveStatus::DeletedRescue),
+        _ => None,
+    }
+}
+
 fn committed_outcome_matches(
     app_data_dir: &Path,
     registry: &ShopRegistry,
@@ -24,29 +32,98 @@ fn committed_outcome_matches(
                 && shop.name == *name
         }),
         ShopLifecyclePayload::Archive | ShopLifecyclePayload::Delete { .. } => {
+            let expected_status = expected_archive_status(&journal.authorization.payload)
+                .expect("archive payload has an archive status");
             let target_absent = !registry.shops.iter().any(|shop| {
                 Some(shop.id.as_str()) == request.target_shop_id.as_deref()
             });
-            let (_, archive) = read_archive(
+            let (archive_directory, archive) = read_archive(
                 app_data_dir,
                 &request.operation_id,
                 installation_root,
             )?;
+            verify_archive_database(
+                &archive_directory.join(ARCHIVE_DATABASE_FILE),
+                &archive.database_sha256,
+            )?;
             target_absent
+                && archive.status == expected_status
+                && archive.workspace_id == registry.workspace_id
+                && archive.installation_id == registry.installation_id
+                && archive.source_registry_revision == request.expected_registry_revision
+                && archive.operation_id == request.operation_id
                 && Some(archive.shop.id.as_str()) == request.target_shop_id.as_deref()
                 && Some(archive.shop.incarnation_id.as_str())
                     == request.target_shop_incarnation_id.as_deref()
         }
-        ShopLifecyclePayload::Recover { archive_id } => {
-            let (_, archive) = read_archive(app_data_dir, archive_id, installation_root)?;
-            registry.shops.iter().any(|shop| {
-                shop.id == archive.shop.id
-                    && shop.incarnation_id == archive.shop.incarnation_id
-                    && shop.database_file == archive.shop.database_file
-                    && app_data_dir.join("shops").join(&shop.database_file).is_file()
-            })
+        ShopLifecyclePayload::Recover { .. } => {
+            let Some(shop) = registry.shops.iter().find(|shop| {
+                Some(shop.id.as_str()) == request.target_shop_id.as_deref()
+                    && Some(shop.incarnation_id.as_str())
+                        == request.target_shop_incarnation_id.as_deref()
+            }) else {
+                return Ok(false);
+            };
+            preflight_database(&app_data_dir.join("shops").join(&shop.database_file))?;
+            true
         }
     })
+}
+
+fn finalize_committed_artifacts(
+    app_data_dir: &Path,
+    journal: &AuthenticatedShopLifecycleJournal,
+    installation_root: &[u8; 32],
+) -> Result<(), MutationAuthorityError> {
+    let request = &journal.journal.request;
+    match &journal.authorization.payload {
+        ShopLifecyclePayload::Archive | ShopLifecyclePayload::Delete { .. } => {
+            let expected_status = expected_archive_status(&journal.authorization.payload)
+                .expect("archive payload has an archive status");
+            let (archive_directory, archive) = read_archive(
+                app_data_dir,
+                &request.operation_id,
+                installation_root,
+            )?;
+            if archive.status != expected_status
+                || archive.workspace_id != request.workspace_id
+                || archive.installation_id != request.installation_id
+                || archive.operation_id != request.operation_id
+                || Some(archive.shop.id.as_str()) != request.target_shop_id.as_deref()
+                || Some(archive.shop.incarnation_id.as_str())
+                    != request.target_shop_incarnation_id.as_deref()
+            {
+                return Err(MutationAuthorityError::ManualRecoveryRequired(
+                    "committed archive evidence no longer matches lifecycle authority".to_string(),
+                ));
+            }
+            verify_archive_database(
+                &archive_directory.join(ARCHIVE_DATABASE_FILE),
+                &archive.database_sha256,
+            )?;
+            let live_database = app_data_dir.join("shops").join(&archive.shop.database_file);
+            if live_database.exists() {
+                remove_sqlite_file_set(&live_database)?;
+            }
+        }
+        ShopLifecyclePayload::Recover { archive_id } => {
+            let expected_directory = app_data_dir.join(ARCHIVE_DIRECTORY).join(archive_id);
+            if expected_directory.exists() {
+                let (archive_directory, archive) =
+                    read_archive(app_data_dir, archive_id, installation_root)?;
+                validate_recovery_target(&archive, request)?;
+                verify_archive_database(
+                    &archive_directory.join(ARCHIVE_DATABASE_FILE),
+                    &archive.database_sha256,
+                )?;
+                fs::remove_dir_all(&archive_directory)?;
+            }
+        }
+        ShopLifecyclePayload::Create { .. }
+        | ShopLifecyclePayload::Rename { .. }
+        | ShopLifecyclePayload::Switch => {}
+    }
+    Ok(())
 }
 
 fn cleanup_uncommitted_artifacts(
