@@ -1,13 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  relaunch: vi.fn(),
-  mutate: vi.fn(),
-}));
-
 vi.mock("@/lib/env", () => ({ isTauriEnv: () => true }));
-vi.mock("@tauri-apps/plugin-process", () => ({ relaunch: mocks.relaunch }));
-vi.mock("swr", () => ({ mutate: mocks.mutate }));
 
 import { useShopStore, type Shop } from "../shop-store";
 
@@ -28,7 +21,7 @@ const shops: Shop[] = [
   },
 ];
 
-describe("shop switch client state", () => {
+describe("native shop switch client state", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useShopStore.setState({
@@ -39,46 +32,58 @@ describe("shop switch client state", () => {
       switchTargetId: null,
       switchError: null,
     });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            status: "pending",
-            processShopId: "shop-a",
-            requestedShopId: "shop-b",
-            relaunchRequired: true,
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ),
-    );
   });
 
-  it("keeps the old shop active while relaunch is delayed and blocks on failure", async () => {
-    let rejectRelaunch!: (error: Error) => void;
-    mocks.relaunch.mockImplementation(
-      () => new Promise((_, reject) => {
-        rejectRelaunch = reject;
+  it("keeps old authority active after an authenticated native pending receipt", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "pending",
+          operationId: "1".repeat(32),
+          targetShopId: "shop-b",
+          targetShopIncarnationId: "2".repeat(32),
+        }),
+        { status: 202, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await useShopStore.getState().setActiveShop("shop-b");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/shops/active",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ shopId: "shop-b" }),
       }),
     );
-
-    const switching = useShopStore.getState().setActiveShop("shop-b");
-    await vi.waitFor(() => expect(mocks.relaunch).toHaveBeenCalledOnce());
-
     expect(useShopStore.getState()).toMatchObject({
       activeShopId: "shop-a",
       switchStatus: "pending",
       switchTargetId: "shop-b",
+      switchError: null,
     });
+  });
 
-    rejectRelaunch(new Error("relaunch failed"));
-    await expect(switching).rejects.toThrow("relaunch failed");
+  it("blocks visibly when native lifecycle intent is rejected", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: "native switch rejected" }), {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+    await expect(
+      useShopStore.getState().setActiveShop("shop-b"),
+    ).rejects.toThrow("native switch rejected");
     expect(useShopStore.getState()).toMatchObject({
       activeShopId: "shop-a",
       switchStatus: "blocked",
       switchTargetId: "shop-b",
-      switchError: "relaunch failed",
+      switchError: "native switch rejected",
     });
   });
 });
