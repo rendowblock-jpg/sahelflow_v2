@@ -10,11 +10,10 @@
 > **Founder-accepted baseline:** Internal.5
 > **Execution epic:** issue #164
 > **Active product phase:** Phase 2 — identity, authorization, licensing and multi-shop
-> **Active session:** governance/planning
-> **Active owner:** Web Agent
-> **Active branch:** `agent/single-agent-aaa-operating-model`
-> **Active package:** Single-agent AAA operating model and truth reconciliation
-> **Product implementation:** paused until this governance package closes
+> **Governance transition:** PR #199; verify its live state and exact head on GitHub
+> **Next implementation package:** Native multi-shop authority
+> **Next implementation branch:** none until created from protected `main` after PR #199 closes
+> **Product implementation:** paused while PR #199 remains open
 
 Live GitHub is authority. The SHAs above describe the verified starting frontier;
 they do not replace a fresh protected-main, PR, branch and CI check.
@@ -67,7 +66,7 @@ PR #198 merged documentation at
 `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`. Its CI run
 `30745607118` passed.
 
-## Governance discrepancies being corrected
+## Governance discrepancies corrected by PR #199
 
 The governance package exists because the merged authority still contained
 contradictions:
@@ -87,9 +86,9 @@ contradictions:
 - the planned native multi-shop branch was not present on remote GitHub at
   verification time.
 
-## Current governance package scope
+## Governance package scope
 
-This branch updates only execution authority and truth:
+PR #199 updates only execution authority and truth:
 
 1. root agent protocol;
 2. delivery workflow;
