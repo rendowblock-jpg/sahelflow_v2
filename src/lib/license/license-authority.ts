@@ -385,7 +385,7 @@ async function validate(
     entitlement,
     allowOnlineTrialInitialization,
   );
-  return validateSignedEntitlement(
+  const result = await validateSignedEntitlement(
     entitlement,
     {
       workspaceId: shop.workspaceId,
@@ -402,6 +402,21 @@ async function validate(
     },
     licenseVerificationKeyring(),
   );
+  if (result.status !== "valid" || entitlement.claims.type !== "permanent") return result;
+  const minimumPermanentRecoveryEpoch = nativeMinimumPermanentRecoveryEpoch(
+    permitsClockRecovery,
+  );
+  if (
+    minimumPermanentRecoveryEpoch > 0 &&
+    entitlement.claims.recoveryEpoch !== minimumPermanentRecoveryEpoch
+  ) {
+    return {
+      status: "transfer_required" as const,
+      entitlement,
+      message: "Permanent entitlement recovery must be completed",
+    };
+  }
+  return result;
 }
 
 function projection(result: EntitlementValidationResult): LicenseAuthorityProjection {
@@ -458,6 +473,11 @@ export async function activateSignedEntitlement(
 ): Promise<LicenseAuthorityProjection> {
   const entitlement = signedEntitlementSchema.parse(input);
   return withLock(async () => {
+    const allowOnlineTrialInitialization = options.allowOnlineTrialInitialization === true;
+    const onlineNativeReconciliation =
+      process.env.NODE_ENV === "production" &&
+      process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS === "missing" &&
+      permitsMissingNativeAuthority(entitlement, allowOnlineTrialInitialization);
     let current: LicenseAuthorityEnvelope | null = null;
     let unreadable = false;
     try {
@@ -465,6 +485,7 @@ export async function activateSignedEntitlement(
     } catch {
       unreadable = true;
       if (
+        !onlineNativeReconciliation &&
         !isOfflineRevocationClaim(entitlement) &&
         (entitlement.claims.type !== "permanent" ||
           entitlement.claims.issuer !== "founder-offline" ||
@@ -474,11 +495,15 @@ export async function activateSignedEntitlement(
       }
     }
     const localMinimumEpoch = current?.state.minimumRevocationEpoch ?? 0;
-    const allowOnlineTrialInitialization = options.allowOnlineTrialInitialization === true;
+    const reconcileInstalledPermanent =
+      onlineNativeReconciliation &&
+      current !== null &&
+      current.state.entitlement.claims.type === "permanent";
     if (
       allowOnlineTrialInitialization &&
       entitlement.claims.type === "trial" &&
-      current?.state.entitlement.claims.type === "permanent"
+      current?.state.entitlement.claims.type === "permanent" &&
+      !reconcileInstalledPermanent
     ) {
       throw authorityError(
         "Online trial initialization cannot replace an installed permanent entitlement",
@@ -494,7 +519,7 @@ export async function activateSignedEntitlement(
     const result = await validate(
       entitlement,
       shop,
-      minimumEpoch,
+      reconcileInstalledPermanent ? 0 : minimumEpoch,
       current?.state.lastObservedAt ?? null,
       now,
       allowOnlineTrialInitialization,
@@ -502,10 +527,7 @@ export async function activateSignedEntitlement(
     const minimumPermanentRecoveryEpoch = nativeMinimumPermanentRecoveryEpoch(
       permitsMissingNativeAuthority(entitlement, allowOnlineTrialInitialization),
     );
-    const initializePermanentRecovery =
-      process.env.NODE_ENV === "production" &&
-      process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS === "missing" &&
-      permitsMissingNativeAuthority(entitlement, allowOnlineTrialInitialization);
+    const initializePermanentRecovery = onlineNativeReconciliation;
     const reconcileExpiredOnlineTrial =
       initializePermanentRecovery && result.status === "expired";
     if (
@@ -534,6 +556,7 @@ export async function activateSignedEntitlement(
     }
     if (
       current &&
+      !reconcileInstalledPermanent &&
       (entitlement.claims.revocationEpoch < current.state.entitlement.claims.revocationEpoch ||
         entitlement.claims.transferEpoch < current.state.entitlement.claims.transferEpoch ||
         entitlement.claims.recoveryEpoch < current.state.entitlement.claims.recoveryEpoch)
@@ -544,9 +567,22 @@ export async function activateSignedEntitlement(
       entitlement.claims.revocationEpoch > minimumEpoch ||
       initializePermanentRecovery
     ) {
-      await advanceNativeRevocationFloor(entitlement.claims.revocationEpoch, {
-        initializePermanentRecovery,
-      });
+      await advanceNativeRevocationFloor(
+        Math.max(minimumEpoch, entitlement.claims.revocationEpoch),
+        {
+          initializePermanentRecovery,
+        },
+      );
+    }
+    if (reconcileInstalledPermanent && current) {
+      const currentResult = await validate(
+        current.state.entitlement,
+        shop,
+        current.state.minimumRevocationEpoch,
+        current.state.lastObservedAt,
+        now,
+      );
+      return projection(currentResult);
     }
     if (unreadable && existsSync(licenseAuthorityPath())) {
       renameSync(

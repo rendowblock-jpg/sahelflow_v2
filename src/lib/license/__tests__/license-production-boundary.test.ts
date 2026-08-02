@@ -83,6 +83,7 @@ describe("production licensing authority inventory", () => {
     expect(authority).toContain("LICENSE_ENTITLEMENT_DOWNGRADE");
     expect(authority).toContain("LICENSE_RECOVERY_CHALLENGE_REQUIRED");
     expect(authority).toContain('reconcileExpiredOnlineTrial =');
+    expect(authority).toContain("reconcileInstalledPermanent");
     const licensePanel = read("src/components/settings/license-panel.tsx");
     expect(licensePanel).toContain("minimumPermanentRecoveryEpoch");
     expect(licensePanel).toContain("permanentActivationAvailable = !valid || !permanent");

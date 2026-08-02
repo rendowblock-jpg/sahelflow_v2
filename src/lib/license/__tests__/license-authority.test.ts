@@ -22,13 +22,13 @@ import {
 
 vi.mock("../native-commercial-authority", () => ({
   advanceNativeRevocationFloor: vi.fn(
-    async (_minimumRevocationEpoch: number, options?: { initializePermanentRecovery?: boolean }) => {
+    async (minimumRevocationEpoch: number, options?: { initializePermanentRecovery?: boolean }) => {
       if (!options?.initializePermanentRecovery) return;
       process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS = "ready";
       process.env.SF_LICENSE_CLOCK_ANCHOR_MS = String(
         new Date("2026-08-10T00:00:00.000Z").getTime(),
       );
-      process.env.SF_LICENSE_REVOCATION_FLOOR = "0";
+      process.env.SF_LICENSE_REVOCATION_FLOOR = String(minimumRevocationEpoch);
       process.env.SF_LICENSE_MINIMUM_PERMANENT_RECOVERY_EPOCH = "5481516234200000";
     },
   ),
@@ -164,6 +164,68 @@ describe("installation license authority", () => {
       status: "expired",
       type: "trial",
       minimumPermanentRecoveryEpoch: 5_481_516_234_200_000,
+    });
+  });
+
+  it("reseals beside installed permanent authority without replacing its envelope", async () => {
+    const permanent = await signedClaims({
+      licenseId: "license_preserved_permanent_001",
+      type: "permanent",
+      expiresAt: null,
+      keyId: "permanent_test_001",
+      issuer: "founder-offline",
+      recoveryEpoch: 7,
+      revocationEpoch: 4,
+    });
+    await activateSignedEntitlement(permanent, shop, new Date("2026-08-03T00:00:00.000Z"));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_STATUS", "missing");
+    vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_MS", "");
+    vi.stubEnv("SF_LICENSE_REVOCATION_FLOOR", "");
+    const expiredTrial = await signedClaims({
+      licenseId: "license_original_trial_001",
+      expiresAt: "2026-08-03T00:00:00.000Z",
+    });
+    const now = new Date("2026-08-10T00:00:00.000Z");
+
+    await expect(
+      activateSignedEntitlement(expiredTrial, shop, now, {
+        allowOnlineTrialInitialization: true,
+      }),
+    ).resolves.toMatchObject({
+      status: "transfer_required",
+      type: "permanent",
+      licenseId: "license_preserved_permanent_001",
+      minimumPermanentRecoveryEpoch: 5_481_516_234_200_000,
+    });
+    const persisted = JSON.parse(readFileSync(licenseAuthorityPath(), "utf8")) as {
+      state: { entitlement: { claims: { licenseId: string } } };
+    };
+    expect(persisted.state.entitlement.claims.licenseId).toBe(
+      "license_preserved_permanent_001",
+    );
+    expect(process.env.SF_LICENSE_REVOCATION_FLOOR).toBe("4");
+    await expect(getLicenseAuthorityProjection(shop, now)).resolves.toMatchObject({
+      status: "transfer_required",
+      type: "permanent",
+      minimumPermanentRecoveryEpoch: 5_481_516_234_200_000,
+    });
+
+    const recovery = await signedClaims({
+      licenseId: "license_preserved_permanent_001",
+      type: "permanent",
+      expiresAt: null,
+      keyId: "permanent_test_001",
+      issuer: "founder-offline",
+      recoveryEpoch: 5_481_516_234_200_000,
+      revocationEpoch: 4,
+    });
+    await expect(
+      activateSignedEntitlement(recovery, shop, new Date("2026-08-10T00:01:00.000Z")),
+    ).resolves.toMatchObject({
+      status: "valid",
+      type: "permanent",
+      licenseId: "license_preserved_permanent_001",
     });
   });
 

@@ -381,14 +381,18 @@ HKCU registry value; a missing anchor beside an existing entitlement fails
 closed. Historical offline permanent recovery claims cannot recreate a missing
 native anchor because no deleted local store can prove that claim is still the
 latest. Only the contained server's direct one-device trial-service reissue may
-initialize that state; the native supervisor then generates and persists a new
-52-bit random minimum permanent-recovery epoch in a dedicated high numeric
-namespace. The UI exposes that epoch for the
-Founder offline signing ceremony, and every later permanent claim must carry at
-exactly that value, so historical claims remain rejected without putting the
-permanent signing key online. Cloudflare D1 has one unique trial record per
-opaque device and re-signs
-the original dates for reinstall recovery. Expiry or any invalid authority
+initialize that state, including when its original trial window has expired;
+that expired claim authenticates reconciliation only and never grants access.
+If an authenticated permanent AppData envelope survives the native-anchor loss,
+reconciliation preserves it rather than installing the trial, carries its local
+revocation floor forward and keeps the permanent projection locked. The native
+supervisor then generates and persists a new 52-bit random minimum
+permanent-recovery epoch in a dedicated high numeric namespace. The UI exposes
+that epoch for the Founder offline signing ceremony, and every later permanent
+claim must carry exactly that value, so historical claims remain rejected
+without putting the permanent signing key online. Cloudflare D1 has one unique
+trial record per opaque device and re-signs the original dates for reinstall
+recovery. Expiry or any invalid authority
 blocks server rendering, client UI, background provider effects and every
 non-allowlisted API while preserving data; only authentication,
 licensing/payment/support and minimal runtime diagnostics remain. Every release
@@ -401,7 +405,8 @@ concurrent trial issuance, reinstall date recovery, missing/corrupt local state,
 AppData snapshot rollback, clock rollback, expiry, revocation, transfer,
 activation replacement, route
 allowlisting, missing-anchor trial recovery followed by historical permanent
-replay, AR/FR/EN lockout and legacy-path removal. Phase 2 exit adds exact
+replay, expired-trial reconciliation without access, preserved-permanent partial
+loss recovery, AR/FR/EN lockout and legacy-path removal. Phase 2 exit adds exact
 Windows SMBIOS, packaged environment, signed MSI, close/reopen and preserved-data
 proof. Revalidate on Windows/SMBIOS API change, Ed25519/provider runtime change,
 key rotation, product-major change or a new transfer/recovery threat finding.
