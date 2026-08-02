@@ -54,7 +54,7 @@ pub struct ShopLifecycleRequest {
     pub actor_person_id: String,
     pub actor_member_id: String,
     pub actor_device_id: String,
-    pub actor_session_id: String,
+    pub actor_session_binding: String,
     pub policy_version: u64,
     pub revocation_epoch: u64,
     pub entitlement_id: String,
@@ -84,7 +84,7 @@ pub enum ShopLifecycleContractError {
     UnsupportedFormat,
     InvalidOperationId,
     InvalidIdentity(&'static str),
-    InvalidSessionId,
+    InvalidSessionBinding,
     InvalidRegistryRevision,
     InvalidPolicyVersion,
     InvalidEntitlementRevision,
@@ -109,7 +109,9 @@ impl fmt::Display for ShopLifecycleContractError {
             Self::UnsupportedFormat => write!(formatter, "unsupported shop lifecycle format"),
             Self::InvalidOperationId => write!(formatter, "invalid shop lifecycle operation ID"),
             Self::InvalidIdentity(label) => write!(formatter, "invalid {label} identity"),
-            Self::InvalidSessionId => write!(formatter, "invalid actor session identity"),
+            Self::InvalidSessionBinding => {
+                write!(formatter, "invalid opaque actor session binding")
+            }
             Self::InvalidRegistryRevision => {
                 write!(formatter, "invalid expected registry revision")
             }
@@ -146,6 +148,13 @@ impl std::error::Error for ShopLifecycleContractError {}
 
 fn valid_hex_identity(value: &str, bytes: usize) -> bool {
     value.len() == bytes * 2 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn valid_lower_hex_identity(value: &str, bytes: usize) -> bool {
+    value.len() == bytes * 2
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 fn valid_shop_id(value: &str) -> bool {
@@ -186,11 +195,8 @@ impl ShopLifecycleRequest {
         require_identity(&self.actor_person_id, "person")?;
         require_identity(&self.actor_member_id, "member")?;
         require_identity(&self.actor_device_id, "device")?;
-        if self.actor_session_id.is_empty()
-            || self.actor_session_id.len() > 256
-            || self.actor_session_id.trim() != self.actor_session_id
-        {
-            return Err(ShopLifecycleContractError::InvalidSessionId);
+        if !valid_lower_hex_identity(&self.actor_session_binding, 32) {
+            return Err(ShopLifecycleContractError::InvalidSessionBinding);
         }
         if self.expected_registry_revision == 0 {
             return Err(ShopLifecycleContractError::InvalidRegistryRevision);
@@ -405,7 +411,7 @@ mod tests {
             actor_person_id: identity('4'),
             actor_member_id: identity('5'),
             actor_device_id: identity('6'),
-            actor_session_id: "session-exact".to_string(),
+            actor_session_binding: "b".repeat(64),
             policy_version: 3,
             revocation_epoch: 1,
             entitlement_id: "license_001".to_string(),
@@ -423,6 +429,22 @@ mod tests {
     #[test]
     fn accepts_complete_switch_contract() {
         assert_eq!(request(ShopLifecycleOperation::Switch).validate(), Ok(()));
+    }
+
+    #[test]
+    fn rejects_raw_or_noncanonical_session_identity() {
+        let mut input = request(ShopLifecycleOperation::Switch);
+        input.actor_session_binding = "session-exact".to_string();
+        assert_eq!(
+            input.validate(),
+            Err(ShopLifecycleContractError::InvalidSessionBinding)
+        );
+
+        input.actor_session_binding = "B".repeat(64);
+        assert_eq!(
+            input.validate(),
+            Err(ShopLifecycleContractError::InvalidSessionBinding)
+        );
     }
 
     #[test]
