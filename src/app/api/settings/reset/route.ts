@@ -54,6 +54,17 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       await tx.codCollectionCorrection.deleteMany({});
       await tx.codCollection.deleteMany({});
 
+      // Collaboration facts and routing state are shop-operational data. Remove
+      // dependent rows before queues and workgroups so a full reset cannot
+      // expose a previous workspace's internal comments or assignments.
+      await tx.collaborationMention.deleteMany({});
+      await tx.collaborationComment.deleteMany({});
+      await tx.collaborationHandover.deleteMany({});
+      await tx.collaborationAssignment.deleteMany({});
+      await tx.collaborationWorkgroupMember.deleteMany({});
+      await tx.collaborationQueue.deleteMany({});
+      await tx.collaborationWorkgroup.deleteMany({});
+
       await tx.compensationFact.deleteMany({});
       await tx.projectionInvalidation.deleteMany({});
       await tx.financialMovement.deleteMany({});
