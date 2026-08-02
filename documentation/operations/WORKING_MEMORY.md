@@ -12,8 +12,8 @@
 > **Active product phase:** Phase 2 — identity, authorization, licensing and multi-shop
 > **Governance transition:** PR #199; verify its live state and exact head on GitHub
 > **Next implementation package:** Native multi-shop authority
-> **Next implementation branch:** none until created from protected `main` after PR #199 closes
-> **Product implementation:** paused while PR #199 remains open
+> **Next implementation branch:** create only from protected `main` after PR #199 closes
+> **Product implementation gate:** may begin only after PR #199 closes
 
 Live GitHub is authority. The SHAs above describe the verified starting frontier;
 they do not replace a fresh protected-main, PR, branch and CI check.
