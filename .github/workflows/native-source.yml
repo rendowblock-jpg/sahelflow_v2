@@ -98,6 +98,10 @@ jobs:
           cargo clippy --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_protocol_diagnostics --locked -- -D warnings
 
       - name: Verify Tauri release compilation
+        env:
+          SF_LICENSE_SERVICE_URL: "https://license.invalid"
+          SF_LICENSE_TRIAL_PUBLIC_KEYS: '{"ci-trial-key-v1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}'
+          SF_LICENSE_PERMANENT_PUBLIC_KEYS: '{"ci-permanent-key-v1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}'
         run: cargo check --manifest-path src-tauri/Cargo.toml --release --locked
 
       - name: Upload native diagnostics
