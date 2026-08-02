@@ -1,4 +1,7 @@
 #![allow(dead_code)]
+// The diagnostic crate deliberately includes the production module, whose own
+// unit-test module precedes these test-only protocol inspection wrappers.
+#![allow(clippy::items_after_test_module)]
 
 #[path = "../src/shop_lifecycle.rs"]
 mod shop_lifecycle;
