@@ -37,7 +37,14 @@ impl ShopLifecycleStage {
     fn is_terminal(self) -> bool {
         matches!(
             self,
-            Self::Completed | Self::Recovered | Self::Blocked | Self::ManualRecoveryRequired
+            Self::Completed | Self::Recovered | Self::ManualRecoveryRequired
+        )
+    }
+
+    fn requires_failure_code(self) -> bool {
+        matches!(
+            self,
+            Self::Compensating | Self::Blocked | Self::ManualRecoveryRequired
         )
     }
 }
@@ -95,6 +102,8 @@ pub enum ShopLifecycleContractError {
     TargetEqualsCurrent,
     OwnerReauthenticationRequired,
     TimeReversal,
+    FailureCodeRequired,
+    UnexpectedFailureCode,
     InvalidTransition {
         from: ShopLifecycleStage,
         to: ShopLifecycleStage,
@@ -115,11 +124,19 @@ impl fmt::Display for ShopLifecycleContractError {
             Self::InvalidMigrationSet => write!(formatter, "invalid migration-set identity"),
             Self::MissingTarget => write!(formatter, "shop lifecycle target is required"),
             Self::UnexpectedTarget => write!(formatter, "shop lifecycle target is not allowed"),
-            Self::TargetEqualsCurrent => write!(formatter, "target shop must differ from current shop"),
+            Self::TargetEqualsCurrent => {
+                write!(formatter, "target shop must differ from current shop")
+            }
             Self::OwnerReauthenticationRequired => {
                 write!(formatter, "recent owner reauthentication is required")
             }
             Self::TimeReversal => write!(formatter, "shop lifecycle journal time moved backwards"),
+            Self::FailureCodeRequired => {
+                write!(formatter, "shop lifecycle failure stage requires an exact code")
+            }
+            Self::UnexpectedFailureCode => {
+                write!(formatter, "shop lifecycle success stage cannot carry a failure code")
+            }
             Self::InvalidTransition { from, to } => {
                 write!(formatter, "invalid shop lifecycle transition {from:?} -> {to:?}")
             }
@@ -141,6 +158,13 @@ fn valid_shop_id(value: &str) -> bool {
             .iter()
             .skip(1)
             .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-')
+}
+
+fn valid_failure_code(value: &str) -> bool {
+    (1..=96).contains(&value.len())
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
 }
 
 fn require_identity(value: &str, label: &'static str) -> Result<(), ShopLifecycleContractError> {
@@ -176,7 +200,10 @@ impl ShopLifecycleRequest {
         if self.policy_version == 0 {
             return Err(ShopLifecycleContractError::InvalidPolicyVersion);
         }
-        if self.entitlement_id.is_empty() || self.entitlement_id.len() > 256 {
+        if self.entitlement_id.is_empty()
+            || self.entitlement_id.len() > 256
+            || self.entitlement_id.trim() != self.entitlement_id
+        {
             return Err(ShopLifecycleContractError::InvalidIdentity("entitlement"));
         }
         if self.entitlement_revision == 0 {
@@ -191,7 +218,10 @@ impl ShopLifecycleRequest {
         if !valid_shop_id(&self.current_shop_id) {
             return Err(ShopLifecycleContractError::InvalidIdentity("current shop"));
         }
-        require_identity(&self.current_shop_incarnation_id, "current shop incarnation")?;
+        require_identity(
+            &self.current_shop_incarnation_id,
+            "current shop incarnation",
+        )?;
 
         let requires_target = !matches!(self.operation, ShopLifecycleOperation::Create);
         match (&self.target_shop_id, &self.target_shop_incarnation_id) {
@@ -200,14 +230,18 @@ impl ShopLifecycleRequest {
                     return Err(ShopLifecycleContractError::InvalidIdentity("target shop"));
                 }
                 require_identity(incarnation_id, "target shop incarnation")?;
-                if matches!(self.operation, ShopLifecycleOperation::Switch) && shop_id == &self.current_shop_id {
+                if matches!(self.operation, ShopLifecycleOperation::Switch)
+                    && shop_id == &self.current_shop_id
+                {
                     return Err(ShopLifecycleContractError::TargetEqualsCurrent);
                 }
                 if !requires_target {
                     return Err(ShopLifecycleContractError::UnexpectedTarget);
                 }
             }
-            (None, None) if requires_target => return Err(ShopLifecycleContractError::MissingTarget),
+            (None, None) if requires_target => {
+                return Err(ShopLifecycleContractError::MissingTarget)
+            }
             (None, None) => {}
             _ => return Err(ShopLifecycleContractError::MissingTarget),
         }
@@ -238,12 +272,24 @@ impl ShopLifecycleJournal {
         })
     }
 
+    pub fn validate(&self) -> Result<(), ShopLifecycleContractError> {
+        if self.format_version != LIFECYCLE_FORMAT_VERSION {
+            return Err(ShopLifecycleContractError::UnsupportedFormat);
+        }
+        self.request.validate()?;
+        if self.updated_at_unix_ms < self.created_at_unix_ms {
+            return Err(ShopLifecycleContractError::TimeReversal);
+        }
+        validate_failure_code(self.stage, self.failure_code.as_deref())
+    }
+
     pub fn transition(
         &mut self,
         next: ShopLifecycleStage,
         now_unix_ms: u64,
         failure_code: Option<String>,
     ) -> Result<(), ShopLifecycleContractError> {
+        self.validate()?;
         if now_unix_ms < self.updated_at_unix_ms {
             return Err(ShopLifecycleContractError::TimeReversal);
         }
@@ -253,11 +299,28 @@ impl ShopLifecycleJournal {
                 to: next,
             });
         }
+        validate_failure_code(next, failure_code.as_deref())?;
         self.stage = next;
         self.updated_at_unix_ms = now_unix_ms;
         self.failure_code = failure_code;
         Ok(())
     }
+}
+
+fn validate_failure_code(
+    stage: ShopLifecycleStage,
+    failure_code: Option<&str>,
+) -> Result<(), ShopLifecycleContractError> {
+    if stage.requires_failure_code() {
+        if failure_code.is_some_and(valid_failure_code) {
+            return Ok(());
+        }
+        return Err(ShopLifecycleContractError::FailureCodeRequired);
+    }
+    if failure_code.is_some() {
+        return Err(ShopLifecycleContractError::UnexpectedFailureCode);
+    }
+    Ok(())
 }
 
 fn transition_allowed(from: ShopLifecycleStage, to: ShopLifecycleStage) -> bool {
@@ -299,7 +362,7 @@ mod tests {
     use super::*;
 
     fn identity(character: char) -> String {
-        std::iter::repeat_n(character, 32).collect()
+        std::iter::repeat(character).take(32).collect()
     }
 
     fn request(operation: ShopLifecycleOperation) -> ShopLifecycleRequest {
@@ -366,11 +429,9 @@ mod tests {
 
     #[test]
     fn permits_happy_path_and_compensation_transitions() {
-        let mut journal = ShopLifecycleJournal::new(
-            request(ShopLifecycleOperation::Switch),
-            1,
-        )
-        .expect("complete request");
+        let mut journal =
+            ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
+                .expect("complete request");
         for (index, stage) in [
             ShopLifecycleStage::Authorized,
             ShopLifecycleStage::Quiescing,
@@ -401,18 +462,45 @@ mod tests {
     }
 
     #[test]
+    fn permits_blocked_escalation_to_manual_recovery() {
+        let mut journal =
+            ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
+                .expect("complete request");
+        journal
+            .transition(
+                ShopLifecycleStage::Blocked,
+                2,
+                Some("REGISTRY_CONFLICT".to_string()),
+            )
+            .expect("request may fail closed");
+        journal
+            .transition(
+                ShopLifecycleStage::ManualRecoveryRequired,
+                3,
+                Some("COMPENSATION_UNAVAILABLE".to_string()),
+            )
+            .expect("blocked authority may require manual recovery");
+        assert_eq!(
+            journal.stage,
+            ShopLifecycleStage::ManualRecoveryRequired
+        );
+    }
+
+    #[test]
     fn rejects_skipped_and_terminal_transitions() {
-        let mut journal = ShopLifecycleJournal::new(
-            request(ShopLifecycleOperation::Switch),
-            1,
-        )
-        .expect("complete request");
+        let mut journal =
+            ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
+                .expect("complete request");
         assert!(matches!(
             journal.transition(ShopLifecycleStage::Committed, 2, None),
             Err(ShopLifecycleContractError::InvalidTransition { .. })
         ));
         journal
-            .transition(ShopLifecycleStage::Blocked, 3, Some("DENIED".to_string()))
+            .transition(
+                ShopLifecycleStage::Blocked,
+                3,
+                Some("DENIED".to_string()),
+            )
             .expect("request may fail closed");
         assert!(matches!(
             journal.transition(ShopLifecycleStage::Authorized, 4, None),
@@ -421,12 +509,21 @@ mod tests {
     }
 
     #[test]
+    fn requires_failure_code_for_failure_stages() {
+        let mut journal =
+            ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 1)
+                .expect("complete request");
+        assert_eq!(
+            journal.transition(ShopLifecycleStage::Blocked, 2, None),
+            Err(ShopLifecycleContractError::FailureCodeRequired)
+        );
+    }
+
+    #[test]
     fn rejects_journal_time_reversal() {
-        let mut journal = ShopLifecycleJournal::new(
-            request(ShopLifecycleOperation::Switch),
-            10,
-        )
-        .expect("complete request");
+        let mut journal =
+            ShopLifecycleJournal::new(request(ShopLifecycleOperation::Switch), 10)
+                .expect("complete request");
         assert_eq!(
             journal.transition(ShopLifecycleStage::Authorized, 9, None),
             Err(ShopLifecycleContractError::TimeReversal)
