@@ -326,6 +326,93 @@ Research focus:
 - Windows-protected secret storage;
 - high-risk and two-person approval.
 
+#### Signed licensing and device binding — adopted 2026-08-02
+
+**Exact question.** How must SahelFlow issue, bind, store and enforce trial and
+permanent entitlements so browser state, mutable shop data, reinstall and copied
+hardware identifiers cannot forge or reset commercial authority?
+
+**Current production path.** The merged path self-issued an unsigned trial in
+the WebView, persisted it through browser state, accepted a client-supplied raw
+machine ID, copied license state into per-shop `Setting` rows and gated only
+selected AI routes. The Tauri command used PowerShell CIM with a registry
+fallback and exposed the raw identifier to JavaScript. Deleting local state
+could restart the trial, shop reset semantics could diverge from entitlement,
+and no online one-trial authority or offline permanent signer existed.
+
+**Primary evidence reviewed.** Microsoft documents direct firmware-table access,
+SMBIOS identity semantics and DPAPI protection; RFC 8032 defines Ed25519;
+Cloudflare documents Worker Web Crypto, secrets and D1 uniqueness/indexing; OWASP
+requires key separation, least privilege and protection of keys outside ordinary
+application data. Sources reviewed 2026-08-02:
+
+- `https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemfirmwaretable`;
+- `https://learn.microsoft.com/en-us/windows-hardware/drivers/bringup/smbios`;
+- `https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata`;
+- `https://www.rfc-editor.org/info/rfc8032/`;
+- `https://developers.cloudflare.com/workers/runtime-apis/web-crypto/`;
+- `https://developers.cloudflare.com/workers/configuration/secrets/`;
+- `https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/`;
+- `https://developers.cloudflare.com/d1/best-practices/use-indexes/`;
+- `https://cheatsheetseries.owasp.org/cheatsheets/Key_Management_Cheat_Sheet.html`;
+- `https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html`.
+
+**Alternatives.** Browser fingerprint/localStorage and unsigned self-issued
+trials were rejected as resettable client authority. Raw SMBIOS UUID or
+`MachineGuid` transport was rejected as unnecessary identifying data. A shared
+trial/permanent key was rejected because online compromise could mint permanent
+licenses. Per-shop database storage was rejected because shop reset, restore or
+direct mutation must not grant commercial access. Generic JSON object signing
+was rejected because serialization differences create ambiguity.
+
+**Adopted decision.** Windows reads SMBIOS directly through
+`GetSystemFirmwareTable('RSMB')`, extracts the non-placeholder System Information
+UUID and exposes only a domain-separated SHA-256 binding. The packaged supervisor
+passes that opaque binding directly to the contained server. Versioned,
+domain-separated canonical claim bytes are signed with Ed25519. Online trial and
+offline permanent keyrings are separate and versioned by key ID; the permanent
+private key never enters the app, repository or cloud control plane. Claims bind
+license, workspace, installation, opaque device, product major, exact dates,
+support horizon, shops, members, devices, resources, features, transfer,
+recovery and revocation epochs. The local authority is atomic, locked,
+installation-root authenticated and outside every shop DB. Clock high-water is
+also anchored outside replayable AppData in a device-bound, DPAPI-protected
+HKCU registry value; a missing anchor beside an existing entitlement fails
+closed. Historical offline permanent recovery claims cannot recreate a missing
+native anchor because no deleted local store can prove that claim is still the
+latest. Only the contained server's direct one-device trial-service reissue may
+initialize that state, including when its original trial window has expired;
+that expired claim authenticates reconciliation only and never grants access.
+If an authenticated permanent AppData envelope survives the native-anchor loss,
+reconciliation preserves it rather than installing the trial, carries its local
+revocation floor forward and keeps the permanent projection locked. The native
+supervisor then generates and persists a new 52-bit random minimum
+permanent-recovery epoch in a dedicated high numeric namespace. The UI exposes
+that epoch for the Founder offline signing ceremony, and every later permanent
+claim must carry exactly that value, so historical claims remain rejected
+without putting the permanent signing key online. An exact protected challenge
+supersedes the prior random recovery value even when it is numerically lower;
+revocation and transfer epochs remain monotonic. Cloudflare D1 has one unique
+trial record per opaque device and re-signs the original dates for reinstall
+recovery. Expiry or any invalid authority
+blocks server rendering, client UI, background provider effects and every
+non-allowlisted API while preserving data; only authentication,
+licensing/payment/support and minimal runtime diagnostics remain. Every release
+build also fails before packaging unless the HTTPS trial-service URL and both
+non-empty public verification keyrings are supplied at compile time.
+
+**Acceptance and revalidation.** Source evidence must cover signature mutation,
+wrong key class, workspace/installation/device/product mismatch, duplicate and
+concurrent trial issuance, reinstall date recovery, missing/corrupt local state,
+AppData snapshot rollback, clock rollback, expiry, revocation, transfer,
+activation replacement, route
+allowlisting, missing-anchor trial recovery followed by historical permanent
+replay, expired-trial reconciliation without access, preserved-permanent partial
+loss recovery, AR/FR/EN lockout and legacy-path removal. Phase 2 exit adds exact
+Windows SMBIOS, packaged environment, signed MSI, close/reopen and preserved-data
+proof. Revalidate on Windows/SMBIOS API change, Ed25519/provider runtime change,
+key rotation, product-major change or a new transfer/recovery threat finding.
+
 #### Teams operational authorization repair — adopted 2026-08-01
 
 **Exact question.** How must central order mutations and idempotent command replay

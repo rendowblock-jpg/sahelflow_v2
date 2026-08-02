@@ -1397,7 +1397,9 @@ fn create_shop_template(
     Ok(())
 }
 
-fn installation_authority_footprint_present(app_data_dir: &Path) -> Result<bool, IoError> {
+pub(crate) fn installation_authority_footprint_present(
+    app_data_dir: &Path,
+) -> Result<bool, IoError> {
     if !app_data_dir.exists() {
         return Ok(false);
     }

@@ -1,0 +1,140 @@
+import { getPublicKeyAsync } from "@noble/ed25519";
+import { describe, expect, it } from "vitest";
+
+import { validateSignedEntitlement, type SignedEntitlement } from "../../src/lib/license/entitlement";
+import {
+  handleLicensingRequest,
+  type LicensingWorkerEnvironment,
+} from "./worker";
+
+const PRIVATE_KEY_HEX = "883e9345ecd41c7cc2d2761720aabada5fd6e1316d6799206cd2707537ea968b";
+const PRIVATE_KEY = new Uint8Array(Buffer.from(PRIVATE_KEY_HEX, "hex"));
+const PKCS8_HEADER = Buffer.from("302e020100300506032b657004220420", "hex");
+
+type RecordRow = {
+  license_id: string;
+  issued_at: string;
+  expires_at: string;
+};
+
+class MemoryD1 {
+  readonly records = new Map<string, RecordRow>();
+
+  prepare(query: string) {
+    let values: unknown[] = [];
+    return {
+      bind: (...input: unknown[]) => {
+        values = input;
+        return this.prepareBound(query, () => values);
+      },
+      first: async <T>() => null as T | null,
+      run: async () => ({ success: true }),
+    };
+  }
+
+  private prepareBound(query: string, values: () => unknown[]) {
+    return {
+      bind: (...input: unknown[]) => this.prepareBound(query, () => input),
+      first: async <T>() => {
+        if (!query.startsWith("SELECT")) return null;
+        return (this.records.get(String(values()[0])) ?? null) as T | null;
+      },
+      run: async () => {
+        if (query.startsWith("INSERT OR IGNORE")) {
+          const [binding, licenseId, issuedAt, expiresAt] = values().map(String);
+          if (binding && licenseId && issuedAt && expiresAt && !this.records.has(binding)) {
+            this.records.set(binding, {
+              license_id: licenseId,
+              issued_at: issuedAt,
+              expires_at: expiresAt,
+            });
+          }
+        }
+        return { success: true };
+      },
+    };
+  }
+}
+
+function environment(database: MemoryD1): LicensingWorkerEnvironment {
+  return {
+    DB: database as unknown as LicensingWorkerEnvironment["DB"],
+    TRIAL_RATE_LIMITER: { limit: async () => ({ success: true }) },
+    TRIAL_PRIVATE_KEY_PKCS8: Buffer.concat([PKCS8_HEADER, Buffer.from(PRIVATE_KEY)]).toString(
+      "base64",
+    ),
+    TRIAL_KEY_ID: "trial_test_001",
+    PRODUCT_MAJOR: "1",
+    TRIAL_SHOP_SLOTS: "1",
+    TRIAL_MEMBER_LIMIT: "25",
+    TRIAL_BACKUP_BYTES: "20000000000",
+  };
+}
+
+function request(workspaceId: string, installationId: string, binding: string) {
+  return new Request("https://licensing.example/v1/trials", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      workspaceId,
+      installationId,
+      deviceBinding: binding,
+      appVersion: "1.0.0-internal.13",
+    }),
+  });
+}
+
+describe("online trial authority", () => {
+  it("issues once per opaque device and recovers original dates for a reinstallation", async () => {
+    const database = new MemoryD1();
+    const env = environment(database);
+    const binding = `sfdb1_${"a".repeat(64)}`;
+    const first = (await (
+      await handleLicensingRequest(request("1".repeat(32), "2".repeat(32), binding), env)
+    ).json()) as SignedEntitlement;
+    const recovered = (await (
+      await handleLicensingRequest(request("3".repeat(32), "4".repeat(32), binding), env)
+    ).json()) as SignedEntitlement;
+
+    expect(database.records.size).toBe(1);
+    expect(recovered.claims.licenseId).toBe(first.claims.licenseId);
+    expect(recovered.claims.issuedAt).toBe(first.claims.issuedAt);
+    expect(recovered.claims.expiresAt).toBe(first.claims.expiresAt);
+    expect(recovered.claims.workspaceId).toBe("3".repeat(32));
+
+    const publicKey = await getPublicKeyAsync(PRIVATE_KEY);
+    await expect(
+      validateSignedEntitlement(
+        recovered,
+        {
+          workspaceId: "3".repeat(32),
+          installationId: "4".repeat(32),
+          deviceBinding: binding,
+          appVersion: "1.0.0-internal.13",
+          minimumRevocationEpoch: 0,
+        },
+        {
+          trial: { trial_test_001: Buffer.from(publicKey).toString("base64") },
+          permanent: {},
+        },
+      ),
+    ).resolves.toMatchObject({ status: "valid" });
+  });
+
+  it("converges concurrent requests on one original trial", async () => {
+    const database = new MemoryD1();
+    const env = environment(database);
+    const binding = `sfdb1_${"b".repeat(64)}`;
+    const responses = await Promise.all(
+      Array.from({ length: 8 }, () =>
+        handleLicensingRequest(request("1".repeat(32), "2".repeat(32), binding), env),
+      ),
+    );
+    const entitlements = (await Promise.all(
+      responses.map((response) => response.json()),
+    )) as SignedEntitlement[];
+    expect(database.records.size).toBe(1);
+    expect(new Set(entitlements.map((item) => item.claims.licenseId)).size).toBe(1);
+    expect(new Set(entitlements.map((item) => item.claims.issuedAt)).size).toBe(1);
+  });
+});

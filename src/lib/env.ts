@@ -111,9 +111,6 @@ export const env = {
   // without a .env file.
   appVersion: optional("APP_VERSION", "4.1.0") ?? "4.1.0",
 
-  /** License public key (Ed25519, for verifying founder-signed licenses) */
-  licensePublicKey: optional("LICENSE_PUBLIC_KEY", ""),
-
   /** Whether we're in development */
   isDev: process.env.NODE_ENV === "development",
 

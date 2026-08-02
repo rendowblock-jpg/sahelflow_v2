@@ -1,45 +1,47 @@
-/**
- * License store — client-side license state.
- *
- * In dev: uses localStorage (not secure, just for testing)
- * In production (Tauri): will use OS keychain via Tauri API
- */
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { SignedLicense, LicenseValidationResult } from "@/lib/license/types";
 
-interface LicenseState {
-  /** The stored license (null if none) */
-  license: SignedLicense | null;
-  /** The last validation result */
-  validation: LicenseValidationResult | null;
-  /** Whether the license has been checked on this session */
-  hasChecked: boolean;
+export type LicenseClientStatus =
+  | "valid"
+  | "missing"
+  | "unavailable"
+  | "invalid"
+  | "expired"
+  | "clock_rollback"
+  | "device_mismatch"
+  | "installation_mismatch"
+  | "workspace_mismatch"
+  | "product_mismatch"
+  | "revoked"
+  | "transfer_required";
 
-  setLicense: (license: SignedLicense | null) => void;
-  setValidation: (result: LicenseValidationResult | null) => void;
-  setHasChecked: (checked: boolean) => void;
-  clear: () => void;
-}
+export type LicenseClientProjection = Readonly<{
+  status: LicenseClientStatus;
+  message: string;
+  licenseId: string | null;
+  type: "trial" | "extension" | "permanent" | null;
+  expiresAt: string | null;
+  supportEndsAt: string | null;
+  shopSlots: number;
+  memberLimit: number;
+  deviceLimit: number;
+  features: readonly string[];
+  minimumPermanentRecoveryEpoch: number | null;
+}>;
 
-const LICENSE_STORAGE_KEY = "sahelflow-license";
+type LicenseState = {
+  projection: LicenseClientProjection | null;
+  isLoading: boolean;
+  error: string | null;
+  setProjection: (projection: LicenseClientProjection) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+};
 
-export const useLicenseStore = create<LicenseState>()(
-  persist(
-    (set) => ({
-      license: null,
-      validation: null,
-      hasChecked: false,
-
-      setLicense: (license) => set({ license }),
-      setValidation: (result) => set({ validation: result }),
-      setHasChecked: (checked) => set({ hasChecked: checked }),
-      clear: () => set({ license: null, validation: null, hasChecked: false }),
-    }),
-    {
-      name: LICENSE_STORAGE_KEY,
-      // Only persist the license itself, not the validation result
-      partialize: (state) => ({ license: state.license }),
-    },
-  ),
-);
+export const useLicenseStore = create<LicenseState>((set) => ({
+  projection: null,
+  isLoading: true,
+  error: null,
+  setProjection: (projection) => set({ projection, error: null }),
+  setLoading: (isLoading) => set({ isLoading }),
+  setError: (error) => set({ error }),
+}));

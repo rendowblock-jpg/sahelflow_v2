@@ -251,9 +251,9 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Research-first rule",
       "1.0.0-internal.13",
       "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
-      "**Active package:** Teams source closure — protected merge decision",
-      "source-closed proposed source",
-      "Teams and permissions is source-closed",
+      "**Active package:** Signed licensing and entitlement authority",
+      "Protected `main` now includes the repaired Phase 1 and Teams boundary through PR",
+      "Teams and permissions is protected source through PR #195",
     ],
   ],
   [
@@ -271,15 +271,15 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Phase 0 status:** Complete",
       "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
-      "**Active package:** Teams source closure — protected merge decision",
+      "**Active package:** Signed licensing and entitlement authority",
       "# Phase 1 — Canonical Golden COD business core",
-      "## Result — source-closed on draft PR #195; protected merge pending",
+      "## Result — protected-source closed through PR #195",
       "# Phase 2 — Identity, authorization, licensing and multi-shop",
       "### Package 2A.1 — setup and session authority — closed",
       "### Package 2A.2 — durable owner identity kernel — closed",
       "### Package 2A.3 — revocation and policy freshness — closed",
       "### Package 2A.4 — multi-member roles, invitations and per-shop permissions — closed",
-      "## Teams and permissions completion — source-closed on draft PR #195",
+      "## Teams and permissions completion — protected-source closed through PR #195",
       "# Phase 9 — Certification, representative beta and Stable",
     ],
   ],
@@ -305,15 +305,15 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/operations/WORKING_MEMORY.md",
     [
       "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
-      "**Active package:** Teams source closure — protected merge decision",
-      "**Active PR:** draft PR #195",
+      "**Active package:** Signed licensing and entitlement authority",
+      "**Active PR:** draft PR #197",
       "Phase 0 remains complete",
-      "Phase 1 — shared replay repair source-closed on PR #195",
+      "Phase 1 — protected-source closed through PR #195",
       "Phase 2A.1 result — setup and session authority closed",
       "Phase 2A.2 result — durable owner identity kernel closed",
       "Phase 2A.3 result — revocation and policy freshness closed",
       "Phase 2A.4 result — multi-member roles, invitations and per-shop permissions closed",
-      "Teams and permissions completion — source-closed on PR #195",
+      "Teams and permissions completion — protected-source closed through PR #195",
       "Exact execution order",
       "**Execution epic:** issue #164",
     ],
@@ -348,7 +348,7 @@ const activePhaseFiles = [
   "documentation/operations/WORKING_MEMORY.md",
 ] as const;
 const expectedPhase = "Phase 2 — identity, authorization, licensing and multi-shop";
-const expectedPackage = "Teams source closure — protected merge decision";
+const expectedPackage = "Signed licensing and entitlement authority";
 
 for (const relativePath of activePhaseFiles) {
   const content = contentOf(relativePath);

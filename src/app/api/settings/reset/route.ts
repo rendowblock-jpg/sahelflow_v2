@@ -104,7 +104,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       await tx.auditLog.deleteMany({});
 
       const protectedExactKeys = [
-        "active_machine_id",
         "gemini_api_key",
         "google_sheets_sa",
         "delivery_yalidine_api_id",
@@ -116,7 +115,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       const protectedSettings = await tx.setting.findMany({
         where: {
           OR: [
-            { key: { startsWith: "active_license" } },
             { key: { in: protectedExactKeys } },
           ],
         },

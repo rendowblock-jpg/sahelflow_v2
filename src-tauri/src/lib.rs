@@ -10,14 +10,49 @@
 //     the degradable WhatsApp sidecar.
 
 mod child_containment;
+mod device_binding;
 mod installation_root_key;
 mod installation_root_rotation;
+mod license_clock;
 mod migration_coordinator;
 mod packaged_auth;
 mod packaged_runtime;
 mod process_authority;
 mod runtime_protocol;
 mod runtime_supervisor;
+
+#[cfg(not(debug_assertions))]
+fn compiled_license_configuration() -> [(&'static str, &'static str); 3] {
+    [
+        ("SF_LICENSE_SERVICE_URL", env!("SF_LICENSE_SERVICE_URL")),
+        (
+            "SF_LICENSE_TRIAL_PUBLIC_KEYS",
+            env!("SF_LICENSE_TRIAL_PUBLIC_KEYS"),
+        ),
+        (
+            "SF_LICENSE_PERMANENT_PUBLIC_KEYS",
+            env!("SF_LICENSE_PERMANENT_PUBLIC_KEYS"),
+        ),
+    ]
+}
+
+#[cfg(debug_assertions)]
+fn compiled_license_configuration() -> [(&'static str, &'static str); 3] {
+    [
+        (
+            "SF_LICENSE_SERVICE_URL",
+            option_env!("SF_LICENSE_SERVICE_URL").unwrap_or(""),
+        ),
+        (
+            "SF_LICENSE_TRIAL_PUBLIC_KEYS",
+            option_env!("SF_LICENSE_TRIAL_PUBLIC_KEYS").unwrap_or(""),
+        ),
+        (
+            "SF_LICENSE_PERMANENT_PUBLIC_KEYS",
+            option_env!("SF_LICENSE_PERMANENT_PUBLIC_KEYS").unwrap_or(""),
+        ),
+    ]
+}
 mod startup_recovery;
 
 use runtime_protocol::RuntimeProtocol;
@@ -30,91 +65,6 @@ use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::{Duration, Instant};
 #[cfg(not(debug_assertions))]
 use tauri::Manager;
-
-#[tauri::command]
-fn get_machine_id() -> String {
-    // Get unique Machine ID (on Windows: Win32_ComputerSystemProduct UUID or MachineGuid registry)
-    #[cfg(target_os = "windows")]
-    {
-        if let Ok(output) = std::process::Command::new("powershell")
-            .arg("-NoProfile")
-            .arg("-Command")
-            .arg("(Get-CimInstance Win32_ComputerSystemProduct).UUID")
-            .output()
-        {
-            let uuid = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !uuid.is_empty() && uuid != "00000000-0000-0000-0000-000000000000" {
-                return uuid;
-            }
-        }
-        // Registry fallback
-        if let Ok(output) = std::process::Command::new("reg")
-            .args([
-                "query",
-                "HKLM\\SOFTWARE\\Microsoft\\Cryptography",
-                "/v",
-                "MachineGuid",
-            ])
-            .output()
-        {
-            let out = String::from_utf8_lossy(&output.stdout);
-            for line in out.lines() {
-                if line.contains("MachineGuid") {
-                    let parts: Vec<&str> = line.split_whitespace().collect();
-                    if let Some(guid) = parts.last() {
-                        if !guid.is_empty() {
-                            return guid.to_string();
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        if let Ok(output) = std::process::Command::new("ioreg")
-            .args(["-rd1", "-c", "IOPlatformExpertDevice"])
-            .output()
-        {
-            let out = String::from_utf8_lossy(&output.stdout);
-            for line in out.lines() {
-                if line.contains("IOPlatformUUID") {
-                    let parts: Vec<&str> = line.split('=').collect();
-                    if let Some(uuid) = parts.last() {
-                        let trimmed = uuid.trim().trim_matches('"');
-                        if !trimmed.is_empty() {
-                            return trimmed.to_string();
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(id) = std::fs::read_to_string("/etc/machine-id") {
-            let trimmed = id.trim().to_string();
-            if !trimmed.is_empty() {
-                return trimmed;
-            }
-        }
-        if let Ok(id) = std::fs::read_to_string("/var/lib/dbus/machine-id") {
-            let trimmed = id.trim().to_string();
-            if !trimmed.is_empty() {
-                return trimmed;
-            }
-        }
-    }
-
-    // In release builds return no synthetic identity, so licensing can fail closed.
-    #[cfg(debug_assertions)]
-    return "DEV-MOCK-MACHINE-ID-FALLBACK".to_string();
-
-    #[cfg(not(debug_assertions))]
-    return String::new();
-}
 
 const SHUTDOWN_IDLE: u8 = 0;
 const SHUTDOWN_RUNNING: u8 = 1;
@@ -364,17 +314,6 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(
-            tauri_plugin_stronghold::Builder::new(|password: &str| {
-                use std::collections::hash_map::DefaultHasher;
-                use std::hash::{Hash, Hasher};
-                let mut hasher = DefaultHasher::new();
-                password.hash(&mut hasher);
-                hasher.finish().to_le_bytes().to_vec()
-            })
-            .build(),
-        )
-        .invoke_handler(tauri::generate_handler![get_machine_id])
         .on_window_event(|_window, _event| {
             #[cfg(not(debug_assertions))]
             if _window.label() == "main" {
@@ -472,6 +411,41 @@ pub fn run() {
                         return;
                     }
 
+                    let installation_authority_preexists =
+                        match migration_coordinator::installation_authority_footprint_present(
+                            &app_data_dir,
+                        ) {
+                            Ok(value) => value,
+                            Err(error) => {
+                                let detail = format!(
+                                    "commercial authority footprint could not be inspected: {error}"
+                                );
+                                let _ = startup_recovery::show_blocked(
+                                    &app_handle,
+                                    "SF-LICENSE-AUTHORITY-BLOCKED",
+                                    &detail,
+                                );
+                                return;
+                            }
+                        };
+                    let license_device_binding = match device_binding::current_device_binding() {
+                        Ok(value) => value,
+                        Err(error) => {
+                            let _ = startup_recovery::show_blocked(
+                                &app_handle,
+                                "SF-LICENSE-AUTHORITY-BLOCKED",
+                                &error,
+                            );
+                            return;
+                        }
+                    };
+                    if let Err(error) = license_clock::observe(
+                        &license_device_binding,
+                        installation_authority_preexists,
+                    ) {
+                        eprintln!("[sahelflow] protected commercial anchor unavailable: {error}");
+                    }
+
                     // Validate the registry and migrate every registered shop
                     // before any business server can observe a database.
                     runtime_protocol::remove_manifest(&app_data_dir);
@@ -500,6 +474,8 @@ pub fn run() {
                         authority,
                         installation_root,
                     } = prepared_installation;
+                    let license_command_key =
+                        license_clock::command_key(installation_root.as_bytes());
                     startup_recovery::record_startup_stage(
                         &app_data_dir,
                         "migration-complete",
@@ -520,6 +496,21 @@ pub fn run() {
                             &app_handle,
                             "SF-RUNTIME-STARTUP-BLOCKED",
                             detail,
+                        );
+                        return;
+                    }
+                    if let Err(error) = license_clock::start_runtime_observer(
+                        license_device_binding,
+                        app_data_dir.join("system"),
+                        license_command_key,
+                    ) {
+                        let detail = format!(
+                            "protected commercial authority observer could not start: {error}"
+                        );
+                        let _ = startup_recovery::show_blocked(
+                            &app_handle,
+                            "SF-LICENSE-AUTHORITY-BLOCKED",
+                            &detail,
                         );
                         return;
                     }
@@ -646,6 +637,14 @@ fn server_env(
         .join(env!("CARGO_PKG_VERSION"));
     let token_file = app_data_dir.join("sidecar-token");
     let resource_dir = app.path().resource_dir()?;
+    let device_binding = device_binding::current_device_binding().map_err(IoError::other)?;
+    let license_clock_anchor = match license_clock::observe(&device_binding, true) {
+        Ok(anchor) => anchor,
+        Err(error) => {
+            eprintln!("[sahelflow] protected license clock unavailable: {error}");
+            None
+        }
+    };
 
     let mut environment = vec![
         (
@@ -710,6 +709,27 @@ fn server_env(
             "SF_INSTALLATION_ID".to_string(),
             authority.installation_id.clone(),
         ),
+        ("SF_DEVICE_BINDING".to_string(), device_binding),
+        (
+            "SF_LICENSE_CLOCK_ANCHOR_STATUS".to_string(),
+            if license_clock_anchor.is_some() {
+                "ready".to_string()
+            } else {
+                "missing".to_string()
+            },
+        ),
+        (
+            "SF_LICENSE_REVOCATION_FLOOR".to_string(),
+            license_clock_anchor
+                .map(|anchor| anchor.minimum_revocation_epoch.to_string())
+                .unwrap_or_default(),
+        ),
+        (
+            "SF_LICENSE_MINIMUM_PERMANENT_RECOVERY_EPOCH".to_string(),
+            license_clock_anchor
+                .map(|anchor| anchor.minimum_permanent_recovery_epoch.to_string())
+                .unwrap_or_default(),
+        ),
         ("SF_ACTIVE_SHOP_ID".to_string(), authority.shop_id.clone()),
         (
             "SF_SHOP_INCARNATION_ID".to_string(),
@@ -747,8 +767,19 @@ fn server_env(
         ),
         ("SF_AUTH_MODE".to_string(), auth.mode().as_str().to_string()),
     ];
+    if let Some(anchor) = license_clock_anchor {
+        environment.push((
+            "SF_LICENSE_CLOCK_ANCHOR_MS".to_string(),
+            anchor.high_water_ms.to_string(),
+        ));
+    }
     if let Some(secret) = auth.secret() {
         environment.push(("AUTH_SECRET".to_string(), secret.to_string()));
+    }
+    for (name, value) in compiled_license_configuration() {
+        if !value.is_empty() {
+            environment.push((name.to_string(), value.to_string()));
+        }
     }
     Ok(environment)
 }

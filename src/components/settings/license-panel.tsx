@@ -1,161 +1,199 @@
 "use client";
 
 import { useState } from "react";
-import { useI18n } from "@/hooks/use-i18n";
-import { useLicense } from "@/hooks/use-license";
-import { useLicenseStore } from "@/stores/license-store";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Calendar, Key, Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  ShieldCheck,
-  ShieldAlert,
-  Key,
-  Cpu,
-  Calendar,
-  Copy,
-  Check,
-  Loader2,
-} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { useI18n } from "@/hooks/use-i18n";
+import { useLicense } from "@/hooks/use-license";
+import type { LicenseClientStatus } from "@/stores/license-store";
+
+const statusKeys: Record<LicenseClientStatus, string> = {
+  valid: "license.status.valid",
+  missing: "license.status.missing",
+  unavailable: "license.status.unavailable",
+  invalid: "license.status.invalid",
+  expired: "license.status.expired",
+  clock_rollback: "license.status.clockRollback",
+  device_mismatch: "license.status.machineMismatch",
+  installation_mismatch: "license.status.installationMismatch",
+  workspace_mismatch: "license.status.workspaceMismatch",
+  product_mismatch: "license.status.versionBlocked",
+  revoked: "license.status.revoked",
+  transfer_required: "license.status.transferRequired",
+};
 
 export function LicensePanel() {
   const { t, locale } = useI18n();
-  const { license, validation, machineId, isLoading } = useLicense();
-  const setLicense = useLicenseStore((s) => s.setLicense);
-  const setHasChecked = useLicenseStore((s) => s.setHasChecked);
-  const [pasteOpen, setPasteOpen] = useState(false);
+  const { projection, isLoading, error: authorityError, refresh } = useLicense();
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [keyInput, setKeyInput] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [activating, setActivating] = useState(false);
+  const [requestingTrial, setRequestingTrial] = useState(false);
 
-  function handlePasteKey() {
+  async function activate() {
     setError(null);
+    let entitlement: unknown;
     try {
-      const parsed = JSON.parse(keyInput);
-      if (!parsed.payload || !parsed.signature) {
-        setError(t("license.invalidFormat"));
-        return;
-      }
-      setLicense(parsed);
-      setHasChecked(false);
-      setPasteOpen(false);
-      setKeyInput("");
-      window.location.reload();
+      entitlement = JSON.parse(keyInput);
     } catch {
       setError(t("license.invalidJson"));
+      return;
+    }
+    if (!entitlement || typeof entitlement !== "object") {
+      setError(t("license.invalidFormat"));
+      return;
+    }
+    setActivating(true);
+    try {
+      const response = await fetch("/api/license/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-requested-with": "sahelflow",
+        },
+        body: JSON.stringify(entitlement),
+      });
+      if (!response.ok) throw new Error(t("license.activationFailed"));
+      setDialogOpen(false);
+      setKeyInput("");
+      await refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : t("license.activationFailed"));
+    } finally {
+      setActivating(false);
     }
   }
 
-  function copyMachineId() {
-    if (machineId) {
-      navigator.clipboard.writeText(machineId);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+  async function startOrRecoverTrial() {
+    setError(null);
+    setRequestingTrial(true);
+    try {
+      const response = await fetch("/api/license/trial", {
+        method: "POST",
+        headers: { "x-requested-with": "sahelflow" },
+      });
+      if (!response.ok) throw new Error(t("license.trialFailed"));
+      await refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : t("license.trialFailed"));
+    } finally {
+      setRequestingTrial(false);
     }
   }
 
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="flex items-center gap-2 py-6 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <CardContent className="flex items-center gap-2 py-6 text-muted-foreground" role="status">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           {t("license.checking")}
         </CardContent>
       </Card>
     );
   }
 
-  const status = validation?.status ?? "missing";
-  const isValid = status === "valid";
-  const isPermanent = license?.payload.type === "permanent";
+  const status: LicenseClientStatus = projection?.status ?? "unavailable";
+  const valid = status === "valid";
+  const permanent = projection?.type === "permanent";
+  const trialRequestAvailable = !valid && !permanent && status !== "expired";
+  const permanentActivationAvailable = !valid || !permanent;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          {isValid ? (
-            <ShieldCheck className="h-5 w-5 text-success" />
+          {valid ? (
+            <ShieldCheck className="h-5 w-5 text-success" aria-hidden="true" />
           ) : (
-            <ShieldAlert className="h-5 w-5 text-destructive" />
+            <ShieldAlert className="h-5 w-5 text-destructive" aria-hidden="true" />
           )}
           {t("license.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-muted-foreground">{t("license.statusLabel")}</span>
-          <Badge variant={isValid ? "default" : "destructive"}>
-            {validation?.message ?? t("license.status.missing")}
-          </Badge>
+          <Badge variant={valid ? "default" : "destructive"}>{t(statusKeys[status])}</Badge>
         </div>
 
-        {license && (
-          <div className="flex items-center justify-between">
+        {projection?.type && (
+          <div className="flex items-center justify-between gap-4">
             <span className="text-sm text-muted-foreground">{t("license.typeLabel")}</span>
-            <span className="text-sm font-medium capitalize">
-              {license.payload.type === "permanent" && t("license.typePermanent")}
-              {license.payload.type === "trial" && t("license.typeTrial")}
-              {license.payload.type === "extension" && t("license.typeExtension")}
+            <span className="text-sm font-medium">
+              {projection.type === "permanent" && t("license.typePermanent")}
+              {projection.type === "trial" && t("license.typeTrial")}
+              {projection.type === "extension" && t("license.typeExtension")}
             </span>
           </div>
         )}
 
-        {license?.payload.expiresAt && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
+        {projection?.expiresAt && (
+          <div className="flex items-center justify-between gap-4">
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
               {t("license.expiresOn")}
             </span>
             <span className="text-sm font-medium">
-              {new Date(license.payload.expiresAt).toLocaleDateString(locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR")}
+              {new Date(projection.expiresAt).toLocaleDateString(
+                locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR",
+              )}
             </span>
           </div>
         )}
 
-        <Separator />
-
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Cpu className="h-3.5 w-3.5" />
-            {t("license.machineId")}
-          </div>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 rounded bg-muted px-2 py-1.5 text-xs font-mono break-all">
-              {machineId ?? "—"}
+        {projection?.minimumPermanentRecoveryEpoch && (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
+            <p className="text-xs font-medium text-foreground">
+              {t("license.permanentRecoveryEpoch")}
+            </p>
+            <code className="mt-1 block select-all text-sm font-semibold" dir="ltr">
+              {projection.minimumPermanentRecoveryEpoch}
             </code>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={copyMachineId}
-              disabled={!machineId}
-              title={t("settings.copy")} aria-label={t("settings.copy")}
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </Button>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("license.permanentRecoveryEpochHelp")}
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {t("license.machineIdHelp")}
-          </p>
-        </div>
+        )}
+
+        {!valid && <p className="text-sm text-muted-foreground">{t("license.lockoutHelp")}</p>}
+        {authorityError && <p className="text-sm text-destructive" role="alert">{t("license.status.unavailable")}</p>}
 
         <Separator />
 
-        {!isPermanent && (
-          <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
+        {trialRequestAvailable && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void startOrRecoverTrial()}
+            disabled={requestingTrial}
+          >
+            {requestingTrial && (
+              <Loader2 className="me-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
+            )}
+            {t("license.startOrRecoverTrial")}
+          </Button>
+        )}
+
+        {permanentActivationAvailable && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="default" size="sm">
-                <Key className="h-4 w-4 me-1.5" />
+              <Button size="sm">
+                <Key className="me-1.5 h-4 w-4" aria-hidden="true" />
                 {t("license.enterKey")}
               </Button>
             </DialogTrigger>
@@ -163,35 +201,32 @@ export function LicensePanel() {
               <DialogHeader>
                 <DialogTitle>{t("license.activatePermanent")}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="license-key">{t("license.licenseKey")}</Label>
-                  <Input
-                    id="license-key"
-                    placeholder={t("license.pasteJsonPlaceholder")}
-                    value={keyInput}
-                    onChange={(e) => setKeyInput(e.target.value)}
-                    className="font-mono text-xs"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t("license.formatHelp")} {"{ \"payload\": {...}, \"signature\": \"...\" }"}
-                  </p>
-                </div>
-                {error && (
-                  <p className="text-sm text-destructive" role="alert">{error}</p>
-                )}
+              <div className="space-y-2 py-4">
+                <Label htmlFor="license-entitlement">{t("license.licenseKey")}</Label>
+                <Input
+                  id="license-entitlement"
+                  value={keyInput}
+                  onChange={(event) => setKeyInput(event.target.value)}
+                  placeholder={t("license.pasteJsonPlaceholder")}
+                  className="font-mono text-xs"
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">{t("license.protectedBindingHelp")}</p>
+                {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setPasteOpen(false)}>
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>
                   {t("common.cancel")}
                 </Button>
-                <Button onClick={handlePasteKey} disabled={!keyInput.trim()}>
+                <Button onClick={() => void activate()} disabled={!keyInput.trim() || activating}>
+                  {activating && <Loader2 className="me-1.5 h-4 w-4 animate-spin" aria-hidden="true" />}
                   {t("license.activate")}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         )}
+        {error && !dialogOpen && <p className="text-sm text-destructive" role="alert">{error}</p>}
       </CardContent>
     </Card>
   );

@@ -2,7 +2,7 @@
 
 > **Authority:** merged protected `main` and named evidence only
 > **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
-> **Current protected application baseline:** `731fb11528345354388b2716f3bd94f0fc73eafb`
+> **Current protected application baseline:** `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Protected signed run:** `30366866703`
@@ -39,31 +39,22 @@ still mainly use legacy services and fields.
 The central completion task is therefore production adoption and removal of
 competing legacy authority, not another architecture reset.
 
-## Unmerged execution frontier — not protected current-state authority
+## Latest protected source closure
 
-Draft PR #195 on `agent/phases1-4-completion-program` contains the unmerged Phase
-1 and Phase 2A/Teams source boundary. Its source-closure implementation head is
-`a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`: normal CI run
-`30714461757` and complete integration source checkpoint `30714461656`
-succeeded, including authority/docs, frozen dependency installation, Prisma
-generation and migration status, TypeScript, ESLint and the full unit/integration
-suite.
+PR #195 merged the repaired Phase 1 and Phase 2A/Teams source boundary at
+protected commit `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`. Its exact proposed head
+`ddec67a36b8000be91562b33a2bd4d6aceb5e443` passed CI `30734100436`, including
+authority/docs, Prisma generation and migration status, TypeScript, ESLint,
+unit/integration, database, coverage, dependency audit and the required PR gate.
 
 Separated sole-agent review repaired concrete replay, operational-action,
 protected-field, risk/oracle, audit, high-risk credential, route-ordering,
 state-only handover and stale/revoked UI findings. No P0/P1 remains in the frozen
 source package; the pass was not independent review.
 
-PR #195 now stops and awaits an explicit protected-merge decision. Licensing,
-multi-shop and later outcomes are prohibited on it and use short dedicated PRs
-from the then-current protected `main` after merge.
-
-The exact branch head and green checks belong to PR #195 and
-[`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md). This
-unmerged frontier does not alter the protected baseline stated by this document.
-It is not published, installed, Windows/Rust/MSI validated, Founder-accepted or
-Stable. Protected `main` continues to expose the discontinuities described below
-until an authorized protected merge changes that truth.
+The merge is protected source truth only. It is not a version bump, release,
+installed Phase 2 candidate, Founder acceptance or Stable evidence. Licensing
+and native multi-shop remain dedicated Phase 2 outcomes.
 
 ## Release and installed truth
 
@@ -413,11 +404,9 @@ packages:
   `30522348699` passed all selected source, Windows runtime and installed-MSI
   gates.
 
-These protected-main packages do not complete Phases 1, 2 or 4. Protected
-Phase 1 still lacks the unmerged COD settlement, exception, cancellation,
-return/refund/compensation, adopted-intake and preservation evidence assembled in
-draft PR #195. Phase 2 still requires durable identity, licensing and native
-multi-shop. Phase 4 still requires full backup/restore, replacement-install
+Phase 1 is protected-source closed through PR #195. Phase 2 still requires
+signed licensing and native multi-shop. Phase 4 still requires full
+backup/restore, replacement-install
 recovery, migration/security/privacy/legal and certification gates.
 
 The remaining Internal.13 Arabic-chart and Founder-acceptance observations stay

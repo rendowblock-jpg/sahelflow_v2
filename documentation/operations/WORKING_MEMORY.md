@@ -1,43 +1,43 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
-> **Last updated:** 2026-08-01
-> **Protected main:** `522ab1642545803c7a9b6c320fe72cceb320e558`
+> **Last updated:** 2026-08-02
+> **Protected main:** `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Founder-accepted baseline:** Internal.5
 > **Operating authority:** FD-028, FD-029, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
 > **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
-> **Active package:** Teams source closure — protected merge decision
-> **Active branch:** `agent/phases1-4-completion-program`
-> **Active PR:** draft PR #195 — `program: close Phase 1 and Teams integration`
-> **Merge state:** open, draft, mergeable, unmerged
+> **Active package:** Signed licensing and entitlement authority
+> **Active branch:** `agent/license-entitlement-authority`
+> **Active PR:** draft PR #197 — `Phase 2: establish signed licensing authority`
+> **Merge state:** PR #195 merged; licensing package in implementation
 
-GitHub PR #195 and its exact current head/checks are live branch authority. Never
-trust copied head or run numbers without re-reading GitHub at session start.
+Protected `main`, the active licensing branch and issue #164 are live authority.
+Never trust copied head or run numbers without re-reading GitHub.
 
 ## Protected truth
 
-Phase 0 remains complete. Protected `main`, the published release, installed
-Internal.13 evidence and Founder acceptance are unchanged. Draft PR #195 is
-proposed source only: it is not merged, published, installed, provider-certified,
-externally reviewed or Founder-accepted.
+Phase 0 remains complete. PR #195 merged Phase 1 and Phase 2A/Teams source at
+`a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`. Published release, installed
+Internal.13 evidence and Founder acceptance are unchanged.
 
 Full Windows/Rust/MSI, live-provider, legal, Beta and Founder-acceptance evidence
 remain later separate gates.
 
-## Phase 1 — shared replay repair source-closed on PR #195
+## Phase 1 — protected-source closed through PR #195
 
-- implementation head `a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`;
-- normal CI `30714461757` — success;
-- complete checkpoint `30714461656` — success.
+- implementation head `ddec67a36b8000be91562b33a2bd4d6aceb5e443`;
+- CI `30734100436` — success;
+- protected merge `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
 
 Concrete P1 replay evidence found on 2026-08-01 was repaired: a durable person's
 command result now replays only for that exact person across safe session
 rotation, while cross-person replay is denied before result decryption. Affected
 order authorization and fixture boundaries passed the same complete checkpoint.
-This remains unmerged proposed source until PR #195 is authorized and merged.
+The repaired boundary is protected source; artifact/installed claims remain at
+their separately named evidence level.
 
 ## Phase 2A.1 result — setup and session authority closed
 
@@ -130,15 +130,15 @@ The separated frozen-head pass found and closed read-time row creation, revoked
 member target exposure, list-query amplification and claim-only empty-menu behavior.
 It found no remaining P0/P1 in this vertical and was not an independent review.
 
-## Teams and permissions completion — source-closed on PR #195
+## Teams and permissions completion — protected-source closed through PR #195
 
 ### Exact source-closure evidence
 
-- implementation head `a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`;
-- normal CI `30714461757` — success;
-- complete integration source checkpoint `30714461656` — success;
-- the checkpoint passed authority/docs, frozen install, Prisma generation,
-  TypeScript, ESLint, the full unit/integration suite and migration status.
+- implementation head `ddec67a36b8000be91562b33a2bd4d6aceb5e443`;
+- CI `30734100436` — success;
+- protected merge `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`;
+- authority/docs, TypeScript, ESLint, unit/integration, database, coverage,
+  dependency audit, migration and required PR gates passed.
 
 Closed boundaries:
 
@@ -162,15 +162,14 @@ external evidence.
 
 ### Exact execution order
 
-1. Verify live protected `main`, PR #195, its current documentation head and exact
-   checks; the immutable implementation evidence remains the head and runs above.
-2. Update PR #195 and issue #164 with the same source-closure evidence.
-3. Keep PR #195 draft, unmerged and version-neutral until the Founder explicitly
-   authorizes its protected merge. Add no licensing or later-phase work.
-4. After merge, start licensing research/contract and implementation on a short
-   dedicated branch from the then-current protected `main`.
-5. Merge the source-complete licensing outcome through its selected gates, then
-   do native multi-shop in a second short outcome PR from protected `main`.
+1. Complete signed licensing, online trial recovery, offline permanent signing,
+   protected local authority and global data-preserving lockout on the active
+   short branch.
+2. Pass source gates, separated review and merge the licensing outcome without a
+   version bump or release.
+3. Complete native multi-shop in a second short outcome PR from protected `main`.
+4. Run Windows standalone, Rust parity and installed-MSI proof once on the frozen
+   complete Phase 2 candidate.
 
 ## Protected local boundaries
 
@@ -180,11 +179,13 @@ external evidence.
 - Preserve the unrelated modified
   `src/lib/identity/__tests__/session-authority.test.ts` in the original checkout.
 - PR #186 is obsolete/conflicting proposed source; never merge it wholesale.
-- Keep PR #195 draft and unmerged. Do not bump the application version.
+- Do not bump the application version or create a release during ordinary Phase
+  2 packages.
 
 ## Validation model
 
-Draft PR #195 runs the exact-head source checkpoint. Keep CI read-only. Linux
-source checks cannot prove Windows standalone, Rust parity, signed MSI, installed
-lifecycle, live-provider, independent security/privacy/Law 18-07 or Founder
+Ordinary Phase 2 packages run complete source authority, type, lint,
+unit/integration, database, coverage, dependency and migration gates. Windows
+standalone, Rust parity and installed-MSI run once at Phase 2 exit. Source checks
+cannot prove live-provider, independent security/privacy/Law 18-07 or Founder
 acceptance.
