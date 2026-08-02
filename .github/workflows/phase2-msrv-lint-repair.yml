@@ -26,54 +26,18 @@ jobs:
           ref: agent/native-multi-shop-authority
           fetch-depth: 0
 
-      - name: Apply exact MSRV-safe lint repairs
+      - name: Apply exact MSRV-safe odd-length check
         shell: python
         run: |
           from pathlib import Path
 
-          root_path = Path("src-tauri/src/installation_root_key.rs")
-          root_source = root_path.read_text(encoding="utf-8")
-          before_root = "if value.len() % 2 != 0 {"
-          after_root = "if value.len() & 1 != 0 {"
-          if root_source.count(before_root) != 1:
+          path = Path("src-tauri/src/installation_root_key.rs")
+          source = path.read_text(encoding="utf-8")
+          before = "if value.len() % 2 != 0 {"
+          after = "if value.len() & 1 != 0 {"
+          if source.count(before) != 1:
               raise SystemExit("installation-root odd-length anchor changed")
-          root_path.write_text(root_source.replace(before_root, after_root), encoding="utf-8")
-
-          mutation_path = Path("src-tauri/src/shop_lifecycle_mutation_06.inc.rs")
-          mutation_source = mutation_path.read_text(encoding="utf-8")
-          cleanup_marker = "fn cleanup_uncommitted_artifacts("
-          recover_marker = "        ShopLifecyclePayload::Recover { archive_id } => {\n"
-          archive_marker = "        ShopLifecyclePayload::Archive | ShopLifecyclePayload::Delete { .. } => {\n"
-          cleanup_start = mutation_source.find(cleanup_marker)
-          recover_start = mutation_source.find(recover_marker, cleanup_start)
-          recover_end = mutation_source.find(archive_marker, recover_start)
-          if cleanup_start < 0 or recover_start < 0 or recover_end < 0:
-              raise SystemExit("mutation cleanup markers changed")
-          recover_block = mutation_source[recover_start:recover_end]
-          required_fragments = (
-              "if let Ok((_, archive)) = read_archive(app_data_dir, archive_id, installation_root)",
-              "if !registry.shops.iter().any(|shop| shop.id == archive.shop.id)",
-              "remove_sqlite_file_set(",
-          )
-          if not all(fragment in recover_block for fragment in required_fragments):
-              raise SystemExit("mutation cleanup authority changed")
-          replacement = '''        ShopLifecyclePayload::Recover { archive_id } => {
-              match read_archive(app_data_dir, archive_id, installation_root) {
-                  Ok((_, archive))
-                      if !registry.shops.iter().any(|shop| shop.id == archive.shop.id) =>
-                  {
-                      remove_sqlite_file_set(
-                          &app_data_dir.join("shops").join(&archive.shop.database_file),
-                      )?;
-                  }
-                  Ok(_) | Err(_) => {}
-              }
-          }
-'''
-          mutation_path.write_text(
-              mutation_source[:recover_start] + replacement + mutation_source[recover_end:],
-              encoding="utf-8",
-          )
+          path.write_text(source.replace(before, after), encoding="utf-8")
 
       - name: Setup Rust formatter
         uses: dtolnay/rust-toolchain@stable
@@ -89,6 +53,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src-tauri/src/installation_root_key.rs src-tauri/src/shop_lifecycle_mutation_06.inc.rs
-          git commit -m "style(phase2): satisfy strict Windows lifecycle lint"
+          git add src-tauri/src/installation_root_key.rs
+          git commit -m "style(phase2): use MSRV-safe odd-length check"
           git push origin HEAD:agent/native-multi-shop-authority
