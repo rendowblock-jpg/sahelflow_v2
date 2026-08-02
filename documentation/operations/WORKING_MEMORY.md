@@ -15,7 +15,7 @@
 > **Exact branch base:** `991c61ac882497fdda01af3ac04f06978146bbda`
 > **Active implementation agent:** ChatGPT Web Agentic Coding Agent
 > **Founder selection recorded:** 2026-08-02
-> **Current session purpose:** implementation contract closure and Task 1 entry
+> **Current session purpose:** Task 1 Level 1 gate closure; Task 2 remains blocked
 
 Live GitHub is authority. Re-read protected `main`, this branch, open PRs, checks,
 issue #164 and the active documentation authorities before relying on copied
@@ -66,17 +66,19 @@ dependency audit, repository inventory and the Required PR gate.
 
 ## Current repository truth
 
-- no pull request is open;
-- `agent/native-multi-shop-authority` is the sole active implementation branch;
-- its first commit `ebd79704badb536167659d82300a5719d8a347fa` recorded the
-  research frontier only;
-- no native multi-shop product implementation existed before this contract
-  closure;
+- PR #200 is open from `agent/native-multi-shop-authority` to protected `main` and
+  is the sole active implementation package;
+- the exact PR head and checks must be re-read from live GitHub because the branch
+  advances during coherent Task 1 repair commits;
+- the branch contains the frozen lifecycle contract, authenticated command-frame
+  interoperability proof and Task 1 CI gates;
+- no native registry, database or runtime lifecycle mutation has landed; Task 2
+  remains blocked until the complete Task 1 Level 1 gate succeeds;
 - the remote repository retains many historical `agent/*` branches; branch names
   alone are not execution authority;
-- protected `main` still contains transition wording that says PR #199 is open
-  even though PR #199 produced protected `main`; the active package must reconcile
-  that wording before closure.
+- PR #200 reconciles the stale PR #199-open and branch-not-created transition
+  wording in the existing entry and current-state authorities; that reconciliation
+  is proposed source until the PR merges.
 
 ## Reconnaissance result
 
@@ -350,9 +352,11 @@ evidence.
 
 ## Exact next action
 
-Open the material draft PR from this branch, then implement Task 1 only. Do not
-mutate registry or database authority until Task 1 types, journal invariants,
-authority reconciliation and focused Rust tests are reviewable together.
+Finish the complete Task 1 Level 1 gate on the exact live PR #200 head. After
+authority/documentation, Rust 1.77, stable Tauri, ordinary source quality and every
+selected CI lane succeed, implement Task 2 — native switch transaction — only.
+Do not begin create, rename, archive, recover or delete until the switch task gate
+passes.
 
 ## Protected local boundaries
 
