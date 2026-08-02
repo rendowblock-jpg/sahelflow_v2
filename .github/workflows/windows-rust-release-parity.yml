@@ -81,6 +81,16 @@ jobs:
             Tee-Object -FilePath sf-windows-rust-release-parity.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+          foreach ($contract in @(
+            'shop_lifecycle_switch',
+            'shop_lifecycle_mutation'
+          )) {
+            Write-Host "Running Windows native lifecycle integration contract: $contract"
+            & cargo test --manifest-path src-tauri/Cargo.toml --test $contract --locked -- --nocapture --test-threads=1 2>&1 |
+              Tee-Object -FilePath sf-windows-rust-release-parity.log -Append
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
       - name: Verify Windows Rust lint authority
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
 
