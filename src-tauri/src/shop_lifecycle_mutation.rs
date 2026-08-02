@@ -1,0 +1,12 @@
+include!("shop_lifecycle_mutation_01.inc.rs");
+include!("shop_lifecycle_mutation_02.inc.rs");
+include!("shop_lifecycle_mutation_03.inc.rs");
+include!("shop_lifecycle_mutation_04.inc.rs");
+include!("shop_lifecycle_mutation_05.inc.rs");
+include!("shop_lifecycle_mutation_06.inc.rs");
+include!("shop_lifecycle_mutation_07.inc.rs");
+include!("shop_lifecycle_mutation_08.inc.rs");
+include!("shop_lifecycle_mutation_09.inc.rs");
+include!("shop_lifecycle_mutation_10.inc.rs");
+include!("shop_lifecycle_mutation_11.inc.rs");
+include!("shop_lifecycle_mutation_12.inc.rs");
