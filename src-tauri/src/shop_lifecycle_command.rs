@@ -1,6 +1,6 @@
 use crate::shop_lifecycle::{
-    ShopLifecycleContractError, ShopLifecycleJournal, ShopLifecycleOperation,
-    ShopLifecycleRequest, ShopLifecycleStage,
+    ShopLifecycleContractError, ShopLifecycleJournal, ShopLifecycleOperation, ShopLifecycleRequest,
+    ShopLifecycleStage,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -178,8 +178,7 @@ impl ShopLifecycleCommand {
         now_unix_ms: u64,
     ) -> Result<(), ShopLifecycleCommandError> {
         self.authorization.validate()?;
-        if self.authorization.issued_at_unix_ms
-            > now_unix_ms.saturating_add(COMMAND_CLOCK_SKEW_MS)
+        if self.authorization.issued_at_unix_ms > now_unix_ms.saturating_add(COMMAND_CLOCK_SKEW_MS)
         {
             return Err(ShopLifecycleCommandError::CommandNotYetValid);
         }
@@ -202,9 +201,7 @@ impl ShopLifecycleCommand {
     }
 }
 
-#[derive(
-    Clone, Debug, Deserialize, Eq, PartialEq, Serialize,
-)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthenticatedShopLifecycleJournal {
     pub authorization: ShopLifecycleAuthorization,
