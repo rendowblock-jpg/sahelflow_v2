@@ -9,9 +9,7 @@ mod shop_lifecycle;
 mod protocol {
     include!("../src/shop_lifecycle_command.rs");
 
-    pub fn framed_authorization(
-        authorization: &ShopLifecycleAuthorization,
-    ) -> Vec<u8> {
+    pub fn framed_authorization(authorization: &ShopLifecycleAuthorization) -> Vec<u8> {
         authorization.mac_message()
     }
 
@@ -26,11 +24,10 @@ mod protocol {
     }
 }
 
-use crate::shop_lifecycle::{ShopLifecycleOperation, ShopLifecycleRequest};
 use crate::protocol::{
-    authorization_mac, framed_authorization, ShopLifecycleAuthorization,
-    ShopLifecyclePayload,
+    authorization_mac, framed_authorization, ShopLifecycleAuthorization, ShopLifecyclePayload,
 };
+use crate::shop_lifecycle::{ShopLifecycleOperation, ShopLifecycleRequest};
 use sha2::{Digest, Sha256};
 
 fn identity(character: char) -> String {
