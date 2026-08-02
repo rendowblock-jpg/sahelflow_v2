@@ -10,7 +10,7 @@
 > **Phase 0 status:** Complete
 > **Phase 1 status:** Protected-source closed through PR #195
 > **Active product phase:** Phase 2 — identity, authorization, licensing and multi-shop
-> **Current session:** governance reset; product implementation paused
+> **Next phase outcome:** native multi-shop under the audit-first operating model
 > **Execution epic:** issue #164
 > **Last consolidated:** 2026-08-02
 
@@ -132,8 +132,8 @@ frontier.
 
 ## Result
 
-Complete through FD-028 and the Phase 0 closeout. This governance reset repairs
-later drift without reopening the product scope.
+Complete through FD-028 and the Phase 0 closeout. The active operating model
+rejects later execution drift without reopening product scope.
 
 ---
 
