@@ -16,6 +16,10 @@ path = "../../tests/shop_lifecycle_contract.rs"
 name = "shop_lifecycle_protocol_diagnostics"
 path = "../../tests/shop_lifecycle_protocol_diagnostics.rs"
 
+[[test]]
+name = "shop_lifecycle_frame_diff"
+path = "../../tests/shop_lifecycle_frame_diff.rs"
+
 [dependencies]
 serde = { version = "=1.0.228", features = ["derive"] }
 sha2 = "=0.10.9"
