@@ -156,15 +156,13 @@ fn execute_switch(
 ) -> Result<(), String> {
     accepted
         .transition(ShopLifecycleStage::Quiescing, unix_milliseconds())
-        .map_err(|error| fail_before_stop(app, accepted, origin_generation, error.to_string()))?;
+        .map_err(|error| {
+            fail_before_stop(app, accepted, origin_generation, error.to_string())
+        })?;
 
     if let Err(error) = stop_planned_runtime(app, origin_generation) {
         let manual = supervisor_in_safe_mode(app);
-        let _ = accepted.block(
-            unix_milliseconds(),
-            "CURRENT_RUNTIME_STOP_FAILED",
-            manual,
-        );
+        let _ = accepted.block(unix_milliseconds(), "CURRENT_RUNTIME_STOP_FAILED", manual);
         if !manual {
             cancel_planned_transition(app, origin_generation);
         }
@@ -294,7 +292,8 @@ fn recover_after_target_failure(
         .compensate_registry(unix_milliseconds(), failure_code)
         .map_err(|error| error.to_string())?;
     replace_current_authority(app, prior).map_err(|error| error.to_string())?;
-    let runtime = start_planned_runtime(app, failed_generation).map_err(|error| error.to_string())?;
+    let runtime =
+        start_planned_runtime(app, failed_generation).map_err(|error| error.to_string())?;
     activate_ready_runtime(app, &runtime).map_err(|error| error.to_string())?;
     accepted
         .complete_recovery(unix_milliseconds())
