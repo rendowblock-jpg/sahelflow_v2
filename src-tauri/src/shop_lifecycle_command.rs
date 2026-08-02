@@ -1,4 +1,4 @@
-use crate::shop_lifecycle::{
+use super::shop_lifecycle::{
     ShopLifecycleContractError, ShopLifecycleJournal, ShopLifecycleOperation, ShopLifecycleRequest,
     ShopLifecycleStage,
 };
