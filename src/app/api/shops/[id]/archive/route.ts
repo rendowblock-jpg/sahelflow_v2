@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import { getRegistry } from "@/lib/shops";
 import {
   enqueueAuthorizedNativeLifecycle,
@@ -15,6 +16,7 @@ export const POST = withErrorHandler(
     _req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
   ) => {
+    await requireTrustedAction("shops.delete");
     const { id } = await params;
     const registry = getRegistry();
     const target = registryLifecycleTarget(id, registry.shops);
