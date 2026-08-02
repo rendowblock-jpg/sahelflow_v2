@@ -390,7 +390,9 @@ supervisor then generates and persists a new 52-bit random minimum
 permanent-recovery epoch in a dedicated high numeric namespace. The UI exposes
 that epoch for the Founder offline signing ceremony, and every later permanent
 claim must carry exactly that value, so historical claims remain rejected
-without putting the permanent signing key online. Cloudflare D1 has one unique
+without putting the permanent signing key online. An exact protected challenge
+supersedes the prior random recovery value even when it is numerically lower;
+revocation and transfer epochs remain monotonic. Cloudflare D1 has one unique
 trial record per opaque device and re-signs the original dates for reinstall
 recovery. Expiry or any invalid authority
 blocks server rendering, client UI, background provider effects and every

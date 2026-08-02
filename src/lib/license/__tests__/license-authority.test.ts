@@ -174,7 +174,7 @@ describe("installation license authority", () => {
       expiresAt: null,
       keyId: "permanent_test_001",
       issuer: "founder-offline",
-      recoveryEpoch: 7,
+      recoveryEpoch: 8_000_000_000_000_000,
       revocationEpoch: 4,
     });
     await activateSignedEntitlement(permanent, shop, new Date("2026-08-03T00:00:00.000Z"));
@@ -187,6 +187,7 @@ describe("installation license authority", () => {
       expiresAt: "2026-08-03T00:00:00.000Z",
     });
     const now = new Date("2026-08-10T00:00:00.000Z");
+    expect(permanent.claims.recoveryEpoch).toBeGreaterThan(5_481_516_234_200_000);
 
     await expect(
       activateSignedEntitlement(expiredTrial, shop, now, {

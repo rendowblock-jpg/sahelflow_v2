@@ -530,10 +530,15 @@ export async function activateSignedEntitlement(
     const initializePermanentRecovery = onlineNativeReconciliation;
     const reconcileExpiredOnlineTrial =
       initializePermanentRecovery && result.status === "expired";
+    const exactNativeRecovery =
+      minimumPermanentRecoveryEpoch > 0 &&
+      entitlement.claims.type === "permanent" &&
+      entitlement.claims.issuer === "founder-offline" &&
+      entitlement.claims.recoveryEpoch === minimumPermanentRecoveryEpoch;
     if (
       minimumPermanentRecoveryEpoch > 0 &&
       entitlement.claims.type === "permanent" &&
-      entitlement.claims.recoveryEpoch !== minimumPermanentRecoveryEpoch
+      !exactNativeRecovery
     ) {
       throw authorityError(
         "Permanent activation requires the current native recovery epoch",
@@ -559,7 +564,8 @@ export async function activateSignedEntitlement(
       !reconcileInstalledPermanent &&
       (entitlement.claims.revocationEpoch < current.state.entitlement.claims.revocationEpoch ||
         entitlement.claims.transferEpoch < current.state.entitlement.claims.transferEpoch ||
-        entitlement.claims.recoveryEpoch < current.state.entitlement.claims.recoveryEpoch)
+        (entitlement.claims.recoveryEpoch < current.state.entitlement.claims.recoveryEpoch &&
+          !exactNativeRecovery))
     ) {
       throw authorityError("Entitlement would roll back protected commercial state", "LICENSE_ROLLBACK", 409);
     }
