@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { getIdentityAdministrationSnapshot } from "@/lib/identity/control-authority";
-import { listShops, createShop } from "@/lib/shops";
+import { listShops } from "@/lib/shops";
+import { enqueueAuthorizedNativeLifecycle } from "@/lib/shops/native-lifecycle-authority";
 
 export const dynamic = "force-dynamic";
 
-/**
- * GET /api/shops — list the exact registry shops granted to the durable member.
- */
+/** GET /api/shops — list the exact registry shops granted to the durable member. */
 export const GET = withErrorHandler(async (): Promise<NextResponse> => {
   const actorContext = await requireTrustedAction("shops.read");
   const shops = listShops();
@@ -45,20 +45,29 @@ export const GET = withErrorHandler(async (): Promise<NextResponse> => {
   });
 }, "GET /api/shops");
 
-const createShopSchema = z.object({
-  name: z.string().min(1).max(50),
-  icon: z.string().max(10).optional().nullable(),
-});
+const createShopSchema = z
+  .object({
+    name: z.string().trim().min(1).max(50),
+    icon: z.string().max(32).optional().nullable(),
+  })
+  .strict();
 
-/**
- * POST /api/shops — create a new shop.
- * Body: { name: string, icon?: string | null }
- * Initializes the shop's SQLite file with the Prisma schema.
- */
+/** POST /api/shops — authorize and enqueue native shop provisioning. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireTrustedAction("shops.create");
-  const body = await req.json();
-  const input = createShopSchema.parse(body);
-  const shop = createShop({ name: input.name, icon: input.icon ?? null });
-  return NextResponse.json({ shop }, { status: 201 });
+  const input = createShopSchema.parse(await req.json());
+  const operation = await enqueueAuthorizedNativeLifecycle({
+    action: "shops.create",
+    operation: "create",
+    payload: {
+      operation: "create",
+      name: input.name,
+      icon: input.icon ?? null,
+    },
+    target: null,
+  });
+
+  return NextResponse.json(
+    { status: "pending", operationId: operation.operationId },
+    { status: 202 },
+  );
 }, "POST /api/shops");
