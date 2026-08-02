@@ -119,7 +119,12 @@ export async function enqueueAuthorizedNativeLifecycle(input: Readonly<{
   );
   assertExactActor(actorContext, identity);
 
-  if (input.target && !identity.member.shopIds.includes(input.target.id)) {
+  const ownerHasInstallationAuthority = actorContext.actor.role === "owner";
+  if (
+    input.target &&
+    !ownerHasInstallationAuthority &&
+    !identity.member.shopIds.includes(input.target.id)
+  ) {
     throw lifecycleError(
       "The current durable member is not authorized for the target shop",
       "SHOP_TARGET_FORBIDDEN",
@@ -130,7 +135,7 @@ export async function enqueueAuthorizedNativeLifecycle(input: Readonly<{
   const recentOwnerReauthentication =
     input.recentOwnerReauthentication === true;
   if (input.operation === "delete") {
-    if (actorContext.actor.role !== "owner" || !recentOwnerReauthentication) {
+    if (!ownerHasInstallationAuthority || !recentOwnerReauthentication) {
       throw lifecycleError(
         "Destructive shop deletion requires owner authority and recent reauthentication",
         "SHOP_DELETE_REAUTHENTICATION_REQUIRED",
