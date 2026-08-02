@@ -41,16 +41,23 @@ jobs:
 
           mutation_path = Path("src-tauri/src/shop_lifecycle_mutation_06.inc.rs")
           mutation_source = mutation_path.read_text(encoding="utf-8")
-          before_mutation = '''        ShopLifecyclePayload::Recover { archive_id } => {
-              if let Ok((_, archive)) = read_archive(app_data_dir, archive_id, installation_root) {
-                  if !registry.shops.iter().any(|shop| shop.id == archive.shop.id) {
-                      remove_sqlite_file_set(
-                          &app_data_dir.join("shops").join(&archive.shop.database_file),
-                      )?;
-                  }
-              }
-          }'''
-          after_mutation = '''        ShopLifecyclePayload::Recover { archive_id } => {
+          cleanup_marker = "fn cleanup_uncommitted_artifacts("
+          recover_marker = "        ShopLifecyclePayload::Recover { archive_id } => {\n"
+          archive_marker = "        ShopLifecyclePayload::Archive | ShopLifecyclePayload::Delete { .. } => {\n"
+          cleanup_start = mutation_source.find(cleanup_marker)
+          recover_start = mutation_source.find(recover_marker, cleanup_start)
+          recover_end = mutation_source.find(archive_marker, recover_start)
+          if cleanup_start < 0 or recover_start < 0 or recover_end < 0:
+              raise SystemExit("mutation cleanup markers changed")
+          recover_block = mutation_source[recover_start:recover_end]
+          required_fragments = (
+              "if let Ok((_, archive)) = read_archive(app_data_dir, archive_id, installation_root)",
+              "if !registry.shops.iter().any(|shop| shop.id == archive.shop.id)",
+              "remove_sqlite_file_set(",
+          )
+          if not all(fragment in recover_block for fragment in required_fragments):
+              raise SystemExit("mutation cleanup authority changed")
+          replacement = '''        ShopLifecyclePayload::Recover { archive_id } => {
               match read_archive(app_data_dir, archive_id, installation_root) {
                   Ok((_, archive))
                       if !registry.shops.iter().any(|shop| shop.id == archive.shop.id) =>
@@ -61,11 +68,10 @@ jobs:
                   }
                   Ok(_) | Err(_) => {}
               }
-          }'''
-          if mutation_source.count(before_mutation) != 1:
-              raise SystemExit("mutation cleanup anchor changed")
+          }
+'''
           mutation_path.write_text(
-              mutation_source.replace(before_mutation, after_mutation),
+              mutation_source[:recover_start] + replacement + mutation_source[recover_end:],
               encoding="utf-8",
           )
 
