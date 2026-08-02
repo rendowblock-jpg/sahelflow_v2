@@ -13,6 +13,7 @@ use self::shop_lifecycle_mutation::{
     accept_mutation, recover_interrupted_lifecycle, AcceptedMutation, MutationAuthorityError,
 };
 use self::shop_lifecycle_switch::{accept_switch, AcceptedSwitch, SwitchAuthorityError};
+use crate::installation_root_key::InstallationRootKey;
 use crate::migration_coordinator::ActiveShopAuthority;
 use std::error::Error;
 use std::fs::{self, File, OpenOptions};
@@ -48,7 +49,7 @@ pub(super) fn ensure_started(app: &tauri::AppHandle) -> HostResult<()> {
     let mut installation_root = [0_u8; 32];
     {
         let root = app
-            .try_state::<crate::InstallationRootKey>()
+            .try_state::<InstallationRootKey>()
             .ok_or_else(|| IoError::other("installation-root authority is missing"))?;
         installation_root.copy_from_slice(root.as_bytes());
     }
@@ -140,7 +141,7 @@ fn process_switch(
     let mut installation_root = [0_u8; 32];
     {
         let root = app
-            .try_state::<crate::InstallationRootKey>()
+            .try_state::<InstallationRootKey>()
             .ok_or_else(|| IoError::other("installation-root authority is missing"))?;
         installation_root.copy_from_slice(root.as_bytes());
     }
@@ -192,7 +193,7 @@ fn process_mutation(
     let mut installation_root = [0_u8; 32];
     {
         let root = app
-            .try_state::<crate::InstallationRootKey>()
+            .try_state::<InstallationRootKey>()
             .ok_or_else(|| IoError::other("installation-root authority is missing"))?;
         installation_root.copy_from_slice(root.as_bytes());
     }
@@ -652,7 +653,8 @@ fn activate_ready_runtime(
             .finish_planned_transition(runtime.generation)
             .map_err(IoError::other)?;
     }
-    let environment = crate::sidecar_env(app, &runtime.protocol)?;
+    let environment = crate::sidecar_env(app, &runtime.protocol)
+        .map_err(|error| IoError::other(error.to_string()))?;
     crate::spawn_sidecar_and_watch(app.clone(), environment, runtime.generation)
 }
 
