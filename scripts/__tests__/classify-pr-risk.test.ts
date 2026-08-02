@@ -87,6 +87,21 @@ describe("classifyPrRisk", () => {
     });
   });
 
+  it("forces complete Windows and installed proof for the Phase 2 checkpoint", () => {
+    expect(
+      classifyPrRisk([
+        ".github/phase-checkpoints/phase2-native-multishop.json",
+      ]),
+    ).toMatchObject({
+      docsOnly: false,
+      runQuality: true,
+      runTauri: true,
+      runWindowsStandalone: true,
+      runWindowsRust: true,
+      runInstalledMsi: true,
+    });
+  });
+
   it("runs a reusable Windows lane when its own proof harness changes", () => {
     expect(
       classifyPrRisk([
