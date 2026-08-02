@@ -539,7 +539,9 @@ fn ensure_no_incomplete_journal(
     journal.validate(installation_root)?;
     if matches!(
         journal.journal.stage,
-        ShopLifecycleStage::Completed | ShopLifecycleStage::Recovered | ShopLifecycleStage::Blocked
+        ShopLifecycleStage::Completed
+            | ShopLifecycleStage::Recovered
+            | ShopLifecycleStage::Blocked
     ) {
         return Ok(());
     }
