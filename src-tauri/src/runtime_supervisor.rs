@@ -331,7 +331,9 @@ mod tests {
     #[test]
     fn planned_transition_suppresses_crash_recovery_and_finishes_at_ready() {
         let mut supervisor = RuntimeSupervisor::default();
-        let current = supervisor.begin_generation().expect("begin current runtime");
+        let current = supervisor
+            .begin_generation()
+            .expect("begin current runtime");
         supervisor
             .register_ready(current)
             .expect("register current runtime");
@@ -365,7 +367,9 @@ mod tests {
     #[test]
     fn planned_target_failure_can_start_compensation_generation() {
         let mut supervisor = RuntimeSupervisor::default();
-        let current = supervisor.begin_generation().expect("begin current runtime");
+        let current = supervisor
+            .begin_generation()
+            .expect("begin current runtime");
         supervisor
             .register_ready(current)
             .expect("register current runtime");
