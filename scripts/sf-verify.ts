@@ -22,6 +22,9 @@ interface VitestAssertionResult {
 
 interface VitestFileResult {
   name?: string;
+  status?: string;
+  message?: string;
+  failureMessage?: string;
   assertionResults?: VitestAssertionResult[];
 }
 
@@ -193,8 +196,10 @@ function printVitestFailures(): boolean {
     const report = JSON.parse(readFileSync(vitestResultsPath, "utf8")) as VitestJsonResult;
     const failures: string[][] = [];
     for (const file of report.testResults ?? []) {
+      let assertionFailureCount = 0;
       for (const assertion of file.assertionResults ?? []) {
         if (assertion.status !== "failed") continue;
+        assertionFailureCount += 1;
 
         const title = [...(assertion.ancestorTitles ?? []), assertion.title]
           .filter(Boolean)
@@ -205,12 +210,25 @@ function printVitestFailures(): boolean {
           ...(assertion.failureMessages ?? []),
         ]);
       }
+
+      if (assertionFailureCount === 0 && file.status === "failed") {
+        const fileMessages = [file.failureMessage, file.message]
+          .filter((value): value is string => Boolean(value?.trim()))
+          .filter((value, index, values) => values.indexOf(value) === index);
+        failures.push([
+          `test file: ${file.name ?? "unknown"}`,
+          "file-level failure: import, collection, setup or hook",
+          ...(fileMessages.length > 0
+            ? fileMessages
+            : ["Vitest marked this file failed without assertion-level diagnostics."]),
+        ]);
+      }
     }
 
     if (failures.length === 0) return false;
 
     const rendered = persistVitestFailures(failures);
-    console.error(`    Vitest reported ${failures.length} failed assertion(s).`);
+    console.error(`    Vitest reported ${failures.length} failure section(s).`);
     printOutput(rendered);
     return true;
   } catch (error) {
