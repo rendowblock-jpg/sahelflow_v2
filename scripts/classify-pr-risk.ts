@@ -35,60 +35,27 @@ function isVersionOrReleaseAuthority(path: string): boolean {
   );
 }
 
-function affectsTauri(path: string): boolean {
-  return path.startsWith("src-tauri/");
-}
-
-function affectsWindowsRust(path: string): boolean {
+function changesWindowsRustProof(path: string): boolean {
   return (
-    affectsTauri(path) ||
-    path.startsWith("sidecars/whatsapp/") ||
-    path.startsWith("prisma/") ||
-    path === "scripts/build-sidecar.ts" ||
-    path === "scripts/prepare-runtime.ts" ||
-    path === "scripts/prepare-libsodium-windows.ps1" ||
     path === ".github/workflows/windows-rust-release-parity.yml" ||
-    path === "package.json" ||
-    path === "bun.lock" ||
-    path === "bun.lockb"
+    path === "scripts/stress-contained-tree.ps1"
   );
 }
 
-function affectsWindowsStandalone(path: string): boolean {
+function changesWindowsStandaloneProof(path: string): boolean {
   return (
-    affectsWindowsRust(path) ||
-    path.startsWith("src/app/api/internal/runtime-") ||
-    path.startsWith("src/components/runtime/") ||
-    path === "src/app/layout.tsx" ||
-    path === "src/lib/runtime-auth.ts" ||
-    path === "src/lib/db.ts" ||
-    path === "src/proxy.ts" ||
     path === "scripts/verify-windows-packaged-runtime.ts" ||
     path === "scripts/verify-installed-standalone.ts" ||
     path === "scripts/standalone-manifest.ts"
   );
 }
 
-function affectsInstalledMsi(path: string): boolean {
+function changesInstalledMsiProof(path: string): boolean {
   return (
-    path === "sahelflow.version.json" ||
-    affectsTauri(path) ||
-    path.startsWith("src/app/api/internal/runtime-") ||
-    path.startsWith("src/components/runtime/") ||
-    path === "src/app/layout.tsx" ||
-    path === "src/lib/runtime-auth.ts" ||
-    path === "src/lib/db.ts" ||
     path === "scripts/install-founder-windows.ps1" ||
     path === "scripts/verify-installed-windows-msi.ps1" ||
     path === "scripts/verify-installed-windows-ui.ps1" ||
-    path === "scripts/verify-installed-standalone.ts" ||
-    path === "scripts/standalone-manifest.ts" ||
-    path === "scripts/prepare-runtime.ts" ||
-    path === "scripts/prepare-libsodium-windows.ps1" ||
-    path === ".github/workflows/windows-installed-e2e.yml" ||
-    path === "package.json" ||
-    path === "bun.lock" ||
-    path === "bun.lockb"
+    path === ".github/workflows/windows-installed-e2e.yml"
   );
 }
 
@@ -101,11 +68,16 @@ export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
     changedCount: paths.length,
     docsOnly,
     runQuality: !docsOnly && paths.length > 0,
-    runTauri: forcesFullReleaseProof || paths.some(affectsTauri),
+    // Ordinary packages merge on complete source evidence. Expensive Windows
+    // and installed proof runs once on phase/milestone authority instead of
+    // repeatedly rebuilding every package accumulated into that candidate.
+    runTauri: forcesFullReleaseProof,
     runWindowsStandalone:
-      forcesFullReleaseProof || paths.some(affectsWindowsStandalone),
-    runWindowsRust: forcesFullReleaseProof || paths.some(affectsWindowsRust),
-    runInstalledMsi: forcesFullReleaseProof || paths.some(affectsInstalledMsi),
+      forcesFullReleaseProof || paths.some(changesWindowsStandaloneProof),
+    runWindowsRust:
+      forcesFullReleaseProof || paths.some(changesWindowsRustProof),
+    runInstalledMsi:
+      forcesFullReleaseProof || paths.some(changesInstalledMsiProof),
   };
 }
 

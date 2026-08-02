@@ -384,13 +384,17 @@ Run selected complete lanes once:
 - Draft feedback reports the complete actionable failure set for each lane; do
   not intentionally stop after the first stale fixture when a full diagnostic
   run is affordable.
-- Type, lint, unit, database/integration and path-risk lanes run in parallel and
-  feed one always-reporting required-check aggregator.
+- Ordinary outcome PRs run complete type, lint, unit, database/integration and
+  audit evidence through one always-reporting required-check aggregator.
+- Windows standalone, Rust release-parity and installed-MSI lanes run once on
+  the complete phase or milestone candidate. A direct edit to one of those
+  proof harnesses may select its own lane earlier so the harness cannot merge
+  unverified.
 - Maintain shared trusted-actor, revoked/stale/cross-shop and marked disposable
   route fixtures. A shared authority change updates its consumer inventory and
   fixtures in the same package.
-- Full frozen-head checkpoints remain blocking for the named outcome even when
-  draft feedback is path-selected.
+- The phase or milestone frozen-head checkpoint remains blocking, but ordinary
+  source packages do not repeatedly rebuild the same accumulated artifact.
 
 ### Evidence ladder
 
