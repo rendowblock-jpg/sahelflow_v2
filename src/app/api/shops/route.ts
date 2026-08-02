@@ -30,11 +30,14 @@ export const GET = withErrorHandler(async (): Promise<NextResponse> => {
       identity.currentActor.revocationEpoch ===
         actorContext.actor.revocationEpoch &&
       identity.member.id === actorContext.actor.workspaceMemberId;
-    const grantedShopIds = actorMatches
-      ? new Set(identity.member.shopIds)
-      : new Set<string>();
+    const visibleShops =
+      actorMatches && actorContext.actor.role === "owner"
+        ? shops
+        : actorMatches
+          ? shops.filter((shop) => identity.member.shopIds.includes(shop.id))
+          : [];
     return NextResponse.json({
-      shops: shops.filter((shop) => grantedShopIds.has(shop.id)),
+      shops: visibleShops,
       activeShopId: actorContext.shop.shopId,
     });
   }
