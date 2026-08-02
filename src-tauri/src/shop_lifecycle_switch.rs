@@ -198,8 +198,8 @@ impl AcceptedSwitch {
             migration_coordinator::active_authority(&self.app_data_dir, &self.migration_set_sha256)
                 .map_err(|error| {
                     SwitchAuthorityError::ManualRecoveryRequired(format!(
-                        "the compensated registry did not produce canonical prior authority: {error}"
-                    ))
+                "the compensated registry did not produce canonical prior authority: {error}"
+            ))
                 })?;
         if recovered.shop_id != committed.previous_authority.shop_id
             || recovered.shop_incarnation_id != committed.previous_authority.shop_incarnation_id
@@ -539,9 +539,7 @@ fn ensure_no_incomplete_journal(
     journal.validate(installation_root)?;
     if matches!(
         journal.journal.stage,
-        ShopLifecycleStage::Completed
-            | ShopLifecycleStage::Recovered
-            | ShopLifecycleStage::Blocked
+        ShopLifecycleStage::Completed | ShopLifecycleStage::Recovered | ShopLifecycleStage::Blocked
     ) {
         return Ok(());
     }

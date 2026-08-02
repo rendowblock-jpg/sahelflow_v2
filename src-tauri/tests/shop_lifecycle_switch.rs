@@ -200,10 +200,7 @@ fn failed_target_finishes_recovery_only_after_prior_runtime_is_ready() {
     compensating
         .validate(&ROOT)
         .expect("authenticate compensating journal");
-    assert_eq!(
-        compensating.journal.stage,
-        ShopLifecycleStage::Compensating
-    );
+    assert_eq!(compensating.journal.stage, ShopLifecycleStage::Compensating);
 
     switch
         .complete_recovery(1_001_009)
