@@ -122,10 +122,12 @@ assignments, workgroups, queues, comments, exact-member mentions, handovers,
 operational action permissions, protected-field projections and complete
 Arabic/French/English seller states are implemented and checkpointed.
 
-The active package is signed licensing and entitlement authority on
-`agent/license-entitlement-authority` from the exact protected baseline above.
-Native multi-shop follows in its own short Phase 2 PR. Version and release remain
-unchanged; Windows/Rust/MSI proof runs once on the complete Phase 2 candidate.
+Signed licensing is protected source through PR #197 at
+`04d4c51831c6e043ab39a614a7e947e6b27d01e6`; exact-head CI `30744598944`
+passed and every review thread was resolved. Native multi-shop is now the active
+package and follows on `agent/native-multi-shop-authority`. Version and release
+remain unchanged; Windows/Rust/MSI proof runs once on the complete Phase 2
+candidate.
 
 ## Final completion model
 

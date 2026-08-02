@@ -242,8 +242,8 @@ revocation, stale policy, route ordering, restart and recovery are covered.
 The separated frozen-head review closed request-parsing authority order,
 state-only handover persistence and stale/revoked UI classification findings and
 found no remaining P0/P1. It was not independent review. PR #195 is merged and
-version-neutral; licensing proceeds on its dedicated branch from protected
-`main`.
+version-neutral. Signed licensing is protected source through PR #197; native
+multi-shop is the next dedicated package from protected `main`.
 
 ## Licensing and entitlements
 
