@@ -78,6 +78,20 @@ impl AcceptedSwitch {
         &self.target.id
     }
 
+    pub fn begin_compensation(
+        &mut self,
+        now_unix_ms: u64,
+        failure_code: &str,
+    ) -> Result<(), SwitchAuthorityError> {
+        self.journal.transition(
+            &self.installation_root,
+            ShopLifecycleStage::Compensating,
+            now_unix_ms,
+            Some(failure_code.to_string()),
+        )?;
+        self.persist_journal()
+    }
+
     pub fn transition(
         &mut self,
         next: ShopLifecycleStage,
@@ -159,13 +173,7 @@ impl AcceptedSwitch {
                 "the switch registry transaction has not been committed".to_string(),
             )
         })?;
-        self.journal.transition(
-            &self.installation_root,
-            ShopLifecycleStage::Compensating,
-            now_unix_ms,
-            Some(failure_code.to_string()),
-        )?;
-        self.persist_journal()?;
+        self.begin_compensation(now_unix_ms, failure_code)?;
 
         let registry_path = self.app_data_dir.join(REGISTRY_FILE);
         let mut registry: ShopRegistry = read_json(&registry_path)?;
@@ -240,17 +248,16 @@ impl AcceptedSwitch {
             now_unix_ms,
             Some(failure_code.to_string()),
         )?;
-        self.persist_journal()?;
         if manual_recovery {
+            self.persist_journal()?;
             self.journal.transition(
                 &self.installation_root,
                 ShopLifecycleStage::ManualRecoveryRequired,
                 now_unix_ms.saturating_add(1),
                 Some(failure_code.to_string()),
             )?;
-            self.persist_terminal_journal()?;
         }
-        Ok(())
+        self.persist_terminal_journal()
     }
 
     fn restore_after_commit_failure<T>(
@@ -532,7 +539,7 @@ fn ensure_no_incomplete_journal(
     journal.validate(installation_root)?;
     if matches!(
         journal.journal.stage,
-        ShopLifecycleStage::Completed | ShopLifecycleStage::Recovered
+        ShopLifecycleStage::Completed | ShopLifecycleStage::Recovered | ShopLifecycleStage::Blocked
     ) {
         return Ok(());
     }
