@@ -102,9 +102,10 @@ Those remain at Phase 2 exit.
 ### Documentation frontier — PR #198
 
 PR #198 merged the previous documentation frontier at
-`d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`. CI `30745607118` passed. The
-single-agent governance reset corrects contradictions that remained after that
-merge.
+`d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`. CI `30745607118` passed.
+The current operating contract reconciles the contradictions that remained after
+that merge through single-agent execution, audit-first planning, batch remediation
+and tiered checkpoints.
 
 ## Release and installed truth
 
@@ -321,20 +322,18 @@ launch/reopen results are far over target. Startup stages, process shutdown,
 query/render performance, memory, low-resource scheduling and eight-hour stability
 remain blocking Phase 7 evidence and continuous package requirements.
 
-### 10. CI and governance needed reconciliation
+### 10. CI and governance reconciliation
 
-Before this reset:
+The active operating contract now corrects the previously observed drift:
 
-- `AGENTS.md` retained the old PR #195 merge-decision frontier;
-- issue #164 body retained `522ab...` and open PR #195 claims;
-- Current State contradicted itself about identity/licensing;
-- workflow retained simultaneous-WIP wording;
-- `sf-audit.ts` protected stale markers;
-- PR #186 remained obsolete/open;
-- PR #196 remained stale with an unresolved file-level Vitest diagnostic gap.
+- stale PR #195 and `522ab...` execution-frontier language;
+- contradictions about identity, Teams and signed licensing;
+- simultaneous-WIP wording that conflicted with the single-agent rule;
+- documentation audit markers that protected stale text;
+- incomplete Vitest diagnostics for import, collection, setup and file-hook
+  failures.
 
-The governance reset corrects the active documentation and process. Product code
-is unchanged.
+Product runtime behavior is unchanged by this governance package.
 
 ## Capability status
 
@@ -360,16 +359,14 @@ is unchanged.
 
 ## Immediate frontier
 
-1. Merge the single-agent governance reset after authority/docs CI and frozen
-   review.
-2. Close PR #186 as obsolete.
-3. Repair or supersede PR #196’s complete-failure diagnostic intent on current
-   main.
-4. Select Desktop as sole active implementation agent.
-5. Create native multi-shop from current protected `main`.
-6. Complete Phase 2 audit and consolidated Problem Register before edits.
-7. Implement native multi-shop with Level 1 gates.
-8. Run frozen review and batch remediation.
-9. Run Phase 2 Level 2 plus risk-triggered Level 3 Windows/Rust/signed-MSI/
+1. Close PR #186 as obsolete after the governance package is protected.
+2. Close PR #196 as superseded after the replacement file-level Vitest diagnostics
+   are protected; do not merge its stale branch wholesale.
+3. Confirm the Desktop Agent as the sole active implementation agent.
+4. Create native multi-shop from the then-current protected `main`.
+5. Complete the Phase 2 audit and consolidated Problem Register before edits.
+6. Implement native multi-shop with Level 1 gates.
+7. Run frozen review and batch remediation.
+8. Run Phase 2 Level 2 plus risk-triggered Level 3 Windows/Rust/signed-MSI/
    install/reopen/preserved-data checkpoint.
-10. Close Phase 2 only with zero known P0/P1 and exact evidence.
+9. Close Phase 2 only with zero known P0/P1 and exact evidence.
