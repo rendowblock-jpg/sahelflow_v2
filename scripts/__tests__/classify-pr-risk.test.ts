@@ -62,6 +62,16 @@ describe("classifyPrRisk", () => {
     });
   });
 
+  it("keeps proxy authorization changes on source and standalone proof", () => {
+    expect(classifyPrRisk(["src/proxy.ts"])).toMatchObject({
+      runQuality: true,
+      runTauri: false,
+      runWindowsStandalone: true,
+      runWindowsRust: false,
+      runInstalledMsi: false,
+    });
+  });
+
   it("forces every release proof when version authority changes", () => {
     expect(classifyPrRisk(["sahelflow.version.json"])).toMatchObject({
       runQuality: true,

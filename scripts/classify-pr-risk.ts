@@ -78,7 +78,6 @@ function affectsInstalledMsi(path: string): boolean {
     path === "src/app/layout.tsx" ||
     path === "src/lib/runtime-auth.ts" ||
     path === "src/lib/db.ts" ||
-    path === "src/proxy.ts" ||
     path === "scripts/install-founder-windows.ps1" ||
     path === "scripts/verify-installed-windows-msi.ps1" ||
     path === "scripts/verify-installed-windows-ui.ps1" ||
