@@ -271,9 +271,14 @@ function deviceBinding(): string {
   return value;
 }
 
-function nativeClockAnchor(): string | null {
+function nativeClockAnchor(allowMissing: boolean): string | null {
+  const status = process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS;
   const value = process.env.SF_LICENSE_CLOCK_ANCHOR_MS;
-  if (!value) {
+  if (status === "missing" && allowMissing) return null;
+  if (status === "missing") {
+    throw authorityError("Protected license clock authority requires signed recovery");
+  }
+  if (status !== "ready" || !value) {
     if (process.env.NODE_ENV === "production") {
       throw authorityError("Native license clock authority is unavailable");
     }
@@ -289,8 +294,8 @@ function nativeClockAnchor(): string | null {
   return new Date(timestamp).toISOString();
 }
 
-function highestObservedAt(local: string | null): string | null {
-  const native = nativeClockAnchor();
+function highestObservedAt(local: string | null, allowMissing: boolean): string | null {
+  const native = nativeClockAnchor(allowMissing);
   if (!local) return native;
   if (!native) return local;
   return new Date(local).getTime() >= new Date(native).getTime() ? local : native;
@@ -303,6 +308,10 @@ async function validate(
   lastObservedAt: string | null,
   now: Date,
 ) {
+  const permitsClockRecovery =
+    entitlement.claims.type === "permanent" &&
+    entitlement.claims.issuer === "founder-offline" &&
+    entitlement.claims.recoveryEpoch > 0;
   return validateSignedEntitlement(
     entitlement,
     {
@@ -311,7 +320,7 @@ async function validate(
       deviceBinding: deviceBinding(),
       appVersion: process.env.APP_VERSION ?? "1.0.0-internal.13",
       minimumRevocationEpoch,
-      lastObservedAt: highestObservedAt(lastObservedAt),
+      lastObservedAt: highestObservedAt(lastObservedAt, permitsClockRecovery),
       now,
     },
     licenseVerificationKeyring(),

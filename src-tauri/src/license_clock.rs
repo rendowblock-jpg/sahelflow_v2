@@ -45,7 +45,10 @@ fn parse_clock_payload(payload: &[u8]) -> Result<u64, String> {
     Ok(u64::from_le_bytes(encoded))
 }
 
-pub(crate) fn observe(device_binding: &str, authority_file_exists: bool) -> Result<u64, String> {
+pub(crate) fn observe(
+    device_binding: &str,
+    authority_file_exists: bool,
+) -> Result<Option<u64>, String> {
     let digest = validate_device_binding(device_binding)?;
     let now = now_unix_ms()?;
     observe_platform(device_binding, digest, authority_file_exists, now)
@@ -57,7 +60,7 @@ fn observe_platform(
     _device_digest: &str,
     _authority_file_exists: bool,
     _now: u64,
-) -> Result<u64, String> {
+) -> Result<Option<u64>, String> {
     Err("the protected license clock anchor is available only on Windows".to_owned())
 }
 
@@ -67,7 +70,7 @@ fn observe_platform(
     device_digest: &str,
     authority_file_exists: bool,
     now: u64,
-) -> Result<u64, String> {
+) -> Result<Option<u64>, String> {
     use std::ptr::{null, null_mut};
     use windows_sys::Win32::Foundation::ERROR_SUCCESS;
     use windows_sys::Win32::System::Registry::{
@@ -100,17 +103,16 @@ fn observe_platform(
     }
     let _key_guard = RegistryKey(key);
 
-    let previous = match read_registry_value(key, &value_name)? {
-        Some(ciphertext) => {
-            let plaintext = unprotect(&ciphertext, device_binding)?;
-            Some(parse_clock_payload(&plaintext)?)
-        }
-        None if authority_file_exists => {
-            return Err(
-                "license authority exists but its protected clock anchor is missing".to_owned(),
-            )
-        }
-        None => None,
+    let previous = match read_registry_value(key, &value_name) {
+        Ok(Some(ciphertext)) => match unprotect(&ciphertext, device_binding)
+            .and_then(|plaintext| parse_clock_payload(&plaintext))
+        {
+            Ok(value) => Some(value),
+            Err(_) => return Ok(None),
+        },
+        Ok(None) if authority_file_exists => return Ok(None),
+        Ok(None) => None,
+        Err(_) => return Ok(None),
     };
     let high_water = previous.map_or(now, |value| value.max(now));
     if previous != Some(high_water) {
@@ -127,13 +129,10 @@ fn observe_platform(
             )
         };
         if written != ERROR_SUCCESS {
-            return Err(format!(
-                "could not persist the protected license clock anchor: {}",
-                std::io::Error::from_raw_os_error(written as i32)
-            ));
+            return Ok(None);
         }
     }
-    Ok(high_water)
+    Ok(Some(high_water))
 }
 
 #[cfg(windows)]

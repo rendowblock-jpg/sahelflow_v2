@@ -63,7 +63,8 @@ describe("production licensing authority inventory", () => {
     expect(anchor).toContain("CryptUnprotectData");
     expect(anchor).toContain("authority_file_exists");
     expect(tauri).toContain('"SF_LICENSE_CLOCK_ANCHOR_MS"');
-    expect(authority).toContain("highestObservedAt(lastObservedAt)");
+    expect(tauri).toContain('"SF_LICENSE_CLOCK_ANCHOR_STATUS"');
+    expect(authority).toContain("highestObservedAt(lastObservedAt, permitsClockRecovery)");
   });
 
   it("gates protected server rendering and background provider effects", () => {

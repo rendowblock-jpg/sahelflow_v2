@@ -71,6 +71,7 @@ beforeEach(async () => {
   vi.stubEnv("SF_DEVICE_BINDING", `sfdb1_${"a".repeat(64)}`);
   vi.stubEnv("APP_VERSION", "1.0.0-internal.13");
   vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_MS", "");
+  vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_STATUS", "");
   const publicKey = await getPublicKeyAsync(PRIVATE_KEY);
   vi.stubEnv(
     "SF_LICENSE_TRIAL_PUBLIC_KEYS",
@@ -127,9 +128,34 @@ describe("installation license authority", () => {
       "SF_LICENSE_CLOCK_ANCHOR_MS",
       String(new Date("2026-08-08T00:00:00.000Z").getTime()),
     );
+    vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_STATUS", "ready");
     await expect(
       getLicenseAuthorityProjection(shop, new Date("2026-08-04T00:00:00.000Z")),
     ).resolves.toMatchObject({ status: "clock_rollback" });
+  });
+
+  it("keeps missing-anchor trials locked while allowing signed permanent recovery", async () => {
+    const trial = await signedClaims();
+    await activateSignedEntitlement(trial, shop, new Date("2026-08-03T00:00:00.000Z"));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_STATUS", "missing");
+    vi.stubEnv("SF_LICENSE_CLOCK_ANCHOR_MS", "");
+
+    await expect(
+      getLicenseAuthorityProjection(shop, new Date("2026-08-04T00:00:00.000Z")),
+    ).rejects.toMatchObject({ code: "LICENSE_AUTHORITY_UNAVAILABLE" });
+
+    const recovery = await signedClaims({
+      licenseId: "license_clock_recovery_001",
+      type: "permanent",
+      expiresAt: null,
+      keyId: "permanent_test_001",
+      issuer: "founder-offline",
+      recoveryEpoch: 1,
+    });
+    await expect(
+      activateSignedEntitlement(recovery, shop, new Date("2026-08-04T00:00:00.000Z")),
+    ).resolves.toMatchObject({ status: "valid", type: "permanent" });
   });
 
   it("recovers corrupt local state only with an exact offline recovery claim", async () => {

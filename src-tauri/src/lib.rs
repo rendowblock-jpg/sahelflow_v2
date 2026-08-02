@@ -590,8 +590,14 @@ fn server_env(
         .join("system")
         .join("license-authority.json")
         .is_file();
-    let license_clock_anchor = license_clock::observe(&device_binding, license_authority_exists)
-        .map_err(IoError::other)?;
+    let license_clock_anchor =
+        match license_clock::observe(&device_binding, license_authority_exists) {
+            Ok(anchor) => anchor,
+            Err(error) => {
+                eprintln!("[sahelflow] protected license clock unavailable: {error}");
+                None
+            }
+        };
 
     let mut environment = vec![
         (
@@ -658,8 +664,12 @@ fn server_env(
         ),
         ("SF_DEVICE_BINDING".to_string(), device_binding),
         (
-            "SF_LICENSE_CLOCK_ANCHOR_MS".to_string(),
-            license_clock_anchor.to_string(),
+            "SF_LICENSE_CLOCK_ANCHOR_STATUS".to_string(),
+            if license_clock_anchor.is_some() {
+                "ready".to_string()
+            } else {
+                "missing".to_string()
+            },
         ),
         ("SF_ACTIVE_SHOP_ID".to_string(), authority.shop_id.clone()),
         (
@@ -698,6 +708,9 @@ fn server_env(
         ),
         ("SF_AUTH_MODE".to_string(), auth.mode().as_str().to_string()),
     ];
+    if let Some(anchor) = license_clock_anchor {
+        environment.push(("SF_LICENSE_CLOCK_ANCHOR_MS".to_string(), anchor.to_string()));
+    }
     if let Some(secret) = auth.secret() {
         environment.push(("AUTH_SECRET".to_string(), secret.to_string()));
     }
