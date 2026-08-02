@@ -9,6 +9,8 @@ use std::fmt;
 const COMMAND_FORMAT_VERSION: u8 = 1;
 const COMMAND_KEY_DOMAIN: &[u8] = b"sahelflow.shop-lifecycle.command.key.v1";
 const COMMAND_MAC_DOMAIN: &[u8] = b"sahelflow.shop-lifecycle.command.v1";
+const JOURNAL_KEY_DOMAIN: &[u8] = b"sahelflow.shop-lifecycle.journal.key.v1";
+const JOURNAL_MAC_DOMAIN: &[u8] = b"sahelflow.shop-lifecycle.journal.v1";
 const MAX_COMMAND_LIFETIME_MS: u64 = 60_000;
 const COMMAND_CLOCK_SKEW_MS: u64 = 5_000;
 const MAX_REAUTHENTICATION_AGE_MS: u64 = 10 * 60 * 1_000;
@@ -191,20 +193,15 @@ impl ShopLifecycleCommand {
         &self,
         installation_root: &[u8; 32],
     ) -> Result<(), ShopLifecycleCommandError> {
-        let supplied =
-            decode_hex_32(&self.mac).ok_or(ShopLifecycleCommandError::InvalidMac)?;
         let mut command_key = lifecycle_command_key(installation_root);
-        let expected = hmac_sha256(&command_key, &self.authorization.mac_message());
+        let result = verify_hex_mac(
+            &self.mac,
+            &command_key,
+            &self.authorization.mac_message(),
+            ShopLifecycleCommandError::InvalidMac,
+        );
         command_key.fill(0);
-        let difference = supplied
-            .iter()
-            .zip(expected)
-            .fold(0_u8, |value, (left, right)| value | (*left ^ right));
-        if difference == 0 {
-            Ok(())
-        } else {
-            Err(ShopLifecycleCommandError::InvalidMac)
-        }
+        result
     }
 }
 
@@ -214,6 +211,7 @@ pub struct AuthenticatedShopLifecycleJournal {
     pub authorization: ShopLifecycleAuthorization,
     pub command_mac: String,
     pub journal: ShopLifecycleJournal,
+    pub journal_mac: String,
 }
 
 impl AuthenticatedShopLifecycleJournal {
@@ -223,11 +221,14 @@ impl AuthenticatedShopLifecycleJournal {
         now_unix_ms: u64,
     ) -> Result<Self, ShopLifecycleCommandError> {
         command.verify(installation_root, now_unix_ms)?;
-        let journal = ShopLifecycleJournal::new(command.authorization.request.clone(), now_unix_ms)?;
+        let journal =
+            ShopLifecycleJournal::new(command.authorization.request.clone(), now_unix_ms)?;
+        let journal_mac = journal_mac(installation_root, &command.mac, &journal);
         Ok(Self {
             authorization: command.authorization.clone(),
             command_mac: command.mac.clone(),
             journal,
+            journal_mac,
         })
     }
 
@@ -245,7 +246,16 @@ impl AuthenticatedShopLifecycleJournal {
             return Err(ShopLifecycleCommandError::JournalRequestMismatch);
         }
         self.journal.validate()?;
-        Ok(())
+
+        let mut journal_key = lifecycle_journal_key(installation_root);
+        let result = verify_hex_mac(
+            &self.journal_mac,
+            &journal_key,
+            &journal_message(&self.command_mac, &self.journal),
+            ShopLifecycleCommandError::InvalidJournalMac,
+        );
+        journal_key.fill(0);
+        result
     }
 
     pub fn transition(
@@ -258,7 +268,9 @@ impl AuthenticatedShopLifecycleJournal {
         self.validate(installation_root)?;
         self.journal
             .transition(next, now_unix_ms, failure_code)
-            .map_err(Into::into)
+            .map_err(ShopLifecycleCommandError::from)?;
+        self.journal_mac = journal_mac(installation_root, &self.command_mac, &self.journal);
+        Ok(())
     }
 }
 
@@ -278,6 +290,7 @@ pub enum ShopLifecycleCommandError {
     CommandNotYetValid,
     CommandExpired,
     InvalidMac,
+    InvalidJournalMac,
     JournalRequestMismatch,
 }
 
@@ -314,6 +327,9 @@ impl fmt::Display for ShopLifecycleCommandError {
             Self::InvalidMac => {
                 write!(formatter, "shop lifecycle command authentication failed")
             }
+            Self::InvalidJournalMac => {
+                write!(formatter, "shop lifecycle journal authentication failed")
+            }
             Self::JournalRequestMismatch => {
                 write!(formatter, "shop lifecycle journal request was altered")
             }
@@ -331,6 +347,55 @@ impl From<ShopLifecycleContractError> for ShopLifecycleCommandError {
 
 pub fn lifecycle_command_key(installation_root: &[u8; 32]) -> [u8; 32] {
     hmac_sha256(installation_root, COMMAND_KEY_DOMAIN)
+}
+
+fn lifecycle_journal_key(installation_root: &[u8; 32]) -> [u8; 32] {
+    hmac_sha256(installation_root, JOURNAL_KEY_DOMAIN)
+}
+
+fn journal_mac(
+    installation_root: &[u8; 32],
+    command_mac: &str,
+    journal: &ShopLifecycleJournal,
+) -> String {
+    let mut journal_key = lifecycle_journal_key(installation_root);
+    let output = hex_32(&hmac_sha256(
+        &journal_key,
+        &journal_message(command_mac, journal),
+    ));
+    journal_key.fill(0);
+    output
+}
+
+fn journal_message(command_mac: &str, journal: &ShopLifecycleJournal) -> Vec<u8> {
+    let mut output = Vec::with_capacity(256);
+    output.extend_from_slice(JOURNAL_MAC_DOMAIN);
+    push_u8(&mut output, 0);
+    push_string(&mut output, command_mac);
+    push_u8(&mut output, stage_code(journal.stage));
+    push_u64(&mut output, journal.created_at_unix_ms);
+    push_u64(&mut output, journal.updated_at_unix_ms);
+    push_optional_string(&mut output, journal.failure_code.as_deref());
+    output
+}
+
+fn stage_code(stage: ShopLifecycleStage) -> u8 {
+    match stage {
+        ShopLifecycleStage::Requested => 1,
+        ShopLifecycleStage::Authorized => 2,
+        ShopLifecycleStage::Quiescing => 3,
+        ShopLifecycleStage::RuntimeStopped => 4,
+        ShopLifecycleStage::Staged => 5,
+        ShopLifecycleStage::RegistryCommitting => 6,
+        ShopLifecycleStage::Committed => 7,
+        ShopLifecycleStage::RuntimeStarting => 8,
+        ShopLifecycleStage::Ready => 9,
+        ShopLifecycleStage::Completed => 10,
+        ShopLifecycleStage::Compensating => 11,
+        ShopLifecycleStage::Recovered => 12,
+        ShopLifecycleStage::Blocked => 13,
+        ShopLifecycleStage::ManualRecoveryRequired => 14,
+    }
 }
 
 fn validate_shop_name(value: &str) -> Result<(), ShopLifecycleCommandError> {
@@ -417,6 +482,25 @@ fn push_optional_string(output: &mut Vec<u8>, value: Option<&str>) {
     }
 }
 
+fn verify_hex_mac(
+    supplied_hex: &str,
+    key: &[u8; 32],
+    message: &[u8],
+    mismatch: ShopLifecycleCommandError,
+) -> Result<(), ShopLifecycleCommandError> {
+    let supplied = decode_hex_32(supplied_hex).ok_or_else(|| mismatch.clone())?;
+    let expected = hmac_sha256(key, message);
+    let difference = supplied
+        .iter()
+        .zip(expected)
+        .fold(0_u8, |value, (left, right)| value | (*left ^ right));
+    if difference == 0 {
+        Ok(())
+    } else {
+        Err(mismatch)
+    }
+}
+
 fn decode_hex_32(value: &str) -> Option<[u8; 32]> {
     if !valid_lower_hex(value, 32) {
         return None;
@@ -467,7 +551,11 @@ fn hmac_sha256(key: &[u8], message: &[u8]) -> [u8; 32] {
     let mut outer = Sha256::new();
     outer.update(outer_pad);
     outer.update(inner_digest);
-    outer.finalize().into()
+    let output = outer.finalize().into();
+    block.fill(0);
+    inner_pad.fill(0);
+    outer_pad.fill(0);
+    output
 }
 
 #[cfg(test)]
@@ -621,7 +709,7 @@ mod tests {
     }
 
     #[test]
-    fn authenticated_journal_detects_persisted_tampering() {
+    fn authenticated_journal_detects_request_tampering() {
         let mut journal =
             AuthenticatedShopLifecycleJournal::accept(&switch_command(), &ROOT, 1_001_000)
                 .expect("authenticated");
@@ -629,6 +717,19 @@ mod tests {
         assert_eq!(
             journal.validate(&ROOT),
             Err(ShopLifecycleCommandError::JournalRequestMismatch)
+        );
+    }
+
+    #[test]
+    fn authenticated_journal_detects_stage_tampering() {
+        let mut journal =
+            AuthenticatedShopLifecycleJournal::accept(&switch_command(), &ROOT, 1_001_000)
+                .expect("authenticated");
+        journal.journal.stage = ShopLifecycleStage::Authorized;
+        journal.journal.updated_at_unix_ms = 1_002_000;
+        assert_eq!(
+            journal.validate(&ROOT),
+            Err(ShopLifecycleCommandError::InvalidJournalMac)
         );
     }
 
@@ -665,5 +766,6 @@ mod tests {
             .transition(&ROOT, ShopLifecycleStage::Recovered, 1_004_000, None)
             .expect("authority recovered");
         assert_eq!(journal.journal.stage, ShopLifecycleStage::Recovered);
+        assert_eq!(journal.validate(&ROOT), Ok(()));
     }
 }
