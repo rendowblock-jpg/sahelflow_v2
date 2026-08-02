@@ -2,25 +2,27 @@
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-08-02
-> **Protected main:** `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`
+> **Protected main:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Founder-accepted baseline:** Internal.5
 > **Operating authority:** FD-028, FD-029, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
 > **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
-> **Active package:** Signed licensing and entitlement authority
-> **Active branch:** `agent/license-entitlement-authority`
-> **Active PR:** draft PR #197 — `Phase 2: establish signed licensing authority`
-> **Merge state:** PR #195 merged; licensing package in implementation
+> **Active package:** Native multi-shop authority
+> **Next branch:** `agent/native-multi-shop-authority`
+> **Active PR:** none until the native multi-shop package opens
+> **Merge state:** PR #195 and PR #197 merged; native multi-shop is next
 
-Protected `main`, the active licensing branch and issue #164 are live authority.
+Protected `main` and issue #164 are live authority. The named native multi-shop
+branch becomes authority only after it is created from the exact protected head.
 Never trust copied head or run numbers without re-reading GitHub.
 
 ## Protected truth
 
 Phase 0 remains complete. PR #195 merged Phase 1 and Phase 2A/Teams source at
-`a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`. Published release, installed
+`a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`. PR #197 merged signed licensing
+source at `04d4c51831c6e043ab39a614a7e947e6b27d01e6`. Published release, installed
 Internal.13 evidence and Founder acceptance are unchanged.
 
 Full Windows/Rust/MSI, live-provider, legal, Beta and Founder-acceptance evidence
@@ -160,16 +162,29 @@ ordering, state-only handover persistence and stale-policy UI classification.
 No P0/P1 remains. This was not independent review and does not prove installed or
 external evidence.
 
+## Phase 2 licensing result — protected-source closed through PR #197
+
+- implementation head `25abbedd176429cf25e657217726d833e3c62a10`;
+- CI `30744598944` — success;
+- protected merge `04d4c51831c6e043ab39a614a7e947e6b27d01e6`.
+
+Signed machine-bound trial/permanent claims, offline Founder signing, one-device
+trial recovery, DPAPI-protected clock/revocation/recovery authority, exact
+transfer and recovery, release fail-closed configuration, complete
+data-preserving lockout and AR/FR/EN recovery states are source-closed. All review
+threads were resolved. Windows artifact and installed behavior are not yet
+claimed.
+
 ### Exact execution order
 
-1. Complete signed licensing, online trial recovery, offline permanent signing,
-   protected local authority and global data-preserving lockout on the active
-   short branch.
-2. Pass source gates, separated review and merge the licensing outcome without a
-   version bump or release.
-3. Complete native multi-shop in a second short outcome PR from protected `main`.
-4. Run Windows standalone, Rust parity and installed-MSI proof once on the frozen
-   complete Phase 2 candidate.
+1. Create `agent/native-multi-shop-authority` from current protected `main`.
+2. Complete native create, rename, switch, archive, recover and
+   owner-reauthenticated delete with atomic registry revision, licence-slot and
+   membership authority, safe database transitions, process relaunch and
+   AR/FR/EN seller states.
+3. Pass the ordinary source gates and merge without a version bump or release.
+4. Freeze the complete Phase 2 source and run Windows standalone, Rust parity,
+   signed MSI, install/reopen, preserved-data and AR/RTL exit proof once.
 
 ## Protected local boundaries
 

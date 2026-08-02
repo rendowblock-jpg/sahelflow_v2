@@ -2,14 +2,14 @@
 
 > **Authority:** merged protected `main` and named evidence only
 > **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
-> **Current protected application baseline:** `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`
+> **Current protected application baseline:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Protected signed run:** `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
-> **Last assessed:** 2026-08-01
+> **Last assessed:** 2026-08-02
 
 This document states what merged source and named evidence prove now. It does not
 convert target architecture, research, adapter presence, mocks, test counts or
@@ -52,9 +52,18 @@ protected-field, risk/oracle, audit, high-risk credential, route-ordering,
 state-only handover and stale/revoked UI findings. No P0/P1 remains in the frozen
 source package; the pass was not independent review.
 
-The merge is protected source truth only. It is not a version bump, release,
-installed Phase 2 candidate, Founder acceptance or Stable evidence. Licensing
-and native multi-shop remain dedicated Phase 2 outcomes.
+PR #197 then merged signed licensing authority at protected commit
+`04d4c51831c6e043ab39a614a7e947e6b27d01e6`. Exact head
+`25abbedd176429cf25e657217726d833e3c62a10` passed CI `30744598944`, including
+authority/docs, TypeScript, ESLint, complete Vitest, Prisma, coverage, dependency
+audit, migration status and the required PR gate. It establishes signed
+machine-bound trial/permanent entitlements, protected native clock, revocation
+and recovery authority, transfer/recovery, complete data-preserving lockout and
+AR/FR/EN recovery states. All review threads were resolved.
+
+These merges are protected source truth only. They are not a version bump,
+release, installed Phase 2 candidate, Founder acceptance or Stable evidence.
+Native multi-shop remains the final Phase 2 implementation outcome.
 
 ## Release and installed truth
 
@@ -404,10 +413,11 @@ packages:
   `30522348699` passed all selected source, Windows runtime and installed-MSI
   gates.
 
-Phase 1 is protected-source closed through PR #195. Phase 2 still requires
-signed licensing and native multi-shop. Phase 4 still requires full
-backup/restore, replacement-install
-recovery, migration/security/privacy/legal and certification gates.
+Phase 1 is protected-source closed through PR #195. Signed licensing is
+protected-source closed through PR #197. Phase 2 still requires native
+multi-shop and the frozen Phase 2 artifact/installed exit proof. Phase 4 still
+requires full backup/restore, replacement-install recovery,
+migration/security/privacy/legal and certification gates.
 
 The remaining Internal.13 Arabic-chart and Founder-acceptance observations stay
 independent in the platform lane.

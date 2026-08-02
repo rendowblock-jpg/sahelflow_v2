@@ -251,9 +251,9 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Research-first rule",
       "1.0.0-internal.13",
       "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
-      "**Active package:** Signed licensing and entitlement authority",
+      "**Active package:** Native multi-shop authority",
       "Protected `main` now includes the repaired Phase 1 and Teams boundary through PR",
-      "Teams and permissions is protected source through PR #195",
+      "Signed licensing is protected source through PR #197",
     ],
   ],
   [
@@ -271,7 +271,7 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Phase 0 status:** Complete",
       "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
-      "**Active package:** Signed licensing and entitlement authority",
+      "**Active package:** Native multi-shop authority",
       "# Phase 1 — Canonical Golden COD business core",
       "## Result — protected-source closed through PR #195",
       "# Phase 2 — Identity, authorization, licensing and multi-shop",
@@ -305,8 +305,8 @@ const semanticRequirements: Array<[string, string[]]> = [
     "documentation/operations/WORKING_MEMORY.md",
     [
       "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
-      "**Active package:** Signed licensing and entitlement authority",
-      "**Active PR:** draft PR #197",
+      "**Active package:** Native multi-shop authority",
+      "**Active PR:** none until the native multi-shop package opens",
       "Phase 0 remains complete",
       "Phase 1 — protected-source closed through PR #195",
       "Phase 2A.1 result — setup and session authority closed",
@@ -314,6 +314,7 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Phase 2A.3 result — revocation and policy freshness closed",
       "Phase 2A.4 result — multi-member roles, invitations and per-shop permissions closed",
       "Teams and permissions completion — protected-source closed through PR #195",
+      "Phase 2 licensing result — protected-source closed through PR #197",
       "Exact execution order",
       "**Execution epic:** issue #164",
     ],
@@ -348,7 +349,7 @@ const activePhaseFiles = [
   "documentation/operations/WORKING_MEMORY.md",
 ] as const;
 const expectedPhase = "Phase 2 — identity, authorization, licensing and multi-shop";
-const expectedPackage = "Signed licensing and entitlement authority";
+const expectedPackage = "Native multi-shop authority";
 
 for (const relativePath of activePhaseFiles) {
   const content = contentOf(relativePath);
