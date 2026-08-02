@@ -25,8 +25,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(1);
 const ROOT: [u8; 32] = [9_u8; 32];
-const MIGRATION_SET: &str =
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const MIGRATION_SET: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 fn identity(character: char) -> String {
     std::iter::repeat(character).take(32).collect()
@@ -63,8 +62,7 @@ fn golden_command() -> ShopLifecycleCommand {
             },
             payload: ShopLifecyclePayload::Switch,
         },
-        mac: "511273bd842a6c5d5265c78e3f74c3f4b7d8f2ee12e37774129add287c640630"
-            .to_owned(),
+        mac: "511273bd842a6c5d5265c78e3f74c3f4b7d8f2ee12e37774129add287c640630".to_owned(),
     }
 }
 
@@ -156,11 +154,12 @@ fn native_switch_commits_exact_target_and_terminal_authenticated_journal() {
     assert_eq!(authority.shop_id, "target-shop");
     assert_eq!(authority.registry_revision, 8);
     let current: AuthenticatedShopLifecycleJournal = serde_json::from_slice(
-        &fs::read(root.join("shop-lifecycle-journal/current.json"))
-            .expect("read current journal"),
+        &fs::read(root.join("shop-lifecycle-journal/current.json")).expect("read current journal"),
     )
     .expect("parse current journal");
-    current.validate(&ROOT).expect("authenticate current journal");
+    current
+        .validate(&ROOT)
+        .expect("authenticate current journal");
     assert_eq!(current.journal.stage, ShopLifecycleStage::Completed);
     assert!(root
         .join("shop-lifecycle-journal")
@@ -213,39 +212,21 @@ fn incomplete_authenticated_journal_blocks_a_second_switch() {
         .expect("accept first switch");
     drop(accepted);
 
-    let error = match accept_switch(
-        &root,
-        MIGRATION_SET,
-        &golden_command(),
-        &ROOT,
-        1_001_000,
-    ) {
+    let error = match accept_switch(&root, MIGRATION_SET, &golden_command(), &ROOT, 1_001_000) {
         Ok(_) => panic!("incomplete journal must block a second switch"),
         Err(error) => error,
     };
-    assert!(matches!(
-        error,
-        SwitchAuthorityError::IncompleteJournal(_)
-    ));
+    assert!(matches!(error, SwitchAuthorityError::IncompleteJournal(_)));
     fs::remove_dir_all(root).expect("remove test installation");
 }
 
 #[test]
 fn stale_registry_revision_is_rejected_before_runtime_quiescence() {
     let root = prepare_installation("switch-stale", 8);
-    let error = match accept_switch(
-        &root,
-        MIGRATION_SET,
-        &golden_command(),
-        &ROOT,
-        1_001_000,
-    ) {
+    let error = match accept_switch(&root, MIGRATION_SET, &golden_command(), &ROOT, 1_001_000) {
         Ok(_) => panic!("stale registry authority must be rejected"),
         Err(error) => error,
     };
-    assert!(matches!(
-        error,
-        SwitchAuthorityError::AuthorityMismatch(_)
-    ));
+    assert!(matches!(error, SwitchAuthorityError::AuthorityMismatch(_)));
     fs::remove_dir_all(root).expect("remove test installation");
 }
