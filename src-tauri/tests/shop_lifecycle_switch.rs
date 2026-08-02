@@ -170,7 +170,7 @@ fn native_switch_commits_exact_target_and_terminal_authenticated_journal() {
 }
 
 #[test]
-fn failed_target_can_compensate_to_prior_shop_with_monotonic_revision() {
+fn failed_target_finishes_recovery_only_after_prior_runtime_is_ready() {
     let root = prepare_installation("switch-compensate", 7);
     let mut switch = accept_switch(&root, MIGRATION_SET, &golden_command(), &ROOT, 1_001_000)
         .expect("accept exact switch");
@@ -192,15 +192,34 @@ fn failed_target_can_compensate_to_prior_shop_with_monotonic_revision() {
 
     assert_eq!(recovered.shop_id, "current-shop");
     assert_eq!(recovered.registry_revision, 9);
-    let current: AuthenticatedShopLifecycleJournal = serde_json::from_slice(
+    let compensating: AuthenticatedShopLifecycleJournal = serde_json::from_slice(
+        &fs::read(root.join("shop-lifecycle-journal/current.json"))
+            .expect("read compensating journal"),
+    )
+    .expect("parse compensating journal");
+    compensating
+        .validate(&ROOT)
+        .expect("authenticate compensating journal");
+    assert_eq!(
+        compensating.journal.stage,
+        ShopLifecycleStage::Compensating
+    );
+
+    switch
+        .complete_recovery(1_001_009)
+        .expect("complete prior runtime recovery");
+    let recovered_journal: AuthenticatedShopLifecycleJournal = serde_json::from_slice(
         &fs::read(root.join("shop-lifecycle-journal/current.json"))
             .expect("read recovered journal"),
     )
     .expect("parse recovered journal");
-    current
+    recovered_journal
         .validate(&ROOT)
         .expect("authenticate recovery journal");
-    assert_eq!(current.journal.stage, ShopLifecycleStage::Recovered);
+    assert_eq!(
+        recovered_journal.journal.stage,
+        ShopLifecycleStage::Recovered
+    );
     drop(switch);
     fs::remove_dir_all(root).expect("remove test installation");
 }
