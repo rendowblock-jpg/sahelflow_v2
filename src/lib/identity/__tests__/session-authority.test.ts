@@ -5,10 +5,26 @@ import {
   type ResolveSessionAuthorityInput,
 } from "../session-authority";
 
+const NOW = new Date("2026-07-30T00:00:00.000Z");
+const ISSUED_AT = new Date("2026-07-29T22:00:00.000Z");
+const LAST_SEEN_AT = new Date("2026-07-29T23:55:00.000Z");
+const OVERALL_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000;
+
 const trustedActorHarness = vi.hoisted(() => ({
   authority: {
     status: "authenticated",
     sessionId: "session-1",
+    issuedAt: new Date("2026-07-29T22:00:00.000Z"),
+    lastSeenAt: new Date("2026-07-29T23:55:00.000Z"),
+  } as unknown,
+  identity: {
+    personId: "5".repeat(32),
+    workspaceMemberId: "6".repeat(32),
+    deviceId: "7".repeat(32),
+    role: "owner" as const,
+    policyVersion: 3,
+    revocationEpoch: 2,
   } as unknown,
   shop: {
     workspaceId: "1".repeat(32),
@@ -29,21 +45,43 @@ vi.mock("@/lib/db", () => ({
   shopContext: trustedActorHarness.shop,
 }));
 
+vi.mock("../control-authority", () => ({
+  resolveDurableIdentityActor: vi.fn(async () => trustedActorHarness.identity),
+}));
+
 import * as trustedActorModule from "../trusted-actor";
 
 const baseInput = (): ResolveSessionAuthorityInput => ({
   token: "signed-token",
   secret: "session-secret",
   authSetup: true,
+  now: NOW,
+  overallTimeoutMs: OVERALL_TIMEOUT_MS,
+  inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,
   verifyToken: vi.fn(async () => true),
   getSessionId: vi.fn(() => "session-1"),
-  findSession: vi.fn(async () => ({ id: "session-1", revokedAt: null })),
+  findSession: vi.fn(async () => ({
+    id: "session-1",
+    issuedAt: ISSUED_AT,
+    lastSeenAt: LAST_SEEN_AT,
+    revokedAt: null,
+  })),
 });
 
 const resetTrustedActorHarness = () => {
   trustedActorHarness.authority = {
     status: "authenticated",
     sessionId: "session-1",
+    issuedAt: ISSUED_AT,
+    lastSeenAt: LAST_SEEN_AT,
+  };
+  trustedActorHarness.identity = {
+    personId: "5".repeat(32),
+    workspaceMemberId: "6".repeat(32),
+    deviceId: "7".repeat(32),
+    role: "owner",
+    policyVersion: 3,
+    revocationEpoch: 2,
   };
   Object.assign(trustedActorHarness.shop, {
     workspaceId: "1".repeat(32),
@@ -66,7 +104,6 @@ describe("resolveSessionAuthority", () => {
       secret: null,
       authSetup: false,
     });
-
     expect(result).toEqual({ status: "setup" });
   });
 
@@ -76,7 +113,6 @@ describe("resolveSessionAuthority", () => {
       secret: null,
       authSetup: true,
     });
-
     expect(result).toEqual({
       status: "rejected",
       code: "AUTH_SECRET_UNAVAILABLE",
@@ -88,7 +124,6 @@ describe("resolveSessionAuthority", () => {
       ...baseInput(),
       token: undefined,
     });
-
     expect(result).toEqual({ status: "rejected", code: "SESSION_REQUIRED" });
   });
 
@@ -97,7 +132,6 @@ describe("resolveSessionAuthority", () => {
       ...baseInput(),
       verifyToken: vi.fn(async () => false),
     });
-
     expect(result).toEqual({ status: "rejected", code: "SESSION_INVALID" });
   });
 
@@ -106,7 +140,6 @@ describe("resolveSessionAuthority", () => {
       ...baseInput(),
       getSessionId: vi.fn(() => null),
     });
-
     expect(result).toEqual({
       status: "rejected",
       code: "LEGACY_SESSION_UNSUPPORTED",
@@ -114,13 +147,17 @@ describe("resolveSessionAuthority", () => {
   });
 
   it("rejects a non-exact session ID before reading the authority store", async () => {
-    const findSession = vi.fn(async () => ({ id: "session-1", revokedAt: null }));
+    const findSession = vi.fn(async () => ({
+      id: "session-1",
+      issuedAt: ISSUED_AT,
+      lastSeenAt: LAST_SEEN_AT,
+      revokedAt: null,
+    }));
     const result = await resolveSessionAuthority({
       ...baseInput(),
       getSessionId: vi.fn(() => " session-1 "),
       findSession,
     });
-
     expect(result).toEqual({ status: "rejected", code: "SESSION_INVALID" });
     expect(findSession).not.toHaveBeenCalled();
   });
@@ -130,7 +167,6 @@ describe("resolveSessionAuthority", () => {
       ...baseInput(),
       findSession: vi.fn(async () => null),
     });
-
     expect(result).toEqual({ status: "rejected", code: "SESSION_NOT_FOUND" });
   });
 
@@ -139,10 +175,11 @@ describe("resolveSessionAuthority", () => {
       ...baseInput(),
       findSession: vi.fn(async () => ({
         id: "session-1",
-        revokedAt: new Date("2026-07-29T20:00:00.000Z"),
+        issuedAt: ISSUED_AT,
+        lastSeenAt: LAST_SEEN_AT,
+        revokedAt: new Date("2026-07-29T23:59:00.000Z"),
       })),
     });
-
     expect(result).toEqual({ status: "rejected", code: "SESSION_REVOKED" });
   });
 
@@ -153,50 +190,111 @@ describe("resolveSessionAuthority", () => {
         throw new Error("database unavailable");
       }),
     });
-
     expect(result).toEqual({
       status: "rejected",
       code: "SESSION_AUTHORITY_UNAVAILABLE",
     });
   });
 
-  it("returns the exact authenticated session ID", async () => {
-    const result = await resolveSessionAuthority(baseInput());
+  it("rejects a session at the exact overall timeout", async () => {
+    const result = await resolveSessionAuthority({
+      ...baseInput(),
+      findSession: vi.fn(async () => ({
+        id: "session-1",
+        issuedAt: new Date(NOW.getTime() - OVERALL_TIMEOUT_MS),
+        lastSeenAt: LAST_SEEN_AT,
+        revokedAt: null,
+      })),
+    });
+    expect(result).toEqual({
+      status: "rejected",
+      code: "SESSION_OVERALL_EXPIRED",
+    });
+  });
 
+  it("rejects a session at the exact inactivity timeout", async () => {
+    const result = await resolveSessionAuthority({
+      ...baseInput(),
+      findSession: vi.fn(async () => ({
+        id: "session-1",
+        issuedAt: ISSUED_AT,
+        lastSeenAt: new Date(NOW.getTime() - INACTIVITY_TIMEOUT_MS),
+        revokedAt: null,
+      })),
+    });
+    expect(result).toEqual({ status: "rejected", code: "SESSION_INACTIVE" });
+  });
+
+  it("rejects future or internally inconsistent timestamps", async () => {
+    const future = await resolveSessionAuthority({
+      ...baseInput(),
+      findSession: vi.fn(async () => ({
+        id: "session-1",
+        issuedAt: new Date(NOW.getTime() + 1),
+        lastSeenAt: new Date(NOW.getTime() + 1),
+        revokedAt: null,
+      })),
+    });
+    const beforeIssue = await resolveSessionAuthority({
+      ...baseInput(),
+      findSession: vi.fn(async () => ({
+        id: "session-1",
+        issuedAt: ISSUED_AT,
+        lastSeenAt: new Date(ISSUED_AT.getTime() - 1),
+        revokedAt: null,
+      })),
+    });
+    expect(future).toEqual({ status: "rejected", code: "SESSION_INVALID" });
+    expect(beforeIssue).toEqual({ status: "rejected", code: "SESSION_INVALID" });
+  });
+
+  it("returns the exact authenticated session and freshness timestamps", async () => {
+    const result = await resolveSessionAuthority(baseInput());
     expect(result).toEqual({
       status: "authenticated",
       sessionId: "session-1",
+      issuedAt: ISSUED_AT,
+      lastSeenAt: LAST_SEEN_AT,
     });
   });
 });
 
 describe("requireTrustedActor", () => {
   it("is the only exported minting path", () => {
-    expect("createCompatibilityLocalOwnerContext" in trustedActorModule).toBe(false);
+    expect("createPersonContext" in trustedActorModule).toBe(false);
     expect(typeof trustedActorModule.requireTrustedActor).toBe("function");
   });
 
-  it("binds the exact authenticated session without inventing person identity", async () => {
+  it("binds the exact authenticated session to durable person authority", async () => {
     const context = await trustedActorModule.requireTrustedActor();
-
     expect(context).toEqual({
       version: 1,
       actor: {
-        kind: "compatibility_local_owner",
+        kind: "person",
+        personId: "5".repeat(32),
+        workspaceMemberId: "6".repeat(32),
+        deviceId: "7".repeat(32),
         role: "owner",
         sessionId: "session-1",
-        compatibilityOnly: true,
+        policyVersion: 3,
+        revocationEpoch: 2,
       },
       shop: trustedActorHarness.shop,
     });
-    expect("personId" in context.actor).toBe(false);
     expect(trustedActorModule.isTrustedActorContext(context)).toBe(true);
     expect(Object.getOwnPropertySymbols(context)).toHaveLength(0);
   });
 
+  it("never bootstraps missing durable identity from a command path", async () => {
+    trustedActorHarness.identity = null;
+    await expect(trustedActorModule.requireTrustedActor()).rejects.toMatchObject({
+      code: "IDENTITY_SESSION_BINDING_REQUIRED",
+      statusCode: 401,
+    });
+  });
+
   it("cannot mint authority during setup mode", async () => {
     trustedActorHarness.authority = { status: "setup" };
-
     await expect(trustedActorModule.requireTrustedActor()).rejects.toMatchObject({
       code: "TRUSTED_ACTOR_REQUIRED",
       statusCode: 401,
@@ -208,7 +306,6 @@ describe("requireTrustedActor", () => {
       status: "rejected",
       code: "SESSION_REVOKED",
     };
-
     await expect(trustedActorModule.requireTrustedActor()).rejects.toMatchObject({
       code: "UNAUTHORIZED",
       statusCode: 401,
@@ -220,7 +317,6 @@ describe("requireTrustedActor", () => {
       status: "rejected",
       code: "SESSION_AUTHORITY_UNAVAILABLE",
     };
-
     await expect(trustedActorModule.requireTrustedActor()).rejects.toMatchObject({
       code: "SESSION_AUTHORITY_UNAVAILABLE",
       statusCode: 503,
@@ -231,8 +327,9 @@ describe("requireTrustedActor", () => {
     trustedActorHarness.authority = {
       status: "authenticated",
       sessionId: " session-1 ",
+      issuedAt: ISSUED_AT,
+      lastSeenAt: LAST_SEEN_AT,
     };
-
     await expect(trustedActorModule.requireTrustedActor()).rejects.toThrow(
       "requires an exact session ID",
     );
@@ -240,9 +337,7 @@ describe("requireTrustedActor", () => {
 
   it("captures an immutable ShopContext snapshot", async () => {
     const context = await trustedActorModule.requireTrustedActor();
-
     trustedActorHarness.shop.shopId = "changed-after-authority-resolution";
-
     expect(context.shop.shopId).toBe("default");
     expect(Object.isFrozen(context.shop)).toBe(true);
     expect(Object.isFrozen(context.actor)).toBe(true);
@@ -253,14 +348,17 @@ describe("requireTrustedActor", () => {
     const lookalike = {
       version: 1,
       actor: {
-        kind: "compatibility_local_owner",
+        kind: "person",
+        personId: "5".repeat(32),
+        workspaceMemberId: "6".repeat(32),
+        deviceId: "7".repeat(32),
         role: "owner",
         sessionId: "session-1",
-        compatibilityOnly: true,
+        policyVersion: 3,
+        revocationEpoch: 2,
       },
       shop: trustedActorHarness.shop,
     };
-
     expect(trustedActorModule.isTrustedActorContext(lookalike)).toBe(false);
   });
 
@@ -273,7 +371,6 @@ describe("requireTrustedActor", () => {
         sessionId: "forged-session",
       },
     };
-
     expect(trustedActorModule.isTrustedActorContext(clone)).toBe(false);
   });
 
@@ -282,10 +379,14 @@ describe("requireTrustedActor", () => {
     const inherited = Object.create(context) as Record<string, unknown>;
     Object.defineProperty(inherited, "actor", {
       value: {
-        kind: "compatibility_local_owner",
+        kind: "person",
+        personId: "5".repeat(32),
+        workspaceMemberId: "6".repeat(32),
+        deviceId: "7".repeat(32),
         role: "owner",
         sessionId: "forged-session",
-        compatibilityOnly: true,
+        policyVersion: 3,
+        revocationEpoch: 2,
       },
       enumerable: true,
     });
@@ -296,7 +397,6 @@ describe("requireTrustedActor", () => {
       },
       enumerable: true,
     });
-
     expect(trustedActorModule.isTrustedActorContext(inherited)).toBe(false);
   });
 });

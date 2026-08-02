@@ -1,10 +1,20 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireLicense } from "@/lib/license/license-server";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
-import { runAgentStream, type AgentMessage, type AgentStreamEvent, type AgentResult } from "@/lib/ai/chat/agent";
-import { isAuthenticated, getCurrentUserKey } from "@/lib/auth/server";
+import {
+  runAgentStream,
+  type AgentMessage,
+  type AgentStreamEvent,
+  type AgentResult,
+} from "@/lib/ai/chat/agent";
+import {
+  resolveAiSourceProposalContext,
+  runWithAiSourceProposal,
+} from "@/lib/ai/chat/source-proposal";
+import { getCurrentUserKey, requireAuth } from "@/lib/auth/server";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { redactPii } from "@/lib/redact-pii";
 import { getBool, SETTING_KEYS } from "@/lib/settings";
 
@@ -14,58 +24,22 @@ const sendSchema = z.object({
   message: z.string().min(1).max(4000),
 });
 
-/**
- * POST /api/ai/sessions/[id]/messages/stream
- *
- * Streaming version of the AI chat. Returns a Server-Sent Events (SSE) stream
- * of agent events:
- *
- *   event: tool_call
- *   data: {"name":"search_products","args":{"query":"phone"}}
- *
- *   event: tool_result
- *   data: {"name":"search_products","result":[...]}
- *
- *   event: text_delta
- *   data: {"text":"Voici les produits..."}
- *
- *   event: done
- *   data: {"response":"...","toolCalls":[...]}
- *
- *   event: error
- *   data: {"message":"..."}
- *
- * The user message is saved immediately. The assistant message is saved when
- * the stream completes (on `done` or `error`).
- */
-export async function POST(
+export const POST = withErrorHandler(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await params;
   const context = { prisma: db, shop: shopContext };
 
-  // SEC-013: defense-in-depth auth check (middleware is the primary layer)
-  if (!(await isAuthenticated())) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  await requireAuth("ai.use");
 
-  // fix-B6: Informed-consent gate. The streaming AI chat forwards the
-  // seller's question + conversation history (which may reference customer
-  // PII via tool results) to Google Gemini. Without explicit consent,
-  // refuse the request — same gate as /api/extraction and the non-streaming
-  // messages route. (Checked before the license + rate-limit gates so the
-  // seller sees the consent_required error first.)
   const consent = await getBool(
     context,
     SETTING_KEYS.geminiConsentAccepted,
     false,
   );
   if (!consent) {
-    return new Response(
+    return new NextResponse(
       JSON.stringify({
         error: "consent_required",
         message:
@@ -75,40 +49,35 @@ export async function POST(
     );
   }
 
-  // Session 30 (AUDIT-7 AI5): license gate on message stream (not just session create)
   try {
     await requireLicense();
   } catch {
-    return new Response(JSON.stringify({ error: "License required" }), {
+    return new NextResponse(JSON.stringify({ error: "License required" }), {
       status: 403,
       headers: { "Content-Type": "application/json" },
     });
   }
 
-  // Session 30 (AUDIT-7 AI4): rate limit. AI-P1: pass the auth session id
-  // as userKey so the daily cap is per-user, not shared across all sessions
-  // via the "default" bucket.
   const userKey = await getCurrentUserKey();
-  const rl = checkRateLimit(id, userKey);
-  if (!rl.allowed) {
-    return new Response(JSON.stringify({ error: rl.reason ?? "Rate limited" }), {
-      status: 429,
-      headers: { "Content-Type": "application/json" },
-    });
+  const rateLimit = checkRateLimit(id, userKey);
+  if (!rateLimit.allowed) {
+    return new NextResponse(
+      JSON.stringify({ error: rateLimit.reason ?? "Rate limited" }),
+      { status: 429, headers: { "Content-Type": "application/json" } },
+    );
   }
 
   let input: z.infer<typeof sendSchema>;
   try {
-    const body = await req.json();
-    input = sendSchema.parse(body);
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return new Response(
-        JSON.stringify({ error: "Validation failed", details: err.issues }),
+    input = sendSchema.parse(await req.json());
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return new NextResponse(
+        JSON.stringify({ error: "Validation failed", details: error.issues }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
-    return new Response(JSON.stringify({ error: "Invalid request" }), {
+    return new NextResponse(JSON.stringify({ error: "Invalid request" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
@@ -116,51 +85,47 @@ export async function POST(
 
   const session = await db.aiChatSession.findUnique({
     where: { id },
-    include: { messages: { orderBy: { createdAt: "asc" }, take: 20 } }, // AI-H3: cap history
+    include: { messages: { orderBy: { createdAt: "asc" }, take: 20 } },
   });
-
   if (!session) {
-    return new Response(JSON.stringify({ error: "Session not found" }), {
+    return new NextResponse(JSON.stringify({ error: "Session not found" }), {
       status: 404,
       headers: { "Content-Type": "application/json" },
     });
   }
 
-  // Save the user message immediately
-  await context.prisma.aiChatMessage.create({
+  const userMessage = await context.prisma.aiChatMessage.create({
     data: { sessionId: id, role: "user", content: input.message },
   });
 
-  // Build conversation history (excluding the just-saved user message, which
-  // runAgentStream takes as a separate arg)
-  // AI-M15: include prior toolCalls in the conversation history so the
-  // agent retains tool context across turns. Previously only m.content
-  // (text) was passed back to Gemini — if the AI created an order in
-  // turn 1 and the user said "annule-la" in turn 2, Gemini had no record
-  // of what "la" referred to (the create_order tool call + result were
-  // dropped). Parse the stored JSON toolCalls (already redacted on save)
-  // and forward them as part of the AgentMessage.
-  const history: AgentMessage[] = session.messages.map((m) => {
+  const history: AgentMessage[] = session.messages.map((message) => {
     let toolCalls: AgentMessage["toolCalls"];
-    if (m.role === "assistant" && m.toolCalls) {
+    if (message.role === "assistant" && message.toolCalls) {
       try {
-        const parsed = JSON.parse(m.toolCalls);
+        const parsed = JSON.parse(message.toolCalls);
         if (Array.isArray(parsed)) {
           toolCalls = parsed as AgentMessage["toolCalls"];
         }
       } catch {
-        // Malformed JSON in DB — ignore (older rows may have invalid JSON).
+        // Older malformed rows remain readable as plain assistant text.
       }
     }
     return {
-      role: m.role === "assistant" ? "assistant" : "user",
-      content: m.content,
+      role: message.role === "assistant" ? "assistant" : "user",
+      content: message.content,
       ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
     };
   });
+  const proposal = resolveAiSourceProposalContext(
+    id,
+    session.messages,
+    userMessage.id,
+  );
 
-  // Auto-title from first message
-  if (session.messages.length === 0 && session.title === "Nouvelle conversation") {
+  if (
+    session.messages.length === 0 &&
+    session.title === "Nouvelle conversation"
+  ) {
     await context.prisma.aiChatSession.update({
       where: { id },
       data: { title: input.message.slice(0, 50) },
@@ -172,26 +137,23 @@ export async function POST(
     });
   }
 
-  // Build the SSE stream
   const encoder = new TextEncoder();
-  // AI-P5: hoist agentAbort + onAbort into the POST function scope so both
-  // start() and cancel() can reference them. Previously they were declared
-  // inside start() with const, which made cancel()'s references to them
-  // fail TypeScript's scope check (TS2552/TS2304).
   let agentAbort = new AbortController();
   let onAbort: (() => void) | null = null;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      // AI-H2: abort the agent loop (not just the stream) when the client
-      // disconnects. Previously onAbort only closed the controller — the
-      // agent continued running for up to 5 iterations × 30s = 150s,
-      // consuming Gemini quota on a response the user will never see.
       agentAbort = new AbortController();
       onAbort = () => {
         agentAbort.abort();
-        try { controller.close(); } catch { /* already closed */ }
+        try {
+          controller.close();
+        } catch {
+          // Already closed.
+        }
       };
-      if (req.signal && onAbort) { req.signal.addEventListener("abort", onAbort); }
+      if (req.signal && onAbort) {
+        req.signal.addEventListener("abort", onAbort);
+      }
       let assistantResponse = "";
       let assistantToolCalls: AgentResult["toolCalls"] = [];
 
@@ -201,25 +163,30 @@ export async function POST(
       }
 
       try {
-        for await (const event of runAgentStream(history, input.message, agentAbort.signal)) {
-          send(event);
-
-          if (event.type === "text_delta") {
-            assistantResponse += event.text;
-          } else if (event.type === "done") {
-            assistantResponse = event.response;
-            assistantToolCalls = event.toolCalls;
-          } else if (event.type === "error") {
-            assistantResponse = event.message;
+        await runWithAiSourceProposal(proposal, async () => {
+          for await (const event of runAgentStream(
+            history,
+            input.message,
+            agentAbort.signal,
+          )) {
+            send(event);
+            if (event.type === "text_delta") {
+              assistantResponse += event.text;
+            } else if (event.type === "done") {
+              assistantResponse = event.response;
+              assistantToolCalls = event.toolCalls;
+            } else if (event.type === "error") {
+              assistantResponse = event.message;
+            }
           }
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Internal error";
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Internal error";
         send({ type: "error", message });
         assistantResponse = message;
       }
 
-      // Save the assistant message (whether success or error)
       try {
         await context.prisma.aiChatMessage.create({
           data: {
@@ -233,32 +200,30 @@ export async function POST(
           },
         });
       } catch {
-        // If saving fails, the stream still delivered the response — don't crash
+        // The response was already delivered; persistence failure is surfaced by
+        // the next session reload rather than crashing the stream.
       }
 
-      // Signal end of stream
       controller.enqueue(encoder.encode("event: close\ndata: {}\n\n"));
       controller.close();
-      // AI-P5: remove the abort listener so the (per-request) AbortSignal
-      // does not keep the closure alive after the stream ends. Without
-      // this, each completed request leaves a dangling listener — minor
-      // memory leak in long-running Node processes.
-      if (req.signal && onAbort) { req.signal.removeEventListener("abort", onAbort); }
+      if (req.signal && onAbort) {
+        req.signal.removeEventListener("abort", onAbort);
+      }
     },
     cancel() {
-      /* PERF-001: client disconnected — stop the stream */
-      // AI-P5: also remove the listener on the cancel path.
-      if (req.signal && onAbort) { req.signal.removeEventListener("abort", onAbort); }
+      if (req.signal && onAbort) {
+        req.signal.removeEventListener("abort", onAbort);
+      }
       agentAbort.abort();
     },
   });
 
-  return new Response(stream, {
+  return new NextResponse(stream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
-      "X-Accel-Buffering": "no", // disable proxy buffering (Caddy, nginx)
+      "X-Accel-Buffering": "no",
     },
   });
-}
+}, "POST /api/ai/sessions/[id]/messages/stream");

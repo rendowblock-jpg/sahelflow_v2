@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db, shopContext } from "@/lib/db";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import { executeCanonicalFulfillment } from "@/lib/orders/canonical-fulfillment";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ const context = { prisma: db, shop: shopContext };
 
 export const POST = withErrorHandler(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
-    await requireTrustedActor();
+    await requireTrustedAction("orders.update");
     const { id } = await params;
     const body = await req.json();
     const command = await executeCanonicalFulfillment(context, {

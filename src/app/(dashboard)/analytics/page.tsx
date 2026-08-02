@@ -21,6 +21,10 @@ import { cn } from "@/lib/utils";
 import { TrendingUp, ShoppingCart, Package, Truck, Activity, PieChart, BarChart3, Users, MapPin, Clock, Gauge } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -40,6 +44,8 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ days?: string }>;
 }) {
+  const actorContext = await requireTrustedAction("analytics.read");
+  assertTrustedAction(actorContext, "analytics.financials.read");
   const { t, locale } = await getI18n();
   const { days: daysParam } = await searchParams;
   const days = Number(daysParam);

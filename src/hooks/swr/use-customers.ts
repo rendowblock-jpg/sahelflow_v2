@@ -6,12 +6,12 @@ import { fetcher } from "@/lib/swr/fetcher";
 
 export interface CustomerListItem {
   id: string;
-  name: string;
-  phone: string;
+  name: string | null;
+  phone: string | null;
   wilaya: string | null;
   commune: string | null;
   orderCount: number;
-  totalSpent: number;
+  totalSpent: number | null;
   riskScore: number;
   isBlacklisted: boolean;
   createdAt: string;

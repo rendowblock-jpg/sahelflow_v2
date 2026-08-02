@@ -39,10 +39,9 @@ function forbidden(action: Phase2Action): SahelFlowError {
 
 /**
  * Enforce an exact action against a server-minted actor and optional resource.
- * Caller-provided role, member and shop fields never participate in the
- * decision. Every local actor, including the compatibility owner, is confined
- * to the exact process-bound shop. Cross-shop authority remains unavailable
- * until the protected installation control cache supplies an allowed-shop set.
+ * Caller-provided role, permission, member and shop fields never participate in
+ * the decision. Durable member custom permissions replace the role preset and
+ * have already been validated against that role's ceiling before persistence.
  */
 export function assertTrustedAction(
   context: TrustedActorContext,
@@ -68,11 +67,34 @@ export function assertTrustedAction(
     throw forbidden(action);
   }
 
-  const permissions = context.actor.kind === "compatibility_local_owner"
-    ? COMPATIBILITY_LOCAL_OWNER_ACTIONS
-    : resolvePhase2Permissions(context.actor.role, null);
+  const permissions =
+    context.actor.kind === "compatibility_local_owner"
+      ? COMPATIBILITY_LOCAL_OWNER_ACTIONS
+      : context.actor.permissions ??
+        resolvePhase2Permissions(context.actor.role, null);
   if (!hasPhase2Permission(permissions, action)) {
     throw forbidden(action);
+  }
+}
+
+/**
+ * Probe an action without weakening fail-closed behavior. Only the ordinary
+ * ACTION_FORBIDDEN result becomes false; malformed policy, untrusted context and
+ * authority failures still throw.
+ */
+export function trustedActionAllowed(
+  context: TrustedActorContext,
+  action: Phase2Action,
+  resource: AuthorizationResource = {},
+): boolean {
+  try {
+    assertTrustedAction(context, action, resource);
+    return true;
+  } catch (error) {
+    if (error instanceof SahelFlowError && error.code === "ACTION_FORBIDDEN") {
+      return false;
+    }
+    throw error;
   }
 }
 

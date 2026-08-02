@@ -1112,6 +1112,7 @@
   "inbox.scanQrHint": "امسح رمز QR أدناه باستخدام WhatsApp (الإعدادات → الأجهزة المرتبطة)",
   "inbox.searchConversations": "ابحث في المحادثات...",
   "inbox.searchPlaceholder": "البحث في المحادثات...",
+  "inbox.restrictedContact": "بيانات الاتصال محجوبة",
   "inbox.seededReplyPlaceholder": "محادثة عرض — اتصل بـ WhatsApp للرد",
   "inbox.selectConversation": "اختر محادثة",
   "inbox.selectConversationHint": "اختر محادثة من القائمة لبدء الدردشة.",

@@ -1,0 +1,189 @@
+// Phase 1C/E canonical cancellation, delivery exception, return, exchange and
+// refund authority.
+//
+// Order.*State columns and CanonicalReturnCase.currentState are current
+// projections. Delivery events, return events, requested items, inspections,
+// refunds, reversals and exchange agreements/links are append-only authority.
+// Scalar order, item and command IDs are linked by SQL migrations so legacy
+// models do not need reverse fields.
+
+model CanonicalDeliveryEvent {
+  id                 String   @id
+  eventKey           String   @unique
+  orderId            String
+  deliveryId         String?
+  eventType          String
+  provider           String
+  providerEventId    String?
+  reasonCode         String
+  occurredAt         DateTime
+  createdByCommandId String   @unique
+  createdAt          DateTime @default(now())
+
+  @@unique([provider, providerEventId])
+  @@index([orderId, occurredAt])
+  @@index([deliveryId, occurredAt])
+  @@index([eventType, occurredAt])
+}
+
+model CanonicalReturnCase {
+  id                   String                         @id
+  returnKey            String                         @unique
+  orderId              String                         @unique
+  origin               String
+  caseType             String                         @default("return")
+  currentState         String
+  reasonCode           String
+  createdByCommandId   String                         @unique
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @default(now()) @updatedAt
+  events               CanonicalReturnEvent[]
+  items                CanonicalReturnItem[]
+  exchangeRequest      CanonicalExchangeRequest?
+  exchangeRequestItems CanonicalExchangeRequestItem[]
+  inspections          CanonicalReturnInspection[]
+  refunds              CanonicalRefund[]
+  exchangeOrder        CanonicalExchangeOrder?
+
+  @@index([currentState, updatedAt])
+  @@index([origin, createdAt])
+}
+
+model CanonicalReturnEvent {
+  id                 String              @id
+  eventKey           String              @unique
+  returnId           String
+  orderId            String
+  eventType          String
+  fromState          String?
+  toState            String
+  reasonCode         String
+  occurredAt         DateTime
+  createdByCommandId String              @unique
+  createdAt          DateTime            @default(now())
+  returnCase         CanonicalReturnCase @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([returnId, occurredAt])
+  @@index([orderId, occurredAt])
+  @@index([eventType, occurredAt])
+}
+
+model CanonicalReturnItem {
+  id                 String              @id
+  itemKey            String              @unique
+  returnId           String
+  orderId            String
+  orderItemId        String
+  productId          String
+  productVariantId   String?
+  quantity           Int
+  createdByCommandId String
+  createdAt          DateTime            @default(now())
+  returnCase         CanonicalReturnCase @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([returnId, orderItemId])
+  @@index([orderId, createdAt])
+  @@index([productId, productVariantId])
+  @@index([createdByCommandId])
+}
+
+model CanonicalExchangeRequest {
+  id                 String              @id
+  requestKey         String              @unique
+  returnId           String              @unique
+  deliveryCost       Int                 @default(0)
+  createdByCommandId String              @unique
+  createdAt          DateTime            @default(now())
+  returnCase         CanonicalReturnCase @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+}
+
+model CanonicalExchangeRequestItem {
+  id                 String              @id
+  itemKey            String              @unique
+  returnId           String
+  productId          String
+  productVariantId   String?
+  productName        String
+  productVariantName String?
+  quantity           Int
+  unitPrice          Int
+  createdByCommandId String
+  createdAt          DateTime            @default(now())
+  returnCase         CanonicalReturnCase @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([returnId, createdAt])
+  @@index([productId, productVariantId])
+  @@index([createdByCommandId])
+}
+
+model CanonicalReturnInspection {
+  id                 String              @id
+  inspectionKey      String              @unique
+  returnId           String
+  orderId            String
+  orderItemId        String
+  productId          String
+  productVariantId   String?
+  quantity           Int
+  disposition        String
+  unitCost           Int?
+  lossAmount         Int?
+  reasonCode         String
+  occurredAt         DateTime
+  createdByCommandId String
+  createdAt          DateTime            @default(now())
+  returnCase         CanonicalReturnCase @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([returnId, orderItemId])
+  @@index([orderId, occurredAt])
+  @@index([productId, productVariantId, disposition])
+  @@index([createdByCommandId])
+}
+
+model CanonicalRefund {
+  id                 String                    @id
+  refundKey          String                    @unique
+  orderId            String
+  returnId           String?
+  amount             Int
+  currency           String                    @default("DZD")
+  method             String
+  reasonCode         String
+  reference          String?
+  occurredAt         DateTime
+  createdByCommandId String                    @unique
+  createdAt          DateTime                  @default(now())
+  returnCase         CanonicalReturnCase?      @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  reversals          CanonicalRefundReversal[]
+
+  @@index([orderId, occurredAt])
+  @@index([returnId, occurredAt])
+  @@index([method, occurredAt])
+}
+
+model CanonicalRefundReversal {
+  id                 String          @id
+  reversalKey        String          @unique
+  refundId           String
+  amount             Int
+  reasonCode         String
+  occurredAt         DateTime
+  createdByCommandId String          @unique
+  createdAt          DateTime        @default(now())
+  refund             CanonicalRefund @relation(fields: [refundId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([refundId, occurredAt])
+}
+
+model CanonicalExchangeOrder {
+  id                 String              @id
+  exchangeKey        String              @unique
+  returnId           String              @unique
+  sourceOrderId      String
+  replacementOrderId String              @unique
+  createdByCommandId String              @unique
+  createdAt          DateTime            @default(now())
+  returnCase         CanonicalReturnCase @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([sourceOrderId, createdAt])
+}

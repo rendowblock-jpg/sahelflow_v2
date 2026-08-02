@@ -9,7 +9,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
-import { requireAuth } from "@/lib/auth/server";
+import {
+  requireTrustedAction,
+  trustedActorAuditIdentity,
+} from "@/lib/identity/authorization";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +20,7 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export const POST = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("orders.delete");
   const { id } = await params;
   const context = { prisma: db, shop: shopContext };
 
@@ -39,11 +42,11 @@ export const POST = withErrorHandler(async (_req: NextRequest, { params }: Route
     data: { deletedAt: null },
   });
 
-  void logAudit(context, {
+  await logAudit(context, {
     action: "order.restored",
     entity: "order",
     entityId: id,
-    actor: "user",
+    actor: trustedActorAuditIdentity(actorContext.actor),
   });
 
   return NextResponse.json({ success: true });

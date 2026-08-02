@@ -18,7 +18,7 @@ const PROFILE_KEYS = {
 } as const;
 
 export const GET = withErrorHandler(async () => {
-  await requireAuth();
+  await requireAuth("settings.read");
   const settings = await db.setting.findMany({
     where: { key: { in: Object.values(PROFILE_KEYS) } },
   });
@@ -39,7 +39,7 @@ const UpdateSchema = z.object({
 });
 
 export const PUT = withErrorHandler(async (req: Request) => {
-  await requireAuth();
+  await requireAuth("settings.manage");
   const body = await req.json();
   const parsed = UpdateSchema.safeParse(body);
   if (!parsed.success) {

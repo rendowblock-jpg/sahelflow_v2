@@ -41,6 +41,7 @@ import {
   TEST_SHOP_CONTEXT,
   uniquePhone,
 } from "@/lib/data/__tests__/helpers";
+import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
 
 let db: PrismaClient;
 
@@ -58,8 +59,14 @@ afterEach(async () => {
   await disconnectTestPrisma(db);
 });
 
-function ctx(): ToolContext {
-  return { db, shop: TEST_SHOP_CONTEXT };
+function ctx(overrides: Partial<ToolContext> = {}): ToolContext {
+  return {
+    db,
+    shop: TEST_SHOP_CONTEXT,
+    sourceIdentity: "ai-session-test",
+    sourceOrderId: "ai-proposal-test",
+    ...overrides,
+  };
 }
 
 // ── search_products ──────────────────────────────────────────────────────────
@@ -123,7 +130,13 @@ describe("search_products", () => {
     const cat = await seedCategory(db);
     await seedProduct(db, { name: "Active Widget", categoryId: cat.id });
     await db.product.create({
-      data: { name: "Inactive Widget", price: 1000, stock: 5, categoryId: cat.id, isActive: false },
+      data: {
+        name: "Inactive Widget",
+        price: 1000,
+        stock: 5,
+        categoryId: cat.id,
+        isActive: false,
+      },
     });
 
     const tool = getTool("search_products")!;
@@ -195,13 +208,18 @@ describe("search_customers", () => {
 // ── create_order ─────────────────────────────────────────────────────────────
 
 describe("create_order", () => {
-  it("creates an order for an existing customer with valid items", async () => {
+  it("creates and replays one canonical AI draft using server pricing", async () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
     const cat = await seedCategory(db);
-    const product = await seedProduct(db, { name: "Test Product", price: 2500, stock: 50, categoryId: cat.id });
+    const product = await seedProduct(db, {
+      name: "Test Product",
+      price: 2500,
+      stock: 50,
+      categoryId: cat.id,
+    });
 
     const tool = getTool("create_order")!;
-    const result = await tool.execute({
+    const input = {
       customerId: customer.id,
       items: [{ productId: product.id, quantity: 2 }],
       wilaya: "Alger",
@@ -209,45 +227,107 @@ describe("create_order", () => {
       address: "123 Rue Didouche",
       phone: "0551234567",
       notes: "Livraison rapide",
-    }, ctx());
+    };
+    const first = await tool.execute(input, ctx());
+    const replay = await tool.execute(input, ctx());
 
-    expect(result.success).toBe(true);
-    const data = result.data as { id: string; orderNumber: string; total: number; status: string };
+    expect(first.success).toBe(true);
+    expect(replay.success).toBe(true);
+    const data = first.data as {
+      id: string;
+      orderNumber: string;
+      total: number;
+      status: string;
+      replayed: boolean;
+    };
+    const replayData = replay.data as { id: string; replayed: boolean };
     expect(data.id).toBeTruthy();
+    expect(replayData.id).toBe(data.id);
     expect(data.orderNumber).toMatch(/^ORD-\d{4}$/);
-    expect(data.total).toBe(5000); // 2 × 2500
+    expect(data.total).toBe(5000);
     expect(data.status).toBe("draft");
+    expect(data.replayed).toBe(false);
+    expect(replayData.replayed).toBe(true);
+
+    const order = await db.order.findUnique({
+      where: { id: data.id },
+      include: { items: true },
+    });
+    expect(order).toMatchObject({
+      source: "ai_chat",
+      sourceOrderId: "ai-proposal-test",
+      status: "draft",
+      totalPrice: 5000,
+    });
+    expect(order?.items[0]).toMatchObject({
+      productId: product.id,
+      quantity: 2,
+      unitPrice: 2500,
+    });
+    expect(
+      isCanonicalOrderAuthority(order?.source, order?.sourceMetadata),
+    ).toBe(true);
+    expect(await db.order.count()).toBe(1);
+    expect(await db.businessCommand.count()).toBe(1);
   });
 
   it("returns error when a product does not exist", async () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
 
     const tool = getTool("create_order")!;
-    const result = await tool.execute({
-      customerId: customer.id,
-      items: [{ productId: "cnonexistent123456789", quantity: 1 }],
-      wilaya: "Alger",
-      commune: "Bab Ezzouar",
-      address: "123",
-      phone: "0551234567",
-    }, ctx());
+    const result = await tool.execute(
+      {
+        customerId: customer.id,
+        items: [{ productId: "cnonexistent123456789", quantity: 1 }],
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "123",
+        phone: "0551234567",
+      },
+      ctx(),
+    );
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain("Produit introuvable");
+    expect(result.error).toMatch(/product|produit/i);
+  });
+
+  it("returns error when the persisted AI proposal identity is missing", async () => {
+    const customer = await seedCustomer(db, { phone: uniquePhone() });
+    const product = await seedProduct(db, { price: 2500 });
+    const tool = getTool("create_order")!;
+
+    const result = await tool.execute(
+      {
+        customerId: customer.id,
+        items: [{ productId: product.id, quantity: 1 }],
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "123",
+        phone: "0551234567",
+      },
+      ctx({ sourceIdentity: undefined, sourceOrderId: undefined }),
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/identit/i);
+    expect(await db.order.count()).toBe(0);
   });
 
   it("returns error when items array is empty", async () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
 
     const tool = getTool("create_order")!;
-    const result = await tool.execute({
-      customerId: customer.id,
-      items: [],
-      wilaya: "Alger",
-      commune: "X",
-      address: "Y",
-      phone: "0551234567",
-    }, ctx());
+    const result = await tool.execute(
+      {
+        customerId: customer.id,
+        items: [],
+        wilaya: "Alger",
+        commune: "X",
+        address: "Y",
+        phone: "0551234567",
+      },
+      ctx(),
+    );
 
     expect(result.success).toBe(false);
     expect(result.error).toBeTruthy();
@@ -270,7 +350,12 @@ describe("get_stats", () => {
     const result = await tool.execute({}, ctx());
 
     expect(result.success).toBe(true);
-    const data = result.data as { totalOrders: number; grossRevenue: number; totalCustomers: number; lowStockCount: number };
+    const data = result.data as {
+      totalOrders: number;
+      grossRevenue: number;
+      totalCustomers: number;
+      lowStockCount: number;
+    };
     expect(data.totalOrders).toBe(0);
     expect(data.grossRevenue).toBe(0);
     expect(data.totalCustomers).toBe(0);
@@ -281,23 +366,45 @@ describe("get_stats", () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
     const cat = await seedCategory(db);
     // Product with low stock (stock=3 ≤ threshold=5)
-    await seedProduct(db, { name: "Low Stock Item", stock: 3, lowStockThreshold: 5, categoryId: cat.id });
+    await seedProduct(db, {
+      name: "Low Stock Item",
+      stock: 3,
+      lowStockThreshold: 5,
+      categoryId: cat.id,
+    });
     // Product with healthy stock
-    await seedProduct(db, { name: "OK Item", stock: 100, lowStockThreshold: 5, categoryId: cat.id });
+    await seedProduct(db, {
+      name: "OK Item",
+      stock: 100,
+      lowStockThreshold: 5,
+      categoryId: cat.id,
+    });
     // Order with realized revenue (delivered)
     await db.order.create({
       data: {
-        orderNumber: "ORD-0001", status: "delivered", customerId: customer.id,
-        totalPrice: 4000, wilaya: "Alger", commune: "Bab Ezzouar",
-        address: "123", phone: "0551234567", source: "manual",
+        orderNumber: "ORD-0001",
+        status: "delivered",
+        customerId: customer.id,
+        totalPrice: 4000,
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "123",
+        phone: "0551234567",
+        source: "manual",
       },
     });
     // Draft order (not counted in revenue)
     await db.order.create({
       data: {
-        orderNumber: "ORD-0002", status: "draft", customerId: customer.id,
-        totalPrice: 9999, wilaya: "Alger", commune: "Bab Ezzouar",
-        address: "123", phone: "0551234567", source: "manual",
+        orderNumber: "ORD-0002",
+        status: "draft",
+        customerId: customer.id,
+        totalPrice: 9999,
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "123",
+        phone: "0551234567",
+        source: "manual",
       },
     });
 
@@ -305,7 +412,12 @@ describe("get_stats", () => {
     const result = await tool.execute({}, ctx());
 
     expect(result.success).toBe(true);
-    const data = result.data as { totalOrders: number; grossRevenue: number; totalCustomers: number; lowStockCount: number };
+    const data = result.data as {
+      totalOrders: number;
+      grossRevenue: number;
+      totalCustomers: number;
+      lowStockCount: number;
+    };
     expect(data.totalOrders).toBe(2);
     // Phase 4: canonical gross = excludes cancelled + draft only.
     // Setup: 1 delivered (4000) + 1 draft (excluded). Gross = 4000.
@@ -333,14 +445,23 @@ describe("update_order_status", () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
     const order = await db.order.create({
       data: {
-        orderNumber: "ORD-0001", status: "draft", customerId: customer.id,
-        totalPrice: 1000, wilaya: "Alger", commune: "Bab Ezzouar",
-        address: "123", phone: "0551234567", source: "manual",
+        orderNumber: "ORD-0001",
+        status: "draft",
+        customerId: customer.id,
+        totalPrice: 1000,
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "123",
+        phone: "0551234567",
+        source: "manual",
       },
     });
 
     const tool = getTool("update_order_status")!;
-    const result = await tool.execute({ orderId: order.id, status: "pending" }, ctx());
+    const result = await tool.execute(
+      { orderId: order.id, status: "pending" },
+      ctx(),
+    );
 
     expect(result.success).toBe(true);
     const data = result.data as { id: string; status: string };
@@ -352,14 +473,23 @@ describe("update_order_status", () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
     const order = await db.order.create({
       data: {
-        orderNumber: "ORD-0001", status: "draft", customerId: customer.id,
-        totalPrice: 1000, wilaya: "Alger", commune: "Bab Ezzouar",
-        address: "123", phone: "0551234567", source: "manual",
+        orderNumber: "ORD-0001",
+        status: "draft",
+        customerId: customer.id,
+        totalPrice: 1000,
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "123",
+        phone: "0551234567",
+        source: "manual",
       },
     });
 
     const tool = getTool("update_order_status")!;
-    const result = await tool.execute({ orderId: order.id, status: "delivered" }, ctx());
+    const result = await tool.execute(
+      { orderId: order.id, status: "delivered" },
+      ctx(),
+    );
 
     expect(result.success).toBe(false);
     expect(result.error).toBeTruthy();
@@ -367,7 +497,10 @@ describe("update_order_status", () => {
 
   it("returns error for a non-existent order", async () => {
     const tool = getTool("update_order_status")!;
-    const result = await tool.execute({ orderId: "cnonexistent123456789", status: "pending" }, ctx());
+    const result = await tool.execute(
+      { orderId: "cnonexistent123456789", status: "pending" },
+      ctx(),
+    );
 
     expect(result.success).toBe(false);
     expect(result.error).toBeTruthy();
@@ -375,7 +508,10 @@ describe("update_order_status", () => {
 
   it("returns error for an invalid status value", async () => {
     const tool = getTool("update_order_status")!;
-    const result = await tool.execute({ orderId: "any", status: "invalid_status" }, ctx());
+    const result = await tool.execute(
+      { orderId: "any", status: "invalid_status" },
+      ctx(),
+    );
 
     expect(result.success).toBe(false);
     expect(result.error).toBeTruthy();
@@ -394,10 +530,17 @@ describe("estimate_delivery_cost", () => {
     });
 
     const tool = getTool("estimate_delivery_cost")!;
-    const result = await tool.execute({ wilaya: "Alger", weight: 1, codAmount: 5000 }, ctx());
+    const result = await tool.execute(
+      { wilaya: "Alger", weight: 1, codAmount: 5000 },
+      ctx(),
+    );
 
     expect(result.success).toBe(true);
-    const data = result.data as { provider: string; cost: number; available: boolean };
+    const data = result.data as {
+      provider: string;
+      cost: number;
+      available: boolean;
+    };
     expect(data.provider).toBe("yalidine");
     expect(data.cost).toBe(600);
     expect(data.available).toBe(true);
@@ -413,7 +556,10 @@ describe("estimate_delivery_cost", () => {
     });
 
     const tool = getTool("estimate_delivery_cost")!;
-    const result = await tool.execute({ wilaya: "Tamanrasset", weight: 2 }, ctx());
+    const result = await tool.execute(
+      { wilaya: "Tamanrasset", weight: 2 },
+      ctx(),
+    );
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Zone non couverte");
@@ -421,7 +567,10 @@ describe("estimate_delivery_cost", () => {
 
   it("returns error for an unknown provider", async () => {
     const tool = getTool("estimate_delivery_cost")!;
-    const result = await tool.execute({ provider: "unknown_provider", wilaya: "Alger" }, ctx());
+    const result = await tool.execute(
+      { provider: "unknown_provider", wilaya: "Alger" },
+      ctx(),
+    );
 
     expect(result.success).toBe(false);
     expect(result.error).toBeTruthy();

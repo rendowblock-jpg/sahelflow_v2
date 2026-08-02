@@ -7,13 +7,21 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, CheckCircle2, AlertCircle, ArrowRight, ShieldAlert } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  ShieldAlert,
+} from "lucide-react";
 import type { ExtractedOrder } from "@/lib/ai/extraction";
 import { dzPhone } from "@/lib/validation";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
 
 interface MessageExtractionProps {
+  conversationId?: string;
   messageId: string;
   messageBody: string;
   knownPhone?: string;
@@ -21,22 +29,34 @@ interface MessageExtractionProps {
 
 interface ExtractionResult {
   order: ExtractedOrder | null;
-  method: string;
+  method: "regex" | "gemini" | "none";
   confidence: number;
   isComplete: boolean;
   missingFields?: string[];
 }
 
-export function MessageExtraction({ messageId, messageBody, knownPhone }: MessageExtractionProps) {
+function algerianPhoneToWhatsAppJid(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const international = digits.startsWith("0")
+    ? `213${digits.slice(1)}`
+    : digits.startsWith("213")
+      ? digits
+      : `213${digits}`;
+  return `${international}@s.whatsapp.net`;
+}
+
+export function MessageExtraction({
+  conversationId,
+  messageId,
+  messageBody,
+  knownPhone,
+}: MessageExtractionProps) {
   const { t } = useI18n();
   const router = useRouter();
   const [result, setResult] = useState<ExtractionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  // Editable phone — pre-filled from extraction or known phone; user can correct
-  // it before creating the order. Required: a customer cannot be created without
-  // a valid Algerian phone (it's the @unique blind-index key).
   const [phone, setPhone] = useState<string>("");
   const [phoneTouched, setPhoneTouched] = useState(false);
 
@@ -47,15 +67,20 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
       const res = await fetch("/api/extraction", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: messageBody, knownPhone }),
+        body: JSON.stringify({
+          body: messageBody,
+          channel: "whatsapp",
+          knownPhone,
+          messageId,
+        }),
       });
       if (!res.ok) {
-        // fix-B6: detect the consent_required error code returned by the
-        // extraction route when the seller hasn't consented to sending
-        // WhatsApp message bodies to Google Gemini. Show a targeted toast
-        // with a "Go to Settings → AI" action instead of a generic error.
         let errData: { error?: string; message?: string } = {};
-        try { errData = await res.json(); } catch { /* ignore parse error */ }
+        try {
+          errData = await res.json();
+        } catch {
+          // Ignore malformed error responses.
+        }
         if (res.status === 403 && errData.error === "consent_required") {
           toast.error(t("inbox.extractionConsentRequired"), {
             duration: 9000,
@@ -64,107 +89,74 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
               onClick: () => router.push("/settings"),
             },
           });
-          // Also surface a compact inline message with a direct link.
           setError(t("inbox.extractionConsentRequired"));
           return;
         }
         throw new Error(t("inbox.extractionFailed"));
       }
-      const data = await res.json();
+      const data = (await res.json()) as { result: ExtractionResult };
       setResult(data.result);
-      // Pre-fill the editable phone from the extraction result or the known phone.
       setPhone(data.result?.order?.phone || knownPhone || "");
       setPhoneTouched(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("inbox.extractionError"));
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : t("inbox.extractionError"),
+      );
     } finally {
       setLoading(false);
     }
   }
 
   async function handleCreateOrder() {
-    if (!result?.order) return;
-    // Validate the phone before submitting — a customer cannot be created
-    // without a valid Algerian phone (it's the @unique blind-index key).
+    if (!result?.order || result.method === "none") return;
     setPhoneTouched(true);
     const phoneCheck = dzPhone.safeParse(phone.trim());
     if (!phoneCheck.success) {
       setError(t("inbox.invalidPhoneFormat"));
       return;
     }
-    const validPhone = phoneCheck.data;
+    const sourceConversationId =
+      conversationId ?? algerianPhoneToWhatsAppJid(phoneCheck.data);
+
     setCreating(true);
     setError(null);
     try {
-      // First, find or create the customer
-      const customerRes = await fetch("/api/customers", {
+      const response = await fetch("/api/orders/source/whatsapp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: result.order.customerName || t("inbox.customerDefaultName"),
-          phone: validPhone,
-          wilaya: result.order.wilaya,
-          commune: result.order.commune,
-          address: result.order.address,
-        }),
-      });
-
-      let customerId: string;
-      if (customerRes.ok) {
-        const customerData = await customerRes.json();
-        customerId = customerData.customer.id;
-      } else if (customerRes.status === 409) {
-        // Session 30 (AUDIT-5 C5): Customer already exists — find by phone
-        // via the dedicated /api/customers/search endpoint (was fetching
-        // ?pageSize=100 + client-side .find() — broken past 100 customers
-        // → created duplicates when the existing customer was past #100).
-        const searchRes = await fetch(`/api/customers/search?q=${encodeURIComponent(validPhone)}&limit=5`);
-        if (searchRes.ok) {
-          const searchData = await searchRes.json();
-          const list: Array<{ id: string; phone?: string }> = searchData.customers ?? [];
-          const existing = list.find((c) => c.phone === validPhone);
-          if (existing) {
-            customerId = existing.id;
-          } else {
-            throw new Error(t("inbox.existingCustomerNotFound"));
-          }
-        } else {
-          throw new Error(t("inbox.cannotListCustomers"));
-        }
-      } else {
-        throw new Error(t("inbox.customerCreateFailed"));
-      }
-
-      // Create the order
-      const orderRes = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId,
+          conversationId: sourceConversationId,
+          messageId,
+          extractionMethod: result.method,
+          extractionConfidence: result.confidence,
+          customer: {
+            name:
+              result.order.customerName || t("inbox.customerDefaultName"),
+            phone: phoneCheck.data,
+            wilaya: result.order.wilaya || "",
+            commune: result.order.commune || "",
+            address: result.order.address || "",
+          },
           items: result.order.items.map((item) => ({
             productName: item.productName,
             quantity: item.quantity,
-            unitPrice: item.unitPrice || 0,
           })),
-          wilaya: result.order.wilaya || "",
-          commune: result.order.commune || "",
-          address: result.order.address || "",
-          phone: validPhone,
-          source: "whatsapp",
-          sourceMetadata: { messageId },
           deliveryCost: 600,
+          notes: result.order.notes,
         }),
       });
-
-      if (!orderRes.ok) {
-        const errData = await orderRes.json();
-        throw new Error(errData.error || t("inbox.orderCreateFailed"));
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message = body.error?.message ?? body.error;
+        throw new Error(
+          typeof message === "string" ? message : t("inbox.orderCreateFailed"),
+        );
       }
-
-      const { order } = await orderRes.json();
-      router.push(`/orders/${order.id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("inbox.extractionError"));
+      router.push(`/orders/${body.order.id}`);
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : t("inbox.extractionError"),
+      );
     } finally {
       setCreating(false);
     }
@@ -192,8 +184,6 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
             <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{error}</span>
           </p>
-          {/* fix-B6: direct link to the AI settings page when the
-              extraction failed because consent hasn't been given. */}
           {error === t("inbox.extractionConsentRequired") && (
             <Button
               variant="outline"
@@ -218,12 +208,18 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 )}
                 <span className="text-sm font-medium">
-                  {result.order ? t("inbox.orderExtractedLabel") : t("inbox.extractionFailedLabel")}
+                  {result.order
+                    ? t("inbox.orderExtractedLabel")
+                    : t("inbox.extractionFailedLabel")}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">
-                  {result.method === "regex" ? t("inbox.extractionMethodRegex") : result.method === "gemini" ? t("inbox.extractionMethodGemini") : "—"}
+                  {result.method === "regex"
+                    ? t("inbox.extractionMethodRegex")
+                    : result.method === "gemini"
+                      ? t("inbox.extractionMethodGemini")
+                      : "—"}
                 </Badge>
                 <Badge variant="outline" className="text-xs">
                   {Math.round(result.confidence * 100)}%
@@ -235,29 +231,43 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
               <div className="space-y-1.5 text-sm">
                 {result.order.customerName && (
                   <div className="flex gap-2">
-                    <span className="text-muted-foreground min-w-[80px]">{t("inbox.customerLabel")}</span>
-                    <span className="font-medium">{result.order.customerName}</span>
+                    <span className="text-muted-foreground min-w-[80px]">
+                      {t("inbox.customerLabel")}
+                    </span>
+                    <span className="font-medium">
+                      {result.order.customerName}
+                    </span>
                   </div>
                 )}
                 {result.order.phone && (
                   <div className="flex gap-2">
-                    <span className="text-muted-foreground min-w-[80px]">{t("inbox.phoneLabel")}</span>
+                    <span className="text-muted-foreground min-w-[80px]">
+                      {t("inbox.phoneLabel")}
+                    </span>
                     <span className="font-mono">{result.order.phone}</span>
                   </div>
                 )}
                 {result.order.wilaya && (
                   <div className="flex gap-2">
-                    <span className="text-muted-foreground min-w-[80px]">{t("inbox.wilayaLabel")}</span>
+                    <span className="text-muted-foreground min-w-[80px]">
+                      {t("inbox.wilayaLabel")}
+                    </span>
                     <span>{result.order.wilaya}</span>
                   </div>
                 )}
                 {result.order.items.length > 0 && (
                   <div className="space-y-1">
-                    <span className="text-muted-foreground">{t("inbox.itemsLabel")}</span>
-                    {result.order.items.map((item, i) => (
-                      <div key={i} className="ms-4 flex justify-between">
-                        <span>{item.quantity}× {item.productName}</span>
-                        {item.unitPrice && <span className="font-medium">{item.unitPrice} DA</span>}
+                    <span className="text-muted-foreground">
+                      {t("inbox.itemsLabel")}
+                    </span>
+                    {result.order.items.map((item, index) => (
+                      <div key={index} className="ms-4 flex justify-between">
+                        <span>
+                          {item.quantity}× {item.productName}
+                        </span>
+                        {item.unitPrice ? (
+                          <span className="font-medium">{item.unitPrice} DA</span>
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -268,30 +278,38 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
             {result.missingFields && result.missingFields.length > 0 && (
               <div className="flex items-center gap-1.5 text-xs text-warning">
                 <AlertCircle className="h-3 w-3" />
-                <span>{t("inbox.missingFields", { fields: result.missingFields.join(", ") })}</span>
+                <span>
+                  {t("inbox.missingFields", {
+                    fields: result.missingFields.join(", "),
+                  })}
+                </span>
               </div>
             )}
 
             {result.order && (
               <div className="space-y-2">
                 <Label htmlFor={`phone-${messageId}`} className="text-xs">
-                  {t("inbox.phoneRequired")} <span className="text-destructive">*</span>
+                  {t("inbox.phoneRequired")} {" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id={`phone-${messageId}`}
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(event) => setPhone(event.target.value)}
                   onBlur={() => setPhoneTouched(true)}
                   placeholder="0[5-7]XXXXXXXX"
                   className="font-mono h-8"
-                  aria-invalid={phoneTouched && !dzPhone.safeParse(phone.trim()).success}
+                  aria-invalid={
+                    phoneTouched && !dzPhone.safeParse(phone.trim()).success
+                  }
                   inputMode="tel"
                 />
-                {phoneTouched && !dzPhone.safeParse(phone.trim()).success && (
-                  <p className="text-xs text-destructive" role="alert">
-                    {t("inbox.invalidFormatExpected")}
-                  </p>
-                )}
+                {phoneTouched &&
+                  !dzPhone.safeParse(phone.trim()).success && (
+                    <p className="text-xs text-destructive" role="alert">
+                      {t("inbox.invalidFormatExpected")}
+                    </p>
+                  )}
               </div>
             )}
 
@@ -299,7 +317,9 @@ export function MessageExtraction({ messageId, messageBody, knownPhone }: Messag
               <Button
                 size="sm"
                 onClick={handleCreateOrder}
-                disabled={creating || !dzPhone.safeParse(phone.trim()).success}
+                disabled={
+                  creating || !dzPhone.safeParse(phone.trim()).success
+                }
               >
                 {creating ? (
                   <>

@@ -3,6 +3,8 @@
 import { useState, useRef } from "react";
 import {
   Shield,
+  ShieldCheck,
+  Users,
   Bot,
   Truck,
   Bell,
@@ -27,9 +29,15 @@ import { AppearancePanel } from "@/components/settings/appearance-panel";
 import { DangerZonePanel } from "@/components/settings/danger-zone-panel";
 import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
 import { DemoDataPanel } from "@/components/settings/demo-data-panel";
+import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
+import { TeamAccessAuthorityPanel } from "@/components/settings/team-access-authority-panel";
+import { TeamMembersPanel } from "@/components/settings/team-members-panel";
+import { CollaborationAdminPanel } from "@/components/settings/collaboration-admin-panel";
 
 type Tab =
   | "profile"
+  | "security"
+  | "team"
   | "appearance"
   | "license"
   | "demo"
@@ -43,6 +51,8 @@ type Tab =
 
 const TABS: Array<{ id: Tab; icon: typeof Shield; labelKey: string }> = [
   { id: "profile", icon: UserCircle, labelKey: "settings.tabs.profile" },
+  { id: "security", icon: ShieldCheck, labelKey: "settings.tabs.security" },
+  { id: "team", icon: Users, labelKey: "settings.tabs.team" },
   { id: "appearance", icon: Palette, labelKey: "settings.tabs.appearance" },
   { id: "license", icon: Shield, labelKey: "settings.tabs.license" },
   { id: "demo", icon: Database, labelKey: "settings.tabs.demo" },
@@ -61,6 +71,18 @@ const DEMO_LABELS = {
   en: "Demo data",
 } as const;
 
+const SECURITY_LABELS = {
+  ar: "الأمان والجلسات",
+  fr: "Sécurité et sessions",
+  en: "Security & sessions",
+} as const;
+
+const TEAM_LABELS = {
+  ar: "وصول الفريق",
+  fr: "Accès de l’équipe",
+  en: "Team access",
+} as const;
+
 export function SettingsTabs({
   integrations,
 }: {
@@ -73,12 +95,18 @@ export function SettingsTabs({
 
   return (
     <div ref={tabListRef} role="tablist" className="flex flex-col gap-6 lg:flex-row">
-      {/* Tab sidebar — left-rail tree with search */}
       <nav className="flex gap-1 overflow-x-auto pb-2 lg:w-56 lg:flex-col lg:overflow-visible lg:pb-0">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = active === tab.id;
-          const label = tab.id === "demo" ? DEMO_LABELS[locale] : t(tab.labelKey);
+          const label =
+            tab.id === "demo"
+              ? DEMO_LABELS[locale]
+              : tab.id === "security"
+                ? SECURITY_LABELS[locale]
+                : tab.id === "team"
+                  ? TEAM_LABELS[locale]
+                  : t(tab.labelKey);
           return (
             <button
               key={tab.id}
@@ -86,14 +114,14 @@ export function SettingsTabs({
               role="tab"
               aria-selected={isActive}
               tabIndex={isActive ? 0 : -1}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-                  e.preventDefault();
-                  const idx = TABS.findIndex((x) => x.id === active);
-                  // In RTL, ArrowRight moves to the previous visual tab.
-                  const rawDir = e.key === "ArrowRight" ? 1 : -1;
-                  const dir = rtl ? -rawDir : rawDir;
-                  const next = TABS[(idx + dir + TABS.length) % TABS.length];
+              onKeyDown={(event) => {
+                if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+                  event.preventDefault();
+                  const index = TABS.findIndex((item) => item.id === active);
+                  const rawDirection = event.key === "ArrowRight" ? 1 : -1;
+                  const direction = rtl ? -rawDirection : rawDirection;
+                  const next =
+                    TABS[(index + direction + TABS.length) % TABS.length];
                   if (next) setActive(next.id);
                 }
               }}
@@ -107,9 +135,9 @@ export function SettingsTabs({
                   "text-destructive/70 hover:text-destructive",
               )}
             >
-              {isActive && (
+              {isActive ? (
                 <span className="absolute start-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
-              )}
+              ) : null}
               <Icon className="h-4 w-4 shrink-0" />
               <span>{label}</span>
             </button>
@@ -118,19 +146,27 @@ export function SettingsTabs({
       </nav>
 
       <div className="min-w-0 flex-1">
-        {active === "license" && <LicensePanel />}
-        {active === "demo" && <DemoDataPanel />}
-        {active === "ai" && <AiKeyPanel />}
-        {active === "delivery" && <DeliveryCredentialsPanel />}
-        {active === "reports" && <DailyReportPanel />}
-        {active === "integrations" && (
+        {active === "security" ? <SecurityAuthorityPanel /> : null}
+        {active === "team" ? (
+          <div className="space-y-8">
+            <TeamAccessAuthorityPanel />
+            <TeamMembersPanel />
+            <CollaborationAdminPanel />
+          </div>
+        ) : null}
+        {active === "license" ? <LicensePanel /> : null}
+        {active === "demo" ? <DemoDataPanel /> : null}
+        {active === "ai" ? <AiKeyPanel /> : null}
+        {active === "delivery" ? <DeliveryCredentialsPanel /> : null}
+        {active === "reports" ? <DailyReportPanel /> : null}
+        {active === "integrations" ? (
           <IntegrationsPanel integrations={integrations} />
-        )}
-        {active === "backup" && <BackupRestorePanel />}
-        {active === "appearance" && <AppearancePanel />}
-        {active === "phone" && <PhoneReputationPanel />}
-        {active === "danger" && <DangerZonePanel />}
-        {active === "profile" && (
+        ) : null}
+        {active === "backup" ? <BackupRestorePanel /> : null}
+        {active === "appearance" ? <AppearancePanel /> : null}
+        {active === "phone" ? <PhoneReputationPanel /> : null}
+        {active === "danger" ? <DangerZonePanel /> : null}
+        {active === "profile" ? (
           <div className="rounded-lg border p-6">
             <h3 className="text-base font-semibold">{t("settings.tabs.profile")}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -141,7 +177,7 @@ export function SettingsTabs({
               .
             </p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

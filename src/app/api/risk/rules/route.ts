@@ -9,14 +9,14 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/risk/rules — list all risk rules */
 export async function GET() {
-  await requireAuth();
+  await requireAuth("risk.read");
   const rules = await getRiskRules({ prisma: db, shop: shopContext });
   return NextResponse.json({ rules });
 }
 
 /** PUT /api/risk/rules — replace all rules */
 export const PUT = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("risk.manage");
   // SEC-021: validate shape with Zod (was: bare `as { rules: RiskRule[] }`).
   // The rule DSL is complex (discriminated unions for conditions + effects);
   // full validation is done in the risk engine on assessment. Here we just

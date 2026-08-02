@@ -1,16 +1,17 @@
 # SahelFlow documentation
 
 > **Status:** Active documentation entry point
-> **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
+> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
 > **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
 > **Current protected application baseline:** `731fb11528345354388b2716f3bd94f0fc73eafb`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD completion continues
+> **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
+> **Active package:** Teams source closure — protected merge decision
 > **Execution epic:** issue #164
-> **Last updated:** 2026-07-30
+> **Last updated:** 2026-08-01
 
 This directory is the durable shared brain for SahelFlow. It defines the finished
 product, the required experience and engineering invariants, what merged source
@@ -29,7 +30,8 @@ adopted by an active owner.
 2. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — capabilities, journeys,
    operational states, page completion and AAA experience standard.
 3. [`product/DECISIONS.md`](product/DECISIONS.md) — numbered Founder decisions;
-   FD-028 governs final completion and research-first implementation.
+   FD-028 governs final completion and FD-029 governs uncompromised AAA delivery
+   without weakening the program.
 4. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — target system, data
    authority, protocols, invariants, security and recovery.
 5. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) — merged implementation,
@@ -83,13 +85,51 @@ and explicit Founder acceptance remain open. Neither publication nor installatio
 proves the full Golden COD Journey, whole-route AAA quality, provider
 certification or Stable readiness.
 
-Protected `main` now also contains the first production canonical Golden COD
-path: trusted manual intake and confirmation/rejection through reservation and
-inventory movement (PR #190), followed by packing, shipment, delivery and COD
-receivable creation (PR #192). A narrow exact-process-shop authorization boundary
-(PR #191) and the Windows-protected installation root with native rotation and
-installed-MSI proof (PR #184) are merged supporting packages. These are partial
-phase results, not completion of Phases 1, 2 or 4.
+Protected `main` contains the first production canonical Golden COD path: trusted
+manual intake and confirmation/rejection through reservation and inventory
+movement (PR #190), followed by packing, shipment, delivery and COD receivable
+creation (PR #192). A narrow exact-process-shop authorization boundary (PR #191)
+and the Windows-protected installation root with native rotation and installed-MSI
+proof (PR #184) are merged supporting packages. These are partial protected phase
+results.
+
+Draft PR #195 now contains the repaired Phase 1 and Teams source boundary at
+implementation head `a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`, with normal CI
+`30714461757` and the complete integration source checkpoint `30714461656`
+successful. The concrete same-person replay, affected order authorization,
+route-ordering and collaboration-authority findings found during the 2026-08-01
+separated review were repaired and revalidated. This is source-closed proposed
+source, not protected-main truth.
+
+Phase 2A packages 2A.1–2A.4 retain their historical checkpoint evidence on the
+draft integration branch, and their shared replay boundary passed again on the
+exact source-closure head above.
+The latest closed package, multi-member roles, invitations and per-shop
+permissions, passed at exact source head
+`3266dc03994ffcb1672256465624ea715f0cf317`, normal CI `30681155150` and
+checkpoint `30681155099`. It establishes installation-level invitation,
+accepted-member and revocation authority, individual member credentials and
+sessions, exact shop grants, role-bounded custom permissions, member-owned
+reauthentication, control-first member revocation, owner administration and
+member self-view in Arabic, French and English.
+
+The separated sole-agent adversarial passes found and closed revoked-login
+disclosure, stale-owner queue authorization, cross-shop inventory exposure,
+wrong-shop login false-success, cross-person command replay, pre-authorization
+request parsing, state-only handover loss and stale-policy UI misclassification.
+No P0/P1 remains in the source-closed package. These passes were not independent
+review.
+
+Teams and permissions is source-closed on draft PR #195: authoritative
+assignments, workgroups, queues, comments, exact-member mentions, handovers,
+operational action permissions, protected-field projections and complete
+Arabic/French/English seller states are implemented and checkpointed.
+
+The active package is the explicit protected-merge decision for PR #195. The PR
+remains draft, mergeable, unmerged and version-neutral. It accepts no licensing,
+multi-shop or later-phase work. After an authorized merge, licensing and native
+multi-shop continue as short dedicated Phase 2 PRs from the then-current
+protected `main`.
 
 ## Final completion model
 

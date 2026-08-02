@@ -36,6 +36,7 @@ import {
   decryptPiiRow,
   encryptPiiFields,
 } from "@/lib/crypto/pii-fields";
+import { rotateIdentityAuthorityAuthentication } from "@/lib/identity/control-authority";
 import {
   MASTER_KEY_ROTATION_LOCK_FILE,
   MASTER_KEY_ROTATION_LOCK_FORMAT_VERSION,
@@ -113,6 +114,7 @@ type RotationStage =
   | "messages"
   | "secrets"
   | "database-disconnect"
+  | "identity-authority"
   | "root-commit";
 
 interface RuntimeEndpointManifest {
@@ -1117,6 +1119,14 @@ async function main(): Promise<void> {
         })),
       );
     }
+
+    stage = "identity-authority";
+    const identityAuthority = rotateIdentityAuthorityAuthentication(
+      oldKey,
+      newKey,
+      DRY_RUN,
+    );
+    console.log(`Identity authority: ${identityAuthority.state}`);
     printStats(allStats);
 
     if (DRY_RUN) {
@@ -1135,7 +1145,7 @@ async function main(): Promise<void> {
         : `New keyfile: ${KEYFILE_PATH}`,
     );
     console.log(
-      "All registered shop Secrets—including business-truth envelope wrappers—were re-wrapped before the shared keyfile commit.",
+      "All registered shop Secrets—including business-truth envelope wrappers—and installation identity authority were re-authenticated before the shared root commit.",
     );
   } catch (error) {
     console.error(

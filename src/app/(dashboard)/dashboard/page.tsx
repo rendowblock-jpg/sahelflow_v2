@@ -23,18 +23,35 @@ import type { OrderStatus } from "@/types/domain";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import Link from "next/link";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import {
+  projectDashboardForTrustedActor,
+  resolveDashboardFieldAccess,
+} from "@/lib/identity/dashboard-projection";
 
 
 export default async function DashboardPage() {
   const { t } = await getI18n();
-  const [stats, recentOrders, analytics] = await Promise.all([
+  const actorContext = await requireTrustedAction("shops.read");
+  const fieldAccess = resolveDashboardFieldAccess(actorContext);
+  const [rawStats, rawRecentOrders, rawAnalytics] = await Promise.all([
     getDashboardStats(),
     getRecentOrders(8),
     getDashboardAnalytics(),
   ]);
+  const { stats, recentOrders, analytics } = projectDashboardForTrustedActor(
+    {
+      stats: rawStats,
+      recentOrders: rawRecentOrders,
+      analytics: rawAnalytics,
+    },
+    fieldAccess,
+  );
 
   // Sparkline series from the 7-day revenue trend (small, inline — not a full chart)
-  const revenueSpark = analytics.revenueSeries.map((p) => ({ value: p.revenue }));
+  const revenueSpark = analytics.revenueSeries.flatMap((p) =>
+    p.revenue === null ? [] : [{ value: p.revenue }],
+  );
   const ordersSpark = analytics.revenueSeries.map((p) => ({ value: p.orders }));
   // New customers per day (7-day trend) — for card 3 sparkline
   const customersSpark = (analytics.customerGrowth ?? []).map((p) => ({ value: p.newCustomers }));
@@ -70,11 +87,11 @@ export default async function DashboardPage() {
       <div className="card-grid-4 stagger-grid">
         <StatCard
           label={t("dashboard.todaysOrders")}
-          value={stats.ordersToday}
+          value={stats.ordersToday ?? "—"}
           icon={<ShoppingCart />}
           accentBg="bg-teal-500/10 dark:bg-teal-500/15"
           accentIcon="text-teal-600 dark:text-teal-400"
-          trend={stats.ordersTrend}
+          trend={stats.ordersTrend ?? undefined}
           trendLabel={t("dashboard.vsYesterday")}
           spark={ordersSpark}
           sparkColor="var(--color-chart-1)"
@@ -82,13 +99,15 @@ export default async function DashboardPage() {
         />
         <StatCard
           label={t("dashboard.grossRevenue")}
-          value={formatDZD(stats.revenueToday)}
+          value={stats.revenueToday === null ? "—" : formatDZD(stats.revenueToday)}
           icon={<Banknote />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
           accentIcon="text-success"
-          trend={stats.revenueTrend}
+          trend={stats.revenueTrend ?? undefined}
           trendLabel={t("dashboard.vsYesterday")}
-          subtitle={`${t("dashboard.realizedRevenue")}: ${formatDZD(stats.realizedRevenueToday)}`}
+          subtitle={stats.realizedRevenueToday === null
+            ? undefined
+            : `${t("dashboard.realizedRevenue")}: ${formatDZD(stats.realizedRevenueToday)}`}
           tooltip={t("dashboard.grossRevenueTooltip")}
           spark={revenueSpark}
           sparkColor="var(--color-chart-2)"
@@ -96,7 +115,7 @@ export default async function DashboardPage() {
         />
         <StatCard
           label={t("dashboard.newCustomersToday")}
-          value={stats.newCustomers}
+          value={stats.newCustomers ?? "—"}
           icon={<Users />}
           accentBg="bg-violet-500/10 dark:bg-violet-500/15"
           accentIcon="text-violet-600 dark:text-violet-400"
@@ -107,11 +126,13 @@ export default async function DashboardPage() {
         />
         <StatCard
           label={t("dashboard.activeConversations")}
-          value={stats.activeConversations}
+          value={stats.activeConversations ?? "—"}
           icon={<MessageSquare />}
           accentBg="bg-amber-500/10 dark:bg-amber-500/15"
           accentIcon="text-warning"
-          subtitle={t("dashboard.pendingDeliveries", { count: stats.pendingDeliveries })}
+          subtitle={stats.pendingDeliveries === null
+            ? undefined
+            : t("dashboard.pendingDeliveries", { count: stats.pendingDeliveries })}
           style={{ animationDelay: "240ms" }}
         />
       </div>
@@ -198,7 +219,7 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 {recentOrders.map((order) => {
                   const statusStyle = orderStatusStyles[order.status as OrderStatus];
-                  const itemCount = order.items.length;
+                  const itemCount = order.itemCount;
                   const itemLabel = itemCount > 1
                     ? t("dashboard.itemsPlural", { n: String(itemCount) })
                     : t("dashboard.items", { n: String(itemCount) });
@@ -211,14 +232,16 @@ export default async function DashboardPage() {
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="font-mono text-sm font-medium shrink-0">{order.orderNumber}</span>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{order.customer.name}</p>
+                          <p className="text-sm font-medium truncate">{order.customerName ?? "—"}</p>
                           <p className="text-xs text-muted-foreground truncate">
-                            {itemLabel} · {order.wilaya}
+                            {itemLabel} · {order.wilaya ?? "—"}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-sm font-medium tabular-nums">{formatDZD(order.totalPrice)}</span>
+                        <span className="text-sm font-medium tabular-nums">
+                          {order.totalPrice === null ? "—" : formatDZD(order.totalPrice)}
+                        </span>
                         {statusStyle ? (
                           <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
                             <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
@@ -252,25 +275,25 @@ export default async function DashboardPage() {
               <div className="rounded-lg border bg-muted/30 p-4">
                 <p className="text-xs text-muted-foreground">{t("dashboard.deliveryRate")}</p>
                 <p className="mt-1 text-3xl font-bold tabular-nums text-success">
-                  {dp.deliveryRate}%
+                  {dp ? `${dp.deliveryRate}%` : "—"}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">{t("dashboard.inTransit")}</p>
-                  <p className="text-lg font-bold tabular-nums">{dp.inTransit}</p>
+                  <p className="text-lg font-bold tabular-nums">{dp?.inTransit ?? "—"}</p>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">{t("dashboard.pending")}</p>
-                  <p className="text-lg font-bold tabular-nums">{dp.pending}</p>
+                  <p className="text-lg font-bold tabular-nums">{dp?.pending ?? "—"}</p>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">{t("analytics.delivered")}</p>
-                  <p className="text-lg font-bold tabular-nums text-success">{dp.delivered}</p>
+                  <p className="text-lg font-bold tabular-nums text-success">{dp?.delivered ?? "—"}</p>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">{t("analytics.returned")}</p>
-                  <p className="text-lg font-bold tabular-nums text-destructive">{dp.returned}</p>
+                  <p className="text-lg font-bold tabular-nums text-destructive">{dp?.returned ?? "—"}</p>
                 </div>
               </div>
               <Button variant="outline" size="sm" asChild className="w-full">

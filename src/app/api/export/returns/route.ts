@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, shopContext } from "@/lib/db";
 import { toCsv, toXlsx } from "@/lib/import/export";
 import { requireAuth } from "@/lib/auth/server";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { logAudit } from "@/lib/audit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
@@ -10,8 +11,13 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/export/returns?format=csv|xlsx */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
-  void logAudit({ prisma: db, shop: shopContext }, { action: "export.returns", entity: "returns", actor: "user", after: { format: req.nextUrl.searchParams.get("format") ?? "csv" } });
+  const actorContext = await requireAuth([
+    "data.export",
+    "orders.read",
+    "customers.contact.read",
+    "orders.financials.read",
+  ]);
+  await logAudit({ prisma: db, shop: shopContext }, { action: "export.returns", entity: "returns", actor: trustedActorAuditIdentity(actorContext.actor), after: { format: req.nextUrl.searchParams.get("format") ?? "csv" } });
   const { t, locale } = await getI18n();
   const format = req.nextUrl.searchParams.get("format") ?? "csv";
 

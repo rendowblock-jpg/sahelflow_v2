@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { logAudit } from "@/lib/audit";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -23,7 +24,7 @@ const updateSchema = z.object({
 
 /** PATCH — Update automation fields (name/trigger/action/conditions/isActive/etc.) */
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
-  await requireAuth();
+  await requireAuth("automations.manage");
   const { id } = await params;
   const body = await req.json();
   const input = updateSchema.parse(body);
@@ -53,7 +54,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 
 /** DELETE — Remove an automation */
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
-  await requireAuth();
+  const actorContext = await requireAuth("automations.manage");
   const { id } = await params;
   const context = { prisma: db, shop: shopContext };
   // W2-5: capture before-state for audit.
@@ -61,11 +62,11 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
   // Soft-delete (Automation has deletedAt). Hard-deleting would cascade-wipe
   // AutomationLog rows and lose the execution audit trail (C-audit S2-8).
   await context.prisma.automation.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
-  void logAudit(context, {
+  await logAudit(context, {
     action: "automation.deleted",
     entity: "automation",
     entityId: id,
-    actor: "user",
+    actor: trustedActorAuditIdentity(actorContext.actor),
     before: existing as Record<string, unknown> | null,
   });
   return NextResponse.json({ success: true });

@@ -35,7 +35,6 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await new Promise((r) => setTimeout(r, 30));
   await disconnectTestPrisma(db);
 });
 
@@ -78,7 +77,8 @@ async function seedOrder(
 // ── Empty DB ────────────────────────────────────────────────────────────────
 
 describe("getRiskAnalyticsReport — empty database", () => {
-  it("returns a well-formed report with zero counts", async () => {
+  it("returns a well-formed report with zero counts without seeding settings", async () => {
+    const before = await db.setting.findMany({ orderBy: { key: "asc" } });
     const report = await getRiskAnalyticsReport(30);
     expect(report.totalOrders).toBe(0);
     expect(report.distribution).toHaveLength(4);
@@ -97,6 +97,9 @@ describe("getRiskAnalyticsReport — empty database", () => {
     expect(report.kpis.highRiskOrderCount).toBe(0);
     expect(report.kpis.blacklistedCustomerCount).toBe(0);
     expect(report.kpis.potentialSavingsDzd).toBe(0);
+    await expect(
+      db.setting.findMany({ orderBy: { key: "asc" } }),
+    ).resolves.toEqual(before);
   });
 });
 
@@ -214,8 +217,7 @@ describe("getRiskAnalyticsReport — seeded orders", () => {
     }
   });
 
-  it("ruleTriggers reflects the persisted rules", async () => {
-    // Seed the default rules in the DB so they have a known state.
+  it("ruleTriggers reflects in-memory defaults without persisting them", async () => {
     await getRiskRules();
     const report = await getRiskAnalyticsReport(30);
     expect(report.ruleTriggers).toHaveLength(DEFAULT_RISK_RULES.length);
@@ -225,6 +227,9 @@ describe("getRiskAnalyticsReport — seeded orders", () => {
       expect(typeof rt.triggerCount).toBe("number");
       expect(typeof rt.enabled).toBe("boolean");
     }
+    await expect(
+      db.setting.findUnique({ where: { key: "risk_engine_rules" } }),
+    ).resolves.toBeNull();
   });
 
   it("KPIs: avgRiskScore is the mean of all assessment scores", async () => {

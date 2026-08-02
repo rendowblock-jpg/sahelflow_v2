@@ -38,13 +38,14 @@ import {
 } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
 import { ConversationControls, ActivityMessage } from "@/components/inbox/conversation-controls";
+import { ConversationCollaborationPanel } from "@/components/inbox/conversation-collaboration-panel";
 import type { ConversationWorkflowState } from "@/components/inbox/conversation-controls";
 import { CannedResponsePicker } from "@/components/inbox/canned-response-picker";
 
 interface SeededConversation {
   id: string;
   channel: string;
-  contactName: string;
+  contactName: string | null;
   contactPhone: string | null;
   lastMessageAt: string | null;
   unreadCount: number;
@@ -85,6 +86,8 @@ interface NormalizedMessage {
   // the MessageStatus component (clock/check/double-check/blue). Was hardcoded
   // to "sent" before, making the WhatsApp-style receipts feature non-functional.
   deliveryStatus?: "sending" | "sent" | "delivered" | "read" | "failed";
+  outboxEffectKey?: string;
+  outboxState?: "queued" | "processing" | "retrying" | "succeeded" | "ambiguous" | "dead_letter";
 }
 
 type Mode = "loading" | "live" | "seeded";
@@ -102,6 +105,12 @@ export function InboxLive() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [qrKey, setQrKey] = useState(0);
+  const [allowedActions, setAllowedActions] = useState<string[]>([]);
+  const canUpdateConversation = allowedActions.includes("conversations.update");
+  const canReply = allowedActions.includes("conversations.reply");
+  const canManageWhatsApp = allowedActions.includes(
+    "whatsapp.connection.manage",
+  );
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesInnerRef = useRef<HTMLDivElement | null>(null);
@@ -121,7 +130,11 @@ export function InboxLive() {
       try {
         const res = await fetch("/api/whatsapp/chats?limit=50");
         if (res.ok) {
-          const data = (await res.json()) as { chats: SidecarChat[] };
+          const data = (await res.json()) as {
+            chats: SidecarChat[];
+            authority?: { allowedActions: string[] };
+          };
+          setAllowedActions(data.authority?.allowedActions ?? []);
           setChats(
             data.chats.map((c) => ({
               id: c.jid,
@@ -143,11 +156,15 @@ export function InboxLive() {
     // Seeded fallback
     try {
       const res = await fetch("/api/conversations");
-      const data = (await res.json()) as { conversations: SeededConversation[] };
+      const data = (await res.json()) as {
+        conversations: SeededConversation[];
+        authority?: { allowedActions: string[] };
+      };
+      setAllowedActions(data.authority?.allowedActions ?? []);
       setChats(
         data.conversations.map((c) => ({
           id: c.id,
-          name: c.contactName,
+          name: c.contactName ?? t("inbox.restrictedContact"),
           phone: c.contactPhone ?? undefined,
           channel: "seeded" as const,
           lastMessageAt: c.lastMessageAt ? new Date(c.lastMessageAt).getTime() : undefined,
@@ -168,7 +185,7 @@ export function InboxLive() {
       setChats([]);
       setMode("seeded");
     }
-  }, []);
+  }, [t]);
 
   // ── Load messages for a specific chat (called from the select handler) ─
   const loadMessages = useCallback(
@@ -187,6 +204,9 @@ export function InboxLive() {
                 body: messageText(m.message),
                 direction: (m.key.fromMe ? "outbound" : "inbound") as "inbound" | "outbound",
                 timestamp: m.messageTimestamp * 1000,
+                deliveryStatus: m.deliveryStatus,
+                outboxEffectKey: m.effectKey,
+                outboxState: m.effectState,
               })),
             );
             return;
@@ -204,6 +224,18 @@ export function InboxLive() {
                 messageType: m.messageType,
               })),
             );
+            if (canUpdateConversation) {
+              void fetch(`/api/conversations/${chatId}/read`, {
+                method: "PATCH",
+              }).then((readResponse) => {
+                if (!readResponse.ok) return;
+                setChats((current) =>
+                  current.map((chat) =>
+                    chat.id === chatId ? { ...chat, unread: 0 } : chat,
+                  ),
+                );
+              });
+            }
             return;
           }
         }
@@ -213,7 +245,7 @@ export function InboxLive() {
         setLoadingMessages(false);
       }
     },
-    [],
+    [canUpdateConversation],
   );
 
   // ── WS event callbacks (event-driven, not effects) ────────────────────
@@ -349,6 +381,96 @@ export function InboxLive() {
   }, [status]);
 
   // ── Send a reply ──────────────────────────────────────────────────────
+  async function monitorWhatsAppEffect(effectKey: string, localMessageId: string) {
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 1000 : 3000));
+      try {
+        const res = await fetch(`/api/whatsapp/outbox?effectKey=${encodeURIComponent(effectKey)}`);
+        if (!res.ok) continue;
+        const data = (await res.json()) as {
+          effect: {
+            state: NormalizedMessage["outboxState"];
+            providerMessageId: string | null;
+          };
+        };
+        const state = data.effect.state;
+        if (state === "succeeded") {
+          setMessages((prev) => prev.map((message) =>
+            message.id === localMessageId
+              ? {
+                  ...message,
+                  id: data.effect.providerMessageId ?? message.id,
+                  deliveryStatus: "sent",
+                  outboxState: state,
+                }
+              : message,
+          ));
+          return;
+        }
+        if (state === "ambiguous" || state === "dead_letter") {
+          setMessages((prev) => prev.map((message) =>
+            message.id === localMessageId
+              ? { ...message, deliveryStatus: "failed", outboxState: state }
+              : message,
+          ));
+          setSendError(state === "ambiguous" ? t("inbox.whatsappAmbiguous") : t("inbox.sendFailed"));
+          return;
+        }
+        setMessages((prev) => prev.map((message) =>
+          message.id === localMessageId ? { ...message, outboxState: state } : message,
+        ));
+      } catch {
+        // The intent remains durable; polling resumes while the inbox is open.
+      }
+    }
+  }
+
+  async function retryFailedMessage(message: NormalizedMessage) {
+    if (!message.outboxEffectKey) return;
+    const confirmMayDuplicate = message.outboxState === "ambiguous"
+      ? window.confirm(t("inbox.whatsappAmbiguousRetryWarning"))
+      : false;
+    if (message.outboxState === "ambiguous" && !confirmMayDuplicate) return;
+    setMessages((prev) => prev.map((entry) =>
+      entry.id === message.id ? { ...entry, deliveryStatus: "sending" } : entry,
+    ));
+    setSendError(null);
+    try {
+      const res = await fetch("/api/whatsapp/outbox", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ effectKey: message.outboxEffectKey, confirmMayDuplicate }),
+      });
+      const data = (await res.json()) as {
+        effect?: { state: NormalizedMessage["outboxState"]; providerMessageId: string | null };
+      };
+      if (!data.effect) throw new Error(t("inbox.sendFailed"));
+      if (data.effect.state === "succeeded") {
+        setMessages((prev) => prev.map((entry) =>
+          entry.id === message.id
+            ? {
+                ...entry,
+                id: data.effect?.providerMessageId ?? entry.id,
+                deliveryStatus: "sent",
+                outboxState: "succeeded",
+              }
+            : entry,
+        ));
+        return;
+      }
+      if (res.status === 202) {
+        void monitorWhatsAppEffect(message.outboxEffectKey, message.id);
+        return;
+      }
+      throw new Error(data.effect.state === "ambiguous" ? t("inbox.whatsappAmbiguous") : t("inbox.sendFailed"));
+    } catch (error) {
+      setMessages((prev) => prev.map((entry) =>
+        entry.id === message.id ? { ...entry, deliveryStatus: "failed" } : entry,
+      ));
+      setSendError(error instanceof Error ? error.message : t("inbox.sendFailed"));
+    }
+  }
+
   async function handleSend() {
     const active = chats.find((c) => c.id === activeChatId);
     if (!active || active.channel !== "whatsapp" || !replyText.trim()) return;
@@ -356,7 +478,7 @@ export function InboxLive() {
     // Optimistic update: show the message bubble instantly with "sending" status.
     // WhatsApp/iMessage/Telegram all do this — the user sees their message
     // immediately, not after the server responds.
-    const tempId = `local-${Date.now()}`;
+    const tempId = crypto.randomUUID();
     const messageText = replyText.trim();
     setReplyText(""); // clear input immediately
     setSending(true);
@@ -376,11 +498,37 @@ export function InboxLive() {
       const res = await fetch("/api/whatsapp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: active.id, text: messageText }),
+        body: JSON.stringify({ clientMessageId: tempId, to: active.id, text: messageText }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string; id?: string };
+      const data = (await res.json()) as {
+        ok: boolean;
+        accepted?: boolean;
+        id?: string | null;
+        effectKey?: string;
+        state?: NormalizedMessage["outboxState"];
+        requiresDuplicateConfirmation?: boolean;
+      };
+      if (res.status === 202 && data.accepted && data.effectKey) {
+        setMessages((prev) => prev.map((message) =>
+          message.id === tempId
+            ? { ...message, outboxEffectKey: data.effectKey, outboxState: data.state }
+            : message,
+        ));
+        void monitorWhatsAppEffect(data.effectKey, tempId);
+        return;
+      }
       if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? t("inbox.sendFailed"));
+        setMessages((prev) => prev.map((message) =>
+          message.id === tempId
+            ? {
+                ...message,
+                deliveryStatus: "failed",
+                outboxEffectKey: data.effectKey,
+                outboxState: data.state,
+              }
+            : message,
+        ));
+        throw new Error(data.requiresDuplicateConfirmation ? t("inbox.whatsappAmbiguous") : t("inbox.sendFailed"));
       }
       // Update the optimistic message to "sent" status. Adopt the real WhatsApp
       // message ID (Session 31, AUDIT-6 I4) so subsequent delivery/read receipts
@@ -388,7 +536,13 @@ export function InboxLive() {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId
-            ? { ...m, deliveryStatus: "sent", ...(data.id ? { id: data.id } : {}) }
+            ? {
+                ...m,
+                deliveryStatus: "sent",
+                outboxEffectKey: data.effectKey,
+                outboxState: "succeeded",
+                ...(data.id ? { id: data.id } : {}),
+              }
             : m
         )
       );
@@ -450,9 +604,10 @@ export function InboxLive() {
         onConnect={handleConnect}
         onLogout={handleLogout}
         onRetry={reconnect}
+        canManage={canManageWhatsApp}
       />
 
-      {status === "qr" && (
+      {status === "qr" && canManageWhatsApp && (
         <QrPairingCard qrKey={qrKey} onRefresh={() => setQrKey((k) => k + 1)} />
       )}
 
@@ -551,7 +706,7 @@ export function InboxLive() {
         <div className={`${isMobile && !activeChatId ? "hidden" : "flex"} flex-1 flex flex-col`}>
           {activeChat ? (
             <>
-              <div className="p-3 border-b bg-background flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-background p-3">
                 <div className="flex items-center gap-3">
                   {isMobile && (
                     <button
@@ -571,15 +726,17 @@ export function InboxLive() {
                     <p className="text-xs text-muted-foreground font-mono">{activeChat.phone}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <Badge variant="outline">
                     {activeChat.channel === "whatsapp" ? "WhatsApp" : t("inbox.channelDemo")}
                   </Badge>
+                  <ConversationControls
+                    conversationId={activeChat.id}
+                    initial={activeChat.workflow ?? {}}
+                    canUpdate={canUpdateConversation}
+                  />
+                  <ConversationCollaborationPanel conversationId={activeChat.id} />
                 </div>
-                <ConversationControls
-                  conversationId={activeChat.id}
-                  initial={activeChat.workflow ?? {}}
-                />
               </div>
 
               <ScrollArea className="flex-1 p-4">
@@ -622,6 +779,19 @@ export function InboxLive() {
                             />
                           </div>
                         )}
+                        {msg.direction === "outbound" && msg.deliveryStatus === "failed" && msg.outboxEffectKey && (
+                          <div className="flex justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void retryFailedMessage(msg)}
+                            >
+                              <RefreshCw className="me-1.5 size-3.5" />
+                              {t("inbox.retry")}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                       )
                     ))
@@ -631,7 +801,7 @@ export function InboxLive() {
               </ScrollArea>
 
               <div className="p-3 border-t bg-background">
-                {activeChat.channel === "whatsapp" && status === "connected" ? (
+                {activeChat.channel === "whatsapp" && status === "connected" && canReply ? (
                   <div className="flex items-center gap-2">
                     <CannedResponsePicker
                       disabled={sending}
@@ -726,6 +896,7 @@ function StatusBar({
   onConnect,
   onLogout,
   onRetry,
+  canManage,
 }: {
   status: WhatsAppStatus | null;
   user: WhatsAppUser | null;
@@ -734,6 +905,7 @@ function StatusBar({
   onConnect: () => void;
   onLogout: () => void;
   onRetry: () => void;
+  canManage: boolean;
 }) {
   const { t } = useI18n();
   if (status === null) {
@@ -772,10 +944,12 @@ function StatusBar({
           {user?.id && <span className="font-mono text-xs">· {user.id.split("@")[0]}</span>}
           {!wsOpen && <span className="text-xs">{t("inbox.reconnecting")}</span>}
         </span>
-        <Button variant="outline" size="sm" onClick={onLogout} className="text-destructive">
-          <LogOut className="h-3 w-3 me-1" />
-          {t("inbox.disconnect")}
-        </Button>
+        {canManage ? (
+          <Button variant="outline" size="sm" onClick={onLogout} className="text-destructive">
+            <LogOut className="h-3 w-3 me-1" />
+            {t("inbox.disconnect")}
+          </Button>
+        ) : null}
       </div>
     );
   }
@@ -801,10 +975,12 @@ function StatusBar({
         <Plug className="h-4 w-4" />
         {t("inbox.disconnected")}
       </span>
-      <Button variant="outline" size="sm" onClick={onConnect}>
-        <Smartphone className="h-3 w-3 me-1" />
-        {t("inbox.connect")}
-      </Button>
+      {canManage ? (
+        <Button variant="outline" size="sm" onClick={onConnect}>
+          <Smartphone className="h-3 w-3 me-1" />
+          {t("inbox.connect")}
+        </Button>
+      ) : null}
     </div>
   );
 }

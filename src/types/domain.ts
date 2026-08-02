@@ -20,7 +20,17 @@ export type OrderStatus =
   | "refused"
   | "cancelled";
 
-export type OrderSource = "whatsapp" | "tiktok" | "manual" | "storefront" | "ai_chat" | "shopify" | "woocommerce" | "youcan";
+export type OrderSource =
+  | "whatsapp"
+  | "tiktok"
+  | "manual"
+  | "storefront"
+  | "ai_chat"
+  | "shopify"
+  | "woocommerce"
+  | "youcan"
+  | "csv"
+  | "xlsx";
 
 export interface OrderItem {
   id: string;
@@ -48,6 +58,7 @@ export interface Order {
   address: string;
   phone: string;
   source: OrderSource;
+  sourceOrderId: string | null;
   sourceMetadata: OrderSourceMetadata | null;
   notes: string | null;
   confirmedAt: Date | null;
@@ -64,6 +75,9 @@ export interface Order {
 
 export interface OrderSourceMetadata {
   authority?: string;
+  source?: OrderSource;
+  sourceIdentity?: string;
+  sourceOrderId?: string;
   conversationId?: string;
   messageId?: string;
   platform?: string;
@@ -142,7 +156,12 @@ export type DeliveryStatus =
   | "refused"
   | "failed";
 
-export type DeliveryProvider = "manual" | "yalidine" | "maystro" | "zrexpress" | "dhd";
+export type DeliveryProvider =
+  | "manual"
+  | "yalidine"
+  | "maystro"
+  | "zrexpress"
+  | "dhd";
 
 export interface Delivery {
   id: string;

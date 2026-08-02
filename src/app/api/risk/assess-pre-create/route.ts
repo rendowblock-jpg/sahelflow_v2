@@ -8,6 +8,14 @@ import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+const PRE_CREATE_RISK_ACTIONS = [
+  "risk.read",
+  "orders.create",
+  "customers.read",
+  "customers.contact.read",
+  "orders.financials.read",
+] as const;
+
 /**
  * W3-4 (task 2-g): request body schema for POST /api/risk/assess-pre-create.
  *
@@ -59,7 +67,7 @@ const preCreateSchema = z.object({
  * endpoint is for the in-app order form only.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth(PRE_CREATE_RISK_ACTIONS);
   const body = await req.json();
   const input = preCreateSchema.parse(body);
 

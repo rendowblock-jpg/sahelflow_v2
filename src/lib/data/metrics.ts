@@ -1,45 +1,21 @@
 /**
- * Canonical revenue + delivery-rate metrics — Phase 4 consolidation.
+ * Shared operational and accounting metric entry points.
  *
- * Single source of truth for the revenue + delivery-rate formulas that
- * previously drifted across dashboard / analytics / accounting / reports
- * / AI (six revenue formulas + three delivery-rate formulas — see
- * DATA_INTEGRITY_PLAN.md Phase 4, lines 263-313).
+ * - Gross order value is an operational measure based on orders placed in the
+ *   period, excluding cancelled and draft rows.
+ * - Realized revenue is earned at delivery from the governed profitability
+ *   authority. Later returns do not erase delivery; refunds and reversals are
+ *   explicit downstream financial facts.
+ * - The legacy `netRevenue()` entry point remains net of refunds and live
+ *   Delivery-row costs for backward compatibility. New accounting readers must
+ *   use the full profitability projection.
  *
- * Canonical definitions (with the founder):
- *   - Gross revenue (period)     = sum(order.totalPrice) where createdAt
- *     in period AND status NOT IN [cancelled, draft].
- *   - Realized revenue (period)  = sum(order.totalPrice) where deliveredAt
- *     in period AND status = "delivered".
- *   - Net revenue (period)       = realized revenue − refunds in period
- *     − delivery costs in period.
- *   - Delivery rate (period)     = delivered orders in period / total
- *     orders in period (by order.status, NOT delivery.status — because
- *     not all orders have a Delivery row).
- *   - Courier delivery rate (all-time) = from the Delivery table
- *     (separate metric — courier performance).
- *
- * Money is integer DZD. All queries apply `deletedAt: null` on tables
- * that support soft-delete (Order, Delivery). Refund has no deletedAt
- * column (refunds are append-only — once issued, they cannot be deleted;
- * a wrong refund gets a compensating reverse entry via `reverseRefund`
- * (W3-2, Session 39), not a soft-delete). The `Refund.reversed` boolean
- * marks reversed refunds; `netRevenue` below filters `reversed: false`
- * so reversed refunds no longer reduce net revenue.
- *
- * Periods are half-open intervals `[from, to)` — `from` is inclusive,
- * `to` is exclusive. This lets adjacent periods chain cleanly
- * (yesterday.to === today.from) without double-counting boundary orders.
- *
- * All functions accept a `DbClient` (the PII-extended Prisma client from
- * src/lib/db.ts). In tests, a raw `PrismaClient` is passed via
- * `as never` — the PII extension is transparent for the fields these
- * queries touch (totalPrice, status, createdAt, deliveredAt, cost,
- * amount) because none of them are PII-encrypted.
+ * All periods are half-open `[from, to)` and all money is integer DZD.
  */
 import "server-only";
 
 import type { DbClient } from "@/lib/db";
+import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 
 /** Half-open period window `[from, to)`. */
 export interface Period {
@@ -88,67 +64,38 @@ export async function grossRevenue(db: DbClient, period: Period): Promise<number
 }
 
 /**
- * Realized revenue (period) — what was actually collected.
+ * Realized revenue (period) — earned delivery revenue.
  *
- * Sum of `order.totalPrice` for orders DELIVERED in the period (filter
- * by `deliveredAt`, not `createdAt`) whose status is currently
- * `delivered`. An order created yesterday and delivered today counts
- * in TODAY's realized revenue, not yesterday's.
- *
- * The `status: "delivered"` filter is defense-in-depth: an order with
- * `deliveredAt` set should always have `status = "delivered"`, but if
- * the row was later transitioned to `returned`, the status filter
- * excludes it (return reverses the realization).
+ * Reads the governed profitability projection whose canonical authority is the
+ * append-only `cod_receivable_created` movement. Historical delivered orders
+ * without canonical facts remain readable through the projection's explicit
+ * compatibility path. Collection and remittance cash transfers never count as
+ * additional revenue.
  */
 export async function realizedRevenue(db: DbClient, period: Period): Promise<number> {
-  const agg = await db.order.aggregate({
-    where: {
-      deliveredAt: { gte: period.from, lt: period.to },
-      status: "delivered",
-      deletedAt: null,
-    },
-    _sum: { totalPrice: true },
-  });
-  return agg._sum.totalPrice ?? 0;
+  const projection = await getProfitabilityProjection(db, period);
+  return projection.grossRevenue;
 }
 
 /**
- * Net revenue (period) — for the accounting P&L.
+ * Legacy net revenue compatibility metric.
  *
- * Realized revenue minus refunds issued in the period minus delivery
- * costs incurred in the period.
- *
- * - Refunds: `refund.amount` where `status = "completed"` (pending /
- *   failed refunds don't reduce net — they may never complete).
- * - Delivery costs: `delivery.cost` where the Delivery row was created
- *   in the period (the cost is incurred when the parcel is shipped to
- *   the courier, not when it's delivered — couriers bill on pickup).
+ * Historically this helper meant realized revenue after refunds and active
+ * Delivery-row costs. Preserve that behavior while dashboard, analytics,
+ * accounting, reports and AI use `getProfitabilityProjection()` directly.
  */
 export async function netRevenue(db: DbClient, period: Period): Promise<number> {
-  const [realized, refundsAgg, deliveryCostsAgg] = await Promise.all([
-    realizedRevenue(db, period),
-    db.refund.aggregate({
-      where: {
-        createdAt: { gte: period.from, lt: period.to },
-        status: "completed",
-        // W3-2 (Session 39): exclude reversed refunds — they no longer
-        // represent money returned to the customer.
-        reversed: false,
-      },
-      _sum: { amount: true },
-    }),
+  const [projection, deliveryCosts] = await Promise.all([
+    getProfitabilityProjection(db, period),
     db.delivery.aggregate({
       where: {
         createdAt: { gte: period.from, lt: period.to },
         deletedAt: null,
-        cost: { not: null },
       },
       _sum: { cost: true },
     }),
   ]);
-  const refunds = refundsAgg._sum.amount ?? 0;
-  const deliveryCosts = deliveryCostsAgg._sum.cost ?? 0;
-  return realized - refunds - deliveryCosts;
+  return projection.netRevenue - (deliveryCosts._sum.cost ?? 0);
 }
 
 /**

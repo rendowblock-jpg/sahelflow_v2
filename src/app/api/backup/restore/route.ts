@@ -9,11 +9,12 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth } from "@/lib/auth/server";
+import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
 import { db, shopContext } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { restoreBackup } from "@/lib/backup";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +26,11 @@ const restoreSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
-  void logAudit({ prisma: db, shop: shopContext }, { action: "backup.restore", entity: "system", entityId: "backup", actor: "user" });
+  const actorContext = await requireAuth(["backups.restore", "approvals.approve"]);
+  await requireRecentReauthentication();
   const body = await req.json();
   const input = restoreSchema.parse(body);
   const result = await restoreBackup(input.filename);
+  await logAudit({ prisma: db, shop: shopContext }, { action: "backup.restore", entity: "system", entityId: "backup", actor: trustedActorAuditIdentity(actorContext.actor), after: { filename: input.filename } });
   return NextResponse.json(result);
 }, "POST /api/backup/restore");

@@ -7,15 +7,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
-import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import {
+  requireTrustedAction,
+  trustedActorAuditIdentity,
+} from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export const POST = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("products.manage");
   const { id } = await params;
   const context = { prisma: db, shop: shopContext };
 
@@ -37,11 +40,11 @@ export const POST = withErrorHandler(async (_req: NextRequest, { params }: Route
     data: { deletedAt: null },
   });
 
-  void logAudit(context, {
+  await logAudit(context, {
     action: "product.restored",
     entity: "product",
     entityId: id,
-    actor: "user",
+    actor: trustedActorAuditIdentity(actorContext.actor),
   });
 
   return NextResponse.json({ success: true });

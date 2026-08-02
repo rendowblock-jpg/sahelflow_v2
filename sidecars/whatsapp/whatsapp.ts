@@ -402,12 +402,20 @@ class WhatsAppManager {
   }
 
   /** Send a text message. Accepts a phone (local or intl) or a JID. */
-  async sendMessage(to: string, text: string): Promise<{ id: string; status: string }> {
+  async sendMessage(
+    to: string,
+    text: string,
+    messageId?: string,
+  ): Promise<{ id: string; status: string }> {
     if (!this.sock || this.status !== "connected") {
       throw new Error(`Not connected (status=${this.status})`);
     }
     const jid = this.toJid(to);
-    const sent = await this.sock.sendMessage(jid, { text });
+    const sent = await this.sock.sendMessage(
+      jid,
+      { text },
+      messageId ? { messageId } : undefined,
+    );
     return {
       id: sent?.key?.id ?? "",
       status: sent?.status ?? "sent",

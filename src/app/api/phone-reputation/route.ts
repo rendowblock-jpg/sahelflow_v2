@@ -8,7 +8,7 @@ import { db, shopContext } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (_req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("risk.read");
   const list = await getBadPhoneList({ prisma: db, shop: shopContext });
   return NextResponse.json({ list });
 }, "GET /api/phone-reputation");
@@ -20,7 +20,7 @@ const reportSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("risk.manage");
   const body = await req.json();
   const parsed = reportSchema.parse(body);
   const result = await reportBadPhone(

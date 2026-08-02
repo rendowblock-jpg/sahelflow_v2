@@ -59,7 +59,7 @@ export const DELETE = withErrorHandler(
     // The database is quarantined for explicit retention cleanup rather than
     // permanently unlinked inside this request.
     // `shop` was fetched above (used for the 404 check + active-shop guard).
-    void logAudit({ prisma: db, shop: shopContext }, {
+    await logAudit({ prisma: db, shop: shopContext }, {
       action: "shop.deleted",
       entity: "shop",
       entityId: id,

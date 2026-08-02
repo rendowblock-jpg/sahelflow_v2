@@ -10,18 +10,57 @@
  * string returned by the route MUST come from the i18n catalog for the
  * request's `sahelflow-locale` cookie (ar/fr/en). No hardcoded English.
  *
- * Auth + i18n cookie isolation:
+ * Actor + i18n cookie isolation:
  *   - `cookies()` is mocked with a stateful Map so we can set the locale
- *     cookie per test. With an empty cookie jar + clean DB → setup mode →
- *     requireAuth() passes.
- *   - To test 401 we seed an AuthSecret row + clear the cookie jar.
+ *     cookie per test.
+ *   - The durable trusted-actor resolver is mocked with an explicit owner;
+ *     real action policy remains active. The 401 case rejects actor resolution.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { rawDb, cleanDb, getJson, seedProduct } from "@/app/api/__tests__/helpers";
+import { SahelFlowError } from "@/types/errors";
+
+const identityHarness = vi.hoisted(() => {
+  const actorContext = Object.freeze({
+    version: 1 as const,
+    actor: Object.freeze({
+      kind: "person" as const,
+      personId: "1".repeat(32),
+      workspaceMemberId: "2".repeat(32),
+      deviceId: "3".repeat(32),
+      sessionId: "notifications-session",
+      role: "owner" as const,
+      policyVersion: 1,
+      revocationEpoch: 0,
+    }),
+    shop: Object.freeze({
+      workspaceId: "4".repeat(32),
+      installationId: "5".repeat(32),
+      shopId: "default",
+      shopIncarnationId: "6".repeat(32),
+      registryRevision: 1,
+      databaseFileId: "default.db",
+      migrationSetSha256: "7".repeat(64),
+    }),
+  });
+  return { actorContext, requireActor: vi.fn() };
+});
+
+vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/identity/trusted-actor")
+  >();
+  return {
+    ...actual,
+    requireTrustedActor: identityHarness.requireActor,
+    isTrustedActorContext: vi.fn(
+      (value: unknown) => value === identityHarness.actorContext,
+    ),
+  };
+});
 
 // ── Stateful cookie store (cleared between tests) ───────────────────────────
-// We need to set both `sahelflow-locale` (for i18n) and `sf_session` (for
-// auth, when an AuthSecret row exists) per test.
+// Locale cookies remain independent of the durable actor fixture.
 const cookieStore = new Map<string, string>();
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
@@ -61,6 +100,9 @@ describe("GET /api/notifications — derived notification feed", () => {
   beforeEach(async () => {
     await cleanDb();
     cookieStore.clear();
+    identityHarness.requireActor
+      .mockReset()
+      .mockResolvedValue(identityHarness.actorContext);
   });
 
   afterAll(async () => {
@@ -259,11 +301,11 @@ describe("GET /api/notifications — derived notification feed", () => {
   });
 
   // ─── Auth ───────────────────────────────────────────────────────────────
-  it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await rawDb.authSecret.create({
-      data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-    });
-    // No sf_session cookie → requireAuth throws
+  it("returns 401 when durable trusted-actor resolution is rejected", async () => {
+    identityHarness.requireActor.mockRejectedValueOnce(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
+    // The production route maps the durable identity rejection to 401.
     const res = await GETNotifications();
     expect(res.status).toBe(401);
   });

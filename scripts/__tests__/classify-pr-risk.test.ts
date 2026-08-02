@@ -28,29 +28,51 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("requires every native and installed lane for Tauri source", () => {
+  it("defers Windows artifact proof for an ordinary native source package", () => {
     expect(classifyPrRisk(["src-tauri/src/lib.rs"])).toMatchObject({
       runQuality: true,
-      runTauri: true,
-      runWindowsStandalone: true,
-      runWindowsRust: true,
-      runInstalledMsi: true,
+      runTauri: false,
+      runWindowsStandalone: false,
+      runWindowsRust: false,
+      runInstalledMsi: false,
     });
   });
 
-  it("requires packaged-runtime and MSI proof for runtime readiness", () => {
+  it("defers Windows artifact proof for ordinary runtime readiness source", () => {
     expect(
       classifyPrRisk(["src/app/api/internal/runtime-ready/route.ts"]),
     ).toMatchObject({
       runQuality: true,
       runTauri: false,
-      runWindowsStandalone: true,
+      runWindowsStandalone: false,
       runWindowsRust: false,
-      runInstalledMsi: true,
+      runInstalledMsi: false,
     });
   });
 
-  it("forces every release proof when version authority changes", () => {
+  it("keeps an ordinary Prisma package on complete source proof", () => {
+    expect(
+      classifyPrRisk(["prisma/migrations/20260801053000_example/migration.sql"]),
+    ).toMatchObject({
+      runQuality: true,
+      runTauri: false,
+      runWindowsStandalone: false,
+      runWindowsRust: false,
+      runInstalledMsi: false,
+    });
+  });
+
+  it("keeps ordinary proxy authorization changes on complete source proof", () => {
+    expect(classifyPrRisk(["src/proxy.ts"])).toMatchObject({
+      runQuality: true,
+      runTauri: false,
+      runWindowsStandalone: false,
+      runWindowsRust: false,
+      runInstalledMsi: false,
+    });
+  });
+
+  it("forces every phase candidate proof when version authority changes", () => {
     expect(classifyPrRisk(["sahelflow.version.json"])).toMatchObject({
       runQuality: true,
       runTauri: true,
@@ -60,7 +82,7 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("runs a reusable Windows lane when its own workflow changes", () => {
+  it("runs a reusable Windows lane when its own proof harness changes", () => {
     expect(
       classifyPrRisk([
         ".github/workflows/windows-rust-release-parity.yml",

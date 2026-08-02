@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureConversationForJid } from "@/lib/data/conversation-service";
+import {
+  ensureConversationForJid,
+  resolveConversationIdForRead,
+} from "@/lib/data/conversation-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import { projectConversationForTrustedActor } from "@/lib/identity/conversation-projection";
 import {
   getConversationLabels,
   setConversationLabels,
@@ -23,11 +27,18 @@ export const GET = withErrorHandler(async (
   _req: NextRequest,
   { params }: Ctx,
 ) => {
-  await requireAuth();
+  await requireTrustedAction("conversations.read");
   const { id: rawId } = await params;
-    // Session 30 (AUDIT-5 C1): if rawId is a JID (live WhatsApp chat), ensure
-    // a Conversation row exists and use its cuid. Otherwise rawId is already a cuid.
-    const id = await ensureConversationForJid({ prisma: db, shop: shopContext }, rawId);
+  const id = await resolveConversationIdForRead(
+    { prisma: db, shop: shopContext },
+    rawId,
+  );
+  if (!id) {
+    return NextResponse.json(
+      { error: "Conversation not found" },
+      { status: 404 },
+    );
+  }
   const labels = await getConversationLabels({ prisma: db, shop: shopContext }, id);
   return NextResponse.json({ labels });
 }, "GET /api/conversations/[id]/labels");
@@ -38,7 +49,7 @@ export const GET = withErrorHandler(async (
  * replacement of the labels array (idempotent), matching the Chatwoot pattern.
  */
 export const PUT = withErrorHandler(async (req: NextRequest, { params }: Ctx) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("conversations.update");
   // A-H2: resolve JID → cuid (live WhatsApp chats are referenced by JID in
   // the URL). Sibling GET + parallel /status, /priority, /assign routes all
   // do this; PUT was missed → 404 for live chats.
@@ -51,5 +62,8 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: Ctx) =>
     id,
     parsed.labels,
   );
-  return NextResponse.json({ conversation: conv, labels: parsed.labels });
+  return NextResponse.json({
+    conversation: projectConversationForTrustedActor(conv, actorContext),
+    labels: parsed.labels,
+  });
 }, "PUT /api/conversations/[id]/labels");

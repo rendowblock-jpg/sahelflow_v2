@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { db } from "@/lib/db";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import {
+  projectConversationForTrustedActor,
+  projectTrustedActorActions,
+} from "@/lib/identity/conversation-projection";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/conversations — list seeded/demo conversations (client-side fallback
- * when the WhatsApp sidecar is not running or not connected). Live WhatsApp
- * conversations come from /api/whatsapp/chats.
+ * GET /api/conversations — exact-shop conversation workflow projection used as
+ * the seeded/offline inbox fallback.
  */
 export const GET = withErrorHandler(async () => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("conversations.read");
   const conversations = await db.conversation.findMany({
     orderBy: { lastMessageAt: "desc" },
     take: 100,
@@ -31,5 +35,12 @@ export const GET = withErrorHandler(async () => {
       firstReplyAt: true,
     },
   });
-  return NextResponse.json({ conversations, source: "seeded" });
+
+  return NextResponse.json({
+    conversations: conversations.map((conversation) =>
+      projectConversationForTrustedActor(conversation, actorContext),
+    ),
+    authority: { allowedActions: projectTrustedActorActions(actorContext) },
+    source: "seeded",
+  });
 }, "GET /api/conversations");

@@ -28,11 +28,53 @@ import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { rawDb, cleanDb, mockPost, mockGet, getJson, seedProduct } from "@/app/api/__tests__/helpers";
 import { db } from "@/lib/db";
+import { SahelFlowError } from "@/types/errors";
 
-// ── Mock next/headers — requireAuth() reads cookies. With a clean DB (no
-//    AuthSecret row), isAuthenticated() returns true (setup mode) — an empty
-//    cookie jar passes requireAuth. To test 401 we seed an AuthSecret row
-//    (setup=true) and leave the cookie jar empty.
+const identityHarness = vi.hoisted(() => {
+  const actorContext = Object.freeze({
+    version: 1 as const,
+    actor: Object.freeze({
+      kind: "person" as const,
+      personId: "1".repeat(32),
+      workspaceMemberId: "2".repeat(32),
+      deviceId: "3".repeat(32),
+      sessionId: "risk-route-session",
+      role: "manager" as const,
+      permissions: Object.freeze([
+        "risk.read",
+        "risk.manage",
+        "orders.create",
+        "orders.read",
+        "customers.read",
+        "customers.contact.read",
+        "orders.financials.read",
+      ] as const),
+      policyVersion: 1,
+      revocationEpoch: 0,
+    }),
+    shop: Object.freeze({ shopId: "default" }),
+  });
+  return { actorContext, requireAction: vi.fn() };
+});
+
+vi.mock("@/lib/auth/server", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/auth/server")
+  >();
+  return {
+    ...actual,
+    requireAuth: vi.fn(async (requiredActions?: unknown) =>
+      requiredActions === undefined
+        ? actual.requireAuth()
+        : identityHarness.requireAction(requiredActions),
+    ),
+  };
+});
+
+// ── Mock next/headers for the remaining legacy requireAuth() routes. With a
+//    clean DB (no AuthSecret row), their setup-mode compatibility path accepts
+//    an empty cookie jar. Action-aware risk routes use the explicit action
+//    boundary harness above; focused authority tests verify the exact grants.
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
     get: () => undefined,
@@ -57,6 +99,12 @@ import { GET as GETRules, PUT as PUTRules } from "@/app/api/risk/rules/route";
 import { GET as GETAssess, POST as POSTAssess } from "@/app/api/risk/assess/[orderId]/route";
 
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+beforeEach(() => {
+  identityHarness.requireAction
+    .mockReset()
+    .mockResolvedValue(identityHarness.actorContext);
+});
 
 /** Build a mock PUT Request with JSON body (helpers.ts only exports mockPost/mockGet). */
 function mockPut(url: string, body: unknown): NextRequest {
@@ -124,18 +172,14 @@ async function seedOrderForAssessment(opts?: { totalPrice?: number }) {
   return { order, customer, product };
 }
 
-/** Seed an AuthSecret row so the app is no longer in setup mode → requireAuth
- *  will reject requests without a valid sf_session cookie. Used by the
- *  POST/PUT 401 tests (the wrapped routes convert the throw to a 401 Response). */
-async function seedAuthSecret() {
-  await rawDb.authSecret.create({
-    data: { id: "default", secret: "test-secret-32-chars-long-aaaa", pinHash: "fake-hash" },
-  });
-}
-
 // ─── GET /api/risk/blacklist ─────────────────────────────────────────────────
 describe("GET /api/risk/blacklist — list blacklisted customers", () => {
-  beforeEach(async () => { await cleanDb(); });
+  beforeEach(async () => {
+    await cleanDb();
+    identityHarness.requireAction
+      .mockReset()
+      .mockResolvedValue(identityHarness.actorContext);
+  });
   afterAll(async () => { await rawDb.$disconnect(); });
 
   it("returns 200 + empty list on a clean DB", async () => {
@@ -171,7 +215,12 @@ describe("GET /api/risk/blacklist — list blacklisted customers", () => {
 
 // ─── POST /api/risk/blacklist ────────────────────────────────────────────────
 describe("POST /api/risk/blacklist — add to blacklist", () => {
-  beforeEach(async () => { await cleanDb(); });
+  beforeEach(async () => {
+    await cleanDb();
+    identityHarness.requireAction
+      .mockReset()
+      .mockResolvedValue(identityHarness.actorContext);
+  });
   afterAll(async () => { await rawDb.$disconnect(); });
 
   it("marks a customer as blacklisted (201) + sets isBlacklisted/blacklistReason/blacklistedAt in DB", async () => {
@@ -221,8 +270,10 @@ describe("POST /api/risk/blacklist — add to blacklist", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 401 when auth is set up but no session cookie is present", async () => {
-    await seedAuthSecret();
+  it("returns 401 when durable trusted-actor resolution is rejected", async () => {
+    identityHarness.requireAction.mockRejectedValueOnce(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     const res = await POSTBlacklist(
       mockPost("http://localhost/api/risk/blacklist", { customerId: "x" }),
     );
@@ -321,8 +372,10 @@ describe("GET / PUT /api/risk/config — risk engine config", () => {
     expect(persisted.thresholds.low).toBe(30);
   });
 
-  it("PUT returns 401 when auth is set up but no session cookie is present", async () => {
-    await seedAuthSecret();
+  it("PUT returns 401 when action authority is rejected", async () => {
+    identityHarness.requireAction.mockRejectedValueOnce(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     const res = await PUTConfig(
       mockPut("http://localhost/api/risk/config", { thresholds: { low: 30 } }),
     );
@@ -337,7 +390,7 @@ describe("GET / PUT /api/risk/rules — risk rules", () => {
   beforeEach(async () => { await cleanDb(); });
   afterAll(async () => { await rawDb.$disconnect(); });
 
-  it("GET returns 200 + default rules (seeded on first access) with triggerCount=0", async () => {
+  it("GET returns in-memory default rules without seeding durable state", async () => {
     const res = await GETRules();
     expect(res.status).toBe(200);
     const body = await getJson(res);
@@ -349,13 +402,16 @@ describe("GET / PUT /api/risk/rules — risk rules", () => {
     expect(ids).toContain("new_customer_high_value");
     // All default rules start with triggerCount=0
     expect(rules.every((r) => r.triggerCount === 0)).toBe(true);
+    expect(
+      await rawDb.setting.findUnique({ where: { key: "risk_engine_rules" } }),
+    ).toBeNull();
   });
 
   it("PUT replaces all rules + persists to Setting table", async () => {
-    // First, seed defaults (so we know there's something to replace)
+    // Reads stay pure; the first explicit management write creates the row.
     await GETRules();
     const initial = await rawDb.setting.findUnique({ where: { key: "risk_engine_rules" } });
-    expect(initial).toBeTruthy();
+    expect(initial).toBeNull();
 
     // Now PUT a custom ruleset — single rule
     const customRules = [
@@ -392,8 +448,10 @@ describe("GET / PUT /api/risk/rules — risk rules", () => {
     expect(res.status).toBe(400);
   });
 
-  it("PUT returns 401 when auth is set up but no session cookie is present", async () => {
-    await seedAuthSecret();
+  it("PUT returns 401 when action authority is rejected", async () => {
+    identityHarness.requireAction.mockRejectedValueOnce(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     const res = await PUTRules(
       mockPut("http://localhost/api/risk/rules", { rules: [] }),
     );
@@ -405,7 +463,12 @@ describe("GET / PUT /api/risk/rules — risk rules", () => {
 
 // ─── GET / POST /api/risk/assess/[orderId] ───────────────────────────────────
 describe("GET / POST /api/risk/assess/[orderId] — assess order risk", () => {
-  beforeEach(async () => { await cleanDb(); });
+  beforeEach(async () => {
+    await cleanDb();
+    identityHarness.requireAction
+      .mockReset()
+      .mockResolvedValue(identityHarness.actorContext);
+  });
   afterAll(async () => { await rawDb.$disconnect(); });
 
   it("GET returns 200 + assessment for a real order (new customer, no history)", async () => {
@@ -458,8 +521,10 @@ describe("GET / POST /api/risk/assess/[orderId] — assess order risk", () => {
     expect(res.status).toBe(404);
   });
 
-  it("POST returns 401 when auth is set up but no session cookie is present", async () => {
-    await seedAuthSecret();
+  it("POST returns 401 when durable trusted-actor resolution is rejected", async () => {
+    identityHarness.requireAction.mockRejectedValueOnce(
+      new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401),
+    );
     const { order } = await seedOrderForAssessment();
     const res = await POSTAssess(
       mockPost(`http://localhost/api/risk/assess/${order.id}`, {}),

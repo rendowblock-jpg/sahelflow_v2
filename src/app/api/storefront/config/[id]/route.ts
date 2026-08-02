@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireRecentReauthentication } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
 import { db, shopContext } from "@/lib/db";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+  trustedActorAuditIdentity,
+} from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +40,7 @@ type RouteContext = { params: Promise<{ id: string }> };
  */
 export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   // W2-4: defense-in-depth — GET was unprotected, exposed inactive storefront configs to anyone.
-  await requireAuth();
+  await requireTrustedAction("storefront.read");
   const { id } = await params;
   const { storefrontService } = await import("@/lib/storefront/service");
   const config = await storefrontService.getById({ prisma: db, shop: shopContext }, id);
@@ -50,7 +55,8 @@ export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteC
  *   Seller-only: update a storefront config. Partial updates supported.
  */
 export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("storefront.manage");
+  assertTrustedAction(actorContext, "storefront.publish");
   const { id } = await params;
   const body = await req.json();
   const input = updateConfigSchema.parse(body);
@@ -65,6 +71,14 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteCo
   }
 
   const config = await storefrontService.update(context, id, input);
+  await logAudit(context, {
+    action: "storefront.updated",
+    entity: "storefront",
+    entityId: id,
+    actor: trustedActorAuditIdentity(actorContext.actor),
+    before: existing as unknown as Record<string, unknown>,
+    after: config as unknown as Record<string, unknown>,
+  });
   return NextResponse.json({ config });
 }, "PUT /api/storefront/config/[id]");
 
@@ -73,7 +87,10 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteCo
  *   Seller-only: permanently delete a storefront config.
  */
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("storefront.manage");
+  assertTrustedAction(actorContext, "storefront.publish");
+  assertTrustedAction(actorContext, "approvals.approve");
+  await requireRecentReauthentication();
   const { id } = await params;
   const { storefrontService } = await import("@/lib/storefront/service");
 
@@ -85,11 +102,11 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
 
   await storefrontService.delete(context, id);
   // W2-5: audit the delete (existing captured above).
-  void logAudit({ prisma: db, shop: shopContext }, {
+  await logAudit({ prisma: db, shop: shopContext }, {
     action: "storefront.deleted",
     entity: "storefront",
     entityId: id,
-    actor: "user",
+    actor: trustedActorAuditIdentity(actorContext.actor),
     before: existing as unknown as Record<string, unknown> | null,
   });
   return NextResponse.json({ ok: true });

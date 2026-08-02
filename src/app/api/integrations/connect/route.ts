@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
 import { setSecret } from "@/lib/secrets";
+import { logAudit } from "@/lib/audit";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 
 /**
  * Connect an e-commerce integration (YouCan, Shopify, WooCommerce).
@@ -42,7 +44,8 @@ const ConnectSchema = z
   );
 
 export const POST = withErrorHandler(async (req: Request) => {
-  await requireAuth();
+  const actorContext = await requireAuth("integrations.manage");
+  await requireRecentReauthentication();
   const body = await req.json();
   const parsed = ConnectSchema.safeParse(body);
   if (!parsed.success) {
@@ -75,6 +78,19 @@ export const POST = withErrorHandler(async (req: Request) => {
     },
     update: {
       isActive: true,
+    },
+  });
+
+  await logAudit(context, {
+    action: "integration.credentials.updated",
+    entity: "integration",
+    entityId: provider,
+    actor: trustedActorAuditIdentity(actorContext.actor),
+    metadata: {
+      provider,
+      fields: Object.entries(creds)
+        .filter(([, value]) => Boolean(value))
+        .map(([key]) => key),
     },
   });
 

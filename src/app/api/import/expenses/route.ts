@@ -29,7 +29,7 @@ const VALID_CATEGORIES = expenseCategorySchema.options;
 
 /** POST /api/import/expenses */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth(["data.import", "accounting.read", "accounting.update"]);
   const { t } = await getI18n();
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

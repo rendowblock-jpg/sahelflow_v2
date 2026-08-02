@@ -34,7 +34,7 @@ function parseMonthFilter(
  * Always ordered by date desc, capped at 100 rows.
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("accounting.read");
   const monthParam = req.nextUrl.searchParams.get("month");
   const range = parseMonthFilter(monthParam);
 
@@ -57,7 +57,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
  *         notes? }
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("accounting.update");
   const body = await req.json();
   const data = createExpenseSchema.parse(body);
   const context = { prisma: db, shop: shopContext };

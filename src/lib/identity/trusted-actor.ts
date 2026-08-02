@@ -2,6 +2,8 @@ import "server-only";
 
 import { getCurrentSessionAuthority } from "@/lib/auth/server";
 import { shopContext } from "@/lib/db";
+import { resolveDurableIdentityActor } from "@/lib/identity/control-authority";
+import type { Phase2Action } from "@/lib/identity/permissions";
 import type { ShopContext } from "@/lib/shops/context";
 import { SahelFlowError } from "@/types/errors";
 import type { SessionAuthorityResult } from "./session-authority";
@@ -13,13 +15,7 @@ const trustedActorContexts = new WeakSet<object>();
 
 export type BuiltInRole = "owner" | "manager" | "operator" | "viewer";
 
-/**
- * Compatibility representation of today's PIN-unlocked single-owner baseline.
- *
- * This is intentionally not a `person` actor. A PIN proves local unlock only;
- * durable Person, WorkspaceMember, Device and policy identity will come from the
- * protected local control cache in later Phase 2 packages.
- */
+/** Historical compatibility shape retained for stored audit/replay contracts. */
 export type CompatibilityLocalOwnerActor = Readonly<{
   kind: "compatibility_local_owner";
   role: "owner";
@@ -34,6 +30,8 @@ export type PersonActor = Readonly<{
   deviceId: string;
   sessionId: string;
   role: BuiltInRole;
+  /** Present only when a durable custom allowlist replaces the role preset. */
+  permissions?: readonly Phase2Action[];
   policyVersion: number;
   revocationEpoch: number;
 }>;
@@ -79,22 +77,30 @@ function sessionAuthorityError(
   return new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
 }
 
-function createCompatibilityLocalOwnerContext(
+function createPersonContext(
   sessionId: string,
   shop: ShopContext,
+  identity: NonNullable<Awaited<ReturnType<typeof resolveDurableIdentityActor>>>,
 ): TrustedActorContext {
   if (!sessionId || sessionId !== sessionId.trim()) {
-    throw new TypeError("A trusted local owner actor requires an exact session ID");
+    throw new TypeError("A trusted person actor requires an exact session ID");
   }
 
   const shopSnapshot: ShopContext = Object.freeze({ ...shop });
   const context = Object.freeze({
     version: TRUSTED_ACTOR_CONTEXT_VERSION,
     actor: Object.freeze({
-      kind: "compatibility_local_owner" as const,
-      role: "owner" as const,
+      kind: "person" as const,
+      personId: identity.personId,
+      workspaceMemberId: identity.workspaceMemberId,
+      deviceId: identity.deviceId,
       sessionId,
-      compatibilityOnly: true as const,
+      role: identity.role,
+      ...(identity.permissions !== null
+        ? { permissions: identity.permissions }
+        : {}),
+      policyVersion: identity.policyVersion,
+      revocationEpoch: identity.revocationEpoch,
     }),
     shop: shopSnapshot,
   });
@@ -104,17 +110,28 @@ function createCompatibilityLocalOwnerContext(
 }
 
 /**
- * Resolve and mint the exact trusted actor for a consequential command.
+ * Resolve and mint the exact durable trusted actor for a consequential command.
  *
- * This is the only exported minting path. The raw constructor, compile-time
- * nominal brand and runtime membership set remain private to this module, so
- * callers cannot bypass session revocation or substitute a caller-created
- * Session ID or ShopContext.
+ * Session authority is checked first. Consequential command paths may only read
+ * an existing installation-level Person, WorkspaceMember, Device, shop grant,
+ * and freshness binding. Identity bootstrap is confined to the authenticated
+ * login/setup ceremony; a command can never invent replacement authority.
  */
 export async function requireTrustedActor(): Promise<TrustedActorContext> {
   const authority = await getCurrentSessionAuthority();
   if (authority.status === "authenticated") {
-    return createCompatibilityLocalOwnerContext(authority.sessionId, shopContext);
+    const identity = await resolveDurableIdentityActor(
+      authority.sessionId,
+      shopContext,
+    );
+    if (!identity) {
+      throw new SahelFlowError(
+        "The authenticated session has no durable identity authority",
+        "IDENTITY_SESSION_BINDING_REQUIRED",
+        401,
+      );
+    }
+    return createPersonContext(authority.sessionId, shopContext, identity);
   }
   if (authority.status === "setup") {
     throw new SahelFlowError(

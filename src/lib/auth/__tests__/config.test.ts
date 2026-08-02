@@ -1,102 +1,113 @@
-/**
- * Auth config tests — pure functions, no DB.
- */
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+
 import {
   AUTH_COOKIE,
+  AUTH_PIN_SETTING_KEY,
   AUTH_SECRET_ENV,
   AUTH_SECRET_SETTING_KEY,
-  AUTH_PIN_SETTING_KEY,
-  SESSION_TTL_MS,
   PUBLIC_API_ROUTES,
   PUBLIC_PAGES,
+  SENSITIVE_REAUTH_WINDOW_MS,
+  SESSION_ACTIVITY_WRITE_INTERVAL_MS,
+  SESSION_INACTIVITY_TIMEOUT_MS,
+  SESSION_OVERALL_TIMEOUT_MS,
+  SESSION_TTL_MS,
   isPublicApiRoute,
   isPublicPage,
 } from "../config";
 
 describe("auth config constants", () => {
-  it("exports the expected cookie name", () => {
+  it("exports stable cookie and secret keys", () => {
     expect(AUTH_COOKIE).toBe("sf_session");
-  });
-
-  it("exports the expected env var name", () => {
     expect(AUTH_SECRET_ENV).toBe("AUTH_SECRET");
-  });
-
-  it("exports the expected setting keys", () => {
     expect(AUTH_SECRET_SETTING_KEY).toBe("auth_secret");
     expect(AUTH_PIN_SETTING_KEY).toBe("auth_pin_hash");
   });
 
-  it("session TTL is 7 days", () => {
+  it("separates cookie lifetime, session freshness and high-risk proof", () => {
     expect(SESSION_TTL_MS).toBe(7 * 24 * 60 * 60 * 1000);
+    expect(SESSION_OVERALL_TIMEOUT_MS).toBe(24 * 60 * 60 * 1000);
+    expect(SESSION_INACTIVITY_TIMEOUT_MS).toBe(60 * 60 * 1000);
+    expect(SESSION_ACTIVITY_WRITE_INTERVAL_MS).toBe(5 * 60 * 1000);
+    expect(SENSITIVE_REAUTH_WINDOW_MS).toBe(10 * 60 * 1000);
+    expect(SESSION_ACTIVITY_WRITE_INTERVAL_MS).toBeLessThan(
+      SESSION_INACTIVITY_TIMEOUT_MS,
+    );
+    expect(SENSITIVE_REAUTH_WINDOW_MS).toBeLessThan(
+      SESSION_OVERALL_TIMEOUT_MS,
+    );
+    expect(SESSION_OVERALL_TIMEOUT_MS).toBeLessThan(SESSION_TTL_MS);
   });
 });
 
 describe("isPublicApiRoute", () => {
-  it("returns true for /api/auth/* routes", () => {
-    expect(isPublicApiRoute("/api/auth/login")).toBe(true);
-    expect(isPublicApiRoute("/api/auth/setup")).toBe(true);
-    expect(isPublicApiRoute("/api/auth/status")).toBe(true);
+  it.each([
+    "/api/auth/login",
+    "/api/auth/logout",
+    "/api/auth/setup",
+    "/api/auth/status",
+    "/api/auth/invitations/accept",
+    "/api/health",
+    "/api/storefront/submit",
+    "/api/reports/daily",
+  ])("allows the exact public route %s", (pathname) => {
+    expect(isPublicApiRoute(pathname)).toBe(true);
   });
 
-  it("returns true for /api/health", () => {
-    expect(isPublicApiRoute("/api/health")).toBe(true);
-  });
-
-  it("returns true for /api/storefront/submit (public COD checkout)", () => {
-    expect(isPublicApiRoute("/api/storefront/submit")).toBe(true);
-  });
-
-  it("returns false for /api/storefront/config/* (SEC-003: all config routes protected)", () => {
-    // SEC-003: /api/storefront/config/ was removed from PUBLIC_API_ROUTES.
-    // The public storefront page reads config via the service directly.
-    expect(isPublicApiRoute("/api/storefront/config/abc123")).toBe(false);
-    expect(isPublicApiRoute("/api/storefront/config")).toBe(false);
-  });
-
-  it("returns false for /api/whatsapp/qr-image (A-S1: now auth-protected)", () => {
-    // A-S1: /api/whatsapp/qr-image removed from PUBLIC_API_ROUTES — the QR
-    // grants full WhatsApp account access, so it must require auth. Enforced
-    // by proxy.ts middleware + per-route requireAuth() (defense-in-depth).
-    expect(isPublicApiRoute("/api/whatsapp/qr-image")).toBe(false);
-  });
-
-  it("returns false for protected routes", () => {
-    expect(isPublicApiRoute("/api/orders")).toBe(false);
-    expect(isPublicApiRoute("/api/customers")).toBe(false);
-    expect(isPublicApiRoute("/api/products")).toBe(false);
-    expect(isPublicApiRoute("/api/risk/assess/abc")).toBe(false);
+  it.each([
+    "/api/auth",
+    "/api/auth/change-pin",
+    "/api/auth/reauthenticate",
+    "/api/auth/invitations",
+    "/api/auth/invitations/accept/private",
+    "/api/auth/invitations/123/revoke",
+    "/api/auth/status/private",
+    "/api/health/private",
+    "/api/storefront/submit/private",
+    "/api/storefront/config",
+    "/api/whatsapp/qr-image",
+    "/api/orders",
+    "/api/customers",
+  ])("rejects protected or child route %s", (pathname) => {
+    expect(isPublicApiRoute(pathname)).toBe(false);
   });
 });
 
 describe("isPublicPage", () => {
-  it("returns true for /login + /setup", () => {
-    expect(isPublicPage("/login")).toBe(true);
-    expect(isPublicPage("/setup")).toBe(true);
+  it.each([
+    "/login",
+    "/setup",
+    "/join",
+    "/storefront",
+    "/storefront/example",
+  ])("allows public page %s", (pathname) => {
+    expect(isPublicPage(pathname)).toBe(true);
   });
 
-  it("returns false for dashboard pages", () => {
-    expect(isPublicPage("/dashboard")).toBe(false);
-    expect(isPublicPage("/orders")).toBe(false);
-    expect(isPublicPage("/customers")).toBe(false);
-    expect(isPublicPage("/risk")).toBe(false);
+  it.each([
+    "/login/recovery",
+    "/setup/profile",
+    "/join/private",
+    "/dashboard",
+    "/orders",
+    "/customers",
+    "/risk",
+  ])("rejects protected page %s", (pathname) => {
+    expect(isPublicPage(pathname)).toBe(false);
   });
 });
 
-describe("PUBLIC_API_ROUTES + PUBLIC_PAGES arrays", () => {
-  it("contains the expected public API routes", () => {
-    expect(PUBLIC_API_ROUTES).toContain("/api/auth");
-    expect(PUBLIC_API_ROUTES).toContain("/api/health");
-    expect(PUBLIC_API_ROUTES).toContain("/api/storefront/submit");
-    // SEC-003: /api/storefront/config/ removed from PUBLIC_API_ROUTES
+describe("public authority arrays", () => {
+  it("does not expose an API namespace prefix", () => {
+    expect(PUBLIC_API_ROUTES).not.toContain("/api/auth");
+    expect(PUBLIC_API_ROUTES).not.toContain("/api/auth/invitations");
     expect(PUBLIC_API_ROUTES).not.toContain("/api/storefront/config/");
-    // A-S1: /api/whatsapp/qr-image removed from PUBLIC_API_ROUTES
     expect(PUBLIC_API_ROUTES).not.toContain("/api/whatsapp/qr-image");
   });
 
-  it("contains the expected public pages", () => {
-    expect(PUBLIC_PAGES).toContain("/login");
-    expect(PUBLIC_PAGES).toContain("/setup");
+  it("retains only the intended public page roots", () => {
+    expect(PUBLIC_PAGES).toEqual(
+      expect.arrayContaining(["/login", "/setup", "/join", "/storefront"]),
+    );
   });
 });

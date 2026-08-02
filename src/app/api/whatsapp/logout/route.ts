@@ -1,32 +1,35 @@
 import { NextResponse } from "next/server";
-import { sidecar, SidecarUnavailableError } from "@/lib/whatsapp/sidecar-client";
-import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+
 import { logAudit } from "@/lib/audit";
-import { db, shopContext } from "@/lib/db";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
+import { db } from "@/lib/db";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import {
+  sidecar,
+  SidecarUnavailableError,
+} from "@/lib/whatsapp/sidecar-client";
 
 export const dynamic = "force-dynamic";
 
-/** DELETE /api/whatsapp/logout — clear auth + disconnect (next connect → fresh QR). */
 export const DELETE = withErrorHandler(async () => {
-  await requireAuth();
+  const actor = await requireTrustedAction("whatsapp.connection.manage");
   try {
     const result = await sidecar.logout();
-    // W2-5: audit the WhatsApp logout (security-relevant account action).
-    void logAudit({ prisma: db, shop: shopContext }, {
+    await logAudit({ prisma: db, shop: actor.shop }, {
       action: "whatsapp.logout",
       entity: "whatsapp",
-      actor: "user",
-      metadata: { ok: result?.ok ?? true },
+      actor: businessPrincipalFromTrustedActor(actor).auditActor,
+      metadata: { ok: result.ok },
     });
     return NextResponse.json(result);
-  } catch (err) {
-    if (err instanceof SidecarUnavailableError) {
+  } catch (error) {
+    if (error instanceof SidecarUnavailableError) {
       return NextResponse.json(
-        { ok: false, error: "WhatsApp sidecar not reachable." },
+        { ok: false, error: "WhatsApp sidecar not reachable" },
         { status: 503 },
       );
     }
-    throw err;
+    throw error;
   }
 }, "DELETE /api/whatsapp/logout");

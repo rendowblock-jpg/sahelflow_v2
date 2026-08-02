@@ -1,5 +1,9 @@
 import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 import { PageHeader } from "@/components/shared/page-header";
 import type { Metadata } from "next";
@@ -12,6 +16,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SettingsPage() {
+  const actorContext = await requireTrustedAction("settings.read");
+  assertTrustedAction(actorContext, "integrations.read");
   const { t } = await getI18n();
 
   // Fetch integration statuses

@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { getAnalyticsReport, getDashboardAnalytics } from "../analytics-data";
+import { getPeriodComparison, getSkuPnl } from "../analytics-v2";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -55,6 +56,9 @@ async function seedOrderWithItem(opts: {
       phone: uniquePhone(),
       source: "manual",
       createdAt: opts.createdAt ?? new Date(),
+      ...(["delivered", "returned"].includes(opts.status ?? "confirmed")
+        ? { deliveredAt: opts.createdAt ?? new Date() }
+        : {}),
       items: {
         create: [
           {
@@ -78,8 +82,6 @@ async function seedOrderWithItem(opts: {
   }
   return order;
 }
-
-// ── getAnalyticsReport ──────────────────────────────────────────────────────
 
 describe("getAnalyticsReport", () => {
   it("returns a well-formed AnalyticsReport on an empty DB", async () => {
@@ -105,12 +107,13 @@ describe("getAnalyticsReport", () => {
   it("computes summary from seeded orders (within the window)", async () => {
     await seedOrderWithItem({ totalPrice: 5000, status: "confirmed" });
     await seedOrderWithItem({ totalPrice: 3000, status: "delivered" });
-    // Cancelled → excluded from revenue but counted in totalOrders
     await seedOrderWithItem({ totalPrice: 9999, status: "cancelled" });
 
     const report = await getAnalyticsReport(30);
     expect(report.summary.totalOrders).toBe(3);
-    expect(report.summary.totalRevenue).toBe(8000); // 5000 + 3000 (cancelled excluded)
+    expect(report.summary.totalRevenue).toBe(8000);
+    expect(report.summary.realizedRevenue).toBe(3000);
+    expect(report.summary.netRevenue).toBe(3000);
   });
 
   it("populates statusDistribution from seeded orders", async () => {
@@ -119,10 +122,10 @@ describe("getAnalyticsReport", () => {
     await seedOrderWithItem({ status: "pending" });
 
     const report = await getAnalyticsReport(30);
-    const delivered = report.statusDistribution.find((s) => s.key === "delivered");
+    const delivered = report.statusDistribution.find((slice) => slice.key === "delivered");
     expect(delivered).toBeDefined();
     expect(delivered!.value).toBe(2);
-    const pending = report.statusDistribution.find((s) => s.key === "pending");
+    const pending = report.statusDistribution.find((slice) => slice.key === "pending");
     expect(pending!.value).toBe(1);
   });
 
@@ -132,7 +135,7 @@ describe("getAnalyticsReport", () => {
     await seedOrderWithItem({ productName: "Gadget", quantity: 1, unitPrice: 500 });
 
     const report = await getAnalyticsReport(30);
-    const widget = report.topProducts.find((p) => p.name === "Widget");
+    const widget = report.topProducts.find((product) => product.name === "Widget");
     expect(widget).toBeDefined();
     expect(widget!.units).toBe(3);
     expect(widget!.revenue).toBe(3000);
@@ -142,7 +145,7 @@ describe("getAnalyticsReport", () => {
     await seedOrderWithItem({});
     const report = await getAnalyticsReport(30);
     expect(report.salesByHour).toHaveLength(24);
-    const total = report.salesByHour.reduce((s, h) => s + h.orders, 0);
+    const total = report.salesByHour.reduce((sum, hour) => sum + hour.orders, 0);
     expect(total).toBeGreaterThanOrEqual(1);
   });
 
@@ -156,8 +159,6 @@ describe("getAnalyticsReport", () => {
   });
 });
 
-// ── getDashboardAnalytics ───────────────────────────────────────────────────
-
 describe("getDashboardAnalytics", () => {
   it("returns the dashboard shape with all expected keys", async () => {
     await seedOrderWithItem({ status: "delivered", deliveryStatus: "delivered" });
@@ -169,16 +170,12 @@ describe("getDashboardAnalytics", () => {
     expect(dashboard).toHaveProperty("salesByHour");
     expect(dashboard).toHaveProperty("deliveryPerformance");
     expect(dashboard).toHaveProperty("summary");
-    // topProducts limited to 5
     expect(dashboard.topProducts.length).toBeLessThanOrEqual(5);
-    // salesByHour has 24 buckets
     expect(dashboard.salesByHour).toHaveLength(24);
-    // revenueSeries matches the report's time series
     expect(Array.isArray(dashboard.revenueSeries)).toBe(true);
   });
 
   it("deliveryPerformance reflects the Delivery model (all-time)", async () => {
-    // Two delivered deliveries + one in_transit
     await seedOrderWithItem({ deliveryStatus: "delivered" });
     await seedOrderWithItem({ deliveryStatus: "delivered" });
     await seedOrderWithItem({ deliveryStatus: "in_transit" });
@@ -195,18 +192,18 @@ describe("getDashboardAnalytics", () => {
     await seedOrderWithItem({ deliveryStatus: "delivered", deliveryProvider: "maystro" });
 
     const dashboard = await getDashboardAnalytics();
-    const yalidine = dashboard.deliveryPerformance.byProvider.find((p) => p.key === "yalidine");
+    const yalidine = dashboard.deliveryPerformance.byProvider.find((provider) => provider.key === "yalidine");
     expect(yalidine).toBeDefined();
     expect(yalidine!.value).toBe(2);
-    const maystro = dashboard.deliveryPerformance.byProvider.find((p) => p.key === "maystro");
+    const maystro = dashboard.deliveryPerformance.byProvider.find((provider) => provider.key === "maystro");
     expect(maystro!.value).toBe(1);
   });
 
   it("summary is computed from the 7-day window", async () => {
-    await seedOrderWithItem({ totalPrice: 4000, status: "confirmed" });
+    await seedOrderWithItem({ totalPrice: 4000, status: "delivered" });
     const dashboard = await getDashboardAnalytics();
     expect(dashboard.summary.totalOrders).toBeGreaterThanOrEqual(1);
-    expect(dashboard.summary.totalRevenue).toBeGreaterThanOrEqual(4000);
+    expect(dashboard.summary.totalRevenue).toBe(4000);
   });
 
   it("returns empty-but-shaped result on an empty DB", async () => {
@@ -217,5 +214,94 @@ describe("getDashboardAnalytics", () => {
     expect(dashboard.deliveryPerformance.deliveryRate).toBe(0);
     expect(dashboard.deliveryPerformance.byProvider).toEqual([]);
     expect(dashboard.topProducts).toEqual([]);
+  });
+});
+
+describe("advanced analytics profitability authority", () => {
+  it("uses realized delivery revenue for period comparison", async () => {
+    const now = new Date();
+    await seedOrderWithItem({ status: "delivered", totalPrice: 3000, createdAt: now });
+    await seedOrderWithItem({ status: "pending", totalPrice: 9000, createdAt: now });
+    const current = {
+      from: new Date(now.getTime() - 86_400_000),
+      to: new Date(now.getTime() + 1_000),
+    };
+    const previous = {
+      from: new Date(now.getTime() - 2 * 86_400_000),
+      to: current.from,
+    };
+    const comparison = await getPeriodComparison(current, previous);
+    expect(comparison.current.orders).toBe(2);
+    expect(comparison.current.revenue).toBe(3000);
+  });
+
+  it("uses the immutable delivery-time cost snapshot for SKU margin", async () => {
+    const category = await db.category.create({ data: { name: "P&L" } });
+    const product = await db.product.create({
+      data: {
+        name: "Snapshot Product",
+        price: 3000,
+        cost: 1000,
+        stock: 5,
+        lowStockThreshold: 1,
+        categoryId: category.id,
+      },
+    });
+    const customer = await seedTestCustomer(db, { phone: uniquePhone() });
+    const recognizedAt = new Date();
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-SKU-PNL",
+        status: "delivered",
+        customerId: customer.id,
+        totalPrice: 3000,
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "123 Rue",
+        phone: uniquePhone(),
+        source: "manual",
+        deliveredAt: recognizedAt,
+        items: {
+          create: {
+            productId: product.id,
+            productName: product.name,
+            quantity: 1,
+            unitPrice: 3000,
+            total: 3000,
+          },
+        },
+      },
+      include: { items: true },
+    });
+    const item = order.items[0]!;
+    await db.profitabilityCostSnapshot.create({
+      data: {
+        id: "snapshot-sku-pnl",
+        snapshotKey: "snapshot-sku-pnl",
+        commandId: "command-sku-pnl",
+        orderId: order.id,
+        orderItemId: item.id,
+        productId: product.id,
+        quantity: 1,
+        unitCost: 1000,
+        costBasis: "delivery_catalog_cost_v1",
+        isExact: true,
+        recognizedAt,
+      },
+    });
+    await db.product.update({ where: { id: product.id }, data: { cost: 2500 } });
+
+    const rows = await getSkuPnl({
+      from: new Date(recognizedAt.getTime() - 1_000),
+      to: new Date(recognizedAt.getTime() + 1_000),
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      sku: "Snapshot Product",
+      revenue: 3000,
+      cost: 1000,
+      margin: 2000,
+      profitabilityComplete: true,
+    });
   });
 });

@@ -56,9 +56,10 @@
  *     Shared with `src/app/api/__tests__/helpers.ts` so this file interops
  *     with the API-route integration tests (same SQLite file, same Prisma
  *     connection — no double-cleanAll races).
- *   - Mocks `next/headers` so API routes that call `requireAuth()` pass
- *     (clean DB = no AuthSecret row = setup mode = allowed). The locale
- *     cookie is mutable per-test (scenario #12 sets it to ar/fr/en).
+ *   - Mocks `next/headers` for locale cookies and supplies one explicit
+ *     durable owner actor fixture so action-aware API routes exercise the
+ *     real authorization policy without depending on installation identity
+ *     bootstrap. Scenario #12 mutates the locale cookie to ar/fr/en.
  *   - Mocks the delivery adapter (`@/lib/integrations/delivery`) so
  *     /api/delivery/create + /api/delivery/sync don't hit a real provider.
  *   - Mocks the e-commerce adapter registry (`@/lib/integrations/ecommerce`)
@@ -73,9 +74,8 @@ import { existsSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "node
 import { join } from "node:path";
 
 // ── Mock next/headers ───────────────────────────────────────────────────────
-// requireAuth() reads cookies via next/headers. With a clean DB (no AuthSecret
-// row), isAuthenticated() returns true (setup mode). The locale cookie is
-// served per-test via a mutable holder (scenario #12 sets it to ar/fr/en).
+// The locale cookie is served per-test via a mutable holder (scenario #12
+// sets it to ar/fr/en).
 const localeHolder: { value: string | undefined } = { value: undefined };
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
@@ -89,6 +89,49 @@ vi.mock("next/headers", () => ({
     delete: () => undefined,
   })),
 }));
+
+// Action-aware notification and confirmation-queue reads require a durable
+// server-minted actor. Keep production authorization intact and replace only
+// the identity resolver with an explicit owner fixture for this integration
+// suite. `isTrustedActorContext` remains fail-closed for every other value.
+const identityHarness = vi.hoisted(() => {
+  const actorContext = Object.freeze({
+    version: 1 as const,
+    actor: Object.freeze({
+      kind: "person" as const,
+      personId: "1".repeat(32),
+      workspaceMemberId: "2".repeat(32),
+      deviceId: "3".repeat(32),
+      sessionId: "data-integrity-session",
+      role: "owner" as const,
+      policyVersion: 1,
+      revocationEpoch: 0,
+    }),
+    shop: Object.freeze({
+      workspaceId: "4".repeat(32),
+      installationId: "5".repeat(32),
+      shopId: "default",
+      shopIncarnationId: "6".repeat(32),
+      registryRevision: 1,
+      databaseFileId: "default.db",
+      migrationSetSha256: "7".repeat(64),
+    }),
+  });
+  return { actorContext };
+});
+
+vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/identity/trusted-actor")
+  >();
+  return {
+    ...actual,
+    requireTrustedActor: vi.fn(async () => identityHarness.actorContext),
+    isTrustedActorContext: vi.fn(
+      (value: unknown) => value === identityHarness.actorContext,
+    ),
+  };
+});
 
 // ── Mock the delivery adapter so API routes that call createShipment/
 //    syncTracking don't hit a real provider ──────────────────────────────────
@@ -757,7 +800,10 @@ describe("Scenario 5 — Order deliver (via /api/delivery/[id] PATCH)", () => {
 
     // PATCH the delivery to "delivered" via the manual route.
     const res = await deliveryPatch(
-      mockPost(`http://localhost/api/delivery/${delivery.id}`, { status: "delivered" }),
+      mockPost(
+        `http://localhost/api/delivery/${delivery.id}`,
+        { status: "delivered" },
+      ),
       { params: Promise.resolve({ id: delivery.id }) },
     );
     expect(res.status).toBe(200);
@@ -1426,6 +1472,9 @@ describe("Scenario 13 — PII survives backup → wipe → restore", () => {
 
 describe("Scenario 14 — E-commerce sync doesn't duplicate + writes 'created' ledger", () => {
   it("sync an order → re-sync the same order → 1 order, 1 'created' OrderChange entry, customer not duplicated", async () => {
+    // Canonical provider intake requires an existing server-owned catalog price.
+    await seedProductRaw({ name: "Widget A", price: 2000, stock: 100 });
+
     const normalized: NormalizedOrder = {
       sourceOrderId: "shop-dedup-001",
       orderNumber: "#1001",
@@ -1459,7 +1508,7 @@ describe("Scenario 14 — E-commerce sync doesn't duplicate + writes 'created' l
     expect(ordersAfterFirst).toHaveLength(1);
     expect(ordersAfterFirst[0]!.sourceOrderId).toBe("shop-dedup-001");
     expect(ordersAfterFirst[0]!.source).toBe("shopify");
-    expect(ordersAfterFirst[0]!.orderNumber).toMatch(/^SYNC-SHOPIFY-\d{4}$/);
+    expect(ordersAfterFirst[0]!.orderNumber).toMatch(/^ORD-\d{4}$/);
 
     // Customer not duplicated (exactly 1 customer row in the DB).
     // NOTE: can't query by phone via rawDb — the PII extension rewrote

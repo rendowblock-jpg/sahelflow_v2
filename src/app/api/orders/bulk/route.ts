@@ -14,7 +14,7 @@ import { db, shopContext } from "@/lib/db";
 import { orderServiceExtensions } from "@/lib/data";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import type { OrderStatus } from "@/types/domain";
-import { requireAuth } from "@/lib/auth/server";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 
 const VALID_STATUSES: OrderStatus[] = [
   "pending", "confirmed", "shipped", "delivered", "returned", "refused", "cancelled",
@@ -26,7 +26,7 @@ const bulkSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireTrustedAction("orders.update");
   const body = await req.json();
   const { ids, status } = bulkSchema.parse(body);
 

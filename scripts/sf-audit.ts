@@ -46,23 +46,19 @@ for (const relativePath of requiredFiles) {
 }
 
 function walk(directory: string): string[] {
+  if (!existsSync(directory)) return [];
   const output: string[] = [];
-  if (!existsSync(directory)) return output;
-
   for (const name of readdirSync(directory)) {
     if ([".git", "node_modules", ".next", "target"].includes(name)) continue;
     const absolutePath = resolve(directory, name);
     const relativePath = absolutePath
       .slice(repoRoot.length + 1)
       .replaceAll("\\", "/");
-
     if (relativePath.startsWith("documentation/archive/")) continue;
-
     const metadata = statSync(absolutePath);
     if (metadata.isDirectory()) output.push(...walk(absolutePath));
     else if (extname(name).toLowerCase() === ".md") output.push(absolutePath);
   }
-
   return output;
 }
 
@@ -71,10 +67,8 @@ function normalizeLink(rawTarget: string): string | null {
   if (target.startsWith("<") && target.endsWith(">")) {
     target = target.slice(1, -1);
   }
-
   const titleMatch = target.match(/^(\S+)(?:\s+["'].*["'])$/);
   if (titleMatch?.[1]) target = titleMatch[1];
-
   if (
     !target ||
     target.startsWith("#") ||
@@ -82,11 +76,9 @@ function normalizeLink(rawTarget: string): string | null {
   ) {
     return null;
   }
-
   target = target.split("#", 1)[0] ?? "";
   target = target.split("?", 1)[0] ?? "";
   if (!target) return null;
-
   try {
     return decodeURIComponent(target);
   } catch {
@@ -94,8 +86,13 @@ function normalizeLink(rawTarget: string): string | null {
   }
 }
 
-function normalizeSemanticText(value: string): string {
+function normalized(value: string): string {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function contentOf(relativePath: string): string {
+  const absolutePath = resolve(repoRoot, relativePath);
+  return existsSync(absolutePath) ? readFileSync(absolutePath, "utf8") : "";
 }
 
 const markdownFiles = walk(repoRoot);
@@ -108,18 +105,14 @@ for (const absoluteFile of markdownFiles) {
     .replaceAll("\\", "/");
   const content = readFileSync(absoluteFile, "utf8");
   let match: RegExpExecArray | null;
-
   while ((match = markdownLinkPattern.exec(content)) !== null) {
     const rawTarget = match[1];
     if (!rawTarget) continue;
-
     const target = normalizeLink(rawTarget);
     if (!target) continue;
-
     const absoluteTarget = isAbsolute(target)
       ? resolve(repoRoot, target.replace(/^[/\\]+/, ""))
       : resolve(dirname(absoluteFile), target);
-
     if (!existsSync(absoluteTarget)) {
       findings.push({
         kind: "link",
@@ -213,11 +206,9 @@ const entrypointChecks: Array<[string, string[]]> = [
 ];
 
 for (const [relativePath, markers] of entrypointChecks) {
-  const absolutePath = resolve(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) continue;
-  const content = readFileSync(absolutePath, "utf8");
+  const content = contentOf(relativePath);
   for (const marker of markers) {
-    if (!content.includes(marker)) {
+    if (content && !content.includes(marker)) {
       findings.push({
         kind: "drift",
         file: relativePath,
@@ -227,18 +218,12 @@ for (const [relativePath, markers] of entrypointChecks) {
   }
 }
 
-/**
- * These markers prove that the current authority describes the active FD-028
- * program and current release boundary. Semantic matching collapses whitespace so
- * Markdown line wrapping cannot create a false authority failure.
- */
 const semanticRequirements: Array<[string, string[]]> = [
   [
     "README.md",
     [
       "FD-028 Final Completion Program",
       "Phase 0 complete",
-      "first Phase 1 manual-confirmation vertical",
       "SahelFlow 1.0 Stable has not been released",
     ],
   ],
@@ -247,10 +232,15 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "FD-028",
       "Phase 0–9",
-      "Research-first gate",
-      "Do not run source builds, full automated tests",
-      "1.0.0-internal.13",
-      "Rebase the corrected local Phase 3 WhatsApp durable-effect commit",
+      "Founder execution-granularity decision",
+      "Sole-agent review rule",
+      "CI read-only",
+      "agent/phases1-4-completion-program",
+      "Phase 2A.1 — setup and session authority",
+      "Phase 2A.2 — durable owner identity kernel",
+      "Phase 2A.3 — revocation and policy freshness",
+      "Phase 2A.4 — multi-member roles, invitations and per-shop permissions",
+      "Exact next outcome — PR #195 protected merge decision",
     ],
   ],
   [
@@ -260,7 +250,10 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Phase 0–9",
       "Research-first rule",
       "1.0.0-internal.13",
-      "**Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD completion continues",
+      "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
+      "**Active package:** Teams source closure — protected merge decision",
+      "source-closed proposed source",
+      "Teams and permissions is source-closed",
     ],
   ],
   [
@@ -270,18 +263,23 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Superseded execution structure",
       "Research-first requirement",
       "Definition of completion",
-      "repeated approval",
       "without TPM or Secure Boot",
-      "No material incremental synchronization cost",
     ],
   ],
   [
     "documentation/system/ROADMAP.md",
     [
       "**Phase 0 status:** Complete",
-      "**Active phase:** Phase 1 — manual confirmation and fulfillment merged; Golden COD slice incomplete",
+      "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
+      "**Active package:** Teams source closure — protected merge decision",
       "# Phase 1 — Canonical Golden COD business core",
-      "## Research gate",
+      "## Result — source-closed on draft PR #195; protected merge pending",
+      "# Phase 2 — Identity, authorization, licensing and multi-shop",
+      "### Package 2A.1 — setup and session authority — closed",
+      "### Package 2A.2 — durable owner identity kernel — closed",
+      "### Package 2A.3 — revocation and policy freshness — closed",
+      "### Package 2A.4 — multi-member roles, invitations and per-shop permissions — closed",
+      "## Teams and permissions completion — source-closed on draft PR #195",
       "# Phase 9 — Certification, representative beta and Stable",
     ],
   ],
@@ -290,17 +288,14 @@ const semanticRequirements: Array<[string, string[]]> = [
     [
       "**Published release:** `1.0.0-internal.13`",
       "**Founder-installed release:** Internal.13",
-      "Trusted manual intake, confirmation/rejection and fulfillment through delivered COD receivable now use that foundation",
       "Windows profile fingerprint SHA-256",
       "Commerce checkpoint safety",
-      "The central completion task is therefore production adoption",
     ],
   ],
   [
     "documentation/operations/WORKFLOW.md",
     [
       "## 3. Research-to-implementation gate",
-      "The Desktop Agent",
       "GitHub Actions for builds",
       "No-research-drift rule",
       "latest.json` is public updater metadata",
@@ -309,12 +304,17 @@ const semanticRequirements: Array<[string, string[]]> = [
   [
     "documentation/operations/WORKING_MEMORY.md",
     [
-      "**Active code PR:** None at this checkpoint",
-      "**Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD slice incomplete",
-      "Phase 0 remains complete through PR #179",
-      "PR #190 — trusted manual confirmation",
-      "### Corrected Phase 3 durable WhatsApp proposal",
-      "## Exact next session order",
+      "**Active phase:** Phase 2 — identity, authorization, licensing and multi-shop",
+      "**Active package:** Teams source closure — protected merge decision",
+      "**Active PR:** draft PR #195",
+      "Phase 0 remains complete",
+      "Phase 1 — shared replay repair source-closed on PR #195",
+      "Phase 2A.1 result — setup and session authority closed",
+      "Phase 2A.2 result — durable owner identity kernel closed",
+      "Phase 2A.3 result — revocation and policy freshness closed",
+      "Phase 2A.4 result — multi-member roles, invitations and per-shop permissions closed",
+      "Teams and permissions completion — source-closed on PR #195",
+      "Exact execution order",
       "**Execution epic:** issue #164",
     ],
   ],
@@ -324,23 +324,15 @@ const semanticRequirements: Array<[string, string[]]> = [
       "Research-first quality rule",
       "No-AI-slop frontend rule",
       "Research-to-implementation gate",
-      "#### External evidence reviewed",
-      "#### Alternatives evaluated",
-      "#### Phase 0 acceptance and evidence",
-      "#### Phase 0 revalidation trigger",
       "NIST SP 800-218",
     ],
   ],
 ];
 
 for (const [relativePath, markers] of semanticRequirements) {
-  const absolutePath = resolve(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) continue;
-  const content = readFileSync(absolutePath, "utf8");
-  const normalizedContent = normalizeSemanticText(content);
-
+  const content = normalized(contentOf(relativePath));
   for (const marker of markers) {
-    if (!normalizedContent.includes(normalizeSemanticText(marker))) {
+    if (content && !content.includes(normalized(marker))) {
       findings.push({
         kind: "drift",
         file: relativePath,
@@ -350,50 +342,55 @@ for (const [relativePath, markers] of semanticRequirements) {
   }
 }
 
-const exactStaleMarkers: Array<[string, string]> = [
-  ["documentation/operations/WORKING_MEMORY.md", "agent/documentation-truth-reset"],
-  ["documentation/operations/WORKING_MEMORY.md", "Publication is the only remaining step"],
-  [
-    "AGENTS.md",
-    "Protected main:\n  `d1fb321ea213b0bfbb10042144c4c9b8019254eb`",
-  ],
+const activePhaseFiles = [
+  "documentation/README.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/operations/WORKING_MEMORY.md",
+] as const;
+const expectedPhase = "Phase 2 — identity, authorization, licensing and multi-shop";
+const expectedPackage = "Teams source closure — protected merge decision";
+
+for (const relativePath of activePhaseFiles) {
+  const content = contentOf(relativePath);
+  if (!content) continue;
+  const phase = /^> \*\*Active phase:\*\* (.+)$/m.exec(content)?.[1]?.trim();
+  const activePackage = /^> \*\*Active package:\*\* (.+)$/m.exec(content)?.[1]?.trim();
+  if (phase !== expectedPhase) {
+    findings.push({
+      kind: "drift",
+      file: relativePath,
+      detail: `active phase must be '${expectedPhase}', found '${phase ?? "missing"}'`,
+    });
+  }
+  if (activePackage !== expectedPackage) {
+    findings.push({
+      kind: "drift",
+      file: relativePath,
+      detail: `active package must be '${expectedPackage}', found '${activePackage ?? "missing"}'`,
+    });
+  }
+}
+
+const staleMarkers: Array<[string, string]> = [
+  ["AGENTS.md", "Exact next outcome — Phase 2A.4"],
+  ["documentation/system/ROADMAP.md", "Package 2A.4 — multi-member roles, invitations and per-shop permissions — active"],
+  ["documentation/operations/WORKING_MEMORY.md", "Active package — Phase 2A.4 member authority"],
+  ["documentation/README.md", "It does not yet claim durable Person"],
+  ["documentation/system/ROADMAP.md", "Package 2A.3 — revocation and policy freshness — active"],
+  ["documentation/operations/WORKING_MEMORY.md", "Active package — Phase 2A.3 revocation and policy freshness"],
+  ["AGENTS.md", "Exact next outcome — Phase 2A.3"],
+  ["documentation/system/ROADMAP.md", "Package 2A.1 — setup and session authority — active"],
+  ["documentation/system/ROADMAP.md", "Package 2A.2 — durable identity kernel — next"],
+  ["documentation/README.md", "**Active phase:** Phase 1 closure repair"],
+  ["documentation/system/ROADMAP.md", "**Active phase:** Phase 1 closure repair"],
+  ["documentation/operations/WORKING_MEMORY.md", "**Active phase:** Phase 1 closure repair"],
+  ["AGENTS.md", "Keep one active Phase 1 closure frontier"],
   ["AGENTS.md", "The compressed program uses four planned sessions"],
-  ["AGENTS.md", "Internal.13 is not yet Founder-installed"],
   ["AGENTS.md", "Next implementation branch: `agent/phase1-manual-confirmation`"],
-  ["documentation/README.md", "**Active phase:** Phase 0"],
-  [
-    "documentation/README.md",
-    "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
-  ],
-  ["documentation/system/ROADMAP.md", "**Active phase:** Phase 0"],
-  [
-    "documentation/system/ROADMAP.md",
-    "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
-  ],
-  ["documentation/system/CURRENT_STATE.md", "Internal.13 is not yet Founder-installed"],
-  [
-    "documentation/system/CURRENT_STATE.md",
-    "Research for the first Phase 1 manual-order confirmation vertical is complete on issue #164",
-  ],
-  ["documentation/operations/WORKING_MEMORY.md", "agent/final-completion-program"],
-  [
-    "documentation/operations/WORKING_MEMORY.md",
-    "**Active implementation branch:** None; Phase 1 implementation ready",
-  ],
-  [
-    "documentation/operations/WORKING_MEMORY.md",
-    "**Next branch:** `agent/phase1-manual-confirmation`",
-  ],
-  [
-    "documentation/operations/WORKING_MEMORY.md",
-    "**Active phase:** Phase 1 — first vertical research complete; implementation ready",
-  ],
 ];
 
-for (const [relativePath, marker] of exactStaleMarkers) {
-  const absolutePath = resolve(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) continue;
-  if (readFileSync(absolutePath, "utf8").includes(marker)) {
+for (const [relativePath, marker] of staleMarkers) {
+  if (contentOf(relativePath).includes(marker)) {
     findings.push({
       kind: "drift",
       file: relativePath,
@@ -402,11 +399,6 @@ for (const [relativePath, marker] of exactStaleMarkers) {
   }
 }
 
-/**
- * Reject active Session 1–4 execution structures even when wording changes.
- * Historical prose that explains FD-028 supersession is allowed; only headings
- * and current/active/immediate/next metadata are treated as execution authority.
- */
 const currentOwnedDocuments = [
   "README.md",
   "AGENTS.md",
@@ -417,89 +409,24 @@ const currentOwnedDocuments = [
   "documentation/operations/WORKING_MEMORY.md",
   "documentation/research/RESEARCH.md",
 ];
-
-const postMergeFrontierPatterns: Array<{
-  name: string;
-  pattern: RegExp;
-}> = [
-  {
-    name: "temporary Phase 0 closeout branch",
-    pattern: /agent\/phase0-closeout/i,
-  },
-  {
-    name: "pre-merge closeout gate",
-    pattern:
-      /(?:\b(?:before|waits?|waiting)\b.{0,120}\bcloseout\b.{0,120}\b(?:is\s+)?merge(?:s|d)?\b|\bafter\b.{0,120}\bcloseout\b.{0,120}\b(?:is\s+merged|merges)\b)/i,
-  },
+const obsoleteSessionPatterns = [
+  /^#{2,4}\s+session\s+[1-4]\b.*$/gim,
+  /^#{2,4}\s+session\s+map\b.*$/gim,
+  /^#{2,4}\s+.*\bfour[- ]session\b.*\b(?:execution|overlay|program|map)\b.*$/gim,
 ];
 
 for (const relativePath of currentOwnedDocuments) {
-  const absolutePath = resolve(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) continue;
-  const normalizedContent = normalizeSemanticText(
-    readFileSync(absolutePath, "utf8"),
-  );
-
-  for (const { name, pattern } of postMergeFrontierPatterns) {
-    if (pattern.test(normalizedContent)) {
+  const content = contentOf(relativePath);
+  for (const pattern of obsoleteSessionPatterns) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(content);
+    if (match) {
       findings.push({
         kind: "drift",
         file: relativePath,
-        detail: `post-merge authority still contains ${name}`,
+        detail: `obsolete session execution heading remains active: ${match[0].trim()}`,
       });
     }
-  }
-}
-
-const optionalListPrefix = String.raw`(?:(?:[-*+]|\d+\.)\s+)?`;
-const obsoleteSessionExecutionPatterns: Array<{
-  name: string;
-  pattern: RegExp;
-}> = [
-  {
-    name: "Session 1–4 heading",
-    pattern: /^#{2,4}\s+session\s+[1-4]\b.*$/gim,
-  },
-  {
-    name: "session map heading",
-    pattern: /^#{2,4}\s+session\s+map\b.*$/gim,
-  },
-  {
-    name: "four-session execution heading",
-    pattern:
-      /^#{2,4}\s+.*\bfour[- ]session\b.*\b(?:execution|overlay|program|map)\b.*$/gim,
-  },
-  {
-    name: "bold current/active/immediate/next Session metadata",
-    pattern: new RegExp(
-      String.raw`^\s*(?:>\s*)?${optionalListPrefix}\*\*(?:current|active|immediate|next)[^*:\n]{0,48}:\*\*[^\n]*\bsession\s+[1-4]\b.*$`,
-      "gim",
-    ),
-  },
-  {
-    name: "plain current/active/immediate/next Session metadata",
-    pattern: new RegExp(
-      String.raw`^\s*(?:>\s*)?${optionalListPrefix}(?:current|active|immediate|next)[^:\n]{0,48}:[^\n]*\bsession\s+[1-4]\b.*$`,
-      "gim",
-    ),
-  },
-];
-
-for (const relativePath of currentOwnedDocuments) {
-  const absolutePath = resolve(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) continue;
-  const content = readFileSync(absolutePath, "utf8");
-
-  for (const { name, pattern } of obsoleteSessionExecutionPatterns) {
-    pattern.lastIndex = 0;
-    const match = pattern.exec(content);
-    if (!match) continue;
-
-    findings.push({
-      kind: "drift",
-      file: relativePath,
-      detail: `obsolete ${name} remains active: ${match[0].trim()}`,
-    });
   }
 }
 
@@ -507,15 +434,13 @@ console.log(
   `SahelFlow authority audit: ${activeDocumentationFiles.length} active documentation files; ${markdownFiles.length} active repository Markdown files scanned.`,
 );
 
-if (findings.length === 0) {
+if (findings.length > 0) {
+  for (const finding of findings) {
+    console.error(`${finding.kind.toUpperCase()}: ${finding.file}: ${finding.detail}`);
+  }
+  process.exitCode = 1;
+} else {
   console.log(
-    "PASS: FD-028 authorities, shared scripts and relative links are coherent.",
+    "PASS: FD-028 authorities, source-closed Teams boundary, protected merge decision, shared scripts and relative links are coherent.",
   );
-  process.exit(0);
 }
-
-for (const finding of findings) {
-  console.error(`FAIL [${finding.kind}] ${finding.file}: ${finding.detail}`);
-}
-console.error(`${findings.length} audit finding(s).`);
-process.exit(1);

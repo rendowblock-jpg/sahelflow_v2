@@ -1,8 +1,8 @@
 // Session 2 business-truth persistence models.
 //
-// The corresponding migration is additive. These models expose the command,
-// event, reservation, movement, outbox and compensation tables to Prisma while
-// legacy order/status/stock/COD readers remain available during migration.
+// The corresponding migrations are additive. These models expose command,
+// event, reservation, movement, outbox, compensation and durable WhatsApp
+// effect tables while legacy readers remain available during migration.
 
 model BusinessAggregateVersion {
   aggregateType String
@@ -61,21 +61,41 @@ model DomainEvent {
 }
 
 model OutboxIntent {
-  id            String    @id
-  effectKey     String    @unique
-  commandId     String
-  effectType    String
-  payloadJson   String
-  status        String    @default("queued")
-  attemptCount  Int       @default(0)
-  nextAttemptAt DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
+  id              String    @id
+  effectKey       String    @unique
+  commandId       String
+  effectType      String
+  payloadJson     String
+  status          String    @default("queued")
+  attemptCount    Int       @default(0)
+  nextAttemptAt   DateTime?
+  lockedAt        DateTime?
+  leaseToken      String?
+  effectStartedAt DateTime?
+  lastErrorCode   String?
+  outcomeState    String    @default("none")
+  receiptJson     String?
+  succeededAt     DateTime?
+  deadLetteredAt  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
 
   command BusinessCommand @relation(fields: [commandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([status, nextAttemptAt])
+  @@index([effectType, status, nextAttemptAt])
+  @@index([status, lockedAt])
   @@index([commandId])
+}
+
+model WhatsAppOutboundEffect {
+  effectKey         String   @id
+  messageId         String   @unique
+  providerMessageId String?  @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+
+  @@index([providerMessageId])
 }
 
 model InventoryReservation {
@@ -142,6 +162,25 @@ model FinancialMovement {
 
   @@index([orderId, occurredAt])
   @@index([settlementId, occurredAt])
+  @@index([commandId])
+}
+
+model ProfitabilityCostSnapshot {
+  id               String   @id
+  snapshotKey      String   @unique
+  commandId        String
+  orderId          String
+  orderItemId      String   @unique
+  productId        String?
+  productVariantId String?
+  quantity         Int
+  unitCost         Int?
+  costBasis        String
+  isExact          Boolean  @default(true)
+  recognizedAt     DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([orderId, recognizedAt])
   @@index([commandId])
 }
 

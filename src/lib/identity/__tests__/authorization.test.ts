@@ -5,6 +5,15 @@ const harness = vi.hoisted(() => ({
     status: "authenticated",
     sessionId: "session-owner",
   } as unknown,
+  identity: {
+    personId: "5".repeat(32),
+    workspaceMemberId: "6".repeat(32),
+    deviceId: "7".repeat(32),
+    role: "owner" as const,
+    policyVersion: 1,
+    revocationEpoch: 0,
+  },
+  resolveDurableIdentityActor: vi.fn(),
   shop: {
     workspaceId: "1".repeat(32),
     installationId: "2".repeat(32),
@@ -20,6 +29,10 @@ vi.mock("@/lib/auth/server", () => ({
   getCurrentSessionAuthority: vi.fn(async () => harness.authority),
 }));
 
+vi.mock("../control-authority", () => ({
+  resolveDurableIdentityActor: harness.resolveDurableIdentityActor,
+}));
+
 vi.mock("@/lib/db", () => ({
   shopContext: harness.shop,
 }));
@@ -32,6 +45,7 @@ beforeEach(() => {
     status: "authenticated",
     sessionId: "session-owner",
   };
+  harness.resolveDurableIdentityActor.mockReset().mockResolvedValue(harness.identity);
 });
 
 describe("process-shop authorization", () => {
@@ -48,24 +62,32 @@ describe("process-shop authorization", () => {
     expect(error).toMatchObject(expected);
   }
 
-  it("allows only read access to the exact process shop for the compatibility owner", async () => {
+  it("allows durable-owner permissions only inside the exact process shop", async () => {
     const context = await requireTrustedActor();
 
-    expect(() => assertTrustedAction(context, "shops.read", {
-      shopId: "shop-a",
-    })).not.toThrow();
-    expectFailure(() => assertTrustedAction(context, "shops.read", {
-      shopId: "shop-b",
-    }), {
-      code: "ACTION_FORBIDDEN",
-      statusCode: 403,
-    });
-    expectFailure(() => assertTrustedAction(context, "shops.switch", {
-      shopId: "shop-a",
-    }), {
-      code: "ACTION_FORBIDDEN",
-      statusCode: 403,
-    });
+    expect(() =>
+      assertTrustedAction(context, "shops.read", { shopId: "shop-a" }),
+    ).not.toThrow();
+    expect(() =>
+      assertTrustedAction(context, "shops.create", { shopId: "shop-a" }),
+    ).not.toThrow();
+    expect(() =>
+      assertTrustedAction(context, "shops.switch", { shopId: "shop-a" }),
+    ).not.toThrow();
+    expect(() =>
+      assertTrustedAction(context, "shops.delete", { shopId: "shop-a" }),
+    ).not.toThrow();
+
+    for (const action of [
+      "shops.read",
+      "shops.switch",
+      "shops.delete",
+    ] as const) {
+      expectFailure(
+        () => assertTrustedAction(context, action, { shopId: "shop-b" }),
+        { code: "ACTION_FORBIDDEN", statusCode: 403 },
+      );
+    }
   });
 
   it("rejects a structurally identical caller-minted context", async () => {
@@ -76,13 +98,15 @@ describe("process-shop authorization", () => {
       shop: trusted.shop,
     };
 
-    expectFailure(() => assertTrustedAction(
-      lookalike as typeof trusted,
-      "shops.read",
-      { shopId: "shop-a" },
-    ), {
-      code: "TRUSTED_ACTOR_REQUIRED",
-      statusCode: 401,
-    });
+    expectFailure(
+      () =>
+        assertTrustedAction(lookalike as typeof trusted, "shops.read", {
+          shopId: "shop-a",
+        }),
+      {
+        code: "TRUSTED_ACTOR_REQUIRED",
+        statusCode: 401,
+      },
+    );
   });
 });

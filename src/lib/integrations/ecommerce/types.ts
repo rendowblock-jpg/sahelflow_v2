@@ -1,72 +1,64 @@
 /**
  * E-commerce sync types + adapter interface.
  *
- * Each platform (Shopify, WooCommerce, YouCan) implements the EcommerceAdapter
- * interface. The sync engine (sync-engine.ts) calls `listOrdersSince` to fetch
- * new/updated orders since the last sync watermark, normalizes them to
- * NormalizedOrder, and the engine creates internal Order records.
- *
- * Design (ADR: polling-based, no webhooks):
- *   The local-first desktop app polls each connected store every N minutes.
- *   Webhooks require a public endpoint, which a local-first app doesn't have.
- *   Polling is simpler, works behind NAT, and the order volume (5-50/day for
- *   target sellers) makes it cheap.
+ * Each platform normalizes provider data, but catalog prices are never business
+ * authority. The sync engine resolves every line against the active SahelFlow
+ * catalog before creating a canonical pending order.
  */
 
-/** A normalized order shape — platform-agnostic, maps to our internal Order. */
 export interface NormalizedOrder {
   /** Platform-specific order ID (Shopify int, Woo int, YouCan UUID). */
   sourceOrderId: string;
-  /** Human-facing order number (e.g. "#1001", "727", "021"). */
+  /** Human-facing provider order number. */
   orderNumber: string;
   customerName: string;
   customerPhone: string;
-  /** Region/province — maps to Algerian wilaya for DZ stores. */
   wilaya: string | null;
-  /** City — maps to Algerian commune. */
   commune: string | null;
   address: string;
   items: Array<{
     productName: string;
+    /** Provider SKU; may identify either the product or an exact variant. */
+    catalogSku?: string | null;
+    /** Provider variant label when the API exposes it. */
+    variantName?: string | null;
     quantity: number;
+    /** Provider price retained for diagnostics only. */
     unitPrice: number;
   }>;
+  /** Provider total retained for reconciliation diagnostics only. */
   totalPrice: number;
-  /** Platform name: "shopify" | "woocommerce" | "youcan". */
+  /** Explicit provider shipping charge. Canonical item prices remain server-owned. */
+  deliveryCost?: number;
   source: EcommercePlatform;
-  /** Platform-specific metadata stored as JSON in Order.sourceMetadata. */
+  /** Provider-specific status and receipt snapshot. */
   sourceMetadata: Record<string, unknown>;
-  /** ISO 8601 creation timestamp from the platform. */
+  /** Provider update identity; falls back to a deterministic metadata hash. */
+  sourceRevision?: string;
   createdAt: string;
 }
 
-/** The result of a polling fetch. */
 export interface SyncFetchResult {
   orders: NormalizedOrder[];
-  /** The new watermark to persist for the next sync (platform-specific). */
   nextWatermark: string;
-  /** True if there might be more results (pagination not exhausted). */
   hasMore: boolean;
 }
 
-/** Platform identifiers. */
 export type EcommercePlatform = "shopify" | "woocommerce" | "youcan";
 
-/** Credentials for each platform (loaded from the Secret store). */
 export interface ShopifyCredentials {
-  shop: string; // e.g. "acme-store" (without .myshopify.com)
-  accessToken: string; // shpat_xxx
+  shop: string;
+  accessToken: string;
 }
 
 export interface WooCommerceCredentials {
-  siteUrl: string; // e.g. "https://example.com"
-  consumerKey: string; // ck_xxx
-  consumerSecret: string; // cs_xxx
+  siteUrl: string;
+  consumerKey: string;
+  consumerSecret: string;
 }
 
 export interface YouCanCredentials {
   accessToken: string;
-  // refreshToken + expiry managed by the caller (future: auto-refresh)
 }
 
 export type EcommerceCredentials =
@@ -74,26 +66,9 @@ export type EcommerceCredentials =
   | WooCommerceCredentials
   | YouCanCredentials;
 
-/** The adapter interface each platform implements. */
 export interface EcommerceAdapter {
   platform: EcommercePlatform;
-  /** Human-readable name for UI display. */
   displayName: string;
-  /**
-   * Fetch orders since the given watermark.
-   * - watermark format is platform-specific:
-   *   - Shopify: last max(updated_at) ISO 8601 UTC, or "" for first sync
-   *     (fix-B5: was numeric order ID in the since_id era — legacy values
-   *     are detected + ignored, see shopify.ts:isIso8601Watermark)
-   *   - WooCommerce: last max(date_modified_gmt) ISO 8601 UTC, or "" for first sync
-   *   - YouCan: "" for first sync, else max(updated_at) ISO 8601 UTC
-   *     (note: YouCan has no updated_at_min server-side filter, so the
-   *     watermark is informational — every sync re-fetches all orders and
-   *     the sync-engine dedup handles duplicates)
-   * @param credentials - loaded from the Secret store
-   * @param watermark - the last sync's nextWatermark, or "" for initial sync
-   * @param maxPages - safety cap on pagination (default 10)
-   */
   listOrdersSince(
     credentials: EcommerceCredentials,
     watermark: string,
@@ -101,26 +76,6 @@ export interface EcommerceAdapter {
   ): Promise<SyncFetchResult>;
 }
 
-// ── Secret key helpers ──────────────────────────────────────────────────────
-
-/**
- * Secret keys for e-commerce credentials (stored encrypted in the Secret table).
- * Convention: `ecommerce_{platform}_{field}`.
- */
-/**
- * Secret keys for e-commerce credentials (stored encrypted in the Secret table).
- * Convention: `ecommerce_{platform}_{field}` where {field} matches the camelCase
- * key the UI sends in the POST body to /api/integrations/connect AND the
- * camelCase field name the typed credentials interface (ShopifyCredentials etc.)
- * uses.
- *
- * Session 29 fix (AUDIT-6 I1): previously these used snake_case suffixes
- * (`ecommerce_shopify_access_token`) while the connect route wrote
- * `ecommerce_${provider}_${camelCaseKey}` (e.g. `ecommerce_shopify_accessToken`)
- * - the loader returned null -> every adapter call failed with "credentials
- * missing" in production. Also fixed: Shopify UI sends `shopDomain` (not
- * `shop`), so the loader key is now `shopDomain` to match.
- */
 export const ECOMMERCE_SECRET_KEYS: Record<
   EcommercePlatform,
   Record<string, string>

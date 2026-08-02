@@ -17,7 +17,11 @@ const estimateSchema = z.object({
 
 /** POST /api/delivery/estimate — estimate delivery cost for a shipment. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth([
+    "deliveries.manage",
+    "customers.contact.read",
+    "orders.financials.read",
+  ]);
   const body = await req.json();
   const input = estimateSchema.parse(body);
 

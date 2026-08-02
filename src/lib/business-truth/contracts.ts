@@ -65,9 +65,11 @@ export type CodFinancialState = (typeof COD_STATES)[number];
 
 export const RETURN_STATES = [
   "none",
+  "awaiting_return",
   "requested",
   "approved",
   "rejected",
+  "cancelled",
   "in_transit",
   "received",
   "inspected",

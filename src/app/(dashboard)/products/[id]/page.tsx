@@ -29,6 +29,11 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { DollarSign } from "lucide-react";
 import type { OrderStatus } from "@/types/domain";
+import {
+  requireTrustedAction,
+  trustedActionAllowed,
+} from "@/lib/identity/authorization";
+import { projectProductForTrustedActor } from "@/lib/identity/product-projection";
 
 export const dynamic = "force-dynamic";
 
@@ -36,11 +41,27 @@ type PageProps = { params: Promise<{ id: string }> };
 
 export default async function ProductDetailPage({ params }: PageProps) {
   const { t, locale } = await getI18n();
+  const actorContext = await requireTrustedAction("products.read");
+  const resource = { shopId: actorContext.shop.shopId };
+  const canReadOrders = trustedActionAllowed(
+    actorContext,
+    "orders.read",
+    resource,
+  );
+  const canReadOrderFinancials = canReadOrders && trustedActionAllowed(
+    actorContext,
+    "orders.financials.read",
+    resource,
+  );
   const { id } = await params;
 
   let product;
   try {
-    product = await productService.getById({ prisma: db, shop: shopContext }, id);
+    const source = await productService.getById(
+      { prisma: db, shop: shopContext },
+      id,
+    );
+    product = projectProductForTrustedActor(actorContext, source);
   } catch (err) {
     if (err instanceof SahelFlowError && err.statusCode === 404) {
       notFound();
@@ -56,12 +77,14 @@ export default async function ProductDetailPage({ params }: PageProps) {
   // Pull recent order items containing this product (no service method yet).
   // P-M7: filter on order.deletedAt = null so soft-deleted orders do not leak
   // into the "recent orders" list shown on the product detail page.
-  const recentItems = await db.orderItem.findMany({
-    where: { productId: id, order: { deletedAt: null } },
-    include: { order: true },
-    orderBy: { order: { createdAt: "desc" } },
-    take: 20,
-  });
+  const recentItems = canReadOrders
+    ? await db.orderItem.findMany({
+        where: { productId: id, order: { deletedAt: null } },
+        include: { order: true },
+        orderBy: { order: { createdAt: "desc" } },
+        take: 20,
+      })
+    : [];
 
   const isLowStock = product.stock <= product.lowStockThreshold;
   const inventoryValue = product.price * Math.max(0, product.stock);
@@ -217,7 +240,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
       )}
 
       {/* Recent orders containing this product */}
-      <Card>
+      {canReadOrders && (
+        <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("customers.recentOrders")}</CardTitle>
         </CardHeader>
@@ -262,10 +286,14 @@ export default async function ProductDetailPage({ params }: PageProps) {
                         {item.quantity}
                       </TableCell>
                       <TableCell className="text-end tabular-nums">
-                        {formatDZD(item.unitPrice)}
+                        {canReadOrderFinancials
+                          ? formatDZD(item.unitPrice)
+                          : "—"}
                       </TableCell>
                       <TableCell className="text-end tabular-nums">
-                        {formatDZD(item.total)}
+                        {canReadOrderFinancials
+                          ? formatDZD(item.total)
+                          : "—"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatDate(item.order.createdAt, locale)}
@@ -278,7 +306,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }

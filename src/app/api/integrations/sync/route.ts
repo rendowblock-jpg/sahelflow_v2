@@ -1,11 +1,9 @@
-import { env } from "@/lib/env";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
 import { syncPlatform, syncAllPlatforms } from "@/lib/integrations/ecommerce/sync-engine";
 import type { EcommercePlatform } from "@/lib/integrations/ecommerce/types";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { requireAuth } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
@@ -38,17 +36,15 @@ export const POST = withErrorHandler(async (req: NextRequest): Promise<NextRespo
   // → connected stores never synced. Now the "Sync now" button in the
   // Settings UI works with just the auth cookie. Cron jobs still use
   // x-cron-secret (no cookie).
-  const headerSecret = req.headers.get("x-cron-secret");
-  const envSecret = env.cronSecret;
-  const cronOk = !!headerSecret && !!envSecret && constantTimeEqual(headerSecret, envSecret);
-  if (!cronOk) {
-    // Fall back to cookie auth
-    try {
-      await requireAuth();
-    } catch {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  await requireAuth([
+    "integrations.manage",
+    "data.import",
+    "orders.create",
+    "customers.contact.read",
+    "customers.contact.update",
+    "orders.financials.read",
+    "orders.financials.update",
+  ]);
 
   const body = await req.json().catch(() => ({}));
   const input = syncSchema.parse(body);
@@ -77,7 +73,7 @@ export const POST = withErrorHandler(async (req: NextRequest): Promise<NextRespo
  * GET /api/integrations/sync — returns the last sync status for each platform.
  */
 export async function GET(): Promise<NextResponse> {
-  await requireAuth();
+  await requireAuth("integrations.read");
   const integrations = await db.integration.findMany({
     where: {
       platform: { in: ["shopify", "woocommerce", "youcan"] },

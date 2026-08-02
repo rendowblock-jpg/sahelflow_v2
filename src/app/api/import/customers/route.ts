@@ -27,7 +27,12 @@ const customerImportSchema = z.object({
 
 /** POST /api/import/customers — preview (commit=false) or insert (commit=true). */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth([
+    "data.import",
+    "customers.manage",
+    "customers.contact.read",
+    "customers.contact.update",
+  ]);
   const { t } = await getI18n();
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

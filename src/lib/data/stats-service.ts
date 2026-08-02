@@ -10,7 +10,8 @@
  */
 import type { DashboardStats } from "@/types/domain";
 import type { ServiceContext } from "./service-base";
-import { grossRevenue, realizedRevenue } from "./metrics";
+import { grossRevenue } from "./metrics";
+import { getProfitabilitySeries } from "@/lib/accounting/profitability";
 
 export const statsService = {
   async getDashboard(ctx: ServiceContext): Promise<DashboardStats> {
@@ -35,8 +36,7 @@ export const statsService = {
       ordersYesterday,
       revenueToday,
       revenueYesterday,
-      realizedRevenueToday,
-      realizedRevenueYesterday,
+      profitabilityPeriods,
       newCustomersToday,
       activeConversations,
       pendingDeliveries,
@@ -49,12 +49,10 @@ export const statsService = {
       // Gross Revenue (today) — canonical: status NOT IN [cancelled, draft].
       grossRevenue(ctx.prisma, todayPeriod),
       grossRevenue(ctx.prisma, yesterdayPeriod),
-      // Realized Revenue (today) — canonical: deliveredAt in period AND
-      // status = "delivered". SV-M10: filter by deliveredAt (not
-      // createdAt) so an order created yesterday + delivered today
-      // shows up in TODAY's realized revenue, not yesterday's.
-      realizedRevenue(ctx.prisma, todayPeriod),
-      realizedRevenue(ctx.prisma, yesterdayPeriod),
+      getProfitabilitySeries(ctx.prisma, [
+        { key: "today", period: todayPeriod },
+        { key: "yesterday", period: yesterdayPeriod },
+      ]),
       ctx.prisma.customer.count({ where: { createdAt: { gte: startOfDay }, deletedAt: null } }),
       ctx.prisma.conversation.count({ where: { unreadCount: { gt: 0 } } }),
       ctx.prisma.delivery.count({
@@ -65,10 +63,19 @@ export const statsService = {
       }),
     ]);
 
+    const profitabilityByKey = new Map(
+      profitabilityPeriods.map((entry) => [entry.key, entry.projection]),
+    );
+    const todayProfitability = profitabilityByKey.get("today");
+    const yesterdayProfitability = profitabilityByKey.get("yesterday");
+    if (!todayProfitability || !yesterdayProfitability) {
+      throw new Error("Dashboard profitability periods were not projected");
+    }
+
     const todayRev = revenueToday;
     const yesterdayRev = revenueYesterday;
-    const todayRealized = realizedRevenueToday;
-    const yesterdayRealized = realizedRevenueYesterday;
+    const todayRealized = todayProfitability.grossRevenue;
+    const yesterdayRealized = yesterdayProfitability.grossRevenue;
 
     // Calculate trends (avoid division by zero)
     const ordersTrend =

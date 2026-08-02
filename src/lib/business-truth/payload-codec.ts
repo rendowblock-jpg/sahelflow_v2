@@ -12,7 +12,9 @@ export type BusinessPayloadKind =
   | "compensation-fact"
   | "financial-movement-detail"
   | "inventory-movement-detail"
-  | "order-change-detail";
+  | "order-change-detail"
+  | "collaboration-comment"
+  | "collaboration-handover-reason";
 
 export type FinancialMovementDetailField =
   | "counterparty"
@@ -57,6 +59,32 @@ export function inventoryMovementReasonBinding(
     kind: "inventory-movement-detail",
     recordKey: `${movementKey}:reason`,
     recordType: `${movementType}:reason`,
+    commandId,
+  };
+}
+
+export function collaborationCommentBinding(
+  commandId: string,
+  commentId: string,
+  entityType: string,
+): BusinessPayloadBinding {
+  return {
+    kind: "collaboration-comment",
+    recordKey: commentId,
+    recordType: entityType,
+    commandId,
+  };
+}
+
+export function collaborationHandoverReasonBinding(
+  commandId: string,
+  handoverId: string,
+  entityType: string,
+): BusinessPayloadBinding {
+  return {
+    kind: "collaboration-handover-reason",
+    recordKey: handoverId,
+    recordType: entityType,
     commandId,
   };
 }

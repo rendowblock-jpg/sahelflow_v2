@@ -9,7 +9,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, shopContext } from "@/lib/db";
 import { customerServiceExtensions } from "@/lib/data";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +22,8 @@ export const GET = withErrorHandler(async (
   _req: NextRequest,
   { params }: RouteContext,
 ) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("customers.read");
+  assertTrustedAction(actorContext, "orders.financials.read");
   const { id } = await params;
   const stats = await customerServiceExtensions.getStats({ prisma: db, shop: shopContext }, id);
   return NextResponse.json({ stats });

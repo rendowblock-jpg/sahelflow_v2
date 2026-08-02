@@ -7,8 +7,9 @@ import {
 } from "@/lib/secrets";
 import { verifyGeminiKey } from "@/lib/ai/extraction";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { db, shopContext } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,8 @@ export const dynamic = "force-dynamic";
  */
 export const GET = withErrorHandler(async () => {
   // W2-4: defense-in-depth — GET was unprotected, leaked "is Gemini configured?" to anyone.
-  await requireAuth();
+  await requireAuth("integrations.manage");
+  await requireRecentReauthentication();
   const configured = await hasSecret({ prisma: db, shop: shopContext }, "gemini_api_key");
   return NextResponse.json({ configured });
 }, "GET /api/secrets/gemini-key");
@@ -37,7 +39,8 @@ const saveSchema = z.object({
  * Tests the key (optional) then saves it encrypted to the Secret store.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireAuth("integrations.manage");
+  await requireRecentReauthentication();
   const body = await req.json();
   const input = saveSchema.parse(body);
 
@@ -52,6 +55,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     }
     // Save the (verified) key
     await setSecret({ prisma: db, shop: shopContext }, "gemini_api_key", input.key);
+    await logAudit({ prisma: db, shop: shopContext }, {
+      action: "secret.updated",
+      entity: "secret",
+      entityId: "gemini_api_key",
+      actor: trustedActorAuditIdentity(actorContext.actor),
+      after: { configured: true, verified: true },
+    });
     return NextResponse.json({
       ok: true,
       model: verification.model,
@@ -61,6 +71,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   // Save without testing
   await setSecret({ prisma: db, shop: shopContext }, "gemini_api_key", input.key);
+  await logAudit({ prisma: db, shop: shopContext }, {
+    action: "secret.updated",
+    entity: "secret",
+    entityId: "gemini_api_key",
+    actor: trustedActorAuditIdentity(actorContext.actor),
+    after: { configured: true, verified: false },
+  });
   return NextResponse.json({
     ok: true,
     message: "Clé enregistrée (non testée).",
@@ -72,16 +89,17 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
  * Removes the stored Gemini key.
  */
 export const DELETE = withErrorHandler(async () => {
-  await requireAuth();
+  const actorContext = await requireAuth("integrations.manage");
+  await requireRecentReauthentication();
   const context = { prisma: db, shop: shopContext };
   const hadKey = await hasSecret(context, "gemini_api_key");
   await deleteSecret(context, "gemini_api_key");
   // W2-5: audit secret deletion. Don't log the key value — just that it was removed.
-  void logAudit({ prisma: db, shop: shopContext }, {
+  await logAudit({ prisma: db, shop: shopContext }, {
     action: "secret.deleted",
     entity: "secret",
     entityId: "gemini_api_key",
-    actor: "user",
+    actor: trustedActorAuditIdentity(actorContext.actor),
     before: { configured: hadKey },
     metadata: { key: "gemini_api_key" },
   });

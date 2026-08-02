@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
 import {
   dispatchTrigger,
   type TriggerEvent,
 } from "@/lib/automations/engine";
+import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
 import { orderService } from "@/lib/data/order-service";
 import { db, shopContext } from "@/lib/db";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
+import { assertOrderCreateFieldAuthority } from "@/lib/identity/order-authorization";
+import {
+  projectOrderForTrustedActor,
+  projectOrdersForTrustedActor,
+} from "@/lib/identity/order-projection";
 import { createTrustedManualOrder } from "@/lib/orders/manual-order";
 import {
   isImportPendingOrderAuthority,
@@ -20,9 +29,9 @@ export const dynamic = "force-dynamic";
 
 const context = { prisma: db, shop: shopContext };
 
-/** GET /api/orders — list orders with pagination and mutation authority. */
+/** GET /api/orders — permission-filtered list with pagination. */
 export async function GET(req: NextRequest) {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("orders.read");
   const searchParams = req.nextUrl.searchParams;
   const rawStatus = searchParams.get("status");
   const status =
@@ -55,17 +64,25 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
-  const listOrders = orders.map((order) => ({
-    ...order,
-    mutationAuthority: isTrustedManualOrderAuthority(
-      order.source,
-      order.sourceMetadata,
-    )
-      ? "canonical_v1"
-      : isImportPendingOrderAuthority(order.source, order.sourceMetadata)
-        ? "confirmation_blocked"
-        : "legacy_compatibility",
-  }));
+  const projected = projectOrdersForTrustedActor(actorContext, orders);
+  const listOrders = projected.map((order, index) => {
+    const sourceOrder = orders[index];
+    if (!sourceOrder) return order;
+    return {
+      ...order,
+      mutationAuthority: isTrustedManualOrderAuthority(
+        sourceOrder.source,
+        sourceOrder.sourceMetadata,
+      )
+        ? "canonical_v1"
+        : isImportPendingOrderAuthority(
+              sourceOrder.source,
+              sourceOrder.sourceMetadata,
+            )
+          ? "confirmation_blocked"
+          : "legacy_compatibility",
+    };
+  });
   const hasNextPage = offset + orders.length < total;
 
   return NextResponse.json({
@@ -79,22 +96,33 @@ export async function GET(req: NextRequest) {
 
 /** POST /api/orders — governed manual intake or compatibility intake. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  const actorContext = await requireTrustedAction("orders.create");
+  assertTrustedAction(actorContext, "orders.read", {
+    shopId: actorContext.shop.shopId,
+  });
+  assertOrderCreateFieldAuthority(actorContext);
+  const businessContext = {
+    ...context,
+    businessPrincipal: businessPrincipalFromTrustedActor(actorContext),
+  };
   const body = await req.json();
   const effectiveSource = body?.source ?? "manual";
   const manualCommand =
     effectiveSource === "manual"
-      ? await createTrustedManualOrder(context, { ...body, source: "manual" })
+      ? await createTrustedManualOrder(businessContext, {
+          ...body,
+          source: "manual",
+        })
       : null;
   const manualResult = manualCommand?.result;
   const order =
     manualResult?.order ?? (await orderService.create(context, body));
 
-  if (manualCommand && !manualCommand.replayed) {
+  if (manualCommand && !manualCommand.replayed && manualResult) {
     void dispatchTrigger(
       context,
       "order.created" as TriggerEvent,
-      manualResult!.automation,
+      manualResult.automation,
     );
   }
 
@@ -109,7 +137,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   return NextResponse.json(
     {
-      order,
+      order: projectOrderForTrustedActor(actorContext, order),
       risk,
       customerCreated: manualResult?.customerCreated ?? false,
       authority: manualCommand ? "trusted-manual-v1" : "legacy-compatibility",

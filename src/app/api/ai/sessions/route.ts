@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/ai/sessions — list chat sessions. */
 export const GET = withErrorHandler(async () => {
-  await requireAuth();
+  await requireAuth("ai.use");
   const sessions = await db.aiChatSession.findMany({
     orderBy: { updatedAt: "desc" },
     take: 50,
@@ -29,7 +29,7 @@ const createSchema = z.object({
 
 /** POST /api/ai/sessions — create a new chat session. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("ai.use");
   await requireLicense();
   const body = await req.json().catch(() => ({}));
   const input = createSchema.parse(body);

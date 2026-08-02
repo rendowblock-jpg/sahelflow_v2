@@ -17,7 +17,7 @@ const createSchema = z.object({
 
 /** POST — Create a new automation */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("automations.manage");
   const body = await req.json();
   const input = createSchema.parse(body);
   const context = { prisma: db, shop: shopContext };
@@ -40,7 +40,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
 /** GET — List all automations (excludes soft-deleted) */
 export const GET = withErrorHandler(async () => {
-  await requireAuth();
+  await requireAuth("automations.read");
   const automations = await db.automation.findMany({
     where: { deletedAt: null },
     orderBy: { createdAt: "desc" },

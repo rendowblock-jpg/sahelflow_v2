@@ -6,7 +6,7 @@ import { getSkuPnl, getLastNDays } from "@/lib/data/analytics-v2";
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth(["analytics.read", "analytics.financials.read"]);
   const days = parseInt(req.nextUrl.searchParams.get("days") ?? "30", 10);
   const range = getLastNDays(days);
   const data = await getSkuPnl(range);

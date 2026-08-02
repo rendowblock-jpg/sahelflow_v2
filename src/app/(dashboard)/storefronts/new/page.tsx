@@ -3,6 +3,10 @@ import { DEFAULT_THEME } from "@/lib/storefront/service";
 import { StorefrontBuilder } from "@/components/storefront/storefront-builder";
 import { db } from "@/lib/db";
 import type { Metadata } from "next";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -11,6 +15,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export const dynamic = "force-dynamic";
 
 export default async function NewStorefrontPage() {
+  const actorContext = await requireTrustedAction("storefront.manage");
+  assertTrustedAction(actorContext, "storefront.publish");
+  assertTrustedAction(actorContext, "products.read");
   const { t } = await getI18n();
 
   // Fetch all active, non-soft-deleted products for the picker (P-M6)

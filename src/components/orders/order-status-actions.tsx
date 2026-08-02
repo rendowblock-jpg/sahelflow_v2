@@ -24,6 +24,7 @@ import {
   Ban,
   CheckCircle2,
   Clock,
+  FileCheck2,
   Loader2,
   PackageCheck,
   RotateCcw,
@@ -51,10 +52,13 @@ const ACTION_CONFIG: Record<
 
 const DECISION_COPY = {
   en: {
-    authority: "Canonical manual authority",
+    authority: "Canonical order authority",
     importAuthority: "Imported order pending catalog mapping",
     confirm: "Confirm order",
     reject: "Reject order",
+    submitDraft: "Submit draft for confirmation",
+    submitDraftCommitted: "The AI draft is now in the confirmation queue.",
+    submitDraftReplayed: "The previous draft submission was recovered safely.",
     confirmTitle: "Confirm this order?",
     confirmBody: "This atomically reserves exact available stock and records the inventory movement.",
     rejectTitle: "Reject this order?",
@@ -68,10 +72,13 @@ const DECISION_COPY = {
     importBlocked: "Map this imported order to exact catalog products and variants before confirmation.",
   },
   fr: {
-    authority: "Autorité manuelle canonique",
+    authority: "Autorité canonique de commande",
     importAuthority: "Commande importée en attente de correspondance catalogue",
     confirm: "Confirmer la commande",
     reject: "Refuser la commande",
+    submitDraft: "Soumettre le brouillon à confirmation",
+    submitDraftCommitted: "Le brouillon IA est maintenant dans la file de confirmation.",
+    submitDraftReplayed: "La soumission précédente du brouillon a été récupérée en toute sécurité.",
     confirmTitle: "Confirmer cette commande ?",
     confirmBody: "Cette action réserve atomiquement le stock exact disponible et enregistre le mouvement.",
     rejectTitle: "Refuser cette commande ?",
@@ -85,10 +92,13 @@ const DECISION_COPY = {
     importBlocked: "Associez cette commande importée aux produits et variantes exacts avant confirmation.",
   },
   ar: {
-    authority: "صلاحية يدوية موثوقة",
+    authority: "صلاحية الطلبية الموثوقة",
     importAuthority: "طلبية مستوردة بانتظار ربط الكتالوج",
     confirm: "تأكيد الطلبية",
     reject: "رفض الطلبية",
+    submitDraft: "إرسال المسودة إلى قائمة التأكيد",
+    submitDraftCommitted: "أصبحت مسودة الذكاء الاصطناعي ضمن قائمة التأكيد.",
+    submitDraftReplayed: "تمت استعادة إرسال المسودة السابق بأمان.",
     confirmTitle: "تأكيد هذه الطلبية؟",
     confirmBody: "سيتم حجز المخزون المتاح بدقة وتسجيل حركة المخزون ضمن عملية ذرية واحدة.",
     rejectTitle: "رفض هذه الطلبية؟",
@@ -124,7 +134,7 @@ export function OrderStatusActions({
   const router = useRouter();
   const { t, locale } = useI18n();
   const copy = DECISION_COPY[locale];
-  const [loading, setLoading] = useState<OrderStatus | Decision | null>(null);
+  const [loading, setLoading] = useState<OrderStatus | Decision | "submit" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [decision, setDecision] = useState<Decision | null>(null);
@@ -141,6 +151,64 @@ export function OrderStatusActions({
     const created = crypto.randomUUID();
     window.localStorage.setItem(key, created);
     return created;
+  }
+
+  function draftSubmissionKey(): string {
+    return `sf-source-draft-submit:${orderId}:${currentVersion}`;
+  }
+
+  function draftSubmissionCommandKey(): string {
+    const key = draftSubmissionKey();
+    const prior = window.localStorage.getItem(key);
+    if (prior && prior.length >= 8) return prior;
+    const created = crypto.randomUUID();
+    window.localStorage.setItem(key, created);
+    return created;
+  }
+
+  async function submitDraft() {
+    if (currentVersion === undefined) {
+      setError(copy.versionMissing);
+      return;
+    }
+    setLoading("submit");
+    setError(null);
+    setNotice(null);
+    const idempotencyKey = draftSubmissionCommandKey();
+    try {
+      const response = await fetch(`/api/orders/${orderId}/source/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: currentVersion,
+          idempotencyKey,
+          correlationId: `source-draft-ui:${idempotencyKey}`,
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message = body.error?.message ?? body.error;
+        throw new Error(
+          typeof message === "string"
+            ? message
+            : t("orders.statusActions.updateFailed"),
+        );
+      }
+      window.localStorage.removeItem(draftSubmissionKey());
+      setNotice(
+        body.command?.replayed
+          ? copy.submitDraftReplayed
+          : copy.submitDraftCommitted,
+      );
+      await mutatePrefix("/api/orders");
+      router.refresh();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : t("errors.somethingWrong"),
+      );
+    } finally {
+      setLoading(null);
+    }
   }
 
   async function commitDecision() {
@@ -229,7 +297,20 @@ export function OrderStatusActions({
     return (
       <div className="space-y-3">
         <Badge variant="outline">{copy.authority}</Badge>
-        {currentStatus === "pending" ? (
+        {currentStatus === "draft" ? (
+          <Button
+            size="sm"
+            onClick={() => void submitDraft()}
+            disabled={loading !== null}
+          >
+            {loading === "submit" ? (
+              <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <FileCheck2 className="me-1.5 h-4 w-4" />
+            )}
+            {copy.submitDraft}
+          </Button>
+        ) : currentStatus === "pending" ? (
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"

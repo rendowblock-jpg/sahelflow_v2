@@ -1,5 +1,6 @@
 import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ const ACTION_I18N: Record<string, string> = {
 };
 
 export default async function AutomationsPage() {
+  await requireTrustedAction("automations.read");
   const { t, locale } = await getI18n();
 
   const [automations, recentLogs] = await Promise.all([

@@ -1,31 +1,43 @@
 /**
  * Product service — CRUD + stock management + low-stock detection.
  */
-import type { Product, Category } from "@/types/domain";
+import { detectLowStock, dispatchLowStock } from "@/lib/automations/engine";
+import type { OrderChangeTransactionClient } from "@/lib/data/order-change-service";
+import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
 import {
-  NotFoundError,
+  createCategorySchema,
+  createProductSchema,
+  updateProductSchema,
+} from "@/lib/validation";
+import type { Category, Product } from "@/types/domain";
+import {
   ConflictError,
+  NotFoundError,
   SahelFlowError,
   ValidationError,
 } from "@/types/errors";
-import { createProductSchema, updateProductSchema, createCategorySchema } from "@/lib/validation";
 import type { ServiceContext } from "./service-base";
 import { withServiceError } from "./service-base";
-import { detectLowStock, dispatchLowStock } from "@/lib/automations/engine";
-import type { OrderChangeTransactionClient } from "@/lib/data/order-change-service";
-import { trustedManualOrderSourceMetadata } from "@/lib/orders/manual-order-authority";
 
 function toDomainProduct(row: Record<string, unknown>): Product {
-  const r = { ...row };
-  // Legacy: variants was a JSON string. Keep parsing for backward compat,
+  const output = { ...row };
+  // Legacy: variants was a JSON string. Keep parsing for backward compatibility,
   // but the canonical source is now the ProductVariant relation.
-  if (typeof r.variants === "string") {
-    try { r.variants = JSON.parse(r.variants as string); } catch { r.variants = null; }
+  if (typeof output.variants === "string") {
+    try {
+      output.variants = JSON.parse(output.variants);
+    } catch {
+      output.variants = null;
+    }
   }
-  if (typeof r.images === "string") {
-    try { r.images = JSON.parse(r.images as string); } catch { r.images = null; }
+  if (typeof output.images === "string") {
+    try {
+      output.images = JSON.parse(output.images);
+    } catch {
+      output.images = null;
+    }
   }
-  return r as unknown as Product;
+  return output as unknown as Product;
 }
 
 function toDomainCategory(row: Record<string, unknown>): Category {
@@ -51,18 +63,32 @@ async function assertCanonicalCatalogMutationAllowed(
     );
   }
 
-  const pendingSelections = await tx.$queryRaw<Array<{ present: number }>>`
-    SELECT 1 AS "present"
-    FROM "OrderItem" AS "item"
-    INNER JOIN "Order" AS "purchase" ON "purchase"."id" = "item"."orderId"
-    WHERE "item"."productId" = ${productId}
-      AND "purchase"."status" = 'pending'
-      AND "purchase"."deletedAt" IS NULL
-      AND "purchase"."source" = 'manual'
-      AND "purchase"."sourceMetadata" = ${trustedManualOrderSourceMetadata()}
-    LIMIT 1
-  `;
-  if (pendingSelections.length > 0) {
+  // A pending canonical order has already selected this exact catalog identity
+  // and price. Block stock, activation and variant-shape changes until the order
+  // is confirmed or rejected, regardless of whether intake was manual,
+  // storefront, WhatsApp, import, provider or AI.
+  const pendingSelections = await tx.orderItem.findMany({
+    where: {
+      productId,
+      order: {
+        status: "pending",
+        deletedAt: null,
+      },
+    },
+    select: {
+      order: {
+        select: {
+          source: true,
+          sourceMetadata: true,
+        },
+      },
+    },
+  });
+  if (
+    pendingSelections.some(({ order }) =>
+      isCanonicalOrderAuthority(order.source, order.sourceMetadata),
+    )
+  ) {
     throw new SahelFlowError(
       "Product or variant authority is selected by a pending canonical order",
       "CANONICAL_CATALOG_MUTATION_BLOCKED",
@@ -72,20 +98,27 @@ async function assertCanonicalCatalogMutationAllowed(
 }
 
 export const productService = {
-  async list(ctx: ServiceContext, opts?: { limit?: number; offset?: number; activeOnly?: boolean }): Promise<Product[]> {
-    const rows = await ctx.prisma.product.findMany({
-      where: opts?.activeOnly ? { isActive: true, deletedAt: null } : { deletedAt: null },
+  async list(
+    context: ServiceContext,
+    options?: { limit?: number; offset?: number; activeOnly?: boolean },
+  ): Promise<Product[]> {
+    const rows = await context.prisma.product.findMany({
+      where: options?.activeOnly
+        ? { isActive: true, deletedAt: null }
+        : { deletedAt: null },
       orderBy: { createdAt: "desc" },
       include: { productVariants: { orderBy: { sortOrder: "asc" } } },
-      take: opts?.limit ?? 50,
-      skip: opts?.offset ?? 0,
+      take: options?.limit ?? 50,
+      skip: options?.offset ?? 0,
     });
-    return rows.map((r) => toDomainProduct(r as unknown as Record<string, unknown>));
+    return rows.map((row) =>
+      toDomainProduct(row as unknown as Record<string, unknown>),
+    );
   },
 
-  async getById(ctx: ServiceContext, id: string): Promise<Product> {
+  async getById(context: ServiceContext, id: string): Promise<Product> {
     return withServiceError(async () => {
-      const row = await ctx.prisma.product.findFirst({
+      const row = await context.prisma.product.findFirst({
         where: { id, deletedAt: null },
         include: { productVariants: { orderBy: { sortOrder: "asc" } } },
       });
@@ -94,40 +127,42 @@ export const productService = {
     }, "Product");
   },
 
-  async create(ctx: ServiceContext, input: unknown): Promise<Product> {
+  async create(context: ServiceContext, input: unknown): Promise<Product> {
     return withServiceError(async () => {
       const data = createProductSchema.parse(input);
       const { variants: legacyVariants, ...productData } = data;
 
-      // Check SKU uniqueness if provided
       if (data.sku) {
-        const existing = await ctx.prisma.product.findFirst({ where: { sku: data.sku, deletedAt: null } });
+        const existing = await context.prisma.product.findFirst({
+          where: { sku: data.sku, deletedAt: null },
+        });
         if (existing) {
           throw new ConflictError(`Product with SKU ${data.sku} already exists`);
         }
       }
 
-      // Build variant rows: use the new variants array (from the form), or
-      // fall back to a single "Default" variant with the product's stock.
-      const variantRows = Array.isArray(legacyVariants) && legacyVariants.length > 0
-        ? legacyVariants.map((v, i) => ({
-            name: v.name,
-            sku: v.sku ?? null,
-            price: v.price ?? null,
-            stock: v.stock ?? 0,
-            isActive: v.isActive ?? true,
-            sortOrder: v.sortOrder ?? i,
-          }))
-        : [{
-            name: "Default",
-            sku: data.sku ?? null,
-            price: data.price,
-            stock: data.stock,
-            isActive: true,
-            sortOrder: 0,
-          }];
+      const variantRows =
+        Array.isArray(legacyVariants) && legacyVariants.length > 0
+          ? legacyVariants.map((variant, index) => ({
+              name: variant.name,
+              sku: variant.sku ?? null,
+              price: variant.price ?? null,
+              stock: variant.stock ?? 0,
+              isActive: variant.isActive ?? true,
+              sortOrder: variant.sortOrder ?? index,
+            }))
+          : [
+              {
+                name: "Default",
+                sku: data.sku ?? null,
+                price: data.price,
+                stock: data.stock,
+                isActive: true,
+                sortOrder: 0,
+              },
+            ];
 
-      const row = await ctx.prisma.product.create({
+      const row = await context.prisma.product.create({
         data: {
           ...productData,
           variants: legacyVariants ? JSON.stringify(legacyVariants) : null,
@@ -140,29 +175,32 @@ export const productService = {
     }, "Product");
   },
 
-  async update(ctx: ServiceContext, id: string, input: unknown): Promise<Product> {
+  async update(
+    context: ServiceContext,
+    id: string,
+    input: unknown,
+  ): Promise<Product> {
     return withServiceError(async () => {
       const data = updateProductSchema.parse(input);
       const { variants: legacyVariants, ...productData } = data;
 
       if (data.sku) {
-        const conflict = await ctx.prisma.product.findFirst({ where: { sku: data.sku, deletedAt: null, id: { not: id } } });
+        const conflict = await context.prisma.product.findFirst({
+          where: { sku: data.sku, deletedAt: null, id: { not: id } },
+        });
         if (conflict && conflict.id !== id) {
           throw new ConflictError(`SKU ${data.sku} already used by another product`);
         }
       }
 
-      // If variants array is provided, sync ProductVariant rows:
-      // - variants with an id → update
-      // - variants without an id → create
-      // - existing rows not in the array → delete
-      // Wrap variant sync + product update + low-stock check in a single
-      // $transaction (S2-7) so a failure mid-sync rolls back — matches the
-      // order-service.update pattern.
-      // SV-M8: collect low-stock product info inside the tx (race-safe read
-      // of the just-updated stock) and dispatch AFTER the tx commits.
-      const lowStockToDispatch: Array<{ id: string; name: string; sku: string | null; stock: number; lowStockThreshold: number }> = [];
-      const row = await ctx.prisma.$transaction(async (tx) => {
+      const lowStockToDispatch: Array<{
+        id: string;
+        name: string;
+        sku: string | null;
+        stock: number;
+        lowStockThreshold: number;
+      }> = [];
+      const row = await context.prisma.$transaction(async (tx) => {
         if (
           data.stock !== undefined ||
           data.isActive === false ||
@@ -172,11 +210,17 @@ export const productService = {
         }
 
         if (Array.isArray(legacyVariants)) {
-          const existing = await tx.productVariant.findMany({ where: { productId: id } });
-          const incomingIds = legacyVariants.filter(v => v.id).map(v => v.id);
-          const ownedVariantIds = new Set(existing.map((variant) => variant.id));
+          const existing = await tx.productVariant.findMany({
+            where: { productId: id },
+          });
+          const incomingIds = legacyVariants
+            .filter((variant) => variant.id)
+            .map((variant) => variant.id);
+          const ownedVariantIds = new Set(
+            existing.map((variant) => variant.id),
+          );
           const foreignVariantId = incomingIds.find(
-            (variantId) => !ownedVariantIds.has(variantId!),
+            (variantId) => variantId && !ownedVariantIds.has(variantId),
           );
           if (foreignVariantId) {
             throw new ValidationError(
@@ -184,29 +228,31 @@ export const productService = {
               "variants.id",
             );
           }
-          const toDelete = existing.filter(e => !incomingIds.includes(e.id)).map(e => e.id);
+          const toDelete = existing
+            .filter((variant) => !incomingIds.includes(variant.id))
+            .map((variant) => variant.id);
 
           await Promise.all([
-            // Delete removed variants
-            ...toDelete.map(variantId =>
-              tx.productVariant.delete({ where: { id: variantId } })
+            ...toDelete.map((variantId) =>
+              tx.productVariant.delete({ where: { id: variantId } }),
             ),
-            // Upsert kept/new variants
-            ...legacyVariants.map((v, i) => {
+            ...legacyVariants.map((variant, index) => {
               const payload = {
-                name: v.name,
-                sku: v.sku ?? null,
-                price: v.price ?? null,
-                stock: v.stock ?? 0,
-                isActive: v.isActive ?? true,
-                sortOrder: v.sortOrder ?? i,
+                name: variant.name,
+                sku: variant.sku ?? null,
+                price: variant.price ?? null,
+                stock: variant.stock ?? 0,
+                isActive: variant.isActive ?? true,
+                sortOrder: variant.sortOrder ?? index,
               };
-              if (v.id) {
-                return tx.productVariant.update({ where: { id: v.id }, data: payload });
-              }
-              return tx.productVariant.create({
-                data: { ...payload, productId: id },
-              });
+              return variant.id
+                ? tx.productVariant.update({
+                    where: { id: variant.id },
+                    data: payload,
+                  })
+                : tx.productVariant.create({
+                    data: { ...payload, productId: id },
+                  });
             }),
           ]);
         }
@@ -215,15 +261,22 @@ export const productService = {
           where: { id },
           data: {
             ...productData,
-            variants: legacyVariants !== undefined ? (legacyVariants ? JSON.stringify(legacyVariants) : null) : undefined,
-            images: data.images !== undefined ? (data.images ? JSON.stringify(data.images) : null) : undefined,
+            variants:
+              legacyVariants !== undefined
+                ? legacyVariants
+                  ? JSON.stringify(legacyVariants)
+                  : null
+                : undefined,
+            images:
+              data.images !== undefined
+                ? data.images
+                  ? JSON.stringify(data.images)
+                  : null
+                : undefined,
           },
           include: { productVariants: { orderBy: { sortOrder: "asc" } } },
         });
 
-        // SV-M8: if stock was changed, DETECT low-stock inside the tx (sees
-        // the uncommitted stock change). Dispatch is deferred to after the tx
-        // commits so we don't notify on a rolled-back change.
         if (data.stock !== undefined) {
           const lowStockInfo = await detectLowStock(tx, id);
           if (lowStockInfo) lowStockToDispatch.push(lowStockInfo);
@@ -232,25 +285,17 @@ export const productService = {
         return updated;
       });
 
-      // SV-M8: dispatch low-stock triggers AFTER the tx commits.
       for (const product of lowStockToDispatch) {
-        void dispatchLowStock(ctx, product);
+        void dispatchLowStock(context, product);
       }
 
       return toDomainProduct(row as unknown as Record<string, unknown>);
     }, "Product");
   },
 
-  async delete(ctx: ServiceContext, id: string): Promise<void> {
-    // Session 30 (AUDIT-3 S5): always soft-delete via deletedAt.
-    // Previously: hard-deleted if no order items referenced it (the ONLY
-    // hard-delete in the service layer). Hard-delete breaks the order
-    // timeline + audit trail for any historical order that ever referenced
-    // the product. The old "soft-delete via isActive=false" was also wrong —
-    // isActive is a flag, not a soft-delete column; deletedAt is the spec
-    // (Phase 2). Now both paths set deletedAt.
+  async delete(context: ServiceContext, id: string): Promise<void> {
     return withServiceError(async () => {
-      await ctx.prisma.$transaction(async (tx) => {
+      await context.prisma.$transaction(async (tx) => {
         await assertCanonicalCatalogMutationAllowed(tx, id);
         await tx.product.update({
           where: { id },
@@ -261,45 +306,74 @@ export const productService = {
   },
 
   /** Deduct stock (called when order is confirmed). */
-  async deductStock(ctx: ServiceContext, productId: string, quantity: number): Promise<void> {
-    if (quantity <= 0) throw new ValidationError("Quantity must be positive", "quantity");
-    await ctx.prisma.product.update({
+  async deductStock(
+    context: ServiceContext,
+    productId: string,
+    quantity: number,
+  ): Promise<void> {
+    if (quantity <= 0) {
+      throw new ValidationError("Quantity must be positive", "quantity");
+    }
+    await context.prisma.product.update({
       where: { id: productId },
       data: { stock: { decrement: quantity } },
     });
   },
 
   /** Restore stock (called when order is cancelled/returned/refused). */
-  async restoreStock(ctx: ServiceContext, productId: string, quantity: number): Promise<void> {
-    if (quantity <= 0) throw new ValidationError("Quantity must be positive", "quantity");
-    await ctx.prisma.product.update({
+  async restoreStock(
+    context: ServiceContext,
+    productId: string,
+    quantity: number,
+  ): Promise<void> {
+    if (quantity <= 0) {
+      throw new ValidationError("Quantity must be positive", "quantity");
+    }
+    await context.prisma.product.update({
       where: { id: productId },
       data: { stock: { increment: quantity } },
     });
   },
 
   /** List products at or below their low-stock threshold. */
-  async listLowStock(ctx: ServiceContext): Promise<Product[]> {
-    const rows = await ctx.prisma.product.findMany({
-      where: { isActive: true, deletedAt: null, stock: { lte: ctx.prisma.product.fields.lowStockThreshold } },
+  async listLowStock(context: ServiceContext): Promise<Product[]> {
+    const rows = await context.prisma.product.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+        stock: { lte: context.prisma.product.fields.lowStockThreshold },
+      },
       orderBy: { stock: "asc" },
     });
-    return rows.map((r) => toDomainProduct(r as unknown as Record<string, unknown>));
+    return rows.map((row) =>
+      toDomainProduct(row as unknown as Record<string, unknown>),
+    );
   },
 
   // ─── Categories ─────────────────────────────────────────────────────────────
 
-  async listCategories(ctx: ServiceContext): Promise<Category[]> {
-    const rows = await ctx.prisma.category.findMany({ orderBy: { name: "asc" } });
-    return rows.map((r) => toDomainCategory(r as unknown as Record<string, unknown>));
+  async listCategories(context: ServiceContext): Promise<Category[]> {
+    const rows = await context.prisma.category.findMany({
+      orderBy: { name: "asc" },
+    });
+    return rows.map((row) =>
+      toDomainCategory(row as unknown as Record<string, unknown>),
+    );
   },
 
-  async createCategory(ctx: ServiceContext, input: unknown): Promise<Category> {
+  async createCategory(
+    context: ServiceContext,
+    input: unknown,
+  ): Promise<Category> {
     return withServiceError(async () => {
       const data = createCategorySchema.parse(input);
-      const existing = await ctx.prisma.category.findUnique({ where: { name: data.name } });
-      if (existing) throw new ConflictError(`Category ${data.name} already exists`);
-      const row = await ctx.prisma.category.create({ data });
+      const existing = await context.prisma.category.findUnique({
+        where: { name: data.name },
+      });
+      if (existing) {
+        throw new ConflictError(`Category ${data.name} already exists`);
+      }
+      const row = await context.prisma.category.create({ data });
       return toDomainCategory(row as unknown as Record<string, unknown>);
     }, "Category");
   },

@@ -1,7 +1,7 @@
 # SahelFlow — Research and adopted findings
 
 > **Status:** Research reference and adopted-evidence index; not product, current-state or roadmap authority
-> **Last consolidated:** 2026-07-29
+> **Last consolidated:** 2026-08-01
 > **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
 
 Research is mandatory before every major phase and material implementation.
@@ -325,6 +325,101 @@ Research focus:
 - transfer and recovery ceremonies;
 - Windows-protected secret storage;
 - high-risk and two-person approval.
+
+#### Teams operational authorization repair — adopted 2026-08-01
+
+**Exact question.** How must central order mutations and idempotent command replay
+behave after SahelFlow introduces multiple durable people and custom field/action
+allowlists?
+
+**Current source.** PR #195 represented every durable person inside the legacy
+`authenticated-owner` business-principal kind. Its default replay rule accepted
+any stored actor with that prefix. Central order create/update also allowed a
+mutation to commit before read/projection denial, and compatibility update could
+write and return contact or financial fields without explicit field-write
+authority. Static source-string tests did not exercise those failures.
+
+**Primary evidence reviewed.** OWASP's current Authorization Cheat Sheet requires
+least privilege, deny by default, permission validation on every request, safe
+failure and unit/integration authorization tests. OWASP's Business Logic Security
+guidance requires server-side re-derivation of permissions and prices and treats
+every request field as untrusted. NIST SP 800-162 defines access decisions from
+subject, object, operation and environment attributes rather than role name
+alone. Sources reviewed 2026-08-01:
+
+- `https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html`;
+- `https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html`;
+- `https://csrc.nist.gov/pubs/sp/800/162/upd2/final`.
+
+**Alternatives.** Keeping the broad owner-prefix replay rule was rejected because
+role compatibility is not person identity. Requiring exact session equality was
+rejected because safe session rotation would break retry recovery. Returning raw
+mutation rows and relying on UI masking was rejected by Architecture INV-027.
+Blind field writes under read-only field actions were rejected because they make
+custom permission intent ambiguous and unsafe.
+
+**Adopted decision.** Default replay for a durable person is limited to that exact
+person across session rotation; cross-person or legacy-to-person replay requires
+an explicit command authorizer. Order create/update must prove read authority
+before mutation. Compatibility updates require distinct contact/financial write
+actions plus their corresponding read actions before touching those fields, and
+their responses use the same permission-filtered projection as reads. Custom
+allowlists inherit no new actions. Tests execute denial before persistence and
+verify redacted responses; source-string presence is not completion evidence.
+
+The same standard applies across operational HTTP boundaries. Conversation read,
+workflow update, reply and WhatsApp connection management are separate actions.
+Conversation/message access does not imply contact-name, phone or provider-JID
+access. A GET cannot create a live-JID conversation or clear unread state; mark
+read is an explicit update. Order lifecycle mutations require `orders.update`,
+order search additionally requires contact read, money operations require both
+financial read and write, and recovery additionally requires approval authority.
+Courier and customer-return projections redact monetary fields when financial
+read is absent. Order intake writes contact and price-bearing state, so it
+requires both protected field domains; the standard operator preset therefore
+does not grant `orders.create`, while manager and owner presets do.
+
+Role ceilings remain deliberately bounded: viewers receive permitted read-only
+projections; operators may update/reply/claim assigned operational work without
+financial or provider-connection administration; managers add broad workflow,
+financial, assignment and WhatsApp connection authority without owner-only
+destructive, approval or licence authority; owners retain the fixed recovery
+ceiling. UI controls consume the server-resolved action set and do not invent a
+parallel role matrix.
+
+**Acceptance and revalidation.** Same-person replay succeeds after session
+rotation; cross-person replay is denied before result decryption; denied create
+or update leaves no mutation; protected field writes require exact actions;
+responses redact ungranted fields; AR/FR/EN permission labels are complete; the
+full exact-head checkpoint passes. Operational route inventory is supporting
+coverage only and is paired with executable deny-before-write/read-purity and
+projection tests. Revalidate when principal encoding, permission vocabulary,
+remote commands, projection transport, provider connection control or
+multi-owner recovery changes.
+
+#### Teams collaboration authority closure — adopted 2026-08-01
+
+**Exact decision.** Shared collaboration state is a server-authorized operational
+aggregate, not inbox UI metadata. Workgroups, queues, comments, mentions and
+handover transitions use exact shop and durable-person authority, command replay,
+optimistic versions and append-only audit/event history. Customer/provider
+messages remain separate from encrypted internal comments. A state-only
+open/closed transition is itself a durable handover and cannot be discarded.
+
+The seller surface reuses server-projected permissions and exact active-member
+mention options. It distinguishes ordinary 403 action denial from stale or
+revoked identity that requires reauthentication, preserves one idempotency key
+across safe network retry, refreshes on version conflict, and exposes complete
+AR/FR/EN loading, empty, permission, stale, offline and recovery states.
+
+**Evidence and revalidation.** Implementation head
+`a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`, normal CI `30714461757`
+and complete checkpoint `30714461656` passed. The separated review covered
+cross-person replay, cross-shop and revoked targets, permission-before-parsing,
+protected-field leakage/oracles, high-risk ceremonies, state-only transitions,
+concurrency, recovery and localized failure states; no P0/P1 remained. Revalidate
+when entity types, assignment states, member lifecycle, action ceilings,
+projection fields or remote collaboration commands change.
 
 ### Phase 3 — Providers, inbox, AI and automations
 

@@ -6,7 +6,7 @@ import Link from "next/link";
 interface EmptyStateProps {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
-  description: string;
+  description?: string;
   actionLabel?: string;
   actionHref?: string;
   onAction?: () => void;
@@ -15,7 +15,7 @@ interface EmptyStateProps {
 
 /**
  * Premium empty state — taxonomy + Dub pattern.
- * 
+ *
  * - min-h-[400px] for consistent vertical space
  * - Dashed border container
  * - Square icon tile (rounded-2xl, not circle)
@@ -42,7 +42,9 @@ export function EmptyState({
         </div>
         <div className="space-y-1.5">
           <h3 className="text-base font-semibold text-foreground">{title}</h3>
-          <p className="text-balance text-sm text-muted-foreground">{description}</p>
+          {description ? (
+            <p className="text-balance text-sm text-muted-foreground">{description}</p>
+          ) : null}
         </div>
         {actionLabel && (actionHref || onAction) && (
           <div className="mt-2">

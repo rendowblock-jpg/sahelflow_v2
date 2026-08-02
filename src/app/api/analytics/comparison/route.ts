@@ -6,7 +6,7 @@ import { getPeriodComparison, getLastNDays, getPreviousPeriod } from "@/lib/data
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth(["analytics.read", "analytics.financials.read"]);
   const days = parseInt(req.nextUrl.searchParams.get("days") ?? "30", 10);
   const current = getLastNDays(days);
   const previous = getPreviousPeriod(current);

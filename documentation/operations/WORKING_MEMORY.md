@@ -1,179 +1,190 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
-> **Last updated:** 2026-07-30
-> **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
-> **Current protected application baseline:** `731fb11528345354388b2716f3bd94f0fc73eafb`
+> **Last updated:** 2026-08-01
+> **Protected main:** `522ab1642545803c7a9b6c320fe72cceb320e558`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
-> **Protected signed run:** `30366866703`
-> **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Operating authority:** FD-028, `../system/ROADMAP.md`, `WORKFLOW.md`
+> **Operating authority:** FD-028, FD-029, `../system/ROADMAP.md`, `WORKFLOW.md`, root `AGENTS.md`
 > **Execution epic:** issue #164
-> **Active phase:** Phase 1 — canonical manual confirmation and fulfillment merged; Golden COD slice incomplete
-> **Active code PR:** None at this checkpoint
+> **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
+> **Active package:** Teams source closure — protected merge decision
+> **Active branch:** `agent/phases1-4-completion-program`
+> **Active PR:** draft PR #195 — `program: close Phase 1 and Teams integration`
+> **Merge state:** open, draft, mergeable, unmerged
 
-## Current merged truth
+GitHub PR #195 and its exact current head/checks are live branch authority. Never
+trust copied head or run numbers without re-reading GitHub at session start.
 
-Phase 0 remains complete through PR #179. Protected application source is
-`731fb11528345354388b2716f3bd94f0fc73eafb`.
+## Protected truth
 
-The following ordinary, no-version-bump packages are merged:
+Phase 0 remains complete. Protected `main`, the published release, installed
+Internal.13 evidence and Founder acceptance are unchanged. Draft PR #195 is
+proposed source only: it is not merged, published, installed, provider-certified,
+externally reviewed or Founder-accepted.
 
-| Package | Merge | Exact-head evidence | Proven boundary |
-|---|---|---|---|
-| PR #190 — trusted manual confirmation | `f0821fb7885be4eeec7efcc2e5ef5a27254f6ac1` | CI `30516059898` | manual intake, confirmation/rejection, exact version/idempotency, exact product-or-variant reservation and inventory movement, AR/FR/EN states |
-| PR #191 — current-shop authorization | `bcdc4fe5643c407dddcc96d47c421d0417a83563` | CI `30520060972` | compatibility PIN actor can read only the exact process shop; create/switch/delete/cross-shop and forged contexts fail closed |
-| PR #184 — protected Windows installation root | `deb148de737b7906d899cbb41764faa929823a24` | CI `30520999819` | DPAPI-protected current/candidate/backup authority, exact legacy-root import, native resumable rotation/recovery, MSI install, rotation, authenticated launch, close/reopen |
-| PR #192 — canonical fulfillment | `731fb11528345354388b2716f3bd94f0fc73eafb` | CI `30522348699` | pack, manual ship, reservation consumption, outbound inventory, deliver, customer facts and DZD COD receivable |
+Full Windows/Rust/MSI, live-provider, legal, Beta and Founder-acceptance evidence
+remain later separate gates.
 
-PR #192 recorded one owned P2 in issue #164: a preserved legacy shipped/delivered
-order has unknown packing history, so its timeline must hide the canonical packed
-step or render it as unknown rather than incomplete. It does not affect mutation,
-stock, money or authority correctness.
+## Phase 1 — shared replay repair source-closed on PR #195
 
-These merges are partial phase results. Phase 1, Phase 2 and Phase 4 are not
-complete. No new Internal candidate or application-version bump has been made.
+- implementation head `a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`;
+- normal CI `30714461757` — success;
+- complete checkpoint `30714461656` — success.
 
-## Installed-release truth
+Concrete P1 replay evidence found on 2026-08-01 was repaired: a durable person's
+command result now replays only for that exact person across safe session
+rotation, while cross-person replay is denied before result decryption. Affected
+order authorization and fixture boundaries passed the same complete checkpoint.
+This remains unmerged proposed source until PR #195 is authorized and merged.
 
-Internal.13 remains the published and Founder-installed release. Its exact
-version and preserved workspace, installation, shop, registry and database
-identity snapshot are recorded in `../system/CURRENT_STATE.md`. Authenticated
-Arabic UI readiness was observed. Stopped-process and immediate-reopen trace
-timings were 68.863 and 31.834 seconds, both beyond the eight-second T470 target.
-Arabic chart visual acceptance and explicit Founder acceptance remain open.
+## Phase 2A.1 result — setup and session authority closed
 
-The installed-MSI gates for PR #184 and PR #192 prove disposable clean-runner
-behavior for those exact heads. They do not change the installed Founder version
-or prove Founder/T470 acceptance of the new merged source.
+- head `ad3987e934c1e42706cf7f29010cd96dc534f290`;
+- normal CI `30656307152` — success;
+- checkpoint `30656308867` — success.
 
-## Phase status
+Setup is onboarding only. Database sessions enforce 24-hour overall and one-hour
+inactivity limits, throttled activity persistence, revocation, reauthentication
+rotation, recent proof, PIN-change revocation and fail-closed logout.
 
-### Phase 1 — in progress
+## Phase 2A.2 result — durable owner identity kernel closed
 
-Merged production authority reaches delivered manual orders and creation of a COD
-receivable. Still open:
+- head `5190e792121dd6c1c9d2c1bd452db7b37ebb0b2e`;
+- normal CI `30660637916` — success;
+- checkpoint `30660637617` — success.
 
-- courier booking, tracking receipts and external provider IDs;
-- cancellation and reservation release;
-- delivery failure, refusal, physical return and inspection;
-- COD collection, partial/full remittance, fees, disputes and discrepancies;
-- returns, exchanges, refunds and append-only compensation;
-- canonical import, storefront, WhatsApp, commerce and AI intake;
-- restart/update and disposable backup-compatibility proof for the complete facts.
+The installation owns HMAC-authenticated Workspace, Installation, Person, owner
+WorkspaceMember, Device and session bindings with exact shop, policy and
+revocation snapshots. Real person actors, cross-shop denial, tamper, restart,
+concurrency, root rotation and anti-reinitialization are proven.
 
-### Phase 2 — in progress
+## Phase 2A.3 result — revocation and policy freshness closed
 
-Only the narrow compatibility current-shop authorization boundary is merged.
-Durable Person, WorkspaceMember, Device and Session authority, persisted policy
-and revocation, licensing/entitlements, invitations/recovery and native multi-shop
-lifecycle remain open.
+- head `56df880bbe2233bf081119fa535e30713d9c6051`;
+- normal CI `30665009016` — success;
+- checkpoint `30665009255` — success.
 
-### Phase 3 — not yet adopted
+Every configured authenticated request validates durable identity. Owner session
+administration is control-first, database/audit catch-up is transactional and
+retryable, stale policy is denied outside the bounded reauthentication ceremony,
+and missing, revoked, cross-shop or unavailable authority remains blocked.
 
-No durable WhatsApp/outbox package is merged. The corrected local package below
-is proposed source only and still needs rebase, independent review and CI.
+## Phase 2A.4 result — multi-member roles, invitations and per-shop permissions closed
 
-### Phase 4 — in progress
+- head `3266dc03994ffcb1672256465624ea715f0cf317`;
+- normal CI `30681155150` — success;
+- checkpoint `30681155099` — success.
 
-The protected installation root and native rotation are merged. Full encrypted
-all-shop backup/restore, replacement-install recovery, recovery ceremonies,
-complete migration matrix, security/privacy/Law 18-07 work and independent
-certification remain open.
+Closed boundaries:
 
-## Paused local-only work
+- authenticated, expiring and single-use invitations with replay-safe recovery;
+- individual member identity, login ID, PIN credential, device and session;
+- owner, manager, operator and viewer presets plus exact role-bounded custom
+  allowlists, including deny-all policy;
+- exact shop grant enforcement for protected access, public credentials and
+  non-owner member inventory;
+- member-owned reauthentication with no owner-PIN fallback;
+- owner-only owner-PIN administration;
+- control-first member revocation invalidating every indexed session;
+- retryable SQLite/audit catch-up without restoring access;
+- installation-root rotation across owner, invitation, member and revocation
+  authorities;
+- owner administration and member self-view in Arabic, French and English;
+- duplicate/concurrent invitation, acceptance and revocation, restart, expiry,
+  replay, recovery and cross-shop proofs.
 
-These worktrees are not protected-main or GitHub authority. Preserve them, but do
-not describe them as complete or publish them without reconstructing current
-source and review.
+The earlier frozen sole-agent adversarial pass found and closed revoked-login disclosure,
+stale-owner queue authorization, cross-shop inventory exposure and wrong-shop
+login false-success. Its no-P0/P1 verdict is superseded for the shared replay
+boundary by the concrete finding above. It was not an independent review.
 
-### Corrected Phase 3 durable WhatsApp proposal
+PIN remains local unlock and reauthentication, never durable person identity.
+The sole core owner cannot be removed or demoted by the accepted-member APIs;
+last-owner recovery remains a separate explicit ceremony if multi-owner support is
+introduced later.
 
-- Worktree: `C:\tmp\sahelflow-phase3-durable-provider`
-- Branch: `codex/phase3-durable-provider`
-- Clean local commit: `01a595b789d31c600da6af7025b9dff7cb7cd813`
-- Tree: `aeff8c6e667adadbbedd28badb0d7759604a8b5c`
-- Base: `deb148de737b7906d899cbb41764faa929823a24`
-- Status: corrected after four prior P1 findings; no post-correction independent
-  SHIP verdict, no publication and no CI.
-- Required resume action: rebase onto current protected `main`, inspect schema and
-  identity integration, then independently review stable receipt authority,
-  workspace/shop/incarnation scoping, effect-start leases, deterministic versus
-  ambiguous recovery, trusted actor enforcement, encryption and sidecar request
-  binding before any PR.
+## Teams vertical 1 result — governed conversation assignment and handover closed
 
-### Incomplete Phase 1D COD-settlement proposal
+- head `c72bf67afd954de3b51d473036adc47223b73d3e`;
+- normal CI `30683805165` — success;
+- checkpoint `30683805097` — success.
 
-- Worktree: `C:\tmp\sahelflow-phase1-cod-settlement`
-- Branch: `codex/phase1-cod-settlement`
-- Base: local pre-merge fulfillment commit `a2abfd2e986d122ae314117112040ec274264dfe`
-- Status: uncommitted; seven tracked files plus five untracked paths; no completed
-  review or CI. The current diff includes research, schema/migration, command,
-  route, controls and tests, but remains an incomplete proposal.
-- Required resume action: preserve the diff, compare it with current protected
-  `main`, reconstruct or rebase carefully, and review money/idempotency/version/
-  compensation and legacy refund/accounting fences before committing.
+Closed boundaries:
 
-### Incomplete Phase 2 durable-identity proposal
+- exact `WorkspaceMember` assignment targets; no free-text assignee authority;
+- self-claim and self-release for operators;
+- owner/manager assignment, unassignment and handover;
+- exact-shop and current revocation checks before target exposure or mutation;
+- command-kernel idempotency, optimistic aggregate versions and same-person replay
+  across session rotation;
+- atomic assignment projection, encrypted activity, trusted audit, domain event
+  and projection invalidation;
+- read-only live-JID hydration and atomic write-time JID upsert;
+- no assignment-version N+1 on inbox list reads;
+- Arabic/French/English loading, conflict, error and activity states;
+- permission, duplicate, concurrent, restart, replay and route-ordering proof.
 
-- GitHub PR #186 (`agent/phase2-session-freshness`) is still open against an
-  obsolete `d9c9b51...` base and GitHub currently reports it as conflicting.
-  It is proposed, unmerged authority; inspect and reconcile or close it before
-  resuming Phase 2 so its session-freshness work is not duplicated or overwritten.
-- Worktree: `C:\tmp\sahelflow-phase2-durable-identity`
-- Branch: `codex/phase2-durable-identity`
-- Base: `bcdc4fe5643c407dddcc96d47c421d0417a83563`
-- Status: uncommitted; four tracked and four untracked identity/auth files; no
-  completed migration, review or CI.
-- Required resume action: keep paused while another core-authority package owns
-  WIP. Reconstruct against current `main` and the protected installation control-
-  cache/recovery contract before treating any local code as adopted design.
+The separated frozen-head pass found and closed read-time row creation, revoked
+member target exposure, list-query amplification and claim-only empty-menu behavior.
+It found no remaining P0/P1 in this vertical and was not an independent review.
 
-The original checkout at `C:\Users\DMR\Desktop\sahelflow_v2` still contains
-unrelated local evidence/noise: `scripts/Founder-install-result.json` and a
-modified `src/lib/identity/__tests__/session-authority.test.ts`. Do not stage,
-delete or reset either as part of future feature or documentation work. Prefer a
-fresh worktree from protected `main`.
+## Teams and permissions completion — source-closed on PR #195
 
-## Exact next session order
+### Exact source-closure evidence
 
-1. Fetch and verify protected `main`; do not assume the application baseline in
-   this file is still the latest documentation merge.
-2. Read `documentation/README.md`, FD-028, the active Roadmap gate, Workflow,
-   this file, issue #164 and exact production source/tests.
-3. Resume the clean Phase 3 proposal first as an integration/review package:
-   rebase `01a595b...` onto current protected `main`, obtain an independent P0/P1
-   verdict, and publish one PR only after SHIP. GitHub Actions must prove the exact
-   head. Do not combine it with Phase 1D or Phase 2 identity.
-4. After that package is merged or explicitly rejected, occupy core-authority WIP
-   with one package only. The dependency-correct implementation frontier is
-   Phase 1D COD collection/remittance/fees/discrepancy. Treat the existing local
-   COD worktree as a proposal to inspect, not as trusted finished work.
-5. Keep the Phase 2 durable-identity proposal paused until core-authority WIP is
-   available. Before resuming, resolve the open conflicting PR #186 and reconcile
-   its session-freshness changes. Use the protected installation control cache
-   rather than per-shop business databases for durable identity authority.
-6. Group coherent source-complete packages into one later Internal candidate;
-   do not bump the application version for ordinary packages. A signed candidate,
-   Founder install and preservation/Arabic/timing acceptance are separate gates.
+- implementation head `a5f5b47626da9d6ec3d31d2a5332c09fcb9b4d5d`;
+- normal CI `30714461757` — success;
+- complete integration source checkpoint `30714461656` — success;
+- the checkpoint passed authority/docs, frozen install, Prisma generation,
+  TypeScript, ESLint, the full unit/integration suite and migration status.
 
-## Active blockers and discontinuities
+Closed boundaries:
 
-- Phase 1 has no governed COD settlement or return/refund compensation path.
-- Remaining intake sources and legacy services can still bypass full canonical
-  order/stock/money authority.
-- Commerce checkpoint advancement and automation direct effects remain unsafe.
-- Phase 3 provider durability is local proposed source only.
-- Durable identity, licensing and native multi-shop are incomplete.
-- Full backup/restore, replacement installation and recovery drills are open.
-- Whole-product AAA, Arabic/RTL/accessibility parity and low-end performance are
-  unproven.
-- Internal.13 remains over the T470 launch budget and not Founder-accepted.
+- shared per-shop workgroups and queues reusable by operational entities;
+- append-only encrypted internal comments, exact active-member mentions and
+  durable assignment/routing/handover history;
+- operational action vocabulary, least-privilege role ceilings and exact
+  deny-by-default custom policy behavior;
+- protected customer/contact, financial and provider projections plus
+  deny-before-query/write oracle closure;
+- trusted person actor and exact-shop derivation for every collaboration command;
+- same-person replay, idempotency, optimistic concurrency, audit, event, outbox,
+  projection invalidation, revocation, restart and recovery;
+- Arabic/French/English loading, empty, permission, conflict, stale/revoked,
+  offline and safe-retry seller states.
 
-## Completion truth
+The separated review closed cross-person replay, malformed-input authorization
+ordering, state-only handover persistence and stale-policy UI classification.
+No P0/P1 remains. This was not independent review and does not prove installed or
+external evidence.
 
-A branch, local commit, PR, model, route, page, mock or passing unit test does not
-complete a phase. Only protected merged source plus every applicable automated,
-installed, external and Founder evidence layer can close the named outcome.
+### Exact execution order
+
+1. Verify live protected `main`, PR #195, its current documentation head and exact
+   checks; the immutable implementation evidence remains the head and runs above.
+2. Update PR #195 and issue #164 with the same source-closure evidence.
+3. Keep PR #195 draft, unmerged and version-neutral until the Founder explicitly
+   authorizes its protected merge. Add no licensing or later-phase work.
+4. After merge, start licensing research/contract and implementation on a short
+   dedicated branch from the then-current protected `main`.
+5. Merge the source-complete licensing outcome through its selected gates, then
+   do native multi-shop in a second short outcome PR from protected `main`.
+
+## Protected local boundaries
+
+- Do not modify, reset or delete the original checkout merely to make branch work
+  easier.
+- Preserve `C:\Users\DMR\Desktop\sahelflow_v2\scripts\Founder-install-result.json`.
+- Preserve the unrelated modified
+  `src/lib/identity/__tests__/session-authority.test.ts` in the original checkout.
+- PR #186 is obsolete/conflicting proposed source; never merge it wholesale.
+- Keep PR #195 draft and unmerged. Do not bump the application version.
+
+## Validation model
+
+Draft PR #195 runs the exact-head source checkpoint. Keep CI read-only. Linux
+source checks cannot prove Windows standalone, Rust parity, signed MSI, installed
+lifecycle, live-provider, independent security/privacy/Law 18-07 or Founder
+acceptance.

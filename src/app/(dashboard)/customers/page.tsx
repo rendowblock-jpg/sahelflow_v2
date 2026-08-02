@@ -9,23 +9,61 @@ import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import { CustomersDataTable } from "@/components/customers/customers-data-table";
 import type { Locale } from "@/lib/i18n";
-import type { Customer } from "@/types/domain";
+import {
+  requireTrustedAction,
+  trustedActionAllowed,
+} from "@/lib/identity/authorization";
+import { projectCustomersForTrustedActor } from "@/lib/identity/customer-projection";
 
 // Always fetch fresh data (local-first app, no ISR)
 export const dynamic = "force-dynamic";
 
 export default async function CustomersPage() {
   const { t, locale } = await getI18n();
+  const actorContext = await requireTrustedAction("customers.read");
+  const resource = { shopId: actorContext.shop.shopId };
+  const canManage = trustedActionAllowed(
+    actorContext,
+    "customers.manage",
+    resource,
+  );
+  const canUpdateContact = trustedActionAllowed(
+    actorContext,
+    "customers.contact.update",
+    resource,
+  );
+  const canReadContact = trustedActionAllowed(
+    actorContext,
+    "customers.contact.read",
+    resource,
+  );
+  const canReadFinancials = trustedActionAllowed(
+    actorContext,
+    "orders.financials.read",
+    resource,
+  );
+  const canExport = canReadContact && trustedActionAllowed(
+    actorContext,
+    "data.export",
+    resource,
+  );
+  const canImport = canManage && canUpdateContact && trustedActionAllowed(
+    actorContext,
+    "data.import",
+    resource,
+  );
   const [customers, totalCustomers, aggregate, activeCountAgg, atRiskCountAgg] = await Promise.all([
     customerService.list({ prisma: db, shop: shopContext }, { limit: 25, offset: 0 }),
     db.customer.count({ where: { deletedAt: null } }),
     // Session 30 (AUDIT-5 P1): compute KPIs from aggregate across ALL customers,
     // not just the first 25 on page 1. A seller with 200 customers was seeing
     // KPIs from a 12.5% sample.
-    db.customer.aggregate({
-      where: { deletedAt: null },
-      _sum: { totalSpent: true },
-    }),
+    canReadFinancials
+      ? db.customer.aggregate({
+          where: { deletedAt: null },
+          _sum: { totalSpent: true },
+        })
+      : Promise.resolve({ _sum: { totalSpent: null } }),
     db.customer.count({ where: { deletedAt: null, orderCount: { gt: 0 } } }),
     db.customer.count({ where: { deletedAt: null, riskScore: { gte: 6 } } }),
   ]);
@@ -33,6 +71,10 @@ export default async function CustomersPage() {
   const totalSpent = aggregate._sum.totalSpent ?? 0;
   const activeCount = activeCountAgg;
   const atRiskCount = atRiskCountAgg;
+  const projectedCustomers = projectCustomersForTrustedActor(
+    actorContext,
+    customers,
+  );
 
   const activePct = totalCustomers > 0 ? Math.round((activeCount / totalCustomers) * 100) : 0;
   const avgSpent = totalCustomers > 0 ? Math.round(totalSpent / totalCustomers) : 0;
@@ -44,12 +86,17 @@ export default async function CustomersPage() {
       <PageHeader
         title={t("customers.title")}
         description={t("customers.subtitle")}
-        actions={
+        actions={canExport || (canManage && canUpdateContact) ? (
           <div className="flex items-center gap-2">
-            <ImportExportButtons exportRoute="/api/export/customers" importRoute="/api/import/customers" />
-            <CustomerFormDialog />
+            {canExport && (
+              <ImportExportButtons
+                exportRoute="/api/export/customers"
+                importRoute={canImport ? "/api/import/customers" : undefined}
+              />
+            )}
+            {canManage && canUpdateContact && <CustomerFormDialog />}
           </div>
-        }
+        ) : undefined}
       />
 
       {/* Stat cards — shared premium StatCard component */}
@@ -65,11 +112,13 @@ export default async function CustomersPage() {
         />
         <StatCard
           label={t("customers.totalSpent")}
-          value={formatDZD(totalSpent)}
+          value={canReadFinancials ? formatDZD(totalSpent) : "—"}
           icon={<TrendingUp />}
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
           accentIcon="text-success"
-          subtitle={t("customers.avgSpent", { amount: formatDZD(avgSpent) })}
+          subtitle={canReadFinancials
+            ? t("customers.avgSpent", { amount: formatDZD(avgSpent) })
+            : undefined}
           style={{ animationDelay: "120ms" }}
         />
         <StatCard
@@ -97,10 +146,10 @@ export default async function CustomersPage() {
       <div className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <CustomersDataTable
           fallback={{
-            customers: customers.map((c: Customer) => ({
+            customers: projectedCustomers.map((c) => ({
               id: c.id,
-              name: c.name,
-              phone: c.phone,
+              name: c.name ?? t("inbox.restrictedContact"),
+              phone: c.phone ?? "—",
               wilaya: c.wilaya,
               commune: c.commune,
               orderCount: c.orderCount,

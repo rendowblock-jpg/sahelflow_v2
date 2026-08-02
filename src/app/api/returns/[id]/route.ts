@@ -11,7 +11,7 @@ import { db, shopContext } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { SahelFlowError } from "@/types/errors";
-import { requireAuth } from "@/lib/auth/server";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ const returnStatusSchema = z.object({
 type RouteContext = { params: Promise<{ id: string }> };
 
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
-  await requireAuth();
+  await requireTrustedAction("orders.update");
   const { id } = await params;
   const body = await req.json();
   const { status, notes } = returnStatusSchema.parse(body);

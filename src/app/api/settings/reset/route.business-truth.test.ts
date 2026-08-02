@@ -2,8 +2,20 @@ process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef012345
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+const requireRecentReauthenticationMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(undefined),
+);
+
 vi.mock("@/lib/auth/server", () => ({
-  requireAuth: vi.fn().mockResolvedValue({ userId: "reset-test" }),
+  requireRecentReauthentication: requireRecentReauthenticationMock,
+}));
+vi.mock("@/lib/identity/authorization", () => ({
+  requireTrustedAction: vi.fn().mockResolvedValue({
+    actor: { kind: "person", personId: "reset-test" },
+    shop: { shopId: "default" },
+  }),
+  assertTrustedAction: vi.fn(),
+  trustedActorAuditIdentity: vi.fn(() => "person:reset-test"),
 }));
 vi.mock("@/lib/audit", () => ({
   logAudit: vi.fn().mockResolvedValue(undefined),
@@ -19,6 +31,13 @@ import { POST } from "./route";
 
 async function clearBusinessTruth(): Promise<void> {
   await rawDb.$transaction([
+    rawDb.collaborationMention.deleteMany(),
+    rawDb.collaborationComment.deleteMany(),
+    rawDb.collaborationHandover.deleteMany(),
+    rawDb.collaborationAssignment.deleteMany(),
+    rawDb.collaborationWorkgroupMember.deleteMany(),
+    rawDb.collaborationQueue.deleteMany(),
+    rawDb.collaborationWorkgroup.deleteMany(),
     rawDb.compensationFact.deleteMany(),
     rawDb.projectionInvalidation.deleteMany(),
     rawDb.financialMovement.deleteMany(),
@@ -33,6 +52,7 @@ async function clearBusinessTruth(): Promise<void> {
 }
 
 beforeEach(async () => {
+  requireRecentReauthenticationMock.mockClear();
   await clearBusinessTruth();
 });
 
@@ -152,12 +172,77 @@ describe("POST /api/settings/reset business-truth authority", () => {
         payloadJson: "encrypted-compensation",
       },
     });
+    await rawDb.collaborationWorkgroup.create({
+      data: {
+        id: "reset-workgroup",
+        name: "Reset workgroup",
+        createdByMemberId: "reset-test",
+      },
+    });
+    await rawDb.collaborationWorkgroupMember.create({
+      data: {
+        workgroupId: "reset-workgroup",
+        memberId: "reset-member",
+        addedByMemberId: "reset-test",
+      },
+    });
+    await rawDb.collaborationQueue.create({
+      data: {
+        id: "reset-queue",
+        key: "reset-queue",
+        name: "Reset queue",
+        entityType: "order",
+        workgroupId: "reset-workgroup",
+        createdByMemberId: "reset-test",
+      },
+    });
+    await rawDb.collaborationAssignment.create({
+      data: {
+        entityType: "order",
+        entityId: "reset-order",
+        queueId: "reset-queue",
+        workgroupId: "reset-workgroup",
+        assigneeMemberId: "reset-member",
+        updatedByMemberId: "reset-test",
+        commandId: "reset-assignment-command",
+      },
+    });
+    await rawDb.collaborationComment.create({
+      data: {
+        id: "reset-comment",
+        entityType: "order",
+        entityId: "reset-order",
+        authorMemberId: "reset-test",
+        bodyJson: JSON.stringify({ text: "must be deleted" }),
+        commandId: "reset-comment-command",
+      },
+    });
+    await rawDb.collaborationMention.create({
+      data: {
+        commentId: "reset-comment",
+        memberId: "reset-member",
+      },
+    });
+    await rawDb.collaborationHandover.create({
+      data: {
+        id: "reset-handover",
+        entityType: "order",
+        entityId: "reset-order",
+        toMemberId: "reset-member",
+        toQueueId: "reset-queue",
+        toWorkgroupId: "reset-workgroup",
+        fromState: "open",
+        toState: "closed",
+        commandId: "reset-handover-command",
+      },
+    });
 
     const response = await POST(
       mockPost("http://localhost/api/settings/reset", { confirm: "RESET" }),
     );
     expect(response.status).toBe(200);
     await expect(getJson(response)).resolves.toMatchObject({ ok: true });
+    expect(requireRecentReauthenticationMock).toHaveBeenCalledOnce();
 
     await expect(
       Promise.all([
@@ -170,8 +255,15 @@ describe("POST /api/settings/reset business-truth authority", () => {
         rawDb.domainEvent.count(),
         rawDb.businessCommand.count(),
         rawDb.businessAggregateVersion.count(),
+        rawDb.collaborationMention.count(),
+        rawDb.collaborationComment.count(),
+        rawDb.collaborationHandover.count(),
+        rawDb.collaborationAssignment.count(),
+        rawDb.collaborationWorkgroupMember.count(),
+        rawDb.collaborationQueue.count(),
+        rawDb.collaborationWorkgroup.count(),
       ]),
-    ).resolves.toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    ).resolves.toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     await expect(
       rawDb.secret.findUnique({ where: { key: BUSINESS_ENVELOPE_SECRET_KEY } }),
     ).resolves.toMatchObject({ key: BUSINESS_ENVELOPE_SECRET_KEY });

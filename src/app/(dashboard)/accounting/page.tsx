@@ -1,5 +1,6 @@
 import { getI18n } from "@/lib/i18n-server";
 import { db } from "@/lib/db";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PremiumTable } from "@/components/shared/premium-table";
@@ -8,11 +9,10 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import type { ExpenseCategory } from "@/lib/validation";
-// Phase 4: canonical net-revenue formula (realized - refunds - delivery
-// costs). Replaces the page's local sum-of-delivered-totalPrice calc,
-// which (a) didn't subtract refunds and (b) duplicated the delivery-cost
-// subtraction that was also in netProfit, double-counting it.
-import { netRevenue } from "@/lib/data/metrics";
+import {
+  getProfitabilityProjection,
+  getProfitabilitySeries,
+} from "@/lib/accounting/profitability";
 import { ExpenseFormDialog } from "@/components/accounting/expense-form-dialog";
 import { ExpenseRowActions } from "@/components/accounting/expense-row-actions";
 import {
@@ -33,6 +33,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export const dynamic = "force-dynamic";
 
 export default async function AccountingPage() {
+  await requireTrustedAction("accounting.read");
   const { t, locale } = await getI18n();
   const dateLocale = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR";
 
@@ -43,46 +44,24 @@ export default async function AccountingPage() {
   const now = new Date();
   const periodStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [orders, expenses] = await Promise.all([
-    db.order.findMany({
-      where: { createdAt: { gte: periodStart }, deletedAt: null },
-      include: { items: { include: { product: { select: { cost: true } } } }, delivery: true },
-    }),
+  const period = { from: periodStart, to: now };
+  const [expenses, profitability] = await Promise.all([
     db.expense.findMany({
-      where: { date: { gte: periodStart }, deletedAt: null },
+      where: { date: { gte: periodStart, lt: now }, deletedAt: null },
       orderBy: { date: "desc" },
     }),
+    getProfitabilityProjection(db, period),
   ]);
 
-  // Phase 4: revenue is now the CANONICAL net revenue (realized - refunds
-  // - delivery costs) from metrics.ts. Previously this was sum-of-
-  // delivered-totalPrice (which equals realized), and deliveryCosts were
-  // subtracted AGAIN in netProfit below -- double-counting them. Now:
-  //   - revenue (StatCard)       = netRevenue(period) = realized - refunds - deliveryCosts
-  //   - netProfit (StatCard)     = netRevenue - cogs - totalExpenses
-  //                                (deliveryCosts + refunds already inside netRevenue)
-  // COGS still uses actual product cost when available; if cost is
-  // missing, it contributes 0 and a warning banner is shown.
-  const period = { from: periodStart, to: now };
-  const revenue = await netRevenue(db, period);
-  const deliveredOrders = orders.filter((o) => o.status === "delivered");
-  const cogs = deliveredOrders.reduce((sum, o) => {
-    return sum + o.items.reduce((s, item) => {
-      const productCost = (item as { product?: { cost?: number } }).product?.cost;
-      if (productCost === undefined || productCost === null) return s;
-      return s + (productCost * item.quantity);
-    }, 0);
-  }, 0);
-  const hasMissingCosts = deliveredOrders.some((o) =>
-    o.items.some((item) => {
-      const productCost = (item as { product?: { cost?: number } }).product?.cost;
-      return productCost === undefined || productCost === null;
-    }),
-  );
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  // deliveryCosts are already inside `revenue` (netRevenue) -- don't
-  // subtract them again here.
-  const netProfit = revenue - cogs - totalExpenses;
+  const revenue = profitability.netRevenue;
+  const cogs = profitability.cogs;
+  const hasMissingCosts = !profitability.profitabilityComplete;
+  const totalExpenses =
+    profitability.courierFees +
+    profitability.inventoryLosses +
+    profitability.operatingExpenses -
+    profitability.settlementAdjustments;
+  const netProfit = profitability.netProfit;
 
   // Monthly data for chart (last 6 months)
   const last6Months = Array.from({ length: 6 }, (_, i) => {
@@ -90,43 +69,31 @@ export default async function AccountingPage() {
     return date;
   });
 
-  // P-M13: previously an N+1 loop firing 2 queries × 6 months = 12 round-trips.
-  // Now: 2 bulk findMany (one for orders, one for expenses) restricted to the
-  // 6-month window + select-only the columns we need; in-JS grouping by month.
-  // Soft-delete filters (deletedAt: null) applied here too (P-M1 part 2).
-  // Equivalent to last6Months[0] but computed directly to avoid indexed-access
-  // (`noUncheckedIndexedAccess` would type last6Months[0] as Date | undefined).
-  const monthlyChartStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-  const [monthlyOrders, monthlyExpenses] = await Promise.all([
-    db.order.findMany({
-      where: {
-        createdAt: { gte: monthlyChartStart },
-        status: "delivered",
-        deletedAt: null,
+  const monthlySeries = await getProfitabilitySeries(
+    db,
+    last6Months.map((date) => ({
+      key: `${date.getFullYear()}-${date.getMonth() + 1}`,
+      period: {
+        from: date,
+        to: new Date(date.getFullYear(), date.getMonth() + 1, 1),
       },
-      select: { totalPrice: true, createdAt: true },
-    }),
-    db.expense.findMany({
-      where: {
-        date: { gte: monthlyChartStart },
-        deletedAt: null,
-      },
-      select: { amount: true, date: true },
-    }),
-  ]);
-
+    })),
+  );
+  const monthlyByKey = new Map(
+    monthlySeries.map((entry) => [entry.key, entry.projection]),
+  );
   const monthlyData = last6Months.map((date) => {
-    const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
-    const monthRevenue = monthlyOrders
-      .filter((o) => o.createdAt >= date && o.createdAt < nextMonth)
-      .reduce((sum, o) => sum + o.totalPrice, 0);
-    const monthExpenses = monthlyExpenses
-      .filter((e) => e.date >= date && e.date < nextMonth)
-      .reduce((sum, e) => sum + e.amount, 0);
+    const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+    const month = monthlyByKey.get(key);
     return {
       month: date.toLocaleDateString(dateLocale, { month: "short" }),
-      revenue: monthRevenue,
-      expenses: monthExpenses,
+      revenue: month?.netRevenue ?? 0,
+      expenses:
+        (month?.cogs ?? 0) +
+        (month?.courierFees ?? 0) +
+        (month?.inventoryLosses ?? 0) +
+        (month?.operatingExpenses ?? 0) -
+        (month?.settlementAdjustments ?? 0),
     };
   });
 

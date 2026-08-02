@@ -28,6 +28,9 @@
     "declaration": false,
     "sourceMap": true,
     "paths": {
+      "@/lib/identity/control-authority": [
+        "./src/lib/identity/identity-authority.ts"
+      ],
       "@/*": [
         "./src/*"
       ],

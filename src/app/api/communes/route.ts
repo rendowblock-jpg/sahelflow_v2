@@ -26,7 +26,7 @@ function getCommunes() {
  * bundling the full 197KB communes.json into the client JS (T-019).
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth();
+  await requireAuth("customers.read");
   const wilayaCode = req.nextUrl.searchParams.get("wilaya");
 
   const all = getCommunes();

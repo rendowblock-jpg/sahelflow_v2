@@ -67,7 +67,12 @@ describe("Algerian Founder demo contract", () => {
     const panel = read("src/components/settings/demo-data-panel.tsx");
     const settings = read("src/components/settings/settings-tabs.tsx");
 
-    expect(route.match(/await requireAuth\(\)/g)).toHaveLength(3);
+    expect(route).toContain('await requireAuth("settings.read")');
+    expect(
+      route.match(
+        /await requireAuth\(\["settings\.manage", "approvals\.approve"\]\)/g,
+      ),
+    ).toHaveLength(2);
     expect(route).toContain("getAlgerianDemoWorkspaceStatus");
     expect(route).toContain("loadAlgerianDemoWorkspace");
     expect(route).toContain("removeAlgerianDemoWorkspace");

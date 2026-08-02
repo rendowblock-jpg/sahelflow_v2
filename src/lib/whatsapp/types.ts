@@ -27,6 +27,11 @@ export interface IncomingMessage {
   message: { conversation?: string; extendedTextMessage?: { text?: string } } & Record<string, unknown>;
   messageTimestamp: number;
   pushName?: string;
+  /** Durable local status, present when the app merged a persisted outbound row. */
+  deliveryStatus?: "sending" | "sent" | "delivered" | "read" | "failed";
+  /** Local durable effect identity/state; never supplied by the provider. */
+  effectKey?: string;
+  effectState?: "queued" | "processing" | "retrying" | "succeeded" | "ambiguous" | "dead_letter";
 }
 
 export interface SidecarChat {
@@ -62,6 +67,24 @@ export function messageText(msg: IncomingMessage["message"]): string {
 /** Pretty-print a JID as a phone number. */
 export function jidToPhone(jid: string): string {
   return jid.replace(/@.+$/, "").replace(/^213/, "0");
+}
+
+/**
+ * Normalize an Algerian phone number or an existing WhatsApp JID to the exact
+ * individual-chat JID used by both the app and sidecar. Group/broadcast JIDs
+ * are intentionally rejected by the durable text-send vertical.
+ */
+export function normalizeWhatsAppJid(input: string): string {
+  const value = input.trim();
+  const local = value.endsWith("@s.whatsapp.net")
+    ? value.slice(0, -"@s.whatsapp.net".length).split(":")[0] ?? ""
+    : value;
+  let digits = local.replace(/\D/g, "");
+  if (digits.startsWith("0")) digits = `213${digits.slice(1)}`;
+  if (!/^213[5-7]\d{8}$/.test(digits)) {
+    throw new Error("WhatsApp recipient must be a valid Algerian mobile number");
+  }
+  return `${digits}@s.whatsapp.net`;
 }
 
 /** Format a WhatsApp timestamp (unix seconds) for display. */

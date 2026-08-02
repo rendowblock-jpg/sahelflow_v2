@@ -5,6 +5,10 @@ import { storefrontService } from "@/lib/storefront/service";
 import { StorefrontBuilder } from "@/components/storefront/storefront-builder";
 import { db, shopContext } from "@/lib/db";
 import type { Metadata } from "next";
+import {
+  assertTrustedAction,
+  requireTrustedAction,
+} from "@/lib/identity/authorization";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -17,6 +21,9 @@ export default async function EditStorefrontPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const actorContext = await requireTrustedAction("storefront.manage");
+  assertTrustedAction(actorContext, "storefront.publish");
+  assertTrustedAction(actorContext, "products.read");
   const { id } = await params;
   const { t } = await getI18n();
 

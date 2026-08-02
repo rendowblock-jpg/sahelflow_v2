@@ -1,14 +1,14 @@
 # SahelFlow — Research, coding, review and delivery workflow
 
 > **Status:** Active operating contract
-> **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
+> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
 > **Agents:** ChatGPT Web Agentic Coding Agent and Desktop Agent
 > **Durable truth:** protected `main`, branches, PRs, Actions, releases, issue #164 and the ten active documentation authorities
-> **Last consolidated:** 2026-07-29
+> **Last consolidated:** 2026-08-01
 
 This workflow is the fastest professional path to a complete class-AAA SahelFlow
-candidate. Speed comes from current research, dependency-correct parallelism,
-complete vertical outcomes, short coherent branches, independent review,
+candidate. Speed comes from current research, dependency-correct sequencing,
+complete vertical outcomes, short coherent branches, separated frozen review,
 risk-selected evidence and immediate removal of superseded paths after proof.
 
 Speed never comes from weakening business integrity, AppData preservation,
@@ -37,7 +37,6 @@ The Web Agent:
 - implements complete outcome packages;
 - uses environment-valid checks and records their limits;
 - opens branches and PRs through GitHub;
-- reviews Desktop Agent work;
 - never claims installed Windows evidence it did not observe.
 
 ### Desktop Agent
@@ -65,26 +64,28 @@ The Desktop Agent:
 
 1. One work package has one owner, one branch and one PR.
 2. No direct changes to protected `main`.
-3. The non-authoring agent reviews material work.
+3. Material frozen work receives a separated adversarial pass; do not describe
+   it as independent review.
 4. Shared schema, migration, domain, identity and design-system contracts are
-   serialized before dependent parallel work.
-5. Parallelize only independent contracts and files.
-6. No important decision or intended work remains only in chat or an unpushed
+   serialized before dependent implementation.
+5. No important decision or intended work remains only in chat or an unpushed
    checkout.
-7. `CURRENT_STATE.md` describes merged source and evidence; `WORKING_MEMORY.md`
+6. `CURRENT_STATE.md` describes merged source and evidence; `WORKING_MEMORY.md`
    describes only the execution frontier.
-8. A page, model, route, adapter, screenshot, mock or passing unit test does not
+7. A page, model, route, adapter, screenshot, mock or passing unit test does not
    complete a capability.
-9. Arabic/RTL, accessibility, recovery and performance are continuous blocking
+8. Arabic/RTL, accessibility, recovery and performance are continuous blocking
    requirements.
-10. New abstractions must be adopted by a named production vertical immediately
-    or in the directly following dependency package.
-11. After migration and parity proof, competing legacy mutation paths are removed
-    or made read-only.
-12. New ideas enter Candidate/post-1.0 unless a Founder decision changes Required
-    scope.
-13. No roadmap rewrite replaces FD-028 without explicit Founder change control.
-14. Public provider, performance, security or Stable claims never exceed evidence.
+9. New abstractions must be adopted by a named production vertical immediately
+   or in the directly following dependency package.
+10. After migration and parity proof, competing legacy mutation paths are removed
+   or made read-only.
+11. New ideas enter Candidate/post-1.0 unless a Founder decision changes Required
+   scope.
+12. No roadmap rewrite replaces FD-028 without explicit Founder change control.
+13. Public provider, performance, security or Stable claims never exceed evidence.
+14. After Teams closes, PR #195 accepts no licensing, multi-shop or later-phase
+    expansion. New outcomes use short PRs from current protected `main`.
 
 ## 3. Research-to-implementation gate
 
@@ -190,8 +191,24 @@ Before implementation, the branch/PR and Working Memory identify:
 - required automated, installed, provider and Founder evidence;
 - exact legacy path removed after adoption.
 
-A package should normally fit one or two working days, but it is split by usable
-observable outcomes—not by arbitrary backend/frontend files.
+The package also includes a source impact map before the first production edit:
+
+- every production caller, route, page, command and background consumer;
+- direct tests, mocks, fixtures, dynamic imports and compatibility markers;
+- affected models, migrations, existing databases and forward-repair behavior;
+- protected actions, fields, projections, search/inference oracles and audit;
+- provider effects, secrets, high-risk ceremonies and failure recovery;
+- AR/FR/EN, RTL, accessibility, responsive and installed UI states;
+- performance budgets, diagnostics, evidence lanes and superseded paths.
+
+Every AAA layer is marked `applicable` with acceptance/evidence or `not
+applicable` with a concrete reason. “Later” is not valid for a blocking layer.
+
+A package should normally fit one focused implementation session plus one review
+cycle. If its impact map cannot be understood, implemented and frozen coherently
+at that size, split it by usable observable outcomes—not by arbitrary
+backend/frontend files. Time is a sizing signal, never permission to cut a
+blocking layer.
 
 Disallowed package framing:
 
@@ -211,6 +228,14 @@ Valid framing:
 
 Do not mix drive-by refactors, unrelated dependency upgrades, broad formatting or
 general cleanup into a product outcome.
+
+### Package sizing
+
+A normal package is the smallest independently usable seller/Founder outcome that
+can be reviewed and closed without carrying an unrelated phase. If one package
+requires several unrelated permission domains, migrations, pages or providers,
+split it before implementation. Package duration is a planning signal, never a
+reason to cut an end-to-end journey or defer a blocking layer.
 
 ## 5. Execution lanes and WIP
 
@@ -268,17 +293,20 @@ observation does not freeze independent development.
 
 Before changing anything:
 
-1. Declare the actual environment: Web checkout, Desktop local Windows, Actions
+1. Declare the session purpose: governance/planning, research/contract,
+   implementation, frozen review/closure or installed evidence. A governance or
+   planning session performs no product implementation.
+2. Declare the actual environment: Web checkout, Desktop local Windows, Actions
    Linux/Windows or installed artifact.
-2. Read `AGENTS.md`, `../README.md`, FD-028, this workflow, the active
+3. Read `AGENTS.md`, `../README.md`, FD-028, FD-029, this workflow, the active
    roadmap phase and Working Memory.
-3. Read the governing Product, Experience, Architecture and Current State sections.
-4. Synchronize with protected `main` and inspect status.
-5. Preserve unrelated user work.
-6. Resolve active branches/PRs and lane ownership.
-7. Complete the research-to-implementation gate.
-8. Freeze required shared contracts.
-9. State the exact outcome and its exit evidence.
+4. Read the governing Product, Experience, Architecture and Current State sections.
+5. Synchronize with protected `main` and inspect status.
+6. Preserve unrelated user work.
+7. Resolve active branches/PRs, exact heads, checks, dependencies and current ownership.
+8. Complete the research-to-implementation gate and impact map.
+9. Freeze required shared contracts.
+10. State the exact outcome and its exit evidence.
 
 Chat history is context, never current authority.
 
@@ -353,6 +381,20 @@ Run selected complete lanes once:
 - Diagnose slow stages before repeating pipelines.
 - Documentation-only work runs authority/audit and creates no MSI unless
   executable release authority changed.
+- Draft feedback reports the complete actionable failure set for each lane; do
+  not intentionally stop after the first stale fixture when a full diagnostic
+  run is affordable.
+- Ordinary outcome PRs run complete type, lint, unit, database/integration and
+  audit evidence through one always-reporting required-check aggregator.
+- Windows standalone, Rust release-parity and installed-MSI lanes run once on
+  the complete phase or milestone candidate. A direct edit to one of those
+  proof harnesses may select its own lane earlier so the harness cannot merge
+  unverified.
+- Maintain shared trusted-actor, revoked/stale/cross-shop and marked disposable
+  route fixtures. A shared authority change updates its consumer inventory and
+  fixtures in the same package.
+- The phase or milestone frozen-head checkpoint remains blocking, but ordinary
+  source packages do not repeatedly rebuild the same accumulated artifact.
 
 ### Evidence ladder
 
@@ -458,8 +500,14 @@ hardware floor to improve a number.
 
 - **Research-complete decision:** current sources and alternatives are evaluated
   and a measurable SahelFlow decision is adopted.
+- **Implemented package:** coherent source exists on a branch but clean-checkout
+  proof or integration is still open.
+- **Source-proven package:** the frozen exact head passes selected complete
+  clean-checkout source gates and review; it is not merged source truth yet.
 - **Source-complete package:** coherent PR merged to protected `main` and legacy
   authority removed as specified.
+- **Artifact-proven milestone:** an exact-source signed candidate passes selected
+  build/signature/runtime gates; it is not automatically Founder-accepted.
 - **Release-complete milestone:** exact-source signed candidate passed every
   selected artifact/installed gate and published.
 - **Founder-accepted milestone:** installed update preserved data, reopened and

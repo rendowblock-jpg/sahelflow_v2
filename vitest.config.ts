@@ -9,6 +9,7 @@ const testTimeout = process.platform === "win32" ? 30_000 : 15_000;
 export default defineConfig({
   test: {
     environment: "node",
+    setupFiles: ["./scripts/vitest-setup.ts"],
     // Auto-restore mocks + globals after each test — prevents cross-file
     // pollution (e.g. one file's `vi.stubGlobal("fetch", ...)` leaking into
     // the next file's tests when running sequentially with fileParallelism:false).
@@ -44,6 +45,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "@/lib/identity/control-authority": path.resolve(
+        __dirname,
+        "./src/lib/identity/identity-authority.ts",
+      ),
       "@": path.resolve(__dirname, "./src"),
       // `server-only` is a Next.js package that throws when imported on the
       // client. In vitest (node environment) it should be a no-op — tests
