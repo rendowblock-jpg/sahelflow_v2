@@ -211,17 +211,24 @@ function printVitestFailures(): boolean {
         ]);
       }
 
-      if (assertionFailureCount === 0 && file.status === "failed") {
+      if (file.status === "failed") {
         const fileMessages = [file.failureMessage, file.message]
           .filter((value): value is string => Boolean(value?.trim()))
           .filter((value, index, values) => values.indexOf(value) === index);
-        failures.push([
-          `test file: ${file.name ?? "unknown"}`,
-          "file-level failure: import, collection, setup or hook",
-          ...(fileMessages.length > 0
-            ? fileMessages
-            : ["Vitest marked this file failed without assertion-level diagnostics."]),
-        ]);
+
+        if (fileMessages.length > 0) {
+          failures.push([
+            `test file: ${file.name ?? "unknown"}`,
+            "file-level failure: import, collection, setup or hook",
+            ...fileMessages,
+          ]);
+        } else if (assertionFailureCount === 0) {
+          failures.push([
+            `test file: ${file.name ?? "unknown"}`,
+            "file-level failure: import, collection, setup or hook",
+            "Vitest marked this file failed without assertion-level diagnostics.",
+          ]);
+        }
       }
     }
 
