@@ -3,15 +3,15 @@
 > **Status:** Active documentation entry point
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
 > **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
-> **Current protected application baseline:** `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`
+> **Current protected application baseline:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
-> **Active package:** Signed licensing and entitlement authority
+> **Active package:** Native multi-shop authority
 > **Execution epic:** issue #164
-> **Last updated:** 2026-08-01
+> **Last updated:** 2026-08-02
 
 This directory is the durable shared brain for SahelFlow. It defines the finished
 product, the required experience and engineering invariants, what merged source

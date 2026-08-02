@@ -2,15 +2,15 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Protected main:** `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`
+> **Protected main:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
 > **Founder-accepted baseline:** Internal.5
 > **Phase 0 status:** Complete through PR #179
 > **Active phase:** Phase 2 — identity, authorization, licensing and multi-shop
-> **Active package:** Signed licensing and entitlement authority
+> **Active package:** Native multi-shop authority
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-08-01
+> **Last consolidated:** 2026-08-02
 
 This document owns Phase 0–9 dependency order, outcomes and exit gates. Product
 detail remains owned by `../product/PRODUCT.md` and
@@ -251,6 +251,15 @@ Replace self-issued production trial behavior with signed machine-bound issuance
 reinstall recovery, expiry lockout with data preserved, offline permanent signing,
 explicit entitlements, transfer/recovery, revocation epoch and key rotation.
 Browser or mutable database state cannot forge production entitlement.
+
+Result at implementation head `25abbedd176429cf25e657217726d833e3c62a10`:
+CI `30744598944` and protected merge
+`04d4c51831c6e043ab39a614a7e947e6b27d01e6` succeeded. PR #197 replaced
+self-issued/browser authority with signed machine-bound trial and permanent
+claims, DPAPI-protected clock/revocation/recovery authority, exact transfer and
+recovery ceremonies, complete data-preserving lockout, AR/FR/EN recovery states
+and fail-closed release configuration. All review threads were resolved. This is
+source closure only; Windows artifact and installed proof remain at Phase 2 exit.
 
 ## Native multi-shop
 
