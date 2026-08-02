@@ -67,6 +67,7 @@ async function signedClaims(overrides: Partial<EntitlementClaims> = {}) {
 
 beforeEach(async () => {
   rmSync(dataDirectory, { recursive: true, force: true });
+  vi.stubEnv("NODE_ENV", "test");
   vi.stubEnv("SF_DATA_DIR", dataDirectory);
   vi.stubEnv("SF_DEVICE_BINDING", `sfdb1_${"a".repeat(64)}`);
   vi.stubEnv("APP_VERSION", "1.0.0-internal.13");
