@@ -113,8 +113,12 @@ describe("central AI tool execution policy", () => {
   });
 
   it("fails closed when a tool is missing from central policy", () => {
-    expect(() => registerTool(tool("unclassified_write_tool"))).toThrowError(
-      /no central execution policy/i,
-    );
+    let failure: unknown;
+    try {
+      registerTool(tool("unclassified_write_tool"));
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toMatchObject({ code: "AI_TOOL_POLICY_MISSING" });
   });
 });
