@@ -57,6 +57,21 @@ jobs:
             sha256sum "$part"
           done
           cat .github/task6-noest-text/part* > /tmp/task6-noest.patch
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/task6-noest.patch')
+          block = (
+              '+        deliverySecretKey("noest", "trackingsUrl"),\n'
+              '+        deliverySecretKey("noest", "feesUrl"),\n'
+              '+      ];\n'
+          )
+          data = path.read_text()
+          overlap = block + block
+          count = data.count(overlap)
+          if count != 1:
+              raise SystemExit(f'expected one staged chunk overlap, found {count}')
+          path.write_text(data.replace(overlap, block, 1))
+          PY
           wc -c /tmp/task6-noest.patch
           sha256sum /tmp/task6-noest.patch
 
