@@ -20,6 +20,7 @@ const WHATSAPP_INGRESS_COMMAND_TYPE = "whatsapp_message.receive.v1";
 const MAX_ATTEMPTS_PER_BUDGET = 6;
 const LEASE_MS = 90_000;
 const RETRY_DELAYS_MS = [5_000, 30_000, 120_000, 600_000, 1_800_000] as const;
+const MAX_RETRY_DELAY_MS = 1_800_000;
 
 export type WhatsAppIngressProcessingState =
   | "received"
@@ -91,7 +92,7 @@ function retryDelay(attemptNumber: number): number {
   return (
     RETRY_DELAYS_MS[
       Math.min(attemptNumber - 1, RETRY_DELAYS_MS.length - 1)
-    ] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]
+    ] ?? MAX_RETRY_DELAY_MS
   );
 }
 
