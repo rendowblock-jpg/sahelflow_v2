@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, CheckCircle2, Plug, ExternalLink, FlaskConical } from "lucide-react";
+import { Loader2, CheckCircle2, Plug, ExternalLink } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
 import {
@@ -26,7 +26,7 @@ import {
   YalidineIcon,
   MaystroIcon,
   ZRExpressIcon,
-  DHDIcon,
+  NoestIcon,
   GoogleSheetsIcon,
 } from "@/components/brand/brand-icons";
 
@@ -42,11 +42,6 @@ interface Integration {
   connectLabel: string;
   connectUrl?: string;
   docsUrl?: string;
-  /**
-   * W2-10: marks adapters whose endpoints are unverified guesses
-   * (DHD today). The card shows an amber "Experimental" badge.
-   */
-  isExperimental?: boolean;
   /** Fields needed to connect (for the dialog) */
   fields?: Array<{ key: string; label: string; type: "text" | "password"; placeholder?: string }>;
   /** API endpoint to save credentials (POST with JSON body) */
@@ -119,21 +114,22 @@ export function IntegrationsPanel({
     },
     // Delivery
     {
-      id: "dhd",
-      name: "DHD Delivery",
-      description: t("integrations.dhdDesc"),
+      id: "noest",
+      name: "NOEST Express",
+      description: t("integrations.noestDesc"),
       category: "delivery",
-      icon: DHDIcon,
-      iconBg: "bg-rose-500/10 dark:bg-rose-500/15",
-      iconColor: "text-rose-600 dark:text-rose-400",
-      connected: false, // checked via delivery credentials API
+      icon: NoestIcon,
+      iconBg: "bg-sky-500/10 dark:bg-sky-500/15",
+      iconColor: "text-sky-600 dark:text-sky-400",
+      connected: false,
       connectLabel: t("integrations.connect"),
-      // W2-10: DHD has no public API docs — endpoints are guesses. The card
-      // shows an amber "Experimental" badge so sellers know to verify before
-      // relying on the adapter. See src/lib/integrations/delivery/dhd.ts.
-      isExperimental: true,
       fields: [
-        { key: "apiToken", label: t("integrations.field.apiToken"), type: "password", placeholder: t("integrations.placeholder.dhdToken") },
+        { key: "apiToken", label: t("integrations.field.apiToken"), type: "password", placeholder: t("integrations.placeholder.noestToken") },
+        { key: "userGuid", label: t("integrations.field.userGuid"), type: "text", placeholder: t("integrations.placeholder.noestUserGuid") },
+        { key: "createOrderUrl", label: t("integrations.field.createOrderUrl"), type: "text", placeholder: t("integrations.placeholder.noestCreateUrl") },
+        { key: "validateOrderUrl", label: t("integrations.field.validateOrderUrl"), type: "text", placeholder: t("integrations.placeholder.noestValidateUrl") },
+        { key: "trackingsUrl", label: t("integrations.field.trackingsUrl"), type: "text", placeholder: t("integrations.placeholder.noestTrackingsUrl") },
+        { key: "feesUrl", label: t("integrations.field.feesUrl"), type: "text", placeholder: t("integrations.placeholder.noestFeesUrl") },
       ],
       saveEndpoint: "/api/delivery/credentials",
     },
@@ -296,17 +292,18 @@ export function IntegrationsPanel({
     }
   };
 
-  // W2-10: "Test connection" — calls POST /api/delivery/test-connection to
-  // validate a delivery provider's credentials without creating a shipment.
-  // Currently only DHD implements testConnection; the route returns a
-  // friendly "not implemented yet" message for the other providers.
+  // Validate provider credentials without creating a shipment. NOEST uses
+  // its provider-issued fees endpoint, so no guessed host or path is trusted.
   const handleTestConnection = async (integration: Integration) => {
     setTesting(integration.id);
     try {
       const res = await fetch("/api/delivery/test-connection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: integration.id }),
+        body: JSON.stringify({
+          provider: integration.id,
+          reasonCode: "settings_manual_certification",
+        }),
       });
       const data = (await res.json().catch(() => null)) as
         | { ok?: boolean; message?: string; error?: string }
@@ -368,16 +365,6 @@ export function IntegrationsPanel({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-medium text-sm">{integration.name}</p>
-                            {integration.isExperimental && (
-                              <Badge
-                                variant="outline"
-                                className="text-amber-700 dark:text-amber-300 border-amber-500/40 bg-amber-500/10 text-xs px-1.5"
-                                title={t("integrations.experimentalHint")}
-                              >
-                                <FlaskConical className="me-1 h-3 w-3" />
-                                {t("integrations.experimental")}
-                              </Badge>
-                            )}
                             {integration.connected && (
                               <Badge variant="outline" className="text-success border-emerald-500/20 text-xs px-1.5">
                                 <CheckCircle2 className="me-1 h-3 w-3" />

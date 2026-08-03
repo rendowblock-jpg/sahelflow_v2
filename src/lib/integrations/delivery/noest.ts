@@ -1,0 +1,449 @@
+/**
+ * NOEST Express (Nord et Ouest Express) adapter.
+ *
+ * NOEST's merchant contract is an EcoTrack-style API requiring an api_token
+ * and user_guid. Unlike the retired undocumented integration, this adapter never guesses
+ * a host or endpoint. Every exact endpoint URL must be copied from the current
+ * provider-issued merchant documentation and stored in the encrypted Secret
+ * store.
+ *
+ * The provider creates a parcel first, then requires a separate validation
+ * call. If validation has an unknown outcome after creation, this adapter throws
+ * so the durable courier worker marks the effect ambiguous and requires
+ * reconciliation instead of creating a second parcel.
+ */
+import "server-only";
+
+import wilayas from "../../../../data/wilayas.json";
+import { SahelFlowError } from "@/types/errors";
+import { retryFetch } from "./retry";
+import type {
+  DeliveryAdapter,
+  DeliveryCredentials,
+  DeliveryCostEstimate,
+  DeliveryStatus,
+  ShipmentResult,
+  TrackingEvent,
+  TrackingInfo,
+} from "./types";
+
+const FETCH_TIMEOUT_MS = 15_000;
+
+type NoestCredentials = DeliveryCredentials & {
+  apiToken?: string;
+  userGuid?: string;
+  createOrderUrl?: string;
+  validateOrderUrl?: string;
+  trackingsUrl?: string;
+  feesUrl?: string;
+};
+
+interface NoestResponse {
+  success?: boolean;
+  tracking?: string;
+  message?: string;
+  error?: string;
+}
+
+interface NoestActivity {
+  event_key?: string;
+  event?: string;
+  date?: string;
+  name?: string;
+  driver?: string;
+}
+
+interface NoestTrackingRecord {
+  OrderInfo?: { tracking?: string };
+  activity?: NoestActivity[];
+}
+
+interface NoestFeesResponse {
+  tarifs?: {
+    delivery?: Record<
+      string,
+      { tarif?: string | number; tarif_stopdesk?: string | number }
+    >;
+  };
+}
+
+function requireUrl(value: string | undefined, field: string): string {
+  if (!value?.trim()) {
+    throw new SahelFlowError(
+      `NOEST ${field} is not configured. Copy the exact URL from the current NOEST merchant API document.`,
+      "NOEST_ENDPOINT_NOT_CONFIGURED",
+      409,
+    );
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new SahelFlowError(
+      `NOEST ${field} is not a valid URL.`,
+      "NOEST_ENDPOINT_INVALID",
+      409,
+    );
+  }
+  if (parsed.protocol !== "https:") {
+    throw new SahelFlowError(
+      `NOEST ${field} must use HTTPS.`,
+      "NOEST_ENDPOINT_INSECURE",
+      409,
+    );
+  }
+  return parsed.toString();
+}
+
+function requireIdentity(creds: NoestCredentials): {
+  apiToken: string;
+  userGuid: string;
+} {
+  const apiToken = creds.apiToken?.trim();
+  const userGuid = creds.userGuid?.trim();
+  if (!apiToken || !userGuid) {
+    throw new SahelFlowError(
+      "NOEST API token and user GUID are required.",
+      "NOEST_CREDENTIALS_MISSING",
+      409,
+    );
+  }
+  return { apiToken, userGuid };
+}
+
+function form(
+  identity: { apiToken: string; userGuid: string },
+  values: Record<string, string | number | boolean | undefined>,
+): URLSearchParams {
+  const body = new URLSearchParams({
+    api_token: identity.apiToken,
+    user_guid: identity.userGuid,
+  });
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== undefined) body.set(key, String(value));
+  }
+  return body;
+}
+
+function wilayaId(name: string): number | null {
+  const normalized = name.trim().toLocaleLowerCase("fr");
+  const match = wilayas.find(
+    (item) =>
+      item.name.toLocaleLowerCase("fr") === normalized ||
+      item.nameAr.trim() === name.trim() ||
+      String(item.code) === name.trim(),
+  );
+  return match?.code ?? null;
+}
+
+function mapEvent(activity: NoestActivity): DeliveryStatus {
+  const key = (activity.event_key ?? "").trim().toLowerCase();
+  const label = (activity.event ?? "").trim().toLowerCase();
+  const combined = `${key} ${label}`;
+
+  if (/livr(ed|e|é)|\blivre\b/.test(combined)) return "delivered";
+  if (/refus|not_received|non.?livr|echec|échoué|suspendu/.test(combined)) {
+    return combined.includes("refus") ? "refused" : "failed";
+  }
+  if (/retour|return/.test(combined)) return "returned";
+  if (/fdr_activated|en livraison|redispatch|mise_a_jour/.test(combined)) {
+    return "out_for_delivery";
+  }
+  if (/ramass|collect|pickedup|pickup_picked/.test(combined)) return "picked_up";
+  if (/transit|reception|enlevé|enleve/.test(combined)) return "in_transit";
+  if (/customer_validation|validé|valide/.test(combined)) return "created";
+  return "pending";
+}
+
+async function parseJson<T>(response: Response): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new SahelFlowError(
+      "NOEST returned an invalid JSON response.",
+      "NOEST_INVALID_RESPONSE",
+      502,
+    );
+  }
+}
+
+function responseMessage(data: NoestResponse, fallback: string): string {
+  return data.message?.trim() || data.error?.trim() || fallback;
+}
+
+export const noestAdapter: DeliveryAdapter = {
+  id: "noest",
+  name: "NOEST Express",
+  logo: "noest",
+
+  async testConnection(credentials): Promise<{ ok: boolean; message: string }> {
+    try {
+      const creds = credentials as NoestCredentials;
+      const identity = requireIdentity(creds);
+      const feesUrl = requireUrl(creds.feesUrl, "fees URL");
+      const response = await retryFetch(
+        feesUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: form(identity, {}),
+        },
+        FETCH_TIMEOUT_MS,
+      );
+      if (!response.ok) {
+        return {
+          ok: false,
+          message: `NOEST connection test failed with HTTP ${response.status}.`,
+        };
+      }
+      const data = await parseJson<NoestFeesResponse>(response);
+      if (!data.tarifs?.delivery || typeof data.tarifs.delivery !== "object") {
+        return {
+          ok: false,
+          message: "NOEST credentials were accepted but the fees response did not match the documented contract.",
+        };
+      }
+      return {
+        ok: true,
+        message: "NOEST API credentials and documented fees endpoint were verified.",
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : "NOEST connection failed.",
+      };
+    }
+  },
+
+  async estimateCost(params, credentials): Promise<DeliveryCostEstimate> {
+    try {
+      const creds = credentials as NoestCredentials;
+      const identity = requireIdentity(creds);
+      const feesUrl = requireUrl(creds.feesUrl, "fees URL");
+      const code = wilayaId(params.wilaya);
+      if (!code) {
+        return {
+          provider: "noest",
+          cost: 0,
+          available: false,
+          error: `Unknown wilaya: ${params.wilaya}`,
+        };
+      }
+      const response = await retryFetch(
+        feesUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: form(identity, {}),
+        },
+        FETCH_TIMEOUT_MS,
+      );
+      if (!response.ok) {
+        return {
+          provider: "noest",
+          cost: 0,
+          available: false,
+          error: `NOEST fees request failed with HTTP ${response.status}.`,
+        };
+      }
+      const data = await parseJson<NoestFeesResponse>(response);
+      const fee = data.tarifs?.delivery?.[String(code)]?.tarif;
+      const cost = typeof fee === "number" ? fee : Number(fee);
+      if (!Number.isFinite(cost) || cost < 0) {
+        return {
+          provider: "noest",
+          cost: 0,
+          available: false,
+          error: `NOEST has no documented home-delivery tariff for wilaya ${code}.`,
+        };
+      }
+      return {
+        provider: "noest",
+        cost: Math.round(cost),
+        available: true,
+      };
+    } catch (error) {
+      return {
+        provider: "noest",
+        cost: 0,
+        available: false,
+        error: error instanceof Error ? error.message : "NOEST fees request failed.",
+      };
+    }
+  },
+
+  async createShipment(request, credentials): Promise<ShipmentResult> {
+    const creds = credentials as NoestCredentials;
+    const identity = requireIdentity(creds);
+    const createOrderUrl = requireUrl(creds.createOrderUrl, "create-order URL");
+    const validateOrderUrl = requireUrl(
+      creds.validateOrderUrl,
+      "validate-order URL",
+    );
+    const code = wilayaId(request.customer.wilaya);
+    if (!code) {
+      return {
+        success: false,
+        trackingId: "",
+        cost: 0,
+        error: `Unknown wilaya: ${request.customer.wilaya}`,
+      };
+    }
+
+    let createResponse: Response;
+    try {
+      createResponse = await retryFetch(
+        createOrderUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: form(identity, {
+            reference: request.orderNumber,
+            client: request.customer.name,
+            phone: request.customer.phone,
+            adresse: request.customer.address,
+            wilaya_id: code,
+            commune: request.customer.commune,
+            montant: request.totalPrice,
+            remarque: request.notes ?? "",
+            produit: request.items
+              .map((item) => `${item.name} x${item.quantity}`)
+              .join(", "),
+            type_id: request.isExchange ? 2 : 1,
+            poids: Math.max(1, Math.ceil(request.weight)),
+            stop_desk: 0,
+            stock: 0,
+            can_open: 0,
+          }),
+        },
+        FETCH_TIMEOUT_MS,
+      );
+    } catch (error) {
+      throw new SahelFlowError(
+        error instanceof Error ? error.message : "NOEST create outcome is unknown.",
+        "NOEST_CREATE_OUTCOME_AMBIGUOUS",
+        502,
+      );
+    }
+
+    if (!createResponse.ok) {
+      return {
+        success: false,
+        trackingId: "",
+        cost: 0,
+        error: `NOEST rejected shipment creation with HTTP ${createResponse.status}.`,
+      };
+    }
+    const created = await parseJson<NoestResponse>(createResponse);
+    const tracking = created.tracking?.trim() ?? "";
+    if (!created.success || !tracking) {
+      return {
+        success: false,
+        trackingId: "",
+        cost: 0,
+        error: responseMessage(created, "NOEST rejected shipment creation."),
+      };
+    }
+
+    try {
+      const validationResponse = await retryFetch(
+        validateOrderUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: form(identity, { tracking }),
+        },
+        FETCH_TIMEOUT_MS,
+      );
+      if (!validationResponse.ok) {
+        throw new SahelFlowError(
+          `NOEST created ${tracking}, but validation returned HTTP ${validationResponse.status}.`,
+          "NOEST_VALIDATION_OUTCOME_AMBIGUOUS",
+          502,
+        );
+      }
+      const validated = await parseJson<NoestResponse>(validationResponse);
+      if (!validated.success) {
+        throw new SahelFlowError(
+          responseMessage(
+            validated,
+            `NOEST created ${tracking}, but validation was not confirmed.`,
+          ),
+          "NOEST_VALIDATION_OUTCOME_AMBIGUOUS",
+          502,
+        );
+      }
+    } catch (error) {
+      if (error instanceof SahelFlowError) throw error;
+      throw new SahelFlowError(
+        error instanceof Error
+          ? `NOEST created ${tracking}, but validation outcome is unknown: ${error.message}`
+          : `NOEST created ${tracking}, but validation outcome is unknown.`,
+        "NOEST_VALIDATION_OUTCOME_AMBIGUOUS",
+        502,
+      );
+    }
+
+    return {
+      success: true,
+      trackingId: tracking,
+      cost: 0,
+    };
+  },
+
+  async syncTracking(trackingId, credentials): Promise<TrackingInfo> {
+    const creds = credentials as NoestCredentials;
+    const identity = requireIdentity(creds);
+    const trackingsUrl = requireUrl(creds.trackingsUrl, "trackings URL");
+    const body = form(identity, {});
+    body.append("trackings[]", trackingId);
+    const response = await retryFetch(
+      trackingsUrl,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      },
+      FETCH_TIMEOUT_MS,
+    );
+    if (!response.ok) {
+      throw new SahelFlowError(
+        `NOEST tracking failed with HTTP ${response.status}.`,
+        "NOEST_TRACKING_FAILED",
+        502,
+      );
+    }
+    const data = await parseJson<Record<string, NoestTrackingRecord>>(response);
+    const record = data[trackingId] ?? Object.values(data)[0];
+    if (!record) {
+      throw new SahelFlowError(
+        `NOEST returned no tracking record for ${trackingId}.`,
+        "NOEST_TRACKING_NOT_FOUND",
+        404,
+      );
+    }
+    const activity = record.activity ?? [];
+    const events: TrackingEvent[] = activity.map((entry) => ({
+      status: mapEvent(entry),
+      timestamp: entry.date ?? new Date().toISOString(),
+      details: entry.event ?? entry.event_key ?? "NOEST update",
+      location: entry.name || entry.driver || undefined,
+    }));
+    const latest = events.at(-1);
+    return {
+      trackingId: record.OrderInfo?.tracking ?? trackingId,
+      status: latest?.status ?? "pending",
+      events:
+        events.length > 0
+          ? events
+          : [
+              {
+                status: "pending",
+                timestamp: new Date().toISOString(),
+                details: "NOEST tracking record received without activity.",
+              },
+            ],
+      deliveryCompany: "NOEST Express",
+    };
+  },
+};

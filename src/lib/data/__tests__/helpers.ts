@@ -43,6 +43,7 @@ const CANONICAL_FACT_TABLES = [
   "CodSettlement",
   "CodCollectionCorrection",
   "CodCollection",
+  "ProviderCapabilityCertification",
   "AiActionExecution",
   "AiActionApproval",
   "AiActionProposal",

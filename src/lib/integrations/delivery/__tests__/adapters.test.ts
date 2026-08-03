@@ -3,20 +3,20 @@
  *
  * The actual API calls (estimateCost, createShipment, syncTracking) require
  * real provider credentials + network access, so they're not unit-tested here.
- * The DHD adapter has its own dedicated test file (dhd.test.ts).
+ * NOEST has dedicated contract tests because it requires provider-issued endpoint URLs.
  */
 import { describe, it, expect } from "vitest";
 import { yalidineAdapter } from "../yalidine";
 import { maystroAdapter } from "../maystro";
 import { zrExpressAdapter } from "../zr-express";
-import { dhdAdapter } from "../dhd";
+import { noestAdapter } from "../noest";
 
 describe("delivery adapter metadata", () => {
   const adapters = [
     { adapter: yalidineAdapter, expectedId: "yalidine", expectedName: "Yalidine" },
     { adapter: maystroAdapter, expectedId: "maystro", expectedName: "Maystro Delivery" },
     { adapter: zrExpressAdapter, expectedId: "zrexpress", expectedName: "ZR Express" },
-    { adapter: dhdAdapter, expectedId: "dhd", expectedName: "DHD Delivery" },
+    { adapter: noestAdapter, expectedId: "noest", expectedName: "NOEST Express" },
   ];
 
   for (const { adapter, expectedId, expectedName } of adapters) {

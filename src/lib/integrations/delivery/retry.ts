@@ -1,7 +1,7 @@
 /**
  * HTTP retry helper for delivery provider API calls.
  *
- * Delivery providers (Yalidine, Maystro, ZR Express) occasionally return 502/503
+ * Delivery providers (Yalidine, Maystro, ZR Express, NOEST) occasionally return 502/503
  * or time out. A single transient failure shouldn't leave an order stuck
  * unshipped. Retries up to 3 times with exponential backoff + jitter.
  *

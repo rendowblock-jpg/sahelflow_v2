@@ -110,7 +110,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         "delivery_yalidine_api_token",
         "delivery_maystro_api_token",
         "delivery_zr_api_token",
-        "delivery_dhd_api_token",
+        "delivery_dhd_apiToken", // legacy undocumented provider cleanup
+        "delivery_noest_apiToken",
+        "delivery_noest_userGuid",
+        "delivery_noest_createOrderUrl",
+        "delivery_noest_validateOrderUrl",
+        "delivery_noest_trackingsUrl",
+        "delivery_noest_feesUrl",
       ];
       const protectedSettings = await tx.setting.findMany({
         where: {

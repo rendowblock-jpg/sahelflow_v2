@@ -4,11 +4,12 @@ import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { db, shopContext } from "@/lib/db";
+import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 
 export const dynamic = "force-dynamic";
 
 const estimateSchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
   wilaya: z.string().min(1),
   commune: z.string().optional(),
   weight: z.number().positive().max(50, "Weight must be ≤ 50kg"),
@@ -25,9 +26,11 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const input = estimateSchema.parse(body);
 
+  const context = { prisma: db, shop: shopContext };
+  await assertProviderCapability(context, input.provider, "fees");
   const adapter = getDeliveryAdapter(input.provider);
   const creds = await loadDeliveryCredentials(
-    { prisma: db, shop: shopContext },
+    context,
     input.provider,
   );
 

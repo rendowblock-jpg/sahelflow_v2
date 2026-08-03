@@ -20,10 +20,24 @@ import {
   Loader2,
   Trash2,
   Save,
+  ShieldCheck,
 } from "lucide-react";
 
 interface ProviderStatus {
   [field: string]: boolean;
+}
+
+interface CertificationStatus {
+  provider: string;
+  capabilities: {
+    connection?: {
+      status: string;
+      expiresAt: string | null;
+      lastCheckedAt: string | null;
+      reasonCode: string | null;
+      lastErrorCode: string | null;
+    };
+  };
 }
 
 interface ProviderConfig {
@@ -66,20 +80,31 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     ],
   },
   {
-    id: "dhd",
-    name: "DHD",
-    logo: "📦",
-    fields: [{ key: "apiToken", label: "API Token" }],
+    id: "noest",
+    name: "NOEST Express",
+    logo: "🚚",
+    fields: [
+      { key: "apiToken", label: "API Token" },
+      { key: "userGuid", label: "User GUID" },
+      { key: "createOrderUrl", label: "Create-order URL" },
+      { key: "validateOrderUrl", label: "Validate-order URL" },
+      { key: "trackingsUrl", label: "Trackings URL" },
+      { key: "feesUrl", label: "Fees URL" },
+    ],
   },
 ];
 
 export function DeliveryCredentialsPanel() {
   const { t } = useI18n();
   const [status, setStatus] = useState<Record<string, ProviderStatus>>({});
+  const [certifications, setCertifications] = useState<
+    Record<string, CertificationStatus>
+  >({});
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [certifying, setCertifying] = useState<string | null>(null);
   const [deleteProvider, setDeleteProvider] = useState<string | null>(null);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
@@ -92,8 +117,16 @@ export function DeliveryCredentialsPanel() {
     try {
       const res = await fetch("/api/delivery/credentials");
       if (res.ok) {
-        const data = (await res.json()) as { providers: Record<string, ProviderStatus> };
+        const data = (await res.json()) as {
+          providers: Record<string, ProviderStatus>;
+          certifications?: CertificationStatus[];
+        };
         setStatus(data.providers);
+        setCertifications(
+          Object.fromEntries(
+            (data.certifications ?? []).map((item) => [item.provider, item]),
+          ),
+        );
       }
     } catch {
       /* ignore */
@@ -129,6 +162,36 @@ export function DeliveryCredentialsPanel() {
       setResult({ ok: false, message: t("delivery.connectionFailed") });
     } finally {
       setSaving(false);
+    }
+  }
+
+
+  async function handleCertify(providerId: string) {
+    setCertifying(providerId);
+    setResult(null);
+    try {
+      const res = await fetch("/api/delivery/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: providerId,
+          reasonCode: "settings_manual_certification",
+        }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        message?: string;
+        error?: string;
+      };
+      setResult({
+        ok: res.ok && data.ok === true,
+        message: data.message ?? data.error ?? t("integrations.testFailed"),
+      });
+      await loadStatus();
+    } catch {
+      setResult({ ok: false, message: t("delivery.connectionFailed") });
+    } finally {
+      setCertifying(null);
     }
   }
 
@@ -176,6 +239,8 @@ export function DeliveryCredentialsPanel() {
           PROVIDER_CONFIGS.map((provider) => {
             const configured = isConfigured(provider.id);
             const isEditing = editing === provider.id;
+            const certification = certifications[provider.id]?.capabilities.connection;
+            const certified = certification?.status === "certified";
             return (
               <div key={provider.id} className="rounded-lg border p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -183,6 +248,13 @@ export function DeliveryCredentialsPanel() {
                     <span className="text-lg">{provider.logo}</span>
                     <span className="font-medium">{provider.name}</span>
                   </div>
+                  <div className="flex items-center gap-2">
+                  {certified ? (
+                    <Badge className="gap-1 border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                      <ShieldCheck className="h-3 w-3" />
+                      {t("delivery.certified")}
+                    </Badge>
+                  ) : null}
                   {configured ? (
                     <Badge className="gap-1 border-emerald-500/20 bg-emerald-500/10 text-success dark:text-emerald-400">
                       <CheckCircle2 className="h-3 w-3" />
@@ -193,6 +265,7 @@ export function DeliveryCredentialsPanel() {
                       {t("delivery.notConfigured")}
                     </Badge>
                   )}
+                  </div>
                 </div>
 
                 {isEditing ? (
@@ -232,6 +305,21 @@ export function DeliveryCredentialsPanel() {
                     <Button size="sm" variant="outline" onClick={() => startEditing(provider.id)}>
                       {configured ? t("common.edit") : t("delivery.configureButton")}
                     </Button>
+                    {configured && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCertify(provider.id)}
+                        disabled={certifying === provider.id}
+                      >
+                        {certifying === provider.id ? (
+                          <Loader2 className="h-3 w-3 me-1 animate-spin" />
+                        ) : (
+                          <ShieldCheck className="h-3 w-3 me-1" />
+                        )}
+                        {t("integrations.testConnection")}
+                      </Button>
+                    )}
                     {configured && (
                       <Button
                         size="sm"

@@ -16,7 +16,7 @@ import { deliverySecretKeys } from "./types";
 import { yalidineAdapter } from "./yalidine";
 import { maystroAdapter } from "./maystro";
 import { zrExpressAdapter } from "./zr-express";
-import { dhdAdapter } from "./dhd";
+import { noestAdapter } from "./noest";
 import { getSecret } from "@/lib/secrets";
 import type { ServiceContext } from "@/lib/data/service-base";
 import {
@@ -29,7 +29,7 @@ const REGISTRY: Record<string, DeliveryAdapter> = {
   yalidine: yalidineAdapter,
   maystro: maystroAdapter,
   zrexpress: zrExpressAdapter,
-  dhd: dhdAdapter,
+  noest: noestAdapter,
 };
 
 /** Get the adapter for a provider. Throws if unknown. */
@@ -94,4 +94,4 @@ export async function hasDeliveryCredentials(
 }
 
 /** Type-safe provider list for UI. */
-export const PROVIDERS: DeliveryProvider[] = ["yalidine", "maystro", "zrexpress", "dhd"];
+export const PROVIDERS: DeliveryProvider[] = ["yalidine", "maystro", "zrexpress", "noest"];

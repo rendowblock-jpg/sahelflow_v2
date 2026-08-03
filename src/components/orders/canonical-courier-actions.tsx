@@ -25,7 +25,7 @@ import {
 import { useI18n } from "@/hooks/use-i18n";
 import { mutatePrefix } from "@/lib/swr/mutate";
 
-const PROVIDERS = ["yalidine", "maystro", "zrexpress", "dhd"] as const;
+const PROVIDERS = ["yalidine", "maystro", "zrexpress", "noest"] as const;
 type Provider = (typeof PROVIDERS)[number];
 type Action = "book" | "sync" | "reconcile_created" | "reconcile_not_created";
 

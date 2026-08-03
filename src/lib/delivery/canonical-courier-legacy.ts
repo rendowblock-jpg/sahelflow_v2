@@ -35,6 +35,7 @@ import {
   type TrackingInfo,
 } from "@/lib/integrations/delivery/types";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 import { executeCanonicalOrderRecovery } from "@/lib/orders/canonical-order-recovery";
 import {
   ConflictError,
@@ -912,6 +913,7 @@ async function defaultBookingSender(
   provider: DeliveryProvider,
   request: ShipmentRequest,
 ): Promise<ShipmentResult> {
+  await assertProviderCapability(context, provider, "booking");
   const adapter = getDeliveryAdapter(provider);
   const credentials = await loadDeliveryCredentials(context, provider);
   return adapter.createShipment(request, credentials);
@@ -1456,6 +1458,7 @@ export async function synchronizeCanonicalCourierTracking(
     throw new ValidationError("Delivery provider is not supported", "delivery.provider");
   }
   const provider = delivery.provider as DeliveryProvider;
+  await assertProviderCapability(context, provider, "tracking");
   const adapter = getDeliveryAdapter(provider);
   const credentials = await loadDeliveryCredentials(context, provider);
   const tracking = await adapter.syncTracking(delivery.trackingNumber, credentials);

@@ -1,59 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
+
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
+import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
 import { db, shopContext } from "@/lib/db";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
+import { testAndCertifyProvider } from "@/lib/integrations/delivery/provider-capability";
 
 export const dynamic = "force-dynamic";
 
 const testSchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
+  reasonCode: z
+    .string()
+    .trim()
+    .min(2)
+    .max(80)
+    .regex(/^[a-z0-9][a-z0-9._-]*$/i)
+    .default("settings_manual_certification"),
 });
 
 /**
- * POST /api/delivery/test-connection — validate a delivery provider's
- * credentials without creating a shipment.
- *
- * W2-10 (DHD experimental): the integrations panel UI calls this endpoint
- * when the user clicks "Test connection" on a delivery card. Each adapter
- * can optionally implement `testConnection(creds)` — a lightweight call to
- * a low-cost endpoint (list wilayas, account info, ping). The endpoint
- * returns `{ ok: boolean, message: string }` so the UI can show a success
- * or failure toast with a useful, provider-specific message.
- *
- * Adapters that haven't implemented `testConnection` yet get a generic
- * "not implemented for this provider" response (so the UI can still
- * display a useful message rather than 404'ing).
+ * POST /api/delivery/test-connection — test and certify the exact current
+ * provider credential + endpoint contract without creating a shipment.
+ * Certification is invalidated automatically when any credential changes.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth("delivery.credentials.manage");
-  const body = await req.json();
-  const input = testSchema.parse(body);
-
-  const adapter = getDeliveryAdapter(input.provider);
-  const creds = await loadDeliveryCredentials(
-    { prisma: db, shop: shopContext },
+  const actorContext = await requireAuth("delivery.credentials.manage");
+  await requireRecentReauthentication();
+  const input = testSchema.parse(await req.json());
+  const context = { prisma: db, shop: shopContext };
+  const actor = trustedActorAuditIdentity(actorContext.actor);
+  const result = await testAndCertifyProvider(
+    context,
     input.provider,
+    actor,
+    input.reasonCode,
   );
 
-  if (!adapter.testConnection) {
-    return NextResponse.json({
-      ok: false,
-      message: `Test connection is not implemented for "${adapter.name}" yet. Credentials were saved and will be validated on the next shipment.`,
-    });
-  }
+  await logAudit(context, {
+    action: result.ok
+      ? "delivery.provider.certified"
+      : "delivery.provider.certification_failed",
+    entity: "delivery_provider",
+    entityId: input.provider,
+    actor,
+    metadata: {
+      provider: input.provider,
+      reasonCode: input.reasonCode,
+      certified: result.ok,
+      expiresAt: result.expiresAt ?? null,
+    },
+  });
 
-  // Check for empty credentials up front so we surface a friendly message
-  // instead of letting each adapter's "missing token" branch repeat itself.
-  const hasAnyCred = Object.values(creds).some((v) => v && v.length > 0);
-  if (!hasAnyCred) {
-    return NextResponse.json({
-      ok: false,
-      message: `No ${adapter.name} credentials configured. Add them in Settings → Integrations first.`,
-    });
-  }
-
-  const result = await adapter.testConnection(creds);
   return NextResponse.json(result);
 }, "POST /api/delivery/test-connection");

@@ -161,7 +161,7 @@ export type DeliveryProvider =
   | "yalidine"
   | "maystro"
   | "zrexpress"
-  | "dhd";
+  | "noest";
 
 export interface Delivery {
   id: string;

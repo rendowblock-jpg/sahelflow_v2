@@ -80,7 +80,7 @@ function mapStatus(situation: string): DeliveryStatus {
   // D-S2: "Non livré" must be checked BEFORE the "livré" branch —
   // "non livré".includes("livré") is true, so without this guard failed
   // deliveries are silently mapped to "delivered" (same bug class as the
-  // fixed DHD I3). Yalidine + DHD already have this guard; ZR Express did not.
+  // fixed provider status bug). Yalidine already had this guard; ZR Express did not.
   if (s.includes("non livré") || s.includes("non livre")) return "failed";
   if (s.includes("livré") || s === "delivre" || s === "delivered") return "delivered";
   if (s.includes("retour") && !s.includes("pret")) return "returned";
@@ -169,6 +169,36 @@ export const zrExpressAdapter: DeliveryAdapter = {
   id: "zrexpress",
   name: "ZR Express",
   logo: "📦",
+
+  async testConnection(creds): Promise<{ ok: boolean; message: string }> {
+    if (!creds.apiId || !creds.apiKey) {
+      return { ok: false, message: "Identifiants ZR Express manquants." };
+    }
+    try {
+      const res = await retryFetch(
+        `${ZR_BASE}/token`,
+        { headers: authHeaders(creds) },
+        FETCH_TIMEOUT_MS,
+      );
+      if (!res.ok) {
+        return {
+          ok: false,
+          message: `ZR Express credential probe failed with HTTP ${res.status}.`,
+        };
+      }
+      await res.text();
+      return {
+        ok: true,
+        message: "ZR Express credentials and Procolis API contract were verified.",
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : "ZR Express connection failed.",
+      };
+    }
+  },
+
 
   async estimateCost(
     params: { wilaya: string; commune?: string; weight: number; codAmount: number },

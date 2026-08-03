@@ -1,0 +1,27 @@
+// Phase 3 provider capability authority.
+// One shop database owns its own provider certifications. Credential and
+// endpoint fingerprints invalidate certifications without storing secrets.
+
+model ProviderCapabilityCertification {
+  id                    String    @id
+  provider              String
+  capability            String
+  contractVersion       String
+  credentialFingerprint String
+  endpointFingerprint   String
+  status                String    @default("uncertified")
+  certifiedBy           String?
+  reasonCode            String?
+  evidenceJson          String?
+  lastCheckedAt         DateTime?
+  certifiedAt           DateTime?
+  expiresAt             DateTime?
+  disabledAt            DateTime?
+  lastErrorCode         String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now()) @updatedAt
+
+  @@unique([provider, capability])
+  @@index([provider, status])
+  @@index([status, expiresAt])
+}

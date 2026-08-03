@@ -21,6 +21,7 @@ import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
 import { currentAiSourceProposal } from "@/lib/ai/chat/source-proposal";
+import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -449,7 +450,7 @@ registerTool({
 // ── Tool 6: estimate_delivery_cost ──────────────────────────────────────────
 
 const estimateDeliverySchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress"]).default("yalidine"),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]).default("yalidine"),
   wilaya: z.string(),
   weight: z.number().positive().default(1),
   codAmount: z.number().min(0).default(0),
@@ -465,7 +466,7 @@ registerTool({
       properties: {
         provider: {
           type: "string",
-          description: "yalidine|maystro|zrexpress (default: yalidine)",
+          description: "yalidine|maystro|zrexpress|noest (default: yalidine)",
         },
         wilaya: { type: "string", description: "Wilaya name" },
         weight: { type: "number", description: "Weight in kg (default 1)" },
@@ -481,9 +482,11 @@ registerTool({
     try {
       const input = estimateDeliverySchema.parse(params);
       const db = getDb(ctx);
+      const context = { prisma: db, shop: ctx.shop };
+      await assertProviderCapability(context, input.provider, "fees");
       const adapter = getDeliveryAdapter(input.provider);
       const credentials = await loadDeliveryCredentials(
-        { prisma: db, shop: ctx.shop },
+        context,
         input.provider,
       );
       const estimate = await adapter.estimateCost(

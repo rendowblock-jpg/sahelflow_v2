@@ -26,6 +26,7 @@ import {
   type ShipmentResult,
 } from "@/lib/integrations/delivery/types";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 import {
   ConflictError,
   NotFoundError,
@@ -779,6 +780,7 @@ async function defaultBookingSender(
   provider: DeliveryProvider,
   request: ShipmentRequest,
 ): Promise<ShipmentResult> {
+  await assertProviderCapability(context, provider, "booking");
   const adapter = getDeliveryAdapter(provider);
   const credentials = await loadDeliveryCredentials(context, provider);
   return adapter.createShipment(request, credentials);
