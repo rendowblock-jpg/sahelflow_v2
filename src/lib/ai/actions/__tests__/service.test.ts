@@ -94,6 +94,7 @@ async function requestMessage(): Promise<{
       sessionId: session.id,
       role: "user",
       content: "Create the proposed action",
+      createdAt: new Date(),
     },
   });
   return { sessionId: session.id, messageId: message.id };
