@@ -29,7 +29,15 @@ interface Phase3Checkpoint {
     releaseAuthorized?: boolean;
     founderAcceptanceClaimAuthorized?: boolean;
   };
-  authorizedFirstPackage?: {
+  task3Closure?: {
+    sourceHead?: string;
+    fullSourceCheckpointRun?: number;
+    normalCiRun?: number;
+    sourceGate?: string;
+    reviewThreadsOpen?: number;
+    separatedAdversarialReview?: string;
+  };
+  authorizedNextPackage?: {
     name?: string;
     problemIds?: string[];
     scope?: string[];
@@ -266,7 +274,8 @@ requireMarkers("AGENTS.md", [
   "Level 3 — Major Full Checkpoint",
   "PR #203",
   "issue #202",
-  "durable inbound WhatsApp",
+  "Task 3 durable inbound WhatsApp is source-closed",
+  "truthful durable automations",
 ]);
 
 requireMarkers("documentation/README.md", [
@@ -313,11 +322,11 @@ requireMarkers("documentation/operations/WORKFLOW.md", [
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "Completed Task 2 — exhaustive inventory and shared contract freeze",
-  "Frozen Problem Register",
-  "Authorized Task 3 — durable inbound WhatsApp",
+  "Completed Task 3 — durable inbound WhatsApp",
+  "Authorized Task 4 — truthful durable automations",
   "All other Phase 3 production work:** not authorized",
   "P3-P1-011",
-  "the exact active native runtime drains its shop database",
+  "only the active native runtime drains its shop DB",
 ]);
 
 requireMarkers("documentation/research/RESEARCH.md", [
@@ -384,13 +393,22 @@ if (checkpoint) {
     uiAndRecoveryInventory: "complete",
     problemRegister: "frozen",
     sharedContractFreeze: "complete",
-    productionImplementation: "authorized:durable-inbound-whatsapp",
+    task3SourceImplementation: "complete",
+    task3SeparatedReview: "complete-repaired",
+    productionImplementation: "authorized:truthful-durable-automations",
   };
-  if (checkpoint.formatVersion !== 3 || checkpoint.phase !== 3) {
+  if (checkpoint.formatVersion !== 4 || checkpoint.phase !== 3) {
     findings.push({
       kind: "drift",
       file: checkpointPath,
-      detail: "Phase 3 checkpoint must use frozen contract formatVersion 3",
+      detail: "Phase 3 checkpoint must use Task 4 authority formatVersion 4",
+    });
+  }
+  if (checkpoint.state !== "task3-source-complete-task4-authorized") {
+    findings.push({
+      kind: "drift",
+      file: checkpointPath,
+      detail: "Phase 3 checkpoint state must close Task 3 and authorize Task 4",
     });
   }
   if (checkpoint.protectedBase !== expectedProtectedBase) {
@@ -420,17 +438,17 @@ if (checkpoint) {
     findings.push({
       kind: "drift",
       file: checkpointPath,
-      detail: "the first scoped production package must be explicitly authorized",
+      detail: "the scoped Task 4 production package must be explicitly authorized",
     });
   }
   if (
     checkpoint.constraints?.authorizedProductionScope !==
-    "durable inbound WhatsApp and database-authoritative inbox only"
+    "truthful durable automations and WhatsApp effect adoption only"
   ) {
     findings.push({
       kind: "drift",
       file: checkpointPath,
-      detail: "authorized production scope is missing or broader than the frozen package",
+      detail: "authorized production scope is missing or broader than Task 4",
     });
   }
   for (const key of [
@@ -447,14 +465,62 @@ if (checkpoint) {
     }
   }
   if (
-    checkpoint.authorizedFirstPackage?.name !==
-    "durable inbound WhatsApp and database-authoritative inbox"
+    checkpoint.authorizedNextPackage?.name !== "truthful durable automations"
   ) {
     findings.push({
       kind: "drift",
       file: checkpointPath,
-      detail: "first authorized package does not match the frozen contract",
+      detail: "authorized next package must be truthful durable automations",
     });
+  }
+  const expectedTask4Problems = new Set([
+    "P3-P1-003",
+    "P3-P1-004",
+    "P3-P1-009",
+    "P3-P1-011",
+  ]);
+  const authorizedProblems = new Set(
+    checkpoint.authorizedNextPackage?.problemIds ?? [],
+  );
+  for (const id of expectedTask4Problems) {
+    if (!authorizedProblems.has(id)) {
+      findings.push({
+        kind: "drift",
+        file: checkpointPath,
+        detail: `Task 4 authorization is missing ${id}`,
+      });
+    }
+  }
+  const task3 = checkpoint.task3Closure;
+  if (
+    task3?.sourceHead !== "f016055be55fd220baa87c26ffed565c4e9e1d85" ||
+    task3.fullSourceCheckpointRun !== 30808773702 ||
+    task3.normalCiRun !== 30808774055 ||
+    task3.sourceGate !== "passed" ||
+    task3.reviewThreadsOpen !== 0 ||
+    task3.separatedAdversarialReview !== "complete-repaired"
+  ) {
+    findings.push({
+      kind: "drift",
+      file: checkpointPath,
+      detail: "Task 3 exact-head closure evidence is incomplete or stale",
+    });
+  }
+  const problemStates = new Map(
+    (checkpoint.problemRegister ?? []).map((problem) => [problem.id, problem.state]),
+  );
+  for (const [id, state] of [
+    ["P3-P1-002", "closed-source-proven"],
+    ["P3-P1-010", "closed-source-proven"],
+    ["P3-P2-001", "closed-source-proven"],
+  ] as const) {
+    if (problemStates.get(id) !== state) {
+      findings.push({
+        kind: "drift",
+        file: checkpointPath,
+        detail: `${id} must be '${state}' after Task 3 closure`,
+      });
+    }
   }
   const problemIds = new Set(
     (checkpoint.problemRegister ?? []).map((problem) => problem.id),
@@ -546,5 +612,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 3 contracts frozen; durable inbound WhatsApp authorized).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Task 3 source-closed; truthful durable automations authorized).`,
 );
