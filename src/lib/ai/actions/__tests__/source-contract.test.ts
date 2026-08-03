@@ -2,6 +2,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { getAiToolPolicy } from "../contracts";
+
 const root = resolve(process.env.SF_REPO_DIR || process.cwd());
 
 function source(path: string): string {
@@ -79,10 +81,11 @@ describe("proposal-bound AI production source contract", () => {
   });
 
   it("keeps provider assignment blocked and hidden from Gemini", () => {
-    const contracts = source("src/lib/ai/actions/contracts.ts");
+    expect(getAiToolPolicy("assign_order_to_delivery")).toMatchObject({
+      executionClass: "blocked",
+      blockedReasonCode: "AI_PROVIDER_ACTION_NOT_CONVERGED",
+    });
     const registry = source("src/lib/ai/chat/tools/registry.ts");
-    expect(contracts).toContain('assign_order_to_delivery: blocked(');
-    expect(contracts).toContain("AI_PROVIDER_ACTION_NOT_CONVERGED");
     expect(registry).toContain('policy.executionClass === "blocked"');
     expect(registry).toContain("return []");
   });
