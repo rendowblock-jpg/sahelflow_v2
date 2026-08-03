@@ -14,7 +14,7 @@
   "implementationAgent": "ChatGPT Web Agentic Coding Agent",
   "sessionPurpose": "research-contract",
   "auditStatus": {
-    "documentationReconciliation": "in-progress",
+    "documentationReconciliation": "complete",
     "sourceInventory": "first-pass-complete",
     "callerInventory": "in-progress",
     "migrationAndTestInventory": "in-progress",
@@ -25,17 +25,16 @@
   "completedGovernanceSurfaces": [
     "AGENTS.md",
     "documentation/README.md",
-    "documentation/operations/WORKING_MEMORY.md"
-  ],
-  "remainingGovernanceSurfaces": [
     "documentation/system/CURRENT_STATE.md",
     "documentation/system/ROADMAP.md",
+    "documentation/operations/WORKING_MEMORY.md",
     "README.md",
     "CHANGELOG.md",
     "scripts/sf-audit.ts",
     "issue #164",
     "PR #203 description"
   ],
+  "remainingGovernanceSurfaces": [],
   "constraints": {
     "oneActiveImplementationAgent": true,
     "productionEditsAuthorized": false,
@@ -68,7 +67,7 @@
       "id": "P3-P1-001",
       "severity": "P1",
       "rootCause": "stale active authority after PR #200 merge",
-      "state": "in-progress"
+      "state": "closed"
     },
     {
       "id": "P3-P1-002",
@@ -162,7 +161,6 @@
     "AR/FR/EN, RTL, accessibility, diagnostics and retention"
   ],
   "nextSequence": [
-    "complete the remaining governance reconciliation surfaces",
     "complete exhaustive source, migration, test, caller and UI inventory",
     "freeze the consolidated Problem Register",
     "record the shared durable ingress, effect, automation-step and AI-proposal contracts",
