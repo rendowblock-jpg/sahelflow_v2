@@ -65,7 +65,7 @@ describe("Phase 1 adopted-source bypass audit", () => {
     expect(files.whatsapp).toContain("messageBodySha256");
 
     expect(files.ai).toContain("currentAiSourceProposal");
-    expect(files.ai).toContain('sourceBusinessPrincipal(\n            "ai_chat",');
+    expect(files.ai).toMatch(/sourceBusinessPrincipal\(\s*"ai_chat",/);
     expect(files.ai).toContain('initialStatus: "draft"');
   });
 
