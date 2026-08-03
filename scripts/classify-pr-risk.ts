@@ -12,6 +12,9 @@ export interface PrRiskLanes {
   runInstalledMsi: boolean;
 }
 
+const PHASE2_INSTALLED_UI_WAIVER =
+  ".github/phase-exceptions/pr-200-installed-ui-waiver.md";
+
 function normalized(path: string): string {
   return path.trim().replaceAll("\\", "/").replace(/^\.\//, "");
 }
@@ -74,6 +77,7 @@ export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
     (path) => isVersionOrReleaseAuthority(path) || isPhaseCheckpoint(path),
   );
   const changesNative = paths.some(changesNativeSource);
+  const waivesPhase2InstalledUi = paths.includes(PHASE2_INSTALLED_UI_WAIVER);
 
   return {
     changedCount: paths.length,
@@ -87,8 +91,12 @@ export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
       forcesFullReleaseProof || paths.some(changesWindowsStandaloneProof),
     runWindowsRust:
       forcesFullReleaseProof || paths.some(changesWindowsRustProof),
+    // PR #200 carries one explicit Founder-directed exception for the installed
+    // hydrated-WebView receipt. All other Phase 2 checkpoint lanes remain
+    // selected, and the waiver is removed after the package is protected.
     runInstalledMsi:
-      forcesFullReleaseProof || paths.some(changesInstalledMsiProof),
+      !waivesPhase2InstalledUi &&
+      (forcesFullReleaseProof || paths.some(changesInstalledMsiProof)),
   };
 }
 
