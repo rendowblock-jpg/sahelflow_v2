@@ -37,10 +37,7 @@ import {
   SahelFlowError,
   ValidationError,
 } from "@/types/errors";
-import {
-  aiActionHash,
-  parseSensitiveAiToolArgs,
-} from "./contracts";
+import { aiActionHash, parseSensitiveAiToolArgs } from "./contracts";
 import {
   assertAiActionExecutionAuthority,
   type AiActionExecutionAuthority,
@@ -48,10 +45,7 @@ import {
 import { buildAiActionTargetSnapshot } from "./targets";
 
 export interface ApprovedAiActionExecutionInput {
-  context: {
-    prisma: DbClient;
-    shop: ShopContext;
-  };
+  context: { prisma: DbClient; shop: ShopContext };
   authority: AiActionExecutionAuthority;
   proposalId: string;
   proposalDigest: string;
@@ -65,10 +59,7 @@ export interface ApprovedAiActionExecutionInput {
   approver: TrustedActorContext;
 }
 
-export type ApprovedAiActionResult = BusinessCommandResult<
-  Record<string, unknown>
->;
-
+export type ApprovedAiActionResult = BusinessCommandResult<Record<string, unknown>>;
 type MutationOutcome = BusinessCommandOutcome<Record<string, unknown>>;
 
 type LowStockProduct = Readonly<{
@@ -92,19 +83,11 @@ function serviceContext(
   tx: BusinessTransaction,
   shop: ShopContext,
 ): { prisma: DbClient; shop: ShopContext } {
-  return {
-    prisma: tx as unknown as DbClient,
-    shop,
-  };
+  return { prisma: tx as unknown as DbClient, shop };
 }
 
 function automationScope(shop: ShopContext): readonly string[] {
-  return [
-    shop.workspaceId,
-    shop.installationId,
-    shop.shopId,
-    shop.shopIncarnationId,
-  ];
+  return [shop.workspaceId, shop.installationId, shop.shopId, shop.shopIncarnationId];
 }
 
 function automationIntent(
@@ -196,8 +179,7 @@ async function assertExactTarget(
     toolName,
     args,
   );
-  const liveHash = aiActionHash(live.targetBinding);
-  if (liveHash !== expectedHash) {
+  if (aiActionHash(live.targetBinding) !== expectedHash) {
     throw new SahelFlowError(
       "The proposed business target changed before AI action execution",
       "AI_ACTION_TARGET_CONFLICT",
@@ -231,9 +213,7 @@ async function assertCatalogStockMutationAllowed(
       order: { status: "pending", deletedAt: null },
     },
     select: {
-      order: {
-        select: { source: true, sourceMetadata: true },
-      },
+      order: { select: { source: true, sourceMetadata: true } },
     },
   });
   if (
@@ -340,10 +320,7 @@ async function createOrder(
     (sum, item) => sum + item.unitPrice * item.quantity,
     0,
   );
-  const orderNumber = await nextOrderNumber(
-    tx as unknown as DbClient,
-    "ORD",
-  );
+  const orderNumber = await nextOrderNumber(tx as unknown as DbClient, "ORD");
   const sourceMetadata = canonicalSourceOrderSourceMetadata({
     source: "ai_chat",
     sourceIdentity: requesterSessionId,
@@ -611,12 +588,31 @@ async function updateProductStock(
   await assertCatalogStockMutationAllowed(tx, productId);
   const before = await tx.product.findFirst({
     where: { id: productId, deletedAt: null },
-    select: { id: true, name: true, sku: true, stock: true },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      stock: true,
+      productVariants: {
+        select: { id: true, name: true, stock: true },
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      },
+    },
   });
   if (!before) throw new NotFoundError("Product", productId);
+  if (before.productVariants.length > 1) {
+    throw new SahelFlowError(
+      `Product '${before.name}' has multiple variants; use a variant-specific catalog action`,
+      "AI_ACTION_VARIANT_SCOPE_REQUIRED",
+      409,
+    );
+  }
+
+  const newStock = Number(args.newStock);
+  const variant = before.productVariants[0] ?? null;
   const product = await tx.product.update({
     where: { id: productId },
-    data: { stock: Number(args.newStock) },
+    data: { stock: newStock },
     select: {
       id: true,
       name: true,
@@ -626,6 +622,12 @@ async function updateProductStock(
       updatedAt: true,
     },
   });
+  if (variant) {
+    await tx.productVariant.update({
+      where: { id: variant.id },
+      data: { stock: newStock },
+    });
+  }
   const reason = typeof args.reason === "string" ? args.reason : null;
   const outbox =
     product.stock <= product.lowStockThreshold
@@ -638,15 +640,23 @@ async function updateProductStock(
       name: product.name,
       sku: product.sku,
       stock: product.stock,
+      variantId: variant?.id ?? null,
     },
     audit: {
       action: "ai.product.stock_adjusted.v1",
       entity: "product",
       entityId: product.id,
-      before: { stock: before.stock },
-      after: { stock: product.stock },
+      before: {
+        stock: before.stock,
+        variantStock: variant?.stock ?? null,
+      },
+      after: {
+        stock: product.stock,
+        variantStock: variant ? newStock : null,
+      },
       metadata: {
         proposalId,
+        variantId: variant?.id ?? null,
         reasonProvided: reason !== null,
         reasonHash: reason ? aiActionHash(reason) : null,
       },
@@ -658,6 +668,7 @@ async function updateProductStock(
         payload: {
           proposalId,
           productId: product.id,
+          productVariantId: variant?.id ?? null,
           fromStock: before.stock,
           toStock: product.stock,
           reasonHash: reason ? aiActionHash(reason) : null,
@@ -767,23 +778,57 @@ async function updateProductPrice(
   const productId = String(args.productId);
   const before = await tx.product.findFirst({
     where: { id: productId, deletedAt: null },
-    select: { id: true, name: true, price: true, sku: true },
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      sku: true,
+      productVariants: {
+        select: { id: true, name: true, price: true },
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      },
+    },
   });
   if (!before) throw new NotFoundError("Product", productId);
+  if (before.productVariants.length > 1) {
+    throw new SahelFlowError(
+      `Product '${before.name}' has multiple variants; use a variant-specific catalog action`,
+      "AI_ACTION_VARIANT_SCOPE_REQUIRED",
+      409,
+    );
+  }
+
+  const newPrice = Number(args.newPrice);
+  const variant = before.productVariants[0] ?? null;
   const product = await tx.product.update({
     where: { id: productId },
-    data: { price: Number(args.newPrice) },
+    data: { price: newPrice },
     select: { id: true, name: true, price: true, sku: true },
   });
+  if (variant) {
+    await tx.productVariant.update({
+      where: { id: variant.id },
+      data: { price: newPrice },
+    });
+  }
   return {
-    result: product,
+    result: {
+      ...product,
+      variantId: variant?.id ?? null,
+    },
     audit: {
       action: "ai.product.price_updated.v1",
       entity: "product",
       entityId: product.id,
-      before: { price: before.price },
-      after: { price: product.price },
-      metadata: { proposalId },
+      before: {
+        price: before.price,
+        variantPrice: variant?.price ?? null,
+      },
+      after: {
+        price: product.price,
+        variantPrice: variant ? newPrice : null,
+      },
+      metadata: { proposalId, variantId: variant?.id ?? null },
     },
     events: [
       {
@@ -792,6 +837,7 @@ async function updateProductPrice(
         payload: {
           proposalId,
           productId: product.id,
+          productVariantId: variant?.id ?? null,
           fromPrice: before.price,
           toPrice: product.price,
         },
@@ -961,12 +1007,7 @@ async function executeMutation(
         args,
       );
     case "cancel_order":
-      return cancelOrder(
-        tx,
-        input.context.shop,
-        input.proposalId,
-        args,
-      );
+      return cancelOrder(tx, input.context.shop, input.proposalId, args);
     case "update_product_stock":
       return updateProductStock(
         tx,
