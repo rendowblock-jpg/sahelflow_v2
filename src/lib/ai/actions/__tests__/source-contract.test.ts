@@ -57,15 +57,16 @@ describe("proposal-bound AI production source contract", () => {
       "src/app/api/ai/sessions/[id]/messages/stream/route.ts",
     ]) {
       const content = source(path);
-      expect(content).toContain("const requester = await requireTrustedActor()");
+      expect(content).toContain(
+        "const requester = await requireTrustedActor()",
+      );
       expect(content).toContain("requestMessageId: userMessage.id");
       expect(content).toContain("runWithAiActionProposalRuntime");
     }
   });
 
   it("requires exact digest and approver continuity before execution", () => {
-    const routePath =
-      "src/app/api/ai/actions/[proposalId]/approve/route.ts";
+    const routePath = "src/app/api/ai/actions/[proposalId]/approve/route.ts";
     const route = source(routePath);
     expect(route).toContain("proposalDigest");
     expect(route).toContain("regex(/^[0-9a-f]{64}$/i)");
@@ -87,6 +88,13 @@ describe("proposal-bound AI production source contract", () => {
       .filter((path) => !path.endsWith("src/lib/ai/chat/tools/registry.ts"))
       .filter((path) => source(path).includes("getTool("));
     expect(matches).toEqual(["src/lib/ai/chat/agent.ts"]);
+  });
+
+  it("keeps approval digests out of persisted and Gemini tool history", () => {
+    const agent = source("src/lib/ai/chat/agent.ts");
+    expect(agent).toContain("historySafeToolResult");
+    expect(agent).toContain("delete safe.proposalDigest");
+    expect(agent).toContain("historySafeToolResult(call.result)");
   });
 
   it("keeps provider assignment blocked and hidden from Gemini", () => {
