@@ -19,6 +19,7 @@ const STARTUP_DIAGNOSTIC_FILE: &str = "startup-diagnostic.json";
 const STARTUP_TRACE_FILE: &str = "startup-trace.json";
 const MAIN_WINDOW_LABEL: &str = "main";
 const MAIN_WINDOW_TITLE: &str = "SahelFlow";
+const BOOTSTRAP_WINDOW_TITLE: &str = "SahelFlow - Starting";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
 const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
@@ -100,9 +101,9 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
             "the configured main desktop window was not created",
         )
     })?;
-    window.set_title(MAIN_WINDOW_TITLE)?;
 
     let Some(handoff) = packaged_handoff(&requested_url)? else {
+        window.set_title(MAIN_WINDOW_TITLE)?;
         window.navigate(requested_url)?;
         window.show()?;
         window.set_focus()?;
@@ -118,6 +119,7 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
     record_startup_stage(&app_data_dir, "ui-navigation-started", None);
 
+    window.set_title(BOOTSTRAP_WINDOW_TITLE)?;
     window.navigate(handoff.bootstrap_url)?;
     window.show()?;
     window.set_focus()?;
@@ -244,7 +246,10 @@ fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_di
     thread::spawn(move || {
         if wait_for_matching_ui_ready(&app_data_dir, PACKAGED_UI_READY_TIMEOUT) {
             record_startup_stage(&app_data_dir, "ui-ready", None);
-            if let Err(error) = window.show().and_then(|_| window.set_focus()) {
+            if let Err(error) = window
+                .set_title(MAIN_WINDOW_TITLE)
+                .and_then(|_| window.show().and_then(|_| window.set_focus()))
+            {
                 let detail = format!("the authenticated workspace was ready but the desktop window could not be shown: {error}");
                 eprintln!("[sahelflow] FATAL: {detail}");
                 let _ = show_blocked(&app, "SF-WINDOW-SHOW-BLOCKED", &detail);
