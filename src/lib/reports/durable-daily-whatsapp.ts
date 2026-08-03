@@ -8,7 +8,6 @@ import {
   type TrustedBusinessPrincipal,
 } from "@/lib/business-truth/principal";
 import type { ServiceContext } from "@/lib/data/service-base";
-import { SahelFlowError } from "@/types/errors";
 import {
   processWhatsAppEffect,
   queueWhatsAppText,
