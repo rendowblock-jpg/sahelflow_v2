@@ -2,34 +2,72 @@
   "formatVersion": 1,
   "phase": 3,
   "name": "durable providers, inbox, AI and automations",
-  "state": "audit-first-reconnaissance",
+  "state": "ready-for-next-session-audit",
+  "handoffPreparedAt": "2026-08-03",
   "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+  "phase2MergePr": 200,
   "phaseIssue": 202,
   "retainedDesktopEvidenceIssue": 201,
+  "activeBranch": "agent/phase3-durable-effects-audit",
+  "activeDraftPr": 203,
   "implementationAgent": "ChatGPT Web Agentic Coding Agent",
+  "auditStatus": {
+    "documentationReconciliation": "not-started",
+    "sourceInventory": "not-started",
+    "callerInventory": "not-started",
+    "migrationAndTestInventory": "not-started",
+    "problemRegister": "not-started",
+    "sharedContractFreeze": "not-started",
+    "productionImplementation": "not-authorized"
+  },
   "constraints": {
     "oneActiveImplementationAgent": true,
     "productionEditsAuthorized": false,
     "problemRegisterRequiredBeforeImplementation": true,
     "targetedCiRerunsRequired": true,
+    "fullMatrixRerunForDocsForbidden": true,
     "versionBumpAuthorized": false,
     "releaseAuthorized": false,
     "founderAcceptanceClaimAuthorized": false
   },
+  "knownProtectedTruth": [
+    "PR #200 is merged into protected main at e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+    "Phase 2 native multi-shop authority is protected source",
+    "issue #201 retains the Founder-waived installed hydrated-WebView proof",
+    "issue #202 owns the Phase 3 audit and implementation program",
+    "draft PR #203 is the sole active Phase 3 audit package"
+  ],
   "auditSurfaces": [
-    "whatsapp ingress and effects",
-    "courier ingress, effects and reconciliation",
-    "commerce synchronization and checkpoints",
-    "durable inbox and operator recovery",
-    "automation step durability and truthful partial status",
-    "AI proposal-bound destructive approval",
-    "legacy mutation and direct-effect callers",
-    "AR/FR/EN degraded, pending, ambiguous and recovery states"
+    "WhatsApp authenticated ingress, outbound effects, receipts and ambiguity",
+    "courier creation, tracking, callbacks, effects and reconciliation",
+    "commerce synchronization, persistence failures and checkpoint advancement",
+    "durable inbox persistence, deduplication and operator recovery",
+    "automation step durability, retries and truthful partial status",
+    "AI persisted proposal-bound approval for sensitive actions",
+    "legacy mutation and direct-effect callers that bypass canonical commands",
+    "AR/FR/EN pending, degraded, ambiguous, retry, recovery and history states"
+  ],
+  "nextSessionStartSequence": [
+    "read protected main at e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+    "read issues #202 and #201 and draft PR #203",
+    "read FD-028 and the Phase 3 section of documentation/system/ROADMAP.md",
+    "reconcile AGENTS.md, documentation/README.md, ROADMAP.md, CURRENT_STATE.md, WORKING_MEMORY.md and scripts/sf-audit.ts in one atomic governance batch",
+    "inventory source, migrations, tests and every production caller across all audit surfaces",
+    "publish one consolidated Phase 3 Problem Register grouped by root cause",
+    "freeze durable ingress, inbox, outbox, effect identity, receipt, reconciliation, automation-step and AI-proposal contracts",
+    "only then authorize the first coherent production implementation task"
+  ],
+  "ciStrategy": [
+    "rerun one failed job when the exact commit is unchanged",
+    "run only affected lanes for isolated source changes",
+    "carry forward code-bearing evidence for documentation-only descendants",
+    "do not rebuild Windows or MSI for documentation-only reconciliation",
+    "reserve Level 3 full checkpoints for roadmap-defined phase boundaries or material native, recovery, security and provider authority"
   ],
   "firstDeliverables": [
-    "reconcile active documentation from merged Phase 2 to Phase 3",
-    "complete source and caller inventory",
-    "publish one consolidated Phase 3 Problem Register",
-    "freeze shared durable ingress, inbox, outbox, receipt, reconciliation, automation and AI proposal contracts"
+    "audit-valid Phase 3 documentation and execution frontier",
+    "complete provider, inbox, automation and AI caller inventory",
+    "one consolidated Phase 3 Problem Register",
+    "shared durable-effect contract decision and task sequence"
   ]
 }
