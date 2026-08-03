@@ -321,7 +321,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     throw error;
   }
 
-  orderService.dispatchStatusTransition(context, committed.effects);
+  await orderService.dispatchStatusTransition(context, committed.effects);
 
   return NextResponse.json({
     ok: true,
