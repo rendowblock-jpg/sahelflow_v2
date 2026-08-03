@@ -31,6 +31,9 @@
       "@/lib/identity/control-authority": [
         "./src/lib/identity/identity-authority.ts"
       ],
+      "@/lib/license/license-authority": [
+        "./src/lib/license/license-authority-api.ts"
+      ],
       "@/*": [
         "./src/*"
       ],
