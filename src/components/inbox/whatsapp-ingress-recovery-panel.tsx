@@ -51,11 +51,14 @@ function contactFromJid(sourceId: string): string {
 
 function dateText(value: string | null, locale: string): string {
   if (!value) return "—";
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Africa/Algiers",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB",
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Africa/Algiers",
+    },
+  ).format(new Date(value));
 }
 
 export function WhatsAppIngressRecoveryPanel() {
@@ -93,8 +96,37 @@ export function WhatsAppIngressRecoveryPanel() {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    const controller = new AbortController();
+    let active = true;
+
+    void fetch("/api/whatsapp/inbound?limit=50", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!active) return;
+        if (response.status === 401 || response.status === 403) {
+          setAuthorized(false);
+          return;
+        }
+        if (!response.ok) throw new Error("Failed to load ingress recovery");
+        const data = (await response.json()) as { events?: IngressEvent[] };
+        if (!active) return;
+        setEvents(Array.isArray(data.events) ? data.events : []);
+        setAuthorized(true);
+      })
+      .catch(() => {
+        // Initial recovery history failure never blocks the main inbox.
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, []);
 
   const recoveryEvents = useMemo(
     () => events.filter((event) => RECOVERY_STATES.has(event.status)),
