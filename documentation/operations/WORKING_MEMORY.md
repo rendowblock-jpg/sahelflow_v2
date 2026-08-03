@@ -31,56 +31,36 @@ The Founder selected the Web Agent to begin Phase 3 professionally under the
 single-agent operating model:
 
 - one active implementation agent at a time;
-- complete phase/package reconnaissance before production edits;
+- complete reconnaissance before production edits;
 - one consolidated Problem Register grouped by root cause;
-- coherent batch remediation instead of one-problem-at-a-time loops;
+- coherent batch remediation;
 - Level 1 Task Gate after every coherent completed task;
 - Level 2 Phase Checkpoint before phase closure;
 - risk-triggered Level 3 evidence for provider effects involving money,
   inventory, irreversible external action or installed runtime authority;
-- one frozen-head adversarial review and one consolidated repair batch;
+- one frozen-head separated adversarial review and one repair batch;
 - zero known P0/P1 before closure;
 - complete Phase 0–9 scope preserved without MVP reduction.
 
-This session is research/contract. It may reconcile authority, inspect source,
-record the Problem Register and freeze shared contracts. It must not silently
-become production implementation.
+This session remains research/contract. It may reconcile authority, inspect
+source, complete the inventory, publish the Problem Register and freeze shared
+contracts. It must not silently become production implementation.
 
-## Protected closures before Phase 3
+## Protected source before Phase 3
 
-### Phase 1 and identity/Teams
-
-PR #195 merged at `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
-It source-closed the repaired Golden COD boundary and durable identity, Teams,
-permissions, revocation and exact-shop authority. This is protected source, not a
-current signed or installed claim.
-
-### Signed licensing
-
-PR #197 merged at `04d4c51831c6e043ab39a614a7e947e6b27d01e6`.
-It established signed installation-level trial/permanent licensing, protected
-clock/recovery floors, transfer/recovery/revocation and data-preserving lockout.
-
-### Single-agent AAA governance
-
-PR #199 merged at `991c61ac882497fdda01af3ac04f06978146bbda`.
-It established complete reconnaissance, one Problem Register, batch remediation,
-Level 1/2/3 validation and whole-product AAA governance.
-
-### Native multi-shop
+- PR #195 source-closed the repaired Golden COD boundary and durable identity,
+  Teams, permissions, revocation and exact-shop authority.
+- PR #197 established signed installation-level trial/permanent licensing,
+  protected clock/recovery floors and data-preserving lockout.
+- PR #199 established the single-agent audit-first AAA operating model.
+- PR #200 established the Tauri host as the sole authority for create, rename,
+  switch, archive, recover and delete through an exact journaled native lifecycle.
 
 PR #200 merged at `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`.
-Protected source now makes the Tauri host the sole lifecycle authority for create,
-rename, switch, archive, recover and delete. Requests are bound to exact registry,
-workspace, installation, actor, session, policy, entitlement, slot,
-migration-set and shop-incarnation authority. A durable native journal owns
-quiescence, mutation, runtime restart, authenticated readiness, compensation and
-startup reconciliation.
-
-The ephemeral MSI built, installed, launched, closed and reopened. The installed
-hydrated-WebView receipt did not pass twice. The Founder-authorized PR #200 waiver
-is retained only as issue #201. It is not passing installed-UI evidence and does
-not reopen native lifecycle authority.
+The MSI built, installed, launched, closed and reopened, but the ephemeral runner
+did not observe the authenticated hydrated-WebView receipt twice. The
+Founder-authorized closure exception is retained only in issue #201. It is not
+passing installed-UI evidence and does not reopen native lifecycle authority.
 
 No Phase 1/2 source closure produced a version bump, new release, Founder
 acceptance or Stable claim. Published executable truth remains Internal.13.
@@ -108,290 +88,214 @@ and Required communication path.
 
 ## Audit status
 
-### Governance reconciliation — in progress
+### Governance reconciliation — complete
 
-Completed in the active branch:
+The active branch now reconciles:
 
-- `AGENTS.md` points to protected merge `e9c92f0`, Phase 3, issue #202 and PR #203;
-- `documentation/README.md` records Phase 2 closure and the Phase 3 contract;
-- this Working Memory records the first consolidated audit and Problem Register.
+- `AGENTS.md`;
+- `documentation/README.md`;
+- `documentation/system/CURRENT_STATE.md`;
+- `documentation/system/ROADMAP.md`;
+- this Working Memory;
+- root `README.md`;
+- `CHANGELOG.md`;
+- `scripts/sf-audit.ts`;
+- issue #164;
+- the Phase 3 checkpoint and PR #203 description.
 
-Still required before this task closes:
+The semantic audit now requires protected merge `e9c92f0`, Phase 3, PR #203,
+issue #202, the research/contract session and production-not-authorized state. It
+rejects known Phase 2 active-frontier markers.
 
-- reconcile `CURRENT_STATE.md`;
-- reconcile `ROADMAP.md` Phase 2 result and active Phase 3 state;
-- reconcile root `README.md` and `CHANGELOG.md`;
-- align `scripts/sf-audit.ts` with the new protected and active frontier;
-- update issue #164 from its stale Phase 2 dashboard state;
-- update the Phase 3 checkpoint JSON and PR description with exact progress.
+### Source/caller inventory — first pass complete; exhaustive pass active
 
-### Source/caller inventory — first pass complete; exhaustive pass in progress
+Inspected high-risk production surfaces:
 
-Inspected production surfaces:
-
-- `src/instrumentation.ts` worker startup;
-- generic command/event/outbox persistence in
-  `prisma/models/business-truth.prisma`;
-- WhatsApp effect identity, durable send, worker, sidecar client, receipt journal,
-  send/status/outbox/chats/messages routes and integration tests;
-- Baileys sidecar connection, in-memory store, inbound events and outbound status
-  callbacks;
-- canonical courier booking, tracking, outbox worker, reconciliation and delivery
-  adapters;
-- Shopify/WooCommerce/YouCan synchronization, source commands and checkpoint
-  advancement;
-- automation CRUD, trigger dispatch, condition evaluation, multi-step execution,
-  retries, direct WhatsApp sending and status mutation;
-- AI agent, confirmation gate, persisted chat messages, proposal helper and
+- worker startup and active-shop ownership;
+- generic business command/event/outbox persistence;
+- WhatsApp effect identity, durable send, leases, receipt journal, routes and
+  integration tests;
+- Baileys in-memory store, inbound events and delivery callbacks;
+- canonical courier booking, tracking, reconciliation and adapters;
+- Shopify/WooCommerce/YouCan synchronization and checkpoint advancement;
+- automation CRUD, trigger dispatch, multi-step execution, retries, direct
+  WhatsApp sending and status mutation;
+- AI agent, generic confirmation gate, chat persistence, proposal helper and
   destructive tools;
 - PR #194 and historical Phase 3 branches as diverged design/test evidence.
 
-Exhaustive inventory still must enumerate every route, test, fixture, migration,
-dynamic caller and UI state in the final audit artifact before implementation.
+Still required before contract freeze:
+
+- enumerate every affected route, page, worker and dynamic caller;
+- enumerate every migration/model/index and existing-data implication;
+- enumerate every direct/indirect test, fixture and mock;
+- enumerate all AR/FR/EN, RTL, accessibility and recovery UI states;
+- map exact legacy path removal and evidence per Problem Register item.
 
 ## Proven foundations to preserve
 
-### Generic business truth
+### Canonical business truth
 
 `BusinessCommand`, `DomainEvent`, encrypted `OutboxIntent`, aggregate versions,
 request-bound idempotency, audit, projection invalidation, inventory/financial
-movements and compensation facts provide the canonical mutation foundation.
+movements and compensation facts remain the shared mutation foundation.
 
 ### Durable outbound WhatsApp
 
-Current protected source already provides:
+Protected source already commits the local message, effect correlation, command,
+audit, event and encrypted outbox before dispatch. Identity is scoped to exact
+shop incarnation and paired WhatsApp account. The implementation includes leases,
+bounded retry, ambiguity, dead letter, duplicate-risk confirmation, sidecar
+receipt lookup and restart recovery tests.
 
-- atomic local message, conversation, command, audit, event, effect correlation
-  and encrypted outbox intent;
-- effect identity scoped to exact workspace, installation, shop incarnation and
-  paired WhatsApp account;
-- request binding to recipient and content;
-- leases, bounded retry, ambiguity, dead letter and operator retry;
-- a sidecar receipt journal for post-restart reconciliation;
-- tests for replay, concurrency, pre/post-effect interruption, ambiguity and
-  recovery.
-
-This is a strong Phase 3 foundation. It does not complete durable inbound inbox or
+This is strong partial source. It does not complete inbound durability or govern
 all WhatsApp callers.
 
-### Canonical courier booking
+### Canonical courier
 
-Current protected source already provides:
+Protected source already validates canonical order/reservation authority, commits
+booking intent before dispatch, leases/retries work, quarantines ambiguity,
+supports manual reconciliation and resumes through a startup-owned worker.
 
-- canonical order/reservation validation before booking;
-- committed outbox intent before provider dispatch;
-- lease/retry/ambiguous outcome handling;
-- manual confirm-created/confirm-not-created reconciliation;
-- tracking ingestion and restart-owned worker execution.
+### Commerce checkpoint safety
 
-### Commerce checkpoint refusal
-
-The current sync engine retains the previous watermark when any fetched order
-fails. It no longer advances a provider checkpoint past an uncommitted order.
-This safety must be preserved while adding durable run/item ingress and recovery.
+The sync engine retains the prior watermark whenever any fetched order fails. It
+does not advance a checkpoint past an uncommitted order. This must be preserved.
 
 ## Consolidated Phase 3 Problem Register
 
 ### P3-P1-001 — stale active authority
 
-**Root cause:** PR #200 merged without a complete post-merge Phase 3 reconciliation.
+**State:** closed in the governance batch.
 
-**Affected authority:** `AGENTS.md`, documentation index, Current State, Roadmap,
-Working Memory, root README, changelog, issue #164 and `sf-audit` semantics.
-
-**Risk:** a fresh session can re-enter already-merged Phase 2 work or trust stale
-release/application facts.
-
-**Correction:** one atomic governance batch before production implementation.
-
-**State:** in progress.
+Every active frontier now records the PR #200 merge, Phase 3, PR #203, issue #202
+and the production implementation gate. `sf-audit` rejects the superseded active
+frontier.
 
 ### P3-P1-002 — inbound WhatsApp is not durable
 
 **Root cause:** Baileys chat/message state is an in-memory sidecar cache and new
-inbound messages are emitted to subscribers without a persistence-before-ack
-protocol.
+inbound messages are emitted to subscribers without persistence-before-ack.
 
-**Affected paths:** sidecar `messages.upsert`, WebSocket events, chats/messages
-routes, inbox UI, extraction and future automation triggers.
+**Risk:** interruption or sidecar-history loss can lose or duplicate inbound work;
+the database fallback preserves only locally queued outbound effects.
 
-**Risk:** interruption or sidecar history loss can lose or duplicate inbound work;
-the database fallback currently preserves only locally queued outbound effects.
-
-**Correction:** authenticated durable ingress, exact account/message identity,
-encrypted raw evidence, deduplication, canonical processing state, replay,
-quarantine and operator recovery.
-
-**State:** open; blocks the inbound/inbox package.
+**Required correction:** authenticated durable ingress, exact account/message
+identity, encrypted raw evidence, deduplication, canonical processing state,
+replay, quarantine and operator recovery.
 
 ### P3-P1-003 — automation execution can report false success
 
-**Root cause:** the current engine is fire-and-forget. Multi-step execution logs a
-failed step, continues and then records the whole automation as `success` with
-`Executed N steps`.
+**Root cause:** multi-step execution logs failed steps, continues and then records
+the whole automation as `success` with `Executed N steps`.
 
-**Affected paths:** `dispatchTrigger`, `executeAutomation`, multi-step recipes,
-`AutomationLog` and seller automation history.
-
-**Risk:** destructive or external work can partially fail while the seller sees
-success; restart cannot resume exact steps safely.
-
-**Correction:** persisted run identity, ordered step attempts, truthful aggregate
-state, stop/continue policy, idempotency, lease/retry/dead-letter and operator
-recovery.
-
-**State:** open; blocks automation implementation.
+**Required correction:** persisted run identity, ordered step attempts, truthful
+aggregate state, explicit stop/continue policy, idempotency, lease/retry/dead-letter
+and recovery.
 
 ### P3-P1-004 — automation provider calls bypass durable effects
 
-**Root cause:** `send_whatsapp` checks and calls the sidecar directly with
-`{to,text}` and in-process retries.
+**Root cause:** `send_whatsapp` calls the sidecar directly with in-process retries.
 
-**Risk:** response loss or retry can duplicate a message; restart can strand work;
-there is no durable effect key, receipt or ambiguity state.
-
-**Correction:** all automation provider actions queue the shared durable effect
-protocol and persist step-to-effect correlation.
-
-**State:** open; grouped with P3-P1-003 for remediation.
+**Required correction:** all automation provider actions queue the shared durable
+effect protocol and persist step-to-effect correlation.
 
 ### P3-P1-005 — sensitive AI approval is not proposal-bound
 
 **Root cause:** generic words such as `yes`, `oui`, `نعم`, `ok` and `d'accord`
-authorize whatever destructive tool call Gemini emits on that current turn. The
-proposal helper supplies source identity for AI order drafts but does not create a
-one-time immutable approval authority.
+authorize the destructive tool emitted on the current model turn. Exact tool,
+arguments, targets, versions, actor, shop, policy, entitlement, expiry and one-time
+approval are not one persisted authority.
 
-**Affected paths:** non-streaming and streaming agent loops, persisted messages,
-stock/price/cancellation/product/customer tools and legacy order mutations.
-
-**Risk:** approval can bind to changed arguments or current state; actor,
-permission, target version and expiry are not one persisted execution contract.
-
-**Correction:** persisted proposal hash and exact arguments, affected record and
-expected version, actor/shop/session/policy/license binding, expiry, one-time
-approval, current-state revalidation, canonical command and durable result.
-
-**State:** open; sensitive tools remain disabled or compatibility-only until
-closed.
+**Required correction:** persisted proposal hash, exact arguments and affected
+versions; actor/shop/session/policy/license binding; expiry; one-time approval;
+current-state revalidation; canonical command and durable result.
 
 ### P3-P1-006 — provider effect protocols are fragmented
 
-**Root cause:** WhatsApp and courier implement separate lease/retry/ambiguity
-machines over the generic outbox, while commerce uses integration config and a
-watermark.
+WhatsApp and courier implement separate attempt/recovery machinery over the
+generic outbox; commerce uses integration config and a watermark.
 
-**Risk:** semantics drift in effect identity, attempt accounting, provider-call
-start, receipts, dead letters, encryption, reconciliation and operator UI.
-
-**Correction:** freeze one shared durable-effect contract and provider-specific
-adapters around it before expanding implementation.
-
-**State:** open; shared contract gate.
+**Required correction:** one shared effect identity, lease, attempt, receipt,
+ambiguity, dead-letter, reconciliation, encryption and operator-state contract.
 
 ### P3-P1-007 — commerce lacks durable run/item ingress and recovery
 
-**Root cause:** checkpoint refusal is correct, but synchronization remains a
-synchronous request with no durable run, page, provider-event or per-item attempt
-authority.
+Checkpoint refusal is correct, but synchronization has no durable run, provider
+page/event, per-item attempt, quarantine, dead-letter, overlap reconciliation or
+operator recovery history.
 
-**Risk:** failures are returned as transient strings without durable retry queue,
-quarantine, history or operator recovery; webhook/poll convergence is absent.
+### P3-P1-008 — uncertified provider can enter normal effect authority
 
-**Correction:** durable sync run and item/event identity, raw encrypted evidence,
-dedup/conflict state, canonical command correlation, dead letter, overlap scan and
-checkpoint proof.
+DHD is registered with normal delivery providers although its source states that
+its endpoints and fields are unverified guesses. Presentation metadata is not a
+server-side execution boundary.
 
-**State:** open; checkpoint safety must be preserved.
-
-### P3-P1-008 — uncertified provider can enter normal effect paths
-
-**Root cause:** DHD is registered with normal delivery providers although its
-source states that endpoints and fields are unverified guesses; `isExperimental`
-is presentation metadata, not fail-closed execution authority.
-
-**Risk:** a seller could create irreversible external work against an uncertified
-adapter.
-
-**Correction:** capability certification authority enforced server-side; hidden or
-blocked provider effects until current live contract evidence exists.
-
-**State:** open; DHD must remain effect-disabled.
+**Required correction:** fail-closed capability certification authority; DHD
+effects remain disabled until current live evidence exists.
 
 ### P3-P2-001 — inactive-shop worker policy is implicit
 
-WhatsApp and courier workers import the process-active `db` and `shopContext`.
-Queued work in inactive shop databases is not drained until that shop becomes the
-active contained runtime. This may be the correct local-first policy, but it must
-be explicit, visible and tested.
+WhatsApp and courier workers drain the process-active shop database. The intended
+behavior for queued work in inactive shops must be explicit, visible and tested.
 
 ### P3-P2-002 — courier implementation layering is difficult to audit
 
-Canonical courier behavior spans current, reviewed-base and legacy modules.
-Consolidation is maintainability work after the shared contract freezes; it must
-not reopen proven behavior without a coherent package.
+Current courier behavior spans current, reviewed-base and legacy modules.
+Consolidation follows contract freeze and must not reopen proven behavior without
+a coherent package.
 
 ### P3-P2-003 — implementation is not live provider certification
 
-Yalidine, Maystro and legacy ZR Express contain substantial adapters. Source and
-unit tests do not prove current credentials, provider contract, rate limits,
-ambiguous failure behavior, reconciliation or production certification.
+Yalidine, Maystro and legacy ZR contain substantial source. Current credentials,
+provider contract, rate limits, ambiguity, reconciliation and production behavior
+still require live evidence.
 
 ### P3-P2-004 — installed hydrated-WebView proof remains open
 
-Issue #201 retains the one waived Phase 2 installed proof. It must reproduce and
-close deterministic renderer/bootstrap authority without weakening the existing
-check. It is separate from provider implementation but blocks a higher installed
-runtime claim.
+Issue #201 must close deterministic renderer/bootstrap authority without weakening
+the installed check.
 
 ## Shared contract questions to freeze
 
-Before production edits, Phase 3 must decide and record:
-
-1. one effect identity format and exact shop/account/provider/capability scope;
+1. effect and ingress identity scope;
 2. encrypted payload and request-binding associated data;
 3. queued, leased, provider-call-started, retrying, succeeded, known-failed,
-   ambiguous, dead-letter and reconciled state semantics;
+   ambiguous, dead-letter and reconciled semantics;
 4. lease expiry and pre-effect versus post-effect recovery;
-5. stable provider idempotency and receipt lookup capability;
+5. provider idempotency and receipt lookup capability;
 6. retry classification and attempt budget;
 7. operator reconciliation and duplicate-risk ceremony;
-8. inbound acknowledgement point and conflict quarantine;
+8. inbound acknowledgement and conflict quarantine;
 9. automation run/step/effect correlation and partial-result truth;
 10. AI proposal/approval identity, expected versions, expiry and one-time use;
 11. active/inactive shop worker ownership;
-12. AR/FR/EN, RTL, accessibility, diagnostics, retention and evidence.
+12. provider certification authority;
+13. AR/FR/EN, RTL, accessibility, diagnostics, retention and evidence.
 
 ## Dependency-correct task sequence
 
-1. Complete governance reconciliation and make `sf-audit` reject Phase 2 drift.
-2. Complete exhaustive source/migration/test/caller/UI inventory.
-3. Freeze the consolidated Problem Register and shared contracts.
-4. Implement durable inbound WhatsApp and database-authoritative inbox.
-5. Implement durable truthful automation runs and route effects through outbox.
+1. Complete exhaustive source, migration, test, caller and UI-state inventory.
+2. Freeze the final consolidated Problem Register.
+3. Record shared durable ingress/effect, automation-step and AI-proposal contracts.
+4. Authorize durable inbound WhatsApp and database-authoritative inbox.
+5. Implement truthful durable automation runs and route effects through outbox.
 6. Implement persisted proposal-bound sensitive AI actions.
 7. Converge courier and commerce on the shared provider protocol.
 8. Complete operator recovery and AR/FR/EN/RTL/accessibility states.
 9. Freeze exact head, run separated adversarial review and one repair batch.
-10. Run Phase 3 Level 2 and applicable Level 3/provider/installed evidence.
-
-The exact package boundaries may be refined by the completed inventory, but the
-dependency order cannot be weakened.
+10. Run Phase 3 Level 2 and applicable provider/installed/Level 3 evidence.
 
 ## Current exact next action
 
-Finish the atomic governance batch:
+Complete the exhaustive inventory and contract decision package. No production
+implementation begins until:
 
-- Current State;
-- Roadmap;
-- root README;
-- changelog;
-- `scripts/sf-audit.ts`;
-- issue #164;
-- Phase 3 checkpoint JSON and PR description.
-
-Then complete the exhaustive inventory and shared contract freeze. Do not begin
-production implementation before those gates pass.
+- every affected caller/migration/test/UI state is recorded;
+- the Problem Register is frozen;
+- shared contracts and explicit non-goals are durable;
+- the checkpoint changes production implementation from `not-authorized` through
+  an explicit approved transition.
 
 ## Protected local boundaries and non-claims
 
@@ -405,5 +309,5 @@ production implementation before those gates pass.
 - no application version bump;
 - no release or MSI publication;
 - no Founder acceptance or Stable claim;
-- no production Phase 3 behavior change in this audit package until explicitly
-  authorized after contract freeze.
+- no production Phase 3 behavior change until explicitly authorized after the
+  inventory and contract freeze.
