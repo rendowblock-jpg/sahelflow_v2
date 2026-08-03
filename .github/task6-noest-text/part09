@@ -1,0 +1,132 @@
++        deliverySecretKey("noest", "trackingsUrl"),
++        deliverySecretKey("noest", "feesUrl"),
++      ];
+     default:
+       return [];
+   }
+diff --git a/src/lib/integrations/delivery/yalidine.ts b/src/lib/integrations/delivery/yalidine.ts
+index d89e9b1fd6897516c29c26cadaeff22bff952895..61940e7960154f1f7f1c61325faa3f68198485e0 100644
+--- a/src/lib/integrations/delivery/yalidine.ts
++++ b/src/lib/integrations/delivery/yalidine.ts
+@@ -101,6 +101,36 @@ export const yalidineAdapter: DeliveryAdapter = {
+   name: "Yalidine",
+   logo: "📦",
+ 
++  async testConnection(creds): Promise<{ ok: boolean; message: string }> {
++    if (!creds.apiId || !creds.apiToken) {
++      return { ok: false, message: "Identifiants Yalidine manquants." };
++    }
++    try {
++      const res = await retryFetch(
++        `${YALIDINE_BASE}/wilayas/?page_size=1`,
++        { headers: headers(creds) },
++        FETCH_TIMEOUT_MS,
++      );
++      if (!res.ok) {
++        return {
++          ok: false,
++          message: `Yalidine credential probe failed with HTTP ${res.status}.`,
++        };
++      }
++      await res.json();
++      return {
++        ok: true,
++        message: "Yalidine credentials and public API contract were verified.",
++      };
++    } catch (error) {
++      return {
++        ok: false,
++        message: error instanceof Error ? error.message : "Yalidine connection failed.",
++      };
++    }
++  },
++
++
+   async estimateCost(
+     params: { wilaya: string; commune?: string; weight: number; codAmount: number },
+     creds: DeliveryCredentials,
+diff --git a/src/lib/integrations/delivery/zr-express.ts b/src/lib/integrations/delivery/zr-express.ts
+index 30bf9593052ace6f3f71b7d82714a7ac3a12e1cd..ba8fa33695765849e27ddce855882278cd981b9b 100644
+--- a/src/lib/integrations/delivery/zr-express.ts
++++ b/src/lib/integrations/delivery/zr-express.ts
+@@ -80,7 +80,7 @@ function mapStatus(situation: string): DeliveryStatus {
+   // D-S2: "Non livré" must be checked BEFORE the "livré" branch —
+   // "non livré".includes("livré") is true, so without this guard failed
+   // deliveries are silently mapped to "delivered" (same bug class as the
+-  // fixed DHD I3). Yalidine + DHD already have this guard; ZR Express did not.
++  // fixed provider status bug). Yalidine already had this guard; ZR Express did not.
+   if (s.includes("non livré") || s.includes("non livre")) return "failed";
+   if (s.includes("livré") || s === "delivre" || s === "delivered") return "delivered";
+   if (s.includes("retour") && !s.includes("pret")) return "returned";
+@@ -170,6 +170,36 @@ export const zrExpressAdapter: DeliveryAdapter = {
+   name: "ZR Express",
+   logo: "📦",
+ 
++  async testConnection(creds): Promise<{ ok: boolean; message: string }> {
++    if (!creds.apiId || !creds.apiKey) {
++      return { ok: false, message: "Identifiants ZR Express manquants." };
++    }
++    try {
++      const res = await retryFetch(
++        `${ZR_BASE}/token`,
++        { headers: authHeaders(creds) },
++        FETCH_TIMEOUT_MS,
++      );
++      if (!res.ok) {
++        return {
++          ok: false,
++          message: `ZR Express credential probe failed with HTTP ${res.status}.`,
++        };
++      }
++      await res.text();
++      return {
++        ok: true,
++        message: "ZR Express credentials and Procolis API contract were verified.",
++      };
++    } catch (error) {
++      return {
++        ok: false,
++        message: error instanceof Error ? error.message : "ZR Express connection failed.",
++      };
++    }
++  },
++
++
+   async estimateCost(
+     params: { wilaya: string; commune?: string; weight: number; codAmount: number },
+     creds: DeliveryCredentials,
+diff --git a/src/lib/shared.ts b/src/lib/shared.ts
+index 9e56bf46ea149c8226f2cbcbaccb648f4efdcae0..64a00092d42da1571ab30234b614a0fc50b43af8 100644
+--- a/src/lib/shared.ts
++++ b/src/lib/shared.ts
+@@ -152,7 +152,7 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
+ 
+ // ── Delivery Provider Config ─────────────────────────────────────────────────
+ //
+-// Brand names ("Yalidine", "ZR Express", "DHD", "Maystro") are proper nouns
++// Brand names ("Yalidine", "ZR Express", "NOEST", "Maystro") are proper nouns
+ // and are intentionally NOT translated — they appear the same in all locales.
+ 
+ export const deliveryProviderConfig: Record<string, { color: string; label: string }> = {
+@@ -160,7 +160,7 @@ export const deliveryProviderConfig: Record<string, { color: string; label: stri
+   maystro: { color: 'bg-teal-500', label: 'Maystro' },
+   zrexpress: { color: 'bg-teal-500', label: 'ZR Express' },
+   zr_express: { color: 'bg-teal-500', label: 'ZR Express' },
+-  dhd: { color: 'bg-rose-500', label: 'DHD' },
++  noest: { color: 'bg-sky-500', label: 'NOEST Express' },
+ }
+ 
+ // ── Customer Status Config ───────────────────────────────────────────────────
+diff --git a/src/types/domain.ts b/src/types/domain.ts
+index e04517e2337c2c41e5cc2358bcad3ad4c48482f5..9e45a821498080e598f5d65a08b7f0d5ac9c61c9 100644
+--- a/src/types/domain.ts
++++ b/src/types/domain.ts
+@@ -161,7 +161,7 @@ export type DeliveryProvider =
+   | "yalidine"
+   | "maystro"
+   | "zrexpress"
+-  | "dhd";
++  | "noest";
+ 
+ export interface Delivery {
+   id: string;
