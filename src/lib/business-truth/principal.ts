@@ -75,7 +75,7 @@ export function aiBusinessPrincipal(sessionId: string): TrustedBusinessPrincipal
 }
 
 export function providerBusinessPrincipal(
-  provider: "yalidine" | "maystro" | "zrexpress" | "dhd",
+  provider: "whatsapp" | "yalidine" | "maystro" | "zrexpress" | "dhd",
 ): TrustedBusinessPrincipal {
   return createPrincipal("provider", provider);
 }
