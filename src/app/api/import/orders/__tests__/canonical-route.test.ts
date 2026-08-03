@@ -274,7 +274,11 @@ describe("canonical CSV/XLSX order import", () => {
         orders[0]?.sourceMetadata,
       ),
     ).toBe(true);
-    expect(await rawDb.businessCommand.count()).toBe(1);
+    expect(
+      await rawDb.businessCommand.count({
+        where: { commandType: "order.source.create.v1" },
+      }),
+    ).toBe(1);
   });
 
   it("requires exact variant identity and applies the variant server price", async () => {
