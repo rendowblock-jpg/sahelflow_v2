@@ -199,7 +199,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   if (committed.effects) {
-    orderService.dispatchStatusTransition(context, committed.effects);
+    await orderService.dispatchStatusTransition(context, committed.effects);
   }
   if (committed.conflict) {
     return NextResponse.json(
