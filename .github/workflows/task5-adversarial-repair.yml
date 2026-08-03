@@ -1,0 +1,1423 @@
+name: Task 5 adversarial repair
+
+on:
+  push:
+    branches:
+      - agent/phase3-durable-effects-audit
+    paths:
+      - .github/task5-adversarial-trigger
+
+permissions:
+  contents: write
+
+concurrency:
+  group: task5-adversarial-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: contains(github.event.head_commit.message, '[task5-adversarial-trigger]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SF_TEST_ROOT: /tmp/sahelflow-task5-adversarial
+      SF_DATA_DIR: /tmp/sahelflow-task5-adversarial/data
+      DATABASE_URL: file:/tmp/sahelflow-task5-adversarial/data/shops/test.db
+      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/phase3-durable-effects-audit
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Apply reviewed Task 5 repairs
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one exact match, found {count}")
+              file.write_text(text.replace(old, new, 1))
+
+          def replace_n(path: str, old: str, new: str, expected: int) -> None:
+              file = Path(path)
+              text = file.read_text()
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f"{path}: expected {expected} exact matches, found {count}")
+              file.write_text(text.replace(old, new))
+
+          def regex_once(path: str, pattern: str, replacement: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one regex match, found {count}")
+              file.write_text(updated)
+
+          def write(path: str, content: str) -> None:
+              file = Path(path)
+              file.parent.mkdir(parents=True, exist_ok=True)
+              file.write_text(content)
+
+          # Preserve exact custom team permission allowlists during requester drift checks.
+          replace_once(
+              "src/lib/ai/actions/service.ts",
+              '''  const requesterEffective = sortedPermissions(
+            resolvePhase2Permissions(requester.role, null),
+          );''',
+              '''  const requesterEffective = sortedPermissions(
+            requester.permissions ?? resolvePhase2Permissions(requester.role, null),
+          );''',
+          )
+
+          # A succeeded execution is terminal even if a later recovery/read path fails.
+          replace_once(
+              "src/lib/ai/actions/service.ts",
+              '''        WHERE "id" = ${executionId}
+              `;''',
+              '''        WHERE "id" = ${executionId}
+                  AND "state" <> 'succeeded'
+              `;''',
+          )
+          regex_once(
+              "src/lib/ai/actions/service.ts",
+              r'''    await markSucceeded\(input\.context, row, execution, command\);\n    const completedRow =.*?      replayed: command\.replayed,\n    \};\n''',
+              '''    await markSucceeded(input.context, row, execution, command);
+              const completedAt = new Date();
+              const completed: DecryptedProposal = {
+                ...proposal,
+                row: {
+                  ...proposal.row,
+                  status: "succeeded",
+                  lastErrorCode: null,
+                  completedAt,
+                  updatedAt: completedAt,
+                },
+              };
+              const completedExecution: ExecutionRow = {
+                ...execution,
+                state: "succeeded",
+                businessCommandId: command.commandId,
+                errorCode: null,
+                completedAt,
+                updatedAt: completedAt,
+              };
+              return {
+                proposal: await proposalProjection(
+                  input.context,
+                  completed,
+                  completedExecution,
+                ),
+                result: command.result,
+                businessCommandId: command.commandId,
+                replayed: command.replayed,
+              };
+''',
+          )
+
+          # Central schemas reject unexecutable status changes and normalize exact Algerian phones.
+          replace_once(
+              "src/lib/ai/actions/contracts.ts",
+              'import { z } from "zod";\n',
+              'import { z } from "zod";\n\nimport { normalizePhone } from "@/lib/import/fields";\n',
+          )
+          replace_once(
+              "src/lib/ai/actions/contracts.ts",
+              '''const createOrderArgsSchema = z
+          ''',
+              '''const normalizedDzPhoneSchema = z
+            .string()
+            .trim()
+            .min(1)
+            .max(40)
+            .transform((value) => normalizePhone(value))
+            .refine(
+              (value) => /^0[5-7]\\d{8}$/.test(value),
+              "Invalid Algerian phone (must be 0[5-7]XXXXXXXX)",
+            );
+
+          const createOrderArgsSchema = z
+          ''',
+          )
+          replace_once(
+              "src/lib/ai/actions/contracts.ts",
+              '''    commune: z.string().trim().max(120),
+              address: z.string().trim().max(500),
+              phone: z.string().trim().min(1).max(40),''',
+              '''    commune: z.string().trim().min(1).max(120),
+              address: z.string().trim().min(1).max(500),
+              phone: normalizedDzPhoneSchema,''',
+          )
+          replace_once(
+              "src/lib/ai/actions/contracts.ts",
+              '''    status: z.enum([
+                "draft",
+                "pending",
+                "confirmed",
+                "shipped",
+                "delivered",
+                "cancelled",
+                "returned",
+              ]),''',
+              '''    status: z.enum([
+                "draft",
+                "pending",
+                "shipped",
+                "delivered",
+                "cancelled",
+                "returned",
+              ]),''',
+          )
+          replace_once(
+              "src/lib/ai/actions/contracts.ts",
+              '''    phone: z.string().trim().min(1).max(40),
+              phone2: z.string().trim().max(40).optional(),
+              wilaya: z.string().trim().max(120).optional(),
+              commune: z.string().trim().max(120).optional(),''',
+              '''    phone: normalizedDzPhoneSchema,
+              phone2: normalizedDzPhoneSchema.optional(),
+              wilaya: z.string().trim().min(1).max(120).optional(),
+              commune: z.string().trim().min(1).max(120).optional(),''',
+          )
+
+          # Keep Gemini's declared order-status tool aligned with the executable central schema.
+          replace_once(
+              "src/lib/ai/chat/tools/core-tools.ts",
+              '''  status: z.enum([
+                "draft",
+                "pending",
+                "confirmed",
+                "shipped",
+                "delivered",
+                "cancelled",
+                "returned",
+              ]),''',
+              '''  status: z.enum([
+                "draft",
+                "pending",
+                "shipped",
+                "delivered",
+                "cancelled",
+                "returned",
+              ]),''',
+          )
+          replace_once(
+              "src/lib/ai/chat/tools/core-tools.ts",
+              '''      "Update the status of a legacy-compatible order. Canonical orders require their governed seller actions. Valid statuses: draft, pending, confirmed, shipped, delivered, cancelled, returned.",''',
+              '''      "Update the status of a legacy-compatible order. Canonical confirmation remains a governed seller action. Valid statuses: draft, pending, shipped, delivered, cancelled, returned.",''',
+          )
+          replace_once(
+              "src/lib/ai/chat/tools/core-tools.ts",
+              '''            "draft|pending|confirmed|shipped|delivered|cancelled|returned",''',
+              '''            "draft|pending|shipped|delivered|cancelled|returned",''',
+          )
+
+          # Target snapshots must reject missing/ambiguous variants before approval.
+          regex_once(
+              "src/lib/ai/actions/targets.ts",
+              r'''      const selected = items\.map\(\(item\) => \{.*?      \}\);\n      return \{\n        targetBinding: \{\n          customer:''',
+              '''      const selected = items.map((item) => {
+                const product = productMap.get(item.productId);
+                if (!product) return missing("Product", item.productId);
+                const allVariants = product.productVariants;
+                const activeVariants = allVariants.filter((candidate) => candidate.isActive);
+                if (allVariants.length > 0 && activeVariants.length === 0) {
+                  throw new SahelFlowError(
+                    `Product '${product.name}' has variants but none are active`,
+                    "AI_ACTION_VARIANT_UNAVAILABLE",
+                    409,
+                  );
+                }
+                if (activeVariants.length > 0) {
+                  if (!item.productVariantId) {
+                    throw new SahelFlowError(
+                      `Product '${product.name}' requires one exact active variant`,
+                      "AI_ACTION_VARIANT_REQUIRED",
+                      409,
+                    );
+                  }
+                  const variant = activeVariants.find(
+                    (candidate) => candidate.id === item.productVariantId,
+                  );
+                  if (!variant) return missing("Product variant", item.productVariantId);
+                  return {
+                    productId: product.id,
+                    productName: product.name,
+                    productPrice: product.price,
+                    productStock: product.stock,
+                    productUpdatedAt: product.updatedAt.toISOString(),
+                    productVariantId: variant.id,
+                    variantPrice: variant.price,
+                    variantStock: variant.stock,
+                    variantUpdatedAt: variant.updatedAt.toISOString(),
+                    quantity: item.quantity,
+                  };
+                }
+                if (item.productVariantId) {
+                  throw new SahelFlowError(
+                    `Product '${product.name}' has no variants`,
+                    "AI_ACTION_VARIANT_NOT_APPLICABLE",
+                    409,
+                  );
+                }
+                return {
+                  productId: product.id,
+                  productName: product.name,
+                  productPrice: product.price,
+                  productStock: product.stock,
+                  productUpdatedAt: product.updatedAt.toISOString(),
+                  productVariantId: null,
+                  variantPrice: null,
+                  variantStock: null,
+                  variantUpdatedAt: null,
+                  quantity: item.quantity,
+                };
+              });
+              return {
+                targetBinding: {
+                  customer:''',
+          )
+          regex_once(
+              "src/lib/ai/actions/targets.ts",
+              r'''    case "update_product_stock": \{.*?\n    \}\n\n    case "update_product_price": \{''',
+              '''    case "update_product_stock": {
+                const productId = String(args.productId);
+                const product = await db.product.findFirst({
+                  where: { id: productId, deletedAt: null },
+                  select: {
+                    id: true,
+                    name: true,
+                    stock: true,
+                    updatedAt: true,
+                    productVariants: {
+                      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+                      select: {
+                        id: true,
+                        name: true,
+                        stock: true,
+                        isActive: true,
+                        updatedAt: true,
+                      },
+                    },
+                  },
+                });
+                if (!product) return missing("Product", productId);
+                const activeVariants = product.productVariants.filter(
+                  (variant) => variant.isActive,
+                );
+                if (
+                  product.productVariants.length > 0 &&
+                  activeVariants.length !== 1
+                ) {
+                  throw new SahelFlowError(
+                    "Product-level stock changes require zero variants or one exact active variant",
+                    "AI_ACTION_VARIANT_MUTATION_AMBIGUOUS",
+                    409,
+                  );
+                }
+                const variant = activeVariants[0] ?? null;
+                return {
+                  targetBinding: {
+                    id: product.id,
+                    stock: product.stock,
+                    updatedAt: product.updatedAt.toISOString(),
+                    variant: variant
+                      ? {
+                          id: variant.id,
+                          name: variant.name,
+                          stock: variant.stock,
+                          updatedAt: variant.updatedAt.toISOString(),
+                        }
+                      : null,
+                  },
+                  summary: {
+                    productName: product.name,
+                    fromStock: product.stock,
+                    toStock: args.newStock,
+                    reasonProvided: Boolean(args.reason),
+                  },
+                };
+              }
+
+              case "update_product_price": {''',
+          )
+          regex_once(
+              "src/lib/ai/actions/targets.ts",
+              r'''    case "update_product_price": \{.*?\n    \}\n\n    case "create_product": \{''',
+              '''    case "update_product_price": {
+                const productId = String(args.productId);
+                const product = await db.product.findFirst({
+                  where: { id: productId, deletedAt: null },
+                  select: {
+                    id: true,
+                    name: true,
+                    price: true,
+                    updatedAt: true,
+                    productVariants: {
+                      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+                      select: {
+                        id: true,
+                        name: true,
+                        price: true,
+                        isActive: true,
+                        updatedAt: true,
+                      },
+                    },
+                  },
+                });
+                if (!product) return missing("Product", productId);
+                return {
+                  targetBinding: {
+                    id: product.id,
+                    price: product.price,
+                    updatedAt: product.updatedAt.toISOString(),
+                    variants: product.productVariants.map((variant) => ({
+                      id: variant.id,
+                      name: variant.name,
+                      price: variant.price,
+                      isActive: variant.isActive,
+                      updatedAt: variant.updatedAt.toISOString(),
+                    })),
+                  },
+                  summary: {
+                    productName: product.name,
+                    fromPrice: product.price,
+                    toPrice: args.newPrice,
+                  },
+                };
+              }
+
+              case "create_product": {''',
+          )
+
+          # Canonical catalog mutation keeps product and variant projections consistent.
+          regex_once(
+              "src/lib/ai/actions/executor.ts",
+              r'''async function updateProductStock\(.*?\n\}\n\nasync function createProduct\(''',
+              '''async function updateProductStock(
+            tx: BusinessTransaction,
+            shop: ShopContext,
+            proposalId: string,
+            args: Record<string, unknown>,
+          ): Promise<MutationOutcome> {
+            const productId = String(args.productId);
+            await assertCatalogStockMutationAllowed(tx, productId);
+            const before = await tx.product.findFirst({
+              where: { id: productId, deletedAt: null },
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                stock: true,
+                productVariants: {
+                  orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+                  select: {
+                    id: true,
+                    name: true,
+                    stock: true,
+                    isActive: true,
+                  },
+                },
+              },
+            });
+            if (!before) throw new NotFoundError("Product", productId);
+            const activeVariants = before.productVariants.filter(
+              (variant) => variant.isActive,
+            );
+            if (
+              before.productVariants.length > 0 &&
+              activeVariants.length !== 1
+            ) {
+              throw new SahelFlowError(
+                "Product-level stock changes require zero variants or one exact active variant",
+                "AI_ACTION_VARIANT_MUTATION_AMBIGUOUS",
+                409,
+              );
+            }
+            const newStock = Number(args.newStock);
+            const variant = activeVariants[0] ?? null;
+            if (variant) {
+              await tx.productVariant.update({
+                where: { id: variant.id },
+                data: { stock: newStock },
+              });
+            }
+            const product = await tx.product.update({
+              where: { id: productId },
+              data: { stock: newStock },
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                stock: true,
+                lowStockThreshold: true,
+                updatedAt: true,
+              },
+            });
+            const reason = typeof args.reason === "string" ? args.reason : null;
+            const outbox =
+              product.stock <= product.lowStockThreshold
+                ? [lowStockIntent(shop, product)]
+                : [];
+
+            return {
+              result: {
+                id: product.id,
+                name: product.name,
+                sku: product.sku,
+                stock: product.stock,
+                variantId: variant?.id ?? null,
+              },
+              audit: {
+                action: "ai.product.stock_adjusted.v1",
+                entity: "product",
+                entityId: product.id,
+                before: {
+                  stock: before.stock,
+                  variantStock: variant?.stock ?? null,
+                },
+                after: {
+                  stock: product.stock,
+                  variantStock: variant ? newStock : null,
+                },
+                metadata: {
+                  proposalId,
+                  reasonProvided: reason !== null,
+                  reasonHash: reason ? aiActionHash(reason) : null,
+                  variantId: variant?.id ?? null,
+                },
+              },
+              events: [
+                {
+                  key: `ai-action:${proposalId}:product-stock`,
+                  type: "product.stock.adjusted.v1",
+                  payload: {
+                    proposalId,
+                    productId: product.id,
+                    productVariantId: variant?.id ?? null,
+                    fromStock: before.stock,
+                    toStock: product.stock,
+                    reasonHash: reason ? aiActionHash(reason) : null,
+                  },
+                },
+              ],
+              outbox,
+              projectionInvalidations: [
+                "products:list",
+                `products:${product.id}`,
+                "dashboard:products",
+              ],
+            };
+          }
+
+          async function createProduct(''',
+          )
+          replace_once(
+              "src/lib/ai/actions/executor.ts",
+              '''          price: Number(args.price),
+                    stock: Number(args.stock ?? 0),
+                    isActive: true,
+                    sortOrder: 0,''',
+              '''          price: null,
+                    stock: Number(args.stock ?? 0),
+                    isActive: true,
+                    sortOrder: 0,''',
+          )
+          regex_once(
+              "src/lib/ai/actions/executor.ts",
+              r'''async function updateProductPrice\(.*?\n\}\n\nasync function createCustomer\(''',
+              '''async function updateProductPrice(
+            tx: BusinessTransaction,
+            proposalId: string,
+            args: Record<string, unknown>,
+          ): Promise<MutationOutcome> {
+            const productId = String(args.productId);
+            const before = await tx.product.findFirst({
+              where: { id: productId, deletedAt: null },
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                sku: true,
+                productVariants: {
+                  where: { isActive: true },
+                  orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+                  select: { id: true, name: true, price: true },
+                },
+              },
+            });
+            if (!before) throw new NotFoundError("Product", productId);
+            const inheritedDefault =
+              before.productVariants.length === 1 &&
+              before.productVariants[0]?.name === "Default" &&
+              before.productVariants[0]?.price === before.price
+                ? before.productVariants[0]
+                : null;
+            if (inheritedDefault) {
+              await tx.productVariant.update({
+                where: { id: inheritedDefault.id },
+                data: { price: null },
+              });
+            }
+            const product = await tx.product.update({
+              where: { id: productId },
+              data: { price: Number(args.newPrice) },
+              select: { id: true, name: true, price: true, sku: true },
+            });
+            return {
+              result: product,
+              audit: {
+                action: "ai.product.price_updated.v1",
+                entity: "product",
+                entityId: product.id,
+                before: { price: before.price },
+                after: { price: product.price },
+                metadata: {
+                  proposalId,
+                  inheritedDefaultVariantId: inheritedDefault?.id ?? null,
+                },
+              },
+              events: [
+                {
+                  key: `ai-action:${proposalId}:product-price`,
+                  type: "product.price.updated.v1",
+                  payload: {
+                    proposalId,
+                    productId: product.id,
+                    fromPrice: before.price,
+                    toPrice: product.price,
+                    inheritedDefaultVariantId: inheritedDefault?.id ?? null,
+                  },
+                },
+              ],
+              projectionInvalidations: [
+                "products:list",
+                `products:${product.id}`,
+                "dashboard:products",
+              ],
+            };
+          }
+
+          async function createCustomer(''',
+          )
+          replace_once(
+              "src/lib/ai/actions/executor.ts",
+              '''  const phone = normalizePhone(String(args.phone));
+            const phone2 =
+              typeof args.phone2 === "string" && args.phone2
+                ? normalizePhone(args.phone2)
+                : null;''',
+              '''  const phone = canonicalAlgerianPhone(String(args.phone), "phone");
+            const phone2 =
+              typeof args.phone2 === "string" && args.phone2
+                ? canonicalAlgerianPhone(String(args.phone2), "phone2")
+                : null;''',
+          )
+
+          # Full approval digests remain UI-only and never enter persisted/Gemini tool history.
+          replace_once(
+              "src/lib/ai/chat/agent.ts",
+              '''interface ToolExecutionResult {
+            result: unknown;
+            actionProposal?: AiActionProposalToolResult;
+          }
+          ''',
+              '''interface ToolExecutionResult {
+            result: unknown;
+            actionProposal?: AiActionProposalToolResult;
+          }
+
+          function historySafeToolResult(value: unknown): unknown {
+            if (
+              value &&
+              typeof value === "object" &&
+              (value as Record<string, unknown>).pending_action_proposal === true
+            ) {
+              const {
+                proposalDigest: _proposalDigest,
+                ...safe
+              } = value as Record<string, unknown>;
+              return redactToolResult(safe);
+            }
+            return redactToolResult(value);
+          }
+          ''',
+          )
+          replace_once(
+              "src/lib/ai/chat/agent.ts",
+              '''            response: { result: call.result },''',
+              '''            response: { result: historySafeToolResult(call.result) },''',
+          )
+          replace_once(
+              "src/lib/ai/chat/agent.ts",
+              '''  return {
+              result,
+              ...(isAiActionProposalToolResult(result)
+                ? { actionProposal: result }
+                : {}),
+            };''',
+              '''  if (isAiActionProposalToolResult(result)) {
+              return {
+                result: historySafeToolResult(result),
+                actionProposal: result,
+              };
+            }
+            return { result };''',
+          )
+          replace_once(
+              "src/lib/ai/chat/agent.ts",
+              '''      const redacted = redactToolResult(executed.result);''',
+              '''      const redacted = historySafeToolResult(executed.result);''',
+          )
+
+          # Permission-filter decrypted proposal history.
+          write(
+              "src/lib/ai/actions/history.ts",
+              '''import "server-only";
+
+          import type { DbClient } from "@/lib/db";
+          import {
+            assertTrustedAction,
+            trustedActionAllowed,
+          } from "@/lib/identity/authorization";
+          import {
+            PHASE2_ACTIONS,
+            type Phase2Action,
+          } from "@/lib/identity/permissions";
+          import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
+          import type { ShopContext } from "@/lib/shops/context";
+          import { SahelFlowError } from "@/types/errors";
+          import {
+            getAiActionProposal,
+            type AiActionProposalHandle,
+          } from "./service";
+
+          interface ProposalHistoryRow {
+            id: string;
+            requiredPermissionsJson: string;
+            workspaceId: string;
+            installationId: string;
+            shopId: string;
+            shopIncarnationId: string;
+            registryRevision: number | bigint;
+            databaseFileId: string;
+            migrationSetSha256: string;
+          }
+
+          const ACTIONS = new Set<string>(PHASE2_ACTIONS);
+
+          function exactShop(row: ProposalHistoryRow, shop: ShopContext): boolean {
+            return (
+              row.workspaceId === shop.workspaceId &&
+              row.installationId === shop.installationId &&
+              row.shopId === shop.shopId &&
+              row.shopIncarnationId === shop.shopIncarnationId &&
+              Number(row.registryRevision) === shop.registryRevision &&
+              row.databaseFileId === shop.databaseFileId &&
+              row.migrationSetSha256 === shop.migrationSetSha256
+            );
+          }
+
+          function requiredPermissions(value: string): Phase2Action[] | null {
+            try {
+              const parsed = JSON.parse(value) as unknown;
+              if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+                return null;
+              }
+              const required = (parsed as Record<string, unknown>).required;
+              if (
+                !Array.isArray(required) ||
+                required.some(
+                  (entry) => typeof entry !== "string" || !ACTIONS.has(entry),
+                )
+              ) {
+                return null;
+              }
+              return [...new Set(required as Phase2Action[])].sort();
+            } catch {
+              return null;
+            }
+          }
+
+          function canRead(
+            actor: TrustedActorContext,
+            shopId: string,
+            required: readonly Phase2Action[],
+          ): boolean {
+            return required.every((action) =>
+              trustedActionAllowed(actor, action, { shopId }),
+            );
+          }
+
+          async function rowsForSession(
+            db: DbClient,
+            sessionId: string,
+          ): Promise<ProposalHistoryRow[]> {
+            return db.$queryRaw<ProposalHistoryRow[]>`
+              SELECT
+                "id", "requiredPermissionsJson", "workspaceId",
+                "installationId", "shopId", "shopIncarnationId",
+                "registryRevision", "databaseFileId", "migrationSetSha256"
+              FROM "AiActionProposal"
+              WHERE "sessionId" = ${sessionId}
+              ORDER BY "createdAt" DESC
+              LIMIT 100
+            `;
+          }
+
+          export async function listAuthorizedAiActionProposals(
+            context: { prisma: DbClient; shop: ShopContext },
+            actor: TrustedActorContext,
+            sessionId: string,
+          ): Promise<AiActionProposalHandle[]> {
+            assertTrustedAction(actor, "ai.use", { shopId: context.shop.shopId });
+            const output: AiActionProposalHandle[] = [];
+            for (const row of await rowsForSession(context.prisma, sessionId)) {
+              const required = requiredPermissions(row.requiredPermissionsJson);
+              if (
+                !required ||
+                !exactShop(row, context.shop) ||
+                !canRead(actor, context.shop.shopId, required)
+              ) {
+                continue;
+              }
+              output.push(
+                await getAiActionProposal(context, actor, row.id),
+              );
+            }
+            return output;
+          }
+
+          export async function getAuthorizedAiActionProposal(
+            context: { prisma: DbClient; shop: ShopContext },
+            actor: TrustedActorContext,
+            proposalId: string,
+          ): Promise<AiActionProposalHandle> {
+            assertTrustedAction(actor, "ai.use", { shopId: context.shop.shopId });
+            const rows = await context.prisma.$queryRaw<ProposalHistoryRow[]>`
+              SELECT
+                "id", "requiredPermissionsJson", "workspaceId",
+                "installationId", "shopId", "shopIncarnationId",
+                "registryRevision", "databaseFileId", "migrationSetSha256"
+              FROM "AiActionProposal"
+              WHERE "id" = ${proposalId}
+              LIMIT 1
+            `;
+            const row = rows[0];
+            const required = row
+              ? requiredPermissions(row.requiredPermissionsJson)
+              : null;
+            if (
+              !row ||
+              !required ||
+              !exactShop(row, context.shop) ||
+              !canRead(actor, context.shop.shopId, required)
+            ) {
+              throw new SahelFlowError(
+                "AI action proposal was not found",
+                "AI_ACTION_PROPOSAL_NOT_FOUND",
+                404,
+              );
+            }
+            return getAiActionProposal(context, actor, proposalId);
+          }
+          ''',
+          )
+          replace_once(
+              "src/app/api/ai/sessions/[id]/actions/route.ts",
+              '''import { listAiActionProposals } from "@/lib/ai/actions/service";''',
+              '''import { listAuthorizedAiActionProposals } from "@/lib/ai/actions/history";''',
+          )
+          replace_once(
+              "src/app/api/ai/sessions/[id]/actions/route.ts",
+              '''    const proposals = await listAiActionProposals(''',
+              '''    const proposals = await listAuthorizedAiActionProposals(''',
+          )
+          replace_once(
+              "src/app/api/ai/actions/[proposalId]/route.ts",
+              '''import { getAiActionProposal } from "@/lib/ai/actions/service";''',
+              '''import { getAuthorizedAiActionProposal } from "@/lib/ai/actions/history";''',
+          )
+          replace_once(
+              "src/app/api/ai/actions/[proposalId]/route.ts",
+              '''    const proposal = await getAiActionProposal(''',
+              '''    const proposal = await getAuthorizedAiActionProposal(''',
+          )
+
+          # Database-level terminal and state integrity guards.
+          write(
+              "prisma/migrations/20260803194500_phase3_ai_action_state_guards/migration.sql",
+              '''-- Phase 3 Task 5 adversarial state guards.
+
+          CREATE TRIGGER "AiActionExecution_valid_state_insert"
+          BEFORE INSERT ON "AiActionExecution"
+          WHEN NEW."state" NOT IN ('claimed', 'running', 'succeeded', 'failed', 'conflict')
+          BEGIN
+            SELECT RAISE(ABORT, 'invalid AiActionExecution state');
+          END;
+
+          CREATE TRIGGER "AiActionExecution_valid_state_update"
+          BEFORE UPDATE OF "state" ON "AiActionExecution"
+          WHEN NEW."state" NOT IN ('claimed', 'running', 'succeeded', 'failed', 'conflict')
+          BEGIN
+            SELECT RAISE(ABORT, 'invalid AiActionExecution state');
+          END;
+
+          CREATE TRIGGER "AiActionExecution_succeeded_terminal"
+          BEFORE UPDATE OF "state" ON "AiActionExecution"
+          WHEN OLD."state" = 'succeeded' AND NEW."state" <> 'succeeded'
+          BEGIN
+            SELECT RAISE(ABORT, 'succeeded AI execution is terminal');
+          END;
+
+          CREATE TRIGGER "AiActionProposal_valid_status_insert"
+          BEFORE INSERT ON "AiActionProposal"
+          WHEN NEW."status" NOT IN (
+            'pending', 'approved', 'executing', 'succeeded',
+            'failed', 'conflict', 'expired', 'rejected'
+          )
+          BEGIN
+            SELECT RAISE(ABORT, 'invalid AiActionProposal status');
+          END;
+
+          CREATE TRIGGER "AiActionProposal_valid_status_update"
+          BEFORE UPDATE OF "status" ON "AiActionProposal"
+          WHEN NEW."status" NOT IN (
+            'pending', 'approved', 'executing', 'succeeded',
+            'failed', 'conflict', 'expired', 'rejected'
+          )
+          BEGIN
+            SELECT RAISE(ABORT, 'invalid AiActionProposal status');
+          END;
+
+          CREATE TRIGGER "AiActionProposal_succeeded_terminal"
+          BEFORE UPDATE OF "status" ON "AiActionProposal"
+          WHEN OLD."status" = 'succeeded' AND NEW."status" <> 'succeeded'
+          BEGIN
+            SELECT RAISE(ABORT, 'succeeded AI proposal is terminal');
+          END;
+          ''',
+          )
+
+          # Regression coverage for schemas, variants, catalog consistency, history and digest isolation.
+          write(
+              "src/lib/ai/actions/__tests__/adversarial-repair.test.ts",
+              '''import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+          import type { PrismaClient } from "@prisma/client";
+
+          import {
+            aiActionHash,
+            parseSensitiveAiToolArgs,
+          } from "../contracts";
+          import { buildAiActionTargetSnapshot } from "../targets";
+          import {
+            createTestPrisma,
+            disconnectTestPrisma,
+            seedCustomer,
+            TEST_SHOP_CONTEXT,
+          } from "@/lib/data/__tests__/helpers";
+
+          let db: PrismaClient;
+
+          beforeEach(async () => {
+            db = await createTestPrisma();
+          });
+
+          afterEach(async () => {
+            await disconnectTestPrisma(db);
+          });
+
+          describe("Task 5 adversarial proposal validation", () => {
+            it("rejects governed confirmation before proposal creation", () => {
+              expect(() =>
+                parseSensitiveAiToolArgs("update_order_status", {
+                  orderId: "order-1",
+                  status: "confirmed",
+                }),
+              ).toThrow();
+            });
+
+            it("normalizes valid Algerian phones and rejects invalid customer phones", () => {
+              expect(
+                parseSensitiveAiToolArgs("create_customer", {
+                  name: "Amina",
+                  phone: "+213 555 12 34 56",
+                }),
+              ).toMatchObject({ phone: "0555123456" });
+              expect(() =>
+                parseSensitiveAiToolArgs("create_customer", {
+                  name: "Amina",
+                  phone: "123",
+                }),
+              ).toThrow();
+            });
+
+            it("requires the exact active variant for order proposals", async () => {
+              const customer = await seedCustomer(db);
+              const product = await db.product.create({
+                data: {
+                  name: "Variant Product",
+                  price: 1000,
+                  stock: 5,
+                  isActive: true,
+                  productVariants: {
+                    create: [
+                      {
+                        name: "Small",
+                        price: 1000,
+                        stock: 5,
+                        isActive: true,
+                        sortOrder: 0,
+                      },
+                    ],
+                  },
+                },
+              });
+              await expect(
+                buildAiActionTargetSnapshot(
+                  { prisma: db as never, shop: TEST_SHOP_CONTEXT },
+                  "create_order",
+                  {
+                    customerId: customer.id,
+                    items: [{ productId: product.id, quantity: 1 }],
+                    wilaya: "Alger",
+                    commune: "Alger Centre",
+                    address: "1 rue test",
+                    phone: "0555123456",
+                  },
+                ),
+              ).rejects.toMatchObject({ code: "AI_ACTION_VARIANT_REQUIRED" });
+            });
+
+            it("rejects ambiguous product-level stock proposals", async () => {
+              const product = await db.product.create({
+                data: {
+                  name: "Multi Variant",
+                  price: 1000,
+                  stock: 10,
+                  isActive: true,
+                  productVariants: {
+                    create: [
+                      { name: "A", stock: 5, isActive: true, sortOrder: 0 },
+                      { name: "B", stock: 5, isActive: true, sortOrder: 1 },
+                    ],
+                  },
+                },
+              });
+              await expect(
+                buildAiActionTargetSnapshot(
+                  { prisma: db as never, shop: TEST_SHOP_CONTEXT },
+                  "update_product_stock",
+                  { productId: product.id, newStock: 7 },
+                ),
+              ).rejects.toMatchObject({
+                code: "AI_ACTION_VARIANT_MUTATION_AMBIGUOUS",
+              });
+            });
+
+            it("binds variant state into price proposal target hashes", async () => {
+              const product = await db.product.create({
+                data: {
+                  name: "Default Variant",
+                  price: 1000,
+                  stock: 2,
+                  isActive: true,
+                  productVariants: {
+                    create: {
+                      name: "Default",
+                      price: 1000,
+                      stock: 2,
+                      isActive: true,
+                      sortOrder: 0,
+                    },
+                  },
+                },
+              });
+              const first = await buildAiActionTargetSnapshot(
+                { prisma: db as never, shop: TEST_SHOP_CONTEXT },
+                "update_product_price",
+                { productId: product.id, newPrice: 1200 },
+              );
+              await db.productVariant.updateMany({
+                where: { productId: product.id },
+                data: { price: 900 },
+              });
+              const second = await buildAiActionTargetSnapshot(
+                { prisma: db as never, shop: TEST_SHOP_CONTEXT },
+                "update_product_price",
+                { productId: product.id, newPrice: 1200 },
+              );
+              expect(aiActionHash(first.targetBinding)).not.toBe(
+                aiActionHash(second.targetBinding),
+              );
+            });
+          });
+          ''',
+          )
+
+          write(
+              "src/lib/ai/actions/__tests__/executor-catalog.test.ts",
+              '''import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+          import type { PrismaClient } from "@prisma/client";
+
+          vi.mock("@/lib/business-truth/principal", () => ({
+            businessPrincipalFromTrustedActor: () => ({
+              auditActor: "authenticated-owner:test",
+            }),
+          }));
+
+          vi.mock("@/lib/business-truth/command-kernel", () => ({
+            executeBusinessCommand: async (
+              context: { prisma: PrismaClient },
+              _command: unknown,
+              work: (input: { tx: unknown }) => Promise<{ result: Record<string, unknown> }>,
+            ) =>
+              context.prisma.$transaction(async (tx) => {
+                const outcome = await work({ tx });
+                return {
+                  commandId: "command-test",
+                  aggregateVersion: 1,
+                  replayed: false,
+                  result: outcome.result,
+                };
+              }),
+          }));
+
+          import { executeApprovedAiAction } from "../executor";
+          import { mintAiActionExecutionAuthority } from "../execution-authority";
+          import { aiActionHash } from "../contracts";
+          import { buildAiActionTargetSnapshot } from "../targets";
+          import {
+            createTestPrisma,
+            disconnectTestPrisma,
+            TEST_SHOP_CONTEXT,
+          } from "@/lib/data/__tests__/helpers";
+
+          let db: PrismaClient;
+
+          beforeEach(async () => {
+            db = await createTestPrisma();
+          });
+
+          afterEach(async () => {
+            await disconnectTestPrisma(db);
+          });
+
+          async function execute(toolName: string, args: Record<string, unknown>) {
+            const proposalId = `proposal-${toolName}`;
+            const proposalDigest = "1".repeat(64);
+            const executionKey = `execution-${toolName}`;
+            const target = await buildAiActionTargetSnapshot(
+              { prisma: db as never, shop: TEST_SHOP_CONTEXT },
+              toolName,
+              args,
+            );
+            const argsHash = aiActionHash(args);
+            return executeApprovedAiAction({
+              context: { prisma: db as never, shop: TEST_SHOP_CONTEXT },
+              authority: mintAiActionExecutionAuthority({
+                proposalId,
+                proposalDigest,
+                toolName,
+                argsHash,
+                executionKey,
+              }),
+              proposalId,
+              proposalDigest,
+              executionKey,
+              toolName,
+              args,
+              argsHash,
+              targetBindingHash: aiActionHash(target.targetBinding),
+              requesterActorId: "requester",
+              requesterSessionId: "session",
+              approver: {} as never,
+            });
+          }
+
+          describe("Task 5 canonical catalog executor", () => {
+            it("keeps a single active variant stock synchronized", async () => {
+              const product = await db.product.create({
+                data: {
+                  name: "Default Stock",
+                  price: 1000,
+                  stock: 5,
+                  isActive: true,
+                  productVariants: {
+                    create: {
+                      name: "Default",
+                      stock: 5,
+                      isActive: true,
+                      sortOrder: 0,
+                    },
+                  },
+                },
+              });
+              await execute("update_product_stock", {
+                productId: product.id,
+                newStock: 2,
+              });
+              const [updated, variant] = await Promise.all([
+                db.product.findUniqueOrThrow({ where: { id: product.id } }),
+                db.productVariant.findFirstOrThrow({
+                  where: { productId: product.id },
+                }),
+              ]);
+              expect(updated.stock).toBe(2);
+              expect(variant.stock).toBe(2);
+            });
+
+            it("moves the single Default variant back to inherited pricing", async () => {
+              const product = await db.product.create({
+                data: {
+                  name: "Default Price",
+                  price: 1000,
+                  stock: 1,
+                  isActive: true,
+                  productVariants: {
+                    create: {
+                      name: "Default",
+                      price: 1000,
+                      stock: 1,
+                      isActive: true,
+                      sortOrder: 0,
+                    },
+                  },
+                },
+              });
+              await execute("update_product_price", {
+                productId: product.id,
+                newPrice: 1200,
+              });
+              const [updated, variant] = await Promise.all([
+                db.product.findUniqueOrThrow({ where: { id: product.id } }),
+                db.productVariant.findFirstOrThrow({
+                  where: { productId: product.id },
+                }),
+              ]);
+              expect(updated.price).toBe(1200);
+              expect(variant.price).toBeNull();
+            });
+
+            it("creates AI products with an inherited Default variant price", async () => {
+              const result = await execute("create_product", {
+                name: "AI Product",
+                price: 1800,
+                stock: 3,
+              });
+              const id = String(result.result.id);
+              const variant = await db.productVariant.findFirstOrThrow({
+                where: { productId: id },
+              });
+              expect(variant.price).toBeNull();
+              expect(variant.stock).toBe(3);
+            });
+          });
+          ''',
+          )
+
+          write(
+              "src/lib/ai/actions/__tests__/history-authorization.test.ts",
+              '''import { describe, expect, it, vi } from "vitest";
+
+          const harness = vi.hoisted(() => ({
+            assertTrustedAction: vi.fn(),
+            trustedActionAllowed: vi.fn(),
+            getAiActionProposal: vi.fn(),
+          }));
+
+          vi.mock("@/lib/identity/authorization", () => ({
+            assertTrustedAction: harness.assertTrustedAction,
+            trustedActionAllowed: harness.trustedActionAllowed,
+          }));
+          vi.mock("../service", () => ({
+            getAiActionProposal: harness.getAiActionProposal,
+          }));
+
+          import {
+            getAuthorizedAiActionProposal,
+            listAuthorizedAiActionProposals,
+          } from "../history";
+          import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
+
+          const row = {
+            id: "proposal-1",
+            requiredPermissionsJson: JSON.stringify({
+              required: ["products.read", "products.manage"],
+              requesterEffective: ["ai.use"],
+            }),
+            ...TEST_SHOP_CONTEXT,
+          };
+          const actor = { shop: TEST_SHOP_CONTEXT } as never;
+
+          describe("AI action history authorization", () => {
+            it("filters summaries when current domain permissions are absent", async () => {
+              harness.trustedActionAllowed.mockImplementation(
+                (_actor, action: string) => action !== "products.manage",
+              );
+              const context = {
+                prisma: { $queryRaw: vi.fn(async () => [row]) },
+                shop: TEST_SHOP_CONTEXT,
+              } as never;
+              expect(
+                await listAuthorizedAiActionProposals(context, actor, "session"),
+              ).toEqual([]);
+              expect(harness.getAiActionProposal).not.toHaveBeenCalled();
+            });
+
+            it("returns authorized summaries and exact digest handles", async () => {
+              harness.trustedActionAllowed.mockReturnValue(true);
+              harness.getAiActionProposal.mockResolvedValue({
+                proposal: { id: row.id },
+                proposalDigest: "1".repeat(64),
+              });
+              const context = {
+                prisma: { $queryRaw: vi.fn(async () => [row]) },
+                shop: TEST_SHOP_CONTEXT,
+              } as never;
+              const listed = await listAuthorizedAiActionProposals(
+                context,
+                actor,
+                "session",
+              );
+              expect(listed).toHaveLength(1);
+              expect(
+                await getAuthorizedAiActionProposal(context, actor, row.id),
+              ).toMatchObject({ proposalDigest: "1".repeat(64) });
+            });
+          });
+          ''',
+          )
+
+          # Extend existing tests for custom permissions, digest isolation and terminal guards.
+          replace_once(
+              "src/lib/ai/chat/__tests__/agent-proposal.test.ts",
+              '''    expect(result.toolCalls).toHaveLength(1);
+              expect(result.response).toMatch(/proposition d'action exacte/i);''',
+              '''    expect(result.toolCalls).toHaveLength(1);
+              expect(JSON.stringify(result.toolCalls)).not.toContain("1".repeat(64));
+              expect(result.actionProposal?.proposalDigest).toBe("1".repeat(64));
+              expect(result.response).toMatch(/proposition d'action exacte/i);''',
+          )
+          replace_once(
+              "src/lib/ai/chat/__tests__/agent-proposal.test.ts",
+              '''    expect(proposal?.proposal).toEqual(proposalResult());
+              expect(fetch).toHaveBeenCalledTimes(1);''',
+              '''    expect(proposal?.proposal).toEqual(proposalResult());
+              const toolResult = events.find((event) => event.type === "tool_result");
+              expect(JSON.stringify(toolResult)).not.toContain("1".repeat(64));
+              expect(fetch).toHaveBeenCalledTimes(1);''',
+          )
+          replace_once(
+              "src/lib/ai/actions/__tests__/service-drift-recovery.test.ts",
+              '''  it("fails closed when the requester device or session authority changes", async () => {''',
+              '''  it("preserves exact custom team permission allowlists", async () => {
+                const manager = {
+                  ...harness.actor,
+                  role: "manager" as const,
+                  permissions: [
+                    "ai.use",
+                    "approvals.request",
+                    "products.read",
+                    "products.manage",
+                    "products.cost.update",
+                  ] as const,
+                };
+                const { sessionId, messageId } = await requestMessage();
+                harness.resolveDurableIdentityActor.mockResolvedValue(manager);
+                const created = await createAiActionProposal({
+                  context: { prisma: db as never, shop: TEST_SHOP_CONTEXT },
+                  requester: actorContext(manager),
+                  sessionId,
+                  requestMessageId: messageId,
+                  toolName: "create_product",
+                  rawArgs: { name: "Custom", price: 1000, stock: 1 },
+                });
+                const approved = await approveAiActionProposal({
+                  context: { prisma: db as never, shop: TEST_SHOP_CONTEXT },
+                  approver: actorContext(),
+                  proposalId: created.proposal.id,
+                  proposalDigest: created.proposalDigest,
+                });
+                expect(approved.result).toEqual({ ok: true, mutationId: "mut-1" });
+              });
+
+              it("fails closed when the requester device or session authority changes", async () => {''',
+          )
+          replace_once(
+              "src/lib/ai/actions/__tests__/service.test.ts",
+              '''    expect(Number(counts[0]?.executions)).toBe(1);
+              });''',
+              '''    expect(Number(counts[0]?.executions)).toBe(1);
+                await expect(
+                  db.$executeRaw`
+                    UPDATE "AiActionExecution"
+                    SET "state" = 'failed'
+                    WHERE "proposalId" = ${created.proposal.id}
+                  `,
+                ).rejects.toThrow(/terminal/i);
+              });''',
+          )
+
+          # Source contract: approval digests stay out of history and routes use permission filtering.
+          replace_once(
+              "src/lib/ai/actions/__tests__/source-contract.test.ts",
+              '''  it("keeps provider assignment blocked and hidden from Gemini", () => {''',
+              '''  it("permission-filters proposal history and keeps digests out of tool history", () => {
+                const sessionRoute = source(
+                  "src/app/api/ai/sessions/[id]/actions/route.ts",
+                );
+                const proposalRoute = source(
+                  "src/app/api/ai/actions/[proposalId]/route.ts",
+                );
+                const agent = source("src/lib/ai/chat/agent.ts");
+                expect(sessionRoute).toContain("listAuthorizedAiActionProposals");
+                expect(proposalRoute).toContain("getAuthorizedAiActionProposal");
+                expect(agent).toContain("historySafeToolResult");
+                expect(agent).toContain("proposalDigest: _proposalDigest");
+              });
+
+              it("keeps provider assignment blocked and hidden from Gemini", () => {''',
+          )
+          PY
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Prepare disposable test sandbox
+        run: bun run test:sandbox -- "$SF_TEST_ROOT"
+
+      - name: Authority and complete source gate
+        shell: bash
+        run: |
+          bun run sf-version
+          bun run sf-audit
+          bun run sf-verify
+
+      - name: Commit and push verified repair
+        shell: bash
+        run: |
+          rm -f .github/task5-adversarial-trigger
+          git config user.name "SahelFlow Task 5 Repair"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(ai): close adversarial proposal boundaries"
+          git push origin HEAD:agent/phase3-durable-effects-audit
