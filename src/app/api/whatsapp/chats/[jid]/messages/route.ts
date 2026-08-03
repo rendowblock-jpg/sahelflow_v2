@@ -35,32 +35,51 @@ export const GET = withErrorHandler(
       where: { channel_sourceId: { channel: "whatsapp", sourceId: jid } },
       select: {
         messages: {
-          where: { direction: "outbound" },
           orderBy: { timestamp: "desc" },
           take: limit,
           select: {
             id: true,
             body: true,
+            direction: true,
             timestamp: true,
             deliveryStatus: true,
+            messageType: true,
           },
         },
       },
     });
 
-    const messageIds = (conversation?.messages ?? []).map((message) => message.id);
-    const effects = messageIds.length
-      ? await db.whatsAppOutboundEffect.findMany({
-          where: { messageId: { in: messageIds } },
-          select: {
-            messageId: true,
-            effectKey: true,
-            providerMessageId: true,
-          },
-        })
-      : [];
+    const rows = conversation?.messages ?? [];
+    const messageIds = rows.map((message) => message.id);
+    const outboundIds = rows
+      .filter((message) => message.direction === "outbound")
+      .map((message) => message.id);
+    const [effects, inboundEvents] = await Promise.all([
+      outboundIds.length
+        ? db.whatsAppOutboundEffect.findMany({
+            where: { messageId: { in: outboundIds } },
+            select: {
+              messageId: true,
+              effectKey: true,
+              providerMessageId: true,
+            },
+          })
+        : [],
+      messageIds.length
+        ? db.providerIngressEvent.findMany({
+            where: { messageId: { in: messageIds }, status: "applied" },
+            select: { messageId: true, providerEventId: true },
+          })
+        : [],
+    ]);
+
     const effectByMessage = new Map(
       effects.map((effect) => [effect.messageId, effect]),
+    );
+    const providerIdByInboundMessage = new Map(
+      inboundEvents.flatMap((event) =>
+        event.messageId ? [[event.messageId, event.providerEventId] as const] : [],
+      ),
     );
     const effectKeys = effects.map((effect) => effect.effectKey);
     const intents = effectKeys.length
@@ -73,9 +92,10 @@ export const GET = withErrorHandler(
       intents.map((intent) => [intent.effectKey, intent]),
     );
 
-    const durable: IncomingMessage[] = (conversation?.messages ?? []).map(
-      (message) => {
-        const effect = effectByMessage.get(message.id);
+    const messages: IncomingMessage[] = rows
+      .map((message) => {
+        const fromMe = message.direction === "outbound";
+        const effect = fromMe ? effectByMessage.get(message.id) : undefined;
         const intent = effect ? intentByKey.get(effect.effectKey) : undefined;
         const effectState = intent
           ? intent.status === "failed" && intent.outcomeState === "ambiguous"
@@ -85,48 +105,30 @@ export const GET = withErrorHandler(
         return {
           key: {
             remoteJid: jid,
-            fromMe: true,
-            id: effect?.providerMessageId ?? message.id,
+            fromMe,
+            id: fromMe
+              ? effect?.providerMessageId ?? message.id
+              : providerIdByInboundMessage.get(message.id) ?? message.id,
           },
           message: { conversation: message.body },
-          messageTimestamp: Math.floor(message.timestamp.getTime() / 1000),
-          deliveryStatus: (message.deliveryStatus ??
-            "sending") as IncomingMessage["deliveryStatus"],
+          messageTimestamp: Math.floor(message.timestamp.getTime() / 1_000),
+          deliveryStatus: fromMe
+            ? ((message.deliveryStatus ?? "sending") as IncomingMessage["deliveryStatus"])
+            : undefined,
           effectKey: effect?.effectKey,
           effectState: effectState as IncomingMessage["effectState"],
         };
-      },
-    );
+      })
+      .reverse();
 
-    let live: IncomingMessage[] = [];
     let sidecarReachable = true;
     try {
-      live = (await sidecar.messages(jid, limit)).messages;
+      await sidecar.status();
     } catch (error) {
       if (!(error instanceof SidecarUnavailableError)) throw error;
       sidecarReachable = false;
     }
 
-    const merged = new Map<string, IncomingMessage>();
-    for (const message of live) merged.set(message.key.id, message);
-    for (const message of durable) {
-      const existing = merged.get(message.key.id);
-      merged.set(
-        message.key.id,
-        existing
-          ? {
-              ...existing,
-              deliveryStatus: message.deliveryStatus,
-              effectKey: message.effectKey,
-              effectState: message.effectState,
-            }
-          : message,
-      );
-    }
-
-    const messages = [...merged.values()]
-      .sort((left, right) => left.messageTimestamp - right.messageTimestamp)
-      .slice(-limit);
     return NextResponse.json({ jid, messages, sidecarReachable });
   },
   "GET /api/whatsapp/chats/[jid]/messages",
