@@ -5,16 +5,13 @@ import { Prisma } from "@prisma/client";
 
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { openBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
-import {
-  sealBusinessCommandResultWithKey,
-} from "@/lib/business-truth/result-codec";
+import { sealBusinessCommandResultWithKey } from "@/lib/business-truth/result-codec";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { ConflictError, SahelFlowError } from "@/types/errors";
 import { evaluateConditions } from "./conditions";
 import {
   AUTOMATION_TRIGGER_EFFECT_TYPE,
   automationHash,
-  canonicalJson,
   definitionHash,
   normalizeStoredTriggerPayload,
   parseStoredAutomationDefinition,
@@ -25,7 +22,13 @@ import {
 
 const TRIGGER_LEASE_MS = 90_000;
 const TRIGGER_MAX_ATTEMPTS = 6;
-const TRIGGER_RETRY_DELAYS_MS = [5_000, 30_000, 120_000, 600_000, 1_800_000] as const;
+const TRIGGER_RETRY_DELAYS_MS = [
+  5_000,
+  30_000,
+  120_000,
+  600_000,
+  1_800_000,
+] as const;
 const MAX_TRIGGER_RETRY_DELAY_MS = 1_800_000;
 
 interface TriggerIntentRow {
@@ -58,7 +61,10 @@ export interface AutomationTriggerDrainResult {
 function triggerRetryDelay(attemptCount: number): number {
   return (
     TRIGGER_RETRY_DELAYS_MS[
-      Math.min(Math.max(attemptCount - 1, 0), TRIGGER_RETRY_DELAYS_MS.length - 1)
+      Math.min(
+        Math.max(attemptCount - 1, 0),
+        TRIGGER_RETRY_DELAYS_MS.length - 1,
+      )
     ] ?? MAX_TRIGGER_RETRY_DELAY_MS
   );
 }
@@ -91,14 +97,19 @@ async function claimTrigger(
       orderBy: { createdAt: "asc" },
     });
     if (!current) return null;
-
     const row = current as TriggerIntentRow;
+
     if (row.attemptCount >= TRIGGER_MAX_ATTEMPTS) {
       await tx.outboxIntent.updateMany({
-        where: { id: row.id, status: row.status, attemptCount: row.attemptCount },
+        where: {
+          id: row.id,
+          status: row.status,
+          attemptCount: row.attemptCount,
+        },
         data: {
           status: "dead_letter",
-          lastErrorCode: row.lastErrorCode ?? "AUTOMATION_TRIGGER_ATTEMPTS_EXHAUSTED",
+          lastErrorCode:
+            row.lastErrorCode ?? "AUTOMATION_TRIGGER_ATTEMPTS_EXHAUSTED",
           nextAttemptAt: null,
           lockedAt: null,
           leaseToken: null,
@@ -206,11 +217,14 @@ async function createValidRun(
     definition.automationId,
     defHash,
   ])}`;
-  const existing = await context.prisma.automationRun.findUnique({
-    where: { runKey },
-    select: { id: true },
-  });
-  if (existing) return "replayed";
+  if (
+    await context.prisma.automationRun.findUnique({
+      where: { runKey },
+      select: { id: true },
+    })
+  ) {
+    return "replayed";
+  }
 
   const runId = randomUUID();
   const payloadHash = automationHash(envelope.payload);
@@ -218,17 +232,17 @@ async function createValidRun(
     definition.conditions,
     envelope.payload,
   );
-  const terminalStatus = !conditionMatched
+  const status = !conditionMatched
     ? "skipped"
     : definition.dryRun
       ? "dry_run"
       : "queued";
-  const completedAt = terminalStatus === "queued" ? null : new Date();
-  const steps = definition.steps.map((step, index) => {
+  const completedAt = status === "queued" ? null : new Date();
+  const steps = definition.steps.map((step, position) => {
     const configHash = automationHash(step.config);
     const stepKey = `automation-step:${automationHash([
       runKey,
-      index,
+      position,
       step.action,
       step.onFailure,
       configHash,
@@ -238,7 +252,7 @@ async function createValidRun(
       id: stepId,
       stepKey,
       runId,
-      position: index,
+      position,
       action: step.action,
       failurePolicy: step.onFailure,
       configJson: sealStepConfig(
@@ -249,7 +263,7 @@ async function createValidRun(
         envelopeKey,
       ),
       configHash,
-      status: terminalStatus,
+      status,
       completedAt,
     };
   });
@@ -284,27 +298,28 @@ async function createValidRun(
             envelopeKey,
           ),
           triggerPayloadHash: payloadHash,
-          status: terminalStatus,
+          status,
           stepCount: steps.length,
-          succeededStepCount: 0,
-          failedStepCount: 0,
-          skippedStepCount: terminalStatus === "skipped" ? steps.length : 0,
-          startedAt: terminalStatus === "queued" ? null : new Date(),
+          skippedStepCount: status === "skipped" ? steps.length : 0,
+          startedAt: status === "queued" ? null : new Date(),
           completedAt,
           steps: { create: steps },
         },
       });
-      if (terminalStatus !== "queued") {
+      if (status !== "queued") {
         await tx.automationLog.create({
           data: {
             automationId: definition.automationId,
             trigger: envelope.trigger,
-            status: terminalStatus,
+            status,
             message:
-              terminalStatus === "skipped"
+              status === "skipped"
                 ? "Conditions not met"
                 : `DRY-RUN: ${steps.length} validated step(s)`,
-            payload: JSON.stringify({ runId, triggerKey: envelope.triggerKey }),
+            payload: JSON.stringify({
+              runId,
+              triggerKey: envelope.triggerKey,
+            }),
           },
         });
       }
@@ -321,7 +336,7 @@ async function createInvalidRun(
   claim: ClaimedTrigger,
   envelope: AutomationTriggerEnvelope,
   automation: StoredAutomationDefinitionRow,
-  error: unknown,
+  validationError: unknown,
   envelopeKey: Buffer,
 ): Promise<"created" | "replayed"> {
   const rawDefinition = {
@@ -343,15 +358,22 @@ async function createInvalidRun(
     automation.id,
     defHash,
   ])}`;
-  const existing = await context.prisma.automationRun.findUnique({
-    where: { runKey },
-    select: { id: true },
-  });
-  if (existing) return "replayed";
+  if (
+    await context.prisma.automationRun.findUnique({
+      where: { runKey },
+      select: { id: true },
+    })
+  ) {
+    return "replayed";
+  }
+
   const runId = randomUUID();
   const payloadHash = automationHash(envelope.payload);
-  const errorCode = "AUTOMATION_DEFINITION_INVALID";
-  const message = error instanceof Error ? error.message.slice(0, 500) : errorCode;
+  const code = "AUTOMATION_DEFINITION_INVALID";
+  const detail =
+    validationError instanceof Error
+      ? validationError.message.slice(0, 500)
+      : code;
   try {
     await context.prisma.$transaction(async (tx) => {
       await tx.automationRun.create({
@@ -384,7 +406,7 @@ async function createInvalidRun(
           triggerPayloadHash: payloadHash,
           status: "dead_letter",
           stepCount: 0,
-          lastErrorCode: errorCode,
+          lastErrorCode: code,
           startedAt: new Date(),
           completedAt: new Date(),
           deadLetteredAt: new Date(),
@@ -392,26 +414,25 @@ async function createInvalidRun(
       });
       await tx.automation.updateMany({
         where: { id: automation.id, isActive: true },
-        data: {
-          isActive: false,
-          lastError: errorCode,
-          nextRunAt: null,
-        },
+        data: { isActive: false, lastError: code, nextRunAt: null },
       });
       await tx.automationLog.create({
         data: {
           automationId: automation.id,
           trigger: envelope.trigger,
           status: "failed",
-          message: `${errorCode}: ${message}`,
-          payload: JSON.stringify({ runId, triggerKey: envelope.triggerKey }),
+          message: `${code}: ${detail}`,
+          payload: JSON.stringify({
+            runId,
+            triggerKey: envelope.triggerKey,
+          }),
         },
       });
     });
     return "created";
-  } catch (caught) {
-    if (isUniqueViolation(caught)) return "replayed";
-    throw caught;
+  } catch (error) {
+    if (isUniqueViolation(error)) return "replayed";
+    throw error;
   }
 }
 
@@ -420,7 +441,6 @@ async function markTriggerSucceeded(
   claim: ClaimedTrigger,
   counts: { createdRuns: number; replayedRuns: number; invalidRuns: number },
 ): Promise<AutomationTriggerDrainResult> {
-  const now = new Date();
   const updated = await context.prisma.outboxIntent.updateMany({
     where: {
       id: claim.id,
@@ -431,7 +451,7 @@ async function markTriggerSucceeded(
       status: "succeeded",
       outcomeState: "receipt",
       receiptJson: JSON.stringify(counts),
-      succeededAt: now,
+      succeededAt: new Date(),
       nextAttemptAt: null,
       lockedAt: null,
       leaseToken: null,
@@ -456,11 +476,12 @@ async function markTriggerFailure(
   claim: ClaimedTrigger,
   error: unknown,
 ): Promise<AutomationTriggerDrainResult> {
-  const code = error instanceof SahelFlowError
-    ? error.code.slice(0, 128)
-    : error instanceof Error && error.name
-      ? error.name.slice(0, 128)
-      : "AUTOMATION_TRIGGER_MATERIALIZATION_FAILED";
+  const code =
+    error instanceof SahelFlowError
+      ? error.code.slice(0, 128)
+      : error instanceof Error && error.name
+        ? error.name.slice(0, 128)
+        : "AUTOMATION_TRIGGER_MATERIALIZATION_FAILED";
   const exhausted = claim.attemptCount >= TRIGGER_MAX_ATTEMPTS;
   const state = exhausted ? "dead_letter" : "retrying";
   const nextAttemptAt = exhausted
@@ -510,31 +531,37 @@ async function executeClaimedTrigger(
     let createdRuns = 0;
     let replayedRuns = 0;
     let invalidRuns = 0;
+
     for (const automation of automations) {
+      let definition: CanonicalAutomationDefinition;
       try {
-        const result = await createValidRun(
-          context,
-          claim,
-          envelope,
-          parseStoredAutomationDefinition(automation),
-          envelopeKey,
-        );
-        if (result === "created") createdRuns += 1;
-        else replayedRuns += 1;
-      } catch (error) {
+        definition = parseStoredAutomationDefinition(automation);
+      } catch (validationError) {
         invalidRuns += 1;
         const result = await createInvalidRun(
           context,
           claim,
           envelope,
           automation,
-          error,
+          validationError,
           envelopeKey,
         );
         if (result === "created") createdRuns += 1;
         else replayedRuns += 1;
+        continue;
       }
+
+      const result = await createValidRun(
+        context,
+        claim,
+        envelope,
+        definition,
+        envelopeKey,
+      );
+      if (result === "created") createdRuns += 1;
+      else replayedRuns += 1;
     }
+
     return markTriggerSucceeded(context, claim, {
       createdRuns,
       replayedRuns,
