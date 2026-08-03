@@ -17,7 +17,7 @@ import { messageText } from "./types";
 
 export const AUTOMATION_TRIGGER_EFFECT_TYPE = "automation.trigger.v1";
 const WHATSAPP_INGRESS_COMMAND_TYPE = "whatsapp_message.receive.v1";
-const MAX_ATTEMPTS = 6;
+const MAX_ATTEMPTS_PER_BUDGET = 6;
 const LEASE_MS = 90_000;
 const RETRY_DELAYS_MS = [5_000, 30_000, 120_000, 600_000, 1_800_000] as const;
 
@@ -45,6 +45,7 @@ interface IngressRow {
   payloadHash: string;
   status: string;
   attemptCount: number;
+  operatorRetryCount: number;
   nextAttemptAt: Date | null;
   lockedAt: Date | null;
   leaseToken: string | null;
@@ -70,6 +71,20 @@ function publicResult(row: IngressRow): WhatsAppIngressProcessingResult {
     publish: state === "applied",
     errorCode: row.lastErrorCode,
   };
+}
+
+function attemptBudget(operatorRetryCount: number): number {
+  return MAX_ATTEMPTS_PER_BUDGET * (operatorRetryCount + 1);
+}
+
+function attemptWithinCurrentBudget(
+  attemptNumber: number,
+  operatorRetryCount: number,
+): number {
+  return Math.max(
+    1,
+    attemptNumber - operatorRetryCount * MAX_ATTEMPTS_PER_BUDGET,
+  );
 }
 
 function retryDelay(attemptNumber: number): number {
@@ -110,27 +125,30 @@ function isQuarantineError(error: unknown): boolean {
   return error instanceof z.ZodError || error instanceof ConflictError;
 }
 
+const ingressSelect = {
+  id: true,
+  ingressKey: true,
+  payloadJson: true,
+  payloadHash: true,
+  status: true,
+  attemptCount: true,
+  operatorRetryCount: true,
+  nextAttemptAt: true,
+  lockedAt: true,
+  leaseToken: true,
+  providerTimestamp: true,
+  conversationId: true,
+  messageId: true,
+  lastErrorCode: true,
+} as const;
+
 async function readIngress(
   context: ServiceContext,
   ingressEventId: string,
 ): Promise<IngressRow> {
   const row = await context.prisma.providerIngressEvent.findUnique({
     where: { id: ingressEventId },
-    select: {
-      id: true,
-      ingressKey: true,
-      payloadJson: true,
-      payloadHash: true,
-      status: true,
-      attemptCount: true,
-      nextAttemptAt: true,
-      lockedAt: true,
-      leaseToken: true,
-      providerTimestamp: true,
-      conversationId: true,
-      messageId: true,
-      lastErrorCode: true,
-    },
+    select: ingressSelect,
   });
   if (!row) {
     throw new SahelFlowError(
@@ -142,6 +160,30 @@ async function readIngress(
   return row as IngressRow;
 }
 
+async function closeExpiredLeaseAttempt(
+  tx: Parameters<Parameters<ServiceContext["prisma"]["$transaction"]>[0]>[0],
+  current: IngressRow,
+  now: Date,
+): Promise<void> {
+  if (current.status !== "processing" || !current.leaseToken) return;
+  await tx.providerIngressAttempt.updateMany({
+    where: {
+      ingressEventId: current.id,
+      leaseToken: current.leaseToken,
+      state: "processing",
+    },
+    data: {
+      state: "lease_expired",
+      errorCode: "LEASE_EXPIRED",
+      detailJson: JSON.stringify({
+        retryable: true,
+        category: "expired-processing-lease",
+      }),
+      completedAt: now,
+    },
+  });
+}
+
 async function claimIngress(
   context: ServiceContext,
   ingressEventId: string,
@@ -149,21 +191,7 @@ async function claimIngress(
   return context.prisma.$transaction(async (tx) => {
     const row = await tx.providerIngressEvent.findUnique({
       where: { id: ingressEventId },
-      select: {
-        id: true,
-        ingressKey: true,
-        payloadJson: true,
-        payloadHash: true,
-        status: true,
-        attemptCount: true,
-        nextAttemptAt: true,
-        lockedAt: true,
-        leaseToken: true,
-        providerTimestamp: true,
-        conversationId: true,
-        messageId: true,
-        lastErrorCode: true,
-      },
+      select: ingressSelect,
     });
     if (!row) {
       throw new SahelFlowError(
@@ -194,14 +222,16 @@ async function claimIngress(
       return current;
     }
 
+    await closeExpiredLeaseAttempt(tx, current, now);
+
     const attemptNumber = current.attemptCount + 1;
-    if (attemptNumber > MAX_ATTEMPTS) {
-      const deadLetteredAt = new Date();
+    const budget = attemptBudget(current.operatorRetryCount);
+    if (attemptNumber > budget) {
       await tx.providerIngressEvent.update({
         where: { id: current.id },
         data: {
           status: "dead_letter",
-          deadLetteredAt,
+          deadLetteredAt: now,
           lastErrorCode: current.lastErrorCode ?? "ATTEMPT_BUDGET_EXHAUSTED",
           lockedAt: null,
           leaseToken: null,
@@ -225,6 +255,7 @@ async function claimIngress(
         id: current.id,
         status: current.status,
         attemptCount: current.attemptCount,
+        operatorRetryCount: current.operatorRetryCount,
       },
       data: {
         status: "processing",
@@ -291,16 +322,21 @@ async function markFailure(
 ): Promise<WhatsAppIngressProcessingResult> {
   const code = errorCode(error);
   const quarantine = isQuarantineError(error);
-  const exhausted = claim.attemptNumber >= MAX_ATTEMPTS;
+  const exhausted =
+    claim.attemptNumber >= attemptBudget(claim.operatorRetryCount);
   const state: WhatsAppIngressProcessingState = quarantine
     ? "quarantined"
     : exhausted
       ? "dead_letter"
       : "retrying";
   const now = new Date();
+  const currentBudgetAttempt = attemptWithinCurrentBudget(
+    claim.attemptNumber,
+    claim.operatorRetryCount,
+  );
   const nextAttemptAt =
     state === "retrying"
-      ? new Date(now.getTime() + retryDelay(claim.attemptNumber))
+      ? new Date(now.getTime() + retryDelay(currentBudgetAttempt))
       : null;
 
   await context.prisma.$transaction(async (tx) => {
@@ -317,6 +353,7 @@ async function markFailure(
         detailJson: JSON.stringify({
           retryable: state === "retrying",
           category: quarantine ? "invalid-or-conflicting-provider-input" : "processing",
+          operatorRetryCount: claim.operatorRetryCount,
         }),
         completedAt: now,
       },
