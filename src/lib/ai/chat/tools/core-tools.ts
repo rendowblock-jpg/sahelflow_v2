@@ -159,9 +159,7 @@ registerTool({
       });
       const lowerQuery = query.toLowerCase();
       const filtered = all
-        .filter((customer) =>
-          customer.name.toLowerCase().includes(lowerQuery),
-        )
+        .filter((customer) => customer.name.toLowerCase().includes(lowerQuery))
         .slice(0, input.limit);
       return {
         success: true,
@@ -276,10 +274,7 @@ registerTool({
         {
           prisma: db,
           shop: ctx.shop,
-          businessPrincipal: sourceBusinessPrincipal(
-            "ai_chat",
-            sourceIdentity,
-          ),
+          businessPrincipal: sourceBusinessPrincipal("ai_chat", sourceIdentity),
         },
         {
           idempotencyKey: `ai-order:${sourceOrderId}`,
@@ -343,20 +338,25 @@ registerTool({
         from: new Date(0),
         to: new Date(Date.now() + 86_400_000),
       };
-      const [totalOrders, grossOrderValue, profitability, totalCustomers, lowStockCount] =
-        await Promise.all([
-          db.order.count({ where: { deletedAt: null } }),
-          grossRevenue(db, allTime),
-          getProfitabilityProjection(db, allTime),
-          db.customer.count({ where: { deletedAt: null } }),
-          db.product.count({
-            where: {
-              stock: { lte: db.product.fields.lowStockThreshold },
-              isActive: true,
-              deletedAt: null,
-            },
-          }),
-        ]);
+      const [
+        totalOrders,
+        grossOrderValue,
+        profitability,
+        totalCustomers,
+        lowStockCount,
+      ] = await Promise.all([
+        db.order.count({ where: { deletedAt: null } }),
+        grossRevenue(db, allTime),
+        getProfitabilityProjection(db, allTime),
+        db.customer.count({ where: { deletedAt: null } }),
+        db.product.count({
+          where: {
+            stock: { lte: db.product.fields.lowStockThreshold },
+            isActive: true,
+            deletedAt: null,
+          },
+        }),
+      ]);
       return {
         success: true,
         data: {
@@ -399,15 +399,14 @@ registerTool({
   definition: {
     name: "update_order_status",
     description:
-      "Update the status of a legacy-compatible order. Canonical orders require their governed seller actions. Valid statuses: draft, pending, confirmed, shipped, delivered, cancelled, returned.",
+      "Update the status of a legacy-compatible order. Canonical confirmation remains a governed seller action. Valid statuses: draft, pending, shipped, delivered, cancelled, returned.",
     parameters: {
       type: "object",
       properties: {
         orderId: { type: "string" },
         status: {
           type: "string",
-          description:
-            "draft|pending|confirmed|shipped|delivered|cancelled|returned",
+          description: "draft|pending|shipped|delivered|cancelled|returned",
         },
       },
       required: ["orderId", "status"],
