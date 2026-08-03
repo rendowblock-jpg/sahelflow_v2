@@ -194,7 +194,7 @@ export async function seedStorefront(
 ) {
   return rawDb.storefrontConfig.create({
     data: {
-      slug: overrides.slug ?? `store-${crypto.randomUUID()}`,
+      slug: overrides.slug ?? "test-store",
       name: overrides.name ?? "Test Storefront",
       description: "Test storefront",
       theme: JSON.stringify({ template: "minimal", primaryColor: "#111111" }),
