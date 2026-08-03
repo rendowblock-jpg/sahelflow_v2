@@ -36,13 +36,6 @@ insert_after(
 """,
 )
 
-authority_test = "src/lib/ai/actions/__tests__/authority-regressions.test.ts"
-replace_exact(
-    authority_test,
-    "function context(actor = harness.owner): TrustedActorContext {",
-    "function context(\n  actor: TrustedActorContext[\"actor\"] = harness.owner,\n): TrustedActorContext {",
-)
-
 phase1_test = "src/lib/orders/__tests__/phase1-adopted-source-bypass.test.ts"
 replace_exact(
     phase1_test,
