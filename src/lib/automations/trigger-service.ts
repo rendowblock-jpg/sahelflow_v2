@@ -26,6 +26,30 @@ export interface QueuedAutomationTrigger {
   replayed: boolean;
 }
 
+let triggerPersistenceTail: Promise<void> = Promise.resolve();
+
+/**
+ * SQLite permits one writer at a time. Trigger identities differ, so the
+ * command kernel's same-key queue cannot serialize a status trigger and its
+ * low-stock triggers. Keep one short FIFO around trigger-command commits only;
+ * workers and provider effects remain independently concurrent.
+ */
+async function withTriggerPersistenceQueue<T>(
+  work: () => Promise<T>,
+): Promise<T> {
+  const previous = triggerPersistenceTail;
+  let release!: () => void;
+  triggerPersistenceTail = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await previous.catch(() => undefined);
+  try {
+    return await work();
+  } finally {
+    release();
+  }
+}
+
 function normalizeRequestedTriggerKey(requested?: string): string | null {
   const value = requested?.trim();
   if (!value) return null;
@@ -110,49 +134,51 @@ export async function enqueueAutomationTrigger(
     ...context,
     businessPrincipal: systemBusinessPrincipal("automation-worker"),
   };
-  const execution = await executeBusinessCommand(
-    commandContext,
-    {
-      idempotencyKey: effectKey,
-      commandType: "automation_trigger.queue.v1",
-      aggregate: {
-        type: "automation-trigger",
-        id: automationHash([trigger, triggerKey]),
-        expectedVersion: 0,
+  const execution = await withTriggerPersistenceQueue(() =>
+    executeBusinessCommand(
+      commandContext,
+      {
+        idempotencyKey: effectKey,
+        commandType: "automation_trigger.queue.v1",
+        aggregate: {
+          type: "automation-trigger",
+          id: automationHash([trigger, triggerKey]),
+          expectedVersion: 0,
+        },
+        actor: commandContext.businessPrincipal.auditActor,
+        correlationId: triggerKey,
+        payload: { trigger, triggerKey, payloadHash },
       },
-      actor: commandContext.businessPrincipal.auditActor,
-      correlationId: triggerKey,
-      payload: { trigger, triggerKey, payloadHash },
-    },
-    async () => ({
-      result: { effectKey, triggerKey },
-      audit: {
-        action: "automation.trigger.queued",
-        entity: "automation-trigger",
-        entityId: effectKey,
-        after: { trigger },
-        metadata: { triggerKey, payloadHash },
-      },
-      events: [
-        {
-          key: `${effectKey}:queued`,
-          type: "automation.trigger.queued.v1",
-          payload: {
-            effectKey,
-            trigger,
-            triggerKey,
-            occurredAt: envelope.occurredAt,
+      async () => ({
+        result: { effectKey, triggerKey },
+        audit: {
+          action: "automation.trigger.queued",
+          entity: "automation-trigger",
+          entityId: effectKey,
+          after: { trigger },
+          metadata: { triggerKey, payloadHash },
+        },
+        events: [
+          {
+            key: `${effectKey}:queued`,
+            type: "automation.trigger.queued.v1",
+            payload: {
+              effectKey,
+              trigger,
+              triggerKey,
+              occurredAt: envelope.occurredAt,
+            },
           },
-        },
-      ],
-      outbox: [
-        {
-          effectKey,
-          effectType: AUTOMATION_TRIGGER_EFFECT_TYPE,
-          payload: envelope,
-        },
-      ],
-    }),
+        ],
+        outbox: [
+          {
+            effectKey,
+            effectType: AUTOMATION_TRIGGER_EFFECT_TYPE,
+            payload: envelope,
+          },
+        ],
+      }),
+    ),
   );
   canonicalJson(envelope);
   return {
