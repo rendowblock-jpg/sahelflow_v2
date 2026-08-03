@@ -1,0 +1,64 @@
+name: Task 5 source closure
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: task5-source-closure-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  close-task5:
+    name: Close Task 5 source authority
+    if: >-
+      ${{ github.event.pull_request.draft == true &&
+          github.event.pull_request.head.ref == 'agent/phase3-durable-effects-audit' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/phase3-durable-effects-audit
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Detect closure marker
+        id: marker
+        run: |
+          if [[ -f .github/task5-close.trigger ]]; then
+            echo "apply=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "apply=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply exact closure authority
+        if: steps.marker.outputs.apply == 'true'
+        run: python3 .github/task5-close.py
+
+      - name: Setup Bun
+        if: steps.marker.outputs.apply == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Verify closure authority
+        if: steps.marker.outputs.apply == 'true'
+        run: |
+          bun install --frozen-lockfile
+          bun run sf-audit
+          git diff --check
+
+      - name: Commit closure authority
+        if: steps.marker.outputs.apply == 'true'
+        run: |
+          git config user.name "SahelFlow Task 5 Closure"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "docs(phase3): close Task 5 source authority"
+          git push origin HEAD:agent/phase3-durable-effects-audit
