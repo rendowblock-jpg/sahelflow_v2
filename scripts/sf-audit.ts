@@ -14,8 +14,38 @@ interface Finding {
   detail: string;
 }
 
+interface Phase3Checkpoint {
+  formatVersion?: number;
+  phase?: number;
+  state?: string;
+  protectedBase?: string;
+  phaseIssue?: number;
+  retainedDesktopEvidenceIssue?: number;
+  activeBranch?: string;
+  activeDraftPr?: number;
+  sessionPurpose?: string;
+  auditStatus?: {
+    documentationReconciliation?: string;
+    problemRegister?: string;
+    sharedContractFreeze?: string;
+    productionImplementation?: string;
+  };
+  constraints?: {
+    productionEditsAuthorized?: boolean;
+    versionBumpAuthorized?: boolean;
+    releaseAuthorized?: boolean;
+  };
+}
+
 const repoRoot = resolve(process.env.SF_REPO_DIR || process.cwd());
 const findings: Finding[] = [];
+
+const protectedMain = "e9c92f08f39e8d87ddfd72d2e698418ae81fc084";
+const activePhase = "Phase 3 — durable providers, inbox, AI and automations";
+const activeBranch = "agent/phase3-durable-effects-audit";
+const activePr = 203;
+const phaseIssue = 202;
+const retainedInstalledIssue = 201;
 
 const requiredFiles = [
   "README.md",
@@ -31,6 +61,7 @@ const requiredFiles = [
   "documentation/operations/WORKFLOW.md",
   "documentation/operations/WORKING_MEMORY.md",
   "documentation/research/RESEARCH.md",
+  ".github/phase-checkpoints/phase3-durable-effects.json",
   "scripts/sf-verify.ts",
   "scripts/sf-audit.ts",
 ];
@@ -40,7 +71,7 @@ for (const relativePath of requiredFiles) {
     findings.push({
       kind: "missing",
       file: relativePath,
-      detail: "required current authority or shared tool is missing",
+      detail: "required current authority, checkpoint or shared tool is missing",
     });
   }
 }
@@ -93,6 +124,19 @@ function contentOf(relativePath: string): string {
 
 function normalized(value: string): string {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function requireMarkers(relativePath: string, markers: readonly string[]): void {
+  const content = normalized(contentOf(relativePath));
+  for (const marker of markers) {
+    if (content && !content.includes(normalized(marker))) {
+      findings.push({
+        kind: "drift",
+        file: relativePath,
+        detail: `semantic continuity marker is missing: ${marker}`,
+      });
+    }
+  }
 }
 
 const markdownFiles = walk(repoRoot);
@@ -218,130 +262,110 @@ for (const [relativePath, markers] of entrypointChecks) {
   }
 }
 
-const semanticRequirements: Array<[string, string[]]> = [
-  [
-    "README.md",
-    [
-      "FD-028 Final Completion Program",
-      "Phase 0 complete",
-      "SahelFlow 1.0 Stable has not been released",
-    ],
-  ],
-  [
-    "AGENTS.md",
-    [
-      "one active implementation agent at a time",
-      "Current verified frontier",
-      "Single-agent rule",
-      "Audit-first rule",
-      "Level 1 — Task Gate",
-      "Level 2 — Phase Checkpoint",
-      "Level 3 — Major Full Checkpoint",
-      "PR #200",
-      "native multi-shop",
-    ],
-  ],
-  [
-    "documentation/README.md",
-    [
-      "Execution mode:** single-agent, audit-first, batch remediation and tiered CI",
-      "Active implementation outcome:** native multi-shop authority",
-      "Active draft:** PR #200",
-      "Problem Register",
-      "Phase 2 — identity, authorization, licensing and multi-shop",
-      "PR #197 merged signed licensing authority",
-      "complete full-app AAA frontend transformation",
-    ],
-  ],
-  [
-    "documentation/product/DECISIONS.md",
-    [
-      "## FD-028",
-      "## FD-029",
-      "Whole-product AAA rule",
-      "The Founder decides whether the Web Agent or Desktop Agent is active",
-    ],
-  ],
-  [
-    "documentation/system/ROADMAP.md",
-    [
-      "Next phase outcome:** native multi-shop under the audit-first operating model",
-      "One active implementation agent at a time",
-      "Level 1 — Task Gate",
-      "Level 2 — Phase Checkpoint",
-      "Level 3 — Major Full Checkpoint",
-      "# Phase 5 — Whole-product AAA UI/UX",
-      "# Phase 9 — Certification, representative beta and Stable",
-    ],
-  ],
-  [
-    "documentation/system/CURRENT_STATE.md",
-    [
-      "Latest protected source closures",
-      "Signed licensing — PR #197",
-      "Active proposed source — PR #200",
-      "This is the final Phase 2 implementation outcome",
-      "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
-    ],
-  ],
-  [
-    "documentation/operations/WORKFLOW.md",
-    [
-      "one active implementation agent; audit-first; batch remediation; tiered CI",
-      "Complete phase/package audit",
-      "Phase Problem Register",
-      "Level 1 — Task Gate",
-      "Frozen review and batch repair",
-      "Level 2 — Phase Checkpoint",
-      "Level 3 — Major Full Checkpoint",
-      "Whole-product AAA frontend program",
-      "file-level hook failure",
-    ],
-  ],
-  [
-    "documentation/operations/WORKING_MEMORY.md",
-    [
-      "Founder execution instruction",
-      "Governance transition:** PR #199",
-      "Active implementation package:** Native multi-shop authority",
-      "Consolidated Phase 2 Problem Register",
-      "native multi-shop",
-      "the complete Phase 0–9 scope is preserved",
-    ],
-  ],
-  [
-    "documentation/research/RESEARCH.md",
-    [
-      "Research-first quality rule",
-      "No-AI-slop frontend rule",
-      "Research-to-implementation gate",
-      "NIST SP 800-218",
-    ],
-  ],
-  [
-    "scripts/sf-verify.ts",
-    [
-      "file-level failure: import, collection, setup or hook",
-      "failureMessage?: string",
-      ".sf-vitest-failures.txt",
-    ],
-  ],
-];
+requireMarkers("README.md", [
+  protectedMain,
+  activePhase,
+  "PR #203",
+  "Production implementation remains unauthorized",
+  "SahelFlow 1.0 Stable has not been released",
+]);
 
-for (const [relativePath, markers] of semanticRequirements) {
-  const content = normalized(contentOf(relativePath));
-  for (const marker of markers) {
-    if (content && !content.includes(normalized(marker))) {
-      findings.push({
-        kind: "drift",
-        file: relativePath,
-        detail: `semantic continuity marker is missing: ${marker}`,
-      });
-    }
-  }
-}
+requireMarkers("AGENTS.md", [
+  "one active implementation agent at a time",
+  "Current verified frontier",
+  protectedMain,
+  activePhase,
+  "PR #203",
+  "issue #202",
+  "research/contract",
+  "Audit-first rule",
+  "Phase 3 package rules",
+  "Level 1 — Task Gate",
+  "Level 2 — Phase Checkpoint",
+  "Level 3 — Major Full Checkpoint",
+  "Production edits remain unauthorized",
+]);
 
-const expectedPhase = "Phase 2 — identity, authorization, licensing and multi-shop";
+requireMarkers("documentation/README.md", [
+  protectedMain,
+  "Execution mode:** single-agent, audit-first, batch remediation and tiered CI",
+  "Active implementation outcome:** Phase 3 audit, Problem Register and shared contract freeze",
+  "Active draft:** PR #203",
+  "Phase execution issue:** issue #202",
+  activePhase,
+  "Active Phase 3 contract",
+  "complete full-app AAA frontend transformation",
+]);
+
+requireMarkers("documentation/product/DECISIONS.md", [
+  "## FD-028",
+  "## FD-029",
+  "Whole-product AAA rule",
+  "The Founder decides whether the Web Agent or Desktop Agent is active",
+]);
+
+requireMarkers("documentation/system/ROADMAP.md", [
+  protectedMain,
+  "Phase 2 status:** Protected-source closed through PR #200 with issue #201 retained",
+  activePhase,
+  "Research/contract gate — active",
+  "Production implementation remains unauthorized until this gate passes",
+  "Level 1 — Task Gate",
+  "Level 2 — Phase Checkpoint",
+  "Level 3 — Major Full Checkpoint",
+  "# Phase 5 — Whole-product AAA UI/UX",
+  "# Phase 9 — Certification, representative beta and Stable",
+]);
+
+requireMarkers("documentation/system/CURRENT_STATE.md", [
+  protectedMain,
+  activePhase,
+  "Native multi-shop — PR #200",
+  "Active proposed Phase 3 package — PR #203",
+  "Inbound provider durability is incomplete",
+  "Automations are not production-safe",
+  "Sensitive AI approval is incomplete",
+  "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
+]);
+
+requireMarkers("documentation/operations/WORKFLOW.md", [
+  "one active implementation agent; audit-first; batch remediation; tiered CI",
+  "Complete phase/package audit",
+  "Phase Problem Register",
+  "Level 1 — Task Gate",
+  "Frozen review and batch repair",
+  "Level 2 — Phase Checkpoint",
+  "Level 3 — Major Full Checkpoint",
+  "Whole-product AAA frontend program",
+  "file-level hook failure",
+]);
+
+requireMarkers("documentation/operations/WORKING_MEMORY.md", [
+  protectedMain,
+  activePhase,
+  "Active PR:** #203",
+  "Current session purpose:** research/contract and governance reconciliation",
+  "Production implementation:** not authorized",
+  "Consolidated Phase 3 Problem Register",
+  "P3-P1-002",
+  "P3-P1-003",
+  "P3-P1-005",
+  "Shared contract questions to freeze",
+]);
+
+requireMarkers("documentation/research/RESEARCH.md", [
+  "Research-first quality rule",
+  "No-AI-slop frontend rule",
+  "Research-to-implementation gate",
+  "NIST SP 800-218",
+]);
+
+requireMarkers("scripts/sf-verify.ts", [
+  "file-level failure: import, collection, setup or hook",
+  "failureMessage?: string",
+  ".sf-vitest-failures.txt",
+]);
+
 for (const relativePath of [
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
@@ -351,17 +375,17 @@ for (const relativePath of [
   const content = contentOf(relativePath);
   if (!content) continue;
   const phase = /^> \*\*Active product phase:\*\* (.+)$/m.exec(content)?.[1]?.trim();
-  if (phase !== expectedPhase) {
+  if (phase !== activePhase) {
     findings.push({
       kind: "drift",
       file: relativePath,
-      detail: `active product phase must be '${expectedPhase}', found '${phase ?? "missing"}'`,
+      detail: `active product phase must be '${activePhase}', found '${phase ?? "missing"}'`,
     });
   }
 }
 
-const expectedApplicationMerge = "04d4c51831c6e043ab39a614a7e947e6b27d01e6";
 for (const relativePath of [
+  "README.md",
   "AGENTS.md",
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
@@ -369,7 +393,7 @@ for (const relativePath of [
   "documentation/operations/WORKING_MEMORY.md",
 ]) {
   const content = contentOf(relativePath);
-  if (content && !content.includes(expectedApplicationMerge)) {
+  if (content && !content.includes(protectedMain)) {
     findings.push({
       kind: "drift",
       file: relativePath,
@@ -378,28 +402,76 @@ for (const relativePath of [
   }
 }
 
+const checkpointPath = ".github/phase-checkpoints/phase3-durable-effects.json";
+if (existsSync(resolve(repoRoot, checkpointPath))) {
+  try {
+    const checkpoint = JSON.parse(contentOf(checkpointPath)) as Phase3Checkpoint;
+    const expected: Array<[boolean, string]> = [
+      [checkpoint.formatVersion === 2, "formatVersion must be 2"],
+      [checkpoint.phase === 3, "phase must be 3"],
+      [checkpoint.state === "audit-in-progress", "state must be audit-in-progress"],
+      [checkpoint.protectedBase === protectedMain, "protectedBase is stale"],
+      [checkpoint.phaseIssue === phaseIssue, "phaseIssue must be 202"],
+      [
+        checkpoint.retainedDesktopEvidenceIssue === retainedInstalledIssue,
+        "retainedDesktopEvidenceIssue must be 201",
+      ],
+      [checkpoint.activeBranch === activeBranch, "activeBranch is stale"],
+      [checkpoint.activeDraftPr === activePr, "activeDraftPr must be 203"],
+      [checkpoint.sessionPurpose === "research-contract", "session purpose is stale"],
+      [
+        checkpoint.auditStatus?.productionImplementation === "not-authorized",
+        "production implementation must remain not-authorized",
+      ],
+      [
+        checkpoint.constraints?.productionEditsAuthorized === false,
+        "productionEditsAuthorized must be false",
+      ],
+      [
+        checkpoint.constraints?.versionBumpAuthorized === false,
+        "versionBumpAuthorized must be false",
+      ],
+      [
+        checkpoint.constraints?.releaseAuthorized === false,
+        "releaseAuthorized must be false",
+      ],
+    ];
+    for (const [ok, detail] of expected) {
+      if (!ok) findings.push({ kind: "drift", file: checkpointPath, detail });
+    }
+  } catch (error) {
+    findings.push({
+      kind: "drift",
+      file: checkpointPath,
+      detail: `checkpoint is not valid JSON: ${String(error)}`,
+    });
+  }
+}
+
 const staleMarkers: Array<[string, string]> = [
-  ["AGENTS.md", "Protected `main`: `522ab1642545803c7a9b6c320fe72cceb320e558`"],
-  ["AGENTS.md", "Draft PR #195 is unmerged"],
-  ["AGENTS.md", "Exact next outcome — PR #195 protected merge decision"],
-  ["AGENTS.md", "Product implementation remains paused while PR #199 is open"],
-  ["AGENTS.md", "Its branch must be created from the then-current protected `main`"],
-  ["documentation/README.md", "Next implementation outcome:** native multi-shop after governance closure"],
-  ["documentation/system/CURRENT_STATE.md", "CI and governance reconciliation"],
-  ["documentation/system/CURRENT_STATE.md", "Confirm the Desktop Agent as the sole active implementation agent"],
-  ["documentation/system/CURRENT_STATE.md", "Create native multi-shop from the then-current protected `main`"],
-  ["documentation/system/CURRENT_STATE.md", "Licensing still contains self-issued trial behavior"],
-  ["documentation/system/CURRENT_STATE.md", "Teams and permissions | Missing/fragmentary"],
-  ["documentation/operations/WORKFLOW.md", "core authority WIP 1"],
-  ["documentation/operations/WORKFLOW.md", "seller vertical WIP 2"],
-  ["documentation/operations/WORKING_MEMORY.md", "Active PR:** draft PR #197"],
-  ["documentation/operations/WORKING_MEMORY.md", "Protected main:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`"],
-  ["documentation/operations/WORKING_MEMORY.md", "Active implementation agent:** none until the Founder selects Web or Desktop"],
-  ["documentation/operations/WORKING_MEMORY.md", "Next implementation package:** Native multi-shop authority"],
-  ["documentation/README.md", "Active package:** Signed licensing and entitlement authority"],
-  ["documentation/README.md", "Active session:** single-agent AAA governance reset"],
-  ["documentation/system/ROADMAP.md", "Active package:** Signed licensing and entitlement authority"],
-  ["documentation/system/ROADMAP.md", "Current session:** governance reset"],
+  ["AGENTS.md", "Active product phase: Phase 2"],
+  ["AGENTS.md", "Active branch: `agent/native-multi-shop-authority`"],
+  ["AGENTS.md", "Active draft: PR #200"],
+  ["AGENTS.md", "The active package is PR #200 only"],
+  ["documentation/README.md", "Active product phase:** Phase 2"],
+  ["documentation/README.md", "Active implementation outcome:** native multi-shop authority"],
+  ["documentation/README.md", "Active draft:** PR #200"],
+  ["documentation/system/ROADMAP.md", "Active product phase:** Phase 2"],
+  ["documentation/system/ROADMAP.md", "Next phase outcome:** native multi-shop"],
+  ["documentation/system/CURRENT_STATE.md", "Active product phase:** Phase 2"],
+  ["documentation/system/CURRENT_STATE.md", "Active proposed package:** PR #200"],
+  ["documentation/system/CURRENT_STATE.md", "This is the final Phase 2 implementation outcome"],
+  ["documentation/operations/WORKING_MEMORY.md", "Active product phase:** Phase 2"],
+  ["documentation/operations/WORKING_MEMORY.md", "Active implementation package:** Native multi-shop authority"],
+  ["documentation/operations/WORKING_MEMORY.md", "Active PR:** #200"],
+  ["README.md", "first Phase 1 manual-confirmation vertical"],
+  ["README.md", "Exact next production outcome"],
+  ["README.md", "first Phase 1 package"],
+  ["CHANGELOG.md", "Phase 2 still needs durable identity/licensing/multi-shop"],
+  ["AGENTS.md", "Protected `main`: `991c61ac882497fdda01af3ac04f06978146bbda`"],
+  ["documentation/README.md", "Live protected main:** `991c61ac882497fdda01af3ac04f06978146bbda`"],
+  ["documentation/system/CURRENT_STATE.md", "Live protected main:** `991c61ac882497fdda01af3ac04f06978146bbda`"],
+  ["documentation/operations/WORKING_MEMORY.md", "Live protected main:** `991c61ac882497fdda01af3ac04f06978146bbda`"],
 ];
 
 for (const [relativePath, marker] of staleMarkers) {
@@ -453,5 +525,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 3 audit frontier ${protectedMain.slice(0, 8)}).`,
 );
