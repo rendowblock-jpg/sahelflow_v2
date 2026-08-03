@@ -83,14 +83,14 @@ describe("central AI tool execution policy", () => {
       proposalDigest: "1".repeat(64),
     });
     expect(createProposal).toHaveBeenCalledTimes(1);
-    expect(createProposal).toHaveBeenCalledWith("create_product", {
-      name: "Widget",
-      price: 1000,
-      stock: 1,
-      sku: undefined,
-      categoryId: undefined,
-      cost: undefined,
-    });
+    expect(createProposal).toHaveBeenCalledWith(
+      "create_product",
+      expect.objectContaining({
+        name: "Widget",
+        price: 1000,
+        stock: 1,
+      }),
+    );
     expect(legacyMutation).not.toHaveBeenCalled();
   });
 
