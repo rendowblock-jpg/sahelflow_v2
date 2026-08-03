@@ -147,8 +147,8 @@ jobs:
           replace_once = '''def replace_once(path: str, old: str, new: str) -> None:
               file = Path(path)
               text = file.read_text()
-              old_lines = [line.strip() for line in old.strip("\\n").splitlines()]
-              new_lines = [line.strip() for line in new.strip("\\n").splitlines()]
+              old_lines = [line.strip() for line in old.strip().splitlines()]
+              new_lines = [line.strip() for line in new.strip().splitlines()]
               source_lines = text.splitlines()
               matches = []
               width = len(old_lines)
@@ -166,7 +166,7 @@ jobs:
                   )
               index = matches[0]
               updated = source_lines[:index] + new_lines + source_lines[index + width:]
-              file.write_text("\\n".join(updated) + ("\\n" if text.endswith("\\n") else ""))
+              file.write_text(chr(10).join(updated) + (chr(10) if text.endswith(chr(10)) else ""))
           '''
           replace_n = '''def replace_n(path: str, old: str, new: str, expected: int) -> None:
               for _ in range(expected):
@@ -175,11 +175,11 @@ jobs:
           regex_once = '''def regex_once(path: str, pattern: str, replacement: str) -> None:
               file = Path(path)
               text = file.read_text()
-              pattern = pattern.strip("\\n")
+              pattern = pattern.strip()
               pattern = re.sub(r"(?m)^ +", r"[ \\t]*", pattern)
               pattern = re.sub(r"\\\\n +", r"\\\\n[ \\t]*", pattern)
-              replacement = "\\n".join(
-                  line.strip() for line in replacement.strip("\\n").splitlines()
+              replacement = chr(10).join(
+                  line.strip() for line in replacement.strip().splitlines()
               )
               updated, count = re.subn(
                   pattern,
@@ -195,10 +195,10 @@ jobs:
           write = '''def write(path: str, content: str) -> None:
               file = Path(path)
               file.parent.mkdir(parents=True, exist_ok=True)
-              content = "\\n".join(
-                  line.strip() for line in content.strip("\\n").splitlines()
+              content = chr(10).join(
+                  line.strip() for line in content.strip().splitlines()
               )
-              file.write_text(content + "\\n")
+              file.write_text(content + chr(10))
           '''
 
           transforms = [
