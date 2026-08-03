@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   source-checkpoint:
@@ -84,102 +84,3 @@ jobs:
           if-no-files-found: warn
           include-hidden-files: true
           retention-days: 2
-
-  task5-adversarial-repair:
-    name: Apply narrowed Task 5 repair
-    if: >-
-      ${{ github.event.pull_request.draft == true &&
-          github.event.pull_request.head.ref == 'agent/phase3-durable-effects-audit' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    env:
-      SF_TEST_ROOT: /tmp/sahelflow-task5-adversarial
-      SF_DATA_DIR: /tmp/sahelflow-task5-adversarial/data
-      DATABASE_URL: file:/tmp/sahelflow-task5-adversarial/data/shops/test.db
-      SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-    steps:
-      - name: Checkout repair branch
-        uses: actions/checkout@v4
-        with:
-          ref: agent/phase3-durable-effects-audit
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Detect one-time repair marker
-        id: repair
-        shell: bash
-        run: |
-          if [[ -f .github/task5-adversarial-trigger ]]; then
-            echo "apply=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "apply=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Setup Bun
-        if: steps.repair.outputs.apply == 'true'
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.14
-
-      - name: Apply reviewed payload
-        if: steps.repair.outputs.apply == 'true'
-        shell: bash
-        run: |
-          python3 <<'PY'
-          from pathlib import Path
-
-          raw = Path('.github/workflows/task5-adversarial-repair.yml').read_text()
-          start_marker = "          python3 <<'PY'\n"
-          end_marker = "\n          PY"
-          start = raw.index(start_marker) + len(start_marker)
-          end = raw.index(end_marker, start)
-          script = "\n".join(
-              line[10:] if line.startswith("          ") else line
-              for line in raw[start:end].splitlines()
-          )
-          exec(compile(script, 'task5-adversarial-repair.py', 'exec'))
-          PY
-
-      - name: Format touched TypeScript
-        if: steps.repair.outputs.apply == 'true'
-        run: |
-          bunx prettier@3.6.2 --write \
-            src/lib/ai/actions/service.ts \
-            src/lib/ai/actions/contracts.ts \
-            src/lib/ai/chat/agent.ts \
-            src/lib/ai/chat/tools/core-tools.ts \
-            src/lib/ai/actions/__tests__/adversarial-boundaries.test.ts \
-            src/lib/ai/actions/__tests__/service.test.ts \
-            src/lib/ai/actions/__tests__/source-contract.test.ts \
-            src/lib/ai/chat/__tests__/agent-proposal.test.ts
-
-      - name: Install frozen dependencies
-        if: steps.repair.outputs.apply == 'true'
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        if: steps.repair.outputs.apply == 'true'
-        run: bunx prisma generate
-
-      - name: Prepare disposable test sandbox
-        if: steps.repair.outputs.apply == 'true'
-        run: bun run test:sandbox -- "$SF_TEST_ROOT"
-
-      - name: Complete repair gate
-        if: steps.repair.outputs.apply == 'true'
-        run: |
-          bun run sf-version
-          bun run sf-audit
-          bun run sf-verify
-          bunx prisma migrate status
-
-      - name: Commit verified repair
-        if: steps.repair.outputs.apply == 'true'
-        run: |
-          rm -f .github/task5-adversarial-trigger
-          git config user.name "SahelFlow Task 5 Repair"
-          git config user.email "actions@users.noreply.github.com"
-          git add -A
-          git diff --cached --check
-          git commit -m "fix(ai): close adversarial proposal boundaries"
-          git push origin HEAD:agent/phase3-durable-effects-audit
