@@ -12,7 +12,6 @@ use tauri::Manager;
 mod shop_lifecycle_host;
 
 const RUNTIME_BOOTSTRAP_PATH: &str = "/api/internal/runtime-bootstrap";
-const RUNTIME_COOKIE: &str = "sf_runtime";
 const RUNTIME_ENDPOINT_FILE: &str = "runtime-endpoint.json";
 const RUNTIME_UI_READY_FILE: &str = "runtime-ui-ready.json";
 const RUNTIME_UI_DIAGNOSTIC_FILE: &str = "runtime-ui-diagnostic.json";
@@ -87,12 +86,12 @@ struct PackagedHandoff {
 
 /// Navigate the configured WebView to a ready application.
 ///
-/// Development URLs are shown immediately. Packaged startup loads a hidden,
+/// Development URLs are shown immediately. Packaged startup first shows a safe,
 /// one-time loopback bootstrap document. That response sets the host-only HttpOnly
 /// launch cookie, then uses `location.replace("/")` so the credential-bearing URL
-/// is replaced before the workspace can become visible. The hidden window is shown
-/// only after a hydrated page reports an authenticated UI acknowledgment matching
-/// the current runtime endpoint instance.
+/// is replaced before the workspace renders. The window is considered ready only
+/// after a hydrated page reports an authenticated UI acknowledgment matching the
+/// current runtime endpoint instance.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let requested_url = tauri::Url::parse(app_url)?;
     let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
@@ -119,8 +118,9 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
     record_startup_stage(&app_data_dir, "ui-navigation-started", None);
 
-    window.hide()?;
     window.navigate(handoff.bootstrap_url)?;
+    window.show()?;
+    window.set_focus()?;
 
     monitor_packaged_ui(app.clone(), window, app_data_dir);
     Ok(())
