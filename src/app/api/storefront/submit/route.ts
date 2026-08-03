@@ -73,9 +73,6 @@ async function verifyTurnstileToken(
 
 const submitSchema = z.object({
   slug: z.string().trim().min(1).max(120),
-  // Current clients persist this UUID across response-loss retries. It remains
-  // optional only so already-deployed storefront pages can transition safely;
-  // the server mints a one-shot identity for those legacy requests.
   submissionId: z.string().uuid().optional(),
   customer: z.object({
     name: z.string().trim().min(1).max(100),
@@ -194,10 +191,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   );
 
   if (!command.replayed) {
-    void dispatchTrigger(
+    await dispatchTrigger(
       { prisma: db, shop: shopContext },
       "order.created" as TriggerEvent,
       command.result.automation,
+      {
+        triggerKey: `order.created:${command.result.order.id}`,
+        occurredAt: command.result.order.createdAt,
+      },
     );
   }
 
