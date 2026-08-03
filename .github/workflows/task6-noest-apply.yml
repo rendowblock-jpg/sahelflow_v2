@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: task6-noest-provider-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -52,10 +52,6 @@ jobs:
         if: steps.package.outputs.apply == 'true'
         run: |
           set -euo pipefail
-          for part in .github/task6-noest-text/part*; do
-            wc -c "$part"
-            sha256sum "$part"
-          done
           cat .github/task6-noest-text/part* > /tmp/task6-noest.patch
           python3 - <<'PY'
           from pathlib import Path
@@ -72,25 +68,21 @@ jobs:
               raise SystemExit(f'expected one staged chunk overlap, found {count}')
           path.write_text(data.replace(overlap, block, 1))
           PY
-          wc -c /tmp/task6-noest.patch
-          sha256sum /tmp/task6-noest.patch
+          printf '%s  %s\n' 'cc00774456d1f7dbf473458008404aa565b8d51637c8bbdf7f79ac333566c8f3' /tmp/task6-noest.patch | sha256sum -c -
 
-      - name: Upload reconstructed patch diagnostics
-        if: steps.package.outputs.apply == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: task6-noest-reconstructed-patch
-          path: /tmp/task6-noest.patch
-          if-no-files-found: error
-          retention-days: 2
-
-      - name: Verify and apply exact patch
+      - name: Apply exact package and focused repair
         if: steps.package.outputs.apply == 'true'
         run: |
           set -euo pipefail
-          printf '%s  %s\n' 'cc00774456d1f7dbf473458008404aa565b8d51637c8bbdf7f79ac333566c8f3' /tmp/task6-noest.patch | sha256sum -c -
           git apply --3way --index /tmp/task6-noest.patch
-          rm -rf .github/task6-noest-patch .github/task6-noest-text .github/task6-noest.trigger
+          test -f .github/task6-noest-followup.patch
+          printf '%s  %s\n' 'd87c8cff12dd2c9c726e0adb5a5bfd899e0c78567aae15081173a5c508bde0dd' .github/task6-noest-followup.patch | sha256sum -c -
+          git apply --3way --index .github/task6-noest-followup.patch
+          rm -rf \
+            .github/task6-noest-patch \
+            .github/task6-noest-text \
+            .github/task6-noest.trigger \
+            .github/task6-noest-followup.patch
           git add -A
           git diff --cached --check
 
@@ -109,10 +101,24 @@ jobs:
       - name: Full source gate
         if: steps.package.outputs.apply == 'true'
         run: |
+          set -o pipefail
           bun run sf-version
           bun run sf-audit
-          bun run sf-verify
+          bun run sf-verify 2>&1 | tee .sf-task6-noest.log
           bunx prisma migrate status
+
+      - name: Upload failure diagnostics
+        if: failure() && steps.package.outputs.apply == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: task6-noest-failure-diagnostics
+          path: |
+            .sf-task6-noest.log
+            .sf-vitest-first-failure.txt
+            .sf-vitest-failures.txt
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 2
 
       - name: Commit verified source-only package
         if: steps.package.outputs.apply == 'true'
