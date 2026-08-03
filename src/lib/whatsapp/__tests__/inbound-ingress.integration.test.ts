@@ -66,7 +66,7 @@ describe("durable WhatsApp inbound ingress", () => {
     expect(stored.payloadJson).not.toContain("Client secret");
     expect(stored.payloadJson).not.toContain("213555000111");
     expect(stored.payloadJson).not.toContain("213555999000");
-    expect(stored.providerTimestamp.toISOString()).toBe(
+    expect(stored.providerTimestamp?.toISOString()).toBe(
       new Date(1_786_000_000 * 1_000).toISOString(),
     );
   });
