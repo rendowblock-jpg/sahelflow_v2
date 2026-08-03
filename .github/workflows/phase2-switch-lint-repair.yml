@@ -1,0 +1,59 @@
+name: Phase 2 switch lint repair
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/phase2-switch-lint-repair.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase2-switch-lint-repair-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact lifecycle head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Remove redundant error conversion
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src-tauri/src/shop_lifecycle_switch.rs")
+          source = path.read_text(encoding="utf-8")
+          before = "write_json_atomic(&current, &self.journal).map_err(Into::into)"
+          after = "write_json_atomic(&current, &self.journal)"
+          if source.count(before) != 1:
+              raise SystemExit("switch lint anchor changed")
+          path.write_text(source.replace(before, after), encoding="utf-8")
+
+      - name: Setup Rust formatter
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Format and verify repair
+        run: |
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all
+          git diff --check
+
+      - name: Commit exact repair and remove helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/phase2-switch-lint-repair.yml
+          git add src-tauri/src/shop_lifecycle_switch.rs
+          git commit -m "style(phase2): remove redundant switch error conversion"
+          git push origin HEAD:agent/native-multi-shop-authority
