@@ -12,14 +12,15 @@ import { orderService } from "@/lib/data/order-service";
 import type { Order } from "@/types/domain";
 
 beforeEach(() => {
-  automation.dispatchTrigger.mockReset();
+  automation.dispatchTrigger.mockReset().mockResolvedValue(undefined);
   automation.detectLowStock.mockReset();
-  automation.dispatchLowStock.mockReset();
+  automation.dispatchLowStock.mockReset().mockResolvedValue(undefined);
 });
 
 describe("order status automation payload", () => {
-  it("publishes the canonical customerPhone field and no legacy phone alias", () => {
+  it("publishes the canonical customerPhone field and no legacy phone alias", async () => {
     const context = {} as never;
+    const updatedAt = new Date("2026-08-03T12:00:00.000Z");
     const order = {
       id: "order-1",
       orderNumber: "ORD-0001",
@@ -28,9 +29,10 @@ describe("order status automation payload", () => {
       totalPrice: 12_000,
       wilaya: "Alger",
       phone: "0555000111",
+      updatedAt,
     } as unknown as Order;
 
-    orderService.dispatchStatusTransition(context, {
+    await orderService.dispatchStatusTransition(context, {
       order,
       changed: true,
       lowStockProducts: [],
@@ -47,6 +49,10 @@ describe("order status automation payload", () => {
         customerPhone: "0555000111",
         totalPrice: 12_000,
         wilaya: "Alger",
+      },
+      {
+        triggerKey: "order.delivered:order-1:2026-08-03T12:00:00.000Z",
+        occurredAt: updatedAt,
       },
     );
     const payload = automation.dispatchTrigger.mock.calls[0]?.[2] as
