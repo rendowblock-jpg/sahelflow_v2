@@ -127,14 +127,17 @@ jobs:
         run: |
           python3 <<'PY'
           from pathlib import Path
-          from textwrap import dedent
 
           raw = Path('.github/workflows/task5-adversarial-repair.yml').read_text()
           start_marker = "          python3 <<'PY'\n"
           end_marker = "\n          PY"
           start = raw.index(start_marker) + len(start_marker)
           end = raw.index(end_marker, start)
-          script = dedent(raw[start:end])
+          lines = raw[start:end].splitlines()
+          script = "\n".join(
+              line[10:] if line.startswith("          ") else line
+              for line in lines
+          )
           exec(compile(script, 'task5-adversarial-repair.py', 'exec'))
           PY
 
