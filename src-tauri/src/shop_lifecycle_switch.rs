@@ -284,7 +284,7 @@ impl AcceptedSwitch {
 
     fn persist_journal(&self) -> Result<(), SwitchAuthorityError> {
         let current = journal_current_path(&self.app_data_dir);
-        write_json_atomic(&current, &self.journal).map_err(Into::into)
+        write_json_atomic(&current, &self.journal)
     }
 
     fn persist_terminal_journal(&self) -> Result<(), SwitchAuthorityError> {
