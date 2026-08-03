@@ -162,6 +162,10 @@ export class WhatsAppInboundSpool {
     }
     this.onCommitted = options.onCommitted;
     this.ensureDirectory();
+    // A key mismatch or tampered record blocks the provider socket before new
+    // messages can arrive. Silently skipping unreadable customer data is never
+    // an acceptable recovery strategy.
+    this.listRecords();
   }
 
   private ensureDirectory(): void {
@@ -195,8 +199,6 @@ export class WhatsAppInboundSpool {
     ) {
       throw new Error(`Unsupported WhatsApp inbound spool record: ${path}`);
     }
-    // Compatibility for a record written by the first Task 3 implementation
-    // commit before terminal publish/no-publish was explicit.
     if (parsed.publish === undefined) parsed.publish = null;
     return parsed;
   }
@@ -291,13 +293,17 @@ export class WhatsAppInboundSpool {
     const records: StoredInboundRecord[] = [];
     for (const name of readdirSync(this.directory)) {
       if (!/^[0-9a-f]{64}\.json$/.test(name)) continue;
+      const path = join(this.directory, name);
       try {
-        records.push(this.readRecord(join(this.directory, name)));
+        records.push(this.readRecord(path));
       } catch (error) {
         console.error(
-          "[sahelflow-whatsapp-sidecar] unreadable inbound spool record",
+          "[sahelflow-whatsapp-sidecar] inbound spool integrity check failed",
           error instanceof Error ? error.message : String(error),
         );
+        throw new Error("WhatsApp inbound spool cannot be opened safely", {
+          cause: error,
+        });
       }
     }
     return records.sort((left, right) =>
