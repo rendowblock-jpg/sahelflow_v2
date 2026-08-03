@@ -55,9 +55,6 @@ function triggerScope(context: ServiceContext): readonly string[] {
     ];
   }
   if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
-    // Test-only service contexts intentionally use an unextended disposable
-    // Prisma client without native ShopContext. Bind trigger identity to the
-    // exact disposable database URL so parallel sandboxes cannot collide.
     return ["test", process.env.DATABASE_URL ?? "disposable-test-database"];
   }
   throw new SahelFlowError(
@@ -75,17 +72,17 @@ export async function enqueueAutomationTrigger(
 ): Promise<QueuedAutomationTrigger> {
   const trigger = automationTriggerSchema.parse(rawTrigger);
   const payload = parseAutomationTriggerPayload(trigger, rawPayload);
+  const payloadHash = automationHash(payload);
   const triggerKey = normalizeTriggerKey(trigger, payload, options.triggerKey);
   const effectKey = `automation-trigger:${automationHash([
     trigger,
     triggerKey,
     ...triggerScope(context),
   ])}`;
-  const occurredAt = options.occurredAt ?? new Date();
   const envelope: AutomationTriggerEnvelope = {
     trigger,
     triggerKey,
-    occurredAt: occurredAt.toISOString(),
+    occurredAt: (options.occurredAt ?? new Date()).toISOString(),
     payload,
   };
   const commandContext = {
@@ -104,7 +101,10 @@ export async function enqueueAutomationTrigger(
       },
       actor: commandContext.businessPrincipal.auditActor,
       correlationId: triggerKey,
-      payload: envelope,
+      // Event time is first-write metadata. The idempotency request binds the
+      // stable event identity and content hash so exact retry cannot conflict
+      // merely because the local clock advanced before the response replay.
+      payload: { trigger, triggerKey, payloadHash },
     },
     async () => ({
       result: { effectKey, triggerKey },
@@ -113,10 +113,7 @@ export async function enqueueAutomationTrigger(
         entity: "automation-trigger",
         entityId: effectKey,
         after: { trigger },
-        metadata: {
-          triggerKey,
-          payloadHash: automationHash(payload),
-        },
+        metadata: { triggerKey, payloadHash },
       },
       events: [
         {
