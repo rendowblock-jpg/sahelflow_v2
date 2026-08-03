@@ -90,17 +90,6 @@ jobs:
               file.parent.mkdir(parents=True, exist_ok=True)
               file.write_text(content)
 
-          service = "src/lib/ai/actions/service.ts"
-          replace_lines(
-              service,
-              [
-                  "  const requesterEffective = sortedPermissions(",
-                  "    resolvePhase2Permissions(requester.role, null),",
-                  "  );",
-              ],
-              ["  const requesterEffective = effectivePermissions(requester);"],
-          )
-
           contracts = "src/lib/ai/actions/contracts.ts"
           replace_exact(
               contracts,
