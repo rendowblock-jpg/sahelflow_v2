@@ -25,7 +25,6 @@ import {
   DisconnectReason,
   type WASocket,
   type proto,
-  type AuthenticationCreds,
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import P from "pino";
@@ -246,7 +245,7 @@ class WhatsAppManager {
 
     this.sock = makeWASocket({
       version,
-      auth: state as unknown as AuthenticationCreds,
+      auth: state,
       logger,
       printQRInTerminal: false,
       browser: ["SahelFlow", "Chrome", "3.0.0"],
@@ -337,7 +336,7 @@ class WhatsAppManager {
           jid: u.key.remoteJid ?? "",
           id: u.key.id ?? "",
           fromMe: u.key.fromMe ?? false,
-          update: u.update ?? {},
+          update: (u.update ?? {}) as Record<string, unknown>,
         }));
       if (updateList.length) {
         this.emit({ type: "message-update", updates: updateList } as SidecarEvent);
@@ -351,8 +350,9 @@ class WhatsAppManager {
       // WhatsApp messages are persisted to Message rows.
       for (const u of updates) {
         if (!u.key.fromMe) continue;
-        const upd = u.update ?? {};
-        const hasError = upd.error !== undefined && upd.error !== null;
+        const upd = (u.update ?? {}) as Record<string, unknown>;
+        const providerError = upd.error;
+        const hasError = providerError !== undefined && providerError !== null;
         const mappedStatus = mapBaileysStatus(upd.status);
         if (hasError) {
           // Failure — always surface to the app for audit logging +
@@ -362,7 +362,7 @@ class WhatsAppManager {
             jid: u.key.remoteJid ?? "",
             fromMe: true,
             deliveryStatus: "failed",
-            error: String(upd.error),
+            error: String(providerError),
           });
         } else if (mappedStatus) {
           // Status change (sent → delivered → read). POST so the endpoint
@@ -418,7 +418,7 @@ class WhatsAppManager {
     );
     return {
       id: sent?.key?.id ?? "",
-      status: sent?.status ?? "sent",
+      status: String(sent?.status ?? "sent"),
     };
   }
 
