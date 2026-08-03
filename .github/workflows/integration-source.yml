@@ -7,10 +7,10 @@ on:
 
 concurrency:
   group: integration-source-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   source-checkpoint:
@@ -84,31 +84,3 @@ jobs:
           if-no-files-found: warn
           include-hidden-files: true
           retention-days: 2
-
-  task5-scripted-repair:
-    name: Verified Task 5 adversarial repair
-    if: >-
-      ${{ github.event.pull_request.draft == true &&
-          github.event.pull_request.head.ref == 'agent/phase3-durable-effects-audit' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    env:
-      SF_TEST_ROOT: /tmp/sahelflow-task5-scripted
-      SF_DATA_DIR: /tmp/sahelflow-task5-scripted/data
-      DATABASE_URL: file:/tmp/sahelflow-task5-scripted/data/shops/test.db
-      SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-    steps:
-      - name: Checkout exact repair head
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.14
-
-      - name: Run verified repair script
-        run: bash .github/task5-inline-repair.sh
