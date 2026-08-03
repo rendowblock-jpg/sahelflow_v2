@@ -16,8 +16,8 @@
 > **Exact branch base:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
 > **Active implementation agent:** ChatGPT Web Agentic Coding Agent
 > **Current session purpose:** implementation
-> **Completed source package:** durable inbound WhatsApp and database-authoritative inbox
-> **Authorized production package:** truthful durable automations and WhatsApp effect adoption only
+> **Completed source packages:** durable inbound WhatsApp; truthful durable automations
+> **Authorized production package:** proposal-bound sensitive AI actions only
 > **All other Phase 3 production work:** not authorized
 
 Live GitHub is authority. Re-read protected `main`, PR #203, its exact head,
@@ -27,15 +27,12 @@ state.
 ## Protected truth
 
 PR #200 merged native multi-shop authority at
-`e9c92f08f39e8d87ddfd72d2e698418ae81fc084`. Phase 2 protected source includes
-trusted identity, permissions, signed licensing and Tauri-owned journaled shop
-create, rename, switch, archive, recover and delete.
-
-The PR #200 MSI built, installed, launched, closed and reopened, but the
-ephemeral runner did not prove authenticated hydrated-WebView readiness twice.
-That retained evidence limitation belongs only to issue #201. No Phase 1/2 merge
-bumped the version, published a release, proved Founder acceptance or released
-Stable. Published executable truth remains Internal.13.
+`e9c92f08f39e8d87ddfd72d2e698418ae81fc084`. Published executable truth remains
+Internal.13. Founder acceptance remains open; Internal.5 is the accepted
+baseline. Issue #201 retains only the installed hydrated-WebView limitation.
+No Phase 3 source package has changed the application version, produced a signed
+artifact, proved installed Windows behavior, earned Founder acceptance or
+released Stable.
 
 ## Phase 3 objective
 
@@ -74,131 +71,156 @@ narrow production authorization are in
 
 **Exact source head:** `f016055be55fd220baa87c26ffed565c4e9e1d85`
 
-**Full source checkpoint:** run `30808773702` — passed.
+**Full source checkpoint:** `30808773702` — passed.
 
-**Normal CI:** run `30808774055` — risk classification, fast authority and
-Required PR gate passed.
+**Normal CI:** `30808774055` — passed.
+
+**Open review threads:** zero.
+
+Source-proven outcome includes authenticated persistence-before-acknowledgement,
+encrypted sidecar spool, exact account/shop-incarnation/message identity,
+leased canonical inbox normalization, atomic audit/event/automation intent,
+database-authoritative reads, post-commit WebSocket publication, active-shop
+recovery workers, immutable attempts, operator replay and AR/FR/EN recovery UI.
+
+The separated repair batch closed Baileys type drift, plaintext spool evidence,
+wrong/tampered key handling, attempt collisions, stale lease history, duplicate
+WebSocket publication and the `phone`/`customerPhone` mismatch.
+
+Task 3 evidence is source/integration/database only. It is not signed, installed,
+live-provider-certified, Founder-accepted, Phase 3 closed or Stable.
+
+## Completed Task 4 — truthful durable automations
+
+**Exact source head:** `c873b8b6a256383497d3799e0839160178e92149`
+
+**Full source checkpoint:** `30826354580` — passed frozen install, Prisma
+generation/deployment, authority audit, TypeScript, ESLint, complete Vitest and
+migration status.
+
+**Normal CI:** `30826355685` — risk classification, fast authority and Required
+PR gate passed.
 
 **Open review threads:** zero.
 
 ### Source-proven outcome
 
-- additive `ProviderIngressEvent` and `ProviderIngressAttempt` persistence;
-- exact provider/account/workspace/shop-incarnation/message identity;
-- authenticated app ingress with database commit before acknowledgement;
-- sidecar spool written before delivery or broadcast;
-- AES-256-GCM spool encryption with purpose-bound associated data;
-- fail-closed key mismatch and tamper behavior;
-- leased idempotent normalization into canonical `Conversation` and `Message`;
-- atomic audit, domain event and encrypted `automation.trigger.v1` intent;
-- database-authoritative WhatsApp chat and message reads;
-- post-commit-only WebSocket publication and client replay deduplication;
-- active-shop restart worker, bounded retry, quarantine and dead letter;
-- immutable attempt history including truthful expired-lease closure;
-- sanitized operator history and reason-bound audited replay;
-- AR/FR/EN recovery UI with RTL-safe identifiers and attempt history;
-- canonical `customerPhone` on status and inbound trigger payloads.
+- additive `AutomationRun`, `AutomationStepRun` and `AutomationStepAttempt`;
+- encrypted immutable trigger, definition, step-config and result snapshots;
+- stable trigger-event plus automation-definition identity;
+- active-shop trigger materializer and ordered run worker;
+- explicit stop/continue policy and truthful queued, retrying, waiting-effect,
+  succeeded, partially-completed, failed, ambiguous, dead-letter and skipped
+  states;
+- restart-safe leases, bounded automatic retries and immutable attempts;
+- `send_whatsapp` through the existing durable WhatsApp effect authority with
+  step-to-effect correlation and receipt reconciliation;
+- deterministic daily-report WhatsApp identity and marker-loss receipt replay;
+- strict trigger/action/config schemas and complete recipe activation payloads;
+- sanitized run/step/attempt history and reason-bound audited operator retry;
+- provider-bound outcomes remain under WhatsApp duplicate-risk reconciliation;
+- AR/FR/EN recovery UI with RTL-safe effect identifiers;
+- all known production trigger producers await bounded durable persistence;
+- repository regression contract forbids fire-and-forget producers.
 
 ### Separated adversarial review and repair batch
 
 The frozen pass found and repaired:
 
-- Baileys 6.17 type incompatibilities;
-- plaintext raw WhatsApp evidence in the first spool implementation;
-- wrong/tampered spool-key handling;
-- retry-attempt collisions and stale processing history;
-- duplicate live WebSocket bubbles;
-- the `phone` versus `customerPhone` payload mismatch.
+- trigger replay bound to a fresh local timestamp;
+- invalid nested parent/step materialization;
+- unawaited database-action promise rejection;
+- future retry hot loops and stale leases;
+- false success after required failure;
+- legacy test worker leakage and durable-table cleanup gaps;
+- different-key SQLite trigger writer contention;
+- repeated blacklist-cycle identity collapse;
+- incomplete one-click recipe configuration;
+- direct daily-report sidecar delivery and marker-loss duplication;
+- provider-effect repetition through automation recovery.
 
-### Evidence boundary
+### Closed Task 4 problems
 
-Task 3 is clean GitHub Actions source/integration/database evidence. It is **not**
-a signed artifact, installed Windows, T470, live-provider certification, Founder
-acceptance, Phase 3 closure or Stable evidence.
+- **P3-P1-003 — closed-source-proven:** no false success after failed required steps.
+- **P3-P1-004 — closed-source-proven:** WhatsApp actions use durable effects.
+- **P3-P1-009 — closed-source-proven:** only complete executable definitions activate.
+- **P3-P1-011 — closed-source-proven:** daily-report replay cannot send twice after marker loss.
+
+Task 4 evidence is source/integration/database/development-UI only. It is not
+signed, installed, live-provider-certified, Founder-accepted, Phase 3 closed or
+Stable.
 
 ## Frozen Problem Register
 
-- **P3-P1-001 — closed:** stale active authority after PR #200.
-- **P3-P1-002 — closed-source-proven:** inbound WhatsApp durability.
-- **P3-P1-003 — open / Task 4:** multi-step automation failures can report success.
-- **P3-P1-004 — open / Task 4:** automation WhatsApp bypasses durable effects.
-- **P3-P1-005 — open / later:** sensitive AI approval is not proposal-bound.
+- **P3-P1-001 — closed-source-proven:** stale active authority after PR #200.
+- **P3-P1-002 — closed-source-proven:** durable inbound WhatsApp.
+- **P3-P1-003 — closed-source-proven:** truthful multi-step aggregate state.
+- **P3-P1-004 — closed-source-proven:** durable automation WhatsApp effects.
+- **P3-P1-005 — open / authorized Task 5:** sensitive AI approval is not proposal-bound.
 - **P3-P1-006 — open / later:** provider protocols remain fragmented.
 - **P3-P1-007 — open / later:** commerce lacks durable run/item recovery.
 - **P3-P1-008 — open / later:** uncertified DHD can enter normal provider authority.
-- **P3-P1-009 — open / Task 4:** automation catalog exposes invalid producer/config combinations.
-- **P3-P1-010 — closed-source-proven:** status trigger now uses `customerPhone`.
-- **P3-P1-011 — open / Task 4:** daily report can duplicate through direct sidecar dispatch.
-- **P3-P2-001 — closed-source-proven:** only the active native runtime drains its shop DB; inactive work remains durable.
-- **P3-P2-002 — open / later:** courier current/reviewed-base/legacy layering.
+- **P3-P1-009 — closed-source-proven:** executable automation catalog/config.
+- **P3-P1-010 — closed-source-proven:** canonical `customerPhone` payload.
+- **P3-P1-011 — closed-source-proven:** durable daily-report identity and replay.
+- **P3-P2-001 — closed-source-proven:** active-runtime worker ownership.
+- **P3-P2-002 — open / later:** courier implementation layering.
 - **P3-P2-003 — open / later:** implementation is not live certification.
 - **P3-P2-004 — open / issue #201:** installed hydrated-WebView evidence.
 
 ## Frozen shared contract
 
 - Reuse canonical `BusinessCommand`, `DomainEvent` and encrypted `OutboxIntent`.
-- Sensitive provider payloads and requests are encrypted at rest and in durable
-  protocol records; logs expose bounded redacted metadata only.
+- Sensitive provider payloads and requests are encrypted; logs expose bounded
+  redacted metadata only.
 - Inbound acknowledgement follows database commit; publication follows the
   committed result.
-- External provider calls never execute inside a business transaction.
+- External provider calls never execute inside business transactions.
 - Effect identity, attempts, leases, known/ambiguous outcome, receipts, dead
   letter and operator reconciliation remain explicit.
-- Only the exact active native runtime drains its shop DB. Native switching
-  quiesces the runtime and workers; inactive-shop work remains durable.
-- Automation aggregate truth derives from persisted ordered step state.
-- AI approval later binds exact persisted proposal, arguments, actor, shop,
+- Only the exact active native runtime drains its shop DB; inactive-shop work
+  remains durable.
+- Automation aggregate truth derives from persisted ordered step state and all
+  trigger producers await bounded persistence.
+- AI approval binds one exact persisted proposal, arguments, actor, shop,
   versions, policy, entitlement, expiry and one-time execution.
 - Server-side certification and kill switches gate provider capabilities. DHD
   remains disabled in production until live-certified.
 
-## Authorized Task 4 — truthful durable automations
+## Authorized Task 5 — proposal-bound sensitive AI actions
 
 Only this coherent production package is authorized now:
 
-1. Add additive `AutomationRun`, `AutomationStepRun` and
-   `AutomationStepAttempt` persistence.
-2. Bind run identity to exact committed trigger-event identity and automation
-   definition version.
-3. Add an active-shop worker that consumes committed
-   `automation.trigger.v1` intents.
-4. Persist ordered steps, explicit stop/continue policy and truthful aggregate
-   state; a failed required step can never become overall success.
-5. Add restart-safe leases, retries, dead letter, replay and operator history.
-6. Route `send_whatsapp` through the existing durable WhatsApp outbox and persist
-   step-to-effect correlation.
-7. Give daily reports stable durable effect identity and remove direct sidecar
-   dispatch from the report route.
-8. Define strict trigger/action/config schemas and fail closed when a trigger has
-   no committed producer or an action lacks required configuration.
-9. Add AR/FR/EN, RTL, accessibility and partial/retry/dead-letter states.
-10. Prove concurrency, restart, replay and no-false-success behavior through
-    database and route/UI tests.
+1. Persist an immutable sensitive-action proposal before approval.
+2. Bind the proposal digest, encrypted arguments, actor, session, device, exact
+   shop, policy, permissions, entitlement, target versions and expiry.
+3. Require one exact approval for one exact proposal.
+4. Claim execution once so double approval or response replay cannot repeat a
+   mutation.
+5. Route approved mutations through canonical commands and durable effects.
+6. Remove generic current-message confirmation as sensitive-action authority.
+7. Fail closed on proposal tamper, expiry, actor/shop/policy drift and target
+   version conflict.
+8. Retain sanitized proposal, approval, execution and recovery history.
+9. Provide AR/FR/EN approval, stale, conflict and recovery states.
+10. Prove tamper, expiry, double approval, one-time execution, restart and
+    no-direct-mutation behavior.
 
-### Task 4 non-goals
+### Task 5 non-goals
 
-- proposal-bound AI;
 - courier or commerce convergence;
 - live provider certification;
-- application version bump, MSI, release, Founder acceptance or Stable.
+- application version bump, MSI, release, Founder acceptance, Phase 3 closure
+  or Stable.
 
-### Task 4 gate
+## Dependency-correct sequence after Task 5
 
-- append-only migration and supported prior-database compatibility;
-- focused tests during implementation;
-- complete risk-selected Level 1 Task Gate;
-- frozen exact-head separated adversarial review;
-- one consolidated repair batch before closure.
-
-## Dependency-correct sequence after Task 4
-
-1. Close truthful durable automations.
-2. Authorize and implement proposal-bound sensitive AI actions.
-3. Converge courier and commerce on the shared provider protocol.
-4. Complete capability certification, operator recovery and complete AR/FR/EN
-   states.
-5. Freeze Phase 3, run Level 2 and applicable provider/installed/Level 3
-   evidence, then close only with zero known P0/P1.
+1. Close proposal-bound sensitive AI actions.
+2. Authorize later provider/courier/commerce convergence through a new checkpoint.
+3. Complete capability certification and complete operator recovery states.
+4. Freeze Phase 3 and run its Level 2 and applicable provider/installed/Level 3
+   evidence.
+5. Close only with zero known P0/P1 and no fabricated release/installed claim.
 
 ## Protected local boundaries and non-claims
 
@@ -208,5 +230,5 @@ Only this coherent production package is authorized now:
 - Preserve canonical AppData, registry, shop databases, migrations and keys.
 - Historical Phase 3 branches and PR #194 are evidence only; never merge or
   cherry-pick them wholesale.
-- No application version bump, release, MSI publication, Founder acceptance or
-  Stable claim.
+- No application version bump, release, MSI publication, Founder acceptance,
+  Phase 3 closure or Stable claim.
