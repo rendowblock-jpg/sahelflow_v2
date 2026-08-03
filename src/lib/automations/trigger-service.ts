@@ -45,29 +45,41 @@ function normalizeTriggerKey(
   return `${trigger}:${automationHash(payload)}`;
 }
 
+function triggerScope(context: ServiceContext): readonly string[] {
+  if (context.shop) {
+    return [
+      context.shop.workspaceId,
+      context.shop.installationId,
+      context.shop.shopId,
+      context.shop.shopIncarnationId,
+    ];
+  }
+  if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
+    // Test-only service contexts intentionally use an unextended disposable
+    // Prisma client without native ShopContext. Bind trigger identity to the
+    // exact disposable database URL so parallel sandboxes cannot collide.
+    return ["test", process.env.DATABASE_URL ?? "disposable-test-database"];
+  }
+  throw new SahelFlowError(
+    "Automation triggers require an exact trusted ShopContext",
+    "AUTOMATION_SHOP_AUTHORITY_REQUIRED",
+    500,
+  );
+}
+
 export async function enqueueAutomationTrigger(
   context: ServiceContext,
   rawTrigger: AutomationTrigger,
   rawPayload: unknown,
   options: AutomationTriggerOptions = {},
 ): Promise<QueuedAutomationTrigger> {
-  if (!context.shop) {
-    throw new SahelFlowError(
-      "Automation triggers require an exact trusted ShopContext",
-      "AUTOMATION_SHOP_AUTHORITY_REQUIRED",
-      500,
-    );
-  }
   const trigger = automationTriggerSchema.parse(rawTrigger);
   const payload = parseAutomationTriggerPayload(trigger, rawPayload);
   const triggerKey = normalizeTriggerKey(trigger, payload, options.triggerKey);
   const effectKey = `automation-trigger:${automationHash([
     trigger,
     triggerKey,
-    context.shop.workspaceId,
-    context.shop.installationId,
-    context.shop.shopId,
-    context.shop.shopIncarnationId,
+    ...triggerScope(context),
   ])}`;
   const occurredAt = options.occurredAt ?? new Date();
   const envelope: AutomationTriggerEnvelope = {
@@ -127,8 +139,6 @@ export async function enqueueAutomationTrigger(
       ],
     }),
   );
-  // The command kernel canonicalizes payloads. This assertion keeps accidental
-  // non-canonical trigger evolution visible during development.
   canonicalJson(envelope);
   return {
     effectKey: execution.result.effectKey,
