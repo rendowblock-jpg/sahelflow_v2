@@ -55,6 +55,11 @@ import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 
 let db: PrismaClient;
 
+type TestPersonActor = Extract<
+  TrustedActorContext["actor"],
+  { kind: "person" }
+>;
+
 function licenseProjection() {
   return {
     status: "valid" as const,
@@ -71,7 +76,9 @@ function licenseProjection() {
   };
 }
 
-function context(actor = harness.owner): TrustedActorContext {
+function context(
+  actor: TestPersonActor = harness.owner as TestPersonActor,
+): TrustedActorContext {
   return {
     version: 1,
     actor,
@@ -125,7 +132,7 @@ describe("proposal authority regressions", () => {
       role: "manager" as const,
       sessionId: "session-manager",
       permissions,
-    };
+    } satisfies TestPersonActor;
     harness.resolveDurableIdentityActor.mockResolvedValue({
       personId: member.personId,
       workspaceMemberId: member.workspaceMemberId,
@@ -220,7 +227,7 @@ describe("proposal authority regressions", () => {
       role: "operator" as const,
       sessionId: "session-restricted",
       permissions: ["ai.use"] as const,
-    };
+    } satisfies TestPersonActor;
     await expect(
       listAiActionProposals(
         { prisma: db as never, shop: TEST_SHOP_CONTEXT },
