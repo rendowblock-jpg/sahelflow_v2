@@ -52,6 +52,7 @@ type LowStockProduct = {
   sku: string | null;
   stock: number;
   lowStockThreshold: number;
+  updatedAt?: Date;
 };
 
 export interface OrderStatusTransitionEffects {
@@ -238,31 +239,38 @@ async function updateStatusInTransaction(
   };
 }
 
-function dispatchCommittedStatusTransition(
+async function dispatchCommittedStatusTransition(
   ctx: ServiceContext,
   effects: OrderStatusTransitionEffects,
-): void {
+): Promise<void> {
   if (!effects.changed) return;
 
-  for (const product of effects.lowStockProducts) {
-    void dispatchLowStock(ctx, product);
-  }
-
   const order = effects.order;
-  void dispatchTrigger(ctx, `order.${order.status}` as TriggerEvent, {
-    orderId: order.id,
-    orderNumber: order.orderNumber,
-    customerId: order.customerId,
-    customerPhone: order.phone,
-    totalPrice: order.totalPrice,
-    wilaya: order.wilaya,
-  });
+  await Promise.all([
+    ...effects.lowStockProducts.map((product) => dispatchLowStock(ctx, product)),
+    dispatchTrigger(
+      ctx,
+      `order.${order.status}` as TriggerEvent,
+      {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerId: order.customerId,
+        customerPhone: order.phone,
+        totalPrice: order.totalPrice,
+        wilaya: order.wilaya,
+      },
+      {
+        triggerKey: `order.${order.status}:${order.id}:${order.updatedAt.toISOString()}`,
+        occurredAt: order.updatedAt,
+      },
+    ),
+  ]);
 }
 
 type OrderCreateOptions =
   | {
       tx: OrderChangeTransactionClient;
-      afterCommit: (effect: () => void) => void;
+      afterCommit: (effect: () => Promise<void>) => void;
     }
   | {
       tx?: undefined;
@@ -341,29 +349,21 @@ export const orderService = {
         throw new Error("Caller-owned order transactions require an afterCommit collector");
       }
 
-      // Pick the client: caller's tx if provided, else the context's prisma.
       const client = opts?.tx ?? ctx.prisma;
-
-      // Verify customer exists
-      const customer = await client.customer.findFirst({ where: { id: data.customerId, deletedAt: null } });
+      const customer = await client.customer.findFirst({
+        where: { id: data.customerId, deletedAt: null },
+      });
       if (!customer) throw new NotFoundError("Customer", data.customerId);
 
-      // Calculate total
       const itemsTotal = data.items.reduce(
         (sum, item) => sum + item.unitPrice * item.quantity,
         0,
       );
       const totalPrice = itemsTotal + (data.deliveryCost ?? 0);
-
-      // Generate order number atomically (D-005/T-011: was racy count()+1).
-      // Phase 1 bug 1.3: caller can override the prefix (e-commerce sync uses
-      // "SYNC-SHOPIFY" etc. so synced orders are distinguishable).
       const orderNumber = await nextOrderNumber(
         client as ServiceContext["prisma"],
         data.orderNumberPrefix ?? "ORD",
       );
-
-      // The order.create payload — shared between the tx + non-tx paths.
       const orderCreateData = {
         orderNumber,
         status: data.status ?? "draft",
@@ -391,7 +391,6 @@ export const orderService = {
         },
       } as const;
 
-      // Create order + items — either inside the caller's tx, or in a new tx.
       let row;
       if (opts?.tx) {
         row = await opts.tx.order.create({ data: orderCreateData, include: { items: true } });
@@ -421,14 +420,20 @@ export const orderService = {
         totalPrice: row.totalPrice,
         wilaya: row.wilaya,
       };
-
-      const dispatchCreated = () => {
-        void dispatchTrigger(ctx, "order.created" as TriggerEvent, triggerPayload);
-      };
+      const dispatchCreated = () =>
+        dispatchTrigger(
+          ctx,
+          "order.created" as TriggerEvent,
+          triggerPayload,
+          {
+            triggerKey: `order.created:${row.id}`,
+            occurredAt: row.createdAt,
+          },
+        );
       if (opts?.tx) {
         opts.afterCommit(dispatchCreated);
       } else {
-        dispatchCreated();
+        await dispatchCreated();
       }
 
       return toDomain(row as unknown as Record<string, unknown>);
@@ -452,7 +457,7 @@ export const orderService = {
       const effects = await ctx.prisma.$transaction((tx) =>
         updateStatusInTransaction(tx, id, to, opts?.actor ?? "user"),
       );
-      dispatchCommittedStatusTransition(ctx, effects);
+      await dispatchCommittedStatusTransition(ctx, effects);
       return effects.order;
     }, "Order");
   },
@@ -470,19 +475,16 @@ export const orderService = {
     return updateStatusInTransaction(tx, id, to, opts?.actor ?? "user");
   },
 
-  dispatchStatusTransition(
+  async dispatchStatusTransition(
     ctx: ServiceContext,
     effects: OrderStatusTransitionEffects,
-  ): void {
-    dispatchCommittedStatusTransition(ctx, effects);
+  ): Promise<void> {
+    await dispatchCommittedStatusTransition(ctx, effects);
   },
 
   async update(ctx: ServiceContext, id: string, input: unknown): Promise<Order> {
     return withServiceError(async () => {
       const data = updateOrderSchema.parse(input);
-
-      // SEC-016/CODE-003: wrap item sync + order update in a single $transaction
-      // so a failure on any item operation rolls back all changes.
       const updated = await ctx.prisma.$transaction(async (tx) => {
         const authority = await tx.order.findFirst({
           where: { id, deletedAt: null },
@@ -504,12 +506,14 @@ export const orderService = {
 
         if (data.items) {
           const existing = await tx.orderItem.findMany({ where: { orderId: id } });
-          const incomingIds = data.items.filter(i => i.id).map(i => i.id);
-          const toDelete = existing.filter(e => !incomingIds.includes(e.id)).map(e => e.id);
+          const incomingIds = data.items.filter((item) => item.id).map((item) => item.id);
+          const toDelete = existing
+            .filter((item) => !incomingIds.includes(item.id))
+            .map((item) => item.id);
 
           await Promise.all([
-            ...toDelete.map(itemId =>
-              tx.orderItem.delete({ where: { id: itemId } })
+            ...toDelete.map((itemId) =>
+              tx.orderItem.delete({ where: { id: itemId } }),
             ),
             ...data.items.map((item) => {
               const payload = {
@@ -563,8 +567,8 @@ export const orderService = {
       _count: { _all: true },
     });
     const result = {} as Record<OrderStatus, number>;
-    for (const g of groups) {
-      result[g.status as OrderStatus] = g._count._all;
+    for (const group of groups) {
+      result[group.status as OrderStatus] = group._count._all;
     }
     return result;
   },
@@ -578,6 +582,6 @@ export const orderService = {
       include: { items: true },
       orderBy: { createdAt: "desc" },
     });
-    return rows.map((r) => toDomain(r as unknown as Record<string, unknown>));
+    return rows.map((row) => toDomain(row as unknown as Record<string, unknown>));
   },
 };
