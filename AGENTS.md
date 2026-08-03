@@ -44,8 +44,8 @@ replace current GitHub authority.
 - Active branch: `agent/phase3-durable-effects-audit`, based exactly on protected
   `main` above.
 - Active draft: PR #203 — `Phase 3: audit durable effects and operator workflows`.
-- Phase execution issue: #202.
-- Retained installed-runtime evidence issue: #201.
+- Phase execution issue: issue #202.
+- Retained installed-runtime evidence issue: issue #201.
 - Current session purpose: research/contract and governance reconciliation.
 - Production implementation remains unauthorized until the complete Phase 3
   inventory, consolidated Problem Register and shared contract freeze exist.
@@ -65,7 +65,7 @@ frontier, not permission to rely on copied state after the repository moves.
 8. Working Memory.
 9. Research and archive.
 
-A lower layer cannot silently weaken a higher layer.
+A lower layer cannot silently weaken a higher one.
 
 ## Completion program
 
