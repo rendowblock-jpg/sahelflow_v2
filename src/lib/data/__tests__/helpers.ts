@@ -44,6 +44,11 @@ const CANONICAL_FACT_TABLES = [
   "CodSettlement",
   "CodCollectionCorrection",
   "CodCollection",
+  // Task 5 approval/execution children must be deleted before proposals and
+  // chat sessions because the migration intentionally keeps strict FKs.
+  "AiActionExecution",
+  "AiActionApproval",
+  "AiActionProposal",
   "WhatsAppOutboundEffect",
   "CompensationFact",
   "ProjectionInvalidation",
@@ -238,72 +243,9 @@ export function makeContext(db: PrismaClient) {
 }
 
 /** Generate a unique phone number for tests (avoids unique constraint conflicts). */
-let _phoneCounter = 0;
 export function uniquePhone(): string {
-  _phoneCounter++;
-  const suffix = String(_phoneCounter).padStart(6, "0");
-  return `0555${suffix}`;
-}
-
-/** Alias: seedTestCustomer (matches subagent test API). */
-export async function seedTestCustomer(
-  db: PrismaClient,
-  opts?: { name?: string; phone?: string },
-) {
-  return seedCustomer(db, {
-    name: opts?.name,
-    phone: opts?.phone ?? uniquePhone(),
-  });
-}
-
-/** Alias: seedTestProduct (matches subagent test API). */
-export async function seedTestProduct(
-  db: PrismaClient,
-  opts?: {
-    name?: string;
-    price?: number;
-    stock?: number;
-    lowStockThreshold?: number;
-    categoryId?: string;
-    sku?: string;
-  },
-) {
-  return seedProduct(db, opts);
-}
-
-/** Alias: seedTestOrder (matches subagent test API). */
-export async function seedTestOrder(
-  db: PrismaClient,
-  opts?: {
-    customerId?: string;
-    status?: string;
-    totalPrice?: number;
-    createdAt?: Date;
-  },
-) {
-  const customer = opts?.customerId ? null : await seedTestCustomer(db);
-  const customerId = opts?.customerId ?? customer!.id;
-
-  const counter = await db.counter.upsert({
-    where: { name: "ORD" },
-    update: { value: { increment: 1 } },
-    create: { name: "ORD", value: 1 },
-  });
-  const orderNumber = `ORD-${String(counter.value).padStart(4, "0")}`;
-
-  return db.order.create({
-    data: {
-      orderNumber,
-      status: opts?.status ?? "draft",
-      customerId,
-      totalPrice: opts?.totalPrice ?? 5000,
-      wilaya: "Alger",
-      commune: "Bab Ezzouar",
-      address: "123 Rue Didouche",
-      phone: "0555123456",
-      source: "manual",
-      ...(opts?.createdAt ? { createdAt: opts.createdAt } : {}),
-    },
-    include: { items: true },
-  });
+  const suffix = Math.floor(Math.random() * 10_000_000)
+    .toString()
+    .padStart(7, "0");
+  return `055${suffix}`;
 }
