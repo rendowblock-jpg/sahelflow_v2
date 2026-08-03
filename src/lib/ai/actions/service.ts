@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHmac, timingSafeEqual } from "node:crypto";
+
 import type { DbClient } from "@/lib/db";
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import {
@@ -13,6 +15,7 @@ import {
 } from "@/lib/identity/authorization";
 import { resolveDurableIdentityActor } from "@/lib/identity/control-authority";
 import {
+  PHASE2_ACTIONS,
   resolvePhase2Permissions,
   type Phase2Action,
 } from "@/lib/identity/permissions";
@@ -34,9 +37,7 @@ import {
   parseSensitiveAiToolArgs,
   type AiActionProposalProjection,
 } from "./contracts";
-import {
-  mintAiActionExecutionAuthority,
-} from "./execution-authority";
+import { mintAiActionExecutionAuthority } from "./execution-authority";
 import {
   executeApprovedAiAction,
   type ApprovedAiActionResult,
@@ -118,13 +119,18 @@ interface ExecutionRow {
   updatedAt: Date | string;
 }
 
+interface PermissionBinding {
+  required: Phase2Action[];
+  requesterEffective: Phase2Action[];
+}
+
 interface DecryptedProposal {
   row: ProposalRow;
   args: Record<string, unknown>;
   summary: Record<string, unknown>;
   licenseBinding: Record<string, unknown>;
   targetBinding: Record<string, unknown>;
-  requiredPermissions: Phase2Action[];
+  permissions: PermissionBinding;
 }
 
 export interface CreateAiActionProposalInput {
@@ -169,8 +175,10 @@ interface LicenseBinding {
   minimumPermanentRecoveryEpoch: number | null;
 }
 
+const PHASE2_ACTION_SET = new Set<string>(PHASE2_ACTIONS);
 const CONFLICT_CODES = new Set([
   "AI_ACTION_ARGUMENT_TAMPERED",
+  "AI_ACTION_APPROVAL_TAMPERED",
   "AI_ACTION_DIGEST_TAMPERED",
   "AI_ACTION_LICENSE_DRIFT",
   "AI_ACTION_POLICY_DRIFT",
@@ -222,6 +230,56 @@ function sortedPermissions(values: readonly Phase2Action[]): Phase2Action[] {
   return [...new Set(values)].sort() as Phase2Action[];
 }
 
+function effectivePermissions(actor: PersonActor): Phase2Action[] {
+  return sortedPermissions(
+    actor.permissions ?? resolvePhase2Permissions(actor.role, null),
+  );
+}
+
+function parsePermissionArray(value: unknown, label: string): Phase2Action[] {
+  if (
+    !Array.isArray(value) ||
+    value.some(
+      (entry) => typeof entry !== "string" || !PHASE2_ACTION_SET.has(entry),
+    )
+  ) {
+    throw new SahelFlowError(
+      `AI action ${label} permission binding is invalid`,
+      "AI_ACTION_POLICY_DRIFT",
+      409,
+    );
+  }
+  return sortedPermissions(value as Phase2Action[]);
+}
+
+function parsePermissionBinding(value: string): PermissionBinding {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new SahelFlowError(
+      "AI action permission binding is unreadable",
+      "AI_ACTION_POLICY_DRIFT",
+      409,
+    );
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new SahelFlowError(
+      "AI action permission binding is invalid",
+      "AI_ACTION_POLICY_DRIFT",
+      409,
+    );
+  }
+  const record = parsed as Record<string, unknown>;
+  return {
+    required: parsePermissionArray(record.required, "required"),
+    requesterEffective: parsePermissionArray(
+      record.requesterEffective,
+      "requester",
+    ),
+  };
+}
+
 function assertPermissions(
   context: TrustedActorContext,
   approvalAction: "approvals.request" | "approvals.approve",
@@ -250,7 +308,24 @@ function binding(
   } as const;
 }
 
-function proposalDigestInput(input: {
+function keyedDigest(key: Buffer, purpose: string, value: unknown): string {
+  return createHmac("sha256", key)
+    .update(purpose, "utf8")
+    .update("\0", "utf8")
+    .update(canonicalAiActionJson(value), "utf8")
+    .digest("hex");
+}
+
+function sameDigest(left: string, right: string): boolean {
+  if (!/^[0-9a-f]{64}$/i.test(left) || !/^[0-9a-f]{64}$/i.test(right)) {
+    return false;
+  }
+  const first = Buffer.from(left, "hex");
+  const second = Buffer.from(right, "hex");
+  return first.length === second.length && timingSafeEqual(first, second);
+}
+
+function digestInput(input: {
   id: string;
   proposalKey: string;
   sessionId: string;
@@ -267,7 +342,7 @@ function proposalDigestInput(input: {
   requestRole: string | null;
   requestPolicyVersion: number;
   requestRevocationEpoch: number;
-  requiredPermissions: readonly Phase2Action[];
+  permissions: PermissionBinding;
   permissionHash: string;
   licenseBindingHash: string;
   shop: ShopContext;
@@ -294,7 +369,7 @@ function proposalDigestInput(input: {
       policyVersion: input.requestPolicyVersion,
       revocationEpoch: input.requestRevocationEpoch,
     },
-    requiredPermissions: input.requiredPermissions,
+    permissions: input.permissions,
     permissionHash: input.permissionHash,
     licenseBindingHash: input.licenseBindingHash,
     shop: input.shop,
@@ -305,9 +380,9 @@ function proposalDigestInput(input: {
 
 function rowDigestInput(
   row: ProposalRow,
-  requiredPermissions: readonly Phase2Action[],
+  permissions: PermissionBinding,
 ): Record<string, unknown> {
-  return proposalDigestInput({
+  return digestInput({
     id: row.id,
     proposalKey: row.proposalKey,
     sessionId: row.sessionId,
@@ -324,7 +399,7 @@ function rowDigestInput(
     requestRole: row.requestRole,
     requestPolicyVersion: numberValue(row.requestPolicyVersion),
     requestRevocationEpoch: numberValue(row.requestRevocationEpoch),
-    requiredPermissions,
+    permissions,
     permissionHash: row.permissionHash,
     licenseBindingHash: row.licenseBindingHash,
     shop: {
@@ -353,7 +428,7 @@ function shopMatches(row: ProposalRow, shop: ShopContext): boolean {
   );
 }
 
-async function licenseBinding(): Promise<LicenseBinding> {
+async function currentLicenseBinding(): Promise<LicenseBinding> {
   const projection = await getLicenseAuthorityProjection();
   const features = [...projection.features].sort();
   if (
@@ -422,6 +497,20 @@ async function readExecution(
   return rows[0] ?? null;
 }
 
+async function hasCommittedCommand(
+  db: DbClient,
+  proposalId: string,
+): Promise<boolean> {
+  const rows = await db.$queryRaw<Array<{ id: string }>>`
+    SELECT "id"
+    FROM "BusinessCommand"
+    WHERE "idempotencyKey" = ${`ai-action:${proposalId}`}
+      AND "status" = 'committed'
+    LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
 async function decryptProposal(
   context: { prisma: DbClient; shop: ShopContext },
   row: ProposalRow,
@@ -453,20 +542,13 @@ async function decryptProposal(
       binding("ai-action-target-binding", row.id, row.toolName, "target"),
       key,
     );
-    const parsedPermissions = JSON.parse(row.requiredPermissionsJson) as unknown;
-    if (!Array.isArray(parsedPermissions)) {
-      throw new Error("permissions are not an array");
-    }
-    const requiredPermissions = sortedPermissions(
-      parsedPermissions as Phase2Action[],
-    );
-
+    const permissions = parsePermissionBinding(row.requiredPermissionsJson);
     if (
       aiActionHash(args) !== row.argsHash ||
       aiActionHash(summary) !== row.summaryHash ||
       aiActionHash(storedLicense) !== row.licenseBindingHash ||
       aiActionHash(targetBinding) !== row.targetBindingHash ||
-      aiActionHash(requiredPermissions) !== row.permissionHash
+      aiActionHash(permissions) !== row.permissionHash
     ) {
       throw new SahelFlowError(
         "AI action proposal payload authentication failed",
@@ -474,24 +556,25 @@ async function decryptProposal(
         409,
       );
     }
-    const expectedDigest = aiActionHash(
-      rowDigestInput(row, requiredPermissions),
+    const expectedDigest = keyedDigest(
+      key,
+      "sahelflow.ai-action.proposal-digest.v1",
+      rowDigestInput(row, permissions),
     );
-    if (expectedDigest !== row.proposalDigest) {
+    if (!sameDigest(expectedDigest, row.proposalDigest)) {
       throw new SahelFlowError(
         "AI action proposal digest authentication failed",
         "AI_ACTION_DIGEST_TAMPERED",
         409,
       );
     }
-
     return {
       row,
       args: parseSensitiveAiToolArgs(row.toolName, args),
       summary,
       licenseBinding: storedLicense,
       targetBinding,
-      requiredPermissions,
+      permissions,
     };
   } catch (error) {
     if (error instanceof SahelFlowError) throw error;
@@ -505,7 +588,7 @@ async function decryptProposal(
   }
 }
 
-async function projection(
+async function proposalProjection(
   context: { prisma: DbClient; shop: ShopContext },
   proposal: DecryptedProposal,
   execution?: ExecutionRow | null,
@@ -528,7 +611,7 @@ async function projection(
   };
 }
 
-function currentPolicyPermissions(toolName: string): Phase2Action[] {
+function currentPolicyRequired(toolName: string): Phase2Action[] {
   const policy = getAiToolPolicy(toolName);
   if (policy.executionClass !== "sensitive") {
     throw new SahelFlowError(
@@ -555,9 +638,10 @@ async function markProposalConflict(
   `;
 }
 
-async function validateApprovalAuthority(
+async function validateBeforeExecution(
   context: { prisma: DbClient; shop: ShopContext },
   proposal: DecryptedProposal,
+  options: { enforceExpiry: boolean; checkTarget: boolean },
 ): Promise<void> {
   const row = proposal.row;
   if (!shopMatches(row, context.shop)) {
@@ -567,7 +651,7 @@ async function validateApprovalAuthority(
       409,
     );
   }
-  if (toDate(row.expiresAt).getTime() <= Date.now()) {
+  if (options.enforceExpiry && toDate(row.expiresAt).getTime() <= Date.now()) {
     await context.prisma.$executeRaw`
       UPDATE "AiActionProposal"
       SET "status" = 'expired',
@@ -583,14 +667,13 @@ async function validateApprovalAuthority(
     );
   }
 
-  const policyPermissions = currentPolicyPermissions(row.toolName);
+  const required = currentPolicyRequired(row.toolName);
   if (
-    aiActionHash(policyPermissions) !== row.permissionHash ||
-    canonicalAiActionJson(policyPermissions) !==
-      canonicalAiActionJson(proposal.requiredPermissions)
+    canonicalAiActionJson(required) !==
+    canonicalAiActionJson(proposal.permissions.required)
   ) {
     throw new SahelFlowError(
-      "AI action policy changed after the proposal was created",
+      "AI action policy changed after proposal creation",
       "AI_ACTION_POLICY_DRIFT",
       409,
     );
@@ -620,13 +703,15 @@ async function validateApprovalAuthority(
       409,
     );
   }
-  const requesterPermissions = resolvePhase2Permissions(requester.role, null);
+  const requesterEffective = sortedPermissions(
+    resolvePhase2Permissions(requester.role, null),
+  );
   if (
-    !proposal.requiredPermissions.every((action) =>
-      requesterPermissions.includes(action),
-    ) ||
-    !requesterPermissions.includes("approvals.request") ||
-    !requesterPermissions.includes("ai.use")
+    canonicalAiActionJson(requesterEffective) !==
+      canonicalAiActionJson(proposal.permissions.requesterEffective) ||
+    !required.every((action) => requesterEffective.includes(action)) ||
+    !requesterEffective.includes("approvals.request") ||
+    !requesterEffective.includes("ai.use")
   ) {
     throw new SahelFlowError(
       "The requester no longer has the proposal permissions",
@@ -635,71 +720,125 @@ async function validateApprovalAuthority(
     );
   }
 
-  const currentLicense = await licenseBinding();
-  if (aiActionHash(currentLicense) !== row.licenseBindingHash) {
+  const license = await currentLicenseBinding();
+  if (aiActionHash(license) !== row.licenseBindingHash) {
     throw new SahelFlowError(
       "The AI entitlement changed after proposal creation",
       "AI_ACTION_LICENSE_DRIFT",
       409,
     );
   }
-  const currentTarget = await buildAiActionTargetSnapshot(
-    context,
-    row.toolName,
-    proposal.args,
-  );
-  if (aiActionHash(currentTarget.targetBinding) !== row.targetBindingHash) {
-    throw new SahelFlowError(
-      "The proposed business target changed before approval",
-      "AI_ACTION_TARGET_CONFLICT",
-      409,
+  if (options.checkTarget) {
+    const currentTarget = await buildAiActionTargetSnapshot(
+      context,
+      row.toolName,
+      proposal.args,
     );
+    if (aiActionHash(currentTarget.targetBinding) !== row.targetBindingHash) {
+      throw new SahelFlowError(
+        "The proposed business target changed before approval",
+        "AI_ACTION_TARGET_CONFLICT",
+        409,
+      );
+    }
   }
 }
 
-function approvalDigest(input: {
-  proposal: ProposalRow;
-  approver: PersonActor;
-  reasonHash: string | null;
-}): string {
-  return aiActionHash({
+function approvalDigestInput(row: ApprovalRow, proposal: ProposalRow) {
+  return {
     formatVersion: 1,
-    proposalId: input.proposal.id,
-    proposalDigest: input.proposal.proposalDigest,
-    decision: "approved",
+    proposalId: proposal.id,
+    proposalDigest: proposal.proposalDigest,
+    decision: row.decision,
     approver: {
-      kind: input.approver.kind,
-      personId: input.approver.personId,
-      workspaceMemberId: input.approver.workspaceMemberId,
-      deviceId: input.approver.deviceId,
-      sessionId: input.approver.sessionId,
-      role: input.approver.role,
-      policyVersion: input.approver.policyVersion,
-      revocationEpoch: input.approver.revocationEpoch,
+      kind: row.approverActorKind,
+      actorId: row.approverActorId,
+      workspaceMemberId: row.approverWorkspaceMemberId,
+      deviceId: row.approverDeviceId,
+      sessionId: row.approverSessionId,
+      role: row.approverRole,
+      policyVersion: numberValue(row.approverPolicyVersion),
+      revocationEpoch: numberValue(row.approverRevocationEpoch),
     },
-    reasonHash: input.reasonHash,
-  });
+    reasonHash: row.reasonHash,
+  };
+}
+
+async function validateApproval(
+  context: { prisma: DbClient; shop: ShopContext },
+  proposal: ProposalRow,
+  approval: ApprovalRow,
+): Promise<void> {
+  if (
+    approval.proposalId !== proposal.id ||
+    approval.decision !== "approved" ||
+    approval.approverActorKind !== "person"
+  ) {
+    throw new SahelFlowError(
+      "AI action approval record is invalid",
+      "AI_ACTION_APPROVAL_TAMPERED",
+      409,
+    );
+  }
+  const key = await getBusinessEnvelopeKey(context);
+  try {
+    const expected = keyedDigest(
+      key,
+      "sahelflow.ai-action.approval-digest.v1",
+      approvalDigestInput(approval, proposal),
+    );
+    if (!sameDigest(expected, approval.approvalDigest)) {
+      throw new SahelFlowError(
+        "AI action approval authentication failed",
+        "AI_ACTION_APPROVAL_TAMPERED",
+        409,
+      );
+    }
+  } finally {
+    key.fill(0);
+  }
 }
 
 async function claimApprovalAndExecution(
   input: ApproveAiActionProposalInput,
   proposal: DecryptedProposal,
   approver: PersonActor,
-  reasonHash: string | null,
+  approvalReasonHash: string | null,
 ): Promise<{ approval: ApprovalRow; execution: ExecutionRow }> {
   const db = input.context.prisma;
   const approvalId = `aia_${aiActionHash({
     proposalId: proposal.row.id,
     decision: "approved",
   })}`;
-  const digest = approvalDigest({
-    proposal: proposal.row,
-    approver,
-    reasonHash,
-  });
   const executionKey = `ai-action-execution:v1:${proposal.row.proposalDigest}`;
   const executionId = `aix_${aiActionHash(executionKey)}`;
   const now = new Date();
+  const proposedApproval: ApprovalRow = {
+    id: approvalId,
+    proposalId: proposal.row.id,
+    decision: "approved",
+    approverActorKind: "person",
+    approverActorId: approver.personId,
+    approverWorkspaceMemberId: approver.workspaceMemberId,
+    approverDeviceId: approver.deviceId,
+    approverSessionId: approver.sessionId,
+    approverRole: approver.role,
+    approverPolicyVersion: approver.policyVersion,
+    approverRevocationEpoch: approver.revocationEpoch,
+    approvalDigest: "",
+    reasonHash: approvalReasonHash,
+    createdAt: now,
+  };
+  const key = await getBusinessEnvelopeKey(input.context);
+  try {
+    proposedApproval.approvalDigest = keyedDigest(
+      key,
+      "sahelflow.ai-action.approval-digest.v1",
+      approvalDigestInput(proposedApproval, proposal.row),
+    );
+  } finally {
+    key.fill(0);
+  }
 
   await db.$transaction(async (tx) => {
     const liveRows = await tx.$queryRaw<
@@ -711,14 +850,22 @@ async function claimApprovalAndExecution(
       LIMIT 1
     `;
     const live = liveRows[0];
-    if (!live || live.proposalDigest !== proposal.row.proposalDigest) {
+    if (!live || !sameDigest(live.proposalDigest, proposal.row.proposalDigest)) {
       throw new SahelFlowError(
         "AI action proposal changed before approval claim",
         "AI_ACTION_DIGEST_TAMPERED",
         409,
       );
     }
-    if (toDate(live.expiresAt).getTime() <= now.getTime()) {
+    const approvalRows = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "AiActionApproval"
+      WHERE "proposalId" = ${proposal.row.id}
+      LIMIT 1
+    `;
+    if (
+      approvalRows.length === 0 &&
+      toDate(live.expiresAt).getTime() <= now.getTime()
+    ) {
       throw new SahelFlowError(
         "AI action proposal expired before approval claim",
         "AI_ACTION_PROPOSAL_EXPIRED",
@@ -739,11 +886,14 @@ async function claimApprovalAndExecution(
         "approverPolicyVersion", "approverRevocationEpoch",
         "approvalDigest", "reasonHash", "createdAt"
       ) VALUES (
-        ${approvalId}, ${proposal.row.id}, 'approved',
-        'person', ${approver.personId}, ${approver.workspaceMemberId},
-        ${approver.deviceId}, ${approver.sessionId}, ${approver.role},
-        ${approver.policyVersion}, ${approver.revocationEpoch},
-        ${digest}, ${reasonHash}, ${now}
+        ${proposedApproval.id}, ${proposedApproval.proposalId}, 'approved',
+        'person', ${proposedApproval.approverActorId},
+        ${proposedApproval.approverWorkspaceMemberId},
+        ${proposedApproval.approverDeviceId},
+        ${proposedApproval.approverSessionId}, ${proposedApproval.approverRole},
+        ${numberValue(proposedApproval.approverPolicyVersion)},
+        ${numberValue(proposedApproval.approverRevocationEpoch)},
+        ${proposedApproval.approvalDigest}, ${proposedApproval.reasonHash}, ${now}
       )
     `;
     await tx.$executeRaw`
@@ -768,13 +918,14 @@ async function claimApprovalAndExecution(
 
   const approval = await readApproval(db, proposal.row.id);
   const execution = await readExecution(db, proposal.row.id);
-  if (!approval || !execution || approval.decision !== "approved") {
+  if (!approval || !execution) {
     throw new SahelFlowError(
       "AI action approval claim did not produce durable authority",
       "AI_ACTION_APPROVAL_CLAIM_FAILED",
       503,
     );
   }
+  await validateApproval(input.context, proposal.row, approval);
   return { approval, execution };
 }
 
@@ -818,6 +969,7 @@ async function readExecutionResult(
 async function markRunning(
   db: DbClient,
   proposalId: string,
+  auditActor: string,
   recoveryReasonHash: string | null,
 ): Promise<void> {
   const now = new Date();
@@ -845,7 +997,7 @@ async function markRunning(
           action: "ai.action.execution.recovery_requested.v1",
           entity: "ai_action_proposal",
           entityId: proposalId,
-          actor: "proposal-bound-ai-recovery",
+          actor: auditActor,
           metadata: canonicalAiActionJson({
             recoveryReasonHash,
             proposalId,
@@ -954,16 +1106,8 @@ export async function createAiActionProposal(
       409,
     );
   }
-  const policy = getAiToolPolicy(input.toolName);
-  if (policy.executionClass !== "sensitive") {
-    throw new SahelFlowError(
-      `AI tool '${input.toolName}' cannot create an action proposal`,
-      policy.blockedReasonCode ?? "AI_ACTION_NOT_SUPPORTED",
-      409,
-    );
-  }
-  const requiredPermissions = sortedPermissions(policy.requiredPermissions);
-  assertPermissions(input.requester, "approvals.request", requiredPermissions);
+  const required = currentPolicyRequired(input.toolName);
+  assertPermissions(input.requester, "approvals.request", required);
   const args = parseSensitiveAiToolArgs(input.toolName, input.rawArgs);
   const argsHash = aiActionHash(args);
 
@@ -998,11 +1142,15 @@ export async function createAiActionProposal(
     input.toolName,
     args,
   );
-  const currentLicense = await licenseBinding();
+  const license = await currentLicenseBinding();
+  const permissions: PermissionBinding = {
+    required,
+    requesterEffective: effectivePermissions(requester),
+  };
   const summaryHash = aiActionHash(target.summary);
   const targetBindingHash = aiActionHash(target.targetBinding);
-  const licenseBindingHash = aiActionHash(currentLicense);
-  const permissionHash = aiActionHash(requiredPermissions);
+  const licenseBindingHash = aiActionHash(license);
+  const permissionHash = aiActionHash(permissions);
   const identityHash = aiActionHash({
     formatVersion: 1,
     sessionId: input.sessionId,
@@ -1013,38 +1161,42 @@ export async function createAiActionProposal(
   });
   const proposalId = `aip_${identityHash}`;
   const proposalKey = `ai-action-proposal:v1:${identityHash}`;
-  const digestInput = proposalDigestInput({
-    id: proposalId,
-    proposalKey,
-    sessionId: input.sessionId,
-    requestMessageId: input.requestMessageId,
-    toolName: input.toolName,
-    actionClass: "sensitive",
-    argsHash,
-    summaryHash,
-    requestActorKind: requester.kind,
-    requestActorId: requester.personId,
-    requestWorkspaceMemberId: requester.workspaceMemberId,
-    requestDeviceId: requester.deviceId,
-    requestSessionId: requester.sessionId,
-    requestRole: requester.role,
-    requestPolicyVersion: requester.policyVersion,
-    requestRevocationEpoch: requester.revocationEpoch,
-    requiredPermissions,
-    permissionHash,
-    licenseBindingHash,
-    shop: input.context.shop,
-    targetBindingHash,
-    expiresAt,
-  });
-  const proposalDigest = aiActionHash(digestInput);
 
   const key = await getBusinessEnvelopeKey(input.context);
+  let proposalDigest: string;
   let argsJson: string;
   let summaryJson: string;
   let licenseBindingJson: string;
   let targetBindingJson: string;
   try {
+    proposalDigest = keyedDigest(
+      key,
+      "sahelflow.ai-action.proposal-digest.v1",
+      digestInput({
+        id: proposalId,
+        proposalKey,
+        sessionId: input.sessionId,
+        requestMessageId: input.requestMessageId,
+        toolName: input.toolName,
+        actionClass: "sensitive",
+        argsHash,
+        summaryHash,
+        requestActorKind: requester.kind,
+        requestActorId: requester.personId,
+        requestWorkspaceMemberId: requester.workspaceMemberId,
+        requestDeviceId: requester.deviceId,
+        requestSessionId: requester.sessionId,
+        requestRole: requester.role,
+        requestPolicyVersion: requester.policyVersion,
+        requestRevocationEpoch: requester.revocationEpoch,
+        permissions,
+        permissionHash,
+        licenseBindingHash,
+        shop: input.context.shop,
+        targetBindingHash,
+        expiresAt,
+      }),
+    );
     argsJson = sealBusinessPayloadWithKey(
       args,
       binding("ai-action-arguments", proposalId, input.toolName, "arguments"),
@@ -1056,7 +1208,7 @@ export async function createAiActionProposal(
       key,
     );
     licenseBindingJson = sealBusinessPayloadWithKey(
-      currentLicense,
+      license,
       binding(
         "ai-action-license-binding",
         proposalId,
@@ -1099,7 +1251,7 @@ export async function createAiActionProposal(
       'person', ${requester.personId}, ${requester.workspaceMemberId},
       ${requester.deviceId}, ${requester.sessionId}, ${requester.role},
       ${requester.policyVersion}, ${requester.revocationEpoch},
-      ${canonicalAiActionJson(requiredPermissions)}, ${permissionHash},
+      ${canonicalAiActionJson(permissions)}, ${permissionHash},
       ${licenseBindingJson}, ${licenseBindingHash},
       ${input.context.shop.workspaceId}, ${input.context.shop.installationId},
       ${input.context.shop.shopId}, ${input.context.shop.shopIncarnationId},
@@ -1110,14 +1262,18 @@ export async function createAiActionProposal(
   `;
 
   const row = await readProposalByKey(input.context.prisma, proposalKey);
-  if (!row || row.id !== proposalId || row.proposalDigest !== proposalDigest) {
+  if (
+    !row ||
+    row.id !== proposalId ||
+    !sameDigest(row.proposalDigest, proposalDigest)
+  ) {
     throw new ConflictError(
       "The AI request identity is already bound to different proposal content",
     );
   }
   const proposal = await decryptProposal(input.context, row);
   return {
-    proposal: await projection(input.context, proposal),
+    proposal: await proposalProjection(input.context, proposal),
     proposalDigest: row.proposalDigest,
   };
 }
@@ -1134,7 +1290,7 @@ export async function approveAiActionProposal(
       404,
     );
   }
-  if (row.proposalDigest !== input.proposalDigest) {
+  if (!sameDigest(row.proposalDigest, input.proposalDigest)) {
     throw new SahelFlowError(
       "AI action approval references the wrong proposal digest",
       "AI_ACTION_DIGEST_TAMPERED",
@@ -1142,24 +1298,53 @@ export async function approveAiActionProposal(
     );
   }
 
-  let proposal: DecryptedProposal;
-  try {
-    proposal = await decryptProposal(input.context, row);
-    assertPermissions(
-      input.approver,
-      "approvals.approve",
-      proposal.requiredPermissions,
+  const proposal = await decryptProposal(input.context, row);
+  if (!shopMatches(row, input.context.shop)) {
+    throw new SahelFlowError(
+      "AI action proposal belongs to another exact shop runtime",
+      "AI_ACTION_SHOP_DRIFT",
+      409,
     );
-    await validateApprovalAuthority(input.context, proposal);
-  } catch (error) {
-    const code =
-      error instanceof SahelFlowError
-        ? error.code
-        : "AI_ACTION_APPROVAL_VALIDATION_FAILED";
-    if (CONFLICT_CODES.has(code)) {
-      await markProposalConflict(input.context.prisma, row.id, code);
+  }
+  assertPermissions(
+    input.approver,
+    "approvals.approve",
+    proposal.permissions.required,
+  );
+
+  let approval = await readApproval(input.context.prisma, row.id);
+  let execution = await readExecution(input.context.prisma, row.id);
+  if (approval) await validateApproval(input.context, row, approval);
+
+  if (execution?.state === "succeeded") {
+    const result = await readExecutionResult(input.context, row, execution);
+    return {
+      proposal: await proposalProjection(input.context, proposal, execution),
+      result,
+      businessCommandId: execution.businessCommandId ?? "",
+      replayed: true,
+    };
+  }
+
+  const commandCommitted = execution
+    ? await hasCommittedCommand(input.context.prisma, row.id)
+    : false;
+  if (!commandCommitted) {
+    try {
+      await validateBeforeExecution(input.context, proposal, {
+        enforceExpiry: approval === null,
+        checkTarget: execution === null,
+      });
+    } catch (error) {
+      const code =
+        error instanceof SahelFlowError
+          ? error.code
+          : "AI_ACTION_APPROVAL_VALIDATION_FAILED";
+      if (CONFLICT_CODES.has(code)) {
+        await markProposalConflict(input.context.prisma, row.id, code);
+      }
+      throw error;
     }
-    throw error;
   }
 
   const reason = input.reason?.trim() || null;
@@ -1167,29 +1352,30 @@ export async function approveAiActionProposal(
     throw new ValidationError("Approval reason is too long", "reason");
   }
   const reasonHash = reason ? aiActionHash(reason) : null;
-  const existingExecution = await readExecution(input.context.prisma, row.id);
-  if (existingExecution?.state === "conflict") {
+  if (execution?.state === "conflict") {
     throw new ConflictError(
       "The AI action proposal is stale and must be recreated",
     );
   }
-  if (existingExecution?.state === "failed" && !reasonHash) {
+  if (execution?.state === "failed" && !reasonHash) {
     throw new ValidationError(
       "A recovery reason is required to retry a failed AI action",
       "reason",
     );
   }
 
-  const { execution } = await claimApprovalAndExecution(
+  const claimed = await claimApprovalAndExecution(
     input,
     proposal,
     approver,
     reasonHash,
   );
+  approval = claimed.approval;
+  execution = claimed.execution;
   if (execution.state === "succeeded") {
     const result = await readExecutionResult(input.context, row, execution);
     return {
-      proposal: await projection(input.context, proposal, execution),
+      proposal: await proposalProjection(input.context, proposal, execution),
       result,
       businessCommandId: execution.businessCommandId ?? "",
       replayed: true,
@@ -1199,6 +1385,7 @@ export async function approveAiActionProposal(
   await markRunning(
     input.context.prisma,
     row.id,
+    trustedActorAuditIdentity(input.approver.actor),
     execution.state === "failed" ? reasonHash : null,
   );
   const authority = mintAiActionExecutionAuthority({
@@ -1239,7 +1426,7 @@ export async function approveAiActionProposal(
     }
     const completed = await decryptProposal(input.context, completedRow);
     return {
-      proposal: await projection(
+      proposal: await proposalProjection(
         input.context,
         completed,
         completedExecution,
@@ -1260,7 +1447,7 @@ export async function listAiActionProposals(
   context: { prisma: DbClient; shop: ShopContext },
   actor: TrustedActorContext,
   sessionId: string,
-): Promise<Array<AiActionProposalHandle>> {
+): Promise<AiActionProposalHandle[]> {
   assertTrustedAction(actor, "ai.use", { shopId: context.shop.shopId });
   const rows = await context.prisma.$queryRaw<ProposalRow[]>`
     SELECT *
@@ -1270,11 +1457,11 @@ export async function listAiActionProposals(
     ORDER BY "createdAt" DESC
     LIMIT 100
   `;
-  const output: Array<AiActionProposalHandle> = [];
+  const output: AiActionProposalHandle[] = [];
   for (const row of rows) {
     const proposal = await decryptProposal(context, row);
     output.push({
-      proposal: await projection(context, proposal),
+      proposal: await proposalProjection(context, proposal),
       proposalDigest: row.proposalDigest,
     });
   }
@@ -1297,7 +1484,7 @@ export async function getAiActionProposal(
   }
   const proposal = await decryptProposal(context, row);
   return {
-    proposal: await projection(context, proposal),
+    proposal: await proposalProjection(context, proposal),
     proposalDigest: row.proposalDigest,
   };
 }
