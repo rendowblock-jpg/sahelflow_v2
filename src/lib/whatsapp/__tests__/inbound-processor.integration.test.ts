@@ -80,6 +80,7 @@ describe("durable WhatsApp inbound normalization", () => {
       status: "applied",
       messageId: ingress.ingressEventId,
       attemptCount: 1,
+      operatorRetryCount: 0,
       leaseToken: null,
       lastErrorCode: null,
     });
@@ -168,7 +169,7 @@ describe("durable WhatsApp inbound normalization", () => {
     ).resolves.toEqual({ unreadCount: 1 });
   });
 
-  it("recovers an expired pre-application lease with a new immutable attempt", async () => {
+  it("recovers an expired pre-application lease with truthful immutable attempt history", async () => {
     const ingress = await persistWhatsAppInbound(context, envelope());
     await db.providerIngressEvent.update({
       where: { id: ingress.ingressEventId },
@@ -203,6 +204,12 @@ describe("durable WhatsApp inbound normalization", () => {
       orderBy: { attemptNumber: "asc" },
     });
     expect(attempts).toHaveLength(2);
+    expect(attempts[0]).toMatchObject({
+      attemptNumber: 1,
+      state: "lease_expired",
+      errorCode: "LEASE_EXPIRED",
+    });
+    expect(attempts[0]?.completedAt).not.toBeNull();
     expect(attempts[1]).toMatchObject({ attemptNumber: 2, state: "succeeded" });
   });
 });
