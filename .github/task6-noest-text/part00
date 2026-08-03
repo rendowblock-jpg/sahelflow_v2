@@ -1,0 +1,362 @@
+diff --git a/prisma/migrations/20260803211500_phase3_provider_capability_authority/migration.sql b/prisma/migrations/20260803211500_phase3_provider_capability_authority/migration.sql
+new file mode 100644
+index 0000000000000000000000000000000000000000..f28588c8ba4e8cb161a6d8ef6458c6f247567b3f
+--- /dev/null
++++ b/prisma/migrations/20260803211500_phase3_provider_capability_authority/migration.sql
+@@ -0,0 +1,40 @@
++CREATE TABLE "ProviderCapabilityCertification" (
++    "id" TEXT NOT NULL PRIMARY KEY,
++    "provider" TEXT NOT NULL,
++    "capability" TEXT NOT NULL,
++    "contractVersion" TEXT NOT NULL,
++    "credentialFingerprint" TEXT NOT NULL,
++    "endpointFingerprint" TEXT NOT NULL,
++    "status" TEXT NOT NULL DEFAULT 'uncertified',
++    "certifiedBy" TEXT,
++    "reasonCode" TEXT,
++    "evidenceJson" TEXT,
++    "lastCheckedAt" DATETIME,
++    "certifiedAt" DATETIME,
++    "expiresAt" DATETIME,
++    "disabledAt" DATETIME,
++    "lastErrorCode" TEXT,
++    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
++);
++
++CREATE UNIQUE INDEX "ProviderCapabilityCertification_provider_capability_key"
++ON "ProviderCapabilityCertification"("provider", "capability");
++
++CREATE INDEX "ProviderCapabilityCertification_provider_status_idx"
++ON "ProviderCapabilityCertification"("provider", "status");
++
++CREATE INDEX "ProviderCapabilityCertification_status_expiresAt_idx"
++ON "ProviderCapabilityCertification"("status", "expiresAt");
++
++-- Remove credentials for the retired undocumented DHD adapter. Historical
++-- delivery rows keep their original provider identity for audit, but no runtime
++-- adapter or effect authority remains registered for them.
++DELETE FROM "Secret" WHERE "key" LIKE 'delivery_dhd_%';
++
++UPDATE "Delivery"
++SET "status" = 'reconciliation_required',
++    "updatedAt" = CURRENT_TIMESTAMP
++WHERE "provider" = 'dhd'
++  AND "deletedAt" IS NULL
++  AND "status" NOT IN ('delivered', 'returned', 'refused', 'failed');
+diff --git a/prisma/models/provider-runtime.prisma b/prisma/models/provider-runtime.prisma
+new file mode 100644
+index 0000000000000000000000000000000000000000..119d9ccf6b40e7596d7650fada18ed7e328205da
+--- /dev/null
++++ b/prisma/models/provider-runtime.prisma
+@@ -0,0 +1,27 @@
++// Phase 3 provider capability authority.
++// One shop database owns its own provider certifications. Credential and
++// endpoint fingerprints invalidate certifications without storing secrets.
++
++model ProviderCapabilityCertification {
++  id                    String    @id
++  provider              String
++  capability            String
++  contractVersion       String
++  credentialFingerprint String
++  endpointFingerprint   String
++  status                String    @default("uncertified")
++  certifiedBy           String?
++  reasonCode            String?
++  evidenceJson          String?
++  lastCheckedAt         DateTime?
++  certifiedAt           DateTime?
++  expiresAt             DateTime?
++  disabledAt            DateTime?
++  lastErrorCode         String?
++  createdAt             DateTime  @default(now())
++  updatedAt             DateTime  @default(now()) @updatedAt
++
++  @@unique([provider, capability])
++  @@index([provider, status])
++  @@index([status, expiresAt])
++}
+diff --git a/scripts/seed-expanded.ts b/scripts/seed-expanded.ts
+index 32ddd15d9632acf88b7e88253a7d62c744c276ae..eafd25fec83a4118b68ff59c4d70b5dd35a7b456 100644
+--- a/scripts/seed-expanded.ts
++++ b/scripts/seed-expanded.ts
+@@ -102,7 +102,7 @@ const ORDER_STATUSES = [
+   "cancelled", "cancelled",
+ ] as const;
+ 
+-const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zr_express", "dhd"] as const;
++const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zr_express", "noest"] as const;
+ 
+ const RETURN_STATUSES = ["requested", "requested", "approved", "approved", "completed", "completed", "rejected"] as const;
+ const RETURN_TYPES = ["return", "return", "return", "exchange", "exchange"] as const;
+@@ -121,7 +121,7 @@ const EXPENSE_DESCRIPTIONS = [
+   "Achat étiquettes",
+   "Frais ZR Express",
+   "Carburant livreur",
+-  "Frais DHD EcoTrack",
++  "Frais NOEST Express",
+   "Matériel bureau",
+   "Maintenance ordinateur",
+ ];
+diff --git a/scripts/seed-rich.ts b/scripts/seed-rich.ts
+index 1b868ba6af1157a12d0f393eb42a05fcdbcffb7d..1fc420f4045ca1447d168b4982ee97d796a1f198 100644
+--- a/scripts/seed-rich.ts
++++ b/scripts/seed-rich.ts
+@@ -432,7 +432,7 @@ async function main() {
+   console.log(`  ✅ ${ORDER_STATUSES.length} orders (full lifecycle, 30-day spread)`);
+ 
+   // ─── Deliveries (40) ──────────────────────────────────────────────────────
+-  const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zrexpress", "dhd"] as const;
++  const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zrexpress", "noest"] as const;
+   const deliveryOrders = await prisma.order.findMany({
+     where: { status: { in: ["confirmed", "shipped", "delivered", "returned", "refused"] } },
+     take: 40,
+@@ -506,7 +506,7 @@ async function main() {
+     { category: "delivery_fees", notes: "Frais Yalidine — lot semaine", amount: 4500, daysAgo: 1 },
+     { category: "delivery_fees", notes: "Frais Maystro — lot jour", amount: 2800, daysAgo: 2 },
+     { category: "delivery_fees", notes: "Frais ZR Express", amount: 3200, daysAgo: 3 },
+-    { category: "delivery_fees", notes: "Frais DHD EcoTrack", amount: 2200, daysAgo: 5 },
++    { category: "delivery_fees", notes: "Frais NOEST Express", amount: 2200, daysAgo: 5 },
+     { category: "ads", notes: "Publicité Facebook Ads", amount: 8000, daysAgo: 1 },
+     { category: "ads", notes: "Instagram sponsorisé", amount: 5000, daysAgo: 4 },
+     { category: "ads", notes: "TikTok Ads", amount: 6000, daysAgo: 7 },
+diff --git a/scripts/sf-verify.ts b/scripts/sf-verify.ts
+index b25322d2e9f6b810c57616953b508fbf94415c8e..a327752b8c7f9848a5a2edc62badbb4d92908d11 100644
+--- a/scripts/sf-verify.ts
++++ b/scripts/sf-verify.ts
+@@ -56,7 +56,6 @@ for (const key of [
+   "APP_VERSION",
+   "AUTH_SECRET",
+   "CRON_SECRET",
+-  "DHD_API_BASE",
+   "GITHUB_TOKEN",
+   "SF_DEVICE_BINDING",
+   "SF_LICENSE_DEVELOPMENT_BYPASS",
+diff --git a/src/app/api/delivery/create/route.ts b/src/app/api/delivery/create/route.ts
+index 0481972d13fd371a9f394406b0e2ad5c9efb829f..d86bb9bd42939cb914b1bc6bd5ba46777e0249fa 100644
+--- a/src/app/api/delivery/create/route.ts
++++ b/src/app/api/delivery/create/route.ts
+@@ -10,13 +10,14 @@ import {
+   loadDeliveryCredentials,
+ } from "@/lib/integrations/delivery";
+ import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
++import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
+ import { ConflictError, SahelFlowError } from "@/types/errors";
+ 
+ export const dynamic = "force-dynamic";
+ 
+ const createSchema = z.object({
+   orderId: z.string().min(1),
+-  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
++  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
+ });
+ 
+ class ExistingShipmentError extends ConflictError {
+@@ -54,6 +55,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
+   const body = await req.json();
+   const input = createSchema.parse(body);
+   const context = { prisma: db, shop: shopContext };
++  await assertProviderCapability(context, input.provider, "booking");
+   const adapter = getDeliveryAdapter(input.provider);
+   const creds = await loadDeliveryCredentials(context, input.provider);
+ 
+diff --git a/src/app/api/delivery/credentials/route.ts b/src/app/api/delivery/credentials/route.ts
+index 10345f8eb9d27d832d9384fa17f7164e4d091991..db070db39ca5d93f36bf82f42e1c1d1473485a2a 100644
+--- a/src/app/api/delivery/credentials/route.ts
++++ b/src/app/api/delivery/credentials/route.ts
+@@ -5,12 +5,21 @@ import {
+   deleteSecret,
+   hasSecret,
+ } from "@/lib/secrets";
+-import { deliverySecretKey, deliverySecretKeys, DELIVERY_PROVIDERS } from "@/lib/integrations/delivery/types";
++import {
++  deliverySecretKey,
++  deliverySecretKeys,
++  DELIVERY_PROVIDERS,
++} from "@/lib/integrations/delivery/types";
+ import { withErrorHandler } from "@/lib/api/with-error-handler";
+ import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
+ import { logAudit } from "@/lib/audit";
+ import { db, shopContext } from "@/lib/db";
+ import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
++import { SahelFlowError } from "@/types/errors";
++import {
++  invalidateProviderCertifications,
++  providerCertificationStatus,
++} from "@/lib/integrations/delivery/provider-capability";
+ 
+ export const dynamic = "force-dynamic";
+ 
+@@ -39,11 +48,12 @@ export const GET = withErrorHandler(async () => {
+     }
+     status[provider] = fieldStatus;
+   }
+-  return NextResponse.json({ providers: status });
++  const certifications = await providerCertificationStatus(context);
++  return NextResponse.json({ providers: status, certifications });
+ }, "GET /api/delivery/credentials");
+ 
+ const saveSchema = z.object({
+-  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
++  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
+   credentials: z.record(z.string(), z.string().min(1)),
+ });
+ 
+@@ -65,12 +75,31 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
+   const context = { prisma: db, shop: shopContext };
+   const body = await req.json();
+   const input = saveSchema.parse(body);
++  const allowedFields = new Set(
++    deliverySecretKeys(input.provider).map((key) =>
++      key.replace(`delivery_${input.provider}_`, ""),
++    ),
++  );
++  const submittedFields = Object.keys(input.credentials);
++  const unknownFields = submittedFields.filter((field) => !allowedFields.has(field));
++  if (unknownFields.length > 0) {
++    throw new SahelFlowError(
++      `Unsupported ${input.provider} credential fields: ${unknownFields.join(", ")}`,
++      "DELIVERY_CREDENTIAL_FIELDS_INVALID",
++      400,
++    );
++  }
+ 
+-  // Save each credential field to the Secret store
++  // Save each credential field to the Secret store.
+   for (const [field, value] of Object.entries(input.credentials)) {
+     const key = deliverySecretKey(input.provider, field);
+     await setSecret(context, key, value);
+   }
++  await invalidateProviderCertifications(
++    context,
++    input.provider,
++    "credentials_updated",
++  );
+   await logAudit(context, {
+     action: "delivery.credentials.updated",
+     entity: "delivery_credentials",
+@@ -86,7 +115,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
+ }, "POST /api/delivery/credentials");
+ 
+ const deleteSchema = z.object({
+-  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
++  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
+ });
+ 
+ /**
+@@ -108,6 +137,12 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
+     await deleteSecret(context, key);
+   }
+ 
++  await invalidateProviderCertifications(
++    context,
++    input.provider,
++    "credentials_deleted",
++  );
++
+   // W2-5: audit credential deletion (security-relevant — strips delivery integration access).
+   await logAudit({ prisma: db, shop: shopContext }, {
+     action: "delivery.credentials.deleted",
+diff --git a/src/app/api/delivery/estimate/route.ts b/src/app/api/delivery/estimate/route.ts
+index b7eaedbee2f8d150044d54eb04f64e1689197efd..9ed26b60c3d44a982f98e0494d96f4afd47621b3 100644
+--- a/src/app/api/delivery/estimate/route.ts
++++ b/src/app/api/delivery/estimate/route.ts
+@@ -4,11 +4,12 @@ import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/
+ import { withErrorHandler } from "@/lib/api/with-error-handler";
+ import { requireAuth } from "@/lib/auth/server";
+ import { db, shopContext } from "@/lib/db";
++import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
+ 
+ export const dynamic = "force-dynamic";
+ 
+ const estimateSchema = z.object({
+-  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
++  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
+   wilaya: z.string().min(1),
+   commune: z.string().optional(),
+   weight: z.number().positive().max(50, "Weight must be ≤ 50kg"),
+@@ -25,9 +26,11 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
+   const body = await req.json();
+   const input = estimateSchema.parse(body);
+ 
++  const context = { prisma: db, shop: shopContext };
++  await assertProviderCapability(context, input.provider, "fees");
+   const adapter = getDeliveryAdapter(input.provider);
+   const creds = await loadDeliveryCredentials(
+-    { prisma: db, shop: shopContext },
++    context,
+     input.provider,
+   );
+ 
+diff --git a/src/app/api/delivery/sync/route.ts b/src/app/api/delivery/sync/route.ts
+index 3abb0c85f39b634323d22b4694efaa141f7c0029..b7b2186f3b5801f44fa02e63b956fa2427cf6be9 100644
+--- a/src/app/api/delivery/sync/route.ts
++++ b/src/app/api/delivery/sync/route.ts
+@@ -11,6 +11,7 @@ import {
+   loadDeliveryCredentials,
+ } from "@/lib/integrations/delivery";
+ import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
++import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
+ import { ConflictError, InvalidTransitionError } from "@/types/errors";
+ 
+ export const dynamic = "force-dynamic";
+@@ -64,6 +65,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
+     );
+   }
+ 
++  await assertProviderCapability(context, delivery.provider, "tracking");
+   const adapter = getDeliveryAdapter(delivery.provider);
+   const creds = await loadDeliveryCredentials(context, delivery.provider);
+   const tracking = await adapter.syncTracking(delivery.trackingNumber, creds);
+@@ -239,9 +241,11 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
+     );
+   }
+ 
++  const context = { prisma: db, shop: shopContext };
++  await assertProviderCapability(context, delivery.provider, "tracking");
+   const adapter = getDeliveryAdapter(delivery.provider);
+   const creds = await loadDeliveryCredentials(
+-    { prisma: db, shop: shopContext },
++    context,
+     delivery.provider,
+   );
+   const tracking = await adapter.syncTracking(delivery.trackingNumber, creds);
+diff --git a/src/app/api/delivery/test-connection/route.ts b/src/app/api/delivery/test-connection/route.ts
+index 6506ffc6396baa3b43bdd9af4b7dd0e4aebf9ed8..7fa1f7841849c5830340e559bc5d266841022b8f 100644
+--- a/src/app/api/delivery/test-connection/route.ts
++++ b/src/app/api/delivery/test-connection/route.ts
+@@ -1,59 +1,58 @@
+ import { NextRequest, NextResponse } from "next/server";
+ import { z } from "zod";
+-import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
++
+ import { withErrorHandler } from "@/lib/api/with-error-handler";
+-import { requireAuth } from "@/lib/auth/server";
++import { logAudit } from "@/lib/audit";
++import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
+ import { db, shopContext } from "@/lib/db";
++import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
++import { testAndCertifyProvider } from "@/lib/integrations/delivery/provider-capability";
+ 
+ export const dynamic = "force-dynamic";
+ 
+ const testSchema = z.object({
+-  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
++  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
++  reasonCode: z
++    .string()
++    .trim()
++    .min(2)
++    .max(80)
++    .regex(/^[a-z0-9][a-z0-9._-]*$/i)
++    .default("settings_manual_certification"),
+ });
+ 
+ /**
+- * POST /api/delivery/test-connection — validate a delivery provider's
+- * credentials without creating a shipment.
+- *
+- * W2-10 (DHD experimental): the integrations panel UI calls this endpoint
+- * when the user clicks "Test connection" on a delivery card. Each adapter
+- * can optionally implement `testConnection(creds)` — a lightweight call to
