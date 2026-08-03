@@ -189,6 +189,7 @@ export async function seedStorefront(
     name: string;
     productIds: string[];
     isActive: boolean;
+    active: boolean;
   }> = {},
 ) {
   return rawDb.storefrontConfig.create({
@@ -198,7 +199,7 @@ export async function seedStorefront(
       description: "Test storefront",
       theme: JSON.stringify({ template: "minimal", primaryColor: "#111111" }),
       productIds: JSON.stringify(overrides.productIds ?? []),
-      isActive: overrides.isActive ?? true,
+      isActive: overrides.isActive ?? overrides.active ?? true,
     },
   });
 }
