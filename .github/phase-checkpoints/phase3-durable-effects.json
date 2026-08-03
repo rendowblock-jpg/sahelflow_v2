@@ -1,11 +1,12 @@
 {
-  "formatVersion": 3,
+  "formatVersion": 4,
   "phase": 3,
   "name": "durable providers, inbox, AI and automations",
-  "state": "contract-frozen-first-package-authorized",
+  "state": "task3-source-complete-task4-authorized",
   "handoffPreparedAt": "2026-08-03",
   "auditStartedAt": "2026-08-03",
   "contractFrozenAt": "2026-08-03",
+  "task3SourceClosedAt": "2026-08-03",
   "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
   "phase2MergePr": 200,
   "phaseIssue": 202,
@@ -13,7 +14,7 @@
   "activeBranch": "agent/phase3-durable-effects-audit",
   "activeDraftPr": 203,
   "implementationAgent": "ChatGPT Web Agentic Coding Agent",
-  "sessionPurpose": "research-contract",
+  "sessionPurpose": "implementation",
   "auditStatus": {
     "documentationReconciliation": "complete",
     "sourceInventory": "complete",
@@ -22,12 +23,14 @@
     "uiAndRecoveryInventory": "complete",
     "problemRegister": "frozen",
     "sharedContractFreeze": "complete",
-    "productionImplementation": "authorized:durable-inbound-whatsapp"
+    "task3SourceImplementation": "complete",
+    "task3SeparatedReview": "complete-repaired",
+    "productionImplementation": "authorized:truthful-durable-automations"
   },
   "constraints": {
     "oneActiveImplementationAgent": true,
     "productionEditsAuthorized": true,
-    "authorizedProductionScope": "durable inbound WhatsApp and database-authoritative inbox only",
+    "authorizedProductionScope": "truthful durable automations and WhatsApp effect adoption only",
     "targetedCiRerunsRequired": true,
     "fullMatrixRerunForDocumentationForbidden": true,
     "versionBumpAuthorized": false,
@@ -41,27 +44,56 @@
     "issue #201 retains the installed hydrated-WebView evidence limitation",
     "issue #202 owns the Phase 3 program",
     "draft PR #203 is the sole active Phase 3 package",
-    "published executable and Founder-installed release remain Internal.13"
+    "published executable and Founder-installed release remain Internal.13",
+    "Task 3 durable inbound WhatsApp is source-closed only, not installed or released"
   ],
   "preservedFoundations": [
     "canonical BusinessCommand, DomainEvent, encrypted OutboxIntent and movement facts",
-    "durable outbound WhatsApp effect identity, leases, ambiguity and receipt reconciliation",
+    "durable inbound and outbound WhatsApp identity, encrypted evidence, leases, ambiguity and receipts",
     "canonical courier booking, tracking and manual ambiguity reconciliation",
     "commerce checkpoint refusal after any failed fetched order",
     "trusted identity, exact shop, signed licensing and native multi-shop authority"
   ],
+  "task3Closure": {
+    "name": "durable inbound WhatsApp and database-authoritative inbox",
+    "sourceHead": "f016055be55fd220baa87c26ffed565c4e9e1d85",
+    "fullSourceCheckpointRun": 30808773702,
+    "normalCiRun": 30808774055,
+    "sourceGate": "passed",
+    "reviewThreadsOpen": 0,
+    "separatedAdversarialReview": "complete-repaired",
+    "evidenceLevel": "clean GitHub Actions source, integration, database and development UI source",
+    "notProven": [
+      "signed artifact",
+      "installed Windows behavior",
+      "T470 behavior",
+      "live WhatsApp provider certification",
+      "Founder acceptance",
+      "Phase 3 closure",
+      "Stable"
+    ],
+    "repairs": [
+      "aligned the sidecar with current Baileys types",
+      "encrypted every sidecar spool record with AES-256-GCM and purpose-bound associated data",
+      "failed closed on spool-key mismatch or tampering",
+      "preserved cumulative immutable attempt history and closed expired leases truthfully",
+      "deduplicated live WebSocket replay",
+      "bound status automation payloads to canonical customerPhone"
+    ]
+  },
   "problemRegister": [
     {
       "id": "P3-P1-001",
       "severity": "P1",
       "rootCause": "stale active authority after PR #200 merge",
-      "state": "closed"
+      "state": "closed",
+      "ownerPackage": "governance-reconciliation"
     },
     {
       "id": "P3-P1-002",
       "severity": "P1",
-      "rootCause": "inbound WhatsApp events depend on in-memory sidecar history instead of persistence-before-acknowledgement",
-      "state": "open",
+      "rootCause": "inbound WhatsApp events depended on in-memory sidecar history instead of persistence-before-acknowledgement",
+      "state": "closed-source-proven",
       "ownerPackage": "durable-inbound-whatsapp"
     },
     {
@@ -69,14 +101,14 @@
       "severity": "P1",
       "rootCause": "multi-step automations continue after failed steps and can report overall success",
       "state": "open",
-      "ownerPackage": "durable-automations"
+      "ownerPackage": "truthful-durable-automations"
     },
     {
       "id": "P3-P1-004",
       "severity": "P1",
       "rootCause": "automation provider actions call the WhatsApp sidecar directly and bypass durable effect authority",
       "state": "open",
-      "ownerPackage": "durable-automations"
+      "ownerPackage": "truthful-durable-automations"
     },
     {
       "id": "P3-P1-005",
@@ -111,13 +143,13 @@
       "severity": "P1",
       "rootCause": "automation UI/API expose trigger and action combinations that have no committed producer or complete executable configuration",
       "state": "open",
-      "ownerPackage": "durable-automations"
+      "ownerPackage": "truthful-durable-automations"
     },
     {
       "id": "P3-P1-010",
       "severity": "P1",
-      "rootCause": "status-trigger payload writes phone while WhatsApp automation consumes customerPhone",
-      "state": "open",
+      "rootCause": "status-trigger payload wrote phone while the WhatsApp automation consumed customerPhone",
+      "state": "closed-source-proven",
       "ownerPackage": "durable-inbound-whatsapp"
     },
     {
@@ -125,13 +157,13 @@
       "severity": "P1",
       "rootCause": "daily report calls the sidecar directly and can duplicate after a successful send followed by marker persistence failure",
       "state": "open",
-      "ownerPackage": "durable-automations"
+      "ownerPackage": "truthful-durable-automations"
     },
     {
       "id": "P3-P2-001",
       "severity": "P2",
-      "rootCause": "inactive-shop worker ownership is implicit rather than contracted and tested",
-      "state": "open",
+      "rootCause": "inactive-shop worker ownership was implicit rather than contracted and tested",
+      "state": "closed-source-proven",
       "ownerPackage": "durable-inbound-whatsapp"
     },
     {
@@ -160,58 +192,24 @@
     "identityAndEncryption": {
       "ingressKey": "provider + environment + exact account/workspace + exact shop incarnation + provider event/message identity",
       "effectKey": "effect type + exact shop incarnation + canonical command/result identity + provider account/capability",
-      "payloadBinding": [
-        "tenant/workspace",
-        "installation",
-        "shop and shop incarnation",
-        "provider, environment and account",
-        "effect or ingress type",
-        "canonical record and expected version when applicable",
-        "actor/member/device/session when applicable",
-        "request or proposal digest",
-        "schema and key version"
-      ],
       "rule": "sensitive raw provider payloads and requests are encrypted; logs and diagnostics contain bounded redacted metadata only"
     },
     "inbound": {
-      "sequence": [
-        "authenticate provider or sidecar request and validate exact account, installation and shop authority",
-        "write the event to a sidecar durable spool before broadcast when the sidecar owns the provider socket",
-        "submit to authenticated app ingress with stable ingress key and encrypted raw evidence",
-        "commit new or duplicate database result before acknowledgement",
-        "lease normalization and canonical application",
-        "commit Conversation, Message, audit, DomainEvent and automation-trigger intent atomically as applicable",
-        "publish websocket/UI change only from the database-committed result",
-        "retain quarantine, dead-letter, replay and reconciliation history"
-      ],
+      "acknowledgement": "the app acknowledges only after database commit; the sidecar removes a spool item only after that acknowledgement",
+      "publication": "WebSocket and UI publication follows the database-committed result only",
       "states": [
         "received",
         "processing",
+        "retrying",
         "applied",
-        "duplicate",
         "quarantined",
         "dead_letter"
-      ],
-      "acknowledgement": "the app acknowledges only after database commit; sidecar removal from spool occurs only after that acknowledgement",
-      "ordering": "provider ordering is recorded but never trusted as the sole deduplication or checkpoint authority"
+      ]
     },
     "outbound": {
-      "states": [
-        "queued",
-        "leased",
-        "provider_call_started",
-        "retry_wait",
-        "succeeded",
-        "known_failed",
-        "ambiguous",
-        "dead_letter",
-        "reconciled"
-      ],
-      "attempts": "every worker claim and provider call creates or updates immutable attempt history correlated to one effect key",
-      "preEffectRecovery": "lease expiry before provider_call_started is safe to retry",
-      "postEffectRecovery": "lease expiry after provider_call_started requires provider idempotency or receipt lookup; otherwise outcome becomes ambiguous",
-      "receipt": "provider IDs, response hashes, timestamps and bounded normalized facts are durable before success is exposed",
-      "operator": "ambiguous retry requires explicit duplicate-risk ceremony; reconciliation decisions are immutable and audited"
+      "preEffectRecovery": "lease expiry before provider call start is safe to retry",
+      "postEffectRecovery": "after provider call start, receipt lookup or provider idempotency is required; otherwise outcome is ambiguous",
+      "operator": "ambiguous retry requires an explicit duplicate-risk ceremony and immutable audit"
     },
     "automation": {
       "records": [
@@ -223,7 +221,6 @@
       "stepPolicy": "steps execute in declared order with explicit stop, continue or compensate policy",
       "truth": "aggregate status is derived from persisted step states and can never report success after a failed required step",
       "effects": "provider actions create shared durable effects and persist step-to-effect correlation",
-      "recovery": "leases, retries, dead letter, replay and operator decisions survive restart",
       "catalog": "only validated trigger/action schemas with a committed producer and complete configuration may be activated"
     },
     "ai": {
@@ -232,42 +229,18 @@
         "AiActionApproval",
         "AiActionExecution"
       ],
-      "proposalBinding": [
-        "exact tool and normalized arguments",
-        "affected record identities and expected versions",
-        "actor, member, device, session, installation and shop",
-        "permissions, policy and entitlement version",
-        "proposal digest, issue time and expiry"
-      ],
-      "approval": "one-time approval references the exact proposal digest and cannot authorize regenerated arguments",
-      "execution": "revalidate current authority and versions, claim approval once, execute canonical command, and persist result",
-      "failure": "tampered, expired, revoked, stale or already-used proposals fail closed"
+      "approval": "one-time approval references the exact persisted proposal digest and cannot authorize regenerated arguments"
     },
     "workerOwnership": {
       "policy": "only the exact active native runtime drains its shop database",
-      "switch": "native shop switch quiesces workers, stops new claims and safely resolves or expires existing leases before runtime replacement",
-      "inactiveShops": "queued work remains durable and visibly pending; no hidden cross-shop worker or mutable global database selection is allowed"
+      "switch": "native shop switch quiesces the process and workers before replacing the runtime",
+      "inactiveShops": "work remains durable and visibly pending in the inactive shop database"
     },
     "certification": {
-      "authority": "server-side capability certification and kill-switch state gates provider execution",
-      "scope": "provider + environment + account class + capability + API/contract version + evidence date",
-      "rule": "adapter presence, mocks or UI metadata never authorize production effects",
+      "authority": "server-side capability certification and kill-switch state gate provider execution",
       "dhd": "disabled in production until current live endpoint and behavior certification exists"
     },
     "experienceAndEvidence": {
-      "states": [
-        "queued",
-        "processing",
-        "retrying",
-        "partially_completed",
-        "ambiguous",
-        "dead_letter",
-        "stale",
-        "conflict",
-        "provider_degraded",
-        "reconciled",
-        "history"
-      ],
       "dimensions": [
         "Arabic",
         "French",
@@ -279,36 +252,35 @@
         "1366x768",
         "low-resource and constrained network"
       ],
-      "diagnostics": "redacted stable IDs, state transitions, attempts, error classes and receipt presence; no secrets or prohibited plaintext",
-      "retention": "raw encrypted evidence and operational history use explicit bounded retention and preserve audit/reconciliation requirements"
+      "diagnostics": "redacted stable IDs, state transitions, attempts, error classes and receipt presence; no secrets or prohibited plaintext"
     }
   },
-  "authorizedFirstPackage": {
-    "name": "durable inbound WhatsApp and database-authoritative inbox",
+  "authorizedNextPackage": {
+    "name": "truthful durable automations",
     "branch": "agent/phase3-durable-effects-audit",
     "pr": 203,
     "problemIds": [
-      "P3-P1-002",
-      "P3-P1-010",
-      "P3-P2-001"
+      "P3-P1-003",
+      "P3-P1-004",
+      "P3-P1-009",
+      "P3-P1-011"
     ],
     "scope": [
-      "additive ProviderIngressEvent and ProviderIngressAttempt persistence with exact indexes and encrypted raw evidence",
-      "sidecar durable inbound spool written before websocket broadcast or app delivery",
-      "authenticated /api/whatsapp/inbound persistence and acknowledgement",
-      "leased normalization into Conversation and Message with exact duplicate handling",
-      "database-committed message.received trigger intent with canonical payload keys",
-      "database-authoritative WhatsApp chats and messages; sidecar history becomes projection/recovery evidence only",
-      "websocket publication from committed database results",
-      "operator quarantine, replay, dead-letter and history states",
-      "duplicate, restart, app-unavailable, sidecar-restart, malformed, wrong-account and shop-switch tests",
-      "AR/FR/EN, RTL, accessibility and constrained-network states"
+      "additive AutomationRun, AutomationStepRun and AutomationStepAttempt persistence",
+      "stable trigger-event plus automation-definition-version identity",
+      "active-shop worker consuming committed automation.trigger.v1 intents",
+      "ordered steps with explicit stop or continue policy and truthful aggregate status",
+      "restart-safe leases, retries, dead letter, replay and operator history",
+      "send_whatsapp through the existing durable WhatsApp outbox with step-to-effect correlation",
+      "durable daily-report effect identity instead of direct sidecar dispatch",
+      "strict trigger/action schemas and fail-closed activation when producer or configuration is missing",
+      "AR/FR/EN, RTL, accessibility and partial, retry and dead-letter states",
+      "database, concurrency, restart and no-false-success tests"
     ],
     "nonGoals": [
-      "durable automation runs or daily-report conversion",
       "proposal-bound AI",
       "courier or commerce convergence",
-      "provider live certification",
+      "live provider certification",
       "application version bump, MSI, release or Founder acceptance"
     ],
     "gate": [
@@ -319,14 +291,14 @@
     ]
   },
   "nextSequence": [
-    "implement the authorized durable inbound WhatsApp package only",
-    "run its risk-selected Level 1 Task Gate",
+    "implement truthful durable automations only",
+    "run the risk-selected Level 1 Task Gate",
     "freeze the exact head and complete one separated adversarial review",
     "repair the consolidated findings",
-    "then authorize durable automation runs and shared provider effects"
+    "then authorize proposal-bound sensitive AI actions"
   ],
   "ciStrategy": [
-    "run affected source, Prisma, migration, TypeScript, lint, Vitest and targeted WhatsApp/database/UI lanes",
+    "run affected source, Prisma, migration, TypeScript, lint, Vitest and targeted automation/WhatsApp/database/UI lanes",
     "do not rebuild Windows or MSI for documentation-only descendants",
     "reserve installed and Level 3 provider evidence for roadmap-defined checkpoints or material installed/provider authority"
   ]
