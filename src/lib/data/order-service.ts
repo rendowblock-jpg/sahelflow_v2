@@ -253,9 +253,9 @@ function dispatchCommittedStatusTransition(
     orderId: order.id,
     orderNumber: order.orderNumber,
     customerId: order.customerId,
+    customerPhone: order.phone,
     totalPrice: order.totalPrice,
     wilaya: order.wilaya,
-    phone: order.phone,
   });
 }
 
