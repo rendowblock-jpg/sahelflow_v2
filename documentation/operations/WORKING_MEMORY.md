@@ -16,8 +16,8 @@
 > **Exact branch base:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
 > **Active implementation agent:** ChatGPT Web Agentic Coding Agent
 > **Current session purpose:** implementation
-> **Completed source packages:** durable inbound WhatsApp; truthful durable automations
-> **Authorized production package:** proposal-bound sensitive AI actions only
+> **Completed source packages:** durable inbound WhatsApp; truthful durable automations; proposal-bound sensitive AI actions
+> **Authorized production package:** courier and commerce convergence plus provider certification only
 > **All other Phase 3 production work:** not authorized
 
 Live GitHub is authority. Re-read protected `main`, PR #203, its exact head,
@@ -156,16 +156,16 @@ Stable.
 - **P3-P1-002 — closed-source-proven:** durable inbound WhatsApp.
 - **P3-P1-003 — closed-source-proven:** truthful multi-step aggregate state.
 - **P3-P1-004 — closed-source-proven:** durable automation WhatsApp effects.
-- **P3-P1-005 — open / authorized Task 5:** sensitive AI approval is not proposal-bound.
-- **P3-P1-006 — open / later:** provider protocols remain fragmented.
-- **P3-P1-007 — open / later:** commerce lacks durable run/item recovery.
-- **P3-P1-008 — open / later:** uncertified DHD can enter normal provider authority.
+- **P3-P1-005 — closed-source-proven:** sensitive AI approval is exact and proposal-bound.
+- **P3-P1-006 — open / authorized Task 6:** provider protocols remain fragmented.
+- **P3-P1-007 — open / authorized Task 6:** commerce lacks durable run/item recovery.
+- **P3-P1-008 — open / authorized Task 6:** uncertified DHD can enter normal provider authority.
 - **P3-P1-009 — closed-source-proven:** executable automation catalog/config.
 - **P3-P1-010 — closed-source-proven:** canonical `customerPhone` payload.
 - **P3-P1-011 — closed-source-proven:** durable daily-report identity and replay.
 - **P3-P2-001 — closed-source-proven:** active-runtime worker ownership.
-- **P3-P2-002 — open / later:** courier implementation layering.
-- **P3-P2-003 — open / later:** implementation is not live certification.
+- **P3-P2-002 — open / authorized Task 6:** courier implementation layering.
+- **P3-P2-003 — open / authorized Task 6:** implementation is not live certification.
 - **P3-P2-004 — open / issue #201:** installed hydrated-WebView evidence.
 
 ## Frozen shared contract
@@ -187,40 +187,45 @@ Stable.
 - Server-side certification and kill switches gate provider capabilities. DHD
   remains disabled in production until live-certified.
 
-## Authorized Task 5 — proposal-bound sensitive AI actions
+## Completed Task 5 — proposal-bound sensitive AI actions
+
+**Exact source head:** `07caedbc797ced5dc0e2ac959f252d5b3481285d`
+
+**Full source checkpoint:** `30849680029` — passed frozen install, Prisma generation/deployment, authority audit, TypeScript, ESLint, complete Vitest and migration status.
+
+**Normal CI:** `30849680245` — passed.
+
+**Open review threads:** zero.
+
+Source-proven outcome includes immutable encrypted proposal/approval/execution records; exact requester, approver, device, session, shop, policy, custom-permission, entitlement, target-version and expiry binding; one-time proposal-idempotent canonical execution; restart-safe replay; durable automation intents; centralized fail-closed tool classification; blocked provider assignment; sanitized permission-filtered history; database-enforced terminal success; exact approver recovery continuity; and AR/FR/EN approval, stale, conflict and recovery states.
+
+The separated adversarial pass repaired custom permission drift, post-command success downgrade, unexecutable confirmation and phone/location inputs, missing exact variants, product/default-variant divergence, multi-variant ambiguity, approval-history exposure and temporary repair-workflow authority.
+
+Task 5 evidence is source/integration/database/development-UI only. It is not signed, installed, live-provider-certified, Founder-accepted, Phase 3 closed or Stable.
+
+## Authorized Task 6 — courier/commerce convergence and provider certification
 
 Only this coherent production package is authorized now:
 
-1. Persist an immutable sensitive-action proposal before approval.
-2. Bind the proposal digest, encrypted arguments, actor, session, device, exact
-   shop, policy, permissions, entitlement, target versions and expiry.
-3. Require one exact approval for one exact proposal.
-4. Claim execution once so double approval or response replay cannot repeat a
-   mutation.
-5. Route approved mutations through canonical commands and durable effects.
-6. Remove generic current-message confirmation as sensitive-action authority.
-7. Fail closed on proposal tamper, expiry, actor/shop/policy drift and target
-   version conflict.
-8. Retain sanitized proposal, approval, execution and recovery history.
-9. Provide AR/FR/EN approval, stale, conflict and recovery states.
-10. Prove tamper, expiry, double approval, one-time execution, restart and
-    no-direct-mutation behavior.
+1. Reconcile courier and commerce callers, workers, migrations, adapters, credentials, tests and operator surfaces from exact current source.
+2. Converge durable run/item ingress, effect, receipt, ambiguity, retry, dead-letter and reconciliation authority.
+3. Persist commerce runs, pages, items, attempts, quarantine and operator recovery without advancing checkpoints past failed work.
+4. Remove or make read-only competing legacy provider mutation/effect paths after parity proof.
+5. Gate provider execution through server-side capability certification and kill switches; DHD remains effect-disabled until live-certified.
+6. Prove duplicate, overlap, retry, ambiguity, restart, interruption and recovery in AR/FR/EN.
 
-### Task 5 non-goals
+### Task 6 non-goals
 
-- courier or commerce convergence;
-- live provider certification;
-- application version bump, MSI, release, Founder acceptance, Phase 3 closure
-  or Stable.
+- application version bump, MSI, release, Founder acceptance, Phase 3 closure or Stable;
+- Phase 4 backup/replacement-install recovery;
+- broad whole-product UI redesign.
 
-## Dependency-correct sequence after Task 5
+## Dependency-correct sequence after Task 6
 
-1. Close proposal-bound sensitive AI actions.
-2. Authorize later provider/courier/commerce convergence through a new checkpoint.
-3. Complete capability certification and complete operator recovery states.
-4. Freeze Phase 3 and run its Level 2 and applicable provider/installed/Level 3
-   evidence.
-5. Close only with zero known P0/P1 and no fabricated release/installed claim.
+1. Close courier/commerce convergence and provider certification.
+2. Complete capability-wide operator recovery and multilingual/accessibility states.
+3. Freeze Phase 3 and run its Level 2 and applicable provider/installed/Level 3 evidence.
+4. Close only with zero known P0/P1 and no fabricated release/installed claim.
 
 ## Protected local boundaries and non-claims
 

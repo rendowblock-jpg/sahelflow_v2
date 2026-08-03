@@ -40,6 +40,7 @@ interface Phase3Checkpoint {
   };
   task3Closure?: PackageClosure;
   task4Closure?: PackageClosure;
+  task5Closure?: PackageClosure;
   authorizedNextPackage?: {
     name?: string;
     problemIds?: string[];
@@ -188,6 +189,7 @@ const requiredFiles = [
   "documentation/research/RESEARCH.md",
   ".github/phase-checkpoints/phase3-durable-effects.json",
   ".github/phase-checkpoints/phase3-surface-inventory.json",
+  ".github/phase-checkpoints/phase3-ai-actions.json",
   "scripts/sf-verify.ts",
   "scripts/sf-audit.ts",
 ];
@@ -297,7 +299,7 @@ requireMarkers("AGENTS.md", [
   "PR #203",
   "Task 3 durable inbound WhatsApp is source-closed",
   "Task 4 truthful durable automations are source-closed",
-  "Authorized package rules — proposal-bound sensitive AI actions",
+  "Authorized package rules — courier and commerce convergence",
   "c873b8b6a256383497d3799e0839160178e92149",
 ]);
 requireMarkers("documentation/README.md", [
@@ -341,11 +343,12 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "Completed Task 2 — exhaustive inventory and shared contract freeze",
   "Completed Task 3 — durable inbound WhatsApp",
   "Completed Task 4 — truthful durable automations",
-  "Authorized Task 5 — proposal-bound sensitive AI actions",
+  "Completed Task 5 — proposal-bound sensitive AI actions",
+  "Authorized Task 6 — courier/commerce convergence and provider certification",
   "All other Phase 3 production work:** not authorized",
-  "c873b8b6a256383497d3799e0839160178e92149",
-  "30826354580",
-  "P3-P1-005 — open / authorized Task 5",
+  "07caedbc797ced5dc0e2ac959f252d5b3481285d",
+  "30849680029",
+  "P3-P1-005 — closed-source-proven",
 ]);
 requireMarkers("documentation/research/RESEARCH.md", [
   "Research-first quality rule",
@@ -408,21 +411,23 @@ if (checkpoint) {
     task3SeparatedReview: "complete-repaired",
     task4SourceImplementation: "complete",
     task4SeparatedReview: "complete-repaired",
-    productionImplementation: "authorized:proposal-bound-sensitive-ai",
+    task5SourceImplementation: "complete",
+    task5SeparatedReview: "complete-repaired",
+    productionImplementation: "authorized:courier-commerce-provider-convergence",
   };
 
-  if (checkpoint.formatVersion !== 5 || checkpoint.phase !== 3) {
+  if (checkpoint.formatVersion !== 6 || checkpoint.phase !== 3) {
     report(
       "drift",
       checkpointPath,
-      "Phase 3 checkpoint must use Task 5 authority formatVersion 5",
+      "Phase 3 checkpoint must use Task 6 authority formatVersion 6",
     );
   }
-  if (checkpoint.state !== "task4-source-complete-task5-authorized") {
+  if (checkpoint.state !== "task5-source-complete-task6-authorized") {
     report(
       "drift",
       checkpointPath,
-      "checkpoint must close Task 4 and authorize Task 5",
+      "checkpoint must close Task 5 and authorize Task 6",
     );
   }
   if (checkpoint.protectedBase !== expectedProtectedBase) {
@@ -441,12 +446,12 @@ if (checkpoint) {
   }
   if (
     checkpoint.constraints?.authorizedProductionScope !==
-    "proposal-bound sensitive AI actions only"
+    "courier and commerce convergence plus provider certification only"
   ) {
     report(
       "drift",
       checkpointPath,
-      "authorized production scope must be proposal-bound sensitive AI only",
+      "authorized production scope must be courier/commerce convergence and provider certification only",
     );
   }
   for (const key of [
@@ -460,27 +465,36 @@ if (checkpoint) {
   }
   if (
     checkpoint.authorizedNextPackage?.name !==
-    "proposal-bound sensitive AI actions"
+    "courier and commerce convergence plus provider certification"
   ) {
     report(
       "drift",
       checkpointPath,
-      "authorized next package must be proposal-bound sensitive AI actions",
+      "authorized next package must be courier/commerce convergence plus provider certification",
     );
   }
   const authorizedProblems = new Set(
     checkpoint.authorizedNextPackage?.problemIds ?? [],
   );
-  if (
-    authorizedProblems.size !== 1 ||
-    !authorizedProblems.has("P3-P1-005")
-  ) {
+  for (const id of [
+    "P3-P1-006",
+    "P3-P1-007",
+    "P3-P1-008",
+    "P3-P2-002",
+    "P3-P2-003",
+  ]) {
+    if (!authorizedProblems.has(id)) {
+      report("drift", checkpointPath, `Task 6 authorization is missing ${id}`);
+    }
+  }
+  if (authorizedProblems.size !== 5) {
     report(
       "drift",
       checkpointPath,
-      "Task 5 authorization must contain only P3-P1-005",
+      "Task 6 authorization must contain exactly five problems",
     );
   }
+
 
   validateClosure(checkpointPath, "Task 3", checkpoint.task3Closure, {
     sourceHead: "f016055be55fd220baa87c26ffed565c4e9e1d85",
@@ -492,6 +506,11 @@ if (checkpoint) {
     fullSourceCheckpointRun: 30826354580,
     normalCiRun: 30826355685,
   });
+  validateClosure(checkpointPath, "Task 5", checkpoint.task5Closure, {
+    sourceHead: "07caedbc797ced5dc0e2ac959f252d5b3481285d",
+    fullSourceCheckpointRun: 30849680029,
+    normalCiRun: 30849680245,
+  });
 
   const problemStates = new Map(
     (checkpoint.problemRegister ?? []).map((problem) => [problem.id, problem.state]),
@@ -501,7 +520,7 @@ if (checkpoint) {
     ["P3-P1-002", "closed-source-proven"],
     ["P3-P1-003", "closed-source-proven"],
     ["P3-P1-004", "closed-source-proven"],
-    ["P3-P1-005", "open-authorized-task5"],
+    ["P3-P1-005", "closed-source-proven"],
     ["P3-P1-009", "closed-source-proven"],
     ["P3-P1-010", "closed-source-proven"],
     ["P3-P1-011", "closed-source-proven"],
@@ -564,6 +583,8 @@ const staleMarkers: Array<[string, string]> = [
   ["documentation/system/ROADMAP.md", "Active product phase:** Phase 2"],
   ["documentation/system/CURRENT_STATE.md", "Active proposed package:** PR #200"],
   ["documentation/operations/WORKING_MEMORY.md", "Authorized Task 4 — truthful durable automations"],
+  ["documentation/operations/WORKING_MEMORY.md", "Authorized Task 5 — proposal-bound sensitive AI actions"],
+  ["AGENTS.md", "Authorized production package:** proposal-bound sensitive AI actions only"],
   ["documentation/operations/WORKING_MEMORY.md", "Production implementation:** not authorized"],
   ["documentation/operations/WORKING_MEMORY.md", "Shared contract questions to freeze"],
 ];
@@ -585,5 +606,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Task 3 and Task 4 source-closed; proposal-bound sensitive AI authorized).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Tasks 3–5 source-closed; courier/commerce provider convergence authorized).`,
 );

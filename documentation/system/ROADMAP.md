@@ -11,7 +11,7 @@
 > **Phase 1 status:** Protected-source closed through PR #195
 > **Phase 2 status:** Protected-source closed through PR #200 with issue #201 retained
 > **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active phase package:** audit, Problem Register and shared contract freeze on PR #203
+> **Active phase package:** Task 5 source-closed; Task 6 courier/commerce convergence and provider certification authorized on PR #203
 > **Phase issue:** #202
 > **Execution epic:** issue #164
 > **Last consolidated:** 2026-08-03
@@ -255,21 +255,15 @@ authenticated ingress
 → receipt and reconciliation
 ```
 
-## Research/contract gate — active
+## Source implementation progress
 
-Before production implementation, PR #203 must:
+PR #203 completed governance reconciliation and the shared contract freeze, then source-closed:
 
-- reconcile all active authority after PR #200;
-- inventory every provider, ingress, worker, route, command, migration, test,
-  caller and UI state;
-- publish one consolidated Problem Register grouped by root cause;
-- freeze shared ingress, effect, lease, retry, receipt, ambiguity, dead-letter,
-  reconciliation, automation-step and AI-proposal contracts;
-- define active/inactive shop worker ownership;
-- define provider certification authority;
-- preserve existing proven behavior and explicit non-goals.
+- Task 3 — durable inbound WhatsApp and database-authoritative inbox at `f016055be55fd220baa87c26ffed565c4e9e1d85`;
+- Task 4 — truthful durable automations at `c873b8b6a256383497d3799e0839160178e92149`;
+- Task 5 — proposal-bound sensitive AI actions at `07caedbc797ced5dc0e2ac959f252d5b3481285d` with complete checkpoint `30849680029` and normal CI `30849680245`.
 
-Production implementation remains unauthorized until this gate passes.
+Only Task 6 courier/commerce convergence and provider certification is authorized next. Phase 3 itself remains open.
 
 ## Preserved foundations
 
@@ -282,19 +276,15 @@ Production implementation remains unauthorized until this gate passes.
 
 ## Current root-cause blockers
 
-- inbound WhatsApp remains sidecar-memory dependent rather than persisted before
-  acknowledgement;
-- multi-step automations can continue after failure and report overall success;
-- automation WhatsApp actions bypass durable effects;
-- sensitive AI tools use generic current-message confirmation rather than exact
-  persisted proposal/approval authority;
-- WhatsApp, courier and commerce effect semantics are fragmented;
+- WhatsApp, courier and commerce effect semantics remain fragmented outside the source-closed WhatsApp packages;
 - commerce lacks durable run/item ingress, quarantine and operator recovery;
-- uncertified DHD execution is not server-side fail-closed;
-- inactive-shop worker policy is implicit;
+- courier implementation remains split across current, reviewed and legacy layers;
+- uncertified DHD execution must remain server-side effect-disabled;
+- current adapter source is not live provider certification;
+- capability-wide operator recovery and Phase 3 checkpoint evidence remain incomplete;
 - issue #201 remains open.
 
-The detailed proposed register lives in Working Memory and the Phase 3 checkpoint.
+The detailed frozen register and Task 6 sequence live in Working Memory and the Phase 3 checkpoint.
 
 ## Required implementation outcomes
 
@@ -314,12 +304,12 @@ The detailed proposed register lives in Working Memory and the Phase 3 checkpoin
 
 ## Dependency-correct package order
 
-1. governance reconciliation and exact audit tooling;
-2. exhaustive inventory and shared contract freeze;
-3. durable inbound WhatsApp and database-authoritative inbox;
-4. truthful durable automation runs and effects;
-5. persisted proposal-bound AI actions;
-6. courier/commerce convergence and provider certification;
+1. governance reconciliation and exact audit tooling — complete;
+2. exhaustive inventory and shared contract freeze — complete;
+3. durable inbound WhatsApp and database-authoritative inbox — source-closed;
+4. truthful durable automation runs and effects — source-closed;
+5. persisted proposal-bound AI actions — source-closed;
+6. courier/commerce convergence and provider certification — authorized;
 7. complete operator recovery and multilingual/accessibility states;
 8. frozen review, repair batch and Phase 3 checkpoint.
 

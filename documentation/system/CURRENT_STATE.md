@@ -10,15 +10,15 @@
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
 > **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active proposed package:** PR #203 — Phase 3 audit and contract freeze
+> **Active proposed package:** PR #203 — Task 6 courier/commerce convergence and provider certification
 > **Phase execution issue:** #202
 > **Retained installed evidence:** #201
 > **Last assessed:** 2026-08-03
 
-This document states what merged source and named evidence prove now. PR #203 is
-identified separately as proposed audit/documentation source and does not become
-merged, installed or phase-closed truth merely because it exists. The exact live
-execution frontier belongs in
+This document states what merged protected source and named evidence prove now. PR #203 is
+identified separately as unmerged Phase 3 source: Tasks 3–5 are source-closed on
+that draft branch, but are not installed, released, Founder-accepted or
+phase-closed truth. The exact live execution frontier belongs in
 [`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md).
 
 ## Executive truth
@@ -285,55 +285,21 @@ replace current installed proof for newly merged source.
 
 ## Active proposed Phase 3 package — PR #203
 
-PR #203 is a draft from exact protected base
-`e9c92f08f39e8d87ddfd72d2e698418ae81fc084`.
+PR #203 remains a draft from exact protected base `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`.
 
-It currently changes documentation and Phase 3 checkpoint authority only. It has
-not changed product runtime, schema, migration, provider behavior, version or
-release.
+It has source-closed durable inbound WhatsApp, truthful durable automations and proposal-bound sensitive AI actions. Task 5 exact source head `07caedbc797ced5dc0e2ac959f252d5b3481285d` passed complete checkpoint `30849680029` and normal CI `30849680245` with zero open review threads.
 
-The proposed audit has identified these root-cause blockers:
+These are source/integration/database/development-UI claims only. No version, release, signed artifact, installed Windows, live-provider, Founder-acceptance, Phase 3 closure or Stable claim follows.
 
-1. active authority remained stale after PR #200;
-2. inbound WhatsApp depends on in-memory sidecar history rather than
-   persistence-before-acknowledgement;
-3. multi-step automations can continue after failure and report overall success;
-4. automation WhatsApp effects call the sidecar directly and bypass durable
-   effect authority;
-5. sensitive AI tools use generic current-message confirmation rather than one
-   exact persisted proposal/approval;
-6. WhatsApp, courier and commerce effect semantics are fragmented;
-7. commerce lacks durable run/item ingress and operator recovery;
-8. the explicitly uncertified DHD adapter remains registered in normal provider
-   execution authority.
-
-The full proposed Problem Register and task sequence are in Working Memory and the
-Phase 3 checkpoint. Production implementation remains unauthorized until the
-exhaustive inventory and shared contract freeze are complete.
+Only courier/commerce convergence and provider certification is authorized next.
 
 ## Blocking discontinuities
 
-### 1. Inbound provider durability is incomplete
+### 1–3. Source-closed Phase 3 packages
 
-Baileys maintains live chats/messages in memory and emits inbound messages to
-subscribers. The database fallback reconstructs locally queued outbound messages,
-not a complete persisted inbound inbox. Interruption, duplicate/conflict and
-pre-acknowledgement authority remain incomplete.
+Inbound WhatsApp is persisted before acknowledgement with encrypted spool recovery and database-authoritative inbox reads. Automations persist truthful ordered run/step/attempt state and use durable provider effects. Sensitive AI actions require exact immutable proposal/approval/execution authority, database-terminal success and canonical one-time execution.
 
-### 2. Automations are not production-safe
-
-The current engine is fire-and-forget. Multi-step actions can continue after a
-failed step and then record the whole run as success. Provider actions use direct
-sidecar calls and in-process retries rather than durable intents, receipts and
-recovery.
-
-### 3. Sensitive AI approval is incomplete
-
-AI order creation has a useful persisted source identity and canonical draft path,
-but the general confirmation gate accepts words such as yes/ok for the tool call
-emitted on that turn. Exact tool/arguments, target versions, actor/shop/session,
-permission/licensing snapshot, expiry, one-time approval and durable result are
-not one persisted authority.
+These packages remain unmerged and uninstalled source evidence on PR #203; they do not prove live provider certification or Phase 3 closure.
 
 ### 4. External-effect protocols remain fragmented
 
@@ -396,11 +362,11 @@ still blocking Phase 7 evidence and continuous package requirements.
 | Golden COD | strong canonical source boundary | remaining provider/intake adoption and installed journey |
 | Inventory/finance | strong facts in adopted paths | remaining callers and reconciliation evidence |
 | Outbound WhatsApp | durable strong partial | all callers, live certification and operator UI |
-| Inbound WhatsApp/inbox | unsafe partial | durable persistence-before-ack and replay/recovery |
+| Inbound WhatsApp/inbox | source-closed on draft PR #203 | merge plus installed/live-provider evidence |
 | Courier | durable strong partial | shared contract and live provider certification |
 | Commerce sync | checkpoint-safe partial | durable run/item ingress, overlap and recovery |
-| Automations | unsafe partial | durable truthful run/step/effect execution |
-| AI | useful reads/drafts and canonical order draft | exact persisted proposal approval and legacy write removal |
+| Automations | source-closed on draft PR #203 | merge plus installed/provider evidence |
+| AI | proposal-bound sensitive actions source-closed on draft PR #203 | merge plus installed representative journey evidence |
 | Backup/recovery | strong migration/native partial | complete Phase 4 backup/restore/replacement drills |
 | UI/UX | broad functional internal app | complete design/chart system and every route/state |
 | Arabic/RTL/accessibility | partial | full route/journey and installed/external evidence |
@@ -412,7 +378,4 @@ still blocking Phase 7 evidence and continuous package requirements.
 SahelFlow has credible protected foundations and substantial product breadth. It
 is not yet a complete AAA candidate or Stable product.
 
-The exact next source work is the Phase 3 audit and contract package on PR #203:
-complete governance reconciliation, exhaustive inventory, consolidated Problem
-Register and shared durable ingress/effect/automation/AI contracts. Production
-implementation begins only after those gates.
+The exact next source work on PR #203 is Task 6 courier/commerce convergence and provider certification under the frozen durable ingress/effect/receipt/reconciliation contracts. Tasks 3–5 remain source-closed only; Phase 3 and release evidence remain open.

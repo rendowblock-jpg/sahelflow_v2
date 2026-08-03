@@ -8,34 +8,15 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
-### Phase 3 audit and durable-effect contract program
+### Phase 3 durable providers, inbox, automations and AI
 
-- Advanced the active product frontier to Phase 3 — durable providers, inbox, AI
-  and automations — after protected merge PR #200.
-- Opened issue #202 and draft PR #203 from exact protected base
-  `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`.
-- Reconciled the agent entry point, documentation index, Current State, Roadmap,
-  Working Memory, root README and issue #164 to Phase 3 truth.
-- Preserved the canonical business command/event/encrypted-outbox foundation,
-  durable outbound WhatsApp effects, canonical courier booking/reconciliation and
-  commerce checkpoint refusal.
-- Published the first consolidated Phase 3 Problem Register:
-  - inbound WhatsApp remains sidecar-memory dependent rather than persisted before
-    acknowledgement;
-  - multi-step automation failure can still be reported as overall success;
-  - automation WhatsApp actions bypass durable effect authority;
-  - sensitive AI actions use generic current-message confirmation instead of one
-    exact persisted proposal and approval;
-  - provider effect semantics are fragmented across WhatsApp, courier and
-    commerce;
-  - commerce lacks durable run/item ingress and operator recovery;
-  - the explicitly uncertified DHD adapter remains registered in normal provider
-    execution authority.
-- Kept production implementation unauthorized until the exhaustive inventory,
-  frozen Problem Register and shared ingress/effect/receipt/reconciliation,
-  automation-step and AI-proposal contracts are complete.
-- Kept ordinary documentation/authority work version-neutral. No release or MSI
-  is authorized by this audit package.
+- Completed governance reconciliation, exhaustive inventory and shared contract freeze on draft PR #203.
+- Source-closed durable inbound WhatsApp and database-authoritative inbox at `f016055be55fd220baa87c26ffed565c4e9e1d85`.
+- Source-closed truthful durable automations at `c873b8b6a256383497d3799e0839160178e92149`.
+- Source-closed proposal-bound sensitive AI actions at `07caedbc797ced5dc0e2ac959f252d5b3481285d`; complete checkpoint `30849680029` and normal CI `30849680245` passed.
+- Added immutable encrypted proposal, approval and execution authority; exact actor/device/session/shop/policy/custom-permission/entitlement/target/expiry binding; one-time canonical execution; restart replay; permission-filtered recovery history; database-terminal success; and AR/FR/EN states.
+- Repaired custom permission drift, post-command success downgrade, invalid confirmation/phone/location proposal shapes, exact variant binding, product/default-variant consistency, multi-variant ambiguity, approval-history exposure and temporary repair-workflow authority.
+- Authorized only courier/commerce convergence and provider certification next. No version, MSI, release, installed, Founder-acceptance, Phase 3 closure or Stable claim was made.
 
 ### Phase 2 protected-source closure
 

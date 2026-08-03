@@ -1,8 +1,8 @@
 {
-  "formatVersion": 5,
+  "formatVersion": 6,
   "phase": 3,
   "name": "durable providers, inbox, AI and automations",
-  "state": "task4-source-complete-task5-authorized",
+  "state": "task5-source-complete-task6-authorized",
   "handoffPreparedAt": "2026-08-03",
   "auditStartedAt": "2026-08-03",
   "contractFrozenAt": "2026-08-03",
@@ -28,12 +28,14 @@
     "task3SeparatedReview": "complete-repaired",
     "task4SourceImplementation": "complete",
     "task4SeparatedReview": "complete-repaired",
-    "productionImplementation": "authorized:proposal-bound-sensitive-ai"
+    "productionImplementation": "authorized:courier-commerce-provider-convergence",
+    "task5SourceImplementation": "complete",
+    "task5SeparatedReview": "complete-repaired"
   },
   "constraints": {
     "oneActiveImplementationAgent": true,
     "productionEditsAuthorized": true,
-    "authorizedProductionScope": "proposal-bound sensitive AI actions only",
+    "authorizedProductionScope": "courier and commerce convergence plus provider certification only",
     "targetedCiRerunsRequired": true,
     "fullMatrixRerunForDocumentationForbidden": true,
     "versionBumpAuthorized": false,
@@ -49,7 +51,8 @@
     "draft PR #203 is the sole active Phase 3 package",
     "published executable and Founder-installed release remain Internal.13",
     "Task 3 durable inbound WhatsApp is source-closed only, not installed or released",
-    "Task 4 truthful durable automations are source-closed only, not installed or released"
+    "Task 4 truthful durable automations are source-closed only, not installed or released",
+    "Task 5 proposal-bound sensitive AI actions are source-closed only, not installed or released"
   ],
   "preservedFoundations": [
     "canonical BusinessCommand, DomainEvent, encrypted OutboxIntent and movement facts",
@@ -174,28 +177,28 @@
       "id": "P3-P1-005",
       "severity": "P1",
       "rootCause": "sensitive AI actions use generic current-message confirmation rather than persisted exact proposal and approval",
-      "state": "open-authorized-task5",
+      "state": "closed-source-proven",
       "ownerPackage": "proposal-bound-ai"
     },
     {
       "id": "P3-P1-006",
       "severity": "P1",
       "rootCause": "WhatsApp, courier and commerce effects use fragmented attempt, receipt and reconciliation semantics",
-      "state": "open-later",
+      "state": "open-authorized-task6",
       "ownerPackage": "provider-convergence"
     },
     {
       "id": "P3-P1-007",
       "severity": "P1",
       "rootCause": "commerce synchronization lacks durable run/item ingress, quarantine and operator recovery",
-      "state": "open-later",
+      "state": "open-authorized-task6",
       "ownerPackage": "durable-commerce"
     },
     {
       "id": "P3-P1-008",
       "severity": "P1",
       "rootCause": "an explicitly uncertified DHD adapter remains registered in normal provider execution authority",
-      "state": "open-later",
+      "state": "open-authorized-task6",
       "ownerPackage": "provider-certification"
     },
     {
@@ -230,14 +233,14 @@
       "id": "P3-P2-002",
       "severity": "P2",
       "rootCause": "canonical courier implementation is split across current, reviewed-base and legacy layers",
-      "state": "open-later",
+      "state": "open-authorized-task6",
       "ownerPackage": "provider-convergence"
     },
     {
       "id": "P3-P2-003",
       "severity": "P2",
       "rootCause": "substantial provider adapter source is not equivalent to current live certification",
-      "state": "open-later",
+      "state": "open-authorized-task6",
       "ownerPackage": "provider-certification"
     },
     {
@@ -316,46 +319,94 @@
     }
   },
   "authorizedNextPackage": {
-    "name": "proposal-bound sensitive AI actions",
+    "name": "courier and commerce convergence plus provider certification",
     "branch": "agent/phase3-durable-effects-audit",
     "pr": 203,
     "problemIds": [
-      "P3-P1-005"
+      "P3-P1-006",
+      "P3-P1-007",
+      "P3-P1-008",
+      "P3-P2-002",
+      "P3-P2-003"
     ],
     "scope": [
-      "persist an immutable sensitive-action proposal before approval",
-      "bind proposal digest, encrypted arguments, actor, session, device, exact shop, policy, permissions, entitlement, target versions and expiry",
-      "require one exact approval for one exact proposal",
-      "claim execution once so double approval or response replay cannot repeat a mutation",
-      "route approved mutations through canonical commands and durable effects",
-      "remove generic current-message confirmation as sensitive-action authority",
-      "fail closed on proposal tamper, expiry, actor or shop drift, policy drift and target-version conflict",
-      "retain sanitized approval, execution and recovery history",
-      "provide Arabic, French and English approval, stale, conflict and recovery states",
-      "prove tamper, expiry, double approval, one-time execution, restart and no-direct-mutation behavior"
+      "converge courier and commerce work on shared durable ingress, effect, receipt and reconciliation contracts",
+      "persist durable commerce runs, pages, items, attempts, quarantine, dead letter and operator recovery",
+      "remove or make read-only competing legacy courier and commerce mutation or effect paths",
+      "gate every provider capability through server-side certification and kill-switch authority",
+      "keep DHD effect-disabled until current live endpoint and behavior certification exists",
+      "prove duplicate, overlap, retry, ambiguity, restart, interruption and checkpoint safety",
+      "provide complete Arabic, French and English operator recovery states"
     ],
     "nonGoals": [
-      "courier or commerce protocol convergence",
-      "live provider certification",
-      "application version bump, MSI, release, Founder acceptance, Phase 3 closure or Stable"
+      "application version bump, MSI, release, Founder acceptance, Phase 3 closure or Stable",
+      "Phase 4 backup and replacement-install recovery",
+      "broad whole-product UI redesign"
     ],
     "gate": [
-      "append-only migration and supported prior-database compatibility",
+      "complete current-source courier and commerce reconnaissance before production edits",
       "focused tests during implementation",
-      "Level 1 Task Gate on the coherent package",
-      "frozen exact-head separated adversarial review before package closure"
+      "Level 1 Task Gate on each coherent package",
+      "frozen exact-head separated adversarial review before package closure",
+      "live certification evidence only where current credentials and provider access exist"
     ]
   },
   "nextSequence": [
-    "implement proposal-bound sensitive AI actions only",
+    "audit and implement courier and commerce convergence plus provider certification only",
     "run the risk-selected Level 1 Task Gate",
     "freeze the exact head and complete one separated adversarial review",
     "repair the consolidated findings",
-    "then authorize later provider convergence packages through a new checkpoint"
+    "then complete operator recovery and the Phase 3 checkpoint"
   ],
   "ciStrategy": [
     "run affected source, Prisma, migration, TypeScript, lint, Vitest and targeted AI/database/UI lanes",
     "do not rebuild Windows or MSI for documentation-only descendants",
     "reserve installed and Level 3 provider evidence for roadmap-defined checkpoints or material installed/provider authority"
-  ]
+  ],
+  "task5SourceClosedAt": "2026-08-03",
+  "task5Closure": {
+    "name": "proposal-bound sensitive AI actions",
+    "sourceHead": "07caedbc797ced5dc0e2ac959f252d5b3481285d",
+    "fullSourceCheckpointRun": 30849680029,
+    "normalCiRun": 30849680245,
+    "sourceGate": "passed",
+    "reviewThreadsOpen": 0,
+    "separatedAdversarialReview": "complete-repaired",
+    "evidenceLevel": "clean GitHub Actions source, integration, database and development UI source",
+    "closedProblemIds": [
+      "P3-P1-005"
+    ],
+    "implementationEvidence": [
+      "immutable encrypted AiActionProposal, AiActionApproval and AiActionExecution persistence",
+      "exact requester, approver, device, session, shop, policy, custom permission, entitlement, target version and expiry binding",
+      "one exact approval and one proposal-idempotent BusinessCommand execution claim",
+      "restart replay returns committed command results without repeating mutation",
+      "central fail-closed tool catalog with provider assignment blocked",
+      "generic confirmation words have no execution authority",
+      "canonical mutations and durable automation intents execute atomically",
+      "sanitized permission-filtered proposal history and exact approver recovery continuity",
+      "database terminal-state guards for succeeded proposal and execution truth",
+      "Arabic, French and English proposal, stale, conflict and recovery states"
+    ],
+    "repairs": [
+      "preserved custom team-member permission allowlists during revalidation",
+      "made succeeded proposal and execution truth monotonic after post-command read failures",
+      "rejected governed confirmation, malformed Algerian phones and blank order location fields before persistence",
+      "required exact active variants for order proposals",
+      "kept product and sole-variant price and stock projections consistent",
+      "refused ambiguous product-level mutations for multi-variant catalogs",
+      "kept exact approval digests out of persisted and Gemini history",
+      "filtered decrypted proposal history by action business permissions",
+      "retired temporary self-modifying repair and artifact workflows"
+    ],
+    "notProven": [
+      "signed artifact",
+      "installed Windows behavior",
+      "T470 behavior",
+      "live provider certification",
+      "Founder acceptance",
+      "Phase 3 closure",
+      "Stable"
+    ]
+  }
 }

@@ -51,7 +51,10 @@ They never replace current GitHub authority.
 - Task 4 truthful durable automations are source-closed at
   `c873b8b6a256383497d3799e0839160178e92149`; complete checkpoint
   `30826354580` and normal CI `30826355685` passed, with no open review threads.
-- **Authorized production package:** proposal-bound sensitive AI actions only.
+- Task 5 proposal-bound sensitive AI actions are source-closed at
+  `07caedbc797ced5dc0e2ac959f252d5b3481285d`; complete checkpoint `30849680029` and normal CI
+  `30849680245` passed, with no open review threads.
+- **Authorized production package:** courier and commerce convergence plus provider certification only.
 - Every other Phase 3 production package remains unauthorized.
 
 Always re-read live GitHub. These values record the verified frontier; they are
@@ -101,8 +104,8 @@ authorize an MVP, hidden deferral or fabricated readiness.
   genuinely independent later.
 - Declare one session purpose: governance/planning, research/contract,
   implementation, frozen review/closure or installed evidence.
-- The current session is implementation of the exact proposal-bound sensitive AI
-  package only.
+- The current session is implementation of the exact courier/commerce convergence
+  and provider-certification package only.
 
 ## Audit-first and batch remediation rule
 
@@ -246,7 +249,7 @@ SQLite trigger contention, repeat-blacklist identity and direct report sends.
 This is source evidence only. It is not signed, installed, provider-certified,
 Founder-accepted, Phase 3 closed or Stable.
 
-## Authorized package rules — proposal-bound sensitive AI actions
+## Authorized package rules — courier and commerce convergence
 
 Only these production edits are authorized now:
 
