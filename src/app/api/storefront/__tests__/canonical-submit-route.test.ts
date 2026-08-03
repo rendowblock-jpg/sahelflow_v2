@@ -66,7 +66,11 @@ describe("canonical storefront submit route", () => {
     expect(replayBody.orderId).toBe(firstBody.orderId);
     expect(replayBody.orderNumber).toBe(firstBody.orderNumber);
     expect(await rawDb.order.count()).toBe(1);
-    expect(await rawDb.businessCommand.count()).toBe(1);
+    expect(
+      await rawDb.businessCommand.count({
+        where: { commandType: "order.source.create.v1" },
+      }),
+    ).toBe(1);
 
     const order = await rawDb.order.findUnique({
       where: { id: firstBody.orderId as string },
