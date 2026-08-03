@@ -1,14 +1,17 @@
-import { getI18n } from "@/lib/i18n-server";
-import { db } from "@/lib/db";
-import { requireTrustedAction } from "@/lib/identity/authorization";
-import { formatDate } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Bot, Zap, Clock, CheckCircle2 } from "lucide-react";
-import { AutomationActions } from "./automation-actions";
+import type { Metadata } from "next";
+import { Bot, CheckCircle2, Clock, Zap } from "lucide-react";
+
+import { AutomationRunRecoveryPanel } from "@/components/automations/automation-run-recovery-panel";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
-import type { Metadata } from "next";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { listAutomationRunHistory } from "@/lib/automations/recovery";
+import { db, shopContext } from "@/lib/db";
+import { getI18n } from "@/lib/i18n-server";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import { formatDate } from "@/lib/utils";
+import { AutomationActions } from "./automation-actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -16,35 +19,37 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const dynamic = "force-dynamic";
 
-/** i18n keys for trigger events */
 const TRIGGER_I18N: Record<string, string> = {
   "order.created": "automations.triggers.orderCreated",
   "order.confirmed": "automations.triggers.orderConfirmed",
   "order.shipped": "automations.triggers.orderShipped",
   "order.delivered": "automations.triggers.orderDelivered",
   "order.returned": "automations.triggers.orderReturned",
-  "customer.created": "automations.triggers.customerCreated",
+  "order.refused": "automations.triggers.orderRefused",
+  "order.cancelled": "automations.triggers.orderCancelled",
+  "order.failed": "automations.triggers.orderFailed",
+  "customer.blacklisted": "automations.triggers.customerBlacklisted",
   "message.received": "automations.triggers.messageReceived",
   "stock.low": "automations.triggers.stockLow",
 };
 
-/** i18n keys for actions */
 const ACTION_I18N: Record<string, string> = {
-  "send_whatsapp": "automations.actions.sendWhatsapp",
-  "update_status": "automations.actions.updateStatus",
-  "send_notification": "automations.actions.sendNotification",
-  "tag_customer": "automations.actions.tagCustomer",
+  send_whatsapp: "automations.actions.sendWhatsapp",
+  update_status: "automations.actions.updateStatus",
+  send_notification: "automations.actions.sendNotification",
+  tag_customer: "automations.actions.tagCustomer",
 };
 
 export default async function AutomationsPage() {
   await requireTrustedAction("automations.read");
   const { t, locale } = await getI18n();
 
-  const [automations, recentLogs] = await Promise.all([
+  const [automations, recentRuns, recentLogs] = await Promise.all([
     db.automation.findMany({
       where: { deletedAt: null },
       orderBy: { createdAt: "desc" },
     }),
+    listAutomationRunHistory({ prisma: db, shop: shopContext }, 20),
     db.automationLog.findMany({
       take: 10,
       orderBy: { createdAt: "desc" },
@@ -52,16 +57,30 @@ export default async function AutomationsPage() {
     }),
   ]);
 
-  const activeCount = automations.filter((a) => a.isActive).length;
-  const totalRuns = automations.reduce((sum, a) => sum + a.runCount, 0);
+  const activeCount = automations.filter((automation) => automation.isActive).length;
+  const totalRuns = automations.reduce(
+    (sum, automation) => sum + automation.runCount,
+    0,
+  );
 
   const stats = [
-    { label: t("automations.total"), value: String(automations.length), icon: Bot },
-    { label: t("common.active"), value: String(activeCount), icon: Zap },
-    { label: t("automations.totalRuns"), value: String(totalRuns), icon: CheckCircle2 },
+    {
+      label: t("automations.total"),
+      value: String(automations.length),
+      icon: Bot,
+    },
+    {
+      label: t("common.active"),
+      value: String(activeCount),
+      icon: Zap,
+    },
+    {
+      label: t("automations.totalRuns"),
+      value: String(totalRuns),
+      icon: CheckCircle2,
+    },
   ];
 
-  // Pre-built recipe templates
   const recipes = [
     {
       nameKey: "automations.recipes.autoConfirm",
@@ -97,7 +116,6 @@ export default async function AutomationsPage() {
         actions={<AutomationActions variant="create" />}
       />
 
-      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -117,33 +135,47 @@ export default async function AutomationsPage() {
         })}
       </div>
 
-      {/* Active automations */}
       {automations.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t("automations.yourAutomations")}</CardTitle>
+            <CardTitle className="text-base">
+              {t("automations.yourAutomations")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
-              {automations.map((auto) => (
-                <div key={auto.id} className="flex items-center justify-between p-4">
+              {automations.map((automation) => (
+                <div
+                  key={automation.id}
+                  className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{auto.name}</span>
-                      <Badge variant={auto.isActive ? "default" : "outline"}>
-                        {auto.isActive ? t("common.active") : t("common.inactive")}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{automation.name}</span>
+                      <Badge
+                        variant={automation.isActive ? "default" : "outline"}
+                      >
+                        {automation.isActive
+                          ? t("common.active")
+                          : t("common.inactive")}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{t("automations.triggerLabel")}: {t(TRIGGER_I18N[auto.trigger] ?? auto.trigger)}</span>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>
+                        {t("automations.triggerLabel")}: {t(
+                          TRIGGER_I18N[automation.trigger] ?? automation.trigger,
+                        )}
+                      </span>
                       <span>·</span>
-                      <span>{t("automations.runsLabel")}: {auto.runCount}</span>
-                      {auto.lastRunAt && (
+                      <span>
+                        {t("automations.runsLabel")}: {automation.runCount}
+                      </span>
+                      {automation.lastRunAt && (
                         <>
                           <span>·</span>
                           <span className="flex items-center gap-0.5">
                             <Clock className="h-2.5 w-2.5" />
-                            {formatDate(auto.lastRunAt, locale)}
+                            {formatDate(automation.lastRunAt, locale)}
                           </span>
                         </>
                       )}
@@ -153,15 +185,19 @@ export default async function AutomationsPage() {
                     <AutomationActions
                       variant="edit"
                       automation={{
-                        id: auto.id,
-                        name: auto.name,
-                        trigger: auto.trigger,
-                        action: auto.action,
-                        isActive: auto.isActive,
-                        conditions: auto.conditions,
+                        id: automation.id,
+                        name: automation.name,
+                        trigger: automation.trigger,
+                        action: automation.action,
+                        isActive: automation.isActive,
+                        conditions: automation.conditions,
                       }}
                     />
-                    <AutomationActions variant="toggle" automationId={auto.id} isActive={auto.isActive} />
+                    <AutomationActions
+                      variant="toggle"
+                      automationId={automation.id}
+                      isActive={automation.isActive}
+                    />
                   </div>
                 </div>
               ))}
@@ -182,27 +218,34 @@ export default async function AutomationsPage() {
         </Card>
       )}
 
-      {/* Recipe templates */}
+      <AutomationRunRecoveryPanel initialRuns={recentRuns} />
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("automations.templates")}</CardTitle>
+          <CardTitle className="text-base">
+            {t("automations.templates")}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y">
             {recipes.map((recipe) => (
               <div key={recipe.nameKey} className="p-4">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-primary" />
                       <span className="font-medium">{t(recipe.nameKey)}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{t(recipe.descKey)}</p>
-                    <div className="flex items-center gap-2 text-xs">
+                    <p className="text-sm text-muted-foreground">
+                      {t(recipe.descKey)}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
                       <Badge variant="outline">
                         {t(TRIGGER_I18N[recipe.trigger] ?? recipe.trigger)}
                       </Badge>
-                      <span className="text-muted-foreground icon-rtl-flip">→</span>
+                      <span className="icon-rtl-flip text-muted-foreground">
+                        →
+                      </span>
                       <Badge variant="outline">
                         {t(ACTION_I18N[recipe.action] ?? recipe.action)}
                       </Badge>
@@ -221,30 +264,42 @@ export default async function AutomationsPage() {
         </CardContent>
       </Card>
 
-      {/* Recent activity (execution log) */}
       {recentLogs.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t("automations.recentActivity")}</CardTitle>
+            <CardTitle className="text-base">
+              {t("automations.recentActivity")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y max-h-96 overflow-y-auto">
+            <div className="max-h-96 divide-y overflow-y-auto">
               {recentLogs.map((log) => (
-                <div key={log.id} className="flex items-start justify-between gap-3 p-3 text-sm">
-                  <div className="space-y-0.5 min-w-0">
+                <div
+                  key={log.id}
+                  className="flex items-start justify-between gap-3 p-3 text-sm"
+                >
+                  <div className="min-w-0 space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className={`size-1.5 rounded-full shrink-0 ${
-                        log.status === "success" ? "bg-success" :
-                        log.status === "failed" ? "bg-destructive" :
-                        "bg-warning"
-                      }`} />
-                      <span className="font-medium truncate">{log.automation.name}</span>
+                      <span
+                        className={`size-1.5 shrink-0 rounded-full ${
+                          log.status === "success"
+                            ? "bg-success"
+                            : log.status === "failed"
+                              ? "bg-destructive"
+                              : "bg-warning"
+                        }`}
+                      />
+                      <span className="truncate font-medium">
+                        {log.automation.name}
+                      </span>
                     </div>
                     {log.message && (
-                      <p className="text-xs text-muted-foreground ps-3.5 truncate">{log.message}</p>
+                      <p className="truncate ps-3.5 text-xs text-muted-foreground">
+                        {log.message}
+                      </p>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
+                  <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
                     {formatDate(log.createdAt, locale)}
                   </span>
                 </div>
