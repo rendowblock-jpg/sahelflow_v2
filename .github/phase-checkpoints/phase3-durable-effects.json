@@ -1,9 +1,10 @@
 {
-  "formatVersion": 1,
+  "formatVersion": 2,
   "phase": 3,
   "name": "durable providers, inbox, AI and automations",
-  "state": "ready-for-next-session-audit",
+  "state": "audit-in-progress",
   "handoffPreparedAt": "2026-08-03",
+  "auditStartedAt": "2026-08-03",
   "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
   "phase2MergePr": 200,
   "phaseIssue": 202,
@@ -11,19 +12,35 @@
   "activeBranch": "agent/phase3-durable-effects-audit",
   "activeDraftPr": 203,
   "implementationAgent": "ChatGPT Web Agentic Coding Agent",
+  "sessionPurpose": "research-contract",
   "auditStatus": {
-    "documentationReconciliation": "not-started",
-    "sourceInventory": "not-started",
-    "callerInventory": "not-started",
-    "migrationAndTestInventory": "not-started",
-    "problemRegister": "not-started",
+    "documentationReconciliation": "in-progress",
+    "sourceInventory": "first-pass-complete",
+    "callerInventory": "in-progress",
+    "migrationAndTestInventory": "in-progress",
+    "problemRegister": "first-pass-published",
     "sharedContractFreeze": "not-started",
     "productionImplementation": "not-authorized"
   },
+  "completedGovernanceSurfaces": [
+    "AGENTS.md",
+    "documentation/README.md",
+    "documentation/operations/WORKING_MEMORY.md"
+  ],
+  "remainingGovernanceSurfaces": [
+    "documentation/system/CURRENT_STATE.md",
+    "documentation/system/ROADMAP.md",
+    "README.md",
+    "CHANGELOG.md",
+    "scripts/sf-audit.ts",
+    "issue #164",
+    "PR #203 description"
+  ],
   "constraints": {
     "oneActiveImplementationAgent": true,
     "productionEditsAuthorized": false,
     "problemRegisterRequiredBeforeImplementation": true,
+    "sharedContractFreezeRequiredBeforeImplementation": true,
     "targetedCiRerunsRequired": true,
     "fullMatrixRerunForDocsForbidden": true,
     "versionBumpAuthorized": false,
@@ -35,7 +52,90 @@
     "Phase 2 native multi-shop authority is protected source",
     "issue #201 retains the Founder-waived installed hydrated-WebView proof",
     "issue #202 owns the Phase 3 audit and implementation program",
-    "draft PR #203 is the sole active Phase 3 audit package"
+    "draft PR #203 is the sole active Phase 3 audit package",
+    "published executable and Founder-installed release remain Internal.13",
+    "no Phase 3 production implementation is authorized"
+  ],
+  "preservedFoundations": [
+    "canonical business command, event, encrypted outbox and movement facts",
+    "durable outbound WhatsApp identity, leases, ambiguity and receipt reconciliation",
+    "canonical courier booking, tracking and manual ambiguity reconciliation",
+    "commerce checkpoint refusal after any failed fetched order",
+    "trusted identity, exact shop, signed licensing and native multi-shop authority"
+  ],
+  "problemRegister": [
+    {
+      "id": "P3-P1-001",
+      "severity": "P1",
+      "rootCause": "stale active authority after PR #200 merge",
+      "state": "in-progress"
+    },
+    {
+      "id": "P3-P1-002",
+      "severity": "P1",
+      "rootCause": "inbound WhatsApp events depend on in-memory sidecar history instead of persistence-before-acknowledgement",
+      "state": "open"
+    },
+    {
+      "id": "P3-P1-003",
+      "severity": "P1",
+      "rootCause": "multi-step automations continue after failed steps and can report overall success",
+      "state": "open"
+    },
+    {
+      "id": "P3-P1-004",
+      "severity": "P1",
+      "rootCause": "automation provider actions call the WhatsApp sidecar directly and bypass durable effect authority",
+      "state": "open"
+    },
+    {
+      "id": "P3-P1-005",
+      "severity": "P1",
+      "rootCause": "sensitive AI actions use generic current-message confirmation rather than a persisted exact proposal and approval",
+      "state": "open"
+    },
+    {
+      "id": "P3-P1-006",
+      "severity": "P1",
+      "rootCause": "WhatsApp, courier and commerce effects use fragmented attempt, receipt and reconciliation semantics",
+      "state": "open"
+    },
+    {
+      "id": "P3-P1-007",
+      "severity": "P1",
+      "rootCause": "commerce synchronization lacks durable run/item ingress, quarantine and operator recovery",
+      "state": "open"
+    },
+    {
+      "id": "P3-P1-008",
+      "severity": "P1",
+      "rootCause": "an explicitly uncertified DHD adapter remains registered in normal provider execution authority",
+      "state": "open"
+    },
+    {
+      "id": "P3-P2-001",
+      "severity": "P2",
+      "rootCause": "inactive-shop worker ownership is implicit rather than contracted and tested",
+      "state": "open"
+    },
+    {
+      "id": "P3-P2-002",
+      "severity": "P2",
+      "rootCause": "canonical courier implementation is split across current, reviewed-base and legacy layers",
+      "state": "open"
+    },
+    {
+      "id": "P3-P2-003",
+      "severity": "P2",
+      "rootCause": "substantial provider adapter source is not equivalent to current live certification",
+      "state": "open"
+    },
+    {
+      "id": "P3-P2-004",
+      "severity": "P2",
+      "rootCause": "installed hydrated-WebView proof remains open in issue #201",
+      "state": "open"
+    }
   ],
   "auditSurfaces": [
     "WhatsApp authenticated ingress, outbound effects, receipts and ambiguity",
@@ -45,17 +145,28 @@
     "automation step durability, retries and truthful partial status",
     "AI persisted proposal-bound approval for sensitive actions",
     "legacy mutation and direct-effect callers that bypass canonical commands",
+    "active and inactive shop worker ownership",
+    "provider certification and capability gating",
     "AR/FR/EN pending, degraded, ambiguous, retry, recovery and history states"
   ],
-  "nextSessionStartSequence": [
-    "read protected main at e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
-    "read issues #202 and #201 and draft PR #203",
-    "read FD-028 and the Phase 3 section of documentation/system/ROADMAP.md",
-    "reconcile AGENTS.md, documentation/README.md, ROADMAP.md, CURRENT_STATE.md, WORKING_MEMORY.md and scripts/sf-audit.ts in one atomic governance batch",
-    "inventory source, migrations, tests and every production caller across all audit surfaces",
-    "publish one consolidated Phase 3 Problem Register grouped by root cause",
-    "freeze durable ingress, inbox, outbox, effect identity, receipt, reconciliation, automation-step and AI-proposal contracts",
-    "only then authorize the first coherent production implementation task"
+  "sharedContractQuestions": [
+    "effect and ingress identity scope",
+    "encrypted payload and request binding",
+    "lease, provider-call-start and retry state semantics",
+    "receipt lookup, ambiguity, dead letter and operator reconciliation",
+    "inbound acknowledgement and conflict quarantine",
+    "automation run, step and effect correlation",
+    "AI proposal and one-time approval binding",
+    "active and inactive shop worker policy",
+    "provider certification authority",
+    "AR/FR/EN, RTL, accessibility, diagnostics and retention"
+  ],
+  "nextSequence": [
+    "complete the remaining governance reconciliation surfaces",
+    "complete exhaustive source, migration, test, caller and UI inventory",
+    "freeze the consolidated Problem Register",
+    "record the shared durable ingress, effect, automation-step and AI-proposal contracts",
+    "authorize the first coherent production package only after those gates"
   ],
   "ciStrategy": [
     "rerun one failed job when the exact commit is unchanged",
@@ -63,11 +174,5 @@
     "carry forward code-bearing evidence for documentation-only descendants",
     "do not rebuild Windows or MSI for documentation-only reconciliation",
     "reserve Level 3 full checkpoints for roadmap-defined phase boundaries or material native, recovery, security and provider authority"
-  ],
-  "firstDeliverables": [
-    "audit-valid Phase 3 documentation and execution frontier",
-    "complete provider, inbox, automation and AI caller inventory",
-    "one consolidated Phase 3 Problem Register",
-    "shared durable-effect contract decision and task sequence"
   ]
 }
