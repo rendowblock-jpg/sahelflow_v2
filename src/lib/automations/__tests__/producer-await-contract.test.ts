@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 
 const root = join(process.cwd(), "src");
 
@@ -27,6 +27,10 @@ describe("durable automation producer contract", () => {
         .map((pattern) => `${relative(process.cwd(), path)}: ${pattern}`);
     });
 
-    expect(violations).toEqual([]);
+    if (violations.length > 0) {
+      throw new Error(
+        `Fire-and-forget automation producers remain:\n${violations.join("\n")}`,
+      );
+    }
   });
 });
