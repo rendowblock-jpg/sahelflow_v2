@@ -102,6 +102,22 @@ describe("classifyPrRisk", () => {
     });
   });
 
+  it("waives only installed UI proof for the documented PR 200 exception", () => {
+    expect(
+      classifyPrRisk([
+        ".github/phase-checkpoints/phase2-native-multishop.json",
+        ".github/phase-exceptions/pr-200-installed-ui-waiver.md",
+      ]),
+    ).toMatchObject({
+      docsOnly: false,
+      runQuality: true,
+      runTauri: true,
+      runWindowsStandalone: true,
+      runWindowsRust: true,
+      runInstalledMsi: false,
+    });
+  });
+
   it("runs a reusable Windows lane when its own proof harness changes", () => {
     expect(
       classifyPrRisk([
