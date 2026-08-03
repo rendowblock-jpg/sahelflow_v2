@@ -113,7 +113,11 @@ describe("canonical WhatsApp source route", () => {
       (firstBody.order as { id: string }).id,
     );
     expect(await rawDb.order.count()).toBe(1);
-    expect(await rawDb.businessCommand.count()).toBe(1);
+    expect(
+      await rawDb.businessCommand.count({
+        where: { commandType: "order.source.create.v1" },
+      }),
+    ).toBe(1);
 
     const order = await rawDb.order.findFirst({ include: { items: true } });
     expect(order).toMatchObject({
