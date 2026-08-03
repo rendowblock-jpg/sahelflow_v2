@@ -185,17 +185,19 @@ export async function persistWhatsAppInbound(
     input.message.key.remoteJid,
     input.message.key.id,
   );
-  const canonicalPayload = {
+
+  // Replay identity binds only provider-owned content. Sidecar-local delivery
+  // metadata (spoolId and receivedAt) may legitimately differ after reconnect.
+  const providerPayload = {
     provider: PROVIDER,
     environment: ENVIRONMENT,
     eventType: EVENT_TYPE,
-    spoolId: input.spoolId,
     accountId: input.accountId,
-    receivedAt: input.receivedAt,
     message: input.message,
   };
-  const payloadText = canonicalJson(canonicalPayload);
-  const payloadHash = createHash("sha256").update(payloadText).digest("hex");
+  const payloadHash = createHash("sha256")
+    .update(canonicalJson(providerPayload))
+    .digest("hex");
 
   const existing = await context.prisma.providerIngressEvent.findUnique({
     where: { ingressKey },
@@ -205,7 +207,11 @@ export async function persistWhatsAppInbound(
 
   const ingressEventId = randomUUID();
   const payloadJson = sealBusinessCommandResultWithKey(
-    canonicalPayload,
+    {
+      ...providerPayload,
+      spoolId: input.spoolId,
+      receivedAt: input.receivedAt,
+    },
     {
       commandId: ingressEventId,
       idempotencyKey: `provider-ingress:${ingressKey}`,
