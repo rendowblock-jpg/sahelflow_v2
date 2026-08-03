@@ -17,6 +17,22 @@ function missing(entity: string, identity: string): never {
   );
 }
 
+function variantRequired(productName: string): never {
+  throw new SahelFlowError(
+    `Product '${productName}' requires one exact active variant`,
+    "AI_ACTION_VARIANT_REQUIRED",
+    409,
+  );
+}
+
+function variantScopeRequired(productName: string): never {
+  throw new SahelFlowError(
+    `Product '${productName}' has multiple variants; use a variant-specific catalog action`,
+    "AI_ACTION_VARIANT_SCOPE_REQUIRED",
+    409,
+  );
+}
+
 export async function buildAiActionTargetSnapshot(
   context: ServiceContext,
   toolName: string,
@@ -50,6 +66,7 @@ export async function buildAiActionTargetSnapshot(
           productVariants: {
             select: {
               id: true,
+              name: true,
               price: true,
               stock: true,
               isActive: true,
@@ -65,12 +82,24 @@ export async function buildAiActionTargetSnapshot(
       const selected = items.map((item) => {
         const product = productMap.get(item.productId);
         if (!product) return missing("Product", item.productId);
+        const activeVariants = product.productVariants.filter(
+          (candidate) => candidate.isActive,
+        );
+        if (product.productVariants.length > 0 && activeVariants.length === 0) {
+          return variantRequired(product.name);
+        }
+        if (activeVariants.length > 0 && !item.productVariantId) {
+          return variantRequired(product.name);
+        }
+        if (activeVariants.length === 0 && item.productVariantId) {
+          return missing("Product variant", item.productVariantId);
+        }
         const variant = item.productVariantId
-          ? product.productVariants.find(
+          ? activeVariants.find(
               (candidate) => candidate.id === item.productVariantId,
             )
           : null;
-        if (item.productVariantId && (!variant || !variant.isActive)) {
+        if (item.productVariantId && !variant) {
           return missing("Product variant", item.productVariantId);
         }
         return {
@@ -80,6 +109,7 @@ export async function buildAiActionTargetSnapshot(
           productStock: product.stock,
           productUpdatedAt: product.updatedAt.toISOString(),
           productVariantId: variant?.id ?? null,
+          productVariantName: variant?.name ?? null,
           variantPrice: variant?.price ?? null,
           variantStock: variant?.stock ?? null,
           variantUpdatedAt: variant?.updatedAt.toISOString() ?? null,
@@ -169,19 +199,42 @@ export async function buildAiActionTargetSnapshot(
           name: true,
           stock: true,
           updatedAt: true,
+          productVariants: {
+            select: {
+              id: true,
+              name: true,
+              stock: true,
+              isActive: true,
+              updatedAt: true,
+            },
+          },
         },
       });
       if (!product) return missing("Product", productId);
+      if (product.productVariants.length > 1) {
+        return variantScopeRequired(product.name);
+      }
+      const variant = product.productVariants[0] ?? null;
       return {
         targetBinding: {
           id: product.id,
           stock: product.stock,
           updatedAt: product.updatedAt.toISOString(),
+          variant: variant
+            ? {
+                id: variant.id,
+                name: variant.name,
+                stock: variant.stock,
+                isActive: variant.isActive,
+                updatedAt: variant.updatedAt.toISOString(),
+              }
+            : null,
         },
         summary: {
           productName: product.name,
           fromStock: product.stock,
           toStock: args.newStock,
+          variantName: variant?.name ?? null,
           reasonProvided: Boolean(args.reason),
         },
       };
@@ -196,19 +249,42 @@ export async function buildAiActionTargetSnapshot(
           name: true,
           price: true,
           updatedAt: true,
+          productVariants: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              isActive: true,
+              updatedAt: true,
+            },
+          },
         },
       });
       if (!product) return missing("Product", productId);
+      if (product.productVariants.length > 1) {
+        return variantScopeRequired(product.name);
+      }
+      const variant = product.productVariants[0] ?? null;
       return {
         targetBinding: {
           id: product.id,
           price: product.price,
           updatedAt: product.updatedAt.toISOString(),
+          variant: variant
+            ? {
+                id: variant.id,
+                name: variant.name,
+                price: variant.price,
+                isActive: variant.isActive,
+                updatedAt: variant.updatedAt.toISOString(),
+              }
+            : null,
         },
         summary: {
           productName: product.name,
           fromPrice: product.price,
           toPrice: args.newPrice,
+          variantName: variant?.name ?? null,
         },
       };
     }
