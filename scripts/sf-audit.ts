@@ -14,6 +14,15 @@ interface Finding {
   detail: string;
 }
 
+interface PackageClosure {
+  sourceHead?: string;
+  fullSourceCheckpointRun?: number;
+  normalCiRun?: number;
+  sourceGate?: string;
+  reviewThreadsOpen?: number;
+  separatedAdversarialReview?: string;
+}
+
 interface Phase3Checkpoint {
   formatVersion?: number;
   phase?: number;
@@ -29,14 +38,8 @@ interface Phase3Checkpoint {
     releaseAuthorized?: boolean;
     founderAcceptanceClaimAuthorized?: boolean;
   };
-  task3Closure?: {
-    sourceHead?: string;
-    fullSourceCheckpointRun?: number;
-    normalCiRun?: number;
-    sourceGate?: string;
-    reviewThreadsOpen?: number;
-    separatedAdversarialReview?: string;
-  };
+  task3Closure?: PackageClosure;
+  task4Closure?: PackageClosure;
   authorizedNextPackage?: {
     name?: string;
     problemIds?: string[];
@@ -60,37 +63,49 @@ interface Phase3Inventory {
 const repoRoot = resolve(process.env.SF_REPO_DIR || process.cwd());
 const findings: Finding[] = [];
 
-const requiredFiles = [
-  "README.md",
-  "AGENTS.md",
-  "CHANGELOG.md",
-  "documentation/README.md",
-  "documentation/product/PRODUCT.md",
-  "documentation/product/EXPERIENCE.md",
-  "documentation/product/DECISIONS.md",
-  "documentation/system/ARCHITECTURE.md",
-  "documentation/system/CURRENT_STATE.md",
-  "documentation/system/ROADMAP.md",
-  "documentation/operations/WORKFLOW.md",
-  "documentation/operations/WORKING_MEMORY.md",
-  "documentation/research/RESEARCH.md",
-  ".github/phase-checkpoints/phase3-durable-effects.json",
-  ".github/phase-checkpoints/phase3-surface-inventory.json",
-  "scripts/sf-verify.ts",
-  "scripts/sf-audit.ts",
-];
+function report(
+  kind: Finding["kind"],
+  file: string,
+  detail: string,
+): void {
+  findings.push({ kind, file, detail });
+}
 
-for (const relativePath of requiredFiles) {
-  if (!existsSync(resolve(repoRoot, relativePath))) {
-    findings.push({
-      kind: "missing",
-      file: relativePath,
-      detail: "required current authority, checkpoint or shared tool is missing",
-    });
+function contentOf(relativePath: string): string {
+  const absolutePath = resolve(repoRoot, relativePath);
+  return existsSync(absolutePath) ? readFileSync(absolutePath, "utf8") : "";
+}
+
+function normalized(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function requireMarkers(relativePath: string, markers: string[]): void {
+  const content = normalized(contentOf(relativePath));
+  if (!content) return;
+  for (const marker of markers) {
+    if (!content.includes(normalized(marker))) {
+      report(
+        "drift",
+        relativePath,
+        `semantic continuity marker is missing: ${marker}`,
+      );
+    }
   }
 }
 
-function walk(directory: string): string[] {
+function parseJson<T>(relativePath: string): T | null {
+  const content = contentOf(relativePath);
+  if (!content) return null;
+  try {
+    return JSON.parse(content) as T;
+  } catch (error) {
+    report("drift", relativePath, `invalid JSON: ${String(error)}`);
+    return null;
+  }
+}
+
+function walkMarkdown(directory: string): string[] {
   if (!existsSync(directory)) return [];
   const output: string[] = [];
   for (const name of readdirSync(directory)) {
@@ -101,7 +116,7 @@ function walk(directory: string): string[] {
       .replaceAll("\\", "/");
     if (relativePath.startsWith("documentation/archive/")) continue;
     const metadata = statSync(absolutePath);
-    if (metadata.isDirectory()) output.push(...walk(absolutePath));
+    if (metadata.isDirectory()) output.push(...walkMarkdown(absolutePath));
     else if (extname(name).toLowerCase() === ".md") output.push(absolutePath);
   }
   return output;
@@ -131,85 +146,59 @@ function normalizeLink(rawTarget: string): string | null {
   }
 }
 
-function contentOf(relativePath: string): string {
-  const absolutePath = resolve(repoRoot, relativePath);
-  return existsSync(absolutePath) ? readFileSync(absolutePath, "utf8") : "";
-}
-
-function normalized(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function requireMarkers(relativePath: string, markers: string[]): void {
-  const content = normalized(contentOf(relativePath));
-  if (!content) return;
-  for (const marker of markers) {
-    if (!content.includes(normalized(marker))) {
-      findings.push({
-        kind: "drift",
-        file: relativePath,
-        detail: `semantic continuity marker is missing: ${marker}`,
-      });
-    }
+function validateClosure(
+  file: string,
+  label: string,
+  closure: PackageClosure | undefined,
+  expected: {
+    sourceHead: string;
+    fullSourceCheckpointRun: number;
+    normalCiRun: number;
+  },
+): void {
+  if (
+    closure?.sourceHead !== expected.sourceHead ||
+    closure.fullSourceCheckpointRun !== expected.fullSourceCheckpointRun ||
+    closure.normalCiRun !== expected.normalCiRun ||
+    closure.sourceGate !== "passed" ||
+    closure.reviewThreadsOpen !== 0 ||
+    closure.separatedAdversarialReview !== "complete-repaired"
+  ) {
+    report(
+      "drift",
+      file,
+      `${label} exact-head closure evidence is incomplete or stale`,
+    );
   }
 }
 
-function parseJson<T>(relativePath: string): T | null {
-  const content = contentOf(relativePath);
-  if (!content) return null;
-  try {
-    return JSON.parse(content) as T;
-  } catch (error) {
-    findings.push({
-      kind: "drift",
-      file: relativePath,
-      detail: `invalid JSON: ${String(error)}`,
-    });
-    return null;
-  }
-}
+const requiredFiles = [
+  "README.md",
+  "AGENTS.md",
+  "CHANGELOG.md",
+  "documentation/README.md",
+  "documentation/product/PRODUCT.md",
+  "documentation/product/EXPERIENCE.md",
+  "documentation/product/DECISIONS.md",
+  "documentation/system/ARCHITECTURE.md",
+  "documentation/system/CURRENT_STATE.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/operations/WORKFLOW.md",
+  "documentation/operations/WORKING_MEMORY.md",
+  "documentation/research/RESEARCH.md",
+  ".github/phase-checkpoints/phase3-durable-effects.json",
+  ".github/phase-checkpoints/phase3-surface-inventory.json",
+  "scripts/sf-verify.ts",
+  "scripts/sf-audit.ts",
+];
 
-const markdownFiles = walk(repoRoot);
-const activeDocumentationFiles = walk(resolve(repoRoot, "documentation"));
-const markdownLinkPattern = /\[[^\]]*\]\(([^)]+)\)/g;
-
-for (const absoluteFile of markdownFiles) {
-  const relativeFile = absoluteFile
-    .slice(repoRoot.length + 1)
-    .replaceAll("\\", "/");
-  const content = readFileSync(absoluteFile, "utf8");
-  let match: RegExpExecArray | null;
-  while ((match = markdownLinkPattern.exec(content)) !== null) {
-    const rawTarget = match[1];
-    if (!rawTarget) continue;
-    const target = normalizeLink(rawTarget);
-    if (!target) continue;
-    const absoluteTarget = isAbsolute(target)
-      ? resolve(repoRoot, target.replace(/^[/\\]+/, ""))
-      : resolve(dirname(absoluteFile), target);
-    if (!existsSync(absoluteTarget)) {
-      findings.push({
-        kind: "link",
-        file: relativeFile,
-        detail: `broken relative link: ${rawTarget}`,
-      });
-    }
-  }
-}
-
-const packagePath = resolve(repoRoot, "package.json");
-if (existsSync(packagePath)) {
-  const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as {
-    scripts?: Record<string, string>;
-  };
-  for (const scriptName of ["sf-verify", "sf-audit", "sf-inventory"]) {
-    if (!packageJson.scripts?.[scriptName]) {
-      findings.push({
-        kind: "drift",
-        file: "package.json",
-        detail: `missing shared script: ${scriptName}`,
-      });
-    }
+for (const relativePath of requiredFiles) {
+  if (!existsSync(resolve(repoRoot, relativePath))) {
+    report(
+      "missing",
+      relativePath,
+      "required current authority, checkpoint or shared tool is missing",
+    );
   }
 }
 
@@ -242,20 +231,55 @@ const forbiddenActivePaths = [
 
 for (const relativePath of forbiddenActivePaths) {
   if (existsSync(resolve(repoRoot, relativePath))) {
-    findings.push({
-      kind: "drift",
-      file: relativePath,
-      detail: "superseded authority or removed workflow remains active",
-    });
+    report(
+      "drift",
+      relativePath,
+      "superseded authority or removed workflow remains active",
+    );
   }
 }
 
+const markdownFiles = walkMarkdown(repoRoot);
+const activeDocumentationFiles = walkMarkdown(resolve(repoRoot, "documentation"));
 if (activeDocumentationFiles.length !== 10) {
-  findings.push({
-    kind: "drift",
-    file: "documentation/",
-    detail: `expected 10 active Markdown files, found ${activeDocumentationFiles.length}`,
-  });
+  report(
+    "drift",
+    "documentation/",
+    `expected 10 active Markdown files, found ${activeDocumentationFiles.length}`,
+  );
+}
+
+const markdownLinkPattern = /\[[^\]]*\]\(([^)]+)\)/g;
+for (const absoluteFile of markdownFiles) {
+  const relativeFile = absoluteFile
+    .slice(repoRoot.length + 1)
+    .replaceAll("\\", "/");
+  const content = readFileSync(absoluteFile, "utf8");
+  let match: RegExpExecArray | null;
+  while ((match = markdownLinkPattern.exec(content)) !== null) {
+    const rawTarget = match[1];
+    if (!rawTarget) continue;
+    const target = normalizeLink(rawTarget);
+    if (!target) continue;
+    const absoluteTarget = isAbsolute(target)
+      ? resolve(repoRoot, target.replace(/^[/\\]+/, ""))
+      : resolve(dirname(absoluteFile), target);
+    if (!existsSync(absoluteTarget)) {
+      report("link", relativeFile, `broken relative link: ${rawTarget}`);
+    }
+  }
+}
+
+const packagePath = resolve(repoRoot, "package.json");
+if (existsSync(packagePath)) {
+  const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as {
+    scripts?: Record<string, string>;
+  };
+  for (const scriptName of ["sf-verify", "sf-audit", "sf-inventory"]) {
+    if (!packageJson.scripts?.[scriptName]) {
+      report("drift", "package.json", `missing shared script: ${scriptName}`);
+    }
+  }
 }
 
 requireMarkers("README.md", [
@@ -264,34 +288,30 @@ requireMarkers("README.md", [
   "Phase 3",
   "SahelFlow 1.0 Stable has not been released",
 ]);
-
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   "Current verified frontier",
-  "Audit-first rule",
   "Level 1 — Task Gate",
   "Level 2 — Phase Checkpoint",
   "Level 3 — Major Full Checkpoint",
   "PR #203",
-  "issue #202",
   "Task 3 durable inbound WhatsApp is source-closed",
-  "truthful durable automations",
+  "Task 4 truthful durable automations are source-closed",
+  "Authorized package rules — proposal-bound sensitive AI actions",
+  "c873b8b6a256383497d3799e0839160178e92149",
 ]);
-
 requireMarkers("documentation/README.md", [
   "Phase 3 — durable providers, inbox, AI and automations",
   "PR #203",
   "Problem Register",
   "complete full-app AAA frontend transformation",
 ]);
-
 requireMarkers("documentation/product/DECISIONS.md", [
   "## FD-028",
   "## FD-029",
   "Whole-product AAA rule",
   "The Founder decides whether the Web Agent or Desktop Agent is active",
 ]);
-
 requireMarkers("documentation/system/ROADMAP.md", [
   "Phase 3 — Durable providers, inbox, AI and automations",
   "One active implementation agent at a time",
@@ -301,14 +321,12 @@ requireMarkers("documentation/system/ROADMAP.md", [
   "# Phase 5 — Whole-product AAA UI/UX",
   "# Phase 9 — Certification, representative beta and Stable",
 ]);
-
 requireMarkers("documentation/system/CURRENT_STATE.md", [
   "Latest protected source closures",
   "Native multi-shop — PR #200",
   "Active proposed package:** PR #203",
   "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
 ]);
-
 requireMarkers("documentation/operations/WORKFLOW.md", [
   "one active implementation agent; audit-first; batch remediation; tiered CI",
   "Complete phase/package audit",
@@ -319,31 +337,29 @@ requireMarkers("documentation/operations/WORKFLOW.md", [
   "Level 3 — Major Full Checkpoint",
   "Whole-product AAA frontend program",
 ]);
-
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "Completed Task 2 — exhaustive inventory and shared contract freeze",
   "Completed Task 3 — durable inbound WhatsApp",
-  "Authorized Task 4 — truthful durable automations",
+  "Completed Task 4 — truthful durable automations",
+  "Authorized Task 5 — proposal-bound sensitive AI actions",
   "All other Phase 3 production work:** not authorized",
-  "P3-P1-011",
-  "only the active native runtime drains its shop DB",
+  "c873b8b6a256383497d3799e0839160178e92149",
+  "30826354580",
+  "P3-P1-005 — open / authorized Task 5",
 ]);
-
 requireMarkers("documentation/research/RESEARCH.md", [
   "Research-first quality rule",
   "No-AI-slop frontend rule",
   "Research-to-implementation gate",
   "NIST SP 800-218",
 ]);
-
 requireMarkers("scripts/sf-verify.ts", [
   "file-level failure: import, collection, setup or hook",
   "failureMessage?: string",
   ".sf-vitest-failures.txt",
 ]);
 
-const expectedPhase =
-  "Phase 3 — durable providers, inbox, AI and automations";
+const expectedPhase = "Phase 3 — durable providers, inbox, AI and automations";
 for (const relativePath of [
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
@@ -354,11 +370,11 @@ for (const relativePath of [
   if (!content) continue;
   const phase = /^> \*\*Active product phase:\*\* (.+)$/m.exec(content)?.[1]?.trim();
   if (phase !== expectedPhase) {
-    findings.push({
-      kind: "drift",
-      file: relativePath,
-      detail: `active product phase must be '${expectedPhase}', found '${phase ?? "missing"}'`,
-    });
+    report(
+      "drift",
+      relativePath,
+      `active product phase must be '${expectedPhase}', found '${phase ?? "missing"}'`,
+    );
   }
 }
 
@@ -373,16 +389,11 @@ for (const relativePath of [
 ]) {
   const content = contentOf(relativePath);
   if (content && !content.includes(expectedProtectedBase)) {
-    findings.push({
-      kind: "drift",
-      file: relativePath,
-      detail: "current protected Phase 2 merge/base is missing",
-    });
+    report("drift", relativePath, "current protected Phase 2 merge/base is missing");
   }
 }
 
-const checkpointPath =
-  ".github/phase-checkpoints/phase3-durable-effects.json";
+const checkpointPath = ".github/phase-checkpoints/phase3-durable-effects.json";
 const checkpoint = parseJson<Phase3Checkpoint>(checkpointPath);
 if (checkpoint) {
   const expectedStatus: Record<string, string> = {
@@ -395,61 +406,48 @@ if (checkpoint) {
     sharedContractFreeze: "complete",
     task3SourceImplementation: "complete",
     task3SeparatedReview: "complete-repaired",
-    productionImplementation: "authorized:truthful-durable-automations",
+    task4SourceImplementation: "complete",
+    task4SeparatedReview: "complete-repaired",
+    productionImplementation: "authorized:proposal-bound-sensitive-ai",
   };
-  if (checkpoint.formatVersion !== 4 || checkpoint.phase !== 3) {
-    findings.push({
-      kind: "drift",
-      file: checkpointPath,
-      detail: "Phase 3 checkpoint must use Task 4 authority formatVersion 4",
-    });
+
+  if (checkpoint.formatVersion !== 5 || checkpoint.phase !== 3) {
+    report(
+      "drift",
+      checkpointPath,
+      "Phase 3 checkpoint must use Task 5 authority formatVersion 5",
+    );
   }
-  if (checkpoint.state !== "task3-source-complete-task4-authorized") {
-    findings.push({
-      kind: "drift",
-      file: checkpointPath,
-      detail: "Phase 3 checkpoint state must close Task 3 and authorize Task 4",
-    });
+  if (checkpoint.state !== "task4-source-complete-task5-authorized") {
+    report(
+      "drift",
+      checkpointPath,
+      "checkpoint must close Task 4 and authorize Task 5",
+    );
   }
   if (checkpoint.protectedBase !== expectedProtectedBase) {
-    findings.push({
-      kind: "drift",
-      file: checkpointPath,
-      detail: "checkpoint protected base is stale",
-    });
+    report("drift", checkpointPath, "checkpoint protected base is stale");
   }
   if (checkpoint.phaseIssue !== 202 || checkpoint.activeDraftPr !== 203) {
-    findings.push({
-      kind: "drift",
-      file: checkpointPath,
-      detail: "checkpoint must bind issue #202 and PR #203",
-    });
+    report("drift", checkpointPath, "checkpoint must bind issue #202 and PR #203");
   }
   for (const [key, value] of Object.entries(expectedStatus)) {
     if (checkpoint.auditStatus?.[key] !== value) {
-      findings.push({
-        kind: "drift",
-        file: checkpointPath,
-        detail: `auditStatus.${key} must be '${value}'`,
-      });
+      report("drift", checkpointPath, `auditStatus.${key} must be '${value}'`);
     }
   }
   if (checkpoint.constraints?.productionEditsAuthorized !== true) {
-    findings.push({
-      kind: "drift",
-      file: checkpointPath,
-      detail: "the scoped Task 4 production package must be explicitly authorized",
-    });
+    report("drift", checkpointPath, "the scoped Task 5 package must be authorized");
   }
   if (
     checkpoint.constraints?.authorizedProductionScope !==
-    "truthful durable automations and WhatsApp effect adoption only"
+    "proposal-bound sensitive AI actions only"
   ) {
-    findings.push({
-      kind: "drift",
-      file: checkpointPath,
-      detail: "authorized production scope is missing or broader than Task 4",
-    });
+    report(
+      "drift",
+      checkpointPath,
+      "authorized production scope must be proposal-bound sensitive AI only",
+    );
   }
   for (const key of [
     "versionBumpAuthorized",
@@ -457,69 +455,60 @@ if (checkpoint) {
     "founderAcceptanceClaimAuthorized",
   ] as const) {
     if (checkpoint.constraints?.[key] !== false) {
-      findings.push({
-        kind: "drift",
-        file: checkpointPath,
-        detail: `${key} must remain false`,
-      });
+      report("drift", checkpointPath, `${key} must remain false`);
     }
   }
   if (
-    checkpoint.authorizedNextPackage?.name !== "truthful durable automations"
+    checkpoint.authorizedNextPackage?.name !==
+    "proposal-bound sensitive AI actions"
   ) {
-    findings.push({
-      kind: "drift",
-      file: checkpointPath,
-      detail: "authorized next package must be truthful durable automations",
-    });
+    report(
+      "drift",
+      checkpointPath,
+      "authorized next package must be proposal-bound sensitive AI actions",
+    );
   }
-  const expectedTask4Problems = new Set([
-    "P3-P1-003",
-    "P3-P1-004",
-    "P3-P1-009",
-    "P3-P1-011",
-  ]);
   const authorizedProblems = new Set(
     checkpoint.authorizedNextPackage?.problemIds ?? [],
   );
-  for (const id of expectedTask4Problems) {
-    if (!authorizedProblems.has(id)) {
-      findings.push({
-        kind: "drift",
-        file: checkpointPath,
-        detail: `Task 4 authorization is missing ${id}`,
-      });
-    }
-  }
-  const task3 = checkpoint.task3Closure;
   if (
-    task3?.sourceHead !== "f016055be55fd220baa87c26ffed565c4e9e1d85" ||
-    task3.fullSourceCheckpointRun !== 30808773702 ||
-    task3.normalCiRun !== 30808774055 ||
-    task3.sourceGate !== "passed" ||
-    task3.reviewThreadsOpen !== 0 ||
-    task3.separatedAdversarialReview !== "complete-repaired"
+    authorizedProblems.size !== 1 ||
+    !authorizedProblems.has("P3-P1-005")
   ) {
-    findings.push({
-      kind: "drift",
-      file: checkpointPath,
-      detail: "Task 3 exact-head closure evidence is incomplete or stale",
-    });
+    report(
+      "drift",
+      checkpointPath,
+      "Task 5 authorization must contain only P3-P1-005",
+    );
   }
+
+  validateClosure(checkpointPath, "Task 3", checkpoint.task3Closure, {
+    sourceHead: "f016055be55fd220baa87c26ffed565c4e9e1d85",
+    fullSourceCheckpointRun: 30808773702,
+    normalCiRun: 30808774055,
+  });
+  validateClosure(checkpointPath, "Task 4", checkpoint.task4Closure, {
+    sourceHead: "c873b8b6a256383497d3799e0839160178e92149",
+    fullSourceCheckpointRun: 30826354580,
+    normalCiRun: 30826355685,
+  });
+
   const problemStates = new Map(
     (checkpoint.problemRegister ?? []).map((problem) => [problem.id, problem.state]),
   );
   for (const [id, state] of [
+    ["P3-P1-001", "closed-source-proven"],
     ["P3-P1-002", "closed-source-proven"],
+    ["P3-P1-003", "closed-source-proven"],
+    ["P3-P1-004", "closed-source-proven"],
+    ["P3-P1-005", "open-authorized-task5"],
+    ["P3-P1-009", "closed-source-proven"],
     ["P3-P1-010", "closed-source-proven"],
+    ["P3-P1-011", "closed-source-proven"],
     ["P3-P2-001", "closed-source-proven"],
   ] as const) {
     if (problemStates.get(id) !== state) {
-      findings.push({
-        kind: "drift",
-        file: checkpointPath,
-        detail: `${id} must be '${state}' after Task 3 closure`,
-      });
+      report("drift", checkpointPath, `${id} must be '${state}'`);
     }
   }
   const problemIds = new Set(
@@ -528,17 +517,12 @@ if (checkpoint) {
   for (let number = 1; number <= 11; number += 1) {
     const id = `P3-P1-${String(number).padStart(3, "0")}`;
     if (!problemIds.has(id)) {
-      findings.push({
-        kind: "drift",
-        file: checkpointPath,
-        detail: `frozen Problem Register is missing ${id}`,
-      });
+      report("drift", checkpointPath, `frozen Problem Register is missing ${id}`);
     }
   }
 }
 
-const inventoryPath =
-  ".github/phase-checkpoints/phase3-surface-inventory.json";
+const inventoryPath = ".github/phase-checkpoints/phase3-surface-inventory.json";
 const inventory = parseJson<Phase3Inventory>(inventoryPath);
 if (inventory) {
   if (
@@ -548,34 +532,26 @@ if (inventory) {
     inventory.protectedBase !== expectedProtectedBase ||
     inventory.activePr !== 203
   ) {
-    findings.push({
-      kind: "drift",
-      file: inventoryPath,
-      detail: "Phase 3 surface inventory is not frozen against the current base and PR",
-    });
+    report(
+      "drift",
+      inventoryPath,
+      "Phase 3 surface inventory is not frozen against the current base and PR",
+    );
   }
   if (inventory.productionImplementationAuthorized !== false) {
-    findings.push({
-      kind: "drift",
-      file: inventoryPath,
-      detail: "inventory is evidence only and must not authorize implementation",
-    });
+    report(
+      "drift",
+      inventoryPath,
+      "inventory is evidence only and must not authorize implementation",
+    );
   }
   if (inventory.closure?.contractFreezeReady !== true) {
-    findings.push({
-      kind: "drift",
-      file: inventoryPath,
-      detail: "inventory must explicitly be contract-freeze ready",
-    });
+    report("drift", inventoryPath, "inventory must be contract-freeze ready");
   }
   const inventoryProblemIds = new Set(inventory.problemIds ?? []);
-  for (const id of ["P3-P1-009", "P3-P1-010", "P3-P1-011"]) {
+  for (const id of ["P3-P1-005", "P3-P1-009", "P3-P1-010", "P3-P1-011"]) {
     if (!inventoryProblemIds.has(id)) {
-      findings.push({
-        kind: "drift",
-        file: inventoryPath,
-        detail: `completed inventory is missing ${id}`,
-      });
+      report("drift", inventoryPath, `completed inventory is missing ${id}`);
     }
   }
 }
@@ -583,21 +559,18 @@ if (inventory) {
 const staleMarkers: Array<[string, string]> = [
   ["AGENTS.md", "Active draft: PR #200"],
   ["AGENTS.md", "Active package is PR #200"],
+  ["AGENTS.md", "Authorized package rules — truthful durable automations"],
   ["documentation/README.md", "Active draft:** PR #200"],
   ["documentation/system/ROADMAP.md", "Active product phase:** Phase 2"],
   ["documentation/system/CURRENT_STATE.md", "Active proposed package:** PR #200"],
+  ["documentation/operations/WORKING_MEMORY.md", "Authorized Task 4 — truthful durable automations"],
   ["documentation/operations/WORKING_MEMORY.md", "Production implementation:** not authorized"],
   ["documentation/operations/WORKING_MEMORY.md", "Shared contract questions to freeze"],
 ];
 
 for (const [relativePath, marker] of staleMarkers) {
-  const content = contentOf(relativePath);
-  if (content.includes(marker)) {
-    findings.push({
-      kind: "drift",
-      file: relativePath,
-      detail: `stale authority remains active: ${marker}`,
-    });
+  if (contentOf(relativePath).includes(marker)) {
+    report("drift", relativePath, `stale authority remains active: ${marker}`);
   }
 }
 
@@ -612,5 +585,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Task 3 source-closed; truthful durable automations authorized).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Task 3 and Task 4 source-closed; proposal-bound sensitive AI authorized).`,
 );
