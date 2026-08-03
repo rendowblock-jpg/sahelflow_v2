@@ -2,22 +2,19 @@
  * AI chat tool framework.
  *
  * Tool registration is fail-closed through the Task 5 execution policy. Read
- * tools may execute in the agent loop. Sensitive tools require a sealed exact
- * proposal execution authority. Blocked or unclassified tools are never sent to
- * Gemini and cannot execute through the registry.
+ * tools may execute in the agent loop. Sensitive tools may only create one
+ * persisted proposal through the request-scoped proposal runtime. Blocked or
+ * unclassified tools are never sent to Gemini and cannot execute.
  */
 
 import type { z } from "zod";
 
 import {
-  aiActionHash,
   getAiToolPolicy,
   parseSensitiveAiToolArgs,
 } from "@/lib/ai/actions/contracts";
-import {
-  assertAiActionExecutionAuthority,
-  type AiActionExecutionAuthority,
-} from "@/lib/ai/actions/execution-authority";
+import type { AiActionExecutionAuthority } from "@/lib/ai/actions/execution-authority";
+import { currentAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
 import type { ShopContext } from "@/lib/shops/context";
 import { SahelFlowError } from "@/types/errors";
 
@@ -46,7 +43,7 @@ export interface ToolContext {
   sourceIdentity?: string;
   /** Stable identity of the persisted proposal. */
   sourceOrderId?: string;
-  /** Present only while executing one exact approved sensitive proposal. */
+  /** Legacy sealed authority retained for source compatibility only. */
   aiActionExecution?: AiActionExecutionAuthority;
 }
 
@@ -95,11 +92,24 @@ export function registerTool(tool: ChatTool): void {
     }
 
     const params = parseSensitiveAiToolArgs(tool.definition.name, rawParams);
-    assertAiActionExecutionAuthority(context.aiActionExecution, {
-      toolName: tool.definition.name,
-      argsHash: aiActionHash(params),
-    });
-    return tool.execute(params, context);
+    const runtime = currentAiActionProposalRuntime();
+    if (!runtime) {
+      throw new SahelFlowError(
+        "Sensitive AI actions require an exact persisted request context",
+        "AI_ACTION_PROPOSAL_RUNTIME_REQUIRED",
+        409,
+      );
+    }
+    const handle = await runtime.createProposal(tool.definition.name, params);
+    return {
+      success: true,
+      data: {
+        pending_action_proposal: true,
+        tool: tool.definition.name,
+        proposal: handle.proposal,
+        proposalDigest: handle.proposalDigest,
+      },
+    };
   };
 
   registry.set(tool.definition.name, {
@@ -118,7 +128,8 @@ export function listTools(): ChatTool[] {
 
 /**
  * Get definitions exposed to Gemini. Blocked provider actions are omitted and
- * every registration must have a central policy entry.
+ * every registration must have a central policy entry. Legacy confirmation
+ * metadata is stripped so current-message words can never become authority.
  */
 export function getAllToolDefinitions(): ToolDefinition[] {
   return listTools().flatMap((tool) => {
