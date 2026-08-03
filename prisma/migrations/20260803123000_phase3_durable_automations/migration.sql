@@ -2,7 +2,8 @@
 --
 -- This migration is append-only. Legacy Automation and AutomationLog tables
 -- remain readable. Trigger/definition/config payloads are encrypted by the
--- application before persistence.
+-- application before persistence. Production definitions are soft-deleted;
+-- the cascade chain exists for explicit test/dev hard cleanup only.
 
 CREATE TABLE "AutomationRun" (
   "id" TEXT NOT NULL PRIMARY KEY,
@@ -32,7 +33,10 @@ CREATE TABLE "AutomationRun" (
   "completedAt" DATETIME,
   "deadLetteredAt" DATETIME,
   "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "AutomationRun_automationId_fkey"
+    FOREIGN KEY ("automationId") REFERENCES "Automation" ("id")
+    ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE UNIQUE INDEX "AutomationRun_runKey_key"
@@ -76,7 +80,7 @@ CREATE TABLE "AutomationStepRun" (
   "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "AutomationStepRun_runId_fkey"
     FOREIGN KEY ("runId") REFERENCES "AutomationRun" ("id")
-    ON DELETE RESTRICT ON UPDATE CASCADE
+    ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE UNIQUE INDEX "AutomationStepRun_stepKey_key"
@@ -105,7 +109,7 @@ CREATE TABLE "AutomationStepAttempt" (
   "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "AutomationStepAttempt_stepRunId_fkey"
     FOREIGN KEY ("stepRunId") REFERENCES "AutomationStepRun" ("id")
-    ON DELETE RESTRICT ON UPDATE CASCADE
+    ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE UNIQUE INDEX "AutomationStepAttempt_stepRunId_attemptNumber_key"
