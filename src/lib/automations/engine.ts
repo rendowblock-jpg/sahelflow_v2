@@ -22,9 +22,6 @@ import {
 export type TriggerEvent = AutomationTrigger;
 export type TriggerPayload = AutomationTriggerPayload;
 
-// Retained for compatibility with legacy UI/log projections. Durable run and
-// step state uses richer values such as retrying, waiting_effect, ambiguous,
-// partially_completed and dead_letter.
 export type ExecutionStatus =
   | "success"
   | "failed"
@@ -32,13 +29,27 @@ export type ExecutionStatus =
   | "dry_run"
   | "rate_limited";
 
+async function drainDurablePipelineForTests(context: ServiceContext): Promise<void> {
+  if (process.env.NODE_ENV !== "test" && process.env.VITEST !== "true") return;
+  const [{ drainDueAutomationTriggers }, { drainDueAutomationRuns }] =
+    await Promise.all([
+      import("./trigger-processor"),
+      import("./run-processor"),
+    ]);
+  await drainDueAutomationTriggers(context, 25);
+  // Database-local notification/tag/status steps complete in bounded ticks.
+  // Provider effects remain waiting_effect and are not faked by this helper.
+  for (let index = 0; index < 25; index += 1) {
+    const results = await drainDueAutomationRuns(context, 25);
+    if (results.length === 0) break;
+    if (results.every((result) => result.state === "waiting_effect")) break;
+  }
+}
+
 /**
- * Persist a supported trigger without running actions from the caller's stack.
- *
- * Callers should supply a stable domain event key when one exists. The fallback
- * is a canonical trigger+payload hash, which remains idempotent for exact replay.
- * Failures remain isolated from the committed business operation and are logged
- * with bounded machine metadata only.
+ * Persist a supported trigger without running actions from the production
+ * caller's stack. Tests drain the same durable state machines synchronously so
+ * journey suites can observe their committed terminal projections.
  */
 export async function dispatchTrigger(
   context: ServiceContext,
@@ -53,6 +64,7 @@ export async function dispatchTrigger(
       effectKey: queued.effectKey,
       replayed: queued.replayed,
     });
+    await drainDurablePipelineForTests(context);
   } catch (error) {
     logger.error("automation.trigger.queue_failed", {
       trigger: event,
