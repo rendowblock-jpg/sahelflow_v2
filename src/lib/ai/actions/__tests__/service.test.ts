@@ -60,10 +60,7 @@ vi.mock("../executor", () => ({
   executeApprovedAiAction: harness.executeApprovedAiAction,
 }));
 
-import {
-  approveAiActionProposal,
-  createAiActionProposal,
-} from "../service";
+import { approveAiActionProposal, createAiActionProposal } from "../service";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -187,6 +184,14 @@ describe("proposal-bound AI action service", () => {
     `;
     expect(Number(counts[0]?.approvals)).toBe(1);
     expect(Number(counts[0]?.executions)).toBe(1);
+
+    await expect(
+      db.$executeRaw`
+        UPDATE "AiActionExecution"
+        SET "state" = 'failed'
+        WHERE "proposalId" = ${created.proposal.id}
+      `,
+    ).rejects.toThrow(/terminal/i);
   });
 
   it("fails closed when encrypted proposal arguments are tampered", async () => {
