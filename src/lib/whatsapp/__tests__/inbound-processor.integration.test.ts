@@ -90,7 +90,9 @@ describe("durable WhatsApp inbound normalization", () => {
       }),
     ).resolves.toMatchObject({ state: "succeeded", attemptNumber: 1 });
 
-    const conversation = await db.conversation.findUniqueOrThrow({
+    // Use an intercepted read method so the test observes the same decrypted
+    // PII projection that production inbox callers receive.
+    const conversation = await db.conversation.findUnique({
       where: {
         channel_sourceId: {
           channel: "whatsapp",
@@ -99,14 +101,15 @@ describe("durable WhatsApp inbound normalization", () => {
       },
       include: { messages: true },
     });
+    expect(conversation).not.toBeNull();
     expect(conversation).toMatchObject({
       contactName: "Client Durable",
       contactPhone: "213555000222",
       unreadCount: 1,
       status: "open",
     });
-    expect(conversation.messages).toHaveLength(1);
-    expect(conversation.messages[0]).toMatchObject({
+    expect(conversation?.messages).toHaveLength(1);
+    expect(conversation?.messages[0]).toMatchObject({
       id: ingress.ingressEventId,
       direction: "inbound",
       body: "Message client durable",
