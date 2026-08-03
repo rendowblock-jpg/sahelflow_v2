@@ -136,6 +136,8 @@ jobs:
               for line in raw[start:end].splitlines()
           )
           exec(compile(script, 'task5-adversarial-repair.py', 'exec'))
+          followup = Path('.github/task5-adversarial-followup.py').read_text()
+          exec(compile(followup, 'task5-adversarial-followup.py', 'exec'))
           PY
 
       - name: Format touched TypeScript
@@ -146,9 +148,16 @@ jobs:
             src/lib/ai/chat/agent.ts \
             src/lib/ai/chat/tools/core-tools.ts \
             src/lib/ai/actions/__tests__/adversarial-boundaries.test.ts \
+            src/lib/ai/actions/__tests__/authority-regressions.test.ts \
             src/lib/ai/actions/__tests__/service.test.ts \
             src/lib/ai/actions/__tests__/source-contract.test.ts \
-            src/lib/ai/chat/__tests__/agent-proposal.test.ts
+            src/lib/ai/chat/__tests__/agent-proposal.test.ts \
+            src/lib/orders/__tests__/phase1-adopted-source-bypass.test.ts
+          for path in bun.lock bun.lockb package.json; do
+            if git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
+              git checkout -- "$path"
+            fi
+          done
 
       - name: Install frozen dependencies
         if: steps.repair.outputs.apply == 'true'
