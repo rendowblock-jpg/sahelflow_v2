@@ -3,7 +3,10 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 
-import { systemBusinessPrincipal } from "@/lib/business-truth/principal";
+import {
+  systemBusinessPrincipal,
+  type TrustedBusinessPrincipal,
+} from "@/lib/business-truth/principal";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { SahelFlowError } from "@/types/errors";
 import {
@@ -14,9 +17,13 @@ import {
 
 const reportDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-interface DailyReportContext extends ServiceContext {
+type ShopBoundServiceContext = Extract<ServiceContext, { shop: unknown }>;
+type DailyReportContext = ShopBoundServiceContext & {
   readonly whatsAppProviderAccountId?: string;
-}
+};
+type DailyReportCommandContext = DailyReportContext & {
+  readonly businessPrincipal: TrustedBusinessPrincipal;
+};
 
 export interface QueueDailyWhatsAppReportInput {
   reportDate: string;
@@ -38,13 +45,6 @@ function deterministicUuid(value: string): string {
 }
 
 function reportIdentity(context: DailyReportContext, reportDate: string): string {
-  if (!context.shop) {
-    throw new SahelFlowError(
-      "Daily WhatsApp reports require an exact trusted ShopContext",
-      "DAILY_REPORT_SHOP_AUTHORITY_REQUIRED",
-      500,
-    );
-  }
   return JSON.stringify([
     "daily-whatsapp-report-v1",
     context.shop.workspaceId,
@@ -70,7 +70,7 @@ export async function queueDailyWhatsAppReport(
   const phone = z.string().trim().min(1).max(100).parse(rawInput.phone);
   const text = z.string().trim().min(1).max(4000).parse(rawInput.text);
   const messageId = deterministicUuid(reportIdentity(context, reportDate));
-  const commandContext = {
+  const commandContext: DailyReportCommandContext = {
     ...context,
     businessPrincipal: systemBusinessPrincipal("scheduler"),
   };
