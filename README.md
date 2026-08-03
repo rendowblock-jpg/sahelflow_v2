@@ -9,9 +9,9 @@ sellers.
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Current program:** FD-028 and FD-029 Phase 0–9 completion program
+> **Current program:** FD-028 Final Completion Program and FD-029 AAA delivery
 > **Active phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active package:** PR #203 audit, Problem Register and shared contract freeze
+> **Active package:** PR #203 durable inbound WhatsApp and database-authoritative inbox
 > **Stable status:** SahelFlow 1.0 Stable has not been released
 
 ## Current truth
@@ -68,7 +68,7 @@ adopted by an active owner.
 
 ## Final completion program
 
-FD-028 and FD-029 define one binding program:
+FD-028 Final Completion Program and FD-029 define one binding program:
 
 0. Authority freeze and execution reset.
 1. Canonical Golden COD business core.
@@ -100,36 +100,51 @@ authenticated ingress
 → receipt and reconciliation
 ```
 
-The active draft PR #203 is currently a research/contract package. It must finish:
+PR #203 has completed its governance reconciliation, exhaustive surface
+inventory, frozen Problem Register and shared contract freeze.
 
-- governance reconciliation after PR #200;
-- exhaustive provider/inbox/automation/AI source, migration, test and caller
-  inventory;
-- one consolidated Problem Register;
-- shared ingress, effect, receipt, reconciliation, automation-step and AI-proposal
-  contract freeze.
+The exact authorized production package is now:
 
-Production implementation remains unauthorized until these gates pass.
+- additive `ProviderIngressEvent` and `ProviderIngressAttempt` persistence;
+- a sidecar durable inbound spool before broadcast or delivery;
+- authenticated `/api/whatsapp/inbound` commit-before-acknowledgement;
+- leased idempotent normalization into `Conversation` and `Message`;
+- committed `message.received` trigger intent with canonical payload keys;
+- database-authoritative WhatsApp chats and messages;
+- post-commit WebSocket publication;
+- quarantine, replay, dead-letter and operator history;
+- duplicate, restart, unavailable-app, malformed, wrong-account/shop and
+  shop-switch tests;
+- AR/FR/EN, RTL, accessibility and constrained-network states.
 
-## First consolidated Phase 3 blockers
+All other Phase 3 production packages remain unauthorized. This task does not
+include durable automation runs, daily-report conversion, proposal-bound AI,
+courier/commerce convergence, provider certification, a version bump, MSI,
+release, Founder acceptance or Stable.
+
+## Frozen Phase 3 blockers
 
 - inbound WhatsApp depends on in-memory sidecar history rather than persistence
   before acknowledgement;
 - multi-step automation failures can still be reported as overall success;
-- automation WhatsApp actions call the sidecar directly and bypass durable effect
-  authority;
+- automation WhatsApp actions and daily reports call the sidecar directly;
 - sensitive AI actions use generic current-message confirmation rather than one
   exact persisted proposal and approval;
 - WhatsApp, courier and commerce effect semantics remain fragmented;
 - commerce lacks durable run/item ingress, quarantine and operator recovery;
 - the explicitly uncertified DHD adapter remains registered in normal provider
   execution authority;
-- inactive-shop worker policy and live provider certification remain incomplete;
+- automation trigger/action catalogs expose unsupported or unconfigured paths;
+- status triggers write `phone` while WhatsApp automation consumes
+  `customerPhone`;
+- inactive-shop worker implementation proof and live provider certification
+  remain incomplete;
 - issue #201 remains open.
 
-The detailed current register and task sequence are in
-[`WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md) and
-`.github/phase-checkpoints/phase3-durable-effects.json` on PR #203.
+The machine-readable inventory, frozen register, contracts and task scope are in
+[`WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md),
+`.github/phase-checkpoints/phase3-surface-inventory.json` and
+`.github/phase-checkpoints/phase3-durable-effects.json`.
 
 ## Binding product shape
 
