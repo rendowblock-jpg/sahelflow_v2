@@ -1,4 +1,5 @@
 import { InboxLive } from "@/components/inbox/inbox-live";
+import { WhatsAppIngressRecoveryPanel } from "@/components/inbox/whatsapp-ingress-recovery-panel";
 import type { Metadata } from "next";
 import { getI18n } from "@/lib/i18n-server";
 
@@ -9,10 +10,14 @@ export async function generateMetadata(): Promise<Metadata> {
 export const dynamic = "force-dynamic";
 
 /**
- * Inbox page — live WhatsApp messaging via the Baileys sidecar, with a
- * graceful fallback to seeded demo conversations when the sidecar is not
- * running or not connected. All interactivity lives in <InboxLive />.
+ * Inbox page — database-authoritative WhatsApp messaging with durable ingress
+ * recovery. The sidecar is transport and low-latency projection only.
  */
 export default function InboxPage() {
-  return <InboxLive />;
+  return (
+    <div className="space-y-4">
+      <WhatsAppIngressRecoveryPanel />
+      <InboxLive />
+    </div>
+  );
 }
