@@ -13,7 +13,6 @@ export const AUTOMATION_TRIGGERS = [
   "order.returned",
   "order.refused",
   "order.cancelled",
-  "order.failed",
   "customer.blacklisted",
   "message.received",
   "stock.low",
@@ -92,7 +91,6 @@ const updateStatusConfigSchema = z
       "returned",
       "refused",
       "cancelled",
-      "failed",
     ]),
   })
   .strict();
@@ -183,7 +181,10 @@ function parseJson(value: string | null | undefined): unknown {
   return JSON.parse(value) as unknown;
 }
 
-function singleStep(action: AutomationAction, rawConfig: unknown): AutomationStepDefinition {
+function singleStep(
+  action: AutomationAction,
+  rawConfig: unknown,
+): AutomationStepDefinition {
   return automationStepSchema.parse({
     action,
     onFailure: "stop",
@@ -191,15 +192,22 @@ function singleStep(action: AutomationAction, rawConfig: unknown): AutomationSte
   });
 }
 
+function firstStep(steps: AutomationStepDefinition[]): AutomationStepDefinition {
+  const first = steps[0];
+  if (!first) throw new Error("Automation definition requires at least one step");
+  return first;
+}
+
 export function canonicalizeAutomationMutation(
   rawInput: unknown,
 ): AutomationMutation & { steps: AutomationStepDefinition[] } {
   const input = automationMutationSchema.parse(rawInput);
   const steps = input.steps ?? [singleStep(input.action, input.config)];
+  const first = firstStep(steps);
   return {
     ...input,
-    action: steps[0]!.action,
-    config: steps[0]!.config,
+    action: first.action,
+    config: first.config,
     steps,
   };
 }
@@ -332,7 +340,9 @@ export function automationHash(value: unknown): string {
   return createHash("sha256").update(canonicalJson(value), "utf8").digest("hex");
 }
 
-export function definitionHash(definition: CanonicalAutomationDefinition): string {
+export function definitionHash(
+  definition: CanonicalAutomationDefinition,
+): string {
   return automationHash(definition);
 }
 
@@ -342,7 +352,11 @@ export function normalizeStoredTriggerPayload(
 ): AutomationTriggerEnvelope {
   const object = z.record(z.string(), z.unknown()).parse(raw);
   const trigger = automationTriggerSchema.parse(object.trigger);
-  if (object.payload && typeof object.payload === "object" && !Array.isArray(object.payload)) {
+  if (
+    object.payload &&
+    typeof object.payload === "object" &&
+    !Array.isArray(object.payload)
+  ) {
     return automationTriggerEnvelopeSchema.parse({
       trigger,
       triggerKey:
@@ -368,12 +382,15 @@ export function renderAutomationTemplate(
   template: string,
   payload: AutomationTriggerPayload,
 ): string {
-  return template.replace(/\{\{([A-Za-z0-9_.-]+)\}\}/g, (_match, path: string) => {
-    let current: unknown = payload;
-    for (const part of path.split(".")) {
-      if (!current || typeof current !== "object") return "";
-      current = (current as Record<string, unknown>)[part];
-    }
-    return current === null || current === undefined ? "" : String(current);
-  });
+  return template.replace(
+    /\{\{([A-Za-z0-9_.-]+)\}\}/g,
+    (_match, path: string) => {
+      let current: unknown = payload;
+      for (const part of path.split(".")) {
+        if (!current || typeof current !== "object") return "";
+        current = (current as Record<string, unknown>)[part];
+      }
+      return current === null || current === undefined ? "" : String(current);
+    },
+  );
 }
