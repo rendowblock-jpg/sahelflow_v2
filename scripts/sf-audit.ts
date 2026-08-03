@@ -296,7 +296,7 @@ requireMarkers("documentation/system/ROADMAP.md", [
 requireMarkers("documentation/system/CURRENT_STATE.md", [
   "Latest protected source closures",
   "Native multi-shop — PR #200",
-  "Active Phase 3 proposed source — PR #203",
+  "Active proposed package:** PR #203",
   "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
 ]);
 
