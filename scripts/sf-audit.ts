@@ -20,32 +20,37 @@ interface Phase3Checkpoint {
   state?: string;
   protectedBase?: string;
   phaseIssue?: number;
-  retainedDesktopEvidenceIssue?: number;
-  activeBranch?: string;
   activeDraftPr?: number;
-  sessionPurpose?: string;
-  auditStatus?: {
-    documentationReconciliation?: string;
-    problemRegister?: string;
-    sharedContractFreeze?: string;
-    productionImplementation?: string;
-  };
+  auditStatus?: Record<string, string>;
   constraints?: {
     productionEditsAuthorized?: boolean;
+    authorizedProductionScope?: string;
     versionBumpAuthorized?: boolean;
     releaseAuthorized?: boolean;
+    founderAcceptanceClaimAuthorized?: boolean;
   };
+  authorizedFirstPackage?: {
+    name?: string;
+    problemIds?: string[];
+    scope?: string[];
+    nonGoals?: string[];
+  };
+  problemRegister?: Array<{ id?: string; state?: string }>;
+}
+
+interface Phase3Inventory {
+  formatVersion?: number;
+  phase?: number;
+  status?: string;
+  protectedBase?: string;
+  activePr?: number;
+  productionImplementationAuthorized?: boolean;
+  closure?: Record<string, string | boolean>;
+  problemIds?: string[];
 }
 
 const repoRoot = resolve(process.env.SF_REPO_DIR || process.cwd());
 const findings: Finding[] = [];
-
-const protectedMain = "e9c92f08f39e8d87ddfd72d2e698418ae81fc084";
-const activePhase = "Phase 3 — durable providers, inbox, AI and automations";
-const activeBranch = "agent/phase3-durable-effects-audit";
-const activePr = 203;
-const phaseIssue = 202;
-const retainedInstalledIssue = 201;
 
 const requiredFiles = [
   "README.md",
@@ -62,6 +67,7 @@ const requiredFiles = [
   "documentation/operations/WORKING_MEMORY.md",
   "documentation/research/RESEARCH.md",
   ".github/phase-checkpoints/phase3-durable-effects.json",
+  ".github/phase-checkpoints/phase3-surface-inventory.json",
   "scripts/sf-verify.ts",
   "scripts/sf-audit.ts",
 ];
@@ -126,16 +132,32 @@ function normalized(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function requireMarkers(relativePath: string, markers: readonly string[]): void {
+function requireMarkers(relativePath: string, markers: string[]): void {
   const content = normalized(contentOf(relativePath));
+  if (!content) return;
   for (const marker of markers) {
-    if (content && !content.includes(normalized(marker))) {
+    if (!content.includes(normalized(marker))) {
       findings.push({
         kind: "drift",
         file: relativePath,
         detail: `semantic continuity marker is missing: ${marker}`,
       });
     }
+  }
+}
+
+function parseJson<T>(relativePath: string): T | null {
+  const content = contentOf(relativePath);
+  if (!content) return null;
+  try {
+    return JSON.parse(content) as T;
+  } catch (error) {
+    findings.push({
+      kind: "drift",
+      file: relativePath,
+      detail: `invalid JSON: ${String(error)}`,
+    });
+    return null;
   }
 }
 
@@ -228,72 +250,29 @@ if (activeDocumentationFiles.length !== 10) {
   });
 }
 
-const entrypointChecks: Array<[string, string[]]> = [
-  [
-    "README.md",
-    [
-      "documentation/README.md",
-      "documentation/product/PRODUCT.md",
-      "documentation/system/CURRENT_STATE.md",
-      "documentation/operations/WORKING_MEMORY.md",
-    ],
-  ],
-  [
-    "AGENTS.md",
-    [
-      "documentation/README.md",
-      "documentation/operations/WORKING_MEMORY.md",
-      "documentation/operations/WORKFLOW.md",
-      "documentation/system/ROADMAP.md",
-    ],
-  ],
-];
-
-for (const [relativePath, markers] of entrypointChecks) {
-  const content = contentOf(relativePath);
-  for (const marker of markers) {
-    if (content && !content.includes(marker)) {
-      findings.push({
-        kind: "drift",
-        file: relativePath,
-        detail: `current entrypoint does not reference ${marker}`,
-      });
-    }
-  }
-}
-
 requireMarkers("README.md", [
-  protectedMain,
-  activePhase,
-  "PR #203",
-  "Production implementation remains unauthorized",
+  "documentation/README.md",
+  "FD-028 Final Completion Program",
+  "Phase 3",
   "SahelFlow 1.0 Stable has not been released",
 ]);
 
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   "Current verified frontier",
-  protectedMain,
-  activePhase,
-  "PR #203",
-  "issue #202",
-  "research/contract",
   "Audit-first rule",
-  "Phase 3 package rules",
   "Level 1 — Task Gate",
   "Level 2 — Phase Checkpoint",
   "Level 3 — Major Full Checkpoint",
-  "Production edits remain unauthorized",
+  "PR #203",
+  "issue #202",
+  "durable inbound WhatsApp",
 ]);
 
 requireMarkers("documentation/README.md", [
-  protectedMain,
-  "Execution mode:** single-agent, audit-first, batch remediation and tiered CI",
-  "Active implementation outcome:** Phase 3 audit, Problem Register and shared contract freeze",
-  "Active draft:** PR #203",
-  "Phase execution issue:** issue #202",
-  activePhase,
-  "Active Phase 3 contract",
+  "Phase 3 — durable providers, inbox, AI and automations",
+  "PR #203",
+  "Problem Register",
   "complete full-app AAA frontend transformation",
 ]);
 
@@ -305,11 +284,8 @@ requireMarkers("documentation/product/DECISIONS.md", [
 ]);
 
 requireMarkers("documentation/system/ROADMAP.md", [
-  protectedMain,
-  "Phase 2 status:** Protected-source closed through PR #200 with issue #201 retained",
-  activePhase,
-  "Research/contract gate — active",
-  "Production implementation remains unauthorized until this gate passes",
+  "Phase 3 — Durable providers, inbox, AI and automations",
+  "One active implementation agent at a time",
   "Level 1 — Task Gate",
   "Level 2 — Phase Checkpoint",
   "Level 3 — Major Full Checkpoint",
@@ -318,13 +294,9 @@ requireMarkers("documentation/system/ROADMAP.md", [
 ]);
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
-  protectedMain,
-  activePhase,
+  "Latest protected source closures",
   "Native multi-shop — PR #200",
-  "Active proposed Phase 3 package — PR #203",
-  "Inbound provider durability is incomplete",
-  "Automations are not production-safe",
-  "Sensitive AI approval is incomplete",
+  "Active Phase 3 proposed source — PR #203",
   "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
 ]);
 
@@ -337,20 +309,15 @@ requireMarkers("documentation/operations/WORKFLOW.md", [
   "Level 2 — Phase Checkpoint",
   "Level 3 — Major Full Checkpoint",
   "Whole-product AAA frontend program",
-  "file-level hook failure",
 ]);
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
-  protectedMain,
-  activePhase,
-  "Active PR:** #203",
-  "Current session purpose:** research/contract and governance reconciliation",
-  "Production implementation:** not authorized",
-  "Consolidated Phase 3 Problem Register",
-  "P3-P1-002",
-  "P3-P1-003",
-  "P3-P1-005",
-  "Shared contract questions to freeze",
+  "Completed Task 2 — exhaustive inventory and shared contract freeze",
+  "Frozen Problem Register",
+  "Authorized Task 3 — durable inbound WhatsApp",
+  "All other Phase 3 production work:** not authorized",
+  "P3-P1-011",
+  "the exact active native runtime drains its shop database",
 ]);
 
 requireMarkers("documentation/research/RESEARCH.md", [
@@ -366,6 +333,8 @@ requireMarkers("scripts/sf-verify.ts", [
   ".sf-vitest-failures.txt",
 ]);
 
+const expectedPhase =
+  "Phase 3 — durable providers, inbox, AI and automations";
 for (const relativePath of [
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
@@ -375,17 +344,18 @@ for (const relativePath of [
   const content = contentOf(relativePath);
   if (!content) continue;
   const phase = /^> \*\*Active product phase:\*\* (.+)$/m.exec(content)?.[1]?.trim();
-  if (phase !== activePhase) {
+  if (phase !== expectedPhase) {
     findings.push({
       kind: "drift",
       file: relativePath,
-      detail: `active product phase must be '${activePhase}', found '${phase ?? "missing"}'`,
+      detail: `active product phase must be '${expectedPhase}', found '${phase ?? "missing"}'`,
     });
   }
 }
 
+const expectedProtectedBase =
+  "e9c92f08f39e8d87ddfd72d2e698418ae81fc084";
 for (const relativePath of [
-  "README.md",
   "AGENTS.md",
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
@@ -393,85 +363,165 @@ for (const relativePath of [
   "documentation/operations/WORKING_MEMORY.md",
 ]) {
   const content = contentOf(relativePath);
-  if (content && !content.includes(protectedMain)) {
+  if (content && !content.includes(expectedProtectedBase)) {
     findings.push({
       kind: "drift",
       file: relativePath,
-      detail: "latest application-changing protected merge is missing",
+      detail: "current protected Phase 2 merge/base is missing",
     });
   }
 }
 
-const checkpointPath = ".github/phase-checkpoints/phase3-durable-effects.json";
-if (existsSync(resolve(repoRoot, checkpointPath))) {
-  try {
-    const checkpoint = JSON.parse(contentOf(checkpointPath)) as Phase3Checkpoint;
-    const expected: Array<[boolean, string]> = [
-      [checkpoint.formatVersion === 2, "formatVersion must be 2"],
-      [checkpoint.phase === 3, "phase must be 3"],
-      [checkpoint.state === "audit-in-progress", "state must be audit-in-progress"],
-      [checkpoint.protectedBase === protectedMain, "protectedBase is stale"],
-      [checkpoint.phaseIssue === phaseIssue, "phaseIssue must be 202"],
-      [
-        checkpoint.retainedDesktopEvidenceIssue === retainedInstalledIssue,
-        "retainedDesktopEvidenceIssue must be 201",
-      ],
-      [checkpoint.activeBranch === activeBranch, "activeBranch is stale"],
-      [checkpoint.activeDraftPr === activePr, "activeDraftPr must be 203"],
-      [checkpoint.sessionPurpose === "research-contract", "session purpose is stale"],
-      [
-        checkpoint.auditStatus?.productionImplementation === "not-authorized",
-        "production implementation must remain not-authorized",
-      ],
-      [
-        checkpoint.constraints?.productionEditsAuthorized === false,
-        "productionEditsAuthorized must be false",
-      ],
-      [
-        checkpoint.constraints?.versionBumpAuthorized === false,
-        "versionBumpAuthorized must be false",
-      ],
-      [
-        checkpoint.constraints?.releaseAuthorized === false,
-        "releaseAuthorized must be false",
-      ],
-    ];
-    for (const [ok, detail] of expected) {
-      if (!ok) findings.push({ kind: "drift", file: checkpointPath, detail });
-    }
-  } catch (error) {
+const checkpointPath =
+  ".github/phase-checkpoints/phase3-durable-effects.json";
+const checkpoint = parseJson<Phase3Checkpoint>(checkpointPath);
+if (checkpoint) {
+  const expectedStatus: Record<string, string> = {
+    documentationReconciliation: "complete",
+    sourceInventory: "complete",
+    callerInventory: "complete",
+    migrationAndTestInventory: "complete",
+    uiAndRecoveryInventory: "complete",
+    problemRegister: "frozen",
+    sharedContractFreeze: "complete",
+    productionImplementation: "authorized:durable-inbound-whatsapp",
+  };
+  if (checkpoint.formatVersion !== 3 || checkpoint.phase !== 3) {
     findings.push({
       kind: "drift",
       file: checkpointPath,
-      detail: `checkpoint is not valid JSON: ${String(error)}`,
+      detail: "Phase 3 checkpoint must use frozen contract formatVersion 3",
     });
+  }
+  if (checkpoint.protectedBase !== expectedProtectedBase) {
+    findings.push({
+      kind: "drift",
+      file: checkpointPath,
+      detail: "checkpoint protected base is stale",
+    });
+  }
+  if (checkpoint.phaseIssue !== 202 || checkpoint.activeDraftPr !== 203) {
+    findings.push({
+      kind: "drift",
+      file: checkpointPath,
+      detail: "checkpoint must bind issue #202 and PR #203",
+    });
+  }
+  for (const [key, value] of Object.entries(expectedStatus)) {
+    if (checkpoint.auditStatus?.[key] !== value) {
+      findings.push({
+        kind: "drift",
+        file: checkpointPath,
+        detail: `auditStatus.${key} must be '${value}'`,
+      });
+    }
+  }
+  if (checkpoint.constraints?.productionEditsAuthorized !== true) {
+    findings.push({
+      kind: "drift",
+      file: checkpointPath,
+      detail: "the first scoped production package must be explicitly authorized",
+    });
+  }
+  if (
+    checkpoint.constraints?.authorizedProductionScope !==
+    "durable inbound WhatsApp and database-authoritative inbox only"
+  ) {
+    findings.push({
+      kind: "drift",
+      file: checkpointPath,
+      detail: "authorized production scope is missing or broader than the frozen package",
+    });
+  }
+  for (const key of [
+    "versionBumpAuthorized",
+    "releaseAuthorized",
+    "founderAcceptanceClaimAuthorized",
+  ] as const) {
+    if (checkpoint.constraints?.[key] !== false) {
+      findings.push({
+        kind: "drift",
+        file: checkpointPath,
+        detail: `${key} must remain false`,
+      });
+    }
+  }
+  if (
+    checkpoint.authorizedFirstPackage?.name !==
+    "durable inbound WhatsApp and database-authoritative inbox"
+  ) {
+    findings.push({
+      kind: "drift",
+      file: checkpointPath,
+      detail: "first authorized package does not match the frozen contract",
+    });
+  }
+  const problemIds = new Set(
+    (checkpoint.problemRegister ?? []).map((problem) => problem.id),
+  );
+  for (let number = 1; number <= 11; number += 1) {
+    const id = `P3-P1-${String(number).padStart(3, "0")}`;
+    if (!problemIds.has(id)) {
+      findings.push({
+        kind: "drift",
+        file: checkpointPath,
+        detail: `frozen Problem Register is missing ${id}`,
+      });
+    }
+  }
+}
+
+const inventoryPath =
+  ".github/phase-checkpoints/phase3-surface-inventory.json";
+const inventory = parseJson<Phase3Inventory>(inventoryPath);
+if (inventory) {
+  if (
+    inventory.formatVersion !== 2 ||
+    inventory.phase !== 3 ||
+    inventory.status !== "complete-for-contract-freeze" ||
+    inventory.protectedBase !== expectedProtectedBase ||
+    inventory.activePr !== 203
+  ) {
+    findings.push({
+      kind: "drift",
+      file: inventoryPath,
+      detail: "Phase 3 surface inventory is not frozen against the current base and PR",
+    });
+  }
+  if (inventory.productionImplementationAuthorized !== false) {
+    findings.push({
+      kind: "drift",
+      file: inventoryPath,
+      detail: "inventory is evidence only and must not authorize implementation",
+    });
+  }
+  if (inventory.closure?.contractFreezeReady !== true) {
+    findings.push({
+      kind: "drift",
+      file: inventoryPath,
+      detail: "inventory must explicitly be contract-freeze ready",
+    });
+  }
+  const inventoryProblemIds = new Set(inventory.problemIds ?? []);
+  for (const id of ["P3-P1-009", "P3-P1-010", "P3-P1-011"]) {
+    if (!inventoryProblemIds.has(id)) {
+      findings.push({
+        kind: "drift",
+        file: inventoryPath,
+        detail: `completed inventory is missing ${id}`,
+      });
+    }
   }
 }
 
 const staleMarkers: Array<[string, string]> = [
-  ["AGENTS.md", "Active product phase: Phase 2"],
-  ["AGENTS.md", "Active branch: `agent/native-multi-shop-authority`"],
   ["AGENTS.md", "Active draft: PR #200"],
-  ["AGENTS.md", "The active package is PR #200 only"],
-  ["documentation/README.md", "Active product phase:** Phase 2"],
-  ["documentation/README.md", "Active implementation outcome:** native multi-shop authority"],
+  ["AGENTS.md", "Active package is PR #200"],
   ["documentation/README.md", "Active draft:** PR #200"],
   ["documentation/system/ROADMAP.md", "Active product phase:** Phase 2"],
-  ["documentation/system/ROADMAP.md", "Next phase outcome:** native multi-shop"],
-  ["documentation/system/CURRENT_STATE.md", "Active product phase:** Phase 2"],
   ["documentation/system/CURRENT_STATE.md", "Active proposed package:** PR #200"],
-  ["documentation/system/CURRENT_STATE.md", "This is the final Phase 2 implementation outcome"],
-  ["documentation/operations/WORKING_MEMORY.md", "Active product phase:** Phase 2"],
-  ["documentation/operations/WORKING_MEMORY.md", "Active implementation package:** Native multi-shop authority"],
-  ["documentation/operations/WORKING_MEMORY.md", "Active PR:** #200"],
-  ["README.md", "first Phase 1 manual-confirmation vertical"],
-  ["README.md", "Exact next production outcome"],
-  ["README.md", "first Phase 1 package"],
-  ["CHANGELOG.md", "Phase 2 still needs durable identity/licensing/multi-shop"],
-  ["AGENTS.md", "Protected `main`: `991c61ac882497fdda01af3ac04f06978146bbda`"],
-  ["documentation/README.md", "Live protected main:** `991c61ac882497fdda01af3ac04f06978146bbda`"],
-  ["documentation/system/CURRENT_STATE.md", "Live protected main:** `991c61ac882497fdda01af3ac04f06978146bbda`"],
-  ["documentation/operations/WORKING_MEMORY.md", "Live protected main:** `991c61ac882497fdda01af3ac04f06978146bbda`"],
+  ["documentation/operations/WORKING_MEMORY.md", "Production implementation:** not authorized"],
+  ["documentation/operations/WORKING_MEMORY.md", "Shared contract questions to freeze"],
 ];
 
 for (const [relativePath, marker] of staleMarkers) {
@@ -485,45 +535,16 @@ for (const [relativePath, marker] of staleMarkers) {
   }
 }
 
-const currentOwnedDocuments = [
-  "README.md",
-  "AGENTS.md",
-  "documentation/README.md",
-  "documentation/system/ROADMAP.md",
-  "documentation/system/CURRENT_STATE.md",
-  "documentation/operations/WORKFLOW.md",
-  "documentation/operations/WORKING_MEMORY.md",
-  "documentation/research/RESEARCH.md",
-];
-const obsoleteSessionPatterns = [
-  /^#{2,4}\s+session\s+[1-4]\b.*$/gim,
-  /^#{2,4}\s+session\s+map\b.*$/gim,
-  /^#{2,4}\s+.*\bfour[- ]session\b.*\b(?:execution|overlay|program|map)\b.*$/gim,
-];
-
-for (const relativePath of currentOwnedDocuments) {
-  const content = contentOf(relativePath);
-  for (const pattern of obsoleteSessionPatterns) {
-    pattern.lastIndex = 0;
-    const match = pattern.exec(content);
-    if (match) {
-      findings.push({
-        kind: "drift",
-        file: relativePath,
-        detail: `obsolete session execution heading remains active: ${match[0].trim()}`,
-      });
-    }
-  }
-}
-
 if (findings.length > 0) {
   for (const finding of findings) {
     console.error(`${finding.kind.toUpperCase()} ${finding.file}: ${finding.detail}`);
   }
-  console.error(`Documentation authority audit failed with ${findings.length} finding(s).`);
+  console.error(
+    `Documentation authority audit failed with ${findings.length} finding(s).`,
+  );
   process.exit(1);
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 3 audit frontier ${protectedMain.slice(0, 8)}).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 3 contracts frozen; durable inbound WhatsApp authorized).`,
 );
