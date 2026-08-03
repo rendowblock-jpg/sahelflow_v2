@@ -58,8 +58,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   assertTrustedAction(actorContext, "orders.financials.update");
   const input = schema.parse(await request.json());
 
-  // The browser cannot mint WhatsApp source authority. Re-read the exact
-  // provider message and bind the command to its immutable ID and body digest.
   const history = await sidecar.messages(input.conversationId, 500);
   const sourceMessage = history.messages.find(
     (message) => message.key.id === input.messageId && !message.key.fromMe,
@@ -119,10 +117,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   );
 
   if (!command.replayed) {
-    void dispatchTrigger(
+    await dispatchTrigger(
       { prisma: db, shop: actorContext.shop },
       "order.created" as TriggerEvent,
       command.result.automation,
+      {
+        triggerKey: `order.created:${command.result.order.id}`,
+        occurredAt: command.result.order.createdAt,
+      },
     );
   }
 
