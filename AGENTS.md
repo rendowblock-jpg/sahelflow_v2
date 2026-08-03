@@ -45,8 +45,11 @@ They never replace current GitHub authority.
 - Retained installed-runtime evidence issue: #201.
 - Governance reconciliation, exhaustive inventory, frozen Problem Register and
   shared Phase 3 contract are complete on the draft branch.
-- **Authorized production package:** durable inbound WhatsApp and
-  database-authoritative inbox.
+- Task 3 durable inbound WhatsApp is source-closed at
+  `f016055be55fd220baa87c26ffed565c4e9e1d85`; full source checkpoint
+  `30808773702` passed and no review threads remain.
+- **Authorized production package:** truthful durable automations and WhatsApp
+  effect adoption only.
 - Every other Phase 3 production package remains unauthorized.
 
 Always re-read live GitHub. These values record the verified frontier; they are
@@ -64,7 +67,7 @@ not permission to rely on copied state after the repository moves.
 8. Working Memory.
 9. Research and archive.
 
-A lower layer cannot silently weaken a higher one.
+A lower layer cannot silently weaken a higher layer.
 
 ## Completion program
 
@@ -108,8 +111,8 @@ Declare exactly one purpose before work:
 - installed evidence.
 
 A governance/planning, research/contract or frozen-review session does not perform
-unrelated product implementation. The current authorized transition is from
-research/contract into implementation of the exact inbound WhatsApp package only.
+unrelated product implementation. The current session is implementation of the
+exact truthful durable automation package only.
 
 ## Audit-first rule
 
@@ -237,8 +240,8 @@ Library presence or a screenshot is not AAA evidence.
 - Reuse canonical commands, events and encrypted `OutboxIntent`; do not create
   provider-specific competing transaction authority.
 - Authenticate and persist inbound events before acknowledgement.
-- When the sidecar owns the provider socket, it writes a durable spool before
-  broadcast or app delivery.
+- When the sidecar owns the provider socket, it writes an encrypted durable spool
+  before broadcast or app delivery.
 - Inbound identity binds provider, environment, exact account, installation,
   shop incarnation and provider event/message identity.
 - Normalize with storage-enforced idempotency and leases.
@@ -257,24 +260,37 @@ Library presence or a screenshot is not AAA evidence.
 - Server-side capability certification and kill switches gate provider effects.
   DHD remains disabled in production until live-certified.
 
-## Authorized package rules — durable inbound WhatsApp
+## Completed package rules — durable inbound WhatsApp
+
+The source package is closed at
+`f016055be55fd220baa87c26ffed565c4e9e1d85` with full source checkpoint
+`30808773702` passed. It is source/integration/database evidence only, not signed,
+installed, live-provider-certified, Founder-accepted or Phase-closed evidence.
+
+Its separated adversarial repair batch closed Baileys type drift, plaintext spool
+evidence, key/tamper handling, attempt-history collisions, duplicate WebSocket
+publication and the status-trigger phone key mismatch.
+
+## Authorized package rules — truthful durable automations
 
 Only these production edits are authorized now:
 
-- additive `ProviderIngressEvent` and `ProviderIngressAttempt` persistence;
-- sidecar durable inbound spool;
-- authenticated `/api/whatsapp/inbound` persistence and acknowledgement;
-- leased, idempotent normalization into `Conversation` and `Message`;
-- committed `message.received` trigger intent with canonical payload keys;
-- database-authoritative chats/messages;
-- post-commit WebSocket publication;
-- quarantine, replay, dead-letter and operator history;
-- restart, duplicate, unavailable-app, malformed, wrong-account/shop and
-  shop-switch tests;
-- complete AR/FR/EN, RTL, accessibility and constrained-network states.
+- additive `AutomationRun`, `AutomationStepRun` and `AutomationStepAttempt`
+  persistence;
+- stable trigger-event plus automation-definition-version identity;
+- an active-shop worker consuming committed `automation.trigger.v1` intents;
+- ordered steps with explicit stop/continue policy and truthful aggregate state;
+- restart-safe leases, retries, dead letter, replay and operator history;
+- `send_whatsapp` through the existing durable WhatsApp outbox with
+  step-to-effect correlation;
+- durable daily-report send identity instead of direct sidecar dispatch;
+- strict trigger/action/config schemas and fail-closed activation when a producer
+  or required configuration is missing;
+- AR/FR/EN, RTL, accessibility and partial/retry/dead-letter states;
+- exact database, concurrency, restart and no-false-success tests.
 
-Do not implement durable automation runs, daily-report conversion,
-proposal-bound AI, courier/commerce convergence or provider certification in this
+Do not implement proposal-bound AI, courier/commerce convergence, live provider
+certification, a version bump, MSI, release, Founder acceptance or Stable in this
 package.
 
 ## Evidence language
