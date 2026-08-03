@@ -2,6 +2,7 @@ process.env.SF_MASTER_KEY =
   process.env.SF_MASTER_KEY ??
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
+import { createHash } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { db, shopContext } from "@/lib/db";
@@ -81,10 +82,11 @@ describe("WhatsApp inbound operator recovery", () => {
       },
     });
 
+    const reason = "Customer 0555000333 confirmed the message";
     const result = await retryWhatsAppInbound(context, {
       ingressEventId: ingress.ingressEventId,
       auditActor: "authenticated-owner:person:owner-1:session:session-1",
-      reason: "Customer 0555000333 confirmed the message",
+      reason,
     });
 
     expect(result.state).toBe("applied");
@@ -117,7 +119,10 @@ describe("WhatsApp inbound operator recovery", () => {
     );
     expect(audit.metadata).not.toContain("0555000333");
     expect(audit.metadata).not.toContain("confirmed the message");
-    expect(audit.metadata).toContain("[REDACTED]");
+    expect(JSON.parse(audit.metadata ?? "{}")).toEqual({
+      reasonHash: createHash("sha256").update(reason).digest("hex"),
+      reasonLength: reason.length,
+    });
   });
 
   it("rejects recovery while a live processing lease owns the event", async () => {
