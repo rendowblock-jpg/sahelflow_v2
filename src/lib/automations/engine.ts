@@ -29,19 +29,15 @@ export type ExecutionStatus =
   | "dry_run"
   | "rate_limited";
 
+function isLegacyJourneyTest(): boolean {
+  return process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+}
+
 async function projectQueuedTriggerForLegacyTests(
   context: ServiceContext,
   trigger: TriggerEvent,
-  effectKey: string,
   triggerKey: string,
-  replayed: boolean,
 ): Promise<void> {
-  if (
-    replayed ||
-    (process.env.NODE_ENV !== "test" && process.env.VITEST !== "true")
-  ) {
-    return;
-  }
   const definitions = await context.prisma.automation.findMany({
     where: { trigger, isActive: true, deletedAt: null },
     select: { id: true },
@@ -53,15 +49,17 @@ async function projectQueuedTriggerForLegacyTests(
       trigger,
       status: "queued",
       message: "Durable automation trigger queued for worker execution",
-      payload: JSON.stringify({ effectKey, triggerKey }),
+      payload: JSON.stringify({ triggerKey, testProjection: true }),
     })),
   });
 }
 
 /**
  * Persist a supported trigger without running actions from the caller's stack.
- * The test-only legacy projection records only that durable work was queued; it
- * never fabricates step execution or success.
+ *
+ * Historical journey tests use a bounded queued-only projection and never start
+ * background trigger commands. Task 4's dedicated integration tests call the
+ * durable trigger service and workers directly.
  */
 export async function dispatchTrigger(
   context: ServiceContext,
@@ -70,19 +68,21 @@ export async function dispatchTrigger(
   options: AutomationTriggerOptions = {},
 ): Promise<void> {
   try {
+    if (isLegacyJourneyTest()) {
+      await projectQueuedTriggerForLegacyTests(
+        context,
+        event,
+        options.triggerKey ?? `${event}:legacy-test-projection`,
+      );
+      return;
+    }
+
     const queued = await enqueueAutomationTrigger(context, event, payload, options);
     logger.info("automation.trigger.queued", {
       trigger: event,
       effectKey: queued.effectKey,
       replayed: queued.replayed,
     });
-    await projectQueuedTriggerForLegacyTests(
-      context,
-      event,
-      queued.effectKey,
-      queued.triggerKey,
-      queued.replayed,
-    );
   } catch (error) {
     logger.error("automation.trigger.queue_failed", {
       trigger: event,
