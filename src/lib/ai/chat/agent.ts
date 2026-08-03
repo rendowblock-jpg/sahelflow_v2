@@ -103,6 +103,19 @@ interface ToolExecutionResult {
   actionProposal?: AiActionProposalToolResult;
 }
 
+function historySafeToolResult(value: unknown): unknown {
+  if (
+    value &&
+    typeof value === "object" &&
+    (value as Record<string, unknown>).pending_action_proposal === true
+  ) {
+    const safe = { ...(value as Record<string, unknown>) };
+    delete safe.proposalDigest;
+    return redactToolResult(safe);
+  }
+  return redactToolResult(value);
+}
+
 function proposalMessage(proposal: AiActionProposalToolResult): string {
   return `Une proposition d'action exacte (${proposal.tool}) a été enregistrée. Vérifiez ses détails et approuvez-la depuis la carte d'action; une réponse « oui » ne l'exécutera pas.`;
 }
@@ -142,7 +155,7 @@ function renderHistory(
         parts.push({
           functionResponse: {
             name: call.name,
-            response: { result: call.result },
+            response: { result: historySafeToolResult(call.result) },
           },
         });
       }
@@ -167,12 +180,13 @@ async function executeFunctionCall(
   const result = toolResult.success
     ? toolResult.data
     : { error: toolResult.error };
-  return {
-    result,
-    ...(isAiActionProposalToolResult(result)
-      ? { actionProposal: result }
-      : {}),
-  };
+  if (isAiActionProposalToolResult(result)) {
+    return {
+      result: historySafeToolResult(result),
+      actionProposal: result,
+    };
+  }
+  return { result };
 }
 
 function finalProposalResponse(
@@ -242,7 +256,9 @@ export async function runAgent(
 
         if (result.status === 400 || result.status === 404) continue;
         if (!result.ok) {
-          const error = (await result.json().catch(() => ({}))) as GeminiResponse;
+          const error = (await result
+            .json()
+            .catch(() => ({}))) as GeminiResponse;
           return {
             response: "",
             toolCalls: allToolCalls,
@@ -297,7 +313,7 @@ export async function runAgent(
           { functionCall },
         ],
       });
-      const redacted = redactToolResult(executed.result);
+      const redacted = historySafeToolResult(executed.result);
       contents.push({
         role: "user",
         parts: [
@@ -322,8 +338,7 @@ export async function runAgent(
     }
 
     return {
-      response:
-        "Je n'ai pas pu générer de réponse. Reformulez votre question.",
+      response: "Je n'ai pas pu générer de réponse. Reformulez votre question.",
       toolCalls: allToolCalls,
     };
   }
@@ -458,9 +473,10 @@ export async function* runAgentStream(
         );
         if (result.status === 400 || result.status === 404) continue;
         if (!result.ok) {
-          const error = (await result.json().catch(() => ({}))) as GeminiResponse;
-          lastError =
-            error.error?.message ?? `Erreur API: ${result.status}`;
+          const error = (await result
+            .json()
+            .catch(() => ({}))) as GeminiResponse;
+          lastError = error.error?.message ?? `Erreur API: ${result.status}`;
           continue;
         }
         stream = result.body;
@@ -531,12 +547,9 @@ export async function* runAgentStream(
 
       contents.push({
         role: "model",
-        parts: [
-          ...(fullText ? [{ text: fullText }] : []),
-          { functionCall },
-        ],
+        parts: [...(fullText ? [{ text: fullText }] : []), { functionCall }],
       });
-      const redacted = redactToolResult(executed.result);
+      const redacted = historySafeToolResult(executed.result);
       contents.push({
         role: "user",
         parts: [
