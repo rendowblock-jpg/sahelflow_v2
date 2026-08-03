@@ -51,7 +51,7 @@ function aiActionPayloadError(
   cause: unknown,
 ): SahelFlowError {
   const executionResult = kind === "ai-action-execution-result";
-  return new SahelFlowError(
+  const error = new SahelFlowError(
     executionResult
       ? "AI action execution result authentication failed"
       : "AI action proposal payload authentication failed",
@@ -59,8 +59,9 @@ function aiActionPayloadError(
       ? "AI_ACTION_EXECUTION_RESULT_TAMPERED"
       : "AI_ACTION_ARGUMENT_TAMPERED",
     409,
-    cause,
   );
+  error.cause = cause;
+  return error;
 }
 
 export function financialMovementDetailBinding(
