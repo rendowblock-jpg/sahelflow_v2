@@ -39,11 +39,7 @@ vi.mock("../tools/core-tools", () => ({}));
 vi.mock("../tools/extended-tools", () => ({}));
 vi.mock("../tools/advanced-tools", () => ({}));
 
-import {
-  runAgent,
-  runAgentStream,
-  type AgentStreamEvent,
-} from "../agent";
+import { runAgent, runAgentStream, type AgentStreamEvent } from "../agent";
 
 function proposalResult() {
   return {
@@ -155,6 +151,7 @@ describe("proposal-bound agent contract", () => {
 
     expect(result.actionProposal).toEqual(proposalResult());
     expect(result.toolCalls).toHaveLength(1);
+    expect(JSON.stringify(result.toolCalls)).not.toContain("1".repeat(64));
     expect(result.response).toMatch(/proposition d'action exacte/i);
     expect(result.response).toMatch(/« oui » ne l'exécutera pas/i);
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -176,10 +173,14 @@ describe("proposal-bound agent contract", () => {
       "done",
     ]);
     const proposal = events.find(
-      (event): event is Extract<AgentStreamEvent, { type: "action_proposal" }> =>
+      (
+        event,
+      ): event is Extract<AgentStreamEvent, { type: "action_proposal" }> =>
         event.type === "action_proposal",
     );
     expect(proposal?.proposal).toEqual(proposalResult());
+    const toolResult = events.find((event) => event.type === "tool_result");
+    expect(JSON.stringify(toolResult)).not.toContain("1".repeat(64));
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(harness.execute).toHaveBeenCalledTimes(1);
   });
