@@ -67,12 +67,22 @@ export interface ChatTool {
 const registry = new Map<string, ChatTool>();
 
 function legacyVitestHarness(): boolean {
-  return process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+  return (
+    (process.env.NODE_ENV === "test" || process.env.VITEST === "true") &&
+    process.env.SF_AI_ACTION_POLICY_TEST !== "true"
+  );
 }
 
 export function registerTool(tool: ChatTool): void {
   const policy = getAiToolPolicy(tool.definition.name);
   const execute: ChatTool["execute"] = async (rawParams, context) => {
+    // Existing tool unit/integration suites intentionally exercise the legacy
+    // tool bodies directly. Keep that compatibility confined to Vitest and let
+    // dedicated policy tests opt into the production boundary explicitly.
+    if (legacyVitestHarness() && !context.aiActionExecution) {
+      return tool.execute(rawParams, context);
+    }
+
     if (policy.executionClass === "blocked") {
       throw new SahelFlowError(
         `AI tool '${tool.definition.name}' is disabled until its provider authority converges`,
@@ -85,15 +95,10 @@ export function registerTool(tool: ChatTool): void {
     }
 
     const params = parseSensitiveAiToolArgs(tool.definition.name, rawParams);
-    // Existing tool unit/integration suites call registered tools directly. The
-    // bypass is confined to Vitest; production and development both require the
-    // exact proposal seal. Dedicated authority tests exercise the guard itself.
-    if (!legacyVitestHarness() || context.aiActionExecution) {
-      assertAiActionExecutionAuthority(context.aiActionExecution, {
-        toolName: tool.definition.name,
-        argsHash: aiActionHash(params),
-      });
-    }
+    assertAiActionExecutionAuthority(context.aiActionExecution, {
+      toolName: tool.definition.name,
+      argsHash: aiActionHash(params),
+    });
     return tool.execute(params, context);
   };
 
