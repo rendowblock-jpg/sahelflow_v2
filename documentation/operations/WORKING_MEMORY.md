@@ -2,32 +2,33 @@
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-08-03
-> **Live protected main:** `991c61ac882497fdda01af3ac04f06978146bbda`
-> **Latest application-changing protected merge:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
+> **Live protected main:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
+> **Latest application-changing protected merge:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Founder-accepted baseline:** Internal.5
 > **Execution epic:** issue #164
-> **Active product phase:** Phase 2 — identity, authorization, licensing and multi-shop
-> **Governance transition:** PR #199 merged at `991c61ac882497fdda01af3ac04f06978146bbda`
-> **Active implementation package:** Native multi-shop authority
-> **Active branch:** `agent/native-multi-shop-authority`
-> **Active PR:** #200 — `Phase 2: establish native multi-shop authority`
-> **Exact branch base:** `991c61ac882497fdda01af3ac04f06978146bbda`
-> **Code-bearing checkpoint head:** `42a3cf678405e929e5a63f71e106f954b1e1f7a5`
+> **Active phase issue:** issue #202
+> **Retained installed evidence:** issue #201
+> **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
+> **Phase 2 protected merge:** PR #200 at `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
+> **Active package:** Phase 3 audit, Problem Register and shared contract freeze
+> **Active branch:** `agent/phase3-durable-effects-audit`
+> **Active PR:** #203 — `Phase 3: audit durable effects and operator workflows`
+> **Exact branch base:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
 > **Active implementation agent:** ChatGPT Web Agentic Coding Agent
-> **Founder selection recorded:** 2026-08-02
-> **Current session purpose:** Phase 2 exit checkpoint, review closure and protected merge
+> **Founder selection recorded:** 2026-08-03
+> **Current session purpose:** research/contract and governance reconciliation
+> **Production implementation:** not authorized
 
-Live GitHub is authority. Re-read protected `main`, PR #200, its exact head,
-selected checks, review threads and issue #164 before relying on copied state. A
-later documentation-only closure commit may advance the PR head beyond the
-code-bearing checkpoint SHA above; only the live exact head can authorize merge.
+Live GitHub is authority. Re-read protected `main`, PR #203, its exact head,
+selected checks, review threads and issues #164, #201 and #202 before relying on
+copied state.
 
 ## Founder execution instruction
 
-The Founder selected the Web Agent as the sole active implementation agent for the
-native multi-shop package and approved this permanent operating model:
+The Founder selected the Web Agent to begin Phase 3 professionally under the
+single-agent operating model:
 
 - one active implementation agent at a time;
 - complete phase/package reconnaissance before production edits;
@@ -35,194 +36,362 @@ native multi-shop package and approved this permanent operating model:
 - coherent batch remediation instead of one-problem-at-a-time loops;
 - Level 1 Task Gate after every coherent completed task;
 - Level 2 Phase Checkpoint before phase closure;
-- Level 3 Major Full Checkpoint at Phase 2 exit because native lifecycle,
-  identity, licensing, migrations and destructive data authority are involved;
+- risk-triggered Level 3 evidence for provider effects involving money,
+  inventory, irreversible external action or installed runtime authority;
 - one frozen-head adversarial review and one consolidated repair batch;
 - zero known P0/P1 before closure;
-- the complete Phase 0–9 scope is preserved; this is not an MVP reduction.
+- complete Phase 0–9 scope preserved without MVP reduction.
 
-## Protected closures before this package
+This session is research/contract. It may reconcile authority, inspect source,
+record the Problem Register and freeze shared contracts. It must not silently
+become production implementation.
 
-- PR #195 merged the repaired Phase 1 Golden COD boundary plus durable
-  identity/Teams at `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
-  Implementation head `ddec67a36b8000be91562b33a2bd4d6aceb5e443` passed CI
-  `30734100436`.
-- PR #197 merged signed licensing at
-  `04d4c51831c6e043ab39a614a7e947e6b27d01e6`. Implementation head
-  `25abbedd176429cf25e657217726d833e3c62a10` passed CI `30744598944`.
-- PR #199 merged single-agent AAA governance at
-  `991c61ac882497fdda01af3ac04f06978146bbda`. Exact head
-  `58f12a24bfce1654e8894ede62880c2458a6808f` passed CI `30750832310`.
+## Protected closures before Phase 3
 
-These are protected-source facts, not a new release, Founder acceptance or Stable
-claim.
+### Phase 1 and identity/Teams
 
-## Current repository truth
+PR #195 merged at `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
+It source-closed the repaired Golden COD boundary and durable identity, Teams,
+permissions, revocation and exact-shop authority. This is protected source, not a
+current signed or installed claim.
 
-PR #200 is open, non-draft and mergeable from
-`agent/native-multi-shop-authority` to protected `main`. It is the sole active
-implementation package. Its code-bearing checkpoint head is
-`42a3cf678405e929e5a63f71e106f954b1e1f7a5`; merge authority normally requires
-the final live PR head, all selected exact-head checks and all P0/P1 review
-threads. The Founder-authorized closure exception recorded below applies only to
-the installed hydrated-WebView proof for PR #200.
+### Signed licensing
 
-The package now implements the native multi-shop outcome rather than only a Task 1
-contract:
+PR #197 merged at `04d4c51831c6e043ab39a614a7e947e6b27d01e6`.
+It established signed installation-level trial/permanent licensing, protected
+clock/recovery floors, transfer/recovery/revocation and data-preserving lockout.
 
-- the browser submits authenticated typed intent and receives a pending-operation
-  receipt; it does not write the registry or relaunch the process;
-- installation-root HMAC binds operation payload, expected registry revision,
-  workspace/installation, person/member/device/session authority, policy and
-  revocation state, signed entitlement revision and shop slots, migration-set
-  identity and exact current/target shop incarnations;
-- one authenticated durable lifecycle journal owns requested, authorized,
-  quiescing, runtime-stopped, staged, registry-committing, committed,
-  runtime-starting, ready, completed, compensating, recovered, blocked and
-  manual-recovery-required states;
-- Rust composes the existing migration coordinator, runtime supervisor and exact
-  process `ShopContext`; it does not introduce a second registry or restart
-  authority;
-- switch performs planned runtime stop, compare-and-swap registry advancement,
-  exact target authority startup, authenticated readiness and prior-authority
-  compensation;
-- create provisions a contained SQLite database from the exact packaged migration
-  set and enforces signed slot authority;
-- rename preserves stable shop ID, incarnation and database identity;
-- archive retains an authenticated manifest and verified SQLite snapshot;
-- recover authenticates the archive, verifies its digest, rejects collisions,
-  enforces slots and restores the original stable identity;
-- destructive delete requires owner installation authority, recent
-  reauthentication, exact target confirmation and retained deleted-rescue
-  evidence;
-- startup recovery reconciles an interrupted operation only to exact prior or
-  exact committed authority;
-- generic browser process authority and `process:default` are removed;
-- temporary TypeScript registry mutation paths are no longer production
-  authority.
+### Single-agent AAA governance
 
-## Frozen lifecycle authority
+PR #199 merged at `991c61ac882497fdda01af3ac04f06978146bbda`.
+It established complete reconnaissance, one Problem Register, batch remediation,
+Level 1/2/3 validation and whole-product AAA governance.
 
-Every consequential request is bound to the exact installation, actor, session,
-entitlement, migration set and registry revision. Operation-specific create,
-rename, archive, recover and delete payloads are part of the authenticated command
-and journal. Delete confirmation and reauthentication timestamp are MAC-bound and
-validated against the target and command window.
+### Native multi-shop
 
-No operation reports success before authenticated runtime readiness. Stale
-revision, lost grant, changed policy/revocation state, changed entitlement,
-exhausted slots, changed migration identity, archive collision, containment
-uncertainty or failed compensation blocks the operation rather than guessing.
+PR #200 merged at `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`.
+Protected source now makes the Tauri host the sole lifecycle authority for create,
+rename, switch, archive, recover and delete. Requests are bound to exact registry,
+workspace, installation, actor, session, policy, entitlement, slot,
+migration-set and shop-incarnation authority. A durable native journal owns
+quiescence, mutation, runtime restart, authenticated readiness, compensation and
+startup reconciliation.
 
-## Separated adversarial review
+The ephemeral MSI built, installed, launched, closed and reopened. The installed
+hydrated-WebView receipt did not pass twice. The Founder-authorized PR #200 waiver
+is retained only as issue #201. It is not passing installed-UI evidence and does
+not reopen native lifecycle authority.
 
-The frozen review found and repaired two concrete P1 interruption defects:
+No Phase 1/2 source closure produced a version bump, new release, Founder
+acceptance or Stable claim. Published executable truth remains Internal.13.
 
-1. a crash after archive/delete registry commit but before live database removal
-   could leave an unregistered live SQLite database;
-2. a recover operation could remove its archive after readiness but before the
-   terminal journal write, causing startup reconciliation to require evidence that
-   had correctly been consumed.
+## Phase 3 objective
 
-The repair authenticates committed archive/delete evidence, removes any leftover
-unregistered live database, permits exact committed recover finalization without
-archive residue and retains prior-authority cleanup for uncommitted work. Dedicated
-Rust integration tests simulate both interruption windows. The native source gate
-executes them on Linux, and the Windows Rust parity lane executes both switch and
-mutation integration contracts on Windows.
+Make every external input and effect durable, replayable, observable and safe:
 
-The review also closed the earlier P1 concerns about operation payload journaling,
-delete proof binding and persisted `ready` recovery. This separated pass is not an
-independent security review.
+```text
+authenticated ingress
+→ durable inbox
+→ validation and deduplication
+→ canonical command
+→ committed result
+→ durable outbox
+→ external effect
+→ receipt and reconciliation
+```
 
-## Consolidated Phase 2 Problem Register
+Required outcomes include one provider protocol, persistence-before-acknowledgment,
+stable effect identity, leases, retries, ambiguity, receipts, dead letter,
+checkpoint safety, truthful automation steps, proposal-bound sensitive AI actions,
+operator recovery, complete AR/FR/EN states and at least one live-certified courier
+and Required communication path.
 
-### Closed P1 root causes
+## Audit status
 
-- **NS-P1-001 stale execution frontier:** PR #200 and its branch are now recorded
-  as the active package.
-- **NS-P1-002 split lifecycle authority:** registry/database/runtime mutation is
-  native; browser mutation and generic relaunch authority are removed.
-- **NS-P1-003 missing durable transaction:** authenticated lifecycle journal,
-  exact transitions, compensation and startup reconciliation are implemented.
-- **NS-P1-004 cross-shop administration:** owner installation authority and
-  non-owner exact shop grants are enforced without exposing a target database to
-  the old process.
-- **NS-P1-005 unsigned slot behavior:** create/recover enforce signed `shopSlots`.
-- **NS-P1-006 broad WebView process authority:** `process:default` is removed.
-- **NS-P1-007 inconsistent delete ceremony:** exact target confirmation and recent
-  owner reauthentication are authenticated and validated.
-- **NS-P1-008 missing lifecycle outcomes:** create, rename, switch, archive,
-  recover and delete are implemented through one native host.
-- **NS-P1-009 weak archive semantics:** authenticated metadata, original identity,
-  digest verification, collision handling and recoverability are implemented.
-- **NS-P1-010 interruption gaps:** exact prior/committed recovery and the two
-  adversarial interruption repairs are integration-tested.
+### Governance reconciliation — in progress
 
-### Non-blocking follow-up
+Completed in the active branch:
 
-- **NS-P2-001 branch hygiene:** numerous historical branches remain. Cleanup is
-  deferred until this package and reconstruction evidence are protected.
-- **NS-P2-002 native module consolidation:** the mutation engine is split across
-  focused include fragments because connector writes could not safely replace one
-  very large file. Consolidation is maintainability work and must not reopen the
-  proven authority boundary without a coherent package.
-- **NS-P2-003 installed hydrated-WebView evidence:** the ephemeral MSI builds,
-  installs, launches, closes and reopens, but the GitHub Windows harness has not
-  observed the authenticated durable UI-ready receipt twice. This remains the
-  first Phase 3 installed-runtime investigation and its check must not be weakened
-  or silently removed.
-- Phase 3 provider, inbox, AI and automation work remains outside this package.
+- `AGENTS.md` points to protected merge `e9c92f0`, Phase 3, issue #202 and PR #203;
+- `documentation/README.md` records Phase 2 closure and the Phase 3 contract;
+- this Working Memory records the first consolidated audit and Problem Register.
 
-No known P0/P1 remains in the reviewed native lifecycle source. The retained
-installed hydrated-WebView proof is an explicit Founder-waived exit limitation,
-not passing evidence.
+Still required before this task closes:
 
-## Evidence frontier
+- reconcile `CURRENT_STATE.md`;
+- reconcile `ROADMAP.md` Phase 2 result and active Phase 3 state;
+- reconcile root `README.md` and `CHANGELOG.md`;
+- align `scripts/sf-audit.ts` with the new protected and active frontier;
+- update issue #164 from its stale Phase 2 dashboard state;
+- update the Phase 3 checkpoint JSON and PR description with exact progress.
 
-The exact Phase 2 implementation has proof for:
+### Source/caller inventory — first pass complete; exhaustive pass in progress
 
-- authority/version and documentation audit;
-- TypeScript, ESLint and complete Vitest;
-- Prisma generation, migration deployment/status and database tests;
-- coverage and production dependency audit;
-- Rust 1.77 lifecycle tests and strict Clippy;
-- canonical Rust formatting;
-- real Tauri switch and mutation interruption contracts;
-- Linux and Windows Tauri release compilation;
-- Windows database, standalone runtime, contained launcher and containment stress;
-- ephemeral MSI build/install plus authenticated launch, close and reopen.
+Inspected production surfaces:
 
-The installed hydrated-WebView proof did **not** pass. The harness did not observe
-the authenticated durable UI-ready receipt twice. This does not claim Founder
-acceptance, a release, Stable readiness or installed-UI certification.
+- `src/instrumentation.ts` worker startup;
+- generic command/event/outbox persistence in
+  `prisma/models/business-truth.prisma`;
+- WhatsApp effect identity, durable send, worker, sidecar client, receipt journal,
+  send/status/outbox/chats/messages routes and integration tests;
+- Baileys sidecar connection, in-memory store, inbound events and outbound status
+  callbacks;
+- canonical courier booking, tracking, outbox worker, reconciliation and delivery
+  adapters;
+- Shopify/WooCommerce/YouCan synchronization, source commands and checkpoint
+  advancement;
+- automation CRUD, trigger dispatch, condition evaluation, multi-step execution,
+  retries, direct WhatsApp sending and status mutation;
+- AI agent, confirmation gate, persisted chat messages, proposal helper and
+  destructive tools;
+- PR #194 and historical Phase 3 branches as diverged design/test evidence.
 
-## Founder-authorized Phase 2 closure exception
+Exhaustive inventory still must enumerate every route, test, fixture, migration,
+dynamic caller and UI state in the final audit artifact before implementation.
 
-The Founder explicitly authorized PR #200 to merge on 2026-08-03 so the roadmap
-can advance to Phase 3 despite the single failed installed hydrated-WebView proof.
-The exception is recorded in the PR body and this Working Memory. It applies only
-to PR #200 and does not change the normal required evidence policy for any other
-package.
+## Proven foundations to preserve
 
-After merge, the active roadmap phase becomes:
+### Generic business truth
 
-**Phase 3 — durable providers, inbox, AI and automations.**
+`BusinessCommand`, `DomainEvent`, encrypted `OutboxIntent`, aggregate versions,
+request-bound idempotency, audit, projection invalidation, inventory/financial
+movements and compensation facts provide the canonical mutation foundation.
 
-The first Phase 3 package must preserve the installed evidence lane and resolve or
-formally reclassify the WebView2 hydration proof without weakening the check.
+### Durable outbound WhatsApp
 
-## Exact next action
+Current protected source already provides:
 
-1. Merge PR #200 only with its final exact head and the Founder closure exception
-   recorded in GitHub and Working Memory.
-2. Re-read protected `main` after merge.
-3. Begin Phase 3 — durable providers, inbox, AI and automations — with a separate
-   audit-first reconnaissance and one consolidated Problem Register.
-4. Include the retained installed hydrated-WebView proof as the first Phase 3
-   installed-runtime investigation.
+- atomic local message, conversation, command, audit, event, effect correlation
+  and encrypted outbox intent;
+- effect identity scoped to exact workspace, installation, shop incarnation and
+  paired WhatsApp account;
+- request binding to recipient and content;
+- leases, bounded retry, ambiguity, dead letter and operator retry;
+- a sidecar receipt journal for post-restart reconciliation;
+- tests for replay, concurrency, pre/post-effect interruption, ambiguity and
+  recovery.
 
-Issue #164 remains the Phase 0–9 execution epic and is not closed by Phase 2.
+This is a strong Phase 3 foundation. It does not complete durable inbound inbox or
+all WhatsApp callers.
+
+### Canonical courier booking
+
+Current protected source already provides:
+
+- canonical order/reservation validation before booking;
+- committed outbox intent before provider dispatch;
+- lease/retry/ambiguous outcome handling;
+- manual confirm-created/confirm-not-created reconciliation;
+- tracking ingestion and restart-owned worker execution.
+
+### Commerce checkpoint refusal
+
+The current sync engine retains the previous watermark when any fetched order
+fails. It no longer advances a provider checkpoint past an uncommitted order.
+This safety must be preserved while adding durable run/item ingress and recovery.
+
+## Consolidated Phase 3 Problem Register
+
+### P3-P1-001 — stale active authority
+
+**Root cause:** PR #200 merged without a complete post-merge Phase 3 reconciliation.
+
+**Affected authority:** `AGENTS.md`, documentation index, Current State, Roadmap,
+Working Memory, root README, changelog, issue #164 and `sf-audit` semantics.
+
+**Risk:** a fresh session can re-enter already-merged Phase 2 work or trust stale
+release/application facts.
+
+**Correction:** one atomic governance batch before production implementation.
+
+**State:** in progress.
+
+### P3-P1-002 — inbound WhatsApp is not durable
+
+**Root cause:** Baileys chat/message state is an in-memory sidecar cache and new
+inbound messages are emitted to subscribers without a persistence-before-ack
+protocol.
+
+**Affected paths:** sidecar `messages.upsert`, WebSocket events, chats/messages
+routes, inbox UI, extraction and future automation triggers.
+
+**Risk:** interruption or sidecar history loss can lose or duplicate inbound work;
+the database fallback currently preserves only locally queued outbound effects.
+
+**Correction:** authenticated durable ingress, exact account/message identity,
+encrypted raw evidence, deduplication, canonical processing state, replay,
+quarantine and operator recovery.
+
+**State:** open; blocks the inbound/inbox package.
+
+### P3-P1-003 — automation execution can report false success
+
+**Root cause:** the current engine is fire-and-forget. Multi-step execution logs a
+failed step, continues and then records the whole automation as `success` with
+`Executed N steps`.
+
+**Affected paths:** `dispatchTrigger`, `executeAutomation`, multi-step recipes,
+`AutomationLog` and seller automation history.
+
+**Risk:** destructive or external work can partially fail while the seller sees
+success; restart cannot resume exact steps safely.
+
+**Correction:** persisted run identity, ordered step attempts, truthful aggregate
+state, stop/continue policy, idempotency, lease/retry/dead-letter and operator
+recovery.
+
+**State:** open; blocks automation implementation.
+
+### P3-P1-004 — automation provider calls bypass durable effects
+
+**Root cause:** `send_whatsapp` checks and calls the sidecar directly with
+`{to,text}` and in-process retries.
+
+**Risk:** response loss or retry can duplicate a message; restart can strand work;
+there is no durable effect key, receipt or ambiguity state.
+
+**Correction:** all automation provider actions queue the shared durable effect
+protocol and persist step-to-effect correlation.
+
+**State:** open; grouped with P3-P1-003 for remediation.
+
+### P3-P1-005 — sensitive AI approval is not proposal-bound
+
+**Root cause:** generic words such as `yes`, `oui`, `نعم`, `ok` and `d'accord`
+authorize whatever destructive tool call Gemini emits on that current turn. The
+proposal helper supplies source identity for AI order drafts but does not create a
+one-time immutable approval authority.
+
+**Affected paths:** non-streaming and streaming agent loops, persisted messages,
+stock/price/cancellation/product/customer tools and legacy order mutations.
+
+**Risk:** approval can bind to changed arguments or current state; actor,
+permission, target version and expiry are not one persisted execution contract.
+
+**Correction:** persisted proposal hash and exact arguments, affected record and
+expected version, actor/shop/session/policy/license binding, expiry, one-time
+approval, current-state revalidation, canonical command and durable result.
+
+**State:** open; sensitive tools remain disabled or compatibility-only until
+closed.
+
+### P3-P1-006 — provider effect protocols are fragmented
+
+**Root cause:** WhatsApp and courier implement separate lease/retry/ambiguity
+machines over the generic outbox, while commerce uses integration config and a
+watermark.
+
+**Risk:** semantics drift in effect identity, attempt accounting, provider-call
+start, receipts, dead letters, encryption, reconciliation and operator UI.
+
+**Correction:** freeze one shared durable-effect contract and provider-specific
+adapters around it before expanding implementation.
+
+**State:** open; shared contract gate.
+
+### P3-P1-007 — commerce lacks durable run/item ingress and recovery
+
+**Root cause:** checkpoint refusal is correct, but synchronization remains a
+synchronous request with no durable run, page, provider-event or per-item attempt
+authority.
+
+**Risk:** failures are returned as transient strings without durable retry queue,
+quarantine, history or operator recovery; webhook/poll convergence is absent.
+
+**Correction:** durable sync run and item/event identity, raw encrypted evidence,
+dedup/conflict state, canonical command correlation, dead letter, overlap scan and
+checkpoint proof.
+
+**State:** open; checkpoint safety must be preserved.
+
+### P3-P1-008 — uncertified provider can enter normal effect paths
+
+**Root cause:** DHD is registered with normal delivery providers although its
+source states that endpoints and fields are unverified guesses; `isExperimental`
+is presentation metadata, not fail-closed execution authority.
+
+**Risk:** a seller could create irreversible external work against an uncertified
+adapter.
+
+**Correction:** capability certification authority enforced server-side; hidden or
+blocked provider effects until current live contract evidence exists.
+
+**State:** open; DHD must remain effect-disabled.
+
+### P3-P2-001 — inactive-shop worker policy is implicit
+
+WhatsApp and courier workers import the process-active `db` and `shopContext`.
+Queued work in inactive shop databases is not drained until that shop becomes the
+active contained runtime. This may be the correct local-first policy, but it must
+be explicit, visible and tested.
+
+### P3-P2-002 — courier implementation layering is difficult to audit
+
+Canonical courier behavior spans current, reviewed-base and legacy modules.
+Consolidation is maintainability work after the shared contract freezes; it must
+not reopen proven behavior without a coherent package.
+
+### P3-P2-003 — implementation is not live provider certification
+
+Yalidine, Maystro and legacy ZR Express contain substantial adapters. Source and
+unit tests do not prove current credentials, provider contract, rate limits,
+ambiguous failure behavior, reconciliation or production certification.
+
+### P3-P2-004 — installed hydrated-WebView proof remains open
+
+Issue #201 retains the one waived Phase 2 installed proof. It must reproduce and
+close deterministic renderer/bootstrap authority without weakening the existing
+check. It is separate from provider implementation but blocks a higher installed
+runtime claim.
+
+## Shared contract questions to freeze
+
+Before production edits, Phase 3 must decide and record:
+
+1. one effect identity format and exact shop/account/provider/capability scope;
+2. encrypted payload and request-binding associated data;
+3. queued, leased, provider-call-started, retrying, succeeded, known-failed,
+   ambiguous, dead-letter and reconciled state semantics;
+4. lease expiry and pre-effect versus post-effect recovery;
+5. stable provider idempotency and receipt lookup capability;
+6. retry classification and attempt budget;
+7. operator reconciliation and duplicate-risk ceremony;
+8. inbound acknowledgement point and conflict quarantine;
+9. automation run/step/effect correlation and partial-result truth;
+10. AI proposal/approval identity, expected versions, expiry and one-time use;
+11. active/inactive shop worker ownership;
+12. AR/FR/EN, RTL, accessibility, diagnostics, retention and evidence.
+
+## Dependency-correct task sequence
+
+1. Complete governance reconciliation and make `sf-audit` reject Phase 2 drift.
+2. Complete exhaustive source/migration/test/caller/UI inventory.
+3. Freeze the consolidated Problem Register and shared contracts.
+4. Implement durable inbound WhatsApp and database-authoritative inbox.
+5. Implement durable truthful automation runs and route effects through outbox.
+6. Implement persisted proposal-bound sensitive AI actions.
+7. Converge courier and commerce on the shared provider protocol.
+8. Complete operator recovery and AR/FR/EN/RTL/accessibility states.
+9. Freeze exact head, run separated adversarial review and one repair batch.
+10. Run Phase 3 Level 2 and applicable Level 3/provider/installed evidence.
+
+The exact package boundaries may be refined by the completed inventory, but the
+dependency order cannot be weakened.
+
+## Current exact next action
+
+Finish the atomic governance batch:
+
+- Current State;
+- Roadmap;
+- root README;
+- changelog;
+- `scripts/sf-audit.ts`;
+- issue #164;
+- Phase 3 checkpoint JSON and PR description.
+
+Then complete the exhaustive inventory and shared contract freeze. Do not begin
+production implementation before those gates pass.
 
 ## Protected local boundaries and non-claims
 
@@ -232,7 +401,9 @@ Issue #164 remains the Phase 0–9 execution epic and is not closed by Phase 2.
 - preserve the unrelated modified
   `src/lib/identity/__tests__/session-authority.test.ts`;
 - preserve canonical AppData, registry, shop databases, migrations and keys;
+- historical Phase 3 branches are evidence only and are not merge authority;
 - no application version bump;
 - no release or MSI publication;
 - no Founder acceptance or Stable claim;
-- no Phase 3 implementation in this package.
+- no production Phase 3 behavior change in this audit package until explicitly
+  authorized after contract freeze.
