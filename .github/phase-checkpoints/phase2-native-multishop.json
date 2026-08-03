@@ -4,7 +4,7 @@
   "checkpoint": "native-multi-shop-authority",
   "pullRequest": 200,
   "baseSha": "991c61ac882497fdda01af3ac04f06978146bbda",
-  "codeBearingHeadSha": "cedf363faa3ff6016f81c0bba9f2b8b8faa9b6a9",
+  "codeBearingHeadSha": "b96025ee6109d119034460c3e6fdca7e80d9f274",
   "requestedAt": "2026-08-02T21:28:00Z",
   "requiredEvidence": [
     "source-quality",
