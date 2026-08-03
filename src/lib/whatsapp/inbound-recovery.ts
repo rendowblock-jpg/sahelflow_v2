@@ -1,7 +1,8 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import type { ServiceContext } from "@/lib/data/service-base";
-import { redactPii } from "@/lib/redact-pii";
 import { ConflictError, SahelFlowError } from "@/types/errors";
 import {
   processWhatsAppInbound,
@@ -28,6 +29,7 @@ export async function retryWhatsAppInbound(
       400,
     );
   }
+  const reasonHash = createHash("sha256").update(reason).digest("hex");
 
   await context.prisma.$transaction(async (tx) => {
     const event = await tx.providerIngressEvent.findUnique({
@@ -119,7 +121,9 @@ export async function retryWhatsAppInbound(
           attemptCount: event.attemptCount,
           operatorRetryCount: nextOperatorRetryCount,
         }),
-        metadata: JSON.stringify(redactPii({ reason })),
+        // The human reason may contain customer/message PII. Persist only a
+        // non-reversible integrity marker and bounded length for audit linkage.
+        metadata: JSON.stringify({ reasonHash, reasonLength: reason.length }),
       },
     });
   });
