@@ -36,6 +36,7 @@ interface StoredInboundRecord {
   nextAttemptAt: string | null;
   lastErrorCode: string | null;
   ingressEventId: string | null;
+  publish: boolean | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,6 +44,7 @@ interface StoredInboundRecord {
 export interface InboundCommitReceipt {
   ingressEventId: string;
   replayed: boolean;
+  publish: boolean;
 }
 
 export interface WhatsAppInboundSpoolOptions {
@@ -168,6 +170,9 @@ export class WhatsAppInboundSpool {
     ) {
       throw new Error(`Unsupported WhatsApp inbound spool record: ${path}`);
     }
+    // Compatibility for a record written by the first Task 3 implementation
+    // commit before terminal publish/no-publish was explicit.
+    if (parsed.publish === undefined) parsed.publish = null;
     return parsed;
   }
 
@@ -240,6 +245,7 @@ export class WhatsAppInboundSpool {
       nextAttemptAt: null,
       lastErrorCode: null,
       ingressEventId: null,
+      publish: null,
       createdAt: now,
       updatedAt: now,
     });
@@ -283,21 +289,24 @@ export class WhatsAppInboundSpool {
     this.writeRecord(record);
   }
 
-  private publishCommitted(record: StoredInboundRecord): void {
+  private finishCommitted(record: StoredInboundRecord): void {
     if (!record.ingressEventId) {
       throw new Error("Committed inbound spool record has no ingress event ID");
     }
-    this.onCommitted(record.envelope, {
-      ingressEventId: record.ingressEventId,
-      replayed: record.attemptCount > 1,
-    });
+    if (record.publish !== false) {
+      this.onCommitted(record.envelope, {
+        ingressEventId: record.ingressEventId,
+        replayed: record.attemptCount > 1,
+        publish: true,
+      });
+    }
     this.removeRecord(record);
   }
 
   private async deliver(record: StoredInboundRecord): Promise<void> {
     if (record.state === "committed") {
       try {
-        this.publishCommitted(record);
+        this.finishCommitted(record);
       } catch (error) {
         this.scheduleFailure(
           record,
@@ -328,6 +337,7 @@ export class WhatsAppInboundSpool {
             acknowledged?: unknown;
             ingressEventId?: unknown;
             replayed?: unknown;
+            publish?: unknown;
             code?: unknown;
           }
         | null;
@@ -342,11 +352,12 @@ export class WhatsAppInboundSpool {
 
       record.state = "committed";
       record.ingressEventId = body.ingressEventId;
+      record.publish = body.publish !== false;
       record.lastErrorCode = null;
       record.nextAttemptAt = null;
       record.updatedAt = new Date().toISOString();
       this.writeRecord(record);
-      this.publishCommitted(record);
+      this.finishCommitted(record);
     } catch (error) {
       const code =
         error instanceof Error && error.name === "AbortError"
