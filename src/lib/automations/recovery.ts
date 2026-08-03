@@ -67,21 +67,23 @@ export interface RetryAutomationRunInput {
   reason: string;
 }
 
+interface RecoverableStepCandidate {
+  id: string;
+  position: number;
+  action: string;
+  status: string;
+  operatorRetryCount: number;
+  effectKey: string | null;
+}
+
 function iso(value: Date | null): string | null {
   return value?.toISOString() ?? null;
 }
 
-function recoveryTarget(
-  run: {
-    status: string;
-    steps: Array<{
-      id: string;
-      action: string;
-      status: string;
-      effectKey: string | null;
-    }>;
-  },
-) {
+function recoveryTarget(run: {
+  status: string;
+  steps: RecoverableStepCandidate[];
+}) {
   if (run.status === "ambiguous") {
     return { step: null, blockCode: "AUTOMATION_EFFECT_AMBIGUOUS" };
   }
