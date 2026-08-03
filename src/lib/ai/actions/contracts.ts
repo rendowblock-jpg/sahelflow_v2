@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 
+import { normalizePhone } from "@/lib/import/fields";
 import type { Phase2Action } from "@/lib/identity/permissions";
 import { SahelFlowError } from "@/types/errors";
 
@@ -20,6 +21,17 @@ export interface AiToolPolicy {
   argsSchema?: z.ZodType<Record<string, unknown>>;
   blockedReasonCode?: string;
 }
+
+const algerianPhoneSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(40)
+  .transform((value) => normalizePhone(value))
+  .refine(
+    (value) => /^0[5-7]\d{8}$/.test(value),
+    "Invalid Algerian phone (must be 0[5-7]XXXXXXXX)",
+  );
 
 const createOrderArgsSchema = z
   .object({
@@ -39,7 +51,7 @@ const createOrderArgsSchema = z
     wilaya: z.string().trim().min(1).max(120),
     commune: z.string().trim().max(120),
     address: z.string().trim().max(500),
-    phone: z.string().trim().min(1).max(40),
+    phone: algerianPhoneSchema,
     notes: z.string().trim().max(2000).optional(),
   })
   .strict();
@@ -50,7 +62,6 @@ const updateOrderStatusArgsSchema = z
     status: z.enum([
       "draft",
       "pending",
-      "confirmed",
       "shipped",
       "delivered",
       "cancelled",
@@ -95,8 +106,8 @@ const updateProductPriceArgsSchema = z
 const createCustomerArgsSchema = z
   .object({
     name: z.string().trim().min(1).max(100),
-    phone: z.string().trim().min(1).max(40),
-    phone2: z.string().trim().max(40).optional(),
+    phone: algerianPhoneSchema,
+    phone2: algerianPhoneSchema.optional(),
     wilaya: z.string().trim().max(120).optional(),
     commune: z.string().trim().max(120).optional(),
     address: z.string().trim().max(500).optional(),
