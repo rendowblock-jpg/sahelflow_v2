@@ -5,7 +5,7 @@ use std::io::{Error as IoError, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tauri::webview::{cookie::SameSite, Cookie, WebviewWindow};
+use tauri::webview::WebviewWindow;
 use tauri::Manager;
 
 #[cfg(not(debug_assertions))]
@@ -82,18 +82,17 @@ struct RuntimeUiDiagnostic {
 }
 
 struct PackagedHandoff {
-    workspace_url: tauri::Url,
-    host: String,
-    token: String,
+    bootstrap_url: tauri::Url,
 }
 
 /// Navigate the configured WebView to a ready application.
 ///
-/// Development URLs are shown immediately. A packaged bootstrap URL is never
-/// loaded into the WebView: the per-launch credential is extracted in Rust,
-/// injected into the native cookie store, and removed from browser navigation.
-/// The hidden window is shown only after a hydrated page reports an authenticated
-/// UI acknowledgment matching the current runtime endpoint instance.
+/// Development URLs are shown immediately. Packaged startup loads a hidden,
+/// one-time loopback bootstrap document. That response sets the host-only HttpOnly
+/// launch cookie, then uses `location.replace("/")` so the credential-bearing URL
+/// is replaced before the workspace can become visible. The hidden window is shown
+/// only after a hydrated page reports an authenticated UI acknowledgment matching
+/// the current runtime endpoint instance.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let requested_url = tauri::Url::parse(app_url)?;
     let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
@@ -121,8 +120,7 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     record_startup_stage(&app_data_dir, "ui-navigation-started", None);
 
     window.hide()?;
-    window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;
-    window.navigate(handoff.workspace_url)?;
+    window.navigate(handoff.bootstrap_url)?;
 
     monitor_packaged_ui(app.clone(), window, app_data_dir);
     Ok(())
@@ -237,44 +235,9 @@ fn packaged_handoff(url: &tauri::Url) -> Result<Option<PackagedHandoff>, IoError
         ));
     }
 
-    let mut workspace_url = url.clone();
-    workspace_url.set_path("/");
-    workspace_url.set_query(None);
-    workspace_url.set_fragment(None);
-
     Ok(Some(PackagedHandoff {
-        workspace_url,
-        host: host.to_string(),
-        token,
+        bootstrap_url: url.clone(),
     }))
-}
-
-fn runtime_cookie(host: &str, token: &str) -> Result<Cookie<'static>, IoError> {
-    if host != "127.0.0.1" && host != "localhost" {
-        return Err(IoError::new(
-            ErrorKind::PermissionDenied,
-            "runtime cookie host is not loopback",
-        ));
-    }
-    if token.len() != 64 || !token.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return Err(IoError::new(
-            ErrorKind::PermissionDenied,
-            "runtime cookie credential is malformed",
-        ));
-    }
-
-    // The initial workspace load is a top-level navigation from Tauri's
-    // configured data: document. Lax sends the host-scoped cookie on that GET
-    // while still withholding it from cross-site state-changing requests.
-    Ok(
-        Cookie::build((RUNTIME_COOKIE.to_string(), token.to_string()))
-            .domain(host.to_string())
-            .path("/")
-            .http_only(true)
-            .same_site(SameSite::Lax)
-            .secure(false)
-            .build(),
-    )
 }
 
 fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_dir: PathBuf) {
@@ -586,7 +549,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn packaged_handoff_removes_the_credential_from_browser_navigation() {
+    fn packaged_handoff_accepts_only_a_valid_loopback_bootstrap() {
         let token = "a".repeat(64);
         let url = tauri::Url::parse(&format!(
             "http://127.0.0.1:43123{RUNTIME_BOOTSTRAP_PATH}?token={token}"
@@ -594,24 +557,7 @@ mod tests {
         .unwrap();
 
         let handoff = packaged_handoff(&url).unwrap().unwrap();
-        assert_eq!(handoff.workspace_url.as_str(), "http://127.0.0.1:43123/");
-        assert_eq!(handoff.host, "127.0.0.1");
-        assert_eq!(handoff.token, token);
-        assert!(!handoff.workspace_url.as_str().contains("token="));
-    }
-
-    #[test]
-    fn runtime_cookie_is_loopback_scoped_http_only_and_lax() {
-        let token = "b".repeat(64);
-        let cookie = runtime_cookie("127.0.0.1", &token).unwrap();
-
-        assert_eq!(cookie.name(), RUNTIME_COOKIE);
-        assert_eq!(cookie.value(), token);
-        assert_eq!(cookie.domain(), Some("127.0.0.1"));
-        assert_eq!(cookie.path(), Some("/"));
-        assert_eq!(cookie.http_only(), Some(true));
-        assert_eq!(cookie.same_site(), Some(SameSite::Lax));
-        assert_eq!(cookie.secure(), Some(false));
+        assert_eq!(handoff.bootstrap_url, url);
     }
 
     #[test]
