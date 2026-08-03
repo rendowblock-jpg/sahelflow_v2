@@ -55,7 +55,7 @@ afterEach(() => {
 });
 
 describe("durable WhatsApp inbound sidecar spool", () => {
-  it("commits a spool file before app delivery and publishes only after acknowledgement", async () => {
+  it("commits encrypted spool evidence before app delivery and publishes only after acknowledgement", async () => {
     const directory = temporaryDirectory();
     let resolveFetch: ((response: Response) => void) | undefined;
     const fetchImpl = vi.fn(
@@ -79,7 +79,12 @@ describe("durable WhatsApp inbound sidecar spool", () => {
     expect(committed).not.toHaveBeenCalled();
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const stored = readFileSync(join(directory, `${envelope.spoolId}.json`), "utf8");
-    expect(stored).toContain("PROVIDER-MESSAGE-1");
+    expect(stored).toContain('"ciphertext"');
+    expect(stored).not.toContain("PROVIDER-MESSAGE-1");
+    expect(stored).not.toContain("213555000111");
+    expect(stored).not.toContain("213555999000");
+    expect(stored).not.toContain("Bonjour");
+    expect(stored).not.toContain("Client");
 
     resolveFetch?.(successResponse());
     await spool.flush();
@@ -152,7 +157,7 @@ describe("durable WhatsApp inbound sidecar spool", () => {
     );
   });
 
-  it("replays a committed file after a publication crash without calling the app again", async () => {
+  it("replays a committed encrypted file after a publication crash without calling the app again", async () => {
     const directory = temporaryDirectory();
     const appFetch = vi.fn().mockResolvedValue(successResponse("ingress-restart"));
     const crashingPublisher = vi.fn(() => {
