@@ -49,8 +49,8 @@ const createOrderArgsSchema = z
       .min(1)
       .max(200),
     wilaya: z.string().trim().min(1).max(120),
-    commune: z.string().trim().max(120),
-    address: z.string().trim().max(500),
+    commune: z.string().trim().min(1).max(120),
+    address: z.string().trim().min(1).max(500),
     phone: algerianPhoneSchema,
     notes: z.string().trim().max(2000).optional(),
   })
@@ -108,8 +108,8 @@ const createCustomerArgsSchema = z
     name: z.string().trim().min(1).max(100),
     phone: algerianPhoneSchema,
     phone2: algerianPhoneSchema.optional(),
-    wilaya: z.string().trim().max(120).optional(),
-    commune: z.string().trim().max(120).optional(),
+    wilaya: z.string().trim().min(1).max(120).optional(),
+    commune: z.string().trim().min(1).max(120).optional(),
     address: z.string().trim().max(500).optional(),
     notes: z.string().trim().max(2000).optional(),
   })
@@ -230,12 +230,14 @@ policies.set("assign_order_to_delivery", {
   blockedReasonCode: "AI_PROVIDER_ACTION_NOT_CONVERGED",
 });
 
-export const EXPECTED_AI_TOOL_NAMES = Object.freeze([
-  ...READ_TOOL_NAMES,
-  ...EXTERNAL_READ_TOOL_NAMES,
-  ...Object.keys(SENSITIVE_POLICIES),
-  "assign_order_to_delivery",
-].sort());
+export const EXPECTED_AI_TOOL_NAMES = Object.freeze(
+  [
+    ...READ_TOOL_NAMES,
+    ...EXTERNAL_READ_TOOL_NAMES,
+    ...Object.keys(SENSITIVE_POLICIES),
+    "assign_order_to_delivery",
+  ].sort(),
+);
 
 export function getAiToolPolicy(toolName: string): AiToolPolicy {
   const policy = policies.get(toolName);
@@ -289,9 +291,7 @@ function canonicalize(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>)
         .filter(([, entry]) => entry !== undefined)
-        .sort(([left], [right]) =>
-          left < right ? -1 : left > right ? 1 : 0,
-        )
+        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
         .map(([key, entry]) => [key, canonicalize(entry)]),
     );
   }
