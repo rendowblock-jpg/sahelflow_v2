@@ -21,6 +21,7 @@ const MAIN_WINDOW_LABEL: &str = "main";
 const MAIN_WINDOW_TITLE: &str = "SahelFlow";
 const BOOTSTRAP_WINDOW_TITLE: &str = "SahelFlow - Starting";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
+const BOOTSTRAP_NAVIGATION_DELAY: Duration = Duration::from_millis(250);
 const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
@@ -121,13 +122,13 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
 
     // A hidden WebView2 controller does not create its renderer on the
     // ephemeral Windows runner. Show the inert local starting document first,
-    // then issue the authenticated loopback navigation after renderer
-    // initialization has been requested. The distinct title prevents this
-    // visible bootstrap surface from being mistaken for the ready workspace.
+    // return control to the native event loop, then navigate from a worker.
+    // The distinct title prevents this visible bootstrap surface from being
+    // mistaken for the authenticated workspace.
     window.set_title(BOOTSTRAP_WINDOW_TITLE)?;
     window.show()?;
     window.set_focus()?;
-    window.navigate(handoff.bootstrap_url)?;
+    schedule_packaged_navigation(app.clone(), window.clone(), handoff.bootstrap_url);
 
     monitor_packaged_ui(app.clone(), window, app_data_dir);
     Ok(())
@@ -245,6 +246,23 @@ fn packaged_handoff(url: &tauri::Url) -> Result<Option<PackagedHandoff>, IoError
     Ok(Some(PackagedHandoff {
         bootstrap_url: url.clone(),
     }))
+}
+
+fn schedule_packaged_navigation(
+    app: tauri::AppHandle,
+    window: WebviewWindow,
+    bootstrap_url: tauri::Url,
+) {
+    thread::spawn(move || {
+        thread::sleep(BOOTSTRAP_NAVIGATION_DELAY);
+        if let Err(error) = window.navigate(bootstrap_url) {
+            let detail = format!(
+                "the startup window could not navigate to the authenticated bootstrap: {error}"
+            );
+            eprintln!("[sahelflow] FATAL: {detail}");
+            let _ = show_blocked(&app, "SF-RUNTIME-UI-NAVIGATION-BLOCKED", &detail);
+        }
+    });
 }
 
 fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_dir: PathBuf) {
