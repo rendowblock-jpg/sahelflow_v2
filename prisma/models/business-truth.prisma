@@ -111,6 +111,7 @@ model ProviderIngressEvent {
   payloadHash         String
   status              String    @default("received")
   attemptCount        Int       @default(0)
+  operatorRetryCount  Int       @default(0)
   nextAttemptAt       DateTime?
   lockedAt            DateTime?
   leaseToken          String?
