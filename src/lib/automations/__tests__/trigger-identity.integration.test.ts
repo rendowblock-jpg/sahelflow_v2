@@ -69,4 +69,31 @@ describe("automation trigger cycle identity", () => {
     expect(next.effectKey).not.toBe(first.effectKey);
     expect(next.triggerKey).toContain(secondCycle.toISOString());
   });
+
+  it("commits different-key trigger commands safely when callers enqueue concurrently", async () => {
+    const results = await Promise.all(
+      Array.from({ length: 6 }, (_, index) =>
+        enqueueAutomationTrigger(
+          makeContext(db),
+          "stock.low",
+          {
+            productId: `product-${index}`,
+            productName: `Product ${index}`,
+            stockLevel: index,
+            lowStockThreshold: 5,
+          },
+          { triggerKey: `stock.low:product-${index}:revision-1` },
+        ),
+      ),
+    );
+
+    expect(results).toHaveLength(6);
+    expect(new Set(results.map((result) => result.effectKey)).size).toBe(6);
+    expect(results.every((result) => result.replayed === false)).toBe(true);
+    expect(
+      await db.outboxIntent.count({
+        where: { effectType: "automation.trigger.v1" },
+      }),
+    ).toBe(6);
+  });
 });
