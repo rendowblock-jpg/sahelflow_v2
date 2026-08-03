@@ -15,15 +15,6 @@ import type { SidecarChat } from "@/lib/whatsapp/types";
 
 export const dynamic = "force-dynamic";
 
-function latestMessage(
-  left: SidecarChat["lastMessage"],
-  right: SidecarChat["lastMessage"],
-): SidecarChat["lastMessage"] {
-  if (!left) return right;
-  if (!right) return left;
-  return right.timestamp > left.timestamp ? right : left;
-}
-
 export const GET = withErrorHandler(async (request: NextRequest) => {
   const actorContext = await requireTrustedAction("conversations.read");
   assertTrustedAction(actorContext, "customers.contact.read", {
@@ -37,85 +28,60 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     ? Math.max(1, Math.min(requested, 500))
     : 50;
 
-  // Durable queued/failed sends must remain reachable even when Baileys has not
-  // rebuilt its in-memory history after an app/sidecar restart.
-  const effects = await db.whatsAppOutboundEffect.findMany({
-    orderBy: { createdAt: "desc" },
-    take: Math.min(limit * 20, 5_000),
-    select: { messageId: true },
-  });
-  const durableMessages = effects.length
-    ? await db.message.findMany({
-        where: { id: { in: effects.map((effect) => effect.messageId) } },
+  // The shop database is the inbox authority. Baileys history is a transient
+  // transport cache and must never add, remove or reorder canonical chats.
+  const conversations = await db.conversation.findMany({
+    where: { channel: "whatsapp", sourceId: { not: null } },
+    orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
+    take: limit,
+    select: {
+      sourceId: true,
+      contactName: true,
+      unreadCount: true,
+      messages: {
         orderBy: { timestamp: "desc" },
+        take: 1,
         select: {
           body: true,
           direction: true,
           timestamp: true,
-          conversation: {
-            select: {
-              sourceId: true,
-              contactName: true,
-              unreadCount: true,
-            },
-          },
         },
-      })
-    : [];
-
-  const durableByJid = new Map<string, SidecarChat>();
-  for (const message of durableMessages) {
-    const jid = message.conversation.sourceId;
-    if (!jid || durableByJid.has(jid)) continue;
-    durableByJid.set(jid, {
-      jid,
-      name: message.conversation.contactName || jid,
-      unread: message.conversation.unreadCount,
-      lastMessage: {
-        text: message.body,
-        timestamp: Math.floor(message.timestamp.getTime() / 1_000),
-        fromMe: message.direction === "outbound",
       },
-    });
-  }
+    },
+  });
 
-  let liveChats: SidecarChat[] = [];
+  const chats: SidecarChat[] = conversations.flatMap((conversation) => {
+    if (!conversation.sourceId) return [];
+    const last = conversation.messages[0];
+    return [
+      {
+        jid: conversation.sourceId,
+        name: conversation.contactName || conversation.sourceId,
+        unread: conversation.unreadCount,
+        lastMessage: last
+          ? {
+              text: last.body,
+              timestamp: Math.floor(last.timestamp.getTime() / 1_000),
+              fromMe: last.direction === "outbound",
+            }
+          : undefined,
+      },
+    ];
+  });
+
   let sidecarReachable = true;
+  let sidecarStatus: string | null = null;
   try {
-    liveChats = (await sidecar.chats(limit)).chats;
+    sidecarStatus = (await sidecar.status()).status;
   } catch (error) {
     if (!(error instanceof SidecarUnavailableError)) throw error;
     sidecarReachable = false;
   }
 
-  const merged = new Map(durableByJid);
-  for (const live of liveChats) {
-    const durable = merged.get(live.jid);
-    merged.set(
-      live.jid,
-      durable
-        ? {
-            ...durable,
-            ...live,
-            name: live.name || durable.name,
-            unread: Math.max(live.unread, durable.unread),
-            lastMessage: latestMessage(durable.lastMessage, live.lastMessage),
-          }
-        : live,
-    );
-  }
-
-  const chats = [...merged.values()]
-    .sort(
-      (left, right) =>
-        (right.lastMessage?.timestamp ?? 0) -
-        (left.lastMessage?.timestamp ?? 0),
-    )
-    .slice(0, limit);
-
   return NextResponse.json({
     chats,
     sidecarReachable,
+    sidecarStatus,
     authority: { allowedActions: projectTrustedActorActions(actorContext) },
   });
 }, "GET /api/whatsapp/chats");
