@@ -1,6 +1,6 @@
 import type { Locale } from "@/lib/i18n";
 
-const translations: Record<Locale, Record<string, string>> = {
+const translations = {
   en: {
     title: "WhatsApp inbound recovery",
     description:
@@ -73,7 +73,7 @@ const translations: Record<Locale, Record<string, string>> = {
     history: "سجل المحاولات الأخيرة",
     unknownContact: "جهة اتصال غير معروفة",
   },
-};
+} satisfies Record<Locale, Record<string, string>>;
 
 export type WhatsAppIngressRecoveryKey = keyof (typeof translations)["en"];
 
