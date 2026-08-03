@@ -119,10 +119,15 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
     record_startup_stage(&app_data_dir, "ui-navigation-started", None);
 
+    // A hidden WebView2 controller does not create its renderer on the
+    // ephemeral Windows runner. Show the inert local starting document first,
+    // then issue the authenticated loopback navigation after renderer
+    // initialization has been requested. The distinct title prevents this
+    // visible bootstrap surface from being mistaken for the ready workspace.
     window.set_title(BOOTSTRAP_WINDOW_TITLE)?;
-    window.navigate(handoff.bootstrap_url)?;
     window.show()?;
     window.set_focus()?;
+    window.navigate(handoff.bootstrap_url)?;
 
     monitor_packaged_ui(app.clone(), window, app_data_dir);
     Ok(())
