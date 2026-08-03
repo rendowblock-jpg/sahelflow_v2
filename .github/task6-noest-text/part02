@@ -1,0 +1,303 @@
+   /** API endpoint to save credentials (POST with JSON body) */
+@@ -119,21 +114,22 @@ export function IntegrationsPanel({
+     },
+     // Delivery
+     {
+-      id: "dhd",
+-      name: "DHD Delivery",
+-      description: t("integrations.dhdDesc"),
++      id: "noest",
++      name: "NOEST Express",
++      description: t("integrations.noestDesc"),
+       category: "delivery",
+-      icon: DHDIcon,
+-      iconBg: "bg-rose-500/10 dark:bg-rose-500/15",
+-      iconColor: "text-rose-600 dark:text-rose-400",
+-      connected: false, // checked via delivery credentials API
++      icon: NoestIcon,
++      iconBg: "bg-sky-500/10 dark:bg-sky-500/15",
++      iconColor: "text-sky-600 dark:text-sky-400",
++      connected: false,
+       connectLabel: t("integrations.connect"),
+-      // W2-10: DHD has no public API docs — endpoints are guesses. The card
+-      // shows an amber "Experimental" badge so sellers know to verify before
+-      // relying on the adapter. See src/lib/integrations/delivery/dhd.ts.
+-      isExperimental: true,
+       fields: [
+-        { key: "apiToken", label: t("integrations.field.apiToken"), type: "password", placeholder: t("integrations.placeholder.dhdToken") },
++        { key: "apiToken", label: t("integrations.field.apiToken"), type: "password", placeholder: t("integrations.placeholder.noestToken") },
++        { key: "userGuid", label: t("integrations.field.userGuid"), type: "text", placeholder: t("integrations.placeholder.noestUserGuid") },
++        { key: "createOrderUrl", label: t("integrations.field.createOrderUrl"), type: "text", placeholder: t("integrations.placeholder.noestCreateUrl") },
++        { key: "validateOrderUrl", label: t("integrations.field.validateOrderUrl"), type: "text", placeholder: t("integrations.placeholder.noestValidateUrl") },
++        { key: "trackingsUrl", label: t("integrations.field.trackingsUrl"), type: "text", placeholder: t("integrations.placeholder.noestTrackingsUrl") },
++        { key: "feesUrl", label: t("integrations.field.feesUrl"), type: "text", placeholder: t("integrations.placeholder.noestFeesUrl") },
+       ],
+       saveEndpoint: "/api/delivery/credentials",
+     },
+@@ -296,17 +292,18 @@ export function IntegrationsPanel({
+     }
+   };
+ 
+-  // W2-10: "Test connection" — calls POST /api/delivery/test-connection to
+-  // validate a delivery provider's credentials without creating a shipment.
+-  // Currently only DHD implements testConnection; the route returns a
+-  // friendly "not implemented yet" message for the other providers.
++  // Validate provider credentials without creating a shipment. NOEST uses
++  // its provider-issued fees endpoint, so no guessed host or path is trusted.
+   const handleTestConnection = async (integration: Integration) => {
+     setTesting(integration.id);
+     try {
+       const res = await fetch("/api/delivery/test-connection", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+-        body: JSON.stringify({ provider: integration.id }),
++        body: JSON.stringify({
++          provider: integration.id,
++          reasonCode: "settings_manual_certification",
++        }),
+       });
+       const data = (await res.json().catch(() => null)) as
+         | { ok?: boolean; message?: string; error?: string }
+@@ -368,16 +365,6 @@ export function IntegrationsPanel({
+                         <div className="flex-1 min-w-0">
+                           <div className="flex items-center gap-2 flex-wrap">
+                             <p className="font-medium text-sm">{integration.name}</p>
+-                            {integration.isExperimental && (
+-                              <Badge
+-                                variant="outline"
+-                                className="text-amber-700 dark:text-amber-300 border-amber-500/40 bg-amber-500/10 text-xs px-1.5"
+-                                title={t("integrations.experimentalHint")}
+-                              >
+-                                <FlaskConical className="me-1 h-3 w-3" />
+-                                {t("integrations.experimental")}
+-                              </Badge>
+-                            )}
+                             {integration.connected && (
+                               <Badge variant="outline" className="text-success border-emerald-500/20 text-xs px-1.5">
+                                 <CheckCircle2 className="me-1 h-3 w-3" />
+diff --git a/src/lib/__tests__/shared.test.ts b/src/lib/__tests__/shared.test.ts
+index 84fdcd88e93bf392cdd3a72650b3bd8a8a1f7091..e7ade219ec89706d2fd368442dc9def7ae509fbe 100644
+--- a/src/lib/__tests__/shared.test.ts
++++ b/src/lib/__tests__/shared.test.ts
+@@ -104,7 +104,7 @@ describe("orderStatusStyles", () => {
+ // ── deliveryProviderConfig ──────────────────────────────────────────────────
+ 
+ describe("deliveryProviderConfig", () => {
+-  const knownProviders = ["yalidine", "maystro", "zrexpress", "zr_express", "dhd"];
++  const knownProviders = ["yalidine", "maystro", "zrexpress", "zr_express", "noest"];
+ 
+   it("has an entry for every known provider key", () => {
+     for (const p of knownProviders) {
+@@ -122,7 +122,7 @@ describe("deliveryProviderConfig", () => {
+   it("brand labels are proper nouns (not translated)", () => {
+     expect(deliveryProviderConfig.yalidine!.label).toBe("Yalidine");
+     expect(deliveryProviderConfig.maystro!.label).toBe("Maystro");
+-    expect(deliveryProviderConfig.dhd!.label).toBe("DHD");
++    expect(deliveryProviderConfig.noest!.label).toBe("NOEST Express");
+   });
+ });
+ 
+diff --git a/src/lib/ai/chat/tools/__tests__/advanced-tools.test.ts b/src/lib/ai/chat/tools/__tests__/advanced-tools.test.ts
+index 996ea15240ac57280c1a756484e0a9826d9f18a6..aee71aff9bc79d1613f44372426e6d19ac7a4d0f 100644
+--- a/src/lib/ai/chat/tools/__tests__/advanced-tools.test.ts
++++ b/src/lib/ai/chat/tools/__tests__/advanced-tools.test.ts
+@@ -29,6 +29,11 @@ vi.mock("@/lib/integrations/delivery", () => ({
+   loadDeliveryCredentials: vi.fn().mockResolvedValue({ apiId: "x", apiToken: "y" }),
+ }));
+ 
++vi.mock("@/lib/integrations/delivery/provider-capability", () => ({
++  assertProviderCapability: vi.fn().mockResolvedValue(undefined),
++}));
++
++
+ import "@/lib/ai/chat/tools/advanced-tools"; // side-effect: registers 12 tools
+ import { getTool, type ToolContext } from "../registry";
+ import {
+@@ -392,19 +397,20 @@ describe("assign_order_to_delivery", () => {
+ // ── get_delivery_cost_comparison ─────────────────────────────────────────────
+ 
+ describe("get_delivery_cost_comparison", () => {
+-  it("compares costs across all three providers", async () => {
+-    // Sequential calls to estimateCost for yalidine, maystro, zrexpress
++  it("compares costs across all four providers", async () => {
++    // Sequential calls to estimateCost for yalidine, maystro, zrexpress, noest
+     mockAdapter.estimateCost
+       .mockResolvedValueOnce({ provider: "yalidine", cost: 600, available: true })
+       .mockResolvedValueOnce({ provider: "maystro", cost: 500, available: true })
+-      .mockResolvedValueOnce({ provider: "zrexpress", cost: 700, available: true });
++      .mockResolvedValueOnce({ provider: "zrexpress", cost: 700, available: true })
++      .mockResolvedValueOnce({ provider: "noest", cost: 550, available: true });
+ 
+     const tool = getTool("get_delivery_cost_comparison")!;
+     const result = await tool.execute({ wilaya: "Alger", codAmount: 5000 }, ctx());
+ 
+     expect(result.success).toBe(true);
+     const data = result.data as Array<{ provider: string; cost: number; available: boolean }>;
+-    expect(data).toHaveLength(3);
++    expect(data).toHaveLength(4);
+     // Should be sorted: cheapest available first
+     expect(data[0]!.provider).toBe("maystro");
+     expect(data[0]!.cost).toBe(500);
+@@ -414,14 +420,15 @@ describe("get_delivery_cost_comparison", () => {
+     mockAdapter.estimateCost
+       .mockResolvedValueOnce({ provider: "yalidine", cost: 600, available: true })
+       .mockResolvedValueOnce({ provider: "maystro", cost: 0, available: false, error: "Zone non couverte" })
+-      .mockResolvedValueOnce({ provider: "zrexpress", cost: 0, available: false, error: "Erreur" });
++      .mockResolvedValueOnce({ provider: "zrexpress", cost: 0, available: false, error: "Erreur" })
++      .mockResolvedValueOnce({ provider: "noest", cost: 0, available: false, error: "Non certifié" });
+ 
+     const tool = getTool("get_delivery_cost_comparison")!;
+     const result = await tool.execute({ wilaya: "Tamanrasset", codAmount: 3000 }, ctx());
+ 
+     expect(result.success).toBe(true);
+     const data = result.data as Array<{ provider: string; available: boolean }>;
+-    expect(data).toHaveLength(3);
++    expect(data).toHaveLength(4);
+     expect(data[0]!.available).toBe(true);
+     expect(data[0]!.provider).toBe("yalidine");
+   });
+diff --git a/src/lib/ai/chat/tools/__tests__/core-tools.test.ts b/src/lib/ai/chat/tools/__tests__/core-tools.test.ts
+index 2bba33444c0ab2b4b1ea357807ea0588f7a4dd29..99e46044cbbde8447f89a2f5452be5be792b3b3b 100644
+--- a/src/lib/ai/chat/tools/__tests__/core-tools.test.ts
++++ b/src/lib/ai/chat/tools/__tests__/core-tools.test.ts
+@@ -30,6 +30,11 @@ vi.mock("@/lib/integrations/delivery", () => ({
+   loadDeliveryCredentials: vi.fn().mockResolvedValue({ apiId: "x", apiToken: "y" }),
+ }));
+ 
++vi.mock("@/lib/integrations/delivery/provider-capability", () => ({
++  assertProviderCapability: vi.fn().mockResolvedValue(undefined),
++}));
++
++
+ import "@/lib/ai/chat/tools/core-tools"; // side-effect: registers 6 tools
+ import { getTool, type ToolContext } from "../registry";
+ import {
+diff --git a/src/lib/ai/chat/tools/advanced-tools-legacy.ts b/src/lib/ai/chat/tools/advanced-tools-legacy.ts
+index 1c1026ec82060449bd3d5a621efc9ba60dd0f0aa..a6070cbd35711c737c56cd1afa29f9d9208a626c 100644
+--- a/src/lib/ai/chat/tools/advanced-tools-legacy.ts
++++ b/src/lib/ai/chat/tools/advanced-tools-legacy.ts
+@@ -33,6 +33,7 @@ import type { DbClient } from "@/lib/db";
+ import { normalizePhone } from "@/lib/import/fields";
+ import { orderService } from "@/lib/data/order-service";
+ import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
++import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
+ 
+ function getDb(ctx: ToolContext): DbClient {
+   return ctx.db as DbClient;
+@@ -356,7 +357,7 @@ registerTool({
+ 
+ const assignOrderToDeliverySchema = z.object({
+   orderNumber: z.string(),
+-  provider: z.enum(["yalidine", "maystro", "zrexpress"]),
++  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
+   weight: z.number().min(0).optional().default(0.5),
+ });
+ 
+@@ -371,7 +372,7 @@ registerTool({
+       type: "object",
+       properties: {
+         orderNumber: { type: "string", description: "The order number" },
+-        provider: { type: "string", enum: ["yalidine", "maystro", "zrexpress"], description: "Delivery provider" },
++        provider: { type: "string", enum: ["yalidine", "maystro", "zrexpress", "noest"], description: "Delivery provider" },
+         weight: { type: "number", description: "Package weight in kg (default 0.5)" },
+       },
+       required: ["orderNumber", "provider"],
+@@ -381,9 +382,11 @@ registerTool({
+     try {
+       const input = assignOrderToDeliverySchema.parse(params);
+       const db = getDb(ctx);
++      const context = { prisma: db, shop: ctx.shop };
++      await assertProviderCapability(context, input.provider, "booking");
+       const adapter = getDeliveryAdapter(input.provider);
+       const creds = await loadDeliveryCredentials(
+-        { prisma: db, shop: ctx.shop },
++        context,
+         input.provider,
+       );
+       if (!creds) {
+@@ -609,7 +612,7 @@ registerTool({
+     try {
+       const input = getDeliveryCostComparisonSchema.parse(params);
+       const db = getDb(ctx);
+-      const providers = ["yalidine", "maystro", "zrexpress"] as const;
++      const providers = ["yalidine", "maystro", "zrexpress", "noest"] as const;
+       const comparisons: Array<{
+         provider: string;
+         cost: number;
+@@ -619,9 +622,11 @@ registerTool({
+ 
+       for (const provider of providers) {
+         try {
++          const context = { prisma: db, shop: ctx.shop };
++          await assertProviderCapability(context, provider, "fees");
+           const adapter = getDeliveryAdapter(provider);
+           const creds = await loadDeliveryCredentials(
+-            { prisma: db, shop: ctx.shop },
++            context,
+             provider,
+           );
+           if (!creds) {
+diff --git a/src/lib/ai/chat/tools/core-tools.ts b/src/lib/ai/chat/tools/core-tools.ts
+index 32615359dbbc8c0f99f5fa2d3ba17a3d4f053605..b3e36122194a394f333333ccb58152c84dc4f61c 100644
+--- a/src/lib/ai/chat/tools/core-tools.ts
++++ b/src/lib/ai/chat/tools/core-tools.ts
+@@ -21,6 +21,7 @@ import { getProfitabilityProjection } from "@/lib/accounting/profitability";
+ import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
+ import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
+ import { currentAiSourceProposal } from "@/lib/ai/chat/source-proposal";
++import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
+ 
+ function getDb(ctx: ToolContext): DbClient {
+   return ctx.db as DbClient;
+@@ -449,7 +450,7 @@ registerTool({
+ // ── Tool 6: estimate_delivery_cost ──────────────────────────────────────────
+ 
+ const estimateDeliverySchema = z.object({
+-  provider: z.enum(["yalidine", "maystro", "zrexpress"]).default("yalidine"),
++  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]).default("yalidine"),
+   wilaya: z.string(),
+   weight: z.number().positive().default(1),
+   codAmount: z.number().min(0).default(0),
+@@ -465,7 +466,7 @@ registerTool({
+       properties: {
+         provider: {
+           type: "string",
+-          description: "yalidine|maystro|zrexpress (default: yalidine)",
++          description: "yalidine|maystro|zrexpress|noest (default: yalidine)",
+         },
+         wilaya: { type: "string", description: "Wilaya name" },
+         weight: { type: "number", description: "Weight in kg (default 1)" },
+@@ -481,9 +482,11 @@ registerTool({
+     try {
+       const input = estimateDeliverySchema.parse(params);
+       const db = getDb(ctx);
++      const context = { prisma: db, shop: ctx.shop };
++      await assertProviderCapability(context, input.provider, "fees");
+       const adapter = getDeliveryAdapter(input.provider);
+       const credentials = await loadDeliveryCredentials(
+-        { prisma: db, shop: ctx.shop },
++        context,
+         input.provider,
+       );
+       const estimate = await adapter.estimateCost(
+diff --git a/src/lib/business-truth/principal.ts b/src/lib/business-truth/principal.ts
+index b777405a495e39d88df12daae81cde161b261723..113a2f4d4051a6bb0aaf3466fff95363d8740dc6 100644
+--- a/src/lib/business-truth/principal.ts
++++ b/src/lib/business-truth/principal.ts
+@@ -75,7 +75,7 @@ export function aiBusinessPrincipal(sessionId: string): TrustedBusinessPrincipal
+ }
+ 
+ export function providerBusinessPrincipal(
+-  provider: "whatsapp" | "yalidine" | "maystro" | "zrexpress" | "dhd",
++  provider: "whatsapp" | "yalidine" | "maystro" | "zrexpress" | "noest",
+ ): TrustedBusinessPrincipal {
+   return createPrincipal("provider", provider);
+ }
+diff --git a/src/lib/data/__tests__/helpers.ts b/src/lib/data/__tests__/helpers.ts
+index 9634083a23d36289398650ae023d0035825a0203..3eba48d5a119a695a56bcf7f82a82cd2d9fb8cbb 100644
+--- a/src/lib/data/__tests__/helpers.ts
++++ b/src/lib/data/__tests__/helpers.ts
+@@ -43,6 +43,7 @@ const CANONICAL_FACT_TABLES = [
+   "CodSettlement",
+   "CodCollectionCorrection",
+   "CodCollection",
