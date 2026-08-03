@@ -1,0 +1,35 @@
+{
+  "formatVersion": 1,
+  "phase": 3,
+  "name": "durable providers, inbox, AI and automations",
+  "state": "audit-first-reconnaissance",
+  "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+  "phaseIssue": 202,
+  "retainedDesktopEvidenceIssue": 201,
+  "implementationAgent": "ChatGPT Web Agentic Coding Agent",
+  "constraints": {
+    "oneActiveImplementationAgent": true,
+    "productionEditsAuthorized": false,
+    "problemRegisterRequiredBeforeImplementation": true,
+    "targetedCiRerunsRequired": true,
+    "versionBumpAuthorized": false,
+    "releaseAuthorized": false,
+    "founderAcceptanceClaimAuthorized": false
+  },
+  "auditSurfaces": [
+    "whatsapp ingress and effects",
+    "courier ingress, effects and reconciliation",
+    "commerce synchronization and checkpoints",
+    "durable inbox and operator recovery",
+    "automation step durability and truthful partial status",
+    "AI proposal-bound destructive approval",
+    "legacy mutation and direct-effect callers",
+    "AR/FR/EN degraded, pending, ambiguous and recovery states"
+  ],
+  "firstDeliverables": [
+    "reconcile active documentation from merged Phase 2 to Phase 3",
+    "complete source and caller inventory",
+    "publish one consolidated Phase 3 Problem Register",
+    "freeze shared durable ingress, inbox, outbox, receipt, reconciliation, automation and AI proposal contracts"
+  ]
+}
