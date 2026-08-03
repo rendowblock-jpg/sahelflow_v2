@@ -236,6 +236,19 @@ function effectivePermissions(actor: PersonActor): Phase2Action[] {
   );
 }
 
+function canReadProposal(
+  actor: TrustedActorContext,
+  requiredPermissions: readonly Phase2Action[],
+): boolean {
+  const permissions = effectivePermissions(
+    personActor(actor, "AI action proposal history"),
+  );
+  return (
+    permissions.includes("ai.use") &&
+    requiredPermissions.every((action) => permissions.includes(action))
+  );
+}
+
 function parsePermissionArray(value: unknown, label: string): Phase2Action[] {
   if (
     !Array.isArray(value) ||
@@ -704,7 +717,7 @@ async function validateBeforeExecution(
     );
   }
   const requesterEffective = sortedPermissions(
-    resolvePhase2Permissions(requester.role, null),
+    requester.permissions ?? resolvePhase2Permissions(requester.role, null),
   );
   if (
     canonicalAiActionJson(requesterEffective) !==
@@ -1078,6 +1091,7 @@ async function markFailed(
             "completedAt" = ${now},
             "updatedAt" = ${now}
         WHERE "id" = ${executionId}
+          AND "state" <> 'succeeded'
       `;
     }
     await tx.$executeRaw`
@@ -1219,12 +1233,7 @@ export async function createAiActionProposal(
     );
     targetBindingJson = sealBusinessPayloadWithKey(
       target.targetBinding,
-      binding(
-        "ai-action-target-binding",
-        proposalId,
-        input.toolName,
-        "target",
-      ),
+      binding("ai-action-target-binding", proposalId, input.toolName, "target"),
       key,
     );
   } finally {
@@ -1396,8 +1405,9 @@ export async function approveAiActionProposal(
     executionKey: execution.executionKey,
   });
 
+  let command: ApprovedAiActionResult;
   try {
-    const command = await executeApprovedAiAction({
+    command = await executeApprovedAiAction({
       context: input.context,
       authority,
       proposalId: row.id,
@@ -1412,35 +1422,42 @@ export async function approveAiActionProposal(
       approver: input.approver,
     });
     await markSucceeded(input.context, row, execution, command);
-    const completedRow = await readProposalById(input.context.prisma, row.id);
-    const completedExecution = await readExecution(
+  } catch (error) {
+    const durableExecution = await readExecution(
       input.context.prisma,
       row.id,
-    );
-    if (!completedRow || !completedExecution) {
-      throw new SahelFlowError(
-        "AI action completion state is unavailable",
-        "AI_ACTION_EXECUTION_RESULT_INCOMPLETE",
-        503,
+    ).catch(() => null);
+    if (durableExecution?.state !== "succeeded") {
+      await markFailed(input.context.prisma, row.id, execution.id, error).catch(
+        () => undefined,
       );
     }
-    const completed = await decryptProposal(input.context, completedRow);
-    return {
-      proposal: await proposalProjection(
-        input.context,
-        completed,
-        completedExecution,
-      ),
-      result: command.result,
-      businessCommandId: command.commandId,
-      replayed: command.replayed,
-    };
-  } catch (error) {
-    await markFailed(input.context.prisma, row.id, execution.id, error).catch(
-      () => undefined,
-    );
     throw error;
   }
+
+  const completedRow = await readProposalById(input.context.prisma, row.id);
+  const completedExecution = await readExecution(
+    input.context.prisma,
+    row.id,
+  );
+  if (!completedRow || !completedExecution) {
+    throw new SahelFlowError(
+      "AI action completion state is unavailable",
+      "AI_ACTION_EXECUTION_RESULT_INCOMPLETE",
+      503,
+    );
+  }
+  const completed = await decryptProposal(input.context, completedRow);
+  return {
+    proposal: await proposalProjection(
+      input.context,
+      completed,
+      completedExecution,
+    ),
+    result: command.result,
+    businessCommandId: command.commandId,
+    replayed: command.replayed,
+  };
 }
 
 export async function listAiActionProposals(
@@ -1460,6 +1477,7 @@ export async function listAiActionProposals(
   const output: AiActionProposalHandle[] = [];
   for (const row of rows) {
     const proposal = await decryptProposal(context, row);
+    if (!canReadProposal(actor, proposal.permissions.required)) continue;
     output.push({
       proposal: await proposalProjection(context, proposal),
       proposalDigest: row.proposalDigest,
@@ -1483,6 +1501,13 @@ export async function getAiActionProposal(
     );
   }
   const proposal = await decryptProposal(context, row);
+  if (!canReadProposal(actor, proposal.permissions.required)) {
+    throw new SahelFlowError(
+      "AI action proposal was not found",
+      "AI_ACTION_PROPOSAL_NOT_FOUND",
+      404,
+    );
+  }
   return {
     proposal: await proposalProjection(context, proposal),
     proposalDigest: row.proposalDigest,
