@@ -39,7 +39,18 @@ jobs:
 
       - name: Apply exact closure authority
         if: steps.marker.outputs.apply == 'true'
-        run: python3 .github/task5-close.py
+        run: |
+          python3 .github/task5-close.py
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('AGENTS.md')
+          text = path.read_text()
+          old = '## Authorized package rules — proposal-bound sensitive AI actions'
+          new = '## Authorized package rules — courier and commerce convergence'
+          if text.count(old) != 1:
+              raise SystemExit(f'AGENTS heading match count: {text.count(old)}')
+          path.write_text(text.replace(old, new, 1))
+          PY
 
       - name: Setup Bun
         if: steps.marker.outputs.apply == 'true'
