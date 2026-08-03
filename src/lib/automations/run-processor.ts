@@ -1179,9 +1179,22 @@ async function executeClaimedRun(
   const step = selection.step;
   try {
     const stepDefinition = await openStepDefinition(context, step);
-    return stepDefinition.action === "send_whatsapp"
-      ? executeWhatsAppStep(context, run, step, stepDefinition, payload)
-      : executeDatabaseStep(context, run, step, stepDefinition, payload);
+    if (stepDefinition.action === "send_whatsapp") {
+      return await executeWhatsAppStep(
+        context,
+        run,
+        step,
+        stepDefinition,
+        payload,
+      );
+    }
+    return await executeDatabaseStep(
+      context,
+      run,
+      step,
+      stepDefinition,
+      payload,
+    );
   } catch (error) {
     return markStepFailure(context, run, step, definition, error);
   }
