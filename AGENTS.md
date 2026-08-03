@@ -21,8 +21,8 @@ keys or retained evidence merely to simplify development.
 6. Read
    [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
 7. Read both Phase 3 checkpoints under `.github/phase-checkpoints/`.
-8. Verify protected `main`, active branches, PR #203, exact head, review threads,
-   CI and issues #164, #201 and issue #202 directly on GitHub.
+8. Verify protected `main`, PR #203, exact head, review threads, CI and issues
+   #164, #201 and #202 directly on GitHub.
 9. Inspect exact source, migrations, tests and production callers before trusting
    implementation claims.
 
@@ -41,15 +41,17 @@ They never replace current GitHub authority.
 - Sole active agent: ChatGPT Web Agentic Coding Agent.
 - Active branch: `agent/phase3-durable-effects-audit`.
 - Active draft: PR #203 — `Phase 3: audit durable effects and operator workflows`.
-- Phase execution issue: issue #202.
+- Phase execution issue: #202.
 - Retained installed-runtime evidence issue: #201.
 - Governance reconciliation, exhaustive inventory, frozen Problem Register and
-  shared Phase 3 contract are complete on the draft branch.
+  shared Phase 3 contracts are complete.
 - Task 3 durable inbound WhatsApp is source-closed at
-  `f016055be55fd220baa87c26ffed565c4e9e1d85`; full source checkpoint
-  `30808773702` passed and no review threads remain.
-- **Authorized production package:** truthful durable automations and WhatsApp
-  effect adoption only.
+  `f016055be55fd220baa87c26ffed565c4e9e1d85`; complete checkpoint
+  `30808773702` passed.
+- Task 4 truthful durable automations are source-closed at
+  `c873b8b6a256383497d3799e0839160178e92149`; complete checkpoint
+  `30826354580` and normal CI `30826355685` passed, with no open review threads.
+- **Authorized production package:** proposal-bound sensitive AI actions only.
 - Every other Phase 3 production package remains unauthorized.
 
 Always re-read live GitHub. These values record the verified frontier; they are
@@ -87,34 +89,22 @@ FD-028 defines the final Phase 0–9 program:
 FD-029 requires uncompromised top-tier class-AAA completion. It does not
 authorize an MVP, hidden deferral or fabricated readiness.
 
-## Single-agent rule
+## Single-agent and session rule
 
 - The Founder selects either the Web Agent or Desktop Agent as active.
 - Only that agent may implement SahelFlow at that time.
-- The inactive agent does not create a competing branch, modify shared files or
-  begin later-phase work.
 - One outcome has one owner, one branch and one PR.
 - A frozen-head adversarial review occurs only after implementation stops.
-- With one agent, that review is a **separated adversarial pass**, not independent
+- With one agent, that review is a separated adversarial pass, not independent
   review.
 - Required security, privacy, legal, accessibility and provider reviews remain
   genuinely independent later.
+- Declare one session purpose: governance/planning, research/contract,
+  implementation, frozen review/closure or installed evidence.
+- The current session is implementation of the exact proposal-bound sensitive AI
+  package only.
 
-## Session types
-
-Declare exactly one purpose before work:
-
-- governance/planning;
-- research/contract;
-- implementation;
-- frozen review/closure;
-- installed evidence.
-
-A governance/planning, research/contract or frozen-review session does not perform
-unrelated product implementation. The current session is implementation of the
-exact truthful durable automation package only.
-
-## Audit-first rule
+## Audit-first and batch remediation rule
 
 Before the first production edit of a phase or material package, inspect:
 
@@ -131,18 +121,6 @@ Before the first production edit of a phase or material package, inspect:
 Group findings by root cause. Do not patch one symptom while a competing
 authority remains.
 
-For Phase 3, the complete inventory and frozen Problem Register are in:
-
-- `.github/phase-checkpoints/phase3-surface-inventory.json`;
-- `.github/phase-checkpoints/phase3-durable-effects.json`;
-- `documentation/operations/WORKING_MEMORY.md`.
-
-Historical `agent/phase3-durable-whatsapp-recovery`,
-`codex/phase3-durable-provider` and PR #194 are diverged evidence only. Never
-merge or cherry-pick them wholesale.
-
-## Batch remediation rule
-
 ```text
 complete audit
 → consolidated Problem Register
@@ -155,10 +133,17 @@ complete audit
 → checkpoint
 ```
 
-Do not drip-feed review findings while the same frozen head is still being
-inspected. New concrete P0/P1 evidence reopens the affected gate.
+For Phase 3, the frozen inventory and authority are in:
 
-## Three validation levels
+- `.github/phase-checkpoints/phase3-surface-inventory.json`;
+- `.github/phase-checkpoints/phase3-durable-effects.json`;
+- `documentation/operations/WORKING_MEMORY.md`.
+
+Historical `agent/phase3-durable-whatsapp-recovery`,
+`codex/phase3-durable-provider` and PR #194 are evidence only. Never merge or
+cherry-pick them wholesale.
+
+## Validation levels
 
 ### Level 1 — Task Gate
 
@@ -169,37 +154,26 @@ Run after each coherent completed task:
 - Prisma generation/validation and migration checks when applicable;
 - TypeScript;
 - ESLint;
-- full Vitest;
+- complete Vitest;
 - targeted Playwright, provider, Rust or native checks selected by risk.
-
-Focused tests may be used during coding, but the completed task passes the
-ordinary source gate.
 
 ### Level 2 — Phase Checkpoint
 
-Before a phase closes, run the frozen complete phase checkpoint:
+Before a phase closes, run the frozen complete phase checkpoint: clean install,
+source/database/integration/migration suites, production build, seller journeys,
+permission/shop isolation, AR/FR/EN, RTL, accessibility, performance, applicable
+native/Windows/recovery lanes and unresolved-problem/documentation audit.
 
-- clean frozen dependency install;
-- complete source, database, integration and migration suites;
-- production build;
-- affected seller journeys and permission/shop-isolation matrices;
-- AR/FR/EN, RTL, accessibility and representative UI states;
-- phase performance and resource evidence;
-- applicable Rust, Windows, packaging and recovery lanes;
-- unresolved-problem and documentation audit.
-
-A phase does not close merely because its PR merged.
+A phase does not close merely because its PR merges.
 
 ### Level 3 — Major Full Checkpoint
 
 Run after every two completed phases by default, or earlier for licensing,
 identity, cryptography, installer/updater, migrations, backup/restore, provider
-money/effects or destructive data authority.
-
-It includes exact-source Windows release compilation, signed MSI, clean install,
-upgrade, reopen, process cleanup, preserved AppData, backup/restore, recovery,
-browser journeys, visual regression, security, performance, stability and an
-evidence bundle.
+money/effects or destructive data authority. It includes exact-source Windows
+release compilation, signed MSI, clean install, upgrade, reopen, process cleanup,
+preserved AppData, recovery, browser journeys, visual regression, security,
+performance and an evidence bundle.
 
 Issue #201 remains a separate installed hydrated-WebView evidence boundary and
 must not be weakened.
@@ -207,19 +181,12 @@ must not be weakened.
 ## AAA frontend rule
 
 Every Required route and journey must converge on one SahelFlow-owned design
-system and governed chart foundation with:
-
-- professional information architecture and operational density;
-- loading, empty, validation, permission, offline, queued, pending, stale,
-  partial, conflict, error, retry, ambiguity, dead-letter, recovery and history;
-- Arabic, French and English parity;
-- real RTL and mixed-direction handling;
-- keyboard, focus, screen-reader, contrast, zoom and reduced motion;
-- 1366×768 and responsive containment;
-- low-end rendering and interaction budgets;
-- visual regression and Founder visual acceptance.
-
-Library presence or a screenshot is not AAA evidence.
+system with professional information architecture and complete loading, empty,
+validation, permission, offline, queued, pending, stale, partial, conflict,
+error, retry, ambiguity, dead-letter, recovery and history states. Arabic,
+French and English, true RTL and mixed-direction handling, keyboard/focus/screen
+reader/contrast/zoom/reduced motion, 1366×768 containment and low-end budgets are
+mandatory. Library presence or a screenshot is not AAA evidence.
 
 ## Branch and PR rules
 
@@ -230,67 +197,76 @@ Library presence or a screenshot is not AAA evidence.
 - No direct protected-main edits.
 - No unrelated refactors or dependency upgrades.
 - No application version bump for ordinary source packages.
-- Rebase or merge current `main` deliberately before final review.
 - Freeze the exact head before consolidated review.
 - Merge only after selected gates pass and all P0/P1 threads close.
-- Delete merged branches and close superseded PRs promptly.
 
 ## Frozen Phase 3 shared contract
 
 - Reuse canonical commands, events and encrypted `OutboxIntent`; do not create
   provider-specific competing transaction authority.
 - Authenticate and persist inbound events before acknowledgement.
-- When the sidecar owns the provider socket, it writes an encrypted durable spool
-  before broadcast or app delivery.
+- The sidecar writes an encrypted durable spool before broadcast or app delivery.
 - Inbound identity binds provider, environment, exact account, installation,
   shop incarnation and provider event/message identity.
 - Normalize with storage-enforced idempotency and leases.
-- Commit `Conversation`, `Message`, audit, event and trigger intent atomically as
-  applicable.
 - Publish WebSocket/UI changes only from database-committed results.
 - External provider calls never execute inside business transactions.
-- Outbound effects have stable identity, encrypted request binding, attempt
-  history, leases, known/ambiguous outcome, receipts, dead letter and recovery.
-- Checkpoints never advance past untracked work.
+- Outbound effects have stable identity, encrypted request binding, attempts,
+  leases, known/ambiguous outcome, receipts, dead letter and recovery.
 - Automation runs and steps persist truthful states; provider actions use durable
-  effects.
+  effects and all producers await bounded trigger persistence.
 - Sensitive AI actions require an exact persisted one-time proposal and approval.
-- Only the exact active native runtime drains its shop DB. Shop switching quiesces
-  workers; inactive-shop work remains durable and visibly pending.
+- Only the exact active native runtime drains its shop DB. Shop switching
+  quiesces workers; inactive-shop work remains durable and visibly pending.
 - Server-side capability certification and kill switches gate provider effects.
   DHD remains disabled in production until live-certified.
 
 ## Completed package rules — durable inbound WhatsApp
 
-The source package is closed at
-`f016055be55fd220baa87c26ffed565c4e9e1d85` with full source checkpoint
-`30808773702` passed. It is source/integration/database evidence only, not signed,
+The package is source-closed at
+`f016055be55fd220baa87c26ffed565c4e9e1d85` with complete checkpoint
+`30808773702`. It is source/integration/database evidence only, not signed,
 installed, live-provider-certified, Founder-accepted or Phase-closed evidence.
 
-Its separated adversarial repair batch closed Baileys type drift, plaintext spool
-evidence, key/tamper handling, attempt-history collisions, duplicate WebSocket
-publication and the status-trigger phone key mismatch.
+## Completed package rules — truthful durable automations
 
-## Authorized package rules — truthful durable automations
+The package is source-closed at
+`c873b8b6a256383497d3799e0839160178e92149` with complete checkpoint
+`30826354580` and normal CI `30826355685` passed.
+
+It includes additive run/step/attempt truth, encrypted immutable snapshots,
+ordered stop/continue execution, restart-safe leases and attempts, truthful
+partial/dead-letter/ambiguity, durable WhatsApp effect correlation, deterministic
+daily-report receipt replay, strict executable schemas, complete recipe config,
+AR/FR/EN recovery history and reason-bound audited retry. The separated review
+repaired timestamp-bound replay drift, invalid nested writes, unawaited action
+errors, retry hot loops, false success, test leakage, fire-and-forget producers,
+SQLite trigger contention, repeat-blacklist identity and direct report sends.
+
+This is source evidence only. It is not signed, installed, provider-certified,
+Founder-accepted, Phase 3 closed or Stable.
+
+## Authorized package rules — proposal-bound sensitive AI actions
 
 Only these production edits are authorized now:
 
-- additive `AutomationRun`, `AutomationStepRun` and `AutomationStepAttempt`
-  persistence;
-- stable trigger-event plus automation-definition-version identity;
-- an active-shop worker consuming committed `automation.trigger.v1` intents;
-- ordered steps with explicit stop/continue policy and truthful aggregate state;
-- restart-safe leases, retries, dead letter, replay and operator history;
-- `send_whatsapp` through the existing durable WhatsApp outbox with
-  step-to-effect correlation;
-- durable daily-report send identity instead of direct sidecar dispatch;
-- strict trigger/action/config schemas and fail-closed activation when a producer
-  or required configuration is missing;
-- AR/FR/EN, RTL, accessibility and partial/retry/dead-letter states;
-- exact database, concurrency, restart and no-false-success tests.
+- persist an immutable sensitive-action proposal before approval;
+- bind proposal digest, encrypted arguments, actor, session, device, exact shop,
+  policy, permissions, entitlement, target versions and expiry;
+- require one exact approval for one exact proposal;
+- claim execution once so double approval or response replay cannot repeat a
+  mutation;
+- route approved mutations through canonical commands and durable effects;
+- remove generic current-message confirmation as sensitive-action authority;
+- fail closed on proposal tamper, expiry, actor/shop/policy drift and target
+  version conflict;
+- retain sanitized proposal, approval, execution and recovery history;
+- provide AR/FR/EN stale, conflict, approval and recovery states;
+- prove tamper, expiry, double approval, one-time execution, restart and
+  no-direct-mutation behavior.
 
-Do not implement proposal-bound AI, courier/commerce convergence, live provider
-certification, a version bump, MSI, release, Founder acceptance or Stable in this
+Do not implement courier/commerce convergence, live provider certification, a
+version bump, MSI, release, Founder acceptance, Phase 3 closure or Stable in this
 package.
 
 ## Evidence language
