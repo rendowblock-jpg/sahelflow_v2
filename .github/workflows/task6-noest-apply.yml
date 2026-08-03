@@ -1,0 +1,88 @@
+name: Task 6 NOEST provider package
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: task6-noest-provider-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  apply-package:
+    name: Verify and publish NOEST provider package
+    if: >-
+      ${{ github.event.pull_request.draft == true &&
+          github.event.pull_request.head.ref == 'agent/phase3-durable-effects-audit' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      SF_TEST_ROOT: /tmp/sahelflow-task6-noest
+      SF_DATA_DIR: /tmp/sahelflow-task6-noest/data
+      DATABASE_URL: file:/tmp/sahelflow-task6-noest/data/shops/test.db
+      SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+    steps:
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/phase3-durable-effects-audit
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Detect one-time package
+        id: package
+        run: |
+          if [[ -f .github/task6-noest.trigger ]]; then
+            echo "apply=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "apply=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Bun
+        if: steps.package.outputs.apply == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Apply exact patch
+        if: steps.package.outputs.apply == 'true'
+        run: |
+          set -euo pipefail
+          cat .github/task6-noest-patch/part* | base64 -d | gzip -d > /tmp/task6-noest.patch
+          printf '%s  %s\n' 'cc00774456d1f7dbf473458008404aa565b8d51637c8bbdf7f79ac333566c8f3' /tmp/task6-noest.patch | sha256sum -c -
+          git apply --3way --index /tmp/task6-noest.patch
+          rm -rf .github/task6-noest-patch .github/task6-noest.trigger
+          git add -A
+          git diff --cached --check
+
+      - name: Install frozen dependencies
+        if: steps.package.outputs.apply == 'true'
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        if: steps.package.outputs.apply == 'true'
+        run: bunx prisma generate
+
+      - name: Prepare disposable test sandbox
+        if: steps.package.outputs.apply == 'true'
+        run: bun run test:sandbox -- /tmp/sahelflow-task6-noest
+
+      - name: Full source gate
+        if: steps.package.outputs.apply == 'true'
+        run: |
+          bun run sf-version
+          bun run sf-audit
+          bun run sf-verify
+          bunx prisma migrate status
+
+      - name: Commit verified source-only package
+        if: steps.package.outputs.apply == 'true'
+        run: |
+          git config user.name "SahelFlow Task 6 Provider Agent"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "feat(delivery): replace DHD with certified NOEST authority"
+          git push origin HEAD:agent/phase3-durable-effects-audit
