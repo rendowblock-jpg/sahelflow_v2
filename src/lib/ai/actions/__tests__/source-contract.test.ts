@@ -63,14 +63,23 @@ describe("proposal-bound AI production source contract", () => {
     }
   });
 
-  it("requires proposal ID plus exact digest at approval", () => {
-    const route = source(
-      "src/app/api/ai/actions/[proposalId]/approve/route.ts",
-    );
+  it("requires exact digest and approver continuity before execution", () => {
+    const routePath =
+      "src/app/api/ai/actions/[proposalId]/approve/route.ts";
+    const route = source(routePath);
     expect(route).toContain("proposalDigest");
     expect(route).toContain("regex(/^[0-9a-f]{64}$/i)");
     expect(route).toContain('await requireAuth("approvals.approve")');
     expect(route).toContain("requireTrustedActor()");
+    expect(route).toContain("await assertAiActionApprovalActor(");
+    expect(route.indexOf("await assertAiActionApprovalActor(")).toBeLessThan(
+      route.indexOf("const result = await approveAiActionProposal("),
+    );
+
+    const approvalCallers = walk("src")
+      .filter((path) => !path.endsWith("src/lib/ai/actions/service.ts"))
+      .filter((path) => source(path).includes("approveAiActionProposal("));
+    expect(approvalCallers).toEqual([routePath]);
   });
 
   it("keeps registered tool resolution confined to the central agent path", () => {
