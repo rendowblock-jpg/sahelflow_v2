@@ -14,6 +14,11 @@ import {
 } from "node:fs";
 import { join, resolve } from "node:path";
 
+import {
+  openWhatsAppInboundSpoolRecord,
+  resolveWhatsAppInboundSpoolKey,
+  sealWhatsAppInboundSpoolRecord,
+} from "./inbound-spool-crypto";
 import type { IncomingMessage } from "./whatsapp";
 
 const FORMAT_VERSION = 1;
@@ -53,6 +58,7 @@ export interface WhatsAppInboundSpoolOptions {
   bearerToken: string;
   fetchImpl?: typeof fetch;
   retryBaseMs?: number;
+  encryptionKey?: Buffer;
   onCommitted: (
     envelope: WhatsAppInboundSpoolEnvelope,
     receipt: InboundCommitReceipt,
@@ -125,12 +131,19 @@ function responseErrorCode(status: number, body: unknown): string {
   return `HTTP_${status}`;
 }
 
+function spoolIdFromPath(path: string): string {
+  const match = /([0-9a-f]{64})\.json$/.exec(path.replaceAll("\\", "/"));
+  if (!match?.[1]) throw new Error(`Invalid WhatsApp inbound spool path: ${path}`);
+  return match[1];
+}
+
 export class WhatsAppInboundSpool {
   private readonly directory: string;
   private readonly appUrl: string;
   private readonly bearerToken: string;
   private readonly fetchImpl: typeof fetch;
   private readonly retryBaseMs: number;
+  private readonly encryptionKey: Buffer;
   private readonly onCommitted: WhatsAppInboundSpoolOptions["onCommitted"];
   private flushPromise: Promise<void> | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -141,6 +154,12 @@ export class WhatsAppInboundSpool {
     this.bearerToken = options.bearerToken;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.retryBaseMs = Math.max(10, options.retryBaseMs ?? DEFAULT_RETRY_BASE_MS);
+    this.encryptionKey = options.encryptionKey
+      ? Buffer.from(options.encryptionKey)
+      : resolveWhatsAppInboundSpoolKey();
+    if (this.encryptionKey.length !== 32) {
+      throw new Error("WhatsApp inbound spool encryption key must be 32 bytes");
+    }
     this.onCommitted = options.onCommitted;
     this.ensureDirectory();
   }
@@ -162,11 +181,17 @@ export class WhatsAppInboundSpool {
   }
 
   private readRecord(path: string): StoredInboundRecord {
-    const parsed = JSON.parse(readFileSync(path, "utf8")) as StoredInboundRecord;
+    const spoolId = spoolIdFromPath(path);
+    const plaintext = openWhatsAppInboundSpoolRecord(
+      readFileSync(path, "utf8"),
+      spoolId,
+      this.encryptionKey,
+    );
+    const parsed = JSON.parse(plaintext) as StoredInboundRecord;
     if (
       parsed.formatVersion !== FORMAT_VERSION ||
       !parsed.envelope ||
-      !/^[0-9a-f]{64}$/.test(parsed.envelope.spoolId)
+      parsed.envelope.spoolId !== spoolId
     ) {
       throw new Error(`Unsupported WhatsApp inbound spool record: ${path}`);
     }
@@ -185,7 +210,15 @@ export class WhatsAppInboundSpool {
     );
     const descriptor = openSync(temporary, "wx", 0o600);
     try {
-      writeFileSync(descriptor, `${JSON.stringify(record)}\n`, "utf8");
+      writeFileSync(
+        descriptor,
+        sealWhatsAppInboundSpoolRecord(
+          record.envelope.spoolId,
+          JSON.stringify(record),
+          this.encryptionKey,
+        ),
+        "utf8",
+      );
       fsyncSync(descriptor);
     } finally {
       closeSync(descriptor);
@@ -202,7 +235,7 @@ export class WhatsAppInboundSpool {
     rmSync(this.recordPath(record.envelope.spoolId), { force: true });
   }
 
-  /** Persist synchronously before any browser or application delivery. */
+  /** Persist encrypted, synchronously, before browser or application delivery. */
   enqueue(
     accountId: string,
     message: IncomingMessage,
