@@ -1,0 +1,371 @@
+{
+  "formatVersion": 1,
+  "phase": 3,
+  "name": "provider-inbox-automation-ai-surface-inventory",
+  "status": "in-progress",
+  "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+  "activePr": 203,
+  "phaseIssue": 202,
+  "generatedAt": "2026-08-03",
+  "productionImplementationAuthorized": false,
+  "inventoryMethod": {
+    "githubCodeSearchIndexed": false,
+    "method": [
+      "read exact current files directly through the authenticated GitHub connector",
+      "use merged and closed PR changed-file inventories to discover historical and current surfaces",
+      "compare diverged Phase 3 branches against current main without merging them",
+      "validate load-bearing findings against current protected source"
+    ],
+    "limitations": [
+      "exhaustive import graph and every UI state are still being completed",
+      "provider live certification is outside source inventory",
+      "historical branches are evidence only"
+    ]
+  },
+  "sharedPersistence": {
+    "files": [
+      "prisma/models/business-truth.prisma",
+      "prisma/schema.prisma",
+      "prisma/migrations/20260730030000_phase3_whatsapp_outbox_delivery/migration.sql"
+    ],
+    "models": [
+      "BusinessAggregateVersion",
+      "BusinessCommand",
+      "DomainEvent",
+      "OutboxIntent",
+      "WhatsAppOutboundEffect",
+      "Conversation",
+      "Message",
+      "Automation",
+      "AutomationLog",
+      "Integration",
+      "Delivery",
+      "CanonicalDeliveryEvent",
+      "AiChatSession",
+      "AiChatMessage"
+    ],
+    "observations": [
+      "OutboxIntent contains generic effect identity, status, attempt, lease, receipt, ambiguity and dead-letter fields",
+      "WhatsAppOutboundEffect correlates a local Message with one effect and provider message ID",
+      "Conversation and Message can persist inbox data but current inbound WhatsApp does not use persistence-before-acknowledgement",
+      "AutomationLog is execution-summary oriented and has no ordered durable step-attempt model",
+      "AI chat messages persist conversational tool-call JSON but there is no dedicated proposal/approval model"
+    ]
+  },
+  "workerOwnership": {
+    "files": [
+      "src/instrumentation.ts",
+      "src/lib/whatsapp/outbox-worker.ts",
+      "src/lib/delivery/outbox-worker.ts"
+    ],
+    "currentBehavior": [
+      "Node instrumentation starts WhatsApp and courier workers",
+      "workers import the process-active db and ShopContext",
+      "workers drain only the currently opened shop database",
+      "license failure leaves durable work queued for a later tick"
+    ],
+    "openContract": "define active versus inactive shop execution, visible pending state and safe shop-switch/quiescence behavior"
+  },
+  "whatsapp": {
+    "serverFiles": [
+      "src/lib/whatsapp/effect-authority.ts",
+      "src/lib/whatsapp/durable-send.ts",
+      "src/lib/whatsapp/outbox-worker.ts",
+      "src/lib/whatsapp/sidecar-client.ts",
+      "src/lib/whatsapp/install-send-recovery.ts",
+      "src/lib/whatsapp/types.ts",
+      "src/lib/whatsapp/ws-url.ts"
+    ],
+    "routeFiles": [
+      "src/app/api/whatsapp/send/route.ts",
+      "src/app/api/whatsapp/outbox/route.ts",
+      "src/app/api/whatsapp/chats/route.ts",
+      "src/app/api/whatsapp/chats/[jid]/messages/route.ts",
+      "src/app/api/whatsapp/message-status/route.ts",
+      "src/app/api/whatsapp/status/route.ts",
+      "src/app/api/whatsapp/connect/route.ts",
+      "src/app/api/whatsapp/logout/route.ts",
+      "src/app/api/whatsapp/qr/route.ts",
+      "src/app/api/whatsapp/qr-image/route.ts",
+      "src/app/api/whatsapp/ws-token/route.ts"
+    ],
+    "sidecarFiles": [
+      "sidecars/whatsapp/index.ts",
+      "sidecars/whatsapp/whatsapp.ts",
+      "sidecars/whatsapp/send-receipts.ts",
+      "sidecars/whatsapp/auth-tokens.ts"
+    ],
+    "uiFiles": [
+      "src/components/inbox/inbox-live.tsx",
+      "src/hooks/use-whatsapp-socket.ts",
+      "src/lib/i18n/whatsapp-recovery.ts"
+    ],
+    "testFiles": [
+      "src/lib/whatsapp/__tests__/durable-send.integration.test.ts",
+      "src/lib/whatsapp/__tests__/sidecar-client.test.ts",
+      "src/lib/whatsapp/__tests__/sidecar-receipt-contract.test.ts",
+      "src/app/api/whatsapp/__tests__/trusted-effect-routes.test.ts"
+    ],
+    "preservedBehavior": [
+      "outbound message and encrypted intent commit before provider dispatch",
+      "effect identity includes exact shop incarnation and paired account binding",
+      "pre-effect retry is distinguished from post-effect ambiguity",
+      "sidecar durable receipt lookup prevents repeat send after restart",
+      "operator retry requires explicit duplicate-risk confirmation for ambiguous outcomes",
+      "concurrent workers cannot claim one effect twice"
+    ],
+    "gaps": [
+      "Baileys uses an in-memory chat/message store",
+      "messages.upsert emits inbound messages to subscribers without durable acknowledgement",
+      "chats and messages routes merge live sidecar history with durable outbound rows only",
+      "inbound message identity, raw evidence, deduplication, quarantine and replay are missing",
+      "delivery-status callback remains best-effort fire-and-forget when the app is unavailable",
+      "daily-report and automation callers require complete durable-effect adoption audit"
+    ],
+    "problemIds": [
+      "P3-P1-002",
+      "P3-P1-004",
+      "P3-P1-006",
+      "P3-P2-001",
+      "P3-P2-003"
+    ]
+  },
+  "automations": {
+    "routeFiles": [
+      "src/app/api/automations/route.ts",
+      "src/app/api/automations/[id]/route.ts"
+    ],
+    "engineFiles": [
+      "src/lib/automations/engine.ts",
+      "src/lib/automations/conditions.ts"
+    ],
+    "uiFiles": [
+      "src/app/(dashboard)/automations/page.tsx"
+    ],
+    "knownCallers": [
+      "canonical and compatibility order creation/status flows",
+      "commerce sync after create/cancel decisions",
+      "low-stock detection and dispatch",
+      "customer and message trigger paths"
+    ],
+    "currentActions": [
+      "send_whatsapp",
+      "send_notification",
+      "tag_customer",
+      "update_status",
+      "multi-step string action lists"
+    ],
+    "gaps": [
+      "dispatch is fire-and-forget and catches all failures",
+      "matching automations execute concurrently through Promise.allSettled",
+      "multi-step execution continues after failed steps",
+      "overall run is recorded as success after any number of failed steps",
+      "retries are in-process sleeps and do not survive restart",
+      "send_whatsapp calls sidecar status and send endpoints directly",
+      "there is no stable run identity, ordered step attempt or step-to-effect receipt",
+      "unknown or skipped actions lack a complete operator recovery contract"
+    ],
+    "problemIds": [
+      "P3-P1-003",
+      "P3-P1-004",
+      "P3-P1-006"
+    ]
+  },
+  "ai": {
+    "routeFiles": [
+      "src/app/api/ai/sessions/route.ts",
+      "src/app/api/ai/sessions/[id]/messages/route.ts",
+      "src/app/api/ai/sessions/[id]/messages/stream/route.ts"
+    ],
+    "agentFiles": [
+      "src/lib/ai/chat/agent.ts",
+      "src/lib/ai/chat/source-proposal.ts",
+      "src/lib/ai/chat/tools/registry.ts",
+      "src/lib/ai/chat/tools/core-tools.ts",
+      "src/lib/ai/chat/tools/extended-tools.ts",
+      "src/lib/ai/chat/tools/advanced-tools.ts",
+      "src/lib/ai/chat/tools/advanced-tools-legacy.ts"
+    ],
+    "sensitiveToolsObserved": [
+      "create_order",
+      "update_product_stock",
+      "cancel_order",
+      "create_product",
+      "update_product_price",
+      "create_customer",
+      "update_customer_notes",
+      "assign_order_to_delivery",
+      "update_order_status"
+    ],
+    "preservedBehavior": [
+      "AI order creation can use a stable persisted session/proposal source identity",
+      "canonical AI order creation produces a draft rather than silently confirming",
+      "tool definitions can declare requiresConfirmation",
+      "tool results are redacted before being fed back to Gemini"
+    ],
+    "gaps": [
+      "confirmation is a generic token in the current user message",
+      "the model can emit a new tool call and arguments on the confirmation turn",
+      "there is no dedicated persisted proposal hash or approval row",
+      "target record versions, permissions, entitlement and expiry are not one approval authority",
+      "several sensitive tools still use direct or compatibility mutations",
+      "streaming response persistence failure is swallowed after delivery",
+      "approval and execution results are not one durable recoverable state machine"
+    ],
+    "problemIds": [
+      "P3-P1-005",
+      "P3-P1-006"
+    ]
+  },
+  "courier": {
+    "routeFiles": [
+      "src/app/api/delivery/create/route.ts",
+      "src/app/api/delivery/sync/route.ts",
+      "src/app/api/orders/[id]/courier/route.ts",
+      "src/app/api/orders/[id]/courier/sync/route.ts"
+    ],
+    "domainFiles": [
+      "src/lib/delivery/canonical-courier.ts",
+      "src/lib/delivery/canonical-courier-reviewed-base.ts",
+      "src/lib/delivery/canonical-courier-legacy.ts",
+      "src/lib/delivery/outbox-worker.ts"
+    ],
+    "adapterFiles": [
+      "src/lib/integrations/delivery/index.ts",
+      "src/lib/integrations/delivery/types.ts",
+      "src/lib/integrations/delivery/yalidine.ts",
+      "src/lib/integrations/delivery/maystro.ts",
+      "src/lib/integrations/delivery/zr-express.ts",
+      "src/lib/integrations/delivery/dhd.ts",
+      "src/lib/integrations/delivery/retry.ts"
+    ],
+    "testFiles": [
+      "src/lib/delivery/__tests__/canonical-courier.integration.test.ts",
+      "src/lib/delivery/__tests__/canonical-courier-closure.integration.test.ts",
+      "src/app/api/orders/__tests__/canonical-courier-routes.test.ts"
+    ],
+    "preservedBehavior": [
+      "canonical order and reservation authority is verified before booking",
+      "booking effect commits before provider dispatch",
+      "worker lease, retry, ambiguity and manual reconciliation exist",
+      "tracking events are normalized into canonical delivery authority"
+    ],
+    "gaps": [
+      "provider mechanics use separate effect implementation from WhatsApp",
+      "current/reviewed-base/legacy layering complicates audit and maintenance",
+      "adapter implementation is not equivalent to current live certification",
+      "DHD explicitly uses unverified guessed endpoints but is registered normally",
+      "capability-specific provider certification is not server-side authority"
+    ],
+    "problemIds": [
+      "P3-P1-006",
+      "P3-P1-008",
+      "P3-P2-002",
+      "P3-P2-003"
+    ]
+  },
+  "commerce": {
+    "routeFiles": [
+      "src/app/api/integrations/sync/route.ts",
+      "src/app/api/integrations/connect/route.ts"
+    ],
+    "engineFiles": [
+      "src/lib/integrations/ecommerce/sync-engine.ts",
+      "src/lib/integrations/ecommerce/shopify.ts",
+      "src/lib/integrations/ecommerce/woocommerce.ts",
+      "src/lib/integrations/ecommerce/types.ts",
+      "src/lib/orders/canonical-commerce-order.ts",
+      "src/lib/orders/canonical-source-order.ts",
+      "src/lib/orders/canonical-source-checkpoint.ts"
+    ],
+    "testFiles": [
+      "src/lib/integrations/ecommerce/__tests__/sync-engine.test.ts",
+      "src/lib/orders/__tests__/canonical-commerce-status.test.ts",
+      "src/lib/orders/__tests__/canonical-source-order.integration.test.ts"
+    ],
+    "preservedBehavior": [
+      "canonical source order commands are used for new imports",
+      "provider cancellations use governed order decisions/recovery when possible",
+      "checkpoint does not advance if any fetched order fails"
+    ],
+    "gaps": [
+      "sync execution is synchronous request work",
+      "there is no durable sync-run, page/event or per-item attempt record",
+      "errors are returned as strings rather than durable quarantine/dead-letter state",
+      "webhook and polling convergence is not a complete persisted protocol",
+      "manual replay, overlap reconciliation and history UI are incomplete"
+    ],
+    "problemIds": [
+      "P3-P1-006",
+      "P3-P1-007"
+    ]
+  },
+  "operatorExperience": {
+    "surfaces": [
+      "inbox conversation list and message bubbles",
+      "WhatsApp connection and QR recovery",
+      "outbox retry and duplicate-risk confirmation",
+      "delivery/courier actions and reconciliation",
+      "integration sync status",
+      "automation list, editor and logs",
+      "AI chat and confirmation cards"
+    ],
+    "requiredStates": [
+      "loading",
+      "empty",
+      "permission denied",
+      "offline",
+      "queued",
+      "processing",
+      "retrying",
+      "partially completed",
+      "ambiguous",
+      "dead letter",
+      "stale proposal",
+      "conflict",
+      "provider degraded",
+      "operator reconciled",
+      "history"
+    ],
+    "requiredDimensions": [
+      "Arabic",
+      "French",
+      "English",
+      "RTL and mixed-direction values",
+      "keyboard and focus",
+      "screen-reader announcements",
+      "1366x768 containment",
+      "low-resource and constrained-network behavior"
+    ],
+    "status": "exhaustive route-by-route matrix pending"
+  },
+  "historicalEvidence": {
+    "branches": [
+      {
+        "name": "agent/phase3-durable-whatsapp-recovery",
+        "relationToMain": "diverged",
+        "use": "selective design and test evidence only"
+      },
+      {
+        "name": "codex/phase3-durable-provider",
+        "relationToMain": "diverged",
+        "use": "selective research and implementation evidence only"
+      }
+    ],
+    "pullRequests": [
+      {
+        "number": 194,
+        "state": "closed-unmerged",
+        "use": "historical WhatsApp durable-effect proposal; never merge wholesale"
+      }
+    ]
+  },
+  "remainingInventoryTasks": [
+    "enumerate every import and dynamic caller for dispatchTrigger and provider adapters",
+    "enumerate every migration and existing-data compatibility implication",
+    "enumerate all direct and indirect tests, mocks and missing negative cases",
+    "complete route-by-route AR/FR/EN, RTL, accessibility and recovery matrix",
+    "map every legacy path to remove or make read-only after parity",
+    "record exact evidence lane per Problem Register item"
+  ]
+}
