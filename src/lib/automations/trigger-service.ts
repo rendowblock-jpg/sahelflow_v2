@@ -26,23 +26,39 @@ export interface QueuedAutomationTrigger {
   replayed: boolean;
 }
 
-function normalizeTriggerKey(
+function normalizeRequestedTriggerKey(requested?: string): string | null {
+  const value = requested?.trim();
+  if (!value) return null;
+  if (value.length > 500) {
+    throw new SahelFlowError(
+      "Automation trigger key exceeds the bounded length",
+      "AUTOMATION_TRIGGER_KEY_INVALID",
+      400,
+    );
+  }
+  return value;
+}
+
+async function durableTriggerKey(
+  context: ServiceContext,
   trigger: AutomationTrigger,
   payload: AutomationTriggerPayload,
   requested?: string,
-): string {
-  const value = requested?.trim();
-  if (value) {
-    if (value.length > 500) {
-      throw new SahelFlowError(
-        "Automation trigger key exceeds the bounded length",
-        "AUTOMATION_TRIGGER_KEY_INVALID",
-        400,
-      );
+): Promise<string> {
+  const normalized = normalizeRequestedTriggerKey(requested);
+  if (
+    trigger === "customer.blacklisted" &&
+    typeof payload.customerId === "string"
+  ) {
+    const customer = await context.prisma.customer.findUnique({
+      where: { id: payload.customerId },
+      select: { blacklistedAt: true },
+    });
+    if (customer?.blacklistedAt) {
+      return `customer.blacklisted:${payload.customerId}:${customer.blacklistedAt.toISOString()}`;
     }
-    return value;
   }
-  return `${trigger}:${automationHash(payload)}`;
+  return normalized ?? `${trigger}:${automationHash(payload)}`;
 }
 
 function triggerScope(context: ServiceContext): readonly string[] {
@@ -73,7 +89,12 @@ export async function enqueueAutomationTrigger(
   const trigger = automationTriggerSchema.parse(rawTrigger);
   const payload = parseAutomationTriggerPayload(trigger, rawPayload);
   const payloadHash = automationHash(payload);
-  const triggerKey = normalizeTriggerKey(trigger, payload, options.triggerKey);
+  const triggerKey = await durableTriggerKey(
+    context,
+    trigger,
+    payload,
+    options.triggerKey,
+  );
   const effectKey = `automation-trigger:${automationHash([
     trigger,
     triggerKey,
@@ -101,9 +122,6 @@ export async function enqueueAutomationTrigger(
       },
       actor: commandContext.businessPrincipal.auditActor,
       correlationId: triggerKey,
-      // Event time is first-write metadata. The idempotency request binds the
-      // stable event identity and content hash so exact retry cannot conflict
-      // merely because the local clock advanced before the response replay.
       payload: { trigger, triggerKey, payloadHash },
     },
     async () => ({
