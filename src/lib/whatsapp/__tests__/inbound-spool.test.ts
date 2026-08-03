@@ -121,22 +121,31 @@ describe("durable WhatsApp inbound sidecar spool", () => {
     expect(spool.pendingCount()).toBe(0);
   });
 
-  it("deduplicates the same provider identity and rejects changed content", () => {
+  it("deduplicates the same provider identity and rejects changed content", async () => {
     const directory = temporaryDirectory();
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ code: "APP_UNAVAILABLE" }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
     const spool = new WhatsAppInboundSpool({
       directory,
       appUrl: "http://127.0.0.1:3000",
       bearerToken: "test-sidecar-token-1234",
-      fetchImpl: vi.fn(() => new Promise<Response>(() => undefined)) as unknown as typeof fetch,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
       onCommitted: vi.fn(),
     });
     const accountId = "213555999000:12@s.whatsapp.net";
 
     const first = spool.enqueue(accountId, message(), new Date("2026-08-03T09:00:00Z"));
+    await spool.flush();
     const replay = spool.enqueue(accountId, message(), new Date("2026-08-03T10:00:00Z"));
+    await spool.flush();
 
     expect(replay).toEqual(first);
     expect(readdirSync(directory)).toHaveLength(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(deriveWhatsAppInboundSpoolId(accountId, message())).toBe(first.spoolId);
     expect(() => spool.enqueue(accountId, message("Changed content"))).toThrow(
       /different content/i,
