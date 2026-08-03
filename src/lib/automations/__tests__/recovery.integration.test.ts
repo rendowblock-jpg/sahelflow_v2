@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { PrismaClient } from "@prisma/client";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   listAutomationRunHistory,
@@ -27,12 +27,26 @@ async function seedFailedRun(options: { effectBound?: boolean } = {}) {
   const runId = randomUUID();
   const failedStepId = randomUUID();
   const skippedStepId = randomUUID();
+  const automation = await db.automation.create({
+    data: {
+      name: "Recovery test",
+      trigger: "order.created",
+      action: options.effectBound ? "send_whatsapp" : "update_status",
+      config: JSON.stringify(
+        options.effectBound
+          ? { messageTemplate: "Order {{orderNumber}}" }
+          : { targetStatus: "cancelled" },
+      ),
+      isActive: true,
+      runCount: 0,
+    },
+  });
   await db.automationRun.create({
     data: {
       id: runId,
       runKey: `run:${randomUUID()}`,
-      automationId: randomUUID(),
-      automationName: "Recovery test",
+      automationId: automation.id,
+      automationName: automation.name,
       triggerIntentId: randomUUID(),
       triggerEffectKey: `trigger:${randomUUID()}`,
       triggerType: "order.created",
