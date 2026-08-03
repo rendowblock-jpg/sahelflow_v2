@@ -14,7 +14,12 @@ export type BusinessPayloadKind =
   | "inventory-movement-detail"
   | "order-change-detail"
   | "collaboration-comment"
-  | "collaboration-handover-reason";
+  | "collaboration-handover-reason"
+  | "ai-action-arguments"
+  | "ai-action-summary"
+  | "ai-action-license-binding"
+  | "ai-action-target-binding"
+  | "ai-action-execution-result";
 
 export type FinancialMovementDetailField =
   | "counterparty"
