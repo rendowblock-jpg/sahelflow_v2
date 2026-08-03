@@ -17,6 +17,7 @@ CREATE TABLE "ProviderIngressEvent" (
   "payloadHash" TEXT NOT NULL,
   "status" TEXT NOT NULL DEFAULT 'received',
   "attemptCount" INTEGER NOT NULL DEFAULT 0,
+  "operatorRetryCount" INTEGER NOT NULL DEFAULT 0,
   "nextAttemptAt" DATETIME,
   "lockedAt" DATETIME,
   "leaseToken" TEXT,
