@@ -140,11 +140,11 @@ export async function detectLowStock(
 }
 
 /** Enqueue low-stock automation work only after the stock transaction commits. */
-export function dispatchLowStock(
+export async function dispatchLowStock(
   context: ServiceContext,
   product: LowStockProductRow,
-): void {
-  void dispatchTrigger(
+): Promise<void> {
+  await dispatchTrigger(
     context,
     "stock.low",
     {
@@ -169,5 +169,5 @@ export async function checkAndDispatchLowStock(
   productId: string,
 ): Promise<void> {
   const product = await detectLowStock(tx, productId);
-  if (product) dispatchLowStock(context, product);
+  if (product) await dispatchLowStock(context, product);
 }
