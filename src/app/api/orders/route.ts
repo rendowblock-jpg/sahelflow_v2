@@ -119,10 +119,14 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     manualResult?.order ?? (await orderService.create(context, body));
 
   if (manualCommand && !manualCommand.replayed && manualResult) {
-    void dispatchTrigger(
+    await dispatchTrigger(
       context,
       "order.created" as TriggerEvent,
       manualResult.automation,
+      {
+        triggerKey: `order.created:${manualResult.order.id}`,
+        occurredAt: manualResult.order.createdAt,
+      },
     );
   }
 
