@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import {
-  approveAiActionProposal,
-} from "@/lib/ai/actions/service";
+import { assertAiActionApprovalActor } from "@/lib/ai/actions/approval-actor";
+import { approveAiActionProposal } from "@/lib/ai/actions/service";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { db, shopContext } from "@/lib/db";
@@ -27,8 +26,15 @@ export const POST = withErrorHandler(
     const approver = await requireTrustedActor();
     const { proposalId } = await params;
     const input = approvalSchema.parse(await request.json());
+    const context = { prisma: db, shop: shopContext };
+    await assertAiActionApprovalActor(
+      context,
+      approver,
+      proposalId,
+      input.proposalDigest,
+    );
     const result = await approveAiActionProposal({
-      context: { prisma: db, shop: shopContext },
+      context,
       approver,
       proposalId,
       proposalDigest: input.proposalDigest,
