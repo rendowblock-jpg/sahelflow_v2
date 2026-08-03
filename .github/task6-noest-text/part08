@@ -1,0 +1,472 @@
++      }
++      const validated = await parseJson<NoestResponse>(validationResponse);
++      if (!validated.success) {
++        throw new SahelFlowError(
++          responseMessage(
++            validated,
++            `NOEST created ${tracking}, but validation was not confirmed.`,
++          ),
++          "NOEST_VALIDATION_OUTCOME_AMBIGUOUS",
++          502,
++        );
++      }
++    } catch (error) {
++      if (error instanceof SahelFlowError) throw error;
++      throw new SahelFlowError(
++        error instanceof Error
++          ? `NOEST created ${tracking}, but validation outcome is unknown: ${error.message}`
++          : `NOEST created ${tracking}, but validation outcome is unknown.`,
++        "NOEST_VALIDATION_OUTCOME_AMBIGUOUS",
++        502,
++      );
++    }
++
++    return {
++      success: true,
++      trackingId: tracking,
++      cost: 0,
++    };
++  },
++
++  async syncTracking(trackingId, credentials): Promise<TrackingInfo> {
++    const creds = credentials as NoestCredentials;
++    const identity = requireIdentity(creds);
++    const trackingsUrl = requireUrl(creds.trackingsUrl, "trackings URL");
++    const body = form(identity, {});
++    body.append("trackings[]", trackingId);
++    const response = await retryFetch(
++      trackingsUrl,
++      {
++        method: "POST",
++        headers: { "Content-Type": "application/x-www-form-urlencoded" },
++        body,
++      },
++      FETCH_TIMEOUT_MS,
++    );
++    if (!response.ok) {
++      throw new SahelFlowError(
++        `NOEST tracking failed with HTTP ${response.status}.`,
++        "NOEST_TRACKING_FAILED",
++        502,
++      );
++    }
++    const data = await parseJson<Record<string, NoestTrackingRecord>>(response);
++    const record = data[trackingId] ?? Object.values(data)[0];
++    if (!record) {
++      throw new SahelFlowError(
++        `NOEST returned no tracking record for ${trackingId}.`,
++        "NOEST_TRACKING_NOT_FOUND",
++        404,
++      );
++    }
++    const activity = record.activity ?? [];
++    const events: TrackingEvent[] = activity.map((entry) => ({
++      status: mapEvent(entry),
++      timestamp: entry.date ?? new Date().toISOString(),
++      details: entry.event ?? entry.event_key ?? "NOEST update",
++      location: entry.name || entry.driver || undefined,
++    }));
++    const latest = events.at(-1);
++    return {
++      trackingId: record.OrderInfo?.tracking ?? trackingId,
++      status: latest?.status ?? "pending",
++      events:
++        events.length > 0
++          ? events
++          : [
++              {
++                status: "pending",
++                timestamp: new Date().toISOString(),
++                details: "NOEST tracking record received without activity.",
++              },
++            ],
++      deliveryCompany: "NOEST Express",
++    };
++  },
++};
+diff --git a/src/lib/integrations/delivery/provider-capability.ts b/src/lib/integrations/delivery/provider-capability.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..ca0fbb913d8967a1a4adb4eb48da89c93f4e247d
+--- /dev/null
++++ b/src/lib/integrations/delivery/provider-capability.ts
+@@ -0,0 +1,311 @@
++import "server-only";
++
++import { createHash } from "node:crypto";
++
++import type { ServiceContext } from "@/lib/data/service-base";
++import { SahelFlowError } from "@/types/errors";
++import { getDeliveryAdapter, loadDeliveryCredentials } from "./index";
++import {
++  DELIVERY_PROVIDERS,
++  type DeliveryCredentials,
++  type DeliveryProvider,
++} from "./types";
++
++export type ProviderCapability = "connection" | "fees" | "booking" | "tracking";
++
++const CERTIFICATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
++
++const CONTRACT_VERSION: Record<DeliveryProvider, string> = {
++  yalidine: "yalidine-public-v1",
++  maystro: "maystro-public-v1",
++  zrexpress: "zrexpress-procolis-public-v1",
++  noest: "noest-provider-issued-ecotrack-v1",
++};
++
++const ENDPOINT_FIELDS = new Set([
++  "apiBaseUrl",
++  "createOrderUrl",
++  "validateOrderUrl",
++  "trackingsUrl",
++  "feesUrl",
++]);
++
++function stableFingerprint(entries: Array<[string, string]>): string {
++  return createHash("sha256")
++    .update(
++      entries
++        .sort(([left], [right]) => left.localeCompare(right))
++        .map(([key, value]) => `${key}\u001f${value}`)
++        .join("\u001e"),
++    )
++    .digest("hex");
++}
++
++function credentialEntries(
++  credentials: DeliveryCredentials,
++): Array<[string, string]> {
++  return Object.entries(credentials)
++    .filter((entry): entry is [string, string] => Boolean(entry[1]?.trim()))
++    .map(([key, value]) => [key, value.trim()]);
++}
++
++function credentialFingerprint(credentials: DeliveryCredentials): string {
++  return stableFingerprint(credentialEntries(credentials));
++}
++
++function endpointFingerprint(credentials: DeliveryCredentials): string {
++  return stableFingerprint(
++    credentialEntries(credentials).filter(([key]) => ENDPOINT_FIELDS.has(key)),
++  );
++}
++
++function assertProvider(value: string): asserts value is DeliveryProvider {
++  if (!DELIVERY_PROVIDERS.includes(value as DeliveryProvider)) {
++    throw new SahelFlowError(
++      `Unknown delivery provider: ${value}`,
++      "DELIVERY_PROVIDER_UNKNOWN",
++      400,
++    );
++  }
++}
++
++function capabilityId(
++  provider: DeliveryProvider,
++  capability: ProviderCapability,
++): string {
++  return `${provider}:${capability}`;
++}
++
++export async function invalidateProviderCertifications(
++  context: ServiceContext,
++  provider: string,
++  reasonCode: string,
++): Promise<void> {
++  assertProvider(provider);
++  await context.prisma.providerCapabilityCertification.updateMany({
++    where: { provider },
++    data: {
++      status: "uncertified",
++      reasonCode,
++      disabledAt: new Date(),
++      certifiedAt: null,
++      expiresAt: null,
++    },
++  });
++}
++
++export async function testAndCertifyProvider(
++  context: ServiceContext,
++  provider: string,
++  actor: string,
++  reasonCode: string,
++): Promise<{ ok: boolean; message: string; expiresAt?: string }> {
++  assertProvider(provider);
++  const adapter = getDeliveryAdapter(provider);
++  const credentials = await loadDeliveryCredentials(context, provider);
++  const fingerprint = credentialFingerprint(credentials);
++  const endpoints = endpointFingerprint(credentials);
++  const now = new Date();
++  const contractVersion = CONTRACT_VERSION[provider];
++
++  if (!fingerprint) {
++    await invalidateProviderCertifications(
++      context,
++      provider,
++      "credentials_missing",
++    );
++    return {
++      ok: false,
++      message: `${adapter.name} credentials are not configured.`,
++    };
++  }
++  if (!adapter.testConnection) {
++    await invalidateProviderCertifications(
++      context,
++      provider,
++      "certification_probe_missing",
++    );
++    return {
++      ok: false,
++      message: `${adapter.name} has no non-mutating certification probe. Provider effects remain disabled.`,
++    };
++  }
++
++  const result = await adapter.testConnection(credentials);
++  if (!result.ok) {
++    await context.prisma.providerCapabilityCertification.updateMany({
++      where: { provider },
++      data: {
++        status: "failed",
++        certifiedBy: actor,
++        reasonCode,
++        lastCheckedAt: now,
++        certifiedAt: null,
++        expiresAt: null,
++        disabledAt: now,
++        lastErrorCode: "PROVIDER_CONNECTION_TEST_FAILED",
++      },
++    });
++    await context.prisma.providerCapabilityCertification.upsert({
++      where: { provider_capability: { provider, capability: "connection" } },
++      create: {
++        id: capabilityId(provider, "connection"),
++        provider,
++        capability: "connection",
++        contractVersion,
++        credentialFingerprint: fingerprint,
++        endpointFingerprint: endpoints,
++        status: "failed",
++        certifiedBy: actor,
++        reasonCode,
++        evidenceJson: JSON.stringify({ message: result.message }),
++        lastCheckedAt: now,
++        lastErrorCode: "PROVIDER_CONNECTION_TEST_FAILED",
++      },
++      update: {
++        contractVersion,
++        credentialFingerprint: fingerprint,
++        endpointFingerprint: endpoints,
++        status: "failed",
++        certifiedBy: actor,
++        reasonCode,
++        evidenceJson: JSON.stringify({ message: result.message }),
++        lastCheckedAt: now,
++        certifiedAt: null,
++        expiresAt: null,
++        disabledAt: now,
++        lastErrorCode: "PROVIDER_CONNECTION_TEST_FAILED",
++      },
++    });
++    return result;
++  }
++
++  const expiresAt = new Date(now.getTime() + CERTIFICATION_TTL_MS);
++  await context.prisma.$transaction(
++    (["connection", "fees", "booking", "tracking"] as const).map(
++      (capability) =>
++        context.prisma.providerCapabilityCertification.upsert({
++          where: { provider_capability: { provider, capability } },
++          create: {
++            id: capabilityId(provider, capability),
++            provider,
++            capability,
++            contractVersion,
++            credentialFingerprint: fingerprint,
++            endpointFingerprint: endpoints,
++            status: "certified",
++            certifiedBy: actor,
++            reasonCode,
++            evidenceJson: JSON.stringify({
++              probe: "non-mutating-provider-connection",
++              message: result.message,
++            }),
++            lastCheckedAt: now,
++            certifiedAt: now,
++            expiresAt,
++          },
++          update: {
++            contractVersion,
++            credentialFingerprint: fingerprint,
++            endpointFingerprint: endpoints,
++            status: "certified",
++            certifiedBy: actor,
++            reasonCode,
++            evidenceJson: JSON.stringify({
++              probe: "non-mutating-provider-connection",
++              message: result.message,
++            }),
++            lastCheckedAt: now,
++            certifiedAt: now,
++            expiresAt,
++            disabledAt: null,
++            lastErrorCode: null,
++          },
++        }),
++    ),
++  );
++  return { ...result, expiresAt: expiresAt.toISOString() };
++}
++
++export async function assertProviderCapability(
++  context: ServiceContext,
++  provider: string,
++  capability: ProviderCapability,
++): Promise<void> {
++  assertProvider(provider);
++  const credentials = await loadDeliveryCredentials(context, provider);
++  const fingerprint = credentialFingerprint(credentials);
++  const endpoints = endpointFingerprint(credentials);
++  const row = await context.prisma.providerCapabilityCertification.findUnique({
++    where: { provider_capability: { provider, capability } },
++  });
++  const now = Date.now();
++  const valid =
++    row?.status === "certified" &&
++    row.contractVersion === CONTRACT_VERSION[provider] &&
++    row.credentialFingerprint === fingerprint &&
++    row.endpointFingerprint === endpoints &&
++    row.expiresAt instanceof Date &&
++    row.expiresAt.getTime() > now;
++
++  if (!valid) {
++    throw new SahelFlowError(
++      `${provider} ${capability} capability is not certified for the current credentials and endpoint contract. Run the provider connection certification in Settings.`,
++      "PROVIDER_CAPABILITY_UNCERTIFIED",
++      409,
++    );
++  }
++}
++
++export interface ProviderCertificationProjection {
++  provider: DeliveryProvider;
++  capabilities: Record<
++    ProviderCapability,
++    {
++      status: string;
++      expiresAt: string | null;
++      lastCheckedAt: string | null;
++      reasonCode: string | null;
++      lastErrorCode: string | null;
++    }
++  >;
++}
++
++export async function providerCertificationStatus(
++  context: ServiceContext,
++): Promise<ProviderCertificationProjection[]> {
++  const rows = await context.prisma.providerCapabilityCertification.findMany({
++    orderBy: [{ provider: "asc" }, { capability: "asc" }],
++  });
++  const capabilities: ProviderCapability[] = [
++    "connection",
++    "fees",
++    "booking",
++    "tracking",
++  ];
++  return DELIVERY_PROVIDERS.map((provider) => {
++    const providerRows = new Map(
++      rows
++        .filter((row) => row.provider === provider)
++        .map((row) => [row.capability, row]),
++    );
++    return {
++      provider,
++      capabilities: Object.fromEntries(
++        capabilities.map((capability) => {
++          const row = providerRows.get(capability);
++          return [
++            capability,
++            {
++              status: row?.status ?? "uncertified",
++              expiresAt: row?.expiresAt?.toISOString() ?? null,
++              lastCheckedAt: row?.lastCheckedAt?.toISOString() ?? null,
++              reasonCode: row?.reasonCode ?? null,
++              lastErrorCode: row?.lastErrorCode ?? null,
++            },
++          ];
++        }),
++      ) as ProviderCertificationProjection["capabilities"],
++    };
++  });
++}
+diff --git a/src/lib/integrations/delivery/retry.ts b/src/lib/integrations/delivery/retry.ts
+index bbb9cd3e292b0323010a335ab9e7c908b47f687d..bca6f1c021ad5c5756b15d57c858b1e5867e0add 100644
+--- a/src/lib/integrations/delivery/retry.ts
++++ b/src/lib/integrations/delivery/retry.ts
+@@ -1,7 +1,7 @@
+ /**
+  * HTTP retry helper for delivery provider API calls.
+  *
+- * Delivery providers (Yalidine, Maystro, ZR Express) occasionally return 502/503
++ * Delivery providers (Yalidine, Maystro, ZR Express, NOEST) occasionally return 502/503
+  * or time out. A single transient failure shouldn't leave an order stuck
+  * unshipped. Retries up to 3 times with exponential backoff + jitter.
+  *
+diff --git a/src/lib/integrations/delivery/types.ts b/src/lib/integrations/delivery/types.ts
+index e7debed09329f34853e7582df7e60e76120ffb81..9219ce5a4136a61ea2b537762076e0f837b47398 100644
+--- a/src/lib/integrations/delivery/types.ts
++++ b/src/lib/integrations/delivery/types.ts
+@@ -8,7 +8,8 @@
+  * Providers (Phase 0 #16, design system Section 6.1):
+  *   - Yalidine (fully implemented)
+  *   - Maystro Delivery (structural stub — same pattern, fill in API details)
+- *   - ZR Express (structural stub — same pattern, fill in API details)
++ *   - ZR Express
++ *   - NOEST Express (provider-issued EcoTrack contract; exact endpoints configured per merchant)
+  */
+ 
+ /** Delivery status across all providers (normalized to our taxonomy). */
+@@ -124,16 +125,9 @@ export interface TestConnectionResult {
+ 
+ /** The adapter interface every delivery provider implements. */
+ export interface DeliveryAdapter {
+-  readonly id: string; // "yalidine" | "maystro" | "zrexpress"
++  readonly id: string; // canonical DeliveryProvider value
+   readonly name: string;
+   readonly logo: string;
+-  /**
+-   * W2-10: marks adapters whose endpoints are unverified guesses
+-   * (e.g., DHD — no public API docs). The UI shows an "Experimental" badge
+-   * and prompts the user to verify endpoints before relying on the adapter.
+-   */
+-  readonly isExperimental?: boolean;
+-
+   /** Estimate the delivery cost for a shipment (wilaya + weight). */
+   estimateCost(
+     params: { wilaya: string; commune?: string; weight: number; codAmount: number },
+@@ -168,7 +162,7 @@ export interface DeliveryAdapter {
+ }
+ 
+ /** Known provider IDs (convention: lowercase, no spaces). */
+-export const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zrexpress", "dhd"] as const;
++export const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zrexpress", "noest"] as const;
+ export type DeliveryProvider = (typeof DELIVERY_PROVIDERS)[number];
+ 
+ /** Secret-store key convention for delivery credentials. */
+@@ -199,8 +193,15 @@ export function deliverySecretKeys(provider: string): string[] {
+       return [deliverySecretKey("maystro", "apiToken")];
+     case "zrexpress":
+       return [deliverySecretKey("zrexpress", "apiId"), deliverySecretKey("zrexpress", "apiKey")];
+-    case "dhd":
+-      return [deliverySecretKey("dhd", "apiToken")];
++    case "noest":
++      return [
++        deliverySecretKey("noest", "apiToken"),
++        deliverySecretKey("noest", "userGuid"),
++        deliverySecretKey("noest", "createOrderUrl"),
++        deliverySecretKey("noest", "validateOrderUrl"),
++        deliverySecretKey("noest", "trackingsUrl"),
++        deliverySecretKey("noest", "feesUrl"),
++      ];
