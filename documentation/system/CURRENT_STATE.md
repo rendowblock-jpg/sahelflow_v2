@@ -1,8 +1,7 @@
 # SahelFlow — Current state
 
 > **Authority:** merged protected source and named evidence only
-> **Live protected main:** resolve directly from GitHub before every session
-> **Governance reset base:** `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`
+> **Live protected main:** `991c61ac882497fdda01af3ac04f06978146bbda`
 > **Latest application-changing protected merge:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
@@ -11,12 +10,13 @@
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
 > **Active product phase:** Phase 2 — identity, authorization, licensing and multi-shop
+> **Active proposed package:** PR #200 — native multi-shop authority
 > **Last assessed:** 2026-08-02
 
-This document states what merged source and named evidence prove now. It does not
-convert target architecture, research, adapter presence, mocks, test counts or
-planned scope into readiness. The exact execution frontier belongs in
-[`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md).
+This document states what merged source and named evidence prove now. Proposed PR
+#200 source is identified separately and does not become merged, installed or
+phase-closed truth merely because it exists. The exact execution frontier belongs
+in [`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md).
 
 ## Executive truth
 
@@ -29,9 +29,9 @@ and strong migration/release infrastructure.
 
 It is not yet a commercially complete or class-AAA SahelFlow 1.0 product.
 
-Its strongest architecture is serious and protected source:
+Its strongest protected architecture includes:
 
-- trusted person/member and exact-shop authority;
+- trusted person/member/device/session and exact-shop authority;
 - optimistic aggregate versions;
 - encrypted request-bound idempotent command replay;
 - atomic audit, domain events and outbox intents;
@@ -39,7 +39,9 @@ Its strongest architecture is serious and protected source:
 - financial movements and compensation facts;
 - projection invalidation;
 - durable Teams/permissions authority;
-- signed installation-level licensing authority.
+- signed installation-level licensing authority;
+- native process containment, exact startup authority and all-shop migration
+  recovery.
 
 The central completion task is production adoption and removal of competing legacy
 authority, followed by complete recovery, provider, UI, accessibility,
@@ -99,13 +101,37 @@ This is source closure. It does not prove a current Windows release artifact,
 signed MSI, installed expiry/activation/recovery or preserved-data lifecycle.
 Those remain at Phase 2 exit.
 
-### Documentation frontier — PR #198
+### Single-agent AAA governance — PR #199
 
-PR #198 merged the previous documentation frontier at
-`d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`. CI `30745607118` passed.
-The current operating contract reconciles the contradictions that remained after
-that merge through single-agent execution, audit-first planning, batch remediation
-and tiered checkpoints.
+PR #199 merged at `991c61ac882497fdda01af3ac04f06978146bbda`.
+Exact head `58f12a24bfce1654e8894ede62880c2458a6808f` passed CI
+`30750832310`, including authority/version, documentation audit, TypeScript,
+ESLint, complete Vitest, Prisma generation/deploy/status, coverage, production
+dependency audit, repository inventory and the Required PR gate.
+
+The merge established one active agent, complete reconnaissance, one consolidated
+Problem Register, coherent batch remediation, Level 1/2/3 validation and
+whole-product AAA frontend governance. It changed no product runtime behavior,
+schema, version, release, AppData, registry, database or installed evidence.
+
+## Active proposed source — PR #200
+
+The Founder selected the ChatGPT Web Agentic Coding Agent as the sole active
+implementation agent. PR #200 is open as a draft from exact protected base
+`991c61ac882497fdda01af3ac04f06978146bbda`.
+
+Current proposed changes:
+
+- reconcile the execution entry points to live PR #200 truth;
+- record complete native multi-shop reconnaissance, primary-source research,
+  consolidated Problem Register, task sequence and evidence boundaries;
+- add a pure Rust native lifecycle contract with typed operations, exact authority
+  inputs, signed slot limits, destructive reauthentication requirements, explicit
+  stages, compensation states and focused tests.
+
+PR #200 currently does **not** mutate the shop registry, any database, process
+runtime, AppData, key, version or release. It is proposed source only. Task 1 must
+pass its source/Rust gate before registry mutation begins.
 
 ## Release and installed truth
 
@@ -150,13 +176,15 @@ cannot prove current Phase 2 behavior.
 
 ```text
 Tauri Windows host
-├── installation and shop registry/migration coordination
+├── protected installation root and commercial clock/device authority
+├── versioned shop registry and all-shop migration/recovery coordinator
+├── runtime-generation, containment, authenticated readiness and shutdown
 ├── packaged Node/Next.js standalone runtime
 │   ├── App Router UI and API routes
 │   ├── Prisma services and one SQLite database per shop
 │   ├── durable identity, permissions and signed licensing source
 │   ├── canonical business command foundation
-│   ├── legacy business services still serving non-adopted paths
+│   ├── temporary/legacy shop lifecycle and business services
 │   ├── local PWA shell
 │   └── local storefront prototype
 └── contained Bun/Baileys WhatsApp sidecar
@@ -165,6 +193,11 @@ Tauri Windows host
 The host owns migration before startup, contained runtime resources,
 authenticated readiness, per-launch loopback credentials, process supervision,
 crash-loop handling and cleanup.
+
+The Node process is intentionally bound to one immutable exact `ShopContext`.
+Changing shop authority requires native runtime transition; it cannot be performed
+safely by changing Zustand state or selecting another Prisma client underneath
+in-flight work.
 
 ## Exact-head inventory
 
@@ -209,8 +242,20 @@ This is a strong foundation for operational truth.
 Merged source provides installation-owned Workspace, Installation, Person,
 WorkspaceMember, Device and session bindings, exact shop grants, role-bounded
 custom policies, invitations, revocation, policy freshness, reauthentication and
-Teams/collaboration authority. Mutable browser state is not intended identity
-authority.
+Teams/collaboration authority. Mutable browser state is not identity authority.
+
+### Native registry, migrations and process authority
+
+Merged Rust source already provides:
+
+- workspace, installation, shop-incarnation and registry-revision validation;
+- exact contained database-file identity and anti-aliasing checks;
+- migration-set hashing and compatibility reports;
+- all-shop preflight, verified snapshots, interruption recovery and compensation;
+- runtime generations, process containment, safe mode, readiness and cleanup;
+- exact authority transport to the Node process.
+
+Native multi-shop should compose these primitives, not replace them.
 
 ### Security and crypto
 
@@ -244,9 +289,17 @@ owns it.
 ### 1. Native multi-shop is incomplete
 
 Licensing and durable membership exist, but production create, rename, switch,
-archive, recover and delete are not yet fully owned and proven by the native
-supervisor with exact registry, license-slot, membership, process-relaunch and
-data-preservation authority.
+archive, recover and delete are not yet owned and proven by the native supervisor
+with exact registry, license-slot, membership, process-relaunch and preservation
+authority.
+
+Temporary TypeScript functions explicitly block production create, switch, delete
+and restore with `*_SUPERVISOR_REQUIRED`. This is correct containment, not feature
+completion.
+
+The current browser flow also contains a direct API-plus-generic-relaunch pattern,
+and its delete caller omits the API's required typed confirmation. PR #200 must
+replace the temporary flow rather than patching it into authority.
 
 This is the final Phase 2 implementation outcome.
 
@@ -322,29 +375,16 @@ launch/reopen results are far over target. Startup stages, process shutdown,
 query/render performance, memory, low-resource scheduling and eight-hour stability
 remain blocking Phase 7 evidence and continuous package requirements.
 
-### 10. CI and governance reconciliation
-
-The active operating contract now corrects the previously observed drift:
-
-- stale PR #195 and `522ab...` execution-frontier language;
-- contradictions about identity, Teams and signed licensing;
-- simultaneous-WIP wording that conflicted with the single-agent rule;
-- documentation audit markers that protected stale text;
-- incomplete Vitest diagnostics for import, collection, setup and file-hook
-  failures.
-
-Product runtime behavior is unchanged by this governance package.
-
 ## Capability status
 
 | Area | Current evidence | Principal closure |
 |---|---|---|
 | Signed Windows runtime/update | Strong historical Internal proof | current Phase 2 artifact/install, T470 lifecycle/performance, wider compatibility |
-| Local database/migrations | Strong partial | full restore/replacement and prior-version/interruption matrix |
+| Local database/migrations | Strong partial | native lifecycle plus full restore/replacement and prior-version/interruption matrix |
 | Workspace/person/member/session | Strong protected source | Phase 2 installed and recovery evidence |
 | Teams and permissions | Strong protected source | installed and representative journey evidence |
 | Licensing/entitlements | Strong protected source | Phase 2 Windows/install/expiry/activation/transfer/recovery evidence |
-| Native multi-shop | Partial/targeted source | complete native lifecycle and Phase 2 checkpoint |
+| Native multi-shop | Partial merged primitives; PR #200 proposed contract | complete native lifecycle and Phase 2 checkpoint |
 | Golden COD | Strong canonical manual/source boundary | remove remaining legacy intake/exceptions/provider bypasses and installed full journey |
 | Inventory/finance | Strong canonical facts in adopted paths | remaining callers, reconciliation, returns/compensation and installed proof |
 | Providers | Strong patterns, inconsistent adoption | one protocol everywhere and live certification |
@@ -359,14 +399,16 @@ Product runtime behavior is unchanged by this governance package.
 
 ## Immediate frontier
 
-1. Close PR #186 as obsolete after the governance package is protected.
-2. Close PR #196 as superseded after the replacement file-level Vitest diagnostics
-   are protected; do not merge its stale branch wholesale.
-3. Confirm the Desktop Agent as the sole active implementation agent.
-4. Create native multi-shop from the then-current protected `main`.
-5. Complete the Phase 2 audit and consolidated Problem Register before edits.
-6. Implement native multi-shop with Level 1 gates.
-7. Run frozen review and batch remediation.
-8. Run Phase 2 Level 2 plus risk-triggered Level 3 Windows/Rust/signed-MSI/
-   install/reopen/preserved-data checkpoint.
-9. Close Phase 2 only with zero known P0/P1 and exact evidence.
+1. Keep the Web Agent as the sole active implementation agent on PR #200.
+2. Complete Task 1 authority reconciliation and pure Rust lifecycle contract.
+3. Pass the Task 1 authority/Rust/source gate before registry mutation.
+4. Implement the native switch transaction against the existing runtime generation,
+   registry, identity, licensing and readiness authorities.
+5. Implement create/rename, then archive/recover, then destructive delete and
+   legacy-path removal as coherent tasks with Level 1 gates.
+6. Freeze the exact head for one separated adversarial review and one consolidated
+   repair batch.
+7. Run the complete Phase 2 Level 2 checkpoint.
+8. Run the risk-triggered Level 3 Windows/Rust/signed-MSI/install/upgrade/reopen/
+   preserved-data/licensing/shop-lifecycle checkpoint.
+9. Close Phase 2 only with objective evidence and zero known P0/P1.

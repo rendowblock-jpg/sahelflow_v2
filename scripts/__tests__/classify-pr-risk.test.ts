@@ -28,10 +28,15 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("defers Windows artifact proof for an ordinary native source package", () => {
-    expect(classifyPrRisk(["src-tauri/src/lib.rs"])).toMatchObject({
+  it("compiles and tests ordinary native source without forcing Windows artifacts", () => {
+    expect(
+      classifyPrRisk([
+        "src-tauri/src/shop_lifecycle.rs",
+        "src-tauri/tests/shop_lifecycle_contract.rs",
+      ]),
+    ).toMatchObject({
       runQuality: true,
-      runTauri: false,
+      runTauri: true,
       runWindowsStandalone: false,
       runWindowsRust: false,
       runInstalledMsi: false,
@@ -79,6 +84,37 @@ describe("classifyPrRisk", () => {
       runWindowsStandalone: true,
       runWindowsRust: true,
       runInstalledMsi: true,
+    });
+  });
+
+  it("forces complete Windows and installed proof for the Phase 2 checkpoint", () => {
+    expect(
+      classifyPrRisk([
+        ".github/phase-checkpoints/phase2-native-multishop.json",
+      ]),
+    ).toMatchObject({
+      docsOnly: false,
+      runQuality: true,
+      runTauri: true,
+      runWindowsStandalone: true,
+      runWindowsRust: true,
+      runInstalledMsi: true,
+    });
+  });
+
+  it("waives only installed UI proof for the documented PR 200 exception", () => {
+    expect(
+      classifyPrRisk([
+        ".github/phase-checkpoints/phase2-native-multishop.json",
+        ".github/phase-exceptions/pr-200-installed-ui-waiver.md",
+      ]),
+    ).toMatchObject({
+      docsOnly: false,
+      runQuality: true,
+      runTauri: true,
+      runWindowsStandalone: true,
+      runWindowsRust: true,
+      runInstalledMsi: false,
     });
   });
 

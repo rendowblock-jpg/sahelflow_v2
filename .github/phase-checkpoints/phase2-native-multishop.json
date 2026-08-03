@@ -1,0 +1,24 @@
+{
+  "formatVersion": 1,
+  "phase": "phase-2",
+  "checkpoint": "native-multi-shop-authority",
+  "pullRequest": 200,
+  "baseSha": "991c61ac882497fdda01af3ac04f06978146bbda",
+  "codeBearingHeadSha": "edf7250c8d985f0343f0e75608eb895c35ef38a9",
+  "requestedAt": "2026-08-03T03:18:00Z",
+  "requiredEvidence": [
+    "source-quality",
+    "native-release-compile",
+    "windows-standalone-runtime",
+    "windows-rust-release-parity",
+    "windows-native-switch-contract",
+    "windows-native-mutation-interruption-contract",
+    "installed-msi-lifecycle"
+  ],
+  "nonClaims": [
+    "no-version-bump",
+    "no-release-publication",
+    "no-founder-acceptance",
+    "no-stable-claim"
+  ]
+}

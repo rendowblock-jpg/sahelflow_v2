@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteShop, getShop, getActiveShopId } from "@/lib/shops";
-import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { z } from "zod";
+
 import {
-  requireTrustedAction,
-  trustedActorAuditIdentity,
-} from "@/lib/identity/authorization";
-import { logAudit } from "@/lib/audit";
-import { db, shopContext } from "@/lib/db";
+  getCurrentSessionAuthority,
+  requireRecentReauthentication,
+} from "@/lib/auth/server";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import { getActiveShopId, getRegistry, getShop } from "@/lib/shops";
+import {
+  enqueueAuthorizedNativeLifecycle,
+  registryLifecycleTarget,
+} from "@/lib/shops/native-lifecycle-authority";
+import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/shops/[id] — get a single shop. */
+const renameSchema = z
+  .object({ name: z.string().trim().min(1).max(50) })
+  .strict();
+const deleteSchema = z
+  .object({ confirmationShopId: z.string().min(1).max(64) })
+  .strict();
+
+/** GET /api/shops/[id] — get the exact current-shop projection. */
 export const GET = withErrorHandler(
   async (
     _req: NextRequest,
@@ -27,46 +40,72 @@ export const GET = withErrorHandler(
   "GET /api/shops/[id]",
 );
 
-/** DELETE /api/shops/[id] — remove a shop and quarantine its SQLite file.
- *
- * Session 30 (AUDIT-2 A8): requires { confirm: "DELETE" } body. Also
- * refuses to delete the active shop (the user must switch first).
- */
+/** PATCH /api/shops/[id] — enqueue stable-identity native rename. */
+export const PATCH = withErrorHandler(
+  async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+    await requireTrustedAction("shops.create");
+    const { id } = await params;
+    const input = renameSchema.parse(await req.json());
+    const registry = getRegistry();
+    const target = registryLifecycleTarget(id, registry.shops);
+    const operation = await enqueueAuthorizedNativeLifecycle({
+      action: "shops.create",
+      operation: "rename",
+      payload: { operation: "rename", name: input.name },
+      target,
+    });
+    return NextResponse.json(
+      { status: "pending", operationId: operation.operationId, targetShopId: id },
+      { status: 202 },
+    );
+  },
+  "PATCH /api/shops/[id]",
+);
+
+/** DELETE /api/shops/[id] — enqueue owner-reauthenticated native deletion. */
 export const DELETE = withErrorHandler(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+    await requireTrustedAction("shops.delete");
     const { id } = await params;
-    const actorContext = await requireTrustedAction("shops.delete", { shopId: id });
-    const shop = getShop(id);
-    if (!shop) {
-      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
-    }
-    // Require explicit confirm body
-    const body = await req.json().catch(() => ({}));
-    if (body.confirm !== "DELETE") {
-      return NextResponse.json(
-        { error: "Confirm required: send { confirm: 'DELETE' } to acknowledge this destructive operation" },
-        { status: 400 },
+    const input = deleteSchema.parse(await req.json());
+    if (input.confirmationShopId !== id) {
+      throw new SahelFlowError(
+        "Deletion confirmation must exactly match the target shop",
+        "SHOP_DELETE_CONFIRMATION_MISMATCH",
+        400,
       );
     }
-    // Refuse to delete the active shop
     if (getActiveShopId() === id) {
-      return NextResponse.json(
-        { error: "Cannot delete the active shop — switch to another shop first" },
-        { status: 400 },
+      throw new SahelFlowError(
+        "Switch to another shop before destructive deletion",
+        "SHOP_DELETE_ACTIVE_FORBIDDEN",
+        409,
       );
     }
-    deleteShop(id);
-    // The database is quarantined for explicit retention cleanup rather than
-    // permanently unlinked inside this request.
-    // `shop` was fetched above (used for the 404 check + active-shop guard).
-    await logAudit({ prisma: db, shop: shopContext }, {
-      action: "shop.deleted",
-      entity: "shop",
-      entityId: id,
-      actor: trustedActorAuditIdentity(actorContext.actor),
-      before: shop as unknown as Record<string, unknown> | null,
+
+    await requireRecentReauthentication();
+    const session = await getCurrentSessionAuthority();
+    if (session.status !== "authenticated") {
+      throw new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
+    }
+
+    const registry = getRegistry();
+    const target = registryLifecycleTarget(id, registry.shops);
+    const operation = await enqueueAuthorizedNativeLifecycle({
+      action: "shops.delete",
+      operation: "delete",
+      payload: {
+        operation: "delete",
+        confirmationShopId: id,
+        reauthenticatedAtUnixMs: session.issuedAt.getTime(),
+      },
+      target,
+      recentOwnerReauthentication: true,
     });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(
+      { status: "pending", operationId: operation.operationId, targetShopId: id },
+      { status: 202 },
+    );
   },
   "DELETE /api/shops/[id]",
 );

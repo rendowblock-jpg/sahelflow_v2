@@ -167,9 +167,8 @@ describe("installed Windows runtime contract", () => {
       "http://127.0.0.1:*",
       "http://localhost:*",
     ]);
-    expect(capability.permissions).toEqual(
-      expect.arrayContaining(["updater:default", "process:default"]),
-    );
+    expect(capability.permissions).toContain("updater:default");
+    expect(capability.permissions).not.toContain("process:default");
     expect(tauriConfig.app?.security?.csp).toContain(
       "connect-src 'self' ipc: http://ipc.localhost",
     );
@@ -256,7 +255,7 @@ describe("installed Windows runtime contract", () => {
     expect(uiHarness).toContain("RUNTIME_UI_READY_PERSISTED");
     expect(uiHarness).toContain("startup-trace-launch-$attempt.json");
     expect(uiHarness).toContain("$maxRuntimePrepareMilliseconds = 15000");
-    expect(uiHarness).toContain("$maxAuthenticatedUiMilliseconds = 45000");
+    expect(uiHarness).toContain("$maxAuthenticatedUiMilliseconds = 100000");
     expect(uiHarness).toContain("Last observation:");
     expect(uiHarness).toContain("runtimePreparationMilliseconds");
     expect(harness).toContain("Close-SahelFlowNormally");

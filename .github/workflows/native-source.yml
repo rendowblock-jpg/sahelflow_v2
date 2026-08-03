@@ -1,0 +1,121 @@
+name: Native source contract
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src-tauri/**"
+      - ".github/workflows/native-source.yml"
+
+concurrency:
+  group: native-source-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  native-source:
+    name: Native source contract (Rust 1.77 + stable Tauri)
+    if: ${{ github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Setup minimum supported Rust
+        uses: dtolnay/rust-toolchain@1.77.2
+        with:
+          components: clippy
+
+      - name: Cache lifecycle MSRV crate
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/contracts/shop-lifecycle/target
+          key: ${{ runner.os }}-cargo-shop-lifecycle-rust177-${{ hashFiles('src-tauri/contracts/shop-lifecycle/Cargo.toml', 'src-tauri/src/shop_lifecycle.rs', 'src-tauri/src/shop_lifecycle_command.rs', 'src-tauri/tests/shop_lifecycle_*.rs') }}
+          restore-keys: ${{ runner.os }}-cargo-shop-lifecycle-rust177-
+
+      - name: Run lifecycle contracts on Rust 1.77
+        run: |
+          set -o pipefail
+          cargo test --manifest-path src-tauri/contracts/shop-lifecycle/Cargo.toml --all-targets -- --nocapture 2>&1 |
+            tee .sf-native-msrv-test.log
+
+      - name: Lint lifecycle contracts on Rust 1.77
+        run: cargo clippy --manifest-path src-tauri/contracts/shop-lifecycle/Cargo.toml --all-targets -- -D warnings
+
+      - name: Setup stable Rust for the real Tauri graph
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Install Linux Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+
+      - name: Cache Tauri Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-native-source-stable-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-native-source-stable-
+
+      - name: Create Linux sidecar stub
+        run: |
+          mkdir -p src-tauri/binaries
+          touch src-tauri/binaries/sahelflow-whatsapp-x86_64-unknown-linux-gnu
+          chmod +x src-tauri/binaries/sahelflow-whatsapp-x86_64-unknown-linux-gnu
+
+      - name: Verify canonical Rust formatting
+        run: |
+          set -o pipefail
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check 2>&1 |
+            tee .sf-native-fmt.log
+
+      - name: Run native lifecycle contracts in the Tauri package
+        run: |
+          set -o pipefail
+          cargo test --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_contract --locked -- --nocapture 2>&1 |
+            tee .sf-native-source-test.log
+          cargo test --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_protocol_diagnostics --locked -- --nocapture 2>&1 |
+            tee -a .sf-native-source-test.log
+          cargo test --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_switch --locked -- --nocapture 2>&1 |
+            tee -a .sf-native-source-test.log
+          cargo test --manifest-path src-tauri/Cargo.toml --test shop_lifecycle_mutation --locked -- --nocapture 2>&1 |
+            tee -a .sf-native-source-test.log
+
+      # The minimum-Rust crate above owns lifecycle Clippy with `-D warnings`.
+      # These stable-toolchain checks prove the exact modules inside the real
+      # Tauri package and the complete release dependency graph without turning
+      # this package-specific gate into an unrelated repository-wide Clippy gate.
+      - name: Verify Tauri release compilation
+        env:
+          SF_LICENSE_SERVICE_URL: "https://license.invalid"
+          SF_LICENSE_TRIAL_PUBLIC_KEYS: '{"ci-trial-key-v1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}'
+          SF_LICENSE_PERMANENT_PUBLIC_KEYS: '{"ci-permanent-key-v1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}'
+        run: cargo check --manifest-path src-tauri/Cargo.toml --release --locked
+
+      - name: Upload native diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-source-diagnostics-${{ github.run_id }}
+          path: |
+            .sf-native-msrv-test.log
+            .sf-native-fmt.log
+            .sf-native-source-test.log
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 2

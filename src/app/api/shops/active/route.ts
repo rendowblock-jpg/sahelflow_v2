@@ -1,30 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { setActiveShopId } from "@/lib/shops";
+
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { assertTrustedAction } from "@/lib/identity/authorization";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import { getRegistry } from "@/lib/shops";
+import {
+  enqueueAuthorizedNativeLifecycle,
+  registryLifecycleTarget,
+} from "@/lib/shops/native-lifecycle-authority";
 
 export const dynamic = "force-dynamic";
 
-const setActiveSchema = z.object({
-  shopId: z.string().min(1),
-});
+const setActiveSchema = z
+  .object({
+    shopId: z.string().trim().min(1).max(64),
+  })
+  .strict();
 
-/**
- * PUT /api/shops/active — set the active shop.
- * Body: { shopId: string }
- */
+/** PUT /api/shops/active — authorize and enqueue an exact native switch. */
 export const PUT = withErrorHandler(async (req: NextRequest) => {
-  const actorContext = await requireTrustedActor();
-  const body = await req.json();
-  const input = setActiveSchema.parse(body);
-  assertTrustedAction(actorContext, "shops.switch", { shopId: input.shopId });
-  setActiveShopId(input.shopId);
-  return NextResponse.json({
-    status: "pending",
-    processShopId: process.env.SF_ACTIVE_SHOP_ID ?? null,
-    requestedShopId: input.shopId,
-    relaunchRequired: true,
+  await requireTrustedAction("shops.switch");
+  const input = setActiveSchema.parse(await req.json());
+  const registry = getRegistry();
+  const target = registryLifecycleTarget(input.shopId, registry.shops);
+  const operation = await enqueueAuthorizedNativeLifecycle({
+    action: "shops.switch",
+    operation: "switch",
+    payload: { operation: "switch" },
+    target,
   });
+
+  return NextResponse.json(
+    {
+      status: "pending",
+      operationId: operation.operationId,
+      targetShopId: target.id,
+      targetShopIncarnationId: target.incarnationId,
+    },
+    { status: 202 },
+  );
 }, "PUT /api/shops/active");

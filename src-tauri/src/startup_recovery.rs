@@ -5,11 +5,13 @@ use std::io::{Error as IoError, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tauri::webview::{cookie::SameSite, Cookie, WebviewWindow};
+use tauri::webview::WebviewWindow;
 use tauri::Manager;
 
+#[cfg(not(debug_assertions))]
+mod shop_lifecycle_host;
+
 const RUNTIME_BOOTSTRAP_PATH: &str = "/api/internal/runtime-bootstrap";
-const RUNTIME_COOKIE: &str = "sf_runtime";
 const RUNTIME_ENDPOINT_FILE: &str = "runtime-endpoint.json";
 const RUNTIME_UI_READY_FILE: &str = "runtime-ui-ready.json";
 const RUNTIME_UI_DIAGNOSTIC_FILE: &str = "runtime-ui-diagnostic.json";
@@ -17,7 +19,9 @@ const STARTUP_DIAGNOSTIC_FILE: &str = "startup-diagnostic.json";
 const STARTUP_TRACE_FILE: &str = "startup-trace.json";
 const MAIN_WINDOW_LABEL: &str = "main";
 const MAIN_WINDOW_TITLE: &str = "SahelFlow";
+const BOOTSTRAP_WINDOW_TITLE: &str = "SahelFlow - Starting";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
+const BOOTSTRAP_NAVIGATION_DELAY: Duration = Duration::from_millis(250);
 const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
@@ -79,18 +83,17 @@ struct RuntimeUiDiagnostic {
 }
 
 struct PackagedHandoff {
-    workspace_url: tauri::Url,
-    host: String,
-    token: String,
+    bootstrap_url: tauri::Url,
 }
 
 /// Navigate the configured WebView to a ready application.
 ///
-/// Development URLs are shown immediately. A packaged bootstrap URL is never
-/// loaded into the WebView: the per-launch credential is extracted in Rust,
-/// injected into the native cookie store, and removed from browser navigation.
-/// The hidden window is shown only after a hydrated page reports an authenticated
-/// UI acknowledgment matching the current runtime endpoint instance.
+/// Development URLs are shown immediately. Packaged startup first shows a safe,
+/// one-time loopback bootstrap document. That response sets the host-only HttpOnly
+/// launch cookie, then uses `location.replace("/")` so the credential-bearing URL
+/// is replaced before the workspace renders. The window is considered ready only
+/// after a hydrated page reports an authenticated UI acknowledgment matching the
+/// current runtime endpoint instance.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let requested_url = tauri::Url::parse(app_url)?;
     let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
@@ -99,14 +102,17 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
             "the configured main desktop window was not created",
         )
     })?;
-    window.set_title(MAIN_WINDOW_TITLE)?;
 
     let Some(handoff) = packaged_handoff(&requested_url)? else {
+        window.set_title(MAIN_WINDOW_TITLE)?;
         window.navigate(requested_url)?;
         window.show()?;
         window.set_focus()?;
         return Ok(());
     };
+
+    #[cfg(not(debug_assertions))]
+    shop_lifecycle_host::ensure_started(app)?;
 
     let app_data_dir = app.path().app_data_dir()?;
     clear_file(&app_data_dir.join(RUNTIME_UI_READY_FILE))?;
@@ -114,9 +120,15 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
     record_startup_stage(&app_data_dir, "ui-navigation-started", None);
 
-    window.hide()?;
-    window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;
-    window.navigate(handoff.workspace_url)?;
+    // A hidden WebView2 controller does not create its renderer on the
+    // ephemeral Windows runner. Show the inert local starting document first,
+    // return control to the native event loop, then navigate from a worker.
+    // The distinct title prevents this visible bootstrap surface from being
+    // mistaken for the authenticated workspace.
+    window.set_title(BOOTSTRAP_WINDOW_TITLE)?;
+    window.show()?;
+    window.set_focus()?;
+    schedule_packaged_navigation(app.clone(), window.clone(), handoff.bootstrap_url);
 
     monitor_packaged_ui(app.clone(), window, app_data_dir);
     Ok(())
@@ -231,51 +243,36 @@ fn packaged_handoff(url: &tauri::Url) -> Result<Option<PackagedHandoff>, IoError
         ));
     }
 
-    let mut workspace_url = url.clone();
-    workspace_url.set_path("/");
-    workspace_url.set_query(None);
-    workspace_url.set_fragment(None);
-
     Ok(Some(PackagedHandoff {
-        workspace_url,
-        host: host.to_string(),
-        token,
+        bootstrap_url: url.clone(),
     }))
 }
 
-fn runtime_cookie(host: &str, token: &str) -> Result<Cookie<'static>, IoError> {
-    if host != "127.0.0.1" && host != "localhost" {
-        return Err(IoError::new(
-            ErrorKind::PermissionDenied,
-            "runtime cookie host is not loopback",
-        ));
-    }
-    if token.len() != 64 || !token.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return Err(IoError::new(
-            ErrorKind::PermissionDenied,
-            "runtime cookie credential is malformed",
-        ));
-    }
-
-    // The initial workspace load is a top-level navigation from Tauri's
-    // configured data: document. Lax sends the host-scoped cookie on that GET
-    // while still withholding it from cross-site state-changing requests.
-    Ok(
-        Cookie::build((RUNTIME_COOKIE.to_string(), token.to_string()))
-            .domain(host.to_string())
-            .path("/")
-            .http_only(true)
-            .same_site(SameSite::Lax)
-            .secure(false)
-            .build(),
-    )
+fn schedule_packaged_navigation(
+    app: tauri::AppHandle,
+    window: WebviewWindow,
+    bootstrap_url: tauri::Url,
+) {
+    thread::spawn(move || {
+        thread::sleep(BOOTSTRAP_NAVIGATION_DELAY);
+        if let Err(error) = window.navigate(bootstrap_url) {
+            let detail = format!(
+                "the startup window could not navigate to the authenticated bootstrap: {error}"
+            );
+            eprintln!("[sahelflow] FATAL: {detail}");
+            let _ = show_blocked(&app, "SF-RUNTIME-UI-NAVIGATION-BLOCKED", &detail);
+        }
+    });
 }
 
 fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_dir: PathBuf) {
     thread::spawn(move || {
         if wait_for_matching_ui_ready(&app_data_dir, PACKAGED_UI_READY_TIMEOUT) {
             record_startup_stage(&app_data_dir, "ui-ready", None);
-            if let Err(error) = window.show().and_then(|_| window.set_focus()) {
+            if let Err(error) = window
+                .set_title(MAIN_WINDOW_TITLE)
+                .and_then(|_| window.show().and_then(|_| window.set_focus()))
+            {
                 let detail = format!("the authenticated workspace was ready but the desktop window could not be shown: {error}");
                 eprintln!("[sahelflow] FATAL: {detail}");
                 let _ = show_blocked(&app, "SF-WINDOW-SHOW-BLOCKED", &detail);
@@ -580,7 +577,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn packaged_handoff_removes_the_credential_from_browser_navigation() {
+    fn packaged_handoff_accepts_only_a_valid_loopback_bootstrap() {
         let token = "a".repeat(64);
         let url = tauri::Url::parse(&format!(
             "http://127.0.0.1:43123{RUNTIME_BOOTSTRAP_PATH}?token={token}"
@@ -588,24 +585,7 @@ mod tests {
         .unwrap();
 
         let handoff = packaged_handoff(&url).unwrap().unwrap();
-        assert_eq!(handoff.workspace_url.as_str(), "http://127.0.0.1:43123/");
-        assert_eq!(handoff.host, "127.0.0.1");
-        assert_eq!(handoff.token, token);
-        assert!(!handoff.workspace_url.as_str().contains("token="));
-    }
-
-    #[test]
-    fn runtime_cookie_is_loopback_scoped_http_only_and_lax() {
-        let token = "b".repeat(64);
-        let cookie = runtime_cookie("127.0.0.1", &token).unwrap();
-
-        assert_eq!(cookie.name(), RUNTIME_COOKIE);
-        assert_eq!(cookie.value(), token);
-        assert_eq!(cookie.domain(), Some("127.0.0.1"));
-        assert_eq!(cookie.path(), Some("/"));
-        assert_eq!(cookie.http_only(), Some(true));
-        assert_eq!(cookie.same_site(), Some(SameSite::Lax));
-        assert_eq!(cookie.secure(), Some(false));
+        assert_eq!(handoff.bootstrap_url, url);
     }
 
     #[test]

@@ -34,14 +34,15 @@ export function CreateShopDialog() {
   }
 
   async function handleCreate() {
-    if (!name.trim()) {
+    const requestedName = name.trim();
+    if (!requestedName) {
       toast.error(t("shops.nameRequired"));
       return;
     }
     startTransition(async () => {
       try {
-        const shop = await createShop({ name: name.trim(), icon });
-        toast.success(t("shops.created", { name: shop.name }));
+        await createShop({ name: requestedName, icon });
+        toast.success(t("shops.created", { name: requestedName }));
         setOpen(false);
         reset();
       } catch (err) {

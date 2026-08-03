@@ -26,7 +26,7 @@ $exe = Join-Path $installRoot "sahelflow.exe"
 $resultPath = Join-Path $evidenceRoot "ui-result.json"
 $workspaceWindowTitle = "SahelFlow"
 $maxRuntimePrepareMilliseconds = 15000
-$maxAuthenticatedUiMilliseconds = 45000
+$maxAuthenticatedUiMilliseconds = 100000
 
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 

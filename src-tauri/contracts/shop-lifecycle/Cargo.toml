@@ -1,0 +1,25 @@
+[package]
+name = "sahelflow-shop-lifecycle-contract"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.77"
+publish = false
+
+[lib]
+path = "lib.rs"
+
+[[test]]
+name = "shop_lifecycle_contract"
+path = "../../tests/shop_lifecycle_contract.rs"
+
+[[test]]
+name = "shop_lifecycle_protocol_diagnostics"
+path = "../../tests/shop_lifecycle_protocol_diagnostics.rs"
+
+[[test]]
+name = "shop_lifecycle_frame_diff"
+path = "../../tests/shop_lifecycle_frame_diff.rs"
+
+[dependencies]
+serde = { version = "=1.0.228", features = ["derive"] }
+sha2 = "=0.10.9"

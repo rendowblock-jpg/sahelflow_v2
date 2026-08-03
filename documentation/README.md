@@ -2,7 +2,7 @@
 
 > **Status:** Active documentation entry point
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Governance reset base:** `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`
+> **Live protected main:** `991c61ac882497fdda01af3ac04f06978146bbda`
 > **Latest application-changing protected merge:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
@@ -10,13 +10,15 @@
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 2 — identity, authorization, licensing and multi-shop
 > **Execution mode:** single-agent, audit-first, batch remediation and tiered CI
-> **Next implementation outcome:** native multi-shop after governance closure
+> **Active implementation outcome:** native multi-shop authority
+> **Active agent:** ChatGPT Web Agentic Coding Agent
+> **Active draft:** PR #200 from `agent/native-multi-shop-authority`
 > **Execution epic:** issue #164
 > **Last updated:** 2026-08-02
 
 Live protected `main` must be re-read directly from GitHub before every session.
-The governance base above records the exact source inspected to create this
-package; it is not a permanent substitute for live repository state.
+The commit above is the exact current protected source at this update; it is not a
+permanent substitute for live repository state.
 
 This directory is the durable shared brain for SahelFlow. It defines the finished
 product, required experience, engineering invariants, merged-source truth, final
@@ -44,7 +46,7 @@ and adopted by an active owner.
 7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — single-agent execution,
    audit-first planning, Problem Register, tiered CI, review, release and evidence.
 8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact live
-   execution frontier and exact next outcome.
+   execution frontier, native multi-shop contract and exact next task.
 9. [`research/RESEARCH.md`](research/RESEARCH.md) — research protocol, adopted
    findings and revalidation triggers.
 10. This file — documentation map and authority rules.
@@ -74,6 +76,7 @@ SahelFlow separates these realities:
 | Reality | Authority |
 |---|---|
 | Integrated source | live protected `main` and exact commit |
+| Proposed source | exact branch and PR head |
 | Latest application-changing source | exact protected merge that changed product behavior |
 | Signed distributable | exact-source signed Internal/Beta/Stable artifact |
 | Founder-observed app | exact installed version and recorded machine result |
@@ -94,9 +97,14 @@ A lower reality cannot claim a higher one.
   threads were resolved.
 - PR #198 merged the previous documentation frontier at
   `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`.
+- PR #199 merged the single-agent AAA governance reset at
+  `991c61ac882497fdda01af3ac04f06978146bbda`.
 - No version bump, signed Phase 2 candidate or new installed claim accompanied
   those source merges.
 - Native multi-shop remains the final Phase 2 implementation outcome.
+- PR #200 is open as a draft and begins with authority reconciliation plus a pure
+  Rust lifecycle contract. It is proposed source only and currently makes no
+  registry, database, runtime, AppData or release claim.
 - Complete Windows/Rust/signed-MSI/install/reopen/preserved-data proof remains the
   Phase 2 exit checkpoint.
 
@@ -113,6 +121,11 @@ The Founder selected the following permanent operating pattern:
 - Level 3 Major Full Checkpoint after every two phases by default, or earlier for
   high-risk native/security/data/recovery/provider authority;
 - complete full-app AAA frontend transformation as a Stable requirement.
+
+For the current package, the Founder selected the ChatGPT Web Agentic Coding Agent
+as the sole active implementation agent. The active contract is in Working Memory:
+Tauri owns lifecycle transactions; the browser submits typed intent and renders
+state only.
 
 This executes FD-028 and FD-029 without reducing Required scope.
 
@@ -131,6 +144,23 @@ This executes FD-028 and FD-029 without reducing Required scope.
 
 Experience, Arabic/RTL, accessibility, performance, security, migration, recovery
 and evidence travel continuously across functional phases.
+
+## Active Phase 2 contract
+
+Native multi-shop must compose existing protected primitives rather than create
+competing authority:
+
+- Rust migration coordinator and exact database-file/migration-set validation;
+- runtime-generation supervisor, process containment and authenticated readiness;
+- process-bound immutable `ShopContext` and Prisma write fencing;
+- durable person/member/device/session and exact shop grants;
+- signed entitlement and exact `shopSlots` authority;
+- verified SQLite snapshot, compensation and recovery behavior.
+
+Create, rename, switch, archive, recover and delete use one native journaled state
+machine. No browser registry write, caller-selected database path, mutable Zustand
+authority or generic relaunch-after-HTTP sequence may become canonical lifecycle
+authority.
 
 ## AAA frontend rule
 

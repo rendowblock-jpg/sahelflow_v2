@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const DEVICE_BINDING_PREFIX: &str = "sfdb1_";
@@ -183,7 +183,7 @@ pub(crate) fn start_runtime_observer(
 
 fn process_revocation_requests(
     device_binding: &str,
-    system_directory: &PathBuf,
+    system_directory: &Path,
     command_key: &[u8; 32],
 ) -> Result<(), String> {
     let directory = system_directory.join("license-native-requests");
@@ -371,7 +371,7 @@ fn hmac_sha256(key: &[u8], message: &[u8]) -> [u8; 32] {
     outer.finalize().into()
 }
 
-fn write_json_atomic(path: &PathBuf, value: &impl Serialize) -> Result<(), String> {
+fn write_json_atomic(path: &Path, value: &impl Serialize) -> Result<(), String> {
     fs::create_dir_all(
         path.parent()
             .ok_or_else(|| "native license path has no parent".to_owned())?,

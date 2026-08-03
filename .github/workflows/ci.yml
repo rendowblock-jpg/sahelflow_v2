@@ -355,6 +355,10 @@ jobs:
 
       - name: cargo check --release (src-tauri)
         working-directory: src-tauri
+        env:
+          SF_LICENSE_SERVICE_URL: "https://license.invalid"
+          SF_LICENSE_TRIAL_PUBLIC_KEYS: '{"ci-trial-key-v1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}'
+          SF_LICENSE_PERMANENT_PUBLIC_KEYS: '{"ci-permanent-key-v1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}'
         # NOTE: not using --locked here because branches that add/remove a
         # Rust dep would otherwise fail before the release-path compile check.
         run: |

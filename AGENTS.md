@@ -30,8 +30,8 @@ replace current GitHub authority.
 
 ## Current verified frontier
 
-- Governance reset package: PR #199 from exact base
-  `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`.
+- Protected `main`: `991c61ac882497fdda01af3ac04f06978146bbda`.
+- Governance reset: PR #199 merged at that protected commit.
 - Latest application-changing protected merge:
   `04d4c51831c6e043ab39a614a7e947e6b27d01e6` (PR #197 licensing).
 - Published executable source: `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
@@ -40,14 +40,17 @@ replace current GitHub authority.
 - Founder-accepted baseline: Internal.5.
 - Active product phase: Phase 2 — identity, authorization, licensing and
   multi-shop.
-- Product implementation remains paused while PR #199 is open.
-- Next implementation package after protected governance closure: native
-  multi-shop.
-- Its branch must be created from the then-current protected `main`; a copied or
-  merely planned branch name is not authority.
+- Sole active implementation agent: ChatGPT Web Agentic Coding Agent, selected by
+  the Founder on 2026-08-02.
+- Active branch: `agent/native-multi-shop-authority`, based exactly on protected
+  `main` above.
+- Active draft: PR #200 — `Phase 2: establish native multi-shop authority`.
+- Current coherent task: Task 1, authority reconciliation and pure native
+  lifecycle contract. No registry mutation is authorized until its task gate
+  passes.
 
-Always re-read live protected `main`; the package base above is historical
-reconstruction evidence, not a promise that `main` has not moved.
+Always re-read live GitHub. The exact values above record the current verified
+frontier, not permission to rely on copied state after the repository moves.
 
 ## Authority precedence
 
@@ -127,6 +130,11 @@ applicable layer:
 
 Group findings by root cause. Do not patch one visible symptom while a shared
 competing authority remains.
+
+For native multi-shop, the complete reconnaissance, adopted decision, consolidated
+Problem Register, task sequence and non-goals are frozen in Working Memory. The
+Tauri host is the sole lifecycle transaction authority; the browser submits typed
+intent and renders state only.
 
 ## Batch remediation rule
 
@@ -229,6 +237,25 @@ performance, charting and maintainability benefit.
 - Merge only after selected gates pass and all P0/P1 threads close.
 - Delete merged branches and close superseded PRs promptly.
 
+## Native multi-shop package rules
+
+- Compose the existing Rust migration coordinator, runtime supervisor, exact
+  process `ShopContext`, durable identity authority and signed licensing
+  authority; do not duplicate them.
+- The browser never writes the registry, selects a database file, changes process
+  environment or calls generic relaunch after an HTTP mutation.
+- Every lifecycle operation carries expected registry revision, exact actor and
+  installation authority, signed entitlement/slot authority and migration-set
+  identity.
+- Create, rename, switch, archive, recover and delete use one journaled native
+  state machine with compensation and visible recovery.
+- No success is returned before the new exact runtime reaches authenticated
+  readiness.
+- Destructive delete requires owner authority, recent reauthentication and an
+  exact typed confirmation ceremony.
+- Temporary TypeScript registry mutation and broad process permissions are removed
+  only after native parity and recovery proof.
+
 ## Evidence language
 
 1. static/source;
@@ -267,7 +294,8 @@ unbounded review loop; they receive explicit ownership and dependency position.
 - Do not delete canonical AppData, registry, databases, migrations or keys.
 - Do not require permanent local `node_modules`, `.next`, Rust `target` or
   repeated installer caches when Actions can provide evidence.
-- PR #186 is obsolete/diverged source and must never be merged wholesale.
-- PR #196 contains a useful CI-diagnostics intention but remains stale and has an
-  unresolved file-level Vitest diagnostic defect; repair or supersede it before
-  closure.
+- PR #186 is closed obsolete/diverged source and must never be merged wholesale.
+- PR #196 is closed superseded; its valid complete-diagnostics intent is protected
+  through PR #199.
+- The active package is PR #200 only. Historical branch movement is not permission
+  to begin competing work.

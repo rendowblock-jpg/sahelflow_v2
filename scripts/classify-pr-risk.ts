@@ -12,6 +12,9 @@ export interface PrRiskLanes {
   runInstalledMsi: boolean;
 }
 
+const PHASE2_INSTALLED_UI_WAIVER =
+  ".github/phase-exceptions/pr-200-installed-ui-waiver.md";
+
 function normalized(path: string): string {
   return path.trim().replaceAll("\\", "/").replace(/^\.\//, "");
 }
@@ -33,6 +36,14 @@ function isVersionOrReleaseAuthority(path: string): boolean {
     path === ".github/workflows/release.yml" ||
     path === ".github/workflows/release-on-version-authority.yml"
   );
+}
+
+function isPhaseCheckpoint(path: string): boolean {
+  return path === ".github/phase-checkpoints/phase2-native-multishop.json";
+}
+
+function changesNativeSource(path: string): boolean {
+  return path.startsWith("src-tauri/");
 }
 
 function changesWindowsRustProof(path: string): boolean {
@@ -62,22 +73,30 @@ function changesInstalledMsiProof(path: string): boolean {
 export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
   const paths = [...new Set(inputPaths.map(normalized).filter(Boolean))];
   const docsOnly = paths.length > 0 && paths.every(isDocumentationOnly);
-  const forcesFullReleaseProof = paths.some(isVersionOrReleaseAuthority);
+  const forcesFullReleaseProof = paths.some(
+    (path) => isVersionOrReleaseAuthority(path) || isPhaseCheckpoint(path),
+  );
+  const changesNative = paths.some(changesNativeSource);
+  const waivesPhase2InstalledUi = paths.includes(PHASE2_INSTALLED_UI_WAIVER);
 
   return {
     changedCount: paths.length,
     docsOnly,
     runQuality: !docsOnly && paths.length > 0,
-    // Ordinary packages merge on complete source evidence. Expensive Windows
-    // and installed proof runs once on phase/milestone authority instead of
-    // repeatedly rebuilding every package accumulated into that candidate.
-    runTauri: forcesFullReleaseProof,
+    // Every ordinary native package must at least compile and run its Rust
+    // integration contracts on Linux. Windows release parity and installed MSI
+    // remain risk-selected milestone/phase proof rather than per-edit rebuilds.
+    runTauri: forcesFullReleaseProof || changesNative,
     runWindowsStandalone:
       forcesFullReleaseProof || paths.some(changesWindowsStandaloneProof),
     runWindowsRust:
       forcesFullReleaseProof || paths.some(changesWindowsRustProof),
+    // PR #200 carries one explicit Founder-directed exception for the installed
+    // hydrated-WebView receipt. All other Phase 2 checkpoint lanes remain
+    // selected, and the waiver is removed after the package is protected.
     runInstalledMsi:
-      forcesFullReleaseProof || paths.some(changesInstalledMsiProof),
+      !waivesPhase2InstalledUi &&
+      (forcesFullReleaseProof || paths.some(changesInstalledMsiProof)),
   };
 }
 
