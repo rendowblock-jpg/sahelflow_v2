@@ -1,0 +1,60 @@
+name: Task 5 verified source artifact
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: task5-source-artifact-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-artifact:
+    name: Build verified source-only artifact
+    if: >-
+      ${{ github.event.pull_request.draft == true &&
+          github.event.pull_request.head.ref == 'agent/phase3-durable-effects-audit' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SF_TEST_ROOT: /tmp/sahelflow-task5-artifact
+      SF_DATA_DIR: /tmp/sahelflow-task5-artifact/data
+      DATABASE_URL: file:/tmp/sahelflow-task5-artifact/data/shops/test.db
+      SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+    steps:
+      - name: Checkout artifact control
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: control
+          persist-credentials: false
+
+      - name: Checkout exact clean source base
+        uses: actions/checkout@v4
+        with:
+          ref: 03c616f0885fdad5054e27fe1ca6378704d92683
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Build and verify source artifact
+        working-directory: source
+        run: bash ../control/.github/task5-source-artifact.sh
+
+      - name: Upload verified source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: task5-verified-source
+          path: /tmp/task5-source-artifact
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 2
