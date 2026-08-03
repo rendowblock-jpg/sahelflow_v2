@@ -1,0 +1,73 @@
+name: Phase 2 Windows release authority repair
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase2-windows-release-authority-repair-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  repair:
+    if: >-
+      github.event.pull_request.head.ref == 'agent/native-multi-shop-authority' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact PR head with write authority
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Add non-production release authority to Windows proof lanes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          files = [
+              Path('.github/workflows/windows-rust-release-parity.yml'),
+              Path('.github/workflows/windows-installed-e2e.yml'),
+          ]
+          before = '''      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SF_TEST_FAIL_FAST: "1"
+'''
+          after = '''      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SF_TEST_FAIL_FAST: "1"
+      SF_LICENSE_SERVICE_URL: "https://license.invalid"
+      SF_LICENSE_TRIAL_PUBLIC_KEYS: '{"ci-trial-key-v1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}'
+      SF_LICENSE_PERMANENT_PUBLIC_KEYS: '{"ci-permanent-key-v1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}'
+'''
+
+          for path in files:
+              source = path.read_text(encoding='utf-8')
+              count = source.count(before)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one release-authority env anchor, found {count}')
+              path.write_text(source.replace(before, after, 1), encoding='utf-8')
+          PY
+
+          rm .github/workflows/phase2-windows-release-authority-repair.yml
+          git diff --check
+          git diff -- .github/workflows/windows-rust-release-parity.yml .github/workflows/windows-installed-e2e.yml
+
+      - name: Commit exact repair and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'SahelFlow Phase 2 Agent'
+          git config user.email 'actions@users.noreply.github.com'
+          git add .github/workflows/windows-rust-release-parity.yml \
+                  .github/workflows/windows-installed-e2e.yml \
+                  .github/workflows/phase2-windows-release-authority-repair.yml
+          git commit -m 'ci(phase2): provide Windows release authority'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
