@@ -1,5 +1,6 @@
 import "server-only";
 
+import { SahelFlowError } from "@/types/errors";
 import {
   openBusinessCommandResultWithKey,
   sealBusinessCommandResultWithKey,
@@ -39,6 +40,27 @@ function resultBinding(binding: BusinessPayloadBinding): BusinessCommandResultBi
     idempotencyKey: `${binding.kind}:${binding.recordKey}`,
     requestHash: `${binding.kind}:${binding.recordType}`,
   };
+}
+
+function isAiActionPayload(kind: BusinessPayloadKind): boolean {
+  return kind.startsWith("ai-action-");
+}
+
+function aiActionPayloadError(
+  kind: BusinessPayloadKind,
+  cause: unknown,
+): SahelFlowError {
+  const executionResult = kind === "ai-action-execution-result";
+  return new SahelFlowError(
+    executionResult
+      ? "AI action execution result authentication failed"
+      : "AI action proposal payload authentication failed",
+    executionResult
+      ? "AI_ACTION_EXECUTION_RESULT_TAMPERED"
+      : "AI_ACTION_ARGUMENT_TAMPERED",
+    409,
+    cause,
+  );
 }
 
 export function financialMovementDetailBinding(
@@ -111,9 +133,16 @@ export function openBusinessPayloadWithKey<TPayload>(
   binding: BusinessPayloadBinding,
   envelopeKey: Buffer,
 ): TPayload {
-  return openBusinessCommandResultWithKey<TPayload>(
-    payloadJson,
-    resultBinding(binding),
-    envelopeKey,
-  );
+  try {
+    return openBusinessCommandResultWithKey<TPayload>(
+      payloadJson,
+      resultBinding(binding),
+      envelopeKey,
+    );
+  } catch (error) {
+    if (isAiActionPayload(binding.kind)) {
+      throw aiActionPayloadError(binding.kind, error);
+    }
+    throw error;
+  }
 }
