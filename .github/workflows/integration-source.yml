@@ -127,6 +127,7 @@ jobs:
         run: |
           python3 <<'PY'
           from pathlib import Path
+          import re
 
           raw = Path('.github/workflows/task5-adversarial-repair.yml').read_text()
           start_marker = "          python3 <<'PY'\n"
@@ -138,8 +139,150 @@ jobs:
               line[10:] if line.startswith("          ") else line
               for line in lines
           )
+          script = script.replace(
+              "normalizedDzPhoneSchema",
+              "algerianPhoneSchema",
+          )
+
+          replace_once = '''def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              old_lines = [line.strip() for line in old.strip("\\n").splitlines()]
+              new_lines = [line.strip() for line in new.strip("\\n").splitlines()]
+              source_lines = text.splitlines()
+              matches = []
+              width = len(old_lines)
+              for index in range(0, len(source_lines) - width + 1):
+                  if [line.strip() for line in source_lines[index:index + width]] == old_lines:
+                      matches.append(index)
+              if any(
+                  [line.strip() for line in source_lines[index:index + len(new_lines)]] == new_lines
+                  for index in range(0, len(source_lines) - len(new_lines) + 1)
+              ):
+                  return
+              if len(matches) != 1:
+                  raise SystemExit(
+                      f"{path}: expected one normalized source match, found {len(matches)}"
+                  )
+              index = matches[0]
+              updated = source_lines[:index] + new_lines + source_lines[index + width:]
+              file.write_text("\\n".join(updated) + ("\\n" if text.endswith("\\n") else ""))
+          '''
+          replace_n = '''def replace_n(path: str, old: str, new: str, expected: int) -> None:
+              for _ in range(expected):
+                  replace_once(path, old, new)
+          '''
+          regex_once = '''def regex_once(path: str, pattern: str, replacement: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              pattern = pattern.strip("\\n")
+              pattern = re.sub(r"(?m)^ +", r"[ \\t]*", pattern)
+              pattern = re.sub(r"\\\\n +", r"\\\\n[ \\t]*", pattern)
+              replacement = "\\n".join(
+                  line.strip() for line in replacement.strip("\\n").splitlines()
+              )
+              updated, count = re.subn(
+                  pattern,
+                  lambda _match: replacement,
+                  text,
+                  count=1,
+                  flags=re.S | re.M,
+              )
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one flexible regex match, found {count}")
+              file.write_text(updated)
+          '''
+          write = '''def write(path: str, content: str) -> None:
+              file = Path(path)
+              file.parent.mkdir(parents=True, exist_ok=True)
+              content = "\\n".join(
+                  line.strip() for line in content.strip("\\n").splitlines()
+              )
+              file.write_text(content + "\\n")
+          '''
+
+          transforms = [
+              (
+                  r"def replace_once\(.*?(?=\ndef replace_n\()",
+                  replace_once,
+                  "replace_once",
+              ),
+              (
+                  r"def replace_n\(.*?(?=\ndef regex_once\()",
+                  replace_n,
+                  "replace_n",
+              ),
+              (
+                  r"def regex_once\(.*?(?=\ndef write\()",
+                  regex_once,
+                  "regex_once",
+              ),
+              (
+                  r"def write\(.*?(?=\n# Preserve exact custom team permission)",
+                  write,
+                  "write",
+              ),
+          ]
+          for pattern, replacement, label in transforms:
+              script, count = re.subn(
+                  pattern,
+                  replacement,
+                  script,
+                  count=1,
+                  flags=re.S,
+              )
+              if count != 1:
+                  raise SystemExit(f"repair helper {label}: expected one match, found {count}")
+
+          contracts = Path('src/lib/ai/actions/contracts.ts')
+          contract_text = contracts.read_text()
+          exact_contract_replacements = [
+              (
+                  '    commune: z.string().trim().max(120),\n'
+                  '    address: z.string().trim().max(500),\n'
+                  '    phone: algerianPhoneSchema,',
+                  '    commune: z.string().trim().min(1).max(120),\n'
+                  '    address: z.string().trim().min(1).max(500),\n'
+                  '    phone: algerianPhoneSchema,',
+              ),
+              (
+                  '    wilaya: z.string().trim().max(120).optional(),\n'
+                  '    commune: z.string().trim().max(120).optional(),',
+                  '    wilaya: z.string().trim().min(1).max(120).optional(),\n'
+                  '    commune: z.string().trim().min(1).max(120).optional(),',
+              ),
+          ]
+          for old, new in exact_contract_replacements:
+              if new in contract_text:
+                  continue
+              if contract_text.count(old) != 1:
+                  raise SystemExit('contracts: expected one exact remaining validation match')
+              contract_text = contract_text.replace(old, new, 1)
+          contracts.write_text(contract_text)
+
           exec(compile(script, 'task5-adversarial-repair.py', 'exec'))
           PY
+
+      - name: Format repaired TypeScript
+        if: steps.repair.outputs.apply == 'true'
+        run: |
+          bunx prettier@3.6.2 --write \
+            src/lib/ai/actions/service.ts \
+            src/lib/ai/actions/contracts.ts \
+            src/lib/ai/actions/targets.ts \
+            src/lib/ai/actions/executor.ts \
+            src/lib/ai/actions/history.ts \
+            src/lib/ai/chat/agent.ts \
+            src/lib/ai/chat/tools/core-tools.ts \
+            src/app/api/ai/sessions/[id]/actions/route.ts \
+            src/app/api/ai/actions/[proposalId]/route.ts \
+            src/lib/ai/actions/__tests__/adversarial-repair.test.ts \
+            src/lib/ai/actions/__tests__/executor-catalog.test.ts \
+            src/lib/ai/actions/__tests__/history-authorization.test.ts \
+            src/lib/ai/actions/__tests__/service.test.ts \
+            src/lib/ai/actions/__tests__/service-drift-recovery.test.ts \
+            src/lib/ai/actions/__tests__/source-contract.test.ts \
+            src/lib/ai/chat/__tests__/agent-proposal.test.ts
 
       - name: Install frozen dependencies
         if: steps.repair.outputs.apply == 'true'
