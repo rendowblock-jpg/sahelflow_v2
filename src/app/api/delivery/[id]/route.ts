@@ -9,9 +9,9 @@ import { z } from "zod";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireRouteAuth } from "@/lib/auth/route-authority";
-import { db, shopContext } from "@/lib/db";
 import { deliveryService } from "@/lib/data/delivery-service";
 import { orderService } from "@/lib/data/order-service";
+import { db, shopContext } from "@/lib/db";
 import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
 import type { OrderStatus } from "@/types/domain";
 
@@ -84,7 +84,7 @@ export const PATCH = withErrorHandler(
     });
 
     if (result.effects) {
-      orderService.dispatchStatusTransition(context, result.effects);
+      await orderService.dispatchStatusTransition(context, result.effects);
     }
 
     return NextResponse.json({ delivery: result.delivery });
