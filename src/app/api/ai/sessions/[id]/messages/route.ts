@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireLicense } from "@/lib/license/license-server";
 import { z } from "zod";
-import { db, shopContext } from "@/lib/db";
-import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
-import {
-  resolveAiSourceProposalContext,
-  runWithAiSourceProposal,
-} from "@/lib/ai/chat/source-proposal";
-import { checkRateLimit } from "@/lib/ai/rate-limit";
-import { redactPii } from "@/lib/redact-pii";
+
+import { createAiActionProposal } from "@/lib/ai/actions/service";
+import { runWithAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth, getCurrentUserKey } from "@/lib/auth/server";
+import { getCurrentUserKey, requireAuth } from "@/lib/auth/server";
+import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
+import { checkRateLimit } from "@/lib/ai/rate-limit";
+import { db, shopContext } from "@/lib/db";
+import { requireTrustedActor } from "@/lib/identity/trusted-actor";
+import { requireLicense } from "@/lib/license/license-server";
+import { redactPii } from "@/lib/redact-pii";
 import { getBool, SETTING_KEYS } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export const GET = withErrorHandler(
-  async (_req: NextRequest, { params }: RouteContext) => {
+  async (_request: NextRequest, { params }: RouteContext) => {
     await requireAuth("ai.use");
     const { id } = await params;
     const session = await db.aiChatSession.findUnique({
@@ -37,9 +37,37 @@ const sendSchema = z.object({
   message: z.string().min(1).max(4000),
 });
 
+function historyFrom(
+  messages: Array<{
+    role: string;
+    content: string;
+    toolCalls: string | null;
+  }>,
+): AgentMessage[] {
+  return messages.map((message) => {
+    let toolCalls: AgentMessage["toolCalls"];
+    if (message.role === "assistant" && message.toolCalls) {
+      try {
+        const parsed = JSON.parse(message.toolCalls);
+        if (Array.isArray(parsed)) {
+          toolCalls = parsed as AgentMessage["toolCalls"];
+        }
+      } catch {
+        // Older malformed rows remain readable as plain assistant text.
+      }
+    }
+    return {
+      role: message.role === "assistant" ? "assistant" : "user",
+      content: message.content,
+      ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
+    };
+  });
+}
+
 export const POST = withErrorHandler(
-  async (req: NextRequest, { params }: RouteContext) => {
+  async (request: NextRequest, { params }: RouteContext) => {
     await requireAuth("ai.use");
+    const requester = await requireTrustedActor();
     const context = { prisma: db, shop: shopContext };
     const consent = await getBool(
       context,
@@ -67,7 +95,7 @@ export const POST = withErrorHandler(
         { status: 429 },
       );
     }
-    const input = sendSchema.parse(await req.json());
+    const input = sendSchema.parse(await request.json());
 
     const session = await db.aiChatSession.findUnique({
       where: { id },
@@ -80,33 +108,25 @@ export const POST = withErrorHandler(
     const userMessage = await context.prisma.aiChatMessage.create({
       data: { sessionId: id, role: "user", content: input.message },
     });
-
-    const history: AgentMessage[] = session.messages.map((message) => {
-      let toolCalls: AgentMessage["toolCalls"];
-      if (message.role === "assistant" && message.toolCalls) {
-        try {
-          const parsed = JSON.parse(message.toolCalls);
-          if (Array.isArray(parsed)) {
-            toolCalls = parsed as AgentMessage["toolCalls"];
-          }
-        } catch {
-          // Older malformed rows remain readable as plain assistant text.
-        }
-      }
-      return {
-        role: message.role === "assistant" ? "assistant" : "user",
-        content: message.content,
-        ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
-      };
-    });
-
-    const proposal = resolveAiSourceProposalContext(
-      id,
-      session.messages,
-      userMessage.id,
-    );
-    const result = await runWithAiSourceProposal(proposal, () =>
-      runAgent(history, input.message),
+    const history = historyFrom(session.messages);
+    const result = await runWithAiActionProposalRuntime(
+      {
+        createProposal: (toolName, args) =>
+          createAiActionProposal({
+            context,
+            requester,
+            sessionId: id,
+            requestMessageId: userMessage.id,
+            toolName,
+            rawArgs: args,
+          }),
+      },
+      () =>
+        runAgent(history, input.message, {
+          db,
+          shop: shopContext,
+          sourceIdentity: `ai-session:${id}`,
+        }),
     );
 
     await context.prisma.aiChatMessage.create({
@@ -140,7 +160,7 @@ export const POST = withErrorHandler(
       response: result.response,
       toolCalls: result.toolCalls,
       error: result.error,
-      pendingConfirmation: result.pendingConfirmation,
+      actionProposal: result.actionProposal,
     });
   },
   "POST /api/ai/sessions/[id]/messages",
