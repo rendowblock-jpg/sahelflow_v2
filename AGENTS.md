@@ -21,7 +21,7 @@ keys or retained evidence merely to simplify development.
 6. Read
    [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
 7. Verify protected `main`, active branches, open PRs, exact heads, review threads,
-   CI and issue #164 directly on GitHub.
+   CI and issues #164, #201 and #202 directly on GitHub.
 8. Inspect exact source, migrations, tests and production callers before trusting
    implementation claims.
 
@@ -30,24 +30,25 @@ replace current GitHub authority.
 
 ## Current verified frontier
 
-- Protected `main`: `991c61ac882497fdda01af3ac04f06978146bbda`.
-- Governance reset: PR #199 merged at that protected commit.
+- Protected `main`: `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`.
+- Phase 2 native multi-shop authority: PR #200 merged at that protected commit.
 - Latest application-changing protected merge:
-  `04d4c51831c6e043ab39a614a7e947e6b27d01e6` (PR #197 licensing).
+  `e9c92f08f39e8d87ddfd72d2e698418ae81fc084` (PR #200 native multi-shop).
 - Published executable source: `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
 - Published release: `1.0.0-internal.13` / MSI `1.0.0.13`.
 - Founder-installed release: Internal.13; acceptance remains open.
 - Founder-accepted baseline: Internal.5.
-- Active product phase: Phase 2 — identity, authorization, licensing and
-  multi-shop.
+- Active product phase: Phase 3 — durable providers, inbox, AI and automations.
 - Sole active implementation agent: ChatGPT Web Agentic Coding Agent, selected by
-  the Founder on 2026-08-02.
-- Active branch: `agent/native-multi-shop-authority`, based exactly on protected
+  the Founder for this session on 2026-08-03.
+- Active branch: `agent/phase3-durable-effects-audit`, based exactly on protected
   `main` above.
-- Active draft: PR #200 — `Phase 2: establish native multi-shop authority`.
-- Current coherent task: Task 1, authority reconciliation and pure native
-  lifecycle contract. No registry mutation is authorized until its task gate
-  passes.
+- Active draft: PR #203 — `Phase 3: audit durable effects and operator workflows`.
+- Phase execution issue: #202.
+- Retained installed-runtime evidence issue: #201.
+- Current session purpose: research/contract and governance reconciliation.
+- Production implementation remains unauthorized until the complete Phase 3
+  inventory, consolidated Problem Register and shared contract freeze exist.
 
 Always re-read live GitHub. The exact values above record the current verified
 frontier, not permission to rely on copied state after the repository moves.
@@ -64,7 +65,7 @@ frontier, not permission to rely on copied state after the repository moves.
 8. Working Memory.
 9. Research and archive.
 
-A lower layer cannot silently weaken a higher one.
+A lower layer cannot silently weaken a higher layer.
 
 ## Completion program
 
@@ -109,8 +110,8 @@ Declare exactly one purpose before work:
 - frozen review/closure;
 - installed evidence.
 
-A governance/planning or frozen-review session does not perform unrelated product
-implementation.
+A governance/planning, research/contract or frozen-review session does not perform
+unrelated product implementation.
 
 ## Audit-first rule
 
@@ -131,10 +132,13 @@ applicable layer:
 Group findings by root cause. Do not patch one visible symptom while a shared
 competing authority remains.
 
-For native multi-shop, the complete reconnaissance, adopted decision, consolidated
-Problem Register, task sequence and non-goals are frozen in Working Memory. The
-Tauri host is the sole lifecycle transaction authority; the browser submits typed
-intent and renders state only.
+For Phase 3, inventory WhatsApp inbound and outbound paths, courier booking and
+tracking, commerce synchronization, inbox persistence, automation execution,
+AI tool approval, direct provider calls, worker ownership, migrations, tests and
+all operator-visible degraded/recovery states. The older
+`agent/phase3-durable-whatsapp-recovery` and `codex/phase3-durable-provider`
+branches are diverged evidence only and must not be merged or cherry-picked
+wholesale.
 
 ## Batch remediation rule
 
@@ -199,8 +203,10 @@ MSI, clean install, upgrade, reopen, process cleanup, preserved AppData,
 backup/restore, recovery, complete browser journeys, visual regression, security,
 performance, stability and an evidence bundle.
 
-Phase 2 requires this major checkpoint because licensing and native multi-shop
-are both high-risk native authority.
+Phase 3 provider effects involving orders, inventory, money or irreversible
+external actions trigger the applicable Level 3 evidence at the affected exit.
+Issue #201 must be resolved or formally reclassified without weakening the
+installed hydrated-WebView check.
 
 ## AAA frontend rule
 
@@ -237,24 +243,27 @@ performance, charting and maintainability benefit.
 - Merge only after selected gates pass and all P0/P1 threads close.
 - Delete merged branches and close superseded PRs promptly.
 
-## Native multi-shop package rules
+## Phase 3 package rules
 
-- Compose the existing Rust migration coordinator, runtime supervisor, exact
-  process `ShopContext`, durable identity authority and signed licensing
-  authority; do not duplicate them.
-- The browser never writes the registry, selects a database file, changes process
-  environment or calls generic relaunch after an HTTP mutation.
-- Every lifecycle operation carries expected registry revision, exact actor and
-  installation authority, signed entitlement/slot authority and migration-set
-  identity.
-- Create, rename, switch, archive, recover and delete use one journaled native
-  state machine with compensation and visible recovery.
-- No success is returned before the new exact runtime reaches authenticated
-  readiness.
-- Destructive delete requires owner authority, recent reauthentication and an
-  exact typed confirmation ceremony.
-- Temporary TypeScript registry mutation and broad process permissions are removed
-  only after native parity and recovery proof.
+- Reuse the canonical business command kernel and encrypted `OutboxIntent`; do
+  not create provider-specific competing transaction authority.
+- Authenticate and persist inbound provider events before acknowledgement.
+- External provider calls never execute inside a business transaction.
+- Every effect has stable exact identity, encrypted request binding, lease,
+  attempt history, known/ambiguous outcome, receipt, dead letter and recovery.
+- Checkpoints never advance past untracked or uncommitted provider work.
+- Automation runs and every step persist truthful state; a failed step cannot be
+  reported as overall success.
+- Automation provider actions use the durable effect protocol rather than direct
+  sidecar or adapter calls.
+- Sensitive AI actions use a persisted one-time proposal and approval bound to
+  exact tool, arguments, actor, shop, affected versions and expiry, or remain
+  disabled.
+- Provider adapters remain hidden or fail closed until current live certification
+  supports the exact capability being exposed.
+- Worker ownership across active and inactive shops is explicit and tested.
+- Every affected route exposes complete AR/FR/EN pending, degraded, ambiguous,
+  retry, recovery and history states.
 
 ## Evidence language
 
@@ -297,5 +306,7 @@ unbounded review loop; they receive explicit ownership and dependency position.
 - PR #186 is closed obsolete/diverged source and must never be merged wholesale.
 - PR #196 is closed superseded; its valid complete-diagnostics intent is protected
   through PR #199.
-- The active package is PR #200 only. Historical branch movement is not permission
-  to begin competing work.
+- PR #194 and the historical Phase 3 branches are preserved evidence only; reuse
+  validated design and tests selectively on current `main`.
+- The active package is PR #203 only. Production edits remain unauthorized until
+  the Phase 3 audit, Problem Register and contract freeze are complete.
