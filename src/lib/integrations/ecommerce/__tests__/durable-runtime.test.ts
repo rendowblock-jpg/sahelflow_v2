@@ -179,35 +179,64 @@ describe("durable commerce runtime", () => {
     expect(await rawDb.order.count()).toBe(1);
   });
 
-  it("stops at the requested page budget without advancing the watermark", async () => {
-    fetchPageMock.mockResolvedValueOnce(
-      page([], { nextCursor: "page-2", watermark: "wm-partial" }),
-    );
+  it("yields at the requested page budget and resumes from the same cursor", async () => {
+    fetchPageMock
+      .mockResolvedValueOnce(
+        page([], { nextCursor: "page-2", watermark: "wm-1" }),
+      )
+      .mockResolvedValueOnce(page([], { nextCursor: null, watermark: "wm-2" }));
     const queued = await queueCommerceSync(context, "shopify", 1);
 
     expect(await processNextCommerceFetch(context)).toBe(true);
     expect(await processNextCommerceFetch(context)).toBe(false);
-    expect(await finalizeCommerceRuns(context)).toBe(1);
 
-    const run = await rawDb.commerceSyncRun.findUniqueOrThrow({
+    const yielded = await rawDb.commerceSyncRun.findUniqueOrThrow({
       where: { id: queued.id },
     });
-    expect(run).toMatchObject({
-      status: "partially_completed",
-      activeKey: null,
-      fetchComplete: true,
+    expect(yielded).toMatchObject({
+      status: "queued",
+      fetchComplete: false,
       hasMore: true,
       pagesFetched: 1,
       continuationCursor: "page-2",
-      lastErrorCode: "COMMERCE_PAGE_BUDGET_EXHAUSTED",
+      candidateWatermark: "wm-1",
     });
-    expect(fetchPageMock).toHaveBeenCalledTimes(1);
+    expect(yielded.nextAttemptAt!.getTime()).toBeGreaterThan(Date.now());
+    expect(await finalizeCommerceRuns(context)).toBe(0);
+
+    const beforeResume = await rawDb.integration.findUniqueOrThrow({
+      where: { platform: "shopify" },
+    });
+    expect(JSON.parse(beforeResume.config ?? "{}")).toMatchObject({
+      watermark: "",
+    });
+
+    await rawDb.commerceSyncRun.update({
+      where: { id: queued.id },
+      data: { nextAttemptAt: new Date(0) },
+    });
+    expect(await processNextCommerceFetch(context)).toBe(true);
+    expect(await finalizeCommerceRuns(context)).toBe(1);
+
+    const completed = await rawDb.commerceSyncRun.findUniqueOrThrow({
+      where: { id: queued.id },
+    });
+    expect(completed).toMatchObject({
+      status: "succeeded",
+      fetchComplete: true,
+      hasMore: false,
+      pagesFetched: 2,
+      continuationCursor: null,
+      candidateWatermark: "wm-2",
+      activeKey: null,
+    });
     const integration = await rawDb.integration.findUniqueOrThrow({
       where: { platform: "shopify" },
     });
     expect(JSON.parse(integration.config ?? "{}")).toMatchObject({
-      watermark: "",
+      watermark: "wm-2",
     });
+    expect(fetchPageMock).toHaveBeenCalledTimes(2);
   });
 
   it("quarantines a catalog conflict and never advances the watermark", async () => {
