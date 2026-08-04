@@ -1,0 +1,110 @@
+name: Task 6 commerce page artifact
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  artifact:
+    name: Build verified commerce page cursor artifact
+    if: ${{ github.event.pull_request.head.ref == 'agent/phase3-durable-effects-audit' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SF_TEST_ROOT: /tmp/sahelflow-commerce-page-artifact
+      SF_DATA_DIR: /tmp/sahelflow-commerce-page-artifact/data
+      DATABASE_URL: file:/tmp/sahelflow-commerce-page-artifact/data/shops/test.db
+      SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply reviewed page cursor contract
+        run: python .github/task6-commerce-page-contract.py
+
+      - name: Format touched TypeScript
+        run: >-
+          bunx prettier --write
+          src/lib/integrations/ecommerce/types.ts
+          src/lib/integrations/ecommerce/shopify.ts
+          src/lib/integrations/ecommerce/woocommerce.ts
+          src/lib/integrations/ecommerce/youcan.ts
+          src/lib/integrations/ecommerce/__tests__/page-cursor-contract.test.ts
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Prepare disposable test sandbox
+        run: bun run test:sandbox -- /tmp/sahelflow-commerce-page-artifact
+
+      - name: Authority and documentation
+        run: |
+          bun run sf-version
+          bun run sf-audit
+
+      - name: Complete source gate
+        run: bun run sf-verify
+
+      - name: Migration status
+        run: bunx prisma migrate status
+
+      - name: Assemble verified source artifact
+        run: |
+          mkdir -p task6-commerce-page-source/src/lib/integrations/ecommerce/__tests__
+          mkdir -p task6-commerce-page-source/src/lib/integrations/ecommerce
+          cp src/lib/integrations/ecommerce/types.ts task6-commerce-page-source/src/lib/integrations/ecommerce/
+          cp src/lib/integrations/ecommerce/shopify.ts task6-commerce-page-source/src/lib/integrations/ecommerce/
+          cp src/lib/integrations/ecommerce/woocommerce.ts task6-commerce-page-source/src/lib/integrations/ecommerce/
+          cp src/lib/integrations/ecommerce/youcan.ts task6-commerce-page-source/src/lib/integrations/ecommerce/
+          cp src/lib/integrations/ecommerce/__tests__/page-cursor-contract.test.ts task6-commerce-page-source/src/lib/integrations/ecommerce/__tests__/
+          git diff --binary -- \
+            src/lib/integrations/ecommerce/types.ts \
+            src/lib/integrations/ecommerce/shopify.ts \
+            src/lib/integrations/ecommerce/woocommerce.ts \
+            src/lib/integrations/ecommerce/youcan.ts \
+            src/lib/integrations/ecommerce/__tests__/page-cursor-contract.test.ts \
+            > task6-commerce-page-source/task6-commerce-page.patch
+          printf '%s\n' "base=${{ github.event.pull_request.head.sha }}" > task6-commerce-page-source/manifest.txt
+          sha256sum \
+            task6-commerce-page-source/src/lib/integrations/ecommerce/types.ts \
+            task6-commerce-page-source/src/lib/integrations/ecommerce/shopify.ts \
+            task6-commerce-page-source/src/lib/integrations/ecommerce/woocommerce.ts \
+            task6-commerce-page-source/src/lib/integrations/ecommerce/youcan.ts \
+            task6-commerce-page-source/src/lib/integrations/ecommerce/__tests__/page-cursor-contract.test.ts \
+            task6-commerce-page-source/task6-commerce-page.patch \
+            >> task6-commerce-page-source/manifest.txt
+
+      - name: Upload verified source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: task6-commerce-page-verified-source
+          path: task6-commerce-page-source
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: task6-commerce-page-diagnostics
+          path: |
+            .sf-vitest-first-failure.txt
+            .sf-vitest-failures.txt
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 2
