@@ -1,0 +1,86 @@
+name: Phase 3 commerce yield correction
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase3-commerce-yield-correction
+  cancel-in-progress: true
+
+jobs:
+  verify-and-publish:
+    name: Verify and publish commerce yield correction
+    if: ${{ github.event.pull_request.head.ref == 'agent/phase3-durable-effects-audit' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      SF_TEST_ROOT: /tmp/sahelflow-phase3-commerce-yield
+      SF_DATA_DIR: /tmp/sahelflow-phase3-commerce-yield/data
+      DATABASE_URL: file:/tmp/sahelflow-phase3-commerce-yield/data/shops/test.db
+      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SF_WORKSPACE_ID: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      SF_INSTALLATION_ID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      SF_ACTIVE_SHOP_ID: phase3-commerce-yield
+      SF_SHOP_INCARNATION_ID: cccccccccccccccccccccccccccccccc
+      SF_REGISTRY_REVISION: "1"
+      SF_DATABASE_FILE_ID: test.db
+      SF_MIGRATION_SET_SHA256: "0000000000000000000000000000000000000000000000000000000000000000"
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply commerce yield correction
+        run: python .github/phase3-commerce-yield.py
+
+      - name: Format changed source
+        run: >-
+          bunx prettier --write
+          src/lib/integrations/ecommerce/processor.ts
+          src/lib/integrations/ecommerce/__tests__/durable-runtime.test.ts
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Prepare disposable database
+        run: |
+          bun run test:sandbox -- /tmp/sahelflow-phase3-commerce-yield
+          bunx prisma migrate deploy
+
+      - name: Targeted commerce regression
+        run: >-
+          bunx vitest run
+          src/lib/integrations/ecommerce/__tests__/durable-runtime.test.ts
+          src/lib/integrations/ecommerce/__tests__/page-cursor-contract.test.ts
+          src/components/settings/__tests__/commerce-sync-runtime-source.test.ts
+
+      - name: Complete source verification
+        run: bun run sf-verify
+
+      - name: Publish verified correction
+        run: |
+          rm -f .github/phase3-commerce-yield.py
+          rm -f .github/workflows/phase3-commerce-yield.yml
+          rm -f .github/workflows/phase3-review-remediation.yml
+          git checkout -- bun.lock
+          git config user.name "SahelFlow Phase 3 Remediation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(phase3): yield commerce runs without losing continuation"
+          git push origin HEAD:agent/phase3-durable-effects-audit
