@@ -2,11 +2,35 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
+import * as ts from "typescript";
 
 const repositoryRoot = resolve(process.env.SF_REPO_DIR ?? process.cwd());
 const sourceRoot = resolve(repositoryRoot, "src");
 const sourceExtensions = new Set([".ts", ".tsx", ".mts", ".cts"]);
-const NAMED_IMPORT = /import\s*\{([^}]*)\}\s*from\s*["']([^"']+)["']/g;
+
+type RawImportKind =
+  | "named"
+  | "namespace"
+  | "default"
+  | "dynamic"
+  | "require"
+  | "import-equals"
+  | "re-export";
+
+interface RawImportFinding {
+  kind: RawImportKind;
+  line: number;
+}
+
+/**
+ * Exact, reviewed raw consumers outside maintenance/tests. Counts are strict so
+ * a new dynamic/namespace access cannot hide behind an existing file allowance.
+ */
+const EXPLICIT_RAW_ALLOWLIST: Readonly<
+  Record<string, Readonly<Partial<Record<RawImportKind, number>>>>
+> = {
+  "src/app/api/internal/runtime-ready/route.ts": { dynamic: 2 },
+};
 
 function extension(path: string): string {
   const dot = path.lastIndexOf(".");
@@ -20,7 +44,7 @@ function isTestFile(path: string): boolean {
   );
 }
 
-function isAllowedRawAuthority(path: string): boolean {
+function isBroadRawAuthority(path: string): boolean {
   return (
     path === "src/lib/db.ts" ||
     path.startsWith("src/lib/maintenance/") ||
@@ -28,23 +52,92 @@ function isAllowedRawAuthority(path: string): boolean {
   );
 }
 
-function importsRawClient(source: string): boolean {
-  NAMED_IMPORT.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = NAMED_IMPORT.exec(source)) !== null) {
-    const specifiers = match[1]
-      ?.split(",")
-      .map((value) => value.trim().split(/\s+as\s+/i)[0])
-      .filter(Boolean);
-    const moduleName = match[2];
-    if (
-      specifiers?.includes("dbRaw") &&
-      (moduleName === "@/lib/db" || moduleName?.endsWith("/db"))
+function isDbModule(value: string): boolean {
+  return value === "@/lib/db" || value.endsWith("/db");
+}
+
+function stringModule(node: ts.Expression | undefined): string | null {
+  return node && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+    ? node.text
+    : null;
+}
+
+function lineOf(sourceFile: ts.SourceFile, node: ts.Node): number {
+  return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+}
+
+export function rawClientImports(
+  source: string,
+  fileName = "source.ts",
+): RawImportFinding[] {
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    fileName.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const findings: RawImportFinding[] = [];
+  const add = (kind: RawImportKind, node: ts.Node) =>
+    findings.push({ kind, line: lineOf(sourceFile, node) });
+
+  function visit(node: ts.Node): void {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      if (isDbModule(node.moduleSpecifier.text)) {
+        const clause = node.importClause;
+        if (clause?.name) add("default", node);
+        const bindings = clause?.namedBindings;
+        if (bindings && ts.isNamespaceImport(bindings)) {
+          add("namespace", node);
+        } else if (bindings && ts.isNamedImports(bindings)) {
+          if (
+            bindings.elements.some(
+              (element) => (element.propertyName ?? element.name).text === "dbRaw",
+            )
+          ) {
+            add("named", node);
+          }
+        }
+      }
+    } else if (
+      ts.isImportEqualsDeclaration(node) &&
+      ts.isExternalModuleReference(node.moduleReference)
     ) {
-      return true;
+      const moduleName = stringModule(node.moduleReference.expression);
+      if (moduleName && isDbModule(moduleName)) add("import-equals", node);
+    } else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
+      const moduleName = stringModule(node.moduleSpecifier);
+      if (moduleName && isDbModule(moduleName)) {
+        const clause = node.exportClause;
+        if (
+          !clause ||
+          ts.isNamespaceExport(clause) ||
+          (ts.isNamedExports(clause) &&
+            clause.elements.some(
+              (element) => (element.propertyName ?? element.name).text === "dbRaw",
+            ))
+        ) {
+          add("re-export", node);
+        }
+      }
+    } else if (ts.isCallExpression(node) && node.arguments.length === 1) {
+      const moduleName = stringModule(node.arguments[0]);
+      if (moduleName && isDbModule(moduleName)) {
+        if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+          add("dynamic", node);
+        } else if (
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "require"
+        ) {
+          add("require", node);
+        }
+      }
     }
+    ts.forEachChild(node, visit);
   }
-  return false;
+
+  visit(sourceFile);
+  return findings;
 }
 
 function sourceFiles(directory: string): string[] {
@@ -60,22 +153,44 @@ function sourceFiles(directory: string): string[] {
   return files;
 }
 
+function allowanceMatches(
+  path: string,
+  findings: readonly RawImportFinding[],
+): boolean {
+  const allowance = EXPLICIT_RAW_ALLOWLIST[path];
+  if (!allowance) return false;
+  const observed = new Map<RawImportKind, number>();
+  for (const finding of findings) {
+    observed.set(finding.kind, (observed.get(finding.kind) ?? 0) + 1);
+  }
+  const kinds = new Set<RawImportKind>([
+    ...(Object.keys(allowance) as RawImportKind[]),
+    ...observed.keys(),
+  ]);
+  return [...kinds].every(
+    (kind) => (allowance[kind] ?? 0) === (observed.get(kind) ?? 0),
+  );
+}
+
 const violations: string[] = [];
 for (const absolutePath of sourceFiles(sourceRoot)) {
   const path = relative(repositoryRoot, absolutePath).replaceAll("\\", "/");
-  const source = readFileSync(absolutePath, "utf8");
-  if (!importsRawClient(source) || isAllowedRawAuthority(path)) continue;
-  violations.push(path);
+  const findings = rawClientImports(readFileSync(absolutePath, "utf8"), path);
+  if (findings.length === 0 || isBroadRawAuthority(path)) continue;
+  if (allowanceMatches(path, findings)) continue;
+  violations.push(
+    `${path}: ${findings.map(({ kind, line }) => `${kind}@${line}`).join(", ")}`,
+  );
 }
 
 if (violations.length > 0) {
   console.error(
-    "Protected raw-client authority violation: application/domain code imported dbRaw outside maintenance or tests.",
+    "Protected raw-client authority violation: application/domain code can access dbRaw outside an exact reviewed boundary.",
   );
   for (const path of violations.sort()) console.error(` - ${path}`);
   process.exit(1);
 }
 
 console.log(
-  "Protected raw-client authority verified: dbRaw is restricted to canonical maintenance and test boundaries.",
+  "Protected raw-client authority verified: named, namespace, dynamic, require and re-export access is restricted to exact canonical boundaries.",
 );
