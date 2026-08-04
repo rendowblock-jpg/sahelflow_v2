@@ -17,6 +17,23 @@ describe("classifyPrRisk", () => {
     });
   });
 
+  it("keeps documentation audit rules and phase checkpoints on fast authority", () => {
+    expect(
+      classifyPrRisk([
+        "scripts/sf-audit.ts",
+        "scripts/__tests__/sf-audit-links.test.ts",
+        ".github/phase-checkpoints/phase2-native-multishop.json",
+      ]),
+    ).toMatchObject({
+      docsOnly: false,
+      runQuality: false,
+      runTauri: false,
+      runWindowsStandalone: false,
+      runWindowsRust: false,
+      runInstalledMsi: false,
+    });
+  });
+
   it("runs only source quality for an ordinary UI component", () => {
     expect(classifyPrRisk(["src/components/orders/order-card.tsx"])).toMatchObject({
       docsOnly: false,
@@ -43,6 +60,21 @@ describe("classifyPrRisk", () => {
     });
   });
 
+  it("forces packaged and installed proof for native migration authority", () => {
+    expect(
+      classifyPrRisk([
+        "src-tauri/src/migration_coordinator.rs",
+        "src-tauri/tests/migration_recovery.rs",
+      ]),
+    ).toMatchObject({
+      runQuality: true,
+      runTauri: true,
+      runWindowsStandalone: true,
+      runWindowsRust: true,
+      runInstalledMsi: true,
+    });
+  });
+
   it("defers Windows artifact proof for ordinary runtime readiness source", () => {
     expect(
       classifyPrRisk(["src/app/api/internal/runtime-ready/route.ts"]),
@@ -55,15 +87,25 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("keeps an ordinary Prisma package on complete source proof", () => {
+  it("forces packaged and installed proof for a Prisma migration", () => {
     expect(
       classifyPrRisk(["prisma/migrations/20260801053000_example/migration.sql"]),
     ).toMatchObject({
       runQuality: true,
       runTauri: false,
-      runWindowsStandalone: false,
+      runWindowsStandalone: true,
       runWindowsRust: false,
-      runInstalledMsi: false,
+      runInstalledMsi: true,
+    });
+  });
+
+  it("forces packaged and installed proof for field crypto", () => {
+    expect(classifyPrRisk(["src/lib/crypto/field-crypto.ts"])).toMatchObject({
+      runQuality: true,
+      runTauri: false,
+      runWindowsStandalone: true,
+      runWindowsRust: false,
+      runInstalledMsi: true,
     });
   });
 
@@ -87,22 +129,7 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("forces complete Windows and installed proof for the Phase 2 checkpoint", () => {
-    expect(
-      classifyPrRisk([
-        ".github/phase-checkpoints/phase2-native-multishop.json",
-      ]),
-    ).toMatchObject({
-      docsOnly: false,
-      runQuality: true,
-      runTauri: true,
-      runWindowsStandalone: true,
-      runWindowsRust: true,
-      runInstalledMsi: true,
-    });
-  });
-
-  it("waives only installed UI proof for the documented PR 200 exception", () => {
+  it("keeps the documented PR 200 exception on fast authority by itself", () => {
     expect(
       classifyPrRisk([
         ".github/phase-checkpoints/phase2-native-multishop.json",
@@ -110,6 +137,21 @@ describe("classifyPrRisk", () => {
       ]),
     ).toMatchObject({
       docsOnly: false,
+      runQuality: false,
+      runTauri: false,
+      runWindowsStandalone: false,
+      runWindowsRust: false,
+      runInstalledMsi: false,
+    });
+  });
+
+  it("waives only installed UI proof when a protected path also changes", () => {
+    expect(
+      classifyPrRisk([
+        "src-tauri/src/migration_coordinator.rs",
+        ".github/phase-exceptions/pr-200-installed-ui-waiver.md",
+      ]),
+    ).toMatchObject({
       runQuality: true,
       runTauri: true,
       runWindowsStandalone: true,
