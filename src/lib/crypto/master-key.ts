@@ -16,33 +16,37 @@
  *
  * OVERRIDE:
  *   `SF_MASTER_KEY=<64 hex chars>` — used by tests to get a deterministic key
- *   without touching the filesystem. Highest priority.
+ *   without touching the filesystem. Highest priority outside packaged mode.
  *
  * RESOLUTION ORDER (getMasterKey):
- *   1. In-memory cache (avoid re-reading on every call)
- *   2. One-use native bridge (packaged runtime)
- *   3. SF_MASTER_KEY env var (development / tests only)
- *   4. Compatibility keyfile (development / tests only)
- *   5. Generate + persist a compatibility key (development / tests only)
+ *   1. This compiled module's in-memory cache
+ *   2. Process-memory packaged cache shared by duplicated Next.js chunks
+ *   3. One-use native bridge (packaged runtime)
+ *   4. SF_MASTER_KEY env var (development / tests only)
+ *   5. Compatibility keyfile (development / tests only)
+ *   6. Generate + persist a compatibility key (development / tests only)
  */
 import "server-only";
 
-
 import {
-  readFileSync,
-  writeFileSync,
+  chmodSync,
   existsSync,
   mkdirSync,
-  chmodSync,
+  readFileSync,
+  writeFileSync,
 } from "fs";
-import { join } from "path";
 import { randomBytes } from "crypto";
+import { join } from "path";
 
 const KEY_LENGTH = 32; // 256 bits
 const NATIVE_ROOT_SOURCE = "native-stdin-v1";
 const NATIVE_ROOT_SYMBOL = Symbol.for("sahelflow.installation-root.v1");
+const NATIVE_ROOT_CACHE_SYMBOL = Symbol.for(
+  "sahelflow.installation-root.cache.v1",
+);
 
 type NativeRootConsumer = () => Buffer;
+type NativeRootHolder = { [key: symbol]: unknown };
 
 /** Resolve the data dir: SF_DATA_DIR > cwd/data > repo data/ */
 function getDataDir(): string {
@@ -60,8 +64,47 @@ function nativeRootIsRequired(): boolean {
   return process.env.SF_INSTALLATION_ROOT_SOURCE === NATIVE_ROOT_SOURCE;
 }
 
+function validateNativeRoot(value: unknown, label: string): Buffer {
+  if (!Buffer.isBuffer(value) || value.length !== KEY_LENGTH) {
+    throw new Error(`${label} is not a 256-bit key`);
+  }
+  return value;
+}
+
+/**
+ * Next.js standalone output can contain more than one compiled copy of this
+ * module. A module-local cache is therefore insufficient after the one-use
+ * native bridge has been consumed. Keep the resolved root only in process
+ * memory under a non-enumerable symbol so every compiled copy shares the same
+ * authority without introducing an environment, argument, or file fallback.
+ */
+function processCachedNativeRoot(): Buffer | null {
+  const holder = globalThis as NativeRootHolder;
+  const candidate = holder[NATIVE_ROOT_CACHE_SYMBOL];
+  if (candidate === undefined) return null;
+  return validateNativeRoot(candidate, "The process-cached installation root");
+}
+
+function cacheNativeRootForProcess(key: Buffer): Buffer {
+  const holder = globalThis as NativeRootHolder;
+  const existing = holder[NATIVE_ROOT_CACHE_SYMBOL];
+  if (existing !== undefined) {
+    return validateNativeRoot(
+      existing,
+      "The process-cached installation root",
+    );
+  }
+  Object.defineProperty(holder, NATIVE_ROOT_CACHE_SYMBOL, {
+    configurable: true,
+    enumerable: false,
+    writable: false,
+    value: key,
+  });
+  return key;
+}
+
 function consumeNativeRoot(): Buffer | null {
-  const holder = globalThis as { [key: symbol]: unknown };
+  const holder = globalThis as NativeRootHolder;
   const candidate = holder[NATIVE_ROOT_SYMBOL];
   if (candidate === undefined) return null;
   if (typeof candidate !== "function") {
@@ -77,11 +120,12 @@ function consumeNativeRoot(): Buffer | null {
     // makes the one-use property explicit even in focused unit tests.
     delete holder[NATIVE_ROOT_SYMBOL];
   }
-  if (!Buffer.isBuffer(key) || key.length !== KEY_LENGTH) {
+  try {
+    return validateNativeRoot(key, "The native installation root");
+  } catch (error) {
     if (Buffer.isBuffer(key)) key.fill(0);
-    throw new Error("The native installation root is not a 256-bit key");
+    throw error;
   }
-  return key;
 }
 
 /**
@@ -100,9 +144,17 @@ function consumeNativeRoot(): Buffer | null {
 export function getMasterKey(): Buffer {
   if (cachedKey) return cachedKey;
 
+  if (nativeRootIsRequired()) {
+    const processRoot = processCachedNativeRoot();
+    if (processRoot) {
+      cachedKey = processRoot;
+      return cachedKey;
+    }
+  }
+
   const nativeRoot = consumeNativeRoot();
   if (nativeRoot) {
-    cachedKey = nativeRoot;
+    cachedKey = cacheNativeRootForProcess(nativeRoot);
     return cachedKey;
   }
 
@@ -110,7 +162,9 @@ export function getMasterKey(): Buffer {
   // plaintext file, or newly generated replacement when the one-use transfer
   // is absent or was corrupted.
   if (nativeRootIsRequired()) {
-    throw new Error("The packaged installation root was not transferred by the native runtime");
+    throw new Error(
+      "The packaged installation root was not transferred by the native runtime",
+    );
   }
 
   // Development/test override.
@@ -119,7 +173,7 @@ export function getMasterKey(): Buffer {
     return cachedKey;
   }
 
-  // 2. Keyfile
+  // Compatibility keyfile.
   const keyFile = getKeyFilePath();
   if (existsSync(keyFile)) {
     const hex = readFileSync(keyFile, "utf8").trim();
@@ -127,7 +181,7 @@ export function getMasterKey(): Buffer {
     return cachedKey;
   }
 
-  // 3. First run — generate + persist to keyfile (F-H4: O_EXCL, race-safe)
+  // First run — generate + persist to keyfile (F-H4: O_EXCL, race-safe).
   const dataDir = getDataDir();
   if (!existsSync(dataDir)) {
     mkdirSync(dataDir, { recursive: true });
@@ -136,9 +190,16 @@ export function getMasterKey(): Buffer {
   try {
     // "wx" = O_EXCL — fails with EEXIST if the file was created by another
     // concurrent caller between our existsSync check and this write.
-    writeFileSync(keyFile, newKey.toString("hex"), { mode: 0o600, flag: "wx" });
+    writeFileSync(keyFile, newKey.toString("hex"), {
+      mode: 0o600,
+      flag: "wx",
+    });
   } catch (err: unknown) {
-    if (err instanceof Error && "code" in err && (err as { code?: string }).code === "EEXIST") {
+    if (
+      err instanceof Error &&
+      "code" in err &&
+      (err as { code?: string }).code === "EEXIST"
+    ) {
       // Lost the race — re-read the winning key instead of overwriting it.
       const hex = readFileSync(keyFile, "utf8").trim();
       cachedKey = parseHexKey(hex, keyFile);
@@ -152,7 +213,7 @@ export function getMasterKey(): Buffer {
     // Best-effort; on some platforms chmod may be restricted.
   }
   cachedKey = newKey;
-  return cachedKey;
+  return newKey;
 }
 
 /**
@@ -164,8 +225,8 @@ export async function getMasterKeyAsync(): Promise<Buffer> {
 }
 
 /** Rotate the master key. WARNING: re-encryption of existing secrets is the
- *  caller's responsibility (this only changes what getMasterKey returns going
- *  forward + overwrites the keyfile). Used by the planned key-rotation flow. */
+ * caller's responsibility (this only changes what getMasterKey returns going
+ * forward + overwrites the keyfile). Used by the planned key-rotation flow. */
 export function rotateMasterKey(): Buffer {
   if (nativeRootIsRequired()) {
     throw new Error(
@@ -187,9 +248,10 @@ export function rotateMasterKey(): Buffer {
   return newKey;
 }
 
-/** For tests: reset the in-memory cache so the next getMasterKey() re-reads. */
+/** For tests: reset this module and the process-wide packaged cache. */
 export function _resetMasterKeyCacheForTests(): void {
   cachedKey = null;
+  delete (globalThis as NativeRootHolder)[NATIVE_ROOT_CACHE_SYMBOL];
 }
 
 function parseHexKey(hex: string, label: string): Buffer {
@@ -201,7 +263,9 @@ function parseHexKey(hex: string, label: string): Buffer {
   }
   const buf = Buffer.from(trimmed, "hex");
   if (buf.length !== KEY_LENGTH) {
-    throw new Error(`${label} decoded to ${buf.length} bytes (expected ${KEY_LENGTH})`);
+    throw new Error(
+      `${label} decoded to ${buf.length} bytes (expected ${KEY_LENGTH})`,
+    );
   }
   return buf;
 }
