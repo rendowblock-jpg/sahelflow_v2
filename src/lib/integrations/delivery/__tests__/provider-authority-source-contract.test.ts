@@ -6,7 +6,7 @@ const root = resolve(process.env.SF_REPO_DIR || process.cwd());
 const source = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("Phase 3 delivery provider authority source contract", () => {
-  it("removes the undocumented DHD runtime and registers NOEST only with exact URLs", () => {
+  it("removes DHD and keeps NOEST effects fail-closed pending authoritative contract evidence", () => {
     expect(
       existsSync(resolve(root, "src/lib/integrations/delivery/dhd.ts")),
     ).toBe(false);
@@ -21,12 +21,17 @@ describe("Phase 3 delivery provider authority source contract", () => {
     expect(noest).toContain("feesUrl");
     expect(noest).toContain('parsed.protocol !== "https:"');
     expect(noest).not.toMatch(/const\s+NOEST_(?:BASE|API)_URL/);
+
+    const capability = source(
+      "src/lib/integrations/delivery/provider-capability.ts",
+    );
+    expect(capability).toContain("noest: []");
+    expect(capability).toContain('provider === "noest"');
+    expect(capability).toContain('status === "source_reviewed"');
   });
 
   it("invalidates credentials and certifies through one recent-reauthenticated route", () => {
-    const credentials = source(
-      "src/app/api/delivery/credentials/route.ts",
-    );
+    const credentials = source("src/app/api/delivery/credentials/route.ts");
     expect(credentials).toContain("invalidateProviderCertifications");
     expect(credentials).toContain('"credentials_updated"');
     expect(credentials).toContain('"credentials_deleted"');

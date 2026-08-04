@@ -81,10 +81,11 @@ function testContext() {
       rows.set(key, next);
       return next;
     }),
-    findUnique: vi.fn(async ({ where }: FindUniqueArgs) =>
-      rows.get(
-        `${where.provider_capability.provider}:${where.provider_capability.capability}`,
-      ) ?? null,
+    findUnique: vi.fn(
+      async ({ where }: FindUniqueArgs) =>
+        rows.get(
+          `${where.provider_capability.provider}:${where.provider_capability.capability}`,
+        ) ?? null,
     ),
     findMany: vi.fn(async () => [...rows.values()]),
   };
@@ -124,7 +125,7 @@ describe("delivery provider capability authority", () => {
     }
   });
 
-  it("certifies all runtime capabilities for one exact credential contract", async () => {
+  it("verifies connection and records source-reviewed capability evidence", async () => {
     const { context, rows } = testContext();
 
     const result = await testAndCertifyProvider(
@@ -142,9 +143,31 @@ describe("delivery provider capability authority", () => {
       "fees",
       "tracking",
     ]);
+    expect(rows.get("yalidine:connection")?.status).toBe("certified");
+    expect(rows.get("yalidine:fees")?.status).toBe("source_reviewed");
+    expect(rows.get("yalidine:booking")?.status).toBe("source_reviewed");
+    expect(rows.get("yalidine:tracking")?.status).toBe("source_reviewed");
     await expect(
       assertProviderCapability(context, "yalidine", "booking"),
     ).resolves.toBeUndefined();
+  });
+
+  it("keeps NOEST effect capabilities disabled without an authoritative contract", async () => {
+    const { context, rows } = testContext();
+
+    const result = await testAndCertifyProvider(
+      context,
+      "noest",
+      "owner:test",
+      "manual_test",
+    );
+
+    expect(result.ok).toBe(false);
+    expect(harness.adapter.testConnection).not.toHaveBeenCalled();
+    expect(rows.size).toBe(0);
+    await expect(
+      assertProviderCapability(context, "noest", "booking"),
+    ).rejects.toMatchObject({ code: "PROVIDER_CAPABILITY_UNCERTIFIED" });
   });
 
   it("fails closed when credentials drift after certification", async () => {

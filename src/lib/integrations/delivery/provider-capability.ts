@@ -22,6 +22,22 @@ const CONTRACT_VERSION: Record<DeliveryProvider, string> = {
   noest: "noest-provider-issued-ecotrack-v1",
 };
 
+// Source-reviewed capability means the adapter and its documented contract have
+// been reviewed in source, but a non-mutating connection probe is not being
+// misrepresented as live proof of booking/tracking/fees behavior. The exact
+// credential + endpoint contract must still have a current certified connection.
+const SOURCE_REVIEWED_CAPABILITIES: Record<
+  DeliveryProvider,
+  readonly ProviderCapability[]
+> = {
+  yalidine: ["fees", "booking", "tracking"],
+  maystro: ["fees", "booking", "tracking"],
+  zrexpress: ["fees", "booking", "tracking"],
+  // NOEST remains effect-disabled until the exact provider-issued create,
+  // validate, tracking and fee contract is independently certified.
+  noest: [],
+};
+
 const ENDPOINT_FIELDS = new Set([
   "apiBaseUrl",
   "createOrderUrl",
@@ -101,6 +117,18 @@ export async function testAndCertifyProvider(
   reasonCode: string,
 ): Promise<{ ok: boolean; message: string; expiresAt?: string }> {
   assertProvider(provider);
+  if (provider === "noest") {
+    await invalidateProviderCertifications(
+      context,
+      provider,
+      "provider_contract_unverified",
+    );
+    return {
+      ok: false,
+      message:
+        "NOEST provider effects remain disabled until the exact provider-issued endpoint contract is independently certified.",
+    };
+  }
   const adapter = getDeliveryAdapter(provider);
   const credentials = await loadDeliveryCredentials(context, provider);
   const fingerprint = credentialFingerprint(credentials);
@@ -183,8 +211,35 @@ export async function testAndCertifyProvider(
   const expiresAt = new Date(now.getTime() + CERTIFICATION_TTL_MS);
   await context.prisma.$transaction(
     (["connection", "fees", "booking", "tracking"] as const).map(
-      (capability) =>
-        context.prisma.providerCapabilityCertification.upsert({
+      (capability) => {
+        const sourceReviewed =
+          capability !== "connection" &&
+          SOURCE_REVIEWED_CAPABILITIES[provider].includes(capability);
+        const status =
+          capability === "connection"
+            ? "certified"
+            : sourceReviewed
+              ? "source_reviewed"
+              : "uncertified";
+        const capabilityExpiresAt =
+          capability === "connection" ? expiresAt : null;
+        const evidence =
+          capability === "connection"
+            ? {
+                probe: "non-mutating-provider-connection",
+                message: result.message,
+              }
+            : sourceReviewed
+              ? {
+                  probe: "source-contract-review",
+                  connectionRequired: true,
+                }
+              : {
+                  probe: "provider-contract-unverified",
+                  connectionRequired: true,
+                };
+
+        return context.prisma.providerCapabilityCertification.upsert({
           where: { provider_capability: { provider, capability } },
           create: {
             id: capabilityId(provider, capability),
@@ -193,35 +248,31 @@ export async function testAndCertifyProvider(
             contractVersion,
             credentialFingerprint: fingerprint,
             endpointFingerprint: endpoints,
-            status: "certified",
+            status,
             certifiedBy: actor,
             reasonCode,
-            evidenceJson: JSON.stringify({
-              probe: "non-mutating-provider-connection",
-              message: result.message,
-            }),
+            evidenceJson: JSON.stringify(evidence),
             lastCheckedAt: now,
-            certifiedAt: now,
-            expiresAt,
+            certifiedAt: capability === "connection" ? now : null,
+            expiresAt: capabilityExpiresAt,
+            disabledAt: status === "uncertified" ? now : null,
           },
           update: {
             contractVersion,
             credentialFingerprint: fingerprint,
             endpointFingerprint: endpoints,
-            status: "certified",
+            status,
             certifiedBy: actor,
             reasonCode,
-            evidenceJson: JSON.stringify({
-              probe: "non-mutating-provider-connection",
-              message: result.message,
-            }),
+            evidenceJson: JSON.stringify(evidence),
             lastCheckedAt: now,
-            certifiedAt: now,
-            expiresAt,
-            disabledAt: null,
+            certifiedAt: capability === "connection" ? now : null,
+            expiresAt: capabilityExpiresAt,
+            disabledAt: status === "uncertified" ? now : null,
             lastErrorCode: null,
           },
-        }),
+        });
+      },
     ),
   );
   return { ...result, expiresAt: expiresAt.toISOString() };
@@ -244,21 +295,47 @@ export async function assertProviderCapability(
   const credentials = await loadDeliveryCredentials(context, provider);
   const fingerprint = credentialFingerprint(credentials);
   const endpoints = endpointFingerprint(credentials);
+  const now = Date.now();
+
+  const connection =
+    await context.prisma.providerCapabilityCertification.findUnique({
+      where: { provider_capability: { provider, capability: "connection" } },
+    });
+  const connectionValid =
+    connection?.status === "certified" &&
+    connection.contractVersion === CONTRACT_VERSION[provider] &&
+    connection.credentialFingerprint === fingerprint &&
+    connection.endpointFingerprint === endpoints &&
+    connection.expiresAt instanceof Date &&
+    connection.expiresAt.getTime() > now;
+
+  if (capability === "connection") {
+    if (connectionValid) return;
+    throw new SahelFlowError(
+      `${provider} connection is not certified for the current credentials and endpoint contract. Run the provider connection verification in Settings.`,
+      "PROVIDER_CAPABILITY_UNCERTIFIED",
+      409,
+    );
+  }
+
   const row = await context.prisma.providerCapabilityCertification.findUnique({
     where: { provider_capability: { provider, capability } },
   });
-  const now = Date.now();
-  const valid =
+  const sourceReviewed = row?.status === "source_reviewed";
+  const liveCertified =
     row?.status === "certified" &&
-    row.contractVersion === CONTRACT_VERSION[provider] &&
-    row.credentialFingerprint === fingerprint &&
-    row.endpointFingerprint === endpoints &&
     row.expiresAt instanceof Date &&
     row.expiresAt.getTime() > now;
+  const capabilityValid =
+    connectionValid &&
+    row?.contractVersion === CONTRACT_VERSION[provider] &&
+    row.credentialFingerprint === fingerprint &&
+    row.endpointFingerprint === endpoints &&
+    (sourceReviewed || liveCertified);
 
-  if (!valid) {
+  if (!capabilityValid) {
     throw new SahelFlowError(
-      `${provider} ${capability} capability is not certified for the current credentials and endpoint contract. Run the provider connection certification in Settings.`,
+      `${provider} ${capability} capability is not enabled for the current credentials and endpoint contract. A current connection plus source-reviewed or live-certified capability evidence is required.`,
       "PROVIDER_CAPABILITY_UNCERTIFIED",
       409,
     );
