@@ -5,8 +5,8 @@ import { createHmac } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
 
 import { resolveShopProtectedKey } from "@/lib/crypto/protected-key-authority";
+import { classifyProtectedValue } from "@/lib/crypto/protected-value-classification";
 import {
-  isProtectedValueEnvelope,
   openProtectedString,
   sealProtectedString,
   type ShopRecordProtectedValueBinding,
@@ -32,7 +32,6 @@ export interface ProtectedRecordReference {
 export interface ProtectedRecordOptions {
   shopContext?: ShopContext;
   installationRoot?: Buffer;
-  /** Set false for read-only verification paths. */
   createIfMissing?: boolean;
 }
 
@@ -90,7 +89,6 @@ function blindIndexContext(
   );
 }
 
-/** Encrypt one seller field under the current purpose-specific shop data key. */
 export async function sealShopRecordField(
   prisma: ProtectedRecordClient,
   plaintext: string,
@@ -101,7 +99,7 @@ export async function sealShopRecordField(
   const authority = await resolveShopProtectedKey(prisma, "shop-data", {
     shopContext: context,
     installationRoot: options.installationRoot,
-    createIfMissing: options.createIfMissing,
+    createIfMissing: options.createIfMissing ?? true,
   });
   return sealProtectedString(
     plaintext,
@@ -111,25 +109,20 @@ export async function sealShopRecordField(
   );
 }
 
-/**
- * Decrypt one contextual seller field. Legacy payloads are deliberately not
- * accepted here; the migration layer must classify and rewrite them before the
- * canonical protected-record reader owns the field.
- */
 export async function openShopRecordField(
   prisma: ProtectedRecordClient,
   encoded: string,
   reference: ProtectedRecordReference,
   options: ProtectedRecordOptions = {},
 ): Promise<string> {
-  if (!isProtectedValueEnvelope(encoded)) {
+  if (classifyProtectedValue(encoded) !== "canonical") {
     throw new TypeError("Protected record field is not a contextual envelope");
   }
   const context = options.shopContext ?? processShopContext();
   const authority = await resolveShopProtectedKey(prisma, "shop-data", {
     shopContext: context,
     installationRoot: options.installationRoot,
-    createIfMissing: options.createIfMissing,
+    createIfMissing: options.createIfMissing ?? false,
   });
   return openProtectedString(
     encoded,
@@ -139,11 +132,6 @@ export async function openShopRecordField(
   );
 }
 
-/**
- * Derive a purpose-separated exact-match index. Context excludes record ID so
- * the same normalized value remains searchable within one field of one shop
- * incarnation, while cross-field/shop/workspace correlation is prevented.
- */
 export async function deriveShopBlindIndex(
   prisma: ProtectedRecordClient,
   value: string,
@@ -159,7 +147,7 @@ export async function deriveShopBlindIndex(
     {
       shopContext: context,
       installationRoot: options.installationRoot,
-      createIfMissing: options.createIfMissing,
+      createIfMissing: options.createIfMissing ?? true,
     },
   );
   const normalized = (options.normalize ?? ((entry: string) => entry.trim().toLowerCase()))(
@@ -171,4 +159,24 @@ export async function deriveShopBlindIndex(
     .update(Buffer.from([0]))
     .update(normalized, "utf8")
     .digest("hex");
+}
+
+/** Return the current contextual index without creating authority on a read. */
+export async function deriveExistingShopBlindIndex(
+  prisma: ProtectedRecordClient,
+  value: string,
+  reference: Pick<ProtectedRecordReference, "recordType" | "field">,
+  options: Omit<ProtectedRecordOptions, "createIfMissing"> & {
+    normalize?: (value: string) => string;
+  } = {},
+): Promise<string | null> {
+  const existing = await prisma.protectedKeyAuthority.findUnique({
+    where: { purpose: "shop-blind-index" },
+    select: { purpose: true },
+  });
+  if (!existing) return null;
+  return deriveShopBlindIndex(prisma, value, reference, {
+    ...options,
+    createIfMissing: false,
+  });
 }
