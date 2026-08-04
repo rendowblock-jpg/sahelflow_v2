@@ -1,0 +1,54 @@
+name: Phase 4 final agent reconciliation
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase4-final-agent-reconciliation
+  cancel-in-progress: true
+
+jobs:
+  verify-and-publish:
+    name: Verify final Phase 4 agent reconciliation
+    if: ${{ github.event.pull_request.head.ref == 'agent/phase4-handoff-truth' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply final agent reconciliation
+        run: python .github/phase4-final-agent-fix.py
+
+      - name: Format and verify authority
+        run: |
+          bunx prettier --write AGENTS.md scripts/sf-audit.ts
+          bun run sf-version
+          bun run sf-audit
+          git diff --check
+
+      - name: Publish verified fix
+        run: |
+          rm .github/phase4-final-agent-fix.py
+          rm .github/workflows/phase4-final-agent-fix.yml
+          git config user.name "SahelFlow Phase 4 Handoff"
+          git config user.email "actions@users.noreply.github.com"
+          git add AGENTS.md scripts/sf-audit.ts .github/phase4-final-agent-fix.py .github/workflows/phase4-final-agent-fix.yml
+          git diff --cached --check
+          git commit -m "docs: remove stale Phase 3 agent directives"
+          git push origin HEAD:agent/phase4-handoff-truth
