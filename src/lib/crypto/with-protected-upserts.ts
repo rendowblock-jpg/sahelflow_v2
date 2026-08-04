@@ -1,37 +1,35 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import type { PrismaClient } from "@prisma/client";
 
-import {
-  CONVERSATION_PROTECTED_FIELDS,
-  MESSAGE_PROTECTED_FIELDS,
-  ORDER_PROTECTED_FIELDS,
-  createProtectedPiiCodec,
-  prepareProtectedSelection,
-} from "@/lib/crypto/protected-pii";
-import { executeRecordBoundUpsert } from "@/lib/crypto/protected-upsert";
-import { assertProcessShopAuthority } from "@/lib/shops/authority";
+import { createProtectedPiiCodec } from "@/lib/crypto/protected-pii";
 import type { ShopContext } from "@/lib/shops/context";
-import { SahelFlowError } from "@/types/errors";
 
-const NESTED_PROTECTED_RELATIONS = new Set([
-  "customer",
-  "order",
-  "orders",
-  "conversation",
-  "conversations",
-  "message",
-  "messages",
-]);
+const UPSERT_ID_DOMAIN = Buffer.from(
+  "sahelflow.protected-upsert-record-id.v1\0",
+  "utf8",
+);
 
-const NESTED_MUTATIONS = new Set([
-  "create",
-  "createMany",
-  "connectOrCreate",
-  "upsert",
-  "update",
-  "updateMany",
-]);
+type ProtectedUpsertModel =
+  | "Customer"
+  | "Order"
+  | "Conversation"
+  | "Message";
+
+type ProtectedUpsertDelegate =
+  | "customer"
+  | "order"
+  | "conversation"
+  | "message";
+
+interface RawDelegate {
+  findUnique(args: {
+    where: unknown;
+    select: { id: true };
+  }): Promise<{ id: string } | null>;
+}
 
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -39,45 +37,74 @@ function record(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function assertNoNestedProtectedMutation(data: Record<string, unknown>): void {
-  for (const [relation, value] of Object.entries(data)) {
-    if (!NESTED_PROTECTED_RELATIONS.has(relation)) continue;
-    const mutation = record(value);
-    if (!mutation) continue;
-    if ([...NESTED_MUTATIONS].some((operation) => operation in mutation)) {
-      throw new SahelFlowError(
-        `Nested protected-data mutation through ${relation} is blocked; write that record through its canonical service first`,
-        "PROTECTED_DATA_NESTED_WRITE_BLOCKED",
-        409,
-      );
+function canonicalValue(value: unknown): unknown {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new TypeError("Protected upsert identity contains a non-finite number");
     }
+    return value;
   }
+  if (typeof value === "bigint") return { bigint: value.toString() };
+  if (value instanceof Date) return { date: value.toISOString() };
+  if (Buffer.isBuffer(value)) return { bytes: value.toString("base64") };
+  if (Array.isArray(value)) return value.map(canonicalValue);
+  const input = record(value);
+  if (!input) {
+    throw new TypeError("Protected upsert identity contains an unsupported value");
+  }
+  const output: Record<string, unknown> = {};
+  for (const key of Object.keys(input).sort()) {
+    if (input[key] !== undefined) output[key] = canonicalValue(input[key]);
+  }
+  return output;
 }
 
-function assertWriteAuthority(context: ShopContext): void {
-  if (process.env.NODE_ENV === "production") {
-    assertProcessShopAuthority(context);
-  }
+function deterministicRecordId(
+  context: ShopContext,
+  model: ProtectedUpsertModel,
+  where: unknown,
+): string {
+  const digest = createHash("sha256")
+    .update(UPSERT_ID_DOMAIN)
+    .update(
+      JSON.stringify({
+        workspaceId: context.workspaceId.toLowerCase(),
+        shopId: context.shopId,
+        shopIncarnationId: context.shopIncarnationId.toLowerCase(),
+        model,
+        where: canonicalValue(where),
+      }),
+      "utf8",
+    )
+    .digest("hex");
+  return `sfup_${digest}`;
 }
 
-function customerFilterWithIndexes(
-  where: Record<string, unknown>,
-  indexes: string[],
-): Record<string, unknown> {
-  return {
-    ...where,
-    phone: indexes.length === 1 ? indexes[0] : { in: indexes },
-  };
+function candidateRecordId(
+  create: Record<string, unknown>,
+  where: unknown,
+  context: ShopContext,
+  model: ProtectedUpsertModel,
+): string {
+  if (typeof create.id === "string" && create.id) return create.id;
+  const directWhereId = record(where)?.id;
+  if (typeof directWhereId === "string" && directWhereId) return directWhereId;
+  return deterministicRecordId(context, model, where);
 }
 
 /**
- * Consume protected-model upserts before the generic protection extension.
- *
- * Prisma's native upsert must prepare the update payload before SQLite reveals
- * which concurrent creator won. Contextual ciphertext cannot safely guess that
- * record ID, so this layer attempts the encrypted create first and resolves a
- * unique-race winner before encrypting the update branch. Other operations pass
- * through to the canonical protected-data extension unchanged.
+ * Stabilize the create ID before the canonical protection layer binds update
+ * ciphertext. If the original unique selector already resolves, normal Prisma
+ * upsert semantics remain untouched. If it is absent, every concurrent caller
+ * derives the same shop-bound candidate ID and upserts through that ID, so the
+ * native transaction reveals/updates the same record without speculative AAD.
  */
 export function withProtectedRaceSafeUpserts<
   TClient extends Pick<PrismaClient, "$extends">,
@@ -87,181 +114,84 @@ export function withProtectedRaceSafeUpserts<
   context: ShopContext,
 ) {
   const codec = createProtectedPiiCodec(rawAuthority, context);
+  const delegates: Record<ProtectedUpsertDelegate, RawDelegate> = {
+    customer: rawAuthority.customer as unknown as RawDelegate,
+    order: rawAuthority.order as unknown as RawDelegate,
+    conversation: rawAuthority.conversation as unknown as RawDelegate,
+    message: rawAuthority.message as unknown as RawDelegate,
+  };
 
-  const decryptCustomer = async (row: Record<string, unknown>) =>
-    codec.decryptNested(await codec.decryptCustomerRow(row));
-  const decryptOrder = async (row: Record<string, unknown>) =>
-    codec.decryptNested(
-      await codec.decryptFields(row, ORDER_PROTECTED_FIELDS, "Order"),
-    );
-  const decryptConversation = async (row: Record<string, unknown>) =>
-    codec.decryptNested(
-      await codec.decryptFields(
-        row,
-        CONVERSATION_PROTECTED_FIELDS,
-        "Conversation",
-      ),
-    );
-  const decryptMessage = async (row: Record<string, unknown>) =>
-    codec.decryptNested(
-      await codec.decryptFields(row, MESSAGE_PROTECTED_FIELDS, "Message"),
-    );
-
-  async function resolveCustomerWinnerId(
-    transaction: PrismaClient,
-    where: unknown,
-  ): Promise<string | null> {
+  async function customerExistingId(where: unknown): Promise<string | null> {
     const input = record(where);
     if (!input) return null;
     const phone = input.phone;
     if (typeof phone === "string" && !/^[0-9a-f]{64}$/.test(phone)) {
       const indexes = await codec.customerPhoneIndexes(phone);
       return (
-        await transaction.customer.findFirst({
-          where: customerFilterWithIndexes(input, indexes),
+        await rawAuthority.customer.findFirst({
+          where: {
+            ...input,
+            phone: indexes.length === 1 ? indexes[0] : { in: indexes },
+          },
           select: { id: true },
         })
       )?.id ?? null;
     }
     return (
-      await transaction.customer.findUnique({
+      await rawAuthority.customer.findUnique({
         where: where as never,
         select: { id: true },
       })
     )?.id ?? null;
   }
 
+  async function prepare(
+    args: { where: unknown; create: unknown },
+    model: ProtectedUpsertModel,
+    delegate: ProtectedUpsertDelegate,
+  ): Promise<void> {
+    const create = record(args.create);
+    if (!create) throw new TypeError(`${model} upsert create data is invalid`);
+    const originalWhere = args.where;
+    const id = candidateRecordId(create, originalWhere, context, model);
+    create.id = id;
+
+    const existingId =
+      delegate === "customer"
+        ? await customerExistingId(originalWhere)
+        : (
+            await delegates[delegate].findUnique({
+              where: originalWhere,
+              select: { id: true },
+            })
+          )?.id ?? null;
+    if (existingId === null) args.where = { id };
+  }
+
   return client.$extends({
     query: {
       customer: {
-        async upsert({ args }) {
-          assertWriteAuthority(context);
-          const where = args.where;
-          const create = args.create as unknown as Record<string, unknown>;
-          const update = args.update as unknown as Record<string, unknown>;
-          assertNoNestedProtectedMutation(create);
-          assertNoNestedProtectedMutation(update);
-          const createId = codec.ensureRecordId(create);
-          const encryptedCreate = await codec.encryptCustomerData(create, createId);
-          prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
-            "Customer",
-          );
-          const row = await executeRecordBoundUpsert(rawAuthority, {
-            delegate: "customer",
-            args: args as unknown as Record<string, unknown>,
-            encryptedCreate,
-            update,
-            encryptUpdate: (data, recordId) =>
-              codec.encryptCustomerData(data, recordId),
-            resolveWinnerId: (transaction) =>
-              resolveCustomerWinnerId(transaction, where),
-          });
-          return (await decryptCustomer(row)) as never;
+        async upsert({ args, query }) {
+          await prepare(args, "Customer", "customer");
+          return query(args);
         },
       },
       order: {
-        async upsert({ args }) {
-          assertWriteAuthority(context);
-          const create = args.create as unknown as Record<string, unknown>;
-          const update = args.update as unknown as Record<string, unknown>;
-          assertNoNestedProtectedMutation(create);
-          assertNoNestedProtectedMutation(update);
-          const createId = codec.ensureRecordId(create);
-          const encryptedCreate = await codec.encryptFields(
-            create,
-            ORDER_PROTECTED_FIELDS,
-            "Order",
-            createId,
-            { sourceField: "phone", indexField: "phoneBlindIndex" },
-          );
-          prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
-            "Order",
-          );
-          const row = await executeRecordBoundUpsert(rawAuthority, {
-            delegate: "order",
-            args: args as unknown as Record<string, unknown>,
-            encryptedCreate,
-            update,
-            encryptUpdate: (data, recordId) =>
-              codec.encryptFields(
-                data,
-                ORDER_PROTECTED_FIELDS,
-                "Order",
-                recordId,
-                { sourceField: "phone", indexField: "phoneBlindIndex" },
-              ),
-          });
-          return (await decryptOrder(row)) as never;
+        async upsert({ args, query }) {
+          await prepare(args, "Order", "order");
+          return query(args);
         },
       },
       conversation: {
-        async upsert({ args }) {
-          assertWriteAuthority(context);
-          const create = args.create as unknown as Record<string, unknown>;
-          const update = args.update as unknown as Record<string, unknown>;
-          assertNoNestedProtectedMutation(create);
-          assertNoNestedProtectedMutation(update);
-          const createId = codec.ensureRecordId(create);
-          const encryptedCreate = await codec.encryptFields(
-            create,
-            CONVERSATION_PROTECTED_FIELDS,
-            "Conversation",
-            createId,
-          );
-          prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
-            "Conversation",
-          );
-          const row = await executeRecordBoundUpsert(rawAuthority, {
-            delegate: "conversation",
-            args: args as unknown as Record<string, unknown>,
-            encryptedCreate,
-            update,
-            encryptUpdate: (data, recordId) =>
-              codec.encryptFields(
-                data,
-                CONVERSATION_PROTECTED_FIELDS,
-                "Conversation",
-                recordId,
-              ),
-          });
-          return (await decryptConversation(row)) as never;
+        async upsert({ args, query }) {
+          await prepare(args, "Conversation", "conversation");
+          return query(args);
         },
       },
       message: {
-        async upsert({ args }) {
-          assertWriteAuthority(context);
-          const create = args.create as unknown as Record<string, unknown>;
-          const update = args.update as unknown as Record<string, unknown>;
-          assertNoNestedProtectedMutation(create);
-          assertNoNestedProtectedMutation(update);
-          const createId = codec.ensureRecordId(create);
-          const encryptedCreate = await codec.encryptFields(
-            create,
-            MESSAGE_PROTECTED_FIELDS,
-            "Message",
-            createId,
-          );
-          prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
-            "Message",
-          );
-          const row = await executeRecordBoundUpsert(rawAuthority, {
-            delegate: "message",
-            args: args as unknown as Record<string, unknown>,
-            encryptedCreate,
-            update,
-            encryptUpdate: (data, recordId) =>
-              codec.encryptFields(
-                data,
-                MESSAGE_PROTECTED_FIELDS,
-                "Message",
-                recordId,
-              ),
-          });
-          return (await decryptMessage(row)) as never;
+        async upsert({ args, query }) {
+          await prepare(args, "Message", "message");
+          return query(args);
         },
       },
     },
