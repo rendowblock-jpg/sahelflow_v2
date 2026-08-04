@@ -100,7 +100,8 @@ jobs:
         run: |
           bun run sf-version
           bun run sf-audit
-          bun run sf-inventory -- --allow-dirty
+          bun run scripts/sf-inventory.ts --allow-dirty
+          bun run scripts/augment-prisma-inventory.ts
           git diff --check
 
       - name: Publish verified handoff truth
