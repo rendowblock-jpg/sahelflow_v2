@@ -2,10 +2,11 @@
  * Secrets service — contextual encrypted key/value store backed by `Secret`.
  *
  * Phase 4 stores the complete authenticated protected-value envelope in the
- * existing `ciphertext` column and uses fixed non-secret sentinels in the legacy
- * `iv`/`tag` columns. This avoids a second secret authority while registered
- * shops migrate in place. Legacy three-column AES-GCM rows remain readable only
- * as migration input; all new writes use the purpose-separated shop-secret key.
+ * existing `ciphertext` column. The legacy `iv`/`tag` columns retain the public
+ * nonce/tag from that same envelope for compatibility diagnostics; they are not
+ * a second decryption authority. Legacy three-column AES-GCM rows remain
+ * readable only as migration input; all new writes use the purpose-separated
+ * shop-secret key.
  */
 import "server-only";
 
@@ -23,8 +24,6 @@ import {
   type ShopRecordProtectedValueBinding,
 } from "@/lib/crypto/protected-value";
 import { processShopContext, type ShopContext } from "@/lib/shops/context";
-
-export const PROTECTED_SECRET_SENTINEL = "sahelflow-protected-value-v1";
 
 export interface SecretRow {
   key: string;
@@ -86,23 +85,20 @@ async function protectedSecretData(
   context: ServiceContext,
   key: string,
   value: string,
-): Promise<{
-  ciphertext: string;
-  iv: typeof PROTECTED_SECRET_SENTINEL;
-  tag: typeof PROTECTED_SECRET_SENTINEL;
-}> {
+): Promise<{ ciphertext: string; iv: string; tag: string }> {
   const contextValue = shopContext(context);
   const authority = await resolveSecretAuthority(context);
-  return {
-    ciphertext: sealProtectedString(
-      value,
-      authority.key,
-      authority.descriptor,
-      secretBinding(contextValue, key),
-    ),
-    iv: PROTECTED_SECRET_SENTINEL,
-    tag: PROTECTED_SECRET_SENTINEL,
-  };
+  const ciphertext = sealProtectedString(
+    value,
+    authority.key,
+    authority.descriptor,
+    secretBinding(contextValue, key),
+  );
+  const envelope = JSON.parse(ciphertext) as { iv?: unknown; tag?: unknown };
+  if (typeof envelope.iv !== "string" || typeof envelope.tag !== "string") {
+    throw new Error("Canonical secret envelope omitted public nonce/tag metadata");
+  }
+  return { ciphertext, iv: envelope.iv, tag: envelope.tag };
 }
 
 /** Get a decrypted secret value, or null if it does not exist. */
