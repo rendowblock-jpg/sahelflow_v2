@@ -45,6 +45,48 @@ jobs:
       - name: Install frozen dependencies
         run: bun install --frozen-lockfile
 
+      - name: Reconcile source-test insertion anchor
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path(".github/phase3-review-remediation.py")
+          content = path.read_text(encoding="utf-8")
+          start = content.index("# Strengthen source contracts for the replay")
+          end = content.index('print("Phase 3 review remediation applied")')
+          replacement = '''# Strengthen source contracts for the replay, fsync and governed UI boundaries.
+          source_test = "src/lib/integrations/__tests__/phase3-source-closure.test.ts"
+          content = read(source_test)
+          needle = ''' + "'''" + '''  it("keeps source completion separate from live and installed evidence", () => {
+          ''' + "'''" + '''
+          if content.count(needle) != 1:
+              raise RuntimeError("Phase 3 source contract insertion point drifted")
+          contract_test = ''' + "'''" + '''  it("locks the Phase 3 review-remediation contracts", () => {
+            const inboundSpool = source("sidecars/whatsapp/inbound-spool.ts");
+            const inboundSpoolCrypto = source(
+              "sidecars/whatsapp/inbound-spool-crypto.ts",
+            );
+            const storefrontSubmit = source(
+              "src/app/api/storefront/submit/route.ts",
+            );
+            const automationEditor = source(
+              "src/components/automations/automation-editor.tsx",
+            );
+
+            expect(inboundSpool).toContain("syncDirectory(this.directory)");
+            expect(inboundSpoolCrypto).toContain("syncParentDirectory(path)");
+            expect(storefrontSubmit).not.toContain("if (!command.replayed)");
+            expect(automationEditor).not.toContain('value: "order.failed"');
+            expect(automationEditor).not.toContain('| "failed";');
+          });
+
+          ''' + "'''" + '''
+          write(source_test, content.replace(needle, contract_test + needle, 1))
+
+          '''
+          path.write_text(content[:start] + replacement + content[end:], encoding="utf-8")
+          PY
+
       - name: Apply review remediation
         run: python .github/phase3-review-remediation.py
 
