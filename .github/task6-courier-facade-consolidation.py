@@ -87,6 +87,18 @@ reviewed = replace_first(
 )
 reviewed = replace_once(
     reviewed,
+    '  drainDueCourierBookings as drainLegacyCourierBookings,\n',
+    '  drainDueCourierBookings as drainCourierEffectRuntime,\n',
+    "effect runtime drain alias",
+)
+reviewed = replace_once(
+    reviewed,
+    '      ? await drainLegacyCourierBookings(context, remaining, guardedSender)\n',
+    '      ? await drainCourierEffectRuntime(context, remaining, guardedSender)\n',
+    "effect runtime drain call",
+)
+reviewed = replace_once(
+    reviewed,
     'from "./canonical-courier-legacy";',
     'from "./canonical-courier-effect-runtime";',
     "reviewed runtime import",
@@ -175,6 +187,7 @@ new_test = '''describe("Phase 3 delivery provider authority source contract", ()
     const runtime = source(runtimePath);
     expect(facade).toContain("./canonical-courier-booking-authority");
     expect(authority).toContain("./canonical-courier-effect-runtime");
+    expect(authority).not.toContain("LegacyCourier");
     expect(runtime).not.toContain(
       "export async function queueCanonicalCourierBooking",
     );
