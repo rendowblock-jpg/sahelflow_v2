@@ -31,8 +31,8 @@ export function processShopContext(): ShopContext {
     Boolean(process.env.SF_TEST_ROOT) ||
     process.env.NODE_ENV === "test" ||
     process.env.VITEST === "true";
-  const development = process.env.NODE_ENV === "development" && !testing;
-  const packaged = process.env.NODE_ENV === "production" && !testing;
+  const development = process.env.NODE_ENV === "development";
+  const packaged = process.env.NODE_ENV === "production";
 
   if (packaged) {
     assertMasterKeyRotationInactive();
