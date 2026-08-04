@@ -13,8 +13,8 @@ import {
 import { getMasterKey } from "@/lib/crypto/master-key";
 import { ProtectedDataCorruptionError } from "@/lib/crypto/protected-data-error";
 import { resolveShopProtectedKey } from "@/lib/crypto/protected-key-authority";
+import { classifyProtectedValue } from "@/lib/crypto/protected-value-classification";
 import {
-  isProtectedValueEnvelope,
   openProtectedString,
   sealProtectedString,
   type ShopRecordProtectedValueBinding,
@@ -51,13 +51,18 @@ interface FieldReference {
 }
 
 interface BlindReference {
-  recordType: "Customer" | "Order";
+  recordType: ProtectedModel;
   field: "name" | "phone";
 }
 
 interface SelectionArgs {
   select?: Record<string, unknown>;
   include?: Record<string, unknown>;
+}
+
+export interface ProtectedSelectionPlan {
+  removeId: boolean;
+  relations: Record<string, ProtectedSelectionPlan>;
 }
 
 const MODEL_FIELDS: Record<ProtectedModel, readonly string[]> = {
@@ -167,9 +172,13 @@ function selectedProtectedField(
 function prepareSelectionNode(
   node: SelectionArgs,
   model?: ProtectedModel,
-): void {
+): ProtectedSelectionPlan {
+  const plan: ProtectedSelectionPlan = { removeId: false, relations: {} };
   if (node.select && model && selectedProtectedField(node.select, model)) {
-    node.select.id = true;
+    if (node.select.id !== true) {
+      node.select.id = true;
+      plan.removeId = true;
+    }
     if (model === "Customer" && node.select.phone === true) {
       node.select.phoneEnc = true;
     }
@@ -180,17 +189,42 @@ function prepareSelectionNode(
     for (const [key, value] of Object.entries(container)) {
       const relationModel = RELATION_MODEL[key];
       if (!relationModel || !value || typeof value !== "object") continue;
-      prepareSelectionNode(value as SelectionArgs, relationModel);
+      plan.relations[key] = prepareSelectionNode(
+        value as SelectionArgs,
+        relationModel,
+      );
     }
   }
+  return plan;
 }
 
-/** Add the exact hidden identity/ciphertext fields required for decryption. */
 export function prepareProtectedSelection(
   args: SelectionArgs,
   model?: ProtectedModel,
-): void {
-  prepareSelectionNode(args, model);
+): ProtectedSelectionPlan {
+  return prepareSelectionNode(args, model);
+}
+
+export function applyProtectedSelectionPlan(
+  value: unknown,
+  plan: ProtectedSelectionPlan,
+): unknown {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) {
+    return value.map((entry) => applyProtectedSelectionPlan(entry, plan));
+  }
+  if (typeof value !== "object") return value;
+  const output = value as Record<string, unknown>;
+  if (plan.removeId) delete output.id;
+  for (const [relation, relationPlan] of Object.entries(plan.relations)) {
+    if (relation in output) {
+      output[relation] = applyProtectedSelectionPlan(
+        output[relation],
+        relationPlan,
+      );
+    }
+  }
+  return output;
 }
 
 export interface ProtectedPiiCodec {
@@ -218,28 +252,31 @@ export interface ProtectedPiiCodec {
   decryptNested(value: unknown): Promise<unknown>;
 }
 
-/**
- * Build one process/shop-bound PII codec. Key authorities are resolved lazily
- * and cached for the lifetime of the Prisma client; seller values never derive
- * directly from the installation root.
- */
 export function createProtectedPiiCodec(
   prisma: ProtectedPiiClient,
   context: ShopContext,
 ): ProtectedPiiCodec {
   const legacyRoot = getMasterKey();
-  let dataAuthority: Promise<KeyAuthority> | undefined;
-  let blindAuthority: Promise<KeyAuthority> | undefined;
+  let dataWriteAuthority: Promise<KeyAuthority> | undefined;
+  let dataReadAuthority: Promise<KeyAuthority> | undefined;
+  let blindWriteAuthority: Promise<KeyAuthority> | undefined;
   let existingBlindAuthority: Promise<KeyAuthority | null> | undefined;
 
-  const dataKey = () =>
-    (dataAuthority ??= resolveShopProtectedKey(prisma, "shop-data", {
+  const dataKeyForWrite = () =>
+    (dataWriteAuthority ??= resolveShopProtectedKey(prisma, "shop-data", {
       shopContext: context,
     }));
-  const blindKey = () =>
-    (blindAuthority ??= resolveShopProtectedKey(prisma, "shop-blind-index", {
+  const dataKeyForRead = () =>
+    (dataReadAuthority ??= resolveShopProtectedKey(prisma, "shop-data", {
       shopContext: context,
+      createIfMissing: false,
     }));
+  const blindKeyForWrite = () =>
+    (blindWriteAuthority ??= resolveShopProtectedKey(
+      prisma,
+      "shop-blind-index",
+      { shopContext: context },
+    ));
   const blindKeyIfPresent = () =>
     (existingBlindAuthority ??= (async () => {
       const row = await prisma.protectedKeyAuthority.findUnique({
@@ -257,8 +294,8 @@ export function createProtectedPiiCodec(
     value: string,
     reference: FieldReference,
   ): Promise<string> {
-    if (isProtectedValueEnvelope(value)) {
-      const authority = await dataKey();
+    if (classifyProtectedValue(value) === "canonical") {
+      const authority = await dataKeyForRead();
       return openProtectedString(
         value,
         authority.key,
@@ -276,12 +313,12 @@ export function createProtectedPiiCodec(
     value: string,
     reference: FieldReference,
   ): Promise<string> {
-    if (isProtectedValueEnvelope(value)) {
+    if (classifyProtectedValue(value) === "canonical") {
       await openCompatible(value, reference);
       return value;
     }
     const plaintext = await openCompatible(value, reference);
-    const authority = await dataKey();
+    const authority = await dataKeyForWrite();
     return sealProtectedString(
       plaintext,
       authority.key,
@@ -307,7 +344,7 @@ export function createProtectedPiiCodec(
     value: string,
     reference: BlindReference,
   ): Promise<string> {
-    return indexWithAuthority(value, reference, await blindKey());
+    return indexWithAuthority(value, reference, await blindKeyForWrite());
   }
 
   async function encryptFields(
@@ -351,11 +388,15 @@ export function createProtectedPiiCodec(
     model: Exclude<ProtectedModel, "Customer">,
   ): Promise<Record<string, unknown>> {
     const output: Record<string, unknown> = { ...row };
-    const recordId = assertRecordId(output.id, model);
-    for (const field of fields) {
-      if (!(field in output)) continue;
+    const selected = fields.filter((field) => {
       const value = output[field];
-      if (value === null || value === undefined) continue;
+      return value !== null && value !== undefined;
+    });
+    if (selected.length === 0) return output;
+
+    const recordId = assertRecordId(output.id, model);
+    for (const field of selected) {
+      const value = output[field];
       if (typeof value !== "string") {
         throw new ProtectedDataCorruptionError(
           "format",
@@ -438,11 +479,17 @@ export function createProtectedPiiCodec(
     row: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     const output: Record<string, unknown> = { ...row };
-    const recordId = assertRecordId(output.id, "Customer");
-    for (const field of CUSTOMER_PROTECTED_FIELDS) {
-      if (!(field in output)) continue;
+    const selectedFields = CUSTOMER_PROTECTED_FIELDS.filter((field) => {
       const value = output[field];
-      if (value === null || value === undefined) continue;
+      return value !== null && value !== undefined;
+    });
+    const hasPhoneCiphertext =
+      output.phoneEnc !== null && output.phoneEnc !== undefined;
+    if (selectedFields.length === 0 && !hasPhoneCiphertext) return output;
+
+    const recordId = assertRecordId(output.id, "Customer");
+    for (const field of selectedFields) {
+      const value = output[field];
       if (typeof value !== "string") {
         throw new ProtectedDataCorruptionError(
           "format",
@@ -489,10 +536,11 @@ export function createProtectedPiiCodec(
     const current = await blindKeyIfPresent();
     if (current) {
       indexes.add(
-        await indexWithAuthority(value, {
-          recordType: "Customer",
-          field: "phone",
-        }, current),
+        await indexWithAuthority(
+          value,
+          { recordType: "Customer", field: "phone" },
+          current,
+        ),
       );
     }
     return [...indexes];
@@ -576,7 +624,13 @@ export function createProtectedPiiCodec(
         data.id = generated;
         return generated;
       }
-      return assertRecordId(existing, "Customer");
+      if (typeof existing !== "string" || !existing || existing.length > 256) {
+        throw new ProtectedDataCorruptionError(
+          "context",
+          "Protected record identity is invalid",
+        );
+      }
+      return existing;
     },
     encryptCustomerData,
     decryptCustomerRow,
