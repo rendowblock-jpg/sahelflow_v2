@@ -60,6 +60,8 @@ export interface ResolveShopProtectedKeyOptions {
   shopContext?: ShopContext;
   installationRoot?: Buffer;
   keyVersion?: number;
+  /** Set false for read-only verification paths. */
+  createIfMissing?: boolean;
 }
 
 function keyAuthorityError(
@@ -152,13 +154,18 @@ function validateRow(
     row.algorithm !== AUTHORITY_ALGORITHM ||
     row.keyVersion !== keyVersion ||
     !/^[0-9a-f]{64}$/.test(row.keyId) ||
-    row.wrappingKeyId !== wrappingKeyId ||
     typeof row.wrappedKey !== "string" ||
     row.wrappedKey.length === 0
   ) {
     throw keyAuthorityError(
       "format",
       `Protected key authority for ${purpose} is unsupported or malformed`,
+    );
+  }
+  if (row.wrappingKeyId !== wrappingKeyId) {
+    throw keyAuthorityError(
+      "key",
+      `Protected key authority for ${purpose} belongs to another installation wrapping key`,
     );
   }
 }
@@ -237,6 +244,7 @@ export async function resolveShopProtectedKey(
   const context = options.shopContext ?? processShopContext();
   const installationRoot = options.installationRoot ?? getMasterKey();
   const keyVersion = options.keyVersion ?? DEFAULT_KEY_VERSION;
+  const createIfMissing = options.createIfMissing ?? true;
   assertKeyVersion(keyVersion);
 
   const existing = await readAuthorityRow(prisma, purpose);
@@ -247,6 +255,12 @@ export async function resolveShopProtectedKey(
       purpose,
       keyVersion,
       installationRoot,
+    );
+  }
+  if (!createIfMissing) {
+    throw keyAuthorityError(
+      "format",
+      `Protected key authority for ${purpose} is missing`,
     );
   }
 
