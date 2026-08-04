@@ -1,8 +1,9 @@
 # SahelFlow — Current state
 
 > **Authority:** merged protected source and named evidence only
-> **Live protected main:** `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Live protected main:** `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
 > **Latest application-changing protected merge:** PR #203 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Latest protected authority merge:** PR #206 at `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Protected signed run:** `30366866703`
@@ -10,7 +11,7 @@
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
-> **Active phase package:** issue #204 — exhaustive audit, primary-source research, Problem Register and shared contract freeze
+> **Active phase package:** issue #204 through PR #207 — bounded P4-A/P4-B protected-data authority and migration
 > **Retained installed evidence:** issue #201
 > **Execution epic:** issue #164
 > **Last assessed:** 2026-08-04
@@ -25,15 +26,15 @@ SahelFlow is a broad real internal Windows application, not an empty prototype o
 generic dashboard shell. It is not yet a commercially complete or class-AAA
 SahelFlow 1.0 product.
 
-Protected source now includes the canonical Golden COD foundation; durable
-identity, Teams, permissions and licensing; Tauri-owned native multi-shop
-lifecycle; durable provider ingress/effects; database-authoritative inbox;
-truthful automations; proposal-bound sensitive AI actions; durable commerce; and
-one canonical courier facade.
+Protected source includes the canonical Golden COD foundation; durable identity,
+Teams, permissions and licensing; Tauri-owned native multi-shop lifecycle;
+durable provider ingress/effects; database-authoritative inbox; truthful
+automations; proposal-bound sensitive AI actions; durable commerce; and one
+canonical courier facade.
 
-The next completion boundary is Phase 4 data protection, backup/restore,
-replacement-install recovery, migration safety, key separation and security/privacy
-assurance. Another broad architecture reset is not required.
+Protected PR #206 froze Phase 4 contracts and consequence-based CI lanes. PR #207
+is the only active production package and remains unmerged until exact-head source,
+Windows runtime, installed-MSI and review-conversation gates pass.
 
 ## Latest protected source closures
 
@@ -68,10 +69,12 @@ native lifecycle authority.
 
 ### Phase 3 protected-source closure — PR #203
 
-PR #203 merged at `aa4ca0758fd696f4b02fc1975629ac698f9349c3` from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`. Final required CI
-run `30901725446` passed version/documentation authority, frozen install, Prisma
-generation and migration status, TypeScript, ESLint, the complete Vitest suite,
-80%+ coverage and a zero-vulnerability production dependency audit.
+PR #203 merged at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`.
+Final required CI run `30901725446` passed version/documentation authority,
+frozen install, Prisma generation and migration status, TypeScript, ESLint, the
+complete Vitest suite, 80%+ coverage and a zero-vulnerability production
+dependency audit.
 
 Protected-source outcomes include:
 
@@ -82,13 +85,20 @@ Protected-source outcomes include:
 - one canonical courier facade and internal durable effect/tracking runtime;
 - durable commerce run/page/item/attempt truth, opaque continuation, bounded
   yields, monotonic watermarks and audited recovery;
-- deterministic provider conformance and fail-closed unverified capabilities;
-- repaired storefront trigger replay, POSIX spool rename durability, monotonic
-  inbox timestamps, governed automation catalogs and commerce page budgets.
+- deterministic provider conformance and fail-closed unverified capabilities.
 
 Issue #202 is closed. No known Phase 3 P0/P1 remains. FD-030 defers real-provider
 certification to Phase 9 representative beta and retains issue #201 at the
 applicable Level 3/installed evidence gate.
+
+### Phase 4 contract freeze and risk lanes — PR #206
+
+PR #206 merged at `9306564ce5b5ea4b3b13b219aa45d4672ae13184`.
+It protected the exhaustive audit, P4-001 through P4-013 Problem Register, frozen
+key/backup/recovery/migration/evidence contracts and CI consequence mapping.
+Crypto, migration, storage, backup/restore and secret-store changes now select
+Windows packaged-runtime and installed-MSI evidence; native authority changes also
+select Rust parity where applicable.
 
 ## Current implementation shape
 
@@ -113,40 +123,47 @@ remains a native lifecycle operation.
 
 ## Active Phase 4 frontier
 
-Issue #204 owns the active phase. No Phase 4 branch or implementation PR is active.
-The first package is audit and contract freeze only.
+Issue #204 owns the active phase. PR #207 is the only active implementation PR.
+It delivers the first dependency-correct P4-A/P4-B package:
 
-The audit must inventory and reconcile:
+- HKDF-SHA-256 versioned purpose-separated installation wrapping/integrity keys;
+- random persisted per-shop data, blind-index and secret authorities;
+- strict contextual versioned AES-256-GCM protected-value envelopes;
+- explicit corruption for malformed, wrong-key, wrong-purpose, wrong-context and
+  authentication failures;
+- canonical protected reads/writes, nested relation decryption, exact projections
+  and blind-index searches for Customer, Order, Conversation and Message;
+- separated secret-store and business-truth envelope authority;
+- guarded raw Prisma access and one canonical contextual client;
+- installation-root re-wrap without rewriting seller ciphertext;
+- exclusive, idempotent, restart-safe all-registered-shop protected-data migration;
+- exact-record race-safe protected upserts;
+- process-memory-only sharing of the one-use native installation root across
+  duplicated standalone server chunks.
 
-- installation, registry and per-shop database data authorities;
-- field encryption, blind indexes, master/root/backup/provider/session keys and secret storage;
-- SQLite online backup, WAL/SHM/journal handling and authenticated manifests;
-- native migration journals, all-shop rollback and interrupted recovery;
-- exports, imports, reset, delete, archive/recover and replacement-install paths;
-- retention, minimization, deletion and diagnostic redaction;
-- SBOM, production dependency security and threat models;
-- Law 18-07 and independent security/privacy review requirements;
-- AR/FR/EN, RTL, accessibility and low-resource recovery UX;
-- historical Phase 4 branches/PRs as evidence only until revalidated on current main.
+PR #207 does not implement all-shop encrypted backup, independent recovery kit,
+replacement-install restore/cutover, complete privacy/destructive lifecycle,
+Phase 4 closure, release, Founder acceptance, Beta or Stable.
 
-Broad Phase 4 production edits are not authorized until one consolidated Problem
-Register and the shared key/backup/recovery/migration/security contracts are frozen.
+## Remaining Phase 4 dependency order
+
+After PR #207 is protected and issue #204 is reconciled:
+
+1. P4-C: native SQLite online all-shop encrypted backup, immutable container,
+   authenticated manifest, independent recovery kit and retention/pinning;
+2. P4-D: replacement-install staged restore, authorization, rescue, key re-wrap,
+   identity re-enrollment, all-shop cutover, compensation and recovery UX;
+3. P4-E: general authenticated migration journal and complete clean/mixed/
+   interrupted/low-disk/corrupt matrices;
+4. P4-F: erase/reset/export/retention governance, SBOM/VEX, threat model,
+   Law 18-07 mapping, independent reviews and Level 3 closure evidence.
 
 ## Release and installed truth
 
 Internal.13 remains the latest published and Founder-installed release. It predates
-the protected Phase 1–3 closures and cannot prove current merged behavior.
+the protected Phase 1–4 source packages and cannot prove current merged behavior.
 Recorded T470 launches remain beyond the eight-second target. Founder acceptance
 remains open.
 
-The Phase 3 merge changed protected source only. It did not bump the version,
-publish an MSI, prove installed Phase 3/4 behavior or promote Beta/Stable.
-
-## Exact next session
-
-1. read the ten active authorities and issues #164, #204 and #201;
-2. verify protected main `aa4ca0758fd696f4b02fc1975629ac698f9349c3`;
-3. perform the complete Phase 4 source/data/migration/recovery/security audit;
-4. research current primary standards and official platform documentation;
-5. freeze one Problem Register and shared contracts;
-6. only then create the first bounded implementation branch and PR.
+No active Phase 4 source package authorizes a version bump, release publication,
+Founder acceptance, Beta or Stable claim.
