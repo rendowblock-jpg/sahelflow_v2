@@ -1,13 +1,35 @@
+import { createHash } from "node:crypto";
+
 import { afterEach, describe, expect, it } from "vitest";
 
 import { isProtectedValueEnvelope } from "@/lib/crypto/protected-value";
-import { db, dbRaw } from "@/lib/db";
+import { db, dbRaw, shopContext } from "@/lib/db";
 
 const customerIds: string[] = [];
 const conversationIds: string[] = [];
 
 function phone(seed: number): string {
   return `05${String(seed).padStart(8, "0").slice(-8)}`;
+}
+
+function legacyPublicConversationId(sourceId: string): string {
+  return `sfup_${createHash("sha256")
+    .update(
+      Buffer.from("sahelflow.protected-upsert-record-id.v1\0", "utf8"),
+    )
+    .update(
+      JSON.stringify({
+        workspaceId: shopContext.workspaceId.toLowerCase(),
+        shopId: shopContext.shopId,
+        shopIncarnationId: shopContext.shopIncarnationId.toLowerCase(),
+        model: "Conversation",
+        where: {
+          channel_sourceId: { channel: "whatsapp", sourceId },
+        },
+      }),
+      "utf8",
+    )
+    .digest("hex")}`;
 }
 
 afterEach(async () => {
@@ -64,6 +86,8 @@ describe("record-bound protected upsert concurrency", () => {
     ]);
 
     expect(first.id).toBe(second.id);
+    expect(first.id).toMatch(/^sfup_[0-9a-f]{64}$/);
+    expect(first.id).not.toBe(legacyPublicConversationId(sourceId));
     conversationIds.push(first.id);
 
     const raw = await dbRaw.conversation.findUniqueOrThrow({
@@ -75,9 +99,12 @@ describe("record-bound protected upsert concurrency", () => {
     const reopened = await db.conversation.findUniqueOrThrow({
       where: { id: first.id },
     });
-    expect(["First create", "First update", "Second create", "Second update"]).toContain(
-      reopened.contactName,
-    );
+    expect([
+      "First create",
+      "First update",
+      "Second create",
+      "Second update",
+    ]).toContain(reopened.contactName);
     expect([firstPhone, secondPhone]).toContain(reopened.contactPhone);
     expect(reopened.unreadCount).toBe(1);
   });
@@ -111,5 +138,30 @@ describe("record-bound protected upsert concurrency", () => {
       "Customer second update",
     ]).toContain(reopened.name);
     expect(reopened.phone).toBe(sharedPhone);
+  });
+
+  it("rejects an ambiguous caller ID on an alternate unique selector", async () => {
+    const sourceId = `phase4-explicit-id-${Date.now()}`;
+
+    await expect(
+      db.conversation.upsert({
+        where: { channel_sourceId: { channel: "whatsapp", sourceId } },
+        create: {
+          id: "caller-selected-id",
+          channel: "whatsapp",
+          sourceId,
+          contactName: "Unsafe speculative identity",
+        },
+        update: { contactName: "Unsafe speculative update" },
+      }),
+    ).rejects.toMatchObject({
+      code: "PROTECTED_DATA_UPSERT_ID_AMBIGUOUS",
+    });
+
+    expect(
+      await dbRaw.conversation.findUnique({
+        where: { channel_sourceId: { channel: "whatsapp", sourceId } },
+      }),
+    ).toBeNull();
   });
 });
