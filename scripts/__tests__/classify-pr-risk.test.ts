@@ -60,8 +60,8 @@ describe("classifyPrRisk", () => {
   it("compiles and tests ordinary native source without forcing Windows artifacts", () => {
     expect(
       classifyPrRisk([
-        "src-tauri/src/shop_lifecycle.rs",
-        "src-tauri/tests/shop_lifecycle_contract.rs",
+        "src-tauri/src/runtime_supervisor.rs",
+        "src-tauri/tests/runtime_supervisor_contract.rs",
       ]),
     ).toMatchObject({
       runQuality: true,
@@ -92,6 +92,21 @@ describe("classifyPrRisk", () => {
       classifyPrRisk([
         "src-tauri/src/backup_container.rs",
         "src-tauri/tests/backup_recovery.rs",
+      ]),
+    ).toMatchObject({
+      runQuality: true,
+      runTauri: true,
+      runWindowsStandalone: true,
+      runWindowsRust: true,
+      runInstalledMsi: true,
+    });
+  });
+
+  it("classifies destructive native shop lifecycle by category", () => {
+    expect(
+      classifyPrRisk([
+        "src-tauri/src/shop_lifecycle_mutation_04.inc.rs",
+        "src-tauri/contracts/shop-lifecycle/lib.rs",
       ]),
     ).toMatchObject({
       runQuality: true,
@@ -136,10 +151,36 @@ describe("classifyPrRisk", () => {
     });
   });
 
+  it("classifies the canonical protected-data database extension", () => {
+    expect(classifyPrRisk(["src/lib/db.ts"])).toMatchObject({
+      runQuality: true,
+      runTauri: false,
+      runWindowsStandalone: true,
+      runWindowsRust: false,
+      runInstalledMsi: true,
+    });
+  });
+
   it("covers existing protected-data migration and key-rotation authorities", () => {
     for (const path of [
       "scripts/migrate-pii-encryption.ts",
       "src/lib/maintenance/master-key-rotation.ts",
+    ]) {
+      expect(classifyPrRisk([path])).toMatchObject({
+        runQuality: true,
+        runTauri: false,
+        runWindowsStandalone: true,
+        runWindowsRust: false,
+        runInstalledMsi: true,
+      });
+    }
+  });
+
+  it("classifies browser-side destructive shop and reset authorities", () => {
+    for (const path of [
+      "src/app/api/shops/archives/[archiveId]/recover/route.ts",
+      "src/app/api/settings/reset/route.ts",
+      "src/lib/shops/native-lifecycle-archives.ts",
     ]) {
       expect(classifyPrRisk([path])).toMatchObject({
         runQuality: true,
