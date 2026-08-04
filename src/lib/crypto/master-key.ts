@@ -1,8 +1,11 @@
 /**
- * Master key management.
+ * Installation-root compatibility API.
  *
- * The master key encrypts all `Secret` rows + PII fields. It is a 32-byte
- * (256-bit) random key.
+ * The historical `getMasterKey` name is retained for call-site compatibility,
+ * but Phase 4 treats this 32-byte value as the installation-local wrapping and
+ * derivation root. New seller PII, blind indexes and secrets use independently
+ * rotatable purpose-separated authorities; they are not encrypted directly by
+ * this root.
  *
  * PACKAGED WINDOWS AUTHORITY:
  *   - The native Tauri process resolves the installation root through DPAPI.
@@ -15,7 +18,7 @@
  *   - Otherwise `data/master.key` remains the non-packaged compatibility path.
  *
  * OVERRIDE:
- *   `SF_MASTER_KEY=<64 hex chars>` — used by tests to get a deterministic key
+ *   `SF_MASTER_KEY=<64 hex chars>` — used by tests to get a deterministic root
  *   without touching the filesystem. Highest priority outside packaged mode.
  *
  * RESOLUTION ORDER (getMasterKey):
@@ -24,7 +27,7 @@
  *   3. One-use native bridge (packaged runtime)
  *   4. SF_MASTER_KEY env var (development / tests only)
  *   5. Compatibility keyfile (development / tests only)
- *   6. Generate + persist a compatibility key (development / tests only)
+ *   6. Generate + persist a compatibility root (development / tests only)
  */
 import "server-only";
 
@@ -129,8 +132,8 @@ function consumeNativeRoot(): Buffer | null {
 }
 
 /**
- * Get the master key, generating + persisting it on first run.
- * Cached in-memory for the process lifetime.
+ * Resolve the installation root, generating and persisting the compatibility
+ * root only in non-packaged development/test mode.
  *
  * F-H4: race-safe first-run generation. Previously two concurrent calls both
  * saw cachedKey===null AND !existsSync(keyFile) → each generated a different
@@ -216,17 +219,16 @@ export function getMasterKey(): Buffer {
   return newKey;
 }
 
-/**
- * Async variant — preferred for call sites that can await.
- * (Same as sync version since Stronghold is no longer used server-side.)
- */
+/** Async installation-root resolver for call sites that can await. */
 export async function getMasterKeyAsync(): Promise<Buffer> {
   return getMasterKey();
 }
 
-/** Rotate the master key. WARNING: re-encryption of existing secrets is the
- * caller's responsibility (this only changes what getMasterKey returns going
- * forward + overwrites the keyfile). Used by the planned key-rotation flow. */
+/**
+ * Rotate only the non-packaged compatibility root. Packaged installation-root
+ * rotation must use the native protected path, which re-wraps persisted Phase 4
+ * authorities before switching roots.
+ */
 export function rotateMasterKey(): Buffer {
   if (nativeRootIsRequired()) {
     throw new Error(
