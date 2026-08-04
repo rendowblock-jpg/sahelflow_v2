@@ -57,8 +57,6 @@ const NATIVE_ROTATION =
   process.env.SF_INSTALLATION_ROOT_ROTATION_SOURCE === NATIVE_ROTATION_SOURCE;
 const REGISTRY_FORMAT_VERSION = 2;
 const RUNTIME_MANIFEST_FORMAT_VERSION = 1;
-const ORDER_FIELDS = ["phone", "address", "notes"] as const;
-const CONVERSATION_FIELDS = ["contactName", "contactPhone"] as const;
 
 interface RotationTarget {
   id: string;
