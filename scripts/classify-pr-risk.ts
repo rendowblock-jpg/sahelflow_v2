@@ -84,8 +84,9 @@ function changesInstalledMsiProof(path: string): boolean {
 
 /**
  * Native authorities are matched by category, not only today's filenames. New
- * backup/restore code and the existing destructive shop lifecycle must never
- * silently fall back to generic Linux Rust proof.
+ * backup/restore code, destructive shop lifecycle, protected commercial state,
+ * root-key transport and startup recovery must never silently fall back to
+ * generic Linux Rust proof.
  */
 function changesNativeDataSurvivability(path: string): boolean {
   const nativeAuthorityPrefixes = [
@@ -98,6 +99,10 @@ function changesNativeDataSurvivability(path: string): boolean {
     "src-tauri/src/protected_storage",
     "src-tauri/src/key_rotation",
     "src-tauri/src/shop_lifecycle",
+    "src-tauri/src/device_binding",
+    "src-tauri/src/license_clock",
+    "src-tauri/src/process_authority",
+    "src-tauri/src/runtime_supervisor",
     "src-tauri/contracts/shop-lifecycle/",
     "src-tauri/tests/backup",
     "src-tauri/tests/restore",
@@ -108,6 +113,9 @@ function changesNativeDataSurvivability(path: string): boolean {
     "src-tauri/tests/protected_storage",
     "src-tauri/tests/key_rotation",
     "src-tauri/tests/shop_lifecycle",
+    "src-tauri/tests/license",
+    "src-tauri/tests/process_authority",
+    "src-tauri/tests/runtime_supervisor",
   ] as const;
   return nativeAuthorityPrefixes.some((prefix) => path.startsWith(prefix));
 }
@@ -119,15 +127,7 @@ function changesNativeDataSurvivability(path: string): boolean {
  * because they live outside `src/lib/crypto`.
  */
 function changesProtectedDataMaintenance(path: string): boolean {
-  const maintenancePrefixes = [
-    "scripts/migrate-",
-    "src/lib/maintenance/master-key-rotation",
-    "src/lib/maintenance/protected-data",
-    "src/lib/maintenance/backup",
-    "src/lib/maintenance/restore",
-    "src/lib/maintenance/recovery",
-  ] as const;
-  return maintenancePrefixes.some((prefix) => path.startsWith(prefix));
+  return path.startsWith("scripts/migrate-") || path.startsWith("src/lib/maintenance/");
 }
 
 /**
@@ -140,6 +140,20 @@ function changesDestructiveDataLifecycle(path: string): boolean {
     path.startsWith("src/app/api/shops/") ||
     path.startsWith("src/app/api/settings/reset/") ||
     path.startsWith("src/lib/shops/native-lifecycle") ||
+    changesNativeDataSurvivability(path)
+  );
+}
+
+/**
+ * Installation identity, licensing and commercial recovery state determine
+ * whether a replacement or recovered installation can safely open seller data.
+ * These are part of the Phase 4 recovery set even when no SQLite schema changes.
+ */
+function changesInstallationRecoveryAuthority(path: string): boolean {
+  return (
+    path.startsWith("src/lib/license/") ||
+    path === "src/lib/identity/control-authority.ts" ||
+    path === "src/lib/identity/identity-authority.ts" ||
     changesNativeDataSurvivability(path)
   );
 }
@@ -167,7 +181,8 @@ function changesDataSurvivability(path: string): boolean {
     path === "scripts/rotate-master-key.ts" ||
     path === "scripts/phase1-backup-preservation-worker.ts" ||
     changesProtectedDataMaintenance(path) ||
-    changesDestructiveDataLifecycle(path)
+    changesDestructiveDataLifecycle(path) ||
+    changesInstallationRecoveryAuthority(path)
   );
 }
 
