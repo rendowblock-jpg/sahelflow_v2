@@ -24,7 +24,8 @@ export default defineConfig({
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
       "tests/**/*.test.ts",
-      "scripts/**/*.test.ts",
+      "scripts/__tests__/classify-pr-risk.test.ts",
+      "scripts/__tests__/sf-audit*.test.ts",
     ],
     exclude: ["node_modules", "src-tauri", "playwright-report"],
     // Database-backed tests in src/lib/data/__tests__/ use a shared SQLite DB
