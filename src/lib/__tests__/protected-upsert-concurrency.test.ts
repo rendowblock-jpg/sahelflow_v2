@@ -7,6 +7,7 @@ import { db, dbRaw, shopContext } from "@/lib/db";
 
 const customerIds: string[] = [];
 const conversationIds: string[] = [];
+const settingKeys: string[] = [];
 
 function phone(seed: number): string {
   return `05${String(seed).padStart(8, "0").slice(-8)}`;
@@ -44,8 +45,12 @@ afterEach(async () => {
   if (customerIds.length > 0) {
     await dbRaw.customer.deleteMany({ where: { id: { in: customerIds } } });
   }
+  if (settingKeys.length > 0) {
+    await dbRaw.setting.deleteMany({ where: { key: { in: settingKeys } } });
+  }
   conversationIds.length = 0;
   customerIds.length = 0;
+  settingKeys.length = 0;
 });
 
 describe("record-bound protected upsert concurrency", () => {
@@ -107,6 +112,41 @@ describe("record-bound protected upsert concurrency", () => {
     ]).toContain(reopened.contactName);
     expect([firstPhone, secondPhone]).toContain(reopened.contactPhone);
     expect(reopened.unreadCount).toBe(1);
+  });
+
+  it("resolves protected selector reads through the active transaction", async () => {
+    const sourceId = `phase4-transaction-${Date.now()}`;
+    const settingKey = `phase4-transaction-marker-${Date.now()}`;
+    settingKeys.push(settingKey);
+
+    const conversation = await db.$transaction(async (tx) => {
+      // Acquire the SQLite transaction's write authority before the protected
+      // upsert performs its winner-ID lookup. A root-client lookup here used to
+      // self-contend until Prisma expired the transaction.
+      await tx.setting.create({
+        data: { key: settingKey, value: "write-lock-acquired" },
+      });
+      return tx.conversation.upsert({
+        where: { channel_sourceId: { channel: "whatsapp", sourceId } },
+        create: {
+          channel: "whatsapp",
+          sourceId,
+          contactName: "Transaction-local create",
+        },
+        update: {
+          contactName: "Transaction-local update",
+          unreadCount: { increment: 1 },
+        },
+      });
+    });
+    conversationIds.push(conversation.id);
+
+    await expect(
+      db.conversation.findUniqueOrThrow({ where: { id: conversation.id } }),
+    ).resolves.toMatchObject({
+      id: conversation.id,
+      contactName: "Transaction-local create",
+    });
   });
 
   it("resolves a concurrent customer by current and legacy phone indexes", async () => {
