@@ -16,6 +16,7 @@ import { basename, isAbsolute, resolve } from "node:path";
 
 import { PrismaClient } from "@prisma/client";
 
+import { withProtectedNestedReads } from "@/lib/crypto/with-protected-nested";
 import { withProtectedPiiEncryption } from "@/lib/crypto/with-protected-pii";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import { processShopContext, type ShopContext } from "@/lib/shops/context";
@@ -64,11 +65,6 @@ function databasePathFromUrl(databaseUrl: string): string {
 
 process.env.DATABASE_URL = resolveDatabaseUrl();
 
-/**
- * Unextended Prisma client. This is not business-domain authority: use it only
- * where raw storage shape is the subject of migration, recovery, evidence or a
- * focused test.
- */
 export const dbRaw =
   globalForPrisma.prismaRaw ??
   new PrismaClient({
@@ -85,12 +81,11 @@ if (process.env.NODE_ENV !== "production") {
 type ProtectedPiiClient = ReturnType<
   typeof withProtectedPiiEncryption<PrismaClient>
 >;
+type ProtectedReadClient = ReturnType<
+  typeof withProtectedNestedReads<ProtectedPiiClient>
+>;
 
-/**
- * Refuse accidental blanket mutations. Test cleanup retains its explicit
- * environment bypass; production callers must always supply a non-empty where.
- */
-function withSafetyGuards(client: ProtectedPiiClient) {
+function withSafetyGuards(client: ProtectedReadClient) {
   const isTestEnv =
     process.env.NODE_ENV === "test" || process.env.VITEST === "true";
 
@@ -183,13 +178,16 @@ function withShopAuthority(
 
 export type DbClient = ReturnType<typeof withShopAuthority>;
 
+function protectedClient(raw: PrismaClient, context: ShopContext) {
+  const pii = withProtectedPiiEncryption(raw, context);
+  return withProtectedNestedReads(pii, raw, context);
+}
+
 const boundShopContext = processShopContext();
 const processClient =
   (globalForPrisma.prisma as DbClient | undefined) ??
   withShopAuthority(
-    withSafetyGuards(
-      withProtectedPiiEncryption(dbRaw, boundShopContext),
-    ),
+    withSafetyGuards(protectedClient(dbRaw, boundShopContext)),
     boundShopContext,
   );
 
@@ -197,7 +195,6 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = processClient;
 }
 
-/** Retained as a no-op while callers migrate away from the legacy meta cache. */
 export function invalidateMetaCache(): void {}
 
 export function invalidateShopClient(shopFilePath: string): void {
@@ -237,12 +234,6 @@ function developmentContextForPath(shopFilePath: string): ShopContext {
   });
 }
 
-/**
- * Legacy multi-client helper. Packaged production is immutable/process-bound;
- * opening another database path requires a supervisor relaunch with its exact
- * trusted ShopContext. Development/tests receive a deterministic synthetic
- * context so isolated database fixtures remain usable.
- */
 export function getShopClient(
   shopFilePath: string,
   _encryptionKey?: string,
@@ -276,7 +267,7 @@ export function getShopClient(
         : ["error"],
   });
   const extended = withShopAuthority(
-    withSafetyGuards(withProtectedPiiEncryption(raw, context)),
+    withSafetyGuards(protectedClient(raw, context)),
     context,
   );
   globalForPrisma.shopClients.set(resolvedPath, extended);
