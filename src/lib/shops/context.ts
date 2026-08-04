@@ -3,6 +3,7 @@ import "server-only";
 import { basename } from "node:path";
 
 import { assertMasterKeyRotationInactive } from "@/lib/maintenance/master-key-rotation";
+import { assertProtectedDataMigrationInactive } from "@/lib/maintenance/protected-data-migration-lock";
 
 export type ShopContext = Readonly<{
   workspaceId: string;
@@ -23,10 +24,13 @@ export function processShopContext(): ShopContext {
   const development = process.env.NODE_ENV === "development";
   const packaged = process.env.NODE_ENV === "production";
 
-  // The rotation lease is acquired before any shop is scanned. A packaged
-  // server launched during that window must not initialize a database client or
-  // become ready under the old key.
-  if (packaged) assertMasterKeyRotationInactive();
+  // Maintenance leases are acquired before any shop is scanned or mutated. A
+  // packaged server launched during either window must not initialize Prisma or
+  // become ready under an old/mixed protected-data generation.
+  if (packaged) {
+    assertMasterKeyRotationInactive();
+    assertProtectedDataMigrationInactive();
+  }
 
   const fallbackShopId = !packaged && testing ? "test" : development ? "default" : "";
   const shopId = process.env.SF_ACTIVE_SHOP_ID ?? fallbackShopId;
