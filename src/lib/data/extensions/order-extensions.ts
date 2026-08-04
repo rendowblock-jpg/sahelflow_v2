@@ -1,9 +1,5 @@
 /**
  * Order service extensions — search + bulk operations.
- *
- * Bulk operations let the merchant confirm/ship/cancel multiple orders
- * in a single request — a major workflow accelerator for high-volume
- * COD merchants processing dozens of orders per day.
  */
 import "server-only";
 import type { ServiceContext } from "../service-base";
@@ -12,6 +8,7 @@ import { orderService } from "../order-service";
 import { logger } from "@/lib/logger";
 import { deriveBlindIndex } from "@/lib/crypto/field-crypto";
 import { getMasterKey } from "@/lib/crypto/master-key";
+import { deriveExistingShopBlindIndex } from "@/lib/crypto/protected-record";
 
 export interface BulkResult {
   succeeded: string[];
@@ -22,11 +19,61 @@ export type OrderSearchResult = Order & {
   customer: { name: string; phone: string };
 };
 
+type BlindIndexClient = Parameters<typeof deriveExistingShopBlindIndex>[0];
+
+async function searchableIndexes(
+  ctx: ServiceContext,
+  value: string,
+  recordType: "Customer" | "Order",
+  field: "name" | "phone",
+): Promise<string[]> {
+  const legacy = deriveBlindIndex(value, getMasterKey());
+  const canonical = await deriveExistingShopBlindIndex(
+    ctx.prisma as unknown as BlindIndexClient,
+    value,
+    { recordType, field },
+    ctx.shop ? { shopContext: ctx.shop } : {},
+  );
+  return [...new Set([legacy, ...(canonical ? [canonical] : [])])];
+}
+
+async function searchIndexes(ctx: ServiceContext, query: string) {
+  const [phoneIndexes, nameIndexes] = await Promise.all([
+    searchableIndexes(ctx, query, "Order", "phone"),
+    searchableIndexes(ctx, query.toLowerCase(), "Customer", "name"),
+  ]);
+  return { phoneIndexes, nameIndexes };
+}
+
+function searchWhere(
+  q: string,
+  indexes: { phoneIndexes: string[]; nameIndexes: string[] },
+  status?: OrderStatus,
+) {
+  const plaintextFallback = process.env.NODE_ENV === "test";
+  return {
+    deletedAt: null,
+    AND: [
+      status ? { status } : {},
+      {
+        OR: [
+          { orderNumber: { contains: q } },
+          { phoneBlindIndex: { in: indexes.phoneIndexes } },
+          { customer: { nameBlindIndex: { in: indexes.nameIndexes } } },
+          { wilaya: { contains: q } },
+          ...(plaintextFallback
+            ? [
+                { phone: { contains: q } },
+                { customer: { name: { contains: q } } },
+              ]
+            : []),
+        ],
+      },
+    ],
+  };
+}
+
 export const orderServiceExtensions = {
-  /**
-   * Search orders by order number, customer name, or phone.
-   * Returns the same shape as list() but filtered by the query.
-   */
   async search(
     ctx: ServiceContext,
     query: string,
@@ -34,40 +81,14 @@ export const orderServiceExtensions = {
   ): Promise<OrderSearchResult[]> {
     const q = query.trim();
     if (!q) return [];
-
-    // SEC-009: phone is AES-256-GCM encrypted, customer.name is encrypted.
-    // Search by: orderNumber (plaintext, substring), phoneBlindIndex (exact),
-    // customer.nameBlindIndex (exact), wilaya (plaintext, substring).
-    const masterKey = getMasterKey();
-    const phoneBlindIndex = deriveBlindIndex(q, masterKey);
-    const nameBlindIndex = deriveBlindIndex(q.toLowerCase().trim(), masterKey);
-
-    // SV-L1: gate the encrypted-field `contains` branches behind
-    // NODE_ENV === "test" (they only fire in tests/dev where PII encryption
-    // may be disabled; in production those columns hold ciphertext).
-    const plaintextFallback = process.env.NODE_ENV === "test";
+    const indexes = await searchIndexes(ctx, q);
 
     const rows = await ctx.prisma.order.findMany({
-      where: { deletedAt: null,
-        AND: [
-          opts?.status ? { status: opts.status } : {},
-          {
-            OR: [
-              { orderNumber: { contains: q } },
-              { phoneBlindIndex },
-              { customer: { nameBlindIndex } },
-              { wilaya: { contains: q } },
-              ...(plaintextFallback
-                ? [
-                    { phone: { contains: q } },                  // tests/dev only
-                    { customer: { name: { contains: q } } },     // tests/dev only
-                  ]
-                : []),
-            ],
-          },
-        ],
+      where: searchWhere(q, indexes, opts?.status),
+      include: {
+        items: true,
+        customer: { select: { name: true, phone: true } },
       },
-      include: { items: true, customer: { select: { name: true, phone: true } } },
       orderBy: { createdAt: "desc" },
       take: opts?.limit ?? 50,
       skip: opts?.offset ?? 0,
@@ -75,15 +96,6 @@ export const orderServiceExtensions = {
     return rows as unknown as OrderSearchResult[];
   },
 
-  /**
-   * Bulk transition multiple orders to a new status.
-   * Each order is validated individually — valid ones transition,
-   * invalid ones are reported in the `failed` array (no rollback of
-   * the successful ones).
-   *
-   * This is transactional PER ORDER (not one big transaction), so a
-   * failure on order #3 doesn't block orders #4-#10.
-   */
   async bulkUpdateStatus(
     ctx: ServiceContext,
     ids: string[],
@@ -94,10 +106,6 @@ export const orderServiceExtensions = {
 
     for (const id of ids) {
       try {
-        // Auto-advance: if the target is "confirmed" and the order is still a
-        // draft, first transition draft → pending, then pending → confirmed.
-        // This lets sellers bulk-confirm a mix of drafts + pending orders
-        // without manually advancing each draft first.
         if (to === "confirmed") {
           const order = await ctx.prisma.order.findUnique({
             where: { id },
@@ -109,10 +117,14 @@ export const orderServiceExtensions = {
         }
         await orderService.updateStatus(ctx, id, to);
         succeeded.push(id);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        failed.push({ id, error: msg });
-        logger.warn("order.bulkUpdateStatus.failed", { id, to, error: msg });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        failed.push({ id, error: message });
+        logger.warn("order.bulkUpdateStatus.failed", {
+          id,
+          to,
+          error: message,
+        });
       }
     }
 
@@ -126,9 +138,6 @@ export const orderServiceExtensions = {
     return { succeeded, failed };
   },
 
-  /**
-   * Count orders matching a search query (for pagination/total display).
-   */
   async countSearch(
     ctx: ServiceContext,
     query: string,
@@ -136,37 +145,9 @@ export const orderServiceExtensions = {
   ): Promise<number> {
     const q = query.trim();
     if (!q) return 0;
-    const masterKey = getMasterKey();
-    const phoneBlindIndex = deriveBlindIndex(q, masterKey);
-    const nameBlindIndex = deriveBlindIndex(q.toLowerCase().trim(), masterKey);
-
-    // SV-L1: gate encrypted-field `contains` branches behind test env.
-    const plaintextFallback = process.env.NODE_ENV === "test";
-
-    // SV-L2: include { wilaya: { contains: q } } so count matches the visible
-    // list (search() above includes it; without it here, the count undercounts
-    // whenever the query matches a wilaya but not the other fields).
+    const indexes = await searchIndexes(ctx, q);
     return ctx.prisma.order.count({
-      where: {
-        deletedAt: null,
-        AND: [
-          opts?.status ? { status: opts.status } : {},
-          {
-            OR: [
-              { orderNumber: { contains: q } },
-              { phoneBlindIndex },
-              { customer: { nameBlindIndex } },
-              { wilaya: { contains: q } },
-              ...(plaintextFallback
-                ? [
-                    { phone: { contains: q } },
-                    { customer: { name: { contains: q } } },
-                  ]
-                : []),
-            ],
-          },
-        ],
-      },
+      where: searchWhere(q, indexes, opts?.status),
     });
   },
 };
