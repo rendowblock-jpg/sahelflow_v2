@@ -1,0 +1,145 @@
+// Phase 3 Task 6 durable commerce polling truth.
+//
+// Integration.config remains the compatibility watermark projection. These
+// additive models own one active run per platform, provider-page continuation,
+// encrypted item ingress, restart-safe leases, immutable attempts and truthful
+// partial/dead-letter state. The active native shop runtime is the only worker.
+
+model CommerceSyncRun {
+  id                 String    @id
+  runKey             String    @unique
+  activeKey          String?   @unique
+  platform           String
+  integrationId      String
+  sourceIdentity     String
+  status             String    @default("queued")
+  initialWatermark   String
+  candidateWatermark String    @default("")
+  continuationCursor String?
+  pagesPerCycle      Int       @default(10)
+  pagesFetched       Int       @default(0)
+  fetchComplete      Boolean   @default(false)
+  hasMore            Boolean   @default(false)
+  fetchedCount       Int       @default(0)
+  createdCount       Int       @default(0)
+  updatedCount       Int       @default(0)
+  skippedCount       Int       @default(0)
+  failedCount        Int       @default(0)
+  attemptCount       Int       @default(0)
+  operatorRetryCount Int       @default(0)
+  nextAttemptAt      DateTime?
+  lockedAt           DateTime?
+  leaseToken         String?
+  lastErrorCode      String?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  deadLetteredAt     DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now()) @updatedAt
+
+  pages    CommerceSyncPage[]
+  items    CommerceSyncItem[]
+  attempts CommerceSyncRunAttempt[]
+
+  @@index([platform, createdAt])
+  @@index([status, nextAttemptAt])
+  @@index([status, lockedAt])
+  @@index([integrationId, createdAt])
+}
+
+model CommerceSyncPage {
+  id                 String   @id
+  pageKey            String   @unique
+  runId              String
+  pageNumber         Int
+  cursorBefore       String?
+  cursorAfter        String?
+  candidateWatermark String   @default("")
+  itemCount          Int
+  pageHash           String
+  status             String   @default("persisted")
+  fetchedAt          DateTime @default(now())
+  createdAt          DateTime @default(now())
+
+  run   CommerceSyncRun    @relation(fields: [runId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  items CommerceSyncItem[]
+
+  @@unique([runId, pageNumber])
+  @@index([runId, fetchedAt])
+}
+
+model CommerceSyncItem {
+  id                 String    @id
+  itemKey            String    @unique
+  runId              String
+  pageId             String
+  platform           String
+  sourceOrderId      String
+  sourceRevision     String
+  payloadJson        String
+  payloadHash        String
+  status             String    @default("queued")
+  outcome            String?
+  canonicalOrderId   String?
+  attemptCount       Int       @default(0)
+  maxAttempts        Int       @default(5)
+  operatorRetryCount Int       @default(0)
+  nextAttemptAt      DateTime?
+  lockedAt           DateTime?
+  leaseToken         String?
+  lastErrorCode      String?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  deadLetteredAt     DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now()) @updatedAt
+
+  run      CommerceSyncRun           @relation(fields: [runId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  page     CommerceSyncPage          @relation(fields: [pageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  attempts CommerceSyncItemAttempt[]
+
+  @@unique([runId, sourceOrderId, sourceRevision])
+  @@index([runId, status, createdAt])
+  @@index([status, nextAttemptAt])
+  @@index([status, lockedAt])
+  @@index([platform, sourceOrderId])
+}
+
+model CommerceSyncRunAttempt {
+  id            String    @id
+  runId         String
+  attemptNumber Int
+  phase         String
+  leaseToken    String?
+  state         String
+  errorCode     String?
+  detailJson    String?
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  run CommerceSyncRun @relation(fields: [runId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([runId, attemptNumber, phase])
+  @@index([runId, startedAt])
+  @@index([state, startedAt])
+}
+
+model CommerceSyncItemAttempt {
+  id            String    @id
+  itemId        String
+  attemptNumber Int
+  leaseToken    String?
+  state         String
+  errorCode     String?
+  detailJson    String?
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  item CommerceSyncItem @relation(fields: [itemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([itemId, attemptNumber])
+  @@index([itemId, startedAt])
+  @@index([state, startedAt])
+}
