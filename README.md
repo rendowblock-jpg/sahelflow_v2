@@ -11,7 +11,7 @@ sellers.
 > **Founder-accepted baseline:** Internal.5
 > **Current program:** FD-028 Final Completion Program and FD-029 AAA delivery
 > **Active phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active package:** PR #203 durable inbound WhatsApp and database-authoritative inbox
+> **Active package:** PR #203 Phase 3 source-complete; Level 2 and evidence open
 > **Stable status:** SahelFlow 1.0 Stable has not been released
 
 ## Current truth
@@ -25,7 +25,10 @@ source now includes:
 - signed installation-level trial/permanent licensing;
 - Tauri-owned journaled create, rename, switch, archive, recover and delete;
 - all-shop migration/recovery, process containment and authenticated readiness;
-- durable outbound WhatsApp and courier-effect foundations;
+- durable inbound/outbound WhatsApp and database-authoritative inbox;
+- truthful durable automations and proposal-bound sensitive AI actions;
+- durable commerce runs/pages/encrypted items and one canonical courier facade;
+- fail-closed server-side provider capability authority;
 - strong exact-source Windows release infrastructure.
 
 PR #200 merged at `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`.
@@ -100,51 +103,31 @@ authenticated ingress
 → receipt and reconciliation
 ```
 
-PR #203 has completed its governance reconciliation, exhaustive surface
-inventory, frozen Problem Register and shared contract freeze.
+Draft PR #203 has source-closed the required Phase 3 production packages:
 
-The exact authorized production package is now:
+- durable inbound WhatsApp and database-authoritative inbox;
+- truthful durable automations and receipt-safe daily reports;
+- exact proposal-bound sensitive AI actions;
+- server-side provider certification authority;
+- durable commerce run/page/item/attempt/recovery authority;
+- one public canonical courier facade with an internal effect runtime.
 
-- additive `ProviderIngressEvent` and `ProviderIngressAttempt` persistence;
-- a sidecar durable inbound spool before broadcast or delivery;
-- authenticated `/api/whatsapp/inbound` commit-before-acknowledgement;
-- leased idempotent normalization into `Conversation` and `Message`;
-- committed `message.received` trigger intent with canonical payload keys;
-- database-authoritative WhatsApp chats and messages;
-- post-commit WebSocket publication;
-- quarantine, replay, dead-letter and operator history;
-- duplicate, restart, unavailable-app, malformed, wrong-account/shop and
-  shop-switch tests;
-- AR/FR/EN, RTL, accessibility and constrained-network states.
+The clean Task 6 source head is
+`676d0e41cc69d44c29b912038cba100fd827fcfa`; full checkpoint `30875723975`
+and normal CI `30875724094` passed. This remains proposed source, not protected
+`main`, a signed artifact or installed behavior.
 
-All other Phase 3 production packages remain unauthorized. This task does not
-include durable automation runs, daily-report conversion, proposal-bound AI,
-courier/commerce convergence, provider certification, a version bump, MSI,
-release, Founder acceptance or Stable.
+### Evidence still open
 
-## Frozen Phase 3 blockers
+- the Phase 3 Level 2 source/database/migration and production-build checkpoint;
+- current live certification for at least one Required courier and communication
+  path using safe current credentials and redacted receipts;
+- applicable Level 3 provider/Windows evidence;
+- issue #201 installed hydrated-WebView proof;
+- explicit protected merge and later Founder-acceptance decisions.
 
-- inbound WhatsApp depends on in-memory sidecar history rather than persistence
-  before acknowledgement;
-- multi-step automation failures can still be reported as overall success;
-- automation WhatsApp actions and daily reports call the sidecar directly;
-- sensitive AI actions use generic current-message confirmation rather than one
-  exact persisted proposal and approval;
-- WhatsApp, courier and commerce effect semantics remain fragmented;
-- commerce lacks durable run/item ingress, quarantine and operator recovery;
-- the explicitly uncertified DHD adapter remains registered in normal provider
-  execution authority;
-- automation trigger/action catalogs expose unsupported or unconfigured paths;
-- status triggers write `phone` while WhatsApp automation consumes
-  `customerPhone`;
-- inactive-shop worker implementation proof and live provider certification
-  remain incomplete;
-- issue #201 remains open.
-
-The machine-readable inventory, frozen register, contracts and task scope are in
-[`WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md),
-`.github/phase-checkpoints/phase3-surface-inventory.json` and
-`.github/phase-checkpoints/phase3-durable-effects.json`.
+No version bump, MSI, release, Founder acceptance, Phase 3 closure or Stable claim
+is authorized by source completion.
 
 ## Binding product shape
 

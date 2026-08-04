@@ -11,10 +11,10 @@
 > **Phase 1 status:** Protected-source closed through PR #195
 > **Phase 2 status:** Protected-source closed through PR #200 with issue #201 retained
 > **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active phase package:** Task 5 source-closed; Task 6 courier/commerce convergence and provider certification authorized on PR #203
+> **Active phase package:** Tasks 3–6 source-closed on PR #203; Level 2 and evidence open
 > **Phase issue:** #202
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-08-03
+> **Last consolidated:** 2026-08-04
 
 Live protected `main` must be re-read directly from GitHub. The SHAs above record
 the exact source frontier used for this consolidation and the latest protected
@@ -257,73 +257,57 @@ authenticated ingress
 
 ## Source implementation progress
 
-PR #203 completed governance reconciliation and the shared contract freeze, then source-closed:
+Draft PR #203 source-closed the required production packages:
 
-- Task 3 — durable inbound WhatsApp and database-authoritative inbox at `f016055be55fd220baa87c26ffed565c4e9e1d85`;
-- Task 4 — truthful durable automations at `c873b8b6a256383497d3799e0839160178e92149`;
-- Task 5 — proposal-bound sensitive AI actions at `07caedbc797ced5dc0e2ac959f252d5b3481285d` with complete checkpoint `30849680029` and normal CI `30849680245`.
+1. governance reconciliation and shared contract freeze — complete;
+2. exhaustive source/caller/migration/test/UI inventory — complete;
+3. durable inbound WhatsApp and database-authoritative inbox — source-closed at `f016055be55fd220baa87c26ffed565c4e9e1d85`;
+4. truthful durable automation runs and effects — source-closed at `c873b8b6a256383497d3799e0839160178e92149`;
+5. proposal-bound sensitive AI actions — source-closed at `07caedbc797ced5dc0e2ac959f252d5b3481285d`;
+6. courier/commerce convergence and provider-certification authority — source-closed at clean head `676d0e41cc69d44c29b912038cba100fd827fcfa` with checkpoint `30875723975` and normal CI `30875724094` passed.
 
-Only Task 6 courier/commerce convergence and provider certification is authorized next. Phase 3 itself remains open.
+No known Phase 3 P0/P1 remains at the source level. Phase 3 is not closed.
 
-## Preserved foundations
+## Source-proven outcome
 
-- canonical command/event/encrypted-outbox authority;
-- durable outbound WhatsApp effect identity, leases, ambiguity and sidecar receipt
-  reconciliation;
-- canonical courier booking, tracking and manual reconciliation;
-- commerce watermark refusal after any failed fetched order;
-- trusted identity, signed licensing and native multi-shop authority.
+- authenticated WhatsApp persistence before acknowledgement and durable recovery;
+- database-authoritative inbox and committed automation triggers;
+- ordered automation step truth with durable effects and receipts;
+- exact one-time AI proposal/approval/execution authority;
+- one public courier facade and internal provider effect/tracking runtime;
+- durable commerce runs/pages/encrypted items/attempts, exact continuation,
+  monotonic checkpointing, credential binding and operator recovery;
+- DHD removed and unverified NOEST effects fail-closed;
+- AR/FR/EN and RTL-safe provider, automation, AI and recovery states.
 
-## Current root-cause blockers
+## Evidence blockers
 
-- WhatsApp, courier and commerce effect semantics remain fragmented outside the source-closed WhatsApp packages;
-- commerce lacks durable run/item ingress, quarantine and operator recovery;
-- courier implementation remains split across current, reviewed and legacy layers;
-- uncertified DHD execution must remain server-side effect-disabled;
-- current adapter source is not live provider certification;
-- capability-wide operator recovery and Phase 3 checkpoint evidence remain incomplete;
-- issue #201 remains open.
+- Phase 3 Level 2 clean source/database/migration and production-build checkpoint;
+- live certification for at least one Required courier and communication path;
+- applicable provider/Windows Level 3 evidence;
+- issue #201 installed hydrated-WebView evidence;
+- protected merge and explicit phase-closure decision.
 
-The detailed frozen register and Task 6 sequence live in Working Memory and the Phase 3 checkpoint.
+## Remaining dependency-correct order
 
-## Required implementation outcomes
-
-- one durable provider protocol for WhatsApp, courier and commerce effects;
-- authenticated inbound persistence before acknowledgement;
-- stable exact effect identity, encrypted request binding, leases, attempts,
-  retry classification, ambiguity, receipts, dead letter and recovery;
-- no provider effect inside a business transaction;
-- checkpoints never advance past untracked work;
-- database-authoritative inbox and conflict quarantine;
-- durable automation run and ordered step truth;
-- automation provider effects through the shared outbox;
-- persisted one-time AI proposal/approval bound to tool, arguments, actor, shop,
-  target versions, permissions, entitlement and expiry;
-- complete operator recovery and AR/FR/EN/RTL/accessibility states;
-- live certification for at least one Required communication path and courier.
-
-## Dependency-correct package order
-
-1. governance reconciliation and exact audit tooling — complete;
-2. exhaustive inventory and shared contract freeze — complete;
-3. durable inbound WhatsApp and database-authoritative inbox — source-closed;
-4. truthful durable automation runs and effects — source-closed;
-5. persisted proposal-bound AI actions — source-closed;
-6. courier/commerce convergence and provider certification — authorized;
-7. complete operator recovery and multilingual/accessibility states;
-8. frozen review, repair batch and Phase 3 checkpoint.
+1. freeze the exact source-complete head and run Level 2;
+2. repair any Level 2 finding in one consolidated batch;
+3. collect current live provider evidence with safe real credentials and redacted receipts;
+4. satisfy issue #201 and applicable Level 3 evidence;
+5. close Phase 3 only with zero known P0/P1 and no fabricated signed, installed,
+   live-provider, Founder-acceptance or Stable claim.
 
 ## Exit gate
 
 Outage, retry, duplicate, rate limit, restart, timeout and partial failure cannot
-silently lose or duplicate a canonical effect. Every action has a durable receipt,
-visible state and recovery path. Public provider claims match current live
-certification. The complete Phase 3 Level 2 checkpoint passes with zero known
-P0/P1. Provider effects involving money, stock or irreversible external work pass
-the applicable Level 3 evidence.
+silently lose or duplicate a canonical effect. Every action has durable truth,
+visible state and recovery. Public provider claims match current live evidence.
+The complete Level 2 and applicable provider/installed/Level 3 evidence pass with
+zero known P0/P1.
 
 ---
 
+# Phase 4 — Data protection, recovery, migrations and security
 # Phase 4 — Data protection, recovery, migrations and security
 
 ## Objective

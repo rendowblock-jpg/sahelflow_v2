@@ -1,11 +1,6 @@
 #!/usr/bin/env bun
 
-import {
-  existsSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-} from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, extname, isAbsolute, resolve } from "node:path";
 
 interface Finding {
@@ -41,6 +36,7 @@ interface Phase3Checkpoint {
   task3Closure?: PackageClosure;
   task4Closure?: PackageClosure;
   task5Closure?: PackageClosure;
+  task6Closure?: PackageClosure;
   authorizedNextPackage?: {
     name?: string;
     problemIds?: string[];
@@ -64,11 +60,7 @@ interface Phase3Inventory {
 const repoRoot = resolve(process.env.SF_REPO_DIR || process.cwd());
 const findings: Finding[] = [];
 
-function report(
-  kind: Finding["kind"],
-  file: string,
-  detail: string,
-): void {
+function report(kind: Finding["kind"], file: string, detail: string): void {
   findings.push({ kind, file, detail });
 }
 
@@ -190,6 +182,9 @@ const requiredFiles = [
   ".github/phase-checkpoints/phase3-durable-effects.json",
   ".github/phase-checkpoints/phase3-surface-inventory.json",
   ".github/phase-checkpoints/phase3-ai-actions.json",
+  ".github/phase-checkpoints/phase3-commerce-runtime.json",
+  ".github/phase-checkpoints/phase3-provider-convergence.json",
+  "src/lib/integrations/__tests__/phase3-source-closure.test.ts",
   "scripts/sf-verify.ts",
   "scripts/sf-audit.ts",
 ];
@@ -242,7 +237,9 @@ for (const relativePath of forbiddenActivePaths) {
 }
 
 const markdownFiles = walkMarkdown(repoRoot);
-const activeDocumentationFiles = walkMarkdown(resolve(repoRoot, "documentation"));
+const activeDocumentationFiles = walkMarkdown(
+  resolve(repoRoot, "documentation"),
+);
 if (activeDocumentationFiles.length !== 10) {
   report(
     "drift",
@@ -299,8 +296,9 @@ requireMarkers("AGENTS.md", [
   "PR #203",
   "Task 3 durable inbound WhatsApp is source-closed",
   "Task 4 truthful durable automations are source-closed",
-  "Authorized package rules — courier and commerce convergence",
-  "c873b8b6a256383497d3799e0839160178e92149",
+  "Task 6 is source-closed",
+  "Authorized evidence rules — Phase 3 Level 2 and certification",
+  "676d0e41cc69d44c29b912038cba100fd827fcfa",
 ]);
 requireMarkers("documentation/README.md", [
   "Phase 3 — durable providers, inbox, AI and automations",
@@ -344,11 +342,12 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "Completed Task 3 — durable inbound WhatsApp",
   "Completed Task 4 — truthful durable automations",
   "Completed Task 5 — proposal-bound sensitive AI actions",
-  "Authorized Task 6 — courier/commerce convergence and provider certification",
-  "All other Phase 3 production work:** not authorized",
-  "07caedbc797ced5dc0e2ac959f252d5b3481285d",
-  "30849680029",
-  "P3-P1-005 — closed-source-proven",
+  "Completed Task 6 — provider convergence and durable commerce",
+  "Authorized next package — Phase 3 Level 2 and evidence",
+  "Broad Phase 3 production work:** not authorized",
+  "676d0e41cc69d44c29b912038cba100fd827fcfa",
+  "30875723975",
+  "P3-P2-003 — source authority closed; live evidence open",
 ]);
 requireMarkers("documentation/research/RESEARCH.md", [
   "Research-first quality rule",
@@ -371,7 +370,9 @@ for (const relativePath of [
 ]) {
   const content = contentOf(relativePath);
   if (!content) continue;
-  const phase = /^> \*\*Active product phase:\*\* (.+)$/m.exec(content)?.[1]?.trim();
+  const phase = /^> \*\*Active product phase:\*\* (.+)$/m
+    .exec(content)?.[1]
+    ?.trim();
   if (phase !== expectedPhase) {
     report(
       "drift",
@@ -381,8 +382,7 @@ for (const relativePath of [
   }
 }
 
-const expectedProtectedBase =
-  "e9c92f08f39e8d87ddfd72d2e698418ae81fc084";
+const expectedProtectedBase = "e9c92f08f39e8d87ddfd72d2e698418ae81fc084";
 for (const relativePath of [
   "AGENTS.md",
   "documentation/README.md",
@@ -392,7 +392,11 @@ for (const relativePath of [
 ]) {
   const content = contentOf(relativePath);
   if (content && !content.includes(expectedProtectedBase)) {
-    report("drift", relativePath, "current protected Phase 2 merge/base is missing");
+    report(
+      "drift",
+      relativePath,
+      "current protected Phase 2 merge/base is missing",
+    );
   }
 }
 
@@ -413,45 +417,58 @@ if (checkpoint) {
     task4SeparatedReview: "complete-repaired",
     task5SourceImplementation: "complete",
     task5SeparatedReview: "complete-repaired",
-    productionImplementation: "authorized:courier-commerce-provider-convergence",
+    task6SourceImplementation: "complete",
+    task6SeparatedReview: "complete-repaired",
+    productionImplementation: "source-complete-evidence-open",
+    phase3Level2: "authorized-pending",
+    liveProviderCertification: "open",
+    installedEvidence: "open-issue-201",
   };
 
-  if (checkpoint.formatVersion !== 6 || checkpoint.phase !== 3) {
+  if (checkpoint.formatVersion !== 7 || checkpoint.phase !== 3) {
     report(
       "drift",
       checkpointPath,
-      "Phase 3 checkpoint must use Task 6 authority formatVersion 6",
+      "Phase 3 checkpoint must use source-complete authority formatVersion 7",
     );
   }
-  if (checkpoint.state !== "task5-source-complete-task6-authorized") {
+  if (checkpoint.state !== "task6-source-complete-phase3-level2-authorized") {
     report(
       "drift",
       checkpointPath,
-      "checkpoint must close Task 5 and authorize Task 6",
+      "checkpoint must close Task 6 and authorize the Phase 3 Level 2/evidence package",
     );
   }
   if (checkpoint.protectedBase !== expectedProtectedBase) {
     report("drift", checkpointPath, "checkpoint protected base is stale");
   }
   if (checkpoint.phaseIssue !== 202 || checkpoint.activeDraftPr !== 203) {
-    report("drift", checkpointPath, "checkpoint must bind issue #202 and PR #203");
+    report(
+      "drift",
+      checkpointPath,
+      "checkpoint must bind issue #202 and PR #203",
+    );
   }
   for (const [key, value] of Object.entries(expectedStatus)) {
     if (checkpoint.auditStatus?.[key] !== value) {
       report("drift", checkpointPath, `auditStatus.${key} must be '${value}'`);
     }
   }
-  if (checkpoint.constraints?.productionEditsAuthorized !== true) {
-    report("drift", checkpointPath, "the scoped Task 5 package must be authorized");
+  if (checkpoint.constraints?.productionEditsAuthorized !== false) {
+    report(
+      "drift",
+      checkpointPath,
+      "broad Phase 3 production edits must be frozen",
+    );
   }
   if (
     checkpoint.constraints?.authorizedProductionScope !==
-    "courier and commerce convergence plus provider certification only"
+    "Phase 3 Level 2 source checkpoint and evidence collection only"
   ) {
     report(
       "drift",
       checkpointPath,
-      "authorized production scope must be courier/commerce convergence and provider certification only",
+      "authorized scope must be Phase 3 Level 2 and evidence collection only",
     );
   }
   for (const key of [
@@ -465,36 +482,29 @@ if (checkpoint) {
   }
   if (
     checkpoint.authorizedNextPackage?.name !==
-    "courier and commerce convergence plus provider certification"
+    "Phase 3 Level 2 source checkpoint and evidence collection"
   ) {
     report(
       "drift",
       checkpointPath,
-      "authorized next package must be courier/commerce convergence plus provider certification",
+      "authorized next package must be the Phase 3 Level 2/evidence package",
     );
   }
-  const authorizedProblems = new Set(
+  const evidenceProblems = new Set(
     checkpoint.authorizedNextPackage?.problemIds ?? [],
   );
-  for (const id of [
-    "P3-P1-006",
-    "P3-P1-007",
-    "P3-P1-008",
-    "P3-P2-002",
-    "P3-P2-003",
-  ]) {
-    if (!authorizedProblems.has(id)) {
-      report("drift", checkpointPath, `Task 6 authorization is missing ${id}`);
+  for (const id of ["P3-P2-003", "P3-P2-004"]) {
+    if (!evidenceProblems.has(id)) {
+      report("drift", checkpointPath, `evidence package is missing ${id}`);
     }
   }
-  if (authorizedProblems.size !== 5) {
+  if (evidenceProblems.size !== 2) {
     report(
       "drift",
       checkpointPath,
-      "Task 6 authorization must contain exactly five problems",
+      "evidence package must contain exactly P3-P2-003 and P3-P2-004",
     );
   }
-
 
   validateClosure(checkpointPath, "Task 3", checkpoint.task3Closure, {
     sourceHead: "f016055be55fd220baa87c26ffed565c4e9e1d85",
@@ -511,9 +521,17 @@ if (checkpoint) {
     fullSourceCheckpointRun: 30849680029,
     normalCiRun: 30849680245,
   });
+  validateClosure(checkpointPath, "Task 6", checkpoint.task6Closure, {
+    sourceHead: "676d0e41cc69d44c29b912038cba100fd827fcfa",
+    fullSourceCheckpointRun: 30875723975,
+    normalCiRun: 30875724094,
+  });
 
   const problemStates = new Map(
-    (checkpoint.problemRegister ?? []).map((problem) => [problem.id, problem.state]),
+    (checkpoint.problemRegister ?? []).map((problem) => [
+      problem.id,
+      problem.state,
+    ]),
   );
   for (const [id, state] of [
     ["P3-P1-001", "closed-source-proven"],
@@ -521,10 +539,16 @@ if (checkpoint) {
     ["P3-P1-003", "closed-source-proven"],
     ["P3-P1-004", "closed-source-proven"],
     ["P3-P1-005", "closed-source-proven"],
+    ["P3-P1-006", "closed-source-proven"],
+    ["P3-P1-007", "closed-source-proven"],
+    ["P3-P1-008", "closed-source-proven"],
     ["P3-P1-009", "closed-source-proven"],
     ["P3-P1-010", "closed-source-proven"],
     ["P3-P1-011", "closed-source-proven"],
     ["P3-P2-001", "closed-source-proven"],
+    ["P3-P2-002", "closed-source-proven"],
+    ["P3-P2-003", "source-authority-closed-live-evidence-open"],
+    ["P3-P2-004", "open-retained-issue-201"],
   ] as const) {
     if (problemStates.get(id) !== state) {
       report("drift", checkpointPath, `${id} must be '${state}'`);
@@ -536,7 +560,11 @@ if (checkpoint) {
   for (let number = 1; number <= 11; number += 1) {
     const id = `P3-P1-${String(number).padStart(3, "0")}`;
     if (!problemIds.has(id)) {
-      report("drift", checkpointPath, `frozen Problem Register is missing ${id}`);
+      report(
+        "drift",
+        checkpointPath,
+        `frozen Problem Register is missing ${id}`,
+      );
     }
   }
 }
@@ -581,12 +609,34 @@ const staleMarkers: Array<[string, string]> = [
   ["AGENTS.md", "Authorized package rules — truthful durable automations"],
   ["documentation/README.md", "Active draft:** PR #200"],
   ["documentation/system/ROADMAP.md", "Active product phase:** Phase 2"],
-  ["documentation/system/CURRENT_STATE.md", "Active proposed package:** PR #200"],
-  ["documentation/operations/WORKING_MEMORY.md", "Authorized Task 4 — truthful durable automations"],
-  ["documentation/operations/WORKING_MEMORY.md", "Authorized Task 5 — proposal-bound sensitive AI actions"],
-  ["AGENTS.md", "Authorized production package:** proposal-bound sensitive AI actions only"],
-  ["documentation/operations/WORKING_MEMORY.md", "Production implementation:** not authorized"],
-  ["documentation/operations/WORKING_MEMORY.md", "Shared contract questions to freeze"],
+  [
+    "documentation/system/CURRENT_STATE.md",
+    "Active proposed package:** PR #200",
+  ],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
+    "Authorized Task 4 — truthful durable automations",
+  ],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
+    "Authorized Task 5 — proposal-bound sensitive AI actions",
+  ],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
+    "Authorized Task 6 — courier/commerce convergence and provider certification",
+  ],
+  [
+    "AGENTS.md",
+    "Authorized production package:** proposal-bound sensitive AI actions only",
+  ],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
+    "Production implementation:** not authorized",
+  ],
+  [
+    "documentation/operations/WORKING_MEMORY.md",
+    "Shared contract questions to freeze",
+  ],
 ];
 
 for (const [relativePath, marker] of staleMarkers) {
@@ -597,7 +647,9 @@ for (const [relativePath, marker] of staleMarkers) {
 
 if (findings.length > 0) {
   for (const finding of findings) {
-    console.error(`${finding.kind.toUpperCase()} ${finding.file}: ${finding.detail}`);
+    console.error(
+      `${finding.kind.toUpperCase()} ${finding.file}: ${finding.detail}`,
+    );
   }
   console.error(
     `Documentation authority audit failed with ${findings.length} finding(s).`,
@@ -606,5 +658,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Tasks 3–5 source-closed; courier/commerce provider convergence authorized).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Tasks 3–6 source-closed; Phase 3 Level 2 and evidence authorized).`,
 );

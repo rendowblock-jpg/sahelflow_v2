@@ -20,7 +20,7 @@ keys or retained evidence merely to simplify development.
 5. Read [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md).
 6. Read
    [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
-7. Read both Phase 3 checkpoints under `.github/phase-checkpoints/`.
+7. Read all Phase 3 checkpoints under `.github/phase-checkpoints/`.
 8. Verify protected `main`, PR #203, exact head, review threads, CI and issues
    #164, #201 and #202 directly on GitHub.
 9. Inspect exact source, migrations, tests and production callers before trusting
@@ -46,16 +46,20 @@ They never replace current GitHub authority.
 - Governance reconciliation, exhaustive inventory, frozen Problem Register and
   shared Phase 3 contracts are complete.
 - Task 3 durable inbound WhatsApp is source-closed at
-  `f016055be55fd220baa87c26ffed565c4e9e1d85`; complete checkpoint
-  `30808773702` passed.
+  `f016055be55fd220baa87c26ffed565c4e9e1d85`; checkpoint `30808773702` passed.
 - Task 4 truthful durable automations are source-closed at
-  `c873b8b6a256383497d3799e0839160178e92149`; complete checkpoint
-  `30826354580` and normal CI `30826355685` passed, with no open review threads.
+  `c873b8b6a256383497d3799e0839160178e92149`; checkpoint `30826354580` passed.
 - Task 5 proposal-bound sensitive AI actions are source-closed at
-  `07caedbc797ced5dc0e2ac959f252d5b3481285d`; complete checkpoint `30849680029` and normal CI
-  `30849680245` passed, with no open review threads.
-- **Authorized production package:** courier and commerce convergence plus provider certification only.
-- Every other Phase 3 production package remains unauthorized.
+  `07caedbc797ced5dc0e2ac959f252d5b3481285d`; checkpoint `30849680029` passed.
+- Task 6 courier/commerce convergence and provider certification authority are
+  source-closed at `676d0e41cc69d44c29b912038cba100fd827fcfa`;
+  checkpoint `30875723975` and normal CI `30875724094` passed.
+- Phase 3 production source is complete on draft PR #203. It is not protected,
+  signed, installed, live-provider-certified, Founder-accepted or phase-closed.
+- **Authorized evidence package:** Phase 3 Level 2 source/build checkpoint,
+  live-provider certification where current safe credentials exist, and the
+  retained installed evidence in issue #201.
+- Broad new Phase 3 production implementation is unauthorized.
 
 Always re-read live GitHub. These values record the verified frontier; they are
 not permission to rely on copied state after the repository moves.
@@ -104,8 +108,8 @@ authorize an MVP, hidden deferral or fabricated readiness.
   genuinely independent later.
 - Declare one session purpose: governance/planning, research/contract,
   implementation, frozen review/closure or installed evidence.
-- The current session is implementation of the exact courier/commerce convergence
-  and provider-certification package only.
+- The current session is Phase 3 source checkpoint and evidence work only; broad
+  new production implementation is frozen.
 
 ## Audit-first and batch remediation rule
 
@@ -140,6 +144,9 @@ For Phase 3, the frozen inventory and authority are in:
 
 - `.github/phase-checkpoints/phase3-surface-inventory.json`;
 - `.github/phase-checkpoints/phase3-durable-effects.json`;
+- `.github/phase-checkpoints/phase3-ai-actions.json`;
+- `.github/phase-checkpoints/phase3-commerce-runtime.json`;
+- `.github/phase-checkpoints/phase3-provider-convergence.json`;
 - `documentation/operations/WORKING_MEMORY.md`.
 
 Historical `agent/phase3-durable-whatsapp-recovery`,
@@ -221,8 +228,9 @@ mandatory. Library presence or a screenshot is not AAA evidence.
 - Sensitive AI actions require an exact persisted one-time proposal and approval.
 - Only the exact active native runtime drains its shop DB. Shop switching
   quiesces workers; inactive-shop work remains durable and visibly pending.
-- Server-side capability certification and kill switches gate provider effects.
-  DHD remains disabled in production until live-certified.
+- Server-side connection, capability, credential and endpoint evidence gates
+  provider effects. DHD is removed from runtime registration; NOEST effects remain
+  fail-closed until its exact provider contract is independently certified.
 
 ## Completed package rules — durable inbound WhatsApp
 
@@ -249,28 +257,42 @@ SQLite trigger contention, repeat-blacklist identity and direct report sends.
 This is source evidence only. It is not signed, installed, provider-certified,
 Founder-accepted, Phase 3 closed or Stable.
 
-## Authorized package rules — courier and commerce convergence
+## Completed package rules — proposal-bound sensitive AI actions
 
-Only these production edits are authorized now:
+Task 5 is source-closed at
+`07caedbc797ced5dc0e2ac959f252d5b3481285d` with checkpoint `30849680029`.
+One immutable encrypted proposal binds exact arguments, requester, approver,
+device, session, shop, policy, permissions, entitlement, target versions, expiry
+and one execution claim. Generic message confirmation is not execution authority.
 
-- persist an immutable sensitive-action proposal before approval;
-- bind proposal digest, encrypted arguments, actor, session, device, exact shop,
-  policy, permissions, entitlement, target versions and expiry;
-- require one exact approval for one exact proposal;
-- claim execution once so double approval or response replay cannot repeat a
-  mutation;
-- route approved mutations through canonical commands and durable effects;
-- remove generic current-message confirmation as sensitive-action authority;
-- fail closed on proposal tamper, expiry, actor/shop/policy drift and target
-  version conflict;
-- retain sanitized proposal, approval, execution and recovery history;
-- provide AR/FR/EN stale, conflict, approval and recovery states;
-- prove tamper, expiry, double approval, one-time execution, restart and
-  no-direct-mutation behavior.
+## Completed package rules — provider convergence and durable commerce
 
-Do not implement courier/commerce convergence, live provider certification, a
-version bump, MSI, release, Founder acceptance, Phase 3 closure or Stable in this
-package.
+Task 6 is source-closed at clean head
+`676d0e41cc69d44c29b912038cba100fd827fcfa` with checkpoint `30875723975`.
+
+- commerce requests queue durable runs and never execute provider pages inline;
+- opaque page continuation, encrypted items, immutable attempts, exact credential
+  contracts, monotonic watermarks and audited recovery are source-proven;
+- one public courier facade owns booking, tracking and reconciliation;
+- the courier effect runtime is internal and obsolete queue/reconciliation exports
+  are removed;
+- DHD is absent from runtime registration and NOEST remains effect-disabled;
+- provider source authority is not live certification evidence.
+
+## Authorized evidence rules — Phase 3 Level 2 and certification
+
+Only these next actions are authorized:
+
+- run the frozen Phase 3 Level 2 source/database/migration and production-build
+  checkpoint;
+- reconcile PR #203 and issues #164/#202 to source-complete evidence-open truth;
+- collect live courier and Required communication-provider evidence only with
+  current safe credentials/accounts;
+- retain issue #201 as the separate installed hydrated-WebView boundary;
+- record applicable Level 3 evidence before any Phase 3 closure decision.
+
+Do not add broad Phase 3 product behavior, bump the version, publish an MSI or
+release, claim Founder acceptance, close Phase 3 or claim Stable.
 
 ## Evidence language
 

@@ -10,13 +10,13 @@
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
 > **Execution mode:** single-agent, audit-first, batch remediation and tiered CI
-> **Active implementation outcome:** Phase 3 audit, Problem Register and shared contract freeze
+> **Active implementation outcome:** Phase 3 source-complete; Level 2 and evidence open
 > **Active agent:** ChatGPT Web Agentic Coding Agent
 > **Active draft:** PR #203 from `agent/phase3-durable-effects-audit`
 > **Phase execution issue:** issue #202
 > **Retained installed evidence:** issue #201
 > **Execution epic:** issue #164
-> **Last updated:** 2026-08-03
+> **Last updated:** 2026-08-04
 
 Live protected `main` must be re-read directly from GitHub before every session.
 The commit above is the exact current protected source at this update; it is not a
@@ -109,6 +109,10 @@ A lower reality cannot claim a higher one.
 - No application version bump, release publication, Founder acceptance or Stable
   claim accompanied the Phase 1/2 protected-source closures.
 - Issue #202 owns Phase 3. Draft PR #203 is the sole active Phase 3 package.
+- Tasks 3–6 are source-closed on PR #203 at clean implementation head
+  `676d0e41cc69d44c29b912038cba100fd827fcfa`; checkpoint `30875723975` passed.
+- Phase 3 remains evidence-open and unmerged; source completion is not live,
+  signed, installed, Founder-accepted or phase-closed evidence.
 
 ## Current execution model
 
@@ -125,10 +129,9 @@ The Founder selected the following permanent operating pattern:
 - complete full-app AAA frontend transformation as a Stable requirement.
 
 For the current package, the Founder selected the ChatGPT Web Agentic Coding Agent
-as the sole active implementation agent. The session purpose is research/contract
-and governance reconciliation. Production edits remain unauthorized until the
-Phase 3 source/migration/test/caller inventory, consolidated Problem Register and
-shared durable-effect contract freeze are complete.
+as the sole active agent. Phase 3 production source is frozen after Tasks 3–6.
+Only Level 2 source/build validation and explicit live/installed evidence
+collection are authorized; broad production edits are not.
 
 This executes FD-028 and FD-029 without reducing Required scope.
 

@@ -166,7 +166,9 @@ describe("canonical courier Phase 1 closure", () => {
     ).toHaveLength(1);
 
     const winner = attempts.find(
-      (attempt): attempt is PromiseFulfilledResult<
+      (
+        attempt,
+      ): attempt is PromiseFulfilledResult<
         Awaited<ReturnType<typeof queueCanonicalCourierBooking>>
       > => attempt.status === "fulfilled",
     );
@@ -480,7 +482,10 @@ describe("canonical courier public boundary", () => {
         process.cwd(),
         "src/lib/delivery/canonical-courier-booking-authority.ts",
       ),
-      resolve(process.cwd(), "src/lib/delivery/canonical-courier-effect-runtime.ts"),
+      resolve(
+        process.cwd(),
+        "src/lib/delivery/canonical-courier-effect-runtime.ts",
+      ),
       resolve(
         process.cwd(),
         "src/lib/delivery/__tests__/canonical-courier-closure.integration.test.ts",
@@ -488,6 +493,10 @@ describe("canonical courier public boundary", () => {
       resolve(
         process.cwd(),
         "src/lib/integrations/delivery/__tests__/provider-authority-source-contract.test.ts",
+      ),
+      resolve(
+        process.cwd(),
+        "src/lib/integrations/__tests__/phase3-source-closure.test.ts",
       ),
     ]);
     const offenders: string[] = [];

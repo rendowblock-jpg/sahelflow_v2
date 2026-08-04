@@ -13,10 +13,12 @@ SahelFlow 1.0 Stable has not been released.
 - Completed governance reconciliation, exhaustive inventory and shared contract freeze on draft PR #203.
 - Source-closed durable inbound WhatsApp and database-authoritative inbox at `f016055be55fd220baa87c26ffed565c4e9e1d85`.
 - Source-closed truthful durable automations at `c873b8b6a256383497d3799e0839160178e92149`.
-- Source-closed proposal-bound sensitive AI actions at `07caedbc797ced5dc0e2ac959f252d5b3481285d`; complete checkpoint `30849680029` and normal CI `30849680245` passed.
-- Added immutable encrypted proposal, approval and execution authority; exact actor/device/session/shop/policy/custom-permission/entitlement/target/expiry binding; one-time canonical execution; restart replay; permission-filtered recovery history; database-terminal success; and AR/FR/EN states.
-- Repaired custom permission drift, post-command success downgrade, invalid confirmation/phone/location proposal shapes, exact variant binding, product/default-variant consistency, multi-variant ambiguity, approval-history exposure and temporary repair-workflow authority.
-- Authorized only courier/commerce convergence and provider certification next. No version, MSI, release, installed, Founder-acceptance, Phase 3 closure or Stable claim was made.
+- Source-closed proposal-bound sensitive AI actions at `07caedbc797ced5dc0e2ac959f252d5b3481285d`.
+- Source-closed provider capability authority, durable commerce and the canonical courier facade at clean head `676d0e41cc69d44c29b912038cba100fd827fcfa`; full checkpoint `30875723975` and normal CI `30875724094` passed.
+- Added exact active-shop workers, encrypted provider ingress, durable run/page/item and immutable-attempt truth, cursor continuation, generation-scoped retry, monotonic checkpointing, exact credential/endpoint binding, audited AR/FR/EN recovery and PII-free history.
+- Removed DHD runtime registration, kept unverified NOEST effects fail-closed and removed competing courier queue/reconciliation exports behind one public facade.
+- Phase 3 is source-complete but evidence-open. Level 2, live-provider certification, issue #201 installed evidence, applicable Level 3, protected merge and Founder acceptance remain open.
+- No version, MSI, release, Founder-acceptance, Phase 3 closure or Stable claim was made.
 
 ### Phase 2 protected-source closure
 

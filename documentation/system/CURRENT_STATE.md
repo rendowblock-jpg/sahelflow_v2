@@ -10,15 +10,15 @@
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
 > **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active proposed package:** PR #203 — Task 6 courier/commerce convergence and provider certification
+> **Active proposed package:** PR #203 — Phase 3 source-complete; Level 2 and evidence open
 > **Phase execution issue:** #202
 > **Retained installed evidence:** #201
-> **Last assessed:** 2026-08-03
+> **Last assessed:** 2026-08-04
 
 This document states what merged protected source and named evidence prove now. PR #203 is
-identified separately as unmerged Phase 3 source: Tasks 3–5 are source-closed on
-that draft branch, but are not installed, released, Founder-accepted or
-phase-closed truth. The exact live execution frontier belongs in
+identified separately as unmerged Phase 3 source: Tasks 3–6 are source-closed on
+that draft branch, but are not protected, installed, released, live-certified,
+Founder-accepted or phase-closed truth. The exact live execution frontier belongs in
 [`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md).
 
 ## Executive truth
@@ -137,6 +137,31 @@ native lifecycle authority.
 No Phase 1/2 protected-source closure bumped the version, published a new release,
 claimed Founder acceptance or declared a phase fully installed/certified.
 
+## Proposed Phase 3 source truth — PR #203
+
+The clean Phase 3 implementation head is
+`676d0e41cc69d44c29b912038cba100fd827fcfa`. Standard checkpoint
+`30875723975` and normal CI `30875724094` passed.
+
+Proposed-source outcomes include:
+
+- authenticated persistence-before-acknowledgement and a database-authoritative
+  WhatsApp inbox;
+- truthful durable automation runs, ordered steps, immutable attempts and
+  receipt-safe provider actions;
+- immutable proposal-bound AI approval and one-time execution authority;
+- server-side provider connection/capability/credential/endpoint gates;
+- durable commerce runs, pages, encrypted items, continuation, leases, retries,
+  quarantine, dead letter, monotonic watermark and audited recovery;
+- one public canonical courier facade with explicit booking authority and one
+  internal provider-effect/tracking runtime;
+- DHD removed from runtime registration and NOEST effects fail-closed.
+
+This is clean source/database/migration/integration/development-UI evidence only.
+The Phase 3 Level 2 production-build checkpoint, live provider certification,
+issue #201 installed proof, applicable Level 3, protected merge and Founder
+acceptance remain open.
+
 ## Release and installed truth
 
 ### Internal.5
@@ -207,9 +232,9 @@ The latest retained inventory before PR #200 reported approximately:
 - 27 sidecar/desktop resources;
 - 12 Playwright scenarios.
 
-These counts prove breadth and risk surface, not completion. The Phase 3 audit is
-revalidating the provider, inbox, automation and AI subset from exact current
-source because GitHub code search is not indexed for this repository.
+These counts prove breadth and risk surface, not completion. PR #203 revalidated
+and source-closed the provider, inbox, automation, AI, courier and commerce
+subset from exact source despite unavailable GitHub code indexing.
 
 ## Proven strengths
 
