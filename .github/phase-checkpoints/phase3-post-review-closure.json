@@ -1,5 +1,5 @@
 {
-  "formatVersion": 1,
+  "formatVersion": 2,
   "phase": 3,
   "name": "post-review closure checkpoint",
   "state": "closure-authorized-pending-protected-merge",
@@ -10,6 +10,7 @@
   "phaseIssue": 202,
   "founderDecision": "FD-030",
   "validatedImplementationHead": "8b8e2bc83e513ec1711120830794e07fc9f6c684",
+  "validatedClosureHead": "f365c3cfe3c51837131c7b522630664e7253558a",
   "validation": {
     "reviewRemediation": {
       "status": "passed",
@@ -23,14 +24,29 @@
     },
     "targetedAndCompleteGateRun": 30897929419,
     "targetedCommerceTests": "passed",
-    "completeSourceDatabaseIntegrationVerification": "passed"
+    "completeSourceDatabaseIntegrationVerification": "passed",
+    "coverageGate": {
+      "run": 30900031498,
+      "status": "passed",
+      "statementsPercent": 80.59,
+      "linesPercent": 80.59,
+      "testFiles": 250,
+      "tests": 2131
+    },
+    "productionDependencyAudit": {
+      "run": 30900908571,
+      "status": "passed",
+      "vulnerabilities": 0,
+      "whatsAppSidecarBuild": "passed",
+      "focusedTests": "passed"
+    }
   },
   "reviewThreads": {
-    "p1StorefrontReplay": "repaired",
-    "p1WhatsAppSpoolDirectoryDurability": "repaired",
-    "p2ConversationTimestampMonotonicity": "repaired",
-    "p2AutomationCatalogDrift": "repaired",
-    "p2CommercePageBudget": "repaired",
+    "p1StorefrontReplay": "repaired-resolved",
+    "p1WhatsAppSpoolDirectoryDurability": "repaired-resolved",
+    "p2ConversationTimestampMonotonicity": "repaired-resolved",
+    "p2AutomationCatalogDrift": "repaired-resolved",
+    "p2CommercePageBudget": "repaired-resolved",
     "knownOpenP0P1": 0
   },
   "evidenceBoundary": {
