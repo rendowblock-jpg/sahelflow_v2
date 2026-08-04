@@ -5,8 +5,7 @@ process.env.SF_MASTER_KEY =
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cleanDb, rawDb } from "@/app/api/__tests__/helpers";
-import { db } from "@/lib/db";
-import type { ShopContext } from "@/lib/shops/context";
+import { db, shopContext } from "@/lib/db";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 
 const harness = vi.hoisted(() => ({
@@ -29,15 +28,7 @@ import {
   getCollaborationRoutingVersion,
 } from "../assignment";
 
-const SHOP: ShopContext = Object.freeze({
-  workspaceId: "1".repeat(32),
-  installationId: "2".repeat(32),
-  shopId: "default",
-  shopIncarnationId: "3".repeat(32),
-  registryRevision: 1,
-  databaseFileId: "default.db",
-  migrationSetSha256: "4".repeat(64),
-});
+const SHOP = shopContext;
 const CONTEXT = Object.freeze({ prisma: db, shop: SHOP });
 
 function actorContext(options?: {
@@ -173,22 +164,26 @@ describe("generic collaboration routing", () => {
         version: 1,
       },
     });
-    expect(await rawDb.collaborationAssignment.findUnique({
-      where: {
-        entityType_entityId: {
-          entityType: "conversation",
-          entityId: conversation.id,
+    expect(
+      await rawDb.collaborationAssignment.findUnique({
+        where: {
+          entityType_entityId: {
+            entityType: "conversation",
+            entityId: conversation.id,
+          },
         },
-      },
-    })).toMatchObject({
+      }),
+    ).toMatchObject({
       queueId: queue.id,
       workgroupId: workgroup.id,
       assigneeMemberId: TARGET.memberId,
       generation: 1,
     });
-    expect(await rawDb.conversation.findUnique({
-      where: { id: conversation.id },
-    })).toMatchObject({
+    expect(
+      await rawDb.conversation.findUnique({
+        where: { id: conversation.id },
+      }),
+    ).toMatchObject({
       assigneeId: TARGET.memberId,
       teamId: workgroup.id,
     });
@@ -203,10 +198,12 @@ describe("generic collaboration routing", () => {
       toState: "open",
     });
     expect(handover?.reasonJson).not.toContain("Evening shift");
-    await expect(rawDb.collaborationHandover.update({
-      where: { id: handover!.id },
-      data: { toMemberId: null },
-    })).rejects.toThrow();
+    await expect(
+      rawDb.collaborationHandover.update({
+        where: { id: handover!.id },
+        data: { toMemberId: null },
+      }),
+    ).rejects.toThrow();
   });
 
   it("replays across session rotation without a second handover", async () => {
@@ -241,9 +238,11 @@ describe("generic collaboration routing", () => {
       result: first.result,
     });
     expect(await rawDb.collaborationHandover.count()).toBe(1);
-    expect(await rawDb.message.count({
-      where: { conversationId: conversation.id },
-    })).toBe(1);
+    expect(
+      await rawDb.message.count({
+        where: { conversationId: conversation.id },
+      }),
+    ).toBe(1);
   });
 
   it("rejects wrong queue type and a non-member assignee atomically", async () => {
@@ -251,25 +250,29 @@ describe("generic collaboration routing", () => {
     const order = await seedOrder();
     const { workgroup, queue } = await seedGroupAndQueue("order");
 
-    await expect(executeCollaborationRouting(CONTEXT, actorContext(), {
-      entityType: "conversation",
-      entityId: conversation.id,
-      targetQueueId: queue.id,
-      expectedVersion: 0,
-      idempotencyKey: "routing-wrong-type",
-    })).rejects.toMatchObject({ statusCode: 400 });
+    await expect(
+      executeCollaborationRouting(CONTEXT, actorContext(), {
+        entityType: "conversation",
+        entityId: conversation.id,
+        targetQueueId: queue.id,
+        expectedVersion: 0,
+        idempotencyKey: "routing-wrong-type",
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
 
     await rawDb.collaborationWorkgroupMember.deleteMany({
       where: { workgroupId: workgroup.id },
     });
-    await expect(executeCollaborationRouting(CONTEXT, actorContext(), {
-      entityType: "order",
-      entityId: order.id,
-      targetQueueId: queue.id,
-      targetMemberId: TARGET.memberId,
-      expectedVersion: 0,
-      idempotencyKey: "routing-non-member",
-    })).rejects.toMatchObject({ statusCode: 409 });
+    await expect(
+      executeCollaborationRouting(CONTEXT, actorContext(), {
+        entityType: "order",
+        entityId: order.id,
+        targetQueueId: queue.id,
+        targetMemberId: TARGET.memberId,
+        expectedVersion: 0,
+        idempotencyKey: "routing-non-member",
+      }),
+    ).rejects.toMatchObject({ statusCode: 409 });
     expect(await rawDb.collaborationAssignment.count()).toBe(0);
     expect(await rawDb.collaborationHandover.count()).toBe(0);
   });
@@ -298,14 +301,20 @@ describe("generic collaboration routing", () => {
       }),
     ]);
 
-    expect(outcomes.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
-    expect(outcomes.filter((outcome) => outcome.status === "rejected")).toHaveLength(1);
+    expect(
+      outcomes.filter((outcome) => outcome.status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(
+      outcomes.filter((outcome) => outcome.status === "rejected"),
+    ).toHaveLength(1);
     expect(await rawDb.collaborationHandover.count()).toBe(1);
-    expect(await getCollaborationRoutingVersion(
-      CONTEXT,
-      "conversation",
-      conversation.id,
-    )).toBe(1);
+    expect(
+      await getCollaborationRoutingVersion(
+        CONTEXT,
+        "conversation",
+        conversation.id,
+      ),
+    ).toBe(1);
   });
 
   it("persists a state-only transition as durable handover history", async () => {
