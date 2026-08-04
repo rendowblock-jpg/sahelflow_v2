@@ -24,9 +24,15 @@ export function processShopContext(): ShopContext {
   const databasePath = databaseUrl.startsWith("file:")
     ? databaseUrl.slice("file:".length)
     : "";
-  const testing = process.env.NODE_ENV === "test" || process.env.VITEST === "true";
-  const development = process.env.NODE_ENV === "development";
-  const packaged = process.env.NODE_ENV === "production";
+  // SF_TEST_ROOT is the immutable test-run authority. Focused suites may
+  // intentionally change NODE_ENV or VITEST while the shared SQLite sandbox and
+  // process-level Prisma cache remain alive, so those flags are only secondary.
+  const testing =
+    Boolean(process.env.SF_TEST_ROOT) ||
+    process.env.NODE_ENV === "test" ||
+    process.env.VITEST === "true";
+  const development = process.env.NODE_ENV === "development" && !testing;
+  const packaged = process.env.NODE_ENV === "production" && !testing;
 
   if (packaged) {
     assertMasterKeyRotationInactive();
