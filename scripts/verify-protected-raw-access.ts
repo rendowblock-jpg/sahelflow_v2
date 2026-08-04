@@ -4,8 +4,6 @@ import { readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import * as ts from "typescript";
 
-const repositoryRoot = resolve(process.env.SF_REPO_DIR ?? process.cwd());
-const sourceRoot = resolve(repositoryRoot, "src");
 const sourceExtensions = new Set([".ts", ".tsx", ".mts", ".cts"]);
 
 type RawImportKind =
@@ -17,7 +15,7 @@ type RawImportKind =
   | "import-equals"
   | "re-export";
 
-interface RawImportFinding {
+export interface RawImportFinding {
   kind: RawImportKind;
   line: number;
 }
@@ -57,13 +55,119 @@ function isDbModule(value: string): boolean {
 }
 
 function stringModule(node: ts.Expression | undefined): string | null {
-  return node && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+  return node &&
+    (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
     ? node.text
     : null;
 }
 
 function lineOf(sourceFile: ts.SourceFile, node: ts.Node): number {
   return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+}
+
+function propertyNameText(name: ts.PropertyName | undefined): string | null {
+  if (!name) return null;
+  if (
+    ts.isIdentifier(name) ||
+    ts.isStringLiteral(name) ||
+    ts.isNumericLiteral(name)
+  ) {
+    return name.text;
+  }
+  return null;
+}
+
+function objectBindingRawState(
+  pattern: ts.ObjectBindingPattern,
+): "raw" | "safe" | "ambiguous" {
+  for (const element of pattern.elements) {
+    if (element.dotDotDotToken) return "ambiguous";
+    const property = propertyNameText(element.propertyName);
+    if (element.propertyName && property === null) return "ambiguous";
+    const exported = property ?? (ts.isIdentifier(element.name) ? element.name.text : null);
+    if (exported === "dbRaw") return "raw";
+  }
+  return "safe";
+}
+
+function bindingRawState(
+  name: ts.BindingName,
+): "raw" | "safe" | "ambiguous" {
+  if (ts.isObjectBindingPattern(name)) return objectBindingRawState(name);
+  return "ambiguous";
+}
+
+function unwrapExpression(node: ts.Expression): ts.Expression {
+  let current = node;
+  while (true) {
+    const parent = current.parent;
+    if (
+      (ts.isAwaitExpression(parent) && parent.expression === current) ||
+      (ts.isParenthesizedExpression(parent) && parent.expression === current) ||
+      (ts.isAsExpression(parent) && parent.expression === current) ||
+      (ts.isTypeAssertionExpression(parent) && parent.expression === current) ||
+      (ts.isNonNullExpression(parent) && parent.expression === current) ||
+      (ts.isSatisfiesExpression(parent) && parent.expression === current)
+    ) {
+      current = parent;
+      continue;
+    }
+    return current;
+  }
+}
+
+function isPromiseAllCall(node: ts.Node): node is ts.CallExpression {
+  return (
+    ts.isCallExpression(node) &&
+    ts.isPropertyAccessExpression(node.expression) &&
+    ts.isIdentifier(node.expression.expression) &&
+    node.expression.expression.text === "Promise" &&
+    node.expression.name.text === "all"
+  );
+}
+
+function promiseAllBindingState(
+  element: ts.Expression,
+): "raw" | "safe" | "ambiguous" | null {
+  const array = element.parent;
+  if (!ts.isArrayLiteralExpression(array)) return null;
+  const index = array.elements.findIndex((candidate) => candidate === element);
+  if (index < 0 || !isPromiseAllCall(array.parent)) return null;
+
+  const expression = unwrapExpression(array.parent);
+  const declaration = expression.parent;
+  if (
+    !ts.isVariableDeclaration(declaration) ||
+    declaration.initializer !== expression ||
+    !ts.isArrayBindingPattern(declaration.name)
+  ) {
+    return "ambiguous";
+  }
+  const selected = declaration.name.elements[index];
+  if (!selected || ts.isOmittedExpression(selected)) return "safe";
+  return bindingRawState(selected.name);
+}
+
+function moduleCallRawState(
+  call: ts.CallExpression,
+): "raw" | "safe" | "ambiguous" {
+  const expression = unwrapExpression(call);
+  const parent = expression.parent;
+
+  if (ts.isPropertyAccessExpression(parent) && parent.expression === expression) {
+    return parent.name.text === "dbRaw" ? "raw" : "safe";
+  }
+  if (ts.isElementAccessExpression(parent) && parent.expression === expression) {
+    const key = stringModule(parent.argumentExpression);
+    return key === null ? "ambiguous" : key === "dbRaw" ? "raw" : "safe";
+  }
+  if (ts.isVariableDeclaration(parent) && parent.initializer === expression) {
+    return bindingRawState(parent.name);
+  }
+
+  const promiseBinding = promiseAllBindingState(expression);
+  if (promiseBinding) return promiseBinding;
+  return "ambiguous";
 }
 
 export function rawClientImports(
@@ -120,14 +224,15 @@ export function rawClientImports(
           add("re-export", node);
         }
       }
-    } else if (ts.isCallExpression(node) && node.arguments.length === 1) {
+    } else if (ts.isCallExpression(node) && node.arguments.length >= 1) {
       const moduleName = stringModule(node.arguments[0]);
       if (moduleName && isDbModule(moduleName)) {
         if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
-          add("dynamic", node);
+          if (moduleCallRawState(node) !== "safe") add("dynamic", node);
         } else if (
           ts.isIdentifier(node.expression) &&
-          node.expression.text === "require"
+          node.expression.text === "require" &&
+          moduleCallRawState(node) !== "safe"
         ) {
           add("require", node);
         }
@@ -172,25 +277,39 @@ function allowanceMatches(
   );
 }
 
-const violations: string[] = [];
-for (const absolutePath of sourceFiles(sourceRoot)) {
-  const path = relative(repositoryRoot, absolutePath).replaceAll("\\", "/");
-  const findings = rawClientImports(readFileSync(absolutePath, "utf8"), path);
-  if (findings.length === 0 || isBroadRawAuthority(path)) continue;
-  if (allowanceMatches(path, findings)) continue;
-  violations.push(
-    `${path}: ${findings.map(({ kind, line }) => `${kind}@${line}`).join(", ")}`,
-  );
+export function protectedRawAccessViolations(
+  repositoryRoot = resolve(process.env.SF_REPO_DIR ?? process.cwd()),
+): string[] {
+  const sourceRoot = resolve(repositoryRoot, "src");
+  const violations: string[] = [];
+  for (const absolutePath of sourceFiles(sourceRoot)) {
+    const path = relative(repositoryRoot, absolutePath).replaceAll("\\", "/");
+    const findings = rawClientImports(readFileSync(absolutePath, "utf8"), path);
+    if (findings.length === 0 || isBroadRawAuthority(path)) continue;
+    if (allowanceMatches(path, findings)) continue;
+    violations.push(
+      `${path}: ${findings.map(({ kind, line }) => `${kind}@${line}`).join(", ")}`,
+    );
+  }
+  return violations.sort();
 }
 
-if (violations.length > 0) {
-  console.error(
-    "Protected raw-client authority violation: application/domain code can access dbRaw outside an exact reviewed boundary.",
+export function runProtectedRawAccessVerification(): boolean {
+  const violations = protectedRawAccessViolations();
+  if (violations.length > 0) {
+    console.error(
+      "Protected raw-client authority violation: application/domain code can access dbRaw outside an exact reviewed boundary.",
+    );
+    for (const path of violations) console.error(` - ${path}`);
+    return false;
+  }
+  console.log(
+    "Protected raw-client authority verified: named, namespace, dynamic, require and re-export access is restricted to exact canonical boundaries.",
   );
-  for (const path of violations.sort()) console.error(` - ${path}`);
-  process.exit(1);
+  return true;
 }
 
-console.log(
-  "Protected raw-client authority verified: named, namespace, dynamic, require and re-export access is restricted to exact canonical boundaries.",
-);
+const importMeta = import.meta as ImportMeta & { main?: boolean };
+if (importMeta.main && !runProtectedRawAccessVerification()) {
+  process.exitCode = 1;
+}
