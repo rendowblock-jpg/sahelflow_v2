@@ -7,6 +7,7 @@ import {
   isEncryptedPayload,
   type EncryptedPayload,
 } from "@/lib/crypto/field-crypto";
+import { resolveShopProtectedKey } from "@/lib/crypto/protected-key-authority";
 import {
   deriveShopBlindIndex,
   openShopRecordField,
@@ -14,7 +15,10 @@ import {
   type ProtectedRecordReference,
 } from "@/lib/crypto/protected-record";
 import { ProtectedDataCorruptionError } from "@/lib/crypto/protected-data-error";
-import { isProtectedValueEnvelope } from "@/lib/crypto/protected-value";
+import {
+  isProtectedValueEnvelope,
+  type ShopProtectedKeyPurpose,
+} from "@/lib/crypto/protected-value";
 import { getSecret, setSecret } from "@/lib/secrets";
 import type { ShopContext } from "@/lib/shops/context";
 
@@ -26,6 +30,8 @@ export interface ProtectedDataMigrationStats {
   conversations: number;
   messages: number;
   secrets: number;
+  keyAuthoritiesVerified: number;
+  keyAuthoritiesMigrated: number;
   valuesVerified: number;
   valuesMigrated: number;
   indexesMigrated: number;
@@ -38,8 +44,26 @@ export interface ProtectedDataMigrationOptions {
 }
 
 type MigrationPrisma = PrismaClient;
-
 type MutableStats = ProtectedDataMigrationStats;
+
+interface MigrationAuthorityState {
+  data: boolean;
+  blindIndex: boolean;
+  secret: boolean;
+}
+
+interface MigratedField {
+  plaintext: string | null;
+  stored: string | null;
+  changed: boolean;
+  canonical: boolean;
+}
+
+const PROTECTED_KEY_PURPOSES = [
+  "shop-data",
+  "shop-blind-index",
+  "shop-secret",
+] as const satisfies readonly ShopProtectedKeyPurpose[];
 
 function emptyStats(): MutableStats {
   return {
@@ -48,6 +72,8 @@ function emptyStats(): MutableStats {
     conversations: 0,
     messages: 0,
     secrets: 0,
+    keyAuthoritiesVerified: 0,
+    keyAuthoritiesMigrated: 0,
     valuesVerified: 0,
     valuesMigrated: 0,
     indexesMigrated: 0,
@@ -89,6 +115,43 @@ function legacyPayload(value: string): EncryptedPayload {
   };
 }
 
+async function ensureKeyAuthorities(
+  prisma: MigrationPrisma,
+  options: ProtectedDataMigrationOptions,
+  stats: MutableStats,
+): Promise<MigrationAuthorityState> {
+  const state: MigrationAuthorityState = {
+    data: false,
+    blindIndex: false,
+    secret: false,
+  };
+
+  for (const purpose of PROTECTED_KEY_PURPOSES) {
+    const existing = await prisma.protectedKeyAuthority.findUnique({
+      where: { purpose },
+      select: { purpose: true },
+    });
+    if (!existing && options.mode === "verify") {
+      stats.keyAuthoritiesMigrated += 1;
+      continue;
+    }
+
+    await resolveShopProtectedKey(prisma, purpose, {
+      shopContext: options.shopContext,
+      installationRoot: options.installationRoot,
+      createIfMissing: options.mode === "apply",
+    });
+    if (existing) stats.keyAuthoritiesVerified += 1;
+    else stats.keyAuthoritiesMigrated += 1;
+
+    if (purpose === "shop-data") state.data = true;
+    if (purpose === "shop-blind-index") state.blindIndex = true;
+    if (purpose === "shop-secret") state.secret = true;
+  }
+
+  return state;
+}
+
 async function readPlaintext(
   prisma: MigrationPrisma,
   value: string,
@@ -100,6 +163,7 @@ async function readPlaintext(
     const plaintext = await openShopRecordField(prisma, value, reference, {
       shopContext: options.shopContext,
       installationRoot: options.installationRoot,
+      createIfMissing: options.mode === "apply",
     });
     stats.valuesVerified += 1;
     return { plaintext, canonical: true };
@@ -119,15 +183,32 @@ async function migrateField(
   reference: ProtectedRecordReference,
   options: ProtectedDataMigrationOptions,
   stats: MutableStats,
-): Promise<{ plaintext: string | null; stored: string | null; changed: boolean }> {
-  if (value === null) return { plaintext: null, stored: null, changed: false };
+): Promise<MigratedField> {
+  if (value === null) {
+    return {
+      plaintext: null,
+      stored: null,
+      changed: false,
+      canonical: true,
+    };
+  }
   const current = await readPlaintext(prisma, value, reference, options, stats);
   if (current.canonical) {
-    return { plaintext: current.plaintext, stored: value, changed: false };
+    return {
+      plaintext: current.plaintext,
+      stored: value,
+      changed: false,
+      canonical: true,
+    };
   }
+  stats.valuesMigrated += 1;
   if (options.mode === "verify") {
-    stats.valuesMigrated += 1;
-    return { plaintext: current.plaintext, stored: value, changed: true };
+    return {
+      plaintext: current.plaintext,
+      stored: value,
+      changed: true,
+      canonical: false,
+    };
   }
   const stored = await sealShopRecordField(
     prisma,
@@ -136,15 +217,69 @@ async function migrateField(
     {
       shopContext: options.shopContext,
       installationRoot: options.installationRoot,
+      createIfMissing: true,
     },
   );
-  stats.valuesMigrated += 1;
-  return { plaintext: current.plaintext, stored, changed: true };
+  return {
+    plaintext: current.plaintext,
+    stored,
+    changed: true,
+    canonical: false,
+  };
+}
+
+async function customerIndexes(
+  prisma: MigrationPrisma,
+  name: MigratedField,
+  phonePlaintext: string,
+  phoneCanonical: boolean,
+  row: { phone: string; nameBlindIndex: string | null },
+  options: ProtectedDataMigrationOptions,
+  authorities: MigrationAuthorityState,
+  stats: MutableStats,
+): Promise<{
+  phoneIndex: string;
+  nameIndex: string;
+  changed: boolean;
+}> {
+  const canVerify =
+    options.mode === "apply" ||
+    (authorities.blindIndex && name.canonical && phoneCanonical);
+  if (!canVerify) {
+    stats.indexesMigrated += 1;
+    return {
+      phoneIndex: row.phone,
+      nameIndex: row.nameBlindIndex ?? "",
+      changed: true,
+    };
+  }
+
+  const cryptoOptions = {
+    shopContext: options.shopContext,
+    installationRoot: options.installationRoot,
+    createIfMissing: options.mode === "apply",
+  } as const;
+  const phoneIndex = await deriveShopBlindIndex(
+    prisma,
+    phonePlaintext,
+    { recordType: "Customer", field: "phone" },
+    cryptoOptions,
+  );
+  const nameIndex = await deriveShopBlindIndex(
+    prisma,
+    name.plaintext ?? "",
+    { recordType: "Customer", field: "name" },
+    cryptoOptions,
+  );
+  const changed = row.phone !== phoneIndex || row.nameBlindIndex !== nameIndex;
+  if (changed) stats.indexesMigrated += 1;
+  return { phoneIndex, nameIndex, changed };
 }
 
 async function migrateCustomers(
   prisma: MigrationPrisma,
   options: ProtectedDataMigrationOptions,
+  authorities: MigrationAuthorityState,
   stats: MutableStats,
 ): Promise<void> {
   const rows = await prisma.customer.findMany({
@@ -194,6 +329,7 @@ async function migrateCustomers(
     let phonePlaintext: string;
     let phoneStored = row.phoneEnc;
     let phoneChanged = false;
+    let phoneCanonical = false;
     if (row.phoneEnc) {
       const phone = await migrateField(
         prisma,
@@ -211,9 +347,11 @@ async function migrateCustomers(
       phonePlaintext = phone.plaintext;
       phoneStored = phone.stored;
       phoneChanged = phone.changed;
+      phoneCanonical = phone.canonical;
     } else if (!/^[0-9a-f]{64}$/.test(row.phone)) {
       phonePlaintext = row.phone;
       phoneChanged = true;
+      stats.valuesMigrated += 1;
       if (options.mode === "apply") {
         phoneStored = await sealShopRecordField(
           prisma,
@@ -222,10 +360,10 @@ async function migrateCustomers(
           {
             shopContext: options.shopContext,
             installationRoot: options.installationRoot,
+            createIfMissing: true,
           },
         );
       }
-      stats.valuesMigrated += 1;
     } else {
       throw new ProtectedDataCorruptionError(
         "format",
@@ -233,27 +371,16 @@ async function migrateCustomers(
       );
     }
 
-    const phoneIndex = await deriveShopBlindIndex(
+    const indexes = await customerIndexes(
       prisma,
+      name,
       phonePlaintext,
-      { recordType: "Customer", field: "phone" },
-      {
-        shopContext: options.shopContext,
-        installationRoot: options.installationRoot,
-      },
+      phoneCanonical,
+      row,
+      options,
+      authorities,
+      stats,
     );
-    const nameIndex = await deriveShopBlindIndex(
-      prisma,
-      name.plaintext ?? "",
-      { recordType: "Customer", field: "name" },
-      {
-        shopContext: options.shopContext,
-        installationRoot: options.installationRoot,
-      },
-    );
-    const indexesChanged =
-      row.phone !== phoneIndex || row.nameBlindIndex !== nameIndex;
-    if (indexesChanged) stats.indexesMigrated += 1;
 
     if (
       options.mode === "apply" &&
@@ -262,15 +389,15 @@ async function migrateCustomers(
         phone2.changed ||
         address.changed ||
         notes.changed ||
-        indexesChanged)
+        indexes.changed)
     ) {
       await prisma.customer.update({
         where: { id: row.id },
         data: {
           name: name.stored!,
-          phone: phoneIndex,
+          phone: indexes.phoneIndex,
           phoneEnc: phoneStored,
-          nameBlindIndex: nameIndex,
+          nameBlindIndex: indexes.nameIndex,
           phone2: phone2.stored,
           address: address.stored,
           notes: notes.stored,
@@ -280,9 +407,39 @@ async function migrateCustomers(
   }
 }
 
+async function orderIndex(
+  prisma: MigrationPrisma,
+  phone: MigratedField,
+  currentIndex: string | null,
+  options: ProtectedDataMigrationOptions,
+  authorities: MigrationAuthorityState,
+  stats: MutableStats,
+): Promise<{ value: string | null; changed: boolean }> {
+  const canVerify =
+    options.mode === "apply" || (authorities.blindIndex && phone.canonical);
+  if (!canVerify) {
+    stats.indexesMigrated += 1;
+    return { value: currentIndex, changed: true };
+  }
+  const value = await deriveShopBlindIndex(
+    prisma,
+    phone.plaintext!,
+    { recordType: "Order", field: "phone" },
+    {
+      shopContext: options.shopContext,
+      installationRoot: options.installationRoot,
+      createIfMissing: options.mode === "apply",
+    },
+  );
+  const changed = currentIndex !== value;
+  if (changed) stats.indexesMigrated += 1;
+  return { value, changed };
+}
+
 async function migrateOrders(
   prisma: MigrationPrisma,
   options: ProtectedDataMigrationOptions,
+  authorities: MigrationAuthorityState,
   stats: MutableStats,
 ): Promise<void> {
   const rows = await prisma.order.findMany({
@@ -317,26 +474,23 @@ async function migrateOrders(
       options,
       stats,
     );
-    const phoneIndex = await deriveShopBlindIndex(
+    const phoneIndex = await orderIndex(
       prisma,
-      phone.plaintext!,
-      { recordType: "Order", field: "phone" },
-      {
-        shopContext: options.shopContext,
-        installationRoot: options.installationRoot,
-      },
+      phone,
+      row.phoneBlindIndex,
+      options,
+      authorities,
+      stats,
     );
-    const indexChanged = row.phoneBlindIndex !== phoneIndex;
-    if (indexChanged) stats.indexesMigrated += 1;
     if (
       options.mode === "apply" &&
-      (phone.changed || address.changed || notes.changed || indexChanged)
+      (phone.changed || address.changed || notes.changed || phoneIndex.changed)
     ) {
       await prisma.order.update({
         where: { id: row.id },
         data: {
           phone: phone.stored!,
-          phoneBlindIndex: phoneIndex,
+          phoneBlindIndex: phoneIndex.value,
           address: address.stored!,
           notes: notes.stored,
         },
@@ -407,14 +561,19 @@ async function migrateSecrets(
   options: ProtectedDataMigrationOptions,
   stats: MutableStats,
 ): Promise<void> {
-  const rows = await prisma.secret.findMany({ select: { key: true, ciphertext: true } });
+  const rows = await prisma.secret.findMany({
+    select: { key: true, ciphertext: true },
+  });
   stats.secrets = rows.length;
   const serviceContext = {
     prisma: prisma as never,
     shop: options.shopContext,
   };
   for (const row of rows) {
-    const plaintext = await getSecret(serviceContext, row.key);
+    const plaintext = await getSecret(serviceContext, row.key, {
+      installationRoot: options.installationRoot,
+      createIfMissing: options.mode === "apply",
+    });
     if (plaintext === null) {
       throw new ProtectedDataCorruptionError(
         "format",
@@ -427,7 +586,10 @@ async function migrateSecrets(
     }
     stats.valuesMigrated += 1;
     if (options.mode === "apply") {
-      await setSecret(serviceContext, row.key, plaintext);
+      await setSecret(serviceContext, row.key, plaintext, {
+        installationRoot: options.installationRoot,
+        createIfMissing: true,
+      });
     }
   }
 }
@@ -437,14 +599,18 @@ async function migrateSecrets(
  * Every row update is idempotent and atomic. Interruption leaves a mixed but
  * readable generation; re-running verifies canonical envelopes and continues
  * remaining legacy/plaintext rows without double-encrypting them.
+ *
+ * Verify mode is strictly read-only: it never creates key-authority rows and
+ * never rewrites indexes or protected values.
  */
 export async function migrateShopProtectedData(
   prisma: MigrationPrisma,
   options: ProtectedDataMigrationOptions,
 ): Promise<ProtectedDataMigrationStats> {
   const stats = emptyStats();
-  await migrateCustomers(prisma, options, stats);
-  await migrateOrders(prisma, options, stats);
+  const authorities = await ensureKeyAuthorities(prisma, options, stats);
+  await migrateCustomers(prisma, options, authorities, stats);
+  await migrateOrders(prisma, options, authorities, stats);
   await migrateConversations(prisma, options, stats);
   await migrateMessages(prisma, options, stats);
   await migrateSecrets(prisma, options, stats);
