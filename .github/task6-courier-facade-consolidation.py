@@ -209,6 +209,26 @@ if insert_marker not in contract:
 contract = contract.replace(insert_marker, new_test, 1)
 source_contract.write_text(contract, encoding="utf-8")
 
+closure_test = ROOT / "src/lib/delivery/__tests__/canonical-courier-closure.integration.test.ts"
+closure = closure_test.read_text(encoding="utf-8")
+allow_marker = '''      resolve(
+        process.cwd(),
+        "src/lib/delivery/__tests__/canonical-courier-closure.integration.test.ts",
+      ),
+'''
+allow_source_contract = '''      resolve(
+        process.cwd(),
+        "src/lib/integrations/delivery/__tests__/provider-authority-source-contract.test.ts",
+      ),
+'''
+closure = replace_once(
+    closure,
+    allow_marker,
+    allow_marker + allow_source_contract,
+    "courier closure source-contract allowlist",
+)
+closure_test.write_text(closure, encoding="utf-8")
+
 LEGACY.unlink()
 REVIEWED.unlink()
 
