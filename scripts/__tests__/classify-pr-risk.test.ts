@@ -75,6 +75,21 @@ describe("classifyPrRisk", () => {
     });
   });
 
+  it("classifies future native backup authority by category", () => {
+    expect(
+      classifyPrRisk([
+        "src-tauri/src/backup_container.rs",
+        "src-tauri/tests/backup_recovery.rs",
+      ]),
+    ).toMatchObject({
+      runQuality: true,
+      runTauri: true,
+      runWindowsStandalone: true,
+      runWindowsRust: true,
+      runInstalledMsi: true,
+    });
+  });
+
   it("defers Windows artifact proof for ordinary runtime readiness source", () => {
     expect(
       classifyPrRisk(["src/app/api/internal/runtime-ready/route.ts"]),
