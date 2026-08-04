@@ -29,6 +29,7 @@ vi.mock("next/headers", () => ({
 delete process.env.AUTH_SECRET;
 delete process.env.SF_DIRECT_ROUTE_TEST_AUTHORITY;
 
+import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 import { dbRaw } from "@/lib/db";
 import {
   identityAuthorityMarkerPath,
@@ -74,8 +75,8 @@ describe("durable identity initialization continuity", () => {
     expect(footprint).not.toBeNull();
     expect(JSON.parse(footprint!.value)).toEqual({
       formatVersion: 1,
-      workspaceId: "0".repeat(32),
-      installationId: "0".repeat(32),
+      workspaceId: TEST_SHOP_CONTEXT.workspaceId,
+      installationId: TEST_SHOP_CONTEXT.installationId,
     });
     expect(existsSync(identityAuthorityPath())).toBe(true);
     expect(existsSync(identityAuthorityMarkerPath())).toBe(true);
