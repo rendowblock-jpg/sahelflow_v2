@@ -41,6 +41,9 @@ jobs:
       - name: Apply source authority reconciliation
         run: python .github/phase3-source-authority-reconciliation.py
 
+      - name: Apply generated audit fixup
+        run: python .github/phase3-source-authority-fixup.py
+
       - name: Format machine authority and audit source
         run: >-
           bunx prettier --write
