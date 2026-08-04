@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 import type { PrismaClient } from "@prisma/client";
 
@@ -27,6 +27,10 @@ const AUTHORITY_FORMAT_VERSION = 1 as const;
 const AUTHORITY_ALGORITHM = "sahelflow-protected-value/aes-256-gcm" as const;
 const KEY_BYTES = 32;
 const DEFAULT_KEY_VERSION = 1;
+const TEST_ROOT_DOMAIN = Buffer.from(
+  "sahelflow.test-installation-root.v1\0",
+  "utf8",
+);
 
 const INSTALLATION_PURPOSE: Record<
   ShopProtectedKeyPurpose,
@@ -64,6 +68,12 @@ export interface ResolveShopProtectedKeyOptions {
   createIfMissing?: boolean;
 }
 
+export interface ProtectedKeyRewrapStats {
+  total: number;
+  rewrapped: number;
+  alreadyCurrent: number;
+}
+
 function keyAuthorityError(
   failure: "format" | "key" | "context" | "authentication",
   message: string,
@@ -85,6 +95,22 @@ function assertKeyVersion(version: number): void {
   if (!Number.isSafeInteger(version) || version < 1) {
     throw new TypeError("Protected shop key version must be a positive integer");
   }
+}
+
+function isShopProtectedKeyPurpose(
+  value: string,
+): value is ShopProtectedKeyPurpose {
+  return Object.prototype.hasOwnProperty.call(INSTALLATION_PURPOSE, value);
+}
+
+function defaultInstallationRoot(): Buffer {
+  if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
+    return createHash("sha256")
+      .update(TEST_ROOT_DOMAIN)
+      .update(process.env.SF_TEST_ROOT ?? "default", "utf8")
+      .digest();
+  }
+  return getMasterKey();
 }
 
 function binding(
@@ -242,7 +268,8 @@ export async function resolveShopProtectedKey(
   options: ResolveShopProtectedKeyOptions = {},
 ): Promise<ResolvedShopProtectedKey> {
   const context = options.shopContext ?? processShopContext();
-  const installationRoot = options.installationRoot ?? getMasterKey();
+  const installationRoot =
+    options.installationRoot ?? defaultInstallationRoot();
   const keyVersion = options.keyVersion ?? DEFAULT_KEY_VERSION;
   const createIfMissing = options.createIfMissing ?? true;
   assertKeyVersion(keyVersion);
@@ -314,4 +341,103 @@ export async function resolveShopProtectedKey(
       installationRoot,
     );
   }
+}
+
+/**
+ * Re-wrap every existing random shop key under a new installation root without
+ * changing the shop key or any seller ciphertext. The operation is idempotent:
+ * rows already authenticated under the new root are verified and skipped.
+ */
+export async function rewrapShopProtectedKeys(
+  prisma: ProtectedKeyAuthorityClient,
+  context: ShopContext,
+  oldInstallationRoot: Buffer,
+  newInstallationRoot: Buffer,
+  dryRun = false,
+): Promise<ProtectedKeyRewrapStats> {
+  const rows = await prisma.protectedKeyAuthority.findMany({
+    select: {
+      purpose: true,
+      formatVersion: true,
+      algorithm: true,
+      keyVersion: true,
+      keyId: true,
+      wrappingKeyId: true,
+      wrappedKey: true,
+    },
+  });
+  const stats: ProtectedKeyRewrapStats = {
+    total: rows.length,
+    rewrapped: 0,
+    alreadyCurrent: 0,
+  };
+
+  for (const row of rows) {
+    if (!isShopProtectedKeyPurpose(row.purpose)) {
+      throw keyAuthorityError(
+        "format",
+        `Protected key authority has unsupported purpose ${row.purpose}`,
+      );
+    }
+    assertKeyVersion(row.keyVersion);
+    const oldWrapping = wrappingAuthority(
+      context,
+      row.purpose,
+      oldInstallationRoot,
+    );
+    const newWrapping = wrappingAuthority(
+      context,
+      row.purpose,
+      newInstallationRoot,
+    );
+
+    if (row.wrappingKeyId === newWrapping.descriptor.keyId) {
+      const current = openAuthorityRow(
+        row,
+        context,
+        row.purpose,
+        row.keyVersion,
+        newInstallationRoot,
+      );
+      current.key.fill(0);
+      stats.alreadyCurrent += 1;
+      continue;
+    }
+    if (row.wrappingKeyId !== oldWrapping.descriptor.keyId) {
+      throw keyAuthorityError(
+        "key",
+        `Protected key authority for ${row.purpose} matches neither the current nor candidate installation root`,
+      );
+    }
+
+    const current = openAuthorityRow(
+      row,
+      context,
+      row.purpose,
+      row.keyVersion,
+      oldInstallationRoot,
+    );
+    try {
+      const wrappedKey = sealProtectedString(
+        current.key.toString("hex"),
+        newWrapping.key,
+        newWrapping.envelopeDescriptor,
+        binding(context, row.purpose, row.keyVersion),
+      );
+      if (!dryRun) {
+        await prisma.protectedKeyAuthority.update({
+          where: { purpose: row.purpose },
+          data: {
+            wrappingKeyId: newWrapping.descriptor.keyId,
+            wrappedKey,
+          },
+        });
+      }
+      stats.rewrapped += 1;
+    } finally {
+      current.key.fill(0);
+    }
+  }
+
+  return stats;
 }
