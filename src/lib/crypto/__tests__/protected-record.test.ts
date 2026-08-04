@@ -149,9 +149,13 @@ describe("canonical protected record codec", () => {
   });
 
   it("prevents cross-shop blind-index correlation", async () => {
-    const fake = new FakeProtectedRecordPrisma();
+    // One SQLite file owns one shop key authority. Model the other shop with a
+    // separate store rather than attempting to open Algiers authority under an
+    // Oran binding in the same fake database.
+    const algiers = new FakeProtectedRecordPrisma();
+    const oran = new FakeProtectedRecordPrisma();
     const first = await deriveShopBlindIndex(
-      client(fake),
+      client(algiers),
       "0555123456",
       { recordType: "Customer", field: "phone" },
       {
@@ -166,7 +170,7 @@ describe("canonical protected record codec", () => {
       databaseFileId: "shop-oran.db",
     });
     const second = await deriveShopBlindIndex(
-      client(fake),
+      client(oran),
       "0555123456",
       { recordType: "Customer", field: "phone" },
       {
