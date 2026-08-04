@@ -1,19 +1,19 @@
 # SahelFlow documentation
 
 > **Status:** Active documentation entry point
-> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Live protected main:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
-> **Latest application-changing protected merge:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
+> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary
+> **Live protected main:** `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Latest application-changing protected merge:** PR #203 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Execution mode:** single-agent, audit-first, batch remediation and tiered CI
-> **Active implementation outcome:** Phase 3 closure authorized under FD-030; Phase 4 audit next
-> **Active agent:** ChatGPT Web Agentic Coding Agent
-> **Active draft:** PR #203 from `agent/phase3-durable-effects-audit`
-> **Phase execution issue:** issue #202
+> **Active implementation outcome:** issue #204 Phase 4 audit, Problem Register and shared contract freeze
+> **Active agent:** selected at session start; one active implementation agent at a time
+> **Active branch/PR:** none until the Phase 4 audit and contract freeze identify the first bounded implementation package
+> **Phase execution issue:** issue #204
 > **Retained installed evidence:** issue #201
 > **Execution epic:** issue #164
 > **Last updated:** 2026-08-04
@@ -28,7 +28,7 @@ dependency order, research/delivery process and exact execution frontier.
 
 The active authority remains intentionally limited to ten Markdown documents.
 Issue #164 tracks execution but is not an eleventh product or architecture
-authority. Issues #201 and #202 track bounded Phase 3 work and evidence. Historical
+authority. Issue #204 owns active Phase 4 execution; issue #201 retains the later installed evidence obligation. Historical
 reports under `archive/` are context only until revalidated and adopted by an
 active owner.
 
@@ -49,7 +49,7 @@ active owner.
 7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — single-agent execution,
    audit-first planning, Problem Register, tiered CI, review, release and evidence.
 8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact live
-   Phase 3 frontier, audit status, Problem Register and exact next task.
+   Phase 4 frontier, audit status, Problem Register and exact next task.
 9. [`research/RESEARCH.md`](research/RESEARCH.md) — research protocol, adopted
    findings and revalidation triggers.
 10. This file — documentation map and authority rules.
@@ -90,51 +90,38 @@ A lower reality cannot claim a higher one.
 
 ## Current protected truth
 
-- PR #195 merged the repaired Phase 1 Golden COD boundary and durable
-  identity/Teams source at
-  `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
-- PR #197 merged signed licensing authority at
-  `04d4c51831c6e043ab39a614a7e947e6b27d01e6`.
-- PR #199 merged the single-agent AAA governance reset at
-  `991c61ac882497fdda01af3ac04f06978146bbda`.
-- PR #200 merged native multi-shop authority at
-  `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`.
-- The Tauri host is protected source authority for create, rename, switch,
-  archive, recover and delete through a journaled lifecycle with exact identity,
-  licensing, migration, runtime-readiness, compensation and recovery binding.
-- The PR #200 installed MSI built, installed, launched, closed and reopened, but
-  the ephemeral runner did not observe the authenticated hydrated-WebView receipt
-  twice. The Founder-authorized closure exception is retained only in issue #201;
-  it is not passing installed-UI evidence.
-- No application version bump, release publication, Founder acceptance or Stable
-  claim accompanied the Phase 1/2 protected-source closures.
-- Issue #202 owns Phase 3. Draft PR #203 is the sole active Phase 3 package.
-- Tasks 3–6 are source-closed on PR #203 at clean implementation head
-  `676d0e41cc69d44c29b912038cba100fd827fcfa`; checkpoint `30875723975` passed.
-- FD-030 moves real provider and issue #201 evidence to Phase 9/applicable Level
-  3, allowing Phase 3 closure on the passed deterministic conformance and Level 2
-  source/build evidence. PR #203 remains the protected closure vehicle.
+- PR #195 protected the repaired Golden COD and durable identity/Teams boundary.
+- PR #197 protected signed installation-level licensing.
+- PR #199 protected the single-agent AAA execution model.
+- PR #200 protected Tauri-owned native multi-shop lifecycle authority; issue #201
+  retains its bounded installed hydrated-WebView evidence obligation.
+- PR #203 merged Phase 3 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3` from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`.
+- Final required run `30901725446` passed source/database/migration tests,
+  TypeScript, ESLint, 80%+ coverage and a zero-vulnerability production audit.
+- Issue #202 is closed and no known Phase 3 P0/P1 remains.
+- FD-030 retains real provider certification for Phase 9 representative beta and
+  issue #201 for the applicable Level 3/installed gate.
+- Internal.13 remains the published and Founder-installed executable; no Phase 3
+  version bump, MSI, Founder acceptance, Beta or Stable claim followed.
+- Issue #204 owns the active Phase 4 audit and contract freeze.
 
 ## Current execution model
 
-The Founder selected the following permanent operating pattern:
+The Founder-selected permanent operating pattern remains:
 
 - one active implementation agent at a time;
 - complete phase/package audit before production edits;
 - one consolidated Problem Register grouped by root cause;
-- coherent batch remediation rather than drip-fed one-problem loops;
-- Level 1 Task Gate after every coherent completed task;
-- Level 2 Phase Checkpoint before phase closure;
-- Level 3 Major Full Checkpoint after every two phases by default, or earlier for
-  high-risk native/security/data/recovery/provider authority;
-- complete full-app AAA frontend transformation as a Stable requirement.
+- coherent batch remediation rather than drip-fed loops;
+- Level 1 Task Gate after every coherent task;
+- Level 2 Phase Checkpoint before closure;
+- Level 3 Major Full Checkpoint after two phases by default or earlier for
+  security, data, recovery, migration, native and irreversible-provider risk;
+- complete whole-product AAA frontend, multilingual, accessibility, performance,
+  recovery and evidence obligations.
 
-For the current package, the Founder selected the ChatGPT Web Agentic Coding Agent
-as the sole active agent. Phase 3 production source is frozen after Tasks 3–6.
-Only the protected PR #203 closure and subsequent Phase 4 audit/contract freeze
-are authorized; broad Phase 4 production edits are not yet authorized.
-
-This executes FD-028 and FD-029 without reducing Required scope.
+For Phase 4, production work is frozen until issue #204's exhaustive audit,
+primary-source research and shared contract freeze are complete.
 
 ## Final completion model
 
@@ -152,51 +139,25 @@ This executes FD-028 and FD-029 without reducing Required scope.
 Experience, Arabic/RTL, accessibility, performance, security, migration, recovery
 and evidence travel continuously across functional phases.
 
-## Active Phase 3 contract
+## Active Phase 4 contract
 
-Phase 3 must make every external input and effect durable, replayable, observable
-and safe:
+Phase 4 must make seller data survivable and the product commercially defensible.
+The first session is audit and contract freeze only.
 
-```text
-authenticated ingress
-→ durable inbox
-→ validation and deduplication
-→ canonical command
-→ committed result
-→ durable outbox
-→ external effect
-→ receipt and reconciliation
-```
+The audit covers every store, protected field, key, blind index, secret,
+backup/export path, migration, journal, recovery, reset/delete path, production
+caller, test, native boundary and legacy competitor. It must adopt current primary
+sources for SQLite/Windows/cryptography/migration/SBOM/privacy/Law 18-07, produce
+one Problem Register and freeze:
 
-The package must preserve and compose existing protected primitives:
+- purpose-separated protected key hierarchy;
+- encrypted all-shop backup and authenticated manifest;
+- independent recovery kit and replacement-install restore;
+- failed-restore rollback and migration failure matrix;
+- minimization, retention, deletion, threat-model and security-review evidence.
 
-- exact trusted person/member/device/session and `ShopContext` authority;
-- signed licensing and native multi-shop lifecycle authority;
-- canonical business command, event, encrypted outbox and movement facts;
-- durable outbound WhatsApp effect identity, leases, ambiguity and sidecar
-  receipts;
-- canonical courier booking, tracking and reconciliation;
-- commerce source commands and checkpoint refusal after any failed item.
-
-The audit must close the competing paths:
-
-- inbound WhatsApp currently depends on an in-memory sidecar history rather than
-  persistence-before-acknowledgement;
-- automation multi-step execution can continue after a failed step and record the
-  whole run as success;
-- automation WhatsApp actions call the sidecar directly instead of the durable
-  outbox;
-- sensitive AI actions use generic current-message confirmation rather than one
-  persisted exact proposal and approval;
-- commerce synchronization lacks durable per-run/per-item ingress and operator
-  recovery authority;
-- provider certification and inactive-shop worker ownership are not yet complete
-  contracts.
-
-The older `agent/phase3-durable-whatsapp-recovery` and
-`codex/phase3-durable-provider` branches are diverged evidence only. Validated
-design and tests may be selectively reconstructed on current protected source;
-those branches must not be merged wholesale.
+Historical Phase 4 branches and PRs are evidence only until revalidated against
+current protected main.
 
 ## AAA frontend rule
 

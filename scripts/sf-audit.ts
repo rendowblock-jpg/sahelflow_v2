@@ -297,7 +297,9 @@ if (existsSync(packagePath)) {
 requireMarkers("README.md", [
   "documentation/README.md",
   "FD-028 Final Completion Program",
-  "Phase 3",
+  "Phase 4",
+  "PR #203 Phase 3 closure",
+  "issue #204",
   "SahelFlow 1.0 Stable has not been released",
 ]);
 requireMarkers("AGENTS.md", [
@@ -306,19 +308,17 @@ requireMarkers("AGENTS.md", [
   "Level 1 — Task Gate",
   "Level 2 — Phase Checkpoint",
   "Level 3 — Major Full Checkpoint",
-  "PR #203",
-  "Task 3 durable inbound WhatsApp is source-closed",
-  "Task 4 truthful durable automations are source-closed",
-  "Task 6 is source-closed",
-  "Completed evidence rule — Phase 3 Level 2 source/build checkpoint",
-  "Founder closure rule — FD-030",
-  "676d0e41cc69d44c29b912038cba100fd827fcfa",
+  "PR #203 is merged",
+  "issue #204",
+  "Phase 4 exhaustive audit and contract freeze",
+  "aa4ca0758fd696f4b02fc1975629ac698f9349c3",
 ]);
 requireMarkers("documentation/README.md", [
   "Phase 4 — data protection, recovery, migrations and security",
-  "PR #203",
+  "PR #203 merged Phase 3",
+  "issue #204",
   "Problem Register",
-  "complete full-app AAA frontend transformation",
+  "complete whole-product AAA frontend",
 ]);
 requireMarkers("documentation/product/DECISIONS.md", [
   "## FD-028",
@@ -338,8 +338,9 @@ requireMarkers("documentation/system/ROADMAP.md", [
 ]);
 requireMarkers("documentation/system/CURRENT_STATE.md", [
   "Latest protected source closures",
-  "Native multi-shop — PR #200",
-  "Active proposed package:** PR #203",
+  "Phase 3 protected-source closure — PR #203",
+  "Active Phase 4 frontier",
+  "issue #204",
   "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
 ]);
 requireMarkers("documentation/operations/WORKFLOW.md", [
@@ -353,17 +354,12 @@ requireMarkers("documentation/operations/WORKFLOW.md", [
   "Whole-product AAA frontend program",
 ]);
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
-  "Completed Task 2 — exhaustive inventory and shared contract freeze",
-  "Completed Task 3 — durable inbound WhatsApp",
-  "Completed Task 4 — truthful durable automations",
-  "Completed Task 5 — proposal-bound sensitive AI actions",
-  "Completed Task 6 — provider convergence and durable commerce",
-  "Completed Phase 3 Level 2 source/build checkpoint",
-  "Authorized next package — protected merge and Phase 4 audit",
-  "Broad Phase 3 and Phase 4 production work:** not authorized",
-  "676d0e41cc69d44c29b912038cba100fd827fcfa",
-  "30875723975",
-  "P3-P2-003 — closed for Phase 3 under FD-030",
+  "Phase 3 protected closure",
+  "Phase 4 first package — exhaustive audit and contract freeze",
+  "issue #204",
+  "Broad Phase 4 production work:** not authorized",
+  "aa4ca0758fd696f4b02fc1975629ac698f9349c3",
+  "30901725446",
 ]);
 requireMarkers("documentation/research/RESEARCH.md", [
   "Research-first quality rule",
@@ -399,6 +395,7 @@ for (const relativePath of [
   }
 }
 
+const expectedCurrentMain = "aa4ca0758fd696f4b02fc1975629ac698f9349c3";
 const expectedProtectedBase = "e9c92f08f39e8d87ddfd72d2e698418ae81fc084";
 for (const relativePath of [
   "AGENTS.md",
@@ -408,12 +405,43 @@ for (const relativePath of [
   "documentation/operations/WORKING_MEMORY.md",
 ]) {
   const content = contentOf(relativePath);
-  if (content && !content.includes(expectedProtectedBase)) {
+  if (content && !content.includes(expectedCurrentMain)) {
     report(
       "drift",
       relativePath,
-      "current protected Phase 2 merge/base is missing",
+      "current protected Phase 3 merge/base is missing",
     );
+  }
+}
+
+const stalePhase3FrontierMarkers = [
+  "PR #203 remains unmerged",
+  "Draft PR #203",
+  "Active draft:** PR #203",
+  "active draft PR: #203",
+  "Issue #202 owns Phase 3",
+  "Current session purpose:** Phase 3 live-provider and installed evidence",
+  "Authorized next package:** protected merge of PR #203",
+  "Live protected main:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`",
+];
+for (const relativePath of [
+  "README.md",
+  "AGENTS.md",
+  "CHANGELOG.md",
+  "documentation/README.md",
+  "documentation/system/CURRENT_STATE.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/operations/WORKING_MEMORY.md",
+]) {
+  const content = contentOf(relativePath);
+  for (const marker of stalePhase3FrontierMarkers) {
+    if (content.includes(marker)) {
+      report(
+        "drift",
+        relativePath,
+        `stale Phase 3 frontier remains: ${marker}`,
+      );
+    }
   }
 }
 
@@ -697,5 +725,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Tasks 3–6 source-closed; Phase 3 Level 2 passed; live/installed evidence open).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 3 protected-source closed; Phase 4 audit active; provider/installed evidence retained for later gates).`,
 );
