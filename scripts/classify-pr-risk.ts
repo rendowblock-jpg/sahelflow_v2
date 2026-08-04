@@ -83,9 +83,9 @@ function changesInstalledMsiProof(path: string): boolean {
 }
 
 /**
- * Native authorities are matched by category, not only today's filenames. A
- * future `backup.rs`, `restore.rs`, or similarly named test must not silently
- * fall back to generic Linux Rust proof.
+ * Native authorities are matched by category, not only today's filenames. New
+ * backup/restore code and the existing destructive shop lifecycle must never
+ * silently fall back to generic Linux Rust proof.
  */
 function changesNativeDataSurvivability(path: string): boolean {
   const nativeAuthorityPrefixes = [
@@ -97,6 +97,8 @@ function changesNativeDataSurvivability(path: string): boolean {
     "src-tauri/src/installation_root",
     "src-tauri/src/protected_storage",
     "src-tauri/src/key_rotation",
+    "src-tauri/src/shop_lifecycle",
+    "src-tauri/contracts/shop-lifecycle/",
     "src-tauri/tests/backup",
     "src-tauri/tests/restore",
     "src-tauri/tests/recovery",
@@ -105,6 +107,7 @@ function changesNativeDataSurvivability(path: string): boolean {
     "src-tauri/tests/installation_root",
     "src-tauri/tests/protected_storage",
     "src-tauri/tests/key_rotation",
+    "src-tauri/tests/shop_lifecycle",
   ] as const;
   return nativeAuthorityPrefixes.some((prefix) => path.startsWith(prefix));
 }
@@ -128,10 +131,24 @@ function changesProtectedDataMaintenance(path: string): boolean {
 }
 
 /**
+ * Shop archive, recovery, delete and reset paths can remove or replace live
+ * SQLite authority. Match the complete command/route families rather than a
+ * historical list of individual files.
+ */
+function changesDestructiveDataLifecycle(path: string): boolean {
+  return (
+    path.startsWith("src/app/api/shops/") ||
+    path.startsWith("src/app/api/settings/reset/") ||
+    path.startsWith("src/lib/shops/native-lifecycle") ||
+    changesNativeDataSurvivability(path)
+  );
+}
+
+/**
  * These paths can change whether protected seller data remains readable after
- * an upgrade, restore, replacement install, or key transition. They therefore
- * require the packaged Windows runtime and installed lifecycle proof rather
- * than relying on Linux/source tests alone.
+ * an upgrade, restore, replacement install, key transition or destructive shop
+ * lifecycle. They require packaged Windows runtime and installed lifecycle proof
+ * rather than Linux/source tests alone.
  */
 function changesDataSurvivability(path: string): boolean {
   return (
@@ -140,6 +157,7 @@ function changesDataSurvivability(path: string): boolean {
     path.startsWith("prisma/models/") ||
     path.startsWith("src/app/api/backup/") ||
     path.startsWith("src/app/api/recovery/") ||
+    path === "src/lib/db.ts" ||
     path === "src/lib/backup.ts" ||
     path.startsWith("src/lib/backup/") ||
     path.startsWith("src/lib/recovery/") ||
@@ -149,7 +167,7 @@ function changesDataSurvivability(path: string): boolean {
     path === "scripts/rotate-master-key.ts" ||
     path === "scripts/phase1-backup-preservation-worker.ts" ||
     changesProtectedDataMaintenance(path) ||
-    changesNativeDataSurvivability(path)
+    changesDestructiveDataLifecycle(path)
   );
 }
 
