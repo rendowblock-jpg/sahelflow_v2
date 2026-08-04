@@ -122,6 +122,11 @@ const steps: Step[] = [
     skipWhenTestsSkipped: true,
   },
   { name: "TypeScript", command: "bun", args: ["run", "typecheck"] },
+  {
+    name: "Protected raw-client authority",
+    command: "bun",
+    args: ["run", "scripts/verify-protected-raw-access.ts"],
+  },
   { name: "ESLint", command: "bun", args: ["run", "lint"] },
   {
     name: "Vitest",
