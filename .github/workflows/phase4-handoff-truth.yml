@@ -32,6 +32,30 @@ jobs:
       - name: Install frozen dependencies
         run: bun install --frozen-lockfile
 
+      - name: Reconcile wrapped audit summary patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/phase4-handoff-truth.py')
+          content = path.read_text(encoding='utf-8')
+          old = '''old_summary = "Documentation authority audit passed (18 Markdown files; 10 active documentation authorities; Tasks 3–6 source-closed; Phase 3 Level 2 passed; live/installed evidence open)."
+          new_summary = "Documentation authority audit passed (18 Markdown files; 10 active documentation authorities; Phase 3 protected-source closed; Phase 4 audit active; provider/installed evidence retained for later gates)."
+          replace_once(audit, old_summary, new_summary)
+          '''
+          new = '''replace_regex(
+              audit,
+              r"console\\.log\\(\\s*`Documentation authority audit passed \\(.*?live/installed evidence open\\)\\.`,\\s*\\);",
+              """console.log(
+            `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 3 protected-source closed; Phase 4 audit active; provider/installed evidence retained for later gates).`,
+          );""",
+          )
+          '''
+          if content.count(old) != 1:
+              raise RuntimeError('audit summary patch anchor drifted')
+          path.write_text(content.replace(old, new, 1), encoding='utf-8')
+          PY
+
       - name: Apply handoff reconciliation
         run: python .github/phase4-handoff-truth.py
 
