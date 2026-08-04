@@ -67,16 +67,11 @@ function mergePlans(
   return merged;
 }
 
-/**
- * Recurse through unknown relation containers until a protected model is found.
- * This covers graphs such as Product→orderItems→order and
- * ReturnNote→return→order rather than only direct protected relations.
- */
 function prepareRelationGraphSelection(
   node: SelectionNode,
   model?: string,
 ): ProtectedSelectionPlan {
-  let plan = prepareProtectedSelection(node, model as never);
+  const plan = prepareProtectedSelection(node, model as never);
   for (const container of [node.select, node.include]) {
     if (!container) continue;
     for (const [key, value] of Object.entries(container)) {
@@ -91,12 +86,6 @@ function prepareRelationGraphSelection(
   return plan;
 }
 
-/**
- * Outer projection/decryption layer for every Prisma model. Model-specific
- * protected-field writes and top-level reads remain in `with-protected-pii`;
- * this layer ensures arbitrary relation graphs receive hidden identity/
- * ciphertext selections, recursive decryption, and exact projection cleanup.
- */
 export function withProtectedNestedReads<
   TClient extends ExtensiblePrismaClient,
 >(
