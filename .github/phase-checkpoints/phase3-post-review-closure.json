@@ -1,0 +1,43 @@
+{
+  "formatVersion": 1,
+  "phase": 3,
+  "name": "post-review closure checkpoint",
+  "state": "closure-authorized-pending-protected-merge",
+  "recordedAt": "2026-08-04",
+  "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+  "branch": "agent/phase3-durable-effects-audit",
+  "pullRequest": 203,
+  "phaseIssue": 202,
+  "founderDecision": "FD-030",
+  "validatedImplementationHead": "8b8e2bc83e513ec1711120830794e07fc9f6c684",
+  "validation": {
+    "reviewRemediation": {
+      "status": "passed",
+      "coverage": [
+        "storefront replay converges on the idempotent order.created trigger",
+        "WhatsApp spool record and generated key renames flush parent-directory durability",
+        "delayed WhatsApp events cannot regress conversation ordering or SLA timestamps",
+        "automation editor exposes only governed triggers and target statuses",
+        "commerce page budgets yield with preserved opaque continuation and no premature watermark commit"
+      ]
+    },
+    "targetedAndCompleteGateRun": 30897929419,
+    "targetedCommerceTests": "passed",
+    "completeSourceDatabaseIntegrationVerification": "passed"
+  },
+  "reviewThreads": {
+    "p1StorefrontReplay": "repaired",
+    "p1WhatsAppSpoolDirectoryDurability": "repaired",
+    "p2ConversationTimestampMonotonicity": "repaired",
+    "p2AutomationCatalogDrift": "repaired",
+    "p2CommercePageBudget": "repaired",
+    "knownOpenP0P1": 0
+  },
+  "evidenceBoundary": {
+    "phase3Closure": "authorized under FD-030 after protected merge",
+    "liveProviderEvidence": "deferred to Phase 9 representative beta",
+    "installedWindowsEvidence": "retained in issue #201 at the applicable Level 3 gate",
+    "releaseOrStableClaim": false
+  },
+  "authorizedNextAction": "merge PR #203 into protected main, close issue #202, and begin the Phase 4 audit and contract freeze"
+}
