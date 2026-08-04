@@ -15,6 +15,10 @@ export type ShopContext = Readonly<{
   migrationSetSha256: string;
 }>;
 
+const TEST_WORKSPACE_ID = "a".repeat(32);
+const TEST_INSTALLATION_ID = "b".repeat(32);
+const TEST_SHOP_INCARNATION_ID = "c".repeat(32);
+
 export function processShopContext(): ShopContext {
   const databaseUrl = process.env.DATABASE_URL ?? "";
   const databasePath = databaseUrl.startsWith("file:")
@@ -24,15 +28,12 @@ export function processShopContext(): ShopContext {
   const development = process.env.NODE_ENV === "development";
   const packaged = process.env.NODE_ENV === "production";
 
-  // Maintenance leases are acquired before any shop is scanned or mutated. A
-  // packaged server launched during either window must not initialize Prisma or
-  // become ready under an old/mixed protected-data generation.
   if (packaged) {
     assertMasterKeyRotationInactive();
     assertProtectedDataMigrationInactive();
   }
 
-  const fallbackShopId = !packaged && testing ? "test" : development ? "default" : "";
+  const fallbackShopId = testing ? "test" : development ? "default" : "";
   const shopId = process.env.SF_ACTIVE_SHOP_ID ?? fallbackShopId;
   const registryRevision = Number.parseInt(
     process.env.SF_REGISTRY_REVISION ?? (!packaged && (testing || development) ? "1" : "0"),
@@ -41,13 +42,15 @@ export function processShopContext(): ShopContext {
   const migrationSetSha256 =
     process.env.SF_MIGRATION_SET_SHA256 ??
     (!packaged && (testing || development) ? "0".repeat(64) : "");
-  const fallbackIdentity = !packaged && (testing || development)
-    ? "0".repeat(32)
-    : "";
-  const workspaceId = process.env.SF_WORKSPACE_ID ?? fallbackIdentity;
-  const installationId = process.env.SF_INSTALLATION_ID ?? fallbackIdentity;
+  const workspaceId =
+    process.env.SF_WORKSPACE_ID ??
+    (testing ? TEST_WORKSPACE_ID : development ? "0".repeat(32) : "");
+  const installationId =
+    process.env.SF_INSTALLATION_ID ??
+    (testing ? TEST_INSTALLATION_ID : development ? "0".repeat(32) : "");
   const shopIncarnationId =
-    process.env.SF_SHOP_INCARNATION_ID ?? fallbackIdentity;
+    process.env.SF_SHOP_INCARNATION_ID ??
+    (testing ? TEST_SHOP_INCARNATION_ID : development ? "0".repeat(32) : "");
   const databaseFileId =
     process.env.SF_DATABASE_FILE_ID ??
     (!packaged && (testing || development) ? basename(databasePath) : "");
