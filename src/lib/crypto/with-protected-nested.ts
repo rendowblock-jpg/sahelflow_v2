@@ -16,12 +16,16 @@ const PROTECTED_MODELS = new Set([
   "Message",
 ]);
 
-const READ_OPERATIONS = new Set([
+const ROW_RETURNING_OPERATIONS = new Set([
   "findMany",
   "findFirst",
   "findFirstOrThrow",
   "findUnique",
   "findUniqueOrThrow",
+  "create",
+  "update",
+  "upsert",
+  "delete",
 ]);
 
 type ExtensiblePrismaClient = Pick<PrismaClient, "$extends">;
@@ -30,7 +34,8 @@ type ExtensiblePrismaClient = Pick<PrismaClient, "$extends">;
  * Outer projection/decryption layer for every Prisma model. Model-specific
  * protected-field writes and top-level reads remain in `with-protected-pii`;
  * this layer ensures any relation graph receives hidden identity/ciphertext
- * selections, recursive decryption, and exact projection cleanup.
+ * selections, recursive decryption, and exact projection cleanup. It also
+ * cleans hidden fields from create/update/upsert/delete return projections.
  */
 export function withProtectedNestedReads<
   TClient extends ExtensiblePrismaClient,
@@ -44,7 +49,7 @@ export function withProtectedNestedReads<
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
-          if (!READ_OPERATIONS.has(operation)) return query(args);
+          if (!ROW_RETURNING_OPERATIONS.has(operation)) return query(args);
           const topModel = PROTECTED_MODELS.has(model) ? model : undefined;
           const plan = prepareProtectedSelection(
             args as {
