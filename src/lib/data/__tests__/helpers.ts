@@ -99,6 +99,11 @@ async function cleanTestDatabase(db: PrismaClient): Promise<void> {
     db.extractionMetric.deleteMany(),
     db.wilayaRiskProfile.deleteMany(),
     db.phoneReputation.deleteMany(),
+    // Secret rows are authenticated by ProtectedKeyAuthority. Treat them as
+    // one ownership unit in test cleanup so no later suite inherits an orphaned
+    // canonical secret or a wrapping-key row from another test generation.
+    db.secret.deleteMany(),
+    db.protectedKeyAuthority.deleteMany(),
   ]);
 }
 
