@@ -32,6 +32,8 @@ export interface ProtectedRecordReference {
 export interface ProtectedRecordOptions {
   shopContext?: ShopContext;
   installationRoot?: Buffer;
+  /** Set false for read-only verification paths. */
+  createIfMissing?: boolean;
 }
 
 function assertIdentifier(
@@ -99,6 +101,7 @@ export async function sealShopRecordField(
   const authority = await resolveShopProtectedKey(prisma, "shop-data", {
     shopContext: context,
     installationRoot: options.installationRoot,
+    createIfMissing: options.createIfMissing,
   });
   return sealProtectedString(
     plaintext,
@@ -126,6 +129,7 @@ export async function openShopRecordField(
   const authority = await resolveShopProtectedKey(prisma, "shop-data", {
     shopContext: context,
     installationRoot: options.installationRoot,
+    createIfMissing: options.createIfMissing,
   });
   return openProtectedString(
     encoded,
@@ -155,6 +159,7 @@ export async function deriveShopBlindIndex(
     {
       shopContext: context,
       installationRoot: options.installationRoot,
+      createIfMissing: options.createIfMissing,
     },
   );
   const normalized = (options.normalize ?? ((entry: string) => entry.trim().toLowerCase()))(
