@@ -59,10 +59,7 @@ describe("classifyPrRisk", () => {
 
   it("compiles and tests ordinary native source without forcing Windows artifacts", () => {
     expect(
-      classifyPrRisk([
-        "src-tauri/src/runtime_supervisor.rs",
-        "src-tauri/tests/runtime_supervisor_contract.rs",
-      ]),
+      classifyPrRisk(["src-tauri/src/window_state.rs"]),
     ).toMatchObject({
       runQuality: true,
       runTauri: true,
@@ -117,6 +114,23 @@ describe("classifyPrRisk", () => {
     });
   });
 
+  it("classifies native installation and commercial recovery authorities", () => {
+    for (const path of [
+      "src-tauri/src/device_binding.rs",
+      "src-tauri/src/license_clock.rs",
+      "src-tauri/src/process_authority.rs",
+      "src-tauri/src/runtime_supervisor.rs",
+    ]) {
+      expect(classifyPrRisk([path])).toMatchObject({
+        runQuality: true,
+        runTauri: true,
+        runWindowsStandalone: true,
+        runWindowsRust: true,
+        runInstalledMsi: true,
+      });
+    }
+  });
+
   it("defers Windows artifact proof for ordinary runtime readiness source", () => {
     expect(
       classifyPrRisk(["src/app/api/internal/runtime-ready/route.ts"]),
@@ -161,10 +175,11 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("covers existing protected-data migration and key-rotation authorities", () => {
+  it("covers existing protected-data migration and maintenance authorities", () => {
     for (const path of [
       "scripts/migrate-pii-encryption.ts",
       "src/lib/maintenance/master-key-rotation.ts",
+      "src/lib/maintenance/future-protected-data-task.ts",
     ]) {
       expect(classifyPrRisk([path])).toMatchObject({
         runQuality: true,
@@ -181,6 +196,23 @@ describe("classifyPrRisk", () => {
       "src/app/api/shops/archives/[archiveId]/recover/route.ts",
       "src/app/api/settings/reset/route.ts",
       "src/lib/shops/native-lifecycle-archives.ts",
+    ]) {
+      expect(classifyPrRisk([path])).toMatchObject({
+        runQuality: true,
+        runTauri: false,
+        runWindowsStandalone: true,
+        runWindowsRust: false,
+        runInstalledMsi: true,
+      });
+    }
+  });
+
+  it("classifies installation identity and licensing recovery state", () => {
+    for (const path of [
+      "src/lib/identity/control-authority.ts",
+      "src/lib/identity/identity-authority.ts",
+      "src/lib/license/native-commercial-authority.ts",
+      "src/lib/license/license-authority.ts",
     ]) {
       expect(classifyPrRisk([path])).toMatchObject({
         runQuality: true,
