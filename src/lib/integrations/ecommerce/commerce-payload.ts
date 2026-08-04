@@ -38,11 +38,8 @@ export async function sealCommerceSyncItem(
 ): Promise<string> {
   const key = await getBusinessEnvelopeKey(context);
   try {
-    return sealBusinessCommandResultWithKey(
-      order,
-      binding(input),
-      key,
-    ).resultJson;
+    return sealBusinessCommandResultWithKey(order, binding(input), key)
+      .resultJson;
   } finally {
     key.fill(0);
   }

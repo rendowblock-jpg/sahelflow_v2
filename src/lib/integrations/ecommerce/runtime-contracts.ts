@@ -33,8 +33,7 @@ export function parseCommerceIntegrationConfig(
   try {
     const parsed = JSON.parse(value) as Partial<CommerceIntegrationConfig>;
     return {
-      watermark:
-        typeof parsed.watermark === "string" ? parsed.watermark : "",
+      watermark: typeof parsed.watermark === "string" ? parsed.watermark : "",
       lastSyncAt:
         typeof parsed.lastSyncAt === "string" ? parsed.lastSyncAt : "",
     };

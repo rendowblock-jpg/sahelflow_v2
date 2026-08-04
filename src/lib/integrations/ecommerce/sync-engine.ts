@@ -2,10 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
-import {
-  dispatchTrigger,
-  type TriggerEvent,
-} from "@/lib/automations/engine";
+import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import {
   sourceBusinessPrincipal,
   type BusinessPrincipalContext,
@@ -52,7 +49,8 @@ function parseConfig(value: string | null): IntegrationConfig {
     const parsed = JSON.parse(value) as Partial<IntegrationConfig>;
     return {
       watermark: typeof parsed.watermark === "string" ? parsed.watermark : "",
-      lastSyncAt: typeof parsed.lastSyncAt === "string" ? parsed.lastSyncAt : "",
+      lastSyncAt:
+        typeof parsed.lastSyncAt === "string" ? parsed.lastSyncAt : "",
     };
   } catch {
     return { watermark: "", lastSyncAt: "" };
@@ -60,7 +58,9 @@ function parseConfig(value: string | null): IntegrationConfig {
 }
 
 function stableKey(scope: string, ...parts: string[]): string {
-  const digest = createHash("sha256").update(parts.join("\u001f")).digest("hex");
+  const digest = createHash("sha256")
+    .update(parts.join("\u001f"))
+    .digest("hex");
   return `commerce:${scope}:${digest}`;
 }
 
@@ -169,7 +169,7 @@ async function cancelCanonicalProviderOrder(
   );
 }
 
-async function upsertCanonicalCommerceOrder(
+export async function upsertCanonicalCommerceOrder(
   context: ServiceContext,
   platform: EcommercePlatform,
   sourceIdentity: string,

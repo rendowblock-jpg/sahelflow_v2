@@ -49,7 +49,8 @@ async function ensureIntegration(
 
 function isUniqueConflict(error: unknown): boolean {
   return (
-    error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002"
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
   );
 }
 
@@ -59,7 +60,11 @@ export async function queueCommerceSync(
   pagesPerCycle = 10,
 ): Promise<QueuedCommerceSync> {
   requireExactShop(context);
-  if (!Number.isInteger(pagesPerCycle) || pagesPerCycle < 1 || pagesPerCycle > 50) {
+  if (
+    !Number.isInteger(pagesPerCycle) ||
+    pagesPerCycle < 1 ||
+    pagesPerCycle > 50
+  ) {
     throw new SahelFlowError(
       "Commerce sync page budget must be between 1 and 50",
       "COMMERCE_SYNC_PAGE_BUDGET_INVALID",

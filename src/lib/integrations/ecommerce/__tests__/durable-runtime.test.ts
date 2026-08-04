@@ -55,16 +55,14 @@ function normalizedOrder(
     commune:
       overrides.commune === undefined ? "Bab Ezzouar" : overrides.commune,
     address: overrides.address ?? "123 Rue Didouche",
-    items:
-      overrides.items ??
-      [
-        {
-          productName: "Widget A",
-          catalogSku: "WIDGET-A",
-          quantity: 1,
-          unitPrice: 1,
-        },
-      ],
+    items: overrides.items ?? [
+      {
+        productName: "Widget A",
+        catalogSku: "WIDGET-A",
+        quantity: 1,
+        unitPrice: 1,
+      },
+    ],
     totalPrice: overrides.totalPrice ?? 2_500,
     deliveryCost: overrides.deliveryCost ?? 500,
     source: overrides.source ?? "shopify",
@@ -208,7 +206,9 @@ describe("durable commerce runtime", () => {
     const integration = await rawDb.integration.findUniqueOrThrow({
       where: { platform: "shopify" },
     });
-    expect(JSON.parse(integration.config ?? "{}")).toMatchObject({ watermark: "" });
+    expect(JSON.parse(integration.config ?? "{}")).toMatchObject({
+      watermark: "",
+    });
     expect(await rawDb.order.count()).toBe(0);
   });
 
@@ -252,8 +252,11 @@ describe("durable commerce runtime", () => {
     ]);
     expect(await rawDb.order.count()).toBe(1);
     expect(
-      (await rawDb.commerceSyncRun.findUniqueOrThrow({ where: { id: queued.id } }))
-        .status,
+      (
+        await rawDb.commerceSyncRun.findUniqueOrThrow({
+          where: { id: queued.id },
+        })
+      ).status,
     ).toBe("succeeded");
   });
 });

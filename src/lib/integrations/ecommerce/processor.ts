@@ -280,8 +280,7 @@ async function persistFetchedPage(
       data: {
         status: page.nextCursor ? "queued" : "processing",
         continuationCursor: page.nextCursor,
-        candidateWatermark:
-          page.candidateWatermark || run.candidateWatermark,
+        candidateWatermark: page.candidateWatermark || run.candidateWatermark,
         pagesFetched: { increment: 1 },
         fetchedCount: { increment: descriptors.length },
         fetchComplete: page.nextCursor === null,
@@ -454,11 +453,7 @@ async function failCommerceItem(
   const errorCode = safeCommerceErrorCode(error);
   const quarantine = quarantinesImmediately(error);
   const dead = !quarantine && item.attemptCount >= item.maxAttempts;
-  const status = quarantine
-    ? "quarantined"
-    : dead
-      ? "dead_letter"
-      : "retrying";
+  const status = quarantine ? "quarantined" : dead ? "dead_letter" : "retrying";
   await context.prisma.$transaction([
     context.prisma.commerceSyncItemAttempt.updateMany({
       where: {
@@ -570,13 +565,10 @@ export async function finalizeCommerceRuns(
       where: { runId: run.id, outcome: "skipped" },
     });
     const failed =
-      (counts.get("quarantined") ?? 0) +
-      (counts.get("dead_letter") ?? 0);
+      (counts.get("quarantined") ?? 0) + (counts.get("dead_letter") ?? 0);
     if (failed > 0) {
       const terminal =
-        created + updated + skipped > 0
-          ? "partially_completed"
-          : "dead_letter";
+        created + updated + skipped > 0 ? "partially_completed" : "dead_letter";
       await context.prisma.commerceSyncRun.update({
         where: { id: run.id },
         data: {
