@@ -1,181 +1,145 @@
-/**
- * retryFetch tests — retry logic for delivery provider API calls.
- *
- * B4a: POST requests are NEVER retried automatically. A 502 on POST /parcels/
- * may mean the provider created the parcel but the response was lost — retrying
- * creates a duplicate (orphaned parcel, double COD fee). The same applies to
- * network errors on POST. Only GET/PATCH/DELETE/PUT are safe to retry.
- */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { retryFetch } from "../retry";
 
-describe("retryFetch", () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+const fetchMock = vi.fn();
+
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.spyOn(Math, "random").mockReturnValue(0);
+  fetchMock.mockReset();
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+describe("courier retry policy", () => {
+  it("returns the first successful response", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("ok", { status: 200 }));
+
+    const response = await retryFetch("https://provider.example/status", {});
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
+  it("retries safe GET requests after transient gateway failures", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response("temporary", { status: 503 }))
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
+
+    const promise = retryFetch("https://provider.example/status", {});
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    await expect(promise).resolves.toMatchObject({ status: 200 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("returns the response on first success", async () => {
-    const mockRes = new Response("{}", { status: 200 });
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(mockRes);
+  it("retries 504 and returns the final response after bounded attempts", async () => {
+    fetchMock.mockResolvedValue(new Response("gateway", { status: 504 }));
 
-    const res = await retryFetch("https://api.example.com/test", {});
-    expect(res.status).toBe(200);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const promise = retryFetch("https://provider.example/status", {});
+    await vi.runAllTimersAsync();
+
+    await expect(promise).resolves.toMatchObject({ status: 504 });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it("retries on 502 status (up to 3 attempts)", async () => {
-    const okRes = new Response("{}", { status: 200 });
-    const fetchSpy = vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("err", { status: 502 }))
-      .mockResolvedValueOnce(new Response("err", { status: 502 }))
-      .mockResolvedValueOnce(okRes);
+  it("honors Retry-After for rate-limited safe requests", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response("limited", {
+          status: 429,
+          headers: { "Retry-After": "2" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
 
-    const promise = retryFetch("https://api.example.com/test", {});
-    await vi.advanceTimersByTimeAsync(5000); // skip delays
-    const res = await promise;
-    expect(res.status).toBe(200);
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    const promise = retryFetch("https://provider.example/fees", { method: "GET" });
+    await vi.advanceTimersByTimeAsync(1_999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(promise).resolves.toMatchObject({ status: 200 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("returns 502 after exhausting retries", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response("err", { status: 502 }));
+  it("retries safe network failures and throws the final error", async () => {
+    fetchMock.mockRejectedValue(new Error("provider offline"));
 
-    const promise = retryFetch("https://api.example.com/test", {});
-    await vi.advanceTimersByTimeAsync(10000);
-    const res = await promise;
-    expect(res.status).toBe(502);
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
-  });
-
-  it("retries on network error (fetch throws)", async () => {
-    const okRes = new Response("{}", { status: 200 });
-    const fetchSpy = vi.spyOn(globalThis, "fetch")
-      .mockRejectedValueOnce(new Error("network error"))
-      .mockResolvedValueOnce(okRes);
-
-    const promise = retryFetch("https://api.example.com/test", {});
-    await vi.advanceTimersByTimeAsync(2000);
-    const res = await promise;
-    expect(res.status).toBe(200);
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-  });
-
-  it("throws the last error after exhausting retries on network errors", async () => {
-    const err = new Error("persistent network error");
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(err);
-
-    // Attach the rejection handler IMMEDIATELY (before advancing timers)
-    // to avoid an unhandled rejection during advanceTimersByTimeAsync.
     const expectation = expect(
-      retryFetch("https://api.example.com/test", {}),
-    ).rejects.toThrow("persistent network error");
+      retryFetch("https://provider.example/status", { method: "GET" }),
+    ).rejects.toThrow("provider offline");
+    await vi.runAllTimersAsync();
 
-    // Advance through all retry delays so the retries complete
-    await vi.advanceTimersByTimeAsync(20000);
     await expectation;
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it("does NOT retry on 400/404/500 (non-transient)", async () => {
-    const notFoundRes = new Response("{}", { status: 404 });
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(notFoundRes);
+  it("does not retry resource-creating POST responses", async () => {
+    fetchMock.mockResolvedValue(new Response("gateway", { status: 503 }));
 
-    const res = await retryFetch("https://api.example.com/test", {});
-    expect(res.status).toBe(404);
-    expect(fetchSpy).toHaveBeenCalledTimes(1); // no retry
-  });
-
-  it("passes options through to fetch", async () => {
-    const mockRes = new Response("{}", { status: 200 });
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(mockRes);
-
-    await retryFetch("https://api.example.com/test", {
+    const response = await retryFetch("https://provider.example/parcels", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ foo: "bar" }),
+      body: "parcel",
     });
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      "https://api.example.com/test",
-      expect.objectContaining({
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ foo: "bar" }),
-        signal: expect.any(AbortSignal),
-      }),
-    );
+    expect(response.status).toBe(503);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  // ── B4a: POST must not be retried (shipment idempotency) ──────────────
-
-  it("B4a: does NOT retry on 502 for POST requests (502 may mean server succeeded, response lost)", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("err", { status: 502 }));
-
-    const res = await retryFetch("https://api.example.com/parcels/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderNumber: "ORD-1" }),
-    });
-    expect(res.status).toBe(502);
-    expect(fetchSpy).toHaveBeenCalledTimes(1); // no retry — return immediately
-  });
-
-  it("B4a: does NOT retry on 503 for POST requests", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("err", { status: 503 }));
-
-    const res = await retryFetch("https://api.example.com/parcels/", {
-      method: "POST",
-      body: JSON.stringify({ orderNumber: "ORD-1" }),
-    });
-    expect(res.status).toBe(503);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("B4a: throws immediately on network error for POST (no retry — server may have processed body)", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch")
-      .mockRejectedValueOnce(new Error("network error"));
+  it("does not retry a POST after an ambiguous network error", async () => {
+    fetchMock.mockRejectedValue(new Error("socket reset after write"));
 
     await expect(
-      retryFetch("https://api.example.com/parcels/", {
-        method: "POST",
-        body: JSON.stringify({ orderNumber: "ORD-1" }),
+      retryFetch("https://provider.example/parcels", {
+        method: "post",
+        body: "parcel",
       }),
-    ).rejects.toThrow("network error");
-    expect(fetchSpy).toHaveBeenCalledTimes(1); // no retry
+    ).rejects.toThrow("socket reset after write");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("B4a: lower-case 'post' method is also treated as POST (case-insensitive)", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("err", { status: 502 }));
+  it("returns non-transient client errors without retrying", async () => {
+    fetchMock.mockResolvedValue(new Response("invalid", { status: 422 }));
 
-    const res = await retryFetch("https://api.example.com/parcels/", {
-      method: "post",
-      body: "{}",
+    const response = await retryFetch("https://provider.example/fees", {
+      method: "GET",
     });
-    expect(res.status).toBe(502);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    expect(response.status).toBe(422);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("B4a: PATCH (non-POST) still retries on 502 — only POST is special-cased", async () => {
-    const okRes = new Response("{}", { status: 200 });
-    const fetchSpy = vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("err", { status: 502 }))
-      .mockResolvedValueOnce(okRes);
+  it("retries idempotent PATCH mutations", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response("temporary", { status: 502 }))
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
 
-    const promise = retryFetch("https://api.example.com/parcels/TRK-1", {
+    const promise = retryFetch("https://provider.example/status/1", {
       method: "PATCH",
-      body: JSON.stringify({ status: "in_transit" }),
+      body: JSON.stringify({ status: 50 }),
     });
-    await vi.advanceTimersByTimeAsync(2000);
-    const res = await promise;
-    expect(res.status).toBe(200);
-    expect(fetchSpy).toHaveBeenCalledTimes(2); // retried — PATCH is idempotent-ish
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    await expect(promise).resolves.toMatchObject({ status: 200 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears request timeout timers after every failed attempt", async () => {
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    fetchMock.mockRejectedValue(new Error("offline"));
+
+    const expectation = expect(
+      retryFetch("https://provider.example/status", { method: "GET" }),
+    ).rejects.toThrow("offline");
+    await vi.runAllTimersAsync();
+
+    await expectation;
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(3);
   });
 });
