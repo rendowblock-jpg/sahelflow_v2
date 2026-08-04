@@ -9,43 +9,26 @@ export type ProtectedUpsertDelegateName =
   | "message";
 
 interface RawUpsertDelegate {
-  upsert(args: unknown): Promise<{ id: string }>;
-  update(args: unknown): Promise<unknown>;
-  findUniqueOrThrow(args: unknown): Promise<Record<string, unknown>>;
+  create(args: unknown): Promise<Record<string, unknown>>;
+  findUnique(args: unknown): Promise<{ id: string } | null>;
+  update(args: unknown): Promise<Record<string, unknown>>;
 }
 
-type RawTransactionDelegates = Record<
-  ProtectedUpsertDelegateName,
-  RawUpsertDelegate
->;
+type RawTransactionClient = PrismaClient &
+  Record<ProtectedUpsertDelegateName, RawUpsertDelegate>;
 
 export interface RecordBoundUpsertOptions {
   delegate: ProtectedUpsertDelegateName;
   args: Record<string, unknown>;
-  createId: string;
   encryptedCreate: Record<string, unknown>;
-  protectedUpdate: Record<string, unknown>;
-  unprotectedUpdate: Record<string, unknown>;
-  encryptProtectedUpdate: (
+  update: Record<string, unknown>;
+  encryptUpdate: (
     data: Record<string, unknown>,
     recordId: string,
   ) => Promise<Record<string, unknown>>;
-}
-
-export function partitionProtectedUpdate(
-  data: Record<string, unknown>,
-  protectedFields: readonly string[],
-): {
-  protectedUpdate: Record<string, unknown>;
-  unprotectedUpdate: Record<string, unknown>;
-} {
-  const protectedNames = new Set(protectedFields);
-  const protectedUpdate: Record<string, unknown> = {};
-  const unprotectedUpdate: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(data)) {
-    (protectedNames.has(key) ? protectedUpdate : unprotectedUpdate)[key] = value;
-  }
-  return { protectedUpdate, unprotectedUpdate };
+  resolveWinnerId?: (
+    transaction: RawTransactionClient,
+  ) => Promise<string | null>;
 }
 
 function projectionOf(args: Record<string, unknown>): Record<string, unknown> {
@@ -64,58 +47,61 @@ function withoutRecordId(
   return output;
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "P2002",
+  );
+}
+
 /**
- * Execute a record-bound protected upsert without guessing which create ID won.
+ * Execute Prisma upsert semantics without ever binding update ciphertext to a
+ * speculative create ID.
  *
- * The database first performs one atomic upsert with only unprotected update
- * fields and returns the actual row ID. If another concurrent creator won, the
- * protected update is then encrypted against that winning ID inside the same
- * transaction. Numeric increments and other unprotected operations are applied
- * exactly once, and no mismatched ciphertext becomes externally visible.
+ * The create branch is attempted first with its final contextual ciphertext.
+ * A unique winner returns immediately. On a unique race, a new transaction
+ * resolves the row that actually won, encrypts the update branch against that
+ * exact ID, and applies the whole update once. A conflict on an unrelated
+ * unique field is rethrown when the requested winner cannot be resolved.
  */
 export async function executeRecordBoundUpsert(
   client: PrismaClient,
   options: RecordBoundUpsertOptions,
 ): Promise<Record<string, unknown>> {
-  const hasProtectedUpdate = Object.keys(options.protectedUpdate).length > 0;
+  const delegate = (client as RawTransactionClient)[options.delegate];
+  const projection = projectionOf(options.args);
 
-  // Preserve validation behavior on the create path and warm the purpose keys
-  // before opening the SQLite write transaction. This ciphertext is never
-  // persisted because its record ID is only a candidate.
-  if (hasProtectedUpdate) {
-    await options.encryptProtectedUpdate(
-      options.protectedUpdate,
-      options.createId,
-    );
-  }
-
-  return client.$transaction(async (transaction) => {
-    const delegate = (transaction as unknown as RawTransactionDelegates)[
-      options.delegate
-    ];
-    const winner = await delegate.upsert({
-      where: options.args.where,
-      create: options.encryptedCreate,
-      update: options.unprotectedUpdate,
-      select: { id: true },
+  try {
+    return await delegate.create({
+      data: options.encryptedCreate,
+      ...projection,
     });
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) throw error;
 
-    if (winner.id !== options.createId && hasProtectedUpdate) {
+    return client.$transaction(async (transaction) => {
+      const tx = transaction as unknown as RawTransactionClient;
+      const txDelegate = tx[options.delegate];
+      const winnerId = options.resolveWinnerId
+        ? await options.resolveWinnerId(tx)
+        : (
+            await txDelegate.findUnique({
+              where: options.args.where,
+              select: { id: true },
+            })
+          )?.id ?? null;
+
+      if (!winnerId) throw error;
       const encryptedUpdate = withoutRecordId(
-        await options.encryptProtectedUpdate(
-          options.protectedUpdate,
-          winner.id,
-        ),
+        await options.encryptUpdate(options.update, winnerId),
       );
-      await delegate.update({
-        where: { id: winner.id },
+      return txDelegate.update({
+        where: { id: winnerId },
         data: encryptedUpdate,
+        ...projection,
       });
-    }
-
-    return delegate.findUniqueOrThrow({
-      where: { id: winner.id },
-      ...projectionOf(options.args),
     });
-  });
+  }
 }
