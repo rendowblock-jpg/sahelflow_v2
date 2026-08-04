@@ -85,6 +85,33 @@ function changesInstalledMsiProof(path: string): boolean {
 }
 
 /**
+ * Native authorities are matched by category, not only today's filenames. A
+ * future `backup.rs`, `restore.rs`, or similarly named test must not silently
+ * fall back to generic Linux Rust proof.
+ */
+function changesNativeDataSurvivability(path: string): boolean {
+  const nativeAuthorityPrefixes = [
+    "src-tauri/src/backup",
+    "src-tauri/src/restore",
+    "src-tauri/src/recovery",
+    "src-tauri/src/startup_recovery",
+    "src-tauri/src/migration",
+    "src-tauri/src/installation_root",
+    "src-tauri/src/protected_storage",
+    "src-tauri/src/key_rotation",
+    "src-tauri/tests/backup",
+    "src-tauri/tests/restore",
+    "src-tauri/tests/recovery",
+    "src-tauri/tests/startup_recovery",
+    "src-tauri/tests/migration",
+    "src-tauri/tests/installation_root",
+    "src-tauri/tests/protected_storage",
+    "src-tauri/tests/key_rotation",
+  ] as const;
+  return nativeAuthorityPrefixes.some((prefix) => path.startsWith(prefix));
+}
+
+/**
  * These paths can change whether protected seller data remains readable after
  * an upgrade, restore, replacement install, or key transition. They therefore
  * require the packaged Windows runtime and installed lifecycle proof rather
@@ -96,30 +123,16 @@ function changesDataSurvivability(path: string): boolean {
     path.startsWith("prisma/migrations/") ||
     path.startsWith("prisma/models/") ||
     path.startsWith("src/app/api/backup/") ||
+    path.startsWith("src/app/api/recovery/") ||
     path === "src/lib/backup.ts" ||
     path.startsWith("src/lib/backup/") ||
+    path.startsWith("src/lib/recovery/") ||
     path.startsWith("src/lib/crypto/") ||
     path.startsWith("src/lib/secrets/") ||
     path.startsWith("src/lib/storage/") ||
     path === "scripts/rotate-master-key.ts" ||
     path === "scripts/phase1-backup-preservation-worker.ts" ||
-    path === "src-tauri/src/migration_coordinator.rs" ||
-    path.startsWith("src-tauri/src/installation_root") ||
-    path.startsWith("src-tauri/src/startup_recovery") ||
-    path.startsWith("src-tauri/tests/migration") ||
-    path.startsWith("src-tauri/tests/installation_root") ||
-    path.startsWith("src-tauri/tests/startup_recovery")
-  );
-}
-
-function changesNativeDataSurvivability(path: string): boolean {
-  return (
-    path === "src-tauri/src/migration_coordinator.rs" ||
-    path.startsWith("src-tauri/src/installation_root") ||
-    path.startsWith("src-tauri/src/startup_recovery") ||
-    path.startsWith("src-tauri/tests/migration") ||
-    path.startsWith("src-tauri/tests/installation_root") ||
-    path.startsWith("src-tauri/tests/startup_recovery")
+    changesNativeDataSurvivability(path)
   );
 }
 
