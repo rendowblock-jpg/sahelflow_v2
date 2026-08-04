@@ -10,12 +10,11 @@ import { join } from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { getMasterKey } from "@/lib/crypto/master-key";
 import { rewrapShopProtectedKeys } from "@/lib/crypto/protected-key-authority";
 import { isProtectedValueEnvelope } from "@/lib/crypto/protected-value";
 import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 import type { ServiceContext } from "@/lib/data/service-base";
-import { getSecret } from "@/lib/secrets";
+import { getSecret, setSecret } from "@/lib/secrets";
 import { executeBusinessCommand } from "../command-kernel";
 import {
   BUSINESS_ENVELOPE_SECRET_KEY,
@@ -246,19 +245,30 @@ describe("business envelope security", () => {
       prisma: isolated as never,
       shop: TEST_SHOP_CONTEXT,
     } satisfies ServiceContext;
-    const oldInstallationRoot = Buffer.from(getMasterKey());
+    const oldInstallationRoot = randomBytes(32);
     const replacementInstallationRoot = randomBytes(32);
     let reopenedStableKey: Buffer | null = null;
 
     try {
       await isolated.$connect();
+      await isolated.$transaction([
+        isolated.secret.deleteMany(),
+        isolated.protectedKeyAuthority.deleteMany(),
+      ]);
+      await setSecret(
+        isolatedContext,
+        BUSINESS_ENVELOPE_SECRET_KEY,
+        stableKey.toString("hex"),
+        { installationRoot: oldInstallationRoot },
+      );
+
       const rewrapped = await rewrapShopProtectedKeys(
         isolated,
         TEST_SHOP_CONTEXT,
         oldInstallationRoot,
         replacementInstallationRoot,
       );
-      expect(rewrapped.rewrapped).toBeGreaterThanOrEqual(1);
+      expect(rewrapped).toMatchObject({ total: 1, rewrapped: 1 });
 
       const reopenedHex = await getSecret(
         isolatedContext,
