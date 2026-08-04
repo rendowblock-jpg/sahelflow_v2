@@ -13,7 +13,7 @@ const querySchema = z.object({
 });
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
-  await requireAuth("integrations.view");
+  await requireAuth("integrations.manage");
   const input = querySchema.parse({
     limit: request.nextUrl.searchParams.get("limit") ?? undefined,
   });
