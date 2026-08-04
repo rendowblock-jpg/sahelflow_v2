@@ -15,6 +15,11 @@ export interface PrRiskLanes {
 const PHASE2_INSTALLED_UI_WAIVER =
   ".github/phase-exceptions/pr-200-installed-ui-waiver.md";
 
+const QUALITY_OWNED_PHASE_CHECKPOINTS = new Set([
+  ".github/phase-checkpoints/phase3-provider-convergence.json",
+  ".github/phase-checkpoints/phase3-commerce-runtime.json",
+]);
+
 function normalized(path: string): string {
   return path.trim().replaceAll("\\", "/").replace(/^\.\//, "");
 }
@@ -29,18 +34,25 @@ function isDocumentationOnly(path: string): boolean {
   );
 }
 
+function isFastPhaseCheckpoint(path: string): boolean {
+  return (
+    path.startsWith(".github/phase-checkpoints/") &&
+    !QUALITY_OWNED_PHASE_CHECKPOINTS.has(path)
+  );
+}
+
 /**
  * Authority-only changes are executable governance inputs, but they do not
  * change the shipped application. The fast authority job already verifies
  * version truth, documentation structure, links, and audit rules for every PR.
- * Changed Vitest files are deliberately excluded because their assertions and
- * syntax must still execute on the quality lane.
+ * Changed Vitest files and checkpoints with Vitest-owned content contracts are
+ * deliberately excluded because their assertions must execute on the quality lane.
  */
 function isFastAuthorityOnly(path: string): boolean {
   return (
     isDocumentationOnly(path) ||
     path === "scripts/sf-audit.ts" ||
-    path.startsWith(".github/phase-checkpoints/") ||
+    isFastPhaseCheckpoint(path) ||
     path.startsWith(".github/phase-exceptions/")
   );
 }
