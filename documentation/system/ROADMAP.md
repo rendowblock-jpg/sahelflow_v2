@@ -2,17 +2,18 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Live protected main:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
-> **Latest application-changing protected merge:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
+> **Live protected main:** `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Latest application-changing protected merge:** PR #203 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
 > **Founder-accepted baseline:** Internal.5
 > **Phase 0 status:** Complete
 > **Phase 1 status:** Protected-source closed through PR #195
 > **Phase 2 status:** Protected-source closed through PR #200 with issue #201 retained
+> **Phase 3 status:** Protected-source closed through PR #203 under FD-030
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
-> **Active phase package:** Phase 3 closure via PR #203 under FD-030; Phase 4 audit next
-> **Phase issue:** #202
+> **Active phase package:** issue #204 audit, Problem Register and shared contract freeze
+> **Phase issue:** #204
 > **Execution epic:** issue #164
 > **Last consolidated:** 2026-08-04
 
@@ -255,63 +256,40 @@ authenticated ingress
 → receipt and reconciliation
 ```
 
-## Source implementation progress
+## Result — protected-source closed through PR #203
 
-Draft PR #203 source-closed the required production packages:
+PR #203 merged at `aa4ca0758fd696f4b02fc1975629ac698f9349c3` from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`. Final required
+CI run `30901725446` passed version/documentation authority, frozen dependency
+installation, Prisma generation/migration status, TypeScript, ESLint, the complete
+Vitest suite, coverage above 80% and the production dependency audit.
 
-1. governance reconciliation and shared contract freeze — complete;
-2. exhaustive source/caller/migration/test/UI inventory — complete;
-3. durable inbound WhatsApp and database-authoritative inbox — source-closed at `f016055be55fd220baa87c26ffed565c4e9e1d85`;
-4. truthful durable automation runs and effects — source-closed at `c873b8b6a256383497d3799e0839160178e92149`;
-5. proposal-bound sensitive AI actions — source-closed at `07caedbc797ced5dc0e2ac959f252d5b3481285d`;
-6. courier/commerce convergence and provider-certification authority — source-closed at clean head `676d0e41cc69d44c29b912038cba100fd827fcfa` with checkpoint `30875723975` and normal CI `30875724094` passed.
+Protected source includes durable WhatsApp ingress and inbox truth, truthful
+automations, proposal-bound sensitive AI actions, one canonical courier facade,
+durable commerce and fail-closed provider capability authority.
 
-No known Phase 3 P0/P1 remains. FD-030 authorizes Phase 3 closure on the
-passed deterministic provider conformance and Level 2 source/build evidence.
-
-## Source-proven outcome
-
-- authenticated WhatsApp persistence before acknowledgement and durable recovery;
-- database-authoritative inbox and committed automation triggers;
-- ordered automation step truth with durable effects and receipts;
-- exact one-time AI proposal/approval/execution authority;
-- one public courier facade and internal provider effect/tracking runtime;
-- durable commerce runs/pages/encrypted items/attempts, exact continuation,
-  monotonic checkpointing, credential binding and operator recovery;
-- DHD removed and unverified NOEST effects fail-closed;
-- AR/FR/EN and RTL-safe provider, automation, AI and recovery states.
-
-## Level 2 result
-
-Run `30878352410` passed the complete source/database/migration suite, semantic
-authority, production WhatsApp sidecar build and production Next build. Clean
-descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf` passed Integration
-`30884662556` and normal CI `30884663240`.
+Post-review repairs closed storefront trigger replay, parent-directory spool
+rename durability, monotonic conversation timestamps, governed automation editor
+values and bounded commerce page yields. All review threads are resolved and issue
+#202 is closed. No known Phase 3 P0/P1 remains.
 
 ## FD-030 evidence boundary
 
-Real courier and communication-provider accounts are unavailable until the app is
-complete enough for representative beta. Live certification and issue #201 are
-therefore moved to Phase 9/applicable Level 3 and are not Phase 3 blockers.
-Providers remain explicitly unverified or disabled until real certification.
+Real courier and communication-provider certification remains mandatory at Phase
+9 representative beta. Issue #201 remains mandatory at the applicable Level 3 /
+installed evidence gate. Neither is mislabeled as current proof or a Phase 3
+closure blocker.
 
-## Remaining dependency-correct order
+## Phase 3 closure meaning
 
-1. merge the exact green PR #203 closure head into protected main;
-2. close issue #202 and begin Phase 4 audit/contract freeze;
-3. collect real provider and installed evidence during applicable Level 3 and
-   representative beta;
-4. preserve the distinction between simulated/conformance-proven and
-   live-certified provider behavior.
+Phase 3 is protected-source closed. It does not claim a new signed artifact,
+installed Windows/T470 proof for newly merged source, Founder acceptance, Beta or
+Stable. Published/installed executable truth remains Internal.13.
 
-## Exit gate
+## Phase 4 handoff
 
-Outage, retry, duplicate, rate limit, restart, timeout and partial failure cannot
-silently lose or duplicate a canonical effect. Every action has durable truth,
-visible state and recovery. Public provider claims match current live evidence.
-The complete Level 2 and deterministic provider-conformance gates pass with
-zero known P0/P1. Live provider/installed evidence remains binding for later
-Level 3, representative beta and Stable promotion under FD-030.
+Issue #204 owns the next phase. The first package is exhaustive audit,
+primary-source research, one consolidated Problem Register and shared contract
+freeze. Broad production edits wait until those contracts are frozen.
 
 ---
 

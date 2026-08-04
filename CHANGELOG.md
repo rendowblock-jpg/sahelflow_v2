@@ -8,20 +8,30 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
-### Phase 3 durable providers, inbox, automations and AI
+### Phase 3 protected-source closure
 
-- Completed governance reconciliation, exhaustive inventory and shared contract freeze on draft PR #203.
-- Source-closed durable inbound WhatsApp and database-authoritative inbox at `f016055be55fd220baa87c26ffed565c4e9e1d85`.
-- Source-closed truthful durable automations at `c873b8b6a256383497d3799e0839160178e92149`.
-- Source-closed proposal-bound sensitive AI actions at `07caedbc797ced5dc0e2ac959f252d5b3481285d`.
-- Source-closed provider capability authority, durable commerce and the canonical courier facade at clean head `676d0e41cc69d44c29b912038cba100fd827fcfa`; full checkpoint `30875723975` and normal CI `30875724094` passed.
-- Added exact active-shop workers, encrypted provider ingress, durable run/page/item and immutable-attempt truth, cursor continuation, generation-scoped retry, monotonic checkpointing, exact credential/endpoint binding, audited AR/FR/EN recovery and PII-free history.
-- Removed DHD runtime registration, kept unverified NOEST effects fail-closed and removed competing courier queue/reconciliation exports behind one public facade.
-- Phase 3 Level 2 run `30878352410` passed the complete source/database/migration suite, semantic authority, production WhatsApp sidecar build and production Next build.
-- FD-030 closes Phase 3 without real provider accounts before beta and defers live provider certification to Phase 9 representative beta.
-- Added deterministic Yalidine, Maystro and ZR request/response conformance plus NOEST fail-closed coverage, rate-limit/timeout retry policy and no-duplicate POST proof at `9e488fa3bcfa6fff944924c341084ea95243ebc7` (`30887782488`, `30887786426`).
-- Phase 3 closure is Founder-authorized under FD-030 pending protected merge of PR #203; live-provider and issue #201 evidence remain later Beta/Level 3 obligations rather than Phase 3 blockers.
-- No version, MSI, release, Founder-acceptance, Phase 3 closure or Stable claim was made.
+- Merged PR #203 through squash commit `aa4ca0758fd696f4b02fc1975629ac698f9349c3` from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`.
+- Integrated durable inbound WhatsApp, database-authoritative inbox, truthful
+  automations, proposal-bound sensitive AI, durable commerce and one canonical
+  courier facade.
+- Closed post-review findings in storefront trigger replay, POSIX spool rename
+  durability, conversation timestamp monotonicity, automation catalogs and
+  commerce page-budget continuation.
+- Final required CI `30901725446` passed TypeScript, ESLint, the complete Vitest
+  suite, Prisma migration status, 80%+ coverage and production dependency audit.
+- Updated Hono/PostCSS/brace-expansion resolutions to clear newly published
+  advisories while preserving ESLint/minimatch compatibility; production audit
+  returned zero vulnerabilities.
+- Closed issue #202 with no known Phase 3 P0/P1.
+- FD-030 retains real provider certification for Phase 9 representative beta and
+  issue #201 for the applicable Level 3/installed evidence gate.
+- No version bump, MSI, Founder acceptance, Beta or Stable claim accompanied the merge.
+
+### Phase 4 audit frontier
+
+- Opened issue #204 for exhaustive data/key/backup/migration/recovery/security/privacy
+  reconnaissance, primary-source research, one Problem Register and shared
+  contract freeze before production implementation.
 
 ### Phase 2 protected-source closure
 

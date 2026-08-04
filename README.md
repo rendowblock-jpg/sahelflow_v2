@@ -3,15 +3,15 @@
 SahelFlow is a Windows-first operations system for Algerian cash-on-delivery
 sellers.
 
-> **Protected main:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
-> **Latest application-changing merge:** PR #200 native multi-shop at the same commit
+> **Protected main:** `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Latest application-changing merge:** PR #203 Phase 3 closure at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Current program:** FD-028 Final Completion Program and FD-029 AAA delivery
+> **Current program:** FD-028 Final Completion Program, FD-029 AAA delivery and FD-030 provider-certification boundary
 > **Active phase:** Phase 4 — data protection, recovery, migrations and security
-> **Active package:** PR #203 Phase 3 closure under FD-030; Phase 4 audit next
+> **Active package:** issue #204 audit, Problem Register and shared contract freeze
 > **Stable status:** SahelFlow 1.0 Stable has not been released
 
 ## Current truth
@@ -31,12 +31,15 @@ source now includes:
 - fail-closed server-side provider capability authority;
 - strong exact-source Windows release infrastructure.
 
-PR #200 merged at `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`.
-Its MSI built, installed, launched, closed and reopened, but the ephemeral runner
-did not observe the authenticated hydrated-WebView receipt twice. The Founder
-authorized the protected merge with that single limitation retained in issue
-#201. This is not passing installed-UI evidence and does not reopen native shop
-lifecycle authority.
+PR #200 merged native multi-shop authority at
+`e9c92f08f39e8d87ddfd72d2e698418ae81fc084`; issue #201 retains its bounded
+installed hydrated-WebView evidence obligation.
+
+PR #203 merged Phase 3 protected source at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`. Durable inbound WhatsApp,
+database-authoritative inbox, truthful automations, proposal-bound sensitive AI,
+durable commerce, canonical courier authority and fail-closed provider capability
+contracts are now integrated. Real provider certification remains a Phase 9 beta
+obligation under FD-030.
 
 The published and Founder-installed executable remains Internal.13. It predates
 the protected Phase 1/Teams/licensing/native-multi-shop closures and cannot prove
@@ -63,8 +66,8 @@ The active authority remains exactly ten documents:
 9. [`RESEARCH.md`](documentation/research/RESEARCH.md)
 10. [`documentation/README.md`](documentation/README.md)
 
-Issue #164 is the live Phase 0–9 execution dashboard, issue #202 owns Phase 3 and
-issue #201 retains the installed hydrated-WebView evidence. Issues are not
+Issue #164 is the live Phase 0–9 execution dashboard, issue #204 owns active
+Phase 4 execution and issue #201 retains the installed hydrated-WebView evidence. Issues are not
 additional product, experience, architecture, roadmap or workflow authorities.
 Archived reports are context only until current evidence is revalidated and
 adopted by an active owner.
@@ -88,54 +91,19 @@ A phase exits only through objective research, implementation and evidence gates
 Session completion, elapsed time, amount of code or agent confidence is not an
 exit condition.
 
-## Active Phase 3 objective
+## Active Phase 4 objective
 
-Make every external input and effect durable, replayable, observable and safe:
+Make seller data survivable and the product commercially defensible.
 
-```text
-authenticated ingress
-→ durable inbox
-→ validation and deduplication
-→ canonical command
-→ committed result
-→ durable outbox
-→ external effect
-→ receipt and reconciliation
-```
+The active package in issue #204 is audit and contract freeze only. It inventories
+all data/key/backup/migration/recovery/security/privacy surfaces, researches current
+primary standards and official platform guidance, creates one Problem Register
+and freezes the shared key hierarchy, encrypted all-shop backup, recovery kit,
+replacement-install restore, migration matrix and security/privacy evidence
+contracts.
 
-Draft PR #203 has source-closed the required Phase 3 production packages:
-
-- durable inbound WhatsApp and database-authoritative inbox;
-- truthful durable automations and receipt-safe daily reports;
-- exact proposal-bound sensitive AI actions;
-- server-side provider certification authority;
-- durable commerce run/page/item/attempt/recovery authority;
-- one public canonical courier facade with an internal effect runtime.
-
-The clean Task 6 source head is
-`676d0e41cc69d44c29b912038cba100fd827fcfa`; full checkpoint `30875723975`
-and normal CI `30875724094` passed. This remains proposed source, not protected
-`main`, a signed artifact or installed behavior.
-
-Phase 3 Level 2 source/build checkpoint `30878352410` passed the complete
-source/database/migration suite, production WhatsApp sidecar build and production
-Next build. Clean descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf`
-then passed Integration `30884662556` and normal CI `30884663240`.
-
-### FD-030 closure boundary
-
-The Founder cannot supply real seller/provider accounts before representative
-beta. Phase 3 therefore closes on deterministic provider conformance, fail-closed
-authority and the passed Level 2 source/build checkpoint. The conformance matrix
-passed at `9e488fa3bcfa6fff944924c341084ea95243ebc7` with Integration
-`30887782488` and CI `30887786426`.
-
-Live provider certification and issue #201 remain mandatory at the applicable
-Level 3 / Phase 9 representative beta / Stable gates. Credentials are entered only
-through protected product UI and never through chat, source or test fixtures.
-
-No version bump, MSI, release, Founder acceptance or Stable claim accompanies
-Phase 3 closure.
+No broad Phase 4 production implementation, version bump, MSI or readiness claim
+is authorized before that audit and contract freeze.
 
 ## Binding product shape
 
