@@ -16,6 +16,10 @@ import { basename, isAbsolute, resolve } from "node:path";
 
 import { PrismaClient } from "@prisma/client";
 
+import {
+  createProtectedClientAuthority,
+  type ProtectedClientAuthority,
+} from "@/lib/crypto/protected-client-authority";
 import { withProtectedNestedReads } from "@/lib/crypto/with-protected-nested";
 import { withProtectedPiiEncryption } from "@/lib/crypto/with-protected-pii";
 import { withProtectedRaceSafeUpserts } from "@/lib/crypto/with-protected-upserts";
@@ -176,31 +180,53 @@ function withShopAuthority(
 
 export type DbClient = ReturnType<typeof withShopAuthority>;
 
-function protectedClient(raw: PrismaClient, context: ShopContext) {
+interface ProtectedClientBundle {
+  client: ProtectedClient;
+  authority: ProtectedClientAuthority;
+}
+
+function protectedClient(
+  raw: PrismaClient,
+  context: ShopContext,
+): ProtectedClientBundle {
+  const authority = createProtectedClientAuthority(raw, context);
+  const authorityRaw = authority.bind(raw);
+
   // Prisma executes extensions in registration order. The outer projection
   // reader records the caller's exact shape first; the race-safe upsert layer
   // consumes record-bound upserts before the generic PII handlers can guess a
   // speculative create ID; all remaining operations continue through canonical
   // protection. Hidden IDs/phone ciphertext are removed by the outer reader.
-  const projectionAware = withProtectedNestedReads(raw, raw, context);
+  // Every codec receives the same authority-backed view so a transaction never
+  // opens a second SQLite connection to resolve or create protected keys.
+  const projectionAware = withProtectedNestedReads(
+    authorityRaw,
+    authorityRaw,
+    context,
+  );
   const raceSafe = withProtectedRaceSafeUpserts(
-    projectionAware as unknown as PrismaClient,
-    raw,
+    authority.bind(projectionAware as unknown as PrismaClient),
+    authorityRaw,
     context,
   );
-  return withProtectedPiiEncryption(
-    raceSafe as unknown as PrismaClient,
+  const client = withProtectedPiiEncryption(
+    authority.bind(raceSafe as unknown as PrismaClient),
     context,
   );
+  return { client, authority };
+}
+
+function applicationClient(raw: PrismaClient, context: ShopContext): DbClient {
+  const protectedBundle = protectedClient(raw, context);
+  const guarded = withSafetyGuards(protectedBundle.client);
+  const shopBound = withShopAuthority(guarded, context);
+  return protectedBundle.authority.bind(shopBound);
 }
 
 const boundShopContext = processShopContext();
 const processClient =
   (globalForPrisma.prisma as DbClient | undefined) ??
-  withShopAuthority(
-    withSafetyGuards(protectedClient(dbRaw, boundShopContext)),
-    boundShopContext,
-  );
+  applicationClient(dbRaw, boundShopContext);
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = processClient;
@@ -277,10 +303,7 @@ export function getShopClient(
         ? ["warn", "error"]
         : ["error"],
   });
-  const extended = withShopAuthority(
-    withSafetyGuards(protectedClient(raw, context)),
-    context,
-  );
+  const extended = applicationClient(raw, context);
   globalForPrisma.shopClients.set(resolvedPath, extended);
   return extended;
 }
