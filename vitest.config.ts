@@ -20,7 +20,13 @@ export default defineConfig({
     // SQLite, and security-scanner overhead can exceed 15 seconds under hosted
     // runner contention, while Linux remains on the stricter 15-second limit.
     testTimeout,
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "tests/**/*.test.ts"],
+    include: [
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "tests/**/*.test.ts",
+      "scripts/__tests__/classify-pr-risk.test.ts",
+      "scripts/__tests__/sf-audit*.test.ts",
+    ],
     exclude: ["node_modules", "src-tauri", "playwright-report"],
     // Database-backed tests in src/lib/data/__tests__/ use a shared SQLite DB
     // and truncate tables in beforeEach — parallel file execution would cause
