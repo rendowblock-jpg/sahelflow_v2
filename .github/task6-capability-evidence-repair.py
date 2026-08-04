@@ -13,6 +13,30 @@ def replace_once(path: str, pattern: str, replacement: str, *, flags: int = 0) -
     file_path.write_text(updated, encoding="utf-8")
 
 
+def replace_marked(
+    path: str,
+    start: str,
+    end: str,
+    replacement: str,
+    *,
+    include_end: bool,
+) -> None:
+    file_path = ROOT / path
+    text = file_path.read_text(encoding="utf-8")
+    start_index = text.find(start)
+    if start_index < 0:
+        raise SystemExit(f"start marker missing in {path}: {start}")
+    end_index = text.find(end, start_index)
+    if end_index < 0:
+        raise SystemExit(f"end marker missing in {path}: {end}")
+    if include_end:
+        end_index += len(end)
+    file_path.write_text(
+        text[:start_index] + replacement + text[end_index:],
+        encoding="utf-8",
+    )
+
+
 provider_path = "src/lib/integrations/delivery/provider-capability.ts"
 replace_once(
     provider_path,
@@ -55,10 +79,11 @@ replace_once(
   }''',
 )
 
-replace_once(
+replace_marked(
     provider_path,
-    r'''  const expiresAt = new Date\(now\.getTime\(\) \+ CERTIFICATION_TTL_MS\);\n  await context\.prisma\.\$transaction\(\n    \(\["connection", "fees", "booking", "tracking"\] as const\)\.map\(\n      \(capability\) =>\n        context\.prisma\.providerCapabilityCertification\.upsert\(\{.*?\n    \),\n  \);\n  return \{ \.\.\.result, expiresAt: expiresAt\.toISOString\(\) \};''',
-    r'''  const expiresAt = new Date(now.getTime() + CERTIFICATION_TTL_MS);
+    "  const expiresAt = new Date(now.getTime() + CERTIFICATION_TTL_MS);",
+    "  return { ...result, expiresAt: expiresAt.toISOString() };",
+    '''  const expiresAt = new Date(now.getTime() + CERTIFICATION_TTL_MS);
   await context.prisma.$transaction(
     (["connection", "fees", "booking", "tracking"] as const).map(
       (capability) => {
@@ -126,13 +151,14 @@ replace_once(
     ),
   );
   return { ...result, expiresAt: expiresAt.toISOString() };''',
-    flags=re.S,
+    include_end=True,
 )
 
-replace_once(
+replace_marked(
     provider_path,
-    r'''export async function assertProviderCapability\(\n  context: ServiceContext,\n  provider: string,\n  capability: ProviderCapability,\n\): Promise<void> \{.*?\n\}\n\nexport interface ProviderCertificationProjection''',
-    r'''export async function assertProviderCapability(
+    "export async function assertProviderCapability(",
+    "export interface ProviderCertificationProjection",
+    '''export async function assertProviderCapability(
   context: ServiceContext,
   provider: string,
   capability: ProviderCapability,
@@ -189,8 +215,8 @@ replace_once(
   }
 }
 
-export interface ProviderCertificationProjection''',
-    flags=re.S,
+''',
+    include_end=False,
 )
 
 migration = ROOT / "prisma/migrations/20260804023000_provider_capability_evidence_levels/migration.sql"
