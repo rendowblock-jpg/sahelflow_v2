@@ -18,6 +18,7 @@ import { PrismaClient } from "@prisma/client";
 
 import { withProtectedNestedReads } from "@/lib/crypto/with-protected-nested";
 import { withProtectedPiiEncryption } from "@/lib/crypto/with-protected-pii";
+import { withProtectedRaceSafeUpserts } from "@/lib/crypto/with-protected-upserts";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import { processShopContext, type ShopContext } from "@/lib/shops/context";
 
@@ -176,14 +177,19 @@ function withShopAuthority(
 export type DbClient = ReturnType<typeof withShopAuthority>;
 
 function protectedClient(raw: PrismaClient, context: ShopContext) {
-  // Projection planning must be registered before model-specific protection.
-  // Prisma executes query extensions in registration order: this lets the
-  // outer reader capture the caller's exact select/include shape before the PII
-  // layer injects hidden IDs or companion ciphertext fields, then remove those
-  // fields after authenticated decryption.
+  // Prisma executes extensions in registration order. The outer projection
+  // reader records the caller's exact shape first; the race-safe upsert layer
+  // consumes record-bound upserts before the generic PII handlers can guess a
+  // speculative create ID; all remaining operations continue through canonical
+  // protection. Hidden IDs/phone ciphertext are removed by the outer reader.
   const projectionAware = withProtectedNestedReads(raw, raw, context);
-  return withProtectedPiiEncryption(
+  const raceSafe = withProtectedRaceSafeUpserts(
     projectionAware as unknown as PrismaClient,
+    raw,
+    context,
+  );
+  return withProtectedPiiEncryption(
+    raceSafe as unknown as PrismaClient,
     context,
   );
 }
