@@ -78,14 +78,11 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prismaRaw = dbRaw;
 }
 
-type ProtectedPiiClient = ReturnType<
+type ProtectedClient = ReturnType<
   typeof withProtectedPiiEncryption<PrismaClient>
 >;
-type ProtectedReadClient = ReturnType<
-  typeof withProtectedNestedReads<ProtectedPiiClient>
->;
 
-function withSafetyGuards(client: ProtectedReadClient) {
+function withSafetyGuards(client: ProtectedClient) {
   const isTestEnv =
     process.env.NODE_ENV === "test" || process.env.VITEST === "true";
 
@@ -179,8 +176,16 @@ function withShopAuthority(
 export type DbClient = ReturnType<typeof withShopAuthority>;
 
 function protectedClient(raw: PrismaClient, context: ShopContext) {
-  const pii = withProtectedPiiEncryption(raw, context);
-  return withProtectedNestedReads(pii, raw, context);
+  // Projection planning must be registered before model-specific protection.
+  // Prisma executes query extensions in registration order: this lets the
+  // outer reader capture the caller's exact select/include shape before the PII
+  // layer injects hidden IDs or companion ciphertext fields, then remove those
+  // fields after authenticated decryption.
+  const projectionAware = withProtectedNestedReads(raw, raw, context);
+  return withProtectedPiiEncryption(
+    projectionAware as unknown as PrismaClient,
+    context,
+  );
 }
 
 const boundShopContext = processShopContext();
