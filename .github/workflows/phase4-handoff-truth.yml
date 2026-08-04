@@ -1,0 +1,66 @@
+name: Phase 4 handoff truth
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase4-handoff-truth
+  cancel-in-progress: true
+
+jobs:
+  reconcile:
+    name: Reconcile and verify Phase 4 handoff
+    if: ${{ github.event.pull_request.head.ref == 'agent/phase4-handoff-truth' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply handoff reconciliation
+        run: python .github/phase4-handoff-truth.py
+
+      - name: Format changed authority
+        run: >-
+          bunx prettier --write
+          README.md
+          AGENTS.md
+          CHANGELOG.md
+          documentation/README.md
+          documentation/system/CURRENT_STATE.md
+          documentation/system/ROADMAP.md
+          documentation/operations/WORKING_MEMORY.md
+          scripts/sf-audit.ts
+
+      - name: Verify version and documentation authority
+        run: |
+          bun run sf-version
+          bun run sf-audit
+          bun run sf-inventory
+          git diff --check
+
+      - name: Publish verified handoff truth
+        run: |
+          rm .github/phase4-handoff-truth.py
+          rm .github/workflows/phase4-handoff-truth.yml
+          git config user.name "SahelFlow Phase 4 Handoff"
+          git config user.email "actions@users.noreply.github.com"
+          git add README.md AGENTS.md CHANGELOG.md documentation scripts/sf-audit.ts .github/phase4-handoff-truth.py .github/workflows/phase4-handoff-truth.yml
+          git diff --cached --check
+          git commit -m "docs: establish Phase 4 execution frontier"
+          git push origin HEAD:agent/phase4-handoff-truth
