@@ -132,7 +132,11 @@ export function withProtectedNestedReads<
     }
     const input = isPlainRecord(args.where) ? args.where : null;
     const phone = input?.phone;
-    if (typeof phone !== "string" || /^[0-9a-f]{64}$/.test(phone)) {
+    if (
+      !input ||
+      typeof phone !== "string" ||
+      /^[0-9a-f]{64}$/.test(phone)
+    ) {
       return;
     }
 
