@@ -18,6 +18,11 @@ jobs:
     if: ${{ github.event.pull_request.head.ref == 'agent/phase3-durable-effects-audit' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      SF_TEST_ROOT: /tmp/sahelflow-phase3-dependency-audit
+      SF_DATA_DIR: /tmp/sahelflow-phase3-dependency-audit/data
+      DATABASE_URL: file:/tmp/sahelflow-phase3-dependency-audit/data/shops/test.db
+      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@v4
@@ -62,6 +67,9 @@ jobs:
 
       - name: Verify sidecar build
         run: bun run build:sidecar
+
+      - name: Prepare focused test sandbox
+        run: bun run test:sandbox -- /tmp/sahelflow-phase3-dependency-audit
 
       - name: Verify focused source tests
         run: >-
