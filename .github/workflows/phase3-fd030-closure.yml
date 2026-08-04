@@ -45,6 +45,9 @@ jobs:
       - name: Install frozen dependencies
         run: bun install --frozen-lockfile
 
+      - name: Normalize current Level 2 authority input
+        run: python .github/phase3-founder-closure-prep.py
+
       - name: Apply FD-030 closure authority
         run: python .github/phase3-founder-closure-fd030.py
 
