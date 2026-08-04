@@ -109,6 +109,9 @@ jobs:
       - name: Prepare disposable test sandbox
         run: bun run test:sandbox -- /tmp/sahelflow-phase3-review
 
+      - name: Deploy migrations
+        run: bunx prisma migrate deploy
+
       - name: Targeted regression tests
         run: >-
           bunx vitest run
