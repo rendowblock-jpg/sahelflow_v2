@@ -94,7 +94,10 @@ export async function cleanDb(): Promise<void> {
   await rawDb.extractionMetric.deleteMany();
   await rawDb.wilayaRiskProfile.deleteMany();
   await rawDb.secret.deleteMany();
-  await rawDb.protectedKeyAuthority.deleteMany();
+  // ProtectedKeyAuthority is installation/shop authority, not per-test business
+  // data. The canonical db client keeps one authenticated process-bound session,
+  // matching packaged runtime semantics; deleting the rows underneath it would
+  // manufacture corruption and invalidate unrelated integration tests.
 }
 
 let _ipCounter = 0;
