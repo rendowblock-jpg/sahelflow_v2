@@ -1,8 +1,0 @@
-diff --git a/dist/commonjs/index.js b/dist/commonjs/index.js
---- a/dist/commonjs/index.js
-+++ b/dist/commonjs/index.js
-@@ -261,3 +261,4 @@ function expand_(str, max, maxLength, isTop) {
-     return acc;
- }
- //# sourceMappingURL=index.js.map
-+module.exports = Object.assign(exports.expand, exports);
