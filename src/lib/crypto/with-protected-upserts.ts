@@ -11,6 +11,7 @@ import {
   prepareProtectedSelection,
 } from "@/lib/crypto/protected-pii";
 import { executeRecordBoundUpsert } from "@/lib/crypto/protected-upsert";
+import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import type { ShopContext } from "@/lib/shops/context";
 import { SahelFlowError } from "@/types/errors";
 
@@ -51,6 +52,12 @@ function assertNoNestedProtectedMutation(data: Record<string, unknown>): void {
         409,
       );
     }
+  }
+}
+
+function assertWriteAuthority(context: ShopContext): void {
+  if (process.env.NODE_ENV === "production") {
+    assertProcessShopAuthority(context);
   }
 }
 
@@ -129,6 +136,7 @@ export function withProtectedRaceSafeUpserts<
     query: {
       customer: {
         async upsert({ args }) {
+          assertWriteAuthority(context);
           const where = args.where;
           const create = args.create as unknown as Record<string, unknown>;
           const update = args.update as unknown as Record<string, unknown>;
@@ -155,6 +163,7 @@ export function withProtectedRaceSafeUpserts<
       },
       order: {
         async upsert({ args }) {
+          assertWriteAuthority(context);
           const create = args.create as unknown as Record<string, unknown>;
           const update = args.update as unknown as Record<string, unknown>;
           assertNoNestedProtectedMutation(create);
@@ -190,6 +199,7 @@ export function withProtectedRaceSafeUpserts<
       },
       conversation: {
         async upsert({ args }) {
+          assertWriteAuthority(context);
           const create = args.create as unknown as Record<string, unknown>;
           const update = args.update as unknown as Record<string, unknown>;
           assertNoNestedProtectedMutation(create);
@@ -223,6 +233,7 @@ export function withProtectedRaceSafeUpserts<
       },
       message: {
         async upsert({ args }) {
+          assertWriteAuthority(context);
           const create = args.create as unknown as Record<string, unknown>;
           const update = args.update as unknown as Record<string, unknown>;
           assertNoNestedProtectedMutation(create);
