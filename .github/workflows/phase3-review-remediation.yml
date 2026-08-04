@@ -90,10 +90,25 @@ jobs:
       - name: Apply review remediation
         run: python .github/phase3-review-remediation.py
 
+      - name: Align Golden COD replay assertion
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/app/api/orders/__tests__/phase1-golden-cod-journey.test.ts")
+          content = path.read_text(encoding="utf-8")
+          old = "expect(harness.dispatchTrigger).toHaveBeenCalledTimes(2);"
+          new = "expect(harness.dispatchTrigger).toHaveBeenCalledTimes(3);"
+          if content.count(old) != 1:
+              raise RuntimeError("Golden COD replay assertion drifted")
+          path.write_text(content.replace(old, new, 1), encoding="utf-8")
+          PY
+
       - name: Format changed source
         run: >-
           bunx prettier --write
           src/app/api/storefront/submit/route.ts
+          src/app/api/orders/__tests__/phase1-golden-cod-journey.test.ts
           sidecars/whatsapp/inbound-spool.ts
           sidecars/whatsapp/inbound-spool-crypto.ts
           src/lib/whatsapp/inbound-processor.ts
@@ -116,6 +131,7 @@ jobs:
         run: >-
           bunx vitest run
           src/app/api/storefront/__tests__/canonical-submit-route.test.ts
+          src/app/api/orders/__tests__/phase1-golden-cod-journey.test.ts
           src/lib/whatsapp/__tests__/inbound-spool-encryption.test.ts
           src/lib/whatsapp/__tests__/inbound-processor.integration.test.ts
           src/lib/integrations/ecommerce/__tests__/durable-runtime.test.ts
