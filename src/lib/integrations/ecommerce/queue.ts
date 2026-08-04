@@ -8,6 +8,7 @@ import { SahelFlowError } from "@/types/errors";
 import { loadEcommerceCredentials } from "./index";
 import {
   commerceActiveKey,
+  commerceCredentialContract,
   commerceHash,
   parseCommerceIntegrationConfig,
 } from "./runtime-contracts";
@@ -71,13 +72,15 @@ export async function queueCommerceSync(
       400,
     );
   }
-  if (!(await loadEcommerceCredentials(context, platform))) {
+  const credentials = await loadEcommerceCredentials(context, platform);
+  if (!credentials) {
     throw new SahelFlowError(
       `No credentials configured for ${platform}`,
       "COMMERCE_SYNC_CREDENTIALS_MISSING",
       409,
     );
   }
+  const credentialContract = commerceCredentialContract(platform, credentials);
 
   const activeKey = commerceActiveKey(platform);
   const existing = await context.prisma.commerceSyncRun.findUnique({
@@ -116,6 +119,8 @@ export async function queueCommerceSync(
         platform,
         integrationId: integration.id,
         sourceIdentity: `integration:${integration.id}`,
+        credentialFingerprint: credentialContract.credentialFingerprint,
+        endpointFingerprint: credentialContract.endpointFingerprint,
         status: "queued",
         initialWatermark,
         candidateWatermark: initialWatermark,

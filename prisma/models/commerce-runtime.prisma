@@ -11,8 +11,10 @@ model CommerceSyncRun {
   activeKey          String?   @unique
   platform           String
   integrationId      String
-  sourceIdentity     String
-  status             String    @default("queued")
+  sourceIdentity        String
+  credentialFingerprint String    @default("")
+  endpointFingerprint   String    @default("")
+  status                String    @default("queued")
   initialWatermark   String
   candidateWatermark String    @default("")
   continuationCursor String?

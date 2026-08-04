@@ -6,6 +6,11 @@ import type { ServiceContext } from "@/lib/data/service-base";
 import { ConflictError, SahelFlowError } from "@/types/errors";
 
 const RECOVERABLE_ITEM_STATES = ["quarantined", "dead_letter"] as const;
+const TERMINAL_AUTHORITY_ERRORS = new Set([
+  "COMMERCE_SYNC_CREDENTIALS_MISSING",
+  "COMMERCE_CREDENTIAL_CONTRACT_INVALID",
+  "COMMERCE_CREDENTIAL_CONTRACT_DRIFT",
+]);
 
 export interface CommerceAttemptHistory {
   id: string;
@@ -68,6 +73,7 @@ function iso(value: Date | null): string | null {
 
 function recoveryDecision(run: {
   status: string;
+  activeKey: string | null;
   fetchComplete: boolean;
   lastErrorCode: string | null;
   items: Array<{ id: string; status: string }>;
@@ -85,6 +91,16 @@ function recoveryDecision(run: {
       itemIds: [],
       blockCode: "COMMERCE_WATERMARK_CONFLICT",
     };
+  }
+  if (run.lastErrorCode && TERMINAL_AUTHORITY_ERRORS.has(run.lastErrorCode)) {
+    return {
+      mode: null,
+      itemIds: [],
+      blockCode: "COMMERCE_CREDENTIAL_CONTRACT_DRIFT",
+    };
+  }
+  if (!run.activeKey) {
+    return { mode: null, itemIds: [], blockCode: "COMMERCE_RUN_REPLACED" };
   }
   if (!run.fetchComplete && run.status === "dead_letter") {
     return { mode: "fetch", itemIds: [], blockCode: null };
@@ -116,6 +132,7 @@ export async function listCommerceSyncHistory(
       id: true,
       platform: true,
       status: true,
+      activeKey: true,
       pagesFetched: true,
       fetchComplete: true,
       hasMore: true,
@@ -256,9 +273,11 @@ export async function retryCommerceSync(
       throw new ConflictError(
         decision.blockCode === "COMMERCE_WATERMARK_CONFLICT"
           ? "The integration watermark changed outside this run; queue a new sync after reconciling the integration state"
-          : decision.blockCode === "COMMERCE_RUN_TERMINAL"
-            ? "A terminal commerce run cannot be retried"
-            : "No recoverable commerce fetch or item was found",
+          : decision.blockCode === "COMMERCE_CREDENTIAL_CONTRACT_DRIFT"
+            ? "The provider credential or endpoint contract changed; queue a new sync under the current contract"
+            : decision.blockCode === "COMMERCE_RUN_TERMINAL"
+              ? "A terminal commerce run cannot be retried"
+              : "No recoverable commerce fetch or item was found",
       );
     }
 

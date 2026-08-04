@@ -171,7 +171,9 @@ export function CommerceSyncRecoveryPanel() {
             void loadRuns();
           }}
         >
-          <RefreshCw className={`me-1 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw
+            className={`me-1 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+          />
           {t("commerce.runtime.refresh")}
         </Button>
       </CardHeader>
@@ -185,11 +187,18 @@ export function CommerceSyncRecoveryPanel() {
             {runs.map((run) => {
               const isExpanded = expanded === run.id;
               return (
-                <section key={run.id} className="p-4" aria-labelledby={`commerce-run-${run.id}`}>
+                <section
+                  key={run.id}
+                  className="p-4"
+                  aria-labelledby={`commerce-run-${run.id}`}
+                >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 id={`commerce-run-${run.id}`} className="font-medium capitalize">
+                        <h3
+                          id={`commerce-run-${run.id}`}
+                          className="font-medium capitalize"
+                        >
                           {run.platform}
                         </h3>
                         <Badge variant={statusVariant(run.status)}>
@@ -197,7 +206,8 @@ export function CommerceSyncRecoveryPanel() {
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {formatter.format(new Date(run.createdAt))} · {t("commerce.runtime.pages")}: {run.pagesFetched}
+                        {formatter.format(new Date(run.createdAt))} ·{" "}
+                        {t("commerce.runtime.pages")}: {run.pagesFetched}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {t("commerce.runtime.counts", {
@@ -230,7 +240,8 @@ export function CommerceSyncRecoveryPanel() {
 
                   {run.nextAttemptAt && (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      {t("commerce.runtime.nextAttempt")}: {formatter.format(new Date(run.nextAttemptAt))}
+                      {t("commerce.runtime.nextAttempt")}:{" "}
+                      {formatter.format(new Date(run.nextAttemptAt))}
                     </p>
                   )}
 
@@ -260,22 +271,30 @@ export function CommerceSyncRecoveryPanel() {
                     </div>
                   )}
 
-                  {!run.recoverable && run.recoveryBlockCode && [
-                    "partially_completed",
-                    "dead_letter",
-                  ].includes(run.status) && (
-                    <div className="mt-3 flex items-start gap-2 rounded-md border p-3 text-sm text-muted-foreground">
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>
-                        {run.recoveryBlockCode === "COMMERCE_WATERMARK_CONFLICT"
-                          ? t("commerce.runtime.watermarkConflict")
-                          : t("commerce.runtime.retryUnavailable")}
-                      </span>
-                    </div>
-                  )}
+                  {!run.recoverable &&
+                    run.recoveryBlockCode &&
+                    ["partially_completed", "dead_letter"].includes(
+                      run.status,
+                    ) && (
+                      <div className="mt-3 flex items-start gap-2 rounded-md border p-3 text-sm text-muted-foreground">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>
+                          {run.recoveryBlockCode ===
+                          "COMMERCE_WATERMARK_CONFLICT"
+                            ? t("commerce.runtime.watermarkConflict")
+                            : run.recoveryBlockCode ===
+                                "COMMERCE_CREDENTIAL_CONTRACT_DRIFT"
+                              ? t("commerce.runtime.credentialDrift")
+                              : t("commerce.runtime.retryUnavailable")}
+                        </span>
+                      </div>
+                    )}
 
                   {isExpanded && (
-                    <div id={`commerce-run-details-${run.id}`} className="mt-4 space-y-3">
+                    <div
+                      id={`commerce-run-details-${run.id}`}
+                      className="mt-4 space-y-3"
+                    >
                       {run.items.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                           {t("commerce.runtime.items")}: 0
@@ -295,7 +314,10 @@ export function CommerceSyncRecoveryPanel() {
                               </Badge>
                             </div>
                             {item.lastErrorCode && (
-                              <p className="mt-2 text-xs text-destructive" dir="ltr">
+                              <p
+                                className="mt-2 text-xs text-destructive"
+                                dir="ltr"
+                              >
                                 {item.lastErrorCode}
                               </p>
                             )}
@@ -305,9 +327,17 @@ export function CommerceSyncRecoveryPanel() {
                                   {t("commerce.runtime.attempts")}
                                 </p>
                                 {item.attempts.map((attempt) => (
-                                  <p key={attempt.id} className="text-xs text-muted-foreground">
-                                    #{attempt.attemptNumber} · {t(`commerce.runtime.state.${attempt.state}`)}
-                                    {attempt.errorCode ? ` · ${attempt.errorCode}` : ""}
+                                  <p
+                                    key={attempt.id}
+                                    className="text-xs text-muted-foreground"
+                                  >
+                                    #{attempt.attemptNumber} ·{" "}
+                                    {t(
+                                      `commerce.runtime.state.${attempt.state}`,
+                                    )}
+                                    {attempt.errorCode
+                                      ? ` · ${attempt.errorCode}`
+                                      : ""}
                                   </p>
                                 ))}
                               </div>

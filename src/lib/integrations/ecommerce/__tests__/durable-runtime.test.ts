@@ -259,4 +259,99 @@ describe("durable commerce runtime", () => {
       ).status,
     ).toBe("succeeded");
   });
+
+  it("retains the maximum candidate watermark across descending provider pages", async () => {
+    fetchPageMock
+      .mockResolvedValueOnce(
+        page([], {
+          nextCursor: "older-page",
+          watermark: "2026-01-03T00:00:00Z",
+        }),
+      )
+      .mockResolvedValueOnce(
+        page([], {
+          nextCursor: null,
+          watermark: "2026-01-02T00:00:00Z",
+        }),
+      );
+
+    const queued = await queueCommerceSync(context, "shopify", 1);
+    await processNextCommerceFetch(context);
+    await processNextCommerceFetch(context);
+    expect(await finalizeCommerceRuns(context)).toBe(1);
+
+    const run = await rawDb.commerceSyncRun.findUniqueOrThrow({
+      where: { id: queued.id },
+    });
+    expect(run.candidateWatermark).toBe("2026-01-03T00:00:00Z");
+    const integration = await rawDb.integration.findUniqueOrThrow({
+      where: { platform: "shopify" },
+    });
+    expect(JSON.parse(integration.config ?? "{}")).toMatchObject({
+      watermark: "2026-01-03T00:00:00Z",
+    });
+  });
+
+  it("fails closed on credential or endpoint drift without changing canonical source identity", async () => {
+    const queued = await queueCommerceSync(context, "shopify", 1);
+    const original = await rawDb.commerceSyncRun.findUniqueOrThrow({
+      where: { id: queued.id },
+    });
+    credentialsProvider.mockResolvedValue({
+      shop: "different-shop",
+      accessToken: "rotated-token",
+    });
+
+    expect(await processNextCommerceFetch(context)).toBe(true);
+    expect(fetchPageMock).not.toHaveBeenCalled();
+    const failed = await rawDb.commerceSyncRun.findUniqueOrThrow({
+      where: { id: queued.id },
+    });
+    expect(failed).toMatchObject({
+      status: "dead_letter",
+      activeKey: null,
+      lastErrorCode: "COMMERCE_CREDENTIAL_CONTRACT_DRIFT",
+    });
+
+    const replacement = await queueCommerceSync(context, "shopify", 1);
+    const replacementRun = await rawDb.commerceSyncRun.findUniqueOrThrow({
+      where: { id: replacement.id },
+    });
+    expect(replacement.id).not.toBe(queued.id);
+    expect(replacementRun.sourceIdentity).toBe(original.sourceIdentity);
+    expect(replacementRun.credentialFingerprint).not.toBe(
+      original.credentialFingerprint,
+    );
+  });
+
+  it("releases a watermark-conflicted run so a reconciled sync can be queued", async () => {
+    fetchPageMock.mockResolvedValueOnce(
+      page([], { nextCursor: null, watermark: "wm-run" }),
+    );
+    const queued = await queueCommerceSync(context, "shopify", 1);
+    await processNextCommerceFetch(context);
+    const integration = await rawDb.integration.findUniqueOrThrow({
+      where: { platform: "shopify" },
+    });
+    await rawDb.integration.update({
+      where: { id: integration.id },
+      data: {
+        config: JSON.stringify({ watermark: "wm-external", lastSyncAt: "" }),
+      },
+    });
+
+    expect(await finalizeCommerceRuns(context)).toBe(0);
+    const conflicted = await rawDb.commerceSyncRun.findUniqueOrThrow({
+      where: { id: queued.id },
+    });
+    expect(conflicted).toMatchObject({
+      status: "dead_letter",
+      activeKey: null,
+      lastErrorCode: "COMMERCE_WATERMARK_CONFLICT",
+    });
+
+    const replacement = await queueCommerceSync(context, "shopify", 1);
+    expect(replacement.id).not.toBe(queued.id);
+    expect(replacement.initialWatermark).toBe("wm-external");
+  });
 });

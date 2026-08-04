@@ -9,9 +9,11 @@ import { getEcommerceAdapter, loadEcommerceCredentials } from "./index";
 import {
   COMMERCE_FETCH_MAX_ATTEMPTS,
   COMMERCE_LEASE_MS,
+  commerceCredentialContract,
   commerceHash,
   commerceItemIdentity,
   commerceRetryAt,
+  maxCommerceWatermark,
   parseCommerceIntegrationConfig,
   safeCommerceErrorCode,
 } from "./runtime-contracts";
@@ -23,6 +25,8 @@ interface ClaimedRun {
   platform: EcommercePlatform;
   integrationId: string;
   sourceIdentity: string;
+  credentialFingerprint: string;
+  endpointFingerprint: string;
   initialWatermark: string;
   candidateWatermark: string;
   continuationCursor: string | null;
@@ -49,6 +53,19 @@ interface ClaimedItem {
 
 function leaseCutoff(): Date {
   return new Date(Date.now() - COMMERCE_LEASE_MS);
+}
+
+const TERMINAL_FETCH_AUTHORITY_ERRORS = new Set([
+  "COMMERCE_SYNC_CREDENTIALS_MISSING",
+  "COMMERCE_CREDENTIAL_CONTRACT_INVALID",
+  "COMMERCE_CREDENTIAL_CONTRACT_DRIFT",
+]);
+
+function terminalFetchAuthorityError(error: unknown): boolean {
+  return (
+    error instanceof SahelFlowError &&
+    TERMINAL_FETCH_AUTHORITY_ERRORS.has(error.code)
+  );
 }
 
 async function claimCommerceRun(
@@ -124,6 +141,8 @@ async function claimCommerceRun(
       platform: candidate.platform as EcommercePlatform,
       integrationId: candidate.integrationId,
       sourceIdentity: candidate.sourceIdentity,
+      credentialFingerprint: candidate.credentialFingerprint,
+      endpointFingerprint: candidate.endpointFingerprint,
       initialWatermark: candidate.initialWatermark,
       candidateWatermark: candidate.candidateWatermark,
       continuationCursor: candidate.continuationCursor,
@@ -154,7 +173,10 @@ async function failCommerceRunFetch(
       state: { in: ["processing", "retrying", "failed"] },
     },
   });
-  const dead = generationAttempts >= COMMERCE_FETCH_MAX_ATTEMPTS;
+  const terminalAuthorityFailure = terminalFetchAuthorityError(error);
+  const dead =
+    terminalAuthorityFailure ||
+    generationAttempts >= COMMERCE_FETCH_MAX_ATTEMPTS;
   await context.prisma.$transaction([
     context.prisma.commerceSyncRunAttempt.updateMany({
       where: {
@@ -175,6 +197,7 @@ async function failCommerceRunFetch(
       where: { id: run.id, leaseToken: run.leaseToken, status: "fetching" },
       data: {
         status: dead ? "dead_letter" : "retrying",
+        activeKey: terminalAuthorityFailure ? null : undefined,
         leaseToken: null,
         lockedAt: null,
         lastErrorCode: errorCode,
@@ -239,8 +262,27 @@ async function persistFetchedPage(
     ]),
   });
   const now = new Date();
+  const candidateWatermark = maxCommerceWatermark(
+    run.candidateWatermark,
+    page.candidateWatermark,
+  );
 
   await context.prisma.$transaction(async (tx) => {
+    const authoritativeRun = await tx.commerceSyncRun.findFirst({
+      where: {
+        id: run.id,
+        status: "fetching",
+        leaseToken: run.leaseToken,
+      },
+      select: { id: true },
+    });
+    if (!authoritativeRun) {
+      throw new SahelFlowError(
+        "Commerce fetch lease was lost before page persistence",
+        "COMMERCE_SYNC_LEASE_LOST",
+        409,
+      );
+    }
     await tx.commerceSyncPage.create({
       data: {
         id: pageId,
@@ -299,7 +341,7 @@ async function persistFetchedPage(
       data: {
         status: page.nextCursor ? "queued" : "processing",
         continuationCursor: page.nextCursor,
-        candidateWatermark: page.candidateWatermark || run.candidateWatermark,
+        candidateWatermark,
         pagesFetched: { increment: 1 },
         fetchedCount: { increment: descriptors.length },
         fetchComplete: page.nextCursor === null,
@@ -324,6 +366,20 @@ export async function processNextCommerceFetch(
       throw new SahelFlowError(
         `No credentials configured for ${run.platform}`,
         "COMMERCE_SYNC_CREDENTIALS_MISSING",
+        409,
+      );
+    }
+    const credentialContract = commerceCredentialContract(
+      run.platform,
+      credentials,
+    );
+    if (
+      credentialContract.credentialFingerprint !== run.credentialFingerprint ||
+      credentialContract.endpointFingerprint !== run.endpointFingerprint
+    ) {
+      throw new SahelFlowError(
+        "Commerce credentials or provider endpoint changed after the run was queued",
+        "COMMERCE_CREDENTIAL_CONTRACT_DRIFT",
         409,
       );
     }
@@ -640,6 +696,7 @@ export async function finalizeCommerceRuns(
           where: { id: run.id },
           data: {
             status: "dead_letter",
+            activeKey: null,
             lastErrorCode: "COMMERCE_WATERMARK_CONFLICT",
             deadLetteredAt: now,
             completedAt: now,
