@@ -213,10 +213,11 @@ mandatory. Library presence or a screenshot is not AAA evidence.
 
 ## Completed package rules — durable inbound WhatsApp
 
-The package is source-closed at
+The package checkpoint is source/integration/database evidence at
 `f016055be55fd220baa87c26ffed565c4e9e1d85` with complete checkpoint
-`30808773702`. It is source/integration/database evidence only, not signed,
-installed, live-provider-certified, Founder-accepted or Phase-closed evidence.
+`30808773702`. Overall Phase 3 protected-source closure is owned by merged PR
+#203; signed, installed, live-provider, Founder-acceptance and Stable evidence
+remain separate higher layers.
 
 ## Completed package rules — truthful durable automations
 
@@ -233,8 +234,9 @@ repaired timestamp-bound replay drift, invalid nested writes, unawaited action
 errors, retry hot loops, false success, test leakage, fire-and-forget producers,
 SQLite trigger contention, repeat-blacklist identity and direct report sends.
 
-This is source evidence only. It is not signed, installed, provider-certified,
-Founder-accepted, Phase 3 closed or Stable.
+This package checkpoint is source evidence only. Overall Phase 3
+protected-source closure is owned by merged PR #203; signed, installed,
+provider-certified, Founder-accepted and Stable evidence remain separate.
 
 ## Completed package rules — proposal-bound sensitive AI actions
 
@@ -265,18 +267,22 @@ deployment, TypeScript, ESLint, complete Vitest, migration status, production
 WhatsApp sidecar build and production Next build. It is source/build evidence,
 not live-provider, signed-artifact or installed-Windows evidence.
 
-## Founder closure rule — FD-030
+## Phase 3 closure boundary and Phase 4 authorization — FD-030
 
-Only these next actions are authorized:
+Phase 3 is protected-source closed through merged PR #203 and issue #202 is
+complete. The only active next package is issue #204:
 
-- preserve the exact green Phase 3 closure head and merge PR #203;
-- close issue #202 after the protected merge;
-- begin Phase 4 with complete data-protection/recovery/migration/security audit;
+- perform the exhaustive Phase 4 data/key/backup/migration/recovery/security/privacy audit;
+- research current primary standards and official platform guidance;
+- create one consolidated Phase 4 Problem Register;
+- freeze the shared key, backup, recovery, migration and evidence contracts;
+- create the first bounded implementation branch only after that freeze;
 - defer real-account provider certification to Phase 9 representative beta;
 - retain issue #201 for applicable Level 3/installed evidence.
 
-Do not paste credentials into chat or source, fabricate live certification, bump
-the version, publish an MSI/release, claim Founder acceptance or claim Stable.
+Do not begin broad Phase 4 production work before the contract freeze. Do not
+paste credentials into chat or source, fabricate live certification, bump the
+version, publish an MSI/release, claim Founder acceptance or claim Stable.
 
 ## Evidence language
 
@@ -319,6 +325,6 @@ ownership and dependency position.
 - PR #186 is obsolete/diverged and must never be merged wholesale.
 - PR #196 is superseded; its diagnostics intent is protected through PR #199.
 - PR #194 and historical Phase 3 branches are evidence only.
-- The active package is PR #203.
+- The active package is issue #204; no Phase 4 implementation PR is active.
 - No version bump, release, MSI publication, Founder acceptance or Stable claim
   is authorized.

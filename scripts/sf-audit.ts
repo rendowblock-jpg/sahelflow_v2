@@ -311,6 +311,7 @@ requireMarkers("AGENTS.md", [
   "PR #203 is merged",
   "issue #204",
   "Phase 4 exhaustive audit and contract freeze",
+  "issue #204; no Phase 4 implementation PR is active",
   "aa4ca0758fd696f4b02fc1975629ac698f9349c3",
 ]);
 requireMarkers("documentation/README.md", [
@@ -422,6 +423,9 @@ const stalePhase3FrontierMarkers = [
   "Issue #202 owns Phase 3",
   "Current session purpose:** Phase 3 live-provider and installed evidence",
   "Authorized next package:** protected merge of PR #203",
+  "preserve the exact green Phase 3 closure head and merge PR #203",
+  "close issue #202 after the protected merge",
+  "The active package is PR #203",
   "Live protected main:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`",
 ];
 for (const relativePath of [
