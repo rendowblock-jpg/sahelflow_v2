@@ -11,7 +11,7 @@ sellers.
 > **Founder-accepted baseline:** Internal.5
 > **Current program:** FD-028 Final Completion Program and FD-029 AAA delivery
 > **Active phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active package:** PR #203 Phase 3 source-complete; Level 2 and evidence open
+> **Active package:** PR #203 Level 2 source/build passed; live and installed evidence open
 > **Stable status:** SahelFlow 1.0 Stable has not been released
 
 ## Current truth
@@ -117,9 +117,13 @@ The clean Task 6 source head is
 and normal CI `30875724094` passed. This remains proposed source, not protected
 `main`, a signed artifact or installed behavior.
 
+Phase 3 Level 2 source/build checkpoint `30878352410` passed the complete
+source/database/migration suite, production WhatsApp sidecar build and production
+Next build. Clean descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf`
+then passed Integration `30884662556` and normal CI `30884663240`.
+
 ### Evidence still open
 
-- the Phase 3 Level 2 source/database/migration and production-build checkpoint;
 - current live certification for at least one Required courier and communication
   path using safe current credentials and redacted receipts;
 - applicable Level 3 provider/Windows evidence;

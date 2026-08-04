@@ -37,6 +37,19 @@ interface Phase3Checkpoint {
   task4Closure?: PackageClosure;
   task5Closure?: PackageClosure;
   task6Closure?: PackageClosure;
+  phase3Level2Closure?: {
+    status?: string;
+    run?: number;
+    validatedInputHead?: string;
+    authorityPublicationHead?: string;
+    cleanDescendantHead?: string;
+    ordinaryIntegrationRun?: number;
+    normalCiRun?: number;
+    sourceGate?: string;
+    migrationStatus?: string;
+    whatsAppSidecarBuild?: string;
+    nextProductionBuild?: string;
+  };
   authorizedNextPackage?: {
     name?: string;
     problemIds?: string[];
@@ -297,7 +310,8 @@ requireMarkers("AGENTS.md", [
   "Task 3 durable inbound WhatsApp is source-closed",
   "Task 4 truthful durable automations are source-closed",
   "Task 6 is source-closed",
-  "Authorized evidence rules — Phase 3 Level 2 and certification",
+  "Completed evidence rule — Phase 3 Level 2 source/build checkpoint",
+  "Authorized evidence rules — live provider and installed evidence",
   "676d0e41cc69d44c29b912038cba100fd827fcfa",
 ]);
 requireMarkers("documentation/README.md", [
@@ -343,7 +357,8 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "Completed Task 4 — truthful durable automations",
   "Completed Task 5 — proposal-bound sensitive AI actions",
   "Completed Task 6 — provider convergence and durable commerce",
-  "Authorized next package — Phase 3 Level 2 and evidence",
+  "Completed Phase 3 Level 2 source/build checkpoint",
+  "Authorized next package — live provider and installed evidence",
   "Broad Phase 3 production work:** not authorized",
   "676d0e41cc69d44c29b912038cba100fd827fcfa",
   "30875723975",
@@ -420,7 +435,7 @@ if (checkpoint) {
     task6SourceImplementation: "complete",
     task6SeparatedReview: "complete-repaired",
     productionImplementation: "source-complete-evidence-open",
-    phase3Level2: "authorized-pending",
+    phase3Level2: "passed-source-and-build",
     liveProviderCertification: "open",
     installedEvidence: "open-issue-201",
   };
@@ -432,11 +447,14 @@ if (checkpoint) {
       "Phase 3 checkpoint must use source-complete authority formatVersion 7",
     );
   }
-  if (checkpoint.state !== "task6-source-complete-phase3-level2-authorized") {
+  if (
+    checkpoint.state !==
+    "task6-source-complete-phase3-level2-passed-evidence-open"
+  ) {
     report(
       "drift",
       checkpointPath,
-      "checkpoint must close Task 6 and authorize the Phase 3 Level 2/evidence package",
+      "checkpoint must record passed Phase 3 Level 2 with live/installed evidence open",
     );
   }
   if (checkpoint.protectedBase !== expectedProtectedBase) {
@@ -463,12 +481,12 @@ if (checkpoint) {
   }
   if (
     checkpoint.constraints?.authorizedProductionScope !==
-    "Phase 3 Level 2 source checkpoint and evidence collection only"
+    "live provider and installed evidence collection only"
   ) {
     report(
       "drift",
       checkpointPath,
-      "authorized scope must be Phase 3 Level 2 and evidence collection only",
+      "authorized scope must be live provider and installed evidence collection only",
     );
   }
   for (const key of [
@@ -482,12 +500,12 @@ if (checkpoint) {
   }
   if (
     checkpoint.authorizedNextPackage?.name !==
-    "Phase 3 Level 2 source checkpoint and evidence collection"
+    "Phase 3 live provider and installed evidence collection"
   ) {
     report(
       "drift",
       checkpointPath,
-      "authorized next package must be the Phase 3 Level 2/evidence package",
+      "authorized next package must be live provider and installed evidence collection",
     );
   }
   const evidenceProblems = new Set(
@@ -526,6 +544,28 @@ if (checkpoint) {
     fullSourceCheckpointRun: 30875723975,
     normalCiRun: 30875724094,
   });
+
+  const level2 = checkpoint.phase3Level2Closure;
+  if (
+    level2?.status !== "passed-source-and-build" ||
+    level2.run !== 30878352410 ||
+    level2.validatedInputHead !== "547b7e53d21a9835fc343f11fb0cd94c331f54fc" ||
+    level2.authorityPublicationHead !==
+      "777207d40b33f3f307728b2f8697765ec6e9e66d" ||
+    level2.cleanDescendantHead !== "cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf" ||
+    level2.ordinaryIntegrationRun !== 30884662556 ||
+    level2.normalCiRun !== 30884663240 ||
+    level2.sourceGate !== "passed" ||
+    level2.migrationStatus !== "passed" ||
+    level2.whatsAppSidecarBuild !== "passed" ||
+    level2.nextProductionBuild !== "passed"
+  ) {
+    report(
+      "drift",
+      checkpointPath,
+      "Phase 3 Level 2 exact-head source/build evidence is incomplete or stale",
+    );
+  }
 
   const problemStates = new Map(
     (checkpoint.problemRegister ?? []).map((problem) => [
@@ -658,5 +698,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Tasks 3–6 source-closed; Phase 3 Level 2 and evidence authorized).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Tasks 3–6 source-closed; Phase 3 Level 2 passed; live/installed evidence open).`,
 );

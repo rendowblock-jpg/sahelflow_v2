@@ -10,7 +10,7 @@
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
 > **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active proposed package:** PR #203 — Phase 3 source-complete; Level 2 and evidence open
+> **Active proposed package:** PR #203 — Level 2 source/build passed; live and installed evidence open
 > **Phase execution issue:** #202
 > **Retained installed evidence:** #201
 > **Last assessed:** 2026-08-04
@@ -157,8 +157,12 @@ Proposed-source outcomes include:
   internal provider-effect/tracking runtime;
 - DHD removed from runtime registration and NOEST effects fail-closed.
 
-This is clean source/database/migration/integration/development-UI evidence only.
-The Phase 3 Level 2 production-build checkpoint, live provider certification,
+Phase 3 Level 2 run `30878352410` passed the complete source/database/migration
+suite, semantic authority, production WhatsApp sidecar build and production Next
+build. Clean descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf`
+passed Integration `30884662556` and normal CI `30884663240`.
+
+This remains proposed source/build evidence only. Live provider certification,
 issue #201 installed proof, applicable Level 3, protected merge and Founder
 acceptance remain open.
 
@@ -377,26 +381,26 @@ still blocking Phase 7 evidence and continuous package requirements.
 
 ## Capability status
 
-| Area | Current evidence | Principal closure |
-|---|---|---|
-| Signed Windows runtime/update | strong historical Internal proof | current-source artifact/install and T470 evidence |
-| Workspace/person/member/session | strong protected source | installed/recovery and representative journey evidence |
-| Teams and permissions | strong protected source | installed and representative evidence |
-| Licensing/entitlements | strong protected source | installed activation/expiry/transfer/recovery evidence |
-| Native multi-shop | strong protected source through PR #200 | issue #201 and current-source installed/Founder evidence |
-| Golden COD | strong canonical source boundary | remaining provider/intake adoption and installed journey |
-| Inventory/finance | strong facts in adopted paths | remaining callers and reconciliation evidence |
-| Outbound WhatsApp | durable strong partial | all callers, live certification and operator UI |
-| Inbound WhatsApp/inbox | source-closed on draft PR #203 | merge plus installed/live-provider evidence |
-| Courier | durable strong partial | shared contract and live provider certification |
-| Commerce sync | checkpoint-safe partial | durable run/item ingress, overlap and recovery |
-| Automations | source-closed on draft PR #203 | merge plus installed/provider evidence |
-| AI | proposal-bound sensitive actions source-closed on draft PR #203 | merge plus installed representative journey evidence |
-| Backup/recovery | strong migration/native partial | complete Phase 4 backup/restore/replacement drills |
-| UI/UX | broad functional internal app | complete design/chart system and every route/state |
-| Arabic/RTL/accessibility | partial | full route/journey and installed/external evidence |
-| Performance | historical improvements; target missed | Phase 7 T470/floor/stability evidence |
-| Connected platform | prototype/partial | Phase 8 complete authority and certification |
+| Area                            | Current evidence                                                | Principal closure                                        |
+| ------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------- |
+| Signed Windows runtime/update   | strong historical Internal proof                                | current-source artifact/install and T470 evidence        |
+| Workspace/person/member/session | strong protected source                                         | installed/recovery and representative journey evidence   |
+| Teams and permissions           | strong protected source                                         | installed and representative evidence                    |
+| Licensing/entitlements          | strong protected source                                         | installed activation/expiry/transfer/recovery evidence   |
+| Native multi-shop               | strong protected source through PR #200                         | issue #201 and current-source installed/Founder evidence |
+| Golden COD                      | strong canonical source boundary                                | remaining provider/intake adoption and installed journey |
+| Inventory/finance               | strong facts in adopted paths                                   | remaining callers and reconciliation evidence            |
+| Outbound WhatsApp               | durable strong partial                                          | all callers, live certification and operator UI          |
+| Inbound WhatsApp/inbox          | source-closed on draft PR #203                                  | merge plus installed/live-provider evidence              |
+| Courier                         | durable strong partial                                          | shared contract and live provider certification          |
+| Commerce sync                   | checkpoint-safe partial                                         | durable run/item ingress, overlap and recovery           |
+| Automations                     | source-closed on draft PR #203                                  | merge plus installed/provider evidence                   |
+| AI                              | proposal-bound sensitive actions source-closed on draft PR #203 | merge plus installed representative journey evidence     |
+| Backup/recovery                 | strong migration/native partial                                 | complete Phase 4 backup/restore/replacement drills       |
+| UI/UX                           | broad functional internal app                                   | complete design/chart system and every route/state       |
+| Arabic/RTL/accessibility        | partial                                                         | full route/journey and installed/external evidence       |
+| Performance                     | historical improvements; target missed                          | Phase 7 T470/floor/stability evidence                    |
+| Connected platform              | prototype/partial                                               | Phase 8 complete authority and certification             |
 
 ## Exact current boundary
 

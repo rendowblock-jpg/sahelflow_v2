@@ -2,7 +2,7 @@
   "formatVersion": 7,
   "phase": 3,
   "name": "durable providers, inbox, AI and automations",
-  "state": "task6-source-complete-phase3-level2-authorized",
+  "state": "task6-source-complete-phase3-level2-passed-evidence-open",
   "sourceCompleteAt": "2026-08-04",
   "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
   "phase2MergePr": 200,
@@ -29,14 +29,14 @@
     "task6SourceImplementation": "complete",
     "task6SeparatedReview": "complete-repaired",
     "productionImplementation": "source-complete-evidence-open",
-    "phase3Level2": "authorized-pending",
+    "phase3Level2": "passed-source-and-build",
     "liveProviderCertification": "open",
     "installedEvidence": "open-issue-201"
   },
   "constraints": {
     "oneActiveImplementationAgent": true,
     "productionEditsAuthorized": false,
-    "authorizedProductionScope": "Phase 3 Level 2 source checkpoint and evidence collection only",
+    "authorizedProductionScope": "live provider and installed evidence collection only",
     "targetedCiRerunsRequired": true,
     "fullMatrixRerunForDocumentationForbidden": true,
     "versionBumpAuthorized": false,
@@ -53,7 +53,8 @@
     "issue #202 owns the Phase 3 program and remains open",
     "draft PR #203 is the sole active Phase 3 package",
     "published executable and Founder-installed release remain Internal.13",
-    "Tasks 3 through 6 are source-closed only, not protected, signed, installed, Founder-accepted or Stable"
+    "Tasks 3 through 6 are source-closed only, not protected, signed, installed, Founder-accepted or Stable",
+    "Phase 3 Level 2 source/build checkpoint 30878352410 passed and published source-complete evidence-open authority"
   ],
   "task3Closure": {
     "name": "durable inbound WhatsApp and database-authoritative inbox",
@@ -213,19 +214,16 @@
     "founderAcceptance": false
   },
   "authorizedNextPackage": {
-    "name": "Phase 3 Level 2 source checkpoint and evidence collection",
+    "name": "Phase 3 live provider and installed evidence collection",
     "branch": "agent/phase3-durable-effects-audit",
     "pr": 203,
-    "problemIds": [
-      "P3-P2-003",
-      "P3-P2-004"
-    ],
+    "problemIds": ["P3-P2-003", "P3-P2-004"],
     "scope": [
-      "run the Phase 3 production source/build checkpoint on one frozen exact head",
-      "reconcile PR #203 and issues #164/#202 to source-complete evidence-open truth",
       "collect live courier and Required communication-provider certification only with current safe credentials",
+      "retain redacted provider receipts and never persist secrets or customer PII in evidence",
       "retain issue #201 as the separate installed hydrated-WebView evidence boundary",
-      "record applicable Level 3 evidence before any phase-closure decision"
+      "record applicable provider and Windows Level 3 evidence before any phase-closure decision",
+      "reconcile PR #203 and issues #164/#202 without claiming signed, installed, Founder-accepted or Stable truth"
     ],
     "nonGoals": [
       "new broad Phase 3 production implementation",
@@ -234,13 +232,35 @@
       "Phase 4 implementation"
     ],
     "gate": [
-      "frozen exact source head",
-      "frozen install and Prisma generation/deployment",
-      "sf-version and semantic documentation audit",
-      "TypeScript, ESLint and complete Vitest",
-      "production Next build and WhatsApp sidecar build",
-      "migration status",
-      "live and installed evidence recorded separately and never inferred from source"
+      "current real provider account and safe credentials",
+      "server-side capability authority remains fail-closed",
+      "redacted receipt and exact provider/account/capability identity",
+      "duplicate, timeout, ambiguity and reconciliation behavior observed where safely possible",
+      "installed and live evidence recorded separately and never inferred from source"
+    ]
+  },
+  "level2PassedAt": "2026-08-04",
+  "phase3Level2Closure": {
+    "status": "passed-source-and-build",
+    "run": 30878352410,
+    "validatedInputHead": "547b7e53d21a9835fc343f11fb0cd94c331f54fc",
+    "authorityPublicationHead": "777207d40b33f3f307728b2f8697765ec6e9e66d",
+    "cleanDescendantHead": "cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf",
+    "ordinaryIntegrationRun": 30884662556,
+    "normalCiRun": 30884663240,
+    "sourceGate": "passed",
+    "migrationStatus": "passed",
+    "whatsAppSidecarBuild": "passed",
+    "nextProductionBuild": "passed",
+    "evidenceBoundary": "source, database, migration and production build only",
+    "notProven": [
+      "live courier certification",
+      "live Required communication-provider certification",
+      "signed artifact",
+      "installed Windows behavior",
+      "Founder acceptance",
+      "Phase 3 closure",
+      "Stable"
     ]
   }
 }

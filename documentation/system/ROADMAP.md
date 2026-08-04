@@ -11,7 +11,7 @@
 > **Phase 1 status:** Protected-source closed through PR #195
 > **Phase 2 status:** Protected-source closed through PR #200 with issue #201 retained
 > **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active phase package:** Tasks 3–6 source-closed on PR #203; Level 2 and evidence open
+> **Active phase package:** Tasks 3–6 and Level 2 source/build passed; live and installed evidence open
 > **Phase issue:** #202
 > **Execution epic:** issue #164
 > **Last consolidated:** 2026-08-04
@@ -280,9 +280,15 @@ No known Phase 3 P0/P1 remains at the source level. Phase 3 is not closed.
 - DHD removed and unverified NOEST effects fail-closed;
 - AR/FR/EN and RTL-safe provider, automation, AI and recovery states.
 
+## Level 2 result
+
+Run `30878352410` passed the complete source/database/migration suite, semantic
+authority, production WhatsApp sidecar build and production Next build. Clean
+descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf` passed Integration
+`30884662556` and normal CI `30884663240`.
+
 ## Evidence blockers
 
-- Phase 3 Level 2 clean source/database/migration and production-build checkpoint;
 - live certification for at least one Required courier and communication path;
 - applicable provider/Windows Level 3 evidence;
 - issue #201 installed hydrated-WebView evidence;
@@ -290,11 +296,10 @@ No known Phase 3 P0/P1 remains at the source level. Phase 3 is not closed.
 
 ## Remaining dependency-correct order
 
-1. freeze the exact source-complete head and run Level 2;
-2. repair any Level 2 finding in one consolidated batch;
-3. collect current live provider evidence with safe real credentials and redacted receipts;
-4. satisfy issue #201 and applicable Level 3 evidence;
-5. close Phase 3 only with zero known P0/P1 and no fabricated signed, installed,
+1. collect current live provider evidence with safe real credentials and redacted receipts;
+2. satisfy issue #201 and applicable Level 3 evidence;
+3. reconcile the frozen PR and evidence record;
+4. close Phase 3 only with zero known P0/P1 and no fabricated signed, installed,
    live-provider, Founder-acceptance or Stable claim.
 
 ## Exit gate
@@ -307,7 +312,6 @@ zero known P0/P1.
 
 ---
 
-# Phase 4 — Data protection, recovery, migrations and security
 # Phase 4 — Data protection, recovery, migrations and security
 
 ## Objective

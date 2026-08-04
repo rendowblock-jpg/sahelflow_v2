@@ -17,7 +17,8 @@ SahelFlow 1.0 Stable has not been released.
 - Source-closed provider capability authority, durable commerce and the canonical courier facade at clean head `676d0e41cc69d44c29b912038cba100fd827fcfa`; full checkpoint `30875723975` and normal CI `30875724094` passed.
 - Added exact active-shop workers, encrypted provider ingress, durable run/page/item and immutable-attempt truth, cursor continuation, generation-scoped retry, monotonic checkpointing, exact credential/endpoint binding, audited AR/FR/EN recovery and PII-free history.
 - Removed DHD runtime registration, kept unverified NOEST effects fail-closed and removed competing courier queue/reconciliation exports behind one public facade.
-- Phase 3 is source-complete but evidence-open. Level 2, live-provider certification, issue #201 installed evidence, applicable Level 3, protected merge and Founder acceptance remain open.
+- Phase 3 Level 2 source/build checkpoint `30878352410` passed the complete source/database/migration suite, production WhatsApp sidecar build and production Next build; clean descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf` passed Integration `30884662556` and normal CI `30884663240`.
+- Phase 3 remains evidence-open: live-provider certification, issue #201 installed evidence, applicable Level 3, protected merge and Founder acceptance remain open.
 - No version, MSI, release, Founder-acceptance, Phase 3 closure or Stable claim was made.
 
 ### Phase 2 protected-source closure

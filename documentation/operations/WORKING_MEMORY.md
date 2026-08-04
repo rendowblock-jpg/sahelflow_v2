@@ -15,9 +15,9 @@
 > **Active PR:** #203 — `Phase 3: audit durable effects and operator workflows`
 > **Exact branch base:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
 > **Active agent:** ChatGPT Web Agentic Coding Agent
-> **Current session purpose:** Phase 3 source checkpoint and evidence
+> **Current session purpose:** Phase 3 live-provider and installed evidence
 > **Completed source packages:** Tasks 3–6
-> **Authorized next package:** Phase 3 Level 2 source/build checkpoint and explicit evidence collection only
+> **Authorized next package:** live-provider and installed evidence collection only
 > **Broad Phase 3 production work:** not authorized
 
 Live GitHub is authority. Re-read protected `main`, PR #203, its exact head,
@@ -105,6 +105,19 @@ Source-proven outcome:
   and audited recovery;
 - AR/FR/EN and RTL-safe commerce/provider states with PII-free history.
 
+## Completed Phase 3 Level 2 source/build checkpoint
+
+- run: `30878352410`;
+- validated input head: `547b7e53d21a9835fc343f11fb0cd94c331f54fc`;
+- published authority head: `777207d40b33f3f307728b2f8697765ec6e9e66d`;
+- clean descendant: `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf`;
+- ordinary Integration: `30884662556` — passed;
+- normal CI: `30884663240` — passed.
+
+Passed semantic authority, frozen install, Prisma generation/deployment,
+TypeScript, ESLint, complete Vitest, migration status, production WhatsApp
+sidecar build and production Next build. This is source/build evidence only.
+
 ## Frozen Problem Register
 
 - **P3-P1-001 through P3-P1-011 — closed-source-proven.**
@@ -115,19 +128,17 @@ Source-proven outcome:
 
 No known Phase 3 P0/P1 remains at source level.
 
-## Authorized next package — Phase 3 Level 2 and evidence
+## Authorized next package — live provider and installed evidence
 
 Only these actions are authorized:
 
-1. freeze the exact source-complete head;
-2. run frozen install, Prisma generation/deployment, semantic authority, TypeScript,
-   ESLint, complete Vitest, migration status, production Next build and WhatsApp
-   sidecar build;
-3. repair any checkpoint finding in one consolidated batch;
-4. collect live courier and Required communication-provider evidence only with
+1. collect live courier and Required communication-provider evidence only with
    current safe credentials and redacted receipts;
-5. retain issue #201 and applicable Level 3 as separate evidence boundaries;
-6. reconcile PR #203 and issues #164/#202 after exact evidence exists.
+2. preserve server-side capability gates and fail closed on account, credential,
+   endpoint or certification drift;
+3. retain issue #201 and applicable Level 3 as separate evidence boundaries;
+4. reconcile PR #203 and issues #164/#202 without inferring higher evidence from
+   source or build success.
 
 ## Non-claims
 

@@ -10,7 +10,7 @@
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
 > **Execution mode:** single-agent, audit-first, batch remediation and tiered CI
-> **Active implementation outcome:** Phase 3 source-complete; Level 2 and evidence open
+> **Active implementation outcome:** Phase 3 Level 2 source/build passed; live and installed evidence open
 > **Active agent:** ChatGPT Web Agentic Coding Agent
 > **Active draft:** PR #203 from `agent/phase3-durable-effects-audit`
 > **Phase execution issue:** issue #202
@@ -76,15 +76,15 @@ Contradictions are reconciled in the owning document before dependent work.
 
 SahelFlow separates these realities:
 
-| Reality | Authority |
-|---|---|
-| Integrated source | live protected `main` and exact commit |
-| Proposed source | exact branch and PR head |
-| Latest application-changing source | exact protected merge that changed product behavior |
-| Signed distributable | exact-source signed Internal/Beta/Stable artifact |
-| Founder-observed app | exact installed version and recorded machine result |
-| Founder AAA Candidate | all Required internal implementation/evidence gates |
-| Public Stable | representative beta plus provider, security, privacy, legal, recovery, compatibility and rollout evidence |
+| Reality                            | Authority                                                                                                 |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Integrated source                  | live protected `main` and exact commit                                                                    |
+| Proposed source                    | exact branch and PR head                                                                                  |
+| Latest application-changing source | exact protected merge that changed product behavior                                                       |
+| Signed distributable               | exact-source signed Internal/Beta/Stable artifact                                                         |
+| Founder-observed app               | exact installed version and recorded machine result                                                       |
+| Founder AAA Candidate              | all Required internal implementation/evidence gates                                                       |
+| Public Stable                      | representative beta plus provider, security, privacy, legal, recovery, compatibility and rollout evidence |
 
 A lower reality cannot claim a higher one.
 
@@ -111,7 +111,10 @@ A lower reality cannot claim a higher one.
 - Issue #202 owns Phase 3. Draft PR #203 is the sole active Phase 3 package.
 - Tasks 3–6 are source-closed on PR #203 at clean implementation head
   `676d0e41cc69d44c29b912038cba100fd827fcfa`; checkpoint `30875723975` passed.
-- Phase 3 remains evidence-open and unmerged; source completion is not live,
+- Phase 3 Level 2 source/build checkpoint `30878352410` passed; clean
+  descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf` passed Integration
+  `30884662556` and normal CI `30884663240`.
+- Phase 3 remains live/installed-evidence-open and unmerged; Level 2 is not live,
   signed, installed, Founder-accepted or phase-closed evidence.
 
 ## Current execution model
@@ -130,8 +133,8 @@ The Founder selected the following permanent operating pattern:
 
 For the current package, the Founder selected the ChatGPT Web Agentic Coding Agent
 as the sole active agent. Phase 3 production source is frozen after Tasks 3–6.
-Only Level 2 source/build validation and explicit live/installed evidence
-collection are authorized; broad production edits are not.
+Level 2 source/build validation is complete. Only explicit live-provider and
+installed evidence collection is authorized; broad production edits are not.
 
 This executes FD-028 and FD-029 without reducing Required scope.
 

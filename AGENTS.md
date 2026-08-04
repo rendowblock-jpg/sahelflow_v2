@@ -56,9 +56,12 @@ They never replace current GitHub authority.
   checkpoint `30875723975` and normal CI `30875724094` passed.
 - Phase 3 production source is complete on draft PR #203. It is not protected,
   signed, installed, live-provider-certified, Founder-accepted or phase-closed.
-- **Authorized evidence package:** Phase 3 Level 2 source/build checkpoint,
-  live-provider certification where current safe credentials exist, and the
-  retained installed evidence in issue #201.
+- Phase 3 Level 2 source/build checkpoint passed in run `30878352410` and
+  published authority head `777207d40b33f3f307728b2f8697765ec6e9e66d`;
+  clean descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf` passed
+  Integration `30884662556` and normal CI `30884663240`.
+- **Authorized evidence package:** live-provider certification where current safe
+  credentials exist and retained installed evidence in issue #201.
 - Broad new Phase 3 production implementation is unauthorized.
 
 Always re-read live GitHub. These values record the verified frontier; they are
@@ -279,15 +282,20 @@ Task 6 is source-closed at clean head
 - DHD is absent from runtime registration and NOEST remains effect-disabled;
 - provider source authority is not live certification evidence.
 
-## Authorized evidence rules — Phase 3 Level 2 and certification
+## Completed evidence rule — Phase 3 Level 2 source/build checkpoint
+
+Run `30878352410` passed semantic authority, frozen install, Prisma generation and
+deployment, TypeScript, ESLint, complete Vitest, migration status, production
+WhatsApp sidecar build and production Next build. It is source/build evidence,
+not live-provider, signed-artifact or installed-Windows evidence.
+
+## Authorized evidence rules — live provider and installed evidence
 
 Only these next actions are authorized:
 
-- run the frozen Phase 3 Level 2 source/database/migration and production-build
-  checkpoint;
-- reconcile PR #203 and issues #164/#202 to source-complete evidence-open truth;
+- reconcile PR #203 and issues #164/#202 to Level-2-passed evidence-open truth;
 - collect live courier and Required communication-provider evidence only with
-  current safe credentials/accounts;
+  current safe credentials/accounts and redacted receipts;
 - retain issue #201 as the separate installed hydrated-WebView boundary;
 - record applicable Level 3 evidence before any Phase 3 closure decision.
 
