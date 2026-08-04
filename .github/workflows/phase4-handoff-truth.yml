@@ -59,6 +59,31 @@ jobs:
       - name: Apply handoff reconciliation
         run: python .github/phase4-handoff-truth.py
 
+      - name: Separate live main from historical Phase 3 base
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/sf-audit.ts')
+          content = path.read_text(encoding='utf-8')
+          old = '''const expectedProtectedBase = "aa4ca0758fd696f4b02fc1975629ac698f9349c3";
+          for (const relativePath of [
+          '''
+          new = '''const expectedCurrentMain = "aa4ca0758fd696f4b02fc1975629ac698f9349c3";
+          const expectedProtectedBase = "e9c92f08f39e8d87ddfd72d2e698418ae81fc084";
+          for (const relativePath of [
+          '''
+          if content.count(old) != 1:
+              raise RuntimeError('current-main/checkpoint-base anchor drifted')
+          content = content.replace(old, new, 1)
+          old_lookup = 'if (content && !content.includes(expectedProtectedBase)) {'
+          new_lookup = 'if (content && !content.includes(expectedCurrentMain)) {'
+          if content.count(old_lookup) < 1:
+              raise RuntimeError('current-main lookup anchor drifted')
+          content = content.replace(old_lookup, new_lookup, 1)
+          path.write_text(content, encoding='utf-8')
+          PY
+
       - name: Format changed authority
         run: >-
           bunx prettier --write
