@@ -1,6 +1,10 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { PrismaClient } from "@prisma/client";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { dbRaw } from "@/lib/db";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+
 import {
   deriveBlindIndex,
   encryptString,
@@ -18,28 +22,55 @@ import { getSecret } from "@/lib/secrets";
 const CUSTOMER_ID = "phase4-protected-customer";
 const ORDER_ID = "phase4-protected-order";
 const SECRET_KEY = "phase4_protected_secret";
-const context = { prisma: dbRaw as never, shop: TEST_SHOP_CONTEXT };
+
+let database: PrismaClient;
+let temporaryDirectory: string;
 
 function payload(value: string, key: Buffer): string {
   return JSON.stringify(encryptString(value, key));
 }
 
-/**
- * This suite intentionally exercises an installation before key authority
- * exists. Remove every protected-value owner before deleting the global
- * purpose rows so no canonical row is orphaned for later test files.
- */
+function sqliteLiteral(value: string): string {
+  return value.replaceAll("\\", "/").replaceAll("'", "''");
+}
+
+function context() {
+  return { prisma: database as never, shop: TEST_SHOP_CONTEXT };
+}
+
 async function clean(): Promise<void> {
-  await dbRaw.$transaction([
-    dbRaw.message.deleteMany(),
-    dbRaw.conversation.deleteMany(),
-    dbRaw.orderItem.deleteMany(),
-    dbRaw.order.deleteMany(),
-    dbRaw.customer.deleteMany(),
-    dbRaw.secret.deleteMany(),
-    dbRaw.protectedKeyAuthority.deleteMany(),
+  await database.$transaction([
+    database.message.deleteMany(),
+    database.conversation.deleteMany(),
+    database.orderItem.deleteMany(),
+    database.order.deleteMany(),
+    database.customer.deleteMany(),
+    database.secret.deleteMany(),
+    database.protectedKeyAuthority.deleteMany(),
   ]);
 }
+
+beforeAll(async () => {
+  temporaryDirectory = mkdtempSync(
+    join(tmpdir(), "sahelflow-protected-migration-"),
+  );
+  const databasePath = join(temporaryDirectory, "migration.db");
+
+  // The CI/test sandbox database has the exact deployed schema. SQLite VACUUM
+  // INTO creates a consistent disposable copy without touching the shared
+  // process database or its cached key authority.
+  const source = new PrismaClient();
+  try {
+    await source.$executeRawUnsafe(
+      `VACUUM INTO '${sqliteLiteral(databasePath)}'`,
+    );
+  } finally {
+    await source.$disconnect();
+  }
+
+  database = new PrismaClient({ datasourceUrl: `file:${databasePath}` });
+  await database.$connect();
+});
 
 beforeEach(async () => {
   _resetMasterKeyCacheForTests();
@@ -47,7 +78,13 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await clean();
+  if (database) {
+    await clean();
+    await database.$disconnect();
+  }
+  if (temporaryDirectory) {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
 });
 
 describe("protected-data migration", () => {
@@ -55,7 +92,7 @@ describe("protected-data migration", () => {
     const root = getMasterKey();
     const customerPhone = "0555123456";
     const orderPhone = "0666123456";
-    await dbRaw.customer.create({
+    await database.customer.create({
       data: {
         id: CUSTOMER_ID,
         name: payload("Ahmed Benali", root),
@@ -65,7 +102,7 @@ describe("protected-data migration", () => {
         notes: payload("Client fidèle", root),
       },
     });
-    await dbRaw.order.create({
+    await database.order.create({
       data: {
         id: ORDER_ID,
         orderNumber: "PHASE4-PROTECTED-1",
@@ -79,11 +116,11 @@ describe("protected-data migration", () => {
       },
     });
     const legacySecret = encryptString("secret-value", root);
-    await dbRaw.secret.create({
+    await database.secret.create({
       data: { key: SECRET_KEY, ...legacySecret },
     });
 
-    const first = await migrateShopProtectedData(dbRaw, {
+    const first = await migrateShopProtectedData(database, {
       mode: "apply",
       shopContext: TEST_SHOP_CONTEXT,
       installationRoot: root,
@@ -92,13 +129,15 @@ describe("protected-data migration", () => {
     expect(first.keyAuthoritiesMigrated).toBe(3);
     expect(first.valuesMigrated).toBeGreaterThanOrEqual(8);
     expect(first.indexesMigrated).toBe(2);
-    expect(await dbRaw.protectedKeyAuthority.count()).toBe(3);
+    expect(await database.protectedKeyAuthority.count()).toBe(3);
 
-    const customer = await dbRaw.customer.findUniqueOrThrow({
+    const customer = await database.customer.findUniqueOrThrow({
       where: { id: CUSTOMER_ID },
     });
-    const order = await dbRaw.order.findUniqueOrThrow({ where: { id: ORDER_ID } });
-    const secret = await dbRaw.secret.findUniqueOrThrow({
+    const order = await database.order.findUniqueOrThrow({
+      where: { id: ORDER_ID },
+    });
+    const secret = await database.secret.findUniqueOrThrow({
       where: { key: SECRET_KEY },
     });
 
@@ -116,7 +155,7 @@ describe("protected-data migration", () => {
     }
     expect(customer.phone).toBe(
       await deriveShopBlindIndex(
-        dbRaw,
+        database,
         customerPhone,
         { recordType: "Customer", field: "phone" },
         { shopContext: TEST_SHOP_CONTEXT, installationRoot: root },
@@ -124,17 +163,17 @@ describe("protected-data migration", () => {
     );
     expect(order.phoneBlindIndex).toBe(
       await deriveShopBlindIndex(
-        dbRaw,
+        database,
         orderPhone,
         { recordType: "Order", field: "phone" },
         { shopContext: TEST_SHOP_CONTEXT, installationRoot: root },
       ),
     );
-    await expect(getSecret(context, SECRET_KEY, { installationRoot: root })).resolves.toBe(
-      "secret-value",
-    );
+    await expect(
+      getSecret(context(), SECRET_KEY, { installationRoot: root }),
+    ).resolves.toBe("secret-value");
 
-    const second = await migrateShopProtectedData(dbRaw, {
+    const second = await migrateShopProtectedData(database, {
       mode: "apply",
       shopContext: TEST_SHOP_CONTEXT,
       installationRoot: root,
@@ -149,7 +188,7 @@ describe("protected-data migration", () => {
   it("verify reports legacy work without mutating rows or key authority", async () => {
     const root = getMasterKey();
     const phone = "0777123456";
-    await dbRaw.customer.create({
+    await database.customer.create({
       data: {
         id: CUSTOMER_ID,
         name: payload("Nadia", root),
@@ -158,15 +197,15 @@ describe("protected-data migration", () => {
       },
     });
 
-    const before = await dbRaw.customer.findUniqueOrThrow({
+    const before = await database.customer.findUniqueOrThrow({
       where: { id: CUSTOMER_ID },
     });
-    const stats = await migrateShopProtectedData(dbRaw, {
+    const stats = await migrateShopProtectedData(database, {
       mode: "verify",
       shopContext: TEST_SHOP_CONTEXT,
       installationRoot: root,
     });
-    const after = await dbRaw.customer.findUniqueOrThrow({
+    const after = await database.customer.findUniqueOrThrow({
       where: { id: CUSTOMER_ID },
     });
 
@@ -174,6 +213,6 @@ describe("protected-data migration", () => {
     expect(stats.valuesMigrated).toBeGreaterThan(0);
     expect(stats.indexesMigrated).toBe(1);
     expect(after).toEqual(before);
-    expect(await dbRaw.protectedKeyAuthority.count()).toBe(0);
+    expect(await database.protectedKeyAuthority.count()).toBe(0);
   });
 });
