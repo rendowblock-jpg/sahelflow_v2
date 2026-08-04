@@ -30,12 +30,19 @@ const ROW_RETURNING_OPERATIONS = new Set([
 
 type ExtensiblePrismaClient = Pick<PrismaClient, "$extends">;
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 /**
  * Outer projection/decryption layer for every Prisma model. Model-specific
  * protected-field writes and top-level reads remain in `with-protected-pii`;
- * this layer ensures any relation graph receives hidden identity/ciphertext
- * selections, recursive decryption, and exact projection cleanup. It also
- * cleans hidden fields from create/update/upsert/delete return projections.
+ * this layer ensures arbitrary relation graphs receive hidden identity/
+ * ciphertext selections, recursive decryption, and exact projection cleanup.
  */
 export function withProtectedNestedReads<
   TClient extends ExtensiblePrismaClient,
@@ -45,6 +52,26 @@ export function withProtectedNestedReads<
   context: ShopContext,
 ) {
   const codec = createProtectedPiiCodec(rawAuthority, context);
+
+  async function decryptRelationGraph(value: unknown): Promise<unknown> {
+    if (value === null || value === undefined) return value;
+    if (Array.isArray(value)) {
+      return Promise.all(value.map(decryptRelationGraph));
+    }
+    if (!isPlainRecord(value)) return value;
+
+    const decrypted = (await codec.decryptNested(value)) as Record<
+      string,
+      unknown
+    >;
+    for (const [key, entry] of Object.entries(decrypted)) {
+      if (Array.isArray(entry) || isPlainRecord(entry)) {
+        decrypted[key] = await decryptRelationGraph(entry);
+      }
+    }
+    return decrypted;
+  }
+
   return client.$extends({
     query: {
       $allModels: {
@@ -59,7 +86,7 @@ export function withProtectedNestedReads<
             topModel as never,
           );
           const result = await query(args);
-          const decrypted = await codec.decryptNested(result);
+          const decrypted = await decryptRelationGraph(result);
           return applyProtectedSelectionPlan(decrypted, plan) as never;
         },
       },
