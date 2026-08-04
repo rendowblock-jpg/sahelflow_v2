@@ -79,8 +79,10 @@ describe("protected-data migration", () => {
       installationRoot: root,
     });
 
+    expect(first.keyAuthoritiesMigrated).toBe(3);
     expect(first.valuesMigrated).toBeGreaterThanOrEqual(8);
     expect(first.indexesMigrated).toBe(2);
+    expect(await dbRaw.protectedKeyAuthority.count()).toBe(3);
 
     const customer = await dbRaw.customer.findUniqueOrThrow({
       where: { id: CUSTOMER_ID },
@@ -125,12 +127,14 @@ describe("protected-data migration", () => {
       shopContext: TEST_SHOP_CONTEXT,
       installationRoot: root,
     });
+    expect(second.keyAuthoritiesVerified).toBe(3);
+    expect(second.keyAuthoritiesMigrated).toBe(0);
     expect(second.valuesMigrated).toBe(0);
     expect(second.indexesMigrated).toBe(0);
     expect(second.valuesVerified).toBeGreaterThanOrEqual(8);
   });
 
-  it("verify reports legacy work without rewriting seller rows", async () => {
+  it("verify reports legacy work without mutating rows or key authority", async () => {
     const root = getMasterKey();
     const phone = "0777123456";
     await dbRaw.customer.create({
@@ -154,7 +158,10 @@ describe("protected-data migration", () => {
       where: { id: CUSTOMER_ID },
     });
 
+    expect(stats.keyAuthoritiesMigrated).toBe(3);
     expect(stats.valuesMigrated).toBeGreaterThan(0);
+    expect(stats.indexesMigrated).toBe(1);
     expect(after).toEqual(before);
+    expect(await dbRaw.protectedKeyAuthority.count()).toBe(0);
   });
 });
