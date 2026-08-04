@@ -148,7 +148,7 @@ describe("proposal-bound AI drift and recovery", () => {
     const created = await createProductProposal();
     const otherShop = {
       ...TEST_SHOP_CONTEXT,
-      shopIncarnationId: "d".repeat(32),
+      registryRevision: TEST_SHOP_CONTEXT.registryRevision + 1,
       databaseFileId: "other.db",
     };
 
