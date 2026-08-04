@@ -29,6 +29,24 @@ function isDocumentationOnly(path: string): boolean {
   );
 }
 
+/**
+ * Authority-only changes are executable governance inputs, but they do not
+ * change the shipped application. The fast authority job already verifies
+ * version truth, documentation structure, links, and audit rules for every PR.
+ * Keeping these files off the complete source/coverage lanes prevents the
+ * Phase 3 -> 4 handoff from repeatedly rebuilding the product for a checkpoint
+ * or documentation-audit edit.
+ */
+function isFastAuthorityOnly(path: string): boolean {
+  return (
+    isDocumentationOnly(path) ||
+    path === "scripts/sf-audit.ts" ||
+    path.startsWith("scripts/__tests__/sf-audit") ||
+    path.startsWith(".github/phase-checkpoints/") ||
+    path.startsWith(".github/phase-exceptions/")
+  );
+}
+
 function isVersionOrReleaseAuthority(path: string): boolean {
   return (
     path === "sahelflow.version.json" ||
@@ -36,10 +54,6 @@ function isVersionOrReleaseAuthority(path: string): boolean {
     path === ".github/workflows/release.yml" ||
     path === ".github/workflows/release-on-version-authority.yml"
   );
-}
-
-function isPhaseCheckpoint(path: string): boolean {
-  return path === ".github/phase-checkpoints/phase2-native-multishop.json";
 }
 
 function changesNativeSource(path: string): boolean {
@@ -70,33 +84,79 @@ function changesInstalledMsiProof(path: string): boolean {
   );
 }
 
+/**
+ * These paths can change whether protected seller data remains readable after
+ * an upgrade, restore, replacement install, or key transition. They therefore
+ * require the packaged Windows runtime and installed lifecycle proof rather
+ * than relying on Linux/source tests alone.
+ */
+function changesDataSurvivability(path: string): boolean {
+  return (
+    path === "prisma/schema.prisma" ||
+    path.startsWith("prisma/migrations/") ||
+    path.startsWith("prisma/models/") ||
+    path.startsWith("src/app/api/backup/") ||
+    path === "src/lib/backup.ts" ||
+    path.startsWith("src/lib/backup/") ||
+    path.startsWith("src/lib/crypto/") ||
+    path.startsWith("src/lib/secrets/") ||
+    path.startsWith("src/lib/storage/") ||
+    path === "scripts/rotate-master-key.ts" ||
+    path === "scripts/phase1-backup-preservation-worker.ts" ||
+    path === "src-tauri/src/migration_coordinator.rs" ||
+    path.startsWith("src-tauri/src/installation_root") ||
+    path.startsWith("src-tauri/src/startup_recovery") ||
+    path.startsWith("src-tauri/tests/migration") ||
+    path.startsWith("src-tauri/tests/installation_root") ||
+    path.startsWith("src-tauri/tests/startup_recovery")
+  );
+}
+
+function changesNativeDataSurvivability(path: string): boolean {
+  return (
+    path === "src-tauri/src/migration_coordinator.rs" ||
+    path.startsWith("src-tauri/src/installation_root") ||
+    path.startsWith("src-tauri/src/startup_recovery") ||
+    path.startsWith("src-tauri/tests/migration") ||
+    path.startsWith("src-tauri/tests/installation_root") ||
+    path.startsWith("src-tauri/tests/startup_recovery")
+  );
+}
+
 export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
   const paths = [...new Set(inputPaths.map(normalized).filter(Boolean))];
   const docsOnly = paths.length > 0 && paths.every(isDocumentationOnly);
-  const forcesFullReleaseProof = paths.some(
-    (path) => isVersionOrReleaseAuthority(path) || isPhaseCheckpoint(path),
-  );
+  const authorityOnly = paths.length > 0 && paths.every(isFastAuthorityOnly);
+  const forcesFullReleaseProof = paths.some(isVersionOrReleaseAuthority);
   const changesNative = paths.some(changesNativeSource);
+  const changesSurvivability = paths.some(changesDataSurvivability);
+  const changesNativeSurvivability = paths.some(changesNativeDataSurvivability);
   const waivesPhase2InstalledUi = paths.includes(PHASE2_INSTALLED_UI_WAIVER);
 
   return {
     changedCount: paths.length,
     docsOnly,
-    runQuality: !docsOnly && paths.length > 0,
+    runQuality: !authorityOnly && paths.length > 0,
     // Every ordinary native package must at least compile and run its Rust
     // integration contracts on Linux. Windows release parity and installed MSI
     // remain risk-selected milestone/phase proof rather than per-edit rebuilds.
     runTauri: forcesFullReleaseProof || changesNative,
     runWindowsStandalone:
-      forcesFullReleaseProof || paths.some(changesWindowsStandaloneProof),
+      forcesFullReleaseProof ||
+      changesSurvivability ||
+      paths.some(changesWindowsStandaloneProof),
     runWindowsRust:
-      forcesFullReleaseProof || paths.some(changesWindowsRustProof),
+      forcesFullReleaseProof ||
+      changesNativeSurvivability ||
+      paths.some(changesWindowsRustProof),
     // PR #200 carries one explicit Founder-directed exception for the installed
-    // hydrated-WebView receipt. All other Phase 2 checkpoint lanes remain
-    // selected, and the waiver is removed after the package is protected.
+    // hydrated-WebView receipt. The exception may waive only that retained UI
+    // proof; it must not suppress source, standalone, or Windows Rust evidence.
     runInstalledMsi:
       !waivesPhase2InstalledUi &&
-      (forcesFullReleaseProof || paths.some(changesInstalledMsiProof)),
+      (forcesFullReleaseProof ||
+        changesSurvivability ||
+        paths.some(changesInstalledMsiProof)),
   };
 }
 
