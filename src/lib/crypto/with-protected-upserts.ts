@@ -1,14 +1,16 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 
 import type { PrismaClient } from "@prisma/client";
 
 import { createProtectedPiiCodec } from "@/lib/crypto/protected-pii";
+import { resolveShopProtectedKey } from "@/lib/crypto/protected-key-authority";
 import type { ShopContext } from "@/lib/shops/context";
+import { SahelFlowError } from "@/types/errors";
 
 const UPSERT_ID_DOMAIN = Buffer.from(
-  "sahelflow.protected-upsert-record-id.v1\0",
+  "sahelflow.protected-upsert-record-id.v2\0",
   "utf8",
 );
 
@@ -66,45 +68,91 @@ function canonicalValue(value: unknown): unknown {
   return output;
 }
 
-function deterministicRecordId(
-  context: ShopContext,
-  model: ProtectedUpsertModel,
-  where: unknown,
-): string {
-  const digest = createHash("sha256")
-    .update(UPSERT_ID_DOMAIN)
-    .update(
-      JSON.stringify({
-        workspaceId: context.workspaceId.toLowerCase(),
-        shopId: context.shopId,
-        shopIncarnationId: context.shopIncarnationId.toLowerCase(),
-        model,
-        where: canonicalValue(where),
-      }),
-      "utf8",
-    )
-    .digest("hex");
-  return `sfup_${digest}`;
+function directWhereId(where: unknown): string | null {
+  const value = record(where)?.id;
+  return typeof value === "string" && value ? value : null;
 }
 
-function candidateRecordId(
-  create: Record<string, unknown>,
-  where: unknown,
+function callerCreateId(create: Record<string, unknown>): string | null {
+  const value = create.id;
+  if (value === undefined) return null;
+  if (typeof value !== "string" || !value) {
+    throw new TypeError("Protected upsert create identity is invalid");
+  }
+  return value;
+}
+
+function assertCompatibleCreateId(
+  createId: string | null,
+  authoritativeId: string,
+  model: ProtectedUpsertModel,
+): void {
+  if (createId !== null && createId !== authoritativeId) {
+    throw new SahelFlowError(
+      `${model} upsert create identity conflicts with its authoritative selector`,
+      "PROTECTED_DATA_UPSERT_ID_AMBIGUOUS",
+      409,
+    );
+  }
+}
+
+/**
+ * A protected upsert on an alternate unique selector cannot safely honor an
+ * arbitrary caller-supplied create ID: competing callers could bind update
+ * ciphertext to different speculative IDs. Require the canonical layer to
+ * derive one shop-keyed pseudonymous ID instead.
+ */
+function assertNoAmbiguousCreateId(
+  createId: string | null,
+  model: ProtectedUpsertModel,
+): void {
+  if (createId === null) return;
+  throw new SahelFlowError(
+    `${model} protected upsert cannot supply a create ID with an alternate unique selector`,
+    "PROTECTED_DATA_UPSERT_ID_AMBIGUOUS",
+    409,
+  );
+}
+
+/**
+ * Derive a race-only stable ID with the purpose-separated shop blind-index key.
+ * The unique selector can contain a phone, JID or other low-entropy identifier;
+ * an unkeyed digest would make the durable record ID dictionary-checkable.
+ */
+async function keyedRecordId(
+  rawAuthority: PrismaClient,
   context: ShopContext,
   model: ProtectedUpsertModel,
-): string {
-  if (typeof create.id === "string" && create.id) return create.id;
-  const directWhereId = record(where)?.id;
-  if (typeof directWhereId === "string" && directWhereId) return directWhereId;
-  return deterministicRecordId(context, model, where);
+  where: unknown,
+): Promise<string> {
+  const authority = await resolveShopProtectedKey(
+    rawAuthority,
+    "shop-blind-index",
+    { shopContext: context },
+  );
+  const identity = Buffer.from(
+    JSON.stringify({
+      formatVersion: 2,
+      workspaceId: context.workspaceId.toLowerCase(),
+      shopId: context.shopId,
+      shopIncarnationId: context.shopIncarnationId.toLowerCase(),
+      model,
+      where: canonicalValue(where),
+    }),
+    "utf8",
+  );
+  return `sfup_${createHmac("sha256", authority.key)
+    .update(UPSERT_ID_DOMAIN)
+    .update(identity)
+    .digest("hex")}`;
 }
 
 /**
  * Stabilize the create ID before the canonical protection layer binds update
- * ciphertext. If the original unique selector already resolves, normal Prisma
- * upsert semantics remain untouched. If it is absent, every concurrent caller
- * derives the same shop-bound candidate ID and upserts through that ID, so the
- * native transaction reveals/updates the same record without speculative AAD.
+ * ciphertext. If the original unique selector resolves, its durable row ID is
+ * authoritative. If it is absent, every concurrent caller derives the same
+ * secret-keyed, shop-bound candidate and upserts through that ID, so no update
+ * branch can carry ciphertext authenticated to a losing speculative identity.
  */
 export function withProtectedRaceSafeUpserts<
   TClient extends Pick<PrismaClient, "$extends">,
@@ -145,6 +193,19 @@ export function withProtectedRaceSafeUpserts<
     )?.id ?? null;
   }
 
+  async function existingId(
+    where: unknown,
+    delegate: ProtectedUpsertDelegate,
+  ): Promise<string | null> {
+    if (delegate === "customer") return customerExistingId(where);
+    return (
+      await delegates[delegate].findUnique({
+        where,
+        select: { id: true },
+      })
+    )?.id ?? null;
+  }
+
   async function prepare(
     args: { where: unknown; create: unknown },
     model: ProtectedUpsertModel,
@@ -152,20 +213,28 @@ export function withProtectedRaceSafeUpserts<
   ): Promise<void> {
     const create = record(args.create);
     if (!create) throw new TypeError(`${model} upsert create data is invalid`);
-    const originalWhere = args.where;
-    const id = candidateRecordId(create, originalWhere, context, model);
-    create.id = id;
 
-    const existingId =
-      delegate === "customer"
-        ? await customerExistingId(originalWhere)
-        : (
-            await delegates[delegate].findUnique({
-              where: originalWhere,
-              select: { id: true },
-            })
-          )?.id ?? null;
-    if (existingId === null) args.where = { id };
+    const originalWhere = args.where;
+    const suppliedCreateId = callerCreateId(create);
+    const resolvedId = await existingId(originalWhere, delegate);
+    if (resolvedId !== null) {
+      // The create branch is normally unused, but pinning it to the durable ID
+      // also keeps a concurrent delete/recreate transition record-bound.
+      create.id = resolvedId;
+      return;
+    }
+
+    const selectorId = directWhereId(originalWhere);
+    if (selectorId !== null) {
+      assertCompatibleCreateId(suppliedCreateId, selectorId, model);
+      create.id = selectorId;
+      return;
+    }
+
+    assertNoAmbiguousCreateId(suppliedCreateId, model);
+    const id = await keyedRecordId(rawAuthority, context, model, originalWhere);
+    create.id = id;
+    args.where = { id };
   }
 
   return client.$extends({
