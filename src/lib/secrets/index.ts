@@ -17,8 +17,8 @@ import {
 } from "@/lib/crypto/field-crypto";
 import { getMasterKey } from "@/lib/crypto/master-key";
 import { resolveShopProtectedKey } from "@/lib/crypto/protected-key-authority";
+import { classifyProtectedValue } from "@/lib/crypto/protected-value-classification";
 import {
-  isProtectedValueEnvelope,
   openProtectedString,
   sealProtectedString,
   type ShopRecordProtectedValueBinding,
@@ -98,7 +98,10 @@ async function protectedSecretData(
   options: SecretCryptoOptions = {},
 ): Promise<{ ciphertext: string; iv: string; tag: string }> {
   const contextValue = shopContext(context);
-  const authority = await resolveSecretAuthority(context, options);
+  const authority = await resolveSecretAuthority(context, {
+    ...options,
+    createIfMissing: true,
+  });
   const ciphertext = sealProtectedString(
     value,
     authority.key,
@@ -112,7 +115,7 @@ async function protectedSecretData(
   return { ciphertext, iv: envelope.iv, tag: envelope.tag };
 }
 
-/** Get a decrypted secret value, or null if it does not exist. */
+/** Get a decrypted secret value, or null if it doesn't exist. */
 export async function getSecret(
   context: ServiceContext,
   key: string,
@@ -121,9 +124,12 @@ export async function getSecret(
   const row = await context.prisma.secret.findUnique({ where: { key } });
   if (!row) return null;
 
-  if (isProtectedValueEnvelope(row.ciphertext)) {
+  if (classifyProtectedValue(row.ciphertext) === "canonical") {
     const contextValue = shopContext(context);
-    const authority = await resolveSecretAuthority(context, options);
+    const authority = await resolveSecretAuthority(context, {
+      ...options,
+      createIfMissing: false,
+    });
     return openProtectedString(
       row.ciphertext,
       authority.key,
@@ -132,8 +138,6 @@ export async function getSecret(
     );
   }
 
-  // Legacy migration input. Corrupt/wrong-key payloads fail with a typed
-  // protected-data error from `decryptString`; raw ciphertext is never returned.
   return decryptString(
     rowToLegacyPayload(row),
     options.installationRoot ?? getMasterKey(),
@@ -151,7 +155,6 @@ export async function hasSecret(
   return row !== null;
 }
 
-/** Set or replace a secret under the canonical shop-secret key. */
 export async function setSecret(
   context: ServiceContext,
   key: string,
@@ -166,11 +169,6 @@ export async function setSecret(
   });
 }
 
-/**
- * Create a secret only if no row exists. Returns true for the winner and false
- * for a concurrent unique-key loser. This is used for stable internal random
- * keys whose first caller must not return a value that another caller replaces.
- */
 export async function createSecretIfAbsent(
   context: ServiceContext,
   key: string,
