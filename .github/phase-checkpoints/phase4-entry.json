@@ -1,0 +1,38 @@
+{
+  "formatVersion": 1,
+  "phase": 4,
+  "name": "Phase 4 entry checkpoint",
+  "state": "audit-and-contract-freeze-authorized",
+  "recordedAt": "2026-08-04",
+  "protectedApplicationBase": "aa4ca0758fd696f4b02fc1975629ac698f9349c3",
+  "phase3PullRequest": 203,
+  "phase3Issue": 202,
+  "phase4Issue": 204,
+  "documentationPullRequest": 205,
+  "validatedDocumentationHead": "b5146c527b55c7609443f91aba6a14761d17ff29",
+  "validation": {
+    "frozenDependencyInstall": "passed",
+    "versionAuthority": "passed",
+    "documentationAuthorityAudit": "passed",
+    "repositoryInventory": "passed-diagnostic-dirty-tree-mode",
+    "formatAndDiffCheck": "passed"
+  },
+  "authorizedScope": [
+    "exhaustive data, key, backup, migration, recovery, security and privacy inventory",
+    "current primary-source research",
+    "one consolidated Phase 4 Problem Register",
+    "shared key, backup, recovery, migration and evidence contract freeze",
+    "implementation package and validation-lane proposal"
+  ],
+  "productionImplementationAuthorized": false,
+  "evidenceBoundary": {
+    "phase3ProtectedSourceClosed": true,
+    "publishedAndInstalledExecutable": "1.0.0-internal.13",
+    "installedPhase4Evidence": false,
+    "founderAcceptance": false,
+    "betaOrStableClaim": false,
+    "retainedInstalledEvidenceIssue": 201,
+    "liveProviderCertificationPhase": 9
+  },
+  "nextAction": "merge PR #205, reconcile issue #164, then begin the Phase 4 audit and contract freeze from current protected main"
+}
