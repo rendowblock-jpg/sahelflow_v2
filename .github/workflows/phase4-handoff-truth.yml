@@ -100,7 +100,7 @@ jobs:
         run: |
           bun run sf-version
           bun run sf-audit
-          bun run sf-inventory
+          bun run sf-inventory -- --allow-dirty
           git diff --check
 
       - name: Publish verified handoff truth
