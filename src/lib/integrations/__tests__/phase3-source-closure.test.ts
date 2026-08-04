@@ -36,8 +36,9 @@ describe("Phase 3 cross-package source closure", () => {
 
   it("persists provider input and queues effects before background execution", () => {
     expectSource("src/app/api/whatsapp/inbound/route.ts", [
-      "persistInboundWhatsApp",
-      "status: 202",
+      "persistWhatsAppInbound",
+      "acknowledged: true",
+      "acknowledged: false",
     ]);
     expectSource("src/app/api/integrations/sync/route.ts", [
       "queueCommerceSync",
@@ -97,33 +98,38 @@ describe("Phase 3 cross-package source closure", () => {
 
   it("derives automation truth from durable runs and shared effects", () => {
     expectSource("src/lib/automations/run-processor.ts", [
-      "AutomationStepAttempt",
+      "automationStepAttempt",
       "partially_completed",
       "waiting_effect",
+      "queueWhatsAppText",
     ]);
     expectSource("src/lib/automations/recovery.ts", [
       "automation.run.retry_requested",
       "AUTOMATION_EFFECT_RECOVERY_REQUIRED",
     ]);
     expectSource("src/lib/reports/durable-daily-whatsapp.ts", [
-      "queueWhatsAppMessage",
-      "receipt",
+      "queueWhatsAppText",
+      "processWhatsAppEffect",
+      "effectKey",
     ]);
   });
 
   it("binds sensitive AI mutations to one persisted proposal and execution", () => {
     expectSource("src/lib/ai/actions/service.ts", [
-      "AiActionProposal",
-      "AiActionApproval",
-      "AiActionExecution",
+      "interface ProposalRow",
+      "interface ApprovalRow",
+      "interface ExecutionRow",
+      "approveAiActionProposal",
     ]);
     expectSource("src/app/api/ai/actions/[proposalId]/approve/route.ts", [
       "approveAiActionProposal",
+      "proposalDigest",
       "proposalId",
     ]);
     expectSource("src/lib/ai/actions/execution-authority.ts", [
       "AI_ACTION_EXECUTION_AUTHORITY_REQUIRED",
       "proposalId",
+      "argsHash",
     ]);
   });
 
