@@ -113,7 +113,10 @@ function assertPurpose(purpose: ProtectedValuePurpose): void {
   }
 }
 
-function assertVersion(version: number, label = "Protected value key version"): void {
+function assertVersion(
+  version: number,
+  label = "Protected value key version",
+): void {
   if (!Number.isSafeInteger(version) || version < 1) {
     throw new TypeError(`${label} must be a positive safe integer`);
   }
@@ -166,7 +169,9 @@ function assertBinding(binding: ProtectedValueBinding): void {
   }
 
   const exhaustive: never = binding;
-  throw new TypeError(`Protected value scope is unsupported: ${String(exhaustive)}`);
+  throw new TypeError(
+    `Protected value scope is unsupported: ${String(exhaustive)}`,
+  );
 }
 
 function bindingBytes(binding: ProtectedValueBinding): Buffer {
@@ -263,8 +268,7 @@ function assertDescriptorForKey(
     throw new TypeError("Protected value key descriptor is invalid");
   }
   if (
-    descriptor.keyId !==
-    keyId(key, descriptor.purpose, descriptor.version)
+    descriptor.keyId !== keyId(key, descriptor.purpose, descriptor.version)
   ) {
     fail(
       "key",
@@ -409,6 +413,21 @@ function parseEnvelope(value: string): ProtectedValueEnvelope {
   return parsed as unknown as ProtectedValueEnvelope;
 }
 
+function declaresCanonicalFormat(value: string): boolean {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return isRecord(parsed) && parsed.format === FORMAT;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ordinary plaintext and legacy payloads return false. A value that explicitly
+ * declares the canonical format but fails strict parsing is corruption and must
+ * never be returned or re-encrypted as plaintext by compatibility/migration
+ * callers.
+ */
 export function isProtectedValueEnvelope(
   value: string | null | undefined,
 ): boolean {
@@ -416,7 +435,15 @@ export function isProtectedValueEnvelope(
   try {
     parseEnvelope(value);
     return true;
-  } catch {
+  } catch (error) {
+    if (declaresCanonicalFormat(value)) {
+      if (error instanceof ProtectedDataCorruptionError) throw error;
+      fail(
+        "format",
+        "Canonical protected value declaration is malformed or unsupported",
+        error,
+      );
+    }
     return false;
   }
 }

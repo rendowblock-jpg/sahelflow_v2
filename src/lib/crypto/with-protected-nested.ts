@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PrismaClient } from "@prisma/client";
 
+import { assertProtectedMutationBoundary } from "@/lib/crypto/with-protected-mutation-boundary";
 import {
   applyProtectedSelectionPlan,
   CONVERSATION_PROTECTED_FIELDS,
@@ -199,6 +200,7 @@ export function withProtectedNestedReads<
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
+          assertProtectedMutationBoundary(model, operation, args);
           if (!ROW_RETURNING_OPERATIONS.has(operation)) return query(args);
           const topModel = protectedModel(model);
           const queryArgs = args as SelectionNode;

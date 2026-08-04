@@ -6,7 +6,7 @@ function kinds(source: string): string[] {
   return rawClientImports(source).map((finding) => finding.kind);
 }
 
-describe("protected raw-client import parser", () => {
+describe("protected raw-client authority parser", () => {
   it("allows ordinary canonical db imports", () => {
     expect(kinds('import { db } from "@/lib/db";')).toEqual([]);
     expect(kinds('const { db } = await import("@/lib/db");')).toEqual([]);
@@ -60,6 +60,39 @@ describe("protected raw-client import parser", () => {
       kinds(`
         // const { dbRaw } = await import("@/lib/db");
         const example = 'import * as db from "@/lib/db"';
+      `),
+    ).toEqual([]);
+  });
+
+  it("blocks raw Prisma methods on canonical db imports and aliases", () => {
+    expect(
+      kinds(`
+        import { db } from "@/lib/db";
+        await db.$queryRaw\`SELECT 1\`;
+        await db.$executeRawUnsafe("DELETE FROM Customer");
+      `),
+    ).toEqual(["canonical-raw-method", "canonical-raw-method"]);
+
+    expect(
+      kinds(`
+        import { db as protectedDb } from "@/lib/db";
+        const alias = protectedDb;
+        await alias["$queryRawUnsafe"]("SELECT 1");
+      `),
+    ).toEqual(["canonical-raw-method"]);
+  });
+
+  it("blocks destructured raw methods but permits ordinary delegate calls", () => {
+    expect(
+      kinds(`
+        const { db } = await import("@/lib/db");
+        const { $queryRaw } = db;
+      `),
+    ).toEqual(["canonical-raw-method"]);
+    expect(
+      kinds(`
+        import { db } from "@/lib/db";
+        await db.customer.findMany();
       `),
     ).toEqual([]);
   });

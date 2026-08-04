@@ -183,9 +183,28 @@ describe("protected value envelope", () => {
     expect(() =>
       openProtectedString("not-json", key, descriptor, binding()),
     ).toThrowError(expect.objectContaining({ code: "PROTECTED_DATA_FORMAT_INVALID" }));
+    expect(() => isProtectedValueEnvelope(JSON.stringify(withUnknownField))).toThrowError(
+      expect.objectContaining({ code: "PROTECTED_DATA_FORMAT_INVALID" }),
+    );
     expect(() =>
       openProtectedString(JSON.stringify(withUnknownField), key, descriptor, binding()),
     ).toThrowError(expect.objectContaining({ code: "PROTECTED_DATA_FORMAT_INVALID" }));
+  });
+
+  it("fails closed when migration probes a malformed canonical declaration", () => {
+    const malformed = JSON.stringify({
+      format: "sahelflow-protected-value",
+      version: 1,
+      algorithm: "aes-256-gcm",
+      key: descriptor,
+      bindingSha256: "00".repeat(32),
+      iv: Buffer.alloc(12).toString("base64"),
+      ciphertext: "",
+    });
+
+    expect(() => isProtectedValueEnvelope(malformed)).toThrowError(
+      expect.objectContaining({ code: "PROTECTED_DATA_FORMAT_INVALID" }),
+    );
   });
 
   it("uses one typed corruption base class", () => {
