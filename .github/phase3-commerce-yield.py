@@ -100,10 +100,10 @@ end = content.index(
 replacement = '''  it("yields at the requested page budget and resumes from the same cursor", async () => {
     fetchPageMock
       .mockResolvedValueOnce(
-        page([], { nextCursor: "page-2", watermark: "wm-partial" }),
+        page([], { nextCursor: "page-2", watermark: "wm-1" }),
       )
       .mockResolvedValueOnce(
-        page([], { nextCursor: null, watermark: "wm-final" }),
+        page([], { nextCursor: null, watermark: "wm-2" }),
       );
     const queued = await queueCommerceSync(context, "shopify", 1);
 
@@ -119,6 +119,7 @@ replacement = '''  it("yields at the requested page budget and resumes from the 
       hasMore: true,
       pagesFetched: 1,
       continuationCursor: "page-2",
+      candidateWatermark: "wm-1",
     });
     expect(yielded.nextAttemptAt!.getTime()).toBeGreaterThan(Date.now());
     expect(await finalizeCommerceRuns(context)).toBe(0);
@@ -146,13 +147,14 @@ replacement = '''  it("yields at the requested page budget and resumes from the 
       hasMore: false,
       pagesFetched: 2,
       continuationCursor: null,
+      candidateWatermark: "wm-2",
       activeKey: null,
     });
     const integration = await rawDb.integration.findUniqueOrThrow({
       where: { platform: "shopify" },
     });
     expect(JSON.parse(integration.config ?? "{}")).toMatchObject({
-      watermark: "wm-final",
+      watermark: "wm-2",
     });
     expect(fetchPageMock).toHaveBeenCalledTimes(2);
   });
