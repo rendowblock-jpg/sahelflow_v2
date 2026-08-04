@@ -67,10 +67,42 @@ function rowToLegacyPayload(row: SecretRow): EncryptedPayload {
   return { iv: row.iv, ciphertext: row.ciphertext, tag: row.tag };
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "P2002",
+  );
+}
+
 async function resolveSecretAuthority(context: ServiceContext) {
   return resolveShopProtectedKey(authorityClient(context), "shop-secret", {
     shopContext: shopContext(context),
   });
+}
+
+async function protectedSecretData(
+  context: ServiceContext,
+  key: string,
+  value: string,
+): Promise<{
+  ciphertext: string;
+  iv: typeof PROTECTED_SECRET_SENTINEL;
+  tag: typeof PROTECTED_SECRET_SENTINEL;
+}> {
+  const contextValue = shopContext(context);
+  const authority = await resolveSecretAuthority(context);
+  return {
+    ciphertext: sealProtectedString(
+      value,
+      authority.key,
+      authority.descriptor,
+      secretBinding(contextValue, key),
+    ),
+    iv: PROTECTED_SECRET_SENTINEL,
+    tag: PROTECTED_SECRET_SENTINEL,
+  };
 }
 
 /** Get a decrypted secret value, or null if it does not exist. */
@@ -114,24 +146,32 @@ export async function setSecret(
   key: string,
   value: string,
 ): Promise<void> {
-  const contextValue = shopContext(context);
-  const authority = await resolveSecretAuthority(context);
-  const protectedValue = sealProtectedString(
-    value,
-    authority.key,
-    authority.descriptor,
-    secretBinding(contextValue, key),
-  );
-  const data = {
-    ciphertext: protectedValue,
-    iv: PROTECTED_SECRET_SENTINEL,
-    tag: PROTECTED_SECRET_SENTINEL,
-  };
+  const data = await protectedSecretData(context, key, value);
   await context.prisma.secret.upsert({
     where: { key },
     create: { key, ...data },
     update: data,
   });
+}
+
+/**
+ * Create a secret only if no row exists. Returns true for the winner and false
+ * for a concurrent unique-key loser. This is used for stable internal random
+ * keys whose first caller must not return a value that another caller replaces.
+ */
+export async function createSecretIfAbsent(
+  context: ServiceContext,
+  key: string,
+  value: string,
+): Promise<boolean> {
+  const data = await protectedSecretData(context, key, value);
+  try {
+    await context.prisma.secret.create({ data: { key, ...data } });
+    return true;
+  } catch (error) {
+    if (isUniqueConstraintError(error)) return false;
+    throw error;
+  }
 }
 
 export async function deleteSecret(
