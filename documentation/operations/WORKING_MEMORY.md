@@ -13,14 +13,14 @@
 > **Retained installed evidence:** issue #201
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Active branch:** `agent/phase4-audit-contract-freeze`
-> **Active PR:** draft PR #206 — Phase 4 audit frontier and survivability risk lanes
+> **Active PR:** PR #206 — review-ready Phase 4 audit frontier and survivability risk lanes
 > **Active agent:** selected at session start; one active implementation agent at a time
-> **Current session purpose:** review and merge the Phase 4 exhaustive audit, Problem Register, shared contract freeze and CI risk correction
-> **Authorized next package:** complete draft PR #206 only
-> **Broad Phase 4 production work:** not authorized before PR #206 is reviewed and the governing issue #204 contract freeze is accepted
+> **Current session purpose:** pass PR #206's selected source-quality gate, review and merge the Phase 4 contract-freeze package
+> **Authorized next package:** complete PR #206 only
+> **Broad Phase 4 production work:** not authorized before PR #206 is protected and the governing issue #204 contract freeze is accepted
 
 Live GitHub is authority. Re-read protected `main`, issue #204, issue #164,
-draft PR #206 and retained evidence issue #201 before relying on copied state.
+PR #206 and retained evidence issue #201 before relying on copied state.
 
 ## Protected truth
 
@@ -71,7 +71,7 @@ migration rollback and Windows DPAPI installation-root foundations, but they do 
 close the all-shop encrypted backup, independent recovery, replacement-install,
 privacy/security or evidence contracts.
 
-Draft PR #206 carries the first executable correction:
+PR #206 carries the first executable correction:
 
 - documentation, phase checkpoints, phase exceptions and `sf-audit` rules stay on
   the fast authority job;
@@ -102,7 +102,7 @@ causes are:
   retention and export are fragmented;
 - **P4-010/P4-011 — evidence/security operations:** replacement-install matrix,
   SBOM/VEX, threat model, Law 18-07 mapping and independent reviews remain open;
-- **P4-012 — CI consequence mapping:** corrected in draft PR #206;
+- **P4-012 — CI consequence mapping:** corrected in PR #206;
 - **P4-013 — truth drift:** stale SHAs and pre-Teams/SQLCipher source comments must
   be repaired in their owning packages.
 
@@ -159,7 +159,7 @@ plaintext authority, backup format or independent recovery semantics.
 
 - Phase 4 execution has begun only with audit, contract freeze and CI risk selection.
 - No production backup, restore, migration or key-format implementation is claimed.
-- Draft PR #206 is not ready for merge until its authority checks and review are clean.
+- PR #206 is review-ready but must not merge until its selected source-quality gate is clean.
 - Internal.13 remains the published and installed executable.
 - Issue #201 and real provider certification remain later evidence obligations.
 - No new signed artifact, Founder acceptance, Beta or Stable claim exists.
