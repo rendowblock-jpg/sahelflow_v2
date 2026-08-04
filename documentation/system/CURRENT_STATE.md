@@ -9,8 +9,8 @@
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
-> **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active proposed package:** PR #203 — Level 2 source/build passed; live and installed evidence open
+> **Active product phase:** Phase 4 — data protection, recovery, migrations and security
+> **Active proposed package:** PR #203 — Phase 3 closure under FD-030; Phase 4 audit next
 > **Phase execution issue:** #202
 > **Retained installed evidence:** #201
 > **Last assessed:** 2026-08-04
@@ -157,14 +157,11 @@ Proposed-source outcomes include:
   internal provider-effect/tracking runtime;
 - DHD removed from runtime registration and NOEST effects fail-closed.
 
-Phase 3 Level 2 run `30878352410` passed the complete source/database/migration
-suite, semantic authority, production WhatsApp sidecar build and production Next
-build. Clean descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf`
-passed Integration `30884662556` and normal CI `30884663240`.
-
-This remains proposed source/build evidence only. Live provider certification,
-issue #201 installed proof, applicable Level 3, protected merge and Founder
-acceptance remain open.
+Phase 3 Level 2 and deterministic courier conformance are passed. FD-030
+defers live provider certification and issue #201 to representative beta /
+applicable Level 3, so they no longer block Phase 3 closure. PR #203 remains
+unmerged until its protected merge; no signed, installed, Founder-accepted or
+Stable claim follows.
 
 ## Release and installed truth
 

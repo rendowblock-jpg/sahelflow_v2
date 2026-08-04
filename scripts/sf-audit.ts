@@ -311,11 +311,11 @@ requireMarkers("AGENTS.md", [
   "Task 4 truthful durable automations are source-closed",
   "Task 6 is source-closed",
   "Completed evidence rule — Phase 3 Level 2 source/build checkpoint",
-  "Authorized evidence rules — live provider and installed evidence",
+  "Founder closure rule — FD-030",
   "676d0e41cc69d44c29b912038cba100fd827fcfa",
 ]);
 requireMarkers("documentation/README.md", [
-  "Phase 3 — durable providers, inbox, AI and automations",
+  "Phase 4 — data protection, recovery, migrations and security",
   "PR #203",
   "Problem Register",
   "complete full-app AAA frontend transformation",
@@ -323,6 +323,7 @@ requireMarkers("documentation/README.md", [
 requireMarkers("documentation/product/DECISIONS.md", [
   "## FD-028",
   "## FD-029",
+  "## FD-030",
   "Whole-product AAA rule",
   "The Founder decides whether the Web Agent or Desktop Agent is active",
 ]);
@@ -358,11 +359,11 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "Completed Task 5 — proposal-bound sensitive AI actions",
   "Completed Task 6 — provider convergence and durable commerce",
   "Completed Phase 3 Level 2 source/build checkpoint",
-  "Authorized next package — live provider and installed evidence",
-  "Broad Phase 3 production work:** not authorized",
+  "Authorized next package — protected merge and Phase 4 audit",
+  "Broad Phase 3 and Phase 4 production work:** not authorized",
   "676d0e41cc69d44c29b912038cba100fd827fcfa",
   "30875723975",
-  "P3-P2-003 — source authority closed; live evidence open",
+  "P3-P2-003 — closed for Phase 3 under FD-030",
 ]);
 requireMarkers("documentation/research/RESEARCH.md", [
   "Research-first quality rule",
@@ -376,7 +377,8 @@ requireMarkers("scripts/sf-verify.ts", [
   ".sf-vitest-failures.txt",
 ]);
 
-const expectedPhase = "Phase 3 — durable providers, inbox, AI and automations";
+const expectedPhase =
+  "Phase 4 — data protection, recovery, migrations and security";
 for (const relativePath of [
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
@@ -436,25 +438,27 @@ if (checkpoint) {
     task6SeparatedReview: "complete-repaired",
     productionImplementation: "source-complete-evidence-open",
     phase3Level2: "passed-source-and-build",
-    liveProviderCertification: "open",
-    installedEvidence: "open-issue-201",
+    providerConformance: "passed-deterministic-simulator",
+    liveProviderCertification: "deferred-to-phase9-representative-beta-fd030",
+    installedEvidence: "deferred-to-applicable-level3-issue201",
+    phase3Closure: "authorized-pending-protected-merge",
   };
 
-  if (checkpoint.formatVersion !== 7 || checkpoint.phase !== 3) {
+  if (checkpoint.formatVersion !== 8 || checkpoint.phase !== 3) {
     report(
       "drift",
       checkpointPath,
-      "Phase 3 checkpoint must use source-complete authority formatVersion 7",
+      "Phase 3 checkpoint must use FD-030 closure authority formatVersion 8",
     );
   }
   if (
     checkpoint.state !==
-    "task6-source-complete-phase3-level2-passed-evidence-open"
+    "phase3-closure-authorized-provider-beta-evidence-deferred"
   ) {
     report(
       "drift",
       checkpointPath,
-      "checkpoint must record passed Phase 3 Level 2 with live/installed evidence open",
+      "checkpoint must record FD-030 Phase 3 closure with provider beta evidence deferred",
     );
   }
   if (checkpoint.protectedBase !== expectedProtectedBase) {
@@ -481,12 +485,12 @@ if (checkpoint) {
   }
   if (
     checkpoint.constraints?.authorizedProductionScope !==
-    "live provider and installed evidence collection only"
+    "protected merge of PR #203 and Phase 4 audit only"
   ) {
     report(
       "drift",
       checkpointPath,
-      "authorized scope must be live provider and installed evidence collection only",
+      "authorized scope must be protected PR #203 merge and Phase 4 audit only",
     );
   }
   for (const key of [
@@ -500,27 +504,22 @@ if (checkpoint) {
   }
   if (
     checkpoint.authorizedNextPackage?.name !==
-    "Phase 3 live provider and installed evidence collection"
+    "protected merge of PR #203, then Phase 4 audit and contract freeze"
   ) {
     report(
       "drift",
       checkpointPath,
-      "authorized next package must be live provider and installed evidence collection",
+      "authorized next package must be protected PR #203 merge then Phase 4 audit",
     );
   }
   const evidenceProblems = new Set(
     checkpoint.authorizedNextPackage?.problemIds ?? [],
   );
-  for (const id of ["P3-P2-003", "P3-P2-004"]) {
-    if (!evidenceProblems.has(id)) {
-      report("drift", checkpointPath, `evidence package is missing ${id}`);
-    }
-  }
-  if (evidenceProblems.size !== 2) {
+  if (evidenceProblems.size !== 0) {
     report(
       "drift",
       checkpointPath,
-      "evidence package must contain exactly P3-P2-003 and P3-P2-004",
+      "Phase 3 closure package must have no open Phase 3 problem IDs",
     );
   }
 
@@ -587,8 +586,8 @@ if (checkpoint) {
     ["P3-P1-011", "closed-source-proven"],
     ["P3-P2-001", "closed-source-proven"],
     ["P3-P2-002", "closed-source-proven"],
-    ["P3-P2-003", "source-authority-closed-live-evidence-open"],
-    ["P3-P2-004", "open-retained-issue-201"],
+    ["P3-P2-003", "closed-phase3-deferred-to-phase9-beta-fd030"],
+    ["P3-P2-004", "closed-phase3-deferred-to-level3-issue201-fd030"],
   ] as const) {
     if (problemStates.get(id) !== state) {
       report("drift", checkpointPath, `${id} must be '${state}'`);

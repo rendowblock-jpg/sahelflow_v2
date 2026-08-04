@@ -8,9 +8,9 @@
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
+> **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Execution mode:** single-agent, audit-first, batch remediation and tiered CI
-> **Active implementation outcome:** Phase 3 Level 2 source/build passed; live and installed evidence open
+> **Active implementation outcome:** Phase 3 closure authorized under FD-030; Phase 4 audit next
 > **Active agent:** ChatGPT Web Agentic Coding Agent
 > **Active draft:** PR #203 from `agent/phase3-durable-effects-audit`
 > **Phase execution issue:** issue #202
@@ -111,11 +111,9 @@ A lower reality cannot claim a higher one.
 - Issue #202 owns Phase 3. Draft PR #203 is the sole active Phase 3 package.
 - Tasks 3–6 are source-closed on PR #203 at clean implementation head
   `676d0e41cc69d44c29b912038cba100fd827fcfa`; checkpoint `30875723975` passed.
-- Phase 3 Level 2 source/build checkpoint `30878352410` passed; clean
-  descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf` passed Integration
-  `30884662556` and normal CI `30884663240`.
-- Phase 3 remains live/installed-evidence-open and unmerged; Level 2 is not live,
-  signed, installed, Founder-accepted or phase-closed evidence.
+- FD-030 moves real provider and issue #201 evidence to Phase 9/applicable Level
+  3, allowing Phase 3 closure on the passed deterministic conformance and Level 2
+  source/build evidence. PR #203 remains the protected closure vehicle.
 
 ## Current execution model
 
@@ -133,8 +131,8 @@ The Founder selected the following permanent operating pattern:
 
 For the current package, the Founder selected the ChatGPT Web Agentic Coding Agent
 as the sole active agent. Phase 3 production source is frozen after Tasks 3–6.
-Level 2 source/build validation is complete. Only explicit live-provider and
-installed evidence collection is authorized; broad production edits are not.
+Only the protected PR #203 closure and subsequent Phase 4 audit/contract freeze
+are authorized; broad Phase 4 production edits are not yet authorized.
 
 This executes FD-028 and FD-029 without reducing Required scope.
 

@@ -17,8 +17,10 @@ SahelFlow 1.0 Stable has not been released.
 - Source-closed provider capability authority, durable commerce and the canonical courier facade at clean head `676d0e41cc69d44c29b912038cba100fd827fcfa`; full checkpoint `30875723975` and normal CI `30875724094` passed.
 - Added exact active-shop workers, encrypted provider ingress, durable run/page/item and immutable-attempt truth, cursor continuation, generation-scoped retry, monotonic checkpointing, exact credential/endpoint binding, audited AR/FR/EN recovery and PII-free history.
 - Removed DHD runtime registration, kept unverified NOEST effects fail-closed and removed competing courier queue/reconciliation exports behind one public facade.
-- Phase 3 Level 2 source/build checkpoint `30878352410` passed the complete source/database/migration suite, production WhatsApp sidecar build and production Next build; clean descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf` passed Integration `30884662556` and normal CI `30884663240`.
-- Phase 3 remains evidence-open: live-provider certification, issue #201 installed evidence, applicable Level 3, protected merge and Founder acceptance remain open.
+- Phase 3 Level 2 run `30878352410` passed the complete source/database/migration suite, semantic authority, production WhatsApp sidecar build and production Next build.
+- FD-030 closes Phase 3 without real provider accounts before beta and defers live provider certification to Phase 9 representative beta.
+- Added deterministic Yalidine, Maystro and ZR request/response conformance plus NOEST fail-closed coverage, rate-limit/timeout retry policy and no-duplicate POST proof at `9e488fa3bcfa6fff944924c341084ea95243ebc7` (`30887782488`, `30887786426`).
+- Phase 3 closure is Founder-authorized under FD-030 pending protected merge of PR #203; live-provider and issue #201 evidence remain later Beta/Level 3 obligations rather than Phase 3 blockers.
 - No version, MSI, release, Founder-acceptance, Phase 3 closure or Stable claim was made.
 
 ### Phase 2 protected-source closure

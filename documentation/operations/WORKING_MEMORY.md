@@ -10,15 +10,15 @@
 > **Execution epic:** issue #164
 > **Active phase issue:** issue #202
 > **Retained installed evidence:** issue #201
-> **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
+> **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Active branch:** `agent/phase3-durable-effects-audit`
 > **Active PR:** #203 — `Phase 3: audit durable effects and operator workflows`
 > **Exact branch base:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
 > **Active agent:** ChatGPT Web Agentic Coding Agent
 > **Current session purpose:** Phase 3 live-provider and installed evidence
 > **Completed source packages:** Tasks 3–6
-> **Authorized next package:** live-provider and installed evidence collection only
-> **Broad Phase 3 production work:** not authorized
+> **Authorized next package:** protected merge of PR #203, then Phase 4 audit/contract freeze
+> **Broad Phase 3 and Phase 4 production work:** not authorized
 
 Live GitHub is authority. Re-read protected `main`, PR #203, its exact head,
 checks, review threads and issues #164, #201 and #202 before relying on copied
@@ -123,27 +123,27 @@ sidecar build and production Next build. This is source/build evidence only.
 - **P3-P1-001 through P3-P1-011 — closed-source-proven.**
 - **P3-P2-001 — closed-source-proven:** active-shop worker ownership.
 - **P3-P2-002 — closed-source-proven:** one courier facade replaces ambiguous layers.
-- **P3-P2-003 — source authority closed; live evidence open:** adapter source and server-side gates do not prove current real provider behavior.
-- **P3-P2-004 — open / issue #201:** installed hydrated-WebView evidence.
+- **P3-P2-003 — closed for Phase 3 under FD-030:** live provider evidence moves to Phase 9 representative beta.
+- **P3-P2-004 — closed for Phase 3 under FD-030:** issue #201 remains an applicable Level 3/installed evidence obligation.
 
 No known Phase 3 P0/P1 remains at source level.
 
-## Authorized next package — live provider and installed evidence
+## Authorized next package — protected merge and Phase 4 audit
 
 Only these actions are authorized:
 
-1. collect live courier and Required communication-provider evidence only with
-   current safe credentials and redacted receipts;
-2. preserve server-side capability gates and fail closed on account, credential,
-   endpoint or certification drift;
-3. retain issue #201 and applicable Level 3 as separate evidence boundaries;
-4. reconcile PR #203 and issues #164/#202 without inferring higher evidence from
-   source or build success.
+1. preserve and merge the exact green PR #203 closure head;
+2. close issue #202 after the protected merge;
+3. start Phase 4 with exhaustive data-protection/recovery/migration/security
+   reconnaissance and a frozen contract;
+4. retain live provider certification for Phase 9 representative beta;
+5. retain issue #201 for applicable Level 3/installed evidence.
 
 ## Non-claims
 
 - PR #203 remains unmerged proposed source.
-- Live provider certification is not inferred from adapters or mocked tests.
+- Deterministic conformance is not mislabeled as live certification; real
+  provider certification is deferred to Phase 9 by FD-030.
 - The published/installed executable remains Internal.13 and does not contain
   current Phase 3 source.
 - No version bump, MSI, release, Founder acceptance, Phase 3 closure or Stable

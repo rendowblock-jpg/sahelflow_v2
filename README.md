@@ -10,8 +10,8 @@ sellers.
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Current program:** FD-028 Final Completion Program and FD-029 AAA delivery
-> **Active phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active package:** PR #203 Level 2 source/build passed; live and installed evidence open
+> **Active phase:** Phase 4 — data protection, recovery, migrations and security
+> **Active package:** PR #203 Phase 3 closure under FD-030; Phase 4 audit next
 > **Stable status:** SahelFlow 1.0 Stable has not been released
 
 ## Current truth
@@ -122,16 +122,20 @@ source/database/migration suite, production WhatsApp sidecar build and productio
 Next build. Clean descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf`
 then passed Integration `30884662556` and normal CI `30884663240`.
 
-### Evidence still open
+### FD-030 closure boundary
 
-- current live certification for at least one Required courier and communication
-  path using safe current credentials and redacted receipts;
-- applicable Level 3 provider/Windows evidence;
-- issue #201 installed hydrated-WebView proof;
-- explicit protected merge and later Founder-acceptance decisions.
+The Founder cannot supply real seller/provider accounts before representative
+beta. Phase 3 therefore closes on deterministic provider conformance, fail-closed
+authority and the passed Level 2 source/build checkpoint. The conformance matrix
+passed at `9e488fa3bcfa6fff944924c341084ea95243ebc7` with Integration
+`30887782488` and CI `30887786426`.
 
-No version bump, MSI, release, Founder acceptance, Phase 3 closure or Stable claim
-is authorized by source completion.
+Live provider certification and issue #201 remain mandatory at the applicable
+Level 3 / Phase 9 representative beta / Stable gates. Credentials are entered only
+through protected product UI and never through chat, source or test fixtures.
+
+No version bump, MSI, release, Founder acceptance or Stable claim accompanies
+Phase 3 closure.
 
 ## Binding product shape
 

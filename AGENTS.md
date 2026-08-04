@@ -37,7 +37,7 @@ They never replace current GitHub authority.
 - Published release: `1.0.0-internal.13` / MSI `1.0.0.13`.
 - Founder-installed release: Internal.13; acceptance remains open.
 - Founder-accepted baseline: Internal.5.
-- Active product phase: Phase 3 — durable providers, inbox, AI and automations.
+- Active product phase: Phase 4 — data protection, recovery, migrations and security.
 - Sole active agent: ChatGPT Web Agentic Coding Agent.
 - Active branch: `agent/phase3-durable-effects-audit`.
 - Active draft: PR #203 — `Phase 3: audit durable effects and operator workflows`.
@@ -54,15 +54,13 @@ They never replace current GitHub authority.
 - Task 6 courier/commerce convergence and provider certification authority are
   source-closed at `676d0e41cc69d44c29b912038cba100fd827fcfa`;
   checkpoint `30875723975` and normal CI `30875724094` passed.
-- Phase 3 production source is complete on draft PR #203. It is not protected,
-  signed, installed, live-provider-certified, Founder-accepted or phase-closed.
-- Phase 3 Level 2 source/build checkpoint passed in run `30878352410` and
-  published authority head `777207d40b33f3f307728b2f8697765ec6e9e66d`;
-  clean descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf` passed
-  Integration `30884662556` and normal CI `30884663240`.
-- **Authorized evidence package:** live-provider certification where current safe
-  credentials exist and retained installed evidence in issue #201.
-- Broad new Phase 3 production implementation is unauthorized.
+- FD-030 authorizes Phase 3 closure without real provider accounts before beta.
+- Deterministic courier conformance passed at `9e488fa3bcfa6fff944924c341084ea95243ebc7`;
+  Integration `30887782488` and CI `30887786426` passed.
+- PR #203 is the protected Phase 3 closure vehicle. Phase 4 audit/contract freeze
+  begins after its exact green merge.
+- Live provider certification and issue #201 remain mandatory later evidence, not
+  Phase 3 blockers.
 
 Always re-read live GitHub. These values record the verified frontier; they are
 not permission to rely on copied state after the repository moves.
@@ -111,8 +109,8 @@ authorize an MVP, hidden deferral or fabricated readiness.
   genuinely independent later.
 - Declare one session purpose: governance/planning, research/contract,
   implementation, frozen review/closure or installed evidence.
-- The current session is Phase 3 source checkpoint and evidence work only; broad
-  new production implementation is frozen.
+- The current session is frozen Phase 3 closure and protected merge only; Phase
+  4 production edits wait for a complete audit and contract freeze.
 
 ## Audit-first and batch remediation rule
 
@@ -289,18 +287,18 @@ deployment, TypeScript, ESLint, complete Vitest, migration status, production
 WhatsApp sidecar build and production Next build. It is source/build evidence,
 not live-provider, signed-artifact or installed-Windows evidence.
 
-## Authorized evidence rules — live provider and installed evidence
+## Founder closure rule — FD-030
 
 Only these next actions are authorized:
 
-- reconcile PR #203 and issues #164/#202 to Level-2-passed evidence-open truth;
-- collect live courier and Required communication-provider evidence only with
-  current safe credentials/accounts and redacted receipts;
-- retain issue #201 as the separate installed hydrated-WebView boundary;
-- record applicable Level 3 evidence before any Phase 3 closure decision.
+- preserve the exact green Phase 3 closure head and merge PR #203;
+- close issue #202 after the protected merge;
+- begin Phase 4 with complete data-protection/recovery/migration/security audit;
+- defer real-account provider certification to Phase 9 representative beta;
+- retain issue #201 for applicable Level 3/installed evidence.
 
-Do not add broad Phase 3 product behavior, bump the version, publish an MSI or
-release, claim Founder acceptance, close Phase 3 or claim Stable.
+Do not paste credentials into chat or source, fabricate live certification, bump
+the version, publish an MSI/release, claim Founder acceptance or claim Stable.
 
 ## Evidence language
 

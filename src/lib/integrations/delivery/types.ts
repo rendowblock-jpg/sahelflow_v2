@@ -7,7 +7,7 @@
  *
  * Providers (Phase 0 #16, design system Section 6.1):
  *   - Yalidine (fully implemented)
- *   - Maystro Delivery (structural stub — same pattern, fill in API details)
+ *   - Maystro Delivery (implemented and covered by deterministic conformance)
  *   - ZR Express
  *   - NOEST Express (provider-issued EcoTrack contract; exact endpoints configured per merchant)
  */
@@ -130,7 +130,12 @@ export interface DeliveryAdapter {
   readonly logo: string;
   /** Estimate the delivery cost for a shipment (wilaya + weight). */
   estimateCost(
-    params: { wilaya: string; commune?: string; weight: number; codAmount: number },
+    params: {
+      wilaya: string;
+      commune?: string;
+      weight: number;
+      codAmount: number;
+    },
     credentials: DeliveryCredentials,
   ): Promise<DeliveryCostEstimate>;
 
@@ -158,11 +163,18 @@ export interface DeliveryAdapter {
    * get account info). Used by the "Test connection" button in the
    * integrations panel + POST /api/delivery/test-connection.
    */
-  testConnection?(credentials: DeliveryCredentials): Promise<TestConnectionResult>;
+  testConnection?(
+    credentials: DeliveryCredentials,
+  ): Promise<TestConnectionResult>;
 }
 
 /** Known provider IDs (convention: lowercase, no spaces). */
-export const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zrexpress", "noest"] as const;
+export const DELIVERY_PROVIDERS = [
+  "yalidine",
+  "maystro",
+  "zrexpress",
+  "noest",
+] as const;
 export type DeliveryProvider = (typeof DELIVERY_PROVIDERS)[number];
 
 /** Secret-store key convention for delivery credentials. */
@@ -188,11 +200,17 @@ export function deliverySecretKey(provider: string, field: string): string {
 export function deliverySecretKeys(provider: string): string[] {
   switch (provider) {
     case "yalidine":
-      return [deliverySecretKey("yalidine", "apiId"), deliverySecretKey("yalidine", "apiToken")];
+      return [
+        deliverySecretKey("yalidine", "apiId"),
+        deliverySecretKey("yalidine", "apiToken"),
+      ];
     case "maystro":
       return [deliverySecretKey("maystro", "apiToken")];
     case "zrexpress":
-      return [deliverySecretKey("zrexpress", "apiId"), deliverySecretKey("zrexpress", "apiKey")];
+      return [
+        deliverySecretKey("zrexpress", "apiId"),
+        deliverySecretKey("zrexpress", "apiKey"),
+      ];
     case "noest":
       return [
         deliverySecretKey("noest", "apiToken"),

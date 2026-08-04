@@ -1,9 +1,9 @@
 /**
  * Delivery adapter metadata tests — id, name, logo for all 4 adapters.
  *
- * The actual API calls (estimateCost, createShipment, syncTracking) require
- * real provider credentials + network access, so they're not unit-tested here.
- * NOEST has dedicated contract tests because it requires provider-issued endpoint URLs.
+ * Metadata remains covered here. Deterministic request/response behavior is
+ * covered by provider-conformance.test.ts, retry.test.ts and noest.test.ts without
+ * requiring real provider credentials or external network access.
  */
 import { describe, it, expect } from "vitest";
 import { yalidineAdapter } from "../yalidine";
@@ -13,10 +13,26 @@ import { noestAdapter } from "../noest";
 
 describe("delivery adapter metadata", () => {
   const adapters = [
-    { adapter: yalidineAdapter, expectedId: "yalidine", expectedName: "Yalidine" },
-    { adapter: maystroAdapter, expectedId: "maystro", expectedName: "Maystro Delivery" },
-    { adapter: zrExpressAdapter, expectedId: "zrexpress", expectedName: "ZR Express" },
-    { adapter: noestAdapter, expectedId: "noest", expectedName: "NOEST Express" },
+    {
+      adapter: yalidineAdapter,
+      expectedId: "yalidine",
+      expectedName: "Yalidine",
+    },
+    {
+      adapter: maystroAdapter,
+      expectedId: "maystro",
+      expectedName: "Maystro Delivery",
+    },
+    {
+      adapter: zrExpressAdapter,
+      expectedId: "zrexpress",
+      expectedName: "ZR Express",
+    },
+    {
+      adapter: noestAdapter,
+      expectedId: "noest",
+      expectedName: "NOEST Express",
+    },
   ];
 
   for (const { adapter, expectedId, expectedName } of adapters) {

@@ -1,8 +1,8 @@
 {
-  "formatVersion": 7,
+  "formatVersion": 8,
   "phase": 3,
   "name": "durable providers, inbox, AI and automations",
-  "state": "task6-source-complete-phase3-level2-passed-evidence-open",
+  "state": "phase3-closure-authorized-provider-beta-evidence-deferred",
   "sourceCompleteAt": "2026-08-04",
   "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
   "phase2MergePr": 200,
@@ -30,19 +30,21 @@
     "task6SeparatedReview": "complete-repaired",
     "productionImplementation": "source-complete-evidence-open",
     "phase3Level2": "passed-source-and-build",
-    "liveProviderCertification": "open",
-    "installedEvidence": "open-issue-201"
+    "liveProviderCertification": "deferred-to-phase9-representative-beta-fd030",
+    "installedEvidence": "deferred-to-applicable-level3-issue201",
+    "providerConformance": "passed-deterministic-simulator",
+    "phase3Closure": "authorized-pending-protected-merge"
   },
   "constraints": {
     "oneActiveImplementationAgent": true,
     "productionEditsAuthorized": false,
-    "authorizedProductionScope": "live provider and installed evidence collection only",
+    "authorizedProductionScope": "protected merge of PR #203 and Phase 4 audit only",
     "targetedCiRerunsRequired": true,
     "fullMatrixRerunForDocumentationForbidden": true,
     "versionBumpAuthorized": false,
     "releaseAuthorized": false,
     "founderAcceptanceClaimAuthorized": false,
-    "phaseClosureClaimAuthorized": false,
+    "phaseClosureClaimAuthorized": true,
     "stableClaimAuthorized": false,
     "historicalBranchesMergeAuthority": false
   },
@@ -54,7 +56,8 @@
     "draft PR #203 is the sole active Phase 3 package",
     "published executable and Founder-installed release remain Internal.13",
     "Tasks 3 through 6 are source-closed only, not protected, signed, installed, Founder-accepted or Stable",
-    "Phase 3 Level 2 source/build checkpoint 30878352410 passed and published source-complete evidence-open authority"
+    "Phase 3 Level 2 source/build checkpoint 30878352410 passed and published source-complete evidence-open authority",
+    "FD-030 moves live provider certification and issue #201 from Phase 3 blockers to applicable Level 3 and Phase 9 representative beta evidence"
   ],
   "task3Closure": {
     "name": "durable inbound WhatsApp and database-authoritative inbox",
@@ -182,13 +185,13 @@
     {
       "id": "P3-P2-003",
       "severity": "P2",
-      "state": "source-authority-closed-live-evidence-open",
+      "state": "closed-phase3-deferred-to-phase9-beta-fd030",
       "ownerPackage": "provider-certification-evidence"
     },
     {
       "id": "P3-P2-004",
       "severity": "P2",
-      "state": "open-retained-issue-201",
+      "state": "closed-phase3-deferred-to-level3-issue201-fd030",
       "ownerPackage": "issue-201"
     }
   ],
@@ -214,29 +217,22 @@
     "founderAcceptance": false
   },
   "authorizedNextPackage": {
-    "name": "Phase 3 live provider and installed evidence collection",
+    "name": "protected merge of PR #203, then Phase 4 audit and contract freeze",
     "branch": "agent/phase3-durable-effects-audit",
     "pr": 203,
-    "problemIds": ["P3-P2-003", "P3-P2-004"],
+    "problemIds": [],
     "scope": [
-      "collect live courier and Required communication-provider certification only with current safe credentials",
-      "retain redacted provider receipts and never persist secrets or customer PII in evidence",
-      "retain issue #201 as the separate installed hydrated-WebView evidence boundary",
-      "record applicable provider and Windows Level 3 evidence before any phase-closure decision",
-      "reconcile PR #203 and issues #164/#202 without claiming signed, installed, Founder-accepted or Stable truth"
+      "merge the exact green Phase 3 closure head into protected main",
+      "close issue #202 as Phase 3 complete under FD-030",
+      "retain provider live certification for Phase 9 representative beta",
+      "retain issue #201 for applicable Level 3 and installed evidence",
+      "begin Phase 4 with complete data protection, recovery, migration and security reconnaissance"
     ],
     "nonGoals": [
-      "new broad Phase 3 production implementation",
       "application version bump, MSI publication or release",
-      "Founder acceptance, Phase 3 closure or Stable",
-      "Phase 4 implementation"
-    ],
-    "gate": [
-      "current real provider account and safe credentials",
-      "server-side capability authority remains fail-closed",
-      "redacted receipt and exact provider/account/capability identity",
-      "duplicate, timeout, ambiguity and reconciliation behavior observed where safely possible",
-      "installed and live evidence recorded separately and never inferred from source"
+      "Founder acceptance or Stable claim",
+      "fabricated live provider certification",
+      "Phase 4 production implementation before its audit and contract freeze"
     ]
   },
   "level2PassedAt": "2026-08-04",
@@ -262,5 +258,23 @@
       "Phase 3 closure",
       "Stable"
     ]
+  },
+  "closedByFounderDecision": "FD-030",
+  "providerConformanceClosure": {
+    "status": "passed-deterministic-simulator",
+    "sourceHead": "9e488fa3bcfa6fff944924c341084ea95243ebc7",
+    "integrationRun": 30887782488,
+    "normalCiRun": 30887786426,
+    "coverage": [
+      "Yalidine credential, pricing, booking and tracking contract",
+      "Maystro credential, catalog, pricing, booking, tracking and cancellation contract",
+      "ZR Express legacy Procolis credential, pricing, booking and tracking contract",
+      "NOEST exact-endpoint and ambiguous create/validate fail-closed contract",
+      "bounded 408/425/429/502/503/504 retries for safe methods",
+      "Retry-After handling and timer cleanup",
+      "resource-creating POST never auto-retried",
+      "provider secrets absent from ordinary failures"
+    ],
+    "evidenceBoundary": "deterministic source contract and simulator evidence; not a live provider account"
   }
 }

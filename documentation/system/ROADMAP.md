@@ -10,8 +10,8 @@
 > **Phase 0 status:** Complete
 > **Phase 1 status:** Protected-source closed through PR #195
 > **Phase 2 status:** Protected-source closed through PR #200 with issue #201 retained
-> **Active product phase:** Phase 3 — durable providers, inbox, AI and automations
-> **Active phase package:** Tasks 3–6 and Level 2 source/build passed; live and installed evidence open
+> **Active product phase:** Phase 4 — data protection, recovery, migrations and security
+> **Active phase package:** Phase 3 closure via PR #203 under FD-030; Phase 4 audit next
 > **Phase issue:** #202
 > **Execution epic:** issue #164
 > **Last consolidated:** 2026-08-04
@@ -266,7 +266,8 @@ Draft PR #203 source-closed the required production packages:
 5. proposal-bound sensitive AI actions — source-closed at `07caedbc797ced5dc0e2ac959f252d5b3481285d`;
 6. courier/commerce convergence and provider-certification authority — source-closed at clean head `676d0e41cc69d44c29b912038cba100fd827fcfa` with checkpoint `30875723975` and normal CI `30875724094` passed.
 
-No known Phase 3 P0/P1 remains at the source level. Phase 3 is not closed.
+No known Phase 3 P0/P1 remains. FD-030 authorizes Phase 3 closure on the
+passed deterministic provider conformance and Level 2 source/build evidence.
 
 ## Source-proven outcome
 
@@ -287,28 +288,30 @@ authority, production WhatsApp sidecar build and production Next build. Clean
 descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf` passed Integration
 `30884662556` and normal CI `30884663240`.
 
-## Evidence blockers
+## FD-030 evidence boundary
 
-- live certification for at least one Required courier and communication path;
-- applicable provider/Windows Level 3 evidence;
-- issue #201 installed hydrated-WebView evidence;
-- protected merge and explicit phase-closure decision.
+Real courier and communication-provider accounts are unavailable until the app is
+complete enough for representative beta. Live certification and issue #201 are
+therefore moved to Phase 9/applicable Level 3 and are not Phase 3 blockers.
+Providers remain explicitly unverified or disabled until real certification.
 
 ## Remaining dependency-correct order
 
-1. collect current live provider evidence with safe real credentials and redacted receipts;
-2. satisfy issue #201 and applicable Level 3 evidence;
-3. reconcile the frozen PR and evidence record;
-4. close Phase 3 only with zero known P0/P1 and no fabricated signed, installed,
-   live-provider, Founder-acceptance or Stable claim.
+1. merge the exact green PR #203 closure head into protected main;
+2. close issue #202 and begin Phase 4 audit/contract freeze;
+3. collect real provider and installed evidence during applicable Level 3 and
+   representative beta;
+4. preserve the distinction between simulated/conformance-proven and
+   live-certified provider behavior.
 
 ## Exit gate
 
 Outage, retry, duplicate, rate limit, restart, timeout and partial failure cannot
 silently lose or duplicate a canonical effect. Every action has durable truth,
 visible state and recovery. Public provider claims match current live evidence.
-The complete Level 2 and applicable provider/installed/Level 3 evidence pass with
-zero known P0/P1.
+The complete Level 2 and deterministic provider-conformance gates pass with
+zero known P0/P1. Live provider/installed evidence remains binding for later
+Level 3, representative beta and Stable promotion under FD-030.
 
 ---
 
