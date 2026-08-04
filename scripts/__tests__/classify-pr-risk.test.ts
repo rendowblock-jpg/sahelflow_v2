@@ -17,7 +17,7 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("keeps documentation audit rules and phase checkpoints on fast authority", () => {
+  it("keeps documentation audit rules and documentation-only checkpoints fast", () => {
     expect(
       classifyPrRisk([
         "scripts/sf-audit.ts",
@@ -31,6 +31,22 @@ describe("classifyPrRisk", () => {
       runWindowsRust: false,
       runInstalledMsi: false,
     });
+  });
+
+  it("keeps Vitest-owned phase checkpoints on the quality lane", () => {
+    for (const path of [
+      ".github/phase-checkpoints/phase3-provider-convergence.json",
+      ".github/phase-checkpoints/phase3-commerce-runtime.json",
+    ]) {
+      expect(classifyPrRisk([path])).toMatchObject({
+        docsOnly: false,
+        runQuality: true,
+        runTauri: false,
+        runWindowsStandalone: false,
+        runWindowsRust: false,
+        runInstalledMsi: false,
+      });
+    }
   });
 
   it("executes changed sf-audit Vitest files on the quality lane", () => {
@@ -58,9 +74,7 @@ describe("classifyPrRisk", () => {
   });
 
   it("compiles and tests ordinary native source without forcing Windows artifacts", () => {
-    expect(
-      classifyPrRisk(["src-tauri/src/window_state.rs"]),
-    ).toMatchObject({
+    expect(classifyPrRisk(["src-tauri/src/window_state.rs"])).toMatchObject({
       runQuality: true,
       runTauri: true,
       runWindowsStandalone: false,
