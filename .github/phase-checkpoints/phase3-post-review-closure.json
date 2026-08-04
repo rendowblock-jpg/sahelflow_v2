@@ -1,5 +1,5 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 3,
   "phase": 3,
   "name": "post-review closure checkpoint",
   "state": "closure-authorized-pending-protected-merge",
@@ -10,7 +10,7 @@
   "phaseIssue": 202,
   "founderDecision": "FD-030",
   "validatedImplementationHead": "8b8e2bc83e513ec1711120830794e07fc9f6c684",
-  "validatedClosureHead": "f365c3cfe3c51837131c7b522630664e7253558a",
+  "validatedClosureHead": "657e1453fd5c3c362c6ccb427dd4524be59f6ea5",
   "validation": {
     "reviewRemediation": {
       "status": "passed",
@@ -34,9 +34,11 @@
       "tests": 2131
     },
     "productionDependencyAudit": {
-      "run": 30900908571,
+      "initialRemediationRun": 30900908571,
+      "compatibleResolutionRun": 30901572922,
       "status": "passed",
       "vulnerabilities": 0,
+      "eslintCompatibility": "passed",
       "whatsAppSidecarBuild": "passed",
       "focusedTests": "passed"
     }
