@@ -4,20 +4,25 @@ import type { PrismaClient } from "@prisma/client";
 
 import {
   applyProtectedSelectionPlan,
+  CONVERSATION_PROTECTED_FIELDS,
   createProtectedPiiCodec,
+  MESSAGE_PROTECTED_FIELDS,
+  ORDER_PROTECTED_FIELDS,
   prepareProtectedSelection,
   type ProtectedSelectionPlan,
 } from "@/lib/crypto/protected-pii";
 import type { ShopContext } from "@/lib/shops/context";
 
-const PROTECTED_MODELS = new Set([
+type ProtectedModel = "Customer" | "Order" | "Conversation" | "Message";
+
+const PROTECTED_MODELS = new Set<ProtectedModel>([
   "Customer",
   "Order",
   "Conversation",
   "Message",
 ]);
 
-const RELATION_MODEL: Record<string, string | undefined> = {
+const RELATION_MODEL: Record<string, ProtectedModel | undefined> = {
   customer: "Customer",
   order: "Order",
   orders: "Order",
@@ -39,10 +44,16 @@ const ROW_RETURNING_OPERATIONS = new Set([
   "delete",
 ]);
 
+const CUSTOMER_THROWING_READS = new Set([
+  "findFirstOrThrow",
+  "findUniqueOrThrow",
+]);
+
 type ExtensiblePrismaClient = Pick<PrismaClient, "$extends">;
 type SelectionNode = {
   select?: Record<string, unknown>;
   include?: Record<string, unknown>;
+  where?: unknown;
 };
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
@@ -51,6 +62,12 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   }
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
+}
+
+function protectedModel(value: string): ProtectedModel | undefined {
+  return PROTECTED_MODELS.has(value as ProtectedModel)
+    ? (value as ProtectedModel)
+    : undefined;
 }
 
 function mergePlans(
@@ -69,9 +86,9 @@ function mergePlans(
 
 function prepareRelationGraphSelection(
   node: SelectionNode,
-  model?: string,
+  model?: ProtectedModel,
 ): ProtectedSelectionPlan {
-  const plan = prepareProtectedSelection(node, model as never);
+  const plan = prepareProtectedSelection(node, model);
   for (const container of [node.select, node.include]) {
     if (!container) continue;
     for (const [key, value] of Object.entries(container)) {
@@ -86,6 +103,16 @@ function prepareRelationGraphSelection(
   return plan;
 }
 
+function customerFilterWithIndexes(
+  where: Record<string, unknown>,
+  indexes: string[],
+): Record<string, unknown> {
+  return {
+    ...where,
+    phone: indexes.length === 1 ? indexes[0] : { in: indexes },
+  };
+}
+
 export function withProtectedNestedReads<
   TClient extends ExtensiblePrismaClient,
 >(
@@ -95,20 +122,70 @@ export function withProtectedNestedReads<
 ) {
   const codec = createProtectedPiiCodec(rawAuthority, context);
 
-  async function decryptRelationGraph(value: unknown): Promise<unknown> {
+  async function rewriteCustomerThrowingWhere(
+    operation: string,
+    args: SelectionNode,
+    model?: ProtectedModel,
+  ): Promise<void> {
+    if (model !== "Customer" || !CUSTOMER_THROWING_READS.has(operation)) {
+      return;
+    }
+    const input = isPlainRecord(args.where) ? args.where : null;
+    const phone = input?.phone;
+    if (typeof phone !== "string" || /^[0-9a-f]{64}$/.test(phone)) {
+      return;
+    }
+
+    const indexes = await codec.customerPhoneIndexes(phone);
+    const filter = customerFilterWithIndexes(input, indexes);
+    if (operation === "findFirstOrThrow") {
+      args.where = filter;
+      return;
+    }
+
+    const row = await rawAuthority.customer.findFirst({
+      where: filter as never,
+      select: { id: true },
+    });
+    args.where = row ? { id: row.id } : { phone: indexes[0] };
+  }
+
+  async function decryptModelRecord(
+    row: Record<string, unknown>,
+    model: ProtectedModel,
+  ): Promise<Record<string, unknown>> {
+    switch (model) {
+      case "Customer":
+        return codec.decryptCustomerRow(row);
+      case "Order":
+        return codec.decryptFields(row, ORDER_PROTECTED_FIELDS, "Order");
+      case "Conversation":
+        return codec.decryptFields(
+          row,
+          CONVERSATION_PROTECTED_FIELDS,
+          "Conversation",
+        );
+      case "Message":
+        return codec.decryptFields(row, MESSAGE_PROTECTED_FIELDS, "Message");
+    }
+  }
+
+  async function decryptRelationGraph(
+    value: unknown,
+    model?: ProtectedModel,
+  ): Promise<unknown> {
     if (value === null || value === undefined) return value;
     if (Array.isArray(value)) {
-      return Promise.all(value.map(decryptRelationGraph));
+      return Promise.all(value.map((entry) => decryptRelationGraph(entry, model)));
     }
     if (!isPlainRecord(value)) return value;
 
-    const decrypted = (await codec.decryptNested(value)) as Record<
-      string,
-      unknown
-    >;
+    const decrypted = model
+      ? await decryptModelRecord(value, model)
+      : { ...value };
     for (const [key, entry] of Object.entries(decrypted)) {
       if (Array.isArray(entry) || isPlainRecord(entry)) {
-        decrypted[key] = await decryptRelationGraph(entry);
+        decrypted[key] = await decryptRelationGraph(entry, RELATION_MODEL[key]);
       }
     }
     return decrypted;
@@ -119,13 +196,12 @@ export function withProtectedNestedReads<
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
           if (!ROW_RETURNING_OPERATIONS.has(operation)) return query(args);
-          const topModel = PROTECTED_MODELS.has(model) ? model : undefined;
-          const plan = prepareRelationGraphSelection(
-            args as SelectionNode,
-            topModel,
-          );
+          const topModel = protectedModel(model);
+          const queryArgs = args as SelectionNode;
+          await rewriteCustomerThrowingWhere(operation, queryArgs, topModel);
+          const plan = prepareRelationGraphSelection(queryArgs, topModel);
           const result = await query(args);
-          const decrypted = await decryptRelationGraph(result);
+          const decrypted = await decryptRelationGraph(result, topModel);
           return applyProtectedSelectionPlan(decrypted, plan) as never;
         },
       },
