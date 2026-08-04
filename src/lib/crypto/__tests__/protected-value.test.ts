@@ -12,7 +12,7 @@ import {
   isProtectedValueEnvelope,
   openProtectedString,
   sealProtectedString,
-  type ProtectedValueBinding,
+  type ShopRecordProtectedValueBinding,
 } from "@/lib/crypto/protected-value";
 
 const ROOT = Buffer.alloc(32, 0x11);
@@ -32,7 +32,9 @@ function installationContext(
   };
 }
 
-function binding(overrides: Partial<ProtectedValueBinding> = {}): ProtectedValueBinding {
+function binding(
+  overrides: Partial<ShopRecordProtectedValueBinding> = {},
+): ShopRecordProtectedValueBinding {
   return {
     scope: "shop-record",
     workspaceId: WORKSPACE,
@@ -90,7 +92,10 @@ describe("installation key hierarchy", () => {
 
   it("rejects malformed roots and identities", () => {
     expect(() =>
-      deriveInstallationKey(Buffer.alloc(16), installationContext("control-integrity")),
+      deriveInstallationKey(
+        Buffer.alloc(16),
+        installationContext("control-integrity"),
+      ),
     ).toThrow(/256-bit/);
     expect(() =>
       deriveInstallationKey(ROOT, {
