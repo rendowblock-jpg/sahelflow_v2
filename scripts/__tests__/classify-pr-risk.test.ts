@@ -116,6 +116,7 @@ describe("classifyPrRisk", () => {
 
   it("classifies native installation and commercial recovery authorities", () => {
     for (const path of [
+      "src-tauri/src/lib.rs",
       "src-tauri/src/device_binding.rs",
       "src-tauri/src/license_clock.rs",
       "src-tauri/src/process_authority.rs",
