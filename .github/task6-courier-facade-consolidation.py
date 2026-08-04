@@ -139,6 +139,20 @@ contract = replace_once(
     'import { existsSync, readFileSync, readdirSync } from "node:fs";',
     "source contract fs import",
 )
+contract = replace_once(
+    contract,
+    '    const reviewedBase = ["canonical-courier", "reviewed-base"].join("-");',
+    '    const bookingAuthority = ["canonical-courier", "booking-authority"].join("-");',
+    "source contract booking authority variable",
+)
+contract = replace_once(
+    contract,
+    '    const legacyBase = ["canonical-courier", "legacy"].join("-");',
+    '    const effectRuntime = ["canonical-courier", "effect-runtime"].join("-");',
+    "source contract effect runtime variable",
+)
+contract = contract.replace("${reviewedBase}", "${bookingAuthority}")
+contract = contract.replace("${legacyBase}", "${effectRuntime}")
 insert_marker = 'describe("Phase 3 delivery provider authority source contract", () => {\n'
 new_test = '''describe("Phase 3 delivery provider authority source contract", () => {
   it("exposes one public courier facade and internalizes effect execution", () => {
