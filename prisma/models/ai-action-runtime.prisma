@@ -1,0 +1,96 @@
+// Phase 3 Task 5: proposal-bound sensitive AI action authority.
+//
+// Arguments, target bindings, license bindings, summaries and execution results
+// are encrypted by the application before persistence. The proposal row is the
+// immutable authority snapshot; only lifecycle columns change after creation.
+
+model AiActionProposal {
+  id                       String   @id
+  proposalKey              String   @unique
+  sessionId                String
+  requestMessageId         String
+  toolName                 String
+  actionClass              String
+  argsJson                 String
+  argsHash                 String
+  proposalDigest           String   @unique
+  summaryJson              String
+  summaryHash              String
+  requestActorKind         String
+  requestActorId           String
+  requestWorkspaceMemberId String?
+  requestDeviceId          String?
+  requestSessionId         String
+  requestRole              String?
+  requestPolicyVersion     Int
+  requestRevocationEpoch   Int
+  requiredPermissionsJson  String
+  permissionHash           String
+  licenseBindingJson       String
+  licenseBindingHash       String
+  workspaceId              String
+  installationId           String
+  shopId                   String
+  shopIncarnationId        String
+  registryRevision         Int
+  databaseFileId           String
+  migrationSetSha256       String
+  targetBindingJson        String
+  targetBindingHash        String
+  status                   String   @default("pending")
+  expiresAt                DateTime
+  lastErrorCode            String?
+  approvedAt               DateTime?
+  executionClaimedAt       DateTime?
+  completedAt              DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @default(now()) @updatedAt
+
+  approval  AiActionApproval?
+  execution AiActionExecution?
+
+  @@index([status, expiresAt])
+  @@index([sessionId, createdAt])
+  @@index([toolName, status, createdAt])
+  @@index([shopIncarnationId, status, createdAt])
+}
+
+model AiActionApproval {
+  id                        String   @id
+  proposalId                String   @unique
+  proposal                  AiActionProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  decision                  String
+  approverActorKind         String
+  approverActorId           String
+  approverWorkspaceMemberId String?
+  approverDeviceId          String?
+  approverSessionId         String
+  approverRole              String?
+  approverPolicyVersion     Int
+  approverRevocationEpoch   Int
+  approvalDigest            String   @unique
+  reasonHash                String?
+  createdAt                 DateTime @default(now())
+
+  @@index([decision, createdAt])
+  @@index([approverActorId, createdAt])
+}
+
+model AiActionExecution {
+  id                String   @id
+  proposalId        String   @unique
+  proposal          AiActionProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  executionKey      String   @unique
+  state             String   @default("claimed")
+  businessCommandId String?
+  resultJson        String?
+  resultHash        String?
+  errorCode         String?
+  claimedAt         DateTime @default(now())
+  startedAt         DateTime?
+  completedAt       DateTime?
+  updatedAt         DateTime @default(now()) @updatedAt
+
+  @@index([state, claimedAt])
+  @@index([businessCommandId])
+}

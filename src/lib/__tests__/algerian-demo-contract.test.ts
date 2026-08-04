@@ -150,8 +150,9 @@ describe("Algerian Founder demo contract", () => {
     );
     expect(reportRoute).toContain("if (await isAlgerianDemoLoaded(db))");
     expect(reportRoute).toContain('code: "DEMO_REPORT_SEND_BLOCKED"');
+    expect(reportRoute).not.toContain("sidecar.send(");
     expect(reportRoute.indexOf("isAlgerianDemoLoaded(db)")).toBeLessThan(
-      reportRoute.indexOf("sidecar.send(phone, report.message)"),
+      reportRoute.indexOf("queueDailyWhatsAppReport(context"),
     );
 
     expect(resetRoute).toContain("await withDemoPolicyLock(() =>");

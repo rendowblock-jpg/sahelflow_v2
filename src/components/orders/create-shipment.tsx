@@ -136,7 +136,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
                       <SelectItem value="yalidine">Yalidine</SelectItem>
                       <SelectItem value="maystro">Maystro Delivery</SelectItem>
                       <SelectItem value="zrexpress">ZR Express</SelectItem>
-                      <SelectItem value="dhd">DHD Delivery</SelectItem>
+                      <SelectItem value="noest">NOEST Express</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">

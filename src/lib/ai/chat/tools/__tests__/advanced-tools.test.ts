@@ -29,6 +29,11 @@ vi.mock("@/lib/integrations/delivery", () => ({
   loadDeliveryCredentials: vi.fn().mockResolvedValue({ apiId: "x", apiToken: "y" }),
 }));
 
+vi.mock("@/lib/integrations/delivery/provider-capability", () => ({
+  assertProviderCapability: vi.fn().mockResolvedValue(undefined),
+}));
+
+
 import "@/lib/ai/chat/tools/advanced-tools"; // side-effect: registers 12 tools
 import { getTool, type ToolContext } from "../registry";
 import {
@@ -392,19 +397,20 @@ describe("assign_order_to_delivery", () => {
 // ── get_delivery_cost_comparison ─────────────────────────────────────────────
 
 describe("get_delivery_cost_comparison", () => {
-  it("compares costs across all three providers", async () => {
-    // Sequential calls to estimateCost for yalidine, maystro, zrexpress
+  it("compares costs across all four providers", async () => {
+    // Sequential calls to estimateCost for yalidine, maystro, zrexpress, noest
     mockAdapter.estimateCost
       .mockResolvedValueOnce({ provider: "yalidine", cost: 600, available: true })
       .mockResolvedValueOnce({ provider: "maystro", cost: 500, available: true })
-      .mockResolvedValueOnce({ provider: "zrexpress", cost: 700, available: true });
+      .mockResolvedValueOnce({ provider: "zrexpress", cost: 700, available: true })
+      .mockResolvedValueOnce({ provider: "noest", cost: 550, available: true });
 
     const tool = getTool("get_delivery_cost_comparison")!;
     const result = await tool.execute({ wilaya: "Alger", codAmount: 5000 }, ctx());
 
     expect(result.success).toBe(true);
     const data = result.data as Array<{ provider: string; cost: number; available: boolean }>;
-    expect(data).toHaveLength(3);
+    expect(data).toHaveLength(4);
     // Should be sorted: cheapest available first
     expect(data[0]!.provider).toBe("maystro");
     expect(data[0]!.cost).toBe(500);
@@ -414,14 +420,15 @@ describe("get_delivery_cost_comparison", () => {
     mockAdapter.estimateCost
       .mockResolvedValueOnce({ provider: "yalidine", cost: 600, available: true })
       .mockResolvedValueOnce({ provider: "maystro", cost: 0, available: false, error: "Zone non couverte" })
-      .mockResolvedValueOnce({ provider: "zrexpress", cost: 0, available: false, error: "Erreur" });
+      .mockResolvedValueOnce({ provider: "zrexpress", cost: 0, available: false, error: "Erreur" })
+      .mockResolvedValueOnce({ provider: "noest", cost: 0, available: false, error: "Non certifié" });
 
     const tool = getTool("get_delivery_cost_comparison")!;
     const result = await tool.execute({ wilaya: "Tamanrasset", codAmount: 3000 }, ctx());
 
     expect(result.success).toBe(true);
     const data = result.data as Array<{ provider: string; available: boolean }>;
-    expect(data).toHaveLength(3);
+    expect(data).toHaveLength(4);
     expect(data[0]!.available).toBe(true);
     expect(data[0]!.provider).toBe("yalidine");
   });

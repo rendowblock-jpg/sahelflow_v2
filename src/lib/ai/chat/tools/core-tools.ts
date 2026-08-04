@@ -21,6 +21,7 @@ import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
 import { currentAiSourceProposal } from "@/lib/ai/chat/source-proposal";
+import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -159,9 +160,7 @@ registerTool({
       });
       const lowerQuery = query.toLowerCase();
       const filtered = all
-        .filter((customer) =>
-          customer.name.toLowerCase().includes(lowerQuery),
-        )
+        .filter((customer) => customer.name.toLowerCase().includes(lowerQuery))
         .slice(0, input.limit);
       return {
         success: true,
@@ -276,10 +275,7 @@ registerTool({
         {
           prisma: db,
           shop: ctx.shop,
-          businessPrincipal: sourceBusinessPrincipal(
-            "ai_chat",
-            sourceIdentity,
-          ),
+          businessPrincipal: sourceBusinessPrincipal("ai_chat", sourceIdentity),
         },
         {
           idempotencyKey: `ai-order:${sourceOrderId}`,
@@ -343,20 +339,25 @@ registerTool({
         from: new Date(0),
         to: new Date(Date.now() + 86_400_000),
       };
-      const [totalOrders, grossOrderValue, profitability, totalCustomers, lowStockCount] =
-        await Promise.all([
-          db.order.count({ where: { deletedAt: null } }),
-          grossRevenue(db, allTime),
-          getProfitabilityProjection(db, allTime),
-          db.customer.count({ where: { deletedAt: null } }),
-          db.product.count({
-            where: {
-              stock: { lte: db.product.fields.lowStockThreshold },
-              isActive: true,
-              deletedAt: null,
-            },
-          }),
-        ]);
+      const [
+        totalOrders,
+        grossOrderValue,
+        profitability,
+        totalCustomers,
+        lowStockCount,
+      ] = await Promise.all([
+        db.order.count({ where: { deletedAt: null } }),
+        grossRevenue(db, allTime),
+        getProfitabilityProjection(db, allTime),
+        db.customer.count({ where: { deletedAt: null } }),
+        db.product.count({
+          where: {
+            stock: { lte: db.product.fields.lowStockThreshold },
+            isActive: true,
+            deletedAt: null,
+          },
+        }),
+      ]);
       return {
         success: true,
         data: {
@@ -399,15 +400,14 @@ registerTool({
   definition: {
     name: "update_order_status",
     description:
-      "Update the status of a legacy-compatible order. Canonical orders require their governed seller actions. Valid statuses: draft, pending, confirmed, shipped, delivered, cancelled, returned.",
+      "Update the status of a legacy-compatible order. Canonical confirmation remains a governed seller action. Valid statuses: draft, pending, shipped, delivered, cancelled, returned.",
     parameters: {
       type: "object",
       properties: {
         orderId: { type: "string" },
         status: {
           type: "string",
-          description:
-            "draft|pending|confirmed|shipped|delivered|cancelled|returned",
+          description: "draft|pending|shipped|delivered|cancelled|returned",
         },
       },
       required: ["orderId", "status"],
@@ -450,7 +450,7 @@ registerTool({
 // ── Tool 6: estimate_delivery_cost ──────────────────────────────────────────
 
 const estimateDeliverySchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress"]).default("yalidine"),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]).default("yalidine"),
   wilaya: z.string(),
   weight: z.number().positive().default(1),
   codAmount: z.number().min(0).default(0),
@@ -466,7 +466,7 @@ registerTool({
       properties: {
         provider: {
           type: "string",
-          description: "yalidine|maystro|zrexpress (default: yalidine)",
+          description: "yalidine|maystro|zrexpress|noest (default: yalidine)",
         },
         wilaya: { type: "string", description: "Wilaya name" },
         weight: { type: "number", description: "Weight in kg (default 1)" },
@@ -482,9 +482,11 @@ registerTool({
     try {
       const input = estimateDeliverySchema.parse(params);
       const db = getDb(ctx);
+      const context = { prisma: db, shop: ctx.shop };
+      await assertProviderCapability(context, input.provider, "fees");
       const adapter = getDeliveryAdapter(input.provider);
       const credentials = await loadDeliveryCredentials(
-        { prisma: db, shop: ctx.shop },
+        context,
         input.provider,
       );
       const estimate = await adapter.estimateCost(

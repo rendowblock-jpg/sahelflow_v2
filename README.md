@@ -3,43 +3,52 @@
 SahelFlow is a Windows-first operations system for Algerian cash-on-delivery
 sellers.
 
-> **Phase 0 closeout base:** `18c45e474f58744b6f837372509154ca500044b0`
+> **Protected main:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
+> **Latest application-changing merge:** PR #200 native multi-shop at the same commit
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Current program:** FD-028 Final Completion Program and Research-First Quality
-> Protocol; Phase 0 complete and the first Phase 1 manual-confirmation vertical
-> research complete
+> **Current program:** FD-028 Final Completion Program and FD-029 AAA delivery
+> **Active phase:** Phase 4 — data protection, recovery, migrations and security
+> **Active package:** PR #203 Phase 3 closure under FD-030; Phase 4 audit next
 > **Stable status:** SahelFlow 1.0 Stable has not been released
 
 ## Current truth
 
-Internal.13 is signed and automatically published through the protected release
-path. Its Windows run passed exact-source authority, staged packaged readiness,
-MSI/signature verification, installed launch/reopen, authenticated hydrated UI
-twice, deterministic evidence, exact asset comparison, source-bound tag
-verification and publication.
+SahelFlow is a broad real internal product, not an empty prototype. Protected
+source now includes:
 
-Internal.13 is Founder-installed and exact-version confirmed on the ThinkPad T470.
-The preserved registry/database identity snapshot and authenticated Arabic UI were
-observed without deleting AppData. A stopped-process launch reached UI-ready in
-68.863 seconds and the immediate reopen in 31.834 seconds, both beyond the
-eight-second cold-launch contract. Arabic chart visual behavior and explicit
-Founder acceptance remain open. Publication or installation does not prove the
-complete Golden COD Journey, whole-route AAA quality, provider certification or
-Stable readiness.
+- canonical Golden COD command, event, inventory and financial foundations;
+- durable Workspace, Installation, Person, Member, Device and session authority;
+- Teams, permissions, exact shop grants and revocation;
+- signed installation-level trial/permanent licensing;
+- Tauri-owned journaled create, rename, switch, archive, recover and delete;
+- all-shop migration/recovery, process containment and authenticated readiness;
+- durable inbound/outbound WhatsApp and database-authoritative inbox;
+- truthful durable automations and proposal-bound sensitive AI actions;
+- durable commerce runs/pages/encrypted items and one canonical courier facade;
+- fail-closed server-side provider capability authority;
+- strong exact-source Windows release infrastructure.
 
-SahelFlow is a broad real internal product, not an empty prototype. Its strongest
-new canonical command/event/outbox/reservation/movement foundation is merged, but
-production order, delivery, refund, provider and automation paths still mainly
-use legacy services. The completion program therefore prioritizes complete
-production adoption and removal of competing legacy authority rather than another
-architecture reset.
+PR #200 merged at `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`.
+Its MSI built, installed, launched, closed and reopened, but the ephemeral runner
+did not observe the authenticated hydrated-WebView receipt twice. The Founder
+authorized the protected merge with that single limitation retained in issue
+#201. This is not passing installed-UI evidence and does not reopen native shop
+lifecycle authority.
+
+The published and Founder-installed executable remains Internal.13. It predates
+the protected Phase 1/Teams/licensing/native-multi-shop closures and cannot prove
+current source behavior. Recorded T470 launch times of 68.863 seconds and 31.834
+seconds remain beyond the eight-second target. Founder acceptance remains open.
+
+SahelFlow is not yet a complete AAA candidate or Stable product.
 
 ## Documentation authority
 
-Start with [`documentation/README.md`](documentation/README.md).
+Start with [`documentation/README.md`](documentation/README.md), then follow
+[`AGENTS.md`](AGENTS.md).
 
 The active authority remains exactly ten documents:
 
@@ -54,14 +63,15 @@ The active authority remains exactly ten documents:
 9. [`RESEARCH.md`](documentation/research/RESEARCH.md)
 10. [`documentation/README.md`](documentation/README.md)
 
-Issue #164 is the live execution tracker, not another product, architecture or
-roadmap authority. Archived reports are context only until current evidence is
-revalidated and adopted by an active owner.
+Issue #164 is the live Phase 0–9 execution dashboard, issue #202 owns Phase 3 and
+issue #201 retains the installed hydrated-WebView evidence. Issues are not
+additional product, experience, architecture, roadmap or workflow authorities.
+Archived reports are context only until current evidence is revalidated and
+adopted by an active owner.
 
 ## Final completion program
 
-FD-028 replaces the obsolete four-session execution overlay with one binding
-Phase 0–9 program:
+FD-028 Final Completion Program and FD-029 define one binding program:
 
 0. Authority freeze and execution reset.
 1. Canonical Golden COD business core.
@@ -74,36 +84,58 @@ Phase 0–9 program:
 8. Connected SahelFlow platform.
 9. Certification, representative beta and Stable.
 
-The valid rules from FD-027 remain: bounded WIP, coherent outcome packages,
-independent review, P0/P1 blocking, milestone releases, exact-source evidence and
-continuous Arabic/RTL, accessibility, recovery and performance quality.
+A phase exits only through objective research, implementation and evidence gates.
+Session completion, elapsed time, amount of code or agent confidence is not an
+exit condition.
 
-A phase exits only through its objective research, implementation and evidence
-gates. Session completion, elapsed time, amount of code or agent confidence is not
-an exit condition.
+## Active Phase 3 objective
 
-## Research-first quality rule
+Make every external input and effect durable, replayable, observable and safe:
 
-Every major phase and material implementation begins by:
+```text
+authenticated ingress
+→ durable inbox
+→ validation and deduplication
+→ canonical command
+→ committed result
+→ durable outbox
+→ external effect
+→ receipt and reconciliation
+```
 
-- inspecting exact current SahelFlow source, tests and production paths;
-- researching current standards, law and official platform/provider guidance;
-- inspecting mature implementation code and relevant best-in-class operational
-  products;
-- accounting for Algerian COD, Arabic/French, Windows, low-end hardware and
-  constrained networks;
-- comparing alternatives across correctness, migration, security/privacy,
-  Arabic/RTL, accessibility, performance, recovery and continuity economics;
-- adopting one SahelFlow-specific measurable decision with an evidence and
-  revalidation contract.
+Draft PR #203 has source-closed the required Phase 3 production packages:
 
-Generic AI advice, visual trends, screenshots, mocks, adapter existence and test
-count are not authority.
+- durable inbound WhatsApp and database-authoritative inbox;
+- truthful durable automations and receipt-safe daily reports;
+- exact proposal-bound sensitive AI actions;
+- server-side provider certification authority;
+- durable commerce run/page/item/attempt/recovery authority;
+- one public canonical courier facade with an internal effect runtime.
 
-For the frontend this explicitly rejects generic gradient dashboards, excessive
-decorative cards, glass effects, fake charts, arbitrary animation,
-machine-sounding copy, icon-only critical actions, compressed desktop mobile
-layouts and superficial `dir="rtl"` fixes.
+The clean Task 6 source head is
+`676d0e41cc69d44c29b912038cba100fd827fcfa`; full checkpoint `30875723975`
+and normal CI `30875724094` passed. This remains proposed source, not protected
+`main`, a signed artifact or installed behavior.
+
+Phase 3 Level 2 source/build checkpoint `30878352410` passed the complete
+source/database/migration suite, production WhatsApp sidecar build and production
+Next build. Clean descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf`
+then passed Integration `30884662556` and normal CI `30884663240`.
+
+### FD-030 closure boundary
+
+The Founder cannot supply real seller/provider accounts before representative
+beta. Phase 3 therefore closes on deterministic provider conformance, fail-closed
+authority and the passed Level 2 source/build checkpoint. The conformance matrix
+passed at `9e488fa3bcfa6fff944924c341084ea95243ebc7` with Integration
+`30887782488` and CI `30887786426`.
+
+Live provider certification and issue #201 remain mandatory at the applicable
+Level 3 / Phase 9 representative beta / Stable gates. Credentials are entered only
+through protected product UI and never through chat, source or test fixtures.
+
+No version bump, MSI, release, Founder acceptance or Stable claim accompanies
+Phase 3 closure.
 
 ## Binding product shape
 
@@ -115,8 +147,8 @@ layouts and superficial `dir="rtl"` fixes.
   behavior.
 - Functional floor: dual-core x64 Windows, 4 GB RAM, HDD or SSD, 1366×768.
 - ThinkPad T470 is mandatory daily reference hardware.
-- Optional shared cloud, PWA, hosted storefront and zero-knowledge backup remain
-  bounded by authority, security, recovery and economics gates.
+- Shared cloud, PWA, hosted storefront and zero-knowledge backup remain bounded by
+  authority, security, recovery and economics gates.
 - Seller-owned Gemini key supports optional privacy-controlled AI.
 - Internal, Beta and Stable remain separate signed release channels.
 
@@ -143,20 +175,6 @@ Product or variant
 No route, provider callback, automation or AI tool may bypass the canonical
 transition, movement, audit, idempotency, outbox or compensation rules.
 
-## Exact next production outcome
-
-After the documentation authority reset merges, the first Phase 1 package is:
-
-> A manual order is created under trusted authority, confirmed or rejected using
-> exact idempotency and optimistic versioning, reserves available product/variant
-> stock atomically, writes inventory movement, trusted audit, domain event,
-> outbox and projection invalidation, exposes complete AR/FR/EN UI states,
-> survives duplicate, concurrent and interrupted attempts, and removes the
-> migrated direct-stock legacy path.
-
-Internal.13 Founder installation and T470 observation proceed independently in
-the platform lane.
-
 ## Development and validation
 
 Follow [`AGENTS.md`](AGENTS.md) and
@@ -177,18 +195,3 @@ The storage-constrained Founder machine does not run builds, automated tests,
 coverage or dependency installation when GitHub Actions can validate the exact
 pushed commit. Installed work uses exact signed artifacts and preserves canonical
 AppData.
-
-`prisma db push` is development-only and is not a production migration mechanism.
-
-## Evidence rule
-
-“Verified,” “supported,” “production-ready,” “AAA” and “Stable” require exact
-source, artifact, environment/provider/device, procedure and result. Source
-presence, mocks, screenshots, historical test counts, version labels and agent
-confidence are not substitutes.
-
-Founder AAA Candidate requires all Required internal implementation and evidence
-gates with zero known P0/P1. Public Stable additionally requires representative
-Algerian seller beta, live provider certification, independent security/privacy
-and Law 18-07 review, restore and incident drills, compatibility evidence,
-rollout readiness and explicit Founder promotion.

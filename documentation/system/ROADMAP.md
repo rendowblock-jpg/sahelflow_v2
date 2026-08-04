@@ -2,17 +2,19 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Governance reset base:** `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`
-> **Latest application-changing protected merge:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
+> **Live protected main:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
+> **Latest application-changing protected merge:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
 > **Founder-accepted baseline:** Internal.5
 > **Phase 0 status:** Complete
 > **Phase 1 status:** Protected-source closed through PR #195
-> **Active product phase:** Phase 2 — identity, authorization, licensing and multi-shop
-> **Next phase outcome:** native multi-shop under the audit-first operating model
+> **Phase 2 status:** Protected-source closed through PR #200 with issue #201 retained
+> **Active product phase:** Phase 4 — data protection, recovery, migrations and security
+> **Active phase package:** Phase 3 closure via PR #203 under FD-030; Phase 4 audit next
+> **Phase issue:** #202
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-08-02
+> **Last consolidated:** 2026-08-04
 
 Live protected `main` must be re-read directly from GitHub. The SHAs above record
 the exact source frontier used for this consolidation and the latest protected
@@ -59,22 +61,22 @@ alone complete a capability.
     decisions.
 13. With one agent, frozen review is a separated adversarial pass, not independent
     review.
-14. Competing legacy mutation paths are removed or made read-only after parity and
-    recovery proof.
+14. Competing legacy mutation and effect paths are removed or made read-only after
+    parity and recovery proof.
 
 ## Validation cadence
 
 ### Level 1 — Task Gate
 
 After each coherent task: authority/docs, Prisma where applicable, TypeScript,
-ESLint, full Vitest and risk-selected browser/provider/Rust/native checks.
+ESLint, complete Vitest and risk-selected browser/provider/Rust/native checks.
 
 ### Level 2 — Phase Checkpoint
 
 At every phase exit: clean complete source/database/migration suites, production
-build, affected journeys, authorization/shop isolation, AR/FR/EN, RTL,
-accessibility, performance, recovery, documentation and applicable native/Windows
-evidence.
+build, affected journeys, authorization/shop isolation, duplicate/concurrency/
+restart/interruption/recovery, AR/FR/EN, RTL, accessibility, performance,
+documentation and applicable native/Windows/provider evidence.
 
 ### Level 3 — Major Full Checkpoint
 
@@ -85,7 +87,8 @@ performance, stability and evidence bundle.
 
 Run Level 3 immediately at the affected phase exit for licensing, identity,
 cryptography, installer/updater, migrations, backup/restore, destructive shop/data
-lifecycle or provider effects involving stock or money.
+lifecycle or provider effects involving stock, money or irreversible external
+work.
 
 ## Critical path
 
@@ -132,8 +135,7 @@ frontier.
 
 ## Result
 
-Complete through FD-028 and the Phase 0 closeout. The active operating model
-rejects later execution drift without reopening product scope.
+Complete through FD-028, FD-029 and the single-agent audit-first operating model.
 
 ---
 
@@ -164,13 +166,13 @@ Production native all-shop restore remains Phase 4.
 ## Result — protected-source closed through PR #195
 
 PR #195 merged at `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
-Implementation head `ddec67a36b8000be91562b33a2bd4d6aceb5e443` passed CI
-`30734100436`.
+Protected source includes trusted manual intake, decision, reservation,
+fulfillment, delivery, COD receivable, settlement/return/compensation boundaries
+and shared replay/authorization repairs.
 
-Trusted manual intake, confirmation/rejection, reservation, fulfillment,
-delivery, COD receivable, settlement/return/compensation source boundaries and
-shared replay/authorization repairs are protected source. This is not current
-installed-product or Stable proof.
+This result is source closure, not a current signed, installed or Stable claim.
+Remaining provider and source-intake adoption is executed under Phase 3 without
+reopening the canonical Golden COD contracts.
 
 ---
 
@@ -182,76 +184,57 @@ Deliver durable commercial identity, permissions, entitlement and native shop
 lifecycle authority without making mutable browser or shop-database state the
 source of truth.
 
-## Closed source outcomes
+## Result — protected-source closed through PR #200
 
-### Setup, sessions and owner identity
+### Identity, Teams and permissions
+
+Protected through PR #195:
 
 - setup is onboarding only;
-- sessions enforce overall/inactivity limits and revocation;
-- PIN reauthentication rotates session identity;
+- sessions enforce timeout, revocation and reauthentication;
 - installation-owned Workspace, Installation, Person, Member, Device and session
   authority exists outside shop databases;
-- exact shop grants, policy freshness, revocation, restart and recovery are
-  source-proven.
-
-### Members, roles, Teams and permissions
-
-- authenticated invitations and individual credentials;
-- owner, manager, operator, viewer and bounded custom policies;
-- exact shop grants and protected-field projections;
-- workgroups, queues, assignments, comments, mentions and handovers;
-- immediate revocation, trusted audit and AR/FR/EN seller states.
-
-Protected through PR #195.
+- exact shop grants, policy freshness and protected projections;
+- invitations, roles, custom permissions, workgroups, queues, assignments,
+  comments, mentions, handovers and immediate revocation.
 
 ### Signed licensing
 
-PR #197 merged at `04d4c51831c6e043ab39a614a7e947e6b27d01e6`.
-Exact implementation head `25abbedd176429cf25e657217726d833e3c62a10` passed CI
-`30744598944`; all review threads were resolved.
+PR #197 merged at `04d4c51831c6e043ab39a614a7e947e6b27d01e6`:
 
-Source-closed behavior:
-
-- signed machine-bound online trial and offline permanent claims;
+- machine-bound signed online trial and offline permanent claims;
 - separate signing authorities;
-- one-device trial reissue/recovery;
-- DPAPI-protected clock, revocation and recovery floors;
+- reinstall recovery and one-device trial authority;
+- protected local state, clock, revocation and recovery floors;
 - transfer, recovery and revocation ceremonies;
-- complete data-preserving lockout;
-- AR/FR/EN recovery states;
-- release builds fail closed when licensing configuration is absent.
+- complete data-preserving lockout and AR/FR/EN recovery states.
 
-Windows artifact and installed behavior remain Phase 2 exit evidence.
+### Native multi-shop
 
-## Active outcome — native multi-shop
+PR #200 merged at `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`:
 
-The native supervisor must own:
+- Tauri owns create, rename, switch, archive, recover and delete;
+- operation authority binds registry revision, workspace, installation, actor,
+  session, policy/revocation, entitlement/slots, migration set and shop
+  incarnations;
+- one durable native journal owns quiescence, mutation, runtime restart,
+  authenticated readiness, compensation and startup reconciliation;
+- browser registry mutation and generic relaunch authority are removed;
+- destructive delete requires exact owner reauthentication and confirmation.
 
-- create, rename, switch, archive, recover and delete;
-- atomic registry revision and persistent shop incarnation;
-- workspace, installation, license-slot and membership validation;
-- exact database-file and migration-set identity;
-- quiesce, target validation, process relaunch and authenticated readiness;
-- interruption, restart, corruption and partial-failure recovery;
-- owner reauthentication for destructive deletion;
-- data-preserving archive/recovery;
-- complete AR/FR/EN and RTL seller states;
-- low-end and installed behavior.
+### Retained evidence boundary
 
-Browser input, Zustand preference, request fields or mutable shop data cannot
-become lifecycle authority.
+The MSI built, installed, launched, closed and reopened, but the ephemeral runner
+did not observe the authenticated hydrated-WebView receipt twice. The Founder
+allowed PR #200 to merge with that single limitation retained in issue #201.
+This is not passing installed-UI evidence and does not reopen lifecycle authority.
 
-## Phase 2 exit gate
+## Phase 2 closure meaning
 
-- every request/command derives verified workspace, person/member, device,
-  session, installation and exact shop context;
-- revocation is immediate;
-- permissions and licensing cannot be forged through browser or mutable shop
-  state;
-- production shop lifecycle works through native authority and preserves data;
-- complete Phase 2 Level 2 checkpoint passes;
-- Level 3 Windows/Rust/signed-MSI/install/reopen/preserved-data checkpoint passes;
-- zero known P0/P1 remains.
+Phase 2 is protected-source closed. It does not claim a current signed Phase 2
+artifact, installed activation/transfer/full lifecycle certification, Founder
+acceptance or Stable. Issue #201 and later exact-source milestone evidence remain
+required for higher evidence levels.
 
 ---
 
@@ -264,7 +247,7 @@ Make every external input and effect durable, replayable, observable and safe:
 ```text
 authenticated ingress
 → durable inbox
-→ validation / deduplication
+→ validation and deduplication
 → canonical command
 → committed result
 → durable outbox
@@ -272,24 +255,63 @@ authenticated ingress
 → receipt and reconciliation
 ```
 
-## Required outcomes
+## Source implementation progress
 
-- one durable provider protocol for WhatsApp, courier and commerce effects;
-- authenticated inbound persistence before acknowledgement;
-- stable effect identity, leases, retries, ambiguity, receipts and dead letter;
-- no provider effect inside a business transaction;
-- checkpoints never advance past untracked work;
-- automation steps report truthful partial state and recover safely;
-- destructive AI actions use persisted proposal-bound confirmation or remain
-  disabled;
-- complete operator recovery and AR/FR/EN states;
-- at least one live-certified courier and Required communication path.
+Draft PR #203 source-closed the required production packages:
+
+1. governance reconciliation and shared contract freeze — complete;
+2. exhaustive source/caller/migration/test/UI inventory — complete;
+3. durable inbound WhatsApp and database-authoritative inbox — source-closed at `f016055be55fd220baa87c26ffed565c4e9e1d85`;
+4. truthful durable automation runs and effects — source-closed at `c873b8b6a256383497d3799e0839160178e92149`;
+5. proposal-bound sensitive AI actions — source-closed at `07caedbc797ced5dc0e2ac959f252d5b3481285d`;
+6. courier/commerce convergence and provider-certification authority — source-closed at clean head `676d0e41cc69d44c29b912038cba100fd827fcfa` with checkpoint `30875723975` and normal CI `30875724094` passed.
+
+No known Phase 3 P0/P1 remains. FD-030 authorizes Phase 3 closure on the
+passed deterministic provider conformance and Level 2 source/build evidence.
+
+## Source-proven outcome
+
+- authenticated WhatsApp persistence before acknowledgement and durable recovery;
+- database-authoritative inbox and committed automation triggers;
+- ordered automation step truth with durable effects and receipts;
+- exact one-time AI proposal/approval/execution authority;
+- one public courier facade and internal provider effect/tracking runtime;
+- durable commerce runs/pages/encrypted items/attempts, exact continuation,
+  monotonic checkpointing, credential binding and operator recovery;
+- DHD removed and unverified NOEST effects fail-closed;
+- AR/FR/EN and RTL-safe provider, automation, AI and recovery states.
+
+## Level 2 result
+
+Run `30878352410` passed the complete source/database/migration suite, semantic
+authority, production WhatsApp sidecar build and production Next build. Clean
+descendant `cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf` passed Integration
+`30884662556` and normal CI `30884663240`.
+
+## FD-030 evidence boundary
+
+Real courier and communication-provider accounts are unavailable until the app is
+complete enough for representative beta. Live certification and issue #201 are
+therefore moved to Phase 9/applicable Level 3 and are not Phase 3 blockers.
+Providers remain explicitly unverified or disabled until real certification.
+
+## Remaining dependency-correct order
+
+1. merge the exact green PR #203 closure head into protected main;
+2. close issue #202 and begin Phase 4 audit/contract freeze;
+3. collect real provider and installed evidence during applicable Level 3 and
+   representative beta;
+4. preserve the distinction between simulated/conformance-proven and
+   live-certified provider behavior.
 
 ## Exit gate
 
 Outage, retry, duplicate, rate limit, restart, timeout and partial failure cannot
-silently lose or duplicate a canonical effect. Every action has a durable receipt,
-visible state and recovery path. Public provider claims match live certification.
+silently lose or duplicate a canonical effect. Every action has durable truth,
+visible state and recovery. Public provider claims match current live evidence.
+The complete Level 2 and deterministic provider-conformance gates pass with
+zero known P0/P1. Live provider/installed evidence remains binding for later
+Level 3, representative beta and Stable promotion under FD-030.
 
 ---
 
@@ -301,13 +323,12 @@ Make seller data survivable and the product commercially defensible.
 
 ## Required outcomes
 
-- Windows-protected installation root and purpose-separated keys;
-- resumable rotation and lost-device/transfer behavior;
+- purpose-separated protected key hierarchy;
 - verified encrypted all-shop backup and authenticated manifests;
-- independent recovery kit and replacement-install restore;
-- atomic restore preserving current data after failure;
+- independent recovery kit and optional assisted recovery;
+- replacement-install restore and failed-restore rollback;
 - clean/mixed/interrupted/low-disk/corrupt migration matrix;
-- threat models, minimization, retention, deletion and diagnostics;
+- threat models, minimization, retention and deletion;
 - Law 18-07 mapping, SBOM and independent security/privacy review.
 
 ## Exit gate
@@ -316,8 +337,8 @@ A full installation can be backed up, corrupted, replaced and restored without
 silent loss, authority confusion or key compromise. Migration/restore drills pass
 and independent review has no unresolved P0/P1.
 
-Phases 3–4 together normally trigger a Level 3 checkpoint; Phase 4 risk may require
-it earlier for each recovery authority package.
+Phases 3–4 normally trigger the next Level 3 checkpoint; high-risk recovery work
+may require it earlier.
 
 ---
 
@@ -329,11 +350,9 @@ Transform the complete application into one coherent top-tier operational system
 
 ## Required outcomes
 
-- one SahelFlow-owned design system;
-- one governed chart foundation selected through benchmark;
-- complete information architecture and navigation;
-- professional operational density, tables, filters, forms, bulk work and
-  destructive ceremonies;
+- one SahelFlow-owned design system and governed chart foundation;
+- complete information architecture, navigation and operational density;
+- professional tables, filters, forms, bulk work and destructive ceremonies;
 - complete happy/loading/empty/validation/permission/offline/pending/stale/
   conflict/error/retry/recovery/history states;
 - every Required page uses real authority and data;
@@ -369,8 +388,8 @@ Make Arabic and accessibility equivalent behavior, not a visual afterthought.
 Every Required journey works in Arabic RTL, French LTR and English LTR with
 equivalent capability and accessibility evidence.
 
-Phases 5–6 normally trigger a Level 3 checkpoint focused on complete installed UI,
-visual regression and accessibility evidence.
+Phases 5–6 normally trigger a Level 3 installed-UI, visual-regression and
+accessibility checkpoint.
 
 ---
 
@@ -436,8 +455,8 @@ only after desktop commit. Storefront success has a durable receipt. Cross-tenan
 leakage and duplicate effects are zero in certification. SahelFlow alone cannot
 decrypt backups.
 
-Phases 7–8 normally trigger a Level 3 checkpoint covering performance, remote
-protocol, storefront, cloud outage and installed desktop integrity.
+Phases 7–8 normally trigger a Level 3 performance, remote-protocol, storefront,
+cloud-outage and installed-desktop checkpoint.
 
 ---
 

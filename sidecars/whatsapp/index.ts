@@ -10,6 +10,7 @@ import {
   getWhatsAppEffectAccountHash,
   verifySidecarWebSocketGrant,
 } from "./auth-tokens";
+import { WhatsAppInboundSpool } from "./inbound-spool";
 import {
   deterministicWhatsAppMessageId,
   findDurableSendReceipt,
@@ -25,6 +26,10 @@ const PORT = configuredPort;
 const HOST = process.env.SIDECAR_HOST || "127.0.0.1";
 const TOKEN_FILE =
   process.env.SIDECAR_TOKEN_FILE || join(tmpdir(), "sahelflow-sidecar-token");
+const APP_URL =
+  process.env.SF_APP_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "http://localhost:3000";
 
 function resolveSidecarToken(): string {
   const fromEnv = process.env.SIDECAR_TOKEN;
@@ -353,7 +358,42 @@ function broadcast(event: SidecarEvent): void {
     if (client.readyState === WebSocket.OPEN) client.send(payload);
   }
 }
-wa.subscribe(broadcast);
+
+const inboundSpool = new WhatsAppInboundSpool({
+  appUrl: APP_URL,
+  bearerToken: SIDECAR_REST_TOKEN,
+  onCommitted(envelope) {
+    // Browser publication is explicitly after the app acknowledged the durable
+    // ProviderIngressEvent commit. Database readers remain source of truth;
+    // WebSocket delivery is a low-latency projection only.
+    broadcast({ type: "message", message: envelope.message });
+  },
+});
+
+wa.subscribe((event) => {
+  if (event.type !== "message" || !event.message || event.message.key.fromMe) {
+    broadcast(event);
+    return;
+  }
+  const status = wa.getStatus();
+  if (status.status !== "connected" || !status.user?.id) {
+    console.error(
+      "[sahelflow-whatsapp-sidecar] refusing inbound publication without paired account authority",
+    );
+    return;
+  }
+  try {
+    // enqueue() performs an atomic synchronous file commit before returning.
+    // It schedules app delivery; this callback intentionally does not broadcast.
+    inboundSpool.enqueue(status.user.id, event.message);
+  } catch (error) {
+    console.error(
+      "[sahelflow-whatsapp-sidecar] failed to durably spool inbound message",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+});
+inboundSpool.start();
 
 function sendCurrentStatus(client: WebSocket): void {
   const status = wa.getStatus();
@@ -423,6 +463,7 @@ void wa.start().catch((error) => {
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
+    inboundSpool.stop();
     clearInterval(wsExpirySweep);
     server.stop();
     process.exit(0);

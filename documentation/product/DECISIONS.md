@@ -547,6 +547,38 @@ This decision clarifies how FD-028 is executed. It does not replace the Phase
 - The truth levels remain distinct: implemented, source-proven, artifact-proven,
   Founder-accepted and phase-closed. A lower level cannot claim a higher one.
 
+## FD-030 — Phase 3 provider conformance closure; live accounts deferred to representative beta
+
+This decision records the Founder’s 2026-08-04 provider-evidence boundary.
+
+- The Founder is not currently operating an e-commerce seller account and cannot
+  supply real courier or communication-provider accounts before the application
+  is complete enough for representative beta testers.
+- Real credentials must never be pasted into agent chat, source, tests, issues or
+  evidence artifacts. They are entered only through SahelFlow’s protected secret
+  interface by an authorized seller or beta operator.
+- Phase 3 completion does **not** require a live real-account provider call.
+  Phase 3 closes when the provider architecture is source-complete, fail-closed,
+  production-built and proven by deterministic contract/conformance simulators,
+  duplicate/timeout/rate-limit/ambiguity/restart/recovery tests, exact credential
+  and endpoint binding, durable attempts/receipts and one canonical effect path.
+- Live provider certification moves to Phase 9 representative beta and remains
+  mandatory before a provider is publicly described as live-certified or relied
+  upon for Stable readiness.
+- Until live certification exists, SahelFlow must distinguish configured,
+  source-reviewed, simulated/conformance-proven and live-certified states. A
+  lower evidence state may never be displayed or documented as live-certified.
+- Providers without an authoritative usable contract remain disabled. NOEST
+  effects stay fail-closed until its exact provider-issued contract is available;
+  DHD remains absent from runtime registration.
+- Issue #201 installed hydrated-WebView evidence and real-provider evidence remain
+  required at the applicable Level 3 / representative beta / Stable gates, but
+  they are not Phase 3 implementation blockers.
+- This supersedes only lower Phase 3 roadmap/issue wording that required real
+  provider accounts or issue #201 before Phase 3 could close. It does not weaken
+  FD-028/FD-029 Public Stable, representative beta, security, privacy, recovery,
+  provider, Windows, Founder-acceptance or evidence-honesty requirements.
+
 ---
 
 ## Change control

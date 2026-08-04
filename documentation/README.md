@@ -2,19 +2,21 @@
 
 > **Status:** Active documentation entry point
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Live protected main:** `991c61ac882497fdda01af3ac04f06978146bbda`
-> **Latest application-changing protected merge:** `04d4c51831c6e043ab39a614a7e947e6b27d01e6`
+> **Live protected main:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
+> **Latest application-changing protected merge:** `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active product phase:** Phase 2 — identity, authorization, licensing and multi-shop
+> **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Execution mode:** single-agent, audit-first, batch remediation and tiered CI
-> **Active implementation outcome:** native multi-shop authority
+> **Active implementation outcome:** Phase 3 closure authorized under FD-030; Phase 4 audit next
 > **Active agent:** ChatGPT Web Agentic Coding Agent
-> **Active draft:** PR #200 from `agent/native-multi-shop-authority`
+> **Active draft:** PR #203 from `agent/phase3-durable-effects-audit`
+> **Phase execution issue:** issue #202
+> **Retained installed evidence:** issue #201
 > **Execution epic:** issue #164
-> **Last updated:** 2026-08-02
+> **Last updated:** 2026-08-04
 
 Live protected `main` must be re-read directly from GitHub before every session.
 The commit above is the exact current protected source at this update; it is not a
@@ -26,8 +28,9 @@ dependency order, research/delivery process and exact execution frontier.
 
 The active authority remains intentionally limited to ten Markdown documents.
 Issue #164 tracks execution but is not an eleventh product or architecture
-authority. Historical reports under `archive/` are context only until revalidated
-and adopted by an active owner.
+authority. Issues #201 and #202 track bounded Phase 3 work and evidence. Historical
+reports under `archive/` are context only until revalidated and adopted by an
+active owner.
 
 ## Read order
 
@@ -46,7 +49,7 @@ and adopted by an active owner.
 7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — single-agent execution,
    audit-first planning, Problem Register, tiered CI, review, release and evidence.
 8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact live
-   execution frontier, native multi-shop contract and exact next task.
+   Phase 3 frontier, audit status, Problem Register and exact next task.
 9. [`research/RESEARCH.md`](research/RESEARCH.md) — research protocol, adopted
    findings and revalidation triggers.
 10. This file — documentation map and authority rules.
@@ -73,40 +76,44 @@ Contradictions are reconciled in the owning document before dependent work.
 
 SahelFlow separates these realities:
 
-| Reality | Authority |
-|---|---|
-| Integrated source | live protected `main` and exact commit |
-| Proposed source | exact branch and PR head |
-| Latest application-changing source | exact protected merge that changed product behavior |
-| Signed distributable | exact-source signed Internal/Beta/Stable artifact |
-| Founder-observed app | exact installed version and recorded machine result |
-| Founder AAA Candidate | all Required internal implementation/evidence gates |
-| Public Stable | representative beta plus provider, security, privacy, legal, recovery, compatibility and rollout evidence |
+| Reality                            | Authority                                                                                                 |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Integrated source                  | live protected `main` and exact commit                                                                    |
+| Proposed source                    | exact branch and PR head                                                                                  |
+| Latest application-changing source | exact protected merge that changed product behavior                                                       |
+| Signed distributable               | exact-source signed Internal/Beta/Stable artifact                                                         |
+| Founder-observed app               | exact installed version and recorded machine result                                                       |
+| Founder AAA Candidate              | all Required internal implementation/evidence gates                                                       |
+| Public Stable                      | representative beta plus provider, security, privacy, legal, recovery, compatibility and rollout evidence |
 
 A lower reality cannot claim a higher one.
 
 ## Current protected truth
 
-- PR #195 merged the repaired Phase 1 Golden COD boundary and Phase 2A
+- PR #195 merged the repaired Phase 1 Golden COD boundary and durable
   identity/Teams source at
   `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
 - PR #197 merged signed licensing authority at
   `04d4c51831c6e043ab39a614a7e947e6b27d01e6`.
-- Licensing implementation head
-  `25abbedd176429cf25e657217726d833e3c62a10` passed CI `30744598944`; all review
-  threads were resolved.
-- PR #198 merged the previous documentation frontier at
-  `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`.
 - PR #199 merged the single-agent AAA governance reset at
   `991c61ac882497fdda01af3ac04f06978146bbda`.
-- No version bump, signed Phase 2 candidate or new installed claim accompanied
-  those source merges.
-- Native multi-shop remains the final Phase 2 implementation outcome.
-- PR #200 is open as a draft and begins with authority reconciliation plus a pure
-  Rust lifecycle contract. It is proposed source only and currently makes no
-  registry, database, runtime, AppData or release claim.
-- Complete Windows/Rust/signed-MSI/install/reopen/preserved-data proof remains the
-  Phase 2 exit checkpoint.
+- PR #200 merged native multi-shop authority at
+  `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`.
+- The Tauri host is protected source authority for create, rename, switch,
+  archive, recover and delete through a journaled lifecycle with exact identity,
+  licensing, migration, runtime-readiness, compensation and recovery binding.
+- The PR #200 installed MSI built, installed, launched, closed and reopened, but
+  the ephemeral runner did not observe the authenticated hydrated-WebView receipt
+  twice. The Founder-authorized closure exception is retained only in issue #201;
+  it is not passing installed-UI evidence.
+- No application version bump, release publication, Founder acceptance or Stable
+  claim accompanied the Phase 1/2 protected-source closures.
+- Issue #202 owns Phase 3. Draft PR #203 is the sole active Phase 3 package.
+- Tasks 3–6 are source-closed on PR #203 at clean implementation head
+  `676d0e41cc69d44c29b912038cba100fd827fcfa`; checkpoint `30875723975` passed.
+- FD-030 moves real provider and issue #201 evidence to Phase 9/applicable Level
+  3, allowing Phase 3 closure on the passed deterministic conformance and Level 2
+  source/build evidence. PR #203 remains the protected closure vehicle.
 
 ## Current execution model
 
@@ -123,9 +130,9 @@ The Founder selected the following permanent operating pattern:
 - complete full-app AAA frontend transformation as a Stable requirement.
 
 For the current package, the Founder selected the ChatGPT Web Agentic Coding Agent
-as the sole active implementation agent. The active contract is in Working Memory:
-Tauri owns lifecycle transactions; the browser submits typed intent and renders
-state only.
+as the sole active agent. Phase 3 production source is frozen after Tasks 3–6.
+Only the protected PR #203 closure and subsequent Phase 4 audit/contract freeze
+are authorized; broad Phase 4 production edits are not yet authorized.
 
 This executes FD-028 and FD-029 without reducing Required scope.
 
@@ -145,22 +152,51 @@ This executes FD-028 and FD-029 without reducing Required scope.
 Experience, Arabic/RTL, accessibility, performance, security, migration, recovery
 and evidence travel continuously across functional phases.
 
-## Active Phase 2 contract
+## Active Phase 3 contract
 
-Native multi-shop must compose existing protected primitives rather than create
-competing authority:
+Phase 3 must make every external input and effect durable, replayable, observable
+and safe:
 
-- Rust migration coordinator and exact database-file/migration-set validation;
-- runtime-generation supervisor, process containment and authenticated readiness;
-- process-bound immutable `ShopContext` and Prisma write fencing;
-- durable person/member/device/session and exact shop grants;
-- signed entitlement and exact `shopSlots` authority;
-- verified SQLite snapshot, compensation and recovery behavior.
+```text
+authenticated ingress
+→ durable inbox
+→ validation and deduplication
+→ canonical command
+→ committed result
+→ durable outbox
+→ external effect
+→ receipt and reconciliation
+```
 
-Create, rename, switch, archive, recover and delete use one native journaled state
-machine. No browser registry write, caller-selected database path, mutable Zustand
-authority or generic relaunch-after-HTTP sequence may become canonical lifecycle
-authority.
+The package must preserve and compose existing protected primitives:
+
+- exact trusted person/member/device/session and `ShopContext` authority;
+- signed licensing and native multi-shop lifecycle authority;
+- canonical business command, event, encrypted outbox and movement facts;
+- durable outbound WhatsApp effect identity, leases, ambiguity and sidecar
+  receipts;
+- canonical courier booking, tracking and reconciliation;
+- commerce source commands and checkpoint refusal after any failed item.
+
+The audit must close the competing paths:
+
+- inbound WhatsApp currently depends on an in-memory sidecar history rather than
+  persistence-before-acknowledgement;
+- automation multi-step execution can continue after a failed step and record the
+  whole run as success;
+- automation WhatsApp actions call the sidecar directly instead of the durable
+  outbox;
+- sensitive AI actions use generic current-message confirmation rather than one
+  persisted exact proposal and approval;
+- commerce synchronization lacks durable per-run/per-item ingress and operator
+  recovery authority;
+- provider certification and inactive-shop worker ownership are not yet complete
+  contracts.
+
+The older `agent/phase3-durable-whatsapp-recovery` and
+`codex/phase3-durable-provider` branches are diverged evidence only. Validated
+design and tests may be selectively reconstructed on current protected source;
+those branches must not be merged wholesale.
 
 ## AAA frontend rule
 

@@ -1,6 +1,6 @@
 /**
  * Yalidine delivery adapter tests (TEST-007).
- * Mock-fetch pattern matching dhd.test.ts. Tests: no-creds, success, HTTP error, malformed JSON.
+ * Mock-fetch smoke coverage. Tests: no-creds, success, HTTP error, malformed JSON.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { yalidineAdapter } from "../yalidine";

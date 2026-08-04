@@ -30,6 +30,11 @@ vi.mock("@/lib/integrations/delivery", () => ({
   loadDeliveryCredentials: vi.fn().mockResolvedValue({ apiId: "x", apiToken: "y" }),
 }));
 
+vi.mock("@/lib/integrations/delivery/provider-capability", () => ({
+  assertProviderCapability: vi.fn().mockResolvedValue(undefined),
+}));
+
+
 import "@/lib/ai/chat/tools/core-tools"; // side-effect: registers 6 tools
 import { getTool, type ToolContext } from "../registry";
 import {

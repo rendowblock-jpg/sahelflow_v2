@@ -25,6 +25,7 @@ interface DeliveryRowActionsProps {
 const PROVIDER_TRACKING_URLS: Record<string, string> = {
   yalidine: "https://suivi.yalidine.app/",
   maystro: "https://www.maystro-delivery.com/",
+  noest: "https://noest-dz.com/",
   zrexpress: "https://zrexpress.com/",
 };
 
@@ -38,7 +39,7 @@ const PROVIDER_TRACKING_URLS: Record<string, string> = {
  * need to call the API to know the result — the dashboard URL is a
  * static property of the provider.
  *
- * For providers NOT in this map (Yalidine, Maystro, DHD), no Cancel
+ * For providers NOT in this map (Yalidine, Maystro, NOEST), no Cancel
  * button is rendered. A real cancel API endpoint would be needed to
  * wire those up (out of scope for W3-11 — ZR Express is the stub).
  */

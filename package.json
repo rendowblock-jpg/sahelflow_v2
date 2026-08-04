@@ -119,16 +119,12 @@
   "overrides": {
     "esbuild": "0.25.0",
     "music-metadata": "11.14.0",
-    "postcss": "8.5.19",
+    "postcss": "8.5.23",
     "uuid": "11.1.1",
-    "brace-expansion": "5.0.8",
     "js-yaml": "4.3.0",
     "sharp": "0.35.3"
   },
   "workspaces": [
     "sidecars/whatsapp"
-  ],
-  "patchedDependencies": {
-    "brace-expansion@5.0.8": "patches/brace-expansion@5.0.8.patch"
-  }
+  ]
 }

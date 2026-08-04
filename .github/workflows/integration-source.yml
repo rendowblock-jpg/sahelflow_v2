@@ -17,7 +17,10 @@ jobs:
     name: Draft integration source checkpoint
     if: >-
       ${{ github.event.pull_request.draft == true &&
-          github.event.pull_request.head.ref == 'agent/phases1-4-completion-program' }}
+          contains(
+            fromJSON('["agent/phases1-4-completion-program","agent/phase3-durable-effects-audit"]'),
+            github.event.pull_request.head.ref
+          ) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:

@@ -11,7 +11,7 @@ import { getDeliveryAdapter, listDeliveryAdapters, PROVIDERS } from "../index";
 import { yalidineAdapter } from "../yalidine";
 import { maystroAdapter } from "../maystro";
 import { zrExpressAdapter } from "../zr-express";
-import { dhdAdapter } from "../dhd";
+import { noestAdapter } from "../noest";
 
 describe("Delivery adapter registry", () => {
   describe("getDeliveryAdapter", () => {
@@ -34,10 +34,10 @@ describe("Delivery adapter registry", () => {
       expect(adapter.id).toBe("zrexpress");
     });
 
-    it("returns the DHD adapter for 'dhd'", () => {
-      const adapter = getDeliveryAdapter("dhd");
-      expect(adapter).toBe(dhdAdapter);
-      expect(adapter.id).toBe("dhd");
+    it("returns the NOEST adapter for 'noest'", () => {
+      const adapter = getDeliveryAdapter("noest");
+      expect(adapter).toBe(noestAdapter);
+      expect(adapter.id).toBe("noest");
     });
 
     it("throws on unknown provider", () => {
@@ -71,12 +71,12 @@ describe("Delivery adapter registry", () => {
       expect(adapters).toHaveLength(4);
     });
 
-    it("includes yalidine, maystro, zrexpress, dhd", () => {
+    it("includes yalidine, maystro, zrexpress, noest", () => {
       const ids = listDeliveryAdapters().map((a) => a.id);
       expect(ids).toContain("yalidine");
       expect(ids).toContain("maystro");
       expect(ids).toContain("zrexpress");
-      expect(ids).toContain("dhd");
+      expect(ids).toContain("noest");
     });
 
     it("each adapter has id + name + logo + estimateCost + createShipment + syncTracking", () => {
@@ -93,7 +93,7 @@ describe("Delivery adapter registry", () => {
 
   describe("PROVIDERS constant", () => {
     it("lists all 4 providers in canonical order", () => {
-      expect(PROVIDERS).toEqual(["yalidine", "maystro", "zrexpress", "dhd"]);
+      expect(PROVIDERS).toEqual(["yalidine", "maystro", "zrexpress", "noest"]);
     });
   });
 });

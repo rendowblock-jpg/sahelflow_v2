@@ -1,0 +1,110 @@
+{
+  "formatVersion": 2,
+  "phase": 3,
+  "task": 6,
+  "name": "durable-commerce-runtime",
+  "state": "source-closed-evidence-open",
+  "sourceClosedAt": "2026-08-04",
+  "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+  "activeBranch": "agent/phase3-durable-effects-audit",
+  "activePr": 203,
+  "implementationHead": "762ee06e6e76986806c5030370bad4fa6168490a",
+  "cleanHead": "29cc179447de1efba1aad8377b5eee677da90d5d",
+  "validation": {
+    "schemaCheckpointRun": 30870303006,
+    "pageCursorPublicationRun": 30871058952,
+    "runtimePublicationRun": 30871657891,
+    "recoveryPublicationRun": 30872611169,
+    "uiPublicationRun": 30873876668,
+    "finalAuthorityRun": 30874432466,
+    "cleanStandardCheckpointRun": 30874687402,
+    "normalCiRun": 30874687547,
+    "status": "passed"
+  },
+  "providerCapabilityFoundation": {
+    "sourceHead": "1d751a2e26b5f911aebe1a28e58cc1b500f1a0a7",
+    "integrationRun": 30869805644,
+    "normalCiRun": 30869805729,
+    "contract": [
+      "connection probes certify connection only",
+      "Yalidine, Maystro and legacy ZR capabilities require a current exact connection plus source-reviewed or live-certified evidence",
+      "NOEST effects remain disabled until the exact provider-issued endpoint contract is independently certified",
+      "credential or endpoint drift invalidates execution authority"
+    ]
+  },
+  "sourceProvenOutcomes": {
+    "queue": [
+      "POST creates or returns one active run per platform and returns 202",
+      "request handlers never fetch provider pages or mutate canonical orders inline",
+      "the exact active-shop worker is the only run, page and item executor"
+    ],
+    "pagination": [
+      "Shopify page_info and WooCommerce/YouCan page cursors are persisted as opaque continuation",
+      "every fetched provider page is committed before any item is processed",
+      "page budgets yield and requeue without discarding continuation",
+      "candidate watermarks retain the maximum observed value across provider page ordering"
+    ],
+    "items": [
+      "each normalized provider order is encrypted before canonical processing",
+      "item identity binds platform, provider order identity and source revision",
+      "one leased immutable attempt executes at a time",
+      "canonical command replay makes restart after mutation safe",
+      "validation conflicts quarantine immediately; retryable faults use bounded generation-scoped retries"
+    ],
+    "providerAuthority": [
+      "each run stores exact credential and endpoint fingerprints",
+      "credential or endpoint drift fails closed before another provider page is fetched",
+      "canonical source identity remains integration-stable so provider credential rotation cannot duplicate orders"
+    ],
+    "watermark": [
+      "Integration.config remains the compatibility projection",
+      "the watermark commits atomically only after fetch completion and every item succeeds or is skipped",
+      "partial, retrying, quarantined and dead-letter runs retain the previous watermark",
+      "terminal watermark conflicts release the active run key so a reconciled new run can be queued"
+    ],
+    "recovery": [
+      "sanitized run, page, item and immutable-attempt history",
+      "reason-bound audited operator retry with fresh automatic retry generations",
+      "no decrypted provider payload or customer PII leaves the service boundary",
+      "inactive-shop runs remain durable and are not drained"
+    ],
+    "experience": [
+      "Arabic, French and English queued, fetching, processing, retrying, partial, quarantine, dead-letter, conflict and history states",
+      "RTL-safe provider identifiers and keyboard-operable expansion/retry controls",
+      "settings Sync now reports durable queueing rather than false synchronous completion"
+    ]
+  },
+  "separatedAdversarialReview": {
+    "status": "complete-repaired",
+    "repairs": [
+      "prevented max-page checkpoint skips by exposing provider continuation",
+      "prevented monotonic watermark regression across descending provider pages",
+      "bound runs to exact credential and endpoint contracts",
+      "released terminal conflict runs for a fresh exact contract",
+      "scoped retry budgets by operator recovery generation",
+      "removed request-synchronous provider work",
+      "kept operator and UI projections PII-free"
+    ]
+  },
+  "closedProblemIds": [
+    "P3-P1-007"
+  ],
+  "constraints": {
+    "versionBumpAuthorized": false,
+    "releaseAuthorized": false,
+    "founderAcceptanceAuthorized": false,
+    "phaseClosureAuthorized": false,
+    "stableClaimAuthorized": false
+  },
+  "evidenceBoundary": {
+    "proven": "source, database, migration, integration and development UI",
+    "notProven": [
+      "live commerce-provider behavior with current real stores",
+      "signed artifact",
+      "installed Windows behavior",
+      "Founder acceptance",
+      "Phase 3 closure",
+      "Stable"
+    ]
+  }
+}

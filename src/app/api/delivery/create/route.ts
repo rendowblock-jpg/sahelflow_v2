@@ -10,13 +10,14 @@ import {
   loadDeliveryCredentials,
 } from "@/lib/integrations/delivery";
 import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 import { ConflictError, SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
 const createSchema = z.object({
   orderId: z.string().min(1),
-  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
 });
 
 class ExistingShipmentError extends ConflictError {
@@ -54,6 +55,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const input = createSchema.parse(body);
   const context = { prisma: db, shop: shopContext };
+  await assertProviderCapability(context, input.provider, "booking");
   const adapter = getDeliveryAdapter(input.provider);
   const creds = await loadDeliveryCredentials(context, input.provider);
 
@@ -321,7 +323,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     throw error;
   }
 
-  orderService.dispatchStatusTransition(context, committed.effects);
+  await orderService.dispatchStatusTransition(context, committed.effects);
 
   return NextResponse.json({
     ok: true,

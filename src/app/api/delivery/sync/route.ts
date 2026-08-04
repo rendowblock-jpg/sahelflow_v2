@@ -11,6 +11,7 @@ import {
   loadDeliveryCredentials,
 } from "@/lib/integrations/delivery";
 import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
+import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 import { ConflictError, InvalidTransitionError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
+  await assertProviderCapability(context, delivery.provider, "tracking");
   const adapter = getDeliveryAdapter(delivery.provider);
   const creds = await loadDeliveryCredentials(context, delivery.provider);
   const tracking = await adapter.syncTracking(delivery.trackingNumber, creds);
@@ -199,7 +201,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   if (committed.effects) {
-    orderService.dispatchStatusTransition(context, committed.effects);
+    await orderService.dispatchStatusTransition(context, committed.effects);
   }
   if (committed.conflict) {
     return NextResponse.json(
@@ -239,9 +241,11 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
+  const context = { prisma: db, shop: shopContext };
+  await assertProviderCapability(context, delivery.provider, "tracking");
   const adapter = getDeliveryAdapter(delivery.provider);
   const creds = await loadDeliveryCredentials(
-    { prisma: db, shop: shopContext },
+    context,
     delivery.provider,
   );
   const tracking = await adapter.syncTracking(delivery.trackingNumber, creds);

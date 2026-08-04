@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireTrustedAction } from "@/lib/identity/authorization";
 import {
   dispatchTrigger,
   type TriggerEvent,
 } from "@/lib/automations/engine";
 import { db, shopContext } from "@/lib/db";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import { executeManualOrderDecision } from "@/lib/orders/manual-confirmation";
 
 export const dynamic = "force-dynamic";
@@ -24,18 +24,29 @@ export const POST = withErrorHandler(
     });
 
     if (!command.replayed) {
-      void dispatchTrigger(
+      const trigger = command.result.automation.trigger as TriggerEvent;
+      await dispatchTrigger(
         context,
-        command.result.automation.trigger as TriggerEvent,
+        trigger,
         command.result.automation.order,
+        {
+          triggerKey: `${trigger}:${command.result.orderId}:v${command.result.version}`,
+        },
       );
       for (const product of command.result.automation.lowStock) {
-        void dispatchTrigger(context, "stock.low" as TriggerEvent, {
-          productId: product.id,
-          productName: product.name,
-          stockLevel: product.stock,
-          lowStockThreshold: product.lowStockThreshold,
-        });
+        await dispatchTrigger(
+          context,
+          "stock.low" as TriggerEvent,
+          {
+            productId: product.id,
+            productName: product.name,
+            stockLevel: product.stock,
+            lowStockThreshold: product.lowStockThreshold,
+          },
+          {
+            triggerKey: `stock.low:${product.id}:order:${command.result.orderId}:v${command.result.version}`,
+          },
+        );
       }
     }
 

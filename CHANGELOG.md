@@ -8,6 +8,45 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### Phase 3 durable providers, inbox, automations and AI
+
+- Completed governance reconciliation, exhaustive inventory and shared contract freeze on draft PR #203.
+- Source-closed durable inbound WhatsApp and database-authoritative inbox at `f016055be55fd220baa87c26ffed565c4e9e1d85`.
+- Source-closed truthful durable automations at `c873b8b6a256383497d3799e0839160178e92149`.
+- Source-closed proposal-bound sensitive AI actions at `07caedbc797ced5dc0e2ac959f252d5b3481285d`.
+- Source-closed provider capability authority, durable commerce and the canonical courier facade at clean head `676d0e41cc69d44c29b912038cba100fd827fcfa`; full checkpoint `30875723975` and normal CI `30875724094` passed.
+- Added exact active-shop workers, encrypted provider ingress, durable run/page/item and immutable-attempt truth, cursor continuation, generation-scoped retry, monotonic checkpointing, exact credential/endpoint binding, audited AR/FR/EN recovery and PII-free history.
+- Removed DHD runtime registration, kept unverified NOEST effects fail-closed and removed competing courier queue/reconciliation exports behind one public facade.
+- Phase 3 Level 2 run `30878352410` passed the complete source/database/migration suite, semantic authority, production WhatsApp sidecar build and production Next build.
+- FD-030 closes Phase 3 without real provider accounts before beta and defers live provider certification to Phase 9 representative beta.
+- Added deterministic Yalidine, Maystro and ZR request/response conformance plus NOEST fail-closed coverage, rate-limit/timeout retry policy and no-duplicate POST proof at `9e488fa3bcfa6fff944924c341084ea95243ebc7` (`30887782488`, `30887786426`).
+- Phase 3 closure is Founder-authorized under FD-030 pending protected merge of PR #203; live-provider and issue #201 evidence remain later Beta/Level 3 obligations rather than Phase 3 blockers.
+- No version, MSI, release, Founder-acceptance, Phase 3 closure or Stable claim was made.
+
+### Phase 2 protected-source closure
+
+- Merged PR #197 with signed installation-level trial/permanent licensing,
+  protected clock/recovery floors, transfer/recovery/revocation and complete
+  data-preserving lockout.
+- Merged PR #200 at
+  `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`, making the Tauri host the sole
+  authority for create, rename, switch, archive, recover and delete.
+- Bound native lifecycle operations to exact registry revision, workspace,
+  installation, person/member/device/session, policy/revocation, signed
+  entitlement/slots, migration set and shop incarnation authority.
+- Added one journaled lifecycle with quiescence, database/registry mutation,
+  runtime restart, authenticated readiness, compensation and startup
+  reconciliation.
+- Removed browser registry mutation and generic process-relaunch authority.
+- Passed source, database, Rust, Tauri, Windows runtime, containment and MSI
+  build/install/launch/close/reopen evidence.
+- Retained one explicit limitation in issue #201: the ephemeral runner did not
+  observe the installed authenticated hydrated-WebView receipt twice. The Founder
+  authorized merge with that single limitation; it is not passing installed-UI
+  evidence and does not reopen native lifecycle authority.
+- No version bump, new signed release, Founder acceptance or Stable claim
+  accompanied the Phase 2 protected-source closure.
+
 ### Canonical Golden COD and Windows authority adoption
 
 - Merged PR #190 with trusted manual intake, canonical confirmation/rejection,
@@ -15,50 +54,32 @@ SahelFlow 1.0 Stable has not been released.
   reservation, inventory movement and complete AR/FR/EN decision states.
 - Merged PR #192 with governed packing, manual shipment, reservation consumption,
   outbound inventory, delivery, customer delivery facts and creation of a DZD COD
-  receivable. Canonical delivered orders are fenced from the unsafe legacy return
-  path until governed return/refund compensation is implemented.
-- Merged PR #191 with a narrow current-shop authorization boundary: the current
-  compatibility PIN actor can read only the exact process shop and cannot create,
-  switch or delete shops or mint a trusted actor context.
+  receivable.
+- Merged PR #195 with repaired canonical settlement, return/refund/compensation,
+  replay and authorization boundaries together with durable identity, Teams and
+  permissions.
 - Merged PR #184 with a Windows DPAPI-protected installation root, exact existing-
   root import, current/candidate/backup authority, resumable native rotation and
-  recovery journaling. Exact-head CI passed staged runtime and installed-MSI
-  build, install, rotation, authenticated launch, close and reopen.
+  recovery journaling.
 - Kept ordinary source packages version-neutral. Internal.13 remains the
   published and Founder-installed release; a new signed Internal milestone has
   not yet been cut.
-- Recorded the remaining boundaries explicitly: Phase 1 still needs COD
-  settlement, exceptions, returns/refunds/compensation and remaining intake
-  sources; Phase 2 still needs durable identity/licensing/multi-shop; Phase 4
-  still needs complete backup/restore, replacement recovery and certification.
 
 ### Final Completion Program and Research-First Quality Protocol
 
-- Added Founder decision FD-028.
-- Replaced the obsolete four-session execution overlay with one final Phase 0–9
-  dependency and completion program.
-- Preserved milestone-based Internal releases, bounded WIP, independent review,
-  P0/P1 blocking, exact-source evidence and continuous Arabic/RTL,
-  accessibility, recovery and performance quality.
+- Added Founder decisions FD-028 and FD-029.
+- Replaced obsolete session overlays with one final Phase 0–9 dependency and
+  completion program.
+- Preserved milestone-based Internal releases, one active agent, complete
+  reconnaissance, one Problem Register, batch remediation, P0/P1 blocking,
+  exact-source evidence and continuous Arabic/RTL, accessibility, recovery and
+  performance quality.
 - Made current primary-source research mandatory before every major phase,
   durable contract and material implementation.
-- Added an explicit no-AI-slop product and frontend standard: generic trends,
-  screenshots, mocks, adapter presence and unsourced AI recommendations are not
-  implementation authority.
 - Required complete observable vertical outcomes and removal of competing legacy
-  mutation paths after canonical adoption and recovery proof.
-- Reconciled documentation entry points, current state, roadmap, workflow,
-  research and Working Memory around one authority chain.
+  mutation/effect paths after canonical adoption and recovery proof.
 - Converted issue #164 into the live Phase 0–9 execution dashboard without making
   it an additional documentation authority.
-- Recorded the first next production package as canonical manual order intake and
-  confirmation with trusted authority, exact idempotency, optimistic concurrency,
-  atomic inventory reservation/movement, audit, event, outbox, complete AR/FR/EN
-  UI states and legacy-path removal.
-
-This authority reset is documentation-only. It does not change installed
-application behavior and does not require an MSI unless executable release
-or updater authority changes.
 
 ### Internal.13 published milestone
 
@@ -71,32 +92,25 @@ or updater authority changes.
   inventory and financial movements, projection invalidations and compensation
   facts.
 - Added compatible workspace, installation, shop-incarnation and exact process
-  ShopContext authority.
+  `ShopContext` authority.
 - Added crash-recoverable multi-shop key rotation, migration-authoritative reset,
   fail-closed audit persistence and evidence-based legacy projections.
 - Added shared Arabic typography, bidi, shell, table, dialog, chart and
   operational-state foundations plus generated route-risk inventory.
-- Corrected GitHub draft publication authority in PR #177 at
-  `b2776bd3ea8d879a475c26af9d0c720d666671a9`.
-- Adopted FD-028 and the final Phase 0–9 completion program in PR #179, merged as
-  `18c45e474f58744b6f837372509154ca500044b0`; exact-head CI run `30430538958`
-  passed.
 - Protected run `30366866703` passed exact-source authority, signed build, staged
   readiness, MSI/signature verification, installed launch/reopen, authenticated
   hydrated UI twice, deterministic evidence, exact release-asset comparison,
   source-bound tag verification and automatic publication.
-- Published `1.0.0-internal.13` as GitHub latest with the signed MSI, its detached
-  signature and public `latest.json` updater metadata containing that MSI
-  signature.
+- Published `1.0.0-internal.13` with the signed MSI, detached signature and public
+  updater metadata.
 - Confirmed the Founder-installed Internal.13 executable and preserved T470
-  AppData identity/database snapshot. Startup remained over budget at 68.863
-  seconds from a stopped process and 31.834 seconds on immediate reopen; Arabic
-  chart visual behavior and explicit Founder acceptance remain open.
+  AppData/database identity. Startup remained over budget at 68.863 seconds from
+  a stopped process and 31.834 seconds on immediate reopen; Arabic chart visual
+  behavior and explicit Founder acceptance remain open.
 
 ### Documentation truth reset
 
-- Consolidated active documentation into ten authoritative documents in PR #154
-  at `5e0527289d7cc3ff06a0e6d4307f6fb125f358ae`.
+- Consolidated active documentation into ten authoritative documents in PR #154.
 - Replaced duplicate product, experience, architecture, gap, roadmap, prompt,
   wave and history documents.
 - Preserved detailed research as non-authoritative archive evidence.

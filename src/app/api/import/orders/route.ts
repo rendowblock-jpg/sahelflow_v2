@@ -16,8 +16,8 @@ import {
   validateRows,
 } from "@/lib/import/engine";
 import { ORDER_FIELDS, parseNumber } from "@/lib/import/fields";
-import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 import { assertTrustedAction } from "@/lib/identity/authorization";
+import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 import {
   canonicalImportRowSchema,
   prepareCanonicalFileImport,
@@ -175,10 +175,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         replayed += 1;
       } else {
         inserted += 1;
-        void dispatchTrigger(
+        await dispatchTrigger(
           { prisma: db, shop: actorContext.shop },
           "order.created" as TriggerEvent,
           command.result.automation,
+          {
+            triggerKey: `order.created:${command.result.order.id}`,
+            occurredAt: command.result.order.createdAt,
+          },
         );
       }
     } catch (error) {

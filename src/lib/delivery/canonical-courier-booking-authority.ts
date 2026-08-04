@@ -1,5 +1,10 @@
 import "server-only";
 
+/**
+ * Canonical courier booking command authority and effect preflight.
+ * Public callers must import canonical-courier.ts, never this internal layer.
+ */
+
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
@@ -26,6 +31,7 @@ import {
   type ShipmentResult,
 } from "@/lib/integrations/delivery/types";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 import {
   ConflictError,
   NotFoundError,
@@ -34,22 +40,20 @@ import {
 } from "@/types/errors";
 import {
   COURIER_BOOKING_EFFECT_TYPE,
-  drainDueCourierBookings as drainLegacyCourierBookings,
+  drainDueCourierBookings as drainCourierEffectRuntime,
   getCanonicalCourierPosition,
   ingestCanonicalCourierTrackingEvent,
-  reconcileCanonicalCourierBooking,
   synchronizeCanonicalCourierTracking,
   type CourierBookingResult,
   type CourierBookingSender,
   type CourierPosition,
   type CourierTrackingFetcher,
-} from "./canonical-courier-legacy";
+} from "./canonical-courier-effect-runtime";
 
 export {
   COURIER_BOOKING_EFFECT_TYPE,
   getCanonicalCourierPosition,
   ingestCanonicalCourierTrackingEvent,
-  reconcileCanonicalCourierBooking,
   synchronizeCanonicalCourierTracking,
 };
 export type {
@@ -185,7 +189,8 @@ function assertReservations(
       !reservation ||
       reservation.productId !== item.productId ||
       reservation.productVariantId !== item.productVariantId ||
-      safeInteger(reservation.quantity, "reservation quantity") !== item.quantity ||
+      safeInteger(reservation.quantity, "reservation quantity") !==
+        item.quantity ||
       reservation.state !== "active"
     ) {
       throw new ConflictError(
@@ -328,7 +333,9 @@ export async function queueCanonicalCourierBooking(
         data: { version: nextVersion, deliveryState: "pending" },
       });
       if (updated.count !== 1) {
-        throw new ConflictError("Order changed while courier booking was queued");
+        throw new ConflictError(
+          "Order changed while courier booking was queued",
+        );
       }
 
       await tx.canonicalDeliveryEvent.create({
@@ -671,7 +678,10 @@ async function restoreTerminalKnownFailures(
   })) as BookingOutboxRow[];
 
   for (const row of rows) {
-    const request = await bookingRequest(context.prisma as never, row.commandId);
+    const request = await bookingRequest(
+      context.prisma as never,
+      row.commandId,
+    );
     if (!request) continue;
     const order = await context.prisma.order.findFirst({
       where: { id: request.orderId, deletedAt: null },
@@ -764,10 +774,7 @@ async function restoreTerminalKnownFailures(
               payload: result,
             },
           ],
-          projectionInvalidations: [
-            "orders:list",
-            `orders:${current.id}`,
-          ],
+          projectionInvalidations: ["orders:list", `orders:${current.id}`],
         };
       },
     );
@@ -779,6 +786,7 @@ async function defaultBookingSender(
   provider: DeliveryProvider,
   request: ShipmentRequest,
 ): Promise<ShipmentResult> {
+  await assertProviderCapability(context, provider, "booking");
   const adapter = getDeliveryAdapter(provider);
   const credentials = await loadDeliveryCredentials(context, provider);
   return adapter.createShipment(request, credentials);
@@ -808,7 +816,7 @@ export async function drainDueCourierBookings(
 
   const drained =
     remaining > 0
-      ? await drainLegacyCourierBookings(context, remaining, guardedSender)
+      ? await drainCourierEffectRuntime(context, remaining, guardedSender)
       : 0;
   await restoreTerminalKnownFailures(context);
   return preflightProcessed + drained;

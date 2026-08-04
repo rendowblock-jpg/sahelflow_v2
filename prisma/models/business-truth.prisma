@@ -2,7 +2,7 @@
 //
 // The corresponding migrations are additive. These models expose command,
 // event, reservation, movement, outbox, compensation and durable WhatsApp
-// effect tables while legacy readers remain available during migration.
+// effect/ingress tables while legacy readers remain available during migration.
 
 model BusinessAggregateVersion {
   aggregateType String
@@ -98,6 +98,62 @@ model WhatsAppOutboundEffect {
   @@index([providerMessageId])
 }
 
+model ProviderIngressEvent {
+  id                  String    @id
+  ingressKey          String    @unique
+  provider            String
+  environment         String
+  providerAccountHash String
+  eventType           String
+  sourceId            String
+  providerEventId     String
+  payloadJson         String
+  payloadHash         String
+  status              String    @default("received")
+  attemptCount        Int       @default(0)
+  operatorRetryCount  Int       @default(0)
+  nextAttemptAt       DateTime?
+  lockedAt            DateTime?
+  leaseToken          String?
+  lastErrorCode       String?
+  providerTimestamp   DateTime?
+  conversationId      String?
+  messageId           String?
+  appliedAt           DateTime?
+  quarantinedAt       DateTime?
+  deadLetteredAt      DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now()) @updatedAt
+
+  attempts ProviderIngressAttempt[]
+
+  @@unique([provider, environment, providerAccountHash, sourceId, providerEventId])
+  @@index([provider, status, nextAttemptAt])
+  @@index([status, lockedAt])
+  @@index([sourceId, providerTimestamp])
+  @@index([conversationId, providerTimestamp])
+  @@index([messageId])
+}
+
+model ProviderIngressAttempt {
+  id             String    @id
+  ingressEventId String
+  attemptNumber  Int
+  leaseToken     String?
+  state          String
+  errorCode      String?
+  detailJson     String?
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  ingressEvent ProviderIngressEvent @relation(fields: [ingressEventId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([ingressEventId, attemptNumber])
+  @@index([state, startedAt])
+  @@index([ingressEventId, startedAt])
+}
+
 model InventoryReservation {
   id                 String    @id
   reservationKey     String    @unique
@@ -136,7 +192,7 @@ model InventoryMovement {
   reason           String
   occurredAt       DateTime @default(now())
 
-  command     BusinessCommand      @relation(fields: [commandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  command     BusinessCommand       @relation(fields: [commandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   reservation InventoryReservation? @relation(fields: [reservationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([productId, productVariantId, occurredAt])

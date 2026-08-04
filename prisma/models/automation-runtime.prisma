@@ -1,0 +1,101 @@
+// Phase 3 durable automation execution truth.
+//
+// Legacy Automation and AutomationLog rows remain readable. These additive
+// models own stable trigger-definition identity, ordered step execution,
+// immutable attempts, restart-safe leases, durable effect correlation and
+// truthful aggregate state. Production definitions are soft-deleted; cascade
+// relations exist for explicit test/dev hard cleanup only.
+
+model AutomationRun {
+  id                 String    @id
+  runKey             String    @unique
+  automationId       String
+  automationName     String
+  triggerIntentId    String
+  triggerEffectKey   String
+  triggerType        String
+  triggerKey         String
+  definitionHash     String
+  definitionJson     String
+  triggerPayloadJson String
+  triggerPayloadHash String
+  status             String    @default("queued")
+  stepCount          Int
+  succeededStepCount Int       @default(0)
+  failedStepCount    Int       @default(0)
+  skippedStepCount   Int       @default(0)
+  attemptCount       Int       @default(0)
+  operatorRetryCount Int       @default(0)
+  nextAttemptAt      DateTime?
+  lockedAt           DateTime?
+  leaseToken         String?
+  lastErrorCode      String?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  deadLetteredAt     DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now()) @updatedAt
+
+  steps AutomationStepRun[]
+
+  @@unique([automationId, triggerEffectKey, definitionHash])
+  @@index([status, nextAttemptAt])
+  @@index([status, lockedAt])
+  @@index([automationId, createdAt])
+  @@index([triggerEffectKey])
+  @@index([triggerType, createdAt])
+}
+
+model AutomationStepRun {
+  id                 String    @id
+  stepKey            String    @unique
+  runId              String
+  position           Int
+  action             String
+  failurePolicy      String    @default("stop")
+  configJson         String
+  configHash         String
+  status             String    @default("queued")
+  attemptCount       Int       @default(0)
+  operatorRetryCount Int       @default(0)
+  nextAttemptAt      DateTime?
+  lockedAt           DateTime?
+  leaseToken         String?
+  lastErrorCode      String?
+  effectKey          String?
+  effectState        String?
+  resultJson         String?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  deadLetteredAt     DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now()) @updatedAt
+
+  run      AutomationRun           @relation(fields: [runId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  attempts AutomationStepAttempt[]
+
+  @@unique([runId, position])
+  @@index([runId, status, position])
+  @@index([status, nextAttemptAt])
+  @@index([status, lockedAt])
+  @@index([effectKey])
+}
+
+model AutomationStepAttempt {
+  id             String    @id
+  stepRunId      String
+  attemptNumber  Int
+  leaseToken     String?
+  state          String
+  errorCode      String?
+  detailJson     String?
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  stepRun AutomationStepRun @relation(fields: [stepRunId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([stepRunId, attemptNumber])
+  @@index([state, startedAt])
+  @@index([stepRunId, startedAt])
+}

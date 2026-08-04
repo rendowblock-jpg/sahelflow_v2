@@ -47,6 +47,14 @@ export async function cleanDb(): Promise<void> {
   await rawDb.$executeRawUnsafe('DELETE FROM "CollaborationQueue"');
   await rawDb.$executeRawUnsafe('DELETE FROM "CollaborationWorkgroupMember"');
   await rawDb.$executeRawUnsafe('DELETE FROM "CollaborationWorkgroup"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CommerceSyncItemAttempt"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CommerceSyncRunAttempt"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CommerceSyncItem"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CommerceSyncPage"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "CommerceSyncRun"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "AutomationStepAttempt"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "AutomationStepRun"');
+  await rawDb.$executeRawUnsafe('DELETE FROM "AutomationRun"');
   await rawDb.$executeRawUnsafe('DELETE FROM "CompensationFact"');
   await rawDb.$executeRawUnsafe('DELETE FROM "ProjectionInvalidation"');
   await rawDb.$executeRawUnsafe('DELETE FROM "FinancialMovement"');
@@ -148,54 +156,55 @@ export function mockGet(
 
 /** Extract JSON from a Response. */
 export async function getJson(res: Response): Promise<Record<string, unknown>> {
-  return JSON.parse(await res.text()) as Record<string, unknown>;
+  return (await res.json()) as Record<string, unknown>;
 }
 
-/** Seed a storefront config for testing. */
-export async function seedStorefront(opts?: {
-  slug?: string;
-  active?: boolean;
-  productIds?: string[];
-}) {
-  return rawDb.storefrontConfig.create({
+/** Seed a minimal active product. */
+export async function seedProduct(
+  overrides: Partial<{
+    name: string;
+    sku: string;
+    price: number;
+    cost: number;
+    stock: number;
+    lowStockThreshold: number;
+  }> = {},
+) {
+  const category = await rawDb.category.create({
+    data: { name: `Test Category ${crypto.randomUUID()}` },
+  });
+  return rawDb.product.create({
     data: {
-      slug: opts?.slug ?? "test-store",
-      name: "Test Store",
-      description: "Test store for integration tests",
-      theme: JSON.stringify({
-        template: "minimal",
-        primaryColor: "#0ea5e9",
-        showPrices: true,
-        showStock: true,
-      }),
-      productIds: JSON.stringify(opts?.productIds ?? []),
-      contact: JSON.stringify({
-        phone: "0555123456",
-        whatsapp: "0555123456",
-      }),
-      isActive: opts?.active ?? true,
+      name: overrides.name ?? "Test Product",
+      sku: overrides.sku ?? `SKU-${crypto.randomUUID()}`,
+      price: overrides.price ?? 2500,
+      cost: overrides.cost ?? 1500,
+      stock: overrides.stock ?? 100,
+      lowStockThreshold: overrides.lowStockThreshold ?? 5,
+      categoryId: category.id,
+      isActive: true,
     },
   });
 }
 
-/** Seed a product for testing. */
-let _productCounter = 0;
-export async function seedProduct(opts?: {
-  name?: string;
-  price?: number;
-  stock?: number;
-}) {
-  _productCounter += 1;
-  const category = await rawDb.category.create({
-    data: { name: `TestCat${_productCounter}` },
-  });
-  return rawDb.product.create({
+/** Seed one storefront with the supplied product IDs. */
+export async function seedStorefront(
+  overrides: Partial<{
+    slug: string;
+    name: string;
+    productIds: string[];
+    isActive: boolean;
+    active: boolean;
+  }> = {},
+) {
+  return rawDb.storefrontConfig.create({
     data: {
-      name: opts?.name ?? "Test Product",
-      price: opts?.price ?? 2500,
-      stock: opts?.stock ?? 100,
-      categoryId: category.id,
-      isActive: true,
+      slug: overrides.slug ?? "test-store",
+      name: overrides.name ?? "Test Storefront",
+      description: "Test storefront",
+      theme: JSON.stringify({ template: "minimal", primaryColor: "#111111" }),
+      productIds: JSON.stringify(overrides.productIds ?? []),
+      isActive: overrides.isActive ?? overrides.active ?? true,
     },
   });
 }

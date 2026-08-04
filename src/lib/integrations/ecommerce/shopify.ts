@@ -4,6 +4,8 @@ import type {
   NormalizedOrder,
   ShopifyCredentials,
   SyncFetchResult,
+  SyncPageRequest,
+  SyncPageResult,
 } from "./types";
 
 const API_VERSION = "2026-01";
@@ -92,8 +94,9 @@ function normalizeOrder(order: ShopifyOrder): NormalizedOrder {
     })),
     totalPrice: Number.parseFloat(order.total_price) || 0,
     deliveryCost:
-      Number.parseFloat(order.total_shipping_price_set?.shop_money?.amount ?? "0") ||
-      0,
+      Number.parseFloat(
+        order.total_shipping_price_set?.shop_money?.amount ?? "0",
+      ) || 0,
     source: "shopify",
     sourceRevision: order.updated_at,
     sourceMetadata: {
@@ -117,6 +120,76 @@ function isIso8601Watermark(watermark: string): boolean {
 export const shopifyAdapter: EcommerceAdapter = {
   platform: "shopify",
   displayName: "Shopify",
+
+  async fetchOrderPage(
+    credentials: EcommerceCredentials,
+    request: SyncPageRequest,
+  ): Promise<SyncPageResult> {
+    if (!isShopifyCreds(credentials)) {
+      throw new Error("Invalid credentials for Shopify adapter");
+    }
+
+    const { shop, accessToken } = credentials;
+    const baseHost = `${shop}.myshopify.com`;
+    const watermarkIsIso = isIso8601Watermark(request.watermark);
+    let url = request.cursor
+      ? `https://${baseHost}/admin/api/${API_VERSION}/orders.json?page_info=${encodeURIComponent(request.cursor)}&limit=${PAGE_SIZE}`
+      : `https://${baseHost}/admin/api/${API_VERSION}/orders.json?status=any&limit=${PAGE_SIZE}`;
+    if (!request.cursor && watermarkIsIso) {
+      url += `&updated_at_min=${encodeURIComponent(request.watermark)}`;
+    }
+
+    const max429Retries = 3;
+    let retries = 0;
+    while (true) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30_000);
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          headers: { "X-Shopify-Access-Token": accessToken },
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      if (response.status === 429) {
+        if (retries >= max429Retries) {
+          throw new Error(
+            `Shopify API 429: rate limit exceeded after ${max429Retries} retries`,
+          );
+        }
+        retries += 1;
+        const retryAfter = Number.parseFloat(
+          response.headers.get("Retry-After") ?? "1",
+        );
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.max(0, retryAfter) * 1000),
+        );
+        continue;
+      }
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        throw new Error(
+          `Shopify API ${response.status}: ${body.slice(0, 200)}`,
+        );
+      }
+
+      const data = (await response.json()) as ShopifyOrdersResponse;
+      let candidateWatermark = watermarkIsIso ? request.watermark : "";
+      for (const order of data.orders) {
+        if (!candidateWatermark || order.updated_at > candidateWatermark) {
+          candidateWatermark = order.updated_at;
+        }
+      }
+      return {
+        orders: data.orders.map(normalizeOrder),
+        nextCursor: parseNextPageInfo(response.headers.get("Link")),
+        candidateWatermark,
+      };
+    }
+  },
 
   async listOrdersSince(
     credentials: EcommerceCredentials,
@@ -171,7 +244,9 @@ export const shopifyAdapter: EcommerceAdapter = {
       }
       if (!response.ok) {
         const body = await response.text().catch(() => "");
-        throw new Error(`Shopify API ${response.status}: ${body.slice(0, 200)}`);
+        throw new Error(
+          `Shopify API ${response.status}: ${body.slice(0, 200)}`,
+        );
       }
 
       page += 1;

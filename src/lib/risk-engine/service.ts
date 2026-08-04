@@ -549,12 +549,16 @@ export async function blacklistCustomer(
     });
   });
 
-  // Fire automation trigger (fire-and-forget)
-  void dispatchTrigger(context, "customer.blacklisted" as TriggerEvent, {
-    customerId,
-    customerName: customer.name,
-    customerPhone: customer.phone,
-  });
+  await dispatchTrigger(
+    context,
+    "customer.blacklisted" as TriggerEvent,
+    {
+      customerId,
+      customerName: customer.name,
+      customerPhone: customer.phone,
+    },
+    { triggerKey: `customer.blacklisted:${customerId}` },
+  );
 }
 
 /**

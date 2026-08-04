@@ -101,6 +101,36 @@ export const yalidineAdapter: DeliveryAdapter = {
   name: "Yalidine",
   logo: "📦",
 
+  async testConnection(creds): Promise<{ ok: boolean; message: string }> {
+    if (!creds.apiId || !creds.apiToken) {
+      return { ok: false, message: "Identifiants Yalidine manquants." };
+    }
+    try {
+      const res = await retryFetch(
+        `${YALIDINE_BASE}/wilayas/?page_size=1`,
+        { headers: headers(creds) },
+        FETCH_TIMEOUT_MS,
+      );
+      if (!res.ok) {
+        return {
+          ok: false,
+          message: `Yalidine credential probe failed with HTTP ${res.status}.`,
+        };
+      }
+      await res.json();
+      return {
+        ok: true,
+        message: "Yalidine credentials and public API contract were verified.",
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : "Yalidine connection failed.",
+      };
+    }
+  },
+
+
   async estimateCost(
     params: { wilaya: string; commune?: string; weight: number; codAmount: number },
     creds: DeliveryCredentials,

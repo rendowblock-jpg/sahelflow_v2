@@ -9,7 +9,6 @@ import { PrismaClient } from "@prisma/client";
 import { deriveBlindIndex } from "@/lib/crypto/field-crypto";
 import type { ShopContext } from "@/lib/shops/context";
 
-// Set the master key for PII encryption (required by db.ts)
 process.env.SF_MASTER_KEY =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
@@ -44,6 +43,15 @@ const CANONICAL_FACT_TABLES = [
   "CodSettlement",
   "CodCollectionCorrection",
   "CodCollection",
+  "CommerceSyncItemAttempt",
+  "CommerceSyncRunAttempt",
+  "CommerceSyncItem",
+  "CommerceSyncPage",
+  "CommerceSyncRun",
+  "ProviderCapabilityCertification",
+  "AiActionExecution",
+  "AiActionApproval",
+  "AiActionProposal",
   "WhatsAppOutboundEffect",
   "CompensationFact",
   "ProjectionInvalidation",
@@ -57,9 +65,6 @@ const CANONICAL_FACT_TABLES = [
 ] as const;
 
 async function cleanTestDatabase(db: PrismaClient): Promise<void> {
-  // Canonical append-only facts must be removed before the legacy projections
-  // they reference. These tables are intentionally accessed through static SQL
-  // so this helper keeps working while Prisma relation fields remain minimal.
   for (const table of CANONICAL_FACT_TABLES) {
     await db.$executeRawUnsafe(`DELETE FROM "${table}"`);
   }
@@ -145,8 +150,8 @@ export async function seedCustomer(
   const phone = opts?.phone ?? "0555123456";
   return db.customer.create({
     data: {
-      name, // plaintext (tests use raw client, no PII extension)
-      phone, // plaintext (tests use raw client; production uses blind index via PII extension)
+      name,
+      phone,
       nameBlindIndex: deriveBlindIndex(name.toLowerCase().trim(), testKey()),
       wilaya: "Alger",
       commune: "Bab Ezzouar",
@@ -166,9 +171,7 @@ export async function seedOrder(
 ) {
   const customer = opts?.customerId ? null : await seedCustomer(db);
   const customerId = opts?.customerId ?? customer!.id;
-
   const product = opts?.productId ? null : await seedProduct(db);
-
   const counter = await db.counter.upsert({
     where: { name: "ORD" },
     update: { value: { increment: 1 } },
@@ -217,35 +220,26 @@ export async function seedOrder(
   });
 }
 
-// ── Aliases for the subagent-written tests (compatibility layer) ─────────────
-// These match the helper API the subagent tests expect.
-
-/** Clean all tables in the test DB (alias for createTestPrisma's cleanup). */
 export async function cleanDb(db: PrismaClient): Promise<void> {
   await cleanTestDatabase(db);
 }
 
-/** Disconnect + clean (alias for disconnectTestPrisma). Tolerates no-arg calls. */
 export async function teardownTestPrisma(db?: PrismaClient): Promise<void> {
   if (!db) return;
   await cleanDb(db);
   await db.$disconnect();
 }
 
-/** Build a ServiceContext from a PrismaClient. */
 export function makeContext(db: PrismaClient) {
   return { prisma: db as never, shop: TEST_SHOP_CONTEXT };
 }
 
-/** Generate a unique phone number for tests (avoids unique constraint conflicts). */
-let _phoneCounter = 0;
+let phoneCounter = 0;
 export function uniquePhone(): string {
-  _phoneCounter++;
-  const suffix = String(_phoneCounter).padStart(6, "0");
-  return `0555${suffix}`;
+  phoneCounter += 1;
+  return `0555${String(phoneCounter).padStart(6, "0")}`;
 }
 
-/** Alias: seedTestCustomer (matches subagent test API). */
 export async function seedTestCustomer(
   db: PrismaClient,
   opts?: { name?: string; phone?: string },
@@ -256,7 +250,6 @@ export async function seedTestCustomer(
   });
 }
 
-/** Alias: seedTestProduct (matches subagent test API). */
 export async function seedTestProduct(
   db: PrismaClient,
   opts?: {
@@ -271,7 +264,6 @@ export async function seedTestProduct(
   return seedProduct(db, opts);
 }
 
-/** Alias: seedTestOrder (matches subagent test API). */
 export async function seedTestOrder(
   db: PrismaClient,
   opts?: {
@@ -283,7 +275,6 @@ export async function seedTestOrder(
 ) {
   const customer = opts?.customerId ? null : await seedTestCustomer(db);
   const customerId = opts?.customerId ?? customer!.id;
-
   const counter = await db.counter.upsert({
     where: { name: "ORD" },
     update: { value: { increment: 1 } },

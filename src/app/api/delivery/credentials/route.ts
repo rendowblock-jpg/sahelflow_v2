@@ -5,12 +5,21 @@ import {
   deleteSecret,
   hasSecret,
 } from "@/lib/secrets";
-import { deliverySecretKey, deliverySecretKeys, DELIVERY_PROVIDERS } from "@/lib/integrations/delivery/types";
+import {
+  deliverySecretKey,
+  deliverySecretKeys,
+  DELIVERY_PROVIDERS,
+} from "@/lib/integrations/delivery/types";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
 import { db, shopContext } from "@/lib/db";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
+import { SahelFlowError } from "@/types/errors";
+import {
+  invalidateProviderCertifications,
+  providerCertificationStatus,
+} from "@/lib/integrations/delivery/provider-capability";
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +48,12 @@ export const GET = withErrorHandler(async () => {
     }
     status[provider] = fieldStatus;
   }
-  return NextResponse.json({ providers: status });
+  const certifications = await providerCertificationStatus(context);
+  return NextResponse.json({ providers: status, certifications });
 }, "GET /api/delivery/credentials");
 
 const saveSchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
   credentials: z.record(z.string(), z.string().min(1)),
 });
 
@@ -65,12 +75,31 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const context = { prisma: db, shop: shopContext };
   const body = await req.json();
   const input = saveSchema.parse(body);
+  const allowedFields = new Set(
+    deliverySecretKeys(input.provider).map((key) =>
+      key.replace(`delivery_${input.provider}_`, ""),
+    ),
+  );
+  const submittedFields = Object.keys(input.credentials);
+  const unknownFields = submittedFields.filter((field) => !allowedFields.has(field));
+  if (unknownFields.length > 0) {
+    throw new SahelFlowError(
+      `Unsupported ${input.provider} credential fields: ${unknownFields.join(", ")}`,
+      "DELIVERY_CREDENTIAL_FIELDS_INVALID",
+      400,
+    );
+  }
 
-  // Save each credential field to the Secret store
+  // Save each credential field to the Secret store.
   for (const [field, value] of Object.entries(input.credentials)) {
     const key = deliverySecretKey(input.provider, field);
     await setSecret(context, key, value);
   }
+  await invalidateProviderCertifications(
+    context,
+    input.provider,
+    "credentials_updated",
+  );
   await logAudit(context, {
     action: "delivery.credentials.updated",
     entity: "delivery_credentials",
@@ -86,7 +115,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 }, "POST /api/delivery/credentials");
 
 const deleteSchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress", "dhd"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
 });
 
 /**
@@ -107,6 +136,12 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
     before[key] = await hasSecret(context, key);
     await deleteSecret(context, key);
   }
+
+  await invalidateProviderCertifications(
+    context,
+    input.provider,
+    "credentials_deleted",
+  );
 
   // W2-5: audit credential deletion (security-relevant — strips delivery integration access).
   await logAudit({ prisma: db, shop: shopContext }, {

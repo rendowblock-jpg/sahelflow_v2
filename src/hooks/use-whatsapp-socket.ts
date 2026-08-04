@@ -33,6 +33,9 @@ interface UseWhatsAppSocketResult {
   reconnect: () => void;
 }
 
+const MESSAGE_DEDUP_WINDOW_MS = 10 * 60_000;
+const MAX_RECENT_MESSAGE_KEYS = 1_000;
+
 export function useWhatsAppSocket(
   options: UseWhatsAppSocketOptions = {},
 ): UseWhatsAppSocketResult {
@@ -45,6 +48,7 @@ export function useWhatsAppSocket(
   const onStatusChangeRef = useRef(onStatusChange);
   const onMessageRef = useRef(onMessage);
   const onMessageUpdateRef = useRef(onMessageUpdate);
+  const recentMessageKeysRef = useRef(new Map<string, number>());
   useEffect(() => {
     onStatusChangeRef.current = onStatusChange;
   }, [onStatusChange]);
@@ -104,6 +108,29 @@ export function useWhatsAppSocket(
       }, delay);
     };
 
+    const deliverMessageOnce = (message: IncomingMessage) => {
+      const messageKey = `${message.key.remoteJid}\0${message.key.id}`;
+      const now = Date.now();
+      const recent = recentMessageKeysRef.current;
+      const previous = recent.get(messageKey);
+      if (previous !== undefined && now - previous <= MESSAGE_DEDUP_WINDOW_MS) {
+        return;
+      }
+      recent.set(messageKey, now);
+      if (recent.size > MAX_RECENT_MESSAGE_KEYS) {
+        for (const [key, seenAt] of recent) {
+          if (now - seenAt > MESSAGE_DEDUP_WINDOW_MS) recent.delete(key);
+          if (recent.size <= MAX_RECENT_MESSAGE_KEYS) break;
+        }
+        while (recent.size > MAX_RECENT_MESSAGE_KEYS) {
+          const oldest = recent.keys().next().value as string | undefined;
+          if (!oldest) break;
+          recent.delete(oldest);
+        }
+      }
+      onMessageRef.current?.(message);
+    };
+
     const handleFrame = (socket: WebSocket, event: MessageEvent) => {
       if (activeSocket !== socket) return;
       try {
@@ -116,7 +143,7 @@ export function useWhatsAppSocket(
           setStatus("qr");
           onStatusChangeRef.current?.("qr", null);
         } else if (data.type === "message" && data.message) {
-          onMessageRef.current?.(data.message);
+          deliverMessageOnce(data.message);
         } else if (data.type === "message-update" && data.updates) {
           onMessageUpdateRef.current?.(data.updates);
         }

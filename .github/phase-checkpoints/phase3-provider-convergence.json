@@ -1,0 +1,119 @@
+{
+  "formatVersion": 1,
+  "phase": 3,
+  "task": 6,
+  "name": "courier-commerce-convergence-and-provider-certification",
+  "status": "source-closed-evidence-open",
+  "recordedAt": "2026-08-04",
+  "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+  "activeBranch": "agent/phase3-durable-effects-audit",
+  "activeDraftPr": 203,
+  "sourceImplementationHead": "676d0e41cc69d44c29b912038cba100fd827fcfa",
+  "courier": {
+    "implementationHead": "2a52feabedf6b3869a5aa45ec67e8dabb0586a37",
+    "cleanHead": "676d0e41cc69d44c29b912038cba100fd827fcfa",
+    "fullTaskGateRun": 30875448797,
+    "cleanStandardCheckpointRun": 30875723975,
+    "normalCiRun": 30875724094,
+    "outcomes": [
+      "one public canonical-courier facade owns all production callers",
+      "booking command and certification preflight live in one internal booking-authority module",
+      "provider call, receipt, ambiguity, retry, position and tracking behavior live in one internal effect runtime",
+      "obsolete exported legacy queue and reconciliation paths are removed",
+      "manual ambiguity reconciliation remains command-bound and public only through the facade",
+      "source contracts prevent production callers from importing internal courier layers"
+    ]
+  },
+  "commerce": {
+    "implementationHead": "762ee06e6e76986806c5030370bad4fa6168490a",
+    "cleanHead": "29cc179447de1efba1aad8377b5eee677da90d5d",
+    "finalAuthorityRun": 30874432466,
+    "cleanStandardCheckpointRun": 30874687402,
+    "normalCiRun": 30874687547,
+    "outcomes": [
+      "request handlers persist one active run per platform and return 202 without inline provider processing",
+      "opaque provider page continuation is persisted for Shopify, WooCommerce and YouCan",
+      "normalized provider orders are encrypted before canonical processing",
+      "durable runs, pages, items and immutable attempts own restart-safe leases, retry, quarantine and dead letter",
+      "candidate watermarks are monotonic and commit only after complete terminal success",
+      "runs bind the exact credential and endpoint contract without changing canonical source identity",
+      "watermark or credential drift fails closed and releases terminal runs for a freshly bound sync",
+      "sanitized AR/FR/EN operator history and reason-bound audited retry expose no customer PII"
+    ]
+  },
+  "providerCertification": {
+    "sourceHead": "1d751a2e26b5f911aebe1a28e58cc1b500f1a0a7",
+    "fullTaskGateRun": 30869805644,
+    "normalCiRun": 30869805729,
+    "sourceAuthority": [
+      "non-mutating probes certify connection only",
+      "Yalidine, Maystro and legacy ZR execution requires one exact current connection plus source-reviewed or live-certified capability evidence",
+      "credential or endpoint drift invalidates execution authority",
+      "DHD is removed from runtime registration",
+      "NOEST effects remain fail-closed until its exact provider-issued contract is independently certified"
+    ],
+    "liveEvidence": {
+      "status": "open",
+      "required": [
+        "at least one Required courier tested against current real credentials and provider behavior",
+        "one Required communication path tested live under current account/shop identity",
+        "retained redacted receipts, failure/retry behavior and operator recovery evidence"
+      ]
+    }
+  },
+  "closedProblemIds": [
+    "P3-P1-006",
+    "P3-P1-007",
+    "P3-P1-008",
+    "P3-P2-002"
+  ],
+  "evidenceOpenProblemIds": [
+    "P3-P2-003",
+    "P3-P2-004"
+  ],
+  "separatedAdversarialReview": {
+    "status": "complete-repaired",
+    "repairs": [
+      "separated connection verification from capability evidence",
+      "kept unverified NOEST effects disabled",
+      "prevented page-limit watermark skips with opaque continuation",
+      "added exact commerce credential and endpoint binding",
+      "made candidate watermark monotonic across provider page ordering",
+      "released terminal watermark and credential conflicts for a fresh run",
+      "scoped automatic retries by operator recovery generation",
+      "removed competing courier queue and reconciliation exports",
+      "replaced reviewed/legacy layering with explicit authority and internal runtime roles"
+    ]
+  },
+  "evidenceBoundary": {
+    "proven": [
+      "clean source, database, migration, integration and development UI behavior",
+      "production caller and worker ownership contracts",
+      "encrypted payload and redacted history boundaries",
+      "duplicate, overlap, retry, restart, stale lease, watermark and credential drift behavior"
+    ],
+    "notProven": [
+      "live courier capability against current provider credentials",
+      "live Required communication-provider certification",
+      "signed or installed Windows behavior for the Phase 3 source",
+      "Founder acceptance",
+      "Phase 3 closure",
+      "Stable"
+    ]
+  },
+  "nextAuthorizedPackage": {
+    "name": "Phase 3 Level 2 source checkpoint and evidence collection",
+    "productionEdits": false,
+    "scope": [
+      "freeze cross-package source authority and run the Phase 3 production build checkpoint",
+      "reconcile active documentation, PR and issue dashboards to source-complete evidence-open truth",
+      "collect live provider certification only where current credentials and safe test accounts exist",
+      "retain issue #201 as the separate installed hydrated-WebView evidence boundary"
+    ],
+    "nonGoals": [
+      "broad new Phase 3 production features",
+      "application version bump, MSI publication, release, Founder acceptance or Stable",
+      "Phase 4 data-protection implementation"
+    ]
+  }
+}

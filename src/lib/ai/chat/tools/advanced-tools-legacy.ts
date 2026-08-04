@@ -33,6 +33,7 @@ import type { DbClient } from "@/lib/db";
 import { normalizePhone } from "@/lib/import/fields";
 import { orderService } from "@/lib/data/order-service";
 import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -356,7 +357,7 @@ registerTool({
 
 const assignOrderToDeliverySchema = z.object({
   orderNumber: z.string(),
-  provider: z.enum(["yalidine", "maystro", "zrexpress"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
   weight: z.number().min(0).optional().default(0.5),
 });
 
@@ -371,7 +372,7 @@ registerTool({
       type: "object",
       properties: {
         orderNumber: { type: "string", description: "The order number" },
-        provider: { type: "string", enum: ["yalidine", "maystro", "zrexpress"], description: "Delivery provider" },
+        provider: { type: "string", enum: ["yalidine", "maystro", "zrexpress", "noest"], description: "Delivery provider" },
         weight: { type: "number", description: "Package weight in kg (default 0.5)" },
       },
       required: ["orderNumber", "provider"],
@@ -381,9 +382,11 @@ registerTool({
     try {
       const input = assignOrderToDeliverySchema.parse(params);
       const db = getDb(ctx);
+      const context = { prisma: db, shop: ctx.shop };
+      await assertProviderCapability(context, input.provider, "booking");
       const adapter = getDeliveryAdapter(input.provider);
       const creds = await loadDeliveryCredentials(
-        { prisma: db, shop: ctx.shop },
+        context,
         input.provider,
       );
       if (!creds) {
@@ -609,7 +612,7 @@ registerTool({
     try {
       const input = getDeliveryCostComparisonSchema.parse(params);
       const db = getDb(ctx);
-      const providers = ["yalidine", "maystro", "zrexpress"] as const;
+      const providers = ["yalidine", "maystro", "zrexpress", "noest"] as const;
       const comparisons: Array<{
         provider: string;
         cost: number;
@@ -619,9 +622,11 @@ registerTool({
 
       for (const provider of providers) {
         try {
+          const context = { prisma: db, shop: ctx.shop };
+          await assertProviderCapability(context, provider, "fees");
           const adapter = getDeliveryAdapter(provider);
           const creds = await loadDeliveryCredentials(
-            { prisma: db, shop: ctx.shop },
+            context,
             provider,
           );
           if (!creds) {

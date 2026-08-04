@@ -212,6 +212,39 @@ export const maystroAdapter: DeliveryAdapter = {
   name: "Maystro Delivery",
   logo: "🚚",
 
+  async testConnection(creds): Promise<{ ok: boolean; message: string }> {
+    if (!creds.apiToken) {
+      return { ok: false, message: "Jeton Maystro manquant." };
+    }
+    try {
+      const res = await retryFetch(
+        `${BACKEND_BASE}/shared/wilayas/?language=en&country=1`,
+        { headers: authHeaders(creds) },
+        FETCH_TIMEOUT_MS,
+      );
+      if (!res.ok) {
+        return {
+          ok: false,
+          message: `Maystro credential probe failed with HTTP ${res.status}.`,
+        };
+      }
+      const data = (await res.json()) as unknown;
+      if (!Array.isArray(data)) {
+        return { ok: false, message: "Maystro returned an unexpected contract response." };
+      }
+      return {
+        ok: true,
+        message: "Maystro credentials and public API contract were verified.",
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : "Maystro connection failed.",
+      };
+    }
+  },
+
+
   async estimateCost(
     params: { wilaya: string; commune?: string; weight: number; codAmount: number },
     creds: DeliveryCredentials,

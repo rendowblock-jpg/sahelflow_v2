@@ -2,29 +2,26 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
-import {
-  dispatchTrigger,
-  type TriggerEvent,
-} from "@/lib/automations/engine";
+import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import {
   sourceBusinessPrincipal,
   type BusinessPrincipalContext,
 } from "@/lib/business-truth/principal";
 import type { ServiceContext } from "@/lib/data/service-base";
-import { syntheticPhone } from "@/lib/shared/phone";
 import {
   commerceOrderIsCancelled,
   commerceSourceSnapshot,
   prepareCanonicalCommerceOrder,
 } from "@/lib/orders/canonical-commerce-order";
+import { executeCanonicalOrderRecovery } from "@/lib/orders/canonical-order-recovery";
+import { commitCanonicalSourceCheckpoint } from "@/lib/orders/canonical-source-checkpoint";
+import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
 import { executeManualOrderDecision } from "@/lib/orders/manual-confirmation";
 import {
   readCanonicalSourceOrderAuthority,
   type CanonicalOrderSource,
 } from "@/lib/orders/manual-order-authority";
-import { executeCanonicalOrderRecovery } from "@/lib/orders/canonical-order-recovery";
-import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
-import { commitCanonicalSourceCheckpoint } from "@/lib/orders/canonical-source-checkpoint";
+import { syntheticPhone } from "@/lib/shared/phone";
 import { getEcommerceAdapter, loadEcommerceCredentials } from "./index";
 import type { EcommercePlatform, NormalizedOrder } from "./types";
 
@@ -52,7 +49,8 @@ function parseConfig(value: string | null): IntegrationConfig {
     const parsed = JSON.parse(value) as Partial<IntegrationConfig>;
     return {
       watermark: typeof parsed.watermark === "string" ? parsed.watermark : "",
-      lastSyncAt: typeof parsed.lastSyncAt === "string" ? parsed.lastSyncAt : "",
+      lastSyncAt:
+        typeof parsed.lastSyncAt === "string" ? parsed.lastSyncAt : "",
     };
   } catch {
     return { watermark: "", lastSyncAt: "" };
@@ -60,7 +58,9 @@ function parseConfig(value: string | null): IntegrationConfig {
 }
 
 function stableKey(scope: string, ...parts: string[]): string {
-  const digest = createHash("sha256").update(parts.join("\u001f")).digest("hex");
+  const digest = createHash("sha256")
+    .update(parts.join("\u001f"))
+    .digest("hex");
   return `commerce:${scope}:${digest}`;
 }
 
@@ -127,10 +127,14 @@ async function cancelCanonicalProviderOrder(
       reason: reasonCode,
     });
     if (!decision.replayed) {
-      void dispatchTrigger(
+      const trigger = decision.result.automation.trigger as TriggerEvent;
+      await dispatchTrigger(
         context,
-        decision.result.automation.trigger as TriggerEvent,
+        trigger,
         decision.result.automation.order,
+        {
+          triggerKey: `${trigger}:${order.id}:v${decision.result.version}`,
+        },
       );
     }
     return decision.result.version;
@@ -165,7 +169,7 @@ async function cancelCanonicalProviderOrder(
   );
 }
 
-async function upsertCanonicalCommerceOrder(
+export async function upsertCanonicalCommerceOrder(
   context: ServiceContext,
   platform: EcommercePlatform,
   sourceIdentity: string,
@@ -241,10 +245,14 @@ async function upsertCanonicalCommerceOrder(
       notes: `Imported from ${platform} order ${normalized.orderNumber}`,
     });
     if (!command.replayed) {
-      void dispatchTrigger(
+      await dispatchTrigger(
         context,
         "order.created" as TriggerEvent,
         command.result.automation,
+        {
+          triggerKey: `order.created:${command.result.order.id}`,
+          occurredAt: command.result.order.createdAt,
+        },
       );
     }
     if (commerceOrderIsCancelled(normalized)) {
@@ -379,9 +387,6 @@ export async function syncPlatform(
     }
   }
 
-  // A provider checkpoint is proof only when every fetched order is committed,
-  // replayed or safely skipped. One failed order keeps the previous watermark so
-  // the complete page is retried instead of losing an update.
   if (result.errors.length > 0) {
     result.watermark = config.watermark;
     return result;

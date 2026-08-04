@@ -1,0 +1,280 @@
+{
+  "formatVersion": 8,
+  "phase": 3,
+  "name": "durable providers, inbox, AI and automations",
+  "state": "phase3-closure-authorized-provider-beta-evidence-deferred",
+  "sourceCompleteAt": "2026-08-04",
+  "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+  "phase2MergePr": 200,
+  "phaseIssue": 202,
+  "retainedDesktopEvidenceIssue": 201,
+  "activeBranch": "agent/phase3-durable-effects-audit",
+  "activeDraftPr": 203,
+  "implementationAgent": "ChatGPT Web Agentic Coding Agent",
+  "sessionPurpose": "phase-source-checkpoint-and-evidence",
+  "auditStatus": {
+    "documentationReconciliation": "complete",
+    "sourceInventory": "complete",
+    "callerInventory": "complete",
+    "migrationAndTestInventory": "complete",
+    "uiAndRecoveryInventory": "complete",
+    "problemRegister": "frozen",
+    "sharedContractFreeze": "complete",
+    "task3SourceImplementation": "complete",
+    "task3SeparatedReview": "complete-repaired",
+    "task4SourceImplementation": "complete",
+    "task4SeparatedReview": "complete-repaired",
+    "task5SourceImplementation": "complete",
+    "task5SeparatedReview": "complete-repaired",
+    "task6SourceImplementation": "complete",
+    "task6SeparatedReview": "complete-repaired",
+    "productionImplementation": "source-complete-evidence-open",
+    "phase3Level2": "passed-source-and-build",
+    "liveProviderCertification": "deferred-to-phase9-representative-beta-fd030",
+    "installedEvidence": "deferred-to-applicable-level3-issue201",
+    "providerConformance": "passed-deterministic-simulator",
+    "phase3Closure": "authorized-pending-protected-merge"
+  },
+  "constraints": {
+    "oneActiveImplementationAgent": true,
+    "productionEditsAuthorized": false,
+    "authorizedProductionScope": "protected merge of PR #203 and Phase 4 audit only",
+    "targetedCiRerunsRequired": true,
+    "fullMatrixRerunForDocumentationForbidden": true,
+    "versionBumpAuthorized": false,
+    "releaseAuthorized": false,
+    "founderAcceptanceClaimAuthorized": false,
+    "phaseClosureClaimAuthorized": true,
+    "stableClaimAuthorized": false,
+    "historicalBranchesMergeAuthority": false
+  },
+  "knownProtectedTruth": [
+    "PR #200 is merged into protected main at e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+    "Phase 2 native multi-shop authority is protected source",
+    "issue #201 retains the installed hydrated-WebView evidence limitation",
+    "issue #202 owns the Phase 3 program and remains open",
+    "draft PR #203 is the sole active Phase 3 package",
+    "published executable and Founder-installed release remain Internal.13",
+    "Tasks 3 through 6 are source-closed only, not protected, signed, installed, Founder-accepted or Stable",
+    "Phase 3 Level 2 source/build checkpoint 30878352410 passed and published source-complete evidence-open authority",
+    "FD-030 moves live provider certification and issue #201 from Phase 3 blockers to applicable Level 3 and Phase 9 representative beta evidence"
+  ],
+  "task3Closure": {
+    "name": "durable inbound WhatsApp and database-authoritative inbox",
+    "sourceHead": "f016055be55fd220baa87c26ffed565c4e9e1d85",
+    "fullSourceCheckpointRun": 30808773702,
+    "normalCiRun": 30808774055,
+    "sourceGate": "passed",
+    "reviewThreadsOpen": 0,
+    "separatedAdversarialReview": "complete-repaired"
+  },
+  "task4Closure": {
+    "name": "truthful durable automations and durable daily reports",
+    "sourceHead": "c873b8b6a256383497d3799e0839160178e92149",
+    "fullSourceCheckpointRun": 30826354580,
+    "normalCiRun": 30826355685,
+    "sourceGate": "passed",
+    "reviewThreadsOpen": 0,
+    "separatedAdversarialReview": "complete-repaired"
+  },
+  "task5Closure": {
+    "name": "proposal-bound sensitive AI actions",
+    "sourceHead": "07caedbc797ced5dc0e2ac959f252d5b3481285d",
+    "fullSourceCheckpointRun": 30849680029,
+    "normalCiRun": 30849680245,
+    "sourceGate": "passed",
+    "reviewThreadsOpen": 0,
+    "separatedAdversarialReview": "complete-repaired"
+  },
+  "task6Closure": {
+    "name": "courier-commerce convergence and provider certification authority",
+    "sourceHead": "676d0e41cc69d44c29b912038cba100fd827fcfa",
+    "fullSourceCheckpointRun": 30875723975,
+    "normalCiRun": 30875724094,
+    "sourceGate": "passed",
+    "reviewThreadsOpen": 0,
+    "separatedAdversarialReview": "complete-repaired",
+    "componentEvidence": {
+      "providerCapabilityHead": "1d751a2e26b5f911aebe1a28e58cc1b500f1a0a7",
+      "providerCapabilityRun": 30869805644,
+      "commerceHead": "762ee06e6e76986806c5030370bad4fa6168490a",
+      "commerceFinalAuthorityRun": 30874432466,
+      "courierHead": "2a52feabedf6b3869a5aa45ec67e8dabb0586a37",
+      "courierConsolidationRun": 30875448797
+    }
+  },
+  "problemRegister": [
+    {
+      "id": "P3-P1-001",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "governance-reconciliation"
+    },
+    {
+      "id": "P3-P1-002",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "durable-inbound-whatsapp"
+    },
+    {
+      "id": "P3-P1-003",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "truthful-durable-automations"
+    },
+    {
+      "id": "P3-P1-004",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "truthful-durable-automations"
+    },
+    {
+      "id": "P3-P1-005",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "proposal-bound-ai"
+    },
+    {
+      "id": "P3-P1-006",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "provider-convergence"
+    },
+    {
+      "id": "P3-P1-007",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "durable-commerce"
+    },
+    {
+      "id": "P3-P1-008",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "provider-certification-authority"
+    },
+    {
+      "id": "P3-P1-009",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "truthful-durable-automations"
+    },
+    {
+      "id": "P3-P1-010",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "durable-inbound-whatsapp"
+    },
+    {
+      "id": "P3-P1-011",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "truthful-durable-automations"
+    },
+    {
+      "id": "P3-P2-001",
+      "severity": "P2",
+      "state": "closed-source-proven",
+      "ownerPackage": "active-shop-worker-ownership"
+    },
+    {
+      "id": "P3-P2-002",
+      "severity": "P2",
+      "state": "closed-source-proven",
+      "ownerPackage": "courier-facade-consolidation"
+    },
+    {
+      "id": "P3-P2-003",
+      "severity": "P2",
+      "state": "closed-phase3-deferred-to-phase9-beta-fd030",
+      "ownerPackage": "provider-certification-evidence"
+    },
+    {
+      "id": "P3-P2-004",
+      "severity": "P2",
+      "state": "closed-phase3-deferred-to-level3-issue201-fd030",
+      "ownerPackage": "issue-201"
+    }
+  ],
+  "sharedContracts": {
+    "identityAndEncryption": "provider identity, exact shop incarnation and canonical command/run identity bind encrypted ingress and effect payloads",
+    "inbound": "acknowledgement and publication follow durable database truth",
+    "outbound": "provider calls occur outside business transactions with leases, attempts, known or ambiguous outcome, receipt and recovery",
+    "automation": "aggregate truth derives from persisted ordered steps and provider effects use durable authority",
+    "ai": "one exact persisted proposal binds one approval and one execution claim",
+    "commerce": "pages and encrypted items persist before processing; watermark commits only after complete success",
+    "courier": "one public facade owns booking, tracking and reconciliation while the provider effect runtime remains internal",
+    "workerOwnership": "only the exact active native runtime drains its shop database",
+    "certification": "server-side connection, capability, credential and endpoint evidence gates provider execution",
+    "experience": "AR/FR/EN and RTL-safe pending, retry, partial, ambiguous, quarantine, dead-letter, conflict and history states remain mandatory"
+  },
+  "sourceCompletion": {
+    "status": "complete",
+    "crossPackageContract": "src/lib/integrations/__tests__/phase3-source-closure.test.ts",
+    "zeroKnownP0P1AtSource": true,
+    "protectedMerge": false,
+    "signedArtifact": false,
+    "installedWindows": false,
+    "founderAcceptance": false
+  },
+  "authorizedNextPackage": {
+    "name": "protected merge of PR #203, then Phase 4 audit and contract freeze",
+    "branch": "agent/phase3-durable-effects-audit",
+    "pr": 203,
+    "problemIds": [],
+    "scope": [
+      "merge the exact green Phase 3 closure head into protected main",
+      "close issue #202 as Phase 3 complete under FD-030",
+      "retain provider live certification for Phase 9 representative beta",
+      "retain issue #201 for applicable Level 3 and installed evidence",
+      "begin Phase 4 with complete data protection, recovery, migration and security reconnaissance"
+    ],
+    "nonGoals": [
+      "application version bump, MSI publication or release",
+      "Founder acceptance or Stable claim",
+      "fabricated live provider certification",
+      "Phase 4 production implementation before its audit and contract freeze"
+    ]
+  },
+  "level2PassedAt": "2026-08-04",
+  "phase3Level2Closure": {
+    "status": "passed-source-and-build",
+    "run": 30878352410,
+    "validatedInputHead": "547b7e53d21a9835fc343f11fb0cd94c331f54fc",
+    "authorityPublicationHead": "777207d40b33f3f307728b2f8697765ec6e9e66d",
+    "cleanDescendantHead": "cfbb6fffe7fb1eb1a50e65da9fbeae0721b5eecf",
+    "ordinaryIntegrationRun": 30884662556,
+    "normalCiRun": 30884663240,
+    "sourceGate": "passed",
+    "migrationStatus": "passed",
+    "whatsAppSidecarBuild": "passed",
+    "nextProductionBuild": "passed",
+    "evidenceBoundary": "source, database, migration and production build only",
+    "notProven": [
+      "live courier certification",
+      "live Required communication-provider certification",
+      "signed artifact",
+      "installed Windows behavior",
+      "Founder acceptance",
+      "Phase 3 closure",
+      "Stable"
+    ]
+  },
+  "closedByFounderDecision": "FD-030",
+  "providerConformanceClosure": {
+    "status": "passed-deterministic-simulator",
+    "sourceHead": "9e488fa3bcfa6fff944924c341084ea95243ebc7",
+    "integrationRun": 30887782488,
+    "normalCiRun": 30887786426,
+    "coverage": [
+      "Yalidine credential, pricing, booking and tracking contract",
+      "Maystro credential, catalog, pricing, booking, tracking and cancellation contract",
+      "ZR Express legacy Procolis credential, pricing, booking and tracking contract",
+      "NOEST exact-endpoint and ambiguous create/validate fail-closed contract",
+      "bounded 408/425/429/502/503/504 retries for safe methods",
+      "Retry-After handling and timer cleanup",
+      "resource-creating POST never auto-retried",
+      "provider secrets absent from ordinary failures"
+    ],
+    "evidenceBoundary": "deterministic source contract and simulator evidence; not a live provider account"
+  }
+}

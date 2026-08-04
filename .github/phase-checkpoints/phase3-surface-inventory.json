@@ -1,0 +1,263 @@
+{
+  "formatVersion": 2,
+  "phase": 3,
+  "status": "complete-for-contract-freeze",
+  "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+  "activePr": 203,
+  "completedAt": "2026-08-03",
+  "productionImplementationAuthorized": false,
+  "method": {
+    "codeSearchIndexed": false,
+    "evidence": [
+      "exact current files read through the authenticated GitHub connector",
+      "PR #195 complete changed-file inventory used as the cross-layer discovery map",
+      "PR #194 changed-file inventory used for the protected WhatsApp package",
+      "historical Phase 3 branches used only as selective design/test evidence"
+    ],
+    "externalLimits": [
+      "live provider certification is not a source claim",
+      "installed hydrated-WebView evidence remains issue #201"
+    ]
+  },
+  "existingPersistence": {
+    "files": [
+      "prisma/models/business-truth.prisma",
+      "prisma/schema.prisma",
+      "prisma/migrations/20260730030000_phase3_whatsapp_outbox_delivery/migration.sql"
+    ],
+    "preserve": [
+      "BusinessCommand, DomainEvent and encrypted OutboxIntent",
+      "WhatsAppOutboundEffect and current outbound rows",
+      "Conversation and Message compatibility",
+      "AutomationLog historical readability"
+    ],
+    "missing": [
+      "durable inbound event and processing attempt",
+      "shared immutable effect attempt and receipt",
+      "reconciliation run and operator decision",
+      "automation run, ordered step and step attempt",
+      "commerce run, page/event and item attempt",
+      "AI proposal, approval and one-time execution claim"
+    ],
+    "migrationRules": [
+      "append-only additive migration; never rewrite 20260730030000",
+      "nullable or default-safe expansion before contraction",
+      "fresh, prior-schema, interruption, rerun and mixed-shop tests",
+      "existing queued outbound work remains runnable"
+    ]
+  },
+  "workerOwnership": {
+    "files": [
+      "src/instrumentation.ts",
+      "src/lib/whatsapp/outbox-worker.ts",
+      "src/lib/delivery/outbox-worker.ts"
+    ],
+    "finding": "workers are pinned to the process database and immutable ShopContext; only the active runtime shop drains work",
+    "requiredContract": "shop switch quiesces the old runtime, safely releases or recovers leases, and never executes inactive-shop effects"
+  },
+  "whatsapp": {
+    "files": [
+      "src/lib/whatsapp/effect-authority.ts",
+      "src/lib/whatsapp/durable-send.ts",
+      "src/lib/whatsapp/outbox-worker.ts",
+      "src/lib/whatsapp/sidecar-client.ts",
+      "sidecars/whatsapp/whatsapp.ts",
+      "sidecars/whatsapp/send-receipts.ts",
+      "src/app/api/whatsapp/send/route.ts",
+      "src/app/api/whatsapp/outbox/route.ts",
+      "src/app/api/whatsapp/chats/route.ts",
+      "src/app/api/whatsapp/chats/[jid]/messages/route.ts",
+      "src/components/inbox/inbox-live.tsx"
+    ],
+    "tests": [
+      "src/lib/whatsapp/__tests__/durable-send.integration.test.ts",
+      "src/lib/whatsapp/__tests__/sidecar-client.test.ts",
+      "src/lib/whatsapp/__tests__/sidecar-receipt-contract.test.ts",
+      "src/app/api/whatsapp/__tests__/trusted-effect-routes.test.ts"
+    ],
+    "preserve": [
+      "outbound commit-before-dispatch",
+      "exact shop-incarnation and paired-account identity",
+      "lease exclusion, pre-effect retry and post-effect ambiguity",
+      "receipt lookup, dead letter and duplicate-risk operator confirmation"
+    ],
+    "gaps": [
+      "inbound messages are sidecar-memory events without persistence-before-acknowledgement",
+      "live routes merge sidecar history with durable outbound rows instead of a database-authoritative inbox",
+      "delivery callback persistence is best effort",
+      "InboxLive silently falls back from live sidecar data to seeded conversations",
+      "daily report delivery calls sidecar.send directly and can duplicate when its post-send marker write fails"
+    ]
+  },
+  "automationTriggerGraph": {
+    "producers": [
+      "order.created: post-commit in src/lib/data/order-service.ts",
+      "order status events: post-commit in src/lib/data/order-service.ts",
+      "stock.low: post-commit from order-service and product-service",
+      "customer.blacklisted: post-commit in src/lib/risk-engine/service.ts"
+    ],
+    "offeredWithoutProducer": [
+      "customer.created",
+      "message.received"
+    ],
+    "catalogAndPayloadDrift": [
+      "order.cancelled exists in engine but is absent from page/editor catalogs",
+      "order.refused and order.failed may be emitted through a cast but are absent from TriggerEvent and UI catalogs",
+      "status dispatch sends phone while send_whatsapp requires customerPhone",
+      "customerService.create and POST /api/customers do not emit customer.created",
+      "WhatsApp inbound does not durably emit message.received"
+    ]
+  },
+  "automations": {
+    "files": [
+      "src/lib/automations/engine.ts",
+      "src/app/api/automations/route.ts",
+      "src/app/api/automations/[id]/route.ts",
+      "src/app/(dashboard)/automations/page.tsx",
+      "src/app/(dashboard)/automations/automation-actions.tsx",
+      "src/components/automations/automation-editor.tsx",
+      "src/app/api/reports/daily/route.ts"
+    ],
+    "gaps": [
+      "dispatch catches every failure and matching automations run through Promise.allSettled",
+      "failed multi-step actions continue and the run is recorded as success",
+      "retries are in-process sleeps",
+      "send_whatsapp and daily reports bypass durable effect authority",
+      "update_status dynamically calls legacy orderService.updateStatus",
+      "CRUD schemas accept arbitrary trigger, action, conditions, steps and config",
+      "the editor does not collect messageTemplate, targetStatus, noteText, steps or dryRun",
+      "the page lacks partial, ambiguous, dead-letter, retry and reconciliation states",
+      "no automation engine integration test exists at the expected test surface"
+    ]
+  },
+  "ai": {
+    "files": [
+      "src/lib/ai/chat/agent.ts",
+      "src/lib/ai/chat/source-proposal.ts",
+      "src/lib/ai/chat/tools/registry.ts",
+      "src/lib/ai/chat/tools/core-tools.ts",
+      "src/lib/ai/chat/tools/extended-tools.ts",
+      "src/lib/ai/chat/tools/advanced-tools.ts",
+      "src/lib/ai/chat/tools/advanced-tools-legacy.ts",
+      "src/app/api/ai/sessions/[id]/messages/route.ts",
+      "src/app/api/ai/sessions/[id]/messages/stream/route.ts"
+    ],
+    "gaps": [
+      "generic current-message confirmation can authorize newly generated arguments",
+      "no immutable proposal digest or dedicated approval row",
+      "target versions, actor, shop, policy, permission, entitlement and expiry are not one authority",
+      "sensitive tools retain direct and compatibility mutations",
+      "stream persistence failure may be swallowed after delivery",
+      "approval, command, effect and result are not one recoverable state machine"
+    ]
+  },
+  "courier": {
+    "files": [
+      "src/lib/delivery/canonical-courier.ts",
+      "src/lib/delivery/canonical-courier-booking-authority.ts",
+      "src/lib/delivery/canonical-courier-effect-runtime.ts",
+      "src/lib/delivery/outbox-worker.ts",
+      "src/lib/integrations/delivery/index.ts",
+      "src/lib/integrations/delivery/yalidine.ts",
+      "src/lib/integrations/delivery/maystro.ts",
+      "src/lib/integrations/delivery/zr-express.ts",
+      "src/lib/integrations/delivery/dhd.ts"
+    ],
+    "gaps": [
+      "attempt and receipt mechanics are separate from WhatsApp",
+      "current, reviewed-base and legacy layers complicate authority",
+      "adapter source is not live capability certification",
+      "DHD guessed endpoints remain normally registered",
+      "certification is not a server-side execution oracle"
+    ]
+  },
+  "commerce": {
+    "files": [
+      "src/lib/integrations/ecommerce/sync-engine.ts",
+      "src/lib/orders/canonical-commerce-order.ts",
+      "src/lib/orders/canonical-source-order.ts",
+      "src/lib/orders/canonical-source-checkpoint.ts",
+      "src/app/api/integrations/sync/route.ts"
+    ],
+    "preserve": [
+      "canonical source-order commands",
+      "checkpoint refusal after any fetched item fails"
+    ],
+    "gaps": [
+      "request-synchronous execution",
+      "no durable run, page/event or per-item attempt",
+      "errors are response strings rather than quarantine/dead-letter state",
+      "polling and webhook convergence is not persisted",
+      "manual replay, overlap reconciliation and operator history are incomplete"
+    ]
+  },
+  "uiAndEvidence": {
+    "requiredStates": [
+      "loading",
+      "empty",
+      "permission denied",
+      "offline",
+      "queued",
+      "processing",
+      "retrying",
+      "partially completed",
+      "ambiguous",
+      "dead letter",
+      "stale proposal",
+      "conflict",
+      "provider degraded",
+      "operator reconciled",
+      "history"
+    ],
+    "dimensions": [
+      "Arabic, French and English",
+      "RTL and mixed direction",
+      "keyboard, focus and screen reader",
+      "1366x768 containment",
+      "low-resource and constrained-network behavior"
+    ],
+    "missingTests": [
+      "inbound persist-before-ack, duplicate, restart, quarantine and replay",
+      "automation crash/restart, partial failure, idempotency and step-to-effect receipt",
+      "trigger catalog and payload contracts",
+      "daily-report durable send and post-send persistence failure",
+      "AI tamper, expiry, state/version change, double approval and one-time execution",
+      "inactive-shop pending and switch lease recovery",
+      "provider certification and DHD fail closed",
+      "complete multilingual accessible recovery journeys"
+    ]
+  },
+  "legacyRemovalMap": [
+    "sidecar memory becomes projection only after durable inbound parity",
+    "automation and daily-report direct sidecar calls move to durable outbox",
+    "unsupported trigger/action combinations are hidden or rejected",
+    "generic AI confirmation and direct destructive tools are removed",
+    "courier layers consolidate after parity",
+    "DHD production execution stays disabled until certified",
+    "commerce error strings move to durable run/item recovery"
+  ],
+  "problemIds": [
+    "P3-P1-002",
+    "P3-P1-003",
+    "P3-P1-004",
+    "P3-P1-005",
+    "P3-P1-006",
+    "P3-P1-007",
+    "P3-P1-008",
+    "P3-P1-009",
+    "P3-P1-010",
+    "P3-P1-011",
+    "P3-P2-001",
+    "P3-P2-002",
+    "P3-P2-003",
+    "P3-P2-004"
+  ],
+  "closure": {
+    "source": "complete",
+    "callers": "complete",
+    "migrationsAndExistingData": "complete",
+    "testsAndMocks": "complete",
+    "uiAndRecovery": "complete",
+    "contractFreezeReady": true
+  }
+}

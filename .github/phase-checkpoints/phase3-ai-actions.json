@@ -1,0 +1,304 @@
+{
+  "formatVersion": 1,
+  "phase": 3,
+  "task": 5,
+  "name": "proposal-bound sensitive AI actions",
+  "status": "source-closed",
+  "auditedAt": "2026-08-03",
+  "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
+  "task4ClosureHead": "c873b8b6a256383497d3799e0839160178e92149",
+  "task4AuthorityHead": "18a6f3ac8834526dd3746e1a9a806134625a6ab7",
+  "activeBranch": "agent/phase3-durable-effects-audit",
+  "activeDraftPr": 203,
+  "problemId": "P3-P1-005",
+  "evidenceBoundary": "source, database, integration and development UI only",
+  "auditedSurfaces": [
+    "src/lib/ai/chat/agent.ts",
+    "src/lib/ai/chat/source-proposal.ts",
+    "src/lib/ai/chat/tools/registry.ts",
+    "src/lib/ai/chat/tools/core-tools.ts",
+    "src/lib/ai/chat/tools/extended-tools.ts",
+    "src/lib/ai/chat/tools/advanced-tools-legacy.ts",
+    "src/app/api/ai/sessions/route.ts",
+    "src/app/api/ai/sessions/[id]/messages/route.ts",
+    "src/app/api/ai/sessions/[id]/messages/stream/route.ts",
+    "src/components/ai/ai-chat.tsx",
+    "prisma/schema.prisma",
+    "src/lib/identity/trusted-actor.ts",
+    "src/lib/identity/authorization.ts",
+    "src/lib/identity/permissions.ts",
+    "src/lib/license/license-authority.ts",
+    "src/lib/business-truth/command-kernel.ts"
+  ],
+  "rootCauses": [
+    {
+      "id": "AI5-RC-001",
+      "severity": "P1",
+      "finding": "Sensitive execution is authorized by confirmation words in the newest user message rather than an immutable proposal record."
+    },
+    {
+      "id": "AI5-RC-002",
+      "severity": "P1",
+      "finding": "The pending proposal is reconstructed from assistant tool-call JSON and AsyncLocalStorage instead of storage-enforced proposal identity."
+    },
+    {
+      "id": "AI5-RC-003",
+      "severity": "P1",
+      "finding": "Mutation classification is optional per tool definition; omitted metadata permits direct execution."
+    },
+    {
+      "id": "AI5-RC-004",
+      "severity": "P1",
+      "finding": "Several AI tools write directly through Prisma or duplicate provider workflows instead of one proposal-bound command executor."
+    },
+    {
+      "id": "AI5-RC-005",
+      "severity": "P1",
+      "finding": "Current confirmation does not bind actor, approver, device, session, exact shop, policy, permission, entitlement, target versions, expiry or one-time execution."
+    },
+    {
+      "id": "AI5-RC-006",
+      "severity": "P1",
+      "finding": "A response replay, duplicated approval request or restart can regenerate arguments or repeat a mutation because there is no unique proposal-to-execution claim."
+    },
+    {
+      "id": "AI5-RC-007",
+      "severity": "P1",
+      "finding": "The streaming UI confirms by sending the generic text 'oui', allowing Gemini to choose or regenerate the next function call."
+    },
+    {
+      "id": "AI5-RC-008",
+      "severity": "P1",
+      "finding": "The streaming route can deliver a mutation result before assistant-message persistence and silently swallow persistence failure; action truth must come from dedicated action records."
+    }
+  ],
+  "toolCatalog": [
+    {
+      "name": "search_products",
+      "class": "read"
+    },
+    {
+      "name": "search_customers",
+      "class": "read"
+    },
+    {
+      "name": "create_order",
+      "class": "sensitive-supported",
+      "currentGate": "exact-persisted-proposal-approval"
+    },
+    {
+      "name": "get_stats",
+      "class": "read"
+    },
+    {
+      "name": "update_order_status",
+      "class": "sensitive-supported",
+      "currentGate": "exact-persisted-proposal-approval"
+    },
+    {
+      "name": "estimate_delivery_cost",
+      "class": "external-read"
+    },
+    {
+      "name": "get_order_details",
+      "class": "read"
+    },
+    {
+      "name": "list_recent_orders",
+      "class": "read"
+    },
+    {
+      "name": "get_customer_details",
+      "class": "read"
+    },
+    {
+      "name": "get_low_stock_products",
+      "class": "read"
+    },
+    {
+      "name": "get_revenue_report",
+      "class": "read"
+    },
+    {
+      "name": "get_delivery_status",
+      "class": "read"
+    },
+    {
+      "name": "search_conversations",
+      "class": "read-pii"
+    },
+    {
+      "name": "get_pending_deliveries",
+      "class": "read"
+    },
+    {
+      "name": "get_top_products",
+      "class": "read"
+    },
+    {
+      "name": "update_product_stock",
+      "class": "sensitive-supported",
+      "currentGate": "exact-persisted-proposal-approval"
+    },
+    {
+      "name": "cancel_order",
+      "class": "sensitive-supported",
+      "currentGate": "exact-persisted-proposal-approval"
+    },
+    {
+      "name": "get_wilaya_risk",
+      "class": "read"
+    },
+    {
+      "name": "create_product",
+      "class": "sensitive-supported",
+      "currentGate": "exact-persisted-proposal-approval"
+    },
+    {
+      "name": "update_product_price",
+      "class": "sensitive-supported",
+      "currentGate": "exact-persisted-proposal-approval"
+    },
+    {
+      "name": "get_product_details",
+      "class": "read"
+    },
+    {
+      "name": "create_customer",
+      "class": "sensitive-supported",
+      "currentGate": "exact-persisted-proposal-approval"
+    },
+    {
+      "name": "update_customer_notes",
+      "class": "sensitive-supported",
+      "currentGate": "exact-persisted-proposal-approval"
+    },
+    {
+      "name": "get_customer_orders",
+      "class": "read"
+    },
+    {
+      "name": "assign_order_to_delivery",
+      "class": "sensitive-blocked-provider-convergence",
+      "currentGate": "blocked-provider-convergence"
+    },
+    {
+      "name": "get_delivery_cost_comparison",
+      "class": "external-read"
+    },
+    {
+      "name": "get_returns_summary",
+      "class": "read"
+    },
+    {
+      "name": "get_sales_by_wilaya",
+      "class": "read"
+    },
+    {
+      "name": "get_conversation_messages",
+      "class": "read-pii"
+    },
+    {
+      "name": "search_orders",
+      "class": "read-pii"
+    }
+  ],
+  "frozenContract": {
+    "records": [
+      "AiActionProposal",
+      "AiActionApproval",
+      "AiActionExecution"
+    ],
+    "proposal": "Gemini function-call arguments are validated, canonicalized, encrypted and persisted before the UI receives an approval request.",
+    "identity": "Proposal digest binds tool, encrypted argument hash, request actor, session, device, workspace, installation, shop incarnation, registry revision, policy version, revocation epoch, required permissions, license projection, target versions and expiry.",
+    "approval": "The approval endpoint receives only a proposal ID and decision. Server authority revalidates the stored digest, current approver, exact shop, permission, license, expiry and target versions.",
+    "execution": "One unique execution row claims one proposal exactly once. Mutation replay returns the stored result and never regenerates arguments.",
+    "commands": "Supported database mutations execute through canonical services inside a proposal-idempotent BusinessCommand. Provider effects are disabled unless an existing durable effect protocol can be reused without convergence work.",
+    "catalog": "Every registered tool declares a central execution class. Unknown or unclassified tools fail closed and are not sent to Gemini.",
+    "history": "UI reads sanitized proposal, approval and execution projections; encrypted arguments and raw result details never leave the server.",
+    "recovery": "Expired, tampered, stale-policy, stale-entitlement, target-conflict and interrupted execution states are explicit and cannot be approved silently."
+  },
+  "supportedSensitiveTools": [
+    "create_order",
+    "update_order_status",
+    "update_product_stock",
+    "cancel_order",
+    "create_product",
+    "update_product_price",
+    "create_customer",
+    "update_customer_notes"
+  ],
+  "blockedSensitiveTools": [
+    {
+      "name": "assign_order_to_delivery",
+      "reason": "Courier/provider convergence is a Task 5 non-goal; the current AI tool duplicates provider execution and therefore must not be exposed for mutation."
+    }
+  ],
+  "requiredTests": [
+    "proposal arguments are encrypted and digest-bound",
+    "tampered encrypted arguments fail closed",
+    "expired proposal cannot be approved",
+    "actor, device, session and shop drift fail closed",
+    "permission, policy and entitlement drift fail closed",
+    "target-version conflict fails closed",
+    "double approval creates one execution",
+    "response replay returns one stored result",
+    "restart after execution claim does not repeat a mutation",
+    "sensitive tool direct invocation without sealed execution authority fails",
+    "unclassified mutation tools are not exposed",
+    "blocked provider mutation is not exposed",
+    "Arabic, French and English approval and stale/conflict states render with RTL-safe identifiers"
+  ],
+  "nonGoals": [
+    "courier or commerce protocol convergence",
+    "live provider certification",
+    "version bump",
+    "MSI or release",
+    "Founder acceptance",
+    "Phase 3 closure",
+    "Stable"
+  ],
+  "sourceClosedAt": "2026-08-03",
+  "sourceHead": "07caedbc797ced5dc0e2ac959f252d5b3481285d",
+  "fullSourceCheckpointRun": 30849680029,
+  "normalCiRun": 30849680245,
+  "sourceGate": "passed",
+  "reviewThreadsOpen": 0,
+  "separatedAdversarialReview": "complete-repaired",
+  "closedProblemIds": [
+    "P3-P1-005"
+  ],
+  "nextAuthorizedPackage": {
+    "name": "courier and commerce convergence plus provider certification",
+    "branch": "agent/phase3-durable-effects-audit",
+    "pr": 203,
+    "problemIds": [
+      "P3-P1-006",
+      "P3-P1-007",
+      "P3-P1-008",
+      "P3-P2-002",
+      "P3-P2-003"
+    ],
+    "scope": [
+      "converge courier and commerce work on shared durable ingress, effect, receipt and reconciliation contracts",
+      "persist durable commerce runs, pages, items, attempts, quarantine, dead letter and operator recovery",
+      "remove or make read-only competing legacy courier and commerce mutation or effect paths",
+      "gate every provider capability through server-side certification and kill-switch authority",
+      "keep DHD effect-disabled until current live endpoint and behavior certification exists",
+      "prove duplicate, overlap, retry, ambiguity, restart, interruption and checkpoint safety",
+      "provide complete Arabic, French and English operator recovery states"
+    ],
+    "nonGoals": [
+      "application version bump, MSI, release, Founder acceptance, Phase 3 closure or Stable",
+      "Phase 4 backup and replacement-install recovery",
+      "broad whole-product UI redesign"
+    ],
+    "gate": [
+      "complete current-source courier and commerce reconnaissance before production edits",
+      "focused tests during implementation",
+      "Level 1 Task Gate on each coherent package",
+      "frozen exact-head separated adversarial review before package closure",
+      "live certification evidence only where current credentials and provider access exist"
+    ]
+  }
+}

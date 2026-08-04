@@ -21,8 +21,6 @@ import { withServiceError } from "./service-base";
 
 function toDomainProduct(row: Record<string, unknown>): Product {
   const output = { ...row };
-  // Legacy: variants was a JSON string. Keep parsing for backward compatibility,
-  // but the canonical source is now the ProductVariant relation.
   if (typeof output.variants === "string") {
     try {
       output.variants = JSON.parse(output.variants);
@@ -63,10 +61,6 @@ async function assertCanonicalCatalogMutationAllowed(
     );
   }
 
-  // A pending canonical order has already selected this exact catalog identity
-  // and price. Block stock, activation and variant-shape changes until the order
-  // is confirmed or rejected, regardless of whether intake was manual,
-  // storefront, WhatsApp, import, provider or AI.
   const pendingSelections = await tx.orderItem.findMany({
     where: {
       productId,
@@ -199,6 +193,7 @@ export const productService = {
         sku: string | null;
         stock: number;
         lowStockThreshold: number;
+        updatedAt?: Date;
       }> = [];
       const row = await context.prisma.$transaction(async (tx) => {
         if (
@@ -285,9 +280,11 @@ export const productService = {
         return updated;
       });
 
-      for (const product of lowStockToDispatch) {
-        void dispatchLowStock(context, product);
-      }
+      await Promise.all(
+        lowStockToDispatch.map((product) =>
+          dispatchLowStock(context, product),
+        ),
+      );
 
       return toDomainProduct(row as unknown as Record<string, unknown>);
     }, "Product");
@@ -305,7 +302,6 @@ export const productService = {
     }, "Product");
   },
 
-  /** Deduct stock (called when order is confirmed). */
   async deductStock(
     context: ServiceContext,
     productId: string,
@@ -320,7 +316,6 @@ export const productService = {
     });
   },
 
-  /** Restore stock (called when order is cancelled/returned/refused). */
   async restoreStock(
     context: ServiceContext,
     productId: string,
@@ -335,7 +330,6 @@ export const productService = {
     });
   },
 
-  /** List products at or below their low-stock threshold. */
   async listLowStock(context: ServiceContext): Promise<Product[]> {
     const rows = await context.prisma.product.findMany({
       where: {
@@ -349,8 +343,6 @@ export const productService = {
       toDomainProduct(row as unknown as Record<string, unknown>),
     );
   },
-
-  // ─── Categories ─────────────────────────────────────────────────────────────
 
   async listCategories(context: ServiceContext): Promise<Category[]> {
     const rows = await context.prisma.category.findMany({

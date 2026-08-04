@@ -7,8 +7,9 @@
  *
  * Providers (Phase 0 #16, design system Section 6.1):
  *   - Yalidine (fully implemented)
- *   - Maystro Delivery (structural stub — same pattern, fill in API details)
- *   - ZR Express (structural stub — same pattern, fill in API details)
+ *   - Maystro Delivery (implemented and covered by deterministic conformance)
+ *   - ZR Express
+ *   - NOEST Express (provider-issued EcoTrack contract; exact endpoints configured per merchant)
  */
 
 /** Delivery status across all providers (normalized to our taxonomy). */
@@ -124,19 +125,17 @@ export interface TestConnectionResult {
 
 /** The adapter interface every delivery provider implements. */
 export interface DeliveryAdapter {
-  readonly id: string; // "yalidine" | "maystro" | "zrexpress"
+  readonly id: string; // canonical DeliveryProvider value
   readonly name: string;
   readonly logo: string;
-  /**
-   * W2-10: marks adapters whose endpoints are unverified guesses
-   * (e.g., DHD — no public API docs). The UI shows an "Experimental" badge
-   * and prompts the user to verify endpoints before relying on the adapter.
-   */
-  readonly isExperimental?: boolean;
-
   /** Estimate the delivery cost for a shipment (wilaya + weight). */
   estimateCost(
-    params: { wilaya: string; commune?: string; weight: number; codAmount: number },
+    params: {
+      wilaya: string;
+      commune?: string;
+      weight: number;
+      codAmount: number;
+    },
     credentials: DeliveryCredentials,
   ): Promise<DeliveryCostEstimate>;
 
@@ -164,11 +163,18 @@ export interface DeliveryAdapter {
    * get account info). Used by the "Test connection" button in the
    * integrations panel + POST /api/delivery/test-connection.
    */
-  testConnection?(credentials: DeliveryCredentials): Promise<TestConnectionResult>;
+  testConnection?(
+    credentials: DeliveryCredentials,
+  ): Promise<TestConnectionResult>;
 }
 
 /** Known provider IDs (convention: lowercase, no spaces). */
-export const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zrexpress", "dhd"] as const;
+export const DELIVERY_PROVIDERS = [
+  "yalidine",
+  "maystro",
+  "zrexpress",
+  "noest",
+] as const;
 export type DeliveryProvider = (typeof DELIVERY_PROVIDERS)[number];
 
 /** Secret-store key convention for delivery credentials. */
@@ -194,13 +200,26 @@ export function deliverySecretKey(provider: string, field: string): string {
 export function deliverySecretKeys(provider: string): string[] {
   switch (provider) {
     case "yalidine":
-      return [deliverySecretKey("yalidine", "apiId"), deliverySecretKey("yalidine", "apiToken")];
+      return [
+        deliverySecretKey("yalidine", "apiId"),
+        deliverySecretKey("yalidine", "apiToken"),
+      ];
     case "maystro":
       return [deliverySecretKey("maystro", "apiToken")];
     case "zrexpress":
-      return [deliverySecretKey("zrexpress", "apiId"), deliverySecretKey("zrexpress", "apiKey")];
-    case "dhd":
-      return [deliverySecretKey("dhd", "apiToken")];
+      return [
+        deliverySecretKey("zrexpress", "apiId"),
+        deliverySecretKey("zrexpress", "apiKey"),
+      ];
+    case "noest":
+      return [
+        deliverySecretKey("noest", "apiToken"),
+        deliverySecretKey("noest", "userGuid"),
+        deliverySecretKey("noest", "createOrderUrl"),
+        deliverySecretKey("noest", "validateOrderUrl"),
+        deliverySecretKey("noest", "trackingsUrl"),
+        deliverySecretKey("noest", "feesUrl"),
+      ];
     default:
       return [];
   }
