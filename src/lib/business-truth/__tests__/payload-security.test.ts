@@ -1,16 +1,21 @@
-process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.SF_MASTER_KEY =
+  process.env.SF_MASTER_KEY ??
+  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 import { randomBytes } from "node:crypto";
 
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
-  decryptString,
-  encryptString,
-} from "@/lib/crypto/field-crypto";
+  resolveShopProtectedKey,
+  rewrapShopProtectedKeys,
+} from "@/lib/crypto/protected-key-authority";
+import { isProtectedValueEnvelope } from "@/lib/crypto/protected-value";
 import { getMasterKey } from "@/lib/crypto/master-key";
+import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { getSecret } from "@/lib/secrets";
 import { executeBusinessCommand } from "../command-kernel";
 import {
   BUSINESS_ENVELOPE_SECRET_KEY,
@@ -20,7 +25,10 @@ import { openBusinessPayloadWithKey } from "../payload-codec";
 import { openBusinessCommandResultWithKey } from "../result-codec";
 
 const db = new PrismaClient();
-const context = { prisma: db as never } satisfies ServiceContext;
+const context = {
+  prisma: db as never,
+  shop: TEST_SHOP_CONTEXT,
+} satisfies ServiceContext;
 
 const sensitive = {
   phone: "0555000111",
@@ -44,9 +52,7 @@ async function cleanBusinessTruth(): Promise<void> {
   ]);
 }
 
-beforeEach(async () => {
-  await cleanBusinessTruth();
-});
+beforeEach(cleanBusinessTruth);
 
 afterAll(async () => {
   await cleanBusinessTruth();
@@ -133,43 +139,51 @@ describe("business envelope security", () => {
 
     const envelopeKey = await getBusinessEnvelopeKey(context);
     expect(
-      openBusinessPayloadWithKey(event.payloadJson, {
-        kind: "domain-event",
-        recordKey: event.eventKey,
-        recordType: event.eventType,
-        commandId: event.commandId,
-      }, envelopeKey),
+      openBusinessPayloadWithKey(
+        event.payloadJson,
+        {
+          kind: "domain-event",
+          recordKey: event.eventKey,
+          recordType: event.eventType,
+          commandId: event.commandId,
+        },
+        envelopeKey,
+      ),
     ).toEqual(sensitive);
     expect(
-      openBusinessPayloadWithKey(intent.payloadJson, {
-        kind: "outbox-intent",
-        recordKey: intent.effectKey,
-        recordType: intent.effectType,
-        commandId: intent.commandId,
-      }, envelopeKey),
+      openBusinessPayloadWithKey(
+        intent.payloadJson,
+        {
+          kind: "outbox-intent",
+          recordKey: intent.effectKey,
+          recordType: intent.effectType,
+          commandId: intent.commandId,
+        },
+        envelopeKey,
+      ),
     ).toEqual(sensitive);
     expect(
-      openBusinessPayloadWithKey(fact.payloadJson, {
-        kind: "compensation-fact",
-        recordKey: fact.factKey,
-        recordType: fact.factType,
-        commandId: fact.commandId,
-      }, envelopeKey),
+      openBusinessPayloadWithKey(
+        fact.payloadJson,
+        {
+          kind: "compensation-fact",
+          recordKey: fact.factKey,
+          recordType: fact.factType,
+          commandId: fact.commandId,
+        },
+        envelopeKey,
+      ),
     ).toEqual(sensitive);
 
-    const unwrappedHex = decryptString(
-      {
-        ciphertext: secret.ciphertext,
-        iv: secret.iv,
-        tag: secret.tag,
-      },
-      getMasterKey(),
-    );
-    expect(Buffer.from(unwrappedHex, "hex").equals(envelopeKey)).toBe(true);
-    expect(secret.ciphertext).not.toContain(unwrappedHex);
+    expect(isProtectedValueEnvelope(secret.ciphertext)).toBe(true);
+    const storedHex = await getSecret(context, BUSINESS_ENVELOPE_SECRET_KEY);
+    expect(storedHex).toMatch(/^[0-9a-f]{64}$/);
+    expect(Buffer.from(storedHex ?? "", "hex").equals(envelopeKey)).toBe(true);
+    expect(secret.ciphertext).not.toContain(storedHex ?? "");
+    envelopeKey.fill(0);
   });
 
-  it("keeps historical envelopes readable when the stable key is re-wrapped under a new master key", async () => {
+  it("keeps historical envelopes readable when the shop-secret key is re-wrapped", async () => {
     const result = await executeBusinessCommand(
       context,
       {
@@ -204,55 +218,74 @@ describe("business envelope security", () => {
       }),
     );
 
-    const [command, event, secret] = await Promise.all([
+    const [command, event] = await Promise.all([
       db.businessCommand.findUniqueOrThrow({
         where: { idempotencyKey: "rotation-command-1" },
       }),
       db.domainEvent.findUniqueOrThrow({ where: { eventKey: "rotation-event-1" } }),
-      db.secret.findUniqueOrThrow({ where: { key: BUSINESS_ENVELOPE_SECRET_KEY } }),
     ]);
 
-    const stableKeyHex = decryptString(
-      {
-        ciphertext: secret.ciphertext,
-        iv: secret.iv,
-        tag: secret.tag,
-      },
-      getMasterKey(),
-    );
-    const replacementMasterKey = randomBytes(32);
-    const rewrapped = encryptString(stableKeyHex, replacementMasterKey);
-    const stableKeyAfterRotation = Buffer.from(
-      decryptString(rewrapped, replacementMasterKey),
-      "hex",
-    );
+    const stableKey = await getBusinessEnvelopeKey(context);
+    const oldInstallationRoot = Buffer.from(getMasterKey());
+    const replacementInstallationRoot = randomBytes(32);
+    try {
+      const rewrapped = await rewrapShopProtectedKeys(
+        db,
+        TEST_SHOP_CONTEXT,
+        oldInstallationRoot,
+        replacementInstallationRoot,
+      );
+      expect(rewrapped.rewrapped).toBeGreaterThanOrEqual(1);
 
-    const reopenedResult = openBusinessCommandResultWithKey<{
-      createdAt: Date;
-      customer: typeof sensitive;
-    }>(
-      command.resultJson ?? "",
-      {
-        commandId: command.id,
-        idempotencyKey: command.idempotencyKey,
-        requestHash: command.requestHash,
-      },
-      stableKeyAfterRotation,
-    );
-    const reopenedEvent = openBusinessPayloadWithKey<typeof sensitive>(
-      event.payloadJson,
-      {
-        kind: "domain-event",
-        recordKey: event.eventKey,
-        recordType: event.eventType,
-        commandId: event.commandId,
-      },
-      stableKeyAfterRotation,
-    );
+      const reopenedAuthority = await resolveShopProtectedKey(
+        db,
+        "shop-secret",
+        {
+          shopContext: TEST_SHOP_CONTEXT,
+          installationRoot: replacementInstallationRoot,
+          createIfMissing: false,
+        },
+      );
+      expect(reopenedAuthority.key.equals(stableKey)).toBe(false);
+      reopenedAuthority.key.fill(0);
 
-    expect(reopenedResult.createdAt).toBeInstanceOf(Date);
-    expect(reopenedResult.customer).toEqual(sensitive);
-    expect(reopenedEvent).toEqual(sensitive);
-    expect(result.result.customer).toEqual(sensitive);
+      const reopenedResult = openBusinessCommandResultWithKey<{
+        createdAt: Date;
+        customer: typeof sensitive;
+      }>(
+        command.resultJson ?? "",
+        {
+          commandId: command.id,
+          idempotencyKey: command.idempotencyKey,
+          requestHash: command.requestHash,
+        },
+        stableKey,
+      );
+      const reopenedEvent = openBusinessPayloadWithKey<typeof sensitive>(
+        event.payloadJson,
+        {
+          kind: "domain-event",
+          recordKey: event.eventKey,
+          recordType: event.eventType,
+          commandId: event.commandId,
+        },
+        stableKey,
+      );
+
+      expect(reopenedResult.createdAt).toBeInstanceOf(Date);
+      expect(reopenedResult.customer).toEqual(sensitive);
+      expect(reopenedEvent).toEqual(sensitive);
+      expect(result.result.customer).toEqual(sensitive);
+    } finally {
+      await rewrapShopProtectedKeys(
+        db,
+        TEST_SHOP_CONTEXT,
+        replacementInstallationRoot,
+        oldInstallationRoot,
+      );
+      stableKey.fill(0);
+      oldInstallationRoot.fill(0);
+      replacementInstallationRoot.fill(0);
+    }
   });
 });
