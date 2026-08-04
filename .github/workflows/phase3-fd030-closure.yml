@@ -51,6 +51,9 @@ jobs:
       - name: Normalize current evidence sections
         run: python .github/phase3-founder-closure-prep-sections.py
 
+      - name: Normalize current changelog input
+        run: python .github/phase3-founder-closure-prep-changelog.py
+
       - name: Apply FD-030 closure authority
         run: python .github/phase3-founder-closure-fd030.py
 
