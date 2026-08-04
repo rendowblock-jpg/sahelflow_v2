@@ -18,6 +18,11 @@ jobs:
     if: ${{ github.event.pull_request.head.ref == 'agent/phase3-durable-effects-audit' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    env:
+      SF_TEST_ROOT: /tmp/sahelflow-phase3-evidence-finalize
+      SF_DATA_DIR: /tmp/sahelflow-phase3-evidence-finalize/data
+      DATABASE_URL: file:/tmp/sahelflow-phase3-evidence-finalize/data/shops/test.db
+      SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@v4
@@ -52,6 +57,9 @@ jobs:
         run: |
           bun run sf-version
           bun run sf-audit
+
+      - name: Prepare disposable test sandbox
+        run: bun run test:sandbox -- /tmp/sahelflow-phase3-evidence-finalize
 
       - name: Verify cross-package evidence contract
         run: bunx vitest run src/lib/integrations/__tests__/phase3-source-closure.test.ts
