@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { ProtectedDataCorruptionError } from "@/lib/crypto/protected-data-error";
-import { resolveShopProtectedKey } from "@/lib/crypto/protected-key-authority";
+import {
+  resolveShopProtectedKey,
+  rewrapShopProtectedKeys,
+} from "@/lib/crypto/protected-key-authority";
 import type { ShopContext } from "@/lib/shops/context";
 
 interface StoredAuthorityRow {
@@ -23,6 +26,9 @@ class FakeProtectedKeyPrisma {
     }): Promise<StoredAuthorityRow | null> => {
       return this.rows.get(args.where.purpose) ?? null;
     },
+    findMany: async (): Promise<StoredAuthorityRow[]> => {
+      return [...this.rows.values()].map((row) => ({ ...row }));
+    },
     create: async (args: {
       data: StoredAuthorityRow;
     }): Promise<StoredAuthorityRow> => {
@@ -32,6 +38,15 @@ class FakeProtectedKeyPrisma {
       const row = { ...args.data };
       this.rows.set(row.purpose, row);
       return row;
+    },
+    update: async (args: {
+      where: { purpose: string };
+      data: Partial<StoredAuthorityRow>;
+    }): Promise<StoredAuthorityRow> => {
+      const row = this.rows.get(args.where.purpose);
+      if (!row) throw new Error("missing authority row");
+      Object.assign(row, args.data);
+      return { ...row };
     },
   };
 }
@@ -47,6 +62,7 @@ const CONTEXT: ShopContext = Object.freeze({
 });
 
 const INSTALLATION_ROOT = Buffer.alloc(32, 0x55);
+const NEXT_INSTALLATION_ROOT = Buffer.alloc(32, 0x66);
 
 type AuthorityClient = Parameters<typeof resolveShopProtectedKey>[0];
 
@@ -90,6 +106,72 @@ describe("protected shop key authority", () => {
     expect(new Set(keys.map((entry) => entry.key.toString("hex"))).size).toBe(3);
     expect(new Set(keys.map((entry) => entry.descriptor.keyId)).size).toBe(3);
     expect(new Set(keys.map((entry) => entry.wrappingKeyId)).size).toBe(3);
+  });
+
+  it("re-wraps every shop key without changing its identity", async () => {
+    const fake = new FakeProtectedKeyPrisma();
+    const before = await Promise.all(
+      (["shop-data", "shop-blind-index", "shop-secret"] as const).map(
+        (purpose) =>
+          resolveShopProtectedKey(client(fake), purpose, {
+            shopContext: CONTEXT,
+            installationRoot: INSTALLATION_ROOT,
+          }),
+      ),
+    );
+    const beforeIds = before.map((entry) => entry.descriptor.keyId);
+    const beforeWrapping = before.map((entry) => entry.wrappingKeyId);
+
+    await expect(
+      rewrapShopProtectedKeys(
+        client(fake),
+        CONTEXT,
+        INSTALLATION_ROOT,
+        NEXT_INSTALLATION_ROOT,
+      ),
+    ).resolves.toEqual({ total: 3, rewrapped: 3, alreadyCurrent: 0 });
+
+    const after = await Promise.all(
+      (["shop-data", "shop-blind-index", "shop-secret"] as const).map(
+        (purpose) =>
+          resolveShopProtectedKey(client(fake), purpose, {
+            shopContext: CONTEXT,
+            installationRoot: NEXT_INSTALLATION_ROOT,
+            createIfMissing: false,
+          }),
+      ),
+    );
+    expect(after.map((entry) => entry.descriptor.keyId)).toEqual(beforeIds);
+    expect(after.map((entry) => entry.wrappingKeyId)).not.toEqual(beforeWrapping);
+
+    await expect(
+      rewrapShopProtectedKeys(
+        client(fake),
+        CONTEXT,
+        INSTALLATION_ROOT,
+        NEXT_INSTALLATION_ROOT,
+      ),
+    ).resolves.toEqual({ total: 3, rewrapped: 0, alreadyCurrent: 3 });
+  });
+
+  it("dry-run verifies old authority without modifying it", async () => {
+    const fake = new FakeProtectedKeyPrisma();
+    await resolveShopProtectedKey(client(fake), "shop-data", {
+      shopContext: CONTEXT,
+      installationRoot: INSTALLATION_ROOT,
+    });
+    const before = { ...fake.rows.get("shop-data")! };
+
+    await expect(
+      rewrapShopProtectedKeys(
+        client(fake),
+        CONTEXT,
+        INSTALLATION_ROOT,
+        NEXT_INSTALLATION_ROOT,
+        true,
+      ),
+    ).resolves.toEqual({ total: 1, rewrapped: 1, alreadyCurrent: 0 });
+    expect(fake.rows.get("shop-data")).toEqual(before);
   });
 
   it("rejects a replacement installation until explicit re-wrapping", async () => {
