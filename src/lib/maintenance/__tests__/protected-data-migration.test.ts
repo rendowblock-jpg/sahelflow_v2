@@ -24,11 +24,21 @@ function payload(value: string, key: Buffer): string {
   return JSON.stringify(encryptString(value, key));
 }
 
+/**
+ * This suite intentionally exercises an installation before key authority
+ * exists. Remove every protected-value owner before deleting the global
+ * purpose rows so no canonical row is orphaned for later test files.
+ */
 async function clean(): Promise<void> {
-  await dbRaw.order.deleteMany({ where: { id: ORDER_ID } });
-  await dbRaw.customer.deleteMany({ where: { id: CUSTOMER_ID } });
-  await dbRaw.secret.deleteMany({ where: { key: SECRET_KEY } });
-  await dbRaw.protectedKeyAuthority.deleteMany();
+  await dbRaw.$transaction([
+    dbRaw.message.deleteMany(),
+    dbRaw.conversation.deleteMany(),
+    dbRaw.orderItem.deleteMany(),
+    dbRaw.order.deleteMany(),
+    dbRaw.customer.deleteMany(),
+    dbRaw.secret.deleteMany(),
+    dbRaw.protectedKeyAuthority.deleteMany(),
+  ]);
 }
 
 beforeEach(async () => {
@@ -120,7 +130,9 @@ describe("protected-data migration", () => {
         { shopContext: TEST_SHOP_CONTEXT, installationRoot: root },
       ),
     );
-    await expect(getSecret(context, SECRET_KEY)).resolves.toBe("secret-value");
+    await expect(getSecret(context, SECRET_KEY, { installationRoot: root })).resolves.toBe(
+      "secret-value",
+    );
 
     const second = await migrateShopProtectedData(dbRaw, {
       mode: "apply",
