@@ -44,6 +44,9 @@ jobs:
       - name: Apply generated audit fixup
         run: python .github/phase3-source-authority-fixup.py
 
+      - name: Allow cross-package courier authority inspection
+        run: python .github/phase3-courier-closure-allowlist.py
+
       - name: Format machine authority and audit source
         run: >-
           bunx prettier --write
@@ -51,6 +54,7 @@ jobs:
           .github/phase-checkpoints/phase3-commerce-runtime.json
           .github/phase-checkpoints/phase3-provider-convergence.json
           src/lib/integrations/__tests__/phase3-source-closure.test.ts
+          src/lib/delivery/__tests__/canonical-courier-closure.integration.test.ts
           scripts/sf-audit.ts
 
       - name: Generate Prisma client
@@ -88,7 +92,8 @@ jobs:
             documentation/system/CURRENT_STATE.md \
             documentation/system/ROADMAP.md \
             documentation/operations/WORKING_MEMORY.md \
-            scripts/sf-audit.ts
+            scripts/sf-audit.ts \
+            src/lib/delivery/__tests__/canonical-courier-closure.integration.test.ts
           git diff --cached --check
           if git diff --cached --quiet; then
             echo "Phase 3 source authority is already reconciled"
