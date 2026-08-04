@@ -10,6 +10,7 @@ import {
 
 import { getDirection, loadTranslations, type Locale } from "@/lib/i18n";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
+import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
 import { useServerLocale } from "@/lib/i18n/server-locale-context";
 import { useUIStore } from "@/stores/ui-store";
@@ -52,6 +53,7 @@ export function useI18n() {
       let value =
         translations[key] ??
         getAutomationRuntimeTranslation(locale, key) ??
+        getCommerceRuntimeTranslation(locale, key) ??
         getWhatsAppRecoveryTranslation(locale, key) ??
         key;
       if (params && "count" in params) {
