@@ -21,12 +21,24 @@ describe("classifyPrRisk", () => {
     expect(
       classifyPrRisk([
         "scripts/sf-audit.ts",
-        "scripts/__tests__/sf-audit-links.test.ts",
         ".github/phase-checkpoints/phase2-native-multishop.json",
       ]),
     ).toMatchObject({
       docsOnly: false,
       runQuality: false,
+      runTauri: false,
+      runWindowsStandalone: false,
+      runWindowsRust: false,
+      runInstalledMsi: false,
+    });
+  });
+
+  it("executes changed sf-audit Vitest files on the quality lane", () => {
+    expect(
+      classifyPrRisk(["scripts/__tests__/sf-audit-links.test.ts"]),
+    ).toMatchObject({
+      docsOnly: false,
+      runQuality: true,
       runTauri: false,
       runWindowsStandalone: false,
       runWindowsRust: false,
@@ -122,6 +134,21 @@ describe("classifyPrRisk", () => {
       runWindowsRust: false,
       runInstalledMsi: true,
     });
+  });
+
+  it("covers existing protected-data migration and key-rotation authorities", () => {
+    for (const path of [
+      "scripts/migrate-pii-encryption.ts",
+      "src/lib/maintenance/master-key-rotation.ts",
+    ]) {
+      expect(classifyPrRisk([path])).toMatchObject({
+        runQuality: true,
+        runTauri: false,
+        runWindowsStandalone: true,
+        runWindowsRust: false,
+        runInstalledMsi: true,
+      });
+    }
   });
 
   it("keeps ordinary proxy authorization changes on complete source proof", () => {
