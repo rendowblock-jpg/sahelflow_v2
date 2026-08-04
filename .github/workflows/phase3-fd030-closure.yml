@@ -1,0 +1,124 @@
+name: Phase 3 FD-030 closure gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase3-fd030-closure
+  cancel-in-progress: true
+
+jobs:
+  close:
+    name: Verify and publish FD-030 Phase 3 closure
+    if: ${{ github.event.pull_request.head.ref == 'agent/phase3-durable-effects-audit' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      SF_TEST_ROOT: /tmp/sahelflow-phase3-fd030
+      SF_DATA_DIR: /tmp/sahelflow-phase3-fd030/data
+      DATABASE_URL: file:/tmp/sahelflow-phase3-fd030/data/shops/test.db
+      SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+      SF_WORKSPACE_ID: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      SF_INSTALLATION_ID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      SF_ACTIVE_SHOP_ID: phase3-fd030
+      SF_SHOP_INCARNATION_ID: cccccccccccccccccccccccccccccccc
+      SF_REGISTRY_REVISION: "1"
+      SF_DATABASE_FILE_ID: test.db
+      SF_MIGRATION_SET_SHA256: "0000000000000000000000000000000000000000000000000000000000000000"
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply FD-030 closure authority
+        run: python .github/phase3-founder-closure-fd030.py
+
+      - name: Format changed authority and tests
+        run: >-
+          bunx prettier --write
+          documentation/product/DECISIONS.md
+          .github/phase-checkpoints/phase3-durable-effects.json
+          AGENTS.md
+          README.md
+          CHANGELOG.md
+          documentation/README.md
+          documentation/system/CURRENT_STATE.md
+          documentation/system/ROADMAP.md
+          documentation/operations/WORKING_MEMORY.md
+          scripts/sf-audit.ts
+          src/lib/integrations/delivery/types.ts
+          src/lib/integrations/delivery/__tests__/adapters.test.ts
+          src/lib/integrations/__tests__/phase3-founder-closure.test.ts
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Prepare disposable test sandbox
+        run: bun run test:sandbox -- /tmp/sahelflow-phase3-fd030
+
+      - name: Verify version and semantic authority
+        run: |
+          bun run sf-version
+          bun run sf-audit
+
+      - name: Complete source, database and integration gate
+        run: bun run sf-verify
+
+      - name: Migration status
+        run: bunx prisma migrate status
+
+      - name: Production WhatsApp sidecar build
+        run: bun run build:sidecar
+
+      - name: Production Next build
+        run: bun run build
+
+      - name: Commit verified FD-030 closure authority
+        run: |
+          git config user.name "SahelFlow Phase 3 Closure"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            documentation/product/DECISIONS.md \
+            .github/phase-checkpoints/phase3-durable-effects.json \
+            AGENTS.md \
+            README.md \
+            CHANGELOG.md \
+            documentation/README.md \
+            documentation/system/CURRENT_STATE.md \
+            documentation/system/ROADMAP.md \
+            documentation/operations/WORKING_MEMORY.md \
+            scripts/sf-audit.ts \
+            src/lib/integrations/delivery/types.ts \
+            src/lib/integrations/delivery/__tests__/adapters.test.ts \
+            src/lib/integrations/__tests__/phase3-founder-closure.test.ts
+          git diff --cached --check
+          git commit -m "docs(phase3): close Phase 3 under FD-030"
+          git push origin HEAD:agent/phase3-durable-effects-audit
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase3-fd030-closure-diagnostics
+          path: |
+            .sf-vitest-first-failure.txt
+            .sf-vitest-failures.txt
+            .next/trace
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 3
