@@ -38,6 +38,20 @@ export interface NormalizedOrder {
   createdAt: string;
 }
 
+export interface SyncPageRequest {
+  watermark: string;
+  /** Opaque provider continuation. Null means fetch the first page. */
+  cursor?: string | null;
+}
+
+export interface SyncPageResult {
+  orders: NormalizedOrder[];
+  /** Opaque continuation to the next provider page, or null when complete. */
+  nextCursor: string | null;
+  /** Candidate diagnostic watermark accumulated through this page. */
+  candidateWatermark: string;
+}
+
 export interface SyncFetchResult {
   orders: NormalizedOrder[];
   nextWatermark: string;
@@ -62,13 +76,15 @@ export interface YouCanCredentials {
 }
 
 export type EcommerceCredentials =
-  | ShopifyCredentials
-  | WooCommerceCredentials
-  | YouCanCredentials;
+  ShopifyCredentials | WooCommerceCredentials | YouCanCredentials;
 
 export interface EcommerceAdapter {
   platform: EcommercePlatform;
   displayName: string;
+  fetchOrderPage(
+    credentials: EcommerceCredentials,
+    request: SyncPageRequest,
+  ): Promise<SyncPageResult>;
   listOrdersSince(
     credentials: EcommerceCredentials,
     watermark: string,

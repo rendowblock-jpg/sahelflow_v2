@@ -36,6 +36,8 @@ import type {
   YouCanCredentials,
   NormalizedOrder,
   SyncFetchResult,
+  SyncPageRequest,
+  SyncPageResult,
 } from "./types";
 
 const PAGE_SIZE = 100;
@@ -119,7 +121,9 @@ function isAddress(addr: YouCanAddress | unknown[]): addr is YouCanAddress {
 }
 
 function normalizeOrder(order: YouCanOrder): NormalizedOrder {
-  const addr = isAddress(order.shipping.address) ? order.shipping.address : null;
+  const addr = isAddress(order.shipping.address)
+    ? order.shipping.address
+    : null;
   const customerName =
     addr?.full_name ??
     (addr ? `${addr.first_name} ${addr.last_name}`.trim() : null) ??
@@ -164,6 +168,82 @@ function normalizeOrder(order: YouCanOrder): NormalizedOrder {
 export const youcanAdapter: EcommerceAdapter = {
   platform: "youcan",
   displayName: "YouCan",
+
+  async fetchOrderPage(
+    credentials: EcommerceCredentials,
+    request: SyncPageRequest,
+  ): Promise<SyncPageResult> {
+    if (!isYouCanCreds(credentials)) {
+      throw new Error("Invalid credentials for YouCan adapter");
+    }
+
+    const page = request.cursor ? Number.parseInt(request.cursor, 10) : 1;
+    if (!Number.isInteger(page) || page < 1) {
+      throw new Error("Invalid YouCan page cursor");
+    }
+    const params = new URLSearchParams({
+      limit: String(PAGE_SIZE),
+      page: String(page),
+      sort_field: "created_at",
+      sort_order: "desc",
+      include: "shipping,customer",
+    });
+    const url = `${BASE_URL}/orders?${params.toString()}`;
+    let retries = 0;
+
+    while (true) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30_000);
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          headers: { Authorization: `Bearer ${credentials.accessToken}` },
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      if (response.status === 429) {
+        if (retries >= MAX_429_RETRIES) {
+          throw new Error(
+            `YouCan API rate-limited (429) on page ${page} after ${MAX_429_RETRIES} retries`,
+          );
+        }
+        const retryAfterHeader = response.headers.get("Retry-After");
+        const seconds = Number.parseFloat(retryAfterHeader ?? "");
+        const delayMs = Number.isFinite(seconds)
+          ? seconds * 1000
+          : BACKOFF_BASE_MS * 2 ** retries;
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        retries += 1;
+        continue;
+      }
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        throw new Error(`YouCan API ${response.status}: ${body.slice(0, 200)}`);
+      }
+
+      const data = (await response.json()) as YouCanOrdersResponse;
+      const providerOrders = data.data ?? [];
+      let candidateWatermark = request.watermark;
+      for (const order of providerOrders) {
+        if (!candidateWatermark || order.updated_at > candidateWatermark) {
+          candidateWatermark = order.updated_at;
+        }
+      }
+      const nextCursor =
+        data.meta?.pagination?.links?.next &&
+        providerOrders.length === PAGE_SIZE
+          ? String(page + 1)
+          : null;
+      return {
+        orders: providerOrders.map(normalizeOrder),
+        nextCursor,
+        candidateWatermark,
+      };
+    }
+  },
 
   async listOrdersSince(
     credentials: EcommerceCredentials,
@@ -231,7 +311,9 @@ export const youcanAdapter: EcommerceAdapter = {
           // Retry-After is either seconds (most common) or an HTTP-date.
           // Parse as seconds first; if NaN, fall back to exponential backoff.
           const seconds = parseFloat(retryAfterHeader);
-          delayMs = Number.isFinite(seconds) ? seconds * 1000 : BACKOFF_BASE_MS * Math.pow(2, retriesThisPage);
+          delayMs = Number.isFinite(seconds)
+            ? seconds * 1000
+            : BACKOFF_BASE_MS * Math.pow(2, retriesThisPage);
         } else {
           delayMs = BACKOFF_BASE_MS * Math.pow(2, retriesThisPage);
         }
