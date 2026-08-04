@@ -90,6 +90,7 @@ function changesInstalledMsiProof(path: string): boolean {
  */
 function changesNativeDataSurvivability(path: string): boolean {
   const nativeAuthorityPrefixes = [
+    "src-tauri/src/lib.rs",
     "src-tauri/src/backup",
     "src-tauri/src/restore",
     "src-tauri/src/recovery",
