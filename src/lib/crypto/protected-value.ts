@@ -29,14 +29,21 @@ const KEY_ID_DOMAIN = Buffer.from(
 
 export const PROTECTED_VALUE_PURPOSES = [
   "shop-data",
+  "shop-blind-index",
   "shop-secret",
   "business-payload",
+  "key-wrap",
   "backup-manifest",
   "recovery-kit",
 ] as const;
 
 export type ProtectedValuePurpose =
   (typeof PROTECTED_VALUE_PURPOSES)[number];
+
+export type ShopProtectedKeyPurpose =
+  | "shop-data"
+  | "shop-blind-index"
+  | "shop-secret";
 
 export interface ProtectedValueKeyDescriptor {
   formatVersion: typeof KEY_DESCRIPTOR_FORMAT_VERSION;
@@ -46,7 +53,7 @@ export interface ProtectedValueKeyDescriptor {
 }
 
 /** Exact shop-record context authenticated as AEAD associated data. */
-export interface ProtectedValueBinding {
+export interface ShopRecordProtectedValueBinding {
   scope: "shop-record";
   workspaceId: string;
   shopId: string;
@@ -55,6 +62,25 @@ export interface ProtectedValueBinding {
   recordId: string;
   field: string;
 }
+
+/**
+ * Context for a wrapped random shop key. Installation ID is authenticated so a
+ * replacement install must explicitly unwrap with recovery authority and
+ * re-wrap under the new local installation root.
+ */
+export interface ShopKeyAuthorityBinding {
+  scope: "shop-key-authority";
+  workspaceId: string;
+  installationId: string;
+  shopId: string;
+  shopIncarnationId: string;
+  protectedPurpose: ShopProtectedKeyPurpose;
+  protectedVersion: number;
+}
+
+export type ProtectedValueBinding =
+  | ShopRecordProtectedValueBinding
+  | ShopKeyAuthorityBinding;
 
 interface ProtectedValueEnvelope {
   format: typeof FORMAT;
@@ -87,11 +113,9 @@ function assertPurpose(purpose: ProtectedValuePurpose): void {
   }
 }
 
-function assertVersion(version: number): void {
+function assertVersion(version: number, label = "Protected value key version"): void {
   if (!Number.isSafeInteger(version) || version < 1) {
-    throw new TypeError(
-      "Protected value key version must be a positive safe integer",
-    );
+    throw new TypeError(`${label} must be a positive safe integer`);
   }
 }
 
@@ -110,33 +134,66 @@ function assertIdentifier(
   }
 }
 
+function assertHexIdentity(value: string, label: string): void {
+  if (!/^[0-9a-f]{32}$/i.test(value)) {
+    throw new TypeError(`${label} is invalid`);
+  }
+}
+
 function assertBinding(binding: ProtectedValueBinding): void {
-  if (binding.scope !== "shop-record") {
-    throw new TypeError("Protected value scope is unsupported");
-  }
-  if (!/^[0-9a-f]{32}$/i.test(binding.workspaceId)) {
-    throw new TypeError("Workspace ID is invalid");
-  }
-  if (!/^[0-9a-f]{32}$/i.test(binding.shopIncarnationId)) {
-    throw new TypeError("Shop incarnation ID is invalid");
-  }
+  assertHexIdentity(binding.workspaceId, "Workspace ID");
   assertIdentifier(binding.shopId, "Shop ID", 64);
-  assertIdentifier(binding.recordType, "Record type", 128);
-  assertIdentifier(binding.recordId, "Record ID", 256);
-  assertIdentifier(binding.field, "Field", 128);
+  assertHexIdentity(binding.shopIncarnationId, "Shop incarnation ID");
+
+  if (binding.scope === "shop-record") {
+    assertIdentifier(binding.recordType, "Record type", 128);
+    assertIdentifier(binding.recordId, "Record ID", 256);
+    assertIdentifier(binding.field, "Field", 128);
+    return;
+  }
+
+  if (binding.scope === "shop-key-authority") {
+    assertHexIdentity(binding.installationId, "Installation ID");
+    if (
+      binding.protectedPurpose !== "shop-data" &&
+      binding.protectedPurpose !== "shop-blind-index" &&
+      binding.protectedPurpose !== "shop-secret"
+    ) {
+      throw new TypeError("Protected key purpose is unsupported");
+    }
+    assertVersion(binding.protectedVersion, "Protected key version");
+    return;
+  }
+
+  const exhaustive: never = binding;
+  throw new TypeError(`Protected value scope is unsupported: ${String(exhaustive)}`);
 }
 
 function bindingBytes(binding: ProtectedValueBinding): Buffer {
   assertBinding(binding);
+  if (binding.scope === "shop-record") {
+    return Buffer.from(
+      JSON.stringify({
+        scope: binding.scope,
+        workspaceId: binding.workspaceId.toLowerCase(),
+        shopId: binding.shopId,
+        shopIncarnationId: binding.shopIncarnationId.toLowerCase(),
+        recordType: binding.recordType,
+        recordId: binding.recordId,
+        field: binding.field,
+      }),
+      "utf8",
+    );
+  }
   return Buffer.from(
     JSON.stringify({
       scope: binding.scope,
       workspaceId: binding.workspaceId.toLowerCase(),
+      installationId: binding.installationId.toLowerCase(),
       shopId: binding.shopId,
       shopIncarnationId: binding.shopIncarnationId.toLowerCase(),
-      recordType: binding.recordType,
-      recordId: binding.recordId,
-      field: binding.field,
+      protectedPurpose: binding.protectedPurpose,
+      protectedVersion: binding.protectedVersion,
     }),
     "utf8",
   );
