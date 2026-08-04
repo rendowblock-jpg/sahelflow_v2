@@ -1,0 +1,93 @@
+name: Task 6 commerce recovery gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    name: Verify and publish commerce recovery authority
+    if: ${{ github.event.pull_request.head.ref == 'agent/phase3-durable-effects-audit' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SF_TEST_ROOT: /tmp/sahelflow-commerce-recovery
+      SF_DATA_DIR: /tmp/sahelflow-commerce-recovery/data
+      DATABASE_URL: file:/tmp/sahelflow-commerce-recovery/data/shops/test.db
+      SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply reviewed retry generation repair
+        run: python .github/task6-commerce-retry-generation.py
+
+      - name: Format recovery source
+        run: >-
+          bunx prettier --write
+          src/lib/integrations/ecommerce/processor.ts
+          src/lib/integrations/ecommerce/recovery.ts
+          src/lib/integrations/ecommerce/__tests__/recovery.integration.test.ts
+          src/app/api/integrations/sync/history/route.ts
+          src/app/api/integrations/sync/recovery/route.ts
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Prepare disposable test sandbox
+        run: bun run test:sandbox -- /tmp/sahelflow-commerce-recovery
+
+      - name: Authority and documentation
+        run: |
+          bun run sf-version
+          bun run sf-audit
+
+      - name: Complete source gate
+        run: bun run sf-verify
+
+      - name: Migration status
+        run: bunx prisma migrate status
+
+      - name: Commit source-only recovery authority
+        run: |
+          git config user.name "SahelFlow Task 6 Recovery"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            src/lib/integrations/ecommerce/processor.ts \
+            src/lib/integrations/ecommerce/recovery.ts \
+            src/lib/integrations/ecommerce/__tests__/recovery.integration.test.ts \
+            src/app/api/integrations/sync/history/route.ts \
+            src/app/api/integrations/sync/recovery/route.ts
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "Commerce recovery authority already present"
+          else
+            git commit -m "feat(task6): recover durable commerce runs by retry generation"
+            git push origin HEAD:agent/phase3-durable-effects-audit
+          fi
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: task6-commerce-recovery-diagnostics
+          path: |
+            .sf-vitest-first-failure.txt
+            .sf-vitest-failures.txt
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 2
