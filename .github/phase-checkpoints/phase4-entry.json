@@ -1,5 +1,5 @@
 {
-  "formatVersion": 1,
+  "formatVersion": 2,
   "phase": 4,
   "name": "Phase 4 entry checkpoint",
   "state": "audit-and-contract-freeze-authorized",
@@ -9,13 +9,15 @@
   "phase3Issue": 202,
   "phase4Issue": 204,
   "documentationPullRequest": 205,
-  "validatedDocumentationHead": "b5146c527b55c7609443f91aba6a14761d17ff29",
+  "validatedDocumentationHead": "e3d65be52d6e6705f300a644671637a53ffb9e9f",
   "validation": {
     "frozenDependencyInstall": "passed",
     "versionAuthority": "passed",
     "documentationAuthorityAudit": "passed",
     "repositoryInventory": "passed-diagnostic-dirty-tree-mode",
-    "formatAndDiffCheck": "passed"
+    "formatAndDiffCheck": "passed",
+    "staleAgentDirectivesRemoved": true,
+    "reviewThreadsResolved": 3
   },
   "authorizedScope": [
     "exhaustive data, key, backup, migration, recovery, security and privacy inventory",
