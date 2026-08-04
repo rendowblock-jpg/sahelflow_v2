@@ -61,8 +61,8 @@ describe("packaged installation-root bridge", () => {
     process.env.SF_MASTER_KEY = "11".repeat(32);
 
     vi.resetModules();
-    const module = await import("../master-key");
-    expect(() => module.getMasterKey()).toThrow(
+    const masterKeyModule = await import("../master-key");
+    expect(() => masterKeyModule.getMasterKey()).toThrow(
       /was not transferred by the native runtime/,
     );
   });
