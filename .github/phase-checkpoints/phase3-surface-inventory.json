@@ -154,8 +154,8 @@
   "courier": {
     "files": [
       "src/lib/delivery/canonical-courier.ts",
-      "src/lib/delivery/canonical-courier-reviewed-base.ts",
-      "src/lib/delivery/canonical-courier-legacy.ts",
+      "src/lib/delivery/canonical-courier-booking-authority.ts",
+      "src/lib/delivery/canonical-courier-effect-runtime.ts",
       "src/lib/delivery/outbox-worker.ts",
       "src/lib/integrations/delivery/index.ts",
       "src/lib/integrations/delivery/yalidine.ts",

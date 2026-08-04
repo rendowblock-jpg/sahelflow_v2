@@ -44,20 +44,20 @@ import {
   ValidationError,
 } from "@/types/errors";
 
+/**
+ * Internal courier effect and tracking runtime.
+ *
+ * This module is not a seller/API entry point. Booking commands and manual
+ * reconciliation are owned by the public canonical-courier facade and booking
+ * authority. Only receipt-safe effect draining, position projection and
+ * canonical tracking ingestion remain here.
+ */
 export const COURIER_BOOKING_EFFECT_TYPE = "courier.shipment.create.v1";
 const MAX_BOOKING_ATTEMPTS = 5;
 const LEASE_MS = 120_000;
 const RETRY_DELAYS_MS = [15_000, 60_000, 300_000, 1_800_000] as const;
 
 const providerSchema = z.enum(DELIVERY_PROVIDERS);
-const bookingSchema = z.object({
-  orderId: z.string().trim().min(1),
-  provider: providerSchema,
-  expectedVersion: z.number().int().positive().safe(),
-  idempotencyKey: z.string().trim().min(8).max(200),
-  correlationId: z.string().trim().min(1).max(200).optional(),
-});
-
 const bookingPayloadSchema = z.object({
   deliveryId: z.string().trim().min(1),
   orderId: z.string().trim().min(1),
@@ -85,46 +85,6 @@ const bookingPayloadSchema = z.object({
     isExchange: z.boolean().optional(),
   }),
 });
-
-const reconciliationSchema = z
-  .object({
-    deliveryId: z.string().trim().min(1),
-    action: z.enum(["confirm_created", "confirm_not_created"]),
-    expectedVersion: z.number().int().positive().safe(),
-    trackingNumber: z.string().trim().min(1).max(240).optional(),
-    labelUrl: z.string().url().max(2000).nullable().optional(),
-    cost: z.number().int().nonnegative().safe().optional(),
-    estimatedDelivery: z.coerce.date().nullable().optional(),
-    reasonCode: z
-      .string()
-      .trim()
-      .min(2)
-      .max(80)
-      .regex(/^[a-z0-9][a-z0-9._-]*$/i)
-      .transform((value) => value.toLowerCase()),
-    idempotencyKey: z.string().trim().min(8).max(200),
-    correlationId: z.string().trim().min(1).max(200).optional(),
-  })
-  .superRefine((input, context) => {
-    if (input.action === "confirm_created" && !input.trackingNumber) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["trackingNumber"],
-        message: "A manually confirmed provider shipment requires tracking identity",
-      });
-    }
-    if (input.action === "confirm_not_created") {
-      for (const field of ["trackingNumber", "labelUrl", "cost", "estimatedDelivery"] as const) {
-        if (input[field] !== undefined) {
-          context.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: [field],
-            message: `${field} is valid only when confirming a created shipment`,
-          });
-        }
-      }
-    }
-  });
 
 const trackingEventSchema = z.object({
   deliveryId: z.string().trim().min(1),
@@ -214,7 +174,9 @@ export interface CourierPosition {
     errorCode: string | null;
     requiresReconciliation: boolean;
   };
-  availableActions: Array<"book" | "sync" | "reconcile_created" | "reconcile_not_created">;
+  availableActions: Array<
+    "book" | "sync" | "reconcile_created" | "reconcile_not_created"
+  >;
 }
 
 function safeInteger(value: number | bigint, field: string): number {
@@ -226,7 +188,9 @@ function safeInteger(value: number | bigint, field: string): number {
 }
 
 function retryAt(attemptCount: number, now = new Date()): Date {
-  const delay = RETRY_DELAYS_MS[Math.min(attemptCount - 1, RETRY_DELAYS_MS.length - 1)] ?? 1_800_000;
+  const delay =
+    RETRY_DELAYS_MS[Math.min(attemptCount - 1, RETRY_DELAYS_MS.length - 1)] ??
+    1_800_000;
   return new Date(now.getTime() + delay);
 }
 
@@ -316,21 +280,29 @@ function assertReservations(
   }
   const byItem = new Map(rows.map((row) => [row.orderItemId, row]));
   if (byItem.size !== rows.length) {
-    throw new ConflictError("Courier inventory authority contains duplicate reservations");
+    throw new ConflictError(
+      "Courier inventory authority contains duplicate reservations",
+    );
   }
   for (const item of items) {
     if (!item.productId) {
-      throw new ValidationError(`Order item '${item.id}' has no product identity`, "items.productId");
+      throw new ValidationError(
+        `Order item '${item.id}' has no product identity`,
+        "items.productId",
+      );
     }
     const reservation = byItem.get(item.id);
     if (
       !reservation ||
       reservation.productId !== item.productId ||
       reservation.productVariantId !== item.productVariantId ||
-      safeInteger(reservation.quantity, "reservation quantity") !== item.quantity ||
+      safeInteger(reservation.quantity, "reservation quantity") !==
+        item.quantity ||
       reservation.state !== expectedState
     ) {
-      throw new ConflictError(`Reservation authority does not match order item '${item.id}'`);
+      throw new ConflictError(
+        `Reservation authority does not match order item '${item.id}'`,
+      );
     }
   }
 }
@@ -376,188 +348,6 @@ async function latestBookingOutbox(
   return row as BookingOutboxRow | null;
 }
 
-export async function queueCanonicalCourierBooking(
-  context: BusinessPrincipalContext,
-  input: unknown,
-): Promise<BusinessCommandResult<CourierBookingResult>> {
-  const data = bookingSchema.parse(input);
-  const correlationId = data.correlationId ?? randomUUID();
-
-  return executeBusinessCommand(
-    context,
-    {
-      idempotencyKey: data.idempotencyKey,
-      commandType: "courier.booking.queue.v1",
-      aggregate: {
-        type: "canonical-courier-booking",
-        id: data.orderId,
-        expectedVersion: 0,
-      },
-      actor: "authenticated-owner",
-      correlationId,
-      payload: data,
-    },
-    async ({ tx, commandId, principal }) => {
-      const order = await tx.order.findFirst({
-        where: { id: data.orderId, deletedAt: null },
-        include: { customer: true, items: true, delivery: true },
-      });
-      if (!order) throw new NotFoundError("Order", data.orderId);
-      if (!isCanonicalOrderAuthority(order.source, order.sourceMetadata)) {
-        throw new ValidationError("Courier booking requires canonical order authority", "order.authority");
-      }
-      if (order.version !== data.expectedVersion) {
-        throw new ConflictError(
-          `Order ${order.id} version conflict: expected ${data.expectedVersion}, current ${order.version}`,
-        );
-      }
-      if (
-        order.status !== "confirmed" ||
-        order.fulfillmentState !== "ready" ||
-        order.inventoryState !== "reserved" ||
-        order.deliveryState !== "not_created"
-      ) {
-        throw new ConflictError(
-          `Courier booking requires confirmed/ready/reserved/not_created; current state is ${order.status}/${order.fulfillmentState}/${order.inventoryState}/${order.deliveryState}`,
-        );
-      }
-      const active = await reservationRows(tx, order.id, "active");
-      assertReservations(active, order.items, "active");
-
-      let deliveryId: string;
-      if (order.delivery) {
-        if (
-          order.delivery.trackingNumber ||
-          !["booking_failed", "not_created"].includes(order.delivery.status)
-        ) {
-          throw new ConflictError("Existing courier authority requires reconciliation before rebooking");
-        }
-        deliveryId = order.delivery.id;
-        const reused = await tx.delivery.updateMany({
-          where: {
-            id: deliveryId,
-            trackingNumber: null,
-            status: { in: ["booking_failed", "not_created"] },
-            deletedAt: null,
-          },
-          data: {
-            provider: data.provider,
-            status: "booking_queued",
-            labelUrl: null,
-            cost: null,
-            estimatedDelivery: null,
-          },
-        });
-        if (reused.count !== 1) throw new ConflictError("Courier delivery changed before rebooking");
-      } else {
-        deliveryId = randomUUID();
-        await tx.delivery.create({
-          data: {
-            id: deliveryId,
-            orderId: order.id,
-            provider: data.provider,
-            status: "booking_queued",
-          },
-        });
-      }
-
-      const nextVersion = order.version + 1;
-      const updated = await tx.order.updateMany({
-        where: {
-          id: order.id,
-          version: order.version,
-          status: "confirmed",
-          deletedAt: null,
-        },
-        data: { version: nextVersion, deliveryState: "pending" },
-      });
-      if (updated.count !== 1) throw new ConflictError("Order changed while courier booking was queued");
-
-      await tx.canonicalDeliveryEvent.create({
-        data: {
-          id: randomUUID(),
-          eventKey: `${commandId}:booking-requested`,
-          orderId: order.id,
-          deliveryId,
-          eventType: "courier_booking_requested",
-          provider: data.provider,
-          reasonCode: "seller_booking_request",
-          occurredAt: new Date(),
-          createdByCommandId: commandId,
-        },
-      });
-
-      const effectKey = `${commandId}:courier-booking`;
-      const request: ShipmentRequest = {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customer: {
-          name: order.customer.name,
-          phone: order.customer.phone,
-          wilaya: order.wilaya,
-          commune: order.commune,
-          address: order.address,
-        },
-        items: order.items.map((item) => ({
-          name: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-        })),
-        totalPrice: order.totalPrice,
-        weight: Math.max(1, order.items.reduce((sum, item) => sum + item.quantity, 0)),
-        notes: order.notes ?? undefined,
-      };
-      const result: CourierBookingResult = {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        orderVersion: nextVersion,
-        deliveryId,
-        provider: data.provider,
-        bookingState: "queued",
-        effectKey,
-      };
-      return {
-        result,
-        audit: {
-          action: "courier.booking.queued.v1",
-          entity: "delivery",
-          entityId: deliveryId,
-          before: {
-            orderVersion: order.version,
-            deliveryState: order.deliveryState,
-          },
-          after: {
-            orderVersion: nextVersion,
-            deliveryState: "pending",
-            provider: data.provider,
-          },
-          metadata: { principal: principal.auditActor },
-        },
-        events: [
-          {
-            key: `${commandId}:event`,
-            type: "courier.booking.queued.v1",
-            payload: result,
-          },
-        ],
-        outbox: [
-          {
-            effectKey,
-            effectType: COURIER_BOOKING_EFFECT_TYPE,
-            payload: { deliveryId, orderId: order.id, provider: data.provider, request },
-          },
-        ],
-        projectionInvalidations: [
-          "orders:list",
-          `orders:${order.id}`,
-          "deliveries:list",
-          `deliveries:${deliveryId}`,
-        ],
-      };
-    },
-  );
-}
-
 async function openBookingPayload(
   context: ServiceContext,
   row: BookingOutboxRow,
@@ -577,7 +367,9 @@ async function openBookingPayload(
   );
 }
 
-async function recoverExpiredBookingLeases(context: ServiceContext): Promise<void> {
+async function recoverExpiredBookingLeases(
+  context: ServiceContext,
+): Promise<void> {
   const cutoff = new Date(Date.now() - LEASE_MS);
   const expired = (await context.prisma.outboxIntent.findMany({
     where: {
@@ -642,7 +434,11 @@ async function recoverExpiredBookingLeases(context: ServiceContext): Promise<voi
       if (marked.count !== 1) return;
       if (payload) {
         await tx.delivery.updateMany({
-          where: { id: payload.deliveryId, trackingNumber: null, deletedAt: null },
+          where: {
+            id: payload.deliveryId,
+            trackingNumber: null,
+            deletedAt: null,
+          },
           data: { status: "reconciliation_required" },
         });
       }
@@ -659,7 +455,9 @@ async function recoverExpiredBookingLeases(context: ServiceContext): Promise<voi
   }
 }
 
-async function claimBookingEffect(context: ServiceContext): Promise<BookingOutboxRow | null> {
+async function claimBookingEffect(
+  context: ServiceContext,
+): Promise<BookingOutboxRow | null> {
   await recoverExpiredBookingLeases(context);
   const now = new Date();
   const candidate = (await context.prisma.outboxIntent.findFirst({
@@ -775,7 +573,12 @@ async function commitBookingReceipt(
 ): Promise<void> {
   const trackingNumber = receipt.trackingId.trim();
   if (!trackingNumber) {
-    await knownBookingFailure(context, row, payload, "COURIER_MISSING_TRACKING_RECEIPT");
+    await knownBookingFailure(
+      context,
+      row,
+      payload,
+      "COURIER_MISSING_TRACKING_RECEIPT",
+    );
     return;
   }
   const principalContext: BusinessPrincipalContext = {
@@ -803,11 +606,20 @@ async function commitBookingReceipt(
     },
     async ({ tx, commandId, principal }) => {
       const delivery = await tx.delivery.findFirst({
-        where: { id: payload.deliveryId, orderId: payload.orderId, deletedAt: null },
+        where: {
+          id: payload.deliveryId,
+          orderId: payload.orderId,
+          deletedAt: null,
+        },
       });
       if (!delivery) throw new NotFoundError("Delivery", payload.deliveryId);
-      if (delivery.trackingNumber && delivery.trackingNumber !== trackingNumber) {
-        throw new ConflictError("Provider receipt conflicts with the stored tracking identity");
+      if (
+        delivery.trackingNumber &&
+        delivery.trackingNumber !== trackingNumber
+      ) {
+        throw new ConflictError(
+          "Provider receipt conflicts with the stored tracking identity",
+        );
       }
 
       const deliveryUpdated = await tx.delivery.updateMany({
@@ -827,7 +639,8 @@ async function commitBookingReceipt(
           status: "created",
         },
       });
-      if (deliveryUpdated.count !== 1) throw new ConflictError("Delivery changed before receipt commit");
+      if (deliveryUpdated.count !== 1)
+        throw new ConflictError("Delivery changed before receipt commit");
 
       const outboxUpdated = await tx.outboxIntent.updateMany({
         where: {
@@ -852,7 +665,10 @@ async function commitBookingReceipt(
           lastErrorCode: null,
         },
       });
-      if (outboxUpdated.count !== 1) throw new ConflictError("Courier outbox lease changed before receipt commit");
+      if (outboxUpdated.count !== 1)
+        throw new ConflictError(
+          "Courier outbox lease changed before receipt commit",
+        );
 
       await tx.canonicalDeliveryEvent.create({
         data: {
@@ -882,7 +698,10 @@ async function commitBookingReceipt(
           action: "courier.booking.receipt.v1",
           entity: "delivery",
           entityId: payload.deliveryId,
-          before: { status: delivery.status, trackingNumber: delivery.trackingNumber },
+          before: {
+            status: delivery.status,
+            trackingNumber: delivery.trackingNumber,
+          },
           after: result,
           metadata: { principal: principal.auditActor },
         },
@@ -944,7 +763,11 @@ export async function drainDueCourierBookings(
     try {
       const receipt = sender
         ? await sender(payload.provider, payload.request)
-        : await defaultBookingSender(context, payload.provider, payload.request);
+        : await defaultBookingSender(
+            context,
+            payload.provider,
+            payload.request,
+          );
       if (!receipt.success) {
         await knownBookingFailure(
           context,
@@ -970,173 +793,6 @@ export async function drainDueCourierBookings(
   return processed;
 }
 
-export async function reconcileCanonicalCourierBooking(
-  context: BusinessPrincipalContext,
-  input: unknown,
-): Promise<BusinessCommandResult<Record<string, unknown>>> {
-  const data = reconciliationSchema.parse(input);
-  const correlationId = data.correlationId ?? randomUUID();
-
-  return executeBusinessCommand(
-    context,
-    {
-      idempotencyKey: data.idempotencyKey,
-      commandType: `courier.booking.reconcile.${data.action}.v1`,
-      aggregate: {
-        type: "courier-booking-reconciliation",
-        id: `${data.deliveryId}:${data.action}`,
-        expectedVersion: 0,
-      },
-      actor: "authenticated-owner",
-      correlationId,
-      payload: data,
-    },
-    async ({ tx, commandId, principal }) => {
-      const delivery = await tx.delivery.findFirst({
-        where: { id: data.deliveryId, deletedAt: null },
-        include: { order: true },
-      });
-      if (!delivery) throw new NotFoundError("Delivery", data.deliveryId);
-      if (!isCanonicalOrderAuthority(delivery.order.source, delivery.order.sourceMetadata)) {
-        throw new ValidationError("Courier reconciliation requires canonical order authority", "order.authority");
-      }
-      if (delivery.order.version !== data.expectedVersion) {
-        throw new ConflictError(
-          `Order ${delivery.orderId} version conflict: expected ${data.expectedVersion}, current ${delivery.order.version}`,
-        );
-      }
-      if (delivery.status !== "reconciliation_required") {
-        throw new ConflictError("Courier booking is not awaiting reconciliation");
-      }
-
-      const request = await tx.canonicalDeliveryEvent.findFirst({
-        where: { deliveryId: delivery.id, eventType: "courier_booking_requested" },
-        orderBy: { createdAt: "desc" },
-        select: { createdByCommandId: true },
-      });
-      if (!request) throw new ConflictError("Courier booking request authority is missing");
-      const outbox = await tx.outboxIntent.findFirst({
-        where: {
-          commandId: request.createdByCommandId,
-          effectType: COURIER_BOOKING_EFFECT_TYPE,
-        },
-      });
-      if (!outbox) throw new ConflictError("Courier booking effect authority is missing");
-      if (outbox.outcomeState !== "ambiguous") {
-        throw new ConflictError("Only an ambiguous courier effect can be reconciled manually");
-      }
-
-      let nextVersion = delivery.order.version;
-      if (data.action === "confirm_created") {
-        const trackingNumber = data.trackingNumber!;
-        await tx.delivery.update({
-          where: { id: delivery.id },
-          data: {
-            trackingNumber,
-            labelUrl: data.labelUrl ?? null,
-            cost: data.cost ?? null,
-            estimatedDelivery: data.estimatedDelivery ?? null,
-            status: "created",
-          },
-        });
-        await tx.outboxIntent.update({
-          where: { id: outbox.id },
-          data: {
-            status: "succeeded",
-            outcomeState: "manual_success",
-            receiptJson: JSON.stringify({
-              trackingNumber,
-              provider: delivery.provider,
-              manuallyReconciled: true,
-            }),
-            succeededAt: new Date(),
-            lastErrorCode: null,
-          },
-        });
-      } else {
-        nextVersion += 1;
-        const orderUpdated = await tx.order.updateMany({
-          where: {
-            id: delivery.orderId,
-            version: delivery.order.version,
-            status: "confirmed",
-            deliveryState: "pending",
-            deletedAt: null,
-          },
-          data: { version: nextVersion, deliveryState: "not_created" },
-        });
-        if (orderUpdated.count !== 1) throw new ConflictError("Order changed during courier reconciliation");
-        await tx.delivery.update({
-          where: { id: delivery.id },
-          data: { status: "booking_failed" },
-        });
-        await tx.outboxIntent.update({
-          where: { id: outbox.id },
-          data: {
-            status: "dead_letter",
-            outcomeState: "manual_not_created",
-            deadLetteredAt: new Date(),
-            lastErrorCode: "COURIER_CONFIRMED_NOT_CREATED",
-          },
-        });
-      }
-
-      await tx.canonicalDeliveryEvent.create({
-        data: {
-          id: randomUUID(),
-          eventKey: `${commandId}:reconciliation`,
-          orderId: delivery.orderId,
-          deliveryId: delivery.id,
-          eventType:
-            data.action === "confirm_created"
-              ? "courier_booking_manually_confirmed"
-              : "courier_booking_manually_rejected",
-          provider: delivery.provider,
-          providerEventId:
-            data.action === "confirm_created"
-              ? `manual-booking:${data.trackingNumber}`
-              : undefined,
-          reasonCode: data.reasonCode,
-          occurredAt: new Date(),
-          createdByCommandId: commandId,
-        },
-      });
-
-      const result = {
-        orderId: delivery.orderId,
-        orderVersion: nextVersion,
-        deliveryId: delivery.id,
-        action: data.action,
-        trackingNumber: data.trackingNumber ?? null,
-      };
-      return {
-        result,
-        audit: {
-          action: `courier.booking.reconcile.${data.action}.v1`,
-          entity: "delivery",
-          entityId: delivery.id,
-          before: { status: delivery.status, outcomeState: outbox.outcomeState },
-          after: result,
-          metadata: { reasonCode: data.reasonCode, principal: principal.auditActor },
-        },
-        events: [
-          {
-            key: `${commandId}:event`,
-            type: `courier.booking.reconcile.${data.action}.v1`,
-            payload: result,
-          },
-        ],
-        projectionInvalidations: [
-          "orders:list",
-          `orders:${delivery.orderId}`,
-          "deliveries:list",
-          `deliveries:${delivery.id}`,
-        ],
-      };
-    },
-  );
-}
-
 export async function getCanonicalCourierPosition(
   context: ServiceContext,
   orderId: string,
@@ -1147,10 +803,15 @@ export async function getCanonicalCourierPosition(
   });
   if (!order) throw new NotFoundError("Order", orderId);
   if (!isCanonicalOrderAuthority(order.source, order.sourceMetadata)) {
-    throw new ValidationError("Courier position requires canonical order authority", "order.authority");
+    throw new ValidationError(
+      "Courier position requires canonical order authority",
+      "order.authority",
+    );
   }
   const delivery = order.delivery;
-  const outbox = delivery ? await latestBookingOutbox(context, delivery.id) : null;
+  const outbox = delivery
+    ? await latestBookingOutbox(context, delivery.id)
+    : null;
   const requiresReconciliation =
     delivery?.status === "reconciliation_required" ||
     outbox?.outcomeState === "ambiguous";
@@ -1164,7 +825,16 @@ export async function getCanonicalCourierPosition(
   ) {
     availableActions.push("book");
   }
-  if (delivery?.trackingNumber && ["created", "picked_up", "in_transit", "at_hub", "out_for_delivery"].includes(delivery.status)) {
+  if (
+    delivery?.trackingNumber &&
+    [
+      "created",
+      "picked_up",
+      "in_transit",
+      "at_hub",
+      "out_for_delivery",
+    ].includes(delivery.status)
+  ) {
     availableActions.push("sync");
   }
   if (requiresReconciliation) {
@@ -1230,13 +900,20 @@ export async function ingestCanonicalCourierTrackingEvent(
     },
     async ({ tx, commandId, principal }) => {
       const delivery = await tx.delivery.findFirst({
-        where: { id: data.deliveryId, provider: data.provider, deletedAt: null },
+        where: {
+          id: data.deliveryId,
+          provider: data.provider,
+          deletedAt: null,
+        },
         include: { order: { include: { items: true } } },
       });
       if (!delivery) throw new NotFoundError("Delivery", data.deliveryId);
       const order = delivery.order;
       if (!isCanonicalOrderAuthority(order.source, order.sourceMetadata)) {
-        throw new ValidationError("Courier tracking requires canonical order authority", "order.authority");
+        throw new ValidationError(
+          "Courier tracking requires canonical order authority",
+          "order.authority",
+        );
       }
       if (order.version !== data.expectedVersion) {
         throw new ConflictError(
@@ -1276,7 +953,9 @@ export async function ingestCanonicalCourierTrackingEvent(
             })),
           );
           inventoryMovements.push(
-            ...active.map((reservation) => movement(commandId, order.id, reservation, data.occurredAt)),
+            ...active.map((reservation) =>
+              movement(commandId, order.id, reservation, data.occurredAt),
+            ),
           );
           orderStatus = "shipped";
           fulfillmentState = "shipped";
@@ -1284,10 +963,7 @@ export async function ingestCanonicalCourierTrackingEvent(
           codState = "not_expected";
           shippedAt = data.occurredAt;
           orderChanged = true;
-        } else if (
-          order.status !== "shipped" &&
-          order.status !== "delivered"
-        ) {
+        } else if (order.status !== "shipped" && order.status !== "delivered") {
           throw new ConflictError(
             `Courier pickup cannot safely advance order from ${order.status}/${order.fulfillmentState}/${order.inventoryState}/${order.deliveryState}`,
           );
@@ -1298,14 +974,22 @@ export async function ingestCanonicalCourierTrackingEvent(
 
       if (!outOfOrder && data.status === "delivered") {
         if (orderStatus !== "shipped" || inventoryState !== "outbound") {
-          throw new ConflictError("Courier delivery requires shipped outbound inventory authority");
+          throw new ConflictError(
+            "Courier delivery requires shipped outbound inventory authority",
+          );
         }
         const active = await reservationRows(tx, order.id, "active");
-        if (active.length > 0) throw new ConflictError("Delivered courier order retains active reservations");
+        if (active.length > 0)
+          throw new ConflictError(
+            "Delivered courier order retains active reservations",
+          );
         const consumed = await reservationRows(tx, order.id, "consumed");
         assertReservations(consumed, order.items, "consumed");
         if (!Number.isSafeInteger(order.totalPrice) || order.totalPrice <= 0) {
-          throw new ValidationError("Delivered courier order requires positive integer DZD COD", "order.totalPrice");
+          throw new ValidationError(
+            "Delivered courier order requires positive integer DZD COD",
+            "order.totalPrice",
+          );
         }
         const customerUpdated = await tx.customer.updateMany({
           where: { id: order.customerId, deletedAt: null },
@@ -1314,7 +998,10 @@ export async function ingestCanonicalCourierTrackingEvent(
             totalSpent: { increment: order.totalPrice },
           },
         });
-        if (customerUpdated.count !== 1) throw new ConflictError("Customer authority is missing for courier delivery");
+        if (customerUpdated.count !== 1)
+          throw new ConflictError(
+            "Customer authority is missing for courier delivery",
+          );
         orderStatus = "delivered";
         fulfillmentState = "closed";
         deliveryState = "delivered";
@@ -1345,7 +1032,8 @@ export async function ingestCanonicalCourierTrackingEvent(
           },
           data: { status: data.status },
         });
-        if (deliveryUpdated.count !== 1) throw new ConflictError("Delivery changed during tracking ingestion");
+        if (deliveryUpdated.count !== 1)
+          throw new ConflictError("Delivery changed during tracking ingestion");
       }
 
       if (orderChanged) {
@@ -1377,7 +1065,8 @@ export async function ingestCanonicalCourierTrackingEvent(
               : {}),
           },
         });
-        if (orderUpdated.count !== 1) throw new ConflictError("Order changed during tracking ingestion");
+        if (orderUpdated.count !== 1)
+          throw new ConflictError("Order changed during tracking ingestion");
       }
 
       await tx.canonicalDeliveryEvent.create({
@@ -1448,32 +1137,46 @@ export async function ingestCanonicalCourierTrackingEvent(
 export async function synchronizeCanonicalCourierTracking(
   context: ServiceContext,
   orderId: string,
-): Promise<{ position: CourierPosition; events: Array<Record<string, unknown>> }> {
+): Promise<{
+  position: CourierPosition;
+  events: Array<Record<string, unknown>>;
+}> {
   const position = await getCanonicalCourierPosition(context, orderId);
   const delivery = position.delivery;
   if (!delivery?.trackingNumber) {
-    throw new ValidationError("Courier tracking identity is missing", "delivery.trackingNumber");
+    throw new ValidationError(
+      "Courier tracking identity is missing",
+      "delivery.trackingNumber",
+    );
   }
   if (!providerSchema.safeParse(delivery.provider).success) {
-    throw new ValidationError("Delivery provider is not supported", "delivery.provider");
+    throw new ValidationError(
+      "Delivery provider is not supported",
+      "delivery.provider",
+    );
   }
   const provider = delivery.provider as DeliveryProvider;
   await assertProviderCapability(context, provider, "tracking");
   const adapter = getDeliveryAdapter(provider);
   const credentials = await loadDeliveryCredentials(context, provider);
-  const tracking = await adapter.syncTracking(delivery.trackingNumber, credentials);
-  const events = tracking.events.length > 0
-    ? [...tracking.events].sort(
-        (left, right) =>
-          new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime(),
-      )
-    : [
-        {
-          status: tracking.status,
-          timestamp: new Date().toISOString(),
-          details: `Provider snapshot: ${tracking.status}`,
-        } satisfies TrackingEvent,
-      ];
+  const tracking = await adapter.syncTracking(
+    delivery.trackingNumber,
+    credentials,
+  );
+  const events =
+    tracking.events.length > 0
+      ? [...tracking.events].sort(
+          (left, right) =>
+            new Date(left.timestamp).getTime() -
+            new Date(right.timestamp).getTime(),
+        )
+      : [
+          {
+            status: tracking.status,
+            timestamp: new Date().toISOString(),
+            details: `Provider snapshot: ${tracking.status}`,
+          } satisfies TrackingEvent,
+        ];
 
   let expectedVersion = position.orderVersion;
   const outcomes: Array<Record<string, unknown>> = [];
@@ -1486,10 +1189,15 @@ export async function synchronizeCanonicalCourierTracking(
         },
         {
           orderId,
-          action: event.status === "failed" ? "delivery_failed" : "delivery_refused",
+          action:
+            event.status === "failed" ? "delivery_failed" : "delivery_refused",
           expectedVersion,
           reasonCode: `provider-${provider}-${event.status}`,
-          providerEventId: stableEventId(provider, delivery.trackingNumber, event),
+          providerEventId: stableEventId(
+            provider,
+            delivery.trackingNumber,
+            event,
+          ),
           occurredAt: event.timestamp,
           idempotencyKey: `courier-recovery:${provider}:${stableEventId(provider, delivery.trackingNumber, event)}`,
           correlationId: `courier:${provider}:${delivery.id}`,
@@ -1510,7 +1218,11 @@ export async function synchronizeCanonicalCourierTracking(
           action: "return_in_transit",
           expectedVersion,
           reasonCode: `provider-${provider}-return`,
-          providerEventId: stableEventId(provider, delivery.trackingNumber, event),
+          providerEventId: stableEventId(
+            provider,
+            delivery.trackingNumber,
+            event,
+          ),
           occurredAt: event.timestamp,
           idempotencyKey: `courier-return:${provider}:${stableEventId(provider, delivery.trackingNumber, event)}`,
           correlationId: `courier:${provider}:${delivery.id}`,

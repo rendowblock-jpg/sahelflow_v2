@@ -478,12 +478,16 @@ describe("canonical courier public boundary", () => {
       resolve(process.cwd(), "src/lib/delivery/canonical-courier.ts"),
       resolve(
         process.cwd(),
-        "src/lib/delivery/canonical-courier-reviewed-base.ts",
+        "src/lib/delivery/canonical-courier-booking-authority.ts",
       ),
-      resolve(process.cwd(), "src/lib/delivery/canonical-courier-legacy.ts"),
+      resolve(process.cwd(), "src/lib/delivery/canonical-courier-effect-runtime.ts"),
       resolve(
         process.cwd(),
         "src/lib/delivery/__tests__/canonical-courier-closure.integration.test.ts",
+      ),
+      resolve(
+        process.cwd(),
+        "src/lib/integrations/delivery/__tests__/provider-authority-source-contract.test.ts",
       ),
     ]);
     const offenders: string[] = [];
@@ -502,8 +506,8 @@ describe("canonical courier public boundary", () => {
         }
         const content = readFileSync(path, "utf8");
         if (
-          content.includes("canonical-courier-legacy") ||
-          content.includes("canonical-courier-reviewed-base")
+          content.includes("canonical-courier-effect-runtime") ||
+          content.includes("canonical-courier-booking-authority")
         ) {
           offenders.push(path.replace(`${process.cwd()}\\`, ""));
         }

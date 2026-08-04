@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -6,6 +6,44 @@ const root = resolve(process.env.SF_REPO_DIR || process.cwd());
 const source = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("Phase 3 delivery provider authority source contract", () => {
+  it("exposes one public courier facade and internalizes effect execution", () => {
+    const legacy = resolve(
+      root,
+      "src/lib/delivery/canonical-courier-legacy.ts",
+    );
+    const reviewed = resolve(
+      root,
+      "src/lib/delivery/canonical-courier-reviewed-base.ts",
+    );
+    const authorityPath =
+      "src/lib/delivery/canonical-courier-booking-authority.ts";
+    const runtimePath = "src/lib/delivery/canonical-courier-effect-runtime.ts";
+    expect(existsSync(legacy)).toBe(false);
+    expect(existsSync(reviewed)).toBe(false);
+    expect(existsSync(resolve(root, authorityPath))).toBe(true);
+    expect(existsSync(resolve(root, runtimePath))).toBe(true);
+
+    const facade = source("src/lib/delivery/canonical-courier.ts");
+    const authority = source(authorityPath);
+    const runtime = source(runtimePath);
+    expect(facade).toContain("./canonical-courier-booking-authority");
+    expect(authority).toContain("./canonical-courier-effect-runtime");
+    expect(authority).not.toContain("LegacyCourier");
+    expect(runtime).not.toContain(
+      "export async function queueCanonicalCourierBooking",
+    );
+    expect(runtime).not.toContain(
+      "export async function reconcileCanonicalCourierBooking",
+    );
+
+    const deliveryFiles = readdirSync(resolve(root, "src/lib/delivery"))
+      .filter((name) => name.endsWith(".ts"))
+      .map((name) => `src/lib/delivery/${name}`);
+    const runtimeImporters = deliveryFiles.filter((path) =>
+      source(path).includes("./canonical-courier-effect-runtime"),
+    );
+    expect(runtimeImporters).toEqual([authorityPath]);
+  });
   it("removes DHD and keeps NOEST effects fail-closed pending authoritative contract evidence", () => {
     expect(
       existsSync(resolve(root, "src/lib/integrations/delivery/dhd.ts")),
@@ -45,8 +83,10 @@ describe("Phase 3 delivery provider authority source contract", () => {
   });
 
   it("gates every production booking, fee and tracking boundary", () => {
-    const reviewedBase = ["canonical-courier", "reviewed-base"].join("-");
-    const legacyBase = ["canonical-courier", "legacy"].join("-");
+    const bookingAuthority = ["canonical-courier", "booking-authority"].join(
+      "-",
+    );
+    const effectRuntime = ["canonical-courier", "effect-runtime"].join("-");
     const expectations: Record<string, string[]> = {
       "src/app/api/delivery/create/route.ts": [
         'assertProviderCapability(context, input.provider, "booking")',
@@ -57,10 +97,10 @@ describe("Phase 3 delivery provider authority source contract", () => {
       "src/app/api/delivery/sync/route.ts": [
         'assertProviderCapability(context, delivery.provider, "tracking")',
       ],
-      [`src/lib/delivery/${reviewedBase}.ts`]: [
+      [`src/lib/delivery/${bookingAuthority}.ts`]: [
         'assertProviderCapability(context, provider, "booking")',
       ],
-      [`src/lib/delivery/${legacyBase}.ts`]: [
+      [`src/lib/delivery/${effectRuntime}.ts`]: [
         'assertProviderCapability(context, provider, "booking")',
         'assertProviderCapability(context, provider, "tracking")',
       ],

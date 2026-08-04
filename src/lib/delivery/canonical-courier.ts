@@ -18,11 +18,7 @@ import { assertBusinessCommandShopAuthority } from "@/lib/business-truth/shop-au
 import type { ServiceContext } from "@/lib/data/service-base";
 import { DELIVERY_PROVIDERS } from "@/lib/integrations/delivery/types";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
-import {
-  ConflictError,
-  NotFoundError,
-  ValidationError,
-} from "@/types/errors";
+import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
 import {
   COURIER_BOOKING_EFFECT_TYPE,
   drainDueCourierBookings as drainReviewedCourierBookings,
@@ -34,7 +30,7 @@ import {
   type CourierBookingSender,
   type CourierPosition,
   type CourierTrackingFetcher,
-} from "./canonical-courier-reviewed-base";
+} from "./canonical-courier-booking-authority";
 
 export {
   COURIER_BOOKING_EFFECT_TYPE,
@@ -295,7 +291,9 @@ export async function reconcileCanonicalCourierBooking(
         );
       }
       if (delivery.status !== "reconciliation_required") {
-        throw new ConflictError("Courier booking is not awaiting reconciliation");
+        throw new ConflictError(
+          "Courier booking is not awaiting reconciliation",
+        );
       }
 
       const authority = await ambiguousBookingAuthority(tx, delivery.id);
