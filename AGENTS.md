@@ -18,8 +18,9 @@ keys or retained evidence merely to simplify development.
 4. Read Phase 4 in [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
 5. Read [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md).
 6. Read [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
-7. Read issue #204, issue #164 and retained evidence issue #201.
-8. Verify protected `main` `aa4ca0758fd696f4b02fc1975629ac698f9349c3` directly on GitHub.
+7. Read issue #204, issue #164, active PR #207 and retained evidence issue #201.
+8. Verify protected `main` `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
+   directly on GitHub, then re-fetch the active PR head before every write or merge.
 9. Inspect exact source, migrations, tests, native boundaries and production callers
    before trusting implementation claims.
 
@@ -28,25 +29,29 @@ They never replace current GitHub authority.
 
 ## Current verified frontier
 
-- Protected `main`: `aa4ca0758fd696f4b02fc1975629ac698f9349c3`.
-- Latest application-changing merge: PR #203 Phase 3 closure at that commit.
+- Protected `main`: `9306564ce5b5ea4b3b13b219aa45d4672ae13184`.
+- Latest application-changing protected merge: PR #203 Phase 3 closure at
+  `aa4ca0758fd696f4b02fc1975629ac698f9349c3`.
+- Latest protected authority merge: PR #206 Phase 4 contract freeze and risk lanes.
 - Published executable source: `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
 - Published release: `1.0.0-internal.13` / MSI `1.0.0.13`.
 - Founder-installed release: Internal.13; acceptance remains open.
 - Founder-accepted baseline: Internal.5.
 - Active product phase: Phase 4 — data protection, recovery, migrations and security.
 - Active phase issue: #204.
-- Active branch/PR: none until audit and contract freeze identify the first package.
+- Active branch: `agent/phase4-protected-data-authority`.
+- Active PR: #207 — bounded P4-A/P4-B protected-data authority and migration.
 - Retained installed evidence issue: #201.
 - PR #203 is merged; issue #202 is closed.
 - Final validated Phase 3 head: `f0db4116874238d0c415b4725cd2c5f3ef6201da`.
-- Final required gate `30901725446` passed tests, lint, typecheck, Prisma,
+- Final Phase 3 gate `30901725446` passed tests, lint, typecheck, Prisma,
   coverage, production dependency audit and migration status.
 - No known Phase 3 P0/P1 remains.
 - Real provider certification and issue #201 remain mandatory later evidence under
   FD-030; they are not current proof and do not reopen Phase 3.
-- The next session is Phase 4 audit, research, Problem Register and shared contract
-  freeze only. Broad Phase 4 production edits are not yet authorized.
+- PR #207 may merge only after exact-current-head source, Windows runtime,
+  installed-MSI and review-conversation gates pass.
+- P4-C backup and P4-D replacement restore are not part of PR #207.
 
 Always re-read live GitHub. These values record the verified frontier; they are
 not permission to rely on copied state after the repository moves.
@@ -89,14 +94,16 @@ authorize an MVP, hidden deferral or fabricated readiness.
 - Only that agent may implement SahelFlow at that time.
 - One outcome has one owner, one branch and one PR.
 - A frozen-head adversarial review occurs only after implementation stops.
-- With one agent, that review is a separated adversarial pass, not independent
-  review.
+- With one agent, that review is a separated adversarial pass, not independent review.
 - Required security, privacy, legal, accessibility and provider reviews remain
   genuinely independent later.
 - Declare one session purpose: governance/planning, research/contract,
   implementation, frozen review/closure or installed evidence.
-- The current session is Phase 4 exhaustive audit and contract freeze only;
-  production edits wait for the Problem Register and shared contracts.
+- The current session is exact-head implementation repair and closure of PR #207.
+
+The historical contract-freeze record was: **Phase 4 exhaustive audit and contract
+freeze** under issue #204; no Phase 4 implementation PR is active. That record was
+superseded when protected PR #206 authorized the bounded PR #207 P4-A/P4-B package.
 
 ## Audit-first and batch remediation rule
 
@@ -112,8 +119,8 @@ Before the first production edit of a phase or material package, inspect:
 - performance, resource use, diagnostics and evidence;
 - legacy paths that must be removed or made read-only.
 
-Group findings by root cause. Do not patch one symptom while a competing
-authority remains.
+Group findings by root cause. Do not patch one symptom while a competing authority
+remains.
 
 ```text
 complete audit
@@ -127,10 +134,10 @@ complete audit
 → checkpoint
 ```
 
-Phase 3 closure evidence remains in the Phase 3 checkpoints and PR #203.
-Issue #204 owns the new Phase 4 inventory, Problem Register and contract freeze.
-Historical Phase 4 branches/PRs and the older Phase 3 branches are evidence only;
-never merge or cherry-pick them wholesale without revalidation on current main.
+Phase 3 closure evidence remains in the Phase 3 checkpoints and PR #203. Issue
+#204 owns the Phase 4 Problem Register and frozen contracts. Historical Phase 4
+branches/PRs remain evidence only; never merge or cherry-pick them wholesale
+without revalidation on protected current main.
 
 ## Validation levels
 
@@ -188,6 +195,7 @@ mandatory. Library presence or a screenshot is not AAA evidence.
 - No application version bump for ordinary source packages.
 - Freeze the exact head before consolidated review.
 - Merge only after selected gates pass and all P0/P1 threads close.
+- Re-fetch the PR immediately before merge and bind the merge to expected head SHA.
 
 ## Frozen Phase 3 shared contract
 
@@ -211,78 +219,32 @@ mandatory. Library presence or a screenshot is not AAA evidence.
   provider effects. DHD is removed from runtime registration; NOEST effects remain
   fail-closed until its exact provider contract is independently certified.
 
-## Completed package rules — durable inbound WhatsApp
+## Frozen Phase 4 shared contract
 
-The package checkpoint is source/integration/database evidence at
-`f016055be55fd220baa87c26ffed565c4e9e1d85` with complete checkpoint
-`30808773702`. Overall Phase 3 protected-source closure is owned by merged PR
-#203; signed, installed, live-provider, Founder-acceptance and Stable evidence
-remain separate higher layers.
+- The DPAPI installation root is a local KEK/derivation root, not a universal
+  seller-data key.
+- HKDF-SHA-256 derives versioned, purpose-separated installation keys.
+- Per-shop data, blind-index and secret authorities remain independently rotatable.
+- Protected values use one contextual versioned AEAD envelope; malformed or
+  unauthenticated canonical values become explicit corruption.
+- Raw Prisma access is exceptional, allowlisted and prohibited from normal domain
+  or production callers.
+- Migration is exact-shop-bound, exclusive, restart-safe, idempotent and verified.
+- Backup is later one immutable all-shop encrypted snapshot using native SQLite
+  online backup and a complete authenticated recovery set.
+- Replacement restore later stages verification, authorization, rescue, all-shop
+  cutover, key re-wrap, identity re-enrollment and compensation.
+- No package may create a competing key, backup, journal or restore authority.
 
-## Completed package rules — truthful durable automations
+## Current package boundary — PR #207
 
-The package is source-closed at
-`c873b8b6a256383497d3799e0839160178e92149` with complete checkpoint
-`30826354580` and normal CI `30826355685` passed.
+PR #207 implements P4-A/P4-B only: purpose-separated protected-data authority,
+contextual encryption, explicit corruption, protected client adoption, guarded raw
+access, secret separation, installation-root re-wrap and protected-data migration.
 
-It includes additive run/step/attempt truth, encrypted immutable snapshots,
-ordered stop/continue execution, restart-safe leases and attempts, truthful
-partial/dead-letter/ambiguity, durable WhatsApp effect correlation, deterministic
-daily-report receipt replay, strict executable schemas, complete recipe config,
-AR/FR/EN recovery history and reason-bound audited retry. The separated review
-repaired timestamp-bound replay drift, invalid nested writes, unawaited action
-errors, retry hot loops, false success, test leakage, fire-and-forget producers,
-SQLite trigger contention, repeat-blacklist identity and direct report sends.
-
-This package checkpoint is source evidence only. Overall Phase 3
-protected-source closure is owned by merged PR #203; signed, installed,
-provider-certified, Founder-accepted and Stable evidence remain separate.
-
-## Completed package rules — proposal-bound sensitive AI actions
-
-Task 5 is source-closed at
-`07caedbc797ced5dc0e2ac959f252d5b3481285d` with checkpoint `30849680029`.
-One immutable encrypted proposal binds exact arguments, requester, approver,
-device, session, shop, policy, permissions, entitlement, target versions, expiry
-and one execution claim. Generic message confirmation is not execution authority.
-
-## Completed package rules — provider convergence and durable commerce
-
-Task 6 is source-closed at clean head
-`676d0e41cc69d44c29b912038cba100fd827fcfa` with checkpoint `30875723975`.
-
-- commerce requests queue durable runs and never execute provider pages inline;
-- opaque page continuation, encrypted items, immutable attempts, exact credential
-  contracts, monotonic watermarks and audited recovery are source-proven;
-- one public courier facade owns booking, tracking and reconciliation;
-- the courier effect runtime is internal and obsolete queue/reconciliation exports
-  are removed;
-- DHD is absent from runtime registration and NOEST remains effect-disabled;
-- provider source authority is not live certification evidence.
-
-## Completed evidence rule — Phase 3 Level 2 source/build checkpoint
-
-Run `30878352410` passed semantic authority, frozen install, Prisma generation and
-deployment, TypeScript, ESLint, complete Vitest, migration status, production
-WhatsApp sidecar build and production Next build. It is source/build evidence,
-not live-provider, signed-artifact or installed-Windows evidence.
-
-## Phase 3 closure boundary and Phase 4 authorization — FD-030
-
-Phase 3 is protected-source closed through merged PR #203 and issue #202 is
-complete. The only active next package is issue #204:
-
-- perform the exhaustive Phase 4 data/key/backup/migration/recovery/security/privacy audit;
-- research current primary standards and official platform guidance;
-- create one consolidated Phase 4 Problem Register;
-- freeze the shared key, backup, recovery, migration and evidence contracts;
-- create the first bounded implementation branch only after that freeze;
-- defer real-account provider certification to Phase 9 representative beta;
-- retain issue #201 for applicable Level 3/installed evidence.
-
-Do not begin broad Phase 4 production work before the contract freeze. Do not
-paste credentials into chat or source, fabricate live certification, bump the
-version, publish an MSI/release, claim Founder acceptance or claim Stable.
+It does not implement all-shop encrypted backup, independent recovery kit,
+replacement-install restore/cutover, complete destructive/privacy lifecycle,
+Phase 4 closure, release, Founder acceptance, Beta or Stable.
 
 ## Evidence language
 
@@ -324,7 +286,8 @@ ownership and dependency position.
   repeated installer caches when Actions can provide evidence.
 - PR #186 is obsolete/diverged and must never be merged wholesale.
 - PR #196 is superseded; its diagnostics intent is protected through PR #199.
-- PR #194 and historical Phase 3 branches are evidence only.
-- The active package is issue #204; no Phase 4 implementation PR is active.
+- PR #194 and historical Phase 3/4 branches are evidence only.
+- The active package is issue #204 through PR #207; no broader Phase 4 package is
+  authorized until PR #207 is protected and the governing frontier is reconciled.
 - No version bump, release, MSI publication, Founder acceptance or Stable claim
   is authorized.
