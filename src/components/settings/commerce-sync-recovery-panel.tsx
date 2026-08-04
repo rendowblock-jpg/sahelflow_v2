@@ -74,6 +74,15 @@ function statusVariant(
   return "outline";
 }
 
+async function fetchCommerceRuns(): Promise<CommerceRunHistory[]> {
+  const response = await fetch("/api/integrations/sync/history?limit=20", {
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("COMMERCE_HISTORY_FAILED");
+  const data = (await response.json()) as { runs?: CommerceRunHistory[] };
+  return Array.isArray(data.runs) ? data.runs : [];
+}
+
 export function CommerceSyncRecoveryPanel() {
   const { t, locale } = useI18n();
   const [runs, setRuns] = useState<CommerceRunHistory[]>([]);
@@ -92,12 +101,7 @@ export function CommerceSyncRecoveryPanel() {
 
   const loadRuns = useCallback(async () => {
     try {
-      const response = await fetch("/api/integrations/sync/history?limit=20", {
-        cache: "no-store",
-      });
-      if (!response.ok) throw new Error("COMMERCE_HISTORY_FAILED");
-      const data = (await response.json()) as { runs?: CommerceRunHistory[] };
-      setRuns(Array.isArray(data.runs) ? data.runs : []);
+      setRuns(await fetchCommerceRuns());
     } catch {
       toast.error(t("commerce.runtime.retryFailed"));
     } finally {
@@ -106,8 +110,21 @@ export function CommerceSyncRecoveryPanel() {
   }, [t]);
 
   useEffect(() => {
-    void loadRuns();
-  }, [loadRuns]);
+    let active = true;
+    void fetchCommerceRuns()
+      .then((history) => {
+        if (active) setRuns(history);
+      })
+      .catch(() => {
+        if (active) toast.error(t("commerce.runtime.retryFailed"));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [t]);
 
   const retryRun = async (runId: string) => {
     const reason = reasons[runId]?.trim() ?? "";
