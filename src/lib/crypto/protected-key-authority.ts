@@ -104,16 +104,17 @@ function isShopProtectedKeyPurpose(
 
 /**
  * Vitest isolates module graphs while sharing one SQLite sandbox and permits
- * legacy master-key tests to mutate their own environment. Derive one stable
- * hermetic wrapping root from the sandbox identity so every test file observes
- * the same installation authority. Packaged/development runtimes continue to
- * use the actual process-bound installation root.
+ * legacy master-key tests to mutate their own environment. The sandbox path is
+ * the immutable cross-file authority; NODE_ENV/VITEST flags are intentionally
+ * excluded because focused suites may change them while the shared database and
+ * process-level Prisma cache remain alive.
  */
 function defaultInstallationRoot(): Buffer {
-  if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
+  const testRoot = process.env.SF_TEST_ROOT;
+  if (testRoot) {
     return createHash("sha256")
       .update(TEST_ROOT_DOMAIN)
-      .update(process.env.SF_TEST_ROOT ?? "default", "utf8")
+      .update(testRoot, "utf8")
       .digest();
   }
   return getMasterKey();
