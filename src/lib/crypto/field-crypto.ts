@@ -22,8 +22,8 @@ const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 const KEY_LENGTH = 32;
 const TAG_LENGTH = 16;
+const CANONICAL_FORMAT = "sahelflow-protected-value";
 
-/** Legacy random-IV payload retained as a migration input. */
 export interface EncryptedPayload {
   iv: string;
   ciphertext: string;
@@ -31,19 +31,29 @@ export interface EncryptedPayload {
 }
 
 /**
- * Shape detector only. Authentication still occurs in `decryptString`; callers
- * must not treat this predicate as proof that the payload is valid ciphertext.
+ * Detect only the legacy three-field shape. A JSON object that declares the
+ * canonical Phase 4 format but fails its strict parser is corruption, not a
+ * legacy/plaintext value that callers may return or encrypt again.
  */
 export function isEncryptedPayload(value: string | null | undefined): boolean {
   if (!value) return false;
   try {
-    const parsed = JSON.parse(value) as Partial<EncryptedPayload>;
+    const parsed = JSON.parse(value) as Partial<EncryptedPayload> & {
+      format?: unknown;
+    };
+    if (parsed.format === CANONICAL_FORMAT) {
+      throw new ProtectedDataCorruptionError(
+        "format",
+        "Canonical protected value declaration is malformed or unsupported",
+      );
+    }
     return (
       typeof parsed.iv === "string" &&
       typeof parsed.ciphertext === "string" &&
       typeof parsed.tag === "string"
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof ProtectedDataCorruptionError) throw error;
     return false;
   }
 }
@@ -92,10 +102,6 @@ function decodeCanonicalBase64(
   return decoded;
 }
 
-/**
- * Decrypt one legacy payload. Format and authentication failures are typed so
- * service/API layers can enter recovery state without leaking raw stored data.
- */
 export function decryptString(payload: EncryptedPayload, key: Buffer): string {
   assertKeyLength(key);
   const iv = decodeCanonicalBase64(payload.iv, "Legacy protected IV", IV_LENGTH);
@@ -123,10 +129,6 @@ export function decryptString(payload: EncryptedPayload, key: Buffer): string {
   }
 }
 
-/**
- * Legacy deterministic blind index. Phase 4 migrates callers to a separately
- * wrapped blind-index key rather than deriving indexes from the data key.
- */
 export function deriveBlindIndex(value: string, key: Buffer): string {
   assertKeyLength(key);
   return createHmac("sha256", key)
