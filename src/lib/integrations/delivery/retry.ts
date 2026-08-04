@@ -1,76 +1,89 @@
 /**
- * HTTP retry helper for delivery provider API calls.
+ * Shared HTTP retry policy for courier-provider APIs.
  *
- * Delivery providers (Yalidine, Maystro, ZR Express, NOEST) occasionally return 502/503
- * or time out. A single transient failure shouldn't leave an order stuck
- * unshipped. Retries up to 3 times with exponential backoff + jitter.
+ * Resource-creating POST requests are never retried automatically. A timeout,
+ * connection reset or gateway error may occur after the provider committed the
+ * parcel, so repeating the POST could create a second shipment. The durable
+ * courier effect runtime owns ambiguity and reconciliation instead.
  *
- * IMPORTANT (B4a — shipment idempotency): POST requests are NEVER retried
- * automatically. A 502/503 on POST /parcels/ may mean the provider created the
- * parcel successfully but a proxy/gateway dropped the response — retrying would
- * create a SECOND parcel (orphaned shipment, double COD fees). The same risk
- * applies to network errors on POST: the server may have received and processed
- * the body before the connection dropped. Only idempotent-ish methods
- * (GET/PATCH/DELETE/PUT) are safe to retry on transient errors. POST callers
- * that want retry-safety must implement idempotency at the application layer
- * (idempotency key header, dedup by orderNumber at the provider, etc).
+ * Safe/idempotent methods retry bounded transient failures with Retry-After
+ * support, exponential backoff and abort cleanup.
  */
 
-const MAX_RETRIES = 3;
-const BASE_DELAY_MS = 1000;
+const MAX_ATTEMPTS = 3;
+const BASE_DELAY_MS = 1_000;
+const MAX_DELAY_MS = 30_000;
+const RETRYABLE_STATUSES = new Set([408, 425, 429, 502, 503, 504]);
+const RETRYABLE_METHODS = new Set([
+  "GET",
+  "HEAD",
+  "OPTIONS",
+  "PUT",
+  "PATCH",
+  "DELETE",
+]);
+
+function retryAfterMs(response: Response): number | null {
+  const value = response.headers.get("Retry-After")?.trim();
+  if (!value) return null;
+
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.min(MAX_DELAY_MS, Math.round(seconds * 1_000));
+  }
+
+  const date = Date.parse(value);
+  if (!Number.isFinite(date)) return null;
+  return Math.min(MAX_DELAY_MS, Math.max(0, date - Date.now()));
+}
+
+function backoffMs(attempt: number): number {
+  const exponential = BASE_DELAY_MS * 2 ** Math.max(0, attempt - 1);
+  const jitter = Math.floor(Math.random() * 250);
+  return Math.min(MAX_DELAY_MS, exponential + jitter);
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export async function retryFetch(
   url: string,
-  options: RequestInit,
-  timeoutMs = 15000,
+  options: RequestInit = {},
+  timeoutMs = 15_000,
 ): Promise<Response> {
+  const method = (options.method ?? "GET").toUpperCase();
+  const retryableMethod = RETRYABLE_METHODS.has(method);
   let lastError: Error | null = null;
 
-  // B4a: POST requests that create server-side resources (e.g. POST /parcels/)
-  // must not be retried automatically — see the rationale in the file header.
-  // Treat an undefined method as GET (fetch default).
-  const method = (options.method ?? "GET").toUpperCase();
-  const isPost = method === "POST";
-
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-      const res = await fetch(url, {
+      const response = await fetch(url, {
         ...options,
         signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
-
-      // Retry on 502/503 (transient server errors) — but only for non-POST
-      // methods. A 502 on POST may indicate the server succeeded and the
-      // response was lost; retrying would create a duplicate resource.
-      if (!isPost && (res.status === 502 || res.status === 503)) {
-        if (attempt < MAX_RETRIES - 1) {
-          const delay = BASE_DELAY_MS * (attempt + 1) + Math.floor(Math.random() * 500);
-          await new Promise((r) => setTimeout(r, delay));
-          continue;
-        }
-      }
-      return res;
-    } catch (err) {
-      lastError = err as Error;
-      // POST: do NOT retry on network errors. The server may have received
-      // and processed the request body before the connection dropped — a
-      // retry would create a duplicate resource. Surface immediately so the
-      // caller can decide (lookup by orderNumber, manual reconciliation, etc).
-      if (isPost) {
-        throw lastError;
-      }
-      // Retry on network errors (AbortError/timeout, connection refused)
-      if (attempt < MAX_RETRIES - 1) {
-        const delay = BASE_DELAY_MS * (attempt + 1) + Math.floor(Math.random() * 500);
-        await new Promise((r) => setTimeout(r, delay));
+      if (
+        retryableMethod &&
+        RETRYABLE_STATUSES.has(response.status) &&
+        attempt < MAX_ATTEMPTS
+      ) {
+        await sleep(retryAfterMs(response) ?? backoffMs(attempt));
         continue;
       }
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (!retryableMethod || attempt >= MAX_ATTEMPTS) {
+        throw lastError;
+      }
+      await sleep(backoffMs(attempt));
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
-  throw lastError ?? new Error("retryFetch exhausted");
+
+  throw lastError ?? new Error("Courier provider request exhausted retries");
 }
