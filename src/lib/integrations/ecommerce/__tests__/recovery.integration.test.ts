@@ -38,10 +38,7 @@ import {
   processNextCommerceFetch,
   processNextCommerceItem,
 } from "../processor";
-import {
-  listCommerceSyncHistory,
-  retryCommerceSync,
-} from "../recovery";
+import { listCommerceSyncHistory, retryCommerceSync } from "../recovery";
 import { queueCommerceSync } from "../queue";
 
 const context = { prisma: rawDb as never, shop: TEST_SHOP_CONTEXT };
@@ -191,7 +188,9 @@ describe("commerce operator retry generations", () => {
       retriedItemCount: 1,
     });
 
-    upsertMock.mockRejectedValueOnce(new Error("temporary database contention"));
+    upsertMock.mockRejectedValueOnce(
+      new Error("temporary database contention"),
+    );
     expect(await processNextCommerceItem(context)).toBe(true);
     const retried = await rawDb.commerceSyncItem.findUniqueOrThrow({
       where: { id: item.id },
@@ -211,7 +210,11 @@ describe("commerce operator retry generations", () => {
     const audit = await rawDb.auditLog.findFirstOrThrow({
       where: { action: "commerce.sync.retry_requested", entityId: queued.id },
     });
-    expect(audit.metadata).not.toContain("Catalog and provider mapping were reviewed");
-    expect(JSON.parse(audit.metadata ?? "{}")).toMatchObject({ reasonLength: 42 });
+    expect(audit.metadata).not.toContain(
+      "Catalog and provider mapping were reviewed",
+    );
+    expect(JSON.parse(audit.metadata ?? "{}")).toMatchObject({
+      reasonLength: 42,
+    });
   });
 });

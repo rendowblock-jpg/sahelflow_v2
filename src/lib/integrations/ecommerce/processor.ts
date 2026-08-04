@@ -28,6 +28,7 @@ interface ClaimedRun {
   continuationCursor: string | null;
   pagesFetched: number;
   attemptCount: number;
+  operatorRetryCount: number;
   leaseToken: string;
 }
 
@@ -41,6 +42,7 @@ interface ClaimedItem {
   payloadHash: string;
   attemptCount: number;
   maxAttempts: number;
+  operatorRetryCount: number;
   leaseToken: string;
   sourceIdentity: string;
 }
@@ -111,6 +113,10 @@ async function claimCommerceRun(
         phase: "fetch",
         leaseToken,
         state: "processing",
+        detailJson: JSON.stringify({
+          cursor: candidate.continuationCursor,
+          generation: candidate.operatorRetryCount,
+        }),
       },
     });
     return {
@@ -123,6 +129,7 @@ async function claimCommerceRun(
       continuationCursor: candidate.continuationCursor,
       pagesFetched: candidate.pagesFetched,
       attemptCount: attemptNumber,
+      operatorRetryCount: candidate.operatorRetryCount,
       leaseToken,
     };
   });
@@ -135,7 +142,19 @@ async function failCommerceRunFetch(
 ): Promise<void> {
   const now = new Date();
   const errorCode = safeCommerceErrorCode(error);
-  const dead = run.attemptCount >= COMMERCE_FETCH_MAX_ATTEMPTS;
+  const generationKey = JSON.stringify({
+    cursor: run.continuationCursor,
+    generation: run.operatorRetryCount,
+  });
+  const generationAttempts = await context.prisma.commerceSyncRunAttempt.count({
+    where: {
+      runId: run.id,
+      phase: "fetch",
+      detailJson: generationKey,
+      state: { in: ["processing", "retrying", "failed"] },
+    },
+  });
+  const dead = generationAttempts >= COMMERCE_FETCH_MAX_ATTEMPTS;
   await context.prisma.$transaction([
     context.prisma.commerceSyncRunAttempt.updateMany({
       where: {
@@ -148,7 +167,7 @@ async function failCommerceRunFetch(
       data: {
         state: dead ? "failed" : "retrying",
         errorCode,
-        detailJson: JSON.stringify({ phase: "fetch" }),
+        detailJson: generationKey,
         completedAt: now,
       },
     }),
@@ -159,7 +178,7 @@ async function failCommerceRunFetch(
         leaseToken: null,
         lockedAt: null,
         lastErrorCode: errorCode,
-        nextAttemptAt: dead ? null : commerceRetryAt(run.attemptCount),
+        nextAttemptAt: dead ? null : commerceRetryAt(generationAttempts),
         deadLetteredAt: dead ? now : null,
         completedAt: dead ? now : null,
       },
@@ -380,6 +399,9 @@ async function claimCommerceItem(
         attemptNumber,
         leaseToken,
         state: "processing",
+        detailJson: JSON.stringify({
+          generation: candidate.operatorRetryCount,
+        }),
       },
     });
     return {
@@ -392,6 +414,7 @@ async function claimCommerceItem(
       payloadHash: candidate.payloadHash,
       attemptCount: attemptNumber,
       maxAttempts: candidate.maxAttempts,
+      operatorRetryCount: candidate.operatorRetryCount,
       leaseToken,
       sourceIdentity: candidate.run.sourceIdentity,
     };
@@ -452,7 +475,17 @@ async function failCommerceItem(
   const now = new Date();
   const errorCode = safeCommerceErrorCode(error);
   const quarantine = quarantinesImmediately(error);
-  const dead = !quarantine && item.attemptCount >= item.maxAttempts;
+  const generationKey = JSON.stringify({ generation: item.operatorRetryCount });
+  const generationAttempts = await context.prisma.commerceSyncItemAttempt.count(
+    {
+      where: {
+        itemId: item.id,
+        detailJson: generationKey,
+        state: { in: ["processing", "retrying", "dead_letter"] },
+      },
+    },
+  );
+  const dead = !quarantine && generationAttempts >= item.maxAttempts;
   const status = quarantine ? "quarantined" : dead ? "dead_letter" : "retrying";
   await context.prisma.$transaction([
     context.prisma.commerceSyncItemAttempt.updateMany({
@@ -467,8 +500,11 @@ async function failCommerceItem(
         errorCode,
         detailJson:
           error instanceof ValidationError && error.field
-            ? JSON.stringify({ field: error.field })
-            : null,
+            ? JSON.stringify({
+                generation: item.operatorRetryCount,
+                field: error.field,
+              })
+            : generationKey,
         completedAt: now,
       },
     }),
@@ -480,7 +516,7 @@ async function failCommerceItem(
         lockedAt: null,
         lastErrorCode: errorCode,
         nextAttemptAt:
-          status === "retrying" ? commerceRetryAt(item.attemptCount) : null,
+          status === "retrying" ? commerceRetryAt(generationAttempts) : null,
         deadLetteredAt: status === "dead_letter" ? now : null,
         completedAt: status === "retrying" ? null : now,
       },
