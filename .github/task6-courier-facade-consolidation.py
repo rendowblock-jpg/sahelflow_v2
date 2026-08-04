@@ -25,6 +25,12 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
+def replace_first(text: str, old: str, new: str, label: str) -> str:
+    if old not in text:
+        raise SystemExit(f"missing match in {label}: {old[:120]}")
+    return text.replace(old, new, 1)
+
+
 legacy = LEGACY.read_text(encoding="utf-8")
 legacy = remove_between(
     legacy,
@@ -45,11 +51,6 @@ legacy = remove_between(
     legacy,
     "export async function reconcileCanonicalCourierBooking(",
     "export async function getCanonicalCourierPosition(",
-)
-legacy = legacy.replace(
-    'import type {\n  BusinessCommandResult,\n',
-    'import type {\n  BusinessCommandResult,\n',
-    1,
 )
 legacy = replace_once(
     legacy,
@@ -72,13 +73,13 @@ if "export async function reconcileCanonicalCourierBooking" in legacy:
 RUNTIME.write_text(legacy, encoding="utf-8")
 
 reviewed = REVIEWED.read_text(encoding="utf-8")
-reviewed = replace_once(
+reviewed = replace_first(
     reviewed,
     '  reconcileCanonicalCourierBooking,\n',
     '',
     "reviewed import",
 )
-reviewed = replace_once(
+reviewed = replace_first(
     reviewed,
     '  reconcileCanonicalCourierBooking,\n',
     '',
@@ -112,7 +113,8 @@ facade = replace_once(
 )
 FACADE.write_text(facade, encoding="utf-8")
 
-# Update all repository source/test references to the explicit internal roles.
+# Update all repository source/test/documentation references to the explicit
+# internal roles. This preserves exact code while removing stale authority names.
 for path in ROOT.rglob("*"):
     if not path.is_file() or path.suffix not in {".ts", ".tsx", ".json", ".md"}:
         continue
