@@ -91,7 +91,6 @@ export function CommerceSyncRecoveryPanel() {
   );
 
   const loadRuns = useCallback(async () => {
-    setLoading(true);
     try {
       const response = await fetch("/api/integrations/sync/history?limit=20", {
         cache: "no-store",
@@ -150,7 +149,10 @@ export function CommerceSyncRecoveryPanel() {
           variant="outline"
           size="sm"
           disabled={loading}
-          onClick={() => void loadRuns()}
+          onClick={() => {
+            setLoading(true);
+            void loadRuns();
+          }}
         >
           <RefreshCw className={`me-1 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           {t("commerce.runtime.refresh")}
