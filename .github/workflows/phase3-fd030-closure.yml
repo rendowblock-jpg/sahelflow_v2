@@ -57,6 +57,9 @@ jobs:
       - name: Apply FD-030 closure authority
         run: python .github/phase3-founder-closure-fd030.py
 
+      - name: Reconcile semantic audit to FD-030
+        run: python .github/phase3-founder-closure-audit-fixup.py
+
       - name: Format changed authority and tests
         run: >-
           bunx prettier --write
