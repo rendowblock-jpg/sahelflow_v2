@@ -33,15 +33,13 @@ function isDocumentationOnly(path: string): boolean {
  * Authority-only changes are executable governance inputs, but they do not
  * change the shipped application. The fast authority job already verifies
  * version truth, documentation structure, links, and audit rules for every PR.
- * Keeping these files off the complete source/coverage lanes prevents the
- * Phase 3 -> 4 handoff from repeatedly rebuilding the product for a checkpoint
- * or documentation-audit edit.
+ * Changed Vitest files are deliberately excluded because their assertions and
+ * syntax must still execute on the quality lane.
  */
 function isFastAuthorityOnly(path: string): boolean {
   return (
     isDocumentationOnly(path) ||
     path === "scripts/sf-audit.ts" ||
-    path.startsWith("scripts/__tests__/sf-audit") ||
     path.startsWith(".github/phase-checkpoints/") ||
     path.startsWith(".github/phase-exceptions/")
   );
@@ -112,6 +110,24 @@ function changesNativeDataSurvivability(path: string): boolean {
 }
 
 /**
+ * TypeScript maintenance authorities are also matched by category. Existing and
+ * future protected-data migration, re-encryption, backup, restore, recovery and
+ * key-rotation implementations must not remain on source-only evidence merely
+ * because they live outside `src/lib/crypto`.
+ */
+function changesProtectedDataMaintenance(path: string): boolean {
+  const maintenancePrefixes = [
+    "scripts/migrate-",
+    "src/lib/maintenance/master-key-rotation",
+    "src/lib/maintenance/protected-data",
+    "src/lib/maintenance/backup",
+    "src/lib/maintenance/restore",
+    "src/lib/maintenance/recovery",
+  ] as const;
+  return maintenancePrefixes.some((prefix) => path.startsWith(prefix));
+}
+
+/**
  * These paths can change whether protected seller data remains readable after
  * an upgrade, restore, replacement install, or key transition. They therefore
  * require the packaged Windows runtime and installed lifecycle proof rather
@@ -132,6 +148,7 @@ function changesDataSurvivability(path: string): boolean {
     path.startsWith("src/lib/storage/") ||
     path === "scripts/rotate-master-key.ts" ||
     path === "scripts/phase1-backup-preservation-worker.ts" ||
+    changesProtectedDataMaintenance(path) ||
     changesNativeDataSurvivability(path)
   );
 }
