@@ -24,15 +24,17 @@ const READ_OPERATIONS = new Set([
   "findUniqueOrThrow",
 ]);
 
+type ExtensiblePrismaClient = Pick<PrismaClient, "$extends">;
+
 /**
  * Outer projection/decryption layer for every Prisma model. Model-specific
  * protected-field writes and top-level reads remain in `with-protected-pii`;
- * this layer ensures any relation graph (Refund→Order, OrderItem→Order,
- * ReturnNote→Return→Order, Product→OrderItems→Order, etc.) receives hidden
- * identity/ciphertext selections, recursive decryption, and exact projection
- * cleanup rather than leaking ciphertext or injected IDs.
+ * this layer ensures any relation graph receives hidden identity/ciphertext
+ * selections, recursive decryption, and exact projection cleanup.
  */
-export function withProtectedNestedReads<TClient extends PrismaClient>(
+export function withProtectedNestedReads<
+  TClient extends ExtensiblePrismaClient,
+>(
   client: TClient,
   rawAuthority: PrismaClient,
   context: ShopContext,
