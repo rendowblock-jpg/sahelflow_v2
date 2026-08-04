@@ -1,13 +1,9 @@
 {
-  "formatVersion": 6,
+  "formatVersion": 7,
   "phase": 3,
   "name": "durable providers, inbox, AI and automations",
-  "state": "task5-source-complete-task6-authorized",
-  "handoffPreparedAt": "2026-08-03",
-  "auditStartedAt": "2026-08-03",
-  "contractFrozenAt": "2026-08-03",
-  "task3SourceClosedAt": "2026-08-03",
-  "task4SourceClosedAt": "2026-08-03",
+  "state": "task6-source-complete-phase3-level2-authorized",
+  "sourceCompleteAt": "2026-08-04",
   "protectedBase": "e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
   "phase2MergePr": 200,
   "phaseIssue": 202,
@@ -15,7 +11,7 @@
   "activeBranch": "agent/phase3-durable-effects-audit",
   "activeDraftPr": 203,
   "implementationAgent": "ChatGPT Web Agentic Coding Agent",
-  "sessionPurpose": "implementation",
+  "sessionPurpose": "phase-source-checkpoint-and-evidence",
   "auditStatus": {
     "documentationReconciliation": "complete",
     "sourceInventory": "complete",
@@ -28,39 +24,36 @@
     "task3SeparatedReview": "complete-repaired",
     "task4SourceImplementation": "complete",
     "task4SeparatedReview": "complete-repaired",
-    "productionImplementation": "authorized:courier-commerce-provider-convergence",
     "task5SourceImplementation": "complete",
-    "task5SeparatedReview": "complete-repaired"
+    "task5SeparatedReview": "complete-repaired",
+    "task6SourceImplementation": "complete",
+    "task6SeparatedReview": "complete-repaired",
+    "productionImplementation": "source-complete-evidence-open",
+    "phase3Level2": "authorized-pending",
+    "liveProviderCertification": "open",
+    "installedEvidence": "open-issue-201"
   },
   "constraints": {
     "oneActiveImplementationAgent": true,
-    "productionEditsAuthorized": true,
-    "authorizedProductionScope": "courier and commerce convergence plus provider certification only",
+    "productionEditsAuthorized": false,
+    "authorizedProductionScope": "Phase 3 Level 2 source checkpoint and evidence collection only",
     "targetedCiRerunsRequired": true,
     "fullMatrixRerunForDocumentationForbidden": true,
     "versionBumpAuthorized": false,
     "releaseAuthorized": false,
     "founderAcceptanceClaimAuthorized": false,
+    "phaseClosureClaimAuthorized": false,
+    "stableClaimAuthorized": false,
     "historicalBranchesMergeAuthority": false
   },
   "knownProtectedTruth": [
     "PR #200 is merged into protected main at e9c92f08f39e8d87ddfd72d2e698418ae81fc084",
     "Phase 2 native multi-shop authority is protected source",
     "issue #201 retains the installed hydrated-WebView evidence limitation",
-    "issue #202 owns the Phase 3 program",
+    "issue #202 owns the Phase 3 program and remains open",
     "draft PR #203 is the sole active Phase 3 package",
     "published executable and Founder-installed release remain Internal.13",
-    "Task 3 durable inbound WhatsApp is source-closed only, not installed or released",
-    "Task 4 truthful durable automations are source-closed only, not installed or released",
-    "Task 5 proposal-bound sensitive AI actions are source-closed only, not installed or released"
-  ],
-  "preservedFoundations": [
-    "canonical BusinessCommand, DomainEvent, encrypted OutboxIntent and movement facts",
-    "durable inbound and outbound WhatsApp identity, encrypted evidence, leases, ambiguity and receipts",
-    "truthful durable automation runs, ordered steps, immutable attempts and provider-effect correlation",
-    "canonical courier booking, tracking and manual ambiguity reconciliation",
-    "commerce checkpoint refusal after any failed fetched order",
-    "trusted identity, exact shop, signed licensing and native multi-shop authority"
+    "Tasks 3 through 6 are source-closed only, not protected, signed, installed, Founder-accepted or Stable"
   ],
   "task3Closure": {
     "name": "durable inbound WhatsApp and database-authoritative inbox",
@@ -69,25 +62,7 @@
     "normalCiRun": 30808774055,
     "sourceGate": "passed",
     "reviewThreadsOpen": 0,
-    "separatedAdversarialReview": "complete-repaired",
-    "evidenceLevel": "clean GitHub Actions source, integration, database and development UI source",
-    "notProven": [
-      "signed artifact",
-      "installed Windows behavior",
-      "T470 behavior",
-      "live WhatsApp provider certification",
-      "Founder acceptance",
-      "Phase 3 closure",
-      "Stable"
-    ],
-    "repairs": [
-      "aligned the sidecar with current Baileys types",
-      "encrypted every sidecar spool record with AES-256-GCM and purpose-bound associated data",
-      "failed closed on spool-key mismatch or tampering",
-      "preserved cumulative immutable attempt history and closed expired leases truthfully",
-      "deduplicated live WebSocket replay",
-      "bound status automation payloads to canonical customerPhone"
-    ]
+    "separatedAdversarialReview": "complete-repaired"
   },
   "task4Closure": {
     "name": "truthful durable automations and durable daily reports",
@@ -96,274 +71,8 @@
     "normalCiRun": 30826355685,
     "sourceGate": "passed",
     "reviewThreadsOpen": 0,
-    "separatedAdversarialReview": "complete-repaired",
-    "evidenceLevel": "clean GitHub Actions source, integration, database and development UI source",
-    "closedProblemIds": [
-      "P3-P1-003",
-      "P3-P1-004",
-      "P3-P1-009",
-      "P3-P1-011"
-    ],
-    "implementationEvidence": [
-      "additive AutomationRun, AutomationStepRun and AutomationStepAttempt persistence",
-      "encrypted immutable trigger, definition, step configuration and result snapshots",
-      "stable trigger-event plus automation-definition run identity",
-      "active-shop trigger and ordered-run workers",
-      "explicit stop and continue policy with truthful aggregate states",
-      "restart-safe leases, bounded automatic retries, dead letter and immutable attempts",
-      "send_whatsapp adoption of the durable WhatsApp outbox with exact effect correlation",
-      "deterministic daily-report WhatsApp identity and confirmed-receipt replay",
-      "strict trigger and action schemas with complete recipe configuration",
-      "sanitized run, step and attempt history with reason-bound audited operator retry",
-      "provider-bound ambiguity remains under WhatsApp reconciliation authority",
-      "Arabic, French and English recovery UI with RTL-safe effect identifiers",
-      "all known production trigger producers await bounded durable persistence",
-      "repository contract forbids fire-and-forget automation producers"
-    ],
-    "repairs": [
-      "removed fresh local timestamps from trigger-command idempotency content",
-      "materialized run parents and step children explicitly in one transaction",
-      "awaited database-action promises inside the durable failure boundary",
-      "prevented future retry hot loops and closed expired attempts truthfully",
-      "made stop failures skip downstream work and continue failures report partial completion",
-      "isolated legacy journey tests from worker execution and cleaned durable runtime tables",
-      "serialized different-key SQLite trigger writes through a bounded FIFO",
-      "bound repeat blacklist cycles to committed blacklistedAt identity",
-      "replaced direct daily-report sidecar delivery with deterministic durable effect authority",
-      "proved marker-loss receipt replay without a second provider call",
-      "made one-click recipes submit complete typed step definitions",
-      "refused provider-effect repetition through automation recovery"
-    ],
-    "notProven": [
-      "signed artifact",
-      "installed Windows behavior",
-      "T470 behavior",
-      "live WhatsApp provider certification",
-      "Founder acceptance",
-      "Phase 3 closure",
-      "Stable"
-    ]
+    "separatedAdversarialReview": "complete-repaired"
   },
-  "problemRegister": [
-    {
-      "id": "P3-P1-001",
-      "severity": "P1",
-      "rootCause": "stale active authority after PR #200 merge",
-      "state": "closed-source-proven",
-      "ownerPackage": "governance-reconciliation"
-    },
-    {
-      "id": "P3-P1-002",
-      "severity": "P1",
-      "rootCause": "inbound WhatsApp events depended on in-memory sidecar history instead of persistence-before-acknowledgement",
-      "state": "closed-source-proven",
-      "ownerPackage": "durable-inbound-whatsapp"
-    },
-    {
-      "id": "P3-P1-003",
-      "severity": "P1",
-      "rootCause": "multi-step automations continued after failed steps and could report overall success",
-      "state": "closed-source-proven",
-      "ownerPackage": "truthful-durable-automations"
-    },
-    {
-      "id": "P3-P1-004",
-      "severity": "P1",
-      "rootCause": "automation provider actions called the WhatsApp sidecar directly and bypassed durable effect authority",
-      "state": "closed-source-proven",
-      "ownerPackage": "truthful-durable-automations"
-    },
-    {
-      "id": "P3-P1-005",
-      "severity": "P1",
-      "rootCause": "sensitive AI actions use generic current-message confirmation rather than persisted exact proposal and approval",
-      "state": "closed-source-proven",
-      "ownerPackage": "proposal-bound-ai"
-    },
-    {
-      "id": "P3-P1-006",
-      "severity": "P1",
-      "rootCause": "WhatsApp, courier and commerce effects use fragmented attempt, receipt and reconciliation semantics",
-      "state": "open-authorized-task6",
-      "ownerPackage": "provider-convergence"
-    },
-    {
-      "id": "P3-P1-007",
-      "severity": "P1",
-      "rootCause": "commerce synchronization lacks durable run/item ingress, quarantine and operator recovery",
-      "state": "open-authorized-task6",
-      "ownerPackage": "durable-commerce"
-    },
-    {
-      "id": "P3-P1-008",
-      "severity": "P1",
-      "rootCause": "an explicitly uncertified DHD adapter remains registered in normal provider execution authority",
-      "state": "open-authorized-task6",
-      "ownerPackage": "provider-certification"
-    },
-    {
-      "id": "P3-P1-009",
-      "severity": "P1",
-      "rootCause": "automation UI/API exposed trigger and action combinations without a committed producer or complete executable configuration",
-      "state": "closed-source-proven",
-      "ownerPackage": "truthful-durable-automations"
-    },
-    {
-      "id": "P3-P1-010",
-      "severity": "P1",
-      "rootCause": "status-trigger payload wrote phone while the WhatsApp automation consumed customerPhone",
-      "state": "closed-source-proven",
-      "ownerPackage": "durable-inbound-whatsapp"
-    },
-    {
-      "id": "P3-P1-011",
-      "severity": "P1",
-      "rootCause": "daily reports could duplicate after provider success followed by marker persistence failure",
-      "state": "closed-source-proven",
-      "ownerPackage": "truthful-durable-automations"
-    },
-    {
-      "id": "P3-P2-001",
-      "severity": "P2",
-      "rootCause": "inactive-shop worker ownership was implicit rather than contracted and tested",
-      "state": "closed-source-proven",
-      "ownerPackage": "durable-inbound-whatsapp"
-    },
-    {
-      "id": "P3-P2-002",
-      "severity": "P2",
-      "rootCause": "canonical courier implementation is split across current, reviewed-base and legacy layers",
-      "state": "open-authorized-task6",
-      "ownerPackage": "provider-convergence"
-    },
-    {
-      "id": "P3-P2-003",
-      "severity": "P2",
-      "rootCause": "substantial provider adapter source is not equivalent to current live certification",
-      "state": "open-authorized-task6",
-      "ownerPackage": "provider-certification"
-    },
-    {
-      "id": "P3-P2-004",
-      "severity": "P2",
-      "rootCause": "installed hydrated-WebView proof remains open in issue #201",
-      "state": "open-retained-issue-201",
-      "ownerPackage": "issue-201"
-    }
-  ],
-  "sharedContracts": {
-    "identityAndEncryption": {
-      "ingressKey": "provider + environment + exact account/workspace + exact shop incarnation + provider event/message identity",
-      "effectKey": "effect type + exact shop incarnation + canonical command/result identity + provider account/capability",
-      "rule": "sensitive raw provider payloads and requests are encrypted; logs and diagnostics contain bounded redacted metadata only"
-    },
-    "inbound": {
-      "acknowledgement": "the app acknowledges only after database commit; the sidecar removes a spool item only after that acknowledgement",
-      "publication": "WebSocket and UI publication follows the database-committed result only",
-      "states": [
-        "received",
-        "processing",
-        "retrying",
-        "applied",
-        "quarantined",
-        "dead_letter"
-      ]
-    },
-    "outbound": {
-      "preEffectRecovery": "lease expiry before provider call start is safe to retry",
-      "postEffectRecovery": "after provider call start, receipt lookup or provider idempotency is required; otherwise outcome is ambiguous",
-      "operator": "ambiguous retry requires an explicit duplicate-risk ceremony and immutable audit"
-    },
-    "automation": {
-      "records": [
-        "AutomationRun",
-        "AutomationStepRun",
-        "AutomationStepAttempt"
-      ],
-      "identity": "stable trigger event identity + immutable automation definition snapshot",
-      "stepPolicy": "steps execute in declared order with explicit stop or continue policy",
-      "truth": "aggregate status is derived from persisted step states and can never report success after a failed required step",
-      "effects": "provider actions create shared durable effects and persist step-to-effect correlation",
-      "catalog": "only validated trigger/action schemas with a committed producer and complete configuration may be activated"
-    },
-    "ai": {
-      "records": [
-        "AiActionProposal",
-        "AiActionApproval",
-        "AiActionExecution"
-      ],
-      "approval": "one-time approval references the exact persisted proposal digest and cannot authorize regenerated arguments"
-    },
-    "workerOwnership": {
-      "policy": "only the exact active native runtime drains its shop database",
-      "switch": "native shop switch quiesces the process and workers before replacing the runtime",
-      "inactiveShops": "work remains durable and visibly pending in the inactive shop database"
-    },
-    "certification": {
-      "authority": "server-side capability certification and kill-switch state gate provider execution",
-      "dhd": "disabled in production until current live endpoint and behavior certification exists"
-    },
-    "experienceAndEvidence": {
-      "dimensions": [
-        "Arabic",
-        "French",
-        "English",
-        "RTL and mixed direction",
-        "keyboard",
-        "focus",
-        "screen reader",
-        "1366x768",
-        "low-resource and constrained network"
-      ],
-      "diagnostics": "redacted stable IDs, state transitions, attempts, error classes and receipt presence; no secrets or prohibited plaintext"
-    }
-  },
-  "authorizedNextPackage": {
-    "name": "courier and commerce convergence plus provider certification",
-    "branch": "agent/phase3-durable-effects-audit",
-    "pr": 203,
-    "problemIds": [
-      "P3-P1-006",
-      "P3-P1-007",
-      "P3-P1-008",
-      "P3-P2-002",
-      "P3-P2-003"
-    ],
-    "scope": [
-      "converge courier and commerce work on shared durable ingress, effect, receipt and reconciliation contracts",
-      "persist durable commerce runs, pages, items, attempts, quarantine, dead letter and operator recovery",
-      "remove or make read-only competing legacy courier and commerce mutation or effect paths",
-      "gate every provider capability through server-side certification and kill-switch authority",
-      "keep DHD effect-disabled until current live endpoint and behavior certification exists",
-      "prove duplicate, overlap, retry, ambiguity, restart, interruption and checkpoint safety",
-      "provide complete Arabic, French and English operator recovery states"
-    ],
-    "nonGoals": [
-      "application version bump, MSI, release, Founder acceptance, Phase 3 closure or Stable",
-      "Phase 4 backup and replacement-install recovery",
-      "broad whole-product UI redesign"
-    ],
-    "gate": [
-      "complete current-source courier and commerce reconnaissance before production edits",
-      "focused tests during implementation",
-      "Level 1 Task Gate on each coherent package",
-      "frozen exact-head separated adversarial review before package closure",
-      "live certification evidence only where current credentials and provider access exist"
-    ]
-  },
-  "nextSequence": [
-    "audit and implement courier and commerce convergence plus provider certification only",
-    "run the risk-selected Level 1 Task Gate",
-    "freeze the exact head and complete one separated adversarial review",
-    "repair the consolidated findings",
-    "then complete operator recovery and the Phase 3 checkpoint"
-  ],
-  "ciStrategy": [
-    "run affected source, Prisma, migration, TypeScript, lint, Vitest and targeted AI/database/UI lanes",
-    "do not rebuild Windows or MSI for documentation-only descendants",
-    "reserve installed and Level 3 provider evidence for roadmap-defined checkpoints or material installed/provider authority"
-  ],
-  "task5SourceClosedAt": "2026-08-03",
   "task5Closure": {
     "name": "proposal-bound sensitive AI actions",
     "sourceHead": "07caedbc797ced5dc0e2ac959f252d5b3481285d",
@@ -371,42 +80,167 @@
     "normalCiRun": 30849680245,
     "sourceGate": "passed",
     "reviewThreadsOpen": 0,
+    "separatedAdversarialReview": "complete-repaired"
+  },
+  "task6Closure": {
+    "name": "courier-commerce convergence and provider certification authority",
+    "sourceHead": "676d0e41cc69d44c29b912038cba100fd827fcfa",
+    "fullSourceCheckpointRun": 30875723975,
+    "normalCiRun": 30875724094,
+    "sourceGate": "passed",
+    "reviewThreadsOpen": 0,
     "separatedAdversarialReview": "complete-repaired",
-    "evidenceLevel": "clean GitHub Actions source, integration, database and development UI source",
-    "closedProblemIds": [
-      "P3-P1-005"
+    "componentEvidence": {
+      "providerCapabilityHead": "1d751a2e26b5f911aebe1a28e58cc1b500f1a0a7",
+      "providerCapabilityRun": 30869805644,
+      "commerceHead": "762ee06e6e76986806c5030370bad4fa6168490a",
+      "commerceFinalAuthorityRun": 30874432466,
+      "courierHead": "2a52feabedf6b3869a5aa45ec67e8dabb0586a37",
+      "courierConsolidationRun": 30875448797
+    }
+  },
+  "problemRegister": [
+    {
+      "id": "P3-P1-001",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "governance-reconciliation"
+    },
+    {
+      "id": "P3-P1-002",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "durable-inbound-whatsapp"
+    },
+    {
+      "id": "P3-P1-003",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "truthful-durable-automations"
+    },
+    {
+      "id": "P3-P1-004",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "truthful-durable-automations"
+    },
+    {
+      "id": "P3-P1-005",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "proposal-bound-ai"
+    },
+    {
+      "id": "P3-P1-006",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "provider-convergence"
+    },
+    {
+      "id": "P3-P1-007",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "durable-commerce"
+    },
+    {
+      "id": "P3-P1-008",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "provider-certification-authority"
+    },
+    {
+      "id": "P3-P1-009",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "truthful-durable-automations"
+    },
+    {
+      "id": "P3-P1-010",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "durable-inbound-whatsapp"
+    },
+    {
+      "id": "P3-P1-011",
+      "severity": "P1",
+      "state": "closed-source-proven",
+      "ownerPackage": "truthful-durable-automations"
+    },
+    {
+      "id": "P3-P2-001",
+      "severity": "P2",
+      "state": "closed-source-proven",
+      "ownerPackage": "active-shop-worker-ownership"
+    },
+    {
+      "id": "P3-P2-002",
+      "severity": "P2",
+      "state": "closed-source-proven",
+      "ownerPackage": "courier-facade-consolidation"
+    },
+    {
+      "id": "P3-P2-003",
+      "severity": "P2",
+      "state": "source-authority-closed-live-evidence-open",
+      "ownerPackage": "provider-certification-evidence"
+    },
+    {
+      "id": "P3-P2-004",
+      "severity": "P2",
+      "state": "open-retained-issue-201",
+      "ownerPackage": "issue-201"
+    }
+  ],
+  "sharedContracts": {
+    "identityAndEncryption": "provider identity, exact shop incarnation and canonical command/run identity bind encrypted ingress and effect payloads",
+    "inbound": "acknowledgement and publication follow durable database truth",
+    "outbound": "provider calls occur outside business transactions with leases, attempts, known or ambiguous outcome, receipt and recovery",
+    "automation": "aggregate truth derives from persisted ordered steps and provider effects use durable authority",
+    "ai": "one exact persisted proposal binds one approval and one execution claim",
+    "commerce": "pages and encrypted items persist before processing; watermark commits only after complete success",
+    "courier": "one public facade owns booking, tracking and reconciliation while the provider effect runtime remains internal",
+    "workerOwnership": "only the exact active native runtime drains its shop database",
+    "certification": "server-side connection, capability, credential and endpoint evidence gates provider execution",
+    "experience": "AR/FR/EN and RTL-safe pending, retry, partial, ambiguous, quarantine, dead-letter, conflict and history states remain mandatory"
+  },
+  "sourceCompletion": {
+    "status": "complete",
+    "crossPackageContract": "src/lib/integrations/__tests__/phase3-source-closure.test.ts",
+    "zeroKnownP0P1AtSource": true,
+    "protectedMerge": false,
+    "signedArtifact": false,
+    "installedWindows": false,
+    "founderAcceptance": false
+  },
+  "authorizedNextPackage": {
+    "name": "Phase 3 Level 2 source checkpoint and evidence collection",
+    "branch": "agent/phase3-durable-effects-audit",
+    "pr": 203,
+    "problemIds": [
+      "P3-P2-003",
+      "P3-P2-004"
     ],
-    "implementationEvidence": [
-      "immutable encrypted AiActionProposal, AiActionApproval and AiActionExecution persistence",
-      "exact requester, approver, device, session, shop, policy, custom permission, entitlement, target version and expiry binding",
-      "one exact approval and one proposal-idempotent BusinessCommand execution claim",
-      "restart replay returns committed command results without repeating mutation",
-      "central fail-closed tool catalog with provider assignment blocked",
-      "generic confirmation words have no execution authority",
-      "canonical mutations and durable automation intents execute atomically",
-      "sanitized permission-filtered proposal history and exact approver recovery continuity",
-      "database terminal-state guards for succeeded proposal and execution truth",
-      "Arabic, French and English proposal, stale, conflict and recovery states"
+    "scope": [
+      "run the Phase 3 production source/build checkpoint on one frozen exact head",
+      "reconcile PR #203 and issues #164/#202 to source-complete evidence-open truth",
+      "collect live courier and Required communication-provider certification only with current safe credentials",
+      "retain issue #201 as the separate installed hydrated-WebView evidence boundary",
+      "record applicable Level 3 evidence before any phase-closure decision"
     ],
-    "repairs": [
-      "preserved custom team-member permission allowlists during revalidation",
-      "made succeeded proposal and execution truth monotonic after post-command read failures",
-      "rejected governed confirmation, malformed Algerian phones and blank order location fields before persistence",
-      "required exact active variants for order proposals",
-      "kept product and sole-variant price and stock projections consistent",
-      "refused ambiguous product-level mutations for multi-variant catalogs",
-      "kept exact approval digests out of persisted and Gemini history",
-      "filtered decrypted proposal history by action business permissions",
-      "retired temporary self-modifying repair and artifact workflows"
+    "nonGoals": [
+      "new broad Phase 3 production implementation",
+      "application version bump, MSI publication or release",
+      "Founder acceptance, Phase 3 closure or Stable",
+      "Phase 4 implementation"
     ],
-    "notProven": [
-      "signed artifact",
-      "installed Windows behavior",
-      "T470 behavior",
-      "live provider certification",
-      "Founder acceptance",
-      "Phase 3 closure",
-      "Stable"
+    "gate": [
+      "frozen exact source head",
+      "frozen install and Prisma generation/deployment",
+      "sf-version and semantic documentation audit",
+      "TypeScript, ESLint and complete Vitest",
+      "production Next build and WhatsApp sidecar build",
+      "migration status",
+      "live and installed evidence recorded separately and never inferred from source"
     ]
   }
 }
