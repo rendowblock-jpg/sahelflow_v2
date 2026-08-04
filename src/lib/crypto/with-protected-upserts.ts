@@ -4,7 +4,6 @@ import type { PrismaClient } from "@prisma/client";
 
 import {
   CONVERSATION_PROTECTED_FIELDS,
-  CUSTOMER_PROTECTED_FIELDS,
   MESSAGE_PROTECTED_FIELDS,
   ORDER_PROTECTED_FIELDS,
   createProtectedPiiCodec,
