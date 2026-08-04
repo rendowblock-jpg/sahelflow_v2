@@ -34,6 +34,11 @@ export interface SecretRow {
   updatedAt: Date;
 }
 
+export interface SecretCryptoOptions {
+  installationRoot?: Buffer;
+  createIfMissing?: boolean;
+}
+
 type KeyAuthorityClient = Parameters<typeof resolveShopProtectedKey>[0];
 
 function authorityClient(context: ServiceContext): KeyAuthorityClient {
@@ -75,9 +80,14 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
-async function resolveSecretAuthority(context: ServiceContext) {
+async function resolveSecretAuthority(
+  context: ServiceContext,
+  options: SecretCryptoOptions = {},
+) {
   return resolveShopProtectedKey(authorityClient(context), "shop-secret", {
     shopContext: shopContext(context),
+    installationRoot: options.installationRoot,
+    createIfMissing: options.createIfMissing,
   });
 }
 
@@ -85,9 +95,10 @@ async function protectedSecretData(
   context: ServiceContext,
   key: string,
   value: string,
+  options: SecretCryptoOptions = {},
 ): Promise<{ ciphertext: string; iv: string; tag: string }> {
   const contextValue = shopContext(context);
-  const authority = await resolveSecretAuthority(context);
+  const authority = await resolveSecretAuthority(context, options);
   const ciphertext = sealProtectedString(
     value,
     authority.key,
@@ -105,13 +116,14 @@ async function protectedSecretData(
 export async function getSecret(
   context: ServiceContext,
   key: string,
+  options: SecretCryptoOptions = {},
 ): Promise<string | null> {
   const row = await context.prisma.secret.findUnique({ where: { key } });
   if (!row) return null;
 
   if (isProtectedValueEnvelope(row.ciphertext)) {
     const contextValue = shopContext(context);
-    const authority = await resolveSecretAuthority(context);
+    const authority = await resolveSecretAuthority(context, options);
     return openProtectedString(
       row.ciphertext,
       authority.key,
@@ -122,7 +134,10 @@ export async function getSecret(
 
   // Legacy migration input. Corrupt/wrong-key payloads fail with a typed
   // protected-data error from `decryptString`; raw ciphertext is never returned.
-  return decryptString(rowToLegacyPayload(row), getMasterKey());
+  return decryptString(
+    rowToLegacyPayload(row),
+    options.installationRoot ?? getMasterKey(),
+  );
 }
 
 export async function hasSecret(
@@ -141,8 +156,9 @@ export async function setSecret(
   context: ServiceContext,
   key: string,
   value: string,
+  options: SecretCryptoOptions = {},
 ): Promise<void> {
-  const data = await protectedSecretData(context, key, value);
+  const data = await protectedSecretData(context, key, value, options);
   await context.prisma.secret.upsert({
     where: { key },
     create: { key, ...data },
@@ -159,8 +175,9 @@ export async function createSecretIfAbsent(
   context: ServiceContext,
   key: string,
   value: string,
+  options: SecretCryptoOptions = {},
 ): Promise<boolean> {
-  const data = await protectedSecretData(context, key, value);
+  const data = await protectedSecretData(context, key, value, options);
   try {
     await context.prisma.secret.create({ data: { key, ...data } });
     return true;
