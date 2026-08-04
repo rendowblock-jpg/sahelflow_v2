@@ -24,6 +24,13 @@ jobs:
       SF_DATA_DIR: /tmp/sahelflow-phase3-level2/data
       DATABASE_URL: file:/tmp/sahelflow-phase3-level2/data/shops/test.db
       SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+      SF_WORKSPACE_ID: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      SF_INSTALLATION_ID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      SF_ACTIVE_SHOP_ID: phase3-level2
+      SF_SHOP_INCARNATION_ID: cccccccccccccccccccccccccccccccc
+      SF_REGISTRY_REVISION: "1"
+      SF_DATABASE_FILE_ID: test.db
+      SF_MIGRATION_SET_SHA256: 0000000000000000000000000000000000000000000000000000000000000000
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@v4
