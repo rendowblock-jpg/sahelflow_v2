@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 import type { PrismaClient } from "@prisma/client";
 
@@ -27,10 +27,6 @@ const AUTHORITY_FORMAT_VERSION = 1 as const;
 const AUTHORITY_ALGORITHM = "sahelflow-protected-value/aes-256-gcm" as const;
 const KEY_BYTES = 32;
 const DEFAULT_KEY_VERSION = 1;
-const TEST_ROOT_DOMAIN = Buffer.from(
-  "sahelflow.test-installation-root.v1\0",
-  "utf8",
-);
 
 const INSTALLATION_PURPOSE: Record<
   ShopProtectedKeyPurpose,
@@ -64,7 +60,6 @@ export interface ResolveShopProtectedKeyOptions {
   shopContext?: ShopContext;
   installationRoot?: Buffer;
   keyVersion?: number;
-  /** Set false for read-only verification paths. */
   createIfMissing?: boolean;
 }
 
@@ -73,6 +68,8 @@ export interface ProtectedKeyRewrapStats {
   rewrapped: number;
   alreadyCurrent: number;
 }
+
+let cachedDefaultInstallationRoot: Buffer | null = null;
 
 function keyAuthorityError(
   failure: "format" | "key" | "context" | "authentication",
@@ -103,14 +100,14 @@ function isShopProtectedKeyPurpose(
   return Object.prototype.hasOwnProperty.call(INSTALLATION_PURPOSE, value);
 }
 
+/**
+ * The packaged process receives one immutable installation root. Tests may
+ * reset the compatibility master-key cache between cases, so retain the first
+ * resolved root here to model the real process-lifetime authority accurately.
+ */
 function defaultInstallationRoot(): Buffer {
-  if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
-    return createHash("sha256")
-      .update(TEST_ROOT_DOMAIN)
-      .update(process.env.SF_TEST_ROOT ?? "default", "utf8")
-      .digest();
-  }
-  return getMasterKey();
+  cachedDefaultInstallationRoot ??= Buffer.from(getMasterKey());
+  return cachedDefaultInstallationRoot;
 }
 
 function binding(
@@ -253,15 +250,6 @@ async function readAuthorityRow(
   });
 }
 
-/**
- * Resolve or create one purpose-specific random shop key.
- *
- * The installation root is used only to derive the local wrapping key. The
- * returned random key encrypts seller fields/secrets and remains stable across
- * installation-root rotation. Concurrent first use is safe through the unique
- * purpose primary key: one writer wins and all losers read the authenticated
- * winner.
- */
 export async function resolveShopProtectedKey(
   prisma: ProtectedKeyAuthorityClient,
   purpose: ShopProtectedKeyPurpose,
@@ -343,11 +331,6 @@ export async function resolveShopProtectedKey(
   }
 }
 
-/**
- * Re-wrap every existing random shop key under a new installation root without
- * changing the shop key or any seller ciphertext. The operation is idempotent:
- * rows already authenticated under the new root are verified and skipped.
- */
 export async function rewrapShopProtectedKeys(
   prisma: ProtectedKeyAuthorityClient,
   context: ShopContext,
