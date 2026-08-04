@@ -65,7 +65,10 @@ afterAll(async () => {
 describe("durable WhatsApp inbound normalization", () => {
   it("atomically creates canonical inbox truth and a durable trigger intent", async () => {
     const ingress = await persistWhatsAppInbound(context, envelope());
-    const processed = await processWhatsAppInbound(context, ingress.ingressEventId);
+    const processed = await processWhatsAppInbound(
+      context,
+      ingress.ingressEventId,
+    );
 
     expect(processed).toMatchObject({
       state: "applied",
@@ -131,7 +134,10 @@ describe("durable WhatsApp inbound normalization", () => {
     ).resolves.toMatchObject({ eventType: "whatsapp.message.received.v1" });
 
     const intent = await db.outboxIntent.findFirstOrThrow({
-      where: { commandId: command.id, effectType: AUTOMATION_TRIGGER_EFFECT_TYPE },
+      where: {
+        commandId: command.id,
+        effectType: AUTOMATION_TRIGGER_EFFECT_TYPE,
+      },
     });
     expect(intent.payloadJson).not.toContain("Message client durable");
     expect(intent.payloadJson).not.toContain("213555000222");
@@ -159,7 +165,10 @@ describe("durable WhatsApp inbound normalization", () => {
   it("replays applied ingress without duplicating message, unread count or trigger intent", async () => {
     const ingress = await persistWhatsAppInbound(context, envelope());
     const first = await processWhatsAppInbound(context, ingress.ingressEventId);
-    const replay = await processWhatsAppInbound(context, ingress.ingressEventId);
+    const replay = await processWhatsAppInbound(
+      context,
+      ingress.ingressEventId,
+    );
 
     expect(replay).toEqual(first);
     await expect(db.message.count()).resolves.toBe(1);
@@ -170,6 +179,30 @@ describe("durable WhatsApp inbound normalization", () => {
     await expect(
       db.conversation.findFirstOrThrow({ select: { unreadCount: true } }),
     ).resolves.toEqual({ unreadCount: 1 });
+  });
+
+  it("keeps the newest conversation timestamp when an older message arrives late", async () => {
+    const newer = envelope("PROVIDER-INBOUND-NEWER");
+    newer.message.messageTimestamp = 1_786_000_300;
+    const older = envelope("PROVIDER-INBOUND-OLDER");
+    older.message.messageTimestamp = 1_786_000_200;
+
+    const newerIngress = await persistWhatsAppInbound(context, newer);
+    await processWhatsAppInbound(context, newerIngress.ingressEventId);
+    const olderIngress = await persistWhatsAppInbound(context, older);
+    await processWhatsAppInbound(context, olderIngress.ingressEventId);
+
+    const conversation = await db.conversation.findFirstOrThrow({
+      select: {
+        lastMessageAt: true,
+        waitingSince: true,
+        unreadCount: true,
+      },
+    });
+    const expected = new Date(newer.message.messageTimestamp * 1_000);
+    expect(conversation.lastMessageAt).toEqual(expected);
+    expect(conversation.waitingSince).toEqual(expected);
+    expect(conversation.unreadCount).toBe(2);
   });
 
   it("recovers an expired pre-application lease with truthful immutable attempt history", async () => {
@@ -193,7 +226,10 @@ describe("durable WhatsApp inbound normalization", () => {
       },
     });
 
-    const recovered = await processWhatsAppInbound(context, ingress.ingressEventId);
+    const recovered = await processWhatsAppInbound(
+      context,
+      ingress.ingressEventId,
+    );
 
     expect(recovered.state).toBe("applied");
     await expect(

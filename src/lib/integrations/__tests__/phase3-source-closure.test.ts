@@ -56,12 +56,15 @@ describe("Phase 3 cross-package source closure", () => {
   });
 
   it("exposes one courier facade and keeps provider execution internal", () => {
-    expect(existsSync(resolve(root, "src/lib/delivery/canonical-courier.ts"))).toBe(
-      true,
-    );
+    expect(
+      existsSync(resolve(root, "src/lib/delivery/canonical-courier.ts")),
+    ).toBe(true);
     expect(
       existsSync(
-        resolve(root, "src/lib/delivery/canonical-courier-booking-authority.ts"),
+        resolve(
+          root,
+          "src/lib/delivery/canonical-courier-booking-authority.ts",
+        ),
       ),
     ).toBe(true);
     expect(
@@ -131,6 +134,23 @@ describe("Phase 3 cross-package source closure", () => {
       "proposalId",
       "argsHash",
     ]);
+  });
+
+  it("locks the Phase 3 review-remediation contracts", () => {
+    const inboundSpool = source("sidecars/whatsapp/inbound-spool.ts");
+    const inboundSpoolCrypto = source(
+      "sidecars/whatsapp/inbound-spool-crypto.ts",
+    );
+    const storefrontSubmit = source("src/app/api/storefront/submit/route.ts");
+    const automationEditor = source(
+      "src/components/automations/automation-editor.tsx",
+    );
+
+    expect(inboundSpool).toContain("syncDirectory(this.directory)");
+    expect(inboundSpoolCrypto).toContain("syncParentDirectory(path)");
+    expect(storefrontSubmit).not.toContain("if (!command.replayed)");
+    expect(automationEditor).not.toContain('value: "order.failed"');
+    expect(automationEditor).not.toContain('| "failed";');
   });
 
   it("keeps source completion separate from live and installed evidence", () => {

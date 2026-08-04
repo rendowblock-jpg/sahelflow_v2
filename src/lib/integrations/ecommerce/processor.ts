@@ -30,6 +30,7 @@ interface ClaimedRun {
   initialWatermark: string;
   candidateWatermark: string;
   continuationCursor: string | null;
+  pagesPerCycle: number;
   pagesFetched: number;
   attemptCount: number;
   operatorRetryCount: number;
@@ -146,6 +147,7 @@ async function claimCommerceRun(
       initialWatermark: candidate.initialWatermark,
       candidateWatermark: candidate.candidateWatermark,
       continuationCursor: candidate.continuationCursor,
+      pagesPerCycle: candidate.pagesPerCycle,
       pagesFetched: candidate.pagesFetched,
       attemptCount: attemptNumber,
       operatorRetryCount: candidate.operatorRetryCount,
@@ -262,6 +264,8 @@ async function persistFetchedPage(
     ]),
   });
   const now = new Date();
+  const pageBudgetReached =
+    page.nextCursor !== null && pageNumber >= run.pagesPerCycle;
   const candidateWatermark = maxCommerceWatermark(
     run.candidateWatermark,
     page.candidateWatermark,
@@ -339,17 +343,19 @@ async function persistFetchedPage(
     await tx.commerceSyncRun.updateMany({
       where: { id: run.id, leaseToken: run.leaseToken, status: "fetching" },
       data: {
-        status: page.nextCursor ? "queued" : "processing",
+        status: page.nextCursor && !pageBudgetReached ? "queued" : "processing",
         continuationCursor: page.nextCursor,
         candidateWatermark,
         pagesFetched: { increment: 1 },
         fetchedCount: { increment: descriptors.length },
-        fetchComplete: page.nextCursor === null,
+        fetchComplete: page.nextCursor === null || pageBudgetReached,
         hasMore: page.nextCursor !== null,
         leaseToken: null,
         lockedAt: null,
-        nextAttemptAt: page.nextCursor ? now : null,
-        lastErrorCode: null,
+        nextAttemptAt: page.nextCursor && !pageBudgetReached ? now : null,
+        lastErrorCode: pageBudgetReached
+          ? "COMMERCE_PAGE_BUDGET_EXHAUSTED"
+          : null,
       },
     });
   });
@@ -658,6 +664,24 @@ export async function finalizeCommerceRuns(
     });
     const failed =
       (counts.get("quarantined") ?? 0) + (counts.get("dead_letter") ?? 0);
+    if (run.hasMore) {
+      await context.prisma.commerceSyncRun.update({
+        where: { id: run.id },
+        data: {
+          status: "partially_completed",
+          activeKey: null,
+          createdCount: created,
+          updatedCount: updated,
+          skippedCount: skipped,
+          failedCount: failed,
+          lastErrorCode: "COMMERCE_PAGE_BUDGET_EXHAUSTED",
+          completedAt: new Date(),
+          deadLetteredAt: null,
+        },
+      });
+      finalized += 1;
+      continue;
+    }
     if (failed > 0) {
       const terminal =
         created + updated + skipped > 0 ? "partially_completed" : "dead_letter";

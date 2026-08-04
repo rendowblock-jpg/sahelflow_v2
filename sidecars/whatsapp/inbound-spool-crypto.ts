@@ -56,6 +56,16 @@ function keyFilePath(): string {
   );
 }
 
+function syncParentDirectory(path: string): void {
+  if (process.platform === "win32") return;
+  const descriptor = openSync(dirname(path), "r");
+  try {
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
 function persistGeneratedKey(path: string, key: Buffer): void {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   const temporary = `${path}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
@@ -72,6 +82,7 @@ function persistGeneratedKey(path: string, key: Buffer): void {
     // Windows ACLs remain authoritative when POSIX chmod is unavailable.
   }
   renameSync(temporary, path);
+  syncParentDirectory(path);
 }
 
 /**
@@ -147,7 +158,9 @@ export function openWhatsAppInboundSpoolRecord(
     typeof parsed.tag !== "string" ||
     typeof parsed.ciphertext !== "string"
   ) {
-    throw new Error("Unsupported or mismatched WhatsApp inbound spool envelope");
+    throw new Error(
+      "Unsupported or mismatched WhatsApp inbound spool envelope",
+    );
   }
 
   const decipher = createDecipheriv(

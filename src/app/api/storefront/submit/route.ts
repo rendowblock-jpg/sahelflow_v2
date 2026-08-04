@@ -4,10 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import {
-  dispatchTrigger,
-  type TriggerEvent,
-} from "@/lib/automations/engine";
+import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import { db, shopContext } from "@/lib/db";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
@@ -20,7 +17,10 @@ const RATE_LIMIT_WINDOW_MS = 10 * 60_000;
 const RATE_LIMIT_MAX = 5;
 const ipHits = new Map<string, { count: number; resetAt: number }>();
 
-function checkRateLimit(ip: string): { allowed: boolean; retryAfterMs: number } {
+function checkRateLimit(ip: string): {
+  allowed: boolean;
+  retryAfterMs: number;
+} {
   const now = Date.now();
   const entry = ipHits.get(ip);
   if (!entry || now > entry.resetAt) {
@@ -135,7 +135,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     const token = input["cf-turnstile-response"]?.trim();
     if (!token) {
       return NextResponse.json(
-        { error: "Anti-bot verification required. Please complete the challenge." },
+        {
+          error:
+            "Anti-bot verification required. Please complete the challenge.",
+        },
         { status: 400 },
       );
     }
@@ -190,17 +193,15 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     },
   );
 
-  if (!command.replayed) {
-    await dispatchTrigger(
-      { prisma: db, shop: shopContext },
-      "order.created" as TriggerEvent,
-      command.result.automation,
-      {
-        triggerKey: `order.created:${command.result.order.id}`,
-        occurredAt: command.result.order.createdAt,
-      },
-    );
-  }
+  await dispatchTrigger(
+    { prisma: db, shop: shopContext },
+    "order.created" as TriggerEvent,
+    command.result.automation,
+    {
+      triggerKey: `order.created:${command.result.order.id}`,
+      occurredAt: command.result.order.createdAt,
+    },
+  );
 
   return NextResponse.json(
     {

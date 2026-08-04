@@ -39,21 +39,12 @@ import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
 
 type EditorAction =
-  | "send_whatsapp"
-  | "send_notification"
-  | "tag_customer"
-  | "update_status";
+  "send_whatsapp" | "send_notification" | "tag_customer" | "update_status";
 type FailurePolicy = "stop" | "continue";
 type EditorStepConfig = {
   messageTemplate?: string;
   noteText?: string;
-  targetStatus?:
-    | "shipped"
-    | "delivered"
-    | "returned"
-    | "refused"
-    | "cancelled"
-    | "failed";
+  targetStatus?: "shipped" | "delivered" | "returned" | "refused" | "cancelled";
 };
 type EditorStep = {
   action: EditorAction;
@@ -69,19 +60,24 @@ const TRIGGERS = [
   { value: "order.returned", labelKey: "automations.triggers.orderReturned" },
   { value: "order.refused", labelKey: "automations.triggers.orderRefused" },
   { value: "order.cancelled", labelKey: "automations.triggers.orderCancelled" },
-  { value: "order.failed", labelKey: "automations.triggers.orderFailed" },
   {
     value: "customer.blacklisted",
     labelKey: "automations.triggers.customerBlacklisted",
   },
-  { value: "message.received", labelKey: "automations.triggers.messageReceived" },
+  {
+    value: "message.received",
+    labelKey: "automations.triggers.messageReceived",
+  },
   { value: "stock.low", labelKey: "automations.triggers.stockLow" },
 ] as const;
 
 const ACTIONS: Array<{ value: EditorAction; labelKey: string }> = [
   { value: "send_whatsapp", labelKey: "automations.actions.sendWhatsapp" },
   { value: "update_status", labelKey: "automations.actions.updateStatus" },
-  { value: "send_notification", labelKey: "automations.actions.sendNotification" },
+  {
+    value: "send_notification",
+    labelKey: "automations.actions.sendNotification",
+  },
   { value: "tag_customer", labelKey: "automations.actions.tagCustomer" },
 ];
 
@@ -91,7 +87,6 @@ const TARGET_STATUSES = [
   "returned",
   "refused",
   "cancelled",
-  "failed",
 ] as const;
 
 function defaultConfig(action: EditorAction): EditorStepConfig {
@@ -127,7 +122,9 @@ function isAction(value: unknown): value is EditorAction {
   return ACTIONS.some((action) => action.value === value);
 }
 
-function parseStoredSteps(automation?: AutomationEditorAutomation): EditorStep[] {
+function parseStoredSteps(
+  automation?: AutomationEditorAutomation,
+): EditorStep[] {
   if (!automation) return [newStep()];
   const raw = parseJson(automation.steps);
   if (Array.isArray(raw)) {
@@ -144,7 +141,9 @@ function parseStoredSteps(automation?: AutomationEditorAutomation): EditorStep[]
     });
     if (parsed.length > 0) return parsed;
   }
-  const action = isAction(automation.action) ? automation.action : "send_whatsapp";
+  const action = isAction(automation.action)
+    ? automation.action
+    : "send_whatsapp";
   const config = parseJson(automation.config);
   return [
     {
@@ -158,7 +157,9 @@ function parseStoredSteps(automation?: AutomationEditorAutomation): EditorStep[]
   ];
 }
 
-function parseConditions(raw: string | null | undefined): ConditionGroup | null {
+function parseConditions(
+  raw: string | null | undefined,
+): ConditionGroup | null {
   const parsed = parseJson(raw);
   if (parsed && typeof parsed === "object") {
     const object = parsed as Record<string, unknown>;
@@ -200,7 +201,10 @@ interface AutomationEditorProps {
   children?: ReactNode;
 }
 
-export function AutomationEditor({ automation, children }: AutomationEditorProps) {
+export function AutomationEditor({
+  automation,
+  children,
+}: AutomationEditorProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const isEdit = Boolean(automation);
@@ -209,7 +213,10 @@ export function AutomationEditor({ automation, children }: AutomationEditorProps
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children ?? (
-          <Button variant={isEdit ? "ghost" : "default"} size={isEdit ? "sm" : "default"}>
+          <Button
+            variant={isEdit ? "ghost" : "default"}
+            size={isEdit ? "sm" : "default"}
+          >
             {isEdit ? t("common.edit") : t("automations.newAutomation")}
           </Button>
         )}
@@ -229,11 +236,16 @@ interface AutomationEditorFormProps {
   onDone: () => void;
 }
 
-function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps) {
+function AutomationEditorForm({
+  automation,
+  onDone,
+}: AutomationEditorFormProps) {
   const { t } = useI18n();
   const router = useRouter();
   const isEdit = Boolean(automation);
-  const initialTrigger = TRIGGERS.some((item) => item.value === automation?.trigger)
+  const initialTrigger = TRIGGERS.some(
+    (item) => item.value === automation?.trigger,
+  )
     ? automation!.trigger
     : TRIGGERS[0].value;
 
@@ -242,7 +254,9 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
   const [conditions, setConditions] = useState<ConditionGroup | null>(
     parseConditions(automation?.conditions),
   );
-  const [steps, setSteps] = useState<EditorStep[]>(parseStoredSteps(automation));
+  const [steps, setSteps] = useState<EditorStep[]>(
+    parseStoredSteps(automation),
+  );
   const [dryRun, setDryRun] = useState(automation?.dryRun ?? false);
   const [maxRetries, setMaxRetries] = useState(automation?.maxRetries ?? 2);
   const [retryDelayMs, setRetryDelayMs] = useState(
@@ -262,7 +276,10 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
     updateStep(index, { action, config: defaultConfig(action) });
   };
 
-  const updateStepConfig = (index: number, config: Partial<EditorStepConfig>) => {
+  const updateStepConfig = (
+    index: number,
+    config: Partial<EditorStepConfig>,
+  ) => {
     setSteps((current) =>
       current.map((step, position) =>
         position === index
@@ -323,9 +340,9 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
             body: JSON.stringify(payload),
           });
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null;
+        const body = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         throw new Error(body?.error ?? "Automation validation failed");
       }
       toast.success(
@@ -337,9 +354,7 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
       router.refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : t("automations.updateFailed"),
+        error instanceof Error ? error.message : t("automations.updateFailed"),
       );
     } finally {
       setLoading(false);
@@ -421,7 +436,10 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
               aria-labelledby={`automation-step-${index}`}
             >
               <div className="flex items-center justify-between gap-3">
-                <h3 id={`automation-step-${index}`} className="text-sm font-semibold">
+                <h3
+                  id={`automation-step-${index}`}
+                  className="text-sm font-semibold"
+                >
                   {t("automations.runtime.step", { count: index + 1 })}
                 </h3>
                 <div className="flex items-center gap-1">
@@ -583,7 +601,10 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
                     role="note"
                     className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-100"
                   >
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <AlertTriangle
+                      className="mt-0.5 h-4 w-4 shrink-0"
+                      aria-hidden="true"
+                    />
                     <span>{t("automations.editor.destructiveWarning")}</span>
                   </div>
                 </div>
@@ -654,9 +675,7 @@ function AutomationEditorForm({ automation, onDone }: AutomationEditorFormProps)
           {t("common.cancel")}
         </Button>
         <Button onClick={handleSubmit} disabled={loading || !valid}>
-          {loading ? (
-            <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
-          ) : null}
+          {loading ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}
           {isEdit ? t("common.saveChanges") : t("common.create")}
         </Button>
       </DialogFooter>

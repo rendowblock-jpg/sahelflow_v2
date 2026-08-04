@@ -90,9 +90,8 @@ function attemptWithinCurrentBudget(
 
 function retryDelay(attemptNumber: number): number {
   return (
-    RETRY_DELAYS_MS[
-      Math.min(attemptNumber - 1, RETRY_DELAYS_MS.length - 1)
-    ] ?? MAX_RETRY_DELAY_MS
+    RETRY_DELAYS_MS[Math.min(attemptNumber - 1, RETRY_DELAYS_MS.length - 1)] ??
+    MAX_RETRY_DELAY_MS
   );
 }
 
@@ -111,7 +110,8 @@ function messageType(input: WhatsAppInboundEnvelope): string {
 
 function jidPhone(sourceId: string): string | null {
   if (!sourceId.endsWith("@s.whatsapp.net")) return null;
-  const value = sourceId.slice(0, -"@s.whatsapp.net".length).split(":")[0] ?? "";
+  const value =
+    sourceId.slice(0, -"@s.whatsapp.net".length).split(":")[0] ?? "";
   return /^\d{6,20}$/.test(value) ? value : null;
 }
 
@@ -245,8 +245,7 @@ async function claimIngress(
         lockedAt: null,
         leaseToken: null,
         nextAttemptAt: null,
-        lastErrorCode:
-          current.lastErrorCode ?? "ATTEMPT_BUDGET_EXHAUSTED",
+        lastErrorCode: current.lastErrorCode ?? "ATTEMPT_BUDGET_EXHAUSTED",
       };
     }
 
@@ -353,7 +352,9 @@ async function markFailure(
         errorCode: code,
         detailJson: JSON.stringify({
           retryable: state === "retrying",
-          category: quarantine ? "invalid-or-conflicting-provider-input" : "processing",
+          category: quarantine
+            ? "invalid-or-conflicting-provider-input"
+            : "processing",
           operatorRetryCount: claim.operatorRetryCount,
         }),
         completedAt: now,
@@ -396,7 +397,8 @@ async function applyClaim(
     claim.providerTimestamp ?? new Date(input.message.messageTimestamp * 1_000);
   const sourceId = input.message.key.remoteJid;
   const contactPhone = jidPhone(sourceId);
-  const contactName = input.message.pushName?.trim() || contactPhone || sourceId;
+  const contactName =
+    input.message.pushName?.trim() || contactPhone || sourceId;
   const body = messageText(input.message.message);
   const canonicalMessageType = messageType(input);
   const commandContext = {
@@ -446,13 +448,25 @@ async function applyClaim(
         update: {
           contactName,
           contactPhone,
-          lastMessageAt: providerTimestamp,
           unreadCount: { increment: 1 },
           status: "open",
           snoozedUntil: null,
-          waitingSince: providerTimestamp,
         },
         select: { id: true },
+      });
+
+      await tx.conversation.updateMany({
+        where: {
+          id: conversation.id,
+          OR: [
+            { lastMessageAt: null },
+            { lastMessageAt: { lt: providerTimestamp } },
+          ],
+        },
+        data: {
+          lastMessageAt: providerTimestamp,
+          waitingSince: providerTimestamp,
+        },
       });
 
       await tx.message.create({
@@ -580,7 +594,11 @@ export async function processWhatsAppInbound(
   if (!isClaim(claimed)) return publicResult(claimed);
 
   try {
-    return await applyClaim(context, claimed, await openEnvelope(context, claimed));
+    return await applyClaim(
+      context,
+      claimed,
+      await openEnvelope(context, claimed),
+    );
   } catch (error) {
     return markFailure(context, claimed, error);
   }

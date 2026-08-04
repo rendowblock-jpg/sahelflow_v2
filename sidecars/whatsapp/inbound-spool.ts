@@ -81,12 +81,29 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(canonicalize(value));
 }
 
+function syncDirectory(path: string): void {
+  // Windows rename durability is owned by the filesystem/handle close contract.
+  // POSIX filesystems require the parent directory entry to be flushed after an
+  // atomic rename or unlink before the spool can be called power-loss durable.
+  if (process.platform === "win32") return;
+  const descriptor = openSync(path, "r");
+  try {
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
 function assertInboundMessage(message: IncomingMessage): void {
   if (message.key.fromMe) {
-    throw new Error("Outbound WhatsApp messages cannot enter the inbound spool");
+    throw new Error(
+      "Outbound WhatsApp messages cannot enter the inbound spool",
+    );
   }
   if (!message.key.remoteJid || !message.key.id) {
-    throw new Error("Inbound WhatsApp messages require provider JID and message ID");
+    throw new Error(
+      "Inbound WhatsApp messages require provider JID and message ID",
+    );
   }
 }
 
@@ -133,7 +150,8 @@ function responseErrorCode(status: number, body: unknown): string {
 
 function spoolIdFromPath(path: string): string {
   const match = /([0-9a-f]{64})\.json$/.exec(path.replaceAll("\\", "/"));
-  if (!match?.[1]) throw new Error(`Invalid WhatsApp inbound spool path: ${path}`);
+  if (!match?.[1])
+    throw new Error(`Invalid WhatsApp inbound spool path: ${path}`);
   return match[1];
 }
 
@@ -153,7 +171,10 @@ export class WhatsAppInboundSpool {
     this.appUrl = options.appUrl.replace(/\/+$/, "");
     this.bearerToken = options.bearerToken;
     this.fetchImpl = options.fetchImpl ?? fetch;
-    this.retryBaseMs = Math.max(10, options.retryBaseMs ?? DEFAULT_RETRY_BASE_MS);
+    this.retryBaseMs = Math.max(
+      10,
+      options.retryBaseMs ?? DEFAULT_RETRY_BASE_MS,
+    );
     this.encryptionKey = options.encryptionKey
       ? Buffer.from(options.encryptionKey)
       : resolveWhatsAppInboundSpoolKey();
@@ -231,10 +252,12 @@ export class WhatsAppInboundSpool {
       // Windows ACLs remain authoritative when POSIX chmod is unavailable.
     }
     renameSync(temporary, target);
+    syncDirectory(this.directory);
   }
 
   private removeRecord(record: StoredInboundRecord): void {
     rmSync(this.recordPath(record.envelope.spoolId), { force: true });
+    syncDirectory(this.directory);
   }
 
   /** Persist encrypted, synchronously, before browser or application delivery. */
@@ -245,7 +268,9 @@ export class WhatsAppInboundSpool {
   ): WhatsAppInboundSpoolEnvelope {
     const normalizedAccountId = accountId.trim();
     if (!normalizedAccountId) {
-      throw new Error("WhatsApp account identity is required for inbound spooling");
+      throw new Error(
+        "WhatsApp account identity is required for inbound spooling",
+      );
     }
     assertInboundMessage(message);
     const spoolId = deriveWhatsAppInboundSpoolId(normalizedAccountId, message);
@@ -362,24 +387,25 @@ export class WhatsAppInboundSpool {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), DELIVERY_TIMEOUT_MS);
     try {
-      const response = await this.fetchImpl(`${this.appUrl}/api/whatsapp/inbound`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.bearerToken}`,
-          "Content-Type": "application/json",
+      const response = await this.fetchImpl(
+        `${this.appUrl}/api/whatsapp/inbound`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${this.bearerToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(record.envelope),
+          signal: controller.signal,
         },
-        body: JSON.stringify(record.envelope),
-        signal: controller.signal,
-      });
-      const body = await response.json().catch(() => null) as
-        | {
-            acknowledged?: unknown;
-            ingressEventId?: unknown;
-            replayed?: unknown;
-            publish?: unknown;
-            code?: unknown;
-          }
-        | null;
+      );
+      const body = (await response.json().catch(() => null)) as {
+        acknowledged?: unknown;
+        ingressEventId?: unknown;
+        replayed?: unknown;
+        publish?: unknown;
+        code?: unknown;
+      } | null;
       if (
         !response.ok ||
         body?.acknowledged !== true ||
@@ -427,7 +453,10 @@ export class WhatsAppInboundSpool {
   start(intervalMs = 1_000): void {
     if (this.timer) return;
     void this.flush();
-    this.timer = setInterval(() => void this.flush(), Math.max(100, intervalMs));
+    this.timer = setInterval(
+      () => void this.flush(),
+      Math.max(100, intervalMs),
+    );
     this.timer.unref?.();
   }
 

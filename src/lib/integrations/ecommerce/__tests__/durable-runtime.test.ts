@@ -128,8 +128,8 @@ describe("durable commerce runtime", () => {
       )
       .mockResolvedValueOnce(page([], { nextCursor: null, watermark: "wm-2" }));
 
-    const queued = await queueCommerceSync(context, "shopify", 1);
-    const replay = await queueCommerceSync(context, "shopify", 1);
+    const queued = await queueCommerceSync(context, "shopify", 2);
+    const replay = await queueCommerceSync(context, "shopify", 2);
     expect(replay).toMatchObject({ id: queued.id, replayed: true });
 
     expect(await processNextCommerceFetch(context)).toBe(true);
@@ -177,6 +177,37 @@ describe("durable commerce runtime", () => {
       watermark: "wm-2",
     });
     expect(await rawDb.order.count()).toBe(1);
+  });
+
+  it("stops at the requested page budget without advancing the watermark", async () => {
+    fetchPageMock.mockResolvedValueOnce(
+      page([], { nextCursor: "page-2", watermark: "wm-partial" }),
+    );
+    const queued = await queueCommerceSync(context, "shopify", 1);
+
+    expect(await processNextCommerceFetch(context)).toBe(true);
+    expect(await processNextCommerceFetch(context)).toBe(false);
+    expect(await finalizeCommerceRuns(context)).toBe(1);
+
+    const run = await rawDb.commerceSyncRun.findUniqueOrThrow({
+      where: { id: queued.id },
+    });
+    expect(run).toMatchObject({
+      status: "partially_completed",
+      activeKey: null,
+      fetchComplete: true,
+      hasMore: true,
+      pagesFetched: 1,
+      continuationCursor: "page-2",
+      lastErrorCode: "COMMERCE_PAGE_BUDGET_EXHAUSTED",
+    });
+    expect(fetchPageMock).toHaveBeenCalledTimes(1);
+    const integration = await rawDb.integration.findUniqueOrThrow({
+      where: { platform: "shopify" },
+    });
+    expect(JSON.parse(integration.config ?? "{}")).toMatchObject({
+      watermark: "",
+    });
   });
 
   it("quarantines a catalog conflict and never advances the watermark", async () => {
@@ -275,7 +306,7 @@ describe("durable commerce runtime", () => {
         }),
       );
 
-    const queued = await queueCommerceSync(context, "shopify", 1);
+    const queued = await queueCommerceSync(context, "shopify", 2);
     await processNextCommerceFetch(context);
     await processNextCommerceFetch(context);
     expect(await finalizeCommerceRuns(context)).toBe(1);
