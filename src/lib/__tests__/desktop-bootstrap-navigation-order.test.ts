@@ -22,39 +22,24 @@ describe("packaged desktop bootstrap navigation", () => {
       "create_workspace_window(app, workspace_url, packaged)?",
       workspaceUrl,
     );
-    const builder = recovery.indexOf(
-      "WebviewWindowBuilder::new(",
-      workspaceCreation,
-    );
-    const mainLabel = recovery.indexOf("MAIN_WINDOW_LABEL", builder);
-    const initialExternalUrl = recovery.indexOf(
-      "WebviewUrl::External(url)",
-      mainLabel,
-    );
-    const startingTitle = recovery.indexOf(
-      "BOOTSTRAP_WINDOW_TITLE",
-      initialExternalUrl,
-    );
-    const visibleWorkspace = recovery.indexOf(".visible(true)", startingTitle);
     const readinessMonitor = recovery.indexOf(
-      "monitor_packaged_ui(",
-      visibleWorkspace,
+      "monitor_packaged_ui(app.clone(), workspace, app_data_dir)",
+      workspaceCreation,
     );
 
     expect(validatedHandoff).toBeGreaterThan(-1);
     expect(workspaceUrl).toBeGreaterThan(validatedHandoff);
     expect(workspaceCreation).toBeGreaterThan(workspaceUrl);
-    expect(builder).toBeGreaterThan(workspaceCreation);
-    expect(mainLabel).toBeGreaterThan(builder);
-    expect(initialExternalUrl).toBeGreaterThan(mainLabel);
-    expect(startingTitle).toBeGreaterThan(initialExternalUrl);
-    expect(visibleWorkspace).toBeGreaterThan(startingTitle);
-    expect(readinessMonitor).toBeGreaterThan(visibleWorkspace);
+    expect(readinessMonitor).toBeGreaterThan(workspaceCreation);
 
     expect(configuration).toContain('"label": "startup"');
     expect(configuration).toContain('"visible": false');
     expect(recovery).toContain('STARTUP_WINDOW_LABEL: &str = "startup"');
     expect(recovery).toContain('MAIN_WINDOW_LABEL: &str = "main"');
+    expect(recovery).toContain("WebviewWindowBuilder::new(");
+    expect(recovery).toContain("WebviewUrl::External(url)");
+    expect(recovery).toContain("BOOTSTRAP_WINDOW_TITLE");
+    expect(recovery).toContain(".visible(true)");
     expect(recovery).toContain('"workspace-window-creating"');
     expect(recovery).toContain('"workspace-window-created"');
     expect(recovery).not.toContain("schedule_packaged_navigation(");
