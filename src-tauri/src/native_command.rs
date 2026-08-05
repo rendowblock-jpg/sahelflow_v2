@@ -83,10 +83,8 @@ pub(crate) fn verify_authorization(
             "native command authorization format is invalid",
         )
     })?;
-    let payload_bytes = crate::native_crypto::hex_decode(
-        payload_hex,
-        "native command authorization payload",
-    )?;
+    let payload_bytes =
+        crate::native_crypto::hex_decode(payload_hex, "native command authorization payload")?;
     let supplied_mac = hex_decode_exact::<32>(mac_hex, "native command authorization MAC")?;
     let derived = derive_installation_key(
         installation_root,
@@ -106,12 +104,13 @@ pub(crate) fn verify_authorization(
         ));
     }
 
-    let payload: NativeCommandPayload = serde_json::from_slice(&payload_bytes).map_err(|error| {
-        IoError::new(
-            ErrorKind::PermissionDenied,
-            format!("native command authorization payload is invalid: {error}"),
-        )
-    })?;
+    let payload: NativeCommandPayload =
+        serde_json::from_slice(&payload_bytes).map_err(|error| {
+            IoError::new(
+                ErrorKind::PermissionDenied,
+                format!("native command authorization payload is invalid: {error}"),
+            )
+        })?;
     if payload.format_version != TOKEN_FORMAT_VERSION
         || payload.action != expected_action
         || payload.workspace_id != workspace_id
@@ -240,10 +239,9 @@ fn persist_replay(replay: &NativeCommandReplay, key: &[u8; 32]) -> Result<(), Io
         reject_link(parent)?;
     }
     reject_link(&replay.path)?;
-    let temporary = replay.path.with_extension(format!(
-        "{}.tmp",
-        hex_encode(&random_array::<8>()?),
-    ));
+    let temporary = replay
+        .path
+        .with_extension(format!("{}.tmp", hex_encode(&random_array::<8>()?),));
     let mut file = OpenOptions::new()
         .create_new(true)
         .write(true)
@@ -258,7 +256,10 @@ fn reject_link(path: &Path) -> Result<(), IoError> {
     match fs::symlink_metadata(path) {
         Ok(metadata) if path_is_link(&metadata) => Err(IoError::new(
             ErrorKind::InvalidData,
-            format!("native command authority path is a link: {}", path.display()),
+            format!(
+                "native command authority path is a link: {}",
+                path.display()
+            ),
         )),
         Ok(_) => Ok(()),
         Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
@@ -315,7 +316,10 @@ fn replace_file(source: &Path, target: &Path) -> Result<(), IoError> {
 fn replace_file(source: &Path, target: &Path) -> Result<(), IoError> {
     fs::rename(source, target)?;
     let parent = target.parent().ok_or_else(|| {
-        IoError::new(ErrorKind::InvalidInput, "native command authority has no parent")
+        IoError::new(
+            ErrorKind::InvalidInput,
+            "native command authority has no parent",
+        )
     })?;
     fs::File::open(parent)?.sync_all()
 }
@@ -324,20 +328,14 @@ fn now_unix_ms() -> Result<u64, IoError> {
     let elapsed = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|_| IoError::other("system clock precedes the Unix epoch"))?;
-    u64::try_from(elapsed.as_millis())
-        .map_err(|_| IoError::other("system clock is out of range"))
+    u64::try_from(elapsed.as_millis()).map_err(|_| IoError::other("system clock is out of range"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn token(
-        root: &[u8; 32],
-        workspace: &str,
-        installation: &str,
-        nonce: &str,
-    ) -> String {
+    fn token(root: &[u8; 32], workspace: &str, installation: &str, nonce: &str) -> String {
         let now = now_unix_ms().unwrap();
         let payload = format!(
             "{{\"formatVersion\":1,\"action\":\"survivability-backup:create\",\"workspaceId\":\"{workspace}\",\"installationId\":\"{installation}\",\"issuedAtUnixMs\":{now},\"expiresAtUnixMs\":{},\"nonce\":\"{nonce}\",\"resource\":\"workspace\"}}",
