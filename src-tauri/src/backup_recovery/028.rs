@@ -138,7 +138,7 @@ pub(crate) fn apply_pending_restore(
                     staged.source.shop_count,
                 );
                 eprintln!(
-                    "[sahelflow] replacement restore failed and the verified previous installation was restored: {error}"
+                    "[sahelflow] replacement restore rolled back [RESTORE_APPLY_FAILED_ROLLED_BACK]"
                 );
                 cleanup_restore_state(app_data_dir, &journal)?;
                 Ok(Some(local_identity))
