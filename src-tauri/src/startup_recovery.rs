@@ -338,20 +338,13 @@ fn schedule_packaged_navigation(
                 });
 
                 if let Err(error) = dispatch_result {
-                    record_startup_stage(
-                        &app_data_dir,
-                        "ui-bootstrap-dispatch-blocked",
-                        None,
-                    );
+                    record_startup_stage(&app_data_dir, "ui-bootstrap-dispatch-blocked", None);
                     let detail = format!(
                         "the startup window could not dispatch authenticated navigation on the main thread: {error}"
                     );
                     eprintln!("[sahelflow] FATAL: {detail}");
-                    let _ = show_blocked(
-                        &app,
-                        "SF-RUNTIME-UI-NAVIGATION-DISPATCH-BLOCKED",
-                        &detail,
-                    );
+                    let _ =
+                        show_blocked(&app, "SF-RUNTIME-UI-NAVIGATION-DISPATCH-BLOCKED", &detail);
                 }
                 return;
             }
