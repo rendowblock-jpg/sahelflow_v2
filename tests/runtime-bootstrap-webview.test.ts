@@ -12,6 +12,19 @@ const originalEnvironment = {
   VITEST: process.env.VITEST,
 };
 
+type TauriWindowConfiguration = {
+  label: string;
+  title: string;
+  url: string;
+  visible: boolean;
+};
+
+type TauriConfiguration = {
+  app: {
+    windows: TauriWindowConfiguration[];
+  };
+};
+
 function restoreEnvironment(name: string, value: string | undefined) {
   if (value === undefined) {
     delete process.env[name];
@@ -39,6 +52,24 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       originalEnvironment.SF_RUNTIME_APP_TOKEN,
     );
     restoreEnvironment("VITEST", originalEnvironment.VITEST);
+  });
+
+  it("constructs the inert startup window visibly before authenticated navigation", () => {
+    const configuration = JSON.parse(
+      readFileSync(
+        resolve(process.cwd(), "src-tauri/tauri.conf.json"),
+        "utf8",
+      ),
+    ) as TauriConfiguration;
+    const mainWindow = configuration.app.windows.find(
+      (window) => window.label === "main",
+    );
+
+    expect(mainWindow).toBeDefined();
+    expect(mainWindow?.visible).toBe(true);
+    expect(mainWindow?.title).toBe("SahelFlow - Starting");
+    expect(mainWindow?.url).toMatch(/^data:text\/html/);
+    expect(decodeURIComponent(mainWindow?.url ?? "")).not.toContain("<script");
   });
 
   it("commits and confirms the HttpOnly runtime cookie before workspace navigation", async () => {
