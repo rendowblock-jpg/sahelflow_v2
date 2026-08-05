@@ -54,7 +54,7 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     restoreEnvironment("VITEST", originalEnvironment.VITEST);
   });
 
-  it("proves an executable inert renderer before authenticated navigation", () => {
+  it("proves an executable inert renderer before main-thread authenticated navigation", () => {
     const configuration = JSON.parse(
       readFileSync(
         resolve(process.cwd(), "src-tauri/tauri.conf.json"),
@@ -79,6 +79,12 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       'RENDERER_PRIME_MARKER: &str = "sahelflow-renderer-prime-v1"',
     );
     expect(recovery).toContain(".eval_with_callback(");
+    expect(recovery).toContain(".run_on_main_thread(");
+    expect(recovery).toContain('"ui-bootstrap-dispatch-started"');
+    expect(recovery).toContain('"ui-bootstrap-navigation-started"');
+    expect(recovery).toContain(
+      '"SF-RUNTIME-UI-NAVIGATION-DISPATCH-BLOCKED"',
+    );
     expect(recovery).toContain('"SF-RUNTIME-UI-RENDERER-BLOCKED"');
     expect(recovery).toContain(
       "renderer_prime_document_is_inert_and_non_secret",
@@ -92,13 +98,18 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       ".eval_with_callback(",
       primeNavigation,
     );
-    const bootstrapNavigation = recovery.indexOf(
-      "window.navigate(bootstrap_url)",
+    const mainThreadDispatch = recovery.indexOf(
+      ".run_on_main_thread(",
       executableProof,
+    );
+    const bootstrapNavigation = recovery.indexOf(
+      "navigation_window.navigate(bootstrap_url)",
+      mainThreadDispatch,
     );
     expect(primeNavigation).toBeGreaterThan(-1);
     expect(executableProof).toBeGreaterThan(primeNavigation);
-    expect(bootstrapNavigation).toBeGreaterThan(executableProof);
+    expect(mainThreadDispatch).toBeGreaterThan(executableProof);
+    expect(bootstrapNavigation).toBeGreaterThan(mainThreadDispatch);
   });
 
   it("commits and confirms the HttpOnly runtime cookie before workspace navigation", async () => {
