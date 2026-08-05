@@ -13,8 +13,8 @@ const KEY_ID_DOMAIN = Buffer.from(
 
 /**
  * Installation-local KEK/integrity purposes. These do not authorize deriving a
- * backup root key or using one derived key directly for every protected field.
- * The protected-data migration wraps independently rotatable shop/secret keys.
+ * universal seller-data key. Shop data, blind indexes, secrets, survivability,
+ * native commands and identity control remain separate compromise domains.
  */
 export const INSTALLATION_KEY_PURPOSES = [
   "shop-data-key-wrap",
@@ -22,6 +22,9 @@ export const INSTALLATION_KEY_PURPOSES = [
   "secret-store-key-wrap",
   "control-integrity",
   "migration-journal-authentication",
+  "backup-recovery-key-wrap",
+  "native-command-bridge",
+  "identity-authority",
 ] as const;
 
 export type InstallationKeyPurpose =
