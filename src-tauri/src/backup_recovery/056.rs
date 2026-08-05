@@ -19,13 +19,36 @@ pub(crate) fn discover_backup_authority(
         &reference_path,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
             | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
-    )?;
-    let mut statement = connection.prepare(
-        "SELECT migration_name, checksum FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name ASC",
-    )?;
+    )
+    .map_err(|error| {
+        IoError::other(format!(
+            "reference shop migration database open failed: {error}"
+        ))
+    })?;
+    let mut statement = connection
+        .prepare(
+            "SELECT migration_name, checksum FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name ASC",
+        )
+        .map_err(|error| {
+            IoError::other(format!(
+                "reference shop migration authority query failed: {error}"
+            ))
+        })?;
     let migrations = statement
-        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?
-        .collect::<Result<Vec<_>, _>>()?;
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|error| {
+            IoError::other(format!(
+                "reference shop migration authority read failed: {error}"
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| {
+            IoError::other(format!(
+                "reference shop migration authority row failed: {error}"
+            ))
+        })?;
     if migrations.is_empty() {
         return Err(IoError::new(
             ErrorKind::InvalidData,
