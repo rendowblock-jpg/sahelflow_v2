@@ -2,10 +2,10 @@ import "server-only";
 
 import { db, shopContext } from "@/lib/db";
 import { withDemoPolicyLock } from "@/lib/demo/algerian-demo-policy";
+import { withPrivacyEraseTransaction } from "@/lib/maintenance/privacy-erase-transaction";
 
 const EXPORT_FORMAT_VERSION = 1 as const;
 const EXPORT_MAX_BYTES = 32 * 1024 * 1024;
-const TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 60_000 } as const;
 
 export type PrivacyEraseMode = "business-reset" | "privacy-erase";
 
@@ -111,7 +111,7 @@ export async function executeShopErase(
   mode: PrivacyEraseMode,
 ): Promise<PrivacyLifecycleReceipt> {
   await withDemoPolicyLock(() =>
-    db.$transaction(async (tx) => {
+    withPrivacyEraseTransaction(async (tx) => {
       // Sensitive AI proposals and approvals precede their parent proposal.
       await tx.aiActionApproval.deleteMany({});
       await tx.aiActionExecution.deleteMany({});
@@ -210,7 +210,7 @@ export async function executeShopErase(
         where: { revokedAt: null },
         data: { revokedAt: new Date() },
       });
-    }, TRANSACTION_OPTIONS),
+    }),
   );
 
   return {
