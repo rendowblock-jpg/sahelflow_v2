@@ -41,13 +41,13 @@ fn decrypt_object_file(
             ));
         }
         let mut ciphertext_hash = Sha256::new();
-        ciphertext_hash.update(&header);
+        ciphertext_hash.update(header);
         let mut plaintext_hash = Sha256::new();
         let mut written = 0_u64;
         for expected_index in 0..object.chunk_count {
             let mut prefix = [0_u8; 36];
             reader.read_exact(&mut prefix)?;
-            ciphertext_hash.update(&prefix);
+            ciphertext_hash.update(prefix);
             let index = u32::from_le_bytes(prefix[..4].try_into().unwrap());
             let length = u32::from_le_bytes(prefix[4..8].try_into().unwrap()) as usize;
             if index != expected_index || length == 0 || length > OBJECT_CHUNK_BYTES {
