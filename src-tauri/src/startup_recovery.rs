@@ -22,6 +22,7 @@ const MAIN_WINDOW_TITLE: &str = "SahelFlow";
 const BOOTSTRAP_WINDOW_TITLE: &str = "SahelFlow - Starting";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
 const RENDERER_PRIME_MARKER: &str = "sahelflow-renderer-prime-v1";
+const BOOTSTRAP_NAVIGATION_MARKER: &str = "sahelflow-bootstrap-navigation-v1";
 const RENDERER_PRIME_TIMEOUT: Duration = Duration::from_secs(15);
 const RENDERER_PRIME_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const RENDERER_PROBE_RESPONSE_TIMEOUT: Duration = Duration::from_millis(500);
@@ -297,6 +298,42 @@ fn renderer_is_ready(window: &WebviewWindow) -> bool {
         })
 }
 
+fn bootstrap_navigation_script(bootstrap_url: &tauri::Url) -> Result<String, IoError> {
+    let target = serde_json::to_string(bootstrap_url.as_str())
+        .map_err(|error| IoError::new(ErrorKind::InvalidData, error))?;
+    let marker = serde_json::to_string(BOOTSTRAP_NAVIGATION_MARKER)
+        .map_err(|error| IoError::new(ErrorKind::InvalidData, error))?;
+    Ok(format!(
+        "(()=>{{const target={target};setTimeout(()=>window.location.replace(target),25);return {marker};}})()"
+    ))
+}
+
+fn renderer_requests_bootstrap(
+    window: &WebviewWindow,
+    bootstrap_url: &tauri::Url,
+) -> Result<bool, IoError> {
+    let script = bootstrap_navigation_script(bootstrap_url)?;
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    window
+        .eval_with_callback(&script, move |result| {
+            let _ = sender.try_send(result);
+        })
+        .map_err(|error| IoError::other(error.to_string()))?;
+
+    receiver
+        .recv_timeout(RENDERER_PROBE_RESPONSE_TIMEOUT)
+        .map(|result| {
+            serde_json::from_str::<String>(&result)
+                .is_ok_and(|value| value == BOOTSTRAP_NAVIGATION_MARKER)
+        })
+        .map_err(|_| {
+            IoError::new(
+                ErrorKind::TimedOut,
+                "the startup renderer did not confirm the bootstrap navigation command",
+            )
+        })
+}
+
 fn schedule_packaged_navigation(
     app: tauri::AppHandle,
     window: WebviewWindow,
@@ -308,44 +345,33 @@ fn schedule_packaged_navigation(
         while started_at.elapsed() < RENDERER_PRIME_TIMEOUT {
             if renderer_is_ready(&window) {
                 record_startup_stage(&app_data_dir, "ui-renderer-prime-ready", None);
-                record_startup_stage(&app_data_dir, "ui-bootstrap-dispatch-started", None);
+                record_startup_stage(
+                    &app_data_dir,
+                    "ui-bootstrap-navigation-script-started",
+                    None,
+                );
 
-                let navigation_app = app.clone();
-                let navigation_window = window.clone();
-                let navigation_app_data_dir = app_data_dir.clone();
-                let dispatch_result = window.run_on_main_thread(move || {
+                if renderer_requests_bootstrap(&window, &bootstrap_url).is_ok_and(|value| value) {
                     record_startup_stage(
-                        &navigation_app_data_dir,
-                        "ui-bootstrap-navigation-started",
+                        &app_data_dir,
+                        "ui-bootstrap-navigation-script-confirmed",
                         None,
                     );
-                    if let Err(error) = navigation_window.navigate(bootstrap_url) {
-                        record_startup_stage(
-                            &navigation_app_data_dir,
-                            "ui-bootstrap-navigation-blocked",
-                            None,
-                        );
-                        let detail = format!(
-                            "the startup window could not navigate to the authenticated bootstrap: {error}"
-                        );
-                        eprintln!("[sahelflow] FATAL: {detail}");
-                        let _ = show_blocked(
-                            &navigation_app,
-                            "SF-RUNTIME-UI-NAVIGATION-BLOCKED",
-                            &detail,
-                        );
-                    }
-                });
-
-                if let Err(error) = dispatch_result {
-                    record_startup_stage(&app_data_dir, "ui-bootstrap-dispatch-blocked", None);
-                    let detail = format!(
-                        "the startup window could not dispatch authenticated navigation on the main thread: {error}"
-                    );
-                    eprintln!("[sahelflow] FATAL: {detail}");
-                    let _ =
-                        show_blocked(&app, "SF-RUNTIME-UI-NAVIGATION-DISPATCH-BLOCKED", &detail);
+                    return;
                 }
+
+                let detail = "the proven startup renderer did not accept the authenticated bootstrap navigation command";
+                record_startup_stage(
+                    &app_data_dir,
+                    "ui-bootstrap-navigation-script-blocked",
+                    None,
+                );
+                eprintln!("[sahelflow] FATAL: {detail}");
+                let _ = show_blocked(
+                    &app,
+                    "SF-RUNTIME-UI-NAVIGATION-SCRIPT-BLOCKED",
+                    detail,
+                );
                 return;
             }
             thread::sleep(RENDERER_PRIME_POLL_INTERVAL);
@@ -698,6 +724,22 @@ mod tests {
         assert!(!html.contains(RUNTIME_BOOTSTRAP_PATH));
         assert!(!html.contains("token"));
         assert_eq!(url.scheme(), "data");
+    }
+
+    #[test]
+    fn renderer_navigation_script_is_callback_confirmed_and_json_escaped() {
+        let token = "a".repeat(64);
+        let url = tauri::Url::parse(&format!(
+            "http://127.0.0.1:43123{RUNTIME_BOOTSTRAP_PATH}?token={token}"
+        ))
+        .unwrap();
+        let script = bootstrap_navigation_script(&url).unwrap();
+
+        assert!(script.contains("setTimeout"));
+        assert!(script.contains("window.location.replace(target)"));
+        assert!(script.contains(BOOTSTRAP_NAVIGATION_MARKER));
+        assert!(script.contains(RUNTIME_BOOTSTRAP_PATH));
+        assert!(!script.contains("run_on_main_thread"));
     }
 
     #[test]
