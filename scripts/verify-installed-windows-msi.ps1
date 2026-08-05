@@ -109,7 +109,17 @@ function Get-SahelFlowProcessTree {
     )
 }
 
-function Get-DescendantProcessIds {
+function Get-ProcessIdentityKey {
+    param([Parameter(Mandatory = $true)]$Process)
+
+    if ($null -eq $Process.CreationDate) {
+        throw "Windows did not expose a creation timestamp for process $($Process.ProcessId)."
+    }
+    $createdAtUtcTicks = ([datetime]$Process.CreationDate).ToUniversalTime().Ticks
+    return "$([int64]$Process.ProcessId):$createdAtUtcTicks"
+}
+
+function Get-DescendantProcessIdentities {
     param([Parameter(Mandatory = $true)][int64]$RootProcessId)
 
     $snapshot = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
@@ -126,7 +136,13 @@ function Get-DescendantProcessIds {
                 $key = [string]$childId
                 if (-not $seen.ContainsKey($key)) {
                     $seen[$key] = $true
-                    $descendants += $childId
+                    $descendants += [pscustomobject]@{
+                        processId = $childId
+                        name = [string]$child.Name
+                        executablePath = [string]$child.ExecutablePath
+                        creationDate = [datetime]$child.CreationDate
+                        identityKey = Get-ProcessIdentityKey -Process $child
+                    }
                     $next += $childId
                 }
             }
@@ -340,9 +356,13 @@ function Close-SahelFlowNormally {
         throw "SahelFlow exited before the normal close request could be proven."
     }
     # WebView2 descendants run outside the SahelFlow installation directory and
-    # may outlive the desktop process briefly. Capture the exact descendant
-    # identities before closing so a relaunch cannot race stale WebView teardown.
-    $descendantProcessIds = @(Get-DescendantProcessIds -RootProcessId $Process.Id)
+    # may outlive the desktop process briefly. Capture PID plus creation time so
+    # rapid Windows PID reuse cannot turn an unrelated runner process into a
+    # false application descendant.
+    $descendantProcesses = @(Get-DescendantProcessIdentities -RootProcessId $Process.Id)
+    $descendantProcessIds = @(
+        $descendantProcesses | ForEach-Object { [int64]$_.processId }
+    )
 
     $handles = @(
         [SahelFlowWindowCloser]::FindTopLevelWindows([uint32]$Process.Id)
@@ -384,9 +404,19 @@ function Close-SahelFlowNormally {
                     $_.Name -ieq "sahelflow-whatsapp.exe"
                 }
         )
-        $liveProcessIds = @($processSnapshot | ForEach-Object { [int64]$_.ProcessId })
+        $liveProcessIdentityKeys = @{}
+        foreach ($candidate in $processSnapshot) {
+            if ($null -ne $candidate.CreationDate) {
+                $identityKey = Get-ProcessIdentityKey -Process $candidate
+                $liveProcessIdentityKeys[$identityKey] = $true
+            }
+        }
+        $remainingDescendants = @(
+            $descendantProcesses |
+                Where-Object { $liveProcessIdentityKeys.ContainsKey($_.identityKey) }
+        )
         $remainingDescendantIds = @(
-            $descendantProcessIds | Where-Object { $liveProcessIds -contains $_ }
+            $remainingDescendants | ForEach-Object { [int64]$_.processId }
         )
         $endpointPresent = Test-Path -LiteralPath $runtimeEndpointPath -PathType Leaf
         if (
@@ -411,10 +441,10 @@ function Close-SahelFlowNormally {
     } else {
         ($remaining | ForEach-Object { "$($_.Name):$($_.ProcessId)" }) -join ", "
     }
-    $descendantSummary = if ($remainingDescendantIds.Count -eq 0) {
+    $descendantSummary = if ($remainingDescendants.Count -eq 0) {
         "none"
     } else {
-        $remainingDescendantIds -join ", "
+        ($remainingDescendants | ForEach-Object { "$($_.name):$($_.processId)" }) -join ", "
     }
     throw "Normal close was incomplete; remaining processes: $remainingSummary; remaining captured descendants: $descendantSummary; runtime endpoint present: $endpointPresent"
 }
