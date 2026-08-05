@@ -14,7 +14,7 @@
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Active branch:** `agent/phase4-protected-data-authority`
 > **Active PR:** PR #207 — frozen complete Phase 4 candidate
-> **Final exact candidate head:** `25c47671cd53117d96d4da76f8bd957fa8a9fe21`
+> **Final exact candidate head:** re-fetch the live PR #207 head; this file intentionally avoids a self-referential commit SHA
 > **Active agent:** one selected closure agent
 > **Current session purpose:** exact-head security/privacy review, one complete selected gate and protected closure
 > **Authorized package:** issue #204 through PR #207 only
@@ -113,9 +113,9 @@ The complete static audit is finished. The final repair batch:
 - restores documentation-audit continuity without reactivating superseded limits;
 - leaves every historical P1 review conversation resolved.
 
-Exact non-skipped head `25c47671cd53117d96d4da76f8bd957fa8a9fe21`
-is frozen for the single exact-head review and complete selected Phase 4 gate. It
-does not itself prove closure.
+The current non-skipped PR head is frozen for the single exact-head review and
+complete selected Phase 4 gate. This statement does not itself prove closure;
+GitHub’s live PR head is the only exact-SHA authority.
 
 ## Final closure sequence
 
