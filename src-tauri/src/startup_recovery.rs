@@ -22,7 +22,15 @@ const MAIN_WINDOW_LABEL: &str = "main";
 const MAIN_WINDOW_TITLE: &str = "SahelFlow";
 const BOOTSTRAP_WINDOW_TITLE: &str = "SahelFlow - Starting";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
+const STARTUP_RENDERER_MARKER: &str = "sahelflow-startup-renderer-v1";
+const WORKSPACE_RENDERER_MARKER: &str = "sahelflow-workspace-renderer-v1";
+const STARTUP_RENDERER_PROBE_SCRIPT: &str =
+    "(()=>{try{return document.documentElement.dataset.sfRendererPrime||''}catch(_error){return ''}})()";
+const WORKSPACE_RENDERER_PROBE_SCRIPT: &str = "(()=>{try{const host=window.location.hostname;return document.readyState!=='loading'&&window.location.protocol==='http:'&&(host==='127.0.0.1'||host==='localhost')?'sahelflow-workspace-renderer-v1':''}catch(_error){return ''}})()";
 const WORKSPACE_WINDOW_CREATION_TIMEOUT: Duration = Duration::from_secs(15);
+const RENDERER_ACTIVATION_TIMEOUT: Duration = Duration::from_secs(15);
+const RENDERER_ACTIVATION_POLL_INTERVAL: Duration = Duration::from_millis(100);
+const RENDERER_PROBE_RESPONSE_TIMEOUT: Duration = Duration::from_millis(500);
 const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
@@ -90,12 +98,13 @@ struct PackagedHandoff {
 /// Create the real workspace WebView with its authenticated loopback bootstrap
 /// as the initial URL.
 ///
-/// The configured `startup` window is capability-free and retained only as a
-/// hidden recovery surface. The authenticated `main` window is created after the
-/// packaged runtime is ready so WebView2 never has to cross from a `data:` origin
-/// to loopback through a later navigation command. It remains titled as a
-/// bounded starting surface until the hydrated page persists a matching
-/// UI-ready acknowledgment.
+/// Packaged startup first exposes the inert, capability-free `startup` window
+/// and proves that WebView2 has activated an executable renderer. Only then is
+/// the authenticated `main` window created on Tauri's main event thread. Its
+/// own loopback document must also execute before the bounded hydrated-UI timer
+/// begins. This prevents a native window handle from being mistaken for an
+/// active WebView renderer while keeping the real workspace non-authoritative
+/// until its durable UI-ready acknowledgment is accepted.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let requested_url = tauri::Url::parse(app_url)?;
     let handoff = packaged_handoff(&requested_url)?;
@@ -112,22 +121,142 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
         clear_file(&app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE))?;
         clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
         record_startup_stage(&app_data_dir, "ui-navigation-started", None);
-        record_startup_stage(&app_data_dir, "workspace-window-creating", None);
     }
+
+    let startup = if packaged {
+        record_startup_stage(&app_data_dir, "startup-renderer-prime-started", None);
+        match activate_startup_renderer(app) {
+            Ok(window) => {
+                record_startup_stage(&app_data_dir, "startup-renderer-prime-ready", None);
+                Some(window)
+            }
+            Err(error) => {
+                let detail = format!(
+                    "the inert startup surface did not activate WebView2 before workspace creation: {error}"
+                );
+                record_startup_stage(&app_data_dir, "startup-renderer-prime-blocked", None);
+                show_blocked(app, "SF-RUNTIME-UI-STARTUP-RENDERER-BLOCKED", &detail)?;
+                return Ok(());
+            }
+        }
+    } else {
+        None
+    };
 
     let workspace_url = handoff
         .map(|value| value.bootstrap_url)
         .unwrap_or(requested_url);
+    if packaged {
+        record_startup_stage(&app_data_dir, "workspace-window-creating", None);
+    }
     let workspace = create_workspace_window(app, workspace_url, packaged)?;
 
     if packaged {
         record_startup_stage(&app_data_dir, "workspace-window-created", None);
+        record_startup_stage(&app_data_dir, "workspace-renderer-probe-started", None);
+        if !wait_for_renderer(
+            &workspace,
+            WORKSPACE_RENDERER_PROBE_SCRIPT,
+            WORKSPACE_RENDERER_MARKER,
+            RENDERER_ACTIVATION_TIMEOUT,
+        ) {
+            let detail = "the main-thread workspace window was created, but its loopback WebView document did not activate before the bounded deadline";
+            record_startup_stage(&app_data_dir, "workspace-renderer-probe-blocked", None);
+            show_blocked(app, "SF-RUNTIME-UI-WORKSPACE-RENDERER-BLOCKED", detail)?;
+            return Ok(());
+        }
+        record_startup_stage(&app_data_dir, "workspace-renderer-probe-ready", None);
+        if let Some(startup) = startup {
+            let _ = startup.hide();
+        }
         monitor_packaged_ui(app.clone(), workspace, app_data_dir);
     } else if let Some(startup) = app.get_webview_window(STARTUP_WINDOW_LABEL) {
         let _ = startup.destroy();
     }
 
     Ok(())
+}
+
+fn activate_startup_renderer(app: &tauri::AppHandle) -> Result<WebviewWindow, Box<dyn Error>> {
+    let startup = app
+        .get_webview_window(STARTUP_WINDOW_LABEL)
+        .ok_or_else(|| {
+            IoError::new(
+                ErrorKind::NotFound,
+                "the configured startup recovery window was not created",
+            )
+        })?;
+    startup.set_title(BOOTSTRAP_WINDOW_TITLE)?;
+    startup.navigate(renderer_prime_url()?)?;
+    startup.show()?;
+    startup.set_focus()?;
+
+    if wait_for_renderer(
+        &startup,
+        STARTUP_RENDERER_PROBE_SCRIPT,
+        STARTUP_RENDERER_MARKER,
+        RENDERER_ACTIVATION_TIMEOUT,
+    ) {
+        return Ok(startup);
+    }
+
+    Err(IoError::new(
+        ErrorKind::TimedOut,
+        "the startup WebView did not execute its inert renderer-prime document",
+    )
+    .into())
+}
+
+fn renderer_prime_html() -> String {
+    [
+        "<!doctype html><html lang=\"fr\" data-sf-renderer-prime=\"",
+        STARTUP_RENDERER_MARKER,
+        "\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>SahelFlow - Starting</title><style>:root{color-scheme:dark;font-family:Inter,Segoe UI,system-ui,sans-serif}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101214;color:#f4f4f5;padding:24px}main{width:min(520px,100%);text-align:center;border:1px solid #3f3f46;border-radius:18px;background:#18181b;padding:32px}p{color:#a1a1aa;line-height:1.6}</style></head><body><main role=\"status\" aria-live=\"polite\"><h1>SahelFlow</h1><p>Preparing the protected local workspace...</p><p lang=\"ar\" dir=\"rtl\">جارٍ تجهيز مساحة العمل المحلية المحمية...</p></main></body></html>",
+    ]
+    .concat()
+}
+
+fn renderer_prime_url() -> Result<tauri::Url, IoError> {
+    let html = renderer_prime_html();
+    let data_url = format!(
+        "data:text/html;charset=utf-8,{}",
+        urlencoding::encode(&html)
+    );
+    tauri::Url::parse(&data_url).map_err(|error| IoError::new(ErrorKind::InvalidData, error))
+}
+
+fn renderer_matches(window: &WebviewWindow, script: &str, marker: &str) -> bool {
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    if window
+        .eval_with_callback(script, move |result| {
+            let _ = sender.try_send(result);
+        })
+        .is_err()
+    {
+        return false;
+    }
+
+    receiver
+        .recv_timeout(RENDERER_PROBE_RESPONSE_TIMEOUT)
+        .is_ok_and(|result| {
+            serde_json::from_str::<String>(&result).is_ok_and(|value| value == marker)
+        })
+}
+
+fn wait_for_renderer(
+    window: &WebviewWindow,
+    script: &str,
+    marker: &str,
+    timeout: Duration,
+) -> bool {
+    let started_at = Instant::now();
+    while started_at.elapsed() < timeout {
+        if renderer_matches(window, script, marker) {
+            return true;
+        }
+        thread::sleep(RENDERER_ACTIVATION_POLL_INTERVAL);
+    }
+    false
 }
 
 fn create_workspace_window(
@@ -634,6 +763,15 @@ mod tests {
 
         let handoff = packaged_handoff(&url).unwrap().unwrap();
         assert_eq!(handoff.bootstrap_url, url);
+    }
+
+    #[test]
+    fn renderer_prime_document_is_inert_and_non_secret() {
+        let html = renderer_prime_html();
+        assert!(html.contains(STARTUP_RENDERER_MARKER));
+        assert!(!html.contains("<script"));
+        assert!(!html.contains("token="));
+        assert!(!html.contains("sf_runtime"));
     }
 
     #[test]
