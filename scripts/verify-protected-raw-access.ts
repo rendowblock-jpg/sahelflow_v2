@@ -103,6 +103,20 @@ function unwrapExpression(node: ts.Expression): ts.Expression {
   }
 }
 
+function unwrapReceiverExpression(node: ts.Expression): ts.Expression {
+  let current = node;
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isAsExpression(current) ||
+    ts.isTypeAssertionExpression(current) ||
+    ts.isNonNullExpression(current) ||
+    ts.isSatisfiesExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return current;
+}
+
 function moduleCall(node: ts.Expression): ts.CallExpression | null {
   let current: ts.Expression = node;
   while (
@@ -344,12 +358,15 @@ export function rawClientImports(
   function collectRawMethods(node: ts.Node): void {
     const method = rawMethodName(node);
     const receiver = rawMethodReceiver(node);
+    const unwrappedReceiver = receiver
+      ? unwrapReceiverExpression(receiver)
+      : null;
     if (
       method &&
       RAW_METHODS.has(method) &&
-      receiver &&
-      ts.isIdentifier(receiver) &&
-      canonicalDbBindings.has(receiver.text)
+      unwrappedReceiver &&
+      ts.isIdentifier(unwrappedReceiver) &&
+      canonicalDbBindings.has(unwrappedReceiver.text)
     ) {
       add("canonical-raw-method", node);
     }
@@ -358,8 +375,10 @@ export function rawClientImports(
       ts.isVariableDeclaration(node) &&
       ts.isObjectBindingPattern(node.name) &&
       node.initializer &&
-      ts.isIdentifier(node.initializer) &&
-      canonicalDbBindings.has(node.initializer.text) &&
+      ts.isIdentifier(unwrapReceiverExpression(node.initializer)) &&
+      canonicalDbBindings.has(
+        (unwrapReceiverExpression(node.initializer) as ts.Identifier).text,
+      ) &&
       node.name.elements.some((element) => {
         const imported = importedName(element);
         return imported !== null && RAW_METHODS.has(imported);
