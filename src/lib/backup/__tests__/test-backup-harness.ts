@@ -88,7 +88,7 @@ async function verifySqlite(path: string): Promise<void> {
 async function checkpoint(path: string): Promise<void> {
   const client = new PrismaClient({ datasourceUrl: `file:${path}` });
   try {
-    await client.$executeRawUnsafe("PRAGMA wal_checkpoint(TRUNCATE)");
+    await client.$queryRawUnsafe("PRAGMA wal_checkpoint(TRUNCATE)");
   } finally {
     await client.$disconnect();
   }
