@@ -103,15 +103,37 @@ export async function createShopPrivacyExport(): Promise<Buffer> {
 /**
  * One canonical dependency-ordered erase. Both reset and privacy erase remove
  * credentials instead of preserving hidden access to the previous workspace.
- * Identity/session control, migration history and wrapped random key descriptors
- * remain as non-business security authority needed to authenticate the receipt
- * and keep the installation fail-closed.
+ * Installation authentication, revocation history, migration history, wrapped
+ * random key descriptors and public wilaya reference data remain as explicit
+ * non-business authority. Every other durable Prisma model is deleted here.
  */
 export async function executeShopErase(
   mode: PrivacyEraseMode,
 ): Promise<PrivacyLifecycleReceipt> {
   await withDemoPolicyLock(() =>
     db.$transaction(async (tx) => {
+      // Sensitive AI proposals and approvals precede their parent proposal.
+      await tx.aiActionApproval.deleteMany({});
+      await tx.aiActionExecution.deleteMany({});
+      await tx.aiActionProposal.deleteMany({});
+
+      // Durable automation attempts precede steps and runs.
+      await tx.automationStepAttempt.deleteMany({});
+      await tx.automationStepRun.deleteMany({});
+      await tx.automationRun.deleteMany({});
+
+      // Commerce item/run attempts precede their items/pages/runs.
+      await tx.commerceSyncItemAttempt.deleteMany({});
+      await tx.commerceSyncRunAttempt.deleteMany({});
+      await tx.commerceSyncItem.deleteMany({});
+      await tx.commerceSyncPage.deleteMany({});
+      await tx.commerceSyncRun.deleteMany({});
+
+      // Provider attempts restrict their ingress event parents.
+      await tx.providerIngressAttempt.deleteMany({});
+      await tx.providerIngressEvent.deleteMany({});
+      await tx.providerCapabilityCertification.deleteMany({});
+
       await tx.canonicalRefundReversal.deleteMany({});
       await tx.canonicalRefund.deleteMany({});
       await tx.canonicalExchangeOrder.deleteMany({});
@@ -140,6 +162,7 @@ export async function executeShopErase(
 
       await tx.compensationFact.deleteMany({});
       await tx.projectionInvalidation.deleteMany({});
+      await tx.profitabilityCostSnapshot.deleteMany({});
       await tx.financialMovement.deleteMany({});
       await tx.inventoryMovement.deleteMany({});
       await tx.inventoryReservation.deleteMany({});
@@ -172,6 +195,7 @@ export async function executeShopErase(
       await tx.aiChatMessage.deleteMany({});
       await tx.aiChatSession.deleteMany({});
       await tx.phoneReputation.deleteMany({});
+      await tx.integration.deleteMany({});
       await tx.counter.deleteMany({});
       await tx.auditLog.deleteMany({});
 
@@ -179,6 +203,13 @@ export async function executeShopErase(
       // dedicated encrypted store and non-secret settings are erased.
       await tx.secret.deleteMany({});
       await tx.setting.deleteMany({});
+
+      // Keep revocation/security history but terminate every active session so
+      // a completed erase cannot leave another live browser or device session.
+      await tx.session.updateMany({
+        where: { revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
     }, TRANSACTION_OPTIONS),
   );
 
@@ -191,9 +222,10 @@ export async function executeShopErase(
     shopIncarnationId: shopContext.shopIncarnationId,
     completedAt: new Date().toISOString(),
     retainedAuthorities: [
-      "trusted identity and revocable session control",
+      "installation authentication and revoked-session history",
       "Prisma migration history",
       "wrapped purpose-separated protected-key descriptors",
+      "public wilaya reference data",
       "post-operation non-PII audit receipt",
     ],
   };
