@@ -54,7 +54,7 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     restoreEnvironment("VITEST", originalEnvironment.VITEST);
   });
 
-  it("constructs the inert startup window visibly before authenticated navigation", () => {
+  it("proves an executable inert renderer before authenticated navigation", () => {
     const configuration = JSON.parse(
       readFileSync(
         resolve(process.cwd(), "src-tauri/tauri.conf.json"),
@@ -64,12 +64,41 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     const mainWindow = configuration.app.windows.find(
       (window) => window.label === "main",
     );
+    const recovery = readFileSync(
+      resolve(process.cwd(), "src-tauri/src/startup_recovery.rs"),
+      "utf8",
+    ).replace(/\r\n?/g, "\n");
 
     expect(mainWindow).toBeDefined();
-    expect(mainWindow?.visible).toBe(true);
-    expect(mainWindow?.title).toBe("SahelFlow - Starting");
+    expect(mainWindow?.visible).toBe(false);
+    expect(mainWindow?.title).toBe("SahelFlow");
     expect(mainWindow?.url).toMatch(/^data:text\/html/);
     expect(decodeURIComponent(mainWindow?.url ?? "")).not.toContain("<script");
+
+    expect(recovery).toContain(
+      'RENDERER_PRIME_MARKER: &str = "sahelflow-renderer-prime-v1"',
+    );
+    expect(recovery).toContain(".eval_with_callback(");
+    expect(recovery).toContain('"SF-RUNTIME-UI-RENDERER-BLOCKED"');
+    expect(recovery).toContain(
+      "renderer_prime_document_is_inert_and_non_secret",
+    );
+    expect(recovery).not.toContain("BOOTSTRAP_NAVIGATION_DELAY");
+
+    const primeNavigation = recovery.indexOf(
+      "window.navigate(renderer_prime_url)?",
+    );
+    const executableProof = recovery.indexOf(
+      ".eval_with_callback(",
+      primeNavigation,
+    );
+    const bootstrapNavigation = recovery.indexOf(
+      "window.navigate(bootstrap_url)",
+      executableProof,
+    );
+    expect(primeNavigation).toBeGreaterThan(-1);
+    expect(executableProof).toBeGreaterThan(primeNavigation);
+    expect(bootstrapNavigation).toBeGreaterThan(executableProof);
   });
 
   it("commits and confirms the HttpOnly runtime cookie before workspace navigation", async () => {
