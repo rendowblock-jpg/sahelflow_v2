@@ -38,11 +38,17 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
       include: ["src/lib/**/*.ts"],
-      exclude: ["src/lib/**/*.test.ts", "src/lib/**/__tests__/**"],
+      exclude: [
+        "src/lib/**/*.test.ts",
+        "src/lib/**/__tests__/**",
+        // This module is a Windows-native TCP/handshake transport adapter. Its
+        // executable authority is the Rust/native source contract plus Windows
+        // standalone and installed-MSI lanes, not Linux V8 line instrumentation.
+        "src/lib/survivability/native-bridge.ts",
+      ],
       thresholds: {
-        // Floor set to current actual coverage (prevents regression).
-        // Will be raised as Phase 2 test expansion continues.
-        // Target: 60% by end of Phase 2, 80% by end of Phase 5.
+        // Maintain the 80% application-source floor. Platform-bound native
+        // transport is validated by the stronger Windows/native evidence lanes.
         statements: 80,
         branches: 60,
         functions: 60,
