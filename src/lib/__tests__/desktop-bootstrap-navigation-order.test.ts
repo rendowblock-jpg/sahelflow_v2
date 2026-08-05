@@ -7,75 +7,59 @@ function readRepositoryFile(path: string): string {
 }
 
 describe("packaged desktop bootstrap navigation", () => {
-  it("proves an executable renderer before main-thread loopback navigation", () => {
+  it("creates the authenticated workspace with the loopback bootstrap as its initial URL", () => {
     const recovery = readRepositoryFile("src-tauri/src/startup_recovery.rs");
-    const packagedTitle = recovery.indexOf(
-      "window.set_title(BOOTSTRAP_WINDOW_TITLE)?;",
+    const configuration = readRepositoryFile("src-tauri/tauri.conf.json");
+
+    const validatedHandoff = recovery.indexOf(
+      "let handoff = packaged_handoff(&requested_url)?;",
     );
-    const primeNavigation = recovery.indexOf(
-      "window.navigate(renderer_prime_url)?;",
-      packagedTitle,
+    const workspaceUrl = recovery.indexOf(
+      "let workspace_url = handoff",
+      validatedHandoff,
     );
-    const visibleStartingDocument = recovery.indexOf(
-      "window.show()?;",
-      primeNavigation,
+    const workspaceCreation = recovery.indexOf(
+      "create_workspace_window(app, workspace_url, packaged)?",
+      workspaceUrl,
     );
-    const deferredNavigation = recovery.indexOf(
-      "schedule_packaged_navigation(",
-      visibleStartingDocument,
+    const builder = recovery.indexOf(
+      "WebviewWindowBuilder::new(",
+      workspaceCreation,
     );
-    const rendererProbe = recovery.indexOf("fn renderer_is_ready(");
-    const callbackProof = recovery.indexOf(
-      ".eval_with_callback(",
-      rendererProbe,
+    const mainLabel = recovery.indexOf("MAIN_WINDOW_LABEL", builder);
+    const initialExternalUrl = recovery.indexOf(
+      "WebviewUrl::External(url)",
+      mainLabel,
     );
-    const navigationWorker = recovery.indexOf(
-      "fn schedule_packaged_navigation(",
-      callbackProof,
+    const startingTitle = recovery.indexOf(
+      "BOOTSTRAP_WINDOW_TITLE",
+      initialExternalUrl,
     );
-    const acceptedProof = recovery.indexOf(
-      "if renderer_is_ready(&window)",
-      navigationWorker,
-    );
-    const mainThreadDispatch = recovery.indexOf(
-      ".run_on_main_thread(",
-      acceptedProof,
-    );
-    const navigationExecution = recovery.indexOf(
-      '"ui-bootstrap-navigation-started"',
-      mainThreadDispatch,
-    );
-    const bootstrapNavigation = recovery.indexOf(
-      "navigation_window.navigate(bootstrap_url)",
-      navigationExecution,
-    );
-    const directNavigation = recovery.indexOf(
-      "window.navigate(handoff.bootstrap_url)?;",
+    const visibleWorkspace = recovery.indexOf(".visible(true)", startingTitle);
+    const readinessMonitor = recovery.indexOf(
+      "monitor_packaged_ui(",
+      visibleWorkspace,
     );
 
-    expect(packagedTitle).toBeGreaterThan(-1);
-    expect(primeNavigation).toBeGreaterThan(packagedTitle);
-    expect(visibleStartingDocument).toBeGreaterThan(primeNavigation);
-    expect(deferredNavigation).toBeGreaterThan(visibleStartingDocument);
-    expect(rendererProbe).toBeGreaterThan(deferredNavigation);
-    expect(callbackProof).toBeGreaterThan(rendererProbe);
-    expect(navigationWorker).toBeGreaterThan(callbackProof);
-    expect(acceptedProof).toBeGreaterThan(navigationWorker);
-    expect(mainThreadDispatch).toBeGreaterThan(acceptedProof);
-    expect(navigationExecution).toBeGreaterThan(mainThreadDispatch);
-    expect(bootstrapNavigation).toBeGreaterThan(navigationExecution);
-    expect(directNavigation).toBe(-1);
-    expect(recovery).toContain(
-      'RENDERER_PRIME_MARKER: &str = "sahelflow-renderer-prime-v1"',
-    );
-    expect(recovery).toContain(
-      "const RENDERER_PRIME_TIMEOUT: Duration = Duration::from_secs(15);",
-    );
-    expect(recovery).toContain('"ui-bootstrap-dispatch-started"');
-    expect(recovery).toContain(
-      '"SF-RUNTIME-UI-NAVIGATION-DISPATCH-BLOCKED"',
-    );
-    expect(recovery).toContain('"SF-RUNTIME-UI-RENDERER-BLOCKED"');
-    expect(recovery).not.toContain("BOOTSTRAP_NAVIGATION_DELAY");
+    expect(validatedHandoff).toBeGreaterThan(-1);
+    expect(workspaceUrl).toBeGreaterThan(validatedHandoff);
+    expect(workspaceCreation).toBeGreaterThan(workspaceUrl);
+    expect(builder).toBeGreaterThan(workspaceCreation);
+    expect(mainLabel).toBeGreaterThan(builder);
+    expect(initialExternalUrl).toBeGreaterThan(mainLabel);
+    expect(startingTitle).toBeGreaterThan(initialExternalUrl);
+    expect(visibleWorkspace).toBeGreaterThan(startingTitle);
+    expect(readinessMonitor).toBeGreaterThan(visibleWorkspace);
+
+    expect(configuration).toContain('"label": "startup"');
+    expect(configuration).toContain('"visible": false');
+    expect(recovery).toContain('STARTUP_WINDOW_LABEL: &str = "startup"');
+    expect(recovery).toContain('MAIN_WINDOW_LABEL: &str = "main"');
+    expect(recovery).toContain('"workspace-window-creating"');
+    expect(recovery).toContain('"workspace-window-created"');
+    expect(recovery).not.toContain("schedule_packaged_navigation(");
+    expect(recovery).not.toContain("renderer_is_ready(");
+    expect(recovery).not.toContain("run_on_main_thread(");
+    expect(recovery).not.toContain("window.location.replace(target)");
   });
 });
