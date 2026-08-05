@@ -63,7 +63,7 @@ fn store_local_brk(
             workspace_id: workspace_id.to_owned(),
             installation_id: installation_id.to_owned(),
             brk_id,
-            wrapping_key_id: wrapping.key_id,
+            wrapping_key_id: wrapping.key_id.clone(),
             wrapped_brk,
             created_at_unix_ms,
         },
