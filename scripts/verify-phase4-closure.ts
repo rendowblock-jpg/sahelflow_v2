@@ -49,6 +49,12 @@ interface CycloneDxDocument {
   vulnerabilities?: unknown[];
 }
 
+const PHASE4_ARCHIVE = "documentation/archive/phase4";
+const LAW_PATH = `${PHASE4_ARCHIVE}/ALGERIA_LAW_18_07_MAPPING.md`;
+const THREAT_MODEL_PATH = `${PHASE4_ARCHIVE}/PHASE4_THREAT_MODEL.md`;
+const INDEPENDENT_REVIEW_PATH = `${PHASE4_ARCHIVE}/PHASE4_INDEPENDENT_REVIEW.md`;
+const EVIDENCE_MATRIX_PATH = `${PHASE4_ARCHIVE}/PHASE4_EVIDENCE_MATRIX.md`;
+
 const REQUIRED_FILES = [
   "src-tauri/src/backup_recovery.rs",
   "src-tauri/src/backup_recovery/037.rs",
@@ -74,10 +80,10 @@ const REQUIRED_FILES = [
   "src/app/api/privacy/erase/route.ts",
   "src/lib/privacy/lifecycle.ts",
   "documentation/privacy/phase4-data-inventory.json",
-  "documentation/privacy/ALGERIA_LAW_18_07_MAPPING.md",
-  "documentation/security/PHASE4_THREAT_MODEL.md",
-  "documentation/security/PHASE4_INDEPENDENT_REVIEW.md",
-  "documentation/security/PHASE4_EVIDENCE_MATRIX.md",
+  LAW_PATH,
+  THREAT_MODEL_PATH,
+  INDEPENDENT_REVIEW_PATH,
+  EVIDENCE_MATRIX_PATH,
   "documentation/security/phase4-vulnerability-triage.json",
 ] as const;
 
@@ -297,24 +303,24 @@ export function verifyPhase4Closure(repoDir: string): string[] {
   verifyIncludes(repoDir, "src-tauri/src/native_crypto.rs", failures);
   verifyIncludes(repoDir, "src-tauri/src/installation_identity_rebind.rs", failures);
 
-  const law = readText(repoDir, "documentation/privacy/ALGERIA_LAW_18_07_MAPPING.md");
+  const law = readText(repoDir, LAW_PATH);
   requireMarkers(
     law,
-    "documentation/privacy/ALGERIA_LAW_18_07_MAPPING.md",
+    LAW_PATH,
     ["Law No. 25-11 of 24 July 2025", "not legal advice", "ANPDP", "right"],
     failures,
   );
-  const threat = readText(repoDir, "documentation/security/PHASE4_THREAT_MODEL.md");
+  const threat = readText(repoDir, THREAT_MODEL_PATH);
   requireMarkers(
     threat,
-    "documentation/security/PHASE4_THREAT_MODEL.md",
+    THREAT_MODEL_PATH,
     ["Trust boundaries", "Residual risks", "Wrong/future migration set", "PII in diagnostics"],
     failures,
   );
-  const review = readText(repoDir, "documentation/security/PHASE4_INDEPENDENT_REVIEW.md");
+  const review = readText(repoDir, INDEPENDENT_REVIEW_PATH);
   requireMarkers(
     review,
-    "documentation/security/PHASE4_INDEPENDENT_REVIEW.md",
+    INDEPENDENT_REVIEW_PATH,
     ["Exact head", "P0", "P1", "Anti-fabrication"],
     failures,
   );
@@ -350,7 +356,7 @@ export function verifyPhase4Closure(repoDir: string): string[] {
       "sbom.cdx.json",
       "vex.cdx.json",
       "documentation/privacy/phase4-data-inventory.json",
-      "documentation/security/PHASE4_THREAT_MODEL.md",
+      THREAT_MODEL_PATH,
     ]) {
       if (!/^[0-9a-f]{64}$/.test(manifest.files[required] ?? "")) {
         failures.push(`Phase 4 evidence manifest lacks a valid digest for ${required}`);
