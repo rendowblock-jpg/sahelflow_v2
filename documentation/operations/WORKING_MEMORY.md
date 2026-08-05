@@ -13,10 +13,10 @@
 > **Retained installed evidence:** issue #201
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Active branch:** `agent/phase4-protected-data-authority`
-> **Active PR:** PR #207 — complete Phase 4 implementation candidate
-> **Current durable PR head before final static repair:** `da9d31ca420a751d36a27479da28692b6303db1f`
-> **Active agent:** one selected implementation agent
-> **Current session purpose:** finish static audit, freeze one exact final head, run one complete selected gate and exact-head security/privacy review
+> **Active PR:** PR #207 — frozen complete Phase 4 candidate
+> **Final static-repair parent:** `839057dd41e955be81a6ce38197368afd9699dd6`
+> **Active agent:** one selected closure agent
+> **Current session purpose:** exact-head security/privacy review, one complete selected gate and protected closure
 > **Authorized package:** issue #204 through PR #207 only
 
 Live GitHub is authority. Re-read protected `main`, issue #204, PR #207 and issue
@@ -102,22 +102,24 @@ are retained here solely as semantic continuity markers. PR #206 superseded that
 restriction when it authorized PR #207; these phrases are not current execution
 limits.
 
-## Current pre-freeze audit
+## Final candidate freeze
 
-Before the non-skipped final head:
+The complete static audit is finished. The final repair batch:
 
-- finish Rust/TypeScript interface and formatting review;
-- ensure active documentation and PR description agree with the complete candidate;
-- verify the consequence classifier selects quality, Tauri release, Windows
-  standalone, Windows Rust and installed-MSI lanes;
-- inspect the complete PR file list and review threads for remaining known P0/P1;
-- preserve generated SBOM/VEX through the existing repository inventory artifact.
+- scans both `upsert.create` and `upsert.update` for protected nested writes;
+- detects raw Prisma access through parenthesized, cast, non-null and `satisfies`
+  canonical-client receivers;
+- binds closure and SBOM/VEX generation to the governed archived Phase 4 evidence;
+- restores documentation-audit continuity without reactivating superseded limits;
+- leaves every historical P1 review conversation resolved.
 
-No intermediate full gate is authorized. Focused static fixes remain `[skip ci]`.
+This metadata-only freeze commit is the first non-skipped head after implementation
+stopped. It authorizes the single exact-head review and complete selected Phase 4
+gate; it does not itself prove closure.
 
 ## Final closure sequence
 
-1. Freeze one exact non-skipped PR head after implementation stops.
+1. Record the exact non-skipped PR head.
 2. Request exact-head security/privacy review using
    `documentation/archive/phase4/PHASE4_INDEPENDENT_REVIEW.md`.
 3. Run one complete selected Phase 4 gate.
