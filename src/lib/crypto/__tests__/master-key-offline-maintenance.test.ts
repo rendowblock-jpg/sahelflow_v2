@@ -16,8 +16,22 @@ import {
 
 const EXPORTED_ROOT_ENV = "SF_PROTECTED_DATA_MIGRATION_ROOT_SOURCE";
 const originalArgv = [...process.argv];
+const originalEnvironment = {
+  SF_DATA_DIR: process.env.SF_DATA_DIR,
+  SF_INSTALLATION_ROOT_SOURCE: process.env.SF_INSTALLATION_ROOT_SOURCE,
+  SF_MASTER_KEY: process.env.SF_MASTER_KEY,
+  exportedRoot: process.env[EXPORTED_ROOT_ENV],
+};
 let sandbox = "";
 let dataDir = "";
+
+function restoreEnvironment(name: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+}
 
 function expectCode(expected: string) {
   try {
@@ -47,10 +61,13 @@ describe("offline protected-data maintenance root authority", () => {
   afterEach(() => {
     _resetMasterKeyCacheForTests();
     process.argv = [...originalArgv];
-    delete process.env.SF_DATA_DIR;
-    delete process.env.SF_INSTALLATION_ROOT_SOURCE;
-    delete process.env.SF_MASTER_KEY;
-    delete process.env[EXPORTED_ROOT_ENV];
+    restoreEnvironment("SF_DATA_DIR", originalEnvironment.SF_DATA_DIR);
+    restoreEnvironment(
+      "SF_INSTALLATION_ROOT_SOURCE",
+      originalEnvironment.SF_INSTALLATION_ROOT_SOURCE,
+    );
+    restoreEnvironment("SF_MASTER_KEY", originalEnvironment.SF_MASTER_KEY);
+    restoreEnvironment(EXPORTED_ROOT_ENV, originalEnvironment.exportedRoot);
     rmSync(sandbox, { recursive: true, force: true });
   });
 
