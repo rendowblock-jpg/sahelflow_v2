@@ -1,7 +1,5 @@
 use crate::backup_recovery;
-use crate::installation_root_key::{
-    self, InstallationIdentity, InstallationRootRequest,
-};
+use crate::installation_root_key::{self, InstallationIdentity, InstallationRootRequest};
 use crate::survivability_bridge::SurvivabilityBridge;
 use serde::Deserialize;
 use std::fs;
@@ -103,15 +101,13 @@ fn start_ready_bridge(
     )
     .map_err(|error| IoError::other(error.to_string()))?;
     let system_dir = app_data_dir.join("system");
-    let prepared = installation_root_key::prepare_installation_root(
-        InstallationRootRequest {
-            system_dir: &system_dir,
-            legacy_master_key_path: &app_data_dir.join("master.key"),
-            identity,
-            existing_authority_present: true,
-            provably_fresh: false,
-        },
-    )
+    let prepared = installation_root_key::prepare_installation_root(InstallationRootRequest {
+        system_dir: &system_dir,
+        legacy_master_key_path: &app_data_dir.join("master.key"),
+        identity,
+        existing_authority_present: true,
+        provably_fresh: false,
+    })
     .map_err(|error| IoError::other(error.to_string()))?;
     SurvivabilityBridge::start(
         app_data_dir.to_path_buf(),
@@ -126,9 +122,7 @@ fn runtime_ready(app_data_dir: &Path) -> Result<bool, IoError> {
     Ok(read_runtime_manifest(app_data_dir)?.is_some())
 }
 
-fn read_runtime_manifest(
-    app_data_dir: &Path,
-) -> Result<Option<RuntimeEndpointManifest>, IoError> {
+fn read_runtime_manifest(app_data_dir: &Path) -> Result<Option<RuntimeEndpointManifest>, IoError> {
     let path = app_data_dir.join(RUNTIME_MANIFEST);
     let metadata = match fs::symlink_metadata(&path) {
         Ok(metadata) => metadata,
@@ -184,7 +178,10 @@ fn app_data_dir() -> Result<PathBuf, IoError> {
     #[cfg(windows)]
     {
         let root = std::env::var_os("APPDATA").ok_or_else(|| {
-            IoError::new(ErrorKind::NotFound, "Windows roaming AppData is unavailable")
+            IoError::new(
+                ErrorKind::NotFound,
+                "Windows roaming AppData is unavailable",
+            )
         })?;
         return Ok(PathBuf::from(root).join(IDENTIFIER));
     }
