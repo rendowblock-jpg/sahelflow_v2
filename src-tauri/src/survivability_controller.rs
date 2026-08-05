@@ -313,7 +313,11 @@ fn classify_error(error: &IoError) -> &'static str {
 mod tests {
     use super::*;
 
-    fn manifest(instance_id: &str, process_id: u32, created_at_unix_seconds: u64) -> RuntimeEndpointManifest {
+    fn manifest(
+        instance_id: &str,
+        process_id: u32,
+        created_at_unix_seconds: u64,
+    ) -> RuntimeEndpointManifest {
         RuntimeEndpointManifest {
             format_version: 1,
             state: "ready".to_owned(),
