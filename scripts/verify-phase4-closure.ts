@@ -116,8 +116,11 @@ export function discoverPrismaModels(repoDir: string): string[] {
   const models = new Set<string>();
   for (const path of prismaSchemaFiles(repoDir)) {
     const source = readFileSync(path, "utf8");
-    for (const match of source.matchAll(/^\s*model\s+([A-Za-z][A-Za-z0-9_]*)\s*\{/gm)) {
-      models.add(match[1]);
+    for (const match of source.matchAll(
+      /^\s*model\s+([A-Za-z][A-Za-z0-9_]*)\s*\{/gm,
+    )) {
+      const model = match[1];
+      if (model) models.add(model);
     }
   }
   return [...models].sort();
@@ -129,8 +132,8 @@ function verifyIncludes(
   failures: string[],
 ): void {
   const source = readText(repoDir, wrapperPath);
-  const includes = [...source.matchAll(/include!\("([^"]+)"\);/g)].map(
-    (match) => match[1],
+  const includes = [...source.matchAll(/include!\("([^"]+)"\);/g)].flatMap(
+    (match) => (match[1] ? [match[1]] : []),
   );
   if (includes.length === 0) {
     failures.push(`${wrapperPath} declares no source includes`);
@@ -152,7 +155,9 @@ function requireMarkers(
   failures: string[],
 ): void {
   for (const marker of markers) {
-    if (!source.includes(marker)) failures.push(`${path} is missing required marker: ${marker}`);
+    if (!source.includes(marker)) {
+      failures.push(`${path} is missing required marker: ${marker}`);
+    }
   }
 }
 
@@ -165,7 +170,11 @@ export function verifyPhase4Closure(repoDir: string): string[] {
       failures.push(`missing Phase 4 authority file: ${path}`);
     }
   }
-  if (failures.some((failure) => failure.startsWith("missing Phase 4 authority"))) {
+  if (
+    failures.some((failure) =>
+      failure.startsWith("missing Phase 4 authority"),
+    )
+  ) {
     return failures;
   }
 
@@ -173,12 +182,16 @@ export function verifyPhase4Closure(repoDir: string): string[] {
     repoDir,
     "documentation/privacy/phase4-data-inventory.json",
   );
-  if (inventory.formatVersion !== 1) failures.push("privacy inventory formatVersion must be 1");
+  if (inventory.formatVersion !== 1) {
+    failures.push("privacy inventory formatVersion must be 1");
+  }
   if (inventory.fieldResolution.unclassifiedBehavior !== "fail-closed") {
     failures.push("privacy inventory must fail closed for unclassified fields");
   }
   if (Object.keys(inventory.fileStores).length < 8) {
-    failures.push("privacy inventory does not classify the complete installation file-store set");
+    failures.push(
+      "privacy inventory does not classify the complete installation file-store set",
+    );
   }
   if (inventory.diagnosticPolicy.deny.length < 8) {
     failures.push("privacy diagnostic deny policy is incomplete");
@@ -193,12 +206,22 @@ export function verifyPhase4Closure(repoDir: string): string[] {
     (model, index) => classified.indexOf(model) !== index,
   );
   if (duplicateModels.length > 0) {
-    failures.push(`privacy inventory classifies models more than once: ${[...new Set(duplicateModels)].sort().join(", ")}`);
+    failures.push(
+      `privacy inventory classifies models more than once: ${[
+        ...new Set(duplicateModels),
+      ]
+        .sort()
+        .join(", ")}`,
+    );
   }
   const missing = schemaModels.filter((model) => !classified.includes(model));
   const obsolete = classified.filter((model) => !schemaModels.includes(model));
-  if (missing.length > 0) failures.push(`unclassified Prisma models: ${missing.join(", ")}`);
-  if (obsolete.length > 0) failures.push(`privacy inventory contains obsolete models: ${obsolete.join(", ")}`);
+  if (missing.length > 0) {
+    failures.push(`unclassified Prisma models: ${missing.join(", ")}`);
+  }
+  if (obsolete.length > 0) {
+    failures.push(`privacy inventory contains obsolete models: ${obsolete.join(", ")}`);
+  }
 
   for (const group of inventory.modelGroups) {
     for (const property of [
@@ -210,10 +233,14 @@ export function verifyPhase4Closure(repoDir: string): string[] {
       "erase",
       "diagnostics",
     ] as const) {
-      if (!group[property]?.trim()) failures.push(`inventory group ${group.id} lacks ${property}`);
+      if (!group[property]?.trim()) {
+        failures.push(`inventory group ${group.id} lacks ${property}`);
+      }
     }
     if (!inventory.retentionClasses[group.retentionClass]) {
-      failures.push(`inventory group ${group.id} uses unknown retention class ${group.retentionClass}`);
+      failures.push(
+        `inventory group ${group.id} uses unknown retention class ${group.retentionClass}`,
+      );
     }
   }
 
@@ -257,9 +284,15 @@ export function verifyPhase4Closure(repoDir: string): string[] {
     ],
     failures,
   );
-  for (const forbidden of ["copyFile(", "new PrismaClient", "wal_checkpoint(TRUNCATE)"]) {
+  for (const forbidden of [
+    "copyFile(",
+    "new PrismaClient",
+    "wal_checkpoint(TRUNCATE)",
+  ]) {
     if (backup.includes(forbidden)) {
-      failures.push(`${backupPath} retains legacy live-file backup behavior: ${forbidden}`);
+      failures.push(
+        `${backupPath} retains legacy live-file backup behavior: ${forbidden}`,
+      );
     }
   }
 
@@ -279,7 +312,12 @@ export function verifyPhase4Closure(repoDir: string): string[] {
   requireMarkers(
     restoreRoute,
     "src/app/api/backup/restore/route.ts",
-    ["backupId", "recoveryCode", "requireRecentReauthentication", "status: 202"],
+    [
+      "backupId",
+      "recoveryCode",
+      "requireRecentReauthentication",
+      "status: 202",
+    ],
     failures,
   );
   if (restoreRoute.includes("filename:")) {
@@ -287,7 +325,12 @@ export function verifyPhase4Closure(repoDir: string): string[] {
   }
 
   const resetRoute = readText(repoDir, "src/app/api/settings/reset/route.ts");
-  requireMarkers(resetRoute, "src/app/api/settings/reset/route.ts", ["executeShopErase"], failures);
+  requireMarkers(
+    resetRoute,
+    "src/app/api/settings/reset/route.ts",
+    ["executeShopErase"],
+    failures,
+  );
   if (resetRoute.includes("protectedExactKeys") || resetRoute.includes("notIn:")) {
     failures.push("reset route still preserves a hidden credential whitelist");
   }
@@ -296,7 +339,11 @@ export function verifyPhase4Closure(repoDir: string): string[] {
   requireMarkers(
     mainSource,
     "src-tauri/src/main.rs",
-    ["recover_pending_before_run", "SurvivabilityController::start", "pending_restore_present"],
+    [
+      "recover_pending_before_run",
+      "SurvivabilityController::start",
+      "pending_restore_present",
+    ],
     failures,
   );
   verifyIncludes(repoDir, "src-tauri/src/backup_recovery.rs", failures);
@@ -314,7 +361,12 @@ export function verifyPhase4Closure(repoDir: string): string[] {
   requireMarkers(
     threat,
     THREAT_MODEL_PATH,
-    ["Trust boundaries", "Residual risks", "Wrong/future migration set", "PII in diagnostics"],
+    [
+      "Trust boundaries",
+      "Residual risks",
+      "Wrong/future migration set",
+      "PII in diagnostics",
+    ],
     failures,
   );
   const review = readText(repoDir, INDEPENDENT_REVIEW_PATH);
@@ -329,9 +381,18 @@ export function verifyPhase4Closure(repoDir: string): string[] {
   rmSync(evidenceDir, { recursive: true, force: true });
   try {
     generatePhase4Evidence(repoDir, evidenceDir);
-    const sbom = readJson<CycloneDxDocument>(repoDir, ".sf-phase4-evidence/sbom.cdx.json");
-    const vex = readJson<CycloneDxDocument>(repoDir, ".sf-phase4-evidence/vex.cdx.json");
-    const manifest = readJson<EvidenceManifest>(repoDir, ".sf-phase4-evidence/manifest.json");
+    const sbom = readJson<CycloneDxDocument>(
+      repoDir,
+      ".sf-phase4-evidence/sbom.cdx.json",
+    );
+    const vex = readJson<CycloneDxDocument>(
+      repoDir,
+      ".sf-phase4-evidence/vex.cdx.json",
+    );
+    const manifest = readJson<EvidenceManifest>(
+      repoDir,
+      ".sf-phase4-evidence/manifest.json",
+    );
     if (sbom.bomFormat !== "CycloneDX" || sbom.specVersion !== "1.5") {
       failures.push("generated SBOM is not CycloneDX 1.5");
     }
@@ -359,12 +420,16 @@ export function verifyPhase4Closure(repoDir: string): string[] {
       THREAT_MODEL_PATH,
     ]) {
       if (!/^[0-9a-f]{64}$/.test(manifest.files[required] ?? "")) {
-        failures.push(`Phase 4 evidence manifest lacks a valid digest for ${required}`);
+        failures.push(
+          `Phase 4 evidence manifest lacks a valid digest for ${required}`,
+        );
       }
     }
   } catch (error) {
     failures.push(
-      `Phase 4 evidence generation failed: ${error instanceof Error ? error.message : String(error)}`,
+      `Phase 4 evidence generation failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
   }
 
@@ -375,7 +440,9 @@ if (import.meta.main) {
   const repoDir = resolve(process.env.SF_REPO_DIR ?? process.cwd());
   const failures = verifyPhase4Closure(repoDir);
   if (failures.length > 0) {
-    console.error(`Phase 4 closure verification found ${failures.length} issue(s):`);
+    console.error(
+      `Phase 4 closure verification found ${failures.length} issue(s):`,
+    );
     for (const failure of failures) console.error(`- ${failure}`);
     process.exit(1);
   }
