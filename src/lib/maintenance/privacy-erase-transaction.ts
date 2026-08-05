@@ -18,7 +18,7 @@ const PRIVACY_ERASE_TRANSACTION_OPTIONS = {
  * immediately before opening the raw transaction so a stale process can never
  * erase a shop it no longer owns.
  */
-export function withPrivacyEraseTransaction<T>(
+export async function withPrivacyEraseTransaction<T>(
   operation: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> {
   assertProcessShopAuthority(shopContext);
