@@ -1,17 +1,19 @@
 export type SupportedLocale = "ar" | "fr" | "en";
 
-export const COPY: Record<SupportedLocale, Record<string, string>> = {
+export const COPY = {
   en: {
     title: "Protected backup and recovery",
     description:
       "Create one verified encrypted snapshot of every registered shop and keep an independent recovery kit for replacement-install recovery.",
-    desktopOnly: "Protected backup and restore are available in the SahelFlow desktop app.",
+    desktopOnly:
+      "Protected backup and restore are available in the SahelFlow desktop app.",
     create: "Create all-shop backup",
     creating: "Creating verified backup…",
     createKit: "Create recovery kit",
     creatingKit: "Creating recovery kit…",
     empty: "No protected backups yet",
-    emptyDescription: "Create the first encrypted all-shop backup before relying on this device.",
+    emptyDescription:
+      "Create the first encrypted all-shop backup before relying on this device.",
     backup: "Backup",
     shops: "Shops",
     size: "Encrypted size",
@@ -28,7 +30,8 @@ export const COPY: Record<SupportedLocale, Record<string, string>> = {
     restoreDescription:
       "SahelFlow verifies the complete encrypted set, stages every shop, creates a rescue generation, then relaunches before cutover.",
     recoveryCode: "Recovery code",
-    recoveryCodeHint: "Enter the code shown when the independent recovery kit was created.",
+    recoveryCodeHint:
+      "Enter the code shown when the independent recovery kit was created.",
     cancel: "Cancel",
     preparingRestore: "Verifying and staging…",
     confirmRestore: "Verify, stage and relaunch",
@@ -44,7 +47,8 @@ export const COPY: Record<SupportedLocale, Record<string, string>> = {
     createSuccess: "Verified all-shop backup created.",
     kitSuccess: "Independent recovery kit created.",
     deleteSuccess: "Protected backup deleted.",
-    restoreSuccess: "Restore staged. SahelFlow is relaunching into protected cutover.",
+    restoreSuccess:
+      "Restore staged. SahelFlow is relaunching into protected cutover.",
     loadFailed: "Protected backups could not be loaded.",
     actionFailed: "The protected operation failed safely.",
   },
@@ -52,13 +56,15 @@ export const COPY: Record<SupportedLocale, Record<string, string>> = {
     title: "Sauvegarde et récupération protégées",
     description:
       "Créez un instantané chiffré et vérifié de toutes les boutiques, avec un kit indépendant pour une réinstallation de remplacement.",
-    desktopOnly: "La sauvegarde et la restauration protégées sont disponibles dans l’application SahelFlow pour bureau.",
+    desktopOnly:
+      "La sauvegarde et la restauration protégées sont disponibles dans l’application SahelFlow pour bureau.",
     create: "Sauvegarder toutes les boutiques",
     creating: "Création et vérification…",
     createKit: "Créer le kit de récupération",
     creatingKit: "Création du kit…",
     empty: "Aucune sauvegarde protégée",
-    emptyDescription: "Créez une sauvegarde chiffrée complète avant de dépendre de cet appareil.",
+    emptyDescription:
+      "Créez une sauvegarde chiffrée complète avant de dépendre de cet appareil.",
     backup: "Sauvegarde",
     shops: "Boutiques",
     size: "Taille chiffrée",
@@ -75,7 +81,8 @@ export const COPY: Record<SupportedLocale, Record<string, string>> = {
     restoreDescription:
       "SahelFlow vérifie l’ensemble complet, prépare chaque boutique, crée une génération de secours puis redémarre avant le remplacement.",
     recoveryCode: "Code de récupération",
-    recoveryCodeHint: "Saisissez le code affiché lors de la création du kit indépendant.",
+    recoveryCodeHint:
+      "Saisissez le code affiché lors de la création du kit indépendant.",
     cancel: "Annuler",
     preparingRestore: "Vérification et préparation…",
     confirmRestore: "Vérifier, préparer et redémarrer",
@@ -91,7 +98,8 @@ export const COPY: Record<SupportedLocale, Record<string, string>> = {
     createSuccess: "Sauvegarde vérifiée de toutes les boutiques créée.",
     kitSuccess: "Kit de récupération indépendant créé.",
     deleteSuccess: "Sauvegarde protégée supprimée.",
-    restoreSuccess: "Restauration préparée. SahelFlow redémarre pour appliquer le remplacement protégé.",
+    restoreSuccess:
+      "Restauration préparée. SahelFlow redémarre pour appliquer le remplacement protégé.",
     loadFailed: "Impossible de charger les sauvegardes protégées.",
     actionFailed: "L’opération protégée a échoué sans modifier les données.",
   },
@@ -99,13 +107,15 @@ export const COPY: Record<SupportedLocale, Record<string, string>> = {
     title: "النسخ الاحتياطي والاسترجاع المحمي",
     description:
       "أنشئ نسخة مشفرة ومتحققًا منها لكل المتاجر، مع حزمة استرجاع مستقلة لاستخدامها عند تثبيت بديل.",
-    desktopOnly: "النسخ والاسترجاع المحميان متاحان داخل تطبيق SahelFlow لسطح المكتب.",
+    desktopOnly:
+      "النسخ والاسترجاع المحميان متاحان داخل تطبيق SahelFlow لسطح المكتب.",
     create: "إنشاء نسخة لكل المتاجر",
     creating: "جارٍ الإنشاء والتحقق…",
     createKit: "إنشاء حزمة الاسترجاع",
     creatingKit: "جارٍ إنشاء الحزمة…",
     empty: "لا توجد نسخ محمية بعد",
-    emptyDescription: "أنشئ أول نسخة مشفرة لجميع المتاجر قبل الاعتماد على هذا الجهاز.",
+    emptyDescription:
+      "أنشئ أول نسخة مشفرة لجميع المتاجر قبل الاعتماد على هذا الجهاز.",
     backup: "النسخة",
     shops: "المتاجر",
     size: "الحجم المشفر",
@@ -122,12 +132,14 @@ export const COPY: Record<SupportedLocale, Record<string, string>> = {
     restoreDescription:
       "يتحقق SahelFlow من المجموعة كاملة، ويجهز كل المتاجر، وينشئ نسخة إنقاذ، ثم يعيد التشغيل قبل الاستبدال.",
     recoveryCode: "رمز الاسترجاع",
-    recoveryCodeHint: "أدخل الرمز الذي ظهر عند إنشاء حزمة الاسترجاع المستقلة.",
+    recoveryCodeHint:
+      "أدخل الرمز الذي ظهر عند إنشاء حزمة الاسترجاع المستقلة.",
     cancel: "إلغاء",
     preparingRestore: "جارٍ التحقق والتحضير…",
     confirmRestore: "التحقق والتحضير وإعادة التشغيل",
     deleteTitle: "حذف النسخة المحمية؟",
-    deleteDescription: "ستُحذف الحاوية المشفرة مع الاحتفاظ بوصل حذف خالٍ من البيانات الشخصية.",
+    deleteDescription:
+      "ستُحذف الحاوية المشفرة مع الاحتفاظ بوصل حذف خالٍ من البيانات الشخصية.",
     kitTitle: "احفظ رمز الاسترجاع الآن",
     kitDescription:
       "الحزمة والرمز مستقلان. لا يستطيع SahelFlow إعادة إنشاء الرمز لاحقًا.",
@@ -137,11 +149,15 @@ export const COPY: Record<SupportedLocale, Record<string, string>> = {
     createSuccess: "تم إنشاء نسخة محمية ومتحقق منها لكل المتاجر.",
     kitSuccess: "تم إنشاء حزمة الاسترجاع المستقلة.",
     deleteSuccess: "تم حذف النسخة المحمية.",
-    restoreSuccess: "تم تحضير الاسترجاع. سيُعاد تشغيل SahelFlow لإتمام الاستبدال المحمي.",
+    restoreSuccess:
+      "تم تحضير الاسترجاع. سيُعاد تشغيل SahelFlow لإتمام الاستبدال المحمي.",
     loadFailed: "تعذر تحميل النسخ المحمية.",
-    actionFailed: "فشل الإجراء المحمي بأمان دون تطبيق بيانات غير متحقق منها.",
+    actionFailed:
+      "فشل الإجراء المحمي بأمان دون تطبيق بيانات غير متحقق منها.",
   },
-};
+} as const satisfies Record<SupportedLocale, Record<string, string>>;
+
+export type BackupRestoreCopy = (typeof COPY)["en"];
 
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -152,7 +168,7 @@ export function formatSize(bytes: number): string {
     value /= 1024;
     index += 1;
   }
-  return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[index]}`;
+  return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[index] ?? "B"}`;
 }
 
 export function errorMessage(error: unknown, fallback: string): string {
