@@ -21,7 +21,10 @@ const MAIN_WINDOW_LABEL: &str = "main";
 const MAIN_WINDOW_TITLE: &str = "SahelFlow";
 const BOOTSTRAP_WINDOW_TITLE: &str = "SahelFlow - Starting";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
-const BOOTSTRAP_NAVIGATION_DELAY: Duration = Duration::from_millis(250);
+const RENDERER_PRIME_MARKER: &str = "sahelflow-renderer-prime-v1";
+const RENDERER_PRIME_TIMEOUT: Duration = Duration::from_secs(15);
+const RENDERER_PRIME_POLL_INTERVAL: Duration = Duration::from_millis(100);
+const RENDERER_PROBE_RESPONSE_TIMEOUT: Duration = Duration::from_millis(500);
 const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
@@ -88,12 +91,12 @@ struct PackagedHandoff {
 
 /// Navigate the configured WebView to a ready application.
 ///
-/// Development URLs are shown immediately. Packaged startup first shows a safe,
-/// one-time loopback bootstrap document. That response sets the host-only HttpOnly
-/// launch cookie, then uses `location.replace("/")` so the credential-bearing URL
-/// is replaced before the workspace renders. The window is considered ready only
-/// after a hydrated page reports an authenticated UI acknowledgment matching the
-/// current runtime endpoint instance.
+/// Development URLs are shown immediately. Packaged startup first proves that
+/// WebView2 has an executable renderer on a safe local document, then opens the
+/// one-time loopback bootstrap. That response sets the host-only HttpOnly launch
+/// cookie and replaces the credential-bearing URL before the workspace renders.
+/// The window is considered ready only after a hydrated page reports an
+/// authenticated UI acknowledgment matching the current runtime endpoint.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let requested_url = tauri::Url::parse(app_url)?;
     let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
@@ -119,16 +122,24 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     clear_file(&app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE))?;
     clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
     record_startup_stage(&app_data_dir, "ui-navigation-started", None);
+    record_startup_stage(&app_data_dir, "ui-renderer-prime-started", None);
 
-    // A hidden WebView2 controller does not create its renderer on the
-    // ephemeral Windows runner. Show the inert local starting document first,
-    // return control to the native event loop, then navigate from a worker.
-    // The distinct title prevents this visible bootstrap surface from being
-    // mistaken for the authenticated workspace.
+    // WebView2 can accept a navigation command before its renderer exists and
+    // silently defer it until another navigation occurs. Explicitly navigate to
+    // an inert, script-free local document, show the starting surface, and prove
+    // JavaScript execution through the native callback before consuming the
+    // one-use authenticated bootstrap URL.
+    let renderer_prime_url = renderer_prime_url()?;
     window.set_title(BOOTSTRAP_WINDOW_TITLE)?;
+    window.navigate(renderer_prime_url)?;
     window.show()?;
     window.set_focus()?;
-    schedule_packaged_navigation(app.clone(), window.clone(), handoff.bootstrap_url);
+    schedule_packaged_navigation(
+        app.clone(),
+        window.clone(),
+        handoff.bootstrap_url,
+        app_data_dir.clone(),
+    );
 
     monitor_packaged_ui(app.clone(), window, app_data_dir);
     Ok(())
@@ -248,20 +259,74 @@ fn packaged_handoff(url: &tauri::Url) -> Result<Option<PackagedHandoff>, IoError
     }))
 }
 
+fn renderer_prime_html() -> String {
+    [
+        "<!doctype html><html lang=\"fr\" data-sf-renderer-prime=\"",
+        RENDERER_PRIME_MARKER,
+        "\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>SahelFlow - Starting</title><style>:root{color-scheme:dark;font-family:Inter,Segoe UI,system-ui,sans-serif}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101214;color:#f4f4f5;padding:24px}main{width:min(520px,100%);text-align:center;border:1px solid #3f3f46;border-radius:18px;background:#18181b;padding:32px}p{color:#a1a1aa;line-height:1.6}</style></head><body><main role=\"status\" aria-live=\"polite\"><h1>SahelFlow</h1><p>Preparing the protected local workspace...</p><p lang=\"ar\" dir=\"rtl\">جارٍ تجهيز مساحة العمل المحلية المحمية...</p></main></body></html>",
+    ]
+    .concat()
+}
+
+fn renderer_prime_url() -> Result<tauri::Url, IoError> {
+    let html = renderer_prime_html();
+    let data_url = format!(
+        "data:text/html;charset=utf-8,{}",
+        urlencoding::encode(&html)
+    );
+    tauri::Url::parse(&data_url).map_err(|error| IoError::new(ErrorKind::InvalidData, error))
+}
+
+fn renderer_is_ready(window: &WebviewWindow) -> bool {
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    let script = "(()=>{try{return document.documentElement.dataset.sfRendererPrime||''}catch(_error){return ''}})()";
+    if window
+        .eval_with_callback(script, move |result| {
+            let _ = sender.try_send(result);
+        })
+        .is_err()
+    {
+        return false;
+    }
+
+    receiver
+        .recv_timeout(RENDERER_PROBE_RESPONSE_TIMEOUT)
+        .is_ok_and(|result| {
+            serde_json::from_str::<String>(&result)
+                .is_ok_and(|value| value == RENDERER_PRIME_MARKER)
+        })
+}
+
 fn schedule_packaged_navigation(
     app: tauri::AppHandle,
     window: WebviewWindow,
     bootstrap_url: tauri::Url,
+    app_data_dir: PathBuf,
 ) {
     thread::spawn(move || {
-        thread::sleep(BOOTSTRAP_NAVIGATION_DELAY);
-        if let Err(error) = window.navigate(bootstrap_url) {
-            let detail = format!(
-                "the startup window could not navigate to the authenticated bootstrap: {error}"
-            );
-            eprintln!("[sahelflow] FATAL: {detail}");
-            let _ = show_blocked(&app, "SF-RUNTIME-UI-NAVIGATION-BLOCKED", &detail);
+        let started_at = Instant::now();
+        while started_at.elapsed() < RENDERER_PRIME_TIMEOUT {
+            if renderer_is_ready(&window) {
+                record_startup_stage(&app_data_dir, "ui-renderer-prime-ready", None);
+                record_startup_stage(&app_data_dir, "ui-bootstrap-navigation-started", None);
+                if let Err(error) = window.navigate(bootstrap_url) {
+                    let detail = format!(
+                        "the startup window could not navigate to the authenticated bootstrap: {error}"
+                    );
+                    eprintln!("[sahelflow] FATAL: {detail}");
+                    let _ =
+                        show_blocked(&app, "SF-RUNTIME-UI-NAVIGATION-BLOCKED", &detail);
+                }
+                return;
+            }
+            thread::sleep(RENDERER_PRIME_POLL_INTERVAL);
         }
+
+        let detail =
+            "the safe startup document did not produce an executable WebView renderer before the bounded deadline";
+        record_startup_stage(&app_data_dir, "ui-renderer-prime-blocked", None);
+        eprintln!("[sahelflow] FATAL: {detail}");
+        let _ = show_blocked(&app, "SF-RUNTIME-UI-RENDERER-BLOCKED", detail);
     });
 }
 
@@ -278,6 +343,12 @@ fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_di
                 let _ = show_blocked(&app, "SF-WINDOW-SHOW-BLOCKED", &detail);
                 return;
             }
+            return;
+        }
+
+        // A renderer-prime or navigation failure already published a more
+        // specific, redacted startup diagnostic and recovery page.
+        if app_data_dir.join(STARTUP_DIAGNOSTIC_FILE).is_file() {
             return;
         }
 
@@ -586,6 +657,18 @@ mod tests {
 
         let handoff = packaged_handoff(&url).unwrap().unwrap();
         assert_eq!(handoff.bootstrap_url, url);
+    }
+
+    #[test]
+    fn renderer_prime_document_is_inert_and_non_secret() {
+        let html = renderer_prime_html();
+        let url = renderer_prime_url().unwrap();
+
+        assert!(html.contains(RENDERER_PRIME_MARKER));
+        assert!(!html.contains("<script"));
+        assert!(!html.contains(RUNTIME_BOOTSTRAP_PATH));
+        assert!(!html.contains("token"));
+        assert_eq!(url.scheme(), "data");
     }
 
     #[test]
