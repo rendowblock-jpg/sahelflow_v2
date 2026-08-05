@@ -9,7 +9,7 @@ pub(crate) fn seal_raw_aes_256_gcm(
     key: &[u8; 32],
     aad: &[u8],
     plaintext: &[u8],
-) -> Result<([u8; 12], Vec<u8>, [u8; 16]), IoError> {
+) -> Result<DetachedCiphertext, IoError> {
     let nonce = random_array::<NONCE_BYTES>()?;
     let (ciphertext, tag) = aes_256_gcm_encrypt(key, &nonce, aad, plaintext)?;
     Ok((nonce, ciphertext, tag))
