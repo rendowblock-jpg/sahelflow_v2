@@ -36,6 +36,46 @@ describe("protected Prisma mutation boundary", () => {
     );
   });
 
+  it("blocks protected writes in both upsert branches", () => {
+    for (const [branch, payload] of [
+      [
+        "create",
+        {
+          where: { id: "delivery-42" },
+          create: {
+            id: "delivery-42",
+            order: { create: { id: "order-42", phone: "0555123456" } },
+          },
+          update: {},
+        },
+      ],
+      [
+        "update",
+        {
+          where: { id: "delivery-42" },
+          create: { id: "delivery-42" },
+          update: {
+            conversation: {
+              upsert: {
+                create: { id: "conversation-42", contactName: "Nadia" },
+                update: { contactName: "Nadia" },
+              },
+            },
+          },
+        },
+      ],
+    ] as const) {
+      expect(() =>
+        assertProtectedMutationBoundary("Delivery", "upsert", payload),
+      ).toThrowError(
+        expect.objectContaining({
+          code: "PROTECTED_DATA_NESTED_WRITE_BLOCKED",
+          message: expect.stringContaining(branch),
+        }),
+      );
+    }
+  });
+
   it("allows relation connects and unprotected mutations", () => {
     expect(() =>
       assertProtectedMutationBoundary("Delivery", "create", {
@@ -45,6 +85,13 @@ describe("protected Prisma mutation boundary", () => {
     expect(() =>
       assertProtectedMutationBoundary("Product", "updateManyAndReturn", {
         data: { price: 2500 },
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertProtectedMutationBoundary("Delivery", "upsert", {
+        where: { id: "delivery-42" },
+        create: { id: "delivery-42", order: { connect: { id: "order-42" } } },
+        update: { order: { connect: { id: "order-42" } } },
       }),
     ).not.toThrow();
   });
