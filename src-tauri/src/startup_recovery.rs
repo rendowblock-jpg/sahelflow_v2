@@ -314,8 +314,7 @@ fn schedule_packaged_navigation(
                         "the startup window could not navigate to the authenticated bootstrap: {error}"
                     );
                     eprintln!("[sahelflow] FATAL: {detail}");
-                    let _ =
-                        show_blocked(&app, "SF-RUNTIME-UI-NAVIGATION-BLOCKED", &detail);
+                    let _ = show_blocked(&app, "SF-RUNTIME-UI-NAVIGATION-BLOCKED", &detail);
                 }
                 return;
             }
