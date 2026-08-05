@@ -14,7 +14,7 @@
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Active branch:** `agent/phase4-protected-data-authority`
 > **Active PR:** PR #207 — frozen complete Phase 4 candidate
-> **Final static-repair parent:** `839057dd41e955be81a6ce38197368afd9699dd6`
+> **Final exact candidate head:** `25c47671cd53117d96d4da76f8bd957fa8a9fe21`
 > **Active agent:** one selected closure agent
 > **Current session purpose:** exact-head security/privacy review, one complete selected gate and protected closure
 > **Authorized package:** issue #204 through PR #207 only
@@ -113,20 +113,19 @@ The complete static audit is finished. The final repair batch:
 - restores documentation-audit continuity without reactivating superseded limits;
 - leaves every historical P1 review conversation resolved.
 
-This metadata-only freeze commit is the first non-skipped head after implementation
-stopped. It authorizes the single exact-head review and complete selected Phase 4
-gate; it does not itself prove closure.
+Exact non-skipped head `25c47671cd53117d96d4da76f8bd957fa8a9fe21`
+is frozen for the single exact-head review and complete selected Phase 4 gate. It
+does not itself prove closure.
 
 ## Final closure sequence
 
-1. Record the exact non-skipped PR head.
-2. Request exact-head security/privacy review using
+1. Request exact-head security/privacy review using
    `documentation/archive/phase4/PHASE4_INDEPENDENT_REVIEW.md`.
-3. Run one complete selected Phase 4 gate.
-4. If anything fails, collect all jobs/logs/artifacts and all review findings before
+2. Run one complete selected Phase 4 gate.
+3. If anything fails, collect all jobs/logs/artifacts and all review findings before
    one consolidated repair; do not patch one failure at a time.
-5. Resolve every P0/P1 conversation on the exact repaired head.
-6. Merge with `expected_head_sha`, verify protected `main`, then reconcile issue
+4. Resolve every P0/P1 conversation on the exact repaired head.
+5. Merge with `expected_head_sha`, verify protected `main`, then reconcile issue
    #204 only when the exit gate is actually satisfied.
 
 ## Required final evidence
