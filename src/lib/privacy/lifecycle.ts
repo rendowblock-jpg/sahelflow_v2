@@ -55,7 +55,7 @@ export async function createShopPrivacyExport(): Promise<Buffer> {
       include: { messages: { orderBy: { createdAt: "asc" } } },
     }),
     db.setting.findMany({
-      select: { key: true, createdAt: true, updatedAt: true },
+      select: { key: true, updatedAt: true },
       orderBy: { key: "asc" },
     }),
   ]);
@@ -175,8 +175,9 @@ export async function executeShopErase(
       await tx.counter.deleteMany({});
       await tx.auditLog.deleteMany({});
 
-      // Credentials and provider configuration are personal/confidential data.
-      // Reset and erase must never preserve them silently.
+      // Credentials and provider configuration are confidential data. Both the
+      // dedicated encrypted store and non-secret settings are erased.
+      await tx.secret.deleteMany({});
       await tx.setting.deleteMany({});
     }, TRANSACTION_OPTIONS),
   );
