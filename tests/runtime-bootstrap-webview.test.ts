@@ -24,10 +24,12 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     delete process.env.VITEST;
   });
 
-  it("commits the HttpOnly runtime cookie before navigating to the workspace", async () => {
+  it("commits the HttpOnly runtime cookie before a CSP-compatible workspace navigation", async () => {
     const response = await GET(request());
     const body = await response.text();
     const setCookie = response.headers.get("set-cookie") ?? "";
+    const contentSecurityPolicy =
+      response.headers.get("content-security-policy") ?? "";
 
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
@@ -38,7 +40,12 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     expect(setCookie).toContain("HttpOnly");
     expect(setCookie).toContain("SameSite=strict");
     expect(setCookie).toContain("Path=/");
-    expect(body).toContain('window.location.replace("/")');
+    expect(contentSecurityPolicy).toContain("script-src 'self'");
+    expect(contentSecurityPolicy).not.toContain("'unsafe-inline'");
+    expect(body).toContain(
+      '<script src="/runtime-bootstrap-handoff.js" defer></script>',
+    );
+    expect(body).not.toContain("<script>window.location");
   });
 
   it("remains one-time after the successful cookie handoff", async () => {
