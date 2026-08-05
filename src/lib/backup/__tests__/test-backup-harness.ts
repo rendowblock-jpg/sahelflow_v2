@@ -36,6 +36,14 @@ function databasePath(): string {
   return resolve(url.slice("file:".length));
 }
 
+function testShopId(): string {
+  const value = (process.env.SF_ACTIVE_SHOP_ID ?? "test").toLowerCase();
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(value)) {
+    throw new Error("The test backup harness requires a canonical shop ID");
+  }
+  return value;
+}
+
 function backupsDir(): string {
   const dataDir = process.env.SF_DATA_DIR;
   if (!dataDir) throw new Error("The test backup harness requires SF_DATA_DIR");
@@ -91,7 +99,9 @@ async function writeManifest(path: string, manifest: TestBackupManifest) {
 }
 
 async function readManifest(path: string): Promise<TestBackupManifest> {
-  const manifest = JSON.parse(await readFile(path, "utf8")) as TestBackupManifest;
+  const manifest = JSON.parse(
+    await readFile(path, "utf8"),
+  ) as TestBackupManifest;
   if (
     manifest.formatVersion !== 1 ||
     !BACKUP_FILENAME_RE.test(manifest.filename) ||
@@ -104,6 +114,7 @@ async function readManifest(path: string): Promise<TestBackupManifest> {
 
 function combinedEntry(manifest: TestBackupManifest, path: string): BackupEntry {
   const createdAtUnixMs = Date.parse(manifest.createdAt);
+  const shopId = testShopId();
   return {
     backupId: manifest.filename,
     createdAtUnixMs,
@@ -122,14 +133,22 @@ function combinedEntry(manifest: TestBackupManifest, path: string): BackupEntry 
     filename: manifest.filename,
     size: manifest.size,
     createdAt: manifest.createdAt,
-    shopId: "test",
+    shopId,
     sha256: manifest.sha256,
   };
 }
 
 export function validateBackupFilename(filename: string): string {
-  if (!filename || basename(filename) !== filename || !BACKUP_FILENAME_RE.test(filename)) {
-    throw new SahelFlowError("Invalid test backup filename", "VALIDATION", 400);
+  if (
+    !filename ||
+    basename(filename) !== filename ||
+    !BACKUP_FILENAME_RE.test(filename)
+  ) {
+    throw new SahelFlowError(
+      "Invalid test backup filename",
+      "VALIDATION",
+      400,
+    );
   }
   return filename;
 }
@@ -139,7 +158,7 @@ export async function createBackup(): Promise<BackupEntry> {
   const directory = backupsDir();
   await mkdir(directory, { recursive: true });
   await checkpoint(source);
-  const filename = `sahelflow-backup-test-${new Date()
+  const filename = `sahelflow-backup-${testShopId()}-${new Date()
     .toISOString()
     .replace(/[:.]/g, "-")}.db`;
   const target = join(directory, filename);
@@ -168,12 +187,16 @@ export async function listBackups(): Promise<BackupEntry[]> {
     if (!BACKUP_FILENAME_RE.test(filename)) continue;
     const path = join(directory, filename);
     try {
-      results.push(combinedEntry(await readManifest(manifestPath(path)), path));
+      results.push(
+        combinedEntry(await readManifest(manifestPath(path)), path),
+      );
     } catch {
       // Invalid test artifacts are not offered as restore points.
     }
   }
-  return results.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  return results.sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt),
+  );
 }
 
 export async function restoreBackup(
@@ -197,7 +220,7 @@ export async function restoreBackup(
   const displaced = `${target}.${randomUUID()}.displaced`;
   const recoveryDir = join(backupsDir(), "recovery");
   await mkdir(recoveryDir, { recursive: true });
-  const rescueFile = `test-${Date.now()}-pre-restore.db`;
+  const rescueFile = `${testShopId()}-${Date.now()}-pre-restore.db`;
   await copyFile(source, staged);
   await verifySqlite(staged);
   const { disconnectAllShops } = await import("@/lib/db");
