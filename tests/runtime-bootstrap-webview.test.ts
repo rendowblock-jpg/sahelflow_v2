@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   GET,
@@ -5,6 +7,18 @@ import {
 } from "@/app/api/internal/runtime-bootstrap/route";
 
 const token = "a".repeat(64);
+const originalEnvironment = {
+  SF_RUNTIME_APP_TOKEN: process.env.SF_RUNTIME_APP_TOKEN,
+  VITEST: process.env.VITEST,
+};
+
+function restoreEnvironment(name: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+}
 
 function request(): Request {
   return new Request(
@@ -20,16 +34,23 @@ describe("packaged runtime bootstrap WebView handoff", () => {
   });
 
   afterEach(() => {
-    delete process.env.SF_RUNTIME_APP_TOKEN;
-    delete process.env.VITEST;
+    restoreEnvironment(
+      "SF_RUNTIME_APP_TOKEN",
+      originalEnvironment.SF_RUNTIME_APP_TOKEN,
+    );
+    restoreEnvironment("VITEST", originalEnvironment.VITEST);
   });
 
-  it("commits the HttpOnly runtime cookie before a CSP-compatible workspace navigation", async () => {
+  it("commits and confirms the HttpOnly runtime cookie before workspace navigation", async () => {
     const response = await GET(request());
     const body = await response.text();
     const setCookie = response.headers.get("set-cookie") ?? "";
     const contentSecurityPolicy =
       response.headers.get("content-security-policy") ?? "";
+    const handoffScript = readFileSync(
+      resolve(process.cwd(), "public/runtime-bootstrap-handoff.js"),
+      "utf8",
+    );
 
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
@@ -41,11 +62,21 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     expect(setCookie).toContain("SameSite=strict");
     expect(setCookie).toContain("Path=/");
     expect(contentSecurityPolicy).toContain("script-src 'self'");
+    expect(contentSecurityPolicy).toContain("connect-src 'self'");
     expect(contentSecurityPolicy).not.toContain("'unsafe-inline'");
     expect(body).toContain(
       '<script src="/runtime-bootstrap-handoff.js" defer></script>',
     );
     expect(body).not.toContain("<script>window.location");
+    expect(handoffScript).toContain(
+      '"/api/internal/runtime-bootstrap/confirm"',
+    );
+    expect(handoffScript).toContain('credentials: "same-origin"');
+    expect(handoffScript).toContain("response.status === 204");
+    expect(handoffScript.indexOf("response.status === 204")).toBeLessThan(
+      handoffScript.indexOf('window.location.replace("/")'),
+    );
+    expect(handoffScript).not.toContain(token);
   });
 
   it("remains one-time after the successful cookie handoff", async () => {
