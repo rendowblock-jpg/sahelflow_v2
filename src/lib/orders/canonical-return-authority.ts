@@ -11,29 +11,6 @@ import type {
 import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
 import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
 
-interface ReturnOrderProjectionRow {
-  id: string;
-  orderNumber: string;
-  customerId: string;
-  source: string;
-  sourceMetadata: string | null;
-  status: string;
-  version: number | bigint;
-  totalPrice: number | bigint;
-  deliveryCost: number | bigint | null;
-  wilaya: string;
-  commune: string;
-  address: string;
-  phone: string;
-  notes: string | null;
-  fulfillmentState: string | null;
-  deliveryState: string | null;
-  inventoryState: string | null;
-  codState: string | null;
-  returnState: string | null;
-  refundState: string | null;
-}
-
 export interface CanonicalReturnOrderItem {
   id: string;
   productId: string | null;
@@ -116,19 +93,34 @@ export async function loadCanonicalReturnOrder(
   tx: BusinessTransaction,
   orderId: string,
 ): Promise<CanonicalReturnOrder> {
-  const rows = await tx.$queryRaw<ReturnOrderProjectionRow[]>`
-    SELECT
-      "id", "orderNumber", "customerId", "source", "sourceMetadata",
-      "status", "version", "totalPrice", "deliveryCost", "wilaya",
-      "commune", "address", "phone", "notes", "fulfillmentState",
-      "deliveryState", "inventoryState", "codState", "returnState",
-      "refundState"
-    FROM "Order"
-    WHERE "id" = ${orderId}
-      AND "deletedAt" IS NULL
-    LIMIT 1
-  `;
-  const projection = rows[0];
+  // This must use the protected transaction delegate rather than raw SQL.
+  // Address, phone and notes are record-bound envelopes and must be opened
+  // against the source Order ID before an exchange copies them to a new row.
+  const projection = await tx.order.findFirst({
+    where: { id: orderId, deletedAt: null },
+    select: {
+      id: true,
+      orderNumber: true,
+      customerId: true,
+      source: true,
+      sourceMetadata: true,
+      status: true,
+      version: true,
+      totalPrice: true,
+      deliveryCost: true,
+      wilaya: true,
+      commune: true,
+      address: true,
+      phone: true,
+      notes: true,
+      fulfillmentState: true,
+      deliveryState: true,
+      inventoryState: true,
+      codState: true,
+      returnState: true,
+      refundState: true,
+    },
+  });
   if (!projection) throw new NotFoundError("Order", orderId);
   if (!isTrustedManualOrderAuthority(projection.source, projection.sourceMetadata)) {
     throw new ValidationError(
