@@ -51,6 +51,8 @@ interface CycloneDxDocument {
 
 const REQUIRED_FILES = [
   "src-tauri/src/backup_recovery.rs",
+  "src-tauri/src/backup_recovery/037.rs",
+  "src-tauri/src/backup_recovery/054.rs",
   "src-tauri/src/backup_recovery/056.rs",
   "src-tauri/src/installation_identity_rebind.rs",
   "src-tauri/src/key_hierarchy.rs",
@@ -236,18 +238,36 @@ export function verifyPhase4Closure(repoDir: string): string[] {
     failures,
   );
 
-  const backup = readText(repoDir, "src/lib/backup/index.ts");
+  const backupPath = "src/lib/backup/index.ts";
+  const backup = readText(repoDir, backupPath);
   requireMarkers(
     backup,
-    "src/lib/backup/index.ts",
-    ["nativeBackupRequest", "create-backup", "prepare-restore", "delete-backup"],
+    backupPath,
+    [
+      "invokeNativeSurvivability",
+      "SURVIVABILITY_OPERATIONS.createBackup",
+      "SURVIVABILITY_OPERATIONS.prepareRestore",
+      "SURVIVABILITY_OPERATIONS.deleteBackup",
+    ],
     failures,
   );
   for (const forbidden of ["copyFile(", "new PrismaClient", "wal_checkpoint(TRUNCATE)"]) {
     if (backup.includes(forbidden)) {
-      failures.push(`src/lib/backup/index.ts retains legacy live-file backup behavior: ${forbidden}`);
+      failures.push(`${backupPath} retains legacy live-file backup behavior: ${forbidden}`);
     }
   }
+
+  const reenrollmentPath = "src-tauri/src/backup_recovery/037.rs";
+  requireMarkers(
+    readText(repoDir, reenrollmentPath),
+    reenrollmentPath,
+    [
+      `DELETE FROM "Session"`,
+      `DELETE FROM "AuthSecret"`,
+      "IDENTITY_FOOTPRINT_SETTING",
+    ],
+    failures,
+  );
 
   const restoreRoute = readText(repoDir, "src/app/api/backup/restore/route.ts");
   requireMarkers(
