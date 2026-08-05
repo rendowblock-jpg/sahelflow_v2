@@ -34,7 +34,7 @@ export const POST = withErrorHandler(async () => {
     },
   );
 
-  return new NextResponse(payload, {
+  return new NextResponse(new Uint8Array(payload), {
     status: 200,
     headers: {
       "Cache-Control": "no-store",
