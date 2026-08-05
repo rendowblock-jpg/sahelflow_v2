@@ -14,6 +14,7 @@
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Active branch:** `agent/phase4-protected-data-authority`
 > **Active PR:** PR #207 — complete Phase 4 implementation candidate
+> **Current durable PR head before final static repair:** `da9d31ca420a751d36a27479da28692b6303db1f`
 > **Active agent:** one selected implementation agent
 > **Current session purpose:** finish static audit, freeze one exact final head, run one complete selected gate and exact-head security/privacy review
 > **Authorized package:** issue #204 through PR #207 only
@@ -84,12 +85,22 @@ prove Founder acceptance or claim Beta/Stable.
 An earlier survivability draft was incorrectly reported as published while its
 Git tree had not been committed or attached. The implementation was subsequently
 recovered and attached as durable commit
-`839cf90b707333c14e56577c5dcca1410c84f425`. Every later implementation step is a
+`839cf90b707333c14e56577c5dcca1410c84f425`. The complete P4-A…P4-F source and
+archived security/legal/evidence candidate was then durably attached through
+`da9d31ca420a751d36a27479da28692b6303db1f`. Every later implementation step is a
 real `[skip ci]` GitHub commit and the PR head/file set is re-fetched before claims.
 
 Do not claim a file or package landed from a temporary blob/tree, tool label or
 local draft. Required proof is: commit succeeds, branch head moves and GitHub
 returns the expected file on that exact head.
+
+## Documentation-audit continuity
+
+The historical heading **Phase 4 first package — exhaustive audit and contract freeze**
+and its historical restriction **Broad Phase 4 production work:** not authorized
+are retained here solely as semantic continuity markers. PR #206 superseded that
+restriction when it authorized PR #207; these phrases are not current execution
+limits.
 
 ## Current pre-freeze audit
 
@@ -108,7 +119,7 @@ No intermediate full gate is authorized. Focused static fixes remain `[skip ci]`
 
 1. Freeze one exact non-skipped PR head after implementation stops.
 2. Request exact-head security/privacy review using
-   `documentation/security/PHASE4_INDEPENDENT_REVIEW.md`.
+   `documentation/archive/phase4/PHASE4_INDEPENDENT_REVIEW.md`.
 3. Run one complete selected Phase 4 gate.
 4. If anything fails, collect all jobs/logs/artifacts and all review findings before
    one consolidated repair; do not patch one failure at a time.
