@@ -82,6 +82,24 @@ describe("protected raw-client authority parser", () => {
     ).toEqual(["canonical-raw-method"]);
   });
 
+  it("blocks wrapped canonical db receivers", () => {
+    expect(
+      kinds(`
+        import { db } from "@/lib/db";
+        await (db).$queryRaw\`SELECT 1\`;
+        await (db as unknown as { $executeRawUnsafe(sql: string): unknown })
+          .$executeRawUnsafe("DELETE FROM Customer");
+        await db!.$queryRawUnsafe("SELECT 1");
+        const { $executeRaw } = (db satisfies object);
+      `),
+    ).toEqual([
+      "canonical-raw-method",
+      "canonical-raw-method",
+      "canonical-raw-method",
+      "canonical-raw-method",
+    ]);
+  });
+
   it("blocks destructured raw methods but permits ordinary delegate calls", () => {
     expect(
       kinds(`
