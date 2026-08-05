@@ -54,14 +54,17 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     restoreEnvironment("VITEST", originalEnvironment.VITEST);
   });
 
-  it("proves an executable inert renderer before main-thread authenticated navigation", () => {
+  it("creates the authenticated main WebView from the loopback bootstrap URL", () => {
     const configuration = JSON.parse(
       readFileSync(
         resolve(process.cwd(), "src-tauri/tauri.conf.json"),
         "utf8",
       ),
     ) as TauriConfiguration;
-    const mainWindow = configuration.app.windows.find(
+    const startupWindow = configuration.app.windows.find(
+      (window) => window.label === "startup",
+    );
+    const configuredMain = configuration.app.windows.find(
       (window) => window.label === "main",
     );
     const recovery = readFileSync(
@@ -69,47 +72,46 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       "utf8",
     ).replace(/\r\n?/g, "\n");
 
-    expect(mainWindow).toBeDefined();
-    expect(mainWindow?.visible).toBe(false);
-    expect(mainWindow?.title).toBe("SahelFlow");
-    expect(mainWindow?.url).toMatch(/^data:text\/html/);
-    expect(decodeURIComponent(mainWindow?.url ?? "")).not.toContain("<script");
+    expect(startupWindow).toBeDefined();
+    expect(startupWindow?.visible).toBe(false);
+    expect(startupWindow?.title).toBe("SahelFlow - Starting");
+    expect(startupWindow?.url).toMatch(/^data:text\/html/);
+    expect(decodeURIComponent(startupWindow?.url ?? "")).not.toContain(
+      "<script",
+    );
+    expect(configuredMain).toBeUndefined();
 
     expect(recovery).toContain(
-      'RENDERER_PRIME_MARKER: &str = "sahelflow-renderer-prime-v1"',
+      "use tauri::webview::{WebviewWindow, WebviewWindowBuilder};",
     );
-    expect(recovery).toContain(".eval_with_callback(");
-    expect(recovery).toContain(".run_on_main_thread(");
-    expect(recovery).toContain('"ui-bootstrap-dispatch-started"');
-    expect(recovery).toContain('"ui-bootstrap-navigation-started"');
-    expect(recovery).toContain(
-      '"SF-RUNTIME-UI-NAVIGATION-DISPATCH-BLOCKED"',
-    );
-    expect(recovery).toContain('"SF-RUNTIME-UI-RENDERER-BLOCKED"');
-    expect(recovery).toContain(
-      "renderer_prime_document_is_inert_and_non_secret",
-    );
-    expect(recovery).not.toContain("BOOTSTRAP_NAVIGATION_DELAY");
+    expect(recovery).toContain("WebviewUrl::External(url)");
+    expect(recovery).toContain("MAIN_WINDOW_LABEL");
+    expect(recovery).toContain("BOOTSTRAP_WINDOW_TITLE");
+    expect(recovery).toContain('"workspace-window-creating"');
+    expect(recovery).toContain('"workspace-window-created"');
+    expect(recovery).toContain(".visible(true)");
+    expect(recovery).toContain(".focused(true)");
+    expect(recovery).not.toContain("renderer_is_ready(");
+    expect(recovery).not.toContain("schedule_packaged_navigation(");
+    expect(recovery).not.toContain(".run_on_main_thread(");
+    expect(recovery).not.toContain("window.location.replace(target)");
 
-    const primeNavigation = recovery.indexOf(
-      "window.navigate(renderer_prime_url)?",
+    const validatedHandoff = recovery.indexOf(
+      "let handoff = packaged_handoff(&requested_url)?;",
     );
-    const executableProof = recovery.indexOf(
-      ".eval_with_callback(",
-      primeNavigation,
+    const builder = recovery.indexOf("WebviewWindowBuilder::new(");
+    const externalInitialUrl = recovery.indexOf(
+      "WebviewUrl::External(url)",
+      builder,
     );
-    const mainThreadDispatch = recovery.indexOf(
-      ".run_on_main_thread(",
-      executableProof,
+    const readinessMonitor = recovery.indexOf(
+      "monitor_packaged_ui(",
+      externalInitialUrl,
     );
-    const bootstrapNavigation = recovery.indexOf(
-      "navigation_window.navigate(bootstrap_url)",
-      mainThreadDispatch,
-    );
-    expect(primeNavigation).toBeGreaterThan(-1);
-    expect(executableProof).toBeGreaterThan(primeNavigation);
-    expect(mainThreadDispatch).toBeGreaterThan(executableProof);
-    expect(bootstrapNavigation).toBeGreaterThan(mainThreadDispatch);
+    expect(validatedHandoff).toBeGreaterThan(-1);
+    expect(builder).toBeGreaterThan(validatedHandoff);
+    expect(externalInitialUrl).toBeGreaterThan(builder);
+    expect(readinessMonitor).toBeGreaterThan(externalInitialUrl);
   });
 
   it("commits and confirms the HttpOnly runtime cookie before workspace navigation", async () => {
