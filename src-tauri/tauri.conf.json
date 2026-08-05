@@ -12,8 +12,8 @@
   "app": {
     "windows": [
       {
-        "label": "main",
-        "title": "SahelFlow",
+        "label": "startup",
+        "title": "SahelFlow - Starting",
         "url": "data:text/html;charset=utf-8,%3C!doctype%20html%3E%3Ctitle%3ESahelFlow%3C%2Ftitle%3E",
         "width": 1280,
         "height": 800,
