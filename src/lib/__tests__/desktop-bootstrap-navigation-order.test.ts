@@ -7,7 +7,7 @@ function readRepositoryFile(path: string): string {
 }
 
 describe("packaged desktop bootstrap navigation", () => {
-  it("proves an executable renderer before issuing the loopback navigation", () => {
+  it("proves an executable renderer before main-thread loopback navigation", () => {
     const recovery = readRepositoryFile("src-tauri/src/startup_recovery.rs");
     const packagedTitle = recovery.indexOf(
       "window.set_title(BOOTSTRAP_WINDOW_TITLE)?;",
@@ -37,9 +37,17 @@ describe("packaged desktop bootstrap navigation", () => {
       "if renderer_is_ready(&window)",
       navigationWorker,
     );
-    const bootstrapNavigation = recovery.indexOf(
-      "window.navigate(bootstrap_url)",
+    const mainThreadDispatch = recovery.indexOf(
+      ".run_on_main_thread(",
       acceptedProof,
+    );
+    const navigationExecution = recovery.indexOf(
+      '"ui-bootstrap-navigation-started"',
+      mainThreadDispatch,
+    );
+    const bootstrapNavigation = recovery.indexOf(
+      "navigation_window.navigate(bootstrap_url)",
+      navigationExecution,
     );
     const directNavigation = recovery.indexOf(
       "window.navigate(handoff.bootstrap_url)?;",
@@ -53,13 +61,19 @@ describe("packaged desktop bootstrap navigation", () => {
     expect(callbackProof).toBeGreaterThan(rendererProbe);
     expect(navigationWorker).toBeGreaterThan(callbackProof);
     expect(acceptedProof).toBeGreaterThan(navigationWorker);
-    expect(bootstrapNavigation).toBeGreaterThan(acceptedProof);
+    expect(mainThreadDispatch).toBeGreaterThan(acceptedProof);
+    expect(navigationExecution).toBeGreaterThan(mainThreadDispatch);
+    expect(bootstrapNavigation).toBeGreaterThan(navigationExecution);
     expect(directNavigation).toBe(-1);
     expect(recovery).toContain(
       'RENDERER_PRIME_MARKER: &str = "sahelflow-renderer-prime-v1"',
     );
     expect(recovery).toContain(
       "const RENDERER_PRIME_TIMEOUT: Duration = Duration::from_secs(15);",
+    );
+    expect(recovery).toContain('"ui-bootstrap-dispatch-started"');
+    expect(recovery).toContain(
+      '"SF-RUNTIME-UI-NAVIGATION-DISPATCH-BLOCKED"',
     );
     expect(recovery).toContain('"SF-RUNTIME-UI-RENDERER-BLOCKED"');
     expect(recovery).not.toContain("BOOTSTRAP_NAVIGATION_DELAY");
