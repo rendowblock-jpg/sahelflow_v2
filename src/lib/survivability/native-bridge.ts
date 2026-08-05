@@ -491,7 +491,6 @@ function connect(endpoint: EndpointManifest): Promise<Socket> {
       port: endpoint.port,
       family: 4,
     });
-    let timer: ReturnType<typeof setTimeout>;
     const cleanup = () => {
       clearTimeout(timer);
       socket.off("connect", onConnect);
@@ -509,7 +508,7 @@ function connect(endpoint: EndpointManifest): Promise<Socket> {
       cleanup();
       reject(error);
     };
-    timer = setTimeout(() => {
+    const timer = setTimeout(() => {
       cleanup();
       socket.destroy();
       reject(new Error("The protected desktop bridge connection timed out"));
