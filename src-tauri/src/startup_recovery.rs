@@ -367,11 +367,7 @@ fn schedule_packaged_navigation(
                     None,
                 );
                 eprintln!("[sahelflow] FATAL: {detail}");
-                let _ = show_blocked(
-                    &app,
-                    "SF-RUNTIME-UI-NAVIGATION-SCRIPT-BLOCKED",
-                    detail,
-                );
+                let _ = show_blocked(&app, "SF-RUNTIME-UI-NAVIGATION-SCRIPT-BLOCKED", detail);
                 return;
             }
             thread::sleep(RENDERER_PRIME_POLL_INTERVAL);
