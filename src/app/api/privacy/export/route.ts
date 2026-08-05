@@ -27,9 +27,10 @@ export const POST = withErrorHandler(async () => {
       action: "privacy.export.completed",
       actor: trustedActorAuditIdentity(actorContext.actor),
       after: {
-        formatVersion: 1,
+        formatVersion: 2,
         byteLength: payload.length,
         excludesSecrets: true,
+        inventoryComplete: true,
       },
     },
   );
