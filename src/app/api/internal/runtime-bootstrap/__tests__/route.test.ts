@@ -22,11 +22,12 @@ describe("GET /api/internal/runtime-bootstrap", () => {
     expect(wrong.status).toBe(401);
   });
 
-  it("commits the fallback cookie before client-side navigation and consumes the bootstrap", async () => {
+  it("commits the fallback cookie before a CSP-compatible external handoff and consumes the bootstrap", async () => {
     const request = new Request(`http://127.0.0.1:49152/api/internal/runtime-bootstrap?token=${TOKEN}`);
     const accepted = await GET(request);
     const body = await accepted.text();
     const replay = await GET(request);
+    const csp = accepted.headers.get("content-security-policy") ?? "";
 
     expect(accepted.status).toBe(200);
     expect(accepted.headers.get("location")).toBeNull();
@@ -34,7 +35,10 @@ describe("GET /api/internal/runtime-bootstrap", () => {
     expect(accepted.headers.get("set-cookie")).toContain("sf_runtime=");
     expect(accepted.headers.get("set-cookie")?.toLowerCase()).toContain("httponly");
     expect(accepted.headers.get("set-cookie")?.toLowerCase()).toContain("samesite=strict");
-    expect(body).toContain('window.location.replace("/")');
+    expect(csp).toContain("script-src 'self'");
+    expect(csp).not.toContain("'unsafe-inline'");
+    expect(body).toContain('<script src="/runtime-bootstrap-handoff.js" defer></script>');
+    expect(body).not.toContain("window.location.replace");
     expect(replay.status).toBe(410);
   });
 
