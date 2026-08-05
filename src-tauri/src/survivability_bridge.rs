@@ -216,8 +216,12 @@ fn bridge_loop(listener: TcpListener, shutdown: Arc<AtomicBool>, context: Bridge
 fn handle_connection(stream: &mut TcpStream, context: &BridgeContext) -> Result<(), IoError> {
     write_handshake(stream, context)?;
     let mut request_bytes = read_frame(stream, MAX_REQUEST_BYTES)?;
-    let request_result = serde_json::from_slice::<BridgeRequest>(&request_bytes)
-        .map_err(|error| IoError::new(ErrorKind::InvalidData, format!("request JSON is invalid: {error}")));
+    let request_result = serde_json::from_slice::<BridgeRequest>(&request_bytes).map_err(|error| {
+        IoError::new(
+            ErrorKind::InvalidData,
+            format!("request JSON is invalid: {error}"),
+        )
+    });
     clear_bytes(&mut request_bytes);
     let request = request_result?;
     let request_id = if is_lower_hex(&request.request_id, 32) {
@@ -351,7 +355,10 @@ fn execute_request(context: &BridgeContext, request: BridgeRequest) -> Result<Va
         }
         "prepare-restore" => {
             let backup_id = request.backup_id.as_deref().ok_or_else(|| {
-                IoError::new(ErrorKind::InvalidInput, "restore request has no backup identity")
+                IoError::new(
+                    ErrorKind::InvalidInput,
+                    "restore request has no backup identity",
+                )
             })?;
             let result: RestorePreparationResult = backup_recovery::prepare_restore(
                 &context.app_data_dir,
@@ -366,7 +373,10 @@ fn execute_request(context: &BridgeContext, request: BridgeRequest) -> Result<Va
         }
         "delete-backup" => {
             let backup_id = request.backup_id.as_deref().ok_or_else(|| {
-                IoError::new(ErrorKind::InvalidInput, "delete request has no backup identity")
+                IoError::new(
+                    ErrorKind::InvalidInput,
+                    "delete request has no backup identity",
+                )
             })?;
             backup_recovery::delete_backup(
                 &context.app_data_dir,
@@ -398,7 +408,10 @@ fn request_contract<'a>(request: &'a BridgeRequest) -> Result<(&'static str, &'a
         }
         "prepare-restore" => {
             let backup_id = request.backup_id.as_deref().ok_or_else(|| {
-                IoError::new(ErrorKind::InvalidInput, "restore request has no backup identity")
+                IoError::new(
+                    ErrorKind::InvalidInput,
+                    "restore request has no backup identity",
+                )
             })?;
             validate_backup_id(backup_id)?;
             if request
@@ -415,7 +428,10 @@ fn request_contract<'a>(request: &'a BridgeRequest) -> Result<(&'static str, &'a
         }
         "delete-backup" if request.recovery_code.is_none() => {
             let backup_id = request.backup_id.as_deref().ok_or_else(|| {
-                IoError::new(ErrorKind::InvalidInput, "delete request has no backup identity")
+                IoError::new(
+                    ErrorKind::InvalidInput,
+                    "delete request has no backup identity",
+                )
             })?;
             validate_backup_id(backup_id)?;
             Ok(("survivability-backup:delete", backup_id))
@@ -429,16 +445,25 @@ fn request_contract<'a>(request: &'a BridgeRequest) -> Result<(&'static str, &'a
 
 fn validate_backup_id(value: &str) -> Result<(), IoError> {
     let Some(rest) = value.strip_prefix("backup-") else {
-        return Err(IoError::new(ErrorKind::InvalidInput, "backup identity is invalid"));
+        return Err(IoError::new(
+            ErrorKind::InvalidInput,
+            "backup identity is invalid",
+        ));
     };
     let Some((timestamp, random)) = rest.rsplit_once('-') else {
-        return Err(IoError::new(ErrorKind::InvalidInput, "backup identity is invalid"));
+        return Err(IoError::new(
+            ErrorKind::InvalidInput,
+            "backup identity is invalid",
+        ));
     };
     if !(10..=17).contains(&timestamp.len())
         || !timestamp.bytes().all(|byte| byte.is_ascii_digit())
         || !is_lower_hex(random, 16)
     {
-        return Err(IoError::new(ErrorKind::InvalidInput, "backup identity is invalid"));
+        return Err(IoError::new(
+            ErrorKind::InvalidInput,
+            "backup identity is invalid",
+        ));
     }
     Ok(())
 }
@@ -497,7 +522,10 @@ fn write_frame(stream: &mut TcpStream, payload: &[u8]) -> Result<(), IoError> {
 
 fn write_endpoint(path: &Path, manifest: &EndpointManifest) -> Result<(), IoError> {
     let parent = path.parent().ok_or_else(|| {
-        IoError::new(ErrorKind::InvalidInput, "survivability endpoint has no parent")
+        IoError::new(
+            ErrorKind::InvalidInput,
+            "survivability endpoint has no parent",
+        )
     })?;
     fs::create_dir_all(parent)?;
     reject_link(parent)?;
@@ -547,7 +575,10 @@ fn reject_link(path: &Path) -> Result<(), IoError> {
 
 fn sync_parent(path: &Path) -> Result<(), IoError> {
     let parent = path.parent().ok_or_else(|| {
-        IoError::new(ErrorKind::InvalidInput, "survivability authority has no parent")
+        IoError::new(
+            ErrorKind::InvalidInput,
+            "survivability authority has no parent",
+        )
     })?;
     #[cfg(not(windows))]
     fs::File::open(parent)?.sync_all()?;
@@ -606,8 +637,7 @@ fn now_unix_ms() -> Result<u64, IoError> {
     let elapsed = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|_| IoError::other("system clock precedes Unix epoch"))?;
-    u64::try_from(elapsed.as_millis())
-        .map_err(|_| IoError::other("system clock is out of range"))
+    u64::try_from(elapsed.as_millis()).map_err(|_| IoError::other("system clock is out of range"))
 }
 
 fn is_lower_hex(value: &str, length: usize) -> bool {
