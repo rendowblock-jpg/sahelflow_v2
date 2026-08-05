@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -90,10 +91,14 @@ function installedNodeComponents(repoDir: string): CycloneDxComponent[] {
   const components = new Map<string, CycloneDxComponent>();
   const visited = new Set<string>();
 
+  function isDirectoryOrLink(entry: { isDirectory(): boolean; isSymbolicLink(): boolean }): boolean {
+    return entry.isDirectory() || entry.isSymbolicLink();
+  }
+
   function scanNodeModules(nodeModulesDir: string): void {
     let realKey: string;
     try {
-      realKey = resolve(nodeModulesDir);
+      realKey = realpathSync(nodeModulesDir);
       if (visited.has(realKey) || !statSync(nodeModulesDir).isDirectory()) return;
     } catch {
       return;
@@ -101,11 +106,20 @@ function installedNodeComponents(repoDir: string): CycloneDxComponent[] {
     visited.add(realKey);
 
     for (const entry of readdirSync(nodeModulesDir, { withFileTypes: true })) {
-      if (!entry.isDirectory() || entry.name === ".bin" || entry.name.startsWith(".")) continue;
+      if (entry.name === ".bin") continue;
       const entryPath = join(nodeModulesDir, entry.name);
+      if (entry.name === ".bun") {
+        for (const stored of readdirSync(entryPath, { withFileTypes: true })) {
+          if (isDirectoryOrLink(stored)) {
+            scanNodeModules(join(entryPath, stored.name, "node_modules"));
+          }
+        }
+        continue;
+      }
+      if (entry.name.startsWith(".") || !isDirectoryOrLink(entry)) continue;
       if (entry.name.startsWith("@")) {
         for (const scoped of readdirSync(entryPath, { withFileTypes: true })) {
-          if (scoped.isDirectory()) scanPackage(join(entryPath, scoped.name));
+          if (isDirectoryOrLink(scoped)) scanPackage(join(entryPath, scoped.name));
         }
       } else {
         scanPackage(entryPath);
@@ -114,7 +128,13 @@ function installedNodeComponents(repoDir: string): CycloneDxComponent[] {
   }
 
   function scanPackage(packageDir: string): void {
-    const manifestPath = join(packageDir, "package.json");
+    let realPackageDir: string;
+    try {
+      realPackageDir = realpathSync(packageDir);
+    } catch {
+      return;
+    }
+    const manifestPath = join(realPackageDir, "package.json");
     if (existsSync(manifestPath)) {
       try {
         const manifest = readJson<{
@@ -147,7 +167,7 @@ function installedNodeComponents(repoDir: string): CycloneDxComponent[] {
         // fail the frozen dependency install/build that owns package validity.
       }
     }
-    scanNodeModules(join(packageDir, "node_modules"));
+    scanNodeModules(join(realPackageDir, "node_modules"));
   }
 
   scanNodeModules(root);
