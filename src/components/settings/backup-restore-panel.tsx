@@ -1,7 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useI18n } from "@/hooks/use-i18n";
+import {
+  DatabaseBackup,
+  KeyRound,
+  Loader2,
+  Plus,
+  RotateCcw,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
+
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,9 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Loader2, DatabaseBackup, Download, RotateCcw, Trash2, Plus } from "lucide-react";
-import { toast } from "@/lib/toast";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -20,292 +29,414 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { useI18n } from "@/hooks/use-i18n";
 import { isTauriEnv } from "@/lib/env";
+import { toast } from "@/lib/toast";
+import {
+  COPY,
+  errorMessage,
+  formatSize,
+  type SupportedLocale,
+} from "./backup-restore-copy";
 
 interface BackupEntry {
-  filename: string;
-  size: number;
-  createdAt: string;
+  backupId: string;
+  createdAtUnixMs: number;
+  verifiedAtUnixMs: number;
+  retentionClass: string;
+  pinned: boolean;
+  workspaceId: string;
+  sourceInstallationId: string;
+  shopCount: number;
+  plaintextBytes: number;
+  containerBytes: number;
+  status: "verified" | "available" | "recovery-kit-required" | "corrupt";
+  location: string;
+  requiresRecoveryKit: boolean;
+  independentRecoveryReady: boolean;
 }
 
-/** Format a byte count as a human-readable string (B / KB / MB / GB). */
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} KB`;
-  const mb = kb / 1024;
-  if (mb < 1024) return `${mb.toFixed(1)} MB`;
-  const gb = mb / 1024;
-  return `${gb.toFixed(2)} GB`;
+interface RecoveryKitResult {
+  kitId: string;
+  path: string;
+  recoveryCode: string;
+  workspaceId: string;
+  brkId: string;
+  createdAtUnixMs: number;
+}
+
+function localeKey(locale: string): SupportedLocale {
+  return locale === "ar" || locale === "en" ? locale : "fr";
+}
+
+function statusLabel(entry: BackupEntry, copy: Record<string, string>): string {
+  if (entry.status === "corrupt") return copy.corrupt;
+  if (entry.requiresRecoveryKit) return copy.kitRequired;
+  if (entry.independentRecoveryReady) return copy.ready;
+  return copy.localAuthority;
 }
 
 export function BackupRestorePanel() {
-  const { t, locale } = useI18n();
+  const { locale } = useI18n();
+  const resolvedLocale = localeKey(locale);
+  const copy = COPY[resolvedLocale];
+  const desktop = isTauriEnv();
   const [backups, setBackups] = useState<BackupEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [creatingKit, setCreatingKit] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [restoreTarget, setRestoreTarget] = useState<BackupEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BackupEntry | null>(null);
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
-  // Bump to trigger a refetch (after create/delete). Initial load runs on mount.
-  const [reloadKey, setReloadKey] = useState(0);
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [kitResult, setKitResult] = useState<RecoveryKitResult | null>(null);
 
-  // Fetch the backup list. `loading` starts true, so we only flip it to
-  // false once the first fetch resolves. Refetches (after create/delete)
-  // bump `reloadKey`, which re-runs this effect without flickering the
-  // whole list — the per-row buttons already show their own spinners.
+  const reload = useCallback(() => setReloadKey((value) => value + 1), []);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/backup/list", { cache: "no-store" });
-        if (!res.ok) throw new Error(t("common.fetchFailed"));
-        const data = (await res.json()) as { backups: BackupEntry[] };
-        if (cancelled) return;
-        setBackups(data.backups ?? []);
-      } catch {
-        // Network/load error — leave the existing list (or empty state) in
-        // place. The create/restore/delete actions surface their own errors.
+        const response = await fetch("/api/backup/list", { cache: "no-store" });
+        const payload = (await response.json()) as {
+          backups?: BackupEntry[];
+          error?: string;
+        };
+        if (!response.ok) throw new Error(payload.error ?? copy.loadFailed);
+        if (!cancelled) setBackups(payload.backups ?? []);
+      } catch (error) {
+        if (!cancelled) toast.error(errorMessage(error, copy.loadFailed));
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    load();
+    if (desktop) void load();
+    else setLoading(false);
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [copy.loadFailed, desktop, reloadKey]);
 
-  // Trigger a refetch (called from handleCreate / handleDelete)
-  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
-
-  async function handleCreate() {
+  async function createBackup() {
     setCreating(true);
     try {
-      const res = await fetch("/api/backup/create", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? t("common.createFailed"));
-      }
-      toast.success(t("backup.createSuccess"));
+      const response = await fetch("/api/backup/create", { method: "POST" });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? copy.actionFailed);
+      toast.success(copy.createSuccess);
       reload();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : t("backup.createFailed"),
-      );
+    } catch (error) {
+      toast.error(errorMessage(error, copy.actionFailed));
     } finally {
       setCreating(false);
     }
   }
 
-  async function handleRestore() {
-    if (!restoreTarget) return;
-    setActionInProgress(restoreTarget.filename);
+  async function createRecoveryKit() {
+    setCreatingKit(true);
     try {
-      // The restore route's zod schema enforces confirm: z.literal("RESTORE")
-      // as an API-level safety net (separate from the AlertDialog the user
-      // already clicked to get here). Without this field the API returns 400
-      // and the restore silently fails.
-      const res = await fetch("/api/backup/restore", {
+      const response = await fetch("/api/backup/recovery-kit", { method: "POST" });
+      const payload = (await response.json()) as RecoveryKitResult & { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? copy.actionFailed);
+      setKitResult(payload);
+      toast.success(copy.kitSuccess);
+      reload();
+    } catch (error) {
+      toast.error(errorMessage(error, copy.actionFailed));
+    } finally {
+      setCreatingKit(false);
+    }
+  }
+
+  async function prepareRestore() {
+    if (!restoreTarget) return;
+    setBusyId(restoreTarget.backupId);
+    try {
+      const response = await fetch("/api/backup/restore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          filename: restoreTarget.filename,
+          backupId: restoreTarget.backupId,
+          recoveryCode: recoveryCode.trim() || undefined,
           confirm: "RESTORE",
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? t("common.restoreFailed"));
-      }
-      toast.success(t("backup.restoreSuccess"));
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? copy.actionFailed);
+      toast.success(copy.restoreSuccess);
       setRestoreTarget(null);
-      // Restore disconnects the process-bound Prisma client. Relaunch the
-      // desktop so migrations and ShopContext are revalidated before use.
-      if (isTauriEnv()) {
-        const { relaunch } = await import("@tauri-apps/plugin-process");
-        await relaunch();
-      } else if (typeof window !== "undefined") {
-        setTimeout(() => window.location.reload(), 800);
-      }
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : t("backup.restoreFailed"),
-      );
+      setRecoveryCode("");
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    } catch (error) {
+      toast.error(errorMessage(error, copy.actionFailed));
     } finally {
-      setActionInProgress(null);
+      setBusyId(null);
     }
   }
 
-  async function handleDelete() {
+  async function deleteBackup() {
     if (!deleteTarget) return;
-    setActionInProgress(deleteTarget.filename);
+    setBusyId(deleteTarget.backupId);
     try {
-      const res = await fetch(
-        `/api/backup/${encodeURIComponent(deleteTarget.filename)}`,
+      const response = await fetch(
+        `/api/backup/${encodeURIComponent(deleteTarget.backupId)}`,
         { method: "DELETE" },
       );
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? t("common.deleteFailed"));
-      }
-      toast.success(t("backup.deleteSuccess"));
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? copy.actionFailed);
+      toast.success(copy.deleteSuccess);
       setDeleteTarget(null);
       reload();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : t("backup.deleteFailed"),
-      );
+    } catch (error) {
+      toast.error(errorMessage(error, copy.actionFailed));
     } finally {
-      setActionInProgress(null);
+      setBusyId(null);
     }
   }
 
-  const localeForDate = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR";
+  const dateLocale = resolvedLocale === "ar" ? "ar-DZ" : resolvedLocale === "en" ? "en-GB" : "fr-DZ";
 
   return (
-    <>
+    <div dir={resolvedLocale === "ar" ? "rtl" : "ltr"}>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
               <DatabaseBackup className="h-5 w-5 text-primary" />
             </span>
-            {t("backup.title")}
+            {copy.title}
           </CardTitle>
-          <CardDescription>{t("backup.description")}</CardDescription>
+          <CardDescription>{copy.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={handleCreate} disabled={creating || loading}>
-              {creating ? (
-                <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
+          {!desktop ? (
+            <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+              {copy.desktopOnly}
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={createBackup} disabled={creating || creatingKit}>
+                  {creating ? (
+                    <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="me-1.5 h-4 w-4" />
+                  )}
+                  {creating ? copy.creating : copy.create}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={createRecoveryKit}
+                  disabled={creating || creatingKit}
+                >
+                  {creatingKit ? (
+                    <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <KeyRound className="me-1.5 h-4 w-4" />
+                  )}
+                  {creatingKit ? copy.creatingKit : copy.createKit}
+                </Button>
+              </div>
+
+              {loading ? (
+                <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                  {copy.creating}
+                </div>
+              ) : backups.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-6 text-center">
+                  <ShieldCheck className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm font-medium">{copy.empty}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {copy.emptyDescription}
+                  </p>
+                </div>
               ) : (
-                <Plus className="h-4 w-4 me-1.5" />
+                <div className="overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{copy.backup}</TableHead>
+                        <TableHead>{copy.shops}</TableHead>
+                        <TableHead>{copy.size}</TableHead>
+                        <TableHead>{copy.verified}</TableHead>
+                        <TableHead>{copy.recovery}</TableHead>
+                        <TableHead className="text-end">{copy.actions}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {backups.map((entry) => {
+                        const busy = busyId === entry.backupId;
+                        return (
+                          <TableRow key={entry.backupId}>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="font-mono text-xs" dir="ltr">
+                                  {entry.backupId}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(entry.createdAtUnixMs).toLocaleString(dateLocale)}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="tabular-nums">{entry.shopCount}</TableCell>
+                            <TableCell className="tabular-nums" dir="ltr">
+                              {formatSize(entry.containerBytes)}
+                            </TableCell>
+                            <TableCell>{entry.status}</TableCell>
+                            <TableCell>{statusLabel(entry, copy)}</TableCell>
+                            <TableCell className="text-end">
+                              <div className="inline-flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={busy || entry.status === "corrupt"}
+                                  onClick={() => {
+                                    setRecoveryCode("");
+                                    setRestoreTarget(entry);
+                                  }}
+                                >
+                                  {busy ? (
+                                    <Loader2 className="me-1 h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <RotateCcw className="me-1 h-3.5 w-3.5" />
+                                  )}
+                                  {copy.restore}
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  disabled={busy}
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setDeleteTarget(entry)}
+                                  aria-label={copy.delete}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
-              {creating ? t("backup.creating") : t("backup.createButton")}
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium">{t("backup.listTitle")}</h3>
-
-            {loading ? (
-              <div className="flex items-center justify-center py-8 text-muted-foreground">
-                <Loader2 className="h-4 w-4 me-2 animate-spin" />
-                {t("backup.loading")}
-              </div>
-            ) : backups.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-6 text-center">
-                <Download className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
-                <p className="text-sm font-medium">{t("backup.empty")}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t("backup.emptyDesc")}
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-lg border">
-                <div className="overflow-x-auto">
-        <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("backup.columnFilename")}</TableHead>
-                      <TableHead className="w-24">{t("backup.columnSize")}</TableHead>
-                      <TableHead className="w-44">{t("backup.columnCreated")}</TableHead>
-                      <TableHead className="w-44 text-end">
-                        {t("backup.columnActions")}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {backups.map((b) => {
-                      const busy = actionInProgress === b.filename;
-                      return (
-                        <TableRow key={b.filename}>
-                          <TableCell className="font-mono text-xs break-all">
-                            {b.filename}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground tabular-nums">
-                            {formatSize(b.size)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground tabular-nums">
-                            {new Date(b.createdAt).toLocaleString(localeForDate, {
-                              year: "numeric",
-                              month: "short",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </TableCell>
-                          <TableCell className="text-end">
-                            <div className="inline-flex gap-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setRestoreTarget(b)}
-                                disabled={busy}
-                              >
-                                {busy ? (
-                                  <Loader2 className="h-3.5 w-3.5 me-1 animate-spin" />
-                                ) : (
-                                  <RotateCcw className="h-3.5 w-3.5 me-1" />
-                                )}
-                                {t("backup.restoreButton")}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setDeleteTarget(b)}
-                                disabled={busy}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                <span className="sr-only">
-                                  {t("backup.deleteButton")}
-                                </span>
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-        </div>
-              </div>
-            )}
-
-            <p className="text-xs text-muted-foreground">{t("backup.restoreHint")}</p>
-          </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
-      <ConfirmDialog
-        open={restoreTarget !== null}
-        onOpenChange={(o) => {
-          if (!o) setRestoreTarget(null);
-        }}
-        title={t("backup.confirmRestoreTitle")}
-        description={t("backup.confirmRestoreDesc")}
-        confirmLabel={t("backup.restoreButton")}
-        cancelLabel={t("common.cancel")}
-        destructive
-        onConfirm={handleRestore}
-      />
+      {restoreTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="restore-title"
+            className="w-full max-w-lg space-y-4 rounded-xl border bg-card p-6 shadow-xl"
+          >
+            <div>
+              <h2 id="restore-title" className="font-semibold">
+                {copy.restoreTitle}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {copy.restoreDescription}
+              </p>
+            </div>
+            <p className="rounded-md bg-muted p-2 font-mono text-xs" dir="ltr">
+              {restoreTarget.backupId}
+            </p>
+            {restoreTarget.requiresRecoveryKit ? (
+              <label className="block space-y-2 text-sm">
+                <span>{copy.recoveryCode}</span>
+                <Input
+                  value={recoveryCode}
+                  onChange={(event) => setRecoveryCode(event.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  dir="ltr"
+                />
+                <span className="block text-xs text-muted-foreground">
+                  {copy.recoveryCodeHint}
+                </span>
+              </label>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRestoreTarget(null);
+                  setRecoveryCode("");
+                }}
+                disabled={busyId !== null}
+              >
+                {copy.cancel}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={prepareRestore}
+                disabled={
+                  busyId !== null ||
+                  (restoreTarget.requiresRecoveryKit && !recoveryCode.trim())
+                }
+              >
+                {busyId ? (
+                  <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
+                ) : null}
+                {busyId ? copy.preparingRestore : copy.confirmRestore}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {kitResult ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="kit-title"
+            className="w-full max-w-lg space-y-4 rounded-xl border bg-card p-6 shadow-xl"
+          >
+            <div>
+              <h2 id="kit-title" className="font-semibold">
+                {copy.kitTitle}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {copy.kitDescription}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">{copy.kitPath}</p>
+              <p className="break-all rounded-md bg-muted p-2 font-mono text-xs" dir="ltr">
+                {kitResult.path}
+              </p>
+              <p className="text-xs text-muted-foreground">{copy.codeLabel}</p>
+              <p className="break-all rounded-md border p-3 font-mono text-sm" dir="ltr">
+                {kitResult.recoveryCode}
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={() => setKitResult(null)}>{copy.saved}</Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        onOpenChange={(o) => {
-          if (!o) setDeleteTarget(null);
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
         }}
-        title={t("backup.confirmDeleteTitle")}
-        description={t("backup.confirmDeleteDesc")}
-        confirmLabel={t("common.delete")}
-        cancelLabel={t("common.cancel")}
+        title={copy.deleteTitle}
+        description={copy.deleteDescription}
+        confirmLabel={copy.delete}
+        cancelLabel={copy.cancel}
         destructive
-        onConfirm={handleDelete}
+        onConfirm={deleteBackup}
       />
-    </>
+    </div>
   );
 }
