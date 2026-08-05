@@ -22,6 +22,7 @@ const MAIN_WINDOW_LABEL: &str = "main";
 const MAIN_WINDOW_TITLE: &str = "SahelFlow";
 const BOOTSTRAP_WINDOW_TITLE: &str = "SahelFlow - Starting";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
+const WORKSPACE_WINDOW_CREATION_TIMEOUT: Duration = Duration::from_secs(15);
 const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
@@ -147,7 +148,14 @@ fn create_workspace_window(
     } else {
         MAIN_WINDOW_TITLE
     };
-    let window = WebviewWindowBuilder::new(app, MAIN_WINDOW_LABEL, WebviewUrl::External(url))
+    let app_for_builder = app.clone();
+    let (sender, receiver) = std::sync::mpsc::sync_channel::<Result<(), String>>(1);
+    app.run_on_main_thread(move || {
+        let result = WebviewWindowBuilder::new(
+            &app_for_builder,
+            MAIN_WINDOW_LABEL,
+            WebviewUrl::External(url),
+        )
         .title(title)
         .inner_size(1280.0, 800.0)
         .min_inner_size(800.0, 500.0)
@@ -155,8 +163,29 @@ fn create_workspace_window(
         .maximized(true)
         .visible(true)
         .focused(true)
-        .build()?;
-    Ok(window)
+        .build()
+        .map(|_| ())
+        .map_err(|error| error.to_string());
+        let _ = sender.send(result);
+    })?;
+
+    receiver
+        .recv_timeout(WORKSPACE_WINDOW_CREATION_TIMEOUT)
+        .map_err(|_| {
+            IoError::new(
+                ErrorKind::TimedOut,
+                "the authenticated workspace window was not created on Tauri's main thread",
+            )
+        })?
+        .map_err(IoError::other)?;
+
+    app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
+        IoError::new(
+            ErrorKind::NotFound,
+            "the main-thread workspace creation completed without a window handle",
+        )
+        .into()
+    })
 }
 
 pub fn reset_startup_trace(app_data_dir: &Path) {
