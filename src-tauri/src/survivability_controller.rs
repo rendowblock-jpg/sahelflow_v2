@@ -1,7 +1,6 @@
 use crate::backup_recovery;
-use crate::installation_identity_rebind;
 use crate::installation_root_key::{
-    self, InstallationRootRequest,
+    self, InstallationIdentity, InstallationRootRequest,
 };
 use crate::survivability_bridge::SurvivabilityBridge;
 use serde::Deserialize;
@@ -77,40 +76,12 @@ impl Drop for SurvivabilityController {
 }
 
 pub(crate) fn pending_restore_present() -> Result<bool, IoError> {
-    backup_recovery::pending_restore_present(&app_data_dir()?)
+    Ok(backup_recovery::pending_restore_present(&app_data_dir()?))
 }
 
 pub(crate) fn recover_pending_before_run() -> Result<(), IoError> {
     let app_data_dir = app_data_dir()?;
-    if !backup_recovery::pending_restore_present(&app_data_dir)? {
-        return Ok(());
-    }
-    let system_dir = app_data_dir.join("system");
-    installation_identity_rebind::recover_incomplete_rebind(&system_dir)
-        .map_err(|error| IoError::other(error.to_string()))?;
-    let identity = installation_root_key::probe_protected_identity(&system_dir)
-        .map_err(|error| IoError::other(error.to_string()))?
-        .ok_or_else(|| {
-            IoError::new(
-                ErrorKind::InvalidData,
-                "pending replacement restore has no protected installation identity",
-            )
-        })?;
-    let prepared = installation_root_key::prepare_installation_root(
-        InstallationRootRequest {
-            system_dir: &system_dir,
-            legacy_master_key_path: &app_data_dir.join("master.key"),
-            identity: identity.clone(),
-            existing_authority_present: true,
-            provably_fresh: false,
-        },
-    )
-    .map_err(|error| IoError::other(error.to_string()))?;
-    backup_recovery::apply_pending_restore(
-        &app_data_dir,
-        &prepared.root_key,
-        &identity,
-    )?;
+    backup_recovery::recover_pending_before_startup(&app_data_dir)?;
     Ok(())
 }
 
@@ -120,7 +91,7 @@ fn start_ready_bridge(
     document_dir: &Path,
 ) -> Result<SurvivabilityBridge, IoError> {
     let authority = backup_recovery::discover_backup_authority(app_data_dir)?;
-    let identity = installation_root_key::InstallationIdentity::new(
+    let identity = InstallationIdentity::new(
         authority.workspace_id.clone(),
         authority.installation_id.clone(),
     )
