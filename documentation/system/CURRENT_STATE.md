@@ -11,14 +11,14 @@
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
-> **Active phase package:** issue #204 through PR #207 — bounded P4-A/P4-B protected-data authority and migration
+> **Active phase package:** issue #204 through PR #207 — complete P4-A…P4-F implementation candidate awaiting exact-head review and validation
 > **Retained installed evidence:** issue #201
 > **Execution epic:** issue #164
-> **Last assessed:** 2026-08-04
+> **Last assessed:** 2026-08-05
 
-This document states what merged protected source and named evidence prove now.
-The exact live execution frontier belongs in
-[`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md).
+This document states merged protected truth and the exact unmerged implementation
+frontier without converting either into a release or phase-closure claim. Re-fetch
+GitHub before relying on any active PR SHA.
 
 ## Executive truth
 
@@ -26,15 +26,17 @@ SahelFlow is a broad real internal Windows application, not an empty prototype o
 generic dashboard shell. It is not yet a commercially complete or class-AAA
 SahelFlow 1.0 product.
 
-Protected source includes the canonical Golden COD foundation; durable identity,
+Protected main includes the canonical Golden COD foundation; durable identity,
 Teams, permissions and licensing; Tauri-owned native multi-shop lifecycle;
 durable provider ingress/effects; database-authoritative inbox; truthful
 automations; proposal-bound sensitive AI actions; durable commerce; and one
 canonical courier facade.
 
 Protected PR #206 froze Phase 4 contracts and consequence-based CI lanes. PR #207
-is the only active production package and remains unmerged until exact-head source,
-Windows runtime, installed-MSI and review-conversation gates pass.
+is the only active production package. Its branch now carries the complete Phase 4
+source candidate, but that candidate is not protected or phase-closed until the
+exact final head passes the selected source, Rust, Windows, installed-MSI and
+review-conversation gates.
 
 ## Latest protected source closures
 
@@ -76,16 +78,11 @@ frozen install, Prisma generation and migration status, TypeScript, ESLint, the
 complete Vitest suite, 80%+ coverage and a zero-vulnerability production
 dependency audit.
 
-Protected-source outcomes include:
-
-- authenticated persistence-before-acknowledgement and durable WhatsApp ingress;
-- database-authoritative inbox, exact identities, leases, immutable attempts and recovery;
-- truthful durable automations and receipt-safe external effects;
-- immutable proposal/approval/execution binding for sensitive AI actions;
-- one canonical courier facade and internal durable effect/tracking runtime;
-- durable commerce run/page/item/attempt truth, opaque continuation, bounded
-  yields, monotonic watermarks and audited recovery;
-- deterministic provider conformance and fail-closed unverified capabilities.
+Protected-source outcomes include authenticated persistence-before-acknowledgement,
+durable WhatsApp ingress/effects, database-authoritative inbox, truthful
+automations, proposal-bound sensitive AI actions, one canonical courier facade,
+durable commerce run/page/item/attempt truth and fail-closed provider capability
+authority.
 
 Issue #202 is closed. No known Phase 3 P0/P1 remains. FD-030 defers real-provider
 certification to Phase 9 representative beta and retains issue #201 at the
@@ -96,21 +93,25 @@ applicable Level 3/installed evidence gate.
 PR #206 merged at `9306564ce5b5ea4b3b13b219aa45d4672ae13184`.
 It protected the exhaustive audit, P4-001 through P4-013 Problem Register, frozen
 key/backup/recovery/migration/evidence contracts and CI consequence mapping.
-Crypto, migration, storage, backup/restore and secret-store changes now select
-Windows packaged-runtime and installed-MSI evidence; native authority changes also
-select Rust parity where applicable.
+Crypto, migration, storage, backup/restore and secret-store changes select Windows
+packaged-runtime and installed-MSI evidence; native authority changes also select
+Rust parity where applicable.
 
 ## Current implementation shape
 
 ```text
 Tauri Windows host
-├── installation root, licensing, device and clock authority
+├── DPAPI installation KEK / purpose-separated key derivation
 ├── versioned workspace/shop registry and native lifecycle journal
-├── all-shop migration and recovery coordinator
+├── authenticated all-shop migration and replacement-restore convergence
+├── encrypted all-shop backup, BRK/DEK authority and independent recovery kit
+├── localhost-only replay-protected survivability command bridge
 ├── exact runtime containment, readiness and shutdown
 ├── packaged Node/Next.js standalone runtime
 │   ├── App Router UI and API routes
 │   ├── Prisma and one SQLite database per shop
+│   ├── contextual protected-value and blind-index authority
+│   ├── governed export/reset/erase/shop-delete lifecycle
 │   ├── identity, permissions and licensing authority
 │   ├── canonical business commands, events and durable effects
 │   ├── database-authoritative inbox, automations, AI and commerce
@@ -121,42 +122,70 @@ Tauri Windows host
 The Node process is bound to one immutable exact `ShopContext`. Shop switching
 remains a native lifecycle operation.
 
-## Active Phase 4 frontier
+## Active Phase 4 frontier — PR #207
 
-Issue #204 owns the active phase. PR #207 is the only active implementation PR.
-It delivers the first dependency-correct P4-A/P4-B package:
+The unmerged branch now implements all authorized packages as one dependency-correct
+candidate:
 
-- HKDF-SHA-256 versioned purpose-separated installation wrapping/integrity keys;
+### P4-A / P4-B — protected data and migration
+
+- HKDF-SHA-256 versioned purpose-separated installation keys;
 - random persisted per-shop data, blind-index and secret authorities;
-- strict contextual versioned AES-256-GCM protected-value envelopes;
-- explicit corruption for malformed, wrong-key, wrong-purpose, wrong-context and
-  authentication failures;
-- canonical protected reads/writes, nested relation decryption, exact projections
-  and blind-index searches for Customer, Order, Conversation and Message;
-- separated secret-store and business-truth envelope authority;
-- guarded raw Prisma access and one canonical contextual client;
-- installation-root re-wrap without rewriting seller ciphertext;
-- exclusive, idempotent, restart-safe all-registered-shop protected-data migration;
-- exact-record race-safe protected upserts;
-- process-memory-only sharing of the one-use native installation root across
-  duplicated standalone server chunks.
+- contextual versioned AES-256-GCM envelopes and explicit corruption;
+- authoritative protected Prisma reads/writes, nested relations, bulk/upsert
+  boundaries and purpose-separated exact searches;
+- guarded raw Prisma access, installation-root re-wrap and restart-safe
+  all-registered-shop protected-data migration.
 
-PR #207 does not implement all-shop encrypted backup, independent recovery kit,
-replacement-install restore/cutover, complete privacy/destructive lifecycle,
-Phase 4 closure, release, Founder acceptance, Beta or Stable.
+### P4-C — encrypted all-shop backup and independent recovery
 
-## Remaining Phase 4 dependency order
+- native SQLite Online Backup snapshots for every registered shop;
+- immutable encrypted descriptor, manifest and ordered object set;
+- per-license BRK and fresh random DEK per backup;
+- exact workspace/install/shop/incarnation and migration bindings;
+- independent recovery kit, one-time recovery code, persisted round-trip proof,
+  verified listing and governed deletion receipt.
 
-After PR #207 is protected and issue #204 is reconciled:
+### P4-D / P4-E — replacement restore and migration convergence
 
-1. P4-C: native SQLite online all-shop encrypted backup, immutable container,
-   authenticated manifest, independent recovery kit and retention/pinning;
-2. P4-D: replacement-install staged restore, authorization, rescue, key re-wrap,
-   identity re-enrollment, all-shop cutover, compensation and recovery UX;
-3. P4-E: general authenticated migration journal and complete clean/mixed/
-   interrupted/low-disk/corrupt matrices;
-4. P4-F: erase/reset/export/retention governance, SBOM/VEX, threat model,
-   Law 18-07 mapping, independent reviews and Level 3 closure evidence.
+- full verification before live mutation, all-shop staging, rescue generation,
+  authenticated applying journal, post-apply proof and compensation;
+- local replacement installation identity preserved while imported shop keys are
+  re-wrapped and source sessions/auth secret are removed;
+- wrong kit, corrupt/missing object, unsupported schema, low disk and interrupted
+  cutover fail closed;
+- bounded localhost bridge with authenticated handshake, exact action/resource
+  binding, short-lived single-use tokens and durable replay protection;
+- pending restore converges before Node, Prisma or WebView exposure and proves the
+  previous packaged runtime stopped before mutation.
+
+### P4-F — privacy, security and release authority
+
+- machine-readable classification for every Prisma model, protected field and
+  installation-level file store;
+- one complete dependency-ordered export/reset/erase lifecycle, active-session
+  revocation and reuse of governed native shop deletion;
+- amended Algeria Law 18-07 / Law 25-11 engineering mapping with qualified legal
+  review boundary;
+- threat model, independent-review protocol and Level 1/2/3 evidence matrix;
+- resolved npm/Cargo CycloneDX SBOM, checked-in VEX triage authority and
+  deterministic evidence manifest retained through the repository inventory;
+- executable closure verifier that blocks new unclassified models/stores, legacy
+  backup paths, incomplete erase authority or missing security evidence.
+
+## Remaining before Phase 4 can close
+
+1. finish the static exact-head compiler/interface audit and freeze one non-skipped
+   final head;
+2. request separated exact-head security/privacy review and leave no unresolved
+   P0/P1 conversation;
+3. pass the one selected full gate: authority, TypeScript, ESLint, complete Vitest,
+   coverage, Prisma, dependency audit, Rust release formatting/check, Windows Rust,
+   packaged standalone/runtime and installed-MSI lifecycle;
+4. prove the replacement-install Level 3 drill and applicable issue #201 obligation
+   from the exact candidate rather than from source narrative;
+5. merge with expected-head binding, verify protected main, then reconcile and
+   close issue #204 only if every exit condition is actually satisfied.
 
 ## Release and installed truth
 
@@ -166,4 +195,4 @@ Recorded T470 launches remain beyond the eight-second target. Founder acceptance
 remains open.
 
 No active Phase 4 source package authorizes a version bump, release publication,
-Founder acceptance, Beta or Stable claim.
+Founder acceptance, Beta, Stable, legal-certification or penetration-test claim.
