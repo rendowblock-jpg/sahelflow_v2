@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { NextRequest } from "next/server";
+import { proxy } from "@/proxy";
 import { GET, resetRuntimeBootstrapForTest } from "../route";
 
 const TOKEN = "c".repeat(64);
@@ -10,6 +12,8 @@ describe("GET /api/internal/runtime-bootstrap", () => {
   });
 
   afterEach(() => {
+    delete process.env.AUTH_SECRET;
+    delete process.env.SF_AUTH_MODE;
     delete process.env.SF_RUNTIME_APP_TOKEN;
     resetRuntimeBootstrapForTest();
   });
@@ -40,6 +44,25 @@ describe("GET /api/internal/runtime-bootstrap", () => {
     expect(body).toContain('<script src="/runtime-bootstrap-handoff.js" defer></script>');
     expect(body).not.toContain("window.location.replace");
     expect(replay.status).toBe(410);
+  });
+
+  it("allows only the exact loopback handoff asset before the launch cookie exists", async () => {
+    process.env.SF_AUTH_MODE = "configured";
+    process.env.AUTH_SECRET = "e".repeat(64);
+
+    const handoff = await proxy(
+      new NextRequest("http://127.0.0.1:49152/runtime-bootstrap-handoff.js"),
+    );
+    const unrelatedScript = await proxy(
+      new NextRequest("http://127.0.0.1:49152/unrelated.js"),
+    );
+    const nonLoopbackHandoff = await proxy(
+      new NextRequest("http://example.com/runtime-bootstrap-handoff.js"),
+    );
+
+    expect(handoff.headers.get("x-middleware-next")).toBe("1");
+    expect(unrelatedScript.status).toBe(401);
+    expect(nonLoopbackHandoff.status).toBe(401);
   });
 
   it("does not bootstrap on a non-loopback host", async () => {
