@@ -7,7 +7,9 @@ const unwrappedControlRoutes = [
   /^auth[\\/]login[\\/]route\.ts$/,
   /^auth[\\/]status[\\/]route\.ts$/,
   /^health[\\/]route\.ts$/,
-  /^internal[\\/]runtime-(?:bootstrap|ready|shutdown|ui-ready)[\\/]route\.ts$/,
+  /^internal[\\/]runtime-bootstrap[\\/]route\.ts$/,
+  /^internal[\\/]runtime-bootstrap[\\/]confirm[\\/]route\.ts$/,
+  /^internal[\\/]runtime-(?:ready|shutdown|ui-ready)[\\/]route\.ts$/,
 ] as const;
 
 function routeFiles(directory: string): string[] {
