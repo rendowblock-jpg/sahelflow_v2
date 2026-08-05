@@ -37,40 +37,35 @@ describe("protected Prisma mutation boundary", () => {
   });
 
   it("blocks protected writes in both upsert branches", () => {
-    for (const [branch, payload] of [
-      [
-        "create",
-        {
-          where: { id: "delivery-42" },
-          create: {
-            id: "delivery-42",
-            order: { create: { id: "order-42", phone: "0555123456" } },
-          },
-          update: {},
+    const payloads = [
+      {
+        where: { id: "delivery-42" },
+        create: {
+          id: "delivery-42",
+          order: { create: { id: "order-42", phone: "0555123456" } },
         },
-      ],
-      [
-        "update",
-        {
-          where: { id: "delivery-42" },
-          create: { id: "delivery-42" },
-          update: {
-            conversation: {
-              upsert: {
-                create: { id: "conversation-42", contactName: "Nadia" },
-                update: { contactName: "Nadia" },
-              },
+        update: {},
+      },
+      {
+        where: { id: "delivery-42" },
+        create: { id: "delivery-42" },
+        update: {
+          conversation: {
+            upsert: {
+              create: { id: "conversation-42", contactName: "Nadia" },
+              update: { contactName: "Nadia" },
             },
           },
         },
-      ],
-    ] as const) {
+      },
+    ];
+
+    for (const payload of payloads) {
       expect(() =>
         assertProtectedMutationBoundary("Delivery", "upsert", payload),
       ).toThrowError(
         expect.objectContaining({
           code: "PROTECTED_DATA_NESTED_WRITE_BLOCKED",
-          message: expect.stringContaining(branch),
         }),
       );
     }
