@@ -11,6 +11,26 @@ import type {
 import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
 import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
 
+interface ReturnOrderProjectionRow {
+  id: string;
+  orderNumber: string;
+  customerId: string;
+  source: string;
+  sourceMetadata: string | null;
+  status: string;
+  version: number | bigint;
+  totalPrice: number | bigint;
+  deliveryCost: number | bigint | null;
+  wilaya: string;
+  commune: string;
+  fulfillmentState: string | null;
+  deliveryState: string | null;
+  inventoryState: string | null;
+  codState: string | null;
+  returnState: string | null;
+  refundState: string | null;
+}
+
 export interface CanonicalReturnOrderItem {
   id: string;
   productId: string | null;
@@ -93,34 +113,22 @@ export async function loadCanonicalReturnOrder(
   tx: BusinessTransaction,
   orderId: string,
 ): Promise<CanonicalReturnOrder> {
-  // This must use the protected transaction delegate rather than raw SQL.
-  // Address, phone and notes are record-bound envelopes and must be opened
-  // against the source Order ID before an exchange copies them to a new row.
-  const projection = await tx.order.findFirst({
-    where: { id: orderId, deletedAt: null },
-    select: {
-      id: true,
-      orderNumber: true,
-      customerId: true,
-      source: true,
-      sourceMetadata: true,
-      status: true,
-      version: true,
-      totalPrice: true,
-      deliveryCost: true,
-      wilaya: true,
-      commune: true,
-      address: true,
-      phone: true,
-      notes: true,
-      fulfillmentState: true,
-      deliveryState: true,
-      inventoryState: true,
-      codState: true,
-      returnState: true,
-      refundState: true,
-    },
-  });
+  // The projection-only lifecycle columns are intentionally outside the
+  // Prisma Order model, so load only non-protected authority through raw SQL.
+  // Record-bound address, phone and notes must be opened by the protected
+  // transaction delegate against the source Order ID.
+  const rows = await tx.$queryRaw<ReturnOrderProjectionRow[]>`
+    SELECT
+      "id", "orderNumber", "customerId", "source", "sourceMetadata",
+      "status", "version", "totalPrice", "deliveryCost", "wilaya",
+      "commune", "fulfillmentState", "deliveryState", "inventoryState",
+      "codState", "returnState", "refundState"
+    FROM "Order"
+    WHERE "id" = ${orderId}
+      AND "deletedAt" IS NULL
+    LIMIT 1
+  `;
+  const projection = rows[0];
   if (!projection) throw new NotFoundError("Order", orderId);
   if (!isTrustedManualOrderAuthority(projection.source, projection.sourceMetadata)) {
     throw new ValidationError(
@@ -129,7 +137,11 @@ export async function loadCanonicalReturnOrder(
     );
   }
 
-  const [items, customer] = await Promise.all([
+  const [protectedFields, items, customer] = await Promise.all([
+    tx.order.findFirst({
+      where: { id: orderId, deletedAt: null },
+      select: { address: true, phone: true, notes: true },
+    }),
     tx.orderItem.findMany({
       where: { orderId },
       include: { product: { select: { cost: true } } },
@@ -145,12 +157,14 @@ export async function loadCanonicalReturnOrder(
       },
     }),
   ]);
+  if (!protectedFields) throw new NotFoundError("Order", orderId);
   if (!customer) {
     throw new ConflictError("Customer authority is missing for canonical return");
   }
 
   return {
     ...projection,
+    ...protectedFields,
     version: integer(projection.version, "order version"),
     totalPrice: integer(projection.totalPrice, "order total"),
     deliveryCost: integer(projection.deliveryCost, "delivery cost"),
