@@ -41,7 +41,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       entityId: shopContext.shopId,
       action: "privacy.erase.completed",
       actor: trustedActorAuditIdentity(actorContext.actor),
-      after: receipt,
+      after: { ...receipt },
     },
   );
 
