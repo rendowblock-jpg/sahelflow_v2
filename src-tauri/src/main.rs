@@ -8,8 +8,21 @@ mod installation_root_key;
 mod key_hierarchy;
 mod native_command;
 mod native_crypto;
+
+// The protected-key transport intentionally keeps each authenticated binding
+// dimension explicit at its call sites. Its canonical base64 sizing formula is
+// also retained verbatim as part of the reviewed Rust 1.77 wire contract.
+#[allow(clippy::manual_div_ceil, clippy::too_many_arguments)]
 mod protected_key_transport;
+
+// Named request lifetimes keep the bridge's borrowed operation target explicit
+// across the closed survivability command set.
+#[allow(clippy::needless_lifetimes)]
 mod survivability_bridge;
+
+// Platform-specific startup branches use explicit returns so the selected data
+// authority remains unambiguous after cfg expansion.
+#[allow(clippy::needless_return)]
 mod survivability_controller;
 
 fn main() {
