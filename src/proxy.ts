@@ -11,6 +11,7 @@ import {
   AUTH_MODE_CONFIGURED,
   AUTH_MODE_ENV,
   AUTH_MODE_SETUP,
+  RUNTIME_BOOTSTRAP_HANDOFF_PATH,
   RUNTIME_BOOTSTRAP_PATH,
   RUNTIME_COOKIE,
   RUNTIME_READY_PATH,
@@ -94,6 +95,19 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname === RUNTIME_BOOTSTRAP_PATH) {
+    return NextResponse.next();
+  }
+
+  // The bootstrap response sets the HttpOnly launch cookie and then loads this
+  // exact same-origin static script. WebView2 may request the subresource before
+  // exposing the newly committed cookie to proxy middleware, so this harmless
+  // one-purpose handoff asset must remain reachable without runtime authority.
+  // Every other script/page/API request stays behind the launch-cookie boundary.
+  if (
+    pathname === RUNTIME_BOOTSTRAP_HANDOFF_PATH &&
+    (request.nextUrl.hostname === "127.0.0.1" ||
+      request.nextUrl.hostname === "localhost")
+  ) {
     return NextResponse.next();
   }
 
