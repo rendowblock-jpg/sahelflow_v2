@@ -4,8 +4,126 @@ import { db, shopContext } from "@/lib/db";
 import { withDemoPolicyLock } from "@/lib/demo/algerian-demo-policy";
 import { withPrivacyEraseTransaction } from "@/lib/maintenance/privacy-erase-transaction";
 
-const EXPORT_FORMAT_VERSION = 1 as const;
+const PRIVACY_EXPORT_FORMAT_VERSION = 2 as const;
+const PRIVACY_ERASE_RECEIPT_FORMAT_VERSION = 1 as const;
 const EXPORT_MAX_BYTES = 32 * 1024 * 1024;
+
+const PRIVACY_EXPORT_EXCLUDED_MODELS = [
+  "AuthSecret",
+  "ProtectedKeyAuthority",
+  "Secret",
+  "Session",
+  "WilayaRiskProfile",
+] as const;
+
+/**
+ * Exact model-level export authority derived from the Phase 4 data inventory.
+ * Every included model is loaded through the protected Prisma client so
+ * contextual protected fields are opened only for this authorized response.
+ * Setting values remain excluded; only their non-secret metadata is exported.
+ */
+const PRIVACY_EXPORT_MODEL_LOADERS = {
+  AiActionApproval: () => db.aiActionApproval.findMany(),
+  AiActionExecution: () => db.aiActionExecution.findMany(),
+  AiActionProposal: () => db.aiActionProposal.findMany(),
+  AiChatMessage: () => db.aiChatMessage.findMany(),
+  AiChatSession: () => db.aiChatSession.findMany(),
+  AuditLog: () => db.auditLog.findMany(),
+  Automation: () => db.automation.findMany(),
+  AutomationLog: () => db.automationLog.findMany(),
+  AutomationRun: () => db.automationRun.findMany(),
+  AutomationStepAttempt: () => db.automationStepAttempt.findMany(),
+  AutomationStepRun: () => db.automationStepRun.findMany(),
+  BusinessAggregateVersion: () => db.businessAggregateVersion.findMany(),
+  BusinessCommand: () => db.businessCommand.findMany(),
+  CannedResponse: () => db.cannedResponse.findMany(),
+  CanonicalDeliveryEvent: () => db.canonicalDeliveryEvent.findMany(),
+  CanonicalExchangeOrder: () => db.canonicalExchangeOrder.findMany(),
+  CanonicalExchangeRequest: () => db.canonicalExchangeRequest.findMany(),
+  CanonicalExchangeRequestItem: () =>
+    db.canonicalExchangeRequestItem.findMany(),
+  CanonicalRefund: () => db.canonicalRefund.findMany(),
+  CanonicalRefundReversal: () => db.canonicalRefundReversal.findMany(),
+  CanonicalReturnCase: () => db.canonicalReturnCase.findMany(),
+  CanonicalReturnEvent: () => db.canonicalReturnEvent.findMany(),
+  CanonicalReturnInspection: () => db.canonicalReturnInspection.findMany(),
+  CanonicalReturnItem: () => db.canonicalReturnItem.findMany(),
+  Category: () => db.category.findMany(),
+  CodCollection: () => db.codCollection.findMany(),
+  CodCollectionCorrection: () => db.codCollectionCorrection.findMany(),
+  CodSettlement: () => db.codSettlement.findMany(),
+  CodSettlementCorrection: () => db.codSettlementCorrection.findMany(),
+  CodSettlementLine: () => db.codSettlementLine.findMany(),
+  CodSettlementLineMatch: () => db.codSettlementLineMatch.findMany(),
+  CollaborationAssignment: () => db.collaborationAssignment.findMany(),
+  CollaborationComment: () => db.collaborationComment.findMany(),
+  CollaborationHandover: () => db.collaborationHandover.findMany(),
+  CollaborationMention: () => db.collaborationMention.findMany(),
+  CollaborationQueue: () => db.collaborationQueue.findMany(),
+  CollaborationWorkgroup: () => db.collaborationWorkgroup.findMany(),
+  CollaborationWorkgroupMember: () =>
+    db.collaborationWorkgroupMember.findMany(),
+  CommerceSyncItem: () => db.commerceSyncItem.findMany(),
+  CommerceSyncItemAttempt: () => db.commerceSyncItemAttempt.findMany(),
+  CommerceSyncPage: () => db.commerceSyncPage.findMany(),
+  CommerceSyncRun: () => db.commerceSyncRun.findMany(),
+  CommerceSyncRunAttempt: () => db.commerceSyncRunAttempt.findMany(),
+  CompensationFact: () => db.compensationFact.findMany(),
+  Conversation: () => db.conversation.findMany(),
+  Counter: () => db.counter.findMany(),
+  Customer: () => db.customer.findMany(),
+  Delivery: () => db.delivery.findMany(),
+  DomainEvent: () => db.domainEvent.findMany(),
+  Expense: () => db.expense.findMany(),
+  ExtractionMetric: () => db.extractionMetric.findMany(),
+  FinancialMovement: () => db.financialMovement.findMany(),
+  Integration: () => db.integration.findMany(),
+  InventoryMovement: () => db.inventoryMovement.findMany(),
+  InventoryReservation: () => db.inventoryReservation.findMany(),
+  Message: () => db.message.findMany(),
+  Order: () => db.order.findMany(),
+  OrderChange: () => db.orderChange.findMany(),
+  OrderItem: () => db.orderItem.findMany(),
+  OutboxIntent: () => db.outboxIntent.findMany(),
+  PhoneReputation: () => db.phoneReputation.findMany(),
+  Product: () => db.product.findMany(),
+  ProductVariant: () => db.productVariant.findMany(),
+  ProfitabilityCostSnapshot: () =>
+    db.profitabilityCostSnapshot.findMany(),
+  ProjectionInvalidation: () => db.projectionInvalidation.findMany(),
+  ProviderCapabilityCertification: () =>
+    db.providerCapabilityCertification.findMany(),
+  ProviderIngressAttempt: () => db.providerIngressAttempt.findMany(),
+  ProviderIngressEvent: () => db.providerIngressEvent.findMany(),
+  Refund: () => db.refund.findMany(),
+  Return: () => db.return.findMany(),
+  ReturnNote: () => db.returnNote.findMany(),
+  Setting: () =>
+    db.setting.findMany({
+      select: { key: true, updatedAt: true },
+      orderBy: { key: "asc" },
+    }),
+  StorefrontConfig: () => db.storefrontConfig.findMany(),
+  WhatsAppOutboundEffect: () => db.whatsAppOutboundEffect.findMany(),
+  WhatsAppTemplate: () => db.whatsAppTemplate.findMany(),
+} as const;
+
+type PrivacyExportModel = keyof typeof PRIVACY_EXPORT_MODEL_LOADERS;
+
+async function loadPrivacyExportModels(): Promise<
+  Record<PrivacyExportModel, unknown>
+> {
+  const modelNames = Object.keys(
+    PRIVACY_EXPORT_MODEL_LOADERS,
+  ) as PrivacyExportModel[];
+  const entries = await Promise.all(
+    modelNames.map(async (model) => {
+      const rows = await PRIVACY_EXPORT_MODEL_LOADERS[model]();
+      return [model, rows] as const;
+    }),
+  );
+  return Object.fromEntries(entries) as Record<PrivacyExportModel, unknown>;
+}
 
 export type PrivacyEraseMode = "business-reset" | "privacy-erase";
 
@@ -21,49 +139,18 @@ export interface PrivacyLifecycleReceipt {
 }
 
 /**
- * Export subject/business data through the protected Prisma client so encrypted
- * columns are opened only for the authorized response. Credential values and
- * key material are never included; setting names are exported for transparency.
+ * Export every inventory-declared seller, subject, business and relevant
+ * operational model through the protected Prisma client. Credential values,
+ * key material, active-session authority and public reference data are excluded
+ * exactly as declared by the Phase 4 privacy inventory.
  */
 export async function createShopPrivacyExport(): Promise<Buffer> {
-  const [
-    customers,
-    orders,
-    conversations,
-    auditLogs,
-    aiSessions,
-    settings,
-  ] = await Promise.all([
-    db.customer.findMany({ orderBy: { createdAt: "asc" } }),
-    db.order.findMany({
-      orderBy: { createdAt: "asc" },
-      include: {
-        items: true,
-        delivery: true,
-        returns: { include: { notes_rel: true } },
-        orderChanges: true,
-        refunds: true,
-      },
-    }),
-    db.conversation.findMany({
-      orderBy: { createdAt: "asc" },
-      include: { messages: { orderBy: { timestamp: "asc" } } },
-    }),
-    db.auditLog.findMany({ orderBy: { createdAt: "asc" } }),
-    db.aiChatSession.findMany({
-      orderBy: { createdAt: "asc" },
-      include: { messages: { orderBy: { createdAt: "asc" } } },
-    }),
-    db.setting.findMany({
-      select: { key: true, updatedAt: true },
-      orderBy: { key: "asc" },
-    }),
-  ]);
+  const models = await loadPrivacyExportModels();
 
   const payload = Buffer.from(
     `${JSON.stringify(
       {
-        formatVersion: EXPORT_FORMAT_VERSION,
+        formatVersion: PRIVACY_EXPORT_FORMAT_VERSION,
         exportedAt: new Date().toISOString(),
         authority: {
           workspaceId: shopContext.workspaceId,
@@ -72,19 +159,20 @@ export async function createShopPrivacyExport(): Promise<Buffer> {
           shopIncarnationId: shopContext.shopIncarnationId,
           registryRevision: shopContext.registryRevision,
         },
+        inventory: {
+          includedModels: Object.keys(PRIVACY_EXPORT_MODEL_LOADERS),
+          excludedModels: PRIVACY_EXPORT_EXCLUDED_MODELS,
+          settingValuesExcluded: true,
+        },
         exclusions: [
           "credential values",
           "protected key material",
-          "session secrets",
+          "session and installation authentication authority",
           "backup recovery secrets",
+          "public rebuildable wilaya reference data",
           "ephemeral runtime state",
         ],
-        customers,
-        orders,
-        conversations,
-        auditLogs,
-        aiSessions,
-        settingMetadata: settings,
+        models,
       },
       null,
       2,
@@ -94,7 +182,7 @@ export async function createShopPrivacyExport(): Promise<Buffer> {
   if (payload.length > EXPORT_MAX_BYTES) {
     payload.fill(0);
     throw new Error(
-      "Privacy export exceeds the local response limit; use the encrypted all-shop backup for complete installation portability.",
+      "Privacy export exceeds the local response limit; no partial portability file was created.",
     );
   }
   return payload;
@@ -214,7 +302,7 @@ export async function executeShopErase(
   );
 
   return {
-    formatVersion: EXPORT_FORMAT_VERSION,
+    formatVersion: PRIVACY_ERASE_RECEIPT_FORMAT_VERSION,
     mode,
     workspaceId: shopContext.workspaceId,
     installationId: shopContext.installationId,
