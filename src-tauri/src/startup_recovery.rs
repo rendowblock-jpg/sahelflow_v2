@@ -308,13 +308,50 @@ fn schedule_packaged_navigation(
         while started_at.elapsed() < RENDERER_PRIME_TIMEOUT {
             if renderer_is_ready(&window) {
                 record_startup_stage(&app_data_dir, "ui-renderer-prime-ready", None);
-                record_startup_stage(&app_data_dir, "ui-bootstrap-navigation-started", None);
-                if let Err(error) = window.navigate(bootstrap_url) {
+                record_startup_stage(&app_data_dir, "ui-bootstrap-dispatch-started", None);
+
+                let navigation_app = app.clone();
+                let navigation_window = window.clone();
+                let navigation_app_data_dir = app_data_dir.clone();
+                let dispatch_result = window.run_on_main_thread(move || {
+                    record_startup_stage(
+                        &navigation_app_data_dir,
+                        "ui-bootstrap-navigation-started",
+                        None,
+                    );
+                    if let Err(error) = navigation_window.navigate(bootstrap_url) {
+                        record_startup_stage(
+                            &navigation_app_data_dir,
+                            "ui-bootstrap-navigation-blocked",
+                            None,
+                        );
+                        let detail = format!(
+                            "the startup window could not navigate to the authenticated bootstrap: {error}"
+                        );
+                        eprintln!("[sahelflow] FATAL: {detail}");
+                        let _ = show_blocked(
+                            &navigation_app,
+                            "SF-RUNTIME-UI-NAVIGATION-BLOCKED",
+                            &detail,
+                        );
+                    }
+                });
+
+                if let Err(error) = dispatch_result {
+                    record_startup_stage(
+                        &app_data_dir,
+                        "ui-bootstrap-dispatch-blocked",
+                        None,
+                    );
                     let detail = format!(
-                        "the startup window could not navigate to the authenticated bootstrap: {error}"
+                        "the startup window could not dispatch authenticated navigation on the main thread: {error}"
                     );
                     eprintln!("[sahelflow] FATAL: {detail}");
-                    let _ = show_blocked(&app, "SF-RUNTIME-UI-NAVIGATION-BLOCKED", &detail);
+                    let _ = show_blocked(
+                        &app,
+                        "SF-RUNTIME-UI-NAVIGATION-DISPATCH-BLOCKED",
+                        &detail,
+                    );
                 }
                 return;
             }
