@@ -32,6 +32,10 @@ fn object_chunk_aad(
     )
 }
 
+// Every argument is an independently authenticated manifest dimension. Keep
+// them explicit at the call sites so additions, removals, or reordering remain
+// visible during cryptographic contract review rather than hiding in a bag type.
+#[allow(clippy::too_many_arguments)]
 fn manifest_aad(
     backup_id: &str,
     created_at_unix_ms: u64,
