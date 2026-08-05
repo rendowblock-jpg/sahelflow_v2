@@ -34,6 +34,9 @@ fn prepare_replacement_identity_reenrollment(database_path: &Path) -> Result<(),
         .execute(r#"DELETE FROM "Session""#, [])
         .map_err(sqlite_error)?;
     transaction
+        .execute(r#"DELETE FROM "AuthSecret""#, [])
+        .map_err(sqlite_error)?;
+    transaction
         .execute(
             r#"DELETE FROM "Setting" WHERE "key" = ?1"#,
             [IDENTITY_FOOTPRINT_SETTING],

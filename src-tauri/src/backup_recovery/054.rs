@@ -4,7 +4,6 @@
 mod tests {
     use super::*;
 
-
     fn test_restore_journal(state: RestoreJournalState) -> RestoreJournal {
         RestoreJournal {
             unsigned: RestoreJournalUnsigned {
@@ -134,8 +133,6 @@ mod tests {
         assert_ne!(original, recovery_kit_receipt_mac(&root, &changed).unwrap());
     }
 
-
-
     fn test_directory(label: &str) -> PathBuf {
         let path = std::env::temp_dir().join(format!(
             "sahelflow-survivability-{label}-{}-{}",
@@ -192,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn replacement_identity_reenrollment_clears_sessions_and_footprint() {
+    fn replacement_identity_reenrollment_clears_local_auth_authority() {
         let root = test_directory("identity-reenrollment");
         let database = root.join("shop.db");
         let connection = Connection::open(&database).unwrap();
@@ -200,8 +197,10 @@ mod tests {
             .execute_batch(
                 r#"
                 CREATE TABLE "Session" ("id" TEXT PRIMARY KEY);
+                CREATE TABLE "AuthSecret" ("id" TEXT PRIMARY KEY);
                 CREATE TABLE "Setting" ("key" TEXT PRIMARY KEY, "value" TEXT NOT NULL);
                 INSERT INTO "Session" VALUES ('old-session');
+                INSERT INTO "AuthSecret" VALUES ('old-auth-secret');
                 INSERT INTO "Setting" VALUES ('identity_authority_initialized_v1', 'old');
                 INSERT INTO "Setting" VALUES ('seller-setting', 'kept');
                 "#,
@@ -214,6 +213,9 @@ mod tests {
         let connection = Connection::open(&database).unwrap();
         let sessions: i64 = connection
             .query_row(r#"SELECT COUNT(*) FROM "Session""#, [], |row| row.get(0))
+            .unwrap();
+        let auth_secrets: i64 = connection
+            .query_row(r#"SELECT COUNT(*) FROM "AuthSecret""#, [], |row| row.get(0))
             .unwrap();
         let footprint: i64 = connection
             .query_row(
@@ -230,6 +232,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(sessions, 0);
+        assert_eq!(auth_secrets, 0);
         assert_eq!(footprint, 0);
         assert_eq!(seller, "kept");
         drop(connection);
