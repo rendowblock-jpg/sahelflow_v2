@@ -17,7 +17,7 @@
     "test:sandbox": "bun run scripts/prepare-test-sandbox.ts",
     "sf-verify": "bun run scripts/sf-verify.ts",
     "sf-audit": "bun run scripts/sf-audit.ts",
-    "sf-inventory": "bun run scripts/sf-inventory.ts && bun run scripts/augment-prisma-inventory.ts",
+    "sf-inventory": "bun run scripts/sf-inventory.ts && bun run scripts/augment-prisma-inventory.ts && bun run scripts/generate-phase4-evidence.ts --out .sf-inventory/phase4-security",
     "sf-version": "bun run scripts/sf-version.ts && bun run scripts/verify-updater-contract.ts",
     "sf-updater-contract": "bun run scripts/verify-updater-contract.ts",
     "sf-evidence": "bun run scripts/generate-evidence-manifest.ts",
