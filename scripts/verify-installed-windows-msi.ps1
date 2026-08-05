@@ -123,27 +123,53 @@ function Get-DescendantProcessIdentities {
     param([Parameter(Mandatory = $true)][int64]$RootProcessId)
 
     $snapshot = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
-    $frontier = @($RootProcessId)
+    $rootProcess = @(
+        $snapshot | Where-Object { [int64]$_.ProcessId -eq $RootProcessId }
+    ) | Select-Object -First 1
+    if ($null -eq $rootProcess -or $null -eq $rootProcess.CreationDate) {
+        throw "Windows did not expose the root process identity for descendant capture."
+    }
+
+    $frontier = @(
+        [pscustomobject]@{
+            processId = $RootProcessId
+            createdAtUtcTicks = ([datetime]$rootProcess.CreationDate).ToUniversalTime().Ticks
+        }
+    )
     $seen = @{}
     $descendants = @()
     while ($frontier.Count -gt 0) {
         $next = @()
-        foreach ($parentId in $frontier) {
+        foreach ($parent in $frontier) {
             foreach ($child in @($snapshot | Where-Object {
-                [int64]$_.ParentProcessId -eq [int64]$parentId
+                [int64]$_.ParentProcessId -eq [int64]$parent.processId
             })) {
+                if ($null -eq $child.CreationDate) {
+                    throw "Windows did not expose a creation timestamp for candidate descendant $($child.ProcessId)."
+                }
+                $childCreatedAtUtcTicks = ([datetime]$child.CreationDate).ToUniversalTime().Ticks
+                # ParentProcessId is only a numeric historical PID. Reject a
+                # candidate created before its alleged parent so PID reuse by
+                # long-lived Windows session processes cannot forge ancestry.
+                if ($childCreatedAtUtcTicks -lt [int64]$parent.createdAtUtcTicks) {
+                    continue
+                }
+
                 $childId = [int64]$child.ProcessId
-                $key = [string]$childId
-                if (-not $seen.ContainsKey($key)) {
-                    $seen[$key] = $true
+                $identityKey = Get-ProcessIdentityKey -Process $child
+                if (-not $seen.ContainsKey($identityKey)) {
+                    $seen[$identityKey] = $true
                     $descendants += [pscustomobject]@{
                         processId = $childId
                         name = [string]$child.Name
                         executablePath = [string]$child.ExecutablePath
                         creationDate = [datetime]$child.CreationDate
-                        identityKey = Get-ProcessIdentityKey -Process $child
+                        identityKey = $identityKey
                     }
-                    $next += $childId
+                    $next += [pscustomobject]@{
+                        processId = $childId
+                        createdAtUtcTicks = $childCreatedAtUtcTicks
+                    }
                 }
             }
         }
