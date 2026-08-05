@@ -54,7 +54,7 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     restoreEnvironment("VITEST", originalEnvironment.VITEST);
   });
 
-  it("creates the authenticated main WebView on Tauri's main thread from the loopback bootstrap URL", () => {
+  it("activates an inert startup renderer before the main-thread loopback workspace", () => {
     const configuration = JSON.parse(
       readFileSync(
         resolve(process.cwd(), "src-tauri/tauri.conf.json"),
@@ -84,49 +84,62 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     expect(recovery).toContain(
       "use tauri::webview::{WebviewWindow, WebviewWindowBuilder};",
     );
+    expect(recovery).toContain(
+      'STARTUP_RENDERER_MARKER: &str = "sahelflow-startup-renderer-v1"',
+    );
+    expect(recovery).toContain(
+      'WORKSPACE_RENDERER_MARKER: &str = "sahelflow-workspace-renderer-v1"',
+    );
+    expect(recovery).toContain("renderer_prime_html()");
+    expect(recovery).toContain("startup.navigate(renderer_prime_url()?)?");
+    expect(recovery).toContain("startup.show()?");
+    expect(recovery).toContain("startup.set_focus()?");
+    expect(recovery).toContain(".eval_with_callback(");
+    expect(recovery).toContain("document.readyState!=='loading'");
     expect(recovery).toContain("WebviewUrl::External(url)");
-    expect(recovery).toContain("MAIN_WINDOW_LABEL");
-    expect(recovery).toContain("BOOTSTRAP_WINDOW_TITLE");
-    expect(recovery).toContain('"workspace-window-creating"');
-    expect(recovery).toContain('"workspace-window-created"');
     expect(recovery).toContain("app.run_on_main_thread(move ||");
     expect(recovery).toContain(
       "recv_timeout(WORKSPACE_WINDOW_CREATION_TIMEOUT)",
     );
-    expect(recovery).toContain(".visible(true)");
-    expect(recovery).toContain(".focused(true)");
-    expect(recovery).not.toContain("renderer_is_ready(");
+    expect(recovery).toContain('"startup-renderer-prime-started"');
+    expect(recovery).toContain('"startup-renderer-prime-ready"');
+    expect(recovery).toContain('"workspace-window-creating"');
+    expect(recovery).toContain('"workspace-window-created"');
+    expect(recovery).toContain('"workspace-renderer-probe-started"');
+    expect(recovery).toContain('"workspace-renderer-probe-ready"');
+    expect(recovery).toContain(
+      '"SF-RUNTIME-UI-STARTUP-RENDERER-BLOCKED"',
+    );
+    expect(recovery).toContain(
+      '"SF-RUNTIME-UI-WORKSPACE-RENDERER-BLOCKED"',
+    );
     expect(recovery).not.toContain("schedule_packaged_navigation(");
     expect(recovery).not.toContain("window.location.replace(target)");
 
     const validatedHandoff = recovery.indexOf(
       "let handoff = packaged_handoff(&requested_url)?;",
     );
-    const mainThreadDispatch = recovery.indexOf(
-      "app.run_on_main_thread(move ||",
+    const startupPrime = recovery.indexOf(
+      "activate_startup_renderer(app)",
+      validatedHandoff,
     );
-    const builder = recovery.indexOf(
-      "WebviewWindowBuilder::new(",
-      mainThreadDispatch,
+    const workspaceCreation = recovery.indexOf(
+      "create_workspace_window(app, workspace_url, packaged)?",
+      startupPrime,
     );
-    const externalInitialUrl = recovery.indexOf(
-      "WebviewUrl::External(url)",
-      builder,
-    );
-    const creationReceipt = recovery.indexOf(
-      "recv_timeout(WORKSPACE_WINDOW_CREATION_TIMEOUT)",
-      externalInitialUrl,
+    const workspaceProbeReady = recovery.indexOf(
+      '"workspace-renderer-probe-ready"',
+      workspaceCreation,
     );
     const readinessMonitor = recovery.indexOf(
       "monitor_packaged_ui(",
-      creationReceipt,
+      workspaceProbeReady,
     );
     expect(validatedHandoff).toBeGreaterThan(-1);
-    expect(mainThreadDispatch).toBeGreaterThan(validatedHandoff);
-    expect(builder).toBeGreaterThan(mainThreadDispatch);
-    expect(externalInitialUrl).toBeGreaterThan(builder);
-    expect(creationReceipt).toBeGreaterThan(externalInitialUrl);
-    expect(readinessMonitor).toBeGreaterThan(creationReceipt);
+    expect(startupPrime).toBeGreaterThan(validatedHandoff);
+    expect(workspaceCreation).toBeGreaterThan(startupPrime);
+    expect(workspaceProbeReady).toBeGreaterThan(workspaceCreation);
+    expect(readinessMonitor).toBeGreaterThan(workspaceProbeReady);
   });
 
   it("commits and confirms the HttpOnly runtime cookie before workspace navigation", async () => {
