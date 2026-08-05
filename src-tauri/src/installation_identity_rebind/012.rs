@@ -9,7 +9,8 @@ fn sync_parent_directory(path: &Path) -> Result<(), InstallationRootError> {
 
 #[cfg(not(windows))]
 fn sync_directory(path: &Path) -> Result<(), InstallationRootError> {
-    std::fs::File::open(path)?.sync_all()
+    std::fs::File::open(path)?.sync_all()?;
+    Ok(())
 }
 
 #[cfg(windows)]
