@@ -22,7 +22,7 @@
 Live GitHub is authority. Re-read protected `main`, issue #204, PR #207 and issue
 #201 before relying on copied state or a recorded head SHA.
 
-## Protected truth
+## Phase 3 protected closure
 
 PR #203 merged Phase 3 at
 `aa4ca0758fd696f4b02fc1975629ac698f9349c3`; exact validated head
