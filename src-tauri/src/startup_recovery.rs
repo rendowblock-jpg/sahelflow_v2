@@ -147,19 +147,15 @@ fn create_workspace_window(
     } else {
         MAIN_WINDOW_TITLE
     };
-    let window = WebviewWindowBuilder::new(
-        app,
-        MAIN_WINDOW_LABEL,
-        WebviewUrl::External(url),
-    )
-    .title(title)
-    .inner_size(1280.0, 800.0)
-    .min_inner_size(800.0, 500.0)
-    .resizable(true)
-    .maximized(true)
-    .visible(true)
-    .focused(true)
-    .build()?;
+    let window = WebviewWindowBuilder::new(app, MAIN_WINDOW_LABEL, WebviewUrl::External(url))
+        .title(title)
+        .inner_size(1280.0, 800.0)
+        .min_inner_size(800.0, 500.0)
+        .resizable(true)
+        .maximized(true)
+        .visible(true)
+        .focused(true)
+        .build()?;
     Ok(window)
 }
 
