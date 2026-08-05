@@ -3,8 +3,7 @@ use crate::key_hierarchy::{
     PURPOSE_SHOP_DATA_WRAP,
 };
 use crate::native_crypto::{
-    clear_bytes, hex_decode_exact, hex_encode, open_raw_aes_256_gcm, seal_raw_aes_256_gcm,
-    sha256,
+    clear_bytes, hex_decode_exact, hex_encode, open_raw_aes_256_gcm, seal_raw_aes_256_gcm, sha256,
 };
 use rusqlite::{params, Connection, TransactionBehavior};
 use serde::{Deserialize, Serialize};
