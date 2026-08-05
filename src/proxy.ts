@@ -11,6 +11,7 @@ import {
   AUTH_MODE_CONFIGURED,
   AUTH_MODE_ENV,
   AUTH_MODE_SETUP,
+  RUNTIME_BOOTSTRAP_CONFIRM_PATH,
   RUNTIME_BOOTSTRAP_HANDOFF_PATH,
   RUNTIME_BOOTSTRAP_PATH,
   RUNTIME_COOKIE,
@@ -122,7 +123,13 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (pathname === RUNTIME_UI_READY_PATH) {
+  // Both internal browser endpoints are available only after the launch-cookie
+  // boundary above succeeds. Their route handlers repeat the runtime authority
+  // checks so an accidental middleware exclusion still fails closed.
+  if (
+    pathname === RUNTIME_BOOTSTRAP_CONFIRM_PATH ||
+    pathname === RUNTIME_UI_READY_PATH
+  ) {
     return NextResponse.next();
   }
 
