@@ -41,10 +41,10 @@ interface VulnerabilityTriage {
 
 const AUTHORITY_FILES = [
   "documentation/privacy/phase4-data-inventory.json",
-  "documentation/privacy/ALGERIA_LAW_18_07_MAPPING.md",
-  "documentation/security/PHASE4_THREAT_MODEL.md",
-  "documentation/security/PHASE4_INDEPENDENT_REVIEW.md",
-  "documentation/security/PHASE4_EVIDENCE_MATRIX.md",
+  "documentation/archive/phase4/ALGERIA_LAW_18_07_MAPPING.md",
+  "documentation/archive/phase4/PHASE4_THREAT_MODEL.md",
+  "documentation/archive/phase4/PHASE4_INDEPENDENT_REVIEW.md",
+  "documentation/archive/phase4/PHASE4_EVIDENCE_MATRIX.md",
   "documentation/security/phase4-vulnerability-triage.json",
 ] as const;
 
