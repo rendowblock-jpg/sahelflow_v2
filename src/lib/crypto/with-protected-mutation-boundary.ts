@@ -87,6 +87,15 @@ function nestedProtectedWrite(
   return null;
 }
 
+function mutationPayloads(args: unknown, operation: string): unknown[] {
+  const input = record(args);
+  if (!input) return [];
+  if (operation === "upsert") {
+    return [input.create, input.update];
+  }
+  return [input.data];
+}
+
 export function assertProtectedMutationBoundary(
   model: string,
   operation: string,
@@ -104,22 +113,23 @@ export function assertProtectedMutationBoundary(
   }
 
   if (!WRITE_OPERATIONS.has(operation)) return;
-  const data = record(args)?.data;
-  const relation = nestedProtectedWrite(data);
-  if (!relation) return;
+  for (const payload of mutationPayloads(args, operation)) {
+    const relation = nestedProtectedWrite(payload);
+    if (!relation) continue;
 
-  throw new SahelFlowError(
-    `Nested protected-data mutation through ${relation} is blocked; write that record through its canonical service first`,
-    "PROTECTED_DATA_NESTED_WRITE_BLOCKED",
-    409,
-  );
+    throw new SahelFlowError(
+      `Nested protected-data mutation through ${relation} is blocked; write that record through its canonical service first`,
+      "PROTECTED_DATA_NESTED_WRITE_BLOCKED",
+      409,
+    );
+  }
 }
 
 /**
  * Global mutation boundary for Prisma operations that never reach the protected
  * model delegate. It runs before the record-aware encryption extensions and
  * rejects Prisma returning-bulk APIs plus protected writes nested under any
- * unprotected parent model.
+ * unprotected parent model, including both upsert branches.
  */
 export function withProtectedMutationBoundary<T extends PrismaClient>(client: T) {
   return client.$extends({
