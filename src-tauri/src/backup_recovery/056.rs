@@ -47,9 +47,3 @@ pub(crate) fn discover_backup_authority(
         runtime_protocol_version: SUPPORTED_RUNTIME_PROTOCOL_VERSION,
     })
 }
-
-pub(crate) fn pending_restore_present(app_data_dir: &Path) -> Result<bool, IoError> {
-    let path = pending_restore_path(app_data_dir);
-    reject_symlink_if_present(&path)?;
-    Ok(path.exists())
-}
