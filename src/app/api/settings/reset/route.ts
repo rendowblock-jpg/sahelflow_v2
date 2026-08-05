@@ -30,7 +30,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       entityId: shopContext.shopId,
       action: "privacy.business-reset.completed",
       actor: trustedActorAuditIdentity(actorContext.actor),
-      after: receipt,
+      after: { ...receipt },
     },
   );
 
@@ -38,7 +38,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     {
       ok: true,
       receipt,
-      message: "Business data, operational configuration and credentials were erased.",
+      message:
+        "Business data, operational configuration and credentials were erased.",
     },
     { headers: { "Cache-Control": "no-store" } },
   );
