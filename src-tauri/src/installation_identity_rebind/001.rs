@@ -4,7 +4,7 @@ use crate::installation_root_key::{
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, OpenOptions};
 use std::io::{ErrorKind, Write};
 use std::path::Path;
 use std::sync::atomic::{compiler_fence, Ordering};
