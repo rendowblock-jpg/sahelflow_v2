@@ -65,11 +65,13 @@ interface RecoveryKitResult {
   createdAtUnixMs: number;
 }
 
+type BackupCopy = Record<keyof (typeof COPY)["en"], string>;
+
 function localeKey(locale: string): SupportedLocale {
   return locale === "ar" || locale === "en" ? locale : "fr";
 }
 
-function statusLabel(entry: BackupEntry, copy: Record<string, string>): string {
+function statusLabel(entry: BackupEntry, copy: BackupCopy): string {
   if (entry.status === "corrupt") return copy.corrupt;
   if (entry.requiresRecoveryKit) return copy.kitRequired;
   if (entry.independentRecoveryReady) return copy.ready;
@@ -79,10 +81,10 @@ function statusLabel(entry: BackupEntry, copy: Record<string, string>): string {
 export function BackupRestorePanel() {
   const { locale } = useI18n();
   const resolvedLocale = localeKey(locale);
-  const copy = COPY[resolvedLocale];
+  const copy: BackupCopy = COPY[resolvedLocale];
   const desktop = isTauriEnv();
   const [backups, setBackups] = useState<BackupEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(desktop);
   const [creating, setCreating] = useState(false);
   const [creatingKit, setCreatingKit] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -95,6 +97,7 @@ export function BackupRestorePanel() {
   const reload = useCallback(() => setReloadKey((value) => value + 1), []);
 
   useEffect(() => {
+    if (!desktop) return;
     let cancelled = false;
     async function load() {
       try {
@@ -111,8 +114,7 @@ export function BackupRestorePanel() {
         if (!cancelled) setLoading(false);
       }
     }
-    if (desktop) void load();
-    else setLoading(false);
+    void load();
     return () => {
       cancelled = true;
     };
@@ -137,7 +139,9 @@ export function BackupRestorePanel() {
     setCreatingKit(true);
     try {
       const response = await fetch("/api/backup/recovery-kit", { method: "POST" });
-      const payload = (await response.json()) as RecoveryKitResult & { error?: string };
+      const payload = (await response.json()) as RecoveryKitResult & {
+        error?: string;
+      };
       if (!response.ok) throw new Error(payload.error ?? copy.actionFailed);
       setKitResult(payload);
       toast.success(copy.kitSuccess);
@@ -196,7 +200,12 @@ export function BackupRestorePanel() {
     }
   }
 
-  const dateLocale = resolvedLocale === "ar" ? "ar-DZ" : resolvedLocale === "en" ? "en-GB" : "fr-DZ";
+  const dateLocale =
+    resolvedLocale === "ar"
+      ? "ar-DZ"
+      : resolvedLocale === "en"
+        ? "en-GB"
+        : "fr-DZ";
 
   return (
     <div dir={resolvedLocale === "ar" ? "rtl" : "ltr"}>
@@ -277,11 +286,15 @@ export function BackupRestorePanel() {
                                   {entry.backupId}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {new Date(entry.createdAtUnixMs).toLocaleString(dateLocale)}
+                                  {new Date(entry.createdAtUnixMs).toLocaleString(
+                                    dateLocale,
+                                  )}
                                 </p>
                               </div>
                             </TableCell>
-                            <TableCell className="tabular-nums">{entry.shopCount}</TableCell>
+                            <TableCell className="tabular-nums">
+                              {entry.shopCount}
+                            </TableCell>
                             <TableCell className="tabular-nums" dir="ltr">
                               {formatSize(entry.containerBytes)}
                             </TableCell>
@@ -410,11 +423,17 @@ export function BackupRestorePanel() {
             </div>
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">{copy.kitPath}</p>
-              <p className="break-all rounded-md bg-muted p-2 font-mono text-xs" dir="ltr">
+              <p
+                className="break-all rounded-md bg-muted p-2 font-mono text-xs"
+                dir="ltr"
+              >
                 {kitResult.path}
               </p>
               <p className="text-xs text-muted-foreground">{copy.codeLabel}</p>
-              <p className="break-all rounded-md border p-3 font-mono text-sm" dir="ltr">
+              <p
+                className="break-all rounded-md border p-3 font-mono text-sm"
+                dir="ltr"
+              >
                 {kitResult.recoveryCode}
               </p>
             </div>
