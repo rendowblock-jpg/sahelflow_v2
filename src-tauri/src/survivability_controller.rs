@@ -6,15 +6,17 @@ use crate::survivability_bridge::SurvivabilityBridge;
 use serde::Deserialize;
 use std::fs;
 use std::io::{Error as IoError, ErrorKind};
+use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const IDENTIFIER: &str = "com.sahelflow.desktop";
 const RUNTIME_MANIFEST: &str = "runtime-endpoint.json";
 const MAX_RUNTIME_MANIFEST_BYTES: u64 = 16 * 1024;
+const RUNTIME_STOP_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -81,6 +83,10 @@ pub(crate) fn pending_restore_present() -> Result<bool, IoError> {
 
 pub(crate) fn recover_pending_before_run() -> Result<(), IoError> {
     let app_data_dir = app_data_dir()?;
+    if !backup_recovery::pending_restore_present(&app_data_dir) {
+        return Ok(());
+    }
+    wait_for_previous_runtime_stop(&app_data_dir)?;
     backup_recovery::recover_pending_before_startup(&app_data_dir)?;
     Ok(())
 }
@@ -117,10 +123,16 @@ fn start_ready_bridge(
 }
 
 fn runtime_ready(app_data_dir: &Path) -> Result<bool, IoError> {
+    Ok(read_runtime_manifest(app_data_dir)?.is_some())
+}
+
+fn read_runtime_manifest(
+    app_data_dir: &Path,
+) -> Result<Option<RuntimeEndpointManifest>, IoError> {
     let path = app_data_dir.join(RUNTIME_MANIFEST);
     let metadata = match fs::symlink_metadata(&path) {
         Ok(metadata) => metadata,
-        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(false),
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
         Err(error) => return Err(error),
     };
     if metadata.file_type().is_symlink()
@@ -135,10 +147,37 @@ fn runtime_ready(app_data_dir: &Path) -> Result<bool, IoError> {
     }
     let manifest: RuntimeEndpointManifest = serde_json::from_slice(&fs::read(&path)?)
         .map_err(|error| IoError::new(ErrorKind::InvalidData, error.to_string()))?;
-    Ok(manifest.format_version == 1
-        && manifest.state == "ready"
-        && manifest.host == "127.0.0.1"
-        && manifest.app_port > 0)
+    if manifest.format_version != 1
+        || manifest.state != "ready"
+        || manifest.host != "127.0.0.1"
+        || manifest.app_port == 0
+    {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "packaged runtime readiness authority is malformed",
+        ));
+    }
+    Ok(Some(manifest))
+}
+
+fn wait_for_previous_runtime_stop(app_data_dir: &Path) -> Result<(), IoError> {
+    let deadline = Instant::now() + RUNTIME_STOP_TIMEOUT;
+    loop {
+        let Some(manifest) = read_runtime_manifest(app_data_dir)? else {
+            return Ok(());
+        };
+        let address = SocketAddr::from((Ipv4Addr::LOCALHOST, manifest.app_port));
+        if TcpStream::connect_timeout(&address, Duration::from_millis(250)).is_err() {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            return Err(IoError::new(
+                ErrorKind::WouldBlock,
+                "replacement restore is waiting for the previous packaged runtime to stop",
+            ));
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
 }
 
 fn app_data_dir() -> Result<PathBuf, IoError> {
