@@ -5,7 +5,7 @@ pub(crate) fn seal_detached(
     context: &[u8],
     aad: &[u8],
     plaintext: &[u8],
-) -> Result<([u8; 12], Vec<u8>, [u8; 16]), IoError> {
+) -> Result<DetachedCiphertext, IoError> {
     let derived = SecretKey::new(derive_aead_key(key, context));
     let nonce = random_array::<NONCE_BYTES>()?;
     let (ciphertext, tag) = aes_256_gcm_encrypt(derived.as_array(), &nonce, aad, plaintext)?;
