@@ -17,7 +17,7 @@ type TauriWindowConfiguration = {
   title: string;
   url: string;
   visible: boolean;
-  focused?: boolean;
+  focus?: boolean;
 };
 
 type TauriConfiguration = {
@@ -72,10 +72,14 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       resolve(process.cwd(), "src-tauri/src/startup_recovery.rs"),
       "utf8",
     ).replace(/\r\n?/g, "\n");
+    const workspaceAuthority = recovery.slice(
+      recovery.indexOf("fn activate_configured_workspace("),
+      recovery.indexOf("pub fn reset_startup_trace"),
+    );
 
     expect(startupWindow).toBeDefined();
     expect(startupWindow?.visible).toBe(true);
-    expect(startupWindow?.focused).toBe(true);
+    expect(startupWindow?.focus).toBe(true);
     expect(startupWindow?.title).toBe("SahelFlow - Starting");
     expect(startupWindow?.url).toMatch(/^data:text\/html/);
     expect(decodeURIComponent(startupWindow?.url ?? "")).not.toContain(
@@ -83,7 +87,7 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     );
     expect(configuredMain).toBeDefined();
     expect(configuredMain?.visible).toBe(false);
-    expect(configuredMain?.focused).toBe(false);
+    expect(configuredMain?.focus).toBe(false);
     expect(configuredMain?.title).toBe("SahelFlow - Starting");
     expect(configuredMain?.url).toMatch(/^data:text\/html/);
     expect(decodeURIComponent(configuredMain?.url ?? "")).not.toContain(
@@ -100,11 +104,12 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     expect(recovery).toContain("startup.set_focus()?");
     expect(recovery).toContain(".eval_with_callback(");
     expect(recovery).toContain("activate_configured_workspace(");
-    expect(recovery).toContain("workspace_for_activation.show()");
-    expect(recovery).toContain("workspace_for_activation.set_focus()");
-    expect(recovery).toContain("workspace_for_activation.navigate(url)");
-    expect(recovery).toContain("app.run_on_main_thread(move ||");
-    expect(recovery).toContain(
+    expect(workspaceAuthority).toContain("workspace_for_activation");
+    expect(workspaceAuthority).toContain(".show()");
+    expect(workspaceAuthority).toContain(".set_focus()");
+    expect(workspaceAuthority).toContain(".navigate(url)");
+    expect(workspaceAuthority).toContain("app.run_on_main_thread(move ||");
+    expect(workspaceAuthority).toContain(
       "recv_timeout(WORKSPACE_ACTIVATION_TIMEOUT)",
     );
     expect(recovery).toContain('"startup-renderer-prime-started"');
