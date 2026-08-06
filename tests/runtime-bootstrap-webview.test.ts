@@ -55,21 +55,29 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     restoreEnvironment("VITEST", originalEnvironment.VITEST);
   });
 
-  it("uses one hidden configured WebView with native session authority", () => {
+  it("uses one hidden configured WebView and commits native navigation before lifecycle startup", () => {
     const configuration = JSON.parse(
       readFileSync(
         resolve(process.cwd(), "src-tauri/tauri.conf.json"),
         "utf8",
       ),
     ) as TauriConfiguration;
-    const recovery = readFileSync(
+    const wrapper = readFileSync(
       resolve(process.cwd(), "src-tauri/src/startup_recovery.rs"),
+      "utf8",
+    ).replace(/\r\n?/g, "\n");
+    const proven = readFileSync(
+      resolve(process.cwd(), "src-tauri/src/startup_recovery/proven.rs"),
       "utf8",
     ).replace(/\r\n?/g, "\n");
     const windows = configuration.app.windows;
     const configuredMain = windows[0];
 
     expect(windows).toHaveLength(1);
+    expect(configuredMain).toBeDefined();
+    if (!configuredMain) {
+      throw new Error("configured main WebView is missing");
+    }
     expect(configuredMain).toMatchObject({
       label: "main",
       title: "SahelFlow",
@@ -79,57 +87,61 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     expect(decodeURIComponent(configuredMain.url)).not.toContain("<script");
     expect(windows.some((window) => window.label === "startup")).toBe(false);
 
-    expect(recovery).toContain(
+    expect(proven).toContain(
       "use tauri::webview::{cookie::SameSite, Cookie, WebviewWindow};",
     );
-    expect(recovery).toContain('RUNTIME_COOKIE: &str = "sf_runtime"');
-    expect(recovery).toContain("mod shop_lifecycle_host;");
-    expect(recovery).toContain("shop_lifecycle_host::ensure_started(app)?;");
-    expect(recovery).toContain("window.hide()?;");
-    expect(recovery).toContain(
+    expect(proven).toContain('RUNTIME_COOKIE: &str = "sf_runtime"');
+    expect(wrapper).toContain("mod shop_lifecycle_host;");
+    expect(proven).toContain("window.hide()?;");
+    expect(proven).toContain(
       "window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;",
     );
-    expect(recovery).toContain("window.navigate(handoff.workspace_url)?;");
-    expect(recovery).toContain("workspace_url.set_path(\"/\")");
-    expect(recovery).toContain("workspace_url.set_query(None)");
-    expect(recovery).toContain("workspace_url.set_fragment(None)");
-    expect(recovery).toContain(".http_only(true)");
-    expect(recovery).toContain(".same_site(SameSite::Lax)");
-    expect(recovery).toContain(
+    expect(proven).toContain("window.navigate(handoff.workspace_url)?;");
+    expect(proven).toContain("workspace_url.set_path(\"/\")");
+    expect(proven).toContain("workspace_url.set_query(None)");
+    expect(proven).toContain("workspace_url.set_fragment(None)");
+    expect(proven).toContain(".http_only(true)");
+    expect(proven).toContain(".same_site(SameSite::Lax)");
+    expect(proven).toContain(
       "monitor_packaged_ui(app.clone(), window, app_data_dir);",
     );
 
-    const handoff = recovery.indexOf(
+    const delegatedHandoff = wrapper.indexOf(
+      "proven::show_ready(app, app_url)?;",
+    );
+    const lifecycle = wrapper.indexOf(
+      "shop_lifecycle_host::ensure_started(app)?;",
+      delegatedHandoff,
+    );
+    const handoff = proven.indexOf(
       "let Some(handoff) = packaged_handoff(&requested_url)? else {",
     );
-    const lifecycle = recovery.indexOf(
-      "shop_lifecycle_host::ensure_started(app)?;",
-      handoff,
-    );
-    const hidden = recovery.indexOf("window.hide()?;", lifecycle);
-    const cookie = recovery.indexOf("window.set_cookie(", hidden);
-    const navigation = recovery.indexOf(
+    const hidden = proven.indexOf("window.hide()?;", handoff);
+    const cookie = proven.indexOf("window.set_cookie(", hidden);
+    const navigation = proven.indexOf(
       "window.navigate(handoff.workspace_url)?;",
       cookie,
     );
-    const monitor = recovery.indexOf("monitor_packaged_ui(", navigation);
+    const monitor = proven.indexOf("monitor_packaged_ui(", navigation);
 
+    expect(delegatedHandoff).toBeGreaterThan(-1);
+    expect(lifecycle).toBeGreaterThan(delegatedHandoff);
     expect(handoff).toBeGreaterThan(-1);
-    expect(lifecycle).toBeGreaterThan(handoff);
-    expect(hidden).toBeGreaterThan(lifecycle);
+    expect(hidden).toBeGreaterThan(handoff);
     expect(cookie).toBeGreaterThan(hidden);
     expect(navigation).toBeGreaterThan(cookie);
     expect(monitor).toBeGreaterThan(navigation);
 
-    expect(recovery).not.toContain("STARTUP_WINDOW_LABEL");
-    expect(recovery).not.toContain("activate_startup_renderer(");
-    expect(recovery).not.toContain("activate_configured_workspace(");
-    expect(recovery).not.toContain("renderer_prime_html(");
-    expect(recovery).not.toContain("run_on_main_thread");
-    expect(recovery).not.toContain("WebviewWindowBuilder::new(");
-    expect(recovery).not.toContain("WebviewUrl::External(url)");
-    expect(recovery).not.toContain("handoff.bootstrap_url");
-    expect(recovery).not.toContain("window.location.replace(target)");
+    const combined = `${wrapper}\n${proven}`;
+    expect(combined).not.toContain("STARTUP_WINDOW_LABEL");
+    expect(combined).not.toContain("activate_startup_renderer(");
+    expect(combined).not.toContain("activate_configured_workspace(");
+    expect(combined).not.toContain("renderer_prime_html(");
+    expect(combined).not.toContain("run_on_main_thread");
+    expect(combined).not.toContain("WebviewWindowBuilder::new(");
+    expect(combined).not.toContain("WebviewUrl::External(url)");
+    expect(combined).not.toContain("handoff.bootstrap_url");
+    expect(combined).not.toContain("window.location.replace(target)");
   });
 
   it("retains the confirmed browser bootstrap only as a legacy fallback", async () => {
@@ -142,8 +154,8 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       resolve(process.cwd(), "public/runtime-bootstrap-handoff.js"),
       "utf8",
     );
-    const recovery = readFileSync(
-      resolve(process.cwd(), "src-tauri/src/startup_recovery.rs"),
+    const proven = readFileSync(
+      resolve(process.cwd(), "src-tauri/src/startup_recovery/proven.rs"),
       "utf8",
     ).replace(/\r\n?/g, "\n");
 
@@ -172,9 +184,9 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       handoffScript.indexOf('window.location.replace("/")'),
     );
     expect(handoffScript).not.toContain(token);
-    expect(recovery).toContain("workspace_url.set_query(None)");
-    expect(recovery).toContain("workspace_url.set_fragment(None)");
-    expect(recovery).not.toContain("handoff.bootstrap_url");
+    expect(proven).toContain("workspace_url.set_query(None)");
+    expect(proven).toContain("workspace_url.set_fragment(None)");
+    expect(proven).not.toContain("handoff.bootstrap_url");
   });
 
   it("remains one-time after the successful fallback cookie handoff", async () => {
