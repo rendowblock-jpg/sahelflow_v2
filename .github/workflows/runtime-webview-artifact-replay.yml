@@ -37,17 +37,26 @@ jobs:
     env:
       SOURCE_SHA: ${{ matrix.source }}
       SOURCE_ARTIFACT_RUN_ID: "31112998028"
+      DIAGNOSTIC_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      GH_TOKEN: ${{ github.token }}
       SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       SF_TEST_FAIL_FAST: "1"
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--remote-debugging-port=9222 --remote-allow-origins=*"
 
     steps:
-      - name: Checkout replay tools
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          persist-credentials: false
+      - name: Fetch replay tools without marketplace actions
+        shell: pwsh
+        run: |
+          git init .
+          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
+          $credential = [Convert]::ToBase64String(
+            [Text.Encoding]::ASCII.GetBytes("x-access-token:$env:GH_TOKEN")
+          )
+          git -c "http.extraheader=AUTHORIZATION: basic $credential" fetch `
+            --no-tags origin $env:DIAGNOSTIC_HEAD_SHA $env:SOURCE_SHA
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git checkout --detach --force $env:DIAGNOSTIC_HEAD_SHA
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Preserve observer outside exact source checkout
         shell: pwsh
@@ -66,10 +75,14 @@ jobs:
             throw "Exact-source checkout mismatch: expected $env:SOURCE_SHA, found $actual"
           }
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.14
+      - name: Install exact Bun without marketplace actions
+        shell: pwsh
+        run: |
+          npm install --global bun@1.3.14
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ((bun --version).Trim() -cne '1.3.14') {
+            throw "Exact Bun 1.3.14 was not installed."
+          }
 
       - name: Configure isolated WebView2 diagnostic profile
         shell: pwsh
@@ -82,13 +95,18 @@ jobs:
         run: bun install --frozen-lockfile --linker=hoisted
 
       - name: Download already-built exact MSI and evidence
-        uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          run-id: ${{ env.SOURCE_ARTIFACT_RUN_ID }}
-          name: ${{ matrix.artifact }}
-          path: retained-artifact
+        shell: pwsh
+        run: |
+          $attempts = 3
+          for ($attempt = 1; $attempt -le $attempts; $attempt++) {
+            gh run download $env:SOURCE_ARTIFACT_RUN_ID `
+              --repo $env:GITHUB_REPOSITORY `
+              --name '${{ matrix.artifact }}' `
+              --dir retained-artifact
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempt -eq $attempts) { exit $LASTEXITCODE }
+            Start-Sleep -Seconds (5 * $attempt)
+          }
 
       - name: Extract exact built resource identities for the install harness
         shell: pwsh
@@ -162,11 +180,12 @@ jobs:
         shell: pwsh
         run: ./scripts/diagnose-installed-webview.ps1
 
-      - name: Upload replay evidence without duplicating the MSI
+      - name: Print replay evidence inventory
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: runtime-webview-replay-${{ matrix.label }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/sahelflow-webview-transition-diagnostic/**
-          if-no-files-found: error
-          retention-days: 3
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-webview-transition-diagnostic'
+          Get-ChildItem -LiteralPath $destination -Recurse -File -ErrorAction SilentlyContinue |
+            Select-Object FullName, Length, LastWriteTimeUtc |
+            ConvertTo-Json -Depth 4 |
+            Write-Host
