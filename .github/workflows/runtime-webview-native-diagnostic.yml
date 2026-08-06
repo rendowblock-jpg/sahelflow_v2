@@ -25,11 +25,11 @@ concurrency:
 
 jobs:
   diagnose:
-    name: Instrument exact b0 installed WebView
+    name: Verify exact redirect repair in installed WebView
     runs-on: windows-latest
     timeout-minutes: 45
     env:
-      SOURCE_SHA: b0fec61d574f6ef8eb2a0231da54762bfd99b3c5
+      SOURCE_SHA: 80f03768d5c45c9df24412ce750e766ad9dcb13f
       DIAGNOSTIC_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       GH_TOKEN: ${{ github.token }}
       SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
