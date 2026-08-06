@@ -20,14 +20,17 @@ import {
   RUNTIME_UI_READY_PATH,
 } from "@/lib/runtime-auth";
 
-function sameOriginRedirect(pathname: "/setup" | "/login"): NextResponse {
-  return new NextResponse(null, {
-    status: 307,
-    headers: {
-      Location: pathname,
-      "Cache-Control": "no-store",
-    },
-  });
+function sameOriginRedirect(
+  request: NextRequest,
+  pathname: "/setup" | "/login",
+): NextResponse {
+  const destination = request.nextUrl.clone();
+  destination.pathname = pathname;
+  destination.search = "";
+  destination.hash = "";
+  const response = NextResponse.redirect(destination, 307);
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }
 
 /**
@@ -151,7 +154,7 @@ export async function proxy(request: NextRequest) {
         },
       );
     }
-    return sameOriginRedirect(decision.destination);
+    return sameOriginRedirect(request, decision.destination);
   }
 
   if (!secret) {
@@ -183,7 +186,7 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get(AUTH_COOKIE)?.value;
   const valid = await verifySessionToken(token, secret);
   if (!valid) {
-    return sameOriginRedirect("/login");
+    return sameOriginRedirect(request, "/login");
   }
 
   return NextResponse.next();

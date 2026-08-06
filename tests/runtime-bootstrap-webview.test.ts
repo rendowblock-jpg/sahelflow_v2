@@ -55,7 +55,7 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     restoreEnvironment("VITEST", originalEnvironment.VITEST);
   });
 
-  it("proves a safe renderer before native-cookie workspace navigation", () => {
+  it("defers lifecycle startup until the authenticated UI receipt is durable", () => {
     const configuration = JSON.parse(
       readFileSync(
         resolve(process.cwd(), "src-tauri/tauri.conf.json"),
@@ -87,12 +87,6 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     expect(decodeURIComponent(configuredMain.url)).not.toContain("<script");
     expect(windows.some((window) => window.label === "startup")).toBe(false);
 
-    expect(wrapper).toContain("prime_packaged_renderer(app, app_url)?");
-    expect(wrapper).toContain("window.navigate(renderer_prime_url()?)?;");
-    expect(wrapper).toContain("window.show()?;");
-    expect(wrapper).toContain("eval_with_callback");
-    expect(wrapper).toContain("window.hide()?;");
-    expect(wrapper).toContain("SF-RUNTIME-UI-RENDERER-BLOCKED");
     expect(proven).toContain(
       "use tauri::webview::{cookie::SameSite, Cookie, WebviewWindow};",
     );
@@ -117,25 +111,20 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       "monitor_packaged_ui(app.clone(), window, app_data_dir);",
     );
 
-    const rendererPrime = wrapper.indexOf(
-      "if !prime_packaged_renderer(app, app_url)? {",
-    );
     const delegatedHandoff = wrapper.indexOf(
       "proven::show_ready(app, app_url)?;",
-      rendererPrime,
     );
     const postUiAuthority = wrapper.indexOf(
       "start_post_ui_authorities(app.clone())?;",
       delegatedHandoff,
     );
-    const safePrimeNavigation = wrapper.indexOf(
-      "window.navigate(renderer_prime_url()?)?;",
+    const durableUiGate = wrapper.indexOf(
+      "if matching_ui_ready_is_durable(&app_data_dir) {",
     );
-    const rendererProof = wrapper.indexOf(
-      "if renderer_is_ready(&window) {",
-      safePrimeNavigation,
+    const lifecycle = wrapper.indexOf(
+      "ensure_shop_lifecycle_started(&app)",
+      durableUiGate,
     );
-    const primeHide = wrapper.indexOf("window.hide()?;", rendererProof);
     const handoff = proven.indexOf(
       "let Some(handoff) = packaged_handoff(&requested_url)? else {",
     );
@@ -147,12 +136,10 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     );
     const monitor = proven.indexOf("monitor_packaged_ui(", navigation);
 
-    expect(rendererPrime).toBeGreaterThan(-1);
-    expect(delegatedHandoff).toBeGreaterThan(rendererPrime);
+    expect(delegatedHandoff).toBeGreaterThan(-1);
     expect(postUiAuthority).toBeGreaterThan(delegatedHandoff);
-    expect(safePrimeNavigation).toBeGreaterThan(-1);
-    expect(rendererProof).toBeGreaterThan(safePrimeNavigation);
-    expect(primeHide).toBeGreaterThan(rendererProof);
+    expect(durableUiGate).toBeGreaterThan(-1);
+    expect(lifecycle).toBeGreaterThan(durableUiGate);
     expect(handoff).toBeGreaterThan(-1);
     expect(hidden).toBeGreaterThan(handoff);
     expect(cookie).toBeGreaterThan(hidden);
@@ -163,6 +150,7 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     expect(combined).not.toContain("STARTUP_WINDOW_LABEL");
     expect(combined).not.toContain("activate_startup_renderer(");
     expect(combined).not.toContain("activate_configured_workspace(");
+    expect(combined).not.toContain("renderer_prime_html(");
     expect(combined).not.toContain("run_on_main_thread");
     expect(combined).not.toContain("WebviewWindowBuilder::new(");
     expect(combined).not.toContain("WebviewUrl::External(url)");
