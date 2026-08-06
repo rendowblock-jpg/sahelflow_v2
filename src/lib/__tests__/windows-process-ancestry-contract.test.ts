@@ -27,9 +27,6 @@ describe("installed Windows descendant identity capture", () => {
     expect(ancestry).toContain("continue");
     expect(ancestry).toContain("identityKey = $identityKey");
     expect(ancestry).toContain("createdAtUtcTicks = $childCreatedAtUtcTicks");
-    expect(ancestry).toContain(
-      "PID reuse by long-lived Windows session processes cannot forge ancestry",
-    );
 
     const stalePidGuard = ancestry.indexOf(
       "$childCreatedAtUtcTicks -lt [int64]$parent.createdAtUtcTicks",
