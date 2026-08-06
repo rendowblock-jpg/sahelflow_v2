@@ -7,6 +7,11 @@ import { proxy } from "./proxy";
 const RUNTIME_TOKEN = "e".repeat(64);
 const INSTANCE_ID = "a".repeat(32);
 const AUTH_SECRET = "proxy-test-auth-secret";
+// Self-hosted Next middleware deliberately exposes its server-populated
+// canonical loopback hostname instead of trusting the request Host header. The
+// installed WebView evidence likewise hydrates on localhost even though the
+// native runtime endpoint is published as 127.0.0.1.
+const CANONICAL_PROXY_ORIGIN = "http://localhost:49152";
 
 type RequestOptions = Readonly<{
   method?: string;
@@ -78,7 +83,7 @@ describe("runtime proxy boundary", () => {
     }
   });
 
-  it("redirects non-setup pages with an absolute same-origin location", async () => {
+  it("redirects non-setup pages with an absolute canonical loopback location", async () => {
     for (const pathname of [
       "/",
       "/login",
@@ -89,7 +94,7 @@ describe("runtime proxy boundary", () => {
       const response = await proxy(request(pathname));
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe(
-        "http://127.0.0.1:49152/setup",
+        `${CANONICAL_PROXY_ORIGIN}/setup`,
       );
     }
   });
@@ -100,7 +105,7 @@ describe("runtime proxy boundary", () => {
     );
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
-      "http://127.0.0.1:49152/setup",
+      `${CANONICAL_PROXY_ORIGIN}/setup`,
     );
   });
 
@@ -212,7 +217,7 @@ describe("runtime proxy boundary", () => {
       const response = await proxy(request(pathname));
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe(
-        "http://127.0.0.1:49152/login",
+        `${CANONICAL_PROXY_ORIGIN}/login`,
       );
     }
   });
