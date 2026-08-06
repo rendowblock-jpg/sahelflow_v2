@@ -5,8 +5,8 @@ use std::io::{Error as IoError, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tauri::webview::{WebviewWindow, WebviewWindowBuilder};
-use tauri::{Manager, WebviewUrl};
+use tauri::webview::WebviewWindow;
+use tauri::Manager;
 
 #[cfg(not(debug_assertions))]
 mod shop_lifecycle_host;
@@ -23,11 +23,9 @@ const MAIN_WINDOW_TITLE: &str = "SahelFlow";
 const BOOTSTRAP_WINDOW_TITLE: &str = "SahelFlow - Starting";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
 const STARTUP_RENDERER_MARKER: &str = "sahelflow-startup-renderer-v1";
-const WORKSPACE_RENDERER_MARKER: &str = "sahelflow-workspace-renderer-v1";
 const STARTUP_RENDERER_PROBE_SCRIPT: &str =
     "(()=>{try{return document.documentElement.dataset.sfRendererPrime||''}catch(_error){return ''}})()";
-const WORKSPACE_RENDERER_PROBE_SCRIPT: &str = "(()=>{try{const host=window.location.hostname;return document.readyState!=='loading'&&window.location.protocol==='http:'&&(host==='127.0.0.1'||host==='localhost')?'sahelflow-workspace-renderer-v1':''}catch(_error){return ''}})()";
-const WORKSPACE_WINDOW_CREATION_TIMEOUT: Duration = Duration::from_secs(15);
+const WORKSPACE_ACTIVATION_TIMEOUT: Duration = Duration::from_secs(15);
 const RENDERER_ACTIVATION_TIMEOUT: Duration = Duration::from_secs(15);
 const RENDERER_ACTIVATION_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const RENDERER_PROBE_RESPONSE_TIMEOUT: Duration = Duration::from_millis(500);
@@ -95,16 +93,14 @@ struct PackagedHandoff {
     bootstrap_url: tauri::Url,
 }
 
-/// Create the real workspace WebView with its authenticated loopback bootstrap
-/// as the initial URL.
+/// Activate the configured workspace WebView behind an inert startup cover.
 ///
-/// Packaged startup first exposes the inert, capability-free `startup` window
-/// and proves that WebView2 has activated an executable renderer. Only then is
-/// the authenticated `main` window created on Tauri's main event thread. Its
-/// own loopback document must also execute before the bounded hydrated-UI timer
-/// begins. This prevents a native window handle from being mistaken for an
-/// active WebView renderer while keeping the real workspace non-authoritative
-/// until its durable UI-ready acknowledgment is accepted.
+/// The capability-free `startup` surface is shown first and proves WebView2 can
+/// execute an inert local document. The already configured, capability-bound
+/// `main` WebView is then shown behind that cover and navigated on Tauri's event
+/// thread. No script callback is treated as workspace authority: only the
+/// durable authenticated UI-ready receipt can remove the cover and expose the
+/// business workspace.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let requested_url = tauri::Url::parse(app_url)?;
     let handoff = packaged_handoff(&requested_url)?;
@@ -132,7 +128,7 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
             }
             Err(error) => {
                 let detail = format!(
-                    "the inert startup surface did not activate WebView2 before workspace creation: {error}"
+                    "the inert startup surface did not activate WebView2 before workspace navigation: {error}"
                 );
                 record_startup_stage(&app_data_dir, "startup-renderer-prime-blocked", None);
                 show_blocked(app, "SF-RUNTIME-UI-STARTUP-RENDERER-BLOCKED", &detail)?;
@@ -147,28 +143,13 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
         .map(|value| value.bootstrap_url)
         .unwrap_or(requested_url);
     if packaged {
-        record_startup_stage(&app_data_dir, "workspace-window-creating", None);
+        record_startup_stage(&app_data_dir, "workspace-window-activating", None);
     }
-    let workspace = create_workspace_window(app, workspace_url, packaged)?;
+    let workspace =
+        activate_configured_workspace(app, workspace_url, packaged, startup.as_ref())?;
 
     if packaged {
-        record_startup_stage(&app_data_dir, "workspace-window-created", None);
-        record_startup_stage(&app_data_dir, "workspace-renderer-probe-started", None);
-        if !wait_for_renderer(
-            &workspace,
-            WORKSPACE_RENDERER_PROBE_SCRIPT,
-            WORKSPACE_RENDERER_MARKER,
-            RENDERER_ACTIVATION_TIMEOUT,
-        ) {
-            let detail = "the main-thread workspace window was created, but its loopback WebView document did not activate before the bounded deadline";
-            record_startup_stage(&app_data_dir, "workspace-renderer-probe-blocked", None);
-            show_blocked(app, "SF-RUNTIME-UI-WORKSPACE-RENDERER-BLOCKED", detail)?;
-            return Ok(());
-        }
-        record_startup_stage(&app_data_dir, "workspace-renderer-probe-ready", None);
-        if let Some(startup) = startup {
-            let _ = startup.hide();
-        }
+        record_startup_stage(&app_data_dir, "workspace-navigation-dispatched", None);
         monitor_packaged_ui(app.clone(), workspace, app_data_dir);
     } else if let Some(startup) = app.get_webview_window(STARTUP_WINDOW_LABEL) {
         let _ = startup.destroy();
@@ -259,62 +240,67 @@ fn wait_for_renderer(
     false
 }
 
-fn create_workspace_window(
+fn activate_configured_workspace(
     app: &tauri::AppHandle,
     url: tauri::Url,
     packaged: bool,
+    startup: Option<&WebviewWindow>,
 ) -> Result<WebviewWindow, Box<dyn Error>> {
-    if app.get_webview_window(MAIN_WINDOW_LABEL).is_some() {
-        return Err(IoError::new(
-            ErrorKind::AlreadyExists,
-            "the authenticated workspace window already exists",
-        )
-        .into());
-    }
+    let workspace = app
+        .get_webview_window(MAIN_WINDOW_LABEL)
+        .ok_or_else(|| {
+            IoError::new(
+                ErrorKind::NotFound,
+                "the configured authenticated workspace window was not created",
+            )
+        })?;
 
     let title = if packaged {
         BOOTSTRAP_WINDOW_TITLE
     } else {
         MAIN_WINDOW_TITLE
     };
-    let app_for_builder = app.clone();
+    let workspace_for_activation = workspace.clone();
+    let startup_for_activation = startup.cloned();
     let (sender, receiver) = std::sync::mpsc::sync_channel::<Result<(), String>>(1);
     app.run_on_main_thread(move || {
-        let result = WebviewWindowBuilder::new(
-            &app_for_builder,
-            MAIN_WINDOW_LABEL,
-            WebviewUrl::External(url),
-        )
-        .title(title)
-        .inner_size(1280.0, 800.0)
-        .min_inner_size(800.0, 500.0)
-        .resizable(true)
-        .maximized(true)
-        .visible(true)
-        .focused(true)
-        .build()
-        .map(|_| ())
-        .map_err(|error| error.to_string());
+        let result = (|| -> Result<(), String> {
+            workspace_for_activation
+                .set_title(title)
+                .map_err(|error| error.to_string())?;
+            // A configured WebView2 window must be shown before external
+            // navigation can create and retain its renderer on Windows. The
+            // inert startup window is immediately refocused and remains the
+            // only authoritative surface until the durable UI-ready receipt.
+            workspace_for_activation
+                .show()
+                .map_err(|error| error.to_string())?;
+            workspace_for_activation
+                .set_focus()
+                .map_err(|error| error.to_string())?;
+            workspace_for_activation
+                .navigate(url)
+                .map_err(|error| error.to_string())?;
+            if let Some(startup) = startup_for_activation {
+                startup.show().map_err(|error| error.to_string())?;
+                startup.set_focus().map_err(|error| error.to_string())?;
+            }
+            Ok(())
+        })();
         let _ = sender.send(result);
     })?;
 
     receiver
-        .recv_timeout(WORKSPACE_WINDOW_CREATION_TIMEOUT)
+        .recv_timeout(WORKSPACE_ACTIVATION_TIMEOUT)
         .map_err(|_| {
             IoError::new(
                 ErrorKind::TimedOut,
-                "the authenticated workspace window was not created on Tauri's main thread",
+                "the configured workspace was not activated on Tauri's event thread",
             )
         })?
         .map_err(IoError::other)?;
 
-    app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
-        IoError::new(
-            ErrorKind::NotFound,
-            "the main-thread workspace creation completed without a window handle",
-        )
-        .into()
-    })
+    Ok(workspace)
 }
 
 pub fn reset_startup_trace(app_data_dir: &Path) {
