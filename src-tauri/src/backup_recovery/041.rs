@@ -27,12 +27,15 @@ fn apply_staged_restore(
     fs::create_dir_all(&shops_dir)?;
     reject_symlink_if_present(&shops_dir)?;
 
+    let mut applied_shop_count = 0_usize;
     for object in &staged.staged_objects {
         let source = safe_relative_path(staging, &object.staged_file)?;
         let target = shops_dir.join(&object.database_file);
         replace_from_verified_source(&source, &target, &object.sha256)?;
         remove_sqlite_sidecars(&target)?;
         preflight_database(&target)?;
+        applied_shop_count += 1;
+        maybe_interrupt_phase4_restore_after_shop(applied_shop_count);
     }
 
     let current_files = read_registry_relaxed(app_data_dir)
