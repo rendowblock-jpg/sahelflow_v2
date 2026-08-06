@@ -30,7 +30,8 @@ describe("Phase 4 installed replacement evidence", () => {
     expect(workflow).toContain("verify-phase4-replacement-install.ps1");
     expect(harness).toContain("Install-Msi uninstall");
     expect(harness).toContain("Install-Msi install");
-    expect(harness).toContain("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS");
+    expect(harness).toContain("HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge\\WebView2");
+    expect(harness).toContain("Disable-RuntimeDebuggingPolicy");
     expect(harness).toContain('method = "Network.getCookies"');
     expect(harness).toContain("Import-RuntimeCookieFromWebView");
     expect(harness).toContain("written to evidence or emitted to the Actions log");

@@ -42,6 +42,48 @@ function Get-FreeLoopbackPort {
 }
 
 $runtimeDebuggingPort = Get-FreeLoopbackPort
+$runtimeDebuggingPolicyPath =
+    "HKLM:\SOFTWARE\Policies\Microsoft\Edge\WebView2\AdditionalBrowserArguments"
+$runtimeDebuggingPolicyName = "sahelflow.exe"
+$runtimeDebuggingPolicyHadPrevious = $false
+$runtimeDebuggingPolicyPrevious = $null
+
+function Enable-RuntimeDebuggingPolicy {
+    $existing = Get-ItemProperty `
+        -LiteralPath $runtimeDebuggingPolicyPath `
+        -ErrorAction SilentlyContinue
+    $script:runtimeDebuggingPolicyHadPrevious =
+        $null -ne $existing -and
+        $existing.PSObject.Properties.Name -contains $runtimeDebuggingPolicyName
+    if ($runtimeDebuggingPolicyHadPrevious) {
+        $script:runtimeDebuggingPolicyPrevious =
+            [string]$existing.$runtimeDebuggingPolicyName
+    }
+    New-Item -Path $runtimeDebuggingPolicyPath -Force | Out-Null
+    New-ItemProperty `
+        -Path $runtimeDebuggingPolicyPath `
+        -Name $runtimeDebuggingPolicyName `
+        -PropertyType String `
+        -Value "--remote-debugging-port=$runtimeDebuggingPort" `
+        -Force | Out-Null
+}
+
+function Disable-RuntimeDebuggingPolicy {
+    if ($runtimeDebuggingPolicyHadPrevious) {
+        New-ItemProperty `
+            -Path $runtimeDebuggingPolicyPath `
+            -Name $runtimeDebuggingPolicyName `
+            -PropertyType String `
+            -Value $runtimeDebuggingPolicyPrevious `
+            -Force | Out-Null
+        return
+    }
+    Remove-ItemProperty `
+        -LiteralPath $runtimeDebuggingPolicyPath `
+        -Name $runtimeDebuggingPolicyName `
+        -Force `
+        -ErrorAction SilentlyContinue
+}
 
 function Read-JsonFile {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -76,24 +118,7 @@ function Start-SahelFlow {
         throw "Installed executable is missing."
     }
     Remove-Item -LiteralPath $endpointPath -Force -ErrorAction SilentlyContinue
-    $previousBrowserArguments = $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
-    try {
-        $debuggingArgument = "--remote-debugging-port=$runtimeDebuggingPort"
-        $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = if (
-            [string]::IsNullOrWhiteSpace($previousBrowserArguments)
-        ) {
-            $debuggingArgument
-        } else {
-            "$previousBrowserArguments $debuggingArgument"
-        }
-        return Start-Process -FilePath $exe -PassThru
-    } finally {
-        if ($null -eq $previousBrowserArguments) {
-            Remove-Item Env:\WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS -ErrorAction SilentlyContinue
-        } else {
-            $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = $previousBrowserArguments
-        }
-    }
+    return Start-Process -FilePath $exe -PassThru
 }
 
 function Wait-ForRuntime {
@@ -412,6 +437,8 @@ if ($sourceSearch.status -ne 200 -or [int]$sourceSearch.body.total -lt 1 -or $so
 Close-SahelFlow $sourceProcess
 $sourceEvidence = Get-ProfileEvidence
 if ($sourceEvidence.shopCount -lt 2) { throw "Source profile is not a realistic multi-shop installation." }
+Enable-RuntimeDebuggingPolicy
+try {
 Stop-ResidualSahelFlow
 
 # Prove source loss, then install into a new local profile/root.
@@ -508,3 +535,6 @@ if (-not (Test-Path -LiteralPath $restoreReceiptPath -PathType Leaf)) { throw "C
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $resultPath -Encoding UTF8
 
 Write-Host "Phase 4 replacement-install backup, restore, identity, and rollback drill passed."
+} finally {
+    Disable-RuntimeDebuggingPolicy
+}
