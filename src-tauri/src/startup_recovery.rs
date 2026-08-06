@@ -145,8 +145,12 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     if packaged {
         record_startup_stage(&app_data_dir, "workspace-window-activating", None);
     }
-    let workspace =
-        activate_configured_workspace(app, workspace_url, packaged, startup.as_ref())?;
+    let workspace = activate_configured_workspace(
+        app,
+        workspace_url,
+        packaged,
+        startup.as_ref(),
+    )?;
 
     if packaged {
         record_startup_stage(&app_data_dir, "workspace-navigation-dispatched", None);
@@ -246,14 +250,12 @@ fn activate_configured_workspace(
     packaged: bool,
     startup: Option<&WebviewWindow>,
 ) -> Result<WebviewWindow, Box<dyn Error>> {
-    let workspace = app
-        .get_webview_window(MAIN_WINDOW_LABEL)
-        .ok_or_else(|| {
-            IoError::new(
-                ErrorKind::NotFound,
-                "the configured authenticated workspace window was not created",
-            )
-        })?;
+    let workspace = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
+        IoError::new(
+            ErrorKind::NotFound,
+            "the configured authenticated workspace window was not created",
+        )
+    })?;
 
     let title = if packaged {
         BOOTSTRAP_WINDOW_TITLE
