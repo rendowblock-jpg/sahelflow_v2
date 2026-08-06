@@ -1,5 +1,32 @@
 
 
+fn phase4_restore_evidence_build() -> bool {
+    option_env!("SF_PHASE4_RESTORE_EVIDENCE_BUILD") == Some("1")
+}
+
+fn maybe_interrupt_phase4_restore_after_shop(applied_shop_count: usize) {
+    if !phase4_restore_evidence_build() {
+        return;
+    }
+    let requested = std::env::var("SF_PHASE4_RESTORE_INTERRUPT_AFTER_SHOPS")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok());
+    if requested == Some(applied_shop_count) {
+        std::process::exit(86);
+    }
+}
+
+fn maybe_stop_phase4_restore_after_rollback() {
+    if phase4_restore_evidence_build()
+        && std::env::var("SF_PHASE4_RESTORE_STOP_AFTER_ROLLBACK")
+            .ok()
+            .as_deref()
+            == Some("1")
+    {
+        std::process::exit(87);
+    }
+}
+
 pub(crate) fn apply_pending_restore(
     app_data_dir: &Path,
     installation_root: &InstallationRootKey,
@@ -70,6 +97,7 @@ pub(crate) fn apply_pending_restore(
                 installation_root.as_bytes(),
                 journal.unsigned.clone(),
             )?;
+            maybe_stop_phase4_restore_after_rollback();
         }
         RestoreJournalState::Staged | RestoreJournalState::RescueReady => {}
     }
