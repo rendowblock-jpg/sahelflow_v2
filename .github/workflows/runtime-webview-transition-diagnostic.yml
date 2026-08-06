@@ -6,7 +6,6 @@ on:
       - main
     types:
       - opened
-      - synchronize
       - reopened
     paths:
       - .github/workflows/runtime-webview-transition-diagnostic.yml

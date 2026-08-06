@@ -1,0 +1,66 @@
+name: Runtime WebView evidence extract
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - .github/workflows/runtime-webview-evidence-extract.yml
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  extract:
+    name: Publish redacted WebView transition summaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DIAGNOSTIC_RUN_ID: "31112998028"
+
+    steps:
+      - name: Download completed exact-source diagnostic artifacts
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.DIAGNOSTIC_RUN_ID }}
+          pattern: runtime-webview-diagnostic-*
+          path: evidence
+          merge-multiple: false
+
+      - name: Print redacted transition summaries
+        shell: bash
+        run: |
+          summaries="$(find evidence -type f -name webview-cdp-summary.json -print)"
+          if [ -z "$summaries" ]; then
+            echo "No WebView transition summaries were found." >&2
+            exit 1
+          fi
+          while IFS= read -r summary; do
+            echo "SUMMARY_FILE=$summary"
+            sed -n '1,240p' "$summary"
+          done <<< "$summaries"
+
+      - name: Upload summary-only evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-webview-summary-${{ github.run_id }}
+          path: |
+            evidence/**/webview-cdp-summary.json
+            evidence/**/webview-cdp-events.jsonl
+            evidence/**/startup-trace.json
+            evidence/**/startup-diagnostic.json
+            evidence/**/runtime-ui-ready.json
+            evidence/**/runtime-ui-diagnostic.json
+            evidence/**/diagnostic-environment.json
+            evidence/**/diagnostic-launch.json
+            evidence/**/diagnostic-msi.json
+            evidence/**/webview2-version.json
+          if-no-files-found: error
+          retention-days: 3
