@@ -55,7 +55,7 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     restoreEnvironment("VITEST", originalEnvironment.VITEST);
   });
 
-  it("activates the configured main WebView behind an inert startup cover", () => {
+  it("installs the native runtime session before token-free root navigation", () => {
     const configuration = JSON.parse(
       readFileSync(
         resolve(process.cwd(), "src-tauri/tauri.conf.json"),
@@ -94,7 +94,10 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       "<script",
     );
 
-    expect(recovery).toContain("use tauri::webview::WebviewWindow;");
+    expect(recovery).toContain(
+      "use tauri::webview::{cookie::SameSite, Cookie, WebviewWindow};",
+    );
+    expect(recovery).toContain('RUNTIME_COOKIE: &str = "sf_runtime"');
     expect(recovery).toContain(
       'STARTUP_RENDERER_MARKER: &str = "sahelflow-startup-renderer-v1"',
     );
@@ -105,6 +108,8 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     expect(recovery).toContain(".eval_with_callback(");
     expect(recovery).toContain("activate_configured_workspace(");
     expect(workspaceAuthority).toContain("workspace_for_activation");
+    expect(workspaceAuthority).toContain("runtime_cookie(&host, &token)");
+    expect(workspaceAuthority).toContain(".set_cookie(cookie)");
     expect(workspaceAuthority).toContain(".show()");
     expect(workspaceAuthority).toContain(".set_focus()");
     expect(workspaceAuthority).toContain(".navigate(url)");
@@ -112,10 +117,17 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     expect(workspaceAuthority).toContain(
       "recv_timeout(WORKSPACE_ACTIVATION_TIMEOUT)",
     );
+    expect(recovery).toContain("workspace_url.set_path(\"/\")");
+    expect(recovery).toContain("workspace_url.set_query(None)");
+    expect(recovery).toContain("workspace_url.set_fragment(None)");
+    expect(recovery).toContain(".http_only(true)");
+    expect(recovery).toContain(".same_site(SameSite::Lax)");
     expect(recovery).toContain('"startup-renderer-prime-started"');
     expect(recovery).toContain('"startup-renderer-prime-ready"');
     expect(recovery).toContain('"workspace-window-activating"');
-    expect(recovery).toContain('"workspace-navigation-dispatched"');
+    expect(recovery).toContain('"workspace-native-session-started"');
+    expect(recovery).toContain('"workspace-native-session-installed"');
+    expect(recovery).toContain('"workspace-root-navigation-dispatched"');
     expect(recovery).toContain(
       '"SF-RUNTIME-UI-STARTUP-RENDERER-BLOCKED"',
     );
@@ -137,8 +149,10 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       "activate_configured_workspace(",
       startupPrime,
     );
+    const nativeCookie = workspaceAuthority.indexOf(".set_cookie(cookie)");
+    const rootNavigation = workspaceAuthority.indexOf(".navigate(url)");
     const navigationDispatched = recovery.indexOf(
-      '"workspace-navigation-dispatched"',
+      '"workspace-root-navigation-dispatched"',
       workspaceActivation,
     );
     const readinessMonitor = recovery.indexOf(
@@ -148,11 +162,13 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     expect(validatedHandoff).toBeGreaterThan(-1);
     expect(startupPrime).toBeGreaterThan(validatedHandoff);
     expect(workspaceActivation).toBeGreaterThan(startupPrime);
+    expect(nativeCookie).toBeGreaterThan(-1);
+    expect(rootNavigation).toBeGreaterThan(nativeCookie);
     expect(navigationDispatched).toBeGreaterThan(workspaceActivation);
     expect(readinessMonitor).toBeGreaterThan(navigationDispatched);
   });
 
-  it("commits and confirms the HttpOnly runtime cookie before workspace navigation", async () => {
+  it("retains the confirmed browser bootstrap only as a legacy fallback", async () => {
     const response = await GET(request());
     const body = await response.text();
     const setCookie = response.headers.get("set-cookie") ?? "";
@@ -162,6 +178,10 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       resolve(process.cwd(), "public/runtime-bootstrap-handoff.js"),
       "utf8",
     );
+    const recovery = readFileSync(
+      resolve(process.cwd(), "src-tauri/src/startup_recovery.rs"),
+      "utf8",
+    ).replace(/\r\n?/g, "\n");
 
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
@@ -188,9 +208,12 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       handoffScript.indexOf('window.location.replace("/")'),
     );
     expect(handoffScript).not.toContain(token);
+    expect(recovery).toContain("workspace_url.set_query(None)");
+    expect(recovery).toContain("workspace_url.set_fragment(None)");
+    expect(recovery).not.toContain("handoff.bootstrap_url");
   });
 
-  it("remains one-time after the successful cookie handoff", async () => {
+  it("remains one-time after the successful fallback cookie handoff", async () => {
     expect((await GET(request())).status).toBe(200);
 
     const second = await GET(request());
