@@ -28,61 +28,12 @@ $sourceSecret = "phase4-evidence-secret-8642"
 
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
-function Get-FreeLoopbackPort {
-    $listener = [System.Net.Sockets.TcpListener]::new(
-        [System.Net.IPAddress]::Loopback,
-        0
-    )
-    try {
-        $listener.Start()
-        return ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
-    } finally {
-        $listener.Stop()
-    }
+if ($env:SF_PHASE4_WEBVIEW_DEBUG_PORT -cnotmatch "^[0-9]{1,5}$") {
+    throw "The CI-only evidence MSI did not publish its WebView debugging port."
 }
-
-$runtimeDebuggingPort = Get-FreeLoopbackPort
-$runtimeDebuggingPolicyPath =
-    "HKLM:\SOFTWARE\Policies\Microsoft\Edge\WebView2\AdditionalBrowserArguments"
-$runtimeDebuggingPolicyName = "sahelflow.exe"
-$runtimeDebuggingPolicyHadPrevious = $false
-$runtimeDebuggingPolicyPrevious = $null
-
-function Enable-RuntimeDebuggingPolicy {
-    $existing = Get-ItemProperty `
-        -LiteralPath $runtimeDebuggingPolicyPath `
-        -ErrorAction SilentlyContinue
-    $script:runtimeDebuggingPolicyHadPrevious =
-        $null -ne $existing -and
-        $existing.PSObject.Properties.Name -contains $runtimeDebuggingPolicyName
-    if ($runtimeDebuggingPolicyHadPrevious) {
-        $script:runtimeDebuggingPolicyPrevious =
-            [string]$existing.$runtimeDebuggingPolicyName
-    }
-    New-Item -Path $runtimeDebuggingPolicyPath -Force | Out-Null
-    New-ItemProperty `
-        -Path $runtimeDebuggingPolicyPath `
-        -Name $runtimeDebuggingPolicyName `
-        -PropertyType String `
-        -Value "--remote-debugging-port=$runtimeDebuggingPort" `
-        -Force | Out-Null
-}
-
-function Disable-RuntimeDebuggingPolicy {
-    if ($runtimeDebuggingPolicyHadPrevious) {
-        New-ItemProperty `
-            -Path $runtimeDebuggingPolicyPath `
-            -Name $runtimeDebuggingPolicyName `
-            -PropertyType String `
-            -Value $runtimeDebuggingPolicyPrevious `
-            -Force | Out-Null
-        return
-    }
-    Remove-ItemProperty `
-        -LiteralPath $runtimeDebuggingPolicyPath `
-        -Name $runtimeDebuggingPolicyName `
-        -Force `
-        -ErrorAction SilentlyContinue
+$runtimeDebuggingPort = [int]$env:SF_PHASE4_WEBVIEW_DEBUG_PORT
+if ($runtimeDebuggingPort -lt 1 -or $runtimeDebuggingPort -gt 65535) {
+    throw "The CI-only WebView debugging port is outside the TCP port range."
 }
 
 function Read-JsonFile {
@@ -437,8 +388,6 @@ if ($sourceSearch.status -ne 200 -or [int]$sourceSearch.body.total -lt 1 -or $so
 Close-SahelFlow $sourceProcess
 $sourceEvidence = Get-ProfileEvidence
 if ($sourceEvidence.shopCount -lt 2) { throw "Source profile is not a realistic multi-shop installation." }
-Enable-RuntimeDebuggingPolicy
-try {
 Stop-ResidualSahelFlow
 
 # Prove source loss, then install into a new local profile/root.
@@ -535,6 +484,3 @@ if (-not (Test-Path -LiteralPath $restoreReceiptPath -PathType Leaf)) { throw "C
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $resultPath -Encoding UTF8
 
 Write-Host "Phase 4 replacement-install backup, restore, identity, and rollback drill passed."
-} finally {
-    Disable-RuntimeDebuggingPolicy
-}

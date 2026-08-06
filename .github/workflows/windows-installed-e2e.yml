@@ -124,12 +124,38 @@ jobs:
           # receipts. Ordinary release builds do not define this compile-time
           # marker and cannot activate the evidence boundaries at runtime.
           $env:SF_PHASE4_RESTORE_EVIDENCE_BUILD = '1'
+          # The replacement drill must call authenticated APIs through the same
+          # per-launch HttpOnly authority as the installed WebView. Give only
+          # this disposable evidence MSI a loopback CDP endpoint; release builds
+          # continue to use the checked-in Tauri configuration unchanged.
+          $listener = [System.Net.Sockets.TcpListener]::new(
+            [System.Net.IPAddress]::Loopback,
+            0
+          )
+          try {
+            $listener.Start()
+            $webViewDebugPort = ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
+          } finally {
+            $listener.Stop()
+          }
+          "SF_PHASE4_WEBVIEW_DEBUG_PORT=$webViewDebugPort" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          $evidenceConfig = Get-Content -LiteralPath 'src-tauri/tauri.conf.json' -Raw |
+            ConvertFrom-Json
+          $browserArguments =
+            "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection " +
+            "--remote-debugging-port=$webViewDebugPort"
+          $evidenceConfig.app.windows[0] |
+            Add-Member -NotePropertyName additionalBrowserArgs -NotePropertyValue $browserArguments
+          $evidenceConfig.bundle.createUpdaterArtifacts = $false
+          $evidenceConfig |
+            ConvertTo-Json -Depth 100 |
+            Set-Content -LiteralPath .sf-installed-e2e-tauri.json -Encoding UTF8
           # The Rust cache contains target/ for compile speed, but may also retain
           # MSI bundles from an older candidate. Build evidence must contain only
           # the exact installer produced by this job.
           Remove-Item -LiteralPath 'src-tauri/target/release/bundle/msi' -Recurse -Force -ErrorAction SilentlyContinue
-          '{"bundle":{"createUpdaterArtifacts":false}}' |
-            Set-Content -LiteralPath .sf-installed-e2e-tauri.json -Encoding UTF8
           & bunx tauri build --bundles msi --config .sf-installed-e2e-tauri.json 2>&1 |
             Tee-Object -FilePath .sf-installed-e2e-build.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

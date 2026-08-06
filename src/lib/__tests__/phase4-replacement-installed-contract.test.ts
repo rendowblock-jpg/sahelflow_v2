@@ -27,16 +27,23 @@ describe("Phase 4 installed replacement evidence", () => {
     );
 
     expect(workflow).toContain("SF_PHASE4_RESTORE_EVIDENCE_BUILD");
+    expect(workflow).toContain("SF_PHASE4_WEBVIEW_DEBUG_PORT");
+    expect(workflow).toContain("additionalBrowserArgs");
+    expect(workflow).toContain("--remote-debugging-port=$webViewDebugPort");
+    expect(workflow).toContain(
+      "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection",
+    );
     expect(workflow).toContain("verify-phase4-replacement-install.ps1");
     expect(harness).toContain("Install-Msi uninstall");
     expect(harness).toContain("Install-Msi install");
-    expect(harness).toContain("HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge\\WebView2");
-    expect(harness).toContain("Disable-RuntimeDebuggingPolicy");
+    expect(harness).toContain("SF_PHASE4_WEBVIEW_DEBUG_PORT");
+    expect(harness).not.toContain("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS");
+    expect(harness).not.toContain("HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge\\WebView2");
     expect(harness).toContain('method = "Network.getCookies"');
     expect(harness).toContain("Import-RuntimeCookieFromWebView");
     expect(harness).toContain("written to evidence or emitted to the Actions log");
-    expect(harness).toContain('ExitCode -ne 86');
-    expect(harness).toContain('ExitCode -ne 87');
+    expect(harness).toContain("ExitCode -ne 86");
+    expect(harness).toContain("ExitCode -ne 87");
     expect(harness).toContain("Assert-BusinessParity $replacementBeforeRestore");
     expect(harness).toContain("Assert-BusinessParity $sourceEvidence");
     expect(harness).toContain("sourceSessionNonCloningVerified = $true");
