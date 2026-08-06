@@ -90,7 +90,20 @@ foreach ($relative in $diagnosticFiles) {
     Remove-Item -LiteralPath (Join-Path $roamingRoot $relative) -Force -ErrorAction SilentlyContinue
 }
 
-$bun = (Get-Command bun.exe -CommandType Application -ErrorAction Stop).Source
+$bunCommand = Get-Command bun.exe -CommandType Application -ErrorAction SilentlyContinue
+if ($null -ne $bunCommand) {
+    $bun = $bunCommand.Source
+} else {
+    $npmRoot = (& npm root --global).Trim()
+    $bun = @(
+        Get-ChildItem -LiteralPath (Join-Path $npmRoot "bun") -Recurse `
+            -Filter "bun.exe" -File -ErrorAction Stop |
+            Select-Object -ExpandProperty FullName
+    ) | Select-Object -First 1
+    if ([string]::IsNullOrWhiteSpace($bun)) {
+        throw "The native Bun executable was not found."
+    }
+}
 $observerPath = Join-Path $PSScriptRoot "observe-installed-webview-cdp.mjs"
 $endpoint = "http://127.0.0.1:$RemoteDebuggingPort"
 $previousBrowserArguments = $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
