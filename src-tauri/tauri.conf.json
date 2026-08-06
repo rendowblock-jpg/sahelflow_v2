@@ -22,7 +22,22 @@
         "resizable": true,
         "fullscreen": false,
         "maximized": true,
-        "visible": true
+        "visible": true,
+        "focused": true
+      },
+      {
+        "label": "main",
+        "title": "SahelFlow - Starting",
+        "url": "data:text/html;charset=utf-8,%3C!doctype%20html%3E%3Ctitle%3ESahelFlow%3C%2Ftitle%3E",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 500,
+        "resizable": true,
+        "fullscreen": false,
+        "maximized": true,
+        "visible": false,
+        "focused": false
       }
     ],
     "security": {
@@ -62,7 +77,7 @@
       "endpoints": [
         "https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM3MTgzNjkzQTA1ODlCNTUKUldSVm0xaWdrellZeDNWZ3BYU2xmakFsR0VQQkNQY1Y2VGxpN0F4bm5ib2kzT0xPb2cyMnlaRG0K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM3MTgzNjkzQTA1ODlCNTUKUldSVmoxaWdrellZeDNWZ3BYU2xmakFsR0VQQkNQY1Y2VGxpN0F4bm5ib2kzT0xPb2cyMnlaRG0K",
       "windows": {
         "installMode": "passive"
       }
