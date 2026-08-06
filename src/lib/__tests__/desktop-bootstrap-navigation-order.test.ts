@@ -7,7 +7,7 @@ function readRepositoryFile(path: string): string {
 }
 
 describe("packaged desktop bootstrap navigation", () => {
-  it("proves startup and loopback workspace renderers before hydrated UI authority", () => {
+  it("keeps the configured workspace covered until durable UI authority", () => {
     const recovery = readRepositoryFile("src-tauri/src/startup_recovery.rs");
     const configuration = readRepositoryFile("src-tauri/tauri.conf.json");
 
@@ -30,25 +30,17 @@ describe("packaged desktop bootstrap navigation", () => {
       "let workspace_url = handoff",
       startupPrimeReady,
     );
-    const workspaceCreation = recovery.indexOf(
-      "create_workspace_window(app, workspace_url, packaged)?",
+    const workspaceActivation = recovery.indexOf(
+      "activate_configured_workspace(",
       workspaceUrl,
     );
-    const workspaceCreated = recovery.indexOf(
-      '"workspace-window-created"',
-      workspaceCreation,
-    );
-    const workspaceProbeStarted = recovery.indexOf(
-      '"workspace-renderer-probe-started"',
-      workspaceCreated,
-    );
-    const workspaceProbeReady = recovery.indexOf(
-      '"workspace-renderer-probe-ready"',
-      workspaceProbeStarted,
+    const navigationDispatched = recovery.indexOf(
+      '"workspace-navigation-dispatched"',
+      workspaceActivation,
     );
     const readinessMonitor = recovery.indexOf(
       "monitor_packaged_ui(app.clone(), workspace, app_data_dir)",
-      workspaceProbeReady,
+      navigationDispatched,
     );
 
     expect(validatedHandoff).toBeGreaterThan(-1);
@@ -56,39 +48,37 @@ describe("packaged desktop bootstrap navigation", () => {
     expect(startupActivation).toBeGreaterThan(startupPrimeStarted);
     expect(startupPrimeReady).toBeGreaterThan(startupActivation);
     expect(workspaceUrl).toBeGreaterThan(startupPrimeReady);
-    expect(workspaceCreation).toBeGreaterThan(workspaceUrl);
-    expect(workspaceCreated).toBeGreaterThan(workspaceCreation);
-    expect(workspaceProbeStarted).toBeGreaterThan(workspaceCreated);
-    expect(workspaceProbeReady).toBeGreaterThan(workspaceProbeStarted);
-    expect(readinessMonitor).toBeGreaterThan(workspaceProbeReady);
+    expect(workspaceActivation).toBeGreaterThan(workspaceUrl);
+    expect(navigationDispatched).toBeGreaterThan(workspaceActivation);
+    expect(readinessMonitor).toBeGreaterThan(navigationDispatched);
 
     expect(configuration).toContain('"label": "startup"');
+    expect(configuration).toContain('"label": "main"');
     expect(configuration).toContain('"visible": true');
+    expect(configuration).toContain('"visible": false');
     expect(configuration).toContain('"title": "SahelFlow - Starting"');
     expect(recovery).toContain('STARTUP_WINDOW_LABEL: &str = "startup"');
     expect(recovery).toContain('MAIN_WINDOW_LABEL: &str = "main"');
     expect(recovery).toContain(
       'STARTUP_RENDERER_MARKER: &str = "sahelflow-startup-renderer-v1"',
     );
-    expect(recovery).toContain(
-      'WORKSPACE_RENDERER_MARKER: &str = "sahelflow-workspace-renderer-v1"',
-    );
     expect(recovery).toContain("renderer_prime_html()");
     expect(recovery).toContain(".eval_with_callback(");
     expect(recovery).toContain("app.run_on_main_thread(move ||");
-    expect(recovery).toContain("WebviewWindowBuilder::new(");
-    expect(recovery).toContain("WebviewUrl::External(url)");
+    expect(recovery).toContain("workspace_for_activation.show()");
+    expect(recovery).toContain("workspace_for_activation.set_focus()");
+    expect(recovery).toContain("workspace_for_activation.navigate(url)");
+    expect(recovery).toContain("startup.set_focus()");
     expect(recovery).toContain(
-      "recv_timeout(WORKSPACE_WINDOW_CREATION_TIMEOUT)",
+      "recv_timeout(WORKSPACE_ACTIVATION_TIMEOUT)",
     );
-    expect(recovery).toContain("WORKSPACE_RENDERER_PROBE_SCRIPT");
-    expect(recovery).toContain("RENDERER_ACTIVATION_TIMEOUT");
     expect(recovery).toContain(
       '"SF-RUNTIME-UI-STARTUP-RENDERER-BLOCKED"',
     );
-    expect(recovery).toContain(
-      '"SF-RUNTIME-UI-WORKSPACE-RENDERER-BLOCKED"',
-    );
+    expect(recovery).not.toContain("WebviewWindowBuilder::new(");
+    expect(recovery).not.toContain("WebviewUrl::External(url)");
+    expect(recovery).not.toContain("WORKSPACE_RENDERER_PROBE_SCRIPT");
+    expect(recovery).not.toContain("WORKSPACE_RENDERER_MARKER");
     expect(recovery).not.toContain("schedule_packaged_navigation(");
     expect(recovery).not.toContain("window.location.replace(target)");
   });
