@@ -12,22 +12,8 @@
   "app": {
     "windows": [
       {
-        "label": "startup",
-        "title": "SahelFlow - Starting",
-        "url": "data:text/html;charset=utf-8,%3C!doctype%20html%3E%3Ctitle%3ESahelFlow%3C%2Ftitle%3E",
-        "width": 1280,
-        "height": 800,
-        "minWidth": 800,
-        "minHeight": 500,
-        "resizable": true,
-        "fullscreen": false,
-        "maximized": true,
-        "visible": true,
-        "focus": true
-      },
-      {
         "label": "main",
-        "title": "SahelFlow - Starting",
+        "title": "SahelFlow",
         "url": "data:text/html;charset=utf-8,%3C!doctype%20html%3E%3Ctitle%3ESahelFlow%3C%2Ftitle%3E",
         "width": 1280,
         "height": 800,
@@ -36,8 +22,7 @@
         "resizable": true,
         "fullscreen": false,
         "maximized": true,
-        "visible": false,
-        "focus": false
+        "visible": false
       }
     ],
     "security": {
