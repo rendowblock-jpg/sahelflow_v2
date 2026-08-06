@@ -1,22 +1,28 @@
-# Phase 4 final source-closure gate request
+# Phase 4 final source-closure gate request — paused
 
-This file marks the final non-skipped candidate after the consolidated implementation, CI-diagnostic and adversarial-review repair.
+> **Status:** Not satisfied. This is a handoff marker, not a closure receipt.  
+> **Session handoff:** [`PHASE4_SESSION_HANDOFF_2026-08-06.md`](PHASE4_SESSION_HANDOFF_2026-08-06.md)  
+> **Last executable/code candidate:** `cbeba7000989ed90553b341ddd820213d3b2d736`  
+> **Active PR:** #207 on `agent/phase4-protected-data-authority`
 
-The exact authority is the live head of PR #207 created by this commit; this document intentionally does not embed its own commit SHA.
+PR #207 contains the complete P4-A through P4-F implementation candidate, but Phase 4 must not be reported as closed or merged from the current state.
 
-The candidate includes the complete P4-A through P4-F source and metadata implementation, including:
+The exact-code-head run `31096748001` proved version/documentation authority, native source contracts, Linux Rust smoke and Windows Rust release parity. Its quality lane passed frozen install, Prisma, TypeScript, protected raw-client authority and ESLint, then failed two stale Vitest source-order contracts that still couple lifecycle-host startup to WebView navigation. Coverage, dependency audit and migration status therefore did not execute.
 
-- purpose-separated protected-data authority, fail-closed access boundaries, migration and restart convergence;
-- verified encrypted all-shop backup, authenticated manifests and independent recovery kits;
-- replacement-install restore with staging, rescue, compensation, rollback and identity rebinding;
-- replay-protected native commands and authenticated migration/restore journals;
-- governed export, reset and privacy erase through a privileged transaction bound to the live active-shop authority;
-- complete privacy inventory, threat/legal mapping, vulnerability triage and generated CycloneDX SBOM/VEX evidence;
-- Phase 1 preservation compatibility isolated behind test-only authority;
-- canonical Rust formatting and Linux/Windows native compilation repairs;
-- raw Prisma access closure, strict TypeScript/lint compatibility and exact-head regression coverage;
-- Windows database, standalone build, contained Node launcher, packaged host launch/reopen and staged runtime-readiness evidence.
+At the session-stop snapshot, the Windows standalone/runtime job and installed MSI job had not reported final conclusions. Authenticated hydrated UI twice and the replacement-install backup/restore/identity/rollback drill were not yet proven for the latest executable head. Two outdated P1 review threads also remained unresolved pending exact-head verification.
 
-Phase 4 source closure requires the exact-head source, database, Linux/Windows native, Windows packaged-runtime and adversarial-review gates to pass with no unresolved P0/P1 findings.
+## Required continuation
 
-Issue #201 remains the independent release-impacting authority for authenticated hydrated-WebView proof. Per issue #204, that installed UI evidence does not reopen or block Phase 4 source/meta closure and no unsupported installed-behavior claim is made here.
+1. Re-fetch the live PR head and final status/artifacts of run `31096748001`.
+2. Repair the two stale navigation-order tests without reverting the detached lifecycle-host design.
+3. Consolidate any Windows/installed finding into one non-skipped executable repair.
+4. Pass one complete exact-head source, coverage, audit, migration, native, Windows standalone/runtime and installed-MSI gate.
+5. Inspect the final installed artifact and replacement-restore receipts.
+6. Resolve every P0/P1 thread on that exact green head.
+7. Update the PR body truthfully, merge with expected-head protection, verify protected `main` and only then close issue #204.
+
+## Closure rule
+
+Phase 4 closes only when the exact final head passes all required source, Rust, Windows, authenticated hydrated-WebView and replacement-install evidence lanes with no unresolved P0/P1 review finding. Source presence, a skipped step, an older artifact or a documentation statement cannot substitute for that evidence.
+
+No release, Founder acceptance, Beta, Stable, legal-certification, penetration-test or live-provider claim is made.
