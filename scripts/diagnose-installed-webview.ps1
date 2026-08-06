@@ -27,6 +27,7 @@ $diagnosticFiles = @(
     "runtime-endpoint.json",
     "runtime-ui-ready.json",
     "runtime-ui-diagnostic.json",
+    "runtime-browser-diagnostic.jsonl",
     "startup-trace.json"
 )
 
