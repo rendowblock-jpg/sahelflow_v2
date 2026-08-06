@@ -90,6 +90,47 @@ jobs:
           name: ${{ matrix.artifact }}
           path: retained-artifact
 
+      - name: Extract exact built resource identities for the install harness
+        shell: pwsh
+        run: |
+          $msis = @(Get-ChildItem -LiteralPath 'retained-artifact' -Recurse -Filter '*.msi' -File)
+          if ($msis.Count -ne 1) {
+            throw "Expected exactly one retained diagnostic MSI, found $($msis.Count)"
+          }
+
+          $administrativeRoot = Join-Path $env:RUNNER_TEMP 'sahelflow-msi-administrative-image'
+          $administrativeLog = Join-Path $env:RUNNER_TEMP 'sahelflow-msi-administrative-image.log'
+          New-Item -ItemType Directory -Path $administrativeRoot -Force | Out-Null
+          $arguments = @(
+            '/a',
+            "`"$($msis[0].FullName)`"",
+            "TARGETDIR=`"$administrativeRoot`"",
+            '/qn',
+            '/norestart',
+            '/L*v',
+            "`"$administrativeLog`""
+          ) -join ' '
+          $extractor = Start-Process -FilePath "$env:SystemRoot\System32\msiexec.exe" `
+            -ArgumentList $arguments -Wait -PassThru
+          if ($extractor.ExitCode -ne 0) {
+            throw "MSI administrative extraction failed with exit code $($extractor.ExitCode)."
+          }
+
+          $standaloneManifest = @(Get-ChildItem -LiteralPath $administrativeRoot -Recurse `
+            -Filter 'sahelflow-standalone-manifest.json' -File)
+          $runtimeManifest = @(Get-ChildItem -LiteralPath $administrativeRoot -Recurse `
+            -Filter 'runtime-manifest.json' -File)
+          if ($standaloneManifest.Count -ne 1 -or $runtimeManifest.Count -ne 1) {
+            throw "Administrative image did not contain one exact standalone and runtime manifest."
+          }
+
+          New-Item -ItemType Directory -Path 'src-tauri/resources/standalone' -Force | Out-Null
+          New-Item -ItemType Directory -Path 'src-tauri/resources/runtime' -Force | Out-Null
+          Copy-Item -Path (Join-Path $standaloneManifest[0].DirectoryName '*') `
+            -Destination 'src-tauri/resources/standalone' -Recurse -Force
+          Copy-Item -Path (Join-Path $runtimeManifest[0].DirectoryName '*') `
+            -Destination 'src-tauri/resources/runtime' -Recurse -Force
+
       - name: Install exact MSI and prove native runtime lifecycle
         shell: pwsh
         run: |
