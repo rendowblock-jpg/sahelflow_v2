@@ -7,7 +7,7 @@ function readRepositoryFile(path: string): string {
 }
 
 describe("packaged desktop bootstrap navigation", () => {
-  it("keeps lifecycle authority behind the durable hydrated-UI gate", () => {
+  it("primes a safe renderer before the hidden authenticated workspace handoff", () => {
     const wrapper = readRepositoryFile("src-tauri/src/startup_recovery.rs");
     const proven = readRepositoryFile(
       "src-tauri/src/startup_recovery/proven.rs",
@@ -28,12 +28,31 @@ describe("packaged desktop bootstrap navigation", () => {
     const windows = configuration.app?.windows ?? [];
     const mainWindow = windows[0];
 
+    const rendererPrime = wrapper.indexOf(
+      "if !prime_packaged_renderer(app, app_url)? {",
+    );
     const delegatedHandoff = wrapper.indexOf(
       "proven::show_ready(app, app_url)?;",
+      rendererPrime,
     );
     const postUiAuthority = wrapper.indexOf(
       "start_post_ui_authorities(app.clone())?;",
       delegatedHandoff,
+    );
+    const safePrimeNavigation = wrapper.indexOf(
+      "window.navigate(renderer_prime_url()?)?;",
+    );
+    const visibleStartingSurface = wrapper.indexOf(
+      "window.show()?;",
+      safePrimeNavigation,
+    );
+    const executableRendererProof = wrapper.indexOf(
+      "if renderer_is_ready(&window) {",
+      visibleStartingSurface,
+    );
+    const hideBeforeWorkspace = wrapper.indexOf(
+      "window.hide()?;",
+      executableRendererProof,
     );
     const durableUiGate = wrapper.indexOf(
       "if matching_ui_ready_is_durable(&app_data_dir) {",
@@ -63,8 +82,13 @@ describe("packaged desktop bootstrap navigation", () => {
       directRootNavigation,
     );
 
-    expect(delegatedHandoff).toBeGreaterThan(-1);
+    expect(rendererPrime).toBeGreaterThan(-1);
+    expect(delegatedHandoff).toBeGreaterThan(rendererPrime);
     expect(postUiAuthority).toBeGreaterThan(delegatedHandoff);
+    expect(safePrimeNavigation).toBeGreaterThan(-1);
+    expect(visibleStartingSurface).toBeGreaterThan(safePrimeNavigation);
+    expect(executableRendererProof).toBeGreaterThan(visibleStartingSurface);
+    expect(hideBeforeWorkspace).toBeGreaterThan(executableRendererProof);
     expect(durableUiGate).toBeGreaterThan(-1);
     expect(lifecycleHost).toBeGreaterThan(durableUiGate);
     expect(validatedHandoff).toBeGreaterThan(-1);
@@ -84,10 +108,12 @@ describe("packaged desktop bootstrap navigation", () => {
     expect(mainWindow?.url).toMatch(/^data:text\/html/);
     expect(decodeURIComponent(mainWindow?.url ?? "")).not.toContain("<script");
 
+    expect(wrapper).toContain('RENDERER_PRIME_MARKER: &str = "sahelflow-renderer-prime-v1"');
+    expect(wrapper).toContain("eval_with_callback");
+    expect(wrapper).toContain("SF-RUNTIME-UI-RENDERER-BLOCKED");
     expect(proven).toContain('MAIN_WINDOW_LABEL: &str = "main"');
     expect(proven).toContain('RUNTIME_COOKIE: &str = "sf_runtime"');
     expect(wrapper).toContain("mod shop_lifecycle_host;");
-    expect(wrapper).toContain('RUNTIME_UI_READY_FILE: &str = "runtime-ui-ready.json"');
     expect(proven).toContain("workspace_url.set_path(\"/\")");
     expect(proven).toContain("workspace_url.set_query(None)");
     expect(proven).toContain("workspace_url.set_fragment(None)");
@@ -100,10 +126,8 @@ describe("packaged desktop bootstrap navigation", () => {
 
     const combined = `${wrapper}\n${proven}`;
     expect(combined).not.toContain("STARTUP_WINDOW_LABEL");
-    expect(combined).not.toContain("STARTUP_RENDERER_MARKER");
     expect(combined).not.toContain("activate_startup_renderer(");
     expect(combined).not.toContain("activate_configured_workspace(");
-    expect(combined).not.toContain("renderer_prime_html(");
     expect(combined).not.toContain("run_on_main_thread");
     expect(combined).not.toContain("WebviewWindowBuilder::new(");
     expect(combined).not.toContain("WebviewUrl::External(url)");
