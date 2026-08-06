@@ -42,6 +42,10 @@ describe("packaged desktop bootstrap navigation", () => {
       "monitor_packaged_ui(app.clone(), workspace, app_data_dir)",
       navigationDispatched,
     );
+    const workspaceAuthority = recovery.slice(
+      recovery.indexOf("fn activate_configured_workspace("),
+      recovery.indexOf("pub fn reset_startup_trace"),
+    );
 
     expect(validatedHandoff).toBeGreaterThan(-1);
     expect(startupPrimeStarted).toBeGreaterThan(validatedHandoff);
@@ -56,6 +60,8 @@ describe("packaged desktop bootstrap navigation", () => {
     expect(configuration).toContain('"label": "main"');
     expect(configuration).toContain('"visible": true');
     expect(configuration).toContain('"visible": false');
+    expect(configuration).toContain('"focus": true');
+    expect(configuration).toContain('"focus": false');
     expect(configuration).toContain('"title": "SahelFlow - Starting"');
     expect(recovery).toContain('STARTUP_WINDOW_LABEL: &str = "startup"');
     expect(recovery).toContain('MAIN_WINDOW_LABEL: &str = "main"');
@@ -64,12 +70,13 @@ describe("packaged desktop bootstrap navigation", () => {
     );
     expect(recovery).toContain("renderer_prime_html()");
     expect(recovery).toContain(".eval_with_callback(");
-    expect(recovery).toContain("app.run_on_main_thread(move ||");
-    expect(recovery).toContain("workspace_for_activation.show()");
-    expect(recovery).toContain("workspace_for_activation.set_focus()");
-    expect(recovery).toContain("workspace_for_activation.navigate(url)");
-    expect(recovery).toContain("startup.set_focus()");
-    expect(recovery).toContain(
+    expect(workspaceAuthority).toContain("app.run_on_main_thread(move ||");
+    expect(workspaceAuthority).toContain("workspace_for_activation");
+    expect(workspaceAuthority).toContain(".show()");
+    expect(workspaceAuthority).toContain(".set_focus()");
+    expect(workspaceAuthority).toContain(".navigate(url)");
+    expect(workspaceAuthority).toContain("startup.set_focus()");
+    expect(workspaceAuthority).toContain(
       "recv_timeout(WORKSPACE_ACTIVATION_TIMEOUT)",
     );
     expect(recovery).toContain(
