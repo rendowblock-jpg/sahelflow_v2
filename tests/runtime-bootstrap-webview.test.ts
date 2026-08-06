@@ -17,6 +17,7 @@ type TauriWindowConfiguration = {
   title: string;
   url: string;
   visible: boolean;
+  focused?: boolean;
 };
 
 type TauriConfiguration = {
@@ -54,7 +55,7 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     restoreEnvironment("VITEST", originalEnvironment.VITEST);
   });
 
-  it("activates an inert startup renderer before the main-thread loopback workspace", () => {
+  it("activates the configured main WebView behind an inert startup cover", () => {
     const configuration = JSON.parse(
       readFileSync(
         resolve(process.cwd(), "src-tauri/tauri.conf.json"),
@@ -73,46 +74,50 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     ).replace(/\r\n?/g, "\n");
 
     expect(startupWindow).toBeDefined();
-    expect(startupWindow?.visible).toBe(false);
+    expect(startupWindow?.visible).toBe(true);
+    expect(startupWindow?.focused).toBe(true);
     expect(startupWindow?.title).toBe("SahelFlow - Starting");
     expect(startupWindow?.url).toMatch(/^data:text\/html/);
     expect(decodeURIComponent(startupWindow?.url ?? "")).not.toContain(
       "<script",
     );
-    expect(configuredMain).toBeUndefined();
-
-    expect(recovery).toContain(
-      "use tauri::webview::{WebviewWindow, WebviewWindowBuilder};",
+    expect(configuredMain).toBeDefined();
+    expect(configuredMain?.visible).toBe(false);
+    expect(configuredMain?.focused).toBe(false);
+    expect(configuredMain?.title).toBe("SahelFlow - Starting");
+    expect(configuredMain?.url).toMatch(/^data:text\/html/);
+    expect(decodeURIComponent(configuredMain?.url ?? "")).not.toContain(
+      "<script",
     );
+
+    expect(recovery).toContain("use tauri::webview::WebviewWindow;");
     expect(recovery).toContain(
       'STARTUP_RENDERER_MARKER: &str = "sahelflow-startup-renderer-v1"',
-    );
-    expect(recovery).toContain(
-      'WORKSPACE_RENDERER_MARKER: &str = "sahelflow-workspace-renderer-v1"',
     );
     expect(recovery).toContain("renderer_prime_html()");
     expect(recovery).toContain("startup.navigate(renderer_prime_url()?)?");
     expect(recovery).toContain("startup.show()?");
     expect(recovery).toContain("startup.set_focus()?");
     expect(recovery).toContain(".eval_with_callback(");
-    expect(recovery).toContain("document.readyState!=='loading'");
-    expect(recovery).toContain("WebviewUrl::External(url)");
+    expect(recovery).toContain("activate_configured_workspace(");
+    expect(recovery).toContain("workspace_for_activation.show()");
+    expect(recovery).toContain("workspace_for_activation.set_focus()");
+    expect(recovery).toContain("workspace_for_activation.navigate(url)");
     expect(recovery).toContain("app.run_on_main_thread(move ||");
     expect(recovery).toContain(
-      "recv_timeout(WORKSPACE_WINDOW_CREATION_TIMEOUT)",
+      "recv_timeout(WORKSPACE_ACTIVATION_TIMEOUT)",
     );
     expect(recovery).toContain('"startup-renderer-prime-started"');
     expect(recovery).toContain('"startup-renderer-prime-ready"');
-    expect(recovery).toContain('"workspace-window-creating"');
-    expect(recovery).toContain('"workspace-window-created"');
-    expect(recovery).toContain('"workspace-renderer-probe-started"');
-    expect(recovery).toContain('"workspace-renderer-probe-ready"');
+    expect(recovery).toContain('"workspace-window-activating"');
+    expect(recovery).toContain('"workspace-navigation-dispatched"');
     expect(recovery).toContain(
       '"SF-RUNTIME-UI-STARTUP-RENDERER-BLOCKED"',
     );
-    expect(recovery).toContain(
-      '"SF-RUNTIME-UI-WORKSPACE-RENDERER-BLOCKED"',
-    );
+    expect(recovery).not.toContain("WebviewWindowBuilder::new(");
+    expect(recovery).not.toContain("WebviewUrl::External(url)");
+    expect(recovery).not.toContain("WORKSPACE_RENDERER_PROBE_SCRIPT");
+    expect(recovery).not.toContain("WORKSPACE_RENDERER_MARKER");
     expect(recovery).not.toContain("schedule_packaged_navigation(");
     expect(recovery).not.toContain("window.location.replace(target)");
 
@@ -123,23 +128,23 @@ describe("packaged runtime bootstrap WebView handoff", () => {
       "activate_startup_renderer(app)",
       validatedHandoff,
     );
-    const workspaceCreation = recovery.indexOf(
-      "create_workspace_window(app, workspace_url, packaged)?",
+    const workspaceActivation = recovery.indexOf(
+      "activate_configured_workspace(",
       startupPrime,
     );
-    const workspaceProbeReady = recovery.indexOf(
-      '"workspace-renderer-probe-ready"',
-      workspaceCreation,
+    const navigationDispatched = recovery.indexOf(
+      '"workspace-navigation-dispatched"',
+      workspaceActivation,
     );
     const readinessMonitor = recovery.indexOf(
       "monitor_packaged_ui(",
-      workspaceProbeReady,
+      navigationDispatched,
     );
     expect(validatedHandoff).toBeGreaterThan(-1);
     expect(startupPrime).toBeGreaterThan(validatedHandoff);
-    expect(workspaceCreation).toBeGreaterThan(startupPrime);
-    expect(workspaceProbeReady).toBeGreaterThan(workspaceCreation);
-    expect(readinessMonitor).toBeGreaterThan(workspaceProbeReady);
+    expect(workspaceActivation).toBeGreaterThan(startupPrime);
+    expect(navigationDispatched).toBeGreaterThan(workspaceActivation);
+    expect(readinessMonitor).toBeGreaterThan(navigationDispatched);
   });
 
   it("commits and confirms the HttpOnly runtime cookie before workspace navigation", async () => {
