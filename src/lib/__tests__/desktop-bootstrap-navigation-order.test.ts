@@ -7,7 +7,7 @@ function readRepositoryFile(path: string): string {
 }
 
 describe("packaged desktop bootstrap navigation", () => {
-  it("commits the proven hidden WebView handoff before starting lifecycle authority", () => {
+  it("keeps lifecycle authority behind the durable hydrated-UI gate", () => {
     const wrapper = readRepositoryFile("src-tauri/src/startup_recovery.rs");
     const proven = readRepositoryFile(
       "src-tauri/src/startup_recovery/proven.rs",
@@ -31,9 +31,16 @@ describe("packaged desktop bootstrap navigation", () => {
     const delegatedHandoff = wrapper.indexOf(
       "proven::show_ready(app, app_url)?;",
     );
-    const lifecycleHost = wrapper.indexOf(
-      "shop_lifecycle_host::ensure_started(app)?;",
+    const postUiAuthority = wrapper.indexOf(
+      "start_post_ui_authorities(app.clone())?;",
       delegatedHandoff,
+    );
+    const durableUiGate = wrapper.indexOf(
+      "if matching_ui_ready_is_durable(&app_data_dir) {",
+    );
+    const lifecycleHost = wrapper.indexOf(
+      "ensure_shop_lifecycle_started(&app)",
+      durableUiGate,
     );
     const validatedHandoff = proven.indexOf(
       "let Some(handoff) = packaged_handoff(&requested_url)? else {",
@@ -57,7 +64,9 @@ describe("packaged desktop bootstrap navigation", () => {
     );
 
     expect(delegatedHandoff).toBeGreaterThan(-1);
-    expect(lifecycleHost).toBeGreaterThan(delegatedHandoff);
+    expect(postUiAuthority).toBeGreaterThan(delegatedHandoff);
+    expect(durableUiGate).toBeGreaterThan(-1);
+    expect(lifecycleHost).toBeGreaterThan(durableUiGate);
     expect(validatedHandoff).toBeGreaterThan(-1);
     expect(clearUiReady).toBeGreaterThan(validatedHandoff);
     expect(hideWorkspace).toBeGreaterThan(clearUiReady);
@@ -78,6 +87,7 @@ describe("packaged desktop bootstrap navigation", () => {
     expect(proven).toContain('MAIN_WINDOW_LABEL: &str = "main"');
     expect(proven).toContain('RUNTIME_COOKIE: &str = "sf_runtime"');
     expect(wrapper).toContain("mod shop_lifecycle_host;");
+    expect(wrapper).toContain('RUNTIME_UI_READY_FILE: &str = "runtime-ui-ready.json"');
     expect(proven).toContain("workspace_url.set_path(\"/\")");
     expect(proven).toContain("workspace_url.set_query(None)");
     expect(proven).toContain("workspace_url.set_fragment(None)");

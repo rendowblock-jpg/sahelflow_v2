@@ -55,7 +55,7 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     restoreEnvironment("VITEST", originalEnvironment.VITEST);
   });
 
-  it("uses one hidden configured WebView and commits native navigation before lifecycle startup", () => {
+  it("defers lifecycle startup until the authenticated UI receipt is durable", () => {
     const configuration = JSON.parse(
       readFileSync(
         resolve(process.cwd(), "src-tauri/tauri.conf.json"),
@@ -92,6 +92,11 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     );
     expect(proven).toContain('RUNTIME_COOKIE: &str = "sf_runtime"');
     expect(wrapper).toContain("mod shop_lifecycle_host;");
+    expect(wrapper).toContain("start_post_ui_authorities(app.clone())?;");
+    expect(wrapper).toContain(
+      "if matching_ui_ready_is_durable(&app_data_dir) {",
+    );
+    expect(wrapper).toContain("ensure_shop_lifecycle_started(&app)");
     expect(proven).toContain("window.hide()?;");
     expect(proven).toContain(
       "window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;",
@@ -109,9 +114,16 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     const delegatedHandoff = wrapper.indexOf(
       "proven::show_ready(app, app_url)?;",
     );
-    const lifecycle = wrapper.indexOf(
-      "shop_lifecycle_host::ensure_started(app)?;",
+    const postUiAuthority = wrapper.indexOf(
+      "start_post_ui_authorities(app.clone())?;",
       delegatedHandoff,
+    );
+    const durableUiGate = wrapper.indexOf(
+      "if matching_ui_ready_is_durable(&app_data_dir) {",
+    );
+    const lifecycle = wrapper.indexOf(
+      "ensure_shop_lifecycle_started(&app)",
+      durableUiGate,
     );
     const handoff = proven.indexOf(
       "let Some(handoff) = packaged_handoff(&requested_url)? else {",
@@ -125,7 +137,9 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     const monitor = proven.indexOf("monitor_packaged_ui(", navigation);
 
     expect(delegatedHandoff).toBeGreaterThan(-1);
-    expect(lifecycle).toBeGreaterThan(delegatedHandoff);
+    expect(postUiAuthority).toBeGreaterThan(delegatedHandoff);
+    expect(durableUiGate).toBeGreaterThan(-1);
+    expect(lifecycle).toBeGreaterThan(durableUiGate);
     expect(handoff).toBeGreaterThan(-1);
     expect(hidden).toBeGreaterThan(handoff);
     expect(cookie).toBeGreaterThan(hidden);
