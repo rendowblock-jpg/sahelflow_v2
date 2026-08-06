@@ -1,0 +1,227 @@
+name: Historical installed WebView control
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - .github/workflows/historical-webview-control.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: historical-webview-control-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  installed-control:
+    name: Run exact 1d843b installed UI control
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SF_TEST_FAIL_FAST: "1"
+      HISTORICAL_SOURCE_SHA: 1d843b4262a2b954befefb93de33fa6d845a0062
+
+    steps:
+      - name: Checkout exact historical source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.HISTORICAL_SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Record control environment
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-historical-webview-control'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          [pscustomobject]@{
+            sourceSha = $env:HISTORICAL_SOURCE_SHA
+            imageOs = $env:ImageOS
+            imageVersion = $env:ImageVersion
+            runnerOs = $env:RUNNER_OS
+            runnerArch = $env:RUNNER_ARCH
+            createdAt = [DateTime]::UtcNow.ToString('o')
+          } | ConvertTo-Json -Depth 4 |
+            Set-Content -LiteralPath (Join-Path $destination 'control-environment.json') -Encoding UTF8
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+
+      - name: Verify canonical Rust formatting
+        shell: pwsh
+        run: |
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+          if ($LASTEXITCODE -ne 0) { throw 'Historical Rust source is not canonically formatted' }
+
+      - name: Parse historical installed harnesses under Windows PowerShell 5.1
+        shell: pwsh
+        run: |
+          $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+          $parserScript = Join-Path $env:RUNNER_TEMP 'parse-historical-powershell51.ps1'
+          @'
+          param([Parameter(Mandatory = $true)][string]$Path)
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+              $Path,
+              [ref]$tokens,
+              [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+              $errors | Format-List * -Force
+              exit 1
+          }
+          '@ | Set-Content -LiteralPath $parserScript -Encoding UTF8
+
+          foreach ($relative in @(
+              '.\scripts\install-founder-windows.ps1',
+              '.\scripts\verify-installed-windows-msi.ps1',
+              '.\scripts\verify-installed-windows-ui.ps1'
+          )) {
+            $resolved = (Resolve-Path -LiteralPath $relative).Path
+            & $windowsPowerShell `
+              -NoLogo `
+              -NoProfile `
+              -NonInteractive `
+              -ExecutionPolicy Bypass `
+              -File $parserScript `
+              -Path $resolved
+            if ($LASTEXITCODE -ne 0) {
+              throw "$relative failed Windows PowerShell 5.1 parsing"
+            }
+          }
+
+      - name: Cache Windows Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-historical-webview-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-installed-e2e-
+            ${{ runner.os }}-cargo-
+
+      - name: Install frozen historical dependencies
+        run: bun install --frozen-lockfile --linker=hoisted
+
+      - name: Prepare signed local libsodium distribution
+        shell: pwsh
+        run: ./scripts/prepare-libsodium-windows.ps1
+
+      - name: Build historical unsigned MSI
+        shell: pwsh
+        run: |
+          Remove-Item -LiteralPath 'src-tauri/target/release/bundle/msi' -Recurse -Force -ErrorAction SilentlyContinue
+          '{"bundle":{"createUpdaterArtifacts":false}}' |
+            Set-Content -LiteralPath .sf-historical-control-tauri.json -Encoding UTF8
+          & bunx tauri build --bundles msi --config .sf-historical-control-tauri.json 2>&1 |
+            Tee-Object -FilePath .sf-historical-control-build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install and prove historical runtime lifecycle
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-historical-webview-control'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          try {
+            $msis = @(Get-ChildItem -File 'src-tauri/target/release/bundle/msi/*.msi')
+            if ($msis.Count -ne 1) {
+              throw "expected exactly one historical MSI, found $($msis.Count)"
+            }
+            ./scripts/verify-installed-windows-msi.ps1 -MsiPath $msis[0].FullName
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'lifecycle-error.txt') -Encoding UTF8
+            throw
+          }
+
+      - name: Prove historical authenticated hydrated WebView UI twice
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-historical-webview-control'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          try {
+            ./scripts/verify-installed-windows-ui.ps1
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'ui-lifecycle-error.txt') -Encoding UTF8
+            throw
+          }
+
+      - name: Collect historical control evidence
+        if: always()
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-historical-webview-control'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          $roaming = Join-Path $env:APPDATA 'com.sahelflow.desktop'
+          foreach ($relative in @(
+              'startup-diagnostic.json',
+              'runtime-probe-diagnostic.json',
+              'runtime-readiness-diagnostic.json',
+              'runtime-endpoint.json',
+              'runtime-ui-ready.json',
+              'runtime-ui-diagnostic.json',
+              'startup-trace.json',
+              'shop-registry.json',
+              'migration-journal\current.json',
+              'migration-journal\compatibility.json',
+              'migration-journal\last-recovery.json'
+          )) {
+            $source = Join-Path $roaming $relative
+            if (Test-Path -LiteralPath $source -PathType Leaf) {
+              $safeName = $relative -replace '[\\/:*?"<>|]', '_'
+              Copy-Item -LiteralPath $source -Destination (Join-Path $destination $safeName) -Force
+            }
+          }
+
+          @(
+            Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+              Where-Object {
+                $_.Name -ieq 'sahelflow.exe' -or
+                $_.Name -ieq 'node.exe' -or
+                $_.Name -ieq 'sahelflow-whatsapp.exe' -or
+                $_.Name -ieq 'msedgewebview2.exe'
+              } |
+              Select-Object Name, ProcessId, ParentProcessId, ExecutablePath, CommandLine, CreationDate
+          ) | ConvertTo-Json -Depth 6 |
+            Set-Content -LiteralPath (Join-Path $destination 'processes.json') -Encoding UTF8
+
+          $webViewBinary = Get-ChildItem -LiteralPath 'C:\Program Files (x86)\Microsoft\EdgeWebView\Application' -Filter msedgewebview2.exe -Recurse -File -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if ($null -ne $webViewBinary) {
+            [pscustomobject]@{
+              path = $webViewBinary.FullName
+              fileVersion = $webViewBinary.VersionInfo.FileVersion
+              productVersion = $webViewBinary.VersionInfo.ProductVersion
+            } | ConvertTo-Json -Depth 4 |
+              Set-Content -LiteralPath (Join-Path $destination 'webview2-version.json') -Encoding UTF8
+          }
+
+      - name: Upload historical control evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-webview-control-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/sahelflow-historical-webview-control/**
+            .sf-historical-control-build.log
+          if-no-files-found: warn
+          retention-days: 7
