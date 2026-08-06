@@ -9,9 +9,7 @@ pub use proven::reset_startup_trace;
 pub use proven::{record_startup_stage, show_blocked};
 
 #[cfg(not(debug_assertions))]
-fn ensure_shop_lifecycle_started(
-    app: &tauri::AppHandle,
-) -> Result<(), Box<dyn std::error::Error>> {
+fn ensure_shop_lifecycle_started(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     shop_lifecycle_host::ensure_started(app)?;
     Ok(())
 }
@@ -22,15 +20,10 @@ fn start_shop_lifecycle_host(app: tauri::AppHandle) -> Result<(), Box<dyn std::e
         .name("sahelflow-shop-lifecycle-bootstrap".to_string())
         .spawn(move || {
             if let Err(error) = ensure_shop_lifecycle_started(&app) {
-                let detail = format!(
-                    "the protected shop lifecycle authority could not initialize: {error}"
-                );
+                let detail =
+                    format!("the protected shop lifecycle authority could not initialize: {error}");
                 eprintln!("[sahelflow] FATAL: {detail}");
-                let _ = proven::show_blocked(
-                    &app,
-                    "SF-SHOP-LIFECYCLE-HOST-BLOCKED",
-                    &detail,
-                );
+                let _ = proven::show_blocked(&app, "SF-SHOP-LIFECYCLE-HOST-BLOCKED", &detail);
             }
         })?;
     Ok(())
