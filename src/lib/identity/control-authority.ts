@@ -537,11 +537,10 @@ function atomicWrite(path: string, value: unknown): void {
   const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
   let fileDescriptor: number | null = null;
   try {
-    writeFileSync(temporary, `${JSON.stringify(value)}\n`, {
-      mode: 0o600,
-      flag: "wx",
+    fileDescriptor = openSync(temporary, "wx", 0o600);
+    writeFileSync(fileDescriptor, `${JSON.stringify(value)}\n`, {
+      encoding: "utf8",
     });
-    fileDescriptor = openSync(temporary, "r");
     fsyncSync(fileDescriptor);
     closeSync(fileDescriptor);
     fileDescriptor = null;
