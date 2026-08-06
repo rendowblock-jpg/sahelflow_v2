@@ -53,6 +53,8 @@ describe("installed Windows runtime contract", () => {
         app?: { windows?: Array<Record<string, unknown>> };
       }
     ).app?.windows;
+    const startupWindow = windows?.find((window) => window.label === "startup");
+    const mainWindow = windows?.find((window) => window.label === "main");
     const beacon = read("src/components/runtime/runtime-ui-ready-beacon.tsx");
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
     const uiRoute = read("src/app/api/internal/runtime-ui-ready/route.ts");
@@ -86,21 +88,33 @@ describe("installed Windows runtime contract", () => {
     expect(recovery).toContain('"SF-RUNTIME-UI-BEACON-MISSING"');
     expect(recovery).toContain('STARTUP_WINDOW_LABEL: &str = "startup"');
     expect(recovery).toContain('MAIN_WINDOW_LABEL: &str = "main"');
-    expect(recovery).toContain("WebviewWindowBuilder::new(");
-    expect(recovery).toContain("WebviewUrl::External(url)");
+    expect(recovery).toContain("activate_configured_workspace(");
+    expect(recovery).toContain("workspace_for_activation.show()");
+    expect(recovery).toContain("workspace_for_activation.set_focus()");
+    expect(recovery).toContain("workspace_for_activation.navigate(url)");
     expect(recovery).toContain("BOOTSTRAP_WINDOW_TITLE");
-    expect(recovery).toContain('"workspace-window-creating"');
-    expect(recovery).toContain('"workspace-window-created"');
+    expect(recovery).toContain('"workspace-window-activating"');
+    expect(recovery).toContain('"workspace-navigation-dispatched"');
+    expect(recovery).not.toContain("WebviewWindowBuilder::new(");
+    expect(recovery).not.toContain("WebviewUrl::External(url)");
+    expect(recovery).not.toContain("WORKSPACE_RENDERER_PROBE_SCRIPT");
     expect(recovery).toContain(
       "if wait_for_matching_ui_ready(&app_data_dir, PACKAGED_UI_READY_TIMEOUT)",
     );
     expect(recovery).toContain("window.show().and_then(|_| window.set_focus())");
     expect(recovery).toContain("SahelFlow - Startup blocked");
-    expect(windows).toHaveLength(1);
-    expect(windows?.[0]).toMatchObject({
+    expect(windows).toHaveLength(2);
+    expect(startupWindow).toMatchObject({
       label: "startup",
       title: "SahelFlow - Starting",
+      visible: true,
+      focused: true,
+    });
+    expect(mainWindow).toMatchObject({
+      label: "main",
+      title: "SahelFlow - Starting",
       visible: false,
+      focused: false,
     });
 
     expect(beacon).toContain("const RETRY_WINDOW_MS = 75_000");
@@ -162,7 +176,12 @@ describe("installed Windows runtime contract", () => {
     };
     const tauriConfig = JSON.parse(read("src-tauri/tauri.conf.json")) as {
       app?: {
-        windows?: Array<{ label?: string; title?: string; visible?: boolean }>;
+        windows?: Array<{
+          label?: string;
+          title?: string;
+          visible?: boolean;
+          focused?: boolean;
+        }>;
         security?: { csp?: string };
       };
     };
@@ -170,6 +189,12 @@ describe("installed Windows runtime contract", () => {
     const updater = read("src/components/updater/update-checker.tsx");
     const rootLayout = read("src/app/layout.tsx");
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
+    const startupWindow = tauriConfig.app?.windows?.find(
+      (window) => window.label === "startup",
+    );
+    const mainWindow = tauriConfig.app?.windows?.find(
+      (window) => window.label === "main",
+    );
 
     expect(capability.windows).toContain("main");
     expect(capability.remote?.urls).toEqual([
@@ -181,11 +206,18 @@ describe("installed Windows runtime contract", () => {
     expect(tauriConfig.app?.security?.csp).toContain(
       "connect-src 'self' ipc: http://ipc.localhost",
     );
-    expect(tauriConfig.app?.windows).toHaveLength(1);
-    expect(tauriConfig.app?.windows?.[0]).toMatchObject({
+    expect(tauriConfig.app?.windows).toHaveLength(2);
+    expect(startupWindow).toMatchObject({
       label: "startup",
       title: "SahelFlow - Starting",
+      visible: true,
+      focused: true,
+    });
+    expect(mainWindow).toMatchObject({
+      label: "main",
+      title: "SahelFlow - Starting",
       visible: false,
+      focused: false,
     });
     expect(nextConfig).toContain(
       '"connect-src \'self\' ipc: http://ipc.localhost',
