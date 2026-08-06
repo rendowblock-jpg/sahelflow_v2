@@ -63,7 +63,8 @@ describe("packaged desktop bootstrap navigation", () => {
     expect(readinessMonitor).toBeGreaterThan(workspaceProbeReady);
 
     expect(configuration).toContain('"label": "startup"');
-    expect(configuration).toContain('"visible": false');
+    expect(configuration).toContain('"visible": true');
+    expect(configuration).toContain('"title": "SahelFlow - Starting"');
     expect(recovery).toContain('STARTUP_WINDOW_LABEL: &str = "startup"');
     expect(recovery).toContain('MAIN_WINDOW_LABEL: &str = "main"');
     expect(recovery).toContain(
