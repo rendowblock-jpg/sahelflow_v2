@@ -6,6 +6,7 @@ on:
       - main
     types:
       - opened
+      - synchronize
       - reopened
     paths:
       - .github/workflows/runtime-webview-transition-diagnostic.yml
@@ -38,6 +39,7 @@ jobs:
       SF_LICENSE_SERVICE_URL: "https://license.invalid"
       SF_LICENSE_TRIAL_PUBLIC_KEYS: '{"ci-trial-key-v1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}'
       SF_LICENSE_PERMANENT_PUBLIC_KEYS: '{"ci-permanent-key-v1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}'
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--remote-debugging-port=9222"
       SOURCE_SHA: ${{ matrix.source }}
 
     steps:

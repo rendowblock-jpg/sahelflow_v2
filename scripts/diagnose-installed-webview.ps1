@@ -48,6 +48,44 @@ if ($installedProcesses.Count -ne 0) {
     throw "The WebView diagnostic requires a clean installed-process boundary."
 }
 
+function Get-SahelFlowWebViewProcesses {
+    return @(
+        Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Name -ieq "msedgewebview2.exe" -and
+                [string]$_.CommandLine -match "com\.sahelflow\.desktop"
+            }
+    )
+}
+
+# The native lifecycle proof launches the installed WebView before this step.
+# WebView2 may retain that browser process and reuse it for the observed launch;
+# additional browser arguments cannot retrofit a process that already exists.
+# Drain only processes bound to SahelFlow's user-data profile after confirming
+# the installed application itself has stopped.
+$naturalDrainDeadline = (Get-Date).AddSeconds(10)
+do {
+    $lingeringWebViews = Get-SahelFlowWebViewProcesses
+    if ($lingeringWebViews.Count -eq 0) { break }
+    Start-Sleep -Milliseconds 250
+} while ((Get-Date) -lt $naturalDrainDeadline)
+
+$forcedWebViewProcessIds = @(
+    $lingeringWebViews | ForEach-Object {
+        Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop
+        [int64]$_.ProcessId
+    }
+)
+$forcedDrainDeadline = (Get-Date).AddSeconds(10)
+do {
+    $remainingWebViews = Get-SahelFlowWebViewProcesses
+    if ($remainingWebViews.Count -eq 0) { break }
+    Start-Sleep -Milliseconds 250
+} while ((Get-Date) -lt $forcedDrainDeadline)
+if ($remainingWebViews.Count -ne 0) {
+    throw "SahelFlow's retained WebView2 browser process did not stop before observation."
+}
+
 foreach ($relative in $diagnosticFiles) {
     Remove-Item -LiteralPath (Join-Path $roamingRoot $relative) -Force -ErrorAction SilentlyContinue
 }
@@ -67,6 +105,8 @@ try {
         [string]::IsNullOrWhiteSpace($previousBrowserArguments)
     ) {
         $remoteDebuggingArgument
+    } elseif ($previousBrowserArguments -match "(?:^|\s)--remote-debugging-port=\d+(?:\s|$)") {
+        $previousBrowserArguments
     } else {
         "$previousBrowserArguments $remoteDebuggingArgument"
     }
@@ -129,6 +169,7 @@ try {
         observerProcessId = if ($null -ne $observer) { $observer.Id } else { $null }
         observerExitCode = if ($null -ne $observer -and $observer.HasExited) { $observer.ExitCode } else { $null }
         remoteDebuggingPort = $RemoteDebuggingPort
+        forcedWebViewProcessIds = $forcedWebViewProcessIds
         productionBinaryModified = $false
         failure = if ($null -ne $failure) { [string]$failure.Exception.Message } else { $null }
     } | ConvertTo-Json -Depth 5 |
@@ -160,3 +201,8 @@ if ($null -ne $failure) {
 }
 
 Write-Host "Installed WebView2 transition diagnostics captured in $evidenceRoot"
+if (Test-Path -LiteralPath $summaryPath -PathType Leaf) {
+    Write-Host "SF_WEBVIEW_TRANSITION_SUMMARY_BEGIN"
+    Write-Host (Get-Content -LiteralPath $summaryPath -Raw)
+    Write-Host "SF_WEBVIEW_TRANSITION_SUMMARY_END"
+}
