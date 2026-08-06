@@ -5,13 +5,14 @@ use std::io::{Error as IoError, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tauri::webview::WebviewWindow;
+use tauri::webview::{cookie::SameSite, Cookie, WebviewWindow};
 use tauri::Manager;
 
 #[cfg(not(debug_assertions))]
 mod shop_lifecycle_host;
 
 const RUNTIME_BOOTSTRAP_PATH: &str = "/api/internal/runtime-bootstrap";
+const RUNTIME_COOKIE: &str = "sf_runtime";
 const RUNTIME_ENDPOINT_FILE: &str = "runtime-endpoint.json";
 const RUNTIME_UI_READY_FILE: &str = "runtime-ui-ready.json";
 const RUNTIME_UI_DIAGNOSTIC_FILE: &str = "runtime-ui-diagnostic.json";
@@ -90,17 +91,19 @@ struct RuntimeUiDiagnostic {
 }
 
 struct PackagedHandoff {
-    bootstrap_url: tauri::Url,
+    workspace_url: tauri::Url,
+    host: String,
+    token: String,
 }
 
 /// Activate the configured workspace WebView behind an inert startup cover.
 ///
-/// The capability-free `startup` surface is shown first and proves WebView2 can
-/// execute an inert local document. The already configured, capability-bound
-/// `main` WebView is then shown behind that cover and navigated on Tauri's event
-/// thread. No script callback is treated as workspace authority: only the
-/// durable authenticated UI-ready receipt can remove the cover and expose the
-/// business workspace.
+/// The capability-free `startup` surface remains the only visible authority
+/// while Rust extracts the one-time credential, injects a host-scoped HttpOnly
+/// cookie through WebView2's native cookie store, and navigates the configured
+/// `main` WebView directly to the token-free loopback root. Browser bootstrap
+/// redirects are compatibility-only; only the durable authenticated UI-ready
+/// receipt can remove the cover and expose the business workspace.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let requested_url = tauri::Url::parse(app_url)?;
     let handoff = packaged_handoff(&requested_url)?;
@@ -140,15 +143,25 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     };
 
     let workspace_url = handoff
-        .map(|value| value.bootstrap_url)
+        .as_ref()
+        .map(|value| value.workspace_url.clone())
         .unwrap_or(requested_url);
     if packaged {
         record_startup_stage(&app_data_dir, "workspace-window-activating", None);
+        record_startup_stage(&app_data_dir, "workspace-native-session-started", None);
     }
-    let workspace = activate_configured_workspace(app, workspace_url, packaged, startup.as_ref())?;
+    let workspace = activate_configured_workspace(
+        app,
+        workspace_url,
+        packaged,
+        startup.as_ref(),
+        handoff.as_ref(),
+    )?;
 
     if packaged {
+        record_startup_stage(&app_data_dir, "workspace-native-session-installed", None);
         record_startup_stage(&app_data_dir, "workspace-navigation-dispatched", None);
+        record_startup_stage(&app_data_dir, "workspace-root-navigation-dispatched", None);
         monitor_packaged_ui(app.clone(), workspace, app_data_dir);
     } else if let Some(startup) = app.get_webview_window(STARTUP_WINDOW_LABEL) {
         let _ = startup.destroy();
@@ -244,6 +257,7 @@ fn activate_configured_workspace(
     url: tauri::Url,
     packaged: bool,
     startup: Option<&WebviewWindow>,
+    handoff: Option<&PackagedHandoff>,
 ) -> Result<WebviewWindow, Box<dyn Error>> {
     let workspace = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
         IoError::new(
@@ -259,16 +273,24 @@ fn activate_configured_workspace(
     };
     let workspace_for_activation = workspace.clone();
     let startup_for_activation = startup.cloned();
+    let native_session = handoff.map(|value| (value.host.clone(), value.token.clone()));
     let (sender, receiver) = std::sync::mpsc::sync_channel::<Result<(), String>>(1);
     app.run_on_main_thread(move || {
         let result = (|| -> Result<(), String> {
             workspace_for_activation
                 .set_title(title)
                 .map_err(|error| error.to_string())?;
-            // A configured WebView2 window must be shown before external
-            // navigation can create and retain its renderer on Windows. The
-            // inert startup window is immediately refocused and remains the
-            // only authoritative surface until the durable UI-ready receipt.
+            if let Some((host, token)) = native_session {
+                let cookie = runtime_cookie(&host, &token).map_err(|error| error.to_string())?;
+                workspace_for_activation
+                    .set_cookie(cookie)
+                    .map_err(|error| error.to_string())?;
+            }
+            // The capability-bound workspace is rendered behind the inert
+            // startup cover, but its authentication no longer depends on a
+            // token-bearing browser request or location.replace(). WebView2
+            // receives the HttpOnly cookie natively before direct root
+            // navigation, matching the last installed architecture that passed.
             workspace_for_activation
                 .show()
                 .map_err(|error| error.to_string())?;
@@ -409,9 +431,41 @@ fn packaged_handoff(url: &tauri::Url) -> Result<Option<PackagedHandoff>, IoError
         ));
     }
 
+    let mut workspace_url = url.clone();
+    workspace_url.set_path("/");
+    workspace_url.set_query(None);
+    workspace_url.set_fragment(None);
+
     Ok(Some(PackagedHandoff {
-        bootstrap_url: url.clone(),
+        workspace_url,
+        host: host.to_string(),
+        token,
     }))
+}
+
+fn runtime_cookie(host: &str, token: &str) -> Result<Cookie<'static>, IoError> {
+    if host != "127.0.0.1" && host != "localhost" {
+        return Err(IoError::new(
+            ErrorKind::PermissionDenied,
+            "runtime cookie host is not loopback",
+        ));
+    }
+    if token.len() != 64 || !token.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(IoError::new(
+            ErrorKind::PermissionDenied,
+            "runtime cookie credential is malformed",
+        ));
+    }
+
+    Ok(
+        Cookie::build((RUNTIME_COOKIE.to_string(), token.to_string()))
+            .domain(host.to_string())
+            .path("/")
+            .http_only(true)
+            .same_site(SameSite::Lax)
+            .secure(false)
+            .build(),
+    )
 }
 
 fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_dir: PathBuf) {
@@ -737,7 +791,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn packaged_handoff_accepts_only_a_valid_loopback_bootstrap() {
+    fn packaged_handoff_removes_the_credential_from_browser_navigation() {
         let token = "a".repeat(64);
         let url = tauri::Url::parse(&format!(
             "http://127.0.0.1:43123{RUNTIME_BOOTSTRAP_PATH}?token={token}"
@@ -745,7 +799,24 @@ mod tests {
         .unwrap();
 
         let handoff = packaged_handoff(&url).unwrap().unwrap();
-        assert_eq!(handoff.bootstrap_url, url);
+        assert_eq!(handoff.workspace_url.as_str(), "http://127.0.0.1:43123/");
+        assert_eq!(handoff.host, "127.0.0.1");
+        assert_eq!(handoff.token, token);
+        assert!(!handoff.workspace_url.as_str().contains("token="));
+    }
+
+    #[test]
+    fn runtime_cookie_is_loopback_scoped_http_only_and_lax() {
+        let token = "b".repeat(64);
+        let cookie = runtime_cookie("127.0.0.1", &token).unwrap();
+
+        assert_eq!(cookie.name(), RUNTIME_COOKIE);
+        assert_eq!(cookie.value(), token);
+        assert_eq!(cookie.domain(), Some("127.0.0.1"));
+        assert_eq!(cookie.path(), Some("/"));
+        assert_eq!(cookie.http_only(), Some(true));
+        assert_eq!(cookie.same_site(), Some(SameSite::Lax));
+        assert_eq!(cookie.secure(), Some(false));
     }
 
     #[test]
