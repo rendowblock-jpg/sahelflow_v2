@@ -66,6 +66,10 @@ describe("installed Windows runtime contract", () => {
     const dashboardRouteLayout = read("src/app/(dashboard)/layout.tsx");
     const setupPage = read("src/app/setup/page.tsx");
     const loginPage = read("src/app/login/page.tsx");
+    const workspaceAuthority = recovery.slice(
+      recovery.indexOf("fn activate_configured_workspace("),
+      recovery.indexOf("pub fn reset_startup_trace"),
+    );
 
     expect(desktop).not.toContain("startup_recovery::show_starting");
     expect(desktop).not.toContain('get_webview_window("startup")');
@@ -89,9 +93,10 @@ describe("installed Windows runtime contract", () => {
     expect(recovery).toContain('STARTUP_WINDOW_LABEL: &str = "startup"');
     expect(recovery).toContain('MAIN_WINDOW_LABEL: &str = "main"');
     expect(recovery).toContain("activate_configured_workspace(");
-    expect(recovery).toContain("workspace_for_activation.show()");
-    expect(recovery).toContain("workspace_for_activation.set_focus()");
-    expect(recovery).toContain("workspace_for_activation.navigate(url)");
+    expect(workspaceAuthority).toContain("workspace_for_activation");
+    expect(workspaceAuthority).toContain(".show()");
+    expect(workspaceAuthority).toContain(".set_focus()");
+    expect(workspaceAuthority).toContain(".navigate(url)");
     expect(recovery).toContain("BOOTSTRAP_WINDOW_TITLE");
     expect(recovery).toContain('"workspace-window-activating"');
     expect(recovery).toContain('"workspace-navigation-dispatched"');
@@ -108,13 +113,13 @@ describe("installed Windows runtime contract", () => {
       label: "startup",
       title: "SahelFlow - Starting",
       visible: true,
-      focused: true,
+      focus: true,
     });
     expect(mainWindow).toMatchObject({
       label: "main",
       title: "SahelFlow - Starting",
       visible: false,
-      focused: false,
+      focus: false,
     });
 
     expect(beacon).toContain("const RETRY_WINDOW_MS = 75_000");
@@ -180,7 +185,7 @@ describe("installed Windows runtime contract", () => {
           label?: string;
           title?: string;
           visible?: boolean;
-          focused?: boolean;
+          focus?: boolean;
         }>;
         security?: { csp?: string };
       };
@@ -211,13 +216,13 @@ describe("installed Windows runtime contract", () => {
       label: "startup",
       title: "SahelFlow - Starting",
       visible: true,
-      focused: true,
+      focus: true,
     });
     expect(mainWindow).toMatchObject({
       label: "main",
       title: "SahelFlow - Starting",
       visible: false,
-      focused: false,
+      focus: false,
     });
     expect(nextConfig).toContain(
       '"connect-src \'self\' ipc: http://ipc.localhost',
