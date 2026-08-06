@@ -18,18 +18,9 @@ const RUNTIME_UI_READY_FILE: &str = "runtime-ui-ready.json";
 const RUNTIME_UI_DIAGNOSTIC_FILE: &str = "runtime-ui-diagnostic.json";
 const STARTUP_DIAGNOSTIC_FILE: &str = "startup-diagnostic.json";
 const STARTUP_TRACE_FILE: &str = "startup-trace.json";
-const STARTUP_WINDOW_LABEL: &str = "startup";
 const MAIN_WINDOW_LABEL: &str = "main";
 const MAIN_WINDOW_TITLE: &str = "SahelFlow";
-const BOOTSTRAP_WINDOW_TITLE: &str = "SahelFlow - Starting";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
-const STARTUP_RENDERER_MARKER: &str = "sahelflow-startup-renderer-v1";
-const STARTUP_RENDERER_PROBE_SCRIPT: &str =
-    "(()=>{try{return document.documentElement.dataset.sfRendererPrime||''}catch(_error){return ''}})()";
-const WORKSPACE_ACTIVATION_TIMEOUT: Duration = Duration::from_secs(15);
-const RENDERER_ACTIVATION_TIMEOUT: Duration = Duration::from_secs(15);
-const RENDERER_ACTIVATION_POLL_INTERVAL: Duration = Duration::from_millis(100);
-const RENDERER_PROBE_RESPONSE_TIMEOUT: Duration = Duration::from_millis(500);
 const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
@@ -96,230 +87,45 @@ struct PackagedHandoff {
     token: String,
 }
 
-/// Activate the configured workspace WebView behind an inert startup cover.
+/// Navigate the configured WebView to a ready application.
 ///
-/// The capability-free `startup` surface remains the only visible authority
-/// while Rust extracts the one-time credential, injects a host-scoped HttpOnly
-/// cookie through WebView2's native cookie store, and navigates the configured
-/// `main` WebView directly to the token-free loopback root. Browser bootstrap
-/// redirects are compatibility-only; only the durable authenticated UI-ready
-/// receipt can remove the cover and expose the business workspace.
+/// Development URLs are shown immediately. A packaged bootstrap URL is never
+/// loaded into the WebView: the per-launch credential is extracted in Rust,
+/// injected into the native cookie store, and removed from browser navigation.
+/// The hidden window is shown only after a hydrated page reports an authenticated
+/// UI acknowledgment matching the current runtime endpoint instance.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let requested_url = tauri::Url::parse(app_url)?;
-    let handoff = packaged_handoff(&requested_url)?;
-    let packaged = handoff.is_some();
-
-    if packaged {
-        #[cfg(not(debug_assertions))]
-        shop_lifecycle_host::ensure_started(app)?;
-    }
-
-    let app_data_dir = app.path().app_data_dir()?;
-    if packaged {
-        clear_file(&app_data_dir.join(RUNTIME_UI_READY_FILE))?;
-        clear_file(&app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE))?;
-        clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
-        record_startup_stage(&app_data_dir, "ui-navigation-started", None);
-    }
-
-    let startup = if packaged {
-        record_startup_stage(&app_data_dir, "startup-renderer-prime-started", None);
-        match activate_startup_renderer(app) {
-            Ok(window) => {
-                record_startup_stage(&app_data_dir, "startup-renderer-prime-ready", None);
-                Some(window)
-            }
-            Err(error) => {
-                let detail = format!(
-                    "the inert startup surface did not activate WebView2 before workspace navigation: {error}"
-                );
-                record_startup_stage(&app_data_dir, "startup-renderer-prime-blocked", None);
-                show_blocked(app, "SF-RUNTIME-UI-STARTUP-RENDERER-BLOCKED", &detail)?;
-                return Ok(());
-            }
-        }
-    } else {
-        None
-    };
-
-    let workspace_url = handoff
-        .as_ref()
-        .map(|value| value.workspace_url.clone())
-        .unwrap_or(requested_url);
-    if packaged {
-        record_startup_stage(&app_data_dir, "workspace-window-activating", None);
-        record_startup_stage(&app_data_dir, "workspace-native-session-started", None);
-    }
-    let workspace = activate_configured_workspace(
-        app,
-        workspace_url,
-        packaged,
-        startup.as_ref(),
-        handoff.as_ref(),
-    )?;
-
-    if packaged {
-        record_startup_stage(&app_data_dir, "workspace-native-session-installed", None);
-        record_startup_stage(&app_data_dir, "workspace-navigation-dispatched", None);
-        record_startup_stage(&app_data_dir, "workspace-root-navigation-dispatched", None);
-        monitor_packaged_ui(app.clone(), workspace, app_data_dir);
-    } else if let Some(startup) = app.get_webview_window(STARTUP_WINDOW_LABEL) {
-        let _ = startup.destroy();
-    }
-
-    Ok(())
-}
-
-fn activate_startup_renderer(app: &tauri::AppHandle) -> Result<WebviewWindow, Box<dyn Error>> {
-    let startup = app
-        .get_webview_window(STARTUP_WINDOW_LABEL)
-        .ok_or_else(|| {
-            IoError::new(
-                ErrorKind::NotFound,
-                "the configured startup recovery window was not created",
-            )
-        })?;
-    startup.set_title(BOOTSTRAP_WINDOW_TITLE)?;
-    startup.navigate(renderer_prime_url()?)?;
-    startup.show()?;
-    startup.set_focus()?;
-
-    if wait_for_renderer(
-        &startup,
-        STARTUP_RENDERER_PROBE_SCRIPT,
-        STARTUP_RENDERER_MARKER,
-        RENDERER_ACTIVATION_TIMEOUT,
-    ) {
-        return Ok(startup);
-    }
-
-    Err(IoError::new(
-        ErrorKind::TimedOut,
-        "the startup WebView did not execute its inert renderer-prime document",
-    )
-    .into())
-}
-
-fn renderer_prime_html() -> String {
-    [
-        "<!doctype html><html lang=\"fr\" data-sf-renderer-prime=\"",
-        STARTUP_RENDERER_MARKER,
-        "\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>SahelFlow - Starting</title><style>:root{color-scheme:dark;font-family:Inter,Segoe UI,system-ui,sans-serif}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101214;color:#f4f4f5;padding:24px}main{width:min(520px,100%);text-align:center;border:1px solid #3f3f46;border-radius:18px;background:#18181b;padding:32px}p{color:#a1a1aa;line-height:1.6}</style></head><body><main role=\"status\" aria-live=\"polite\"><h1>SahelFlow</h1><p>Preparing the protected local workspace...</p><p lang=\"ar\" dir=\"rtl\">جارٍ تجهيز مساحة العمل المحلية المحمية...</p></main></body></html>",
-    ]
-    .concat()
-}
-
-fn renderer_prime_url() -> Result<tauri::Url, IoError> {
-    let html = renderer_prime_html();
-    let data_url = format!(
-        "data:text/html;charset=utf-8,{}",
-        urlencoding::encode(&html)
-    );
-    tauri::Url::parse(&data_url).map_err(|error| IoError::new(ErrorKind::InvalidData, error))
-}
-
-fn renderer_matches(window: &WebviewWindow, script: &str, marker: &str) -> bool {
-    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
-    if window
-        .eval_with_callback(script, move |result| {
-            let _ = sender.try_send(result);
-        })
-        .is_err()
-    {
-        return false;
-    }
-
-    receiver
-        .recv_timeout(RENDERER_PROBE_RESPONSE_TIMEOUT)
-        .is_ok_and(|result| {
-            serde_json::from_str::<String>(&result).is_ok_and(|value| value == marker)
-        })
-}
-
-fn wait_for_renderer(
-    window: &WebviewWindow,
-    script: &str,
-    marker: &str,
-    timeout: Duration,
-) -> bool {
-    let started_at = Instant::now();
-    while started_at.elapsed() < timeout {
-        if renderer_matches(window, script, marker) {
-            return true;
-        }
-        thread::sleep(RENDERER_ACTIVATION_POLL_INTERVAL);
-    }
-    false
-}
-
-fn activate_configured_workspace(
-    app: &tauri::AppHandle,
-    url: tauri::Url,
-    packaged: bool,
-    startup: Option<&WebviewWindow>,
-    handoff: Option<&PackagedHandoff>,
-) -> Result<WebviewWindow, Box<dyn Error>> {
-    let workspace = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
+    let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
         IoError::new(
             ErrorKind::NotFound,
-            "the configured authenticated workspace window was not created",
+            "the configured main desktop window was not created",
         )
     })?;
+    window.set_title(MAIN_WINDOW_TITLE)?;
 
-    let title = if packaged {
-        BOOTSTRAP_WINDOW_TITLE
-    } else {
-        MAIN_WINDOW_TITLE
+    let Some(handoff) = packaged_handoff(&requested_url)? else {
+        window.navigate(requested_url)?;
+        window.show()?;
+        window.set_focus()?;
+        return Ok(());
     };
-    let workspace_for_activation = workspace.clone();
-    let startup_for_activation = startup.cloned();
-    let native_session = handoff.map(|value| (value.host.clone(), value.token.clone()));
-    let (sender, receiver) = std::sync::mpsc::sync_channel::<Result<(), String>>(1);
-    app.run_on_main_thread(move || {
-        let result = (|| -> Result<(), String> {
-            workspace_for_activation
-                .set_title(title)
-                .map_err(|error| error.to_string())?;
-            if let Some((host, token)) = native_session {
-                let cookie = runtime_cookie(&host, &token).map_err(|error| error.to_string())?;
-                workspace_for_activation
-                    .set_cookie(cookie)
-                    .map_err(|error| error.to_string())?;
-            }
-            // The capability-bound workspace is rendered behind the inert
-            // startup cover, but its authentication no longer depends on a
-            // token-bearing browser request or location.replace(). WebView2
-            // receives the HttpOnly cookie natively before direct root
-            // navigation, matching the last installed architecture that passed.
-            workspace_for_activation
-                .show()
-                .map_err(|error| error.to_string())?;
-            workspace_for_activation
-                .set_focus()
-                .map_err(|error| error.to_string())?;
-            workspace_for_activation
-                .navigate(url)
-                .map_err(|error| error.to_string())?;
-            if let Some(startup) = startup_for_activation {
-                startup.show().map_err(|error| error.to_string())?;
-                startup.set_focus().map_err(|error| error.to_string())?;
-            }
-            Ok(())
-        })();
-        let _ = sender.send(result);
-    })?;
 
-    receiver
-        .recv_timeout(WORKSPACE_ACTIVATION_TIMEOUT)
-        .map_err(|_| {
-            IoError::new(
-                ErrorKind::TimedOut,
-                "the configured workspace was not activated on Tauri's event thread",
-            )
-        })?
-        .map_err(IoError::other)?;
+    #[cfg(not(debug_assertions))]
+    shop_lifecycle_host::ensure_started(app)?;
 
-    Ok(workspace)
+    let app_data_dir = app.path().app_data_dir()?;
+    clear_file(&app_data_dir.join(RUNTIME_UI_READY_FILE))?;
+    clear_file(&app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE))?;
+    clear_file(&app_data_dir.join(STARTUP_DIAGNOSTIC_FILE))?;
+    record_startup_stage(&app_data_dir, "ui-navigation-started", None);
+
+    window.hide()?;
+    window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;
+    window.navigate(handoff.workspace_url)?;
+
+    monitor_packaged_ui(app.clone(), window, app_data_dir);
+    Ok(())
 }
 
 pub fn reset_startup_trace(app_data_dir: &Path) {
@@ -457,6 +263,9 @@ fn runtime_cookie(host: &str, token: &str) -> Result<Cookie<'static>, IoError> {
         ));
     }
 
+    // The initial workspace load is a top-level navigation from Tauri's
+    // configured data: document. Lax sends the host-scoped cookie on that GET
+    // while still withholding it from cross-site state-changing requests.
     Ok(
         Cookie::build((RUNTIME_COOKIE.to_string(), token.to_string()))
             .domain(host.to_string())
@@ -472,13 +281,7 @@ fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_di
     thread::spawn(move || {
         if wait_for_matching_ui_ready(&app_data_dir, PACKAGED_UI_READY_TIMEOUT) {
             record_startup_stage(&app_data_dir, "ui-ready", None);
-            if let Some(startup) = app.get_webview_window(STARTUP_WINDOW_LABEL) {
-                let _ = startup.destroy();
-            }
-            if let Err(error) = window
-                .set_title(MAIN_WINDOW_TITLE)
-                .and_then(|_| window.show().and_then(|_| window.set_focus()))
-            {
+            if let Err(error) = window.show().and_then(|_| window.set_focus()) {
                 let detail = format!("the authenticated workspace was ready but the desktop window could not be shown: {error}");
                 eprintln!("[sahelflow] FATAL: {detail}");
                 let _ = show_blocked(&app, "SF-WINDOW-SHOW-BLOCKED", &detail);
@@ -677,20 +480,12 @@ pub fn show_blocked(
     );
     let url = tauri::Url::parse(&data_url)?;
 
-    let window = if let Some(startup) = app.get_webview_window(STARTUP_WINDOW_LABEL) {
-        if let Some(workspace) = app.get_webview_window(MAIN_WINDOW_LABEL) {
-            let _ = workspace.hide();
-            let _ = workspace.destroy();
-        }
-        startup
-    } else {
-        app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
-            IoError::new(
-                ErrorKind::NotFound,
-                "no desktop window is available for startup recovery",
-            )
-        })?
-    };
+    let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
+        IoError::new(
+            ErrorKind::NotFound,
+            "the configured main desktop window was not created",
+        )
+    })?;
     window.navigate(url)?;
     window.set_title(BLOCKED_WINDOW_TITLE)?;
     window.show()?;
@@ -817,15 +612,6 @@ mod tests {
         assert_eq!(cookie.http_only(), Some(true));
         assert_eq!(cookie.same_site(), Some(SameSite::Lax));
         assert_eq!(cookie.secure(), Some(false));
-    }
-
-    #[test]
-    fn renderer_prime_document_is_inert_and_non_secret() {
-        let html = renderer_prime_html();
-        assert!(html.contains(STARTUP_RENDERER_MARKER));
-        assert!(!html.contains("<script"));
-        assert!(!html.contains("token="));
-        assert!(!html.contains("sf_runtime"));
     }
 
     #[test]
