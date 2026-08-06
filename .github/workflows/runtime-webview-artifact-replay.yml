@@ -28,9 +28,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: pre-pr200-991c61a
-            source: 991c61ac882497fdda01af3ac04f06978146bbda
-            artifact: runtime-webview-diagnostic-pre-pr200-991c61a-31112998028
           - label: handoff-b0fec61
             source: b0fec61d574f6ef8eb2a0231da54762bfd99b3c5
             artifact: runtime-webview-diagnostic-handoff-b0fec61-31112998028
