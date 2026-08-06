@@ -32,7 +32,7 @@ function canonicalDigest(value: unknown): string {
   return sha256(JSON.stringify(normalize(value)));
 }
 
-const tables = new Set(
+const tables: Set<string> = new Set<string>(
   database
     .query<{ name: string }, []>(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
@@ -41,10 +41,12 @@ const tables = new Set(
     .map((row) => row.name),
 );
 
-function rows(table: string): unknown[] {
+function rows(table: string): Array<Record<string, unknown>> {
   if (!tables.has(table)) return [];
   const quoted = `"${table.replaceAll('"', '""')}"`;
-  return database.query(`SELECT * FROM ${quoted}`).all() as unknown[];
+  return database
+    .query<Record<string, unknown>, []>(`SELECT * FROM ${quoted}`)
+    .all();
 }
 
 const businessTables = [
@@ -67,7 +69,7 @@ const business = Object.fromEntries(
     .map((table) => [table, rows(table)]),
 );
 
-const migrations = tables.has("_prisma_migrations")
+const migrations: string[] = tables.has("_prisma_migrations")
   ? database
       .query<{ migration_name: string }, []>(
         'SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name',
@@ -77,32 +79,27 @@ const migrations = tables.has("_prisma_migrations")
   : [];
 
 const sessionIds = rows("Session")
-  .map((row) => String((row as Record<string, unknown>).id ?? ""))
+  .map((row) => String(row.id ?? ""))
   .filter(Boolean)
   .sort()
-  .map(sha256);
+  .map((value) => sha256(value));
 const authSecretIds = rows("AuthSecret")
-  .map((row) => String((row as Record<string, unknown>).id ?? ""))
+  .map((row) => String(row.id ?? ""))
   .filter(Boolean)
   .sort()
-  .map(sha256);
-const protectedKeys = rows("ProtectedKeyAuthority").map((row) => {
-  const record = row as Record<string, unknown>;
-  return {
-    id: record.id,
-    keyId: record.keyId,
-    wrappedKeySha256: sha256(String(record.wrappedKey ?? "")),
-  };
-});
+  .map((value) => sha256(value));
+const protectedKeys = rows("ProtectedKeyAuthority").map((record) => ({
+  id: record.id,
+  keyId: record.keyId,
+  wrappedKeySha256: sha256(String(record.wrappedKey ?? "")),
+}));
 
 const result = {
   businessDigest: canonicalDigest(business),
   migrationDigest: canonicalDigest(migrations),
   migrationCount: migrations.length,
   tableCounts: Object.fromEntries(
-    [...tables]
-      .sort()
-      .map((table) => [table, rows(table).length]),
+    [...tables].sort().map((table) => [table, rows(table).length]),
   ),
   sessionIdentityHashes: sessionIds,
   authSecretIdentityHashes: authSecretIds,
