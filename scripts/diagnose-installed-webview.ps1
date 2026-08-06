@@ -90,7 +90,7 @@ foreach ($relative in $diagnosticFiles) {
     Remove-Item -LiteralPath (Join-Path $roamingRoot $relative) -Force -ErrorAction SilentlyContinue
 }
 
-$bun = (Get-Command bun -ErrorAction Stop).Source
+$bun = (Get-Command bun.exe -CommandType Application -ErrorAction Stop).Source
 $observerPath = Join-Path $PSScriptRoot "observe-installed-webview-cdp.mjs"
 $endpoint = "http://127.0.0.1:$RemoteDebuggingPort"
 $previousBrowserArguments = $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
