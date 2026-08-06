@@ -28,6 +28,21 @@ $sourceSecret = "phase4-evidence-secret-8642"
 
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
+function Get-FreeLoopbackPort {
+    $listener = [System.Net.Sockets.TcpListener]::new(
+        [System.Net.IPAddress]::Loopback,
+        0
+    )
+    try {
+        $listener.Start()
+        return ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
+    } finally {
+        $listener.Stop()
+    }
+}
+
+$runtimeDebuggingPort = Get-FreeLoopbackPort
+
 function Read-JsonFile {
     param([Parameter(Mandatory = $true)][string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
@@ -45,6 +60,14 @@ function Stop-ResidualSahelFlow {
     Get-Process -Name node -ErrorAction SilentlyContinue |
         Where-Object { $_.Path -like "C:\Program Files\SahelFlow\*" } |
         Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.Name -ieq "msedgewebview2.exe" -and
+            [string]$_.CommandLine -match "com\.sahelflow\.desktop"
+        } |
+        ForEach-Object {
+            Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+        }
     Start-Sleep -Milliseconds 500
 }
 
@@ -53,7 +76,24 @@ function Start-SahelFlow {
         throw "Installed executable is missing."
     }
     Remove-Item -LiteralPath $endpointPath -Force -ErrorAction SilentlyContinue
-    return Start-Process -FilePath $exe -PassThru
+    $previousBrowserArguments = $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
+    try {
+        $debuggingArgument = "--remote-debugging-port=$runtimeDebuggingPort"
+        $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = if (
+            [string]::IsNullOrWhiteSpace($previousBrowserArguments)
+        ) {
+            $debuggingArgument
+        } else {
+            "$previousBrowserArguments $debuggingArgument"
+        }
+        return Start-Process -FilePath $exe -PassThru
+    } finally {
+        if ($null -eq $previousBrowserArguments) {
+            Remove-Item Env:\WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS -ErrorAction SilentlyContinue
+        } else {
+            $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = $previousBrowserArguments
+        }
+    }
 }
 
 function Wait-ForRuntime {
@@ -107,11 +147,121 @@ function Invoke-SahelFlowJson {
     }
 }
 
+function Read-CdpMessage {
+    param(
+        [Parameter(Mandatory = $true)][System.Net.WebSockets.ClientWebSocket]$Socket,
+        [Parameter(Mandatory = $true)][System.Threading.CancellationToken]$CancellationToken
+    )
+    $stream = [System.IO.MemoryStream]::new()
+    try {
+        do {
+            $buffer = [byte[]]::new(16384)
+            $segment = [System.ArraySegment[byte]]::new($buffer)
+            $result = $Socket.ReceiveAsync($segment, $CancellationToken).GetAwaiter().GetResult()
+            if ($result.MessageType -eq [System.Net.WebSockets.WebSocketMessageType]::Close) {
+                throw "The WebView2 CDP target closed before returning its runtime cookie."
+            }
+            $stream.Write($buffer, 0, $result.Count)
+        } while (-not $result.EndOfMessage)
+        return [System.Text.Encoding]::UTF8.GetString($stream.ToArray()) | ConvertFrom-Json
+    } finally {
+        $stream.Dispose()
+    }
+}
+
+function Get-RuntimeCookieFromTarget {
+    param(
+        [Parameter(Mandatory = $true)][string]$WebSocketUrl,
+        [Parameter(Mandatory = $true)][string]$BaseUrl
+    )
+    $socket = [System.Net.WebSockets.ClientWebSocket]::new()
+    $timeout = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds(5))
+    try {
+        $socket.ConnectAsync([Uri]$WebSocketUrl, $timeout.Token).GetAwaiter().GetResult()
+        $base = [Uri]$BaseUrl
+        $command = @{
+            id = 1
+            method = "Network.getCookies"
+            params = @{
+                urls = @(
+                    "http://127.0.0.1:$($base.Port)/"
+                    "http://localhost:$($base.Port)/"
+                )
+            }
+        } | ConvertTo-Json -Depth 5 -Compress
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($command)
+        $socket.SendAsync(
+            [System.ArraySegment[byte]]::new($bytes),
+            [System.Net.WebSockets.WebSocketMessageType]::Text,
+            $true,
+            $timeout.Token
+        ).GetAwaiter().GetResult()
+
+        do {
+            $message = Read-CdpMessage -Socket $socket -CancellationToken $timeout.Token
+        } while ([int]$message.id -ne 1)
+
+        return @($message.result.cookies | Where-Object { $_.name -ceq "sf_runtime" }) |
+            Select-Object -First 1
+    } finally {
+        $timeout.Dispose()
+        $socket.Dispose()
+    }
+}
+
+function Import-RuntimeCookieFromWebView {
+    param(
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [Parameter(Mandatory = $true)][Microsoft.PowerShell.Commands.WebRequestSession]$Session
+    )
+    $deadline = (Get-Date).AddSeconds(30)
+    $debugEndpoint = "http://127.0.0.1:$runtimeDebuggingPort/json/list"
+    do {
+        try {
+            $targets = @(Invoke-RestMethod -Uri $debugEndpoint -TimeoutSec 2)
+            $appPort = ([Uri]$BaseUrl).Port
+            $candidates = @(
+                $targets | Where-Object {
+                    -not [string]::IsNullOrWhiteSpace([string]$_.webSocketDebuggerUrl) -and
+                    (
+                        [string]$_.url -match ":$appPort(?:/|$)" -or
+                        [string]$_.type -ceq "page"
+                    )
+                }
+            )
+            foreach ($target in $candidates) {
+                $cookie = Get-RuntimeCookieFromTarget `
+                    -WebSocketUrl ([string]$target.webSocketDebuggerUrl) `
+                    -BaseUrl $BaseUrl
+                if (
+                    $null -ne $cookie -and
+                    [string]$cookie.value -cmatch "^[0-9a-f]{64}$"
+                ) {
+                    # Keep the per-launch bearer only in this process. It is never
+                    # written to evidence or emitted to the Actions log.
+                    $Session.Cookies.SetCookies(
+                        [Uri]$BaseUrl,
+                        "sf_runtime=$([string]$cookie.value); Path=/; HttpOnly"
+                    )
+                    $cookie = $null
+                    return
+                }
+            }
+        } catch {
+            # WebView2 and its CDP target appear asynchronously after runtime
+            # readiness. Retry only inside this bounded ephemeral-runner gate.
+        }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+    throw "The installed WebView session did not expose its runtime cookie to the bounded CI drill."
+}
+
 function Establish-OwnerSession {
     param(
         [Parameter(Mandatory = $true)][string]$BaseUrl,
         [Parameter(Mandatory = $true)][Microsoft.PowerShell.Commands.WebRequestSession]$Session
     )
+    Import-RuntimeCookieFromWebView -BaseUrl $BaseUrl -Session $Session
     $setup = Invoke-SahelFlowJson -Method POST -BaseUrl $BaseUrl -Path "/api/auth/setup" -Session $Session -Body @{ pin = $pin }
     if ($setup.status -eq 200) { return }
     if ($setup.status -ne 409) {
@@ -262,6 +412,7 @@ if ($sourceSearch.status -ne 200 -or [int]$sourceSearch.body.total -lt 1 -or $so
 Close-SahelFlow $sourceProcess
 $sourceEvidence = Get-ProfileEvidence
 if ($sourceEvidence.shopCount -lt 2) { throw "Source profile is not a realistic multi-shop installation." }
+Stop-ResidualSahelFlow
 
 # Prove source loss, then install into a new local profile/root.
 $sourceActive = @($sourceEvidence.shops | Where-Object { $_.shopId -eq $sourceEvidence.activeShopId })[0]
