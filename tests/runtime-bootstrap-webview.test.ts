@@ -55,117 +55,81 @@ describe("packaged runtime bootstrap WebView handoff", () => {
     restoreEnvironment("VITEST", originalEnvironment.VITEST);
   });
 
-  it("installs the native runtime session before token-free root navigation", () => {
+  it("uses one hidden configured WebView with native session authority", () => {
     const configuration = JSON.parse(
       readFileSync(
         resolve(process.cwd(), "src-tauri/tauri.conf.json"),
         "utf8",
       ),
     ) as TauriConfiguration;
-    const startupWindow = configuration.app.windows.find(
-      (window) => window.label === "startup",
-    );
-    const configuredMain = configuration.app.windows.find(
-      (window) => window.label === "main",
-    );
     const recovery = readFileSync(
       resolve(process.cwd(), "src-tauri/src/startup_recovery.rs"),
       "utf8",
     ).replace(/\r\n?/g, "\n");
-    const workspaceAuthority = recovery.slice(
-      recovery.indexOf("fn activate_configured_workspace("),
-      recovery.indexOf("pub fn reset_startup_trace"),
-    );
+    const windows = configuration.app.windows;
+    const configuredMain = windows[0];
 
-    expect(startupWindow).toBeDefined();
-    expect(startupWindow?.visible).toBe(true);
-    expect(startupWindow?.focus).toBe(true);
-    expect(startupWindow?.title).toBe("SahelFlow - Starting");
-    expect(startupWindow?.url).toMatch(/^data:text\/html/);
-    expect(decodeURIComponent(startupWindow?.url ?? "")).not.toContain(
-      "<script",
-    );
-    expect(configuredMain).toBeDefined();
-    expect(configuredMain?.visible).toBe(false);
-    expect(configuredMain?.focus).toBe(false);
-    expect(configuredMain?.title).toBe("SahelFlow - Starting");
-    expect(configuredMain?.url).toMatch(/^data:text\/html/);
-    expect(decodeURIComponent(configuredMain?.url ?? "")).not.toContain(
-      "<script",
-    );
+    expect(windows).toHaveLength(1);
+    expect(configuredMain).toMatchObject({
+      label: "main",
+      title: "SahelFlow",
+      visible: false,
+    });
+    expect(configuredMain.url).toMatch(/^data:text\/html/);
+    expect(decodeURIComponent(configuredMain.url)).not.toContain("<script");
+    expect(windows.some((window) => window.label === "startup")).toBe(false);
 
     expect(recovery).toContain(
       "use tauri::webview::{cookie::SameSite, Cookie, WebviewWindow};",
     );
     expect(recovery).toContain('RUNTIME_COOKIE: &str = "sf_runtime"');
+    expect(recovery).toContain("mod shop_lifecycle_host;");
+    expect(recovery).toContain("shop_lifecycle_host::ensure_started(app)?;");
+    expect(recovery).toContain("window.hide()?;");
     expect(recovery).toContain(
-      'STARTUP_RENDERER_MARKER: &str = "sahelflow-startup-renderer-v1"',
+      "window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;",
     );
-    expect(recovery).toContain("renderer_prime_html()");
-    expect(recovery).toContain("startup.navigate(renderer_prime_url()?)?");
-    expect(recovery).toContain("startup.show()?");
-    expect(recovery).toContain("startup.set_focus()?");
-    expect(recovery).toContain(".eval_with_callback(");
-    expect(recovery).toContain("activate_configured_workspace(");
-    expect(workspaceAuthority).toContain("workspace_for_activation");
-    expect(workspaceAuthority).toContain("runtime_cookie(&host, &token)");
-    expect(workspaceAuthority).toContain(".set_cookie(cookie)");
-    expect(workspaceAuthority).toContain(".show()");
-    expect(workspaceAuthority).toContain(".set_focus()");
-    expect(workspaceAuthority).toContain(".navigate(url)");
-    expect(workspaceAuthority).toContain("app.run_on_main_thread(move ||");
-    expect(workspaceAuthority).toContain(
-      "recv_timeout(WORKSPACE_ACTIVATION_TIMEOUT)",
-    );
+    expect(recovery).toContain("window.navigate(handoff.workspace_url)?;");
     expect(recovery).toContain("workspace_url.set_path(\"/\")");
     expect(recovery).toContain("workspace_url.set_query(None)");
     expect(recovery).toContain("workspace_url.set_fragment(None)");
     expect(recovery).toContain(".http_only(true)");
     expect(recovery).toContain(".same_site(SameSite::Lax)");
-    expect(recovery).toContain('"startup-renderer-prime-started"');
-    expect(recovery).toContain('"startup-renderer-prime-ready"');
-    expect(recovery).toContain('"workspace-window-activating"');
-    expect(recovery).toContain('"workspace-native-session-started"');
-    expect(recovery).toContain('"workspace-native-session-installed"');
-    expect(recovery).toContain('"workspace-root-navigation-dispatched"');
     expect(recovery).toContain(
-      '"SF-RUNTIME-UI-STARTUP-RENDERER-BLOCKED"',
+      "monitor_packaged_ui(app.clone(), window, app_data_dir);",
     );
+
+    const handoff = recovery.indexOf(
+      "let Some(handoff) = packaged_handoff(&requested_url)? else {",
+    );
+    const lifecycle = recovery.indexOf(
+      "shop_lifecycle_host::ensure_started(app)?;",
+      handoff,
+    );
+    const hidden = recovery.indexOf("window.hide()?;", lifecycle);
+    const cookie = recovery.indexOf("window.set_cookie(", hidden);
+    const navigation = recovery.indexOf(
+      "window.navigate(handoff.workspace_url)?;",
+      cookie,
+    );
+    const monitor = recovery.indexOf("monitor_packaged_ui(", navigation);
+
+    expect(handoff).toBeGreaterThan(-1);
+    expect(lifecycle).toBeGreaterThan(handoff);
+    expect(hidden).toBeGreaterThan(lifecycle);
+    expect(cookie).toBeGreaterThan(hidden);
+    expect(navigation).toBeGreaterThan(cookie);
+    expect(monitor).toBeGreaterThan(navigation);
+
+    expect(recovery).not.toContain("STARTUP_WINDOW_LABEL");
+    expect(recovery).not.toContain("activate_startup_renderer(");
+    expect(recovery).not.toContain("activate_configured_workspace(");
+    expect(recovery).not.toContain("renderer_prime_html(");
+    expect(recovery).not.toContain("run_on_main_thread");
     expect(recovery).not.toContain("WebviewWindowBuilder::new(");
     expect(recovery).not.toContain("WebviewUrl::External(url)");
-    expect(recovery).not.toContain("WORKSPACE_RENDERER_PROBE_SCRIPT");
-    expect(recovery).not.toContain("WORKSPACE_RENDERER_MARKER");
-    expect(recovery).not.toContain("schedule_packaged_navigation(");
+    expect(recovery).not.toContain("handoff.bootstrap_url");
     expect(recovery).not.toContain("window.location.replace(target)");
-
-    const validatedHandoff = recovery.indexOf(
-      "let handoff = packaged_handoff(&requested_url)?;",
-    );
-    const startupPrime = recovery.indexOf(
-      "activate_startup_renderer(app)",
-      validatedHandoff,
-    );
-    const workspaceActivation = recovery.indexOf(
-      "activate_configured_workspace(",
-      startupPrime,
-    );
-    const nativeCookie = workspaceAuthority.indexOf(".set_cookie(cookie)");
-    const rootNavigation = workspaceAuthority.indexOf(".navigate(url)");
-    const navigationDispatched = recovery.indexOf(
-      '"workspace-root-navigation-dispatched"',
-      workspaceActivation,
-    );
-    const readinessMonitor = recovery.indexOf(
-      "monitor_packaged_ui(",
-      navigationDispatched,
-    );
-    expect(validatedHandoff).toBeGreaterThan(-1);
-    expect(startupPrime).toBeGreaterThan(validatedHandoff);
-    expect(workspaceActivation).toBeGreaterThan(startupPrime);
-    expect(nativeCookie).toBeGreaterThan(-1);
-    expect(rootNavigation).toBeGreaterThan(nativeCookie);
-    expect(navigationDispatched).toBeGreaterThan(workspaceActivation);
-    expect(readinessMonitor).toBeGreaterThan(navigationDispatched);
   });
 
   it("retains the confirmed browser bootstrap only as a legacy fallback", async () => {
