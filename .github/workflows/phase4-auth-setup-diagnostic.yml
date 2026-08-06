@@ -1,0 +1,191 @@
+name: Phase 4 installed auth setup diagnostic
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - .github/workflows/phase4-auth-setup-diagnostic.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase4-auth-setup-diagnostic-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  SOURCE_SHA: 7ed7f0a506bab57be27191b42cfff15e12674593
+  SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+  SF_TEST_FAIL_FAST: "1"
+  SF_LICENSE_SERVICE_URL: "https://license.invalid"
+  SF_LICENSE_TRIAL_PUBLIC_KEYS: '{"ci-trial-key-v1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}'
+  SF_LICENSE_PERMANENT_PUBLIC_KEYS: '{"ci-permanent-key-v1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}'
+
+jobs:
+  installed-auth-diagnostic:
+    name: Run exact Phase 4 installed auth/replacement diagnostic
+    runs-on: windows-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout exact Phase 4 source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Record exact diagnostic source
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          $actual = (& git rev-parse HEAD).Trim()
+          if ($actual -cne $env:SOURCE_SHA) {
+            throw "Diagnostic checkout mismatch: expected $env:SOURCE_SHA, got $actual"
+          }
+          [pscustomobject]@{
+            sourceSha = $actual
+            imageOs = $env:ImageOS
+            imageVersion = $env:ImageVersion
+            runnerOs = $env:RUNNER_OS
+            runnerArch = $env:RUNNER_ARCH
+            createdAt = [DateTime]::UtcNow.ToString('o')
+          } | ConvertTo-Json -Depth 4 |
+            Set-Content -LiteralPath (Join-Path $destination 'diagnostic-source.json') -Encoding UTF8
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile --linker=hoisted
+
+      - name: Verify diagnostic source compiles
+        shell: pwsh
+        run: |
+          bun run typecheck
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          bunx vitest run src/lib/auth/__tests__/identity-continuity.test.ts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Prepare signed local libsodium distribution
+        shell: pwsh
+        run: ./scripts/prepare-libsodium-windows.ps1
+
+      - name: Build exact diagnostic MSI
+        shell: pwsh
+        run: |
+          $env:SF_PHASE4_RESTORE_EVIDENCE_BUILD = '1'
+          $listener = [System.Net.Sockets.TcpListener]::new(
+            [System.Net.IPAddress]::Loopback,
+            0
+          )
+          try {
+            $listener.Start()
+            $webViewDebugPort = ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
+          } finally {
+            $listener.Stop()
+          }
+          "SF_PHASE4_WEBVIEW_DEBUG_PORT=$webViewDebugPort" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          $evidenceConfig = Get-Content -LiteralPath 'src-tauri/tauri.conf.json' -Raw |
+            ConvertFrom-Json
+          $browserArguments =
+            "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection " +
+            "--remote-debugging-port=$webViewDebugPort"
+          $evidenceConfig.app.windows[0] |
+            Add-Member -NotePropertyName additionalBrowserArgs -NotePropertyValue $browserArguments
+          $evidenceConfig.bundle.createUpdaterArtifacts = $false
+          $evidenceConfig |
+            ConvertTo-Json -Depth 100 |
+            Set-Content -LiteralPath .sf-phase4-auth-diagnostic-tauri.json -Encoding UTF8
+
+          Remove-Item -LiteralPath 'src-tauri/target/release/bundle/msi' -Recurse -Force -ErrorAction SilentlyContinue
+          & bunx tauri build --bundles msi --config .sf-phase4-auth-diagnostic-tauri.json 2>&1 |
+            Tee-Object -FilePath .sf-phase4-auth-diagnostic-build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Establish installed lifecycle fixture
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          try {
+            $msis = @(Get-ChildItem -File 'src-tauri/target/release/bundle/msi/*.msi')
+            if ($msis.Count -ne 1) {
+              throw "expected exactly one MSI, found $($msis.Count)"
+            }
+            ./scripts/verify-installed-windows-msi.ps1 -MsiPath $msis[0].FullName
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'lifecycle-error.txt') -Encoding UTF8
+            throw
+          }
+
+      - name: Run replacement/auth diagnostic
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          try {
+            $msis = @(Get-ChildItem -File 'src-tauri/target/release/bundle/msi/*.msi')
+            if ($msis.Count -ne 1) {
+              throw "expected exactly one MSI, found $($msis.Count)"
+            }
+            ./scripts/verify-phase4-replacement-install.ps1 -MsiPath $msis[0].FullName
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'replacement-restore-error.txt') -Encoding UTF8
+            throw
+          }
+
+      - name: Collect diagnostic evidence
+        if: always()
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          $roaming = Join-Path $env:APPDATA 'com.sahelflow.desktop'
+          foreach ($relative in @(
+              'startup-diagnostic.json',
+              'runtime-probe-diagnostic.json',
+              'runtime-readiness-diagnostic.json',
+              'runtime-endpoint.json',
+              'runtime-ui-ready.json',
+              'runtime-ui-diagnostic.json',
+              'startup-trace.json',
+              'shop-registry.json',
+              'system\pending-restore.json',
+              'system\last-restore.json',
+              'migration-journal\current.json',
+              'migration-journal\compatibility.json',
+              'migration-journal\last-recovery.json'
+          )) {
+            $source = Join-Path $roaming $relative
+            if (Test-Path -LiteralPath $source -PathType Leaf) {
+              $safeName = $relative -replace '[\\/:*?"<>|]', '_'
+              Copy-Item -LiteralPath $source -Destination (Join-Path $destination $safeName) -Force
+            }
+          }
+
+      - name: Upload diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase4-auth-setup-diagnostic-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/sahelflow-installed-e2e/**
+            .sf-phase4-auth-diagnostic-build.log
+          if-no-files-found: warn
+          retention-days: 7
