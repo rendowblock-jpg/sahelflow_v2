@@ -4,19 +4,48 @@ mod proven;
 #[cfg(not(debug_assertions))]
 mod shop_lifecycle_host;
 
-pub use proven::{record_startup_stage, reset_startup_trace, show_blocked};
+#[cfg(not(debug_assertions))]
+pub use proven::reset_startup_trace;
+pub use proven::{record_startup_stage, show_blocked};
 
-/// Run the control-proven WebView handoff before activating the Phase 4
-/// lifecycle command host. `proven::show_ready` installs the native HttpOnly
-/// launch cookie, issues token-free root navigation and starts the durable
-/// authenticated readiness monitor while the configured workspace stays hidden.
-/// The lifecycle host is then fully initialized before this startup worker
-/// returns to the desktop supervisor.
+#[cfg(not(debug_assertions))]
+fn ensure_shop_lifecycle_started(
+    app: &tauri::AppHandle,
+) -> Result<(), Box<dyn std::error::Error>> {
+    shop_lifecycle_host::ensure_started(app)?;
+    Ok(())
+}
+
+#[cfg(not(debug_assertions))]
+fn start_shop_lifecycle_host(app: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    std::thread::Builder::new()
+        .name("sahelflow-shop-lifecycle-bootstrap".to_string())
+        .spawn(move || {
+            if let Err(error) = ensure_shop_lifecycle_started(&app) {
+                let detail = format!(
+                    "the protected shop lifecycle authority could not initialize: {error}"
+                );
+                eprintln!("[sahelflow] FATAL: {detail}");
+                let _ = proven::show_blocked(
+                    &app,
+                    "SF-SHOP-LIFECYCLE-HOST-BLOCKED",
+                    &detail,
+                );
+            }
+        })?;
+    Ok(())
+}
+
+/// Run the control-proven WebView handoff, then detach Phase 4 lifecycle-host
+/// initialization from the navigation owner. Returning the startup worker
+/// immediately after cookie installation and root navigation is required for
+/// WebView2 to commit the authenticated document; lifecycle recovery remains
+/// fail-closed on its own named authority thread.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn std::error::Error>> {
     proven::show_ready(app, app_url)?;
 
     #[cfg(not(debug_assertions))]
-    shop_lifecycle_host::ensure_started(app)?;
+    start_shop_lifecycle_host(app.clone())?;
 
     Ok(())
 }
