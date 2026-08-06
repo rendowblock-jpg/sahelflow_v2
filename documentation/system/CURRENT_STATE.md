@@ -14,7 +14,7 @@
 > **Active phase package:** issue #204 through PR #207 — complete P4-A…P4-F implementation candidate awaiting exact-head review and validation
 > **Retained installed evidence:** issue #201
 > **Execution epic:** issue #164
-> **Last assessed:** 2026-08-05
+> **Last assessed:** 2026-08-06
 
 This document states merged protected truth and the exact unmerged implementation
 frontier without converting either into a release or phase-closure claim. Re-fetch
@@ -173,19 +173,36 @@ candidate:
 - executable closure verifier that blocks new unclassified models/stores, legacy
   backup paths, incomplete erase authority or missing security evidence.
 
+### Installed runtime diagnosis and repair — PR #207
+
+The missing installed UI beacon was one narrow application regression, not a
+general WebView2, Windows profile or data-architecture failure. PR #195 changed
+the configured-session root redirect to a relative `Location: /login`; Next.js 16
+rejects that packaged proxy response as an invalid URL, so authenticated root
+navigation returned HTTP 500 before React or the UI-ready beacon could run.
+
+PR #207 commit `80f03768d5c45c9df24412ce750e766ad9dcb13f` restores a
+request-derived absolute same-origin 307 redirect and removes the speculative
+renderer-prime workaround. Manual Windows run `31126124211` then proved the MSI
+build, installed launch/reopen and three authenticated hydrated WebView launches
+on the exact repair. The replacement drill's later HTTP 401 was independently
+identified as stale evidence-harness authentication: production correctly
+required the per-launch HttpOnly runtime cookie.
+
+The replacement harness now obtains that existing cookie through a temporary,
+ephemeral-runner-only WebView2 debugging boundary without changing production
+authentication or writing the bearer to evidence. Exact final replacement proof
+must still be read from the current PR #207 run before Phase 4 closure.
+
 ## Remaining before Phase 4 can close
 
-1. finish the static exact-head compiler/interface audit and freeze one non-skipped
-   final head;
+1. finish the exact-head source/quality gate after GitHub Actions service recovers;
 2. request separated exact-head security/privacy review and leave no unresolved
    P0/P1 conversation;
-3. pass the one selected full gate: authority, TypeScript, ESLint, complete Vitest,
-   coverage, Prisma, dependency audit, Rust release formatting/check, Windows Rust,
-   packaged standalone/runtime and installed-MSI lifecycle;
-4. prove the replacement-install Level 3 drill and applicable issue #201 obligation
-   from the exact candidate rather than from source narrative;
-5. merge with expected-head binding, verify protected main, then reconcile and
-   close issue #204 only if every exit condition is actually satisfied.
+3. read the current PR #207 installed run and retain its exact replacement-install
+   result alongside the already-green launch/reopen and hydrated-WebView evidence;
+4. merge with expected-head binding, verify protected main, then reconcile issues
+   #201 and #204 only if every applicable exit condition is actually satisfied.
 
 ## Release and installed truth
 

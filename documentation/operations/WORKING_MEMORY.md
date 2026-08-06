@@ -1,7 +1,7 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
-> **Last updated:** 2026-08-05
+> **Last updated:** 2026-08-06
 > **Live protected main:** `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
 > **Latest application-changing protected merge:** PR #203 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
 > **Latest protected authority merge:** PR #206 at `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
@@ -13,10 +13,10 @@
 > **Retained installed evidence:** issue #201
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Active branch:** `agent/phase4-protected-data-authority`
-> **Active PR:** PR #207 — frozen complete Phase 4 candidate
+> **Active PR:** PR #207 — complete Phase 4 candidate plus installed-runtime root fix
 > **Final exact candidate head:** re-fetch the live PR #207 head; this file intentionally avoids a self-referential commit SHA
 > **Active agent:** one selected closure agent
-> **Current session purpose:** exact-head security/privacy review, one complete selected gate and protected closure
+> **Current session purpose:** finish exact installed replacement proof, exact-head review/checks and protected closure
 > **Authorized package:** issue #204 through PR #207 only
 
 Live GitHub is authority. Re-read protected `main`, issue #204, PR #207 and issue
@@ -113,9 +113,23 @@ The complete static audit is finished. The final repair batch:
 - restores documentation-audit continuity without reactivating superseded limits;
 - leaves every historical P1 review conversation resolved.
 
-The current non-skipped PR head is frozen for the single exact-head review and
-complete selected Phase 4 gate. This statement does not itself prove closure;
-GitHub’s live PR head is the only exact-SHA authority.
+The original installed UI blocker is source-diagnosed and repaired. PR #195 had
+introduced a relative configured-session redirect that Next.js 16 rejected in
+the packaged server with `TypeError: Invalid URL`. Commit
+`80f03768d5c45c9df24412ce750e766ad9dcb13f` restores a request-derived absolute
+same-origin 307 and removes the speculative renderer-prime workaround. Manual
+Windows run `31126124211` proved install, launch/reopen and three authenticated
+hydrated WebView launches on that exact repair.
+
+The subsequent replacement-drill 401 was a stale harness boundary: direct HTTP
+requests lacked the native WebView's per-launch HttpOnly runtime cookie. The
+harness repair uses an ephemeral-runner-only WebView2 debugging boundary, keeps
+the bearer in process memory and never weakens production authentication. Re-read
+the current PR #207 head and latest installed run before claiming final closure.
+
+Two historical P1 review threads remain unresolved in GitHub even though their
+dependency-pin and migration-root findings are already repaired in the exact
+branch tree. They remain for the independent reviewer to verify and resolve.
 
 ## Final closure sequence
 
