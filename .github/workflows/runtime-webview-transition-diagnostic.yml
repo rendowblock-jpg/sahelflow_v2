@@ -1,0 +1,185 @@
+name: Runtime WebView transition diagnostic
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - .github/workflows/runtime-webview-transition-diagnostic.yml
+      - scripts/diagnose-installed-webview.ps1
+      - scripts/observe-installed-webview-cdp.mjs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-webview-transition-diagnostic-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  installed-transition:
+    name: Observe ${{ matrix.label }} installed WebView transitions
+    runs-on: windows-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: pre-pr200-991c61a
+            source: 991c61ac882497fdda01af3ac04f06978146bbda
+          - label: handoff-b0fec61
+            source: b0fec61d574f6ef8eb2a0231da54762bfd99b3c5
+    env:
+      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SF_TEST_FAIL_FAST: "1"
+      SOURCE_SHA: ${{ matrix.source }}
+
+    steps:
+      - name: Checkout diagnostic tools
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Preserve observer outside exact source checkout
+        shell: pwsh
+        run: |
+          $toolRoot = Join-Path $env:RUNNER_TEMP 'sahelflow-webview-tools'
+          New-Item -ItemType Directory -Path $toolRoot -Force | Out-Null
+          Copy-Item -LiteralPath 'scripts/diagnose-installed-webview.ps1' -Destination $toolRoot -Force
+          Copy-Item -LiteralPath 'scripts/observe-installed-webview-cdp.mjs' -Destination $toolRoot -Force
+
+      - name: Checkout exact matrix source
+        shell: pwsh
+        run: |
+          git checkout --detach --force $env:SOURCE_SHA
+          $actual = git rev-parse HEAD
+          if ($actual -cne $env:SOURCE_SHA) {
+            throw "Exact-source checkout mismatch: expected $env:SOURCE_SHA, found $actual"
+          }
+
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-webview-transition-diagnostic'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          [pscustomobject]@{
+            sourceSha = $actual
+            label = '${{ matrix.label }}'
+            imageOs = $env:ImageOS
+            imageVersion = $env:ImageVersion
+            runnerOs = $env:RUNNER_OS
+            runnerArch = $env:RUNNER_ARCH
+            createdAt = [DateTime]::UtcNow.ToString('o')
+          } | ConvertTo-Json -Depth 4 |
+            Set-Content -LiteralPath (Join-Path $destination 'diagnostic-environment.json') -Encoding UTF8
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+
+      - name: Cache Windows Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-webview-diagnostic-${{ matrix.label }}-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-installed-e2e-
+            ${{ runner.os }}-cargo-
+
+      - name: Install exact frozen dependencies
+        run: bun install --frozen-lockfile --linker=hoisted
+
+      - name: Prepare signed local libsodium distribution
+        shell: pwsh
+        run: ./scripts/prepare-libsodium-windows.ps1
+
+      - name: Build exact unsigned diagnostic MSI
+        shell: pwsh
+        run: |
+          Remove-Item -LiteralPath 'src-tauri/target/release/bundle/msi' -Recurse -Force -ErrorAction SilentlyContinue
+          '{"bundle":{"createUpdaterArtifacts":false}}' |
+            Set-Content -LiteralPath .sf-webview-diagnostic-tauri.json -Encoding UTF8
+          & bunx tauri build --bundles msi --config .sf-webview-diagnostic-tauri.json 2>&1 |
+            Tee-Object -FilePath .sf-webview-diagnostic-build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $msis = @(Get-ChildItem -File 'src-tauri/target/release/bundle/msi/*.msi')
+          if ($msis.Count -ne 1) {
+            throw "Expected exactly one diagnostic MSI, found $($msis.Count)"
+          }
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-webview-transition-diagnostic'
+          [pscustomobject]@{
+            sourceSha = $env:SOURCE_SHA
+            fileName = $msis[0].Name
+            length = $msis[0].Length
+            sha256 = (Get-FileHash -LiteralPath $msis[0].FullName -Algorithm SHA256).Hash
+            signedReleaseArtifact = $false
+            intendedUse = 'ephemeral-installed-runtime-diagnosis-only'
+          } | ConvertTo-Json -Depth 4 |
+            Set-Content -LiteralPath (Join-Path $destination 'diagnostic-msi.json') -Encoding UTF8
+
+      - name: Install and prove native runtime lifecycle
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-webview-transition-diagnostic'
+          try {
+            $msi = @(Get-ChildItem -File 'src-tauri/target/release/bundle/msi/*.msi')
+            ./scripts/verify-installed-windows-msi.ps1 -MsiPath $msi[0].FullName
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'native-lifecycle-error.txt') -Encoding UTF8
+            throw
+          }
+
+      - name: Install observation-only tools after binary build
+        shell: pwsh
+        run: |
+          $toolRoot = Join-Path $env:RUNNER_TEMP 'sahelflow-webview-tools'
+          Copy-Item -LiteralPath (Join-Path $toolRoot 'diagnose-installed-webview.ps1') -Destination 'scripts' -Force
+          Copy-Item -LiteralPath (Join-Path $toolRoot 'observe-installed-webview-cdp.mjs') -Destination 'scripts' -Force
+
+      - name: Observe installed browser transitions without changing production behavior
+        shell: pwsh
+        run: ./scripts/diagnose-installed-webview.ps1
+
+      - name: Record WebView2 runtime version
+        if: always()
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-webview-transition-diagnostic'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          $webViewBinary = Get-ChildItem -LiteralPath 'C:\Program Files (x86)\Microsoft\EdgeWebView\Application' -Filter msedgewebview2.exe -Recurse -File -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if ($null -ne $webViewBinary) {
+            [pscustomobject]@{
+              path = $webViewBinary.FullName
+              fileVersion = $webViewBinary.VersionInfo.FileVersion
+              productVersion = $webViewBinary.VersionInfo.ProductVersion
+            } | ConvertTo-Json -Depth 4 |
+              Set-Content -LiteralPath (Join-Path $destination 'webview2-version.json') -Encoding UTF8
+          }
+
+      - name: Upload exact diagnostic evidence and unsigned MSI
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-webview-diagnostic-${{ matrix.label }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/sahelflow-webview-transition-diagnostic/**
+            src-tauri/target/release/bundle/msi/*.msi
+            .sf-webview-diagnostic-build.log
+          if-no-files-found: error
+          retention-days: 3
