@@ -85,9 +85,8 @@ fn read_bounded_json<T: DeserializeOwned>(path: &Path) -> Option<T> {
 fn matching_ui_ready_is_durable(app_data_dir: &Path) -> bool {
     let endpoint = read_bounded_json::<RuntimeEndpoint>(&app_data_dir.join(RUNTIME_ENDPOINT_FILE));
     let ready = read_bounded_json::<RuntimeUiReady>(&app_data_dir.join(RUNTIME_UI_READY_FILE));
-    let diagnostic = read_bounded_json::<RuntimeUiDiagnostic>(
-        &app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE),
-    );
+    let diagnostic =
+        read_bounded_json::<RuntimeUiDiagnostic>(&app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE));
     let (Some(endpoint), Some(ready), Some(diagnostic)) = (endpoint, ready, diagnostic) else {
         return false;
     };
@@ -120,11 +119,8 @@ fn start_post_ui_authorities(app: tauri::AppHandle) -> Result<(), Box<dyn std::e
                             "the protected shop lifecycle authority could not initialize: {error}"
                         );
                         eprintln!("[sahelflow] FATAL: {detail}");
-                        let _ = proven::show_blocked(
-                            &app,
-                            "SF-SHOP-LIFECYCLE-HOST-BLOCKED",
-                            &detail,
-                        );
+                        let _ =
+                            proven::show_blocked(&app, "SF-SHOP-LIFECYCLE-HOST-BLOCKED", &detail);
                     }
                     return;
                 }
