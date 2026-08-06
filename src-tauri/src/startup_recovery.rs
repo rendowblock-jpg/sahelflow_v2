@@ -12,10 +12,7 @@ pub use proven::{record_startup_stage, reset_startup_trace, show_blocked};
 /// authenticated readiness monitor while the configured workspace stays hidden.
 /// The lifecycle host is then fully initialized before this startup worker
 /// returns to the desktop supervisor.
-pub fn show_ready(
-    app: &tauri::AppHandle,
-    app_url: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn std::error::Error>> {
     proven::show_ready(app, app_url)?;
 
     #[cfg(not(debug_assertions))]
