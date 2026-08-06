@@ -189,18 +189,29 @@ on the exact repair. The replacement drill's later HTTP 401 was independently
 identified as stale evidence-harness authentication: production correctly
 required the per-launch HttpOnly runtime cookie.
 
-The replacement harness now obtains that existing cookie through a temporary,
-ephemeral-runner-only WebView2 debugging boundary without changing production
-authentication or writing the bearer to evidence. Exact final replacement proof
-must still be read from the current PR #207 run before Phase 4 closure.
+Executable candidate `33500fd8c7e968f1244a444f6fb130d9d897d6a1` makes that
+boundary deterministic through an evidence-MSI-only Tauri WebView2 argument; the
+checked-in production configuration remains unchanged. Run `31127743699` passed
+the MSI build, installed launch/close/reopen and three authenticated hydrated
+WebView launches. Its process evidence contains the expected loopback debugging
+argument, and the replacement request passed runtime-cookie authorization.
+
+The same exact-head run then reached `/api/auth/setup` and returned HTTP 500.
+This is now the first missing replacement-drill transition. It occurs before the
+source customer/secret, recovery kit or all-shop backup is created, so the run
+does not prove replacement restore. The artifact captured no safe inner error
+code, and no further CI retry is authorized by this handoff. The next owner must
+diagnose the setup path once across `setupAuth`, `createSession`, durable identity
+binding and session-cookie creation, then make one consolidated repair.
 
 ## Remaining before Phase 4 can close
 
-1. finish the exact-head source/quality gate after GitHub Actions service recovers;
-2. request separated exact-head security/privacy review and leave no unresolved
-   P0/P1 conversation;
-3. read the current PR #207 installed run and retain its exact replacement-install
-   result alongside the already-green launch/reopen and hydrated-WebView evidence;
+1. diagnose the installed `/api/auth/setup` HTTP 500 at the first failing setup,
+   session or durable-identity transition and make one consolidated repair;
+2. complete the replacement backup/corrupt/replace/restore/rollback drill on the
+   repaired exact executable head;
+3. finish the exact-head source/quality gate and request separated security/privacy
+   review with no unresolved P0/P1 conversation;
 4. merge with expected-head binding, verify protected main, then reconcile issues
    #201 and #204 only if every applicable exit condition is actually satisfied.
 

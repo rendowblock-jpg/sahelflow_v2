@@ -12,8 +12,10 @@
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Execution mode:** single-agent, audit-first, batch remediation and tiered CI
 > **Active implementation outcome:** issue #204 through PR #207 — complete Phase 4 candidate under exact-head review and validation
-> **Active agent:** one selected closure agent; one active implementation agent at a time
+> **Active agent:** ChatGPT Web Agent owns the next Phase 4 closure action; Desktop Agent has released the implementation seat
 > **Active branch/PR:** `agent/phase4-protected-data-authority` / PR #207
+> **Last executable candidate:** `33500fd8c7e968f1244a444f6fb130d9d897d6a1`
+> **Last installed evidence:** run `31127743699` — MSI lifecycle and hydrated UI green; replacement setup HTTP 500
 > **Phase execution issue:** issue #204
 > **Retained installed evidence:** issue #201
 > **Execution epic:** issue #164
@@ -22,6 +24,14 @@
 Live protected `main` must be re-read directly from GitHub before every session.
 The commit above is the exact current protected source at this update; it is not a
 permanent substitute for live repository state.
+
+The original installed-UI blocker is closed on the unmerged candidate: the
+request-derived absolute redirect passed real installed WebView proof. The final
+run also proved that the replacement harness reaches the application through the
+native WebView's HttpOnly runtime authority. Phase 4 remains open because the
+replacement drill then reached `/api/auth/setup` and received HTTP 500 before
+source backup creation. This is the exact next bounded application boundary; it
+is not another WebView2 or cookie failure.
 
 This directory is the durable shared brain for SahelFlow. It defines the finished
 product, required experience, engineering invariants, merged-source truth, final

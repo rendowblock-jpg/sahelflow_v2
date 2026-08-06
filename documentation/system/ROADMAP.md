@@ -294,6 +294,14 @@ the complete Phase 4 candidate through PR #207. Phase 5 remains blocked until
 PR #207 passes exact-head evidence and independent review, merges to protected
 `main`, and issue #204 is reconciled against the exit gate below.
 
+Executable candidate `33500fd8c7e968f1244a444f6fb130d9d897d6a1` passed the
+MSI build, installed launch/close/reopen and three authenticated hydrated WebView
+launches in run `31127743699`. The same run proved the CI replacement harness can
+reuse the native WebView's per-launch HttpOnly runtime authority, then stopped at
+HTTP 500 from `/api/auth/setup` before the backup/replace/restore sequence began.
+Phase 4 and Phase 5 therefore remain gated on diagnosing that first app-level
+setup failure, completing the replacement drill and clearing exact-head review.
+
 ---
 
 # Phase 4 — Data protection, recovery, migrations and security

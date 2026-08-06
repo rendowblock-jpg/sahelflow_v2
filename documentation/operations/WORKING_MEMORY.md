@@ -15,8 +15,10 @@
 > **Active branch:** `agent/phase4-protected-data-authority`
 > **Active PR:** PR #207 — complete Phase 4 candidate plus installed-runtime root fix
 > **Final exact candidate head:** re-fetch the live PR #207 head; this file intentionally avoids a self-referential commit SHA
-> **Active agent:** one selected closure agent
-> **Current session purpose:** finish exact installed replacement proof, exact-head review/checks and protected closure
+> **Last executable candidate:** `33500fd8c7e968f1244a444f6fb130d9d897d6a1`
+> **Last installed run:** `31127743699` — MSI lifecycle/UI green; replacement setup HTTP 500
+> **Active agent:** ChatGPT Web Agent; Desktop Agent stopped implementation after this handoff
+> **Current session purpose:** diagnose the first installed setup failure, complete replacement proof, exact-head review/checks and protected closure
 > **Authorized package:** issue #204 through PR #207 only
 
 Live GitHub is authority. Re-read protected `main`, issue #204, PR #207 and issue
@@ -122,10 +124,20 @@ Windows run `31126124211` proved install, launch/reopen and three authenticated
 hydrated WebView launches on that exact repair.
 
 The subsequent replacement-drill 401 was a stale harness boundary: direct HTTP
-requests lacked the native WebView's per-launch HttpOnly runtime cookie. The
-harness repair uses an ephemeral-runner-only WebView2 debugging boundary, keeps
-the bearer in process memory and never weakens production authentication. Re-read
-the current PR #207 head and latest installed run before claiming final closure.
+requests lacked the native WebView's per-launch HttpOnly runtime cookie. Exact
+executable head `33500fd8c7e968f1244a444f6fb130d9d897d6a1` gives only the
+disposable evidence MSI a supported Tauri/WebView2 loopback debugging argument,
+keeps the bearer in process memory and leaves production configuration and
+authentication unchanged.
+
+Run `31127743699` passed the MSI build, installed launch/close/reopen and three
+authenticated hydrated WebView launches. It also proved the replacement harness
+obtained the runtime cookie: `/api/auth/setup` was authorized and reached the
+application. That request returned HTTP 500 before customer/secret creation,
+recovery-kit generation, backup or replacement began. The artifact did not retain
+an inner safe error code. Treat the first missing transition as the bounded setup
+chain `setupAuth` -> `createSession` -> durable identity binding -> session cookie;
+do not reopen the already-green redirect, WebView or cookie diagnoses.
 
 Two historical P1 review threads remain unresolved in GitHub even though their
 dependency-pin and migration-root findings are already repaired in the exact
@@ -133,13 +145,17 @@ branch tree. They remain for the independent reviewer to verify and resolve.
 
 ## Final closure sequence
 
-1. Request exact-head security/privacy review using
+1. Instrument or reproduce the installed setup chain once and determine its first
+   failing transition; do not begin another speculative CI loop.
+2. Apply one consolidated repair and complete the replacement-install drill on
+   that exact executable head.
+3. Request exact-head security/privacy review using
    `documentation/archive/phase4/PHASE4_INDEPENDENT_REVIEW.md`.
-2. Run one complete selected Phase 4 gate.
-3. If anything fails, collect all jobs/logs/artifacts and all review findings before
+4. Run one complete selected Phase 4 gate.
+5. If anything fails, collect all jobs/logs/artifacts and all review findings before
    one consolidated repair; do not patch one failure at a time.
-4. Resolve every P0/P1 conversation on the exact repaired head.
-5. Merge with `expected_head_sha`, verify protected `main`, then reconcile issue
+6. Resolve every P0/P1 conversation on the exact repaired head.
+7. Merge with `expected_head_sha`, verify protected `main`, then reconcile issue
    #204 only when the exit gate is actually satisfied.
 
 ## Required final evidence
