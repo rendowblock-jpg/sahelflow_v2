@@ -29,6 +29,19 @@ describe("Phase 5 Golden COD workbench source contract", () => {
     expect(client).toContain("riskData: data?.riskData");
   });
 
+  it("matches Orders import and export controls to endpoint authority independently", () => {
+    const page = read("src/app/(dashboard)/orders/page.tsx");
+    const controls = read("src/components/shared/import-export-buttons.tsx");
+    expect(page).toContain('can("customers.contact.read")');
+    expect(page).toContain('can("orders.financials.read")');
+    expect(page).toContain('can("customers.contact.update")');
+    expect(page).toContain('can("orders.financials.update")');
+    expect(page).toContain('exportRoute={canExport ? "/api/export/orders" : undefined}');
+    expect(page).toContain('importRoute={canImport ? "/api/import/orders" : undefined}');
+    expect(controls).toContain("exportRoute?: string");
+    expect(controls).toContain("if (!exportRoute && !importRoute) return null");
+  });
+
   it("uses deterministic total ordering for every offset-paginated queue", () => {
     const orders = read("src/lib/orders/order-list-workbench.ts");
     const confirmation = read("src/lib/orders/confirmation-workbench.ts");
@@ -44,11 +57,13 @@ describe("Phase 5 Golden COD workbench source contract", () => {
     const hook = read("src/hooks/swr/use-confirmation-queue.ts");
     expect(page).toContain("ConfirmationQueueTable");
     expect(page).not.toContain("<table");
-    expect(page).toContain("page,");
+    expect(page).toContain("lastPage");
+    expect(page).toContain("redirect(`/orders/confirmation-queue?page=${lastPage}`)");
     expect(helper).toContain("staleCount");
     expect(helper).toContain("hasNextPage");
     expect(helper).not.toContain("take: 100");
     expect(hook).toContain("fallback.page === currentPage");
+    expect(hook).toContain("currentPage > lastPage");
     expect(hook).not.toContain("data: data ?? fallback");
   });
 
@@ -81,17 +96,27 @@ describe("Phase 5 Golden COD workbench source contract", () => {
     expect(client).toContain('"/api/orders/bulk"');
   });
 
-  it("uses immediate neutral operational metrics without fake sentinel percentages", () => {
+  it("distinguishes legacy direction sentinels from calculated one-percent trends", () => {
+    const metric = read("src/components/shared/stat-card.tsx");
+    const dashboard = read("src/app/(dashboard)/dashboard/page.tsx");
+    const analytics = read("src/app/(dashboard)/analytics/page.tsx");
+    expect(metric).toContain("trendDirectionOnly?: boolean");
+    expect(metric).toContain("trendDirectionOnly ??");
+    expect(metric).toContain("Math.abs(trend) === 1");
+    expect(metric).toContain("!directionOnly");
+    expect(dashboard).toContain("trendDirectionOnly={false}");
+    expect(analytics).toContain("trendDirectionOnly={false}");
+  });
+
+  it("uses immediate neutral operational metrics", () => {
     const metric = read("src/components/shared/stat-card.tsx");
     expect(metric).toContain('data-slot="operational-metric"');
     expect(metric).not.toContain("requestAnimationFrame");
     expect(metric).not.toContain("bg-gradient-to-br");
     expect(metric).not.toContain("hover:-translate-y");
-    expect(metric).toContain("Math.abs(trend) === 1");
-    expect(metric).toContain("!directionOnly");
   });
 
-  it("makes Home attention-first and permission-before-read", () => {
+  it("makes Home attention-first, permission-aware and permission-before-read", () => {
     const dashboard = read("src/app/(dashboard)/dashboard/page.tsx");
     const stats = read("src/lib/data/stats-service.ts");
     const deliveryPage = read("src/app/(dashboard)/deliveries/page.tsx");
@@ -100,6 +125,9 @@ describe("Phase 5 Golden COD workbench source contract", () => {
     expect(dashboard).toContain("getStaleOrderCount");
     expect(dashboard).toContain("getDashboardStats(fieldAccess)");
     expect(dashboard).toContain("getDashboardAnalytics(fieldAccess)");
+    expect(dashboard).toContain("hasAttentionAuthority");
+    expect(dashboard).toContain("!fieldAccess.orders");
+    expect(dashboard).toContain('title={t("error.forbidden")}');
     expect(dashboard).toContain('href: "/deliveries?status=pending"');
     expect(stats).toContain('status: { in: ["pending", "created"] }');
     expect(deliveryPage).toContain('status === "pending"');
