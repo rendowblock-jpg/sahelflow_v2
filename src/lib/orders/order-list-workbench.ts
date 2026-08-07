@@ -107,9 +107,13 @@ function orderByFor(sort: OrdersWorkbenchSort) {
     "createdAt" | "orderNumber" | "totalPrice",
     "asc" | "desc",
   ];
-  if (field === "orderNumber") return { orderNumber: direction } as const;
-  if (field === "totalPrice") return { totalPrice: direction } as const;
-  return { createdAt: direction } as const;
+  if (field === "orderNumber") {
+    return [{ orderNumber: direction }, { id: direction }] as const;
+  }
+  if (field === "totalPrice") {
+    return [{ totalPrice: direction }, { id: direction }] as const;
+  }
+  return [{ createdAt: direction }, { id: direction }] as const;
 }
 
 function mutationAuthority(
@@ -129,7 +133,8 @@ function mutationAuthority(
  * One permission-aware list contract shared by the RSC first paint and the
  * paginated API. Denied contact/financial fields are omitted from the Prisma
  * selection before protected values are opened; risk is emitted only when the
- * trusted actor has explicit risk.read authority.
+ * trusted actor has explicit risk.read authority. Every offset-paginated sort is
+ * total and deterministic by appending the unique order id as a tie-breaker.
  */
 export async function getOrdersWorkbenchPage(
   actorContext: TrustedActorContext,
