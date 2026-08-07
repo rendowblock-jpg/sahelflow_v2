@@ -31,20 +31,26 @@ export function ConfirmationQueueTable({
   const router = useRouter();
   const { data, error, isLoading, pagination } = useConfirmationQueue({ fallback });
   const access = data?.fieldAccess ?? fallback.fieldAccess;
+  const canOpenDetail = access.contact && access.financials;
 
   const columns: ColumnDef<ConfirmationQueueItem, unknown>[] = [
     {
       accessorKey: "orderNumber",
       header: () => t("confirmationQueue.col.order"),
-      cell: ({ row }) => (
-        <Link
-          href={`/orders/${row.original.id}`}
-          className="font-mono text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-          data-order-number
-        >
-          {row.original.orderNumber}
-        </Link>
-      ),
+      cell: ({ row }) =>
+        canOpenDetail ? (
+          <Link
+            href={`/orders/${row.original.id}`}
+            className="font-mono text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            data-order-number
+          >
+            {row.original.orderNumber}
+          </Link>
+        ) : (
+          <span className="font-mono text-sm font-medium" data-order-number>
+            {row.original.orderNumber}
+          </span>
+        ),
       enableSorting: false,
     },
     ...(access.contact
@@ -135,6 +141,7 @@ export function ConfirmationQueueTable({
           status="pending"
           size="sm"
           disabled={
+            !canOpenDetail ||
             !row.original.canUpdate ||
             row.original.mutationAuthority !== "legacy_compatibility"
           }
@@ -147,7 +154,7 @@ export function ConfirmationQueueTable({
       header: () => t("confirmationQueue.col.action"),
       cell: ({ row }) => {
         const order = row.original;
-        if (!order.canUpdate) return null;
+        if (!canOpenDetail || !order.canUpdate) return null;
         return order.mutationAuthority === "legacy_compatibility" ? (
           <Button size="sm" variant="outline" asChild>
             <Link href={`/orders/${order.id}`}>{t("confirmationQueue.confirm")}</Link>
@@ -187,7 +194,7 @@ export function ConfirmationQueueTable({
       pagination={pagination}
       showDensityToggle
       getRowId={(row) => row.id}
-      onRowClick={(row) => router.push(`/orders/${row.id}`)}
+      onRowClick={canOpenDetail ? (row) => router.push(`/orders/${row.id}`) : undefined}
       emptyState={
         <StateSurface
           icon={CheckCircle2}
