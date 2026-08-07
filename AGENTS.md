@@ -55,9 +55,10 @@ context, import/export, permission-truth and browser-evidence contracts. Reopen 
 Phase 5 surface only when a concrete Phase 6 accessibility/RTL defect requires a
 bounded repair.
 
-Issue #221 retains the one human-only Phase 5 gate that CI cannot prove: Founder
-visual acceptance on the actual installed Windows/Tauri application. Never report
-that evidence as passed unless the Founder actually records it.
+Retained evidence issue #221 owns the one human-only Phase 5 gate that CI cannot
+prove: Founder visual acceptance on the actual installed Windows/Tauri
+application. Never report that evidence as passed unless the Founder actually
+records it.
 
 ## Active Phase 6 contract
 
