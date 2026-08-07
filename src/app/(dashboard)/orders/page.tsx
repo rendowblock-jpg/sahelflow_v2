@@ -54,11 +54,6 @@ function localDayBounds(now = new Date()): { start: Date; end: Date } {
   return { start, end };
 }
 
-/**
- * Orders is a real paginated operational workbench. Summary metrics are exact
- * aggregates over the shop database; the displayed rows are one explicit URL-
- * addressable page and never double as the source for totals or risk truth.
- */
 export default async function OrdersPage({
   searchParams,
 }: {
@@ -78,9 +73,7 @@ export default async function OrdersPage({
     sort: sortRaw,
   } = await searchParams;
 
-  if (riskFilter === "high") {
-    redirect("/risk");
-  }
+  if (riskFilter === "high") redirect("/risk");
 
   const statusFilter =
     statusFilterRaw && statusFilterRaw !== "all"
@@ -101,8 +94,17 @@ export default async function OrdersPage({
     can("orders.financials.read") &&
     can("orders.financials.update") &&
     can("products.read");
-  const canExport = can("data.export");
-  const canImport = can("data.import");
+  const canExport =
+    can("data.export") &&
+    can("customers.contact.read") &&
+    can("orders.financials.read");
+  const canImport =
+    can("data.import") &&
+    can("orders.create") &&
+    can("customers.contact.read") &&
+    can("customers.contact.update") &&
+    can("orders.financials.read") &&
+    can("orders.financials.update");
 
   const { start, end } = localDayBounds();
   const fieldAccess = resolveOrdersWorkbenchAccess(actorContext);
@@ -196,11 +198,11 @@ export default async function OrdersPage({
         title={t("nav.orders")}
         description={t("orders.subtitle")}
         actions={
-          canExport || canCreateOrder ? (
+          canExport || canImport || canCreateOrder ? (
             <div className="flex flex-wrap items-center gap-2">
-              {canExport ? (
+              {canExport || canImport ? (
                 <ImportExportButtons
-                  exportRoute="/api/export/orders"
+                  exportRoute={canExport ? "/api/export/orders" : undefined}
                   importRoute={canImport ? "/api/import/orders" : undefined}
                 />
               ) : null}
