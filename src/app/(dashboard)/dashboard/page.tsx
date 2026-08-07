@@ -146,6 +146,7 @@ export default async function DashboardPage() {
           value={stats.ordersToday ?? "—"}
           icon={<ShoppingCart />}
           trend={stats.ordersTrend ?? undefined}
+          trendDirectionOnly={false}
           trendLabel={t("dashboard.vsYesterday")}
           spark={ordersSpark}
           sparkColor="var(--color-chart-1)"
@@ -159,6 +160,7 @@ export default async function DashboardPage() {
           }
           icon={<Banknote />}
           trend={stats.revenueTrend ?? undefined}
+          trendDirectionOnly={false}
           trendLabel={t("dashboard.vsYesterday")}
           subtitle={
             stats.realizedRevenueToday === null
