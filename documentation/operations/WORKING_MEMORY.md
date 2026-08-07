@@ -2,82 +2,109 @@
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-08-07
+> **Protected base at package start:** `d511080e0f7c4c951e76c99690d9b7f3b3a03e12`
 > **Latest application-changing protected merge:** PR #220
 > **Phase 5 product baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Founder-accepted baseline:** Internal.5
 > **Execution epic:** issue #164
-> **Phase 5 issue:** #208 closed
 > **Retained evidence:** #201, #214, #221
-> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Active implementation branch/PR:** none after documentation closure merges
+> **Active product program:** combined Phase 6 → Phase 7 source completion
+> **Active implementation branch:** `agent/phase6-7-completion`
+> **Active implementation PR:** not opened until the coherent source/evidence batch is frozen
 
 Live GitHub is authority. Re-read protected `main`, current open PRs/issues and
-Actions before resuming work. Documentation-only merges may advance `main` beyond
-the Phase 5 application SHA above.
+Actions before any merge. This branch starts from the documentation-reconciled
+Phase 6 frontier; Phase 5 application behavior remains the protected product base.
 
-## Phase 5 closure snapshot
+## Combined Phase 6 → 7 execution contract
 
-PR #220 merged the complete source/browser Phase 5 program. Its exact final head
-passed the Required PR gate and the dedicated Required Phase 5 Experience gate.
-The closure evidence includes the route matrix, fresh-install/login journey,
-representative LTR route sweep, Arabic RTL/viewport sweep and zero unresolved
-latest-head review threads.
+Founder direction is to finish Phase 6 and Phase 7 as **one implementation
+completion**, not a sequence of page fixes and CI-driven micro-PRs.
 
-Merged source product contracts now include:
+Issue #164 comment `5221864441` owns the consolidated Problem Register and frozen
+shared contracts for this package. The operating sequence is:
 
-- one workflow/domain navigation + command-search authority;
-- shared desktop shell, DataTable, StateSurface, StatCard and ChartCard grammar;
-- Orders/confirmation, Customer, Product, Delivery and Return workbenches;
-- permission-before-read protected data queries;
-- truthful pagination, loading/error and mutation state;
-- governed Order/Customer/Product import preview/commit;
-- streaming complete CSV + explicitly bounded XLSX export contract;
-- batched Risk analytics and read/manage separation;
-- Inbox/AI/Automation server authority and durable recovery;
-- Accounting/COD read vs command separation;
-- capability-driven Settings/Profile;
-- EntityLink/Preview/Inspector/Timeline context primitives;
-- quiet login/setup/join and root/inherited state boundaries;
-- blocking route-completion/browser evidence workflow.
+```text
+complete Phase 6/7 audit
+→ one consolidated Problem Register
+→ shared localization/RTL/accessibility correction
+→ generalized multilingual/browser evidence
+→ Phase 7 measurement and low-resource correction
+→ only measurement-backed optimization
+→ one frozen exact head
+→ complete review/gates
+→ one consolidated repair batch if the full result requires it
+```
 
-Do not reopen Phase 5 generically. Fix a Phase 5 surface only if Phase 6 exposes a
-specific RTL/accessibility/semantic defect.
+Phase 6 correctness is established first inside this same branch. Phase 7 measures
+and optimizes that final accessible/RTL surface. Performance work may not remove
+accessibility, durable workers, canonical state, recovery or Phase 1–5 authority
+merely to improve a timing number.
 
-## Retained evidence
+## Implemented shared-root corrections
 
-- #201 — prior native/install evidence obligation.
-- #214 — replacement-install recovery certification evidence.
-- issue #221 — Founder-installed Phase 5 visual acceptance.
+The active branch currently establishes:
 
-Retained evidence issue #221 is human-only. Do not claim it passed from browser
-screenshots or CI.
+- one server/client runtime-translation fallback authority across canonical JSON,
+  Phase 5 auth/join copy, automations, commerce and WhatsApp recovery;
+- localized shared Sheet close and EntityTimeline accessible labels;
+- explicit RTL submenu direction;
+- 24 CSS-pixel target floors for compact checkbox, switch, slider and inline-help
+  controls;
+- route-transition focus entry to the active `<main>` work surface without
+  stealing initial-launch focus;
+- bounded intent prefetch instead of whole-document speculative prerender;
+- integrated static/browser Phase 6–7 evidence infrastructure;
+- SQLite hot-query index/`PRAGMA optimize`/query-plan evidence;
+- controlled Chromium route/search/resource trend evidence with explicit
+  non-equivalence to installed T470/floor proof.
 
-## Phase 6 next action
+The deeper audit confirmed the repository already has a global
+`prefers-reduced-motion` policy and root Arabic typography/bidi rules. Those are
+therefore certification/evidence obligations, not duplicate source-rewrite tasks.
 
-Begin one audit-first Phase 6 package from live protected `main`:
+## Integrated evidence contract
 
-1. inventory every user-facing route/component for AR/FR/EN copy and semantics;
-2. inspect logical vs physical RTL geometry and directional icons;
-3. inspect keyboard/focus/dialog/table/chart/timeline behavior;
-4. inspect screen-reader names, descriptions, live regions and error/retry states;
-5. inspect contrast, reduced motion, zoom 100–200% and 1366×768 containment;
-6. inspect equivalent permission/offline/pending/stale/conflict/recovery behavior;
-7. freeze one consolidated Phase 6 Problem Register and shared contracts;
-8. implement by root cause in coherent batches;
-9. reuse/generalize the Phase 5 route inventory + Playwright evidence gate;
-10. perform exact-head review/gates and retained installed evidence honestly.
+`scripts/verify-phase6-7-completion.ts` and
+`e2e/phase6-7-completion.spec.ts` generalize the Phase 5 inventory/browser stack.
+The combined gate is expected to collect the complete remaining failure set in one
+run, including:
+
+- exact AR/FR/EN locale-key parity and shared server/client runtime-copy parity;
+- AST inventory of literal user-facing JSX/accessibility copy;
+- loading/error boundaries and canonical localization use on Required routes;
+- logical RTL/shared primitive/focus/target-size contracts;
+- state announcement, chart textual-context and semantic DataTable contracts;
+- EN/FR/AR full route sweeps at 1366×768;
+- 200%-equivalent reflow sweeps;
+- visible interactive accessible-name/image-alt/heading checks;
+- keyboard focus, dialog escape, reduced-motion and Settings tab direction;
+- bounded browser route/search performance and renderer-resource trend evidence;
+- required hot-query composite indexes and retained SQLite planner evidence.
+
+## Evidence that remains external to source completion
+
+Do not fabricate these from browser CI:
+
+- native-Arabic human language/reading review;
+- signed installed Windows/Tauri observation;
+- issue #221 Founder visual acceptance reconciliation;
+- T470 ≤8 s launch / ≤700 ms navigation / ≤350 ms search / ≤500 ms local
+  mutation p95;
+- declared-floor SSD/HDD, 4 GB and eight-hour stability/resource evidence.
+
+Those are evidence/checkpoint actions after this one source implementation is
+frozen; they are not permission to reopen an indefinite coding loop.
 
 ## Hard rules
 
-- one active implementation agent at a time;
-- branch/PR only; no direct protected-main edits;
-- preserve Phase 1–5 business/data/effect/workbench authority unless consequence
-  truly requires a bounded repair;
-- collect the whole failure/review set before patching;
-- do not weaken tests to preserve stale source spelling;
-- coverage is informational; TypeScript, ESLint, Vitest, Prisma, dependency,
-  migration, authority, browser/accessibility and selected native gates remain
-  real blockers;
+- one active implementation agent and one combined branch/PR;
+- no direct protected-main edits;
+- no Phase 1–5 authority weakening;
+- no performance optimization without measured evidence;
+- collect the complete failure/review set before repair;
+- one consolidated repair batch after the full frozen-head result, not one fix per
+  workflow assertion;
 - no release/Beta/Stable/Founder-acceptance claim without matching evidence.
