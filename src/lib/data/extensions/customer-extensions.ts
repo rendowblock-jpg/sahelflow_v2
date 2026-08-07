@@ -3,8 +3,6 @@
  */
 import "server-only";
 import type { ServiceContext } from "../service-base";
-import { deriveBlindIndex } from "@/lib/crypto/field-crypto";
-import { getMasterKey } from "@/lib/crypto/master-key";
 import { deriveExistingShopBlindIndex } from "@/lib/crypto/protected-record";
 
 export interface CustomerStats {
@@ -39,14 +37,13 @@ async function searchableIndexes(
   value: string,
   field: "name" | "phone",
 ): Promise<string[]> {
-  const legacy = deriveBlindIndex(value, getMasterKey());
   const canonical = await deriveExistingShopBlindIndex(
     ctx.prisma as unknown as BlindIndexClient,
     value,
     { recordType: "Customer", field },
     ctx.shop ? { shopContext: ctx.shop } : {},
   );
-  return [...new Set([legacy, ...(canonical ? [canonical] : [])])];
+  return canonical ? [canonical] : [];
 }
 
 export const customerServiceExtensions = {
