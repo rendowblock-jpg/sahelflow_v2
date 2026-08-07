@@ -94,12 +94,17 @@ describe("Phase 5 Golden COD workbench source contract", () => {
   it("makes Home attention-first and permission-before-read", () => {
     const dashboard = read("src/app/(dashboard)/dashboard/page.tsx");
     const stats = read("src/lib/data/stats-service.ts");
+    const deliveryPage = read("src/app/(dashboard)/deliveries/page.tsx");
+    const deliveryApi = read("src/app/api/delivery/route.ts");
     expect(dashboard).toContain("AttentionCenter");
     expect(dashboard).toContain("getStaleOrderCount");
     expect(dashboard).toContain("getDashboardStats(fieldAccess)");
     expect(dashboard).toContain("getDashboardAnalytics(fieldAccess)");
     expect(dashboard).toContain('href: "/deliveries?status=pending"');
-    expect(stats).toContain('status: "pending"');
+    expect(stats).toContain('status: { in: ["pending", "created"] }');
+    expect(deliveryPage).toContain('status === "pending"');
+    expect(deliveryPage).toContain("PENDING_STATUSES");
+    expect(deliveryApi).toContain("PENDING_DELIVERY_STATUSES");
     expect(dashboard).not.toContain("dashboard.openInbox");
     expect(dashboard).not.toContain("dashboard.manageOrders");
   });
