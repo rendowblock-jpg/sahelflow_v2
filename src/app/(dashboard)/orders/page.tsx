@@ -68,12 +68,13 @@ export default async function OrdersPage({
   const { t, locale } = await getI18n();
   const {
     status: statusFilterRaw,
-    risk: riskFilterRaw,
+    risk: riskFilter,
     page: pageRaw,
     sort: sortRaw,
   } = await searchParams;
 
-  const riskFilter = riskFilterRaw === "high" ? "high" as const : undefined;
+  if (riskFilter === "high") redirect("/risk");
+
   const statusFilter =
     statusFilterRaw && statusFilterRaw !== "all"
       ? orderStatusSchema.safeParse(statusFilterRaw).success
@@ -122,7 +123,6 @@ export default async function OrdersPage({
   ] = await Promise.all([
     getOrdersWorkbenchPage(actorContext, {
       status: statusFilter,
-      risk: riskFilter,
       page,
       pageSize: 25,
       sort: sortRaw,
@@ -185,7 +185,6 @@ export default async function OrdersPage({
   if (page > lastPage) {
     const params = new URLSearchParams();
     if (statusFilter) params.set("status", statusFilter);
-    if (riskFilter) params.set("risk", riskFilter);
     params.set("sort", fallback.sort);
     params.set("page", String(lastPage));
     redirect(`/orders?${params.toString()}`);
@@ -258,18 +257,11 @@ export default async function OrdersPage({
 
         {fallback.fieldAccess.risk ? (
           <Link
-            href={riskFilter ? "/orders" : "/orders?risk=high"}
-            className={`inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-sm outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${
-              riskFilter ? "bg-muted text-foreground" : "text-muted-foreground"
-            }`}
+            href="/risk"
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ShieldAlert className="size-4" aria-hidden="true" />
-            {t("risk.highRisk")}
-            {riskFilter ? (
-              <Badge variant="secondary" className="px-1.5 py-0 text-xs">
-                {fallback.total}
-              </Badge>
-            ) : null}
+            {t("nav.risk")}
           </Link>
         ) : null}
       </div>
@@ -278,7 +270,6 @@ export default async function OrdersPage({
         fallback={fallback}
         locale={locale}
         statusFilter={statusFilter ?? "all"}
-        riskFilter={riskFilter}
       />
     </div>
   );
