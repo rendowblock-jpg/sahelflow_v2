@@ -11,23 +11,18 @@ import {
 } from "@/lib/identity/authorization";
 import { assertCustomerUpdateFieldAuthority } from "@/lib/identity/customer-authorization";
 import { projectCustomerForTrustedActor } from "@/lib/identity/customer-projection";
+import { getCustomerWorkbenchDetail } from "@/lib/customers/customer-workbench";
 
 export const dynamic = "force-dynamic";
-
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET /api/customers/[id] — fetch a single customer by id */
 export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
-  // W2-4: defense-in-depth — GET was unprotected, exposed customer PII to unauthenticated callers.
   const actorContext = await requireTrustedAction("customers.read");
   const { id } = await params;
-  const customer = await customerService.getById({ prisma: db, shop: shopContext }, id);
-  return NextResponse.json({
-    customer: projectCustomerForTrustedActor(actorContext, customer),
-  });
+  const detail = await getCustomerWorkbenchDetail(actorContext, id);
+  return NextResponse.json({ customer: detail.customer });
 }, "GET /api/customers/[id]");
 
-/** PATCH /api/customers/[id] — update an existing customer */
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
   const actorContext = await requireTrustedAction("customers.manage");
   assertTrustedAction(actorContext, "customers.read", {
@@ -37,19 +32,15 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   const body = await req.json();
   const data = updateCustomerSchema.parse(body);
   assertCustomerUpdateFieldAuthority(actorContext, data);
-
   const customer = await customerService.update({ prisma: db, shop: shopContext }, id, data);
-
   return NextResponse.json({
     customer: projectCustomerForTrustedActor(actorContext, customer),
   });
 }, "PATCH /api/customers/[id]");
 
-/** DELETE /api/customers/[id] — delete a customer (blocked if has orders) */
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   const actorContext = await requireTrustedAction("customers.manage");
   const { id } = await params;
-  // W2-5: capture before-state for audit (soft-delete — row stays in DB).
   const existing = await db.customer.findUnique({ where: { id } });
   await customerService.delete({ prisma: db, shop: shopContext }, id);
   await logAudit({ prisma: db, shop: shopContext }, {

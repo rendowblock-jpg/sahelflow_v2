@@ -12,6 +12,7 @@ import { PRODUCT_FIELDS, parseNumber } from "@/lib/import/fields";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
 import { requireAuth } from "@/lib/auth/server";
+import { productService } from "@/lib/data/product-service";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +26,6 @@ const productImportSchema = z.object({
   lowStockThreshold: z.number().int().min(0).optional(),
 });
 
-/**
- * POST /api/import/products
- * Body (multipart): file=products.csv|xlsx, [commit=true|false], [mapping=JSON]
- *
- * If commit=false (default): parse + map + validate, return a preview.
- * If commit=true: insert the validated rows.
- */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth([
     "data.import",
@@ -44,41 +38,32 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const file = formData.get("file") as File | null;
   const commit = formData.get("commit") === "true";
   const mappingJson = formData.get("mapping") as string | null;
+  if (!file) return NextResponse.json({ error: t("import.missingFile") }, { status: 400 });
 
-  if (!file) {
-    return NextResponse.json({ error: t("import.missingFile") }, { status: 400 });
-  }
-
-  const buffer = await file.arrayBuffer();
-  const parsed = parseFile(buffer, file.name);
-
+  const parsed = parseFile(await file.arrayBuffer(), file.name);
   if (parsed.rows.length === 0) {
     return NextResponse.json({ error: t("import.emptyFile") }, { status: 400 });
   }
-
-  // Resolve the column mapping: explicit > auto-detect
-  let mapping = parsed.headers.reduce<Record<string, string>>((acc, h) => {
-    acc[h] = h;
+  let mapping = parsed.headers.reduce<Record<string, string>>((acc, header) => {
+    acc[header] = header;
     return acc;
   }, {});
   if (mappingJson) {
     try {
       mapping = JSON.parse(mappingJson) as Record<string, string>;
     } catch {
-      /* fall back to auto-detect */
+      // Fall through to the current header mapping.
     }
   } else {
     mapping = autoDetectMapping(
       parsed.headers,
-      PRODUCT_FIELDS.map((f) => ({ key: f.key, aliases: f.aliases })),
+      PRODUCT_FIELDS.map((field) => ({ key: field.key, aliases: field.aliases })),
     );
   }
-
-  // Map + coerce types (price/stock/cost → numbers)
-  const mapped = mapRows(parsed.rows, mapping).map((r) => {
-    const data = r.data as Record<string, string>;
+  const mapped = mapRows(parsed.rows, mapping).map((row) => {
+    const data = row.data as Record<string, string>;
     return {
-      rowIndex: r.rowIndex,
+      rowIndex: row.rowIndex,
       data: {
         name: data.name ?? "",
         sku: data.sku || undefined,
@@ -92,11 +77,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       },
     };
   });
-
   const validation = validateRows(mapped, productImportSchema);
-
   if (!commit) {
-    // Preview mode
     return NextResponse.json({
       totalRows: parsed.rows.length,
       headers: parsed.headers,
@@ -104,25 +86,18 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       validCount: validation.valid.length,
       invalidCount: validation.invalid.length,
       invalid: validation.invalid.slice(0, 20),
-      preview: validation.valid.slice(0, 10).map((r) => r.data),
+      preview: validation.valid.slice(0, 10).map((row) => row.data),
     });
   }
 
-  // Commit mode — insert
   const context = { prisma: db, shop: shopContext };
-  // Resolve categories (create if missing)
   const categoryNameToId = new Map<string, string>();
   for (const row of validation.valid) {
-    const catName = (row.data as { category?: string }).category;
-    if (catName && !categoryNameToId.has(catName)) {
-      const existing = await db.category.findUnique({ where: { name: catName } });
-      if (existing) {
-        categoryNameToId.set(catName, existing.id);
-      } else {
-        const created = await context.prisma.category.create({ data: { name: catName } });
-        categoryNameToId.set(catName, created.id);
-      }
-    }
+    const categoryName = (row.data as { category?: string }).category;
+    if (!categoryName || categoryNameToId.has(categoryName)) continue;
+    const existing = await db.category.findUnique({ where: { name: categoryName } });
+    const category = existing ?? await productService.createCategory(context, { name: categoryName });
+    categoryNameToId.set(categoryName, category.id);
   }
 
   const result = await batchInsert(validation.valid, async (chunk) => {
@@ -130,7 +105,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     const errors: Array<{ rowIndex: number; error: string }> = [];
     for (const row of chunk) {
       try {
-        const { category, ...productData } = row.data as {
+        const { category, ...data } = row.data as {
           category?: string;
           name: string;
           sku?: string;
@@ -139,24 +114,21 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           stock?: number;
           lowStockThreshold?: number;
         };
-        await context.prisma.product.create({
-          data: {
-            ...productData,
-            stock: productData.stock ?? 0,
-            categoryId: category ? categoryNameToId.get(category) : undefined,
-          },
+        await productService.create(context, {
+          ...data,
+          stock: data.stock ?? 0,
+          categoryId: category ? categoryNameToId.get(category) : undefined,
         });
-        inserted++;
-      } catch (err) {
+        inserted += 1;
+      } catch (error) {
         errors.push({
           rowIndex: row.rowIndex,
-          error: err instanceof Error ? err.message : t("common.errorGeneric"),
+          error: error instanceof Error ? error.message : t("common.errorGeneric"),
         });
       }
     }
     return { inserted, errors };
   });
-
   return NextResponse.json({
     ok: true,
     inserted: result.inserted,

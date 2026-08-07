@@ -7,68 +7,38 @@ import {
   assertTrustedAction,
   requireTrustedAction,
 } from "@/lib/identity/authorization";
-import {
-  projectProductForTrustedActor,
-  projectProductsForTrustedActor,
-} from "@/lib/identity/product-projection";
+import { projectProductForTrustedActor } from "@/lib/identity/product-projection";
+import { getProductsWorkbenchPage } from "@/lib/products/product-workbench";
 
 export const dynamic = "force-dynamic";
 
-/**
- * GET /api/products — list products with pagination (?page=&pageSize=).
- *
- * Backward-compat: ?limit=&offset=&activeOnly= still accepted (used by the
- * storefront product picker + onboarding). When `page` is present, the
- * response includes `total`, `hasNextPage`, `page`, `pageSize` for the
- * DataTable v2 pagination contract.
- */
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("products.read");
   const searchParams = req.nextUrl.searchParams;
   const activeOnly = searchParams.get("activeOnly") === "true";
-
-  // New paginated contract (?page=&pageSize=)
   const pageParam = searchParams.get("page");
-  if (pageParam) {
-    const page = Math.max(1, parseInt(pageParam, 10) || 1);
-    const pageSize = Math.min(parseInt(searchParams.get("pageSize") ?? "25", 10) || 25, 100);
-    const offset = (page - 1) * pageSize;
-
-    const where = activeOnly ? { isActive: true, deletedAt: null } : { deletedAt: null };
-
-    const [products, total] = await Promise.all([
-      productService.list({ prisma: db, shop: shopContext }, { limit: pageSize, offset, ...(activeOnly ? { activeOnly: true } : {}) }),
-      db.product.count({ where }),
-    ]);
-
-    const hasNextPage = offset + products.length < total;
-    return NextResponse.json({
-      products: projectProductsForTrustedActor(actorContext, products),
-      total,
-      hasNextPage,
-      page,
-      pageSize,
-    });
-  }
-
-  // Legacy contract (?limit=&offset=) — returns { products } only
-  const limit = parseInt(searchParams.get("limit") ?? "50", 10);
-  const offset = parseInt(searchParams.get("offset") ?? "0", 10);
-  const products = await productService.list(
-    { prisma: db, shop: shopContext },
-    {
-      limit: Math.min(limit, 100),
-      offset,
-      ...(activeOnly ? { activeOnly: true } : {}),
-    },
+  const limit = Math.min(
+    Math.max(1, Number.parseInt(searchParams.get("limit") ?? "50", 10) || 50),
+    100,
   );
-
-  return NextResponse.json({
-    products: projectProductsForTrustedActor(actorContext, products),
+  const offset = Math.max(0, Number.parseInt(searchParams.get("offset") ?? "0", 10) || 0);
+  const result = await getProductsWorkbenchPage(actorContext, {
+    ...(pageParam
+      ? {
+          page: Number.parseInt(pageParam, 10),
+          pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
+        }
+      : { pageSize: limit, offset }),
+    activeOnly,
+    sort: searchParams.get("sort"),
   });
+
+  if (!pageParam) {
+    return NextResponse.json({ products: result.products });
+  }
+  return NextResponse.json(result);
 }, "GET /api/products");
 
-/** POST /api/products — create a new product */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("products.manage");
   assertTrustedAction(actorContext, "products.read", {
@@ -82,9 +52,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   });
   const body = await req.json();
   const data = createProductSchema.parse(body);
-
   const product = await productService.create({ prisma: db, shop: shopContext }, data);
-
   return NextResponse.json(
     { product: projectProductForTrustedActor(actorContext, product) },
     { status: 201 },

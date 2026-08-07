@@ -10,23 +10,18 @@ import {
   trustedActorAuditIdentity,
 } from "@/lib/identity/authorization";
 import { projectProductForTrustedActor } from "@/lib/identity/product-projection";
+import { getProductWorkbenchDetail } from "@/lib/products/product-workbench";
 
 export const dynamic = "force-dynamic";
-
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET /api/products/[id] — fetch a single product by id */
 export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
-  // W2-4: defense-in-depth — GET was unprotected, exposed product details.
   const actorContext = await requireTrustedAction("products.read");
   const { id } = await params;
-  const product = await productService.getById({ prisma: db, shop: shopContext }, id);
-  return NextResponse.json({
-    product: projectProductForTrustedActor(actorContext, product),
-  });
+  const detail = await getProductWorkbenchDetail(actorContext, id);
+  return NextResponse.json({ product: detail.product });
 }, "GET /api/products/[id]");
 
-/** PATCH /api/products/[id] — update an existing product */
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
   const actorContext = await requireTrustedAction("products.manage");
   assertTrustedAction(actorContext, "products.read", {
@@ -43,19 +38,15 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
       shopId: actorContext.shop.shopId,
     });
   }
-
   const product = await productService.update({ prisma: db, shop: shopContext }, id, data);
-
   return NextResponse.json({
     product: projectProductForTrustedActor(actorContext, product),
   });
 }, "PATCH /api/products/[id]");
 
-/** DELETE /api/products/[id] — delete a product (soft-deletes if order items exist) */
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   const actorContext = await requireTrustedAction("products.manage");
   const { id } = await params;
-  // W2-5: capture before-state for audit (soft-delete — row stays in DB).
   const existing = await db.product.findUnique({ where: { id } });
   await productService.delete({ prisma: db, shop: shopContext }, id);
   await logAudit({ prisma: db, shop: shopContext }, {

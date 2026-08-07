@@ -67,3 +67,161 @@ export interface ConfirmationQueueResponse {
   page: number;
   pageSize: number;
 }
+
+export interface CustomerWorkbenchAccess {
+  contact: boolean;
+  financials: boolean;
+  risk: boolean;
+  manage: boolean;
+  contactUpdate: boolean;
+  export: boolean;
+  import: boolean;
+}
+
+export interface CustomerWorkbenchItem {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  wilaya: string | null;
+  commune: string | null;
+  orderCount: number;
+  totalSpent: number | null;
+  riskScore: number | null;
+  isBlacklisted: boolean | null;
+  createdAt: Date | string;
+}
+
+export interface CustomersWorkbenchResponse {
+  customers: CustomerWorkbenchItem[];
+  fieldAccess: CustomerWorkbenchAccess;
+  total: number;
+  hasNextPage: boolean;
+  page: number;
+  pageSize: number;
+}
+
+export interface CustomerWorkbenchSummary {
+  totalCustomers: number;
+  activeCustomers: number;
+  totalSpent: number | null;
+  atRiskCustomers: number | null;
+}
+
+export interface CustomerWorkbenchDetail {
+  customer: CustomerWorkbenchItem & {
+    phone2: string | null;
+    address: string | null;
+    notes: string | null;
+    blacklistReason: string | null;
+  };
+  stats: null | {
+    totalOrders: number;
+    totalSpent: number | null;
+    deliveredCount: number;
+    returnedCount: number;
+    deliveryRate: number;
+    avgOrderValue: number | null;
+    firstOrderDate: Date | string | null;
+    lastOrderDate: Date | string | null;
+  };
+  orders: Array<{
+    id: string;
+    orderNumber: string;
+    status: string;
+    totalPrice: number | null;
+    createdAt: Date | string;
+  }>;
+  fieldAccess: CustomerWorkbenchAccess & {
+    orders: boolean;
+    orderFinancials: boolean;
+    riskManage: boolean;
+  };
+}
+
+export interface ProductWorkbenchAccess {
+  cost: boolean;
+  manage: boolean;
+  costUpdate: boolean;
+  export: boolean;
+  import: boolean;
+}
+
+export interface ProductWorkbenchItem {
+  id: string;
+  name: string;
+  sku: string | null;
+  price: number;
+  cost: number | null;
+  stock: number;
+  lowStockThreshold: number;
+  categoryId: string | null;
+  categoryName: string | null;
+  isActive: boolean;
+  createdAt: Date | string;
+}
+
+export interface ProductsWorkbenchResponse {
+  products: ProductWorkbenchItem[];
+  fieldAccess: ProductWorkbenchAccess;
+  total: number;
+  hasNextPage: boolean;
+  page: number;
+  pageSize: number;
+  sort: string;
+}
+
+export interface ProductWorkbenchSummary {
+  totalProducts: number;
+  activeProducts: number;
+  lowStockProducts: number;
+  inventoryValue: number;
+}
+
+export interface ProductWorkbenchDetail {
+  product: ProductWorkbenchItem & {
+    productVariants: Array<{
+      id: string;
+      name: string;
+      sku: string | null;
+      price: number | null;
+      stock: number;
+      isActive: boolean;
+    }>;
+  };
+  recentOrders: Array<{
+    id: string;
+    orderId: string;
+    orderNumber: string;
+    status: string;
+    quantity: number;
+    unitPrice: number | null;
+    total: number | null;
+    createdAt: Date | string;
+  }>;
+  fieldAccess: ProductWorkbenchAccess & {
+    orders: boolean;
+    orderFinancials: boolean;
+  };
+}
+
+export interface ExpenseWorkbenchAccess {
+  update: boolean;
+  export: boolean;
+}
+
+export interface ExpenseWorkbenchItem {
+  id: string;
+  category: string;
+  amount: number;
+  date: Date | string;
+  notes: string | null;
+}
+
+export interface ExpensesWorkbenchResponse {
+  expenses: ExpenseWorkbenchItem[];
+  fieldAccess: ExpenseWorkbenchAccess;
+  total: number;
+  hasNextPage: boolean;
+  page: number;
+  pageSize: number;
+}

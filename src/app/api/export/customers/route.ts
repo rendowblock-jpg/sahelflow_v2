@@ -9,29 +9,36 @@ import { getI18n } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/export/customers?format=csv|xlsx */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  const actorContext = await requireAuth(["data.export", "customers.read", "customers.contact.read"]);
-  await logAudit({ prisma: db, shop: shopContext }, { action: "export.customers", entity: "customers", actor: trustedActorAuditIdentity(actorContext.actor), after: { format: req.nextUrl.searchParams.get("format") ?? "csv" } });
+  const actorContext = await requireAuth([
+    "data.export",
+    "customers.read",
+    "customers.contact.read",
+    "orders.financials.read",
+  ]);
+  await logAudit({ prisma: db, shop: shopContext }, {
+    action: "export.customers",
+    entity: "customers",
+    actor: trustedActorAuditIdentity(actorContext.actor),
+    after: { format: req.nextUrl.searchParams.get("format") ?? "csv" },
+  });
   const format = req.nextUrl.searchParams.get("format") ?? "csv";
   const { t, locale } = await getI18n();
   const customers = await db.customer.findMany({
     where: { deletedAt: null },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: 10000,
   });
-
-  const rows = customers.map((c) => ({
-    name: c.name,
-    phone: c.phone,
-    phone2: c.phone2 ?? "",
-    wilaya: c.wilaya ?? "",
-    commune: c.commune ?? "",
-    address: c.address ?? "",
-    orderCount: c.orderCount,
-    totalSpent: c.totalSpent,
+  const rows = customers.map((customer) => ({
+    name: customer.name,
+    phone: customer.phone,
+    phone2: customer.phone2 ?? "",
+    wilaya: customer.wilaya ?? "",
+    commune: customer.commune ?? "",
+    address: customer.address ?? "",
+    orderCount: customer.orderCount,
+    totalSpent: customer.totalSpent,
   }));
-
   const columns = [
     { key: "name", label: t("export.customers.name") },
     { key: "phone", label: t("export.customers.phone") },
@@ -42,10 +49,8 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     { key: "orderCount", label: t("export.customers.orderCount") },
     { key: "totalSpent", label: t("export.customers.totalSpent") },
   ];
-
   const filePrefix = locale === "ar" ? "عملاء" : locale === "fr" ? "clients" : "customers";
   const fileSuffix = new Date().toISOString().slice(0, 10);
-
   if (format === "xlsx") {
     const buf = toXlsx(rows, columns);
     return new NextResponse(buf, {
@@ -55,9 +60,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       },
     });
   }
-
-  const csv = toCsv(rows, columns);
-  return new NextResponse(csv, {
+  return new NextResponse(toCsv(rows, columns), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.csv"`,
