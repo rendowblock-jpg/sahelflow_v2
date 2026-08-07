@@ -6,7 +6,6 @@ import type { PrismaClient } from "@prisma/client";
 
 import {
   decryptString,
-  deriveBlindIndex,
   isEncryptedPayload,
   type EncryptedPayload,
 } from "@/lib/crypto/field-crypto";
@@ -532,18 +531,15 @@ export function createProtectedPiiCodec(
   }
 
   async function customerPhoneIndexes(value: string): Promise<string[]> {
-    const indexes = new Set<string>([deriveBlindIndex(value, legacyRoot)]);
     const current = await blindKeyIfPresent();
-    if (current) {
-      indexes.add(
-        await indexWithAuthority(
-          value,
-          { recordType: "Customer", field: "phone" },
-          current,
-        ),
-      );
-    }
-    return [...indexes];
+    if (!current) return [];
+    return [
+      await indexWithAuthority(
+        value,
+        { recordType: "Customer", field: "phone" },
+        current,
+      ),
+    ];
   }
 
   async function decryptNested(value: unknown): Promise<unknown> {

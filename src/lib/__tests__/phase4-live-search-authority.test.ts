@@ -18,4 +18,17 @@ describe("Phase 4 live blind-index search authority", () => {
       expect(source).not.toContain("getMasterKey");
     }
   });
+
+  it("does not derive installation-root candidates for direct customer phone lookups", () => {
+    const source = read("src/lib/crypto/protected-pii.ts");
+    const start = source.indexOf("async function customerPhoneIndexes");
+    const end = source.indexOf("async function decryptNested", start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const lookupAuthority = source.slice(start, end);
+    expect(lookupAuthority).toContain("blindKeyIfPresent");
+    expect(lookupAuthority).not.toContain("deriveBlindIndex");
+    expect(lookupAuthority).not.toContain("legacyRoot");
+  });
+
 });
