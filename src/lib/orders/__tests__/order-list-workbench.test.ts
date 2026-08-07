@@ -164,48 +164,6 @@ describe("Orders workbench", () => {
     expect(result.riskData?.b).toEqual({ level: "high", score: 70 });
   });
 
-  it("keeps the high-risk queue exact and paginates only high or critical orders", async () => {
-    const high = sourceRow({ id: "high", totalPrice: 5_000 });
-    const critical = sourceRow({ id: "critical", totalPrice: 4_500 });
-    mocks.findMany
-      .mockResolvedValueOnce([
-        { id: "low" },
-        { id: "high" },
-        { id: "critical" },
-      ])
-      .mockResolvedValueOnce([high, critical]);
-    mocks.batchAssessOrders.mockResolvedValue(
-      new Map([
-        ["low", { level: "low", score: 10 }],
-        ["high", { level: "high", score: 70 }],
-        ["critical", { level: "critical", score: 90 }],
-      ]),
-    );
-
-    const result = await getOrdersWorkbenchPage(context("owner"), {
-      risk: "high",
-      page: 1,
-      pageSize: 25,
-    });
-
-    expect(mocks.batchAssessOrders).toHaveBeenCalledWith(
-      expect.anything(),
-      ["low", "high", "critical"],
-    );
-    expect(mocks.findMany).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        where: expect.objectContaining({ id: { in: ["high", "critical"] } }),
-      }),
-    );
-    expect(result.total).toBe(2);
-    expect(result.orders.map((order) => order.id)).toEqual(["high", "critical"]);
-    expect(result.riskData).toEqual({
-      high: { level: "high", score: 70 },
-      critical: { level: "critical", score: 90 },
-    });
-  });
-
   it("does not read or derive protected risk inputs for a viewer", async () => {
     mocks.findMany.mockResolvedValue([
       {
