@@ -1,33 +1,17 @@
-/**
- * Risk analytics — aggregates risk data across all orders for the analysis dashboard.
- *
- * Computes:
- *   - Risk distribution (how many orders at each level)
- *   - Confirmation rate BY risk level (proves the engine works — low-risk orders
- *     should have higher confirmation rates than high-risk ones)
- *   - Risk by wilaya (geographic hotspots)
- *   - Risk by product/category
- *   - Top contributing factors (which signals are most common)
- *   - Risk trend over time (are we improving?)
- *   - Rule trigger counts (which rules fire most)
- *
- * NOTE: Since risk assessments are computed on-demand (not persisted per order
- * in this iteration), this analytics module re-computes assessments for the
- * time range. For large datasets this should be cached or materialized.
- */
 import "server-only";
 
 import type { ServiceContext } from "@/lib/data/service-base";
-import { getRiskConfig, getRiskRules, buildAssessmentInputFromOrder } from "./service";
+import { getRiskConfig, getRiskRules } from "./service";
 import { assessRisk } from "./scoring";
-import type { RiskAssessment, RiskLevel } from "./types";
+import type {
+  RiskAssessment,
+  RiskAssessmentInput,
+  RiskLevel,
+} from "./types";
 
 export interface RiskAnalyticsReport {
-  /** Total orders assessed */
   totalOrders: number;
-  /** Distribution by risk level */
   distribution: Array<{ level: RiskLevel; count: number; percentage: number }>;
-  /** Confirmation/delivery rate by risk level (the proof the engine works) */
   confirmationByLevel: Array<{
     level: RiskLevel;
     total: number;
@@ -36,49 +20,63 @@ export interface RiskAnalyticsReport {
     refused: number;
     cancelled: number;
     pending: number;
-    confirmationRate: number; // 0-1
-    returnRate: number; // 0-1
+    confirmationRate: number;
+    returnRate: number;
   }>;
-  /** Risk by wilaya (top 10 by order count) */
   riskByWilaya: Array<{
     wilaya: string;
     orderCount: number;
     avgScore: number;
     confirmationRate: number;
   }>;
-  /** Top contributing factors (by frequency) */
   topFactors: Array<{
     factorId: string;
     labelKey: string;
     occurrenceCount: number;
     avgPoints: number;
   }>;
-  /** Risk trend over time (daily avg score) */
   trend: Array<{
     date: string;
     orderCount: number;
     avgScore: number;
     criticalCount: number;
   }>;
-  /** Rule trigger summary */
   ruleTriggers: Array<{
     ruleId: string;
     labelKey: string;
     triggerCount: number;
     enabled: boolean;
   }>;
-  /** Overall KPIs */
   kpis: {
     avgRiskScore: number;
-    confirmationRate: number;     // overall
-    returnRate: number;           // overall
-    highRiskOrderCount: number;   // high + critical
+    confirmationRate: number;
+    returnRate: number;
+    highRiskOrderCount: number;
     blacklistedCustomerCount: number;
-    potentialSavingsDzd: number;  // estimated savings from preventing high-risk shipments
+    potentialSavingsDzd: number;
   };
 }
 
-/** Compute the full risk analytics report for a time range (default: last 30 days). */
+interface HistoryAccumulator {
+  totalOrders: number;
+  deliveredCount: number;
+  returnedCount: number;
+  refusedCount: number;
+  cancelledCount: number;
+  totalSpent: number;
+  firstOrderDate: Date | null;
+  lastOrderDate: Date | null;
+}
+
+/**
+ * Compute risk analytics with a bounded query count.
+ *
+ * The previous implementation called the DB-aware assessment builder once per
+ * order, which fanned out into customer-history/customer/wilaya queries for each
+ * row. This implementation bulk-loads the selected orders, their complete
+ * customer histories, customer blacklist flags and wilaya profiles once, then
+ * runs the same pure scoring authority in memory.
+ */
 export async function getRiskAnalyticsReport(
   context: ServiceContext,
   days = 30,
@@ -87,35 +85,137 @@ export async function getRiskAnalyticsReport(
   const since = new Date();
   since.setDate(since.getDate() - days);
 
-  const [config, rules] = await Promise.all([
+  const [config, rules, orders] = await Promise.all([
     getRiskConfig(context),
     getRiskRules(context),
+    db.order.findMany({
+      where: { createdAt: { gte: since }, deletedAt: null },
+      select: {
+        id: true,
+        status: true,
+        totalPrice: true,
+        wilaya: true,
+        commune: true,
+        address: true,
+        phone: true,
+        source: true,
+        createdAt: true,
+        customerId: true,
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    }),
   ]);
 
-  // Load all orders in the range (with customer + status for aggregation)
-  const orders = await db.order.findMany({
-    where: { createdAt: { gte: since } },
-    select: {
-      id: true,
-      status: true,
-      totalPrice: true,
-      wilaya: true,
-      createdAt: true,
-      customerId: true,
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  const customerIds = [...new Set(orders.map((order) => order.customerId))];
+  const wilayas = [...new Set(orders.map((order) => order.wilaya))];
+  const [historyRows, customers, wilayaProfiles, blacklistedCustomerCount] =
+    await Promise.all([
+      customerIds.length
+        ? db.order.findMany({
+            where: { customerId: { in: customerIds }, deletedAt: null },
+            select: {
+              customerId: true,
+              status: true,
+              totalPrice: true,
+              createdAt: true,
+            },
+            orderBy: [
+              { customerId: "asc" },
+              { createdAt: "asc" },
+              { id: "asc" },
+            ],
+          })
+        : Promise.resolve([]),
+      customerIds.length
+        ? db.customer.findMany({
+            where: { id: { in: customerIds }, deletedAt: null },
+            select: { id: true, isBlacklisted: true },
+          })
+        : Promise.resolve([]),
+      wilayas.length
+        ? db.wilayaRiskProfile.findMany({
+            where: { wilaya: { in: wilayas } },
+            select: {
+              wilaya: true,
+              riskLevel: true,
+              confirmationRate: true,
+              returnRate: true,
+            },
+          })
+        : Promise.resolve([]),
+      db.customer.count({ where: { isBlacklisted: true, deletedAt: null } }),
+    ]);
 
-  // Compute assessments for each order (batch the input building)
-  const assessments: Array<{ orderId: string; assessment: RiskAssessment; status: string; wilaya: string; createdAt: Date; totalPrice: number }> = [];
+  const historyMap = new Map<string, HistoryAccumulator>();
+  for (const row of historyRows) {
+    const history = historyMap.get(row.customerId) ?? {
+      totalOrders: 0,
+      deliveredCount: 0,
+      returnedCount: 0,
+      refusedCount: 0,
+      cancelledCount: 0,
+      totalSpent: 0,
+      firstOrderDate: null,
+      lastOrderDate: null,
+    };
+    history.totalOrders += 1;
+    if (row.status === "delivered") history.deliveredCount += 1;
+    if (row.status === "returned") history.returnedCount += 1;
+    if (row.status === "refused") history.refusedCount += 1;
+    if (row.status === "cancelled") history.cancelledCount += 1;
+    if (!['cancelled', 'draft'].includes(row.status)) {
+      history.totalSpent += row.totalPrice;
+    }
+    history.firstOrderDate ??= row.createdAt;
+    history.lastOrderDate = row.createdAt;
+    historyMap.set(row.customerId, history);
+  }
+  const blacklistMap = new Map(
+    customers.map((customer) => [customer.id, customer.isBlacklisted]),
+  );
+  const wilayaMap = new Map(
+    wilayaProfiles.map((profile) => [profile.wilaya, profile]),
+  );
 
+  const assessments: Array<{
+    orderId: string;
+    assessment: RiskAssessment;
+    status: string;
+    wilaya: string;
+    createdAt: Date;
+    totalPrice: number;
+  }> = [];
   for (const order of orders) {
-    const input = await buildAssessmentInputFromOrder(context, order.id);
-    if (!input) continue;
-    const assessment = assessRisk(input, config, rules);
+    const history = historyMap.get(order.customerId);
+    const profile = wilayaMap.get(order.wilaya);
+    const input: RiskAssessmentInput = {
+      order: {
+        totalPrice: order.totalPrice,
+        wilaya: order.wilaya,
+        commune: order.commune,
+        address: order.address,
+        phone: order.phone,
+        source: order.source,
+        createdAt: order.createdAt,
+      },
+      customerHistory: history
+        ? {
+            customerId: order.customerId,
+            ...history,
+            isBlacklisted: blacklistMap.get(order.customerId) ?? false,
+          }
+        : undefined,
+      wilayaRisk: profile
+        ? {
+            riskLevel: profile.riskLevel,
+            confirmationRate: profile.confirmationRate ?? 0,
+            returnRate: profile.returnRate ?? 0,
+          }
+        : null,
+    };
     assessments.push({
       orderId: order.id,
-      assessment,
+      assessment: assessRisk(input, config, rules),
       status: order.status,
       wilaya: order.wilaya,
       createdAt: order.createdAt,
@@ -124,25 +224,28 @@ export async function getRiskAnalyticsReport(
   }
 
   const totalOrders = assessments.length;
-
-  // ── Distribution ──
-  const levelCounts: Record<RiskLevel, number> = { low: 0, medium: 0, high: 0, critical: 0 };
-  for (const a of assessments) levelCounts[a.assessment.level]++;
-  const distribution = (Object.keys(levelCounts) as RiskLevel[]).map((level) => ({
+  const levels: RiskLevel[] = ["low", "medium", "high", "critical"];
+  const levelCounts: Record<RiskLevel, number> = {
+    low: 0,
+    medium: 0,
+    high: 0,
+    critical: 0,
+  };
+  for (const row of assessments) levelCounts[row.assessment.level] += 1;
+  const distribution = levels.map((level) => ({
     level,
     count: levelCounts[level],
     percentage: totalOrders > 0 ? levelCounts[level] / totalOrders : 0,
   }));
 
-  // ── Confirmation by level ──
-  const confirmationByLevel = (Object.keys(levelCounts) as RiskLevel[]).map((level) => {
-    const levelOrders = assessments.filter((a) => a.assessment.level === level);
-    const delivered = levelOrders.filter((a) => a.status === "delivered").length;
-    const returned = levelOrders.filter((a) => a.status === "returned").length;
-    const refused = levelOrders.filter((a) => a.status === "refused").length;
-    const cancelled = levelOrders.filter((a) => a.status === "cancelled").length;
-    const pending = levelOrders.filter((a) =>
-      ["draft", "pending", "confirmed", "shipped"].includes(a.status),
+  const confirmationByLevel = levels.map((level) => {
+    const levelOrders = assessments.filter((row) => row.assessment.level === level);
+    const delivered = levelOrders.filter((row) => row.status === "delivered").length;
+    const returned = levelOrders.filter((row) => row.status === "returned").length;
+    const refused = levelOrders.filter((row) => row.status === "refused").length;
+    const cancelled = levelOrders.filter((row) => row.status === "cancelled").length;
+    const pending = levelOrders.filter((row) =>
+      ["draft", "pending", "confirmed", "shipped"].includes(row.status),
     ).length;
     const completed = delivered + returned + refused;
     return {
@@ -158,88 +261,85 @@ export async function getRiskAnalyticsReport(
     };
   });
 
-  // ── Risk by wilaya ──
-  const wilayaMap = new Map<string, { scores: number[]; statuses: string[] }>();
-  for (const a of assessments) {
-    const entry = wilayaMap.get(a.wilaya) ?? { scores: [], statuses: [] };
-    entry.scores.push(a.assessment.score);
-    entry.statuses.push(a.status);
-    wilayaMap.set(a.wilaya, entry);
+  const geography = new Map<string, { scores: number[]; statuses: string[] }>();
+  for (const row of assessments) {
+    const entry = geography.get(row.wilaya) ?? { scores: [], statuses: [] };
+    entry.scores.push(row.assessment.score);
+    entry.statuses.push(row.status);
+    geography.set(row.wilaya, entry);
   }
-  const riskByWilaya = Array.from(wilayaMap.entries())
+  const riskByWilaya = [...geography.entries()]
     .map(([wilaya, data]) => {
-      const completed = data.statuses.filter((s) =>
-        ["delivered", "returned", "refused"].includes(s),
+      const completed = data.statuses.filter((status) =>
+        ["delivered", "returned", "refused"].includes(status),
       );
-      const delivered = data.statuses.filter((s) => s === "delivered").length;
+      const delivered = data.statuses.filter((status) => status === "delivered").length;
       return {
         wilaya,
         orderCount: data.scores.length,
-        avgScore: Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length),
+        avgScore: Math.round(data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length),
         confirmationRate: completed.length > 0 ? delivered / completed.length : 0,
       };
     })
-    .sort((a, b) => b.orderCount - a.orderCount)
+    .sort((left, right) => right.orderCount - left.orderCount)
     .slice(0, 10);
 
-  // ── Top factors ──
-  const factorMap = new Map<string, { count: number; pointsSum: number; labelKey: string }>();
-  for (const a of assessments) {
-    for (const f of a.assessment.factors) {
-      const entry = factorMap.get(f.id) ?? { count: 0, pointsSum: 0, labelKey: f.labelKey };
-      entry.count++;
-      entry.pointsSum += f.points;
-      factorMap.set(f.id, entry);
+  const factors = new Map<string, { count: number; points: number; labelKey: string }>();
+  for (const row of assessments) {
+    for (const factor of row.assessment.factors) {
+      const current = factors.get(factor.id) ?? {
+        count: 0,
+        points: 0,
+        labelKey: factor.labelKey,
+      };
+      current.count += 1;
+      current.points += factor.points;
+      factors.set(factor.id, current);
     }
   }
-  const topFactors = Array.from(factorMap.entries())
+  const topFactors = [...factors.entries()]
     .map(([factorId, data]) => ({
       factorId,
       labelKey: data.labelKey,
       occurrenceCount: data.count,
-      avgPoints: data.count > 0 ? Math.round(data.pointsSum / data.count) : 0,
+      avgPoints: data.count > 0 ? Math.round(data.points / data.count) : 0,
     }))
-    .sort((a, b) => b.occurrenceCount - a.occurrenceCount)
+    .sort((left, right) => right.occurrenceCount - left.occurrenceCount)
     .slice(0, 8);
 
-  // ── Trend (daily) ──
-  const trendMap = new Map<string, { scores: number[]; criticalCount: number }>();
-  for (const a of assessments) {
-    const dateKey = a.createdAt.toISOString().split("T")[0]!;
-    const entry = trendMap.get(dateKey) ?? { scores: [], criticalCount: 0 };
-    entry.scores.push(a.assessment.score);
-    if (a.assessment.level === "critical") entry.criticalCount++;
-    trendMap.set(dateKey, entry);
+  const daily = new Map<string, { scores: number[]; criticalCount: number }>();
+  for (const row of assessments) {
+    const date = row.createdAt.toISOString().split("T")[0]!;
+    const current = daily.get(date) ?? { scores: [], criticalCount: 0 };
+    current.scores.push(row.assessment.score);
+    if (row.assessment.level === "critical") current.criticalCount += 1;
+    daily.set(date, current);
   }
-  const trend = Array.from(trendMap.entries())
+  const trend = [...daily.entries()]
     .map(([date, data]) => ({
       date,
       orderCount: data.scores.length,
-      avgScore: Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length),
+      avgScore: Math.round(data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length),
       criticalCount: data.criticalCount,
     }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((left, right) => left.date.localeCompare(right.date));
 
-  // ── Rule triggers ──
-  const ruleTriggers = rules.map((r) => ({
-    ruleId: r.id,
-    labelKey: r.labelKey,
-    triggerCount: r.triggerCount,
-    enabled: r.enabled,
+  const ruleTriggers = rules.map((rule) => ({
+    ruleId: rule.id,
+    labelKey: rule.labelKey,
+    triggerCount: rule.triggerCount,
+    enabled: rule.enabled,
   }));
-
-  // ── KPIs ──
-  const allScores = assessments.map((a) => a.assessment.score);
-  const avgRiskScore = allScores.length > 0
-    ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+  const scores = assessments.map((row) => row.assessment.score);
+  const avgRiskScore = scores.length > 0
+    ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
     : 0;
-
-  const completedOrders = assessments.filter((a) =>
-    ["delivered", "returned", "refused"].includes(a.status),
+  const completedOrders = assessments.filter((row) =>
+    ["delivered", "returned", "refused"].includes(row.status),
   );
-  const deliveredCount = completedOrders.filter((a) => a.status === "delivered").length;
+  const deliveredCount = completedOrders.filter((row) => row.status === "delivered").length;
   const returnedCount = completedOrders.filter(
-    (a) => a.status === "returned" || a.status === "refused",
+    (row) => row.status === "returned" || row.status === "refused",
   ).length;
   const confirmationRate = completedOrders.length > 0
     ? deliveredCount / completedOrders.length
@@ -247,22 +347,14 @@ export async function getRiskAnalyticsReport(
   const returnRate = completedOrders.length > 0
     ? returnedCount / completedOrders.length
     : 0;
-
   const highRiskOrderCount = assessments.filter(
-    (a) => a.assessment.level === "high" || a.assessment.level === "critical",
+    (row) => row.assessment.level === "high" || row.assessment.level === "critical",
   ).length;
-
-  // Potential savings: high-risk orders that were returned × avg delivery cost
-  // (conservative estimate: 600 DZD per returned delivery)
   const returnedHighRisk = assessments.filter(
-    (a) => (a.assessment.level === "high" || a.assessment.level === "critical")
-      && (a.status === "returned" || a.status === "refused"),
+    (row) =>
+      (row.assessment.level === "high" || row.assessment.level === "critical") &&
+      (row.status === "returned" || row.status === "refused"),
   ).length;
-  const potentialSavingsDzd = returnedHighRisk * 600;
-
-  const blacklistedCustomerCount = (await db.customer.count({
-    where: { isBlacklisted: true, deletedAt: null },
-  }));
 
   return {
     totalOrders,
@@ -278,7 +370,7 @@ export async function getRiskAnalyticsReport(
       returnRate,
       highRiskOrderCount,
       blacklistedCustomerCount,
-      potentialSavingsDzd,
+      potentialSavingsDzd: returnedHighRisk * 600,
     },
   };
 }
