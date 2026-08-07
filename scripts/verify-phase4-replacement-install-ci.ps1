@@ -11,7 +11,7 @@ if ($env:GITHUB_ACTIONS -cne "true") {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $sourceScript = Join-Path $PSScriptRoot "verify-phase4-replacement-install.ps1"
 $patchedScript = Join-Path $env:RUNNER_TEMP "verify-phase4-replacement-install.licensed.ps1"
-$trialServerScript = Join-Path $env:RUNNER_TEMP "phase4-trial-service.mjs"
+$trialServerScript = Join-Path $repoRoot ".phase4-trial-service.mjs"
 $trialKeyHex = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
 $trialKeyId = "ci-trial-key-v1"
 $trialServer = $null
