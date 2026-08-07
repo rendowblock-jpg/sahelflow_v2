@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowRight,
   Banknote,
+  LockKeyhole,
   MessageSquare,
   Package,
   ShoppingCart,
@@ -33,11 +34,6 @@ import { statusI18nKey } from "@/lib/shared/status-colors";
 import { formatDZD } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 
-/**
- * Home is an attention-first desktop work surface. Every data family is resolved
- * against trusted field access before its owning query runs; projection remains
- * defense-in-depth rather than a post-read permission boundary.
- */
 export default async function DashboardPage() {
   const { t, locale } = await getI18n();
   const actorContext = await requireTrustedAction("shops.read");
@@ -131,6 +127,11 @@ export default async function DashboardPage() {
         ]
       : []),
   ];
+  const hasAttentionAuthority =
+    fieldAccess.orders ||
+    fieldAccess.deliveries ||
+    fieldAccess.conversations ||
+    fieldAccess.products;
 
   return (
     <div className="app-content page-sections">
@@ -193,11 +194,20 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <AttentionCenter
-        title={t("dashboard.filterAlerts")}
-        items={attentionItems}
-        allClearLabel={t("confirmationQueue.allCaughtUp")}
-      />
+      {hasAttentionAuthority ? (
+        <AttentionCenter
+          title={t("dashboard.filterAlerts")}
+          items={attentionItems}
+          allClearLabel={t("confirmationQueue.allCaughtUp")}
+        />
+      ) : (
+        <StateSurface
+          icon={LockKeyhole}
+          title={t("error.forbidden")}
+          tone="info"
+          size="inline"
+        />
+      )}
 
       <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
         <section className="min-w-0 rounded-md border border-border/80 bg-background">
@@ -216,7 +226,15 @@ export default async function DashboardPage() {
             ) : null}
           </div>
 
-          {recentOrders.length === 0 ? (
+          {!fieldAccess.orders ? (
+            <StateSurface
+              icon={LockKeyhole}
+              title={t("error.forbidden")}
+              tone="info"
+              size="inline"
+              className="rounded-none border-0"
+            />
+          ) : recentOrders.length === 0 ? (
             <StateSurface
               icon={ShoppingCart}
               title={t("dashboard.noOrders")}
@@ -319,8 +337,16 @@ export default async function DashboardPage() {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : fieldAccess.deliveries ? (
             <div className="px-3 py-5 text-sm text-muted-foreground">—</div>
+          ) : (
+            <StateSurface
+              icon={LockKeyhole}
+              title={t("error.forbidden")}
+              tone="info"
+              size="inline"
+              className="rounded-none border-0"
+            />
           )}
         </section>
       </div>
