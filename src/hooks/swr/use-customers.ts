@@ -40,7 +40,7 @@ export function useCustomers(
   const lastPage = Math.max(1, Math.ceil((knownTotal ?? 0) / pageSize));
 
   useEffect(() => {
-    if ((knownTotal ?? 0) > 0 && currentPage > lastPage) {
+    if (knownTotal !== undefined && currentPage > lastPage) {
       void setPage(String(lastPage));
     }
   }, [currentPage, knownTotal, lastPage, setPage]);
