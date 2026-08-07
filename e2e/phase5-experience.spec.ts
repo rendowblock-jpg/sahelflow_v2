@@ -1,6 +1,6 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
-const OWNER_PIN = "24681357";
+const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
 
 const LTR_ROUTES = [
@@ -79,15 +79,12 @@ async function assertRenderedRoute(
 
 async function ensureOwnerSession(page: Page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  if (page.url().includes("/setup")) {
-    await page.locator("#pin").fill(OWNER_PIN);
-    await page.locator("#confirmPin").fill(OWNER_PIN);
-    await page.locator('button[type="submit"]').click();
-    await page.waitForURL((url) => !url.pathname.includes("/setup"));
-  } else if (page.url().includes("/login")) {
+  if (page.url().includes("/login")) {
     await page.locator("#pin").fill(OWNER_PIN);
     await page.locator('button[type="submit"]').click();
     await page.waitForURL((url) => !url.pathname.includes("/login"));
+  } else if (page.url().includes("/setup")) {
+    throw new Error("Representative Phase 5 evidence requires the rich seeded owner authority");
   }
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
   expect(page.url()).toContain("/dashboard");
@@ -98,11 +95,11 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await page.setViewportSize(DESKTOP);
   });
 
-  test("owner setup and LTR operational routes fit the desktop workbench", async ({
+  test("LTR operational routes fit the desktop workbench with representative data", async ({
     page,
   }, testInfo) => {
     await ensureOwnerSession(page);
-    await expect(page.locator("html")).toHaveAttribute("dir", /^(ltr|rtl)$/);
+    await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
 
     for (const route of LTR_ROUTES) {
       await assertRenderedRoute(page, route, testInfo, "phase5-ltr");
