@@ -24,11 +24,12 @@ export const deliveryService = {
     status?: DeliveryStatus | readonly DeliveryStatus[];
     include?: Prisma.DeliveryInclude;
   }): Promise<Delivery[]> {
-    const statusFilter = Array.isArray(opts?.status)
-      ? { status: { in: [...opts.status] } }
-      : opts?.status
+    const statusFilter =
+      typeof opts?.status === "string"
         ? { status: opts.status }
-        : {};
+        : opts?.status
+          ? { status: { in: [...opts.status] } }
+          : {};
     const rows = await ctx.prisma.delivery.findMany({
       where: { ...statusFilter, deletedAt: null },
       orderBy: { createdAt: "desc" },
