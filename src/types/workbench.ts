@@ -5,6 +5,12 @@ export type MutationAuthority =
   | "confirmation_blocked"
   | "legacy_compatibility";
 
+export interface WorkbenchFieldAccess {
+  contact: boolean;
+  financials: boolean;
+  risk: boolean;
+}
+
 export interface OrderListItem {
   id: string;
   orderNumber: string;
@@ -26,6 +32,7 @@ export interface RiskListProjection {
 export interface OrdersWorkbenchResponse {
   orders: OrderListItem[];
   riskData?: Record<string, RiskListProjection>;
+  fieldAccess: WorkbenchFieldAccess;
   total: number;
   hasNextPage: boolean;
   page: number;
@@ -50,6 +57,7 @@ export interface ConfirmationQueueItem {
 
 export interface ConfirmationQueueResponse {
   queue: ConfirmationQueueItem[];
+  fieldAccess: Pick<WorkbenchFieldAccess, "contact" | "financials">;
   total: number;
   staleCount: number;
   totalValue: number | null;
