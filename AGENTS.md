@@ -1,206 +1,192 @@
 # SahelFlow agent entry point
 
-SahelFlow uses the ChatGPT Web Agentic Coding Agent and the Desktop Agent with
+SahelFlow uses the ChatGPT Web Agentic Coding Agent and Desktop Agent with
 **one active implementation agent at a time**. GitHub is durable truth. GitHub
-Actions is clean-checkout validation and artifact infrastructure, not a coding
-agent.
+Actions is clean-checkout validation/evidence infrastructure, not a coding agent.
 
 The Founder-owned Windows checkout is evidence-bearing local state. Never reset,
-delete or overwrite unrelated work, canonical AppData, shop databases, registry,
-keys or retained evidence merely to simplify development.
+delete, overwrite or replace unrelated work, canonical AppData, shop databases,
+registry, keys or retained evidence merely to simplify development.
+
+## Verified product frontier
+
+- Latest application-changing protected merge: PR #220.
+- Phase 5 protected product baseline: `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- Phase 5 issue #208: closed at protected-source + controlled-browser level.
+- Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
+- Execution epic: issue #164.
+- Retained installed/human evidence: issues #201, #214 and #221.
+- Published executable source remains `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
+- Published release remains `1.0.0-internal.13` / MSI `1.0.0.13`.
+- Founder-installed Internal.13 is observed but not Founder-accepted; accepted
+  baseline remains Internal.5.
+
+Always re-read live protected `main`, open PRs/issues and current Actions state at
+the start of a session. The Phase 5 SHA above is the latest application-changing
+baseline; docs-only reconciliations may make the current `main` SHA newer.
 
 ## Start here
 
-1. Read [`documentation/README.md`](documentation/README.md).
-2. Read FD-028, FD-029 and FD-030 in
-   [`documentation/product/DECISIONS.md`](documentation/product/DECISIONS.md).
-3. Read [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md).
-4. Read Phase 5 in [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
-5. Read [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md).
-6. Read [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
-7. Read issue #164 and retained installed-evidence issues #201 and #214.
-8. Verify protected `main` directly on GitHub before every write, review request,
-   workflow assessment or merge.
-9. Inspect exact source, migrations, tests, native boundaries and production callers
-   before trusting implementation claims.
+Read these active authorities in order:
 
-Chat history, screenshots, temporary Git objects, old branches and archived reports
-are context only. They never replace a successful commit, live branch head and
-GitHub-confirmed file set.
+1. [`documentation/README.md`](documentation/README.md)
+2. [`documentation/product/PRODUCT.md`](documentation/product/PRODUCT.md)
+3. [`documentation/product/EXPERIENCE.md`](documentation/product/EXPERIENCE.md)
+4. [`documentation/product/DECISIONS.md`](documentation/product/DECISIONS.md)
+5. [`documentation/system/ARCHITECTURE.md`](documentation/system/ARCHITECTURE.md)
+6. [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md)
+7. [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md)
+8. [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md)
+9. [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md)
+10. [`documentation/research/RESEARCH.md`](documentation/research/RESEARCH.md)
 
-## Current verified frontier
+Issue #164 is the execution dashboard, not an extra product/architecture authority.
 
-- Protected `main`: `18f56b06eb66f652aa6904d3f93f2e8f4bcfd7c6` before this entry-point reconciliation.
-- Latest application-changing protected merge: PR #207 Phase 4 protected-source
-  closure at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`.
-- Latest protected authority reconciliation: PR #215 at
-  `18f56b06eb66f652aa6904d3f93f2e8f4bcfd7c6`.
-- Published executable source: `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
-- Published release: `1.0.0-internal.13` / MSI `1.0.0.13`.
-- Founder-installed release: Internal.13; acceptance remains open.
-- Founder-accepted baseline: Internal.5.
-- Active product phase: **Phase 5 — whole-product AAA UI/UX**.
-- Active Phase 5 issue/branch/PR: none yet; audit and contract freeze come first.
-- Retained installed evidence: issues #201 and #214.
-- PR #203 is merged at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`;
-  issue #202 is closed.
-- PR #207 is merged; issue #204 is completed and Phase 4 is protected-source closed.
-- Issue #214 retains the unproven installed replacement-install recovery drill and
-  does not reopen Phase 4 or block Phase 5.
+## Phase 5 is closed
 
-Always re-read live GitHub. These values record a verified frontier; they are not
-permission to rely on copied state after the repository moves.
+Do not restart or broadly re-audit Phase 5 merely because old prompts or archived
+reports mention it. PR #220 merged the complete whole-product source/browser
+convergence with green exact-head source CI, a blocking route-completion matrix,
+fresh-install/login evidence, representative LTR and Arabic RTL route traversal,
+viewport containment and zero unresolved review threads.
 
-## Historical continuity markers
+Phase 5 introduced/closed the shared desktop workbench, state, chart, entity
+context, import/export, permission-truth and browser-evidence contracts. Reopen a
+Phase 5 surface only when a concrete Phase 6 accessibility/RTL defect requires a
+bounded repair.
 
-The historical contract-freeze record was **Phase 4 exhaustive audit and contract
-freeze** under issue #204. The old continuity sentence was: **issue #204; no Phase
-4 implementation PR is active**. PR #206 later authorized PR #207, and PR #207 is
-now merged. Preserve those phrases only for audit/history compatibility; they are
-not the current execution frontier.
+Retained evidence issue #221 owns the one human-only Phase 5 gate that CI cannot
+prove: Founder visual acceptance on the actual installed Windows/Tauri
+application. Never report that evidence as passed unless the Founder actually
+records it.
 
-## Authority precedence
+## Active Phase 6 contract
 
-1. Newer explicit Founder decision for the choice it changes.
-2. Product contract.
-3. Experience and journey contract.
-4. Architecture and invariants.
-5. Source-grounded current state.
-6. Final roadmap.
-7. Workflow.
-8. Working Memory.
-9. Research and archive.
+Phase 6 makes Arabic and accessibility equivalent behavior, not decoration.
+Before broad edits, inspect the exact current source/evidence and build one
+consolidated Problem Register grouped by root cause.
 
-A lower layer cannot silently weaken a higher layer.
+Required outcomes include:
 
-## Completion program
+- semantic AR/FR/EN parity; eliminate remaining page-local/concatenated copy;
+- correct Arabic joining/typography and mixed-direction isolation;
+- logical RTL geometry throughout layout, controls, charts and timelines;
+- deliberate directional-icon mirroring rather than blanket transforms;
+- WCAG 2.2 AA target;
+- keyboard-only completion of Required journeys;
+- correct focus entry/return, modal/dialog behavior and announcements;
+- screen-reader semantics, labels, status/error/recovery messages;
+- contrast, reduced motion and 100–200% zoom;
+- 1366×768 containment and representative responsive widths;
+- equivalent permission/loading/offline/pending/stale/conflict/error/retry/
+  recovery behavior in Arabic, French and English;
+- controlled browser evidence plus applicable installed Founder review.
 
-FD-028 defines the final Phase 0–9 program:
+Reuse the Phase 5 `Phase 5 Experience Gate`, route-completion inventory and
+Playwright infrastructure rather than inventing another parallel evidence stack.
+Phase 6 may strengthen those gates and rename/generalize them when appropriate.
 
-0. authority freeze and execution reset;
-1. canonical Golden COD business core;
-2. identity, authorization, licensing and multi-shop;
-3. durable providers, inbox, AI and automations;
-4. data protection, recovery, migrations and security;
-5. whole-product AAA UI/UX and frontend transformation;
-6. Arabic, RTL and accessibility parity;
-7. performance and reliability;
-8. connected SahelFlow platform;
-9. certification, representative beta and Stable.
+## Permanent engineering rules
 
-FD-029 requires uncompromised top-tier class-AAA completion. It does not authorize
-an MVP, hidden deferral or fabricated readiness.
+### One authority per business fact
 
-## Single-agent and session rule
+Every order status, stock movement, money movement, customer identity, provider
+effect, license right and recovery fact has one canonical owner. No UI/API/import/
+AI/provider path may bypass it.
 
-- The Founder selects either the Web Agent or Desktop Agent as active.
-- Only that agent may implement SahelFlow at that time.
-- One outcome has one owner, one branch and one PR.
-- A frozen-head adversarial review occurs only after implementation stops.
-- With one agent, that review is a separated adversarial pass, not an author-written
-  independent approval.
-- Required security, privacy, legal, accessibility and provider reviews remain
-  genuinely independent where the evidence contract requires them.
-- Declare one session purpose: governance/planning, research/contract,
-  implementation, frozen review/closure or installed evidence.
+### Permission before protected read
 
-For Phase 5, do not begin broad production edits before exact-current frontend
-reconnaissance, one consolidated Problem Register and a frozen coherent design/
-information-architecture/page-completion contract.
+Resolve actor/shop/action authority **before** querying protected contact,
+financial, risk, identity or secret fields. Projection is defense-in-depth, not a
+substitute for permission-before-read.
 
-## Audit-first and batch remediation rule
+### Local-first and Windows-first
 
-Before the first production edit of a phase or material package, inspect:
+SQLite is one file per shop. Native/Tauri owns installation-level lifecycle,
+registry, shop switching and recovery. Treat packaged Windows runtime behavior as
+product behavior, not a browser afterthought.
 
-- production callers, routes, pages, commands and background workers;
-- models, migrations, existing databases and compatibility projections;
-- tests, fixtures, mocks, dynamic imports and failure diagnostics;
-- business invariants, idempotency, concurrency and restart behavior;
-- trusted actor, exact shop, permissions and protected-field oracles;
-- provider effects, receipts, ambiguity, retry and recovery;
-- AR/FR/EN, RTL, accessibility, responsive and installed UI states;
-- performance, resource use, diagnostics and evidence;
-- legacy paths that must be removed or made read-only.
+### No silent truth
 
-Group findings by root cause. Do not patch one symptom while a competing authority
-remains.
+Do not show sampled lists as totals, optimistic business status as committed,
+local-only sorts as global, hidden export caps, fake actions or recovery success
+without authoritative proof.
 
-```text
-complete audit
-→ consolidated Problem Register
-→ freeze shared contracts
-→ coherent root-cause implementation
-→ complete static audit
-→ one frozen exact head
-→ complete adversarial/relevant independent review
-→ one selected full gate
-→ one consolidated repair only if complete diagnostics require it
-→ expected-head merge and protected-main verification
+### Durable effects and recovery
+
+Provider, AI, automation and financial effects remain replayable/auditable with
+idempotency, conflict/recovery semantics and explicit external capability truth.
+
+## Repository hygiene
+
+Before edits:
+
+```bash
+git status
+git branch --show-current
+git log -1 --oneline
 ```
 
-Phase 4 is closed at the protected-source layer. Do not reopen it merely because
-#214 remains as installed recovery certification evidence.
+Rules:
 
-## Validation levels
+- work from a task branch/PR, never directly on protected `main`;
+- do not force-push/reset/rebase away another agent’s work;
+- do not modify version/release/native/recovery authorities unless the task truly
+  requires it;
+- do not create ad-hoc worktrees inside this repo;
+- never commit credentials, signing material, private seller data or secret
+  values;
+- update active authority docs when the execution frontier materially changes.
 
-### Level 1 — Task Gate
+## Delivery workflow
 
-Run after each coherent completed task when it adds value without starting the full
-phase gate:
+Use the Founder-approved audit-first pattern:
 
-- version and documentation authority;
-- Prisma generation/validation and migration checks when applicable;
-- TypeScript, ESLint and focused/complete Vitest as risk requires;
-- targeted browser, parser, database, Rust or native checks.
+```text
+live protected source
+→ complete reconnaissance
+→ consolidated Problem Register
+→ freeze shared contracts
+→ coherent implementation batch
+→ self-review full diff
+→ exact-head adversarial review
+→ selected Level 1/2/3 gates
+→ consolidated repair batch
+→ expected-head merge
+→ protected-main verification
+→ documentation reconciliation
+```
 
-### Level 2 — Phase Checkpoint
+Prefer one coherent repair wave over repeated one-error CI loops. Collect the
+complete failure/review set before patching.
 
-Before a phase normally closes, run the frozen complete phase checkpoint: clean
-source/database/integration/migration suites, production build, affected journeys,
-permission/shop isolation, AR/FR/EN, RTL, accessibility, performance,
-documentation and applicable native/Windows/provider evidence.
+## Evidence and claims
 
-A scoped Founder-directed closure exception may close protected-source phase status
-only when the unproven evidence is explicitly named and retained. It never turns
-missing evidence into passing certification.
+Keep these realities separate:
 
-### Level 3 — Major Full Checkpoint
+- integrated protected source;
+- proposed PR source;
+- clean-checkout CI/browser evidence;
+- signed distributable;
+- installed Founder-observed application;
+- Founder acceptance;
+- Beta/Stable certification.
 
-Run after every two completed phases by default, or earlier for licensing,
-identity, cryptography, installer/updater, migrations, backup/restore, provider
-money/effects or destructive data authority. It includes exact-source Windows
-release compilation, signed/installed lifecycle as authorized, clean install,
-upgrade, reopen, process cleanup, preserved AppData, recovery, security and an
-evidence bundle.
+A lower layer cannot claim a higher one. Retained issues #201, #214 and #221 are
+explicit evidence obligations, not passing proof.
 
-Issues #201 and #214 remain separate installed evidence boundaries for later
-applicable gates; neither blocks the Phase 5 source program unless Phase 5 changes
-materially affect those boundaries.
+## Review/merge rule
 
-## Phase 5 objective
+Before merge:
 
-Transform the complete application into one coherent top-tier operational system.
-The Phase 5 audit must cover:
+- freeze the exact head;
+- all selected blocking gates pass;
+- collect and repair all actionable review findings;
+- latest-head adversarial review is clean (zero unresolved P0/P1; resolve threads
+  only after the fix actually exists);
+- use expected-head merge protection;
+- re-read protected `main` after merge.
 
-- route and navigation information architecture;
-- design tokens, typography, spacing, surfaces and component primitives;
-- tables, filters, forms, bulk actions, dialogs and destructive ceremonies;
-- charts and analytics foundation;
-- happy/loading/empty/validation/permission/offline/pending/stale/conflict/error/
-  retry/recovery/history states;
-- real data/authority bindings and mocked/legacy surfaces;
-- responsive containment and obvious RTL/accessibility/performance hazards;
-- visual-regression and Founder-acceptance evidence needs.
-
-Freeze one SahelFlow-owned design system and page-completion matrix before broad
-implementation. Phase 6 owns complete Arabic/RTL/accessibility parity; Phase 7
-owns performance completion, but Phase 5 must not make either harder.
-
-## Non-claims
-
-- Protected Phase 4 source is not a new signed release.
-- Installed replacement-install recovery is not certified; #214 retains it.
-- Internal.13 remains the latest published and Founder-installed executable.
-- Founder acceptance remains open.
-- No Beta, Stable, penetration-test, legal-certification or live-provider
-  certification claim follows from Phase 4 closure.
+Coverage is currently informational in general CI by Founder direction; do not use
+that as permission to weaken TypeScript, ESLint, Vitest, Prisma, dependency audit,
+migration, authority, browser, accessibility or risk-selected native gates.

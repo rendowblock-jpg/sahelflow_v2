@@ -2,160 +2,82 @@
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-08-07
-> **Live protected main:** `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
-> **Latest application-changing protected merge:** PR #207 at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
-> **Latest protected authority merge:** PR #207 at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
+> **Latest application-changing protected merge:** PR #220
+> **Phase 5 product baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Founder-accepted baseline:** Internal.5
 > **Execution epic:** issue #164
-> **Active phase issue:** not yet opened
-> **Retained installed evidence:** issues #201 and #214
-> **Active product phase:** Phase 5 — whole-product AAA UI/UX
-> **Active product branch:** none
-> **Active product PR:** none
-> **Current session purpose:** begin Phase 5 from protected main; audit the whole frontend before broad production edits
-> **Authorized package:** no Phase 5 production package until reconnaissance, Problem Register and contract freeze are complete
+> **Phase 5 issue:** #208 closed
+> **Retained evidence:** #201, #214, #221
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
+> **Active implementation branch/PR:** none after documentation closure merges
 
-Live GitHub is authority. Re-read protected `main`, the active documentation
-authorities, issue #164 and retained evidence issues #201/#214 before relying on
-copied state.
+Live GitHub is authority. Re-read protected `main`, current open PRs/issues and
+Actions before resuming work. Documentation-only merges may advance `main` beyond
+the Phase 5 application SHA above.
 
-## Phase 3 protected closure
+## Phase 5 closure snapshot
 
-PR #203 merged Phase 3 at
-`aa4ca0758fd696f4b02fc1975629ac698f9349c3`; exact validated head
-`f0db4116874238d0c415b4725cd2c5f3ef6201da` passed final required run
-`30901725446`.
+PR #220 merged the complete source/browser Phase 5 program. Its exact final head
+passed the Required PR gate and the dedicated Required Phase 5 Experience gate.
+The closure evidence includes the route matrix, fresh-install/login journey,
+representative LTR route sweep, Arabic RTL/viewport sweep and zero unresolved
+latest-head review threads.
 
-## Phase 4 protected-source closure
+Merged source product contracts now include:
 
-PR #206 merged the Phase 4 exhaustive audit, P4-001…P4-013 Problem Register,
-frozen contracts and consequence classifier at
-`9306564ce5b5ea4b3b13b219aa45d4672ae13184`.
+- one workflow/domain navigation + command-search authority;
+- shared desktop shell, DataTable, StateSurface, StatCard and ChartCard grammar;
+- Orders/confirmation, Customer, Product, Delivery and Return workbenches;
+- permission-before-read protected data queries;
+- truthful pagination, loading/error and mutation state;
+- governed Order/Customer/Product import preview/commit;
+- streaming complete CSV + explicitly bounded XLSX export contract;
+- batched Risk analytics and read/manage separation;
+- Inbox/AI/Automation server authority and durable recovery;
+- Accounting/COD read vs command separation;
+- capability-driven Settings/Profile;
+- EntityLink/Preview/Inspector/Timeline context primitives;
+- quiet login/setup/join and root/inherited state boundaries;
+- blocking route-completion/browser evidence workflow.
 
-PR #207 then merged the complete Phase 4 protected-source package by squash at
-`8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`; issue #204 is completed.
+Do not reopen Phase 5 generically. Fix a Phase 5 surface only if Phase 6 exposes a
+specific RTL/accessibility/semantic defect.
 
-The exact product head immediately before the closure-control commits was
-`ccba7ec138b6aa1a77bf9d972bb1127a3270267d`. On that head:
+## Retained evidence
 
-- source quality, documentation audit, coverage and production dependency audit
-  were green;
-- Tauri release smoke was green;
-- Windows standalone and Windows Rust parity were green;
-- the exact MSI built, installed, launched, closed and reopened;
-- authenticated hydrated WebView UI proof passed twice.
+- #201 — prior native/install evidence obligation.
+- #214 — replacement-install recovery certification evidence.
+- issue #221 — Founder-installed Phase 5 visual acceptance.
 
-The remaining installed failure occurred before replacement backup/restore: CI
-trial activation returned HTTP 503 with `LICENSE_TRIAL_SERVICE_UNAVAILABLE`.
-The Founder explicitly directed Phase 4 to close rather than remain indefinitely
-blocked on that disposable evidence boundary.
+Retained evidence issue #221 is human-only. Do not claim it passed from browser
+screenshots or CI.
 
-PR #207 therefore contains the one-PR, diff-scoped closure marker
-`.github/phase-exceptions/pr-207-phase4-closure-override.md`. The closure commit's
-fast authority passed while heavy lanes were intentionally skipped. The marker is
-already in the base for future work and therefore does not silently bypass future
-PRs unless deliberately changed again.
+## Phase 6 next action
 
-Issue #214 owns the unproven installed replacement-install recovery drill. It does
-not reopen Phase 4 and does not block Phase 5, but it must be satisfied before any
-claim that replacement-install recovery is installed/certified and before Stable
-if still applicable.
+Begin one audit-first Phase 6 package from live protected `main`:
 
-Issue #201 remains a retained installed-evidence/waiver-cleanup obligation. Phase
-4 evidence materially improved that path and passed hydrated WebView proof twice;
-#201 does not reopen Phase 2 or block Phase 5.
+1. inventory every user-facing route/component for AR/FR/EN copy and semantics;
+2. inspect logical vs physical RTL geometry and directional icons;
+3. inspect keyboard/focus/dialog/table/chart/timeline behavior;
+4. inspect screen-reader names, descriptions, live regions and error/retry states;
+5. inspect contrast, reduced motion, zoom 100–200% and 1366×768 containment;
+6. inspect equivalent permission/offline/pending/stale/conflict/recovery behavior;
+7. freeze one consolidated Phase 6 Problem Register and shared contracts;
+8. implement by root cause in coherent batches;
+9. reuse/generalize the Phase 5 route inventory + Playwright evidence gate;
+10. perform exact-head review/gates and retained installed evidence honestly.
 
-## Phase 4 protected capabilities now on main
+## Hard rules
 
-### Protected data and migration
-
-- purpose-separated HKDF installation keys and random per-shop data,
-  blind-index and secret authorities;
-- contextual versioned AES-256-GCM values with explicit corruption;
-- protected Prisma read/write/nested/bulk/upsert/search authority and guarded raw
-  access;
-- installation-root re-wrap and exclusive restart-safe protected-data migration.
-
-### All-shop backup and recovery authority
-
-- native SQLite Online Backup snapshot per registered shop;
-- immutable encrypted descriptor, manifest and ordered object set;
-- per-license BRK, fresh per-backup DEK and exact identity bindings;
-- independent recovery kit/code, verification receipt, verified listing and
-  governed deletion;
-- replacement restore machinery with staging, rescue, compensation, rollback and
-  identity rebinding;
-- authenticated migration/restore journals and replay-protected native bridge.
-
-### Privacy/security/evidence authority
-
-- machine-readable classification for Prisma models, protected fields and
-  installation-level file stores;
-- export/reset/erase lifecycle, credential deletion, session revocation and
-  governed native shop deletion reuse;
-- Algeria Law 18-07/Law 25-11 engineering mapping with qualified legal-review
-  boundary;
-- threat model, review protocol and Level 1/2/3 evidence matrix;
-- deterministic npm/Cargo CycloneDX SBOM, VEX triage and evidence manifest;
-- executable closure verifier for model/lifecycle drift and legacy backup paths.
-
-## Documentation-audit continuity
-
-The historical heading **Phase 4 first package — exhaustive audit and contract freeze**
-and its historical restriction **Broad Phase 4 production work:** not authorized
-are retained here solely as semantic continuity markers. They describe the state
-before PR #207 implementation authorization and are not current Phase 5 limits.
-
-Historical issue #204 is retained in this closure record because it owns the now
-completed Phase 4 execution history.
-
-## Active Phase 5 frontier
-
-Phase 5 starts from protected `main` at
-`8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`.
-
-Objective: transform the complete application into one coherent top-tier
-operational system rather than another isolated UI polish wave.
-
-Before broad Phase 5 production edits:
-
-1. inspect the exact current frontend, route tree, design primitives, tables,
-   forms, charts, navigation, responsive behavior and real authority bindings;
-2. map every Required route and journey against happy/loading/empty/validation/
-   permission/offline/pending/stale/conflict/error/retry/recovery/history states;
-3. identify competing design systems, legacy patterns, mocked or incomplete
-   surfaces and accessibility/RTL/performance risks;
-4. group findings by root cause into one Phase 5 Problem Register;
-5. freeze one SahelFlow-owned design system, chart foundation, information
-   architecture and page-completion contract;
-6. define coherent implementation packages and Level 1/2/3 evidence before
-   changing broad UI surfaces.
-
-Do not reopen Phase 4 unless a Phase 5 change materially breaks a protected Phase
-4 authority. Retained installed replacement evidence remains in #214.
-
-## Phase 5 target
-
-- one SahelFlow-owned design system and governed chart foundation;
-- coherent information architecture and navigation;
-- professional operational density without module-maze noise;
-- complete tables, filters, forms, bulk actions and destructive ceremonies;
-- complete state coverage on every Required page;
-- real data and authority, not mocked happy paths;
-- route-by-route visual regression;
-- Founder visual acceptance at the defined checkpoint.
-
-Arabic/RTL/accessibility are formally Phase 6 but must not be made harder by Phase
-5 architecture. Performance is formally Phase 7 but obvious regressions are not
-acceptable during Phase 5.
-
-## Current non-claims
-
-- Phase 4 protected-source closure is not a new signed release.
-- Installed replacement-install recovery is not certified; issue #214 retains it.
-- The Law 18-07 document is engineering mapping, not legal advice or certification.
-- Internal.13 remains the latest published and Founder-installed executable.
-- No Founder acceptance, Beta, Stable, penetration-test or live-provider
-  certification claim exists for current protected Phase 1–4 source.
+- one active implementation agent at a time;
+- branch/PR only; no direct protected-main edits;
+- preserve Phase 1–5 business/data/effect/workbench authority unless consequence
+  truly requires a bounded repair;
+- collect the whole failure/review set before patching;
+- do not weaken tests to preserve stale source spelling;
+- coverage is informational; TypeScript, ESLint, Vitest, Prisma, dependency,
+  migration, authority, browser/accessibility and selected native gates remain
+  real blockers;
+- no release/Beta/Stable/Founder-acceptance claim without matching evidence.

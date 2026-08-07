@@ -296,30 +296,27 @@ if (existsSync(packagePath)) {
 
 requireMarkers("README.md", [
   "documentation/README.md",
-  "FD-028 Final Completion Program",
-  "Phase 4",
-  "PR #203 Phase 3 closure",
-  "issue #204",
-  "SahelFlow 1.0 Stable has not been released",
+  "Phase 5 closure",
+  "PR #220",
+  "Phase 6 — Arabic, RTL and accessibility parity",
+  "issues #201, #214 and #221",
+  "Founder acceptance remains open",
 ]);
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
-  "Current verified frontier",
-  "Level 1 — Task Gate",
-  "Level 2 — Phase Checkpoint",
-  "Level 3 — Major Full Checkpoint",
-  "PR #203 is merged",
-  "issue #204",
-  "Phase 4 exhaustive audit and contract freeze",
-  "issue #204; no Phase 4 implementation PR is active",
-  "aa4ca0758fd696f4b02fc1975629ac698f9349c3",
+  "Verified product frontier",
+  "Phase 5 is closed",
+  "Active Phase 6 contract",
+  "selected Level 1/2/3 gates",
+  "issue #221",
+  "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734",
 ]);
 requireMarkers("documentation/README.md", [
-  "Phase 4 — data protection, recovery, migrations and security",
-  "PR #203 merged Phase 3",
-  "issue #204",
-  "Problem Register",
-  "complete whole-product AAA frontend",
+  "Phase 5 is now also closed at the protected-source + controlled-browser layer",
+  "Phase 6 — Arabic, RTL and accessibility parity",
+  "PR #220",
+  "issue #221",
+  "Retained issues #201, #214 and #221",
 ]);
 requireMarkers("documentation/product/DECISIONS.md", [
   "## FD-028",
@@ -329,21 +326,19 @@ requireMarkers("documentation/product/DECISIONS.md", [
   "The Founder decides whether the Web Agent or Desktop Agent is active",
 ]);
 requireMarkers("documentation/system/ROADMAP.md", [
-  "Phase 3 — Durable providers, inbox, AI and automations",
-  "One active implementation agent at a time",
-  "Level 1 — Task Gate",
-  "Level 2 — Phase Checkpoint",
-  "Level 3 — Major Full Checkpoint",
-  "# Phase 5 — Whole-product AAA UI/UX",
-  "# Phase 9 — Certification, representative beta and Stable",
+  "## Phase 3 — providers, inbox, AI and automations",
+  "## Phase 5 — whole-product AAA desktop experience",
+  "## Phase 6 — Arabic, RTL and accessibility parity",
+  "## Phase 9 — release certification and launch readiness",
+  "complete reconnaissance",
+  "expected-head merge",
 ]);
 requireMarkers("documentation/system/CURRENT_STATE.md", [
-  "Latest protected source closures",
-  "Phase 3 protected-source closure — PR #203",
-  "Phase 4 protected-source closure — PR #207",
-  "Active Phase 5 frontier",
+  "Phase 5 merged result",
+  "Phase 5 evidence",
+  "Active Phase 6 frontier",
   "issue #214",
-  "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
+  "not yet a commercially certified Stable release",
 ]);
 requireMarkers("documentation/operations/WORKFLOW.md", [
   "one active implementation agent; audit-first; batch remediation; tiered CI",
@@ -356,12 +351,11 @@ requireMarkers("documentation/operations/WORKFLOW.md", [
   "Whole-product AAA frontend program",
 ]);
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
-  "Phase 3 protected closure",
-  "Phase 4 first package — exhaustive audit and contract freeze",
-  "issue #204",
-  "Broad Phase 4 production work:** not authorized",
-  "aa4ca0758fd696f4b02fc1975629ac698f9349c3",
-  "30901725446",
+  "Phase 5 closure snapshot",
+  "Phase 6 next action",
+  "Hard rules",
+  "issue #221",
+  "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734",
 ]);
 requireMarkers("documentation/research/RESEARCH.md", [
   "Research-first quality rule",
@@ -375,7 +369,7 @@ requireMarkers("scripts/sf-verify.ts", [
   ".sf-vitest-failures.txt",
 ]);
 
-const expectedPhase = "Phase 5 — whole-product AAA UI/UX";
+const expectedPhase = "Phase 6 — Arabic, RTL and accessibility parity";
 for (const relativePath of [
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
@@ -396,7 +390,8 @@ for (const relativePath of [
   }
 }
 
-const expectedCurrentMain = "aa4ca0758fd696f4b02fc1975629ac698f9349c3";
+const expectedPhase5ProductBaseline =
+  "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734";
 const expectedProtectedBase = "e9c92f08f39e8d87ddfd72d2e698418ae81fc084";
 for (const relativePath of [
   "AGENTS.md",
@@ -406,11 +401,11 @@ for (const relativePath of [
   "documentation/operations/WORKING_MEMORY.md",
 ]) {
   const content = contentOf(relativePath);
-  if (content && !content.includes(expectedCurrentMain)) {
+  if (content && !content.includes(expectedPhase5ProductBaseline)) {
     report(
       "drift",
       relativePath,
-      "current protected Phase 3 merge/base is missing",
+      "Phase 5 application-changing protected baseline is missing",
     );
   }
 }
@@ -444,6 +439,33 @@ for (const relativePath of [
         "drift",
         relativePath,
         `stale Phase 3 frontier remains: ${marker}`,
+      );
+    }
+  }
+}
+
+const stalePhase5FrontierMarkers = [
+  "Active product phase:** Phase 5 — whole-product AAA UI/UX",
+  "Phase 5 package not yet opened",
+  "begin Phase 5 from protected main",
+  "Active Phase 5 package:** not yet opened",
+  "For Phase 5, do not begin broad production edits",
+];
+for (const relativePath of [
+  "README.md",
+  "AGENTS.md",
+  "documentation/README.md",
+  "documentation/system/CURRENT_STATE.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/operations/WORKING_MEMORY.md",
+]) {
+  const content = contentOf(relativePath);
+  for (const marker of stalePhase5FrontierMarkers) {
+    if (content.includes(marker)) {
+      report(
+        "drift",
+        relativePath,
+        `stale Phase 5 frontier remains: ${marker}`,
       );
     }
   }
@@ -729,5 +751,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 4 protected-source closed; Phase 5 active; retained installed evidence tracked in issues #201 and #214).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 5 protected-source/browser closed; Phase 6 active; retained evidence tracked in issues #201, #214 and #221).`,
 );
