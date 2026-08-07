@@ -10,6 +10,7 @@ export interface WorkbenchFieldAccess {
   financials: boolean;
   risk: boolean;
   update: boolean;
+  delete: boolean;
 }
 
 export interface OrderListItem {
