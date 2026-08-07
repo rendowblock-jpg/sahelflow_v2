@@ -55,18 +55,28 @@ function localDayBounds(now = new Date()): { start: Date; end: Date } {
 }
 
 /**
- * Orders is now a real paginated operational workbench. Summary metrics are
- * exact aggregates over the shop database; the displayed rows are one explicit
- * page and never double as the source for totals, delivered-today truth or risk.
+ * Orders is a real paginated operational workbench. Summary metrics are exact
+ * aggregates over the shop database; the displayed rows are one explicit URL-
+ * addressable page and never double as the source for totals or risk truth.
  */
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; risk?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    risk?: string;
+    page?: string;
+    sort?: string;
+  }>;
 }) {
   const actorContext = await requireTrustedAction("orders.read");
   const { t, locale } = await getI18n();
-  const { status: statusFilterRaw, risk: riskFilter } = await searchParams;
+  const {
+    status: statusFilterRaw,
+    risk: riskFilter,
+    page: pageRaw,
+    sort: sortRaw,
+  } = await searchParams;
 
   if (riskFilter === "high") {
     redirect("/risk");
@@ -78,6 +88,7 @@ export default async function OrdersPage({
         ? (statusFilterRaw as OrderStatus)
         : undefined
       : undefined;
+  const page = Math.max(1, Number.parseInt(pageRaw ?? "1", 10) || 1);
   const resource = { shopId: actorContext.shop.shopId };
   const can = (action: Parameters<typeof trustedActionAllowed>[1]) =>
     trustedActionAllowed(actorContext, action, resource);
@@ -95,78 +106,86 @@ export default async function OrdersPage({
 
   const { start, end } = localDayBounds();
   const fieldAccess = resolveOrdersWorkbenchAccess(actorContext);
-  const [fallback, statusGroups, totalCount, deliveredToday, creationData] =
-    await Promise.all([
-      getOrdersWorkbenchPage(actorContext, {
-        status: statusFilter,
-        page: 1,
-        pageSize: 25,
-        sort: "createdAt.desc",
-      }),
-      db.order.groupBy({
-        by: ["status"],
-        where: { deletedAt: null },
-        _count: { _all: true },
-      }),
-      db.order.count({ where: { deletedAt: null } }),
-      db.order.aggregate({
-        where: {
-          deletedAt: null,
-          status: "delivered",
-          deliveredAt: { gte: start, lt: end },
-        },
-        _count: { _all: true },
-        ...(fieldAccess.financials ? { _sum: { totalPrice: true } } : {}),
-      }),
-      canCreateOrder
-        ? Promise.all([
-            db.customer.findMany({
-              where: { deletedAt: null },
-              orderBy: { createdAt: "desc" },
-              select: {
-                id: true,
-                name: true,
-                phone: true,
-                phoneEnc: true,
-                wilaya: true,
-                commune: true,
-                address: true,
-              },
-            }),
-            db.product.findMany({
-              where: { isActive: true, deletedAt: null },
-              orderBy: { name: "asc" },
-              select: {
-                id: true,
-                name: true,
-                price: true,
-                stock: true,
-                isActive: true,
-                productVariants: {
-                  orderBy: { sortOrder: "asc" },
-                  select: {
-                    id: true,
-                    name: true,
-                    sku: true,
-                    price: true,
-                    stock: true,
-                    isActive: true,
-                  },
+  const deliveredWhere = {
+    deletedAt: null,
+    status: "delivered" as const,
+    deliveredAt: { gte: start, lt: end },
+  };
+  const [
+    fallback,
+    statusGroups,
+    totalCount,
+    deliveredTodayCount,
+    deliveredRevenue,
+    creationData,
+  ] = await Promise.all([
+    getOrdersWorkbenchPage(actorContext, {
+      status: statusFilter,
+      page,
+      pageSize: 25,
+      sort: sortRaw,
+    }),
+    db.order.groupBy({
+      by: ["status"],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    }),
+    db.order.count({ where: { deletedAt: null } }),
+    db.order.count({ where: deliveredWhere }),
+    fieldAccess.financials
+      ? db.order.aggregate({
+          where: deliveredWhere,
+          _sum: { totalPrice: true },
+        })
+      : Promise.resolve(null),
+    canCreateOrder
+      ? Promise.all([
+          db.customer.findMany({
+            where: { deletedAt: null },
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              phoneEnc: true,
+              wilaya: true,
+              commune: true,
+              address: true,
+            },
+          }),
+          db.product.findMany({
+            where: { isActive: true, deletedAt: null },
+            orderBy: { name: "asc" },
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              stock: true,
+              isActive: true,
+              productVariants: {
+                orderBy: { sortOrder: "asc" },
+                select: {
+                  id: true,
+                  name: true,
+                  sku: true,
+                  price: true,
+                  stock: true,
+                  isActive: true,
                 },
               },
-            }),
-          ])
-        : Promise.resolve(null),
-    ]);
+            },
+          }),
+        ])
+      : Promise.resolve(null),
+  ]);
 
   const counts: Record<string, number> = { all: totalCount };
   for (const group of statusGroups) counts[group.status] = group._count._all;
 
   const activeOrders = computeActiveOrderCount(statusGroups);
   const pendingCount = counts.pending ?? 0;
-  const todayDeliveredCount = deliveredToday._count._all;
   const todayRevenue = fieldAccess.financials
-    ? (deliveredToday._sum?.totalPrice ?? 0)
+    ? (deliveredRevenue?._sum.totalPrice ?? 0)
     : null;
   const customers = creationData?.[0] ?? [];
   const products = creationData?.[1] ?? [];
@@ -206,7 +225,7 @@ export default async function OrdersPage({
         />
         <StatCard
           label={t("orders.deliveredToday")}
-          value={todayDeliveredCount}
+          value={deliveredTodayCount}
           icon={<CheckCircle2 />}
         />
         <StatCard
