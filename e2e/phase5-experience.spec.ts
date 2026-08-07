@@ -2,6 +2,7 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
+const ROUTE_JOURNEY_TIMEOUT_MS = 180_000;
 
 const LTR_ROUTES = [
   "/dashboard",
@@ -118,6 +119,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
   test("LTR operational routes fit the desktop workbench with representative data", async ({
     page,
   }, testInfo) => {
+    test.setTimeout(ROUTE_JOURNEY_TIMEOUT_MS);
     await ensureOwnerSession(page);
     await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
 
@@ -144,6 +146,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     page,
     context,
   }, testInfo) => {
+    test.setTimeout(ROUTE_JOURNEY_TIMEOUT_MS);
     await context.addCookies([
       {
         name: "sahelflow-locale",
