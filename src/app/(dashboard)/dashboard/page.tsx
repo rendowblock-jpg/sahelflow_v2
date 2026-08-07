@@ -34,9 +34,9 @@ import { formatDZD } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 
 /**
- * Home is an attention-first desktop work surface. Metrics provide context; the
- * primary interaction is a compact list of exact exceptions requiring seller
- * action, followed by recent operational context and delivery health.
+ * Home is an attention-first desktop work surface. Every data family is resolved
+ * against trusted field access before its owning query runs; projection remains
+ * defense-in-depth rather than a post-read permission boundary.
  */
 export default async function DashboardPage() {
   const { t, locale } = await getI18n();
@@ -45,11 +45,11 @@ export default async function DashboardPage() {
 
   const [rawStats, rawRecentOrders, rawAnalytics, staleConfirmations] =
     await Promise.all([
-      getDashboardStats(),
+      getDashboardStats(fieldAccess),
       fieldAccess.orders
         ? getRecentOrders(8, fieldAccess)
         : Promise.resolve([]),
-      getDashboardAnalytics(),
+      getDashboardAnalytics(fieldAccess),
       fieldAccess.orders ? getStaleOrderCount() : Promise.resolve(0),
     ]);
 
@@ -100,7 +100,7 @@ export default async function DashboardPage() {
             id: "delivery-pending",
             label: t("nav.delivery"),
             value: stats.pendingDeliveries,
-            href: "/deliveries?status=pending",
+            href: "/deliveries",
             icon: Truck,
             tone: "warning" as const,
           },
