@@ -20,6 +20,15 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(source).not.toContain('id: "action-new-order"');
   });
 
+  it("keeps active child destinations reachable when navigation is collapsed", () => {
+    const source = read("src/components/layout/sidebar.tsx");
+    expect(source).toContain("data-navigation-children={domain.id}");
+    expect(source).toContain("domainSelected && domain.children?.length");
+    expect(source).not.toContain(
+      "!collapsed && domainSelected && domain.children?.length",
+    );
+  });
+
   it("uses one shared persistent state surface for empty and page-error states", () => {
     expect(read("src/components/shared/empty-state.tsx")).toContain(
       "StateSurface",
