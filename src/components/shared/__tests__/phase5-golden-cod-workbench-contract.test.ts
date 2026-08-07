@@ -9,10 +9,13 @@ describe("Phase 5 Golden COD workbench source contract", () => {
   it("uses one exact paginated Orders contract instead of sampled page truth", () => {
     const page = read("src/app/(dashboard)/orders/page.tsx");
     const route = read("src/app/api/orders/route.ts");
+    const hook = read("src/hooks/swr/use-orders.ts");
     expect(page).toContain("getOrdersWorkbenchPage");
     expect(page).not.toContain("take: 200");
-    expect(page).toContain("page,");
+    expect(page).toContain("lastPage");
+    expect(page).toContain("redirect(`/orders?${params.toString()}`)");
     expect(page).toContain("sort: sortRaw");
+    expect(hook).toContain("currentPage > lastPage");
     expect(route).toContain("getOrdersWorkbenchPage");
   });
 
@@ -23,6 +26,10 @@ describe("Phase 5 Golden COD workbench source contract", () => {
     expect(workbench).toContain("fieldAccess: access");
     expect(workbench).toContain("batchAssessOrders");
     expect(workbench).toContain('allowed(actorContext, "orders.delete")');
+    expect(workbench).toContain('allowed(actorContext, "risk.read")');
+    expect(workbench).toContain('allowed(actorContext, "customers.read")');
+    expect(workbench).toContain("contact &&");
+    expect(workbench).toContain("financials;");
     expect(hook).toContain("opts.fallback.page === currentPage");
     expect(hook).toContain("opts.fallback.sort === normalizedSort");
     expect(client).toContain("fieldAccess = data?.fieldAccess ?? fallback.fieldAccess");
