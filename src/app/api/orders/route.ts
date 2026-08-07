@@ -40,11 +40,9 @@ export async function GET(req: NextRequest) {
     rawStatus && orderStatusSchema.safeParse(rawStatus).success
       ? (rawStatus as OrderStatus)
       : undefined;
-  const risk = searchParams.get("risk") === "high" ? "high" : undefined;
 
   const result = await getOrdersWorkbenchPage(actorContext, {
     status,
-    risk,
     page: Number.parseInt(searchParams.get("page") ?? "1", 10),
     pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
     sort: searchParams.get("sort"),
