@@ -1,14 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { AlertTriangle, Ban } from "lucide-react";
+import { AlertTriangle, Ban, Eye } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table/data-table";
+import {
+  EntityInspector,
+  EntityLink,
+  EntityPreview,
+} from "@/components/entities/entity-context";
 import { CustomersEmptyState } from "@/components/shared/empty-states";
 import { StateSurface } from "@/components/shared/state-surface";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   useCustomers,
   type CustomerListItem,
@@ -34,12 +39,10 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
       header: () => t("customers.name"),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Link
+          <EntityLink
             href={`/customers/${row.original.id}`}
-            className="font-medium text-primary hover:underline"
-          >
-            {row.original.name ?? t("inbox.restrictedContact")}
-          </Link>
+            label={row.original.name ?? t("inbox.restrictedContact")}
+          />
           {row.original.isBlacklisted === true ? (
             <Badge
               variant="outline"
@@ -96,6 +99,55 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
         </span>
       ),
       meta: { hideOn: "lg" },
+    },
+    {
+      id: "context",
+      header: () => t("common.actions"),
+      cell: ({ row }) => {
+        const customer = row.original;
+        const label = customer.name ?? t("inbox.restrictedContact");
+        return (
+          <EntityInspector
+            title={label}
+            description={customer.phone ?? undefined}
+            fullHref={`/customers/${customer.id}`}
+            fullLabel={t("common.view")}
+            trigger={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("common.view")}
+              >
+                <Eye className="size-4" aria-hidden="true" />
+              </Button>
+            }
+          >
+            <EntityPreview
+              title={label}
+              description={customer.wilaya ?? undefined}
+              metadata={formatDate(customer.createdAt, locale)}
+            >
+              <dl className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("customers.orders")}</dt>
+                  <dd className="mt-1 font-medium tabular-nums">{customer.orderCount}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("customers.totalSpent")}</dt>
+                  <dd className="mt-1 font-medium tabular-nums">
+                    {customer.totalSpent === null
+                      ? "—"
+                      : formatDZD(customer.totalSpent, locale)}
+                  </dd>
+                </div>
+              </dl>
+            </EntityPreview>
+          </EntityInspector>
+        );
+      },
+      meta: { align: "end", width: "w-12" },
+      enableSorting: false,
     },
   ];
 
