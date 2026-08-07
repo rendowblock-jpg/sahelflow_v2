@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import useSWR from "swr";
 import { useQueryState } from "nuqs";
 
@@ -34,15 +35,6 @@ function normalizeClientSort(raw: string, canReadFinancials: boolean): string {
   }
 }
 
-/**
- * Paginated Orders workbench query.
- *
- * Page and sort live in URL state. Because the API owns the same sort contract,
- * changing a sortable header fetches the correctly ordered dataset page instead
- * of reordering only the rows already in memory. RSC fallback is seeded only
- * when it matches the exact current page and normalized sort, so page/sort
- * navigation never relabels stale rows as a different workbench page.
- */
 export function useOrders(opts: UseOrdersOptions = {}) {
   const [page, setPage] = useQueryState("page", {
     defaultValue: "1",
@@ -77,6 +69,13 @@ export function useOrders(opts: UseOrdersOptions = {}) {
   });
   const response = data ?? fallbackData;
   const knownTotal = response?.total ?? opts.fallback?.total;
+  const lastPage = Math.max(1, Math.ceil((knownTotal ?? 0) / pageSize));
+
+  useEffect(() => {
+    if ((knownTotal ?? 0) > 0 && currentPage > lastPage) {
+      void setPage(String(lastPage));
+    }
+  }, [currentPage, knownTotal, lastPage, setPage]);
 
   return {
     data: response,
