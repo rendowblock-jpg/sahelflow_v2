@@ -24,6 +24,13 @@ export default async function ImportsPage() {
   const can = (action: Parameters<typeof trustedActionAllowed>[1]) =>
     trustedActionAllowed(actorContext, action, resource);
 
+  const canImportOrders =
+    can("data.import") &&
+    can("orders.create") &&
+    can("customers.contact.read") &&
+    can("customers.contact.update") &&
+    can("orders.financials.read") &&
+    can("orders.financials.update");
   const canImportProducts =
     can("data.import") &&
     can("products.read") &&
@@ -50,7 +57,7 @@ export default async function ImportsPage() {
     can("products.read") &&
     can("products.cost.read");
   const hasExport = canExportOrders || canExportCustomers || canExportProducts;
-  const hasAny = canImportProducts || canImportCustomers || hasExport;
+  const hasAny = canImportOrders || canImportProducts || canImportCustomers || hasExport;
 
   return (
     <div className="app-content page-sections">
@@ -64,6 +71,16 @@ export default async function ImportsPage() {
           tone="warning"
           size="panel"
         />
+      ) : null}
+
+      {canImportOrders ? (
+        <div id="import-orders" className="scroll-mt-24">
+          <ImportPanel
+            entity="orders"
+            title={t("nav.orders")}
+            description={t("imports.subtitle")}
+          />
+        </div>
       ) : null}
 
       {canImportProducts ? (
