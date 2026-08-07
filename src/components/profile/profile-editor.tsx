@@ -28,24 +28,44 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
+  const requestProfile = useCallback(async (): Promise<Profile> => {
+    const response = await fetch("/api/profile", { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error ?? t("error.requestFailed"));
+    return data as Profile;
+  }, [t]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void requestProfile()
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setProfile(data);
+          setLoadError(null);
+        }
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setLoadError(error instanceof Error ? error.message : t("error.requestFailed"));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [requestProfile, t]);
+
+  const reload = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const response = await fetch("/api/profile", { cache: "no-store" });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error ?? t("error.requestFailed"));
-      setProfile(data as Profile);
+      setProfile(await requestProfile());
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : t("error.requestFailed"));
     } finally {
       setLoading(false);
     }
-  }, [t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  }, [requestProfile, t]);
 
   const handleSave = useCallback(async () => {
     if (!canManage) return;
@@ -83,7 +103,7 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
         tone="danger"
         size="inline"
         role="alert"
-        actions={<Button variant="outline" onClick={() => void load()}>{t("common.retry")}</Button>}
+        actions={<Button variant="outline" onClick={() => void reload()}>{t("common.retry")}</Button>}
       />
     );
   }
