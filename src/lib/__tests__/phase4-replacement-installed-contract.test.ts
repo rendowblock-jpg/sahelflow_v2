@@ -41,6 +41,9 @@ describe("Phase 4 installed replacement evidence", () => {
     expect(harness).not.toContain("HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge\\WebView2");
     expect(harness).toContain('method = "Network.getCookies"');
     expect(harness).toContain("Import-RuntimeCookieFromWebView");
+    expect(harness).toContain("Import-SellerSessionCookieFromResponse");
+    expect(harness).toContain('\"sf_session\"');
+    expect(harness).toContain("$cookie.Secure = $false");
     expect(harness).toContain("written to evidence or emitted to the Actions log");
     expect(harness).toContain("ExitCode -ne 86");
     expect(harness).toContain("ExitCode -ne 87");

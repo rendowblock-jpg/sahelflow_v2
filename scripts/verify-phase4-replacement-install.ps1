@@ -120,7 +120,41 @@ function Invoke-SahelFlowJson {
     return [pscustomobject]@{
         status = [int]$response.StatusCode
         body = $decoded
+        setCookies = @($response.Headers["Set-Cookie"])
     }
+}
+
+function Import-SellerSessionCookieFromResponse {
+    param(
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [Parameter(Mandatory = $true)][Microsoft.PowerShell.Commands.WebRequestSession]$Session,
+        [Parameter(Mandatory = $true)]$Response
+    )
+    # The installed app correctly marks the seller session Secure in
+    # production. This evidence client speaks only to the app's HTTP
+    # loopback listener, and System.Net therefore will not resend that
+    # Secure cookie. Reuse the exact server-minted value only inside
+    # this ephemeral runner by copying it into a host-only non-Secure
+    # loopback cookie. Production cookie policy is never changed.
+    $header = @($Response.setCookies) -join ","
+    $match = [regex]::Match(
+        $header,
+        "(?:^|,\s*)sf_session=([^;,\s]+)"
+    )
+    if (-not $match.Success) {
+        throw "Seller session response did not contain the expected auth cookie."
+    }
+    $cookie = [System.Net.Cookie]::new(
+        "sf_session",
+        $match.Groups[1].Value,
+        "/"
+    )
+    $cookie.HttpOnly = $true
+    $cookie.Secure = $false
+    $Session.Cookies.Add([Uri]$BaseUrl, $cookie)
+    $cookie = $null
+    $match = $null
+    $header = $null
 }
 
 function Read-CdpMessage {
@@ -239,7 +273,10 @@ function Establish-OwnerSession {
     )
     Import-RuntimeCookieFromWebView -BaseUrl $BaseUrl -Session $Session
     $setup = Invoke-SahelFlowJson -Method POST -BaseUrl $BaseUrl -Path "/api/auth/setup" -Session $Session -Body @{ pin = $pin }
-    if ($setup.status -eq 200) { return }
+    if ($setup.status -eq 200) {
+        Import-SellerSessionCookieFromResponse -BaseUrl $BaseUrl -Session $Session -Response $setup
+        return
+    }
     if ($setup.status -ne 409) {
         throw "Owner setup failed with HTTP $($setup.status)."
     }
@@ -247,6 +284,7 @@ function Establish-OwnerSession {
     if ($login.status -ne 200) {
         throw "Owner login failed with HTTP $($login.status)."
     }
+    Import-SellerSessionCookieFromResponse -BaseUrl $BaseUrl -Session $Session -Response $login
 }
 
 if (-not ("SahelFlowPhase4Closer" -as [type])) {
@@ -358,7 +396,14 @@ $sourceSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 Establish-OwnerSession $sourceBaseUrl $sourceSession
 
 $search = Invoke-SahelFlowJson -Method GET -BaseUrl $sourceBaseUrl -Path "/api/customers/search?q=$sourcePhone" -Session $sourceSession
-if ($search.status -ne 200) { throw "Source customer search failed." }
+if ($search.status -ne 200) {
+    $safeCode = if ($null -ne $search.body -and $null -ne $search.body.code) {
+        [string]$search.body.code
+    } else {
+        "none"
+    }
+    throw "Source customer search failed with HTTP $($search.status) and code $safeCode."
+}
 if ([int]$search.body.total -eq 0) {
     $created = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/customers" -Session $sourceSession -Body @{
         name = "Phase4 Evidence Customer"
