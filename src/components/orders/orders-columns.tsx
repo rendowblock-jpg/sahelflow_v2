@@ -38,9 +38,7 @@ interface UseOrdersColumnsOptions {
 
 function SortIcon({ dir }: { dir: false | "asc" | "desc" }) {
   if (!dir) {
-    return (
-      <ArrowUpDown className="ms-1 inline size-3 opacity-40" aria-hidden="true" />
-    );
+    return <ArrowUpDown className="ms-1 inline size-3 opacity-40" aria-hidden="true" />;
   }
   return dir === "asc" ? (
     <ArrowUp className="ms-1 inline size-3" aria-hidden="true" />
@@ -49,17 +47,12 @@ function SortIcon({ dir }: { dir: false | "asc" | "desc" }) {
   );
 }
 
-/**
- * Orders columns follow server-projected field and action access. A member
- * without contact/financial authority does not receive a decorative redacted
- * column that can accidentally become an inference oracle, while update/delete
- * controls appear only for their exact action authority.
- */
 export function useOrdersColumns(
   opts: UseOrdersColumnsOptions,
 ): ColumnDef<OrderListItem, unknown>[] {
   const { t } = useI18n();
   const { locale, fieldAccess, riskData, onDelete } = opts;
+  const canOpenDetail = fieldAccess.contact && fieldAccess.financials;
 
   const columns: ColumnDef<OrderListItem, unknown>[] = [
     ...(fieldAccess.update ? [selectColumn<OrderListItem>()] : []),
@@ -71,15 +64,20 @@ export function useOrdersColumns(
           <SortIcon dir={column.getIsSorted() as false | "asc" | "desc"} />
         </span>
       ),
-      cell: ({ row }) => (
-        <Link
-          href={`/orders/${row.original.id}`}
-          className="font-mono text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-          data-order-number
-        >
-          {row.original.orderNumber}
-        </Link>
-      ),
+      cell: ({ row }) =>
+        canOpenDetail ? (
+          <Link
+            href={`/orders/${row.original.id}`}
+            className="font-mono text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            data-order-number
+          >
+            {row.original.orderNumber}
+          </Link>
+        ) : (
+          <span className="font-mono text-sm font-medium" data-order-number>
+            {row.original.orderNumber}
+          </span>
+        ),
     },
     ...(fieldAccess.contact
       ? [
@@ -89,13 +87,8 @@ export function useOrdersColumns(
             header: () => t("orders.customer"),
             cell: ({ row }: { row: { original: OrderListItem } }) => (
               <div className="max-w-[170px] text-sm">
-                <div className="truncate font-medium">
-                  {row.original.customer?.name ?? "—"}
-                </div>
-                <div
-                  className="truncate font-mono text-xs text-muted-foreground"
-                  dir="ltr"
-                >
+                <div className="truncate font-medium">{row.original.customer?.name ?? "—"}</div>
+                <div className="truncate font-mono text-xs text-muted-foreground" dir="ltr">
                   {row.original.customer?.phone ?? row.original.phone ?? "—"}
                 </div>
               </div>
@@ -140,16 +133,12 @@ export function useOrdersColumns(
             header: ({ column }) => (
               <span className="inline-flex items-center">
                 {t("orders.total")}
-                <SortIcon
-                  dir={column.getIsSorted() as false | "asc" | "desc"}
-                />
+                <SortIcon dir={column.getIsSorted() as false | "asc" | "desc"} />
               </span>
             ),
             cell: ({ row }: { row: { original: OrderListItem } }) => (
               <span className="text-sm font-medium tabular-nums" data-money>
-                {row.original.totalPrice == null
-                  ? "—"
-                  : formatDZD(row.original.totalPrice, locale)}
+                {row.original.totalPrice == null ? "—" : formatDZD(row.original.totalPrice, locale)}
               </span>
             ),
             meta: { align: "end" as const },
@@ -184,7 +173,7 @@ export function useOrdersColumns(
                 <RiskBadge
                   level={risk.level as RiskLevel}
                   score={risk.score}
-                  href={`/orders/${row.original.id}`}
+                  href={canOpenDetail ? `/orders/${row.original.id}` : undefined}
                 />
               ) : (
                 <span className="text-xs text-muted-foreground">—</span>
@@ -215,6 +204,18 @@ export function useOrdersColumns(
       header: () => t("orders.action"),
       cell: ({ row }) => {
         const order = row.original;
+        const canDelete =
+          fieldAccess.delete &&
+          order.mutationAuthority !== "canonical_v1" &&
+          (order.status === "draft" || order.status === "cancelled") &&
+          Boolean(onDelete);
+        const canEdit =
+          canOpenDetail &&
+          fieldAccess.update &&
+          order.mutationAuthority !== "canonical_v1";
+        if (!canOpenDetail && !canDelete) {
+          return <span className="text-muted-foreground">—</span>;
+        }
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -224,14 +225,15 @@ export function useOrdersColumns(
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="shadow-dropdown">
-              <DropdownMenuItem asChild>
-                <Link href={`/orders/${order.id}`}>
-                  <Eye className="me-2 size-4" aria-hidden="true" />
-                  {t("orders.viewDetails")}
-                </Link>
-              </DropdownMenuItem>
-              {fieldAccess.update &&
-              order.mutationAuthority !== "canonical_v1" ? (
+              {canOpenDetail ? (
+                <DropdownMenuItem asChild>
+                  <Link href={`/orders/${order.id}`}>
+                    <Eye className="me-2 size-4" aria-hidden="true" />
+                    {t("orders.viewDetails")}
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
+              {canEdit ? (
                 <DropdownMenuItem asChild>
                   <Link href={`/orders/${order.id}`}>
                     <Pencil className="me-2 size-4" aria-hidden="true" />
@@ -239,12 +241,9 @@ export function useOrdersColumns(
                   </Link>
                 </DropdownMenuItem>
               ) : null}
-              {fieldAccess.delete &&
-              order.mutationAuthority !== "canonical_v1" &&
-              (order.status === "draft" || order.status === "cancelled") &&
-              onDelete ? (
+              {canDelete && onDelete ? (
                 <>
-                  <DropdownMenuSeparator />
+                  {(canOpenDetail || canEdit) ? <DropdownMenuSeparator /> : null}
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"
                     onClick={() => onDelete(order.id)}
