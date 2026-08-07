@@ -147,7 +147,7 @@ export function OrdersDataTable({
       isLoading={isLoading}
       pagination={pagination}
       onRowClick={(row) => router.push(`/orders/${row.id}`)}
-      bulkActions={bulkActions}
+      bulkActions={response.fieldAccess.update ? bulkActions : undefined}
       getRowId={(row) => row.id}
       emptyState={<OrdersEmptyState />}
     />
