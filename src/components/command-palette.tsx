@@ -2,33 +2,30 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Hash, Package, Users } from "lucide-react";
+
 import {
-  ShoppingCart, Users, Package, Truck, RotateCcw, MessageCircle, Bot,
-  BarChart3, Calculator, Settings, Plus, FileDown, Sparkles, Store,
-  Upload, UserCircle, Zap, DatabaseBackup, Hash,
-} from "lucide-react";
-import {
-  Command, CommandInput, CommandList, CommandEmpty,
-  CommandGroup, CommandItem,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useI18n } from "@/hooks/use-i18n";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { fetcher } from "@/lib/swr/fetcher";
+import { flattenNavigationItems } from "@/components/layout/navigation";
 
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Retained for caller compatibility; Phase 5 exposes only executable commands. */
   onAction?: (action: string) => void;
-}
-
-interface CmdItem {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  group: string;
-  keywords: string[];
-  action: () => void;
-  shortcut?: string;
 }
 
 interface RecordResult {
@@ -39,27 +36,29 @@ interface RecordResult {
   icon: React.ComponentType<{ className?: string }>;
 }
 
+function normalized(value: string): string {
+  return value.trim().toLocaleLowerCase();
+}
+
 /**
- * CommandPalette — the real one (Phase 2).
+ * Universal SahelFlow navigation and record search.
  *
- * Enhancements over the original:
- *   - Fuzzy search ACTUAL RECORDS (orders, customers, products) via the
- *     existing /api/{resource}/search endpoints — not just nav labels
- *   - Debounced record search (250ms) — only fires when query > 1 char
- *   - Record results appear in a "Records" group above navigation
- *   - Shortcut-hint chips shown on nav items (g o, g c, etc.)
- *   - Records navigate to detail pages on select
+ * Navigation destinations are derived from the canonical Phase 5 information
+ * architecture instead of maintaining a second route list. Quick actions are
+ * intentionally omitted until they have a real executable/deep-link contract;
+ * the command surface must never advertise a button that only navigates to a
+ * page and hopes a caller opens the intended dialog.
  */
-export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteProps) {
+export function CommandPalette({
+  open,
+  onOpenChange,
+}: CommandPaletteProps) {
   const router = useRouter();
   const { t } = useI18n();
   const [query, setQuery] = React.useState("");
   const [records, setRecords] = React.useState<RecordResult[]>([]);
   const [searching, setSearching] = React.useState(false);
 
-  // Reset query when palette closes. The setState calls here are intentional
-  // — we need to clear the search state when the dialog closes so the next
-  // open starts fresh. This is the standard pattern for modal/palette state.
   React.useEffect(() => {
     if (!open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -71,7 +70,6 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
     }
   }, [open]);
 
-  // Debounced record search (only when open + query > 1 char)
   React.useEffect(() => {
     if (!open) return;
     const q = query.trim();
@@ -82,166 +80,210 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
       setSearching(false);
       return;
     }
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSearching(true);
     const timer = setTimeout(async () => {
       try {
-        // Search orders + customers + products in parallel
         const [ordersRes, customersRes, productsRes] = await Promise.allSettled([
-          fetcher<{ orders: Array<{ id: string; orderNumber: string; customer?: { name: string | null } }> }>(`/api/orders/search?q=${encodeURIComponent(q)}&limit=5`),
-          fetcher<{ customers: Array<{ id: string; name: string | null; phone: string | null }> }>(`/api/customers/search?q=${encodeURIComponent(q)}&limit=5`),
-          fetcher<{ products: Array<{ id: string; name: string; sku?: string | null }> }>(`/api/products/search?q=${encodeURIComponent(q)}&limit=5`),
+          fetcher<{
+            orders: Array<{
+              id: string;
+              orderNumber: string;
+              customer?: { name: string | null };
+            }>;
+          }>(`/api/orders/search?q=${encodeURIComponent(q)}&limit=5`),
+          fetcher<{
+            customers: Array<{
+              id: string;
+              name: string | null;
+              phone: string | null;
+            }>;
+          }>(`/api/customers/search?q=${encodeURIComponent(q)}&limit=5`),
+          fetcher<{
+            products: Array<{
+              id: string;
+              name: string;
+              sku?: string | null;
+            }>;
+          }>(`/api/products/search?q=${encodeURIComponent(q)}&limit=5`),
         ]);
 
-        const results: RecordResult[] = [];
+        const next: RecordResult[] = [];
         if (ordersRes.status === "fulfilled") {
-          for (const o of ordersRes.value.orders) {
-            results.push({
-              id: o.id,
-              label: o.orderNumber,
-              sublabel: o.customer?.name ?? undefined,
-              href: `/orders/${o.id}`,
+          for (const order of ordersRes.value.orders) {
+            next.push({
+              id: `order:${order.id}`,
+              label: order.orderNumber,
+              sublabel: order.customer?.name ?? undefined,
+              href: `/orders/${order.id}`,
               icon: Hash,
             });
           }
         }
         if (customersRes.status === "fulfilled") {
-          for (const c of customersRes.value.customers) {
-            results.push({
-              id: c.id,
-              label: c.name ?? "—",
-              sublabel: c.phone ?? undefined,
-              href: `/customers/${c.id}`,
+          for (const customer of customersRes.value.customers) {
+            next.push({
+              id: `customer:${customer.id}`,
+              label: customer.name ?? "—",
+              sublabel: customer.phone ?? undefined,
+              href: `/customers/${customer.id}`,
               icon: Users,
             });
           }
         }
         if (productsRes.status === "fulfilled") {
-          for (const p of productsRes.value.products) {
-            results.push({
-              id: p.id,
-              label: p.name,
-              sublabel: p.sku ?? undefined,
-              href: `/products/${p.id}`,
+          for (const product of productsRes.value.products) {
+            next.push({
+              id: `product:${product.id}`,
+              label: product.name,
+              sublabel: product.sku ?? undefined,
+              href: `/products/${product.id}`,
               icon: Package,
             });
           }
         }
-        setRecords(results.slice(0, 8));
+        setRecords(next.slice(0, 8));
       } catch {
         setRecords([]);
       } finally {
         setSearching(false);
       }
-    }, 250);
+    }, 220);
+
     return () => clearTimeout(timer);
   }, [query, open]);
 
-  const navItems = React.useMemo<CmdItem[]>(() => [
-    { id: "nav-dashboard", label: t("command.nav.dashboard"), icon: BarChart3, group: t("command.group.navigation"), keywords: ["dashboard", "home"], action: () => router.push("/dashboard"), shortcut: "g d" },
-    { id: "nav-orders", label: t("command.nav.orders"), icon: ShoppingCart, group: t("command.group.navigation"), keywords: ["orders"], action: () => router.push("/orders"), shortcut: "g o" },
-    { id: "nav-customers", label: t("command.nav.customers"), icon: Users, group: t("command.group.navigation"), keywords: ["customers"], action: () => router.push("/customers"), shortcut: "g c" },
-    { id: "nav-products", label: t("command.nav.products"), icon: Package, group: t("command.group.navigation"), keywords: ["products"], action: () => router.push("/products"), shortcut: "g p" },
-    { id: "nav-deliveries", label: t("command.nav.deliveries"), icon: Truck, group: t("command.group.navigation"), keywords: ["deliveries"], action: () => router.push("/deliveries"), shortcut: "g l" },
-    { id: "nav-returns", label: t("command.nav.returns"), icon: RotateCcw, group: t("command.group.navigation"), keywords: ["returns"], action: () => router.push("/returns"), shortcut: "g r" },
-    { id: "nav-inbox", label: t("command.nav.inbox"), icon: MessageCircle, group: t("command.group.navigation"), keywords: ["inbox", "whatsapp"], action: () => router.push("/inbox"), shortcut: "g i" },
-    { id: "nav-ai", label: t("command.nav.ai"), icon: Bot, group: t("command.group.navigation"), keywords: ["ai", "agent"], action: () => router.push("/agents") },
-    { id: "nav-analytics", label: t("command.nav.analytics"), icon: BarChart3, group: t("command.group.navigation"), keywords: ["analytics"], action: () => router.push("/analytics"), shortcut: "g a" },
-    { id: "nav-accounting", label: t("command.nav.accounting"), icon: Calculator, group: t("command.group.navigation"), keywords: ["accounting"], action: () => router.push("/accounting") },
-    { id: "nav-settings", label: t("command.nav.settings"), icon: Settings, group: t("command.group.navigation"), keywords: ["settings"], action: () => router.push("/settings"), shortcut: "g s" },
-    { id: "nav-storefronts", label: t("command.nav.storefronts"), icon: Store, group: t("command.group.navigation"), keywords: ["storefronts"], action: () => router.push("/storefronts") },
-    { id: "nav-imports", label: t("command.nav.imports"), icon: Upload, group: t("command.group.navigation"), keywords: ["imports"], action: () => router.push("/imports") },
-    { id: "nav-profile", label: t("command.nav.profile"), icon: UserCircle, group: t("command.group.navigation"), keywords: ["profile"], action: () => router.push("/profile") },
-    { id: "nav-automations", label: t("command.nav.automations"), icon: Zap, group: t("command.group.navigation"), keywords: ["automations"], action: () => router.push("/automations") },
-  ], [router, t]);
+  const navigation = React.useMemo(
+    () =>
+      flattenNavigationItems().map((item) => ({
+        ...item,
+        label: t(item.labelKey),
+      })),
+    [t],
+  );
 
-  const actionItems = React.useMemo<CmdItem[]>(() => [
-    { id: "action-new-order", label: t("command.action.newOrder"), icon: Plus, group: t("command.group.quickActions"), keywords: ["new order"], action: () => { router.push("/orders"); onAction?.("new-order"); }, shortcut: "o" },
-    { id: "action-new-product", label: t("command.action.newProduct"), icon: Plus, group: t("command.group.quickActions"), keywords: ["new product"], action: () => { router.push("/products"); onAction?.("new-product"); }, shortcut: "p" },
-    { id: "action-new-customer", label: t("command.action.newCustomer"), icon: Plus, group: t("command.group.quickActions"), keywords: ["new customer"], action: () => { router.push("/customers"); onAction?.("new-customer"); }, shortcut: "c" },
-    { id: "action-export", label: t("command.action.export"), icon: FileDown, group: t("command.group.quickActions"), keywords: ["export", "csv"], action: () => onAction?.("export") },
-    { id: "action-ai", label: t("command.action.askAi"), icon: Sparkles, group: t("command.group.quickActions"), keywords: ["ai", "ask"], action: () => router.push("/agents") },
-    { id: "action-backup", label: t("command.action.backup"), icon: DatabaseBackup, group: t("command.group.quickActions"), keywords: ["backup"], action: () => router.push("/settings") },
-  ], [router, onAction, t]);
-
-  const groupedNav = React.useMemo(() => {
-    const groups: Record<string, CmdItem[]> = {};
-    for (const item of [...navItems, ...actionItems]) {
-      (groups[item.group] ??= []).push(item);
-    }
-    return groups;
-  }, [navItems, actionItems]);
+  const visibleNavigation = React.useMemo(() => {
+    const q = normalized(query);
+    if (!q) return navigation;
+    return navigation.filter((item) => {
+      const searchable = normalized(
+        [item.label, item.href, ...item.keywords].join(" "),
+      );
+      return searchable.includes(q);
+    });
+  }, [navigation, query]);
 
   function runAndClose(action: () => void) {
     onOpenChange(false);
-    setTimeout(action, 150);
+    window.setTimeout(action, 80);
   }
+
+  const hasResults = records.length > 0 || visibleNavigation.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden p-0 shadow-elevated max-w-lg">
-        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5" shouldFilter={false}>
+      <DialogContent
+        className="gap-0 overflow-hidden p-0 shadow-popover sm:max-w-xl"
+        showCloseButton={false}
+      >
+        <DialogTitle className="sr-only">
+          {t("command.searchPlaceholder")}
+        </DialogTitle>
+        <Command
+          shouldFilter={false}
+          className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:rounded-md [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5"
+        >
           <CommandInput
             placeholder={t("command.searchPlaceholder")}
             value={query}
             onValueChange={setQuery}
           />
-          <CommandList className="max-h-[400px]">
-            <CommandEmpty>
-              {searching ? t("command.records.searching") : t("command.noResults", { search: "" })}
-            </CommandEmpty>
+          <CommandList className="max-h-[min(440px,60dvh)] px-1.5 py-1.5">
+            {!hasResults ? (
+              <CommandEmpty>
+                {searching
+                  ? t("command.records.searching")
+                  : t("command.noResults", { search: query })}
+              </CommandEmpty>
+            ) : null}
 
-            {/* Records group (fuzzy search results) */}
-            {records.length > 0 && (
+            {records.length > 0 ? (
               <CommandGroup heading={t("command.group.records")}>
-                {records.map((r) => {
-                  const Icon = r.icon;
+                {records.map((record) => {
+                  const Icon = record.icon;
                   return (
                     <CommandItem
-                      key={r.id}
-                      value={`record-${r.id}-${r.label}`}
-                      onSelect={() => runAndClose(() => router.push(r.href))}
+                      key={record.id}
+                      value={`${record.id}-${record.label}`}
+                      onSelect={() =>
+                        runAndClose(() => router.push(record.href))
+                      }
                     >
-                      <Icon className="me-3 h-4 w-4 text-muted-foreground" />
-                      <div className="flex flex-col">
-                        <span>{r.label}</span>
-                        {r.sublabel && <span className="text-xs text-muted-foreground">{r.sublabel}</span>}
+                      <Icon
+                        className="me-3 size-4 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">
+                          {record.label}
+                        </div>
+                        {record.sublabel ? (
+                          <div className="truncate text-xs text-muted-foreground">
+                            {record.sublabel}
+                          </div>
+                        ) : null}
                       </div>
                     </CommandItem>
                   );
                 })}
               </CommandGroup>
-            )}
+            ) : null}
 
-            {/* Navigation + actions groups */}
-            {Object.entries(groupedNav).map(([group, groupItems]) => (
-              <CommandGroup key={group} heading={group}>
-                {groupItems.map((item) => {
+            {visibleNavigation.length > 0 ? (
+              <CommandGroup heading={t("command.group.navigation")}>
+                {visibleNavigation.map((item) => {
                   const Icon = item.icon;
                   return (
                     <CommandItem
                       key={item.id}
-                      value={`${item.label} ${item.keywords.join(" ")}`}
-                      onSelect={() => runAndClose(item.action)}
+                      value={`${item.id}-${item.label}`}
+                      onSelect={() =>
+                        runAndClose(() => router.push(item.href))
+                      }
                     >
-                      <Icon className="me-3 h-4 w-4 text-muted-foreground" />
-                      <span>{item.label}</span>
-                      {item.shortcut && (
-                        <kbd className="ms-auto rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                          {item.shortcut}
-                        </kbd>
-                      )}
+                      <Icon
+                        className="me-3 size-4 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        {item.label}
+                      </span>
+                      <span
+                        dir="ltr"
+                        className="ms-3 hidden max-w-44 truncate font-mono text-[10px] text-muted-foreground/70 sm:inline"
+                      >
+                        {item.href}
+                      </span>
                     </CommandItem>
                   );
                 })}
               </CommandGroup>
-            ))}
+            ) : null}
           </CommandList>
-          <div className="border-t border-border px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
-            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono">↑↓</kbd>
+
+          <div className="flex items-center gap-2 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
+            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono">
+              ↑↓
+            </kbd>
             <span>{t("command.navigate")}</span>
-            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono ms-2">↵</kbd>
+            <kbd className="ms-2 rounded border bg-muted px-1.5 py-0.5 font-mono">
+              ↵
+            </kbd>
             <span>{t("command.select")}</span>
-            <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono ms-2">esc</kbd>
+            <kbd className="ms-auto rounded border bg-muted px-1.5 py-0.5 font-mono">
+              esc
+            </kbd>
             <span>{t("command.close")}</span>
           </div>
         </Command>
