@@ -35,7 +35,7 @@ interface EntityLinkProps {
 }
 
 /**
- * Canonical Phase 5 relationship link. It is always a real link so keyboard,
+ * Canonical relationship link. It is always a real link so keyboard,
  * context-menu, copy-link and browser/WebView navigation semantics remain native.
  */
 export function EntityLink({
@@ -171,8 +171,10 @@ const TONE_CLASS = {
 
 /** Shared semantic history/timeline primitive for entity state and audit facts. */
 export function EntityTimeline({ items }: { items: readonly EntityTimelineItem[] }) {
+  const { t } = useI18n();
+
   return (
-    <ol className="space-y-3" aria-label="Timeline">
+    <ol className="space-y-3" aria-label={t("common.timeline")}>
       {items.map((item) => {
         const Icon = item.icon ?? Clock3;
         const tone = item.tone ?? "neutral";
