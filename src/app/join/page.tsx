@@ -17,40 +17,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
 
-const COPY = {
-  en: {
-    title: "Join a SahelFlow team",
-    description: "Use the single-use invitation from the workspace owner, then create your individual local profile and PIN.",
-    token: "Invitation token", tokenPlaceholder: "sf-invite-v1.…", name: "Display name", namePlaceholder: "Your name",
-    login: "Login ID", loginPlaceholder: "e.g. amina.ops", loginHelp: "3–32 lowercase letters, numbers, dots, dashes or underscores.",
-    pin: "Create PIN", confirmPin: "Confirm PIN", submit: "Accept invitation", mismatch: "The PIN confirmation does not match.",
-    failed: "The invitation could not be accepted.", success: "Team profile created. Opening SahelFlow…", loginLink: "Back to login",
-  },
-  fr: {
-    title: "Rejoindre une équipe SahelFlow",
-    description: "Utilisez l’invitation à usage unique du propriétaire, puis créez votre profil local individuel et votre code PIN.",
-    token: "Jeton d’invitation", tokenPlaceholder: "sf-invite-v1.…", name: "Nom affiché", namePlaceholder: "Votre nom",
-    login: "Identifiant de connexion", loginPlaceholder: "ex. amina.ops", loginHelp: "3 à 32 lettres minuscules, chiffres, points, tirets ou underscores.",
-    pin: "Créer le PIN", confirmPin: "Confirmer le PIN", submit: "Accepter l’invitation", mismatch: "La confirmation du PIN ne correspond pas.",
-    failed: "Impossible d’accepter l’invitation.", success: "Profil d’équipe créé. Ouverture de SahelFlow…", loginLink: "Retour à la connexion",
-  },
-  ar: {
-    title: "الانضمام إلى فريق SahelFlow",
-    description: "استخدم دعوة الاستخدام الواحد من مالك مساحة العمل، ثم أنشئ ملفك المحلي الفردي ورمز PIN الخاص بك.",
-    token: "رمز الدعوة", tokenPlaceholder: "sf-invite-v1.…", name: "الاسم الظاهر", namePlaceholder: "اسمك",
-    login: "معرّف تسجيل الدخول", loginPlaceholder: "مثال: amina.ops", loginHelp: "من 3 إلى 32 حرفًا لاتينيًا صغيرًا أو رقمًا أو نقطة أو شرطة أو شرطة سفلية.",
-    pin: "إنشاء رمز PIN", confirmPin: "تأكيد رمز PIN", submit: "قبول الدعوة", mismatch: "تأكيد رمز PIN غير مطابق.",
-    failed: "تعذر قبول الدعوة.", success: "تم إنشاء ملف الفريق. جارٍ فتح SahelFlow…", loginLink: "العودة إلى تسجيل الدخول",
-  },
-} as const;
-
 type ApiError = { error?: string };
 type AcceptanceAttempt = Readonly<{ fingerprint: string; requestId: string }>;
 
 export default function JoinPage() {
   const router = useRouter();
-  const { locale } = useI18n();
-  const copy = COPY[locale];
+  const { t } = useI18n();
   const [token, setToken] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [loginId, setLoginId] = useState("");
@@ -65,7 +37,7 @@ export default function JoinPage() {
     event.preventDefault();
     setError("");
     if (pin !== confirmation) {
-      setError(copy.mismatch);
+      setError(t("phase5.join.mismatch"));
       return;
     }
     const normalizedToken = token.trim();
@@ -85,16 +57,16 @@ export default function JoinPage() {
         body: JSON.stringify({ token: normalizedToken, requestId, displayName: normalizedName, loginId: normalizedLogin, pin }),
       });
       const body = (await response.json()) as ApiError;
-      if (!response.ok) throw new Error(body.error ?? copy.failed);
+      if (!response.ok) throw new Error(body.error ?? t("phase5.join.failed"));
       setSuccess(true);
       router.replace("/");
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.failed);
+      setError(caught instanceof Error ? caught.message : t("phase5.join.failed"));
     } finally {
       setLoading(false);
     }
-  }, [confirmation, copy.failed, copy.mismatch, displayName, loginId, pin, router, token]);
+  }, [confirmation, displayName, loginId, pin, router, t, token]);
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background p-4">
@@ -104,47 +76,47 @@ export default function JoinPage() {
           <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-md border bg-muted text-muted-foreground">
             <UserPlus className="size-5" aria-hidden="true" />
           </div>
-          <CardTitle>{copy.title}</CardTitle>
-          <CardDescription>{copy.description}</CardDescription>
+          <CardTitle>{t("phase5.join.title")}</CardTitle>
+          <CardDescription>{t("phase5.join.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="invite-token">{copy.token}</Label>
-              <Input id="invite-token" dir="ltr" value={token} onChange={(event) => setToken(event.target.value)} placeholder={copy.tokenPlaceholder} autoComplete="off" disabled={loading || success} required />
+              <Label htmlFor="invite-token">{t("phase5.join.token")}</Label>
+              <Input id="invite-token" dir="ltr" value={token} onChange={(event) => setToken(event.target.value)} placeholder={t("phase5.join.tokenPlaceholder")} autoComplete="off" disabled={loading || success} required />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="display-name">{copy.name}</Label>
-                <Input id="display-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder={copy.namePlaceholder} autoComplete="name" minLength={1} maxLength={80} disabled={loading || success} required />
+                <Label htmlFor="display-name">{t("phase5.join.name")}</Label>
+                <Input id="display-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder={t("phase5.join.namePlaceholder")} autoComplete="name" minLength={1} maxLength={80} disabled={loading || success} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="login-id">{copy.login}</Label>
-                <Input id="login-id" dir="ltr" value={loginId} onChange={(event) => setLoginId(event.target.value.toLowerCase())} placeholder={copy.loginPlaceholder} pattern="[a-z0-9][a-z0-9._-]{2,31}" autoComplete="username" disabled={loading || success} required />
-                <p className="text-xs text-muted-foreground">{copy.loginHelp}</p>
+                <Label htmlFor="login-id">{t("phase5.join.login")}</Label>
+                <Input id="login-id" dir="ltr" value={loginId} onChange={(event) => setLoginId(event.target.value.toLowerCase())} placeholder={t("phase5.join.loginPlaceholder")} pattern="[a-z0-9][a-z0-9._-]{2,31}" autoComplete="username" disabled={loading || success} required />
+                <p className="text-xs text-muted-foreground">{t("phase5.join.loginHelp")}</p>
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="member-pin">{copy.pin}</Label>
+                <Label htmlFor="member-pin">{t("phase5.join.pin")}</Label>
                 <Input id="member-pin" type="password" inputMode="numeric" autoComplete="new-password" value={pin} onChange={(event) => setPin(event.target.value)} minLength={8} maxLength={32} disabled={loading || success} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="member-pin-confirmation">{copy.confirmPin}</Label>
+                <Label htmlFor="member-pin-confirmation">{t("phase5.join.confirmPin")}</Label>
                 <Input id="member-pin-confirmation" type="password" inputMode="numeric" autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} minLength={8} maxLength={32} disabled={loading || success} required />
               </div>
             </div>
 
             {error ? <p role="alert" className="rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">{error}</p> : null}
-            {success ? <p role="status" className="rounded-md border border-success/25 bg-success/5 p-3 text-sm text-success">{copy.success}</p> : null}
+            {success ? <p role="status" className="rounded-md border border-success/25 bg-success/5 p-3 text-sm text-success">{t("phase5.join.success")}</p> : null}
 
             <Button type="submit" className="w-full" disabled={loading || success || !token.trim() || !displayName.trim() || loginId.length < 3 || pin.length < 8 || confirmation.length < 8}>
-              {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <><KeyRound className="me-2 size-4" aria-hidden="true" />{copy.submit}<ArrowRight className="ms-2 size-4 rtl:rotate-180" aria-hidden="true" /></>}
+              {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <><KeyRound className="me-2 size-4" aria-hidden="true" />{t("phase5.join.submit")}<ArrowRight className="ms-2 size-4 rtl:rotate-180" aria-hidden="true" /></>}
             </Button>
 
-            <Button type="button" variant="ghost" className="w-full" onClick={() => router.push("/login")}>{copy.loginLink}</Button>
+            <Button type="button" variant="ghost" className="w-full" onClick={() => router.push("/login")}>{t("phase5.join.loginLink")}</Button>
           </form>
         </CardContent>
       </Card>
