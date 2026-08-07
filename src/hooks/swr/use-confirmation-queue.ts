@@ -41,10 +41,10 @@ export function useConfirmationQueue({
   const lastPage = Math.max(1, Math.ceil(knownTotal / pageSize));
 
   useEffect(() => {
-    if (knownTotal > 0 && currentPage > lastPage) {
+    if (currentPage > lastPage) {
       void setPage(String(lastPage));
     }
-  }, [currentPage, knownTotal, lastPage, setPage]);
+  }, [currentPage, lastPage, setPage]);
 
   return {
     data: response,
