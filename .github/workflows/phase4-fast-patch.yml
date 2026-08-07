@@ -83,39 +83,25 @@ jobs:
               raise SystemExit('setup success anchor drifted')
           harness = harness.replace(
               needle,
-              '''    if ($setup.status -eq 200) {
-                  Import-SellerSessionCookieFromResponse -BaseUrl $BaseUrl -Session $Session -Response $setup
-                  return
-              }''',
+              '    if ($setup.status -eq 200) {\n        Import-SellerSessionCookieFromResponse -BaseUrl $BaseUrl -Session $Session -Response $setup\n        return\n    }',
               1,
           )
 
-          old = '''    if ($login.status -ne 200) {
-              throw "Owner login failed with HTTP $($login.status)."
-          }
-          }'''
-          new = '''    if ($login.status -ne 200) {
-              throw "Owner login failed with HTTP $($login.status)."
-          }
-              Import-SellerSessionCookieFromResponse -BaseUrl $BaseUrl -Session $Session -Response $login
-          }'''
-          if harness.count(old) != 1:
+          needle = '        throw "Owner login failed with HTTP $($login.status)."\n    }\n'
+          if harness.count(needle) != 1:
               raise SystemExit('login success anchor drifted')
-          harness = harness.replace(old, new, 1)
+          harness = harness.replace(
+              needle,
+              needle + '    Import-SellerSessionCookieFromResponse -BaseUrl $BaseUrl -Session $Session -Response $login\n',
+              1,
+          )
 
           needle = 'if ($search.status -ne 200) { throw "Source customer search failed." }'
           if harness.count(needle) != 1:
               raise SystemExit('source search anchor drifted')
           harness = harness.replace(
               needle,
-              '''if ($search.status -ne 200) {
-              $safeCode = if ($null -ne $search.body -and $null -ne $search.body.code) {
-                  [string]$search.body.code
-              } else {
-                  "none"
-              }
-              throw "Source customer search failed with HTTP $($search.status) and code $safeCode."
-          }''',
+              'if ($search.status -ne 200) {\n    $safeCode = if ($null -ne $search.body -and $null -ne $search.body.code) {\n        [string]$search.body.code\n    } else {\n        "none"\n    }\n    throw "Source customer search failed with HTTP $($search.status) and code $safeCode."\n}',
               1,
           )
           harness_path.write_text(harness, encoding='utf-8', newline='\n')
