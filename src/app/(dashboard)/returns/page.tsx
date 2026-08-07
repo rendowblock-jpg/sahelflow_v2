@@ -1,16 +1,19 @@
-import { getI18n } from "@/lib/i18n-server";
-import { db } from "@/lib/db";
-import { PageHeader } from "@/components/shared/page-header";
-import { StatCard } from "@/components/shared/stat-card";
-import { ImportExportButtons } from "@/components/shared/import-export-buttons";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { ArrowLeftRight, CheckCircle2, Clock, RotateCcw } from "lucide-react";
+
 import { ReturnFormDialog } from "@/components/returns/return-form-dialog";
 import { ReturnsDataTable } from "@/components/returns/returns-data-table";
-import { RotateCcw, CheckCircle2, Clock, ArrowLeftRight } from "lucide-react";
-import type { Metadata } from "next";
+import { ImportExportButtons } from "@/components/shared/import-export-buttons";
+import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { db } from "@/lib/db";
+import { getI18n } from "@/lib/i18n-server";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import {
-  assertTrustedAction,
-  requireTrustedAction,
-} from "@/lib/identity/authorization";
+  getReturnWorkbenchPage,
+  resolveReturnWorkbenchAccess,
+} from "@/lib/returns/return-workbench";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -18,36 +21,40 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const dynamic = "force-dynamic";
 
-export default async function ReturnsPage() {
+export default async function ReturnsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const actorContext = await requireTrustedAction("orders.read");
-  assertTrustedAction(actorContext, "customers.contact.read");
-  assertTrustedAction(actorContext, "orders.financials.read");
   const { t, locale } = await getI18n();
-
-  const PAGE_SIZE = 25;
-  const where = { deletedAt: null };
-
-  // Page-1 fallback + total + stat-card aggregates (across ALL returns).
-  const [returns, total, statusCounts, typeCounts] = await Promise.all([
-    db.return.findMany({
-      where,
-      include: { order: { include: { customer: { select: { name: true } } } } },
-      orderBy: { createdAt: "desc" },
-      take: PAGE_SIZE,
-      skip: 0,
+  const requestedPage = Number.parseInt((await searchParams).page ?? "1", 10);
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0
+    ? requestedPage
+    : 1;
+  const access = resolveReturnWorkbenchAccess(actorContext);
+  const [fallback, statusCounts, typeCounts] = await Promise.all([
+    getReturnWorkbenchPage(actorContext, { page, pageSize: 25 }),
+    db.return.groupBy({
+      by: ["status"],
+      where: { deletedAt: null },
+      _count: { _all: true },
     }),
-    db.return.count({ where }),
-    db.return.groupBy({ by: ["status"], where, _count: true }),
-    db.return.groupBy({ by: ["type"], where, _count: true }),
+    db.return.groupBy({
+      by: ["type"],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    }),
   ]);
+  const lastPage = Math.max(1, Math.ceil(fallback.total / fallback.pageSize));
+  if (page > lastPage) redirect(`/returns?page=${lastPage}`);
 
-  const countOf = (key: string, groups: { status: string; _count: number }[] | { type: string; _count: number }[]) =>
-    groups.find((g) => (g as { status?: string; type?: string }).status === key || (g as { type?: string }).type === key)?._count ?? 0;
-
-  const requestedCount = countOf("requested", statusCounts as { status: string; _count: number }[]);
-  const completedCount = countOf("completed", statusCounts as { status: string; _count: number }[]);
-  const exchangeCount = countOf("exchange", typeCounts as { type: string; _count: number }[]);
-
+  const statusMap = new Map(statusCounts.map((group) => [group.status, group._count._all]));
+  const typeMap = new Map(typeCounts.map((group) => [group.type, group._count._all]));
+  const total = fallback.total;
+  const requestedCount = statusMap.get("requested") ?? 0;
+  const completedCount = statusMap.get("completed") ?? 0;
+  const exchangeCount = typeMap.get("exchange") ?? 0;
   const completedPct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
   const exchangePct = total > 0 ? Math.round((exchangeCount / total) * 100) : 0;
 
@@ -56,81 +63,59 @@ export default async function ReturnsPage() {
       <PageHeader
         title={t("nav.returns")}
         description={t("returns.subtitle")}
-        actions={
-          <div className="flex items-center gap-2">
-            <ImportExportButtons exportRoute="/api/export/returns" />
-            <ReturnFormDialog />
+        actions={access.export || access.create ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {access.export ? <ImportExportButtons exportRoute="/api/export/returns" /> : null}
+            {access.create ? <ReturnFormDialog /> : null}
           </div>
-        }
+        ) : undefined}
       />
 
-      <div className="card-grid-4 stagger-grid">
+      <div className="card-grid-4">
         <StatCard
           label={t("returns.totalReturns")}
           value={total}
           icon={<RotateCcw />}
-          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
-          accentIcon="text-teal-600 dark:text-teal-400"
           subtitle={t("returns.completedPct", { pct: completedPct })}
-          style={{ animationDelay: "60ms" }}
         />
         <StatCard
           label={t("returns.waiting")}
           value={requestedCount}
           icon={<Clock />}
-          accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-warning"
           trendLabel={t("returns.waitingTrend")}
-          style={{ animationDelay: "120ms" }}
         />
         <StatCard
           label={t("returns.completed")}
           value={completedCount}
           icon={<CheckCircle2 />}
-          accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-success"
           subtitle={t("returns.completedPct", { pct: completedPct })}
-          style={{ animationDelay: "180ms" }}
         />
         <StatCard
           label={t("returns.exchanges")}
           value={exchangeCount}
           icon={<ArrowLeftRight />}
-          accentBg="bg-violet-500/10 dark:bg-violet-500/15"
-          accentIcon="text-violet-600 dark:text-violet-400"
           subtitle={t("returns.exchangePct", { pct: exchangePct })}
-          style={{ animationDelay: "240ms" }}
         />
       </div>
 
-      <div className="animate-fade-up" style={{ animationDelay: "240ms" }}>
-        <h2 className="text-base font-semibold mb-3">{t("returns.history")}</h2>
+      <section aria-labelledby="returns-history-title" className="space-y-3">
+        <h2 id="returns-history-title" className="text-base font-semibold">
+          {t("returns.history")}
+        </h2>
         <ReturnsDataTable
-            fallback={{
-              returns: returns.map((r) => ({
-                id: r.id,
-                orderId: r.orderId,
-                reason: r.reason,
-                status: r.status,
-                type: r.type,
-                notes: r.notes,
-                createdAt: r.createdAt.toISOString(),
-                order: r.order
-                  ? {
-                      id: r.order.id,
-                      orderNumber: r.order.orderNumber,
-                      customer: r.order.customer ? { name: r.order.customer.name } : null,
-                    }
-                  : { id: "", orderNumber: "", customer: null },
-              })),
-              total,
-              hasNextPage: total > PAGE_SIZE,
-              page: 1,
-              pageSize: PAGE_SIZE,
-            }}
-            locale={locale}
-          />
-      </div>
+          fallback={{
+            ...fallback,
+            returns: fallback.returns.map((entry) => ({
+              ...entry,
+              createdAt:
+                entry.createdAt instanceof Date
+                  ? entry.createdAt.toISOString()
+                  : entry.createdAt,
+            })),
+          }}
+          locale={locale}
+        />
+      </section>
     </div>
   );
 }

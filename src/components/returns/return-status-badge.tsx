@@ -1,16 +1,6 @@
 "use client";
 
-/**
- * ReturnStatusBadge — clickable status badge with inline status change dropdown.
- *
- * Pattern: same as OrderStatusBadge — dropdown of allowed transitions,
- * optimistic update + toast + API call to PATCH /api/returns/[id].
- *
- * Return status flow: requested → approved → completed
- *                     requested → rejected
- */
-
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
@@ -20,22 +10,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Check, Loader2, ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Check, ChevronDown, Loader2 } from "lucide-react";
+
 import { useI18n } from "@/hooks/use-i18n";
-import { toast } from "@/lib/toast";
 import { mutatePrefix } from "@/lib/swr/mutate";
+import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 
 type ReturnStatus = "requested" | "approved" | "rejected" | "completed";
 
 const STATUS_STYLES: Record<ReturnStatus, { i18nKey: string; dot: string; bg: string; text: string; border: string }> = {
-  requested: { i18nKey: "returns.status.requested", dot: "bg-warning", bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-warning dark:text-amber-400", border: "border-amber-200 dark:border-amber-800/50" },
-  approved: { i18nKey: "returns.status.approved", dot: "bg-teal-500", bg: "bg-teal-50 dark:bg-teal-950/40", text: "text-teal-700 dark:text-teal-400", border: "border-teal-200 dark:border-teal-800/50" },
-  rejected: { i18nKey: "returns.status.rejected", dot: "bg-destructive", bg: "bg-red-50 dark:bg-red-950/40", text: "text-destructive dark:text-red-400", border: "border-red-200 dark:border-red-800/50" },
-  completed: { i18nKey: "returns.status.completed", dot: "bg-success", bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-success dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-800/50" },
+  requested: { i18nKey: "returns.status.requested", dot: "bg-warning", bg: "bg-warning/10", text: "text-warning", border: "border-warning/25" },
+  approved: { i18nKey: "returns.status.approved", dot: "bg-primary", bg: "bg-primary/10", text: "text-primary", border: "border-primary/25" },
+  rejected: { i18nKey: "returns.status.rejected", dot: "bg-destructive", bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/25" },
+  completed: { i18nKey: "returns.status.completed", dot: "bg-success", bg: "bg-success/10", text: "text-success", border: "border-success/25" },
 };
-
-// Allowed transitions for returns
 const ALLOWED_TRANSITIONS: Record<ReturnStatus, ReturnStatus[]> = {
   requested: ["approved", "rejected"],
   approved: ["completed", "rejected"],
@@ -50,6 +39,7 @@ interface ReturnStatusBadgeProps {
   disabled?: boolean;
 }
 
+/** Return status remains authoritative until the transition commits. */
 export function ReturnStatusBadge({
   returnId,
   status,
@@ -59,41 +49,31 @@ export function ReturnStatusBadge({
   const router = useRouter();
   const { t } = useI18n();
   const [isPending, startTransition] = useTransition();
-  const [optimisticStatus, setOptimisticStatus] = useState<ReturnStatus>(status);
-
-  const currentStatus = optimisticStatus;
-  const style = STATUS_STYLES[currentStatus];
-  const allowed = ALLOWED_TRANSITIONS[currentStatus] ?? [];
+  const style = STATUS_STYLES[status];
+  const allowed = ALLOWED_TRANSITIONS[status] ?? [];
+  const hasTransitions = allowed.length > 0;
 
   async function handleChange(newStatus: ReturnStatus) {
-    if (newStatus === currentStatus) return;
-
-    setOptimisticStatus(newStatus);
-
+    if (newStatus === status || disabled || isPending) return;
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/returns/${returnId}`, {
+        const response = await fetch(`/api/returns/${returnId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus }),
         });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
           throw new Error(data.error ?? t("returns.updateFailed"));
         }
         toast.success(t("returns.statusUpdated"));
+        await mutatePrefix("/api/returns");
         router.refresh();
-        // Invalidate SWR cache for /api/returns* keys so the ReturnsDataTable
-        // reflects the new status without waiting for the dedup window.
-        void mutatePrefix("/api/returns");
-      } catch (err) {
-        setOptimisticStatus(currentStatus);
-        toast.error(err instanceof Error ? err.message : t("returns.updateFailed"));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : t("returns.updateFailed"));
       }
     });
   }
-
-  const hasTransitions = allowed.length > 0;
 
   return (
     <DropdownMenu>
@@ -102,41 +82,44 @@ export function ReturnStatusBadge({
           type="button"
           disabled={disabled || isPending || !hasTransitions}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
+            "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
             style.bg,
             style.text,
             style.border,
-            size === "sm" && "text-xs px-1.5 py-0",
-            (disabled || isPending || !hasTransitions) && "opacity-70 cursor-not-allowed",
-            !disabled && hasTransitions && "hover:bg-muted/50 cursor-pointer",
+            size === "sm" && "px-1.5 py-0 text-xs",
+            (disabled || isPending || !hasTransitions) && "cursor-not-allowed opacity-70",
+            !disabled && !isPending && hasTransitions && "cursor-pointer hover:bg-muted/50",
           )}
         >
-          {isPending && <Loader2 className="h-3 w-3 animate-spin" />}
-          {!isPending && <span className={cn("size-1.5 rounded-full", style.dot)} />}
+          {isPending ? (
+            <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+          ) : (
+            <span className={cn("size-1.5 rounded-full", style.dot)} aria-hidden="true" />
+          )}
           {t(style.i18nKey)}
-          {hasTransitions && !disabled && <ChevronDown className="h-3 w-3 opacity-60" />}
+          {hasTransitions && !disabled && !isPending ? <ChevronDown className="size-3 opacity-60" aria-hidden="true" /> : null}
         </button>
       </DropdownMenuTrigger>
-      {hasTransitions && (
+      {hasTransitions && !disabled ? (
         <DropdownMenuContent align="start">
           <DropdownMenuLabel>{t("returns.changeStatus")}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {allowed.map((s) => {
-            const sStyle = STATUS_STYLES[s];
+          {allowed.map((candidate) => {
+            const candidateStyle = STATUS_STYLES[candidate];
             return (
               <DropdownMenuItem
-                key={s}
-                onClick={() => handleChange(s)}
+                key={candidate}
+                onClick={() => handleChange(candidate)}
                 className="gap-2"
               >
-                <span className={cn("size-1.5 rounded-full", sStyle.dot)} />
-                <span className="flex-1">{t(sStyle.i18nKey)}</span>
-                {s === currentStatus && <Check className="h-3 w-3 opacity-60" />}
+                <span className={cn("size-1.5 rounded-full", candidateStyle.dot)} aria-hidden="true" />
+                <span className="flex-1">{t(candidateStyle.i18nKey)}</span>
+                {candidate === status ? <Check className="size-3 opacity-60" aria-hidden="true" /> : null}
               </DropdownMenuItem>
             );
           })}
         </DropdownMenuContent>
-      )}
+      ) : null}
     </DropdownMenu>
   );
 }

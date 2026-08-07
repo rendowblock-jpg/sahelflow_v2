@@ -1,38 +1,41 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
-  Shield,
-  ShieldCheck,
-  Users,
-  Bot,
-  Truck,
+  AlertTriangle,
   Bell,
-  Store,
+  Bot,
   Database,
   DatabaseBackup,
-  UserCircle,
   Palette,
-  AlertTriangle,
   Phone,
+  Shield,
+  ShieldCheck,
+  Store,
+  Truck,
+  UserCircle,
+  Users,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useI18n } from "@/hooks/use-i18n";
-import { isRTL } from "@/lib/i18n";
-import { LicensePanel } from "@/components/settings/license-panel";
+
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
-import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
-import { DailyReportPanel } from "@/components/settings/daily-report-panel";
-import { IntegrationsPanel } from "@/components/settings/integrations-panel";
-import { BackupRestorePanel } from "@/components/settings/backup-restore-panel";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
+import { BackupRestorePanel } from "@/components/settings/backup-restore-panel";
+import { CollaborationAdminPanel } from "@/components/settings/collaboration-admin-panel";
+import { DailyReportPanel } from "@/components/settings/daily-report-panel";
 import { DangerZonePanel } from "@/components/settings/danger-zone-panel";
-import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
+import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
 import { DemoDataPanel } from "@/components/settings/demo-data-panel";
+import { IntegrationsPanel } from "@/components/settings/integrations-panel";
+import { LicensePanel } from "@/components/settings/license-panel";
+import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
 import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
 import { TeamAccessAuthorityPanel } from "@/components/settings/team-access-authority-panel";
 import { TeamMembersPanel } from "@/components/settings/team-members-panel";
-import { CollaborationAdminPanel } from "@/components/settings/collaboration-admin-panel";
+import { Button } from "@/components/ui/button";
+import { useI18n } from "@/hooks/use-i18n";
+import { isRTL } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 type Tab =
   | "profile"
@@ -48,6 +51,8 @@ type Tab =
   | "phone"
   | "backup"
   | "danger";
+
+export type SettingsTabAccess = Record<Tab, boolean>;
 
 const TABS: Array<{ id: Tab; icon: typeof Shield; labelKey: string }> = [
   { id: "profile", icon: UserCircle, labelKey: "settings.tabs.profile" },
@@ -65,120 +70,133 @@ const TABS: Array<{ id: Tab; icon: typeof Shield; labelKey: string }> = [
   { id: "danger", icon: AlertTriangle, labelKey: "settings.tabs.dangerZone" },
 ];
 
-const DEMO_LABELS = {
-  ar: "بيانات تجريبية",
-  fr: "Données de démo",
-  en: "Demo data",
-} as const;
-
-const SECURITY_LABELS = {
-  ar: "الأمان والجلسات",
-  fr: "Sécurité et sessions",
-  en: "Security & sessions",
-} as const;
-
-const TEAM_LABELS = {
-  ar: "وصول الفريق",
-  fr: "Accès de l’équipe",
-  en: "Team access",
-} as const;
-
 export function SettingsTabs({
   integrations,
+  access,
 }: {
   integrations: Array<{ platform: string; status: string }>;
+  access: SettingsTabAccess;
 }) {
   const { t, locale } = useI18n();
   const rtl = isRTL(locale);
-  const [active, setActive] = useState<Tab>("demo");
-  const tabListRef = useRef<HTMLDivElement>(null);
+  const visibleTabs = useMemo(
+    () => TABS.filter((tab) => access[tab.id]),
+    [access],
+  );
+  const [active, setActive] = useState<Tab>(visibleTabs[0]?.id ?? "profile");
+  const effectiveActive = access[active] ? active : (visibleTabs[0]?.id ?? "profile");
 
-  return (
-    <div ref={tabListRef} role="tablist" className="flex flex-col gap-6 lg:flex-row">
-      <nav className="flex gap-1 overflow-x-auto pb-2 lg:w-56 lg:flex-col lg:overflow-visible lg:pb-0">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = active === tab.id;
-          const label =
-            tab.id === "demo"
-              ? DEMO_LABELS[locale]
-              : tab.id === "security"
-                ? SECURITY_LABELS[locale]
-                : tab.id === "team"
-                  ? TEAM_LABELS[locale]
-                  : t(tab.labelKey);
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActive(tab.id)}
-              role="tab"
-              aria-selected={isActive}
-              tabIndex={isActive ? 0 : -1}
-              onKeyDown={(event) => {
-                if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-                  event.preventDefault();
-                  const index = TABS.findIndex((item) => item.id === active);
-                  const rawDirection = event.key === "ArrowRight" ? 1 : -1;
-                  const direction = rtl ? -rawDirection : rawDirection;
-                  const next =
-                    TABS[(index + direction + TABS.length) % TABS.length];
-                  if (next) setActive(next.id);
-                }
-              }}
-              className={cn(
-                "relative flex items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary/5 text-primary"
-                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                tab.id === "danger" &&
-                  !isActive &&
-                  "text-destructive/70 hover:text-destructive",
-              )}
-            >
-              {isActive ? (
-                <span className="absolute start-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
-              ) : null}
-              <Icon className="h-4 w-4 shrink-0" />
-              <span>{label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="min-w-0 flex-1">
-        {active === "security" ? <SecurityAuthorityPanel /> : null}
-        {active === "team" ? (
+  const renderPanel = () => {
+    switch (effectiveActive) {
+      case "security":
+        return <SecurityAuthorityPanel />;
+      case "team":
+        return (
           <div className="space-y-8">
             <TeamAccessAuthorityPanel />
             <TeamMembersPanel />
             <CollaborationAdminPanel />
           </div>
-        ) : null}
-        {active === "license" ? <LicensePanel /> : null}
-        {active === "demo" ? <DemoDataPanel /> : null}
-        {active === "ai" ? <AiKeyPanel /> : null}
-        {active === "delivery" ? <DeliveryCredentialsPanel /> : null}
-        {active === "reports" ? <DailyReportPanel /> : null}
-        {active === "integrations" ? (
-          <IntegrationsPanel integrations={integrations} />
-        ) : null}
-        {active === "backup" ? <BackupRestorePanel /> : null}
-        {active === "appearance" ? <AppearancePanel /> : null}
-        {active === "phone" ? <PhoneReputationPanel /> : null}
-        {active === "danger" ? <DangerZonePanel /> : null}
-        {active === "profile" ? (
-          <div className="rounded-lg border p-6">
+        );
+      case "license":
+        return <LicensePanel />;
+      case "demo":
+        return <DemoDataPanel />;
+      case "ai":
+        return <AiKeyPanel />;
+      case "delivery":
+        return <DeliveryCredentialsPanel />;
+      case "reports":
+        return <DailyReportPanel />;
+      case "integrations":
+        return <IntegrationsPanel integrations={integrations} />;
+      case "backup":
+        return <BackupRestorePanel />;
+      case "appearance":
+        return <AppearancePanel />;
+      case "phone":
+        return <PhoneReputationPanel />;
+      case "danger":
+        return <DangerZonePanel />;
+      default:
+        return (
+          <div className="rounded-md border p-6">
             <h3 className="text-base font-semibold">{t("settings.tabs.profile")}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Profile settings are managed via the{" "}
-              <a href="/profile" className="text-primary underline">
-                Profile page
-              </a>
-              .
-            </p>
+            <div className="mt-4">
+              <Button asChild variant="outline">
+                <Link href="/profile">{t("settings.tabs.profile")}</Link>
+              </Button>
+            </div>
           </div>
-        ) : null}
-      </div>
+        );
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-6 lg:flex-row">
+      <nav
+        role="tablist"
+        className="flex gap-1 overflow-x-auto pb-2 lg:w-56 lg:flex-col lg:overflow-visible lg:pb-0"
+      >
+        {visibleTabs.map((tab, index) => {
+          const Icon = tab.icon;
+          const isActive = effectiveActive === tab.id;
+          return (
+            <button
+              key={tab.id}
+              id={`settings-tab-${tab.id}`}
+              type="button"
+              onClick={() => setActive(tab.id)}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`settings-panel-${tab.id}`}
+              tabIndex={isActive ? 0 : -1}
+              onKeyDown={(event) => {
+                if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+                event.preventDefault();
+                let nextIndex = index;
+                if (event.key === "Home") nextIndex = 0;
+                else if (event.key === "End") nextIndex = visibleTabs.length - 1;
+                else {
+                  const horizontalDirection = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+                  const verticalDirection = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+                  const direction = horizontalDirection !== 0
+                    ? (rtl ? -horizontalDirection : horizontalDirection)
+                    : verticalDirection;
+                  nextIndex = (index + direction + visibleTabs.length) % visibleTabs.length;
+                }
+                const next = visibleTabs[nextIndex];
+                if (next) {
+                  setActive(next.id);
+                  requestAnimationFrame(() =>
+                    document.getElementById(`settings-tab-${next.id}`)?.focus(),
+                  );
+                }
+              }}
+              className={cn(
+                "relative flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                isActive
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                tab.id === "danger" && !isActive && "text-destructive/80 hover:text-destructive",
+              )}
+            >
+              <Icon className="size-4 shrink-0" aria-hidden="true" />
+              <span>{t(tab.labelKey)}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <section
+        id={`settings-panel-${effectiveActive}`}
+        role="tabpanel"
+        aria-labelledby={`settings-tab-${effectiveActive}`}
+        tabIndex={0}
+        className="min-w-0 flex-1 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {renderPanel()}
+      </section>
     </div>
   );
 }

@@ -21,11 +21,17 @@ export const deliveryService = {
   async list(ctx: ServiceContext, opts?: {
     limit?: number;
     offset?: number;
-    status?: DeliveryStatus;
+    status?: DeliveryStatus | readonly DeliveryStatus[];
     include?: Prisma.DeliveryInclude;
   }): Promise<Delivery[]> {
+    const statusFilter =
+      typeof opts?.status === "string"
+        ? { status: opts.status }
+        : opts?.status
+          ? { status: { in: [...opts.status] } }
+          : {};
     const rows = await ctx.prisma.delivery.findMany({
-      where: opts?.status ? { status: opts.status, deletedAt: null } : { deletedAt: null },
+      where: { ...statusFilter, deletedAt: null },
       orderBy: { createdAt: "desc" },
       take: opts?.limit ?? 50,
       skip: opts?.offset ?? 0,

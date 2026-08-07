@@ -49,7 +49,6 @@ export function resolveFormatter(
   }
 }
 
-/** Compatibility registry for callers that have not yet passed route locale. */
 export const chartFormatters: Record<ChartFormatter, (value: number) => string> = {
   currency: resolveFormatter("currency"),
   currencyShort: resolveFormatter("currencyShort"),
@@ -91,7 +90,7 @@ export function buildChartConfig(
 interface ChartCardProps {
   title: React.ReactNode;
   description?: React.ReactNode;
-  /** Human-readable summary exposed beside the graphic for assistive technology. */
+  /** Prefer a concise data/insight summary; description/title is the fallback. */
   summary?: React.ReactNode;
   icon?: React.ReactNode;
   accent?: string;
@@ -103,14 +102,7 @@ interface ChartCardProps {
   children: React.ComponentProps<typeof ChartContainer>["children"];
 }
 
-/**
- * Governed SahelFlow analytical frame.
- *
- * The graphic is supplemental to a named analytical region. Callers may provide
- * a concise text summary of the insight/data so chart interpretation never
- * depends on color or pointer hover alone. Elevation and decorative hover motion
- * are intentionally absent inside the desktop workbench.
- */
+/** Governed SahelFlow analytical frame with mandatory non-visual context. */
 export function ChartCard({
   title,
   description,
@@ -124,6 +116,8 @@ export function ChartCard({
 }: ChartCardProps) {
   const titleId = React.useId();
   const descriptionId = React.useId();
+  const summaryId = React.useId();
+  const accessibleSummary = summary ?? description ?? title;
 
   return (
     <Card className={cn("border shadow-none", className)}>
@@ -144,9 +138,11 @@ export function ChartCard({
         <div
           role="group"
           aria-labelledby={titleId}
-          aria-describedby={description ? descriptionId : undefined}
+          aria-describedby={summaryId}
         >
-          {summary ? <div className="sr-only">{summary}</div> : null}
+          <div id={summaryId} className="sr-only">
+            {accessibleSummary}
+          </div>
           <ChartContainer
             config={config}
             className="aspect-auto w-full"

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { CanonicalCodDashboard } from "@/components/accounting/canonical-cod-dashboard";
+import { CanonicalCodReadOnly } from "@/components/accounting/canonical-cod-readonly";
 import { PageHeader } from "@/components/shared/page-header";
 import { getCanonicalCodWorkspaceSummary } from "@/lib/accounting/canonical-cod-projections";
 import { db, shopContext } from "@/lib/db";
@@ -8,6 +9,7 @@ import { getI18n } from "@/lib/i18n-server";
 import {
   assertTrustedAction,
   requireTrustedAction,
+  trustedActionAllowed,
 } from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +28,11 @@ export default async function CodReconciliationPage() {
     prisma: db,
     shop: shopContext,
   });
+  const canUpdate = trustedActionAllowed(
+    actorContext,
+    "accounting.update",
+    { shopId: actorContext.shop.shopId },
+  );
 
   return (
     <div className="app-content page-sections">
@@ -33,7 +40,11 @@ export default async function CodReconciliationPage() {
         title={t("codReconciliation.title")}
         description={t("codReconciliation.description")}
       />
-      <CanonicalCodDashboard summary={summary} />
+      {canUpdate ? (
+        <CanonicalCodDashboard summary={summary} />
+      ) : (
+        <CanonicalCodReadOnly summary={summary} />
+      )}
     </div>
   );
 }

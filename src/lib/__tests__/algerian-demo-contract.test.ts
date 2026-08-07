@@ -120,12 +120,15 @@ describe("Algerian Founder demo contract", () => {
     expect(panel).toContain('const COPY: Record<"ar" | "fr" | "en", Copy>');
     expect(panel).toContain('fetch("/api/demo-data"');
     expect(panel).toContain('mutate("DELETE")');
-    expect(panel).toContain("window.confirm(copy.confirmRemove)");
+    expect(panel).toContain("<ConfirmDialog");
+    expect(panel).toContain('onConfirm={() => mutate("DELETE")}');
+    expect(panel).not.toContain("window.confirm");
     expect(panel).toContain("Fatima Zohra WhatsApp message");
     expect(panel).toContain("رسالة واتساب من فاطمة الزهراء");
 
     expect(settings).toContain('{ id: "demo", icon: Database');
-    expect(settings).toContain('useState<Tab>("demo")');
+    expect(settings).toContain("TABS.filter((tab) => access[tab.id])");
+    expect(settings).toContain("visibleTabs[0]?.id");
     expect(settings).toContain("<DemoDataPanel />");
   });
 

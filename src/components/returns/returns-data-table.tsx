@@ -1,21 +1,24 @@
 "use client";
 
-/**
- * ReturnsDataTable — DataTable v2 wrapper for the returns list page.
- */
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DataTable, selectColumn } from "@/components/data-table/data-table";
+import { AlertTriangle } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ReturnsEmptyState } from "@/components/shared/empty-states";
-import { useReturns, type ReturnListItem, type ReturnsResponse } from "@/hooks/swr/use-returns";
-import { useI18n } from "@/hooks/use-i18n";
-import { formatDate } from "@/lib/utils";
+
+import { DataTable } from "@/components/data-table/data-table";
 import { ReturnStatusBadge } from "@/components/returns/return-status-badge";
+import { ReturnsEmptyState } from "@/components/shared/empty-states";
+import { StateSurface } from "@/components/shared/state-surface";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-import Link from "next/link";
+import {
+  useReturns,
+  type ReturnListItem,
+  type ReturnsResponse,
+} from "@/hooks/swr/use-returns";
+import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
+import { formatDate } from "@/lib/utils";
 
 const TYPE_I18N: Record<string, string> = {
   return: "returns.type.return",
@@ -30,44 +33,61 @@ interface ReturnsDataTableProps {
 export function ReturnsDataTable({ fallback, locale }: ReturnsDataTableProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const { data, isLoading, pagination } = useReturns({ fallback });
+  const { data, error, isLoading, pagination } = useReturns({ fallback });
+  const access = data?.fieldAccess ?? fallback.fieldAccess;
+  const canViewDetail = access.contact && access.financials;
 
   const columns: ColumnDef<ReturnListItem, unknown>[] = [
-    selectColumn<ReturnListItem>(),
     {
       id: "order",
       accessorKey: "order.orderNumber",
       header: () => t("returns.table.order"),
-      cell: ({ row }) => (
-        <Link
-          href={`/orders/${row.original.orderId}`}
-          className="font-mono text-sm font-medium text-primary hover:underline"
-        >
-          {row.original.order?.orderNumber ?? "—"}
-        </Link>
-      ),
+      cell: ({ row }) =>
+        canViewDetail ? (
+          <Link
+            href={`/orders/${row.original.orderId}`}
+            className="font-mono text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {row.original.order?.orderNumber ?? "—"}
+          </Link>
+        ) : (
+          <span className="font-mono text-sm font-medium">
+            {row.original.order?.orderNumber ?? "—"}
+          </span>
+        ),
+      enableSorting: false,
     },
-    {
-      id: "customer",
-      header: () => t("returns.table.customer"),
-      cell: ({ row }) => row.original.order?.customer?.name ?? "—",
-    },
+    ...(access.contact
+      ? [
+          {
+            id: "customer",
+            header: () => t("returns.table.customer"),
+            cell: ({ row }: { row: { original: ReturnListItem } }) =>
+              row.original.order?.customer?.name ?? "—",
+            enableSorting: false,
+          } satisfies ColumnDef<ReturnListItem, unknown>,
+        ]
+      : []),
     {
       accessorKey: "type",
       header: () => t("returns.table.type"),
       cell: ({ row }) => (
-        <Badge variant="outline">{t(TYPE_I18N[row.original.type] ?? row.original.type)}</Badge>
+        <Badge variant="outline">
+          {t(TYPE_I18N[row.original.type] ?? row.original.type)}
+        </Badge>
       ),
+      enableSorting: false,
     },
     {
       accessorKey: "reason",
       header: () => t("returns.table.reason"),
       cell: ({ row }) => (
-        <span className="text-muted-foreground max-w-xs truncate block">
+        <span className="block max-w-xs truncate text-muted-foreground">
           {row.original.reason}
         </span>
       ),
       meta: { hideOn: "md" },
+      enableSorting: false,
     },
     {
       accessorKey: "status",
@@ -77,9 +97,11 @@ export function ReturnsDataTable({ fallback, locale }: ReturnsDataTableProps) {
           returnId={row.original.id}
           status={row.original.status as "requested" | "approved" | "rejected" | "completed"}
           size="sm"
+          disabled={!access.manage}
         />
       ),
       meta: { align: "center" },
+      enableSorting: false,
     },
     {
       accessorKey: "createdAt",
@@ -90,29 +112,45 @@ export function ReturnsDataTable({ fallback, locale }: ReturnsDataTableProps) {
         </span>
       ),
       meta: { hideOn: "lg" },
-    },
-    {
-      id: "actions",
-      header: () => t("returns.table.action"),
-      cell: ({ row }) => (
-        <Button variant="ghost" size="sm" asChild>
-          <Link href={`/orders/${row.original.orderId}`}>{t("returns.view")}</Link>
-        </Button>
-      ),
-      meta: { align: "end", width: "w-20" },
       enableSorting: false,
     },
+    ...(canViewDetail
+      ? [
+          {
+            id: "actions",
+            header: () => t("returns.table.action"),
+            cell: ({ row }: { row: { original: ReturnListItem } }) => (
+              <Button variant="ghost" size="sm" asChild>
+                <Link href={`/orders/${row.original.orderId}`}>{t("returns.view")}</Link>
+              </Button>
+            ),
+            meta: { align: "end" as const, width: "w-20" },
+            enableSorting: false,
+          } satisfies ColumnDef<ReturnListItem, unknown>,
+        ]
+      : []),
   ];
 
-  const returns = data?.returns ?? fallback.returns;
+  if (error && !data) {
+    return (
+      <StateSurface
+        icon={AlertTriangle}
+        title={t("error.requestFailed")}
+        description={error.message}
+        tone="danger"
+        size="inline"
+        role="alert"
+      />
+    );
+  }
 
   return (
     <DataTable
       columns={columns}
-      data={returns}
+      data={data?.returns ?? []}
       isLoading={isLoading}
       pagination={pagination}
-      onRowClick={(row) => router.push(`/orders/${row.orderId}`)}
+      onRowClick={canViewDetail ? (row) => router.push(`/orders/${row.orderId}`) : undefined}
       getRowId={(row) => row.id}
       emptyState={<ReturnsEmptyState />}
     />

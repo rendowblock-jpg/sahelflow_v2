@@ -1,66 +1,66 @@
 "use client";
 
-/**
- * useDeliveries — SWR hook for the paginated deliveries list (DataTable v2).
- *
- * Supports a status filter (via URL `status` param, synced with the page's
- * filter tabs). Page state is URL-synced via nuqs.
- */
+import { useEffect } from "react";
 import useSWR from "swr";
 import { useQueryState } from "nuqs";
+
 import { fetcher } from "@/lib/swr/fetcher";
+import type {
+  DeliveryWorkbenchItem,
+  DeliveryWorkbenchResponse,
+} from "@/lib/deliveries/delivery-workbench";
 
-export interface DeliveryListItem {
-  id: string;
-  orderId: string;
-  provider: string;
-  trackingNumber: string | null;
-  cost: number | null;
-  status: string;
-  estimatedDelivery: string | null;
-  createdAt: string;
-  order: {
-    id: string;
-    orderNumber: string;
-    wilaya: string | null;
-    customer: { name: string | null; phone: string | null } | null;
-  } | null;
-}
+export type DeliveryListItem = DeliveryWorkbenchItem;
+export type DeliveriesResponse = DeliveryWorkbenchResponse;
 
-export interface DeliveriesResponse {
-  deliveries: DeliveryListItem[];
-  total: number;
-  hasNextPage: boolean;
-  page: number;
-  pageSize: number;
-}
-
-export function useDeliveries(opts: { pageSize?: number; fallback?: DeliveriesResponse; status?: string } = {}) {
-  const [page, setPage] = useQueryState("page", { defaultValue: "1", shallow: true });
+export function useDeliveries(
+  opts: { pageSize?: number; fallback?: DeliveriesResponse; status?: string } = {},
+) {
+  const [page, setPage] = useQueryState("page", {
+    defaultValue: "1",
+    shallow: true,
+  });
+  const currentPage = Number.parseInt(page, 10) || 1;
   const pageSize = opts.pageSize ?? 25;
   const status = opts.status ?? "all";
-  const key = `/api/delivery?page=${page}&pageSize=${pageSize}${status !== "all" ? `&status=${status}` : ""}`;
+  const statusParam = status !== "all" ? `&status=${encodeURIComponent(status)}` : "";
+  const key = `/api/delivery?page=${currentPage}&pageSize=${pageSize}${statusParam}`;
+  const fallbackData =
+    opts.fallback &&
+    opts.fallback.page === currentPage &&
+    opts.fallback.pageSize === pageSize
+      ? opts.fallback
+      : undefined;
 
   const { data, error, isLoading, mutate } = useSWR<DeliveriesResponse>(key, fetcher, {
-    fallbackData: opts.fallback,
+    fallbackData,
     revalidateOnFocus: false,
     dedupingInterval: 5000,
   });
+  const response = data ?? fallbackData;
+  const knownTotal = response?.total ?? opts.fallback?.total;
+  const lastPage = Math.max(1, Math.ceil((knownTotal ?? 0) / pageSize));
 
-  const currentPage = parseInt(page, 10) || 1;
+  useEffect(() => {
+    if (knownTotal !== undefined && currentPage > lastPage) {
+      void setPage(String(lastPage));
+    }
+  }, [currentPage, knownTotal, lastPage, setPage]);
 
   return {
-    data,
+    data: response,
     error,
-    isLoading: isLoading && !data,
+    isLoading: isLoading && !response,
     mutate,
     pagination: {
       page: currentPage,
       pageSize,
-      total: data?.total,
-      hasNextPage: data?.hasNextPage ?? false,
-      onPageChange: (p: number) => setPage(String(p)),
-      isLoading: isLoading && !!data,
+      total: knownTotal,
+      hasNextPage:
+        response?.hasNextPage ??
+        (knownTotal != null ? currentPage * pageSize < knownTotal : false),
+      onPageChange: (nextPage: number) => setPage(String(nextPage)),
+      isLoading,
     },
   };
 }

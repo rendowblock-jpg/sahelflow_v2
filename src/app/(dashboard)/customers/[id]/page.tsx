@@ -1,21 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  Phone,
+  AlertTriangle,
+  Ban,
+  Calendar,
   MapPin,
+  Phone,
   ShoppingBag,
   TrendingUp,
-  AlertTriangle,
   Truck,
-  Calendar,
 } from "lucide-react";
 
-import { getI18n } from "@/lib/i18n-server";
-import { db, shopContext } from "@/lib/db";
-import { customerService, customerServiceExtensions } from "@/lib/data";
-import { formatDZD, formatDate } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BlacklistToggle } from "@/components/customers/blacklist-toggle";
+import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -24,21 +25,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SahelFlowError } from "@/types/errors";
-import { orderStatusStyles } from "@/lib/shared";
-import { statusI18nKey } from "@/lib/shared/status-colors";
-import type { Order, OrderStatus } from "@/types/domain";
-import { PageHeader } from "@/components/shared/page-header";
-import { Breadcrumbs } from "@/components/shared/breadcrumbs";
-import { StatCard } from "@/components/shared/stat-card";
-import { BlacklistToggle } from "@/components/customers/blacklist-toggle";
-import { Ban } from "lucide-react";
+import { getCustomerDetailWorkbench } from "@/lib/customers/customer-detail-workbench";
+import { getI18n } from "@/lib/i18n-server";
 import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
-import { projectCustomerForTrustedActor } from "@/lib/identity/customer-projection";
-import { projectOrderForTrustedActor } from "@/lib/identity/order-projection";
+import { orderStatusStyles } from "@/lib/shared";
+import { statusI18nKey } from "@/lib/shared/status-colors";
+import { formatDZD, formatDate } from "@/lib/utils";
+import type { OrderStatus } from "@/types/domain";
 
 export const dynamic = "force-dynamic";
 
@@ -53,76 +49,30 @@ function getRiskLevel(score: number): "low" | "medium" | "high" {
 export default async function CustomerDetailPage({ params }: PageProps) {
   const { t, locale } = await getI18n();
   const actorContext = await requireTrustedAction("customers.read");
-  const resource = { shopId: actorContext.shop.shopId };
-  const canReadOrders = trustedActionAllowed(
-    actorContext,
-    "orders.read",
-    resource,
-  );
-  const canReadOrderFinancials = canReadOrders && trustedActionAllowed(
-    actorContext,
-    "orders.financials.read",
-    resource,
-  );
-  const canReadRisk = trustedActionAllowed(
-    actorContext,
-    "risk.read",
-    resource,
-  );
-  const canManageRisk = trustedActionAllowed(
-    actorContext,
-    "risk.manage",
-    resource,
-  );
   const { id } = await params;
+  const workbench = await getCustomerDetailWorkbench(actorContext, id);
+  if (!workbench) notFound();
 
-  let customer;
-  try {
-    const source = await customerService.getById(
-      { prisma: db, shop: shopContext },
-      id,
-    );
-    customer = projectCustomerForTrustedActor(actorContext, source);
-  } catch (err) {
-    if (err instanceof SahelFlowError && err.statusCode === 404) {
-      notFound();
-    }
-    throw err;
-  }
-
-  // Use the new stats service for accurate aggregation
-  const [stats, sourceOrders] = canReadOrders
-    ? await Promise.all([
-        customerServiceExtensions.getStats(
-          { prisma: db, shop: shopContext },
-          id,
-        ),
-        customerServiceExtensions.getOrderHistory(
-          { prisma: db, shop: shopContext },
-          id,
-          { limit: 50 },
-        ),
-      ])
-    : [null, []];
-  const orders = sourceOrders.map((order) =>
-    projectOrderForTrustedActor(actorContext, order as unknown as Order),
-  );
-
-  const riskLevel = getRiskLevel(customer.riskScore);
-  const riskBadge: Record<typeof riskLevel, { variant: "secondary" | "outline" | "destructive"; label: string }> = {
-    low: { variant: "secondary", label: t("risk.lowRisk") },
-    medium: { variant: "outline", label: t("risk.mediumRisk") },
-    high: { variant: "destructive", label: t("risk.highRisk") },
-  };
-
-  // Spending sparkline (last 20 orders by date)
+  const { customer, stats, orders, canReadOrderFinancials } = workbench;
+  const resource = { shopId: actorContext.shop.shopId };
+  const canManageRisk =
+    customer.fieldAccess.risk &&
+    trustedActionAllowed(actorContext, "risk.manage", resource);
+  const riskScore = customer.riskScore;
+  const riskLevel = riskScore === null ? null : getRiskLevel(riskScore);
+  const riskBadge = riskLevel
+    ? {
+        low: { variant: "secondary" as const, label: t("risk.lowRisk") },
+        medium: { variant: "outline" as const, label: t("risk.mediumRisk") },
+        high: { variant: "destructive" as const, label: t("risk.highRisk") },
+      }[riskLevel]
+    : null;
   const spendingSeries = canReadOrderFinancials
     ? orders
         .slice(0, 20)
         .reverse()
-        .map((o) => ({ value: o.totalPrice ?? 0 }))
+        .map((order) => ({ value: order.totalPrice ?? 0 }))
     : [];
-
   const customerLabel = customer.name ?? t("inbox.restrictedContact");
 
   return (
@@ -132,232 +82,207 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           { label: t("customers.title"), href: "/customers" },
           { label: customerLabel },
         ]}
-        className="mb-4"
       />
 
       <PageHeader
         title={customerLabel}
         description={
           <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            {customer.fieldAccess.contact && customer.phone && (
+            {customer.phone ? (
               <span className="inline-flex items-center gap-1">
-                <Phone className="h-3.5 w-3.5" />
+                <Phone className="size-3.5" aria-hidden="true" />
                 <span className="font-mono">{customer.phone}</span>
               </span>
-            )}
-            {customer.fieldAccess.contact && customer.phone2 && (
+            ) : null}
+            {customer.phone2 ? (
               <span className="inline-flex items-center gap-1">
-                <Phone className="h-3.5 w-3.5" />
+                <Phone className="size-3.5" aria-hidden="true" />
                 <span className="font-mono">{customer.phone2}</span>
               </span>
-            )}
-            {customer.fieldAccess.contact && customer.wilaya && (
+            ) : null}
+            {customer.wilaya ? (
               <span className="inline-flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
+                <MapPin className="size-3.5" aria-hidden="true" />
                 {customer.wilaya}{customer.commune ? ` · ${customer.commune}` : ""}
               </span>
-            )}
+            ) : null}
             <span className="inline-flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
+              <Calendar className="size-3.5" aria-hidden="true" />
               {t("customers.customerSince")} {formatDate(customer.createdAt, locale)}
             </span>
           </span>
         }
-        actions={canReadRisk ? (
+        actions={riskBadge && riskScore !== null ? (
           <div className="flex items-center gap-2">
-            <Badge variant={riskBadge[riskLevel].variant}>
-              <AlertTriangle className="h-3.5 w-3.5" />
-              {riskBadge[riskLevel].label} · {customer.riskScore}
+            <Badge variant={riskBadge.variant}>
+              <AlertTriangle className="size-3.5" aria-hidden="true" />
+              {riskBadge.label} · {riskScore}
             </Badge>
-            {canManageRisk && (
+            {canManageRisk ? (
               <BlacklistToggle
                 customerId={customer.id}
-                isBlacklisted={customer.isBlacklisted}
+                isBlacklisted={customer.isBlacklisted === true}
                 variant="button"
               />
-            )}
+            ) : null}
           </div>
         ) : undefined}
       />
 
-      {/* Blacklist warning banner */}
-      {canReadRisk && customer.isBlacklisted && (
-        <div className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
-          <Ban className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+      {customer.fieldAccess.risk && customer.isBlacklisted === true ? (
+        <div className="flex items-start gap-3 rounded-lg border border-destructive/25 bg-destructive/[0.025] p-4">
+          <Ban className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-destructive">
               {t("customers.blacklisted")}
             </p>
-            {customer.blacklistReason && (
-              <p className="mt-0.5 text-sm text-destructive">
+            {customer.blacklistReason ? (
+              <p className="mt-0.5 text-sm text-muted-foreground">
                 {t("risk.blacklist.reason")}: {customer.blacklistReason}
               </p>
-            )}
-            <p className="mt-0.5 text-xs text-destructive">
-              {t("risk.blacklist.subtitle")}
-            </p>
+            ) : null}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Customer 360 stat cards */}
-      {stats && (
-        <div className="card-grid-4 stagger-grid">
-        {canReadOrderFinancials && (
+      {stats ? (
+        <div className="card-grid-4">
+          {stats.totalSpent !== null ? (
+            <StatCard
+              label={t("customers.lifetimeValue")}
+              value={formatDZD(stats.totalSpent, locale)}
+              icon={<TrendingUp />}
+              spark={spendingSeries}
+              sparkColor="var(--color-chart-2)"
+            />
+          ) : null}
           <StatCard
-            label={t("customers.lifetimeValue")}
-            value={formatDZD(stats.totalSpent)}
-            icon={<TrendingUp />}
-            accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-            accentIcon="text-success"
-            spark={spendingSeries}
-            sparkColor="var(--color-chart-2)"
-            style={{ animationDelay: "60ms" }}
+            label={t("customers.totalOrders")}
+            value={stats.totalOrders}
+            icon={<ShoppingBag />}
           />
-        )}
-        <StatCard
-          label={t("customers.totalOrders")}
-          value={stats.totalOrders}
-          icon={<ShoppingBag />}
-          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
-          accentIcon="text-teal-600 dark:text-teal-400"
-          style={{ animationDelay: "120ms" }}
-        />
-        <StatCard
-          label={t("customers.deliveryRate")}
-          value={`${stats.deliveryRate}%`}
-          icon={<Truck />}
-          accentBg="bg-violet-500/10 dark:bg-violet-500/15"
-          accentIcon="text-violet-600 dark:text-violet-400"
-          style={{ animationDelay: "180ms" }}
-        />
-        {canReadOrderFinancials && (
           <StatCard
-            label={t("customers.avgOrderValue")}
-            value={formatDZD(stats.avgOrderValue)}
-            icon={<TrendingUp />}
-            accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-            accentIcon="text-warning"
-            style={{ animationDelay: "240ms" }}
+            label={t("customers.deliveryRate")}
+            value={`${stats.deliveryRate}%`}
+            icon={<Truck />}
           />
-        )}
+          {stats.avgOrderValue !== null ? (
+            <StatCard
+              label={t("customers.avgOrderValue")}
+              value={formatDZD(stats.avgOrderValue, locale)}
+              icon={<TrendingUp />}
+            />
+          ) : null}
         </div>
-      )}
+      ) : null}
 
-      {/* Delivery breakdown + Notes */}
-      {(stats || customer.fieldAccess.contact) && (
+      {stats || customer.fieldAccess.contact ? (
         <div className="card-grid-3">
-        {stats && (
-        <Card className="lg:col-span-1 animate-fade-up">
+          {stats ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{t("customers.deliveryRate")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">{t("customers.delivered")}</p>
+                    <p className="text-lg font-bold tabular-nums">{stats.deliveredCount}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">{t("customers.returned")}</p>
+                    <p className="text-lg font-bold tabular-nums">{stats.returnedCount}</p>
+                  </div>
+                </div>
+                {stats.firstOrderDate ? (
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground">{t("customers.firstOrder")}</p>
+                    <p className="text-sm font-medium">{formatDate(stats.firstOrderDate, locale)}</p>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {customer.fieldAccess.contact ? (
+            <Card className={stats ? "lg:col-span-2" : "lg:col-span-3"}>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  {customer.notes ? t("publicForm.notes") : t("customers.address")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap text-sm">
+                  {customer.notes ?? customer.address ?? "—"}
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
+
+      {workbench.canReadOrders ? (
+        <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t("customers.deliveryRate")}</CardTitle>
+            <CardTitle className="text-base">{t("customers.orderHistory")}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">{t("customers.delivered")}</p>
-                <p className="text-lg font-bold tabular-nums text-success">{stats.deliveredCount}</p>
+          <CardContent>
+            {orders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <ShoppingBag className="mb-2 size-8 text-muted-foreground" aria-hidden="true" />
+                <p className="text-sm text-muted-foreground">{t("customers.noOrders")}</p>
               </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">{t("customers.returned")}</p>
-                <p className="text-lg font-bold tabular-nums text-destructive">{stats.returnedCount}</p>
-              </div>
-            </div>
-            {stats.firstOrderDate && (
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <p className="text-xs text-muted-foreground">{t("customers.firstOrder")}</p>
-                <p className="text-sm font-medium">{formatDate(stats.firstOrderDate, locale)}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>{t("orders.status")}</TableHead>
+                      <TableHead className="text-end">{t("orders.total")}</TableHead>
+                      <TableHead>{t("orders.date")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((order) => {
+                      const status = order.status as OrderStatus;
+                      const style = orderStatusStyles[status];
+                      return (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-mono text-sm">
+                            <Link
+                              href={`/orders/${order.id}`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {order.orderNumber}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            {style ? (
+                              <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.border}`}>
+                                <span className={`size-1.5 rounded-full ${style.dot}`} />
+                                {t(style.i18nKey)}
+                              </span>
+                            ) : (
+                              <Badge variant="outline">{t(statusI18nKey(status))}</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-end tabular-nums">
+                            {order.totalPrice === null ? "—" : formatDZD(order.totalPrice, locale)}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(order.createdAt, locale)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
         </Card>
-        )}
-
-        {customer.fieldAccess.contact && customer.notes && (
-          <Card className="lg:col-span-2 animate-fade-up">
-            <CardHeader>
-              <CardTitle className="text-base">{t("publicForm.notes")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm whitespace-pre-wrap">{customer.notes}</p>
-            </CardContent>
-          </Card>
-        )}
-        {customer.fieldAccess.contact && !customer.notes && (
-          <Card className="lg:col-span-2 animate-fade-up">
-            <CardHeader>
-              <CardTitle className="text-base">{t("customers.address")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm">{customer.address || "—"}</p>
-            </CardContent>
-          </Card>
-        )}
-        </div>
-      )}
-
-      {/* Order history */}
-      {canReadOrders && (
-        <Card className="animate-fade-up">
-        <CardHeader>
-          <CardTitle className="text-base">{t("customers.orderHistory")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {orders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <ShoppingBag className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">{t("customers.noOrders")}</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-        <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>#</TableHead>
-                  <TableHead>{t("orders.status")}</TableHead>
-                  <TableHead className="text-end">{t("orders.total")}</TableHead>
-                  <TableHead>{t("orders.date")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => {
-                  const status = order.status as OrderStatus;
-                  const style = orderStatusStyles[status];
-                  return (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-mono text-sm">
-                        <Link href={`/orders/${order.id}`} className="font-medium hover:underline">
-                          {order.orderNumber}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        {style ? (
-                          <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.border}`}>
-                            <span className={`size-1.5 rounded-full ${style.dot}`} />
-                            {t(style.i18nKey)}
-                          </span>
-                        ) : (
-                          <Badge variant="outline">{t(statusI18nKey(status))}</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
-                        {order.totalPrice !== null
-                          ? formatDZD(order.totalPrice)
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(order.createdAt, locale)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-        </div>
-          )}
-        </CardContent>
-        </Card>
-      )}
+      ) : null}
     </div>
   );
 }

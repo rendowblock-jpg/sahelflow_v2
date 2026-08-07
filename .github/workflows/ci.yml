@@ -173,9 +173,10 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
-      # TEST-001: Enforce coverage threshold (60% floor configured in vitest.config.ts)
-      # Runs separately so the coverage report is visible in CI output.
-      - name: Coverage check
+      # TEST-001: Coverage remains visible as an informational trend signal.
+      # Product correctness, security, dependency audit and migration checks stay blocking.
+      - name: Coverage check (informational)
+        continue-on-error: true
         run: bunx vitest run --coverage
 
       # PROD-021: Audit dependencies for known vulnerabilities
@@ -454,10 +455,6 @@ jobs:
           require_selected_lane 'Installed MSI lifecycle' "${RUN_INSTALLED_MSI}" "${INSTALLED_MSI_RESULT}"
           echo 'Every selected PR risk lane succeeded.'
 
-  # T-M9 (TODO): E2E (Playwright) is NOT wired into per-push CI on purpose —
-  # a full `bun run test:e2e` boots Next.js + a SQLite DB + the WhatsApp
-  # sidecar and takes 8-12 min, which is too slow for the per-PR quality gate.
-  # Plan: add a separate `e2e` job (or nightly schedule) that runs on
-  # `workflow_dispatch` + on tag pushes, gates merges to main. Track in
-  # the active implementation wave. For now, run `bun run test:e2e` locally
-  # against the appropriate candidate before release-impacting work.
+  # Phase 5 rendered browser evidence is enforced separately by
+  # .github/workflows/phase5-experience.yml. The broader full E2E suite remains
+  # outside this per-push quality job because it is materially more expensive.

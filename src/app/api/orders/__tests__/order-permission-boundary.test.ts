@@ -14,7 +14,7 @@ describe("central order permission wiring inventory", () => {
 
     expect(collection).toContain('requireTrustedAction("orders.read")');
     expect(collection).toContain('requireTrustedAction("orders.create")');
-    expect(collection).toContain("projectOrdersForTrustedActor");
+    expect(collection).toContain("getOrdersWorkbenchPage");
     expect(collection).toContain("projectOrderForTrustedActor");
     expect(collection).not.toContain("requireAuth()");
 

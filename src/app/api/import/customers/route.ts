@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
+import { customerService } from "@/lib/data";
 import {
   parseFile,
   mapRows,
@@ -25,7 +26,7 @@ const customerImportSchema = z.object({
   notes: z.string().optional(),
 });
 
-/** POST /api/import/customers — preview (commit=false) or insert (commit=true). */
+/** POST /api/import/customers — preview (commit=false) or canonical insert. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth([
     "data.import",
@@ -43,34 +44,36 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     return NextResponse.json({ error: t("import.missingFile") }, { status: 400 });
   }
 
-  const buffer = await file.arrayBuffer();
-  const parsed = parseFile(buffer, file.name);
-
+  const parsed = parseFile(await file.arrayBuffer(), file.name);
   if (parsed.rows.length === 0) {
     return NextResponse.json({ error: t("import.emptyFile") }, { status: 400 });
   }
 
-  let mapping = parsed.headers.reduce<Record<string, string>>((acc, h) => {
-    acc[h] = h;
+  let mapping = parsed.headers.reduce<Record<string, string>>((acc, header) => {
+    acc[header] = header;
     return acc;
   }, {});
   if (mappingJson) {
     try {
       mapping = JSON.parse(mappingJson) as Record<string, string>;
     } catch {
-      /* fall back */
+      // Invalid explicit mapping falls back to auto-detection below.
+      mapping = autoDetectMapping(
+        parsed.headers,
+        CUSTOMER_FIELDS.map((field) => ({ key: field.key, aliases: field.aliases })),
+      );
     }
   } else {
     mapping = autoDetectMapping(
       parsed.headers,
-      CUSTOMER_FIELDS.map((f) => ({ key: f.key, aliases: f.aliases })),
+      CUSTOMER_FIELDS.map((field) => ({ key: field.key, aliases: field.aliases })),
     );
   }
 
-  const mapped = mapRows(parsed.rows, mapping).map((r) => {
-    const data = r.data as Record<string, string>;
+  const mapped = mapRows(parsed.rows, mapping).map((row) => {
+    const data = row.data as Record<string, string>;
     return {
-      rowIndex: r.rowIndex,
+      rowIndex: row.rowIndex,
       data: {
         name: data.name ?? "",
         phone: normalizePhone(data.phone ?? ""),
@@ -82,7 +85,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       },
     };
   });
-
   const validation = validateRows(mapped, customerImportSchema);
 
   if (!commit) {
@@ -93,7 +95,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       validCount: validation.valid.length,
       invalidCount: validation.invalid.length,
       invalid: validation.invalid.slice(0, 20),
-      preview: validation.valid.slice(0, 10).map((r) => r.data),
+      preview: validation.valid.slice(0, 10).map((row) => row.data),
     });
   }
 
@@ -103,17 +105,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     const errors: Array<{ rowIndex: number; error: string }> = [];
     for (const row of chunk) {
       try {
-        await context.prisma.customer.create({ data: row.data });
-        inserted++;
-      } catch (err) {
+        await customerService.create(context, row.data);
+        inserted += 1;
+      } catch (error) {
         errors.push({
           rowIndex: row.rowIndex,
-          error:
-            err instanceof Error
-              ? err.message.includes("Unique")
-                ? t("import.duplicatePhone")
-                : err.message
-              : t("common.errorGeneric"),
+          error: error instanceof Error ? error.message : t("common.errorGeneric"),
         });
       }
     }

@@ -17,6 +17,8 @@ import {
   Truck,
   Users,
 } from "lucide-react";
+
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -209,6 +211,7 @@ export function DemoDataPanel() {
     "refresh",
   );
   const [error, setError] = useState<string | null>(null);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -237,7 +240,6 @@ export function DemoDataPanel() {
   };
 
   const mutate = async (method: "POST" | "DELETE") => {
-    if (method === "DELETE" && !window.confirm(copy.confirmRemove)) return;
     setBusy(method === "POST" ? "load" : "remove");
     setError(null);
     try {
@@ -273,15 +275,12 @@ export function DemoDataPanel() {
 
   return (
     <div className="space-y-4">
-      <Card className="overflow-hidden border-primary/20">
-        <CardHeader className="border-b bg-gradient-to-br from-primary/10 via-background to-background">
+      <Card className="shadow-none">
+        <CardHeader className="border-b">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-2">
-              <Badge
-                variant="outline"
-                className="gap-1.5 border-primary/30 bg-primary/5 text-primary"
-              >
-                <Sparkles className="size-3.5" />
+              <Badge variant="outline" className="gap-1.5">
+                <Sparkles className="size-3.5" aria-hidden="true" />
                 {copy.eyebrow}
               </Badge>
               <CardTitle className="text-xl">{copy.title}</CardTitle>
@@ -289,8 +288,8 @@ export function DemoDataPanel() {
                 {copy.description}
               </CardDescription>
             </div>
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20">
-              <Database className="size-6" />
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+              <Database className="size-5" aria-hidden="true" />
             </div>
           </div>
         </CardHeader>
@@ -299,12 +298,12 @@ export function DemoDataPanel() {
           <div className="flex flex-wrap items-center gap-2">
             {status?.loaded ? (
               <Badge className="gap-1.5">
-                <ShieldCheck className="size-3.5" />
+                <ShieldCheck className="size-3.5" aria-hidden="true" />
                 {copy.loaded}
               </Badge>
             ) : status?.canSeed ? (
               <Badge variant="secondary" className="gap-1.5">
-                <Sparkles className="size-3.5" />
+                <Sparkles className="size-3.5" aria-hidden="true" />
                 {copy.available}
               </Badge>
             ) : status ? (
@@ -313,88 +312,86 @@ export function DemoDataPanel() {
             <span className="text-xs text-muted-foreground">{copy.emptyOnly}</span>
           </div>
 
-          {status?.loaded && (
+          {status?.loaded ? (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
               {metrics.map(({ icon: Icon, value, label }) => (
-                <div key={label} className="rounded-lg border bg-muted/20 p-3">
+                <div key={label} className="rounded-md border bg-muted/20 p-3">
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <Icon className="size-4" />
+                    <Icon className="size-4" aria-hidden="true" />
                     <span className="text-xs">{label}</span>
                   </div>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
 
-          <div className="rounded-xl border bg-muted/20 p-4">
+          <div className="rounded-md border bg-muted/20 p-4">
             <p className="text-sm font-semibold">{copy.journeyTitle}</p>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
               {copy.journey}
             </p>
           </div>
 
-          {status && !status.loaded && !status.canSeed && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
-              <p className="font-medium text-amber-700 dark:text-amber-300">
-                {copy.unavailable}
-              </p>
+          {status && !status.loaded && !status.canSeed ? (
+            <div className="rounded-md border border-warning/30 bg-warning/5 p-4 text-sm">
+              <p className="font-medium text-warning">{copy.unavailable}</p>
               <p className="mt-1 text-muted-foreground">
                 {copy.unavailableDescription}
               </p>
             </div>
-          )}
+          ) : null}
 
-          {error && (
+          {error ? (
             <div
               role="alert"
-              className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+              className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
             >
               <span className="font-medium">{copy.failed}: </span>
               {error}
             </div>
-          )}
+          ) : null}
 
           <div className="flex flex-wrap gap-2">
-            {!status?.loaded && (
+            {!status?.loaded ? (
               <Button
                 type="button"
                 onClick={() => void mutate("POST")}
                 disabled={!status?.canSeed || busy !== null}
               >
                 {busy === "load" ? (
-                  <Loader2 className="me-2 size-4 animate-spin" />
+                  <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Sparkles className="me-2 size-4" />
+                  <Sparkles className="me-2 size-4" aria-hidden="true" />
                 )}
                 {busy === "load" ? copy.loading : copy.load}
               </Button>
-            )}
+            ) : null}
 
-            {status?.loaded && (
+            {status?.loaded ? (
               <>
                 <Button asChild>
                   <Link href="/dashboard">
                     {copy.openDashboard}
-                    <ExternalLink className="ms-2 size-4" />
+                    <ExternalLink className="ms-2 size-4" aria-hidden="true" />
                   </Link>
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => void mutate("DELETE")}
+                  onClick={() => setRemoveConfirmOpen(true)}
                   disabled={busy !== null}
                   className="text-destructive hover:text-destructive"
                 >
                   {busy === "remove" ? (
-                    <Loader2 className="me-2 size-4 animate-spin" />
+                    <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
                   ) : (
-                    <Trash2 className="me-2 size-4" />
+                    <Trash2 className="me-2 size-4" aria-hidden="true" />
                   )}
                   {busy === "remove" ? copy.removing : copy.remove}
                 </Button>
               </>
-            )}
+            ) : null}
 
             <Button
               type="button"
@@ -402,21 +399,31 @@ export function DemoDataPanel() {
               onClick={() => void refreshStatus()}
               disabled={busy !== null}
             >
-              {busy === "refresh" && (
-                <Loader2 className="me-2 size-4 animate-spin" />
-              )}
+              {busy === "refresh" ? (
+                <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
+              ) : null}
               {copy.refresh}
             </Button>
           </div>
 
-          <div className="flex items-start gap-2 rounded-lg border bg-muted/20 p-3 text-xs leading-5 text-muted-foreground">
-            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+          <div className="flex items-start gap-2 rounded-md border bg-muted/20 p-3 text-xs leading-5 text-muted-foreground">
+            <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>
               {copy.isolated} {copy.note}
             </span>
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={removeConfirmOpen}
+        onOpenChange={setRemoveConfirmOpen}
+        title={copy.remove}
+        description={copy.confirmRemove}
+        confirmLabel={copy.remove}
+        destructive
+        onConfirm={() => mutate("DELETE")}
+      />
     </div>
   );
 }

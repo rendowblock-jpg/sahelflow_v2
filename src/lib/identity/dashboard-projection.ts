@@ -35,10 +35,10 @@ type DashboardProjectionSource = Readonly<{
     id: string;
     orderNumber: string;
     status: string;
-    wilaya: string;
-    totalPrice: number;
+    wilaya?: string;
+    totalPrice?: number;
     items: readonly unknown[];
-    customer: Readonly<{ name: string | null }>;
+    customer?: Readonly<{ name: string | null }> | null;
   }>[];
   analytics: Readonly<{
     revenueSeries: readonly Readonly<{ revenue: number; orders: number }>[];
@@ -62,7 +62,7 @@ function allowed(
   });
 }
 
-/** Resolve every dashboard field decision before any private data is queried. */
+/** Resolve every dashboard field decision before private rows are queried. */
 export function resolveDashboardFieldAccess(
   actorContext: TrustedActorContext,
 ): DashboardFieldAccess {
@@ -122,11 +122,13 @@ export function projectDashboardForTrustedActor(
           orderNumber: order.orderNumber,
           status: order.status,
           customerName: fieldAccess.customerContact
-            ? order.customer.name
+            ? order.customer?.name ?? null
             : null,
-          wilaya: fieldAccess.customerContact ? order.wilaya : null,
+          wilaya: fieldAccess.customerContact ? order.wilaya ?? null : null,
           itemCount: order.items.length,
-          totalPrice: fieldAccess.orderFinancials ? order.totalPrice : null,
+          totalPrice: fieldAccess.orderFinancials
+            ? order.totalPrice ?? null
+            : null,
         }),
       )
     : [];

@@ -1,36 +1,5 @@
 "use client";
 
-/**
- * DataTable v2 — premium data table built on TanStack Table (Phase 1).
- *
- * The reusable primitive for all list pages (orders, customers, products,
- * deliveries, returns). Replaces the ad-hoc HTML <table> + take:200 pattern.
- *
- * Features (the "real app" bar from R-2/R-5):
- *   - Cursor/offset pagination (prev/next + page indicator)
- *   - URL-synced sort + page (via nuqs — shareable, back-button works)
- *   - Density toggle (compact/comfortable) — persisted to localStorage
- *   - Bulk selection (checkboxes) + bulk action bar
- *   - Loading skeleton rows (not bare spinner)
- *   - Empty state (illustrated + CTA, not "No data")
- *   - Responsive column hiding (via column meta `hideOn`)
- *   - Row click navigation (via `onRowClick`)
- *   - Frozen first column (for the checkbox column)
- *   - RTL-aware (logical properties throughout)
- *
- * Usage:
- *   const columns = useOrderColumns();
- *   const { data, isLoading, pagination } = useOrders();
- *   <DataTable
- *     columns={columns}
- *     data={data?.orders ?? []}
- *     isLoading={isLoading}
- *     pagination={pagination}
- *     onRowClick={(row) => router.push(`/orders/${row.id}`)}
- *     bulkActions={[{ label: "Confirm", onClick: handleBulkConfirm }]}
- *     emptyState={<EmptyState icon={Package} title="No orders" ... />}
- *   />
- */
 import * as React from "react";
 import {
   flexRender,
@@ -38,20 +7,26 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
-  type SortingState,
-  type RowSelectionState,
-  type Table,
   type Row,
+  type RowSelectionState,
+  type SortingState,
+  type Table,
 } from "@tanstack/react-table";
 import { useQueryStates } from "nuqs";
-import { cn } from "@/lib/utils";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-import { useI18n } from "@/hooks/use-i18n";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Loader2,
+} from "lucide-react";
 
-// ── Density ────────────────────────────────────────────────────────────
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useI18n } from "@/hooks/use-i18n";
+import { cn } from "@/lib/utils";
+
 type Density = "compact" | "comfortable";
 const DENSITY_STORAGE_KEY = "sf-density";
 const DENSITY_CLASSES: Record<Density, { cell: string; head: string }> = {
@@ -59,51 +34,56 @@ const DENSITY_CLASSES: Record<Density, { cell: string; head: string }> = {
   comfortable: { cell: "px-4 py-3", head: "px-4 py-3" },
 };
 
-function useDensity(): [Density, (d: Density) => void] {
-  // Lazy initializer reads localStorage once on mount (client-only — no SSR
-  // flash because the default "comfortable" matches the first render).
+function useDensity(): [Density, (density: Density) => void] {
   const [density, setDensityState] = React.useState<Density>(() => {
     if (typeof window === "undefined") return "comfortable";
     try {
       const stored = localStorage.getItem(DENSITY_STORAGE_KEY) as Density | null;
       if (stored === "compact" || stored === "comfortable") return stored;
-    } catch { /* blocked */ }
+    } catch {
+      // Storage can be unavailable in restricted browser contexts.
+    }
     return "comfortable";
   });
-  const setDensity = React.useCallback((d: Density) => {
-    setDensityState(d);
-    try { localStorage.setItem(DENSITY_STORAGE_KEY, d); } catch { /* ignore */ }
+
+  const setDensity = React.useCallback((next: Density) => {
+    setDensityState(next);
+    try {
+      localStorage.setItem(DENSITY_STORAGE_KEY, next);
+    } catch {
+      // Density remains a session preference when persistence is unavailable.
+    }
   }, []);
+
   return [density, setDensity];
 }
 
-// ── URL-state parsers (nuqs) ──────────────────────────────────────────
 const sortParser = {
-  parse: (v: string | null) => v ?? "",
-  serialize: (v: string) => v || "",
+  parse: (value: string | null) => value ?? "",
+  serialize: (value: string) => value || "",
 };
 const pageParser = {
-  parse: (v: string | null) => (v ? Math.max(1, parseInt(v, 10) || 1) : 1),
-  serialize: (v: number) => String(v),
+  parse: (value: string | null) =>
+    value ? Math.max(1, Number.parseInt(value, 10) || 1) : 1,
+  serialize: (value: number) => String(value),
 };
 
-// ── Pagination interface ──────────────────────────────────────────────
 export interface DataTablePagination {
-  /** Current page (1-based). */
   page: number;
-  /** Items per page. */
   pageSize: number;
-  /** Total item count (for page count display). undefined = unknown. */
   total?: number;
-  /** Is there a next page? Required if total is unknown (cursor mode). */
   hasNextPage?: boolean;
-  /** Called when user navigates to a page. */
   onPageChange: (page: number) => void;
-  /** Is the current page loading (refetch)? */
   isLoading?: boolean;
+  /**
+   * When true, URL sort changes are part of the server query contract and the
+   * table must not locally reorder one page as though it sorted the dataset.
+   */
+  serverSort?: boolean;
+  /** Authoritative normalized server sort, for example `createdAt.desc`. */
+  sort?: string;
 }
 
-// ── Bulk action ───────────────────────────────────────────────────────
 export interface BulkAction {
   label: string;
   onClick: (selectedIds: string[]) => void;
@@ -112,43 +92,39 @@ export interface BulkAction {
   disabled?: boolean;
 }
 
-// ── Column meta (for responsive hiding) ───────────────────────────────
 declare module "@tanstack/react-table" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnMeta<TData, TValue> {
-    /** Hide column on small screens. */
     hideOn?: "sm" | "md" | "lg";
-    /** Cell alignment (logical: start/end/center). */
     align?: "start" | "center" | "end";
-    /** Fixed width utility class. */
     width?: string;
   }
 }
 
-// ── Main component ────────────────────────────────────────────────────
 interface DataTableProps<TData> {
   columns: ColumnDef<TData, unknown>[];
   data: TData[];
-  /** Loading state — shows skeleton rows. */
   isLoading?: boolean;
-  /** Pagination controls (omit for non-paginated tables). */
   pagination?: DataTablePagination;
-  /** Row click handler (usually navigate to detail). */
   onRowClick?: (row: TData) => void;
-  /** Bulk actions shown when rows are selected. */
   bulkActions?: BulkAction[];
-  /** Custom empty state (shown when data.length === 0 && !isLoading). */
   emptyState?: React.ReactNode;
-  /** Get the row ID (for selection). Defaults to (row) => row.id. */
   getRowId?: (row: TData) => string;
-  /** Show the density toggle (default true). */
   showDensityToggle?: boolean;
-  /** Skeleton row count for loading state. */
   skeletonRows?: number;
-  /** className for the table wrapper. */
   className?: string;
 }
 
+/**
+ * SahelFlow operational table.
+ *
+ * This remains a semantic HTML table rather than pretending every list is an
+ * ARIA grid. Sortable headers contain real buttons. A paginated table exposes
+ * sort only when its backend declares a matching server contract; otherwise it
+ * avoids the false impression that reordering one page sorted the complete set.
+ * Row navigation remains a pointer convenience only; keyboard navigation belongs
+ * to real labelled links rendered inside the row rather than focusable <tr>s.
+ */
 export function DataTable<TData>({
   columns,
   data,
@@ -165,59 +141,94 @@ export function DataTable<TData>({
   const { t } = useI18n();
   const [density, setDensity] = useDensity();
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
-
-  // URL-synced sorting (nuqs) — only if no server-side sort via pagination
   const [sortUrl, setSortUrl] = useQueryStates(
     { sort: sortParser, page: pageParser },
     { shallow: true },
   );
+  const effectiveSort = pagination?.serverSort
+    ? (pagination.sort ?? sortUrl.sort)
+    : sortUrl.sort;
 
   const sorting = React.useMemo<SortingState>(() => {
-    if (!sortUrl.sort) return [];
-    const [id, dir] = sortUrl.sort.split(".");
+    if (!effectiveSort) return [];
+    const [id, direction] = effectiveSort.split(".");
     if (!id) return [];
-    return [{ id, desc: dir === "desc" }];
-  }, [sortUrl.sort]);
+    return [{ id, desc: direction === "desc" }];
+  }, [effectiveSort]);
 
+  const sortingEnabled = pagination ? Boolean(pagination.serverSort) : true;
   const table = useReactTable({
     data,
     columns,
     state: { sorting, rowSelection },
     enableRowSelection: true,
+    enableSorting: sortingEnabled,
+    enableSortingRemoval: !pagination?.serverSort,
     onRowSelectionChange: setRowSelection,
     onSortingChange: (updater) => {
+      if (!sortingEnabled) return;
       const next = typeof updater === "function" ? updater(sorting) : updater;
       const first = next[0];
-      setSortUrl({ sort: first ? `${first.id}.${first.desc ? "desc" : "asc"}` : "", page: 1 });
+      const nextSort = first
+        ? `${first.id}.${first.desc ? "desc" : "asc"}`
+        : (pagination?.sort ?? "");
+      setRowSelection({});
+      void setSortUrl({ sort: nextSort, page: 1 });
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId,
-    manualPagination: !!pagination, // server-side pagination
+    manualPagination: Boolean(pagination),
+    manualSorting: Boolean(pagination?.serverSort),
   });
 
-  const selectedIds = React.useMemo(
-    () => Object.keys(rowSelection).filter((k) => rowSelection[k]),
-    [rowSelection],
+  const visibleIds = React.useMemo(
+    () => new Set(data.map((row) => getRowId(row))),
+    [data, getRowId],
   );
-
+  const selectedIds = React.useMemo(
+    () =>
+      Object.keys(rowSelection).filter(
+        (key) => rowSelection[key] && visibleIds.has(key),
+      ),
+    [rowSelection, visibleIds],
+  );
   const dens = DENSITY_CLASSES[density];
-
-  // ── Pagination info ──
-  const totalPages = pagination?.total
-    ? Math.ceil(pagination.total / pagination.pageSize)
-    : undefined;
   const currentPage = pagination?.page ?? 1;
-  const hasNext = pagination?.hasNextPage ?? (totalPages ? currentPage < totalPages : false);
+  const totalPages =
+    pagination?.total != null
+      ? Math.max(1, Math.ceil(pagination.total / pagination.pageSize))
+      : undefined;
+  const hasNext =
+    pagination?.hasNextPage ??
+    (totalPages !== undefined ? currentPage < totalPages : false);
   const hasPrev = currentPage > 1;
 
+  const changePage = React.useCallback(
+    (page: number) => {
+      if (!pagination) return;
+      setRowSelection({});
+      pagination.onPageChange(page);
+    },
+    [pagination],
+  );
+
+  const paginationLabel = pagination
+    ? t("dataTable.pageOf", {
+        current: currentPage,
+        total: totalPages ?? currentPage,
+        count: pagination.total ?? data.length,
+      })
+    : undefined;
+
   return (
-    <div className={cn("space-y-3", className)}>
-      {/* Bulk action toolbar */}
-      {bulkActions && selectedIds.length > 0 && (
+    <div className={cn("space-y-3", className)} data-table-density={density}>
+      {bulkActions && selectedIds.length > 0 ? (
         <div
-          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/50 px-4 py-2.5 animate-fade-up"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/35 px-3 py-2"
           data-testid="data-table-bulk-bar"
+          role="toolbar"
+          aria-label={t("dataTable.selected", { count: selectedIds.length })}
         >
           <span className="text-sm font-medium">
             {t("dataTable.selected", { count: selectedIds.length })}
@@ -231,7 +242,9 @@ export function DataTable<TData>({
                 onClick={() => action.onClick(selectedIds)}
                 disabled={action.disabled}
               >
-                {action.icon && <action.icon className="me-2 h-3.5 w-3.5" />}
+                {action.icon ? (
+                  <action.icon className="me-2 size-3.5" aria-hidden="true" />
+                ) : null}
                 {action.label}
               </Button>
             ))}
@@ -244,53 +257,75 @@ export function DataTable<TData>({
             </Button>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Table — rounded border wrapper, sticky header */}
-      <div className="overflow-hidden rounded-lg border bg-card shadow-xs">
+      <div className="overflow-hidden rounded-md border bg-background">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="sticky top-0 z-10 border-b bg-muted">
-              {table.getHeaderGroups().map((hg) => (
-                <tr key={hg.id} className="text-start">
-                  {hg.headers.map((header) => {
+          <table className="w-full" aria-busy={isLoading}>
+            <thead className="sticky top-0 z-10 border-b bg-muted/80 backdrop-blur-sm">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id} className="text-start">
+                  {headerGroup.headers.map((header) => {
                     const meta = header.column.columnDef.meta;
-                    const hideClass = meta?.hideOn === "sm" ? "hidden sm:table-cell"
-                      : meta?.hideOn === "md" ? "hidden md:table-cell"
-                      : meta?.hideOn === "lg" ? "hidden lg:table-cell"
-                      : "";
-                    const alignClass = meta?.align === "end" ? "text-end"
-                      : meta?.align === "center" ? "text-center"
-                      : "text-start";
+                    const hideClass =
+                      meta?.hideOn === "sm"
+                        ? "hidden sm:table-cell"
+                        : meta?.hideOn === "md"
+                          ? "hidden md:table-cell"
+                          : meta?.hideOn === "lg"
+                            ? "hidden lg:table-cell"
+                            : "";
+                    const alignClass =
+                      meta?.align === "end"
+                        ? "text-end"
+                        : meta?.align === "center"
+                          ? "text-center"
+                          : "text-start";
                     const canSort = header.column.getCanSort();
-                    const sortDir = header.column.getIsSorted();
+                    const sortDirection = header.column.getIsSorted();
+                    const content = header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        );
+
                     return (
                       <th
                         key={header.id}
+                        scope="col"
                         className={cn(
-                          "text-xs font-medium uppercase tracking-wider text-muted-foreground whitespace-nowrap",
+                          "whitespace-nowrap text-xs font-medium uppercase tracking-wide text-muted-foreground",
                           dens.head,
                           alignClass,
                           hideClass,
                           meta?.width,
-                          canSort && "cursor-pointer hover:text-foreground select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                         )}
-                        role={canSort ? "button" : undefined}
-                        tabIndex={canSort ? 0 : undefined}
                         aria-sort={
-                          sortDir === "asc" ? "ascending"
-                          : sortDir === "desc" ? "descending"
-                          : "none"
+                          canSort
+                            ? sortDirection === "asc"
+                              ? "ascending"
+                              : sortDirection === "desc"
+                                ? "descending"
+                                : "none"
+                            : undefined
                         }
-                        onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
-                        onKeyDown={canSort ? (e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            header.column.getToggleSortingHandler()?.(e);
-                          }
-                        } : undefined}
                       >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {canSort ? (
+                          <button
+                            type="button"
+                            className={cn(
+                              "inline-flex min-h-7 max-w-full items-center rounded px-1 text-inherit outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                              meta?.align === "end" && "ms-auto",
+                              meta?.align === "center" && "mx-auto",
+                            )}
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {content}
+                          </button>
+                        ) : (
+                          content
+                        )}
                       </th>
                     );
                   })}
@@ -299,11 +334,10 @@ export function DataTable<TData>({
             </thead>
             <tbody className="divide-y">
               {isLoading ? (
-                // Skeleton rows
-                Array.from({ length: skeletonRows }).map((_, i) => (
-                  <tr key={`skeleton-${i}`}>
-                    {columns.map((_, j) => (
-                      <td key={j} className={dens.cell}>
+                Array.from({ length: skeletonRows }).map((_, rowIndex) => (
+                  <tr key={`skeleton-${rowIndex}`}>
+                    {columns.map((_, columnIndex) => (
+                      <td key={columnIndex} className={dens.cell}>
                         <Skeleton className="h-4 w-full max-w-[120px]" />
                       </td>
                     ))}
@@ -313,7 +347,9 @@ export function DataTable<TData>({
                 <tr>
                   <td colSpan={columns.length} className="h-32 text-center">
                     {emptyState ?? (
-                      <span className="text-sm text-muted-foreground">{t("dataTable.noData")}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {t("dataTable.noData")}
+                      </span>
                     )}
                   </td>
                 </tr>
@@ -322,41 +358,65 @@ export function DataTable<TData>({
                   <tr
                     key={row.id}
                     className={cn(
-                      "transition-colors hover:bg-muted/50",
+                      "transition-colors hover:bg-muted/40",
                       onRowClick && "cursor-pointer",
                       row.getIsSelected() && "bg-primary/5",
                     )}
-                    onClick={onRowClick ? (e) => {
-                      const target = e.target as HTMLElement;
-                      if (target.closest("button") || target.closest("a") || target.closest('[role="checkbox"]')) return;
-                      onRowClick(row.original);
-                    } : undefined}
+                    onClick={
+                      onRowClick
+                        ? (event) => {
+                            const target = event.target as HTMLElement;
+                            if (
+                              target.closest("button") ||
+                              target.closest("a") ||
+                              target.closest("input") ||
+                              target.closest("select") ||
+                              target.closest('[role="checkbox"]') ||
+                              target.closest("[data-no-row-click]")
+                            ) {
+                              return;
+                            }
+                            onRowClick(row.original);
+                          }
+                        : undefined
+                    }
                   >
                     {row.getVisibleCells().map((cell) => {
                       const meta = cell.column.columnDef.meta;
-                      const hideClass = meta?.hideOn === "sm" ? "hidden sm:table-cell"
-                        : meta?.hideOn === "md" ? "hidden md:table-cell"
-                        : meta?.hideOn === "lg" ? "hidden lg:table-cell"
-                        : "";
-                      const alignClass = meta?.align === "end" ? "text-end"
-                        : meta?.align === "center" ? "text-center"
-                        : "text-start";
+                      const hideClass =
+                        meta?.hideOn === "sm"
+                          ? "hidden sm:table-cell"
+                          : meta?.hideOn === "md"
+                            ? "hidden md:table-cell"
+                            : meta?.hideOn === "lg"
+                              ? "hidden lg:table-cell"
+                              : "";
+                      const alignClass =
+                        meta?.align === "end"
+                          ? "text-end"
+                          : meta?.align === "center"
+                            ? "text-center"
+                            : "text-start";
                       return (
                         <td
                           key={cell.id}
                           className={cn(
-                            "text-sm align-middle whitespace-nowrap",
+                            "whitespace-nowrap text-sm align-middle",
                             dens.cell,
                             alignClass,
                             hideClass,
                             meta?.width,
                           )}
-                          onClick={(e) => {
-                            // Stop propagation for checkbox cell
-                            if (cell.column.id === "select") e.stopPropagation();
+                          onClick={(event) => {
+                            if (cell.column.id === "select") {
+                              event.stopPropagation();
+                            }
                           }}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
                         </td>
                       );
                     })}
@@ -368,86 +428,109 @@ export function DataTable<TData>({
         </div>
       </div>
 
-      {/* Footer: pagination + density */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Density toggle */}
-        {showDensityToggle && (
-          <div className="flex items-center gap-1 rounded-md border p-0.5" role="group" aria-label={t("dataTable.density")}>
-            {(["comfortable", "compact"] as Density[]).map((d) => (
+        {showDensityToggle ? (
+          <div
+            className="flex items-center gap-1 rounded-md border p-0.5"
+            role="group"
+            aria-label={t("dataTable.density")}
+          >
+            {(["comfortable", "compact"] as Density[]).map((option) => (
               <button
-                key={d}
+                key={option}
                 type="button"
-                onClick={() => setDensity(d)}
+                onClick={() => setDensity(option)}
                 className={cn(
-                  "rounded px-2 py-1 text-xs font-medium transition-colors",
-                  density === d
+                  "rounded px-2 py-1 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  density === option
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",
                 )}
-                aria-pressed={density === d}
+                aria-pressed={density === option}
               >
-                {d === "comfortable" ? t("dataTable.normal") : t("dataTable.compact")}
+                {option === "comfortable"
+                  ? t("dataTable.normal")
+                  : t("dataTable.compact")}
               </button>
             ))}
           </div>
+        ) : (
+          <span />
         )}
 
-        {/* Pagination */}
-        {pagination && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              {pagination.total != null
-                ? t("dataTable.pageOf", { current: currentPage, total: totalPages ?? 0, count: pagination.total })
-                : `Page ${currentPage}`}
+        {pagination ? (
+          <nav
+            className="flex items-center gap-2"
+            aria-label={paginationLabel}
+          >
+            <span className="text-xs text-muted-foreground" aria-live="polite">
+              {pagination.total != null ? paginationLabel : `${currentPage}`}
             </span>
             <div className="flex items-center gap-1">
+              {totalPages !== undefined ? (
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  disabled={!hasPrev || pagination.isLoading}
+                  onClick={() => changePage(1)}
+                  aria-label={t("dataTable.firstPage")}
+                >
+                  <ChevronsLeft
+                    className="size-4 rtl:rotate-180"
+                    aria-hidden="true"
+                  />
+                </Button>
+              ) : null}
               <Button
                 size="icon-sm"
                 variant="outline"
                 disabled={!hasPrev || pagination.isLoading}
-                onClick={() => pagination.onPageChange(1)}
-                aria-label={t("dataTable.firstPage")}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon-sm"
-                variant="outline"
-                disabled={!hasPrev || pagination.isLoading}
-                onClick={() => pagination.onPageChange(currentPage - 1)}
+                onClick={() => changePage(currentPage - 1)}
                 aria-label={t("dataTable.prevPage")}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft
+                  className="size-4 rtl:rotate-180"
+                  aria-hidden="true"
+                />
               </Button>
               <Button
                 size="icon-sm"
                 variant="outline"
                 disabled={!hasNext || pagination.isLoading}
-                onClick={() => pagination.onPageChange(currentPage + 1)}
+                onClick={() => changePage(currentPage + 1)}
                 aria-label={t("dataTable.nextPage")}
               >
-                {pagination.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
+                {pagination.isLoading ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <ChevronRight
+                    className="size-4 rtl:rotate-180"
+                    aria-hidden="true"
+                  />
+                )}
               </Button>
-              <Button
-                size="icon-sm"
-                variant="outline"
-                disabled={!hasNext || pagination.isLoading}
-                onClick={() => pagination.onPageChange(totalPages ?? currentPage + 1)}
-                aria-label={t("dataTable.lastPage")}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
+              {totalPages !== undefined ? (
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  disabled={!hasNext || pagination.isLoading}
+                  onClick={() => changePage(totalPages)}
+                  aria-label={t("dataTable.lastPage")}
+                >
+                  <ChevronsRight
+                    className="size-4 rtl:rotate-180"
+                    aria-hidden="true"
+                  />
+                </Button>
+              ) : null}
             </div>
-          </div>
-        )}
+          </nav>
+        ) : null}
       </div>
     </div>
   );
 }
 
-// ── Helper: select column definition (reusable) ───────────────────────
-
-/** Header checkbox for the select column — uses the i18n label. */
 function SelectAllHeader<T>({ table }: { table: Table<T> }) {
   const { t } = useI18n();
   return (
@@ -459,19 +542,18 @@ function SelectAllHeader<T>({ table }: { table: Table<T> }) {
             ? "indeterminate"
             : false
       }
-      onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
+      onCheckedChange={(value) => table.toggleAllPageRowsSelected(Boolean(value))}
       aria-label={t("dataTable.selectAll")}
     />
   );
 }
 
-/** Row checkbox for the select column — uses the i18n label. */
 function SelectRowCell<T>({ row }: { row: Row<T> }) {
   const { t } = useI18n();
   return (
     <Checkbox
       checked={row.getIsSelected()}
-      onCheckedChange={(v) => row.toggleSelected(!!v)}
+      onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
       aria-label={t("dataTable.selectRow")}
     />
   );
@@ -480,9 +562,6 @@ function SelectRowCell<T>({ row }: { row: Row<T> }) {
 export function selectColumn<T>(): ColumnDef<T, unknown> {
   return {
     id: "select",
-    // C-P3: use i18n keys (dataTable.selectAll / selectRow) instead of
-    // hardcoded English aria-labels — screen readers announce the user's
-    // locale, not English.
     header: ({ table }) => <SelectAllHeader table={table} />,
     cell: ({ row }) => <SelectRowCell row={row} />,
     meta: { width: "w-10", align: "center" },

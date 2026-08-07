@@ -53,7 +53,6 @@ export default async function AnalyticsPage({
 
   const report = await getAnalyticsReport(validDays);
 
-  // Phase 7: advanced analytics (return-rate, SKU P&L, period comparison)
   const range = getLastNDays(validDays);
   const prevRange = getPreviousPeriod(range);
   const [returnRateByWilaya, skuPnl, comparison] = await Promise.all([
@@ -62,7 +61,6 @@ export default async function AnalyticsPage({
     getPeriodComparison(range, prevRange),
   ]);
 
-  // Format return-rate data for the horizontal bar chart
   const returnRateData: HBarDatum[] = returnRateByWilaya.slice(0, 10).map((w) => ({
     key: w.wilaya,
     label: w.wilaya.length > 15 ? w.wilaya.slice(0, 14) + "…" : w.wilaya,
@@ -79,7 +77,6 @@ export default async function AnalyticsPage({
 
   const s = report.summary;
 
-  // ── Revenue trend (area) ──
   const revenueData = report.revenueTimeSeries.map((p) => ({
     date: p.date,
     label: fmtShortDate(p.date),
@@ -89,7 +86,6 @@ export default async function AnalyticsPage({
     revenue: { label: t("analytics.revenueLabel"), color: "var(--color-chart-2)" },
   };
 
-  // ── AOV trend (line) ──
   const aovData = report.aovTimeSeries.map((p) => ({
     date: p.date,
     label: fmtShortDate(p.date),
@@ -99,7 +95,6 @@ export default async function AnalyticsPage({
     aov: { label: t("analytics.avgOrderValue"), color: "var(--color-chart-4)" },
   };
 
-  // ── Customer growth (area) ──
   const growthData = report.customerGrowth.map((p) => ({
     date: p.date,
     label: fmtShortDate(p.date),
@@ -111,7 +106,6 @@ export default async function AnalyticsPage({
     newCustomers: { label: t("analytics.newCustomers"), color: "var(--color-chart-3)" },
   };
 
-  // ── Status donut ──
   const donutData: DonutDatum[] = report.statusDistribution.map((st) => ({
     key: st.key,
     label: t(statusI18nKey(st.key)),
@@ -122,7 +116,6 @@ export default async function AnalyticsPage({
   for (const d of donutData) donutConfig[d.key] = { label: d.label, color: d.color };
   const totalOrders = donutData.reduce((sum, d) => sum + d.value, 0);
 
-  // ── Top products (h-bar) ──
   const topProductsData: HBarDatum[] = report.topProducts.map((p) => ({
     key: p.key,
     label: p.name.length > 20 ? p.name.slice(0, 19) + "…" : p.name,
@@ -132,7 +125,6 @@ export default async function AnalyticsPage({
     value: { label: t("analytics.revenueLabel"), color: "var(--color-chart-1)" },
   };
 
-  // ── Top wilayas (h-bar) ──
   const topWilayasData: HBarDatum[] = report.topWilayas.map((w) => ({
     key: w.key,
     label: w.name,
@@ -142,7 +134,6 @@ export default async function AnalyticsPage({
     value: { label: t("analytics.ordersLabel"), color: "var(--color-chart-3)" },
   };
 
-  // ── Sales by hour (composed) ──
   const hourData = report.salesByHour.map((b) => ({
     hour: fmtHour(b.hour),
     orders: b.orders,
@@ -183,7 +174,6 @@ export default async function AnalyticsPage({
         }
       />
 
-      {/* Summary KPIs with trend deltas */}
       <div className="card-grid-4 stagger-grid">
         <StatCard
           label={t("analytics.totalRevenue")}
@@ -192,6 +182,7 @@ export default async function AnalyticsPage({
           accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
           accentIcon="text-success"
           trend={s.revenueDelta}
+          trendDirectionOnly={false}
           trendLabel={t("analytics.vsPrevious")}
           style={{ animationDelay: "60ms" }}
         />
@@ -202,6 +193,7 @@ export default async function AnalyticsPage({
           accentBg="bg-teal-500/10 dark:bg-teal-500/15"
           accentIcon="text-teal-600 dark:text-teal-400"
           trend={s.ordersDelta}
+          trendDirectionOnly={false}
           trendLabel={t("analytics.vsPrevious")}
           style={{ animationDelay: "120ms" }}
         />
@@ -212,6 +204,7 @@ export default async function AnalyticsPage({
           accentBg="bg-violet-500/10 dark:bg-violet-500/15"
           accentIcon="text-violet-600 dark:text-violet-400"
           trend={s.aovDelta}
+          trendDirectionOnly={false}
           trendLabel={t("analytics.vsPrevious")}
           style={{ animationDelay: "180ms" }}
         />
@@ -225,7 +218,6 @@ export default async function AnalyticsPage({
         />
       </div>
 
-      {/* Revenue trend — full width */}
       <ChartCard
         title={t("analytics.revenueTrend")}
         description={t("analytics.revenueTrendDesc")}
@@ -244,7 +236,6 @@ export default async function AnalyticsPage({
         />
       </ChartCard>
 
-      {/* Status donut + Delivery gauge */}
       <div className="card-grid-2">
         <ChartCard
           title={t("analytics.ordersByStatus")}
@@ -298,7 +289,6 @@ export default async function AnalyticsPage({
         </ChartCard>
       </div>
 
-      {/* Top products + Top wilayas */}
       <div className="card-grid-2">
         <ChartCard
           title={t("analytics.topProductsByRevenue")}
@@ -343,7 +333,6 @@ export default async function AnalyticsPage({
         </ChartCard>
       </div>
 
-      {/* Sales by hour (composed) */}
       <ChartCard
         title={t("analytics.salesByHour")}
         description={t("analytics.salesByHourDesc")}
@@ -366,7 +355,6 @@ export default async function AnalyticsPage({
         />
       </ChartCard>
 
-      {/* AOV trend + Customer growth */}
       <div className="card-grid-2">
         <ChartCard
           title={t("analytics.aovTrend")}
@@ -405,7 +393,6 @@ export default async function AnalyticsPage({
         </ChartCard>
       </div>
 
-      {/* ── Phase 7: Return rate by wilaya (the killer COD metric) ── */}
       <ChartCard
         title={t("analytics.returnRateByWilaya")}
         description={t("analytics.returnRateHint")}
@@ -428,7 +415,6 @@ export default async function AnalyticsPage({
         )}
       </ChartCard>
 
-      {/* ── Phase 7: Period comparison ── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -467,7 +453,6 @@ export default async function AnalyticsPage({
         </CardContent>
       </Card>
 
-      {/* ── Phase 7: SKU P&L ── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">

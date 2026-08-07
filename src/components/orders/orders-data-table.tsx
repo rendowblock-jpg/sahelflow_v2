@@ -1,96 +1,80 @@
 "use client";
 
-/**
- * OrdersDataTable — the Phase 1 replacement for OrdersTableClient.
- *
- * Key upgrades over the old client:
- *   - Uses DataTable v2 (TanStack Table): pagination, URL-synced sort, density toggle, bulk
- *   - Uses SWR (useOrders hook) for data fetching — no more router.refresh()
- *   - Optimistic bulk status updates (instant UI feedback + rollback on error)
- *   - Receives first page as `fallback` from RSC (fast initial render, no loading flash)
- *   - Subsequent pages fetched client-side via SWR (paginated API)
- *
- * The RSC page renders this component with the first page of orders + risk data
- * as props. The component seeds SWR's fallback cache with that data, so the
- * first render is instant. When the user paginates, SWR fetches the next page.
- */
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, XCircle, } from "lucide-react";
+import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+
 import { DataTable, type BulkAction } from "@/components/data-table/data-table";
-import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 import { OrdersEmptyState } from "@/components/shared/empty-states";
-import { useOrders, type OrdersResponse } from "@/hooks/swr/use-orders";
-import { useOrdersColumns } from "./orders-columns";
-import { useI18n } from "@/hooks/use-i18n";
+import { StateSurface } from "@/components/shared/state-surface";
 import { useApiMutation } from "@/hooks/use-api-mutation";
+import { useUndoableDelete } from "@/hooks/use-undoable-delete";
+import { useOrders } from "@/hooks/swr/use-orders";
+import { useI18n } from "@/hooks/use-i18n";
+import type { Locale } from "@/lib/i18n";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { toast } from "@/lib/toast";
 import type { OrderStatus } from "@/types/domain";
-import type { Locale } from "@/lib/i18n";
+import type { OrdersWorkbenchResponse } from "@/types/workbench";
+import { useOrdersColumns } from "./orders-columns";
 
 interface OrdersDataTableProps {
-  /** First page of orders from RSC (SWR fallback). */
-  fallback: OrdersResponse;
+  fallback: OrdersWorkbenchResponse;
   locale: Locale;
-  /** Status filter (from URL searchParams). */
   statusFilter?: OrderStatus | "all";
-  /** Risk assessments from RSC (orderId → {level, score}). */
-  riskData?: Record<string, { level: string; score: number }>;
 }
 
 export function OrdersDataTable({
   fallback,
   locale,
   statusFilter = "all",
-  riskData,
 }: OrdersDataTableProps) {
   const { t } = useI18n();
   const router = useRouter();
 
-  // Phase 2: soft-delete with undo toast (replaces the hard-delete confirm dialog)
   const deleteOrder = useUndoableDelete({
     deleteUrl: (id) => `/api/orders/${id}`,
     restoreUrl: (id) => `/api/orders/${id}/restore`,
     entityLabel: "Order",
     contextualLabel: (record) => {
-      const r = record as { orderNumber?: string };
-      return r.orderNumber ? `Order ${r.orderNumber}` : "Order";
+      const order = record as { orderNumber?: string };
+      return order.orderNumber ? `Order ${order.orderNumber}` : "Order";
     },
     onAfter: () => mutatePrefix("/api/orders"),
   });
 
-  const { data, isLoading, mutate, pagination } = useOrders({
+  const { data, error, isLoading, mutate, pagination } = useOrders({
     status: statusFilter,
     fallback,
   });
+  const fieldAccess = data?.fieldAccess ?? fallback.fieldAccess;
+  const canOpenDetail = fieldAccess.contact && fieldAccess.financials;
 
   const columns = useOrdersColumns({
     locale,
-    riskData,
+    fieldAccess,
+    riskData: data?.riskData,
     onDelete: (id) => deleteOrder(id),
   });
 
-  // ── Optimistic bulk status update ──
-  // The #1 mutation in the app. Instead of router.refresh() (which refetches
-  // the whole RSC tree), we optimistically update the SWR cache: flip the
-  // status of selected orders instantly, then call the API. On error, SWR
-  // rolls back automatically.
   const bulkMutation = useApiMutation({
     onSuccess: async (result) => {
-      const r = result as { succeeded?: string[]; failed?: string[] };
-      const succeeded = r.succeeded?.length ?? 0;
-      const failed = r.failed?.length ?? 0;
+      const payload = result as { succeeded?: string[]; failed?: string[] };
+      const succeeded = payload.succeeded?.length ?? 0;
+      const failed = payload.failed?.length ?? 0;
       if (failed === 0) {
         toast.success(t("orders.bulkSuccess", { n: String(succeeded) }));
       } else {
-        toast.warning(t("orders.bulkPartial", { ok: String(succeeded), fail: String(failed) }));
+        toast.warning(
+          t("orders.bulkPartial", {
+            ok: String(succeeded),
+            fail: String(failed),
+          }),
+        );
       }
-      // Revalidate orders + dashboard stats
       await Promise.all([
+        mutate(),
         mutatePrefix("/api/orders"),
-        // The dashboard is a Server Component (no SWR key) — router.refresh()
-        // revalidates the RSC tree so dashboard stats update too.
         router.refresh(),
       ]);
     },
@@ -98,8 +82,8 @@ export function OrdersDataTable({
 
   const handleBulk = useCallback(
     (status: OrderStatus, selectedIds: string[]) => {
-      if (selectedIds.length === 0) return;
-      const governedSelected = data?.orders.some(
+      if (selectedIds.length === 0 || bulkMutation.isSubmitting || !data) return;
+      const governedSelected = data.orders.some(
         (order) =>
           selectedIds.includes(order.id) &&
           (order.mutationAuthority === "canonical_v1" ||
@@ -116,30 +100,14 @@ export function OrdersDataTable({
         return;
       }
 
-      // Optimistic update: immediately flip status in the SWR cache
-      const optimisticData: OrdersResponse | undefined = data
-        ? {
-            ...data,
-            orders: data.orders.map((o) =>
-              selectedIds.includes(o.id) ? { ...o, status } : o,
-            ),
-          }
-        : undefined;
-
-      mutate(optimisticData, { revalidate: false });
-
-      // Fire the mutation (rollbackOnError restores the real state on failure)
-      bulkMutation.submit("/api/orders/bulk", {
-        method: "POST",
-        body: JSON.stringify({ ids: selectedIds, status }),
-      }).catch(() => {
-        // Error toast handled by useApiMutation. SWR auto-rolls back the
-        // optimistic update because we passed revalidate: false + the
-        // mutation threw — we need to revalidate to get the true state.
-        mutate();
-      });
+      void bulkMutation
+        .submit("/api/orders/bulk", {
+          method: "POST",
+          body: JSON.stringify({ ids: selectedIds, status }),
+        })
+        .catch(() => undefined);
     },
-    [data, mutate, bulkMutation, locale],
+    [bulkMutation, data, locale],
   );
 
   const bulkActions: BulkAction[] = [
@@ -147,34 +115,45 @@ export function OrdersDataTable({
       label: t("orders.confirmSelected"),
       onClick: (ids) => handleBulk("confirmed", ids),
       icon: CheckCircle2,
+      disabled: bulkMutation.isSubmitting,
     },
     {
       label: t("orders.shipSelected"),
       onClick: (ids) => handleBulk("shipped", ids),
+      disabled: bulkMutation.isSubmitting,
     },
     {
       label: t("orders.cancelSelectedShort"),
       onClick: (ids) => handleBulk("cancelled", ids),
       variant: "destructive",
       icon: XCircle,
+      disabled: bulkMutation.isSubmitting,
     },
   ];
 
-  const orders = data?.orders ?? fallback.orders;
+  if (error && !data) {
+    return (
+      <StateSurface
+        icon={AlertTriangle}
+        title={t("error.requestFailed")}
+        description={error.message}
+        tone="danger"
+        size="inline"
+        role="alert"
+      />
+    );
+  }
 
   return (
-    <>
-      <DataTable
-        columns={columns}
-        data={orders}
-        isLoading={isLoading}
-        pagination={pagination}
-        onRowClick={(row) => router.push(`/orders/${row.id}`)}
-        bulkActions={bulkActions}
-        getRowId={(row) => row.id}
-        emptyState={<OrdersEmptyState />}
-      />
-
-    </>
+    <DataTable
+      columns={columns}
+      data={data?.orders ?? []}
+      isLoading={isLoading}
+      pagination={pagination}
+      onRowClick={canOpenDetail ? (row) => router.push(`/orders/${row.id}`) : undefined}
+      bulkActions={fieldAccess.update ? bulkActions : undefined}
+      getRowId={(row) => row.id}
+      emptyState={<OrdersEmptyState />}
+    />
   );
 }

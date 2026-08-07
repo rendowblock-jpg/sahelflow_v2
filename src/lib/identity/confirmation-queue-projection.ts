@@ -19,16 +19,16 @@ export type ConfirmationQueueFieldAccess = Readonly<{
 type ConfirmationQueueSource = readonly Readonly<{
   id: string;
   orderNumber: string;
-  totalPrice: number;
-  wilaya: string;
-  phone: string;
+  totalPrice?: number;
+  wilaya?: string;
+  phone?: string;
   source: unknown;
   sourceMetadata: unknown;
   version: number;
   ageMinutes: number;
   isStale: boolean;
   ageLabel: string;
-  customer: Readonly<{ name: string | null; phone: string | null }> | null;
+  customer?: Readonly<{ name: string | null; phone: string | null }> | null;
 }>[];
 
 function allowed(
@@ -80,10 +80,10 @@ export function projectConfirmationQueueForTrustedActor(
         canUpdate: fieldAccess.update,
         customerName: fieldAccess.contact ? order.customer?.name ?? null : null,
         phone: fieldAccess.contact
-          ? order.customer?.phone ?? order.phone
+          ? order.customer?.phone ?? order.phone ?? null
           : null,
-        wilaya: fieldAccess.contact ? order.wilaya : null,
-        totalPrice: fieldAccess.financials ? order.totalPrice : null,
+        wilaya: fieldAccess.contact ? order.wilaya ?? null : null,
+        totalPrice: fieldAccess.financials ? order.totalPrice ?? null : null,
       });
     }),
   );
