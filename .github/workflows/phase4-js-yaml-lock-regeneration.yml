@@ -12,10 +12,11 @@ on:
       - .github/workflows/phase4-js-yaml-lock-regeneration.yml
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   SOURCE_SHA: 755e4dadcb6a1482e0b0543fb154178c5df27f00
+  GENERATED_BRANCH: diag/phase4-js-yaml-generated
 
 jobs:
   regenerate-and-audit:
@@ -28,7 +29,7 @@ jobs:
         with:
           ref: ${{ env.SOURCE_SHA }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -73,6 +74,16 @@ jobs:
           git diff -- package.json bun.lock > "$RUNNER_TEMP/phase4-js-yaml-lock/diff.patch"
           git rev-parse HEAD > "$RUNNER_TEMP/phase4-js-yaml-lock/source-sha.txt"
           bun --version > "$RUNNER_TEMP/phase4-js-yaml-lock/bun-version.txt"
+
+      - name: Commit verified dependency authority to disposable generated branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json bun.lock
+          git commit -m "fix: pin patched js-yaml dependency"
+          git push --force-with-lease origin "HEAD:refs/heads/$GENERATED_BRANCH"
+          git rev-parse HEAD | tee "$RUNNER_TEMP/phase4-js-yaml-lock/generated-commit-sha.txt"
 
       - name: Upload regenerated dependency authority
         uses: actions/upload-artifact@v4
