@@ -13,85 +13,42 @@ import {
   requireTrustedAction,
 } from "@/lib/identity/authorization";
 import { assertOrderCreateFieldAuthority } from "@/lib/identity/order-authorization";
-import {
-  projectOrderForTrustedActor,
-  projectOrdersForTrustedActor,
-} from "@/lib/identity/order-projection";
+import { projectOrderForTrustedActor } from "@/lib/identity/order-projection";
 import { createTrustedManualOrder } from "@/lib/orders/manual-order";
-import {
-  isImportPendingOrderAuthority,
-  isTrustedManualOrderAuthority,
-} from "@/lib/orders/manual-order-authority";
+import { getOrdersWorkbenchPage } from "@/lib/orders/order-list-workbench";
 import { assessOrderRisk } from "@/lib/risk-engine";
 import { orderStatusSchema } from "@/lib/validation";
+import type { OrderStatus } from "@/types/domain";
 
 export const dynamic = "force-dynamic";
 
 const context = { prisma: db, shop: shopContext };
 
-/** GET /api/orders — permission-filtered list with pagination. */
+/**
+ * GET /api/orders — the canonical Phase 5 operational list contract.
+ *
+ * Pagination, sort, permission filtering, protected-field selection, mutation
+ * authority and optional risk projection are resolved by the same server helper
+ * used for the RSC first paint, so later pages cannot silently lose customer or
+ * risk truth.
+ */
 export async function GET(req: NextRequest) {
   const actorContext = await requireTrustedAction("orders.read");
   const searchParams = req.nextUrl.searchParams;
   const rawStatus = searchParams.get("status");
   const status =
     rawStatus && orderStatusSchema.safeParse(rawStatus).success
-      ? rawStatus
+      ? (rawStatus as OrderStatus)
       : undefined;
 
-  const page = parseInt(searchParams.get("page") ?? "1", 10);
-  const pageSize = parseInt(searchParams.get("pageSize") ?? "50", 10);
-  const limit = Math.min(pageSize, 100);
-  const offset = (page - 1) * limit;
-  const statusFilter = status as
-    | "draft"
-    | "pending"
-    | "confirmed"
-    | "shipped"
-    | "delivered"
-    | "returned"
-    | "refused"
-    | "cancelled"
-    | undefined;
-
-  const [orders, total] = await Promise.all([
-    orderService.list(context, { status: statusFilter, limit, offset }),
-    db.order.count({
-      where: {
-        deletedAt: null,
-        ...(statusFilter ? { status: statusFilter } : {}),
-      },
-    }),
-  ]);
-
-  const projected = projectOrdersForTrustedActor(actorContext, orders);
-  const listOrders = projected.map((order, index) => {
-    const sourceOrder = orders[index];
-    if (!sourceOrder) return order;
-    return {
-      ...order,
-      mutationAuthority: isTrustedManualOrderAuthority(
-        sourceOrder.source,
-        sourceOrder.sourceMetadata,
-      )
-        ? "canonical_v1"
-        : isImportPendingOrderAuthority(
-              sourceOrder.source,
-              sourceOrder.sourceMetadata,
-            )
-          ? "confirmation_blocked"
-          : "legacy_compatibility",
-    };
+  const result = await getOrdersWorkbenchPage(actorContext, {
+    status,
+    page: Number.parseInt(searchParams.get("page") ?? "1", 10),
+    pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
+    sort: searchParams.get("sort"),
   });
-  const hasNextPage = offset + orders.length < total;
 
-  return NextResponse.json({
-    orders: listOrders,
-    total,
-    hasNextPage,
-    page,
-    pageSize: limit,
-  });
+  return NextResponse.json(result);
 }
 
 /** POST /api/orders — governed manual intake or compatibility intake. */
