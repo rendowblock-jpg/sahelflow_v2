@@ -9,6 +9,7 @@ export interface WorkbenchFieldAccess {
   contact: boolean;
   financials: boolean;
   risk: boolean;
+  update: boolean;
 }
 
 export interface OrderListItem {
