@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
+
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useI18n } from "@/hooks/use-i18n";
+import type { Locale } from "@/lib/i18n";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
-import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import type { Locale } from "@/lib/i18n";
-import { useI18n } from "@/hooks/use-i18n";
 
 const CommandPalette = dynamic(() =>
-  import("@/components/command-palette").then((module) => module.CommandPalette),
+  import("@/components/command-palette").then(
+    (module) => module.CommandPalette,
+  ),
 );
 const CheatsheetModal = dynamic(() =>
   import("@/components/shared/cheatsheet-modal").then(
@@ -19,60 +22,34 @@ const CheatsheetModal = dynamic(() =>
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  /** Server-rendered locale (from cookie) — used for initial render to prevent hydration mismatch */
   locale: Locale;
-  /** Server-rendered direction (from cookie) — used for initial render to prevent hydration mismatch */
   dir: "ltr" | "rtl";
 }
 
 /**
- * AppShell — the single source of truth for app layout.
+ * SahelFlow desktop application frame.
  *
- * Premium patterns (Dub + Trigger.dev):
- * - Grid layout: grid-cols-[auto_1fr] with overflow-hidden root
- * - Floating content panel: rounded-xl bg-background on neutral gutter
- * - Only <main id="main-content"> scrolls — no double scrollbars, no page bounce
- * - Responsive: sidebar hidden on mobile (Sheet handles it)
- *
- * RTL (the definitive fix):
- * The root grid container sets `dir` EXPLICITLY (not via CSS inheritance from <html>).
- * This is critical because:
- *   1. CSS Grid column placement (grid-cols-[auto_1fr]) only flips when the grid
- *      container itself has `direction: rtl`. Inheriting from <html> works in theory
- *      but breaks in practice when client-side locale switches update <html dir> via
- *      useEffect — the grid doesn't reliably re-layout.
- *   2. The `dir` prop from the Server Component gives the correct initial value
- *      (matches SSR → no hydration mismatch).
- *   3. The live `dir` from useI18n() ensures the grid updates immediately when the
- *      user switches language via the Topbar (no full page reload required).
- * The fallback chain is: liveDir (from useI18n) → serverDir (from prop/cookie).
- *
- * Responsive behavior:
- *  - mobile (<lg): sidebar hidden, slides in via Sheet
- *  - tablet/desktop (lg+): sidebar visible, collapsible to 68px rail
+ * Phase 5 deliberately removes the floating rounded "web dashboard inside a
+ * page" treatment. The canonical workspace is one edge-to-edge software frame:
+ * durable domain navigation, one command/title bar and one scroll authority for
+ * the active work surface. This keeps focus, keyboard navigation, zoom and
+ * contained WebView behavior predictable.
  */
-export function DashboardLayout({ children, locale, dir: serverDir }: DashboardLayoutProps) {
+export function DashboardLayout({
+  children,
+  locale,
+  dir: serverDir,
+}: DashboardLayoutProps) {
   const [commandOpen, setCommandOpen] = useState(false);
-  // useKeyboardShortcuts handles g+letter navigation. It explicitly SKIPS
-  // Cmd+K (line 40 of the hook), so we handle that here — there's only ONE
-  // Cmd+K listener, not two.
   const { cheatsheetOpen, setCheatsheetOpen } = useKeyboardShortcuts();
   const { t } = useI18n();
-
-  // Use the server-rendered dir ONLY. This comes from the Server Component
-  // layout which reads the cookie via next/headers — it's always correct and
-  // matches on both server + client (no hydration mismatch).
-  //
-  // Live locale switching is handled by router.refresh() in the Topbar's
-  // setLocale handler, which re-runs the server layout → new serverDir prop.
   const dir = serverDir;
 
-  // Cmd+K → toggle command palette (single listener — useKeyboardShortcuts skips this)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setCommandOpen((prev) => !prev);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen((current) => !current);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -82,41 +59,45 @@ export function DashboardLayout({ children, locale, dir: serverDir }: DashboardL
   return (
     <div
       dir={dir}
-      className="flex h-[100dvh] min-h-0 overflow-hidden bg-muted/30 lg:bg-muted/40"
+      className="flex h-[100dvh] min-h-0 overflow-hidden bg-background text-foreground"
+      data-sahelflow-shell="desktop"
     >
-      {/* Sidebar — hidden on mobile, shown on lg+.
-          In RTL, the sidebar visually appears on the RIGHT because the
-          parent <html dir="rtl"> makes flexbox lay out children right-to-left.
-          We do NOT use flex-row-reverse here (that would double-reverse the
-          sidebar's internal content which already handles its own RTL layout). */}
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:start-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:shadow-md">{t("common.skipToContent")}</a>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-[100] focus:rounded-md focus:border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg"
+      >
+        {t("common.skipToContent")}
+      </a>
+
       <div className="hidden h-full min-h-0 shrink-0 lg:flex">
         <Sidebar serverLocale={locale} serverDir={dir} />
       </div>
 
-      {/* Main content column — floating panel on lg+ */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-0 lg:p-2 lg:ps-0 lg:pb-0">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background lg:rounded-xl lg:border lg:shadow-sm">
-          <Topbar onCommandPaletteOpen={() => setCommandOpen(true)} serverLocale={locale} serverDir={dir} />
-          <main id="main-content" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden scroll-pt-16" tabIndex={-1}>
-            {children}
-          </main>
-        </div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <Topbar
+          onCommandPaletteOpen={() => setCommandOpen(true)}
+          serverLocale={locale}
+          serverDir={dir}
+        />
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scroll-pt-14 outline-none"
+        >
+          {children}
+        </main>
       </div>
 
-      {/* Command Palette */}
-      {commandOpen && (
+      {commandOpen ? (
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-      )}
+      ) : null}
 
-      {/* Keyboard Shortcuts Cheatsheet (? to open) */}
-      {cheatsheetOpen && (
+      {cheatsheetOpen ? (
         <CheatsheetModal
           open={cheatsheetOpen}
           onOpenChange={setCheatsheetOpen}
         />
-      )}
-
+      ) : null}
     </div>
   );
 }
