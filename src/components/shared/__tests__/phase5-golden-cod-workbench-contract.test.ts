@@ -57,9 +57,7 @@ describe("Phase 5 Golden COD workbench source contract", () => {
   });
 
   it("makes confirmation a truthful paginated workbench", () => {
-    const page = read(
-      "src/app/(dashboard)/orders/confirmation-queue/page.tsx",
-    );
+    const page = read("src/app/(dashboard)/orders/confirmation-queue/page.tsx");
     const helper = read("src/lib/orders/confirmation-workbench.ts");
     const hook = read("src/hooks/swr/use-confirmation-queue.ts");
     expect(page).toContain("ConfirmationQueueTable");
@@ -126,7 +124,7 @@ describe("Phase 5 Golden COD workbench source contract", () => {
   it("makes Home attention-first, permission-aware and permission-before-read", () => {
     const dashboard = read("src/app/(dashboard)/dashboard/page.tsx");
     const stats = read("src/lib/data/stats-service.ts");
-    const deliveryPage = read("src/app/(dashboard)/deliveries/page.tsx");
+    const deliveryWorkbench = read("src/lib/deliveries/delivery-workbench.ts");
     const deliveryApi = read("src/app/api/delivery/route.ts");
     expect(dashboard).toContain("AttentionCenter");
     expect(dashboard).toContain("getStaleOrderCount");
@@ -137,9 +135,9 @@ describe("Phase 5 Golden COD workbench source contract", () => {
     expect(dashboard).toContain('title={t("error.forbidden")}');
     expect(dashboard).toContain('href: "/deliveries?status=pending"');
     expect(stats).toContain('status: { in: ["pending", "created"] }');
-    expect(deliveryPage).toContain('status === "pending"');
-    expect(deliveryPage).toContain("PENDING_STATUSES");
-    expect(deliveryApi).toContain("PENDING_DELIVERY_STATUSES");
+    expect(deliveryWorkbench).toContain('status === "pending"');
+    expect(deliveryWorkbench).toContain("PENDING_STATUSES");
+    expect(deliveryApi).toContain("getDeliveryWorkbenchPage");
     expect(dashboard).not.toContain("dashboard.openInbox");
     expect(dashboard).not.toContain("dashboard.manageOrders");
   });
