@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Banknote, Calendar, Clock, Hash, Package, PackageCheck, Truck, User } from "lucide-react";
+import { Banknote, Calendar, Clock, Hash, Package, Truck, User } from "lucide-react";
 
+import { EntityLink, EntityTimeline } from "@/components/entities/entity-context";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -49,6 +50,23 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
   const orderStyle = orderStatusStyles[orderStatus as keyof typeof orderStatusStyles];
   const statusOrder = ["created", "pending", "picked_up", "in_transit", "at_hub", "out_for_delivery", "delivered", "returned", "refused", "failed"];
   const currentIdx = statusOrder.indexOf(delivery.status);
+  const terminalFailure = ["returned", "refused", "failed"].includes(delivery.status);
+  const timelineItems = statusOrder.map((status, index) => ({
+    id: status,
+    title: t(`deliveries.status.${status}`),
+    timestamp: index === 0 ? formatDate(delivery.createdAt, locale) : undefined,
+    icon: index === currentIdx ? Truck : Package,
+    tone:
+      index === currentIdx
+        ? terminalFailure
+          ? ("danger" as const)
+          : delivery.status === "delivered"
+            ? ("success" as const)
+            : ("warning" as const)
+        : index < currentIdx
+          ? ("success" as const)
+          : ("neutral" as const),
+  }));
 
   return (
     <div className="app-content page-sections">
@@ -69,9 +87,11 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
             </span>
             <span className="inline-flex items-center gap-1">
               <Hash className="size-3.5" aria-hidden="true" />
-              <Link href={`/orders/${delivery.order.id}`} className="font-mono text-primary hover:underline">
-                {delivery.order.orderNumber}
-              </Link>
+              <EntityLink
+                href={`/orders/${delivery.order.id}`}
+                label={delivery.order.orderNumber}
+                className="font-mono"
+              />
             </span>
             <span className="inline-flex items-center gap-1">
               <Clock className="size-3.5" aria-hidden="true" />
@@ -80,7 +100,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
           </span>
         }
         actions={
-          <Badge variant={delivery.status === "delivered" ? "default" : delivery.status === "returned" || delivery.status === "refused" || delivery.status === "failed" ? "destructive" : "secondary"}>
+          <Badge variant={delivery.status === "delivered" ? "default" : terminalFailure ? "destructive" : "secondary"}>
             {t(`deliveries.status.${delivery.status}`)}
           </Badge>
         }
@@ -104,9 +124,11 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-muted-foreground">{t("orders.orderNumber")}</span>
-              <Link href={`/orders/${delivery.order.id}`} className="font-mono text-sm font-medium text-primary hover:underline">
-                {delivery.order.orderNumber}
-              </Link>
+              <EntityLink
+                href={`/orders/${delivery.order.id}`}
+                label={delivery.order.orderNumber}
+                className="font-mono"
+              />
             </div>
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-muted-foreground">{t("orders.status")}</span>
@@ -145,9 +167,10 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-muted-foreground">{t("customers.name")}</span>
-              <Link href={`/customers/${delivery.order.customer.id}`} className="text-sm font-medium text-primary hover:underline">
-                {delivery.order.customer.name}
-              </Link>
+              <EntityLink
+                href={`/customers/${delivery.order.customer.id}`}
+                label={delivery.order.customer.name}
+              />
             </div>
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-muted-foreground">{t("customers.phone")}</span>
@@ -177,33 +200,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
           <CardTitle className="text-base">{t("deliveries.timeline")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <ol className="flex flex-wrap items-center gap-2" aria-label={t("deliveries.timeline")}>
-            {statusOrder.map((status, index) => {
-              const isPast = index <= currentIdx;
-              const isCurrent = index === currentIdx;
-              return (
-                <li key={status} className="flex items-center gap-2">
-                  <div
-                    aria-current={isCurrent ? "step" : undefined}
-                    className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium ${
-                      isCurrent
-                        ? "border-primary/30 bg-primary/10 text-primary"
-                        : isPast
-                          ? "border-success/25 bg-success/5 text-success"
-                          : "border-border bg-muted/30 text-muted-foreground"
-                    }`}
-                  >
-                    {isPast && !isCurrent ? <PackageCheck className="size-3" aria-hidden="true" /> : null}
-                    {isCurrent ? <Truck className="size-3" aria-hidden="true" /> : null}
-                    {t(`deliveries.status.${status}`)}
-                  </div>
-                  {index < statusOrder.length - 1 ? (
-                    <span className={`h-px w-4 ${isPast ? "bg-success/30" : "bg-border"}`} aria-hidden="true" />
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
+          <EntityTimeline items={timelineItems} />
         </CardContent>
       </Card>
     </div>
