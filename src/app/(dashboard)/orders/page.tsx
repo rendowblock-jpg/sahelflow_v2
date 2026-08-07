@@ -181,6 +181,15 @@ export default async function OrdersPage({
       : Promise.resolve(null),
   ]);
 
+  const lastPage = Math.max(1, Math.ceil(totalCount / fallback.pageSize));
+  if (page > lastPage) {
+    const params = new URLSearchParams();
+    if (statusFilter) params.set("status", statusFilter);
+    params.set("sort", fallback.sort);
+    params.set("page", String(lastPage));
+    redirect(`/orders?${params.toString()}`);
+  }
+
   const counts: Record<string, number> = { all: totalCount };
   for (const group of statusGroups) counts[group.status] = group._count._all;
 
