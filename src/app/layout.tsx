@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Inter, Amiri } from "next/font/google";
 import "./globals.css";
+import "./phase5.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -12,10 +13,6 @@ import { getI18n } from "@/lib/i18n-server";
 import { ServerLocaleProvider } from "@/lib/i18n/server-locale-context";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
-// CSS variable renamed from --font-geist-sans to --font-inter to match the
-// actual font being loaded (Inter, not Geist Sans). The `geist` package is
-// not installed, so the previous variable name was misleading.
-// (CONN-4-BUILD finding)
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -59,37 +56,33 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5, // allows zoom for accessibility
+  maximumScale: 5,
 };
 
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Read the locale from the cookie (set by useI18n.setLocale) so the
-  // <html lang/dir> attributes are correct on the very first server render.
-  // This eliminates the hydration flash for Arabic users (U-005) and
-  // improves SEO (search engines see the correct language immediately).
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get("sahelflow-locale")?.value;
   const validLocales: readonly string[] = ["ar", "fr", "en"];
-  const locale: Locale = localeCookie && validLocales.includes(localeCookie)
-    ? (localeCookie as Locale)
-    : "fr"; // French is the business default in Algeria
+  const locale: Locale =
+    localeCookie && validLocales.includes(localeCookie)
+      ? (localeCookie as Locale)
+      : "fr";
   const dir = getDirection(locale);
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
-        {/*
-          FOUC-prevention script — runs synchronously BEFORE first paint.
-          Sets the theme class on <html> from localStorage before hydration.
-          This is the App Router equivalent of next-themes' inline script,
-          but rendered as a raw <script> in the server HTML (not inside a
-          React component), which avoids the React 19 "script tag" error.
-        */}
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme')||'dark';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.style.colorScheme=r;}catch(e){}})();` }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme')||'dark';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.style.colorScheme=r;}catch(e){}})();`,
+          }}
+        />
       </head>
-      <body className={`${inter.variable} ${amiri.variable} font-sans antialiased`}>
+      <body
+        className={`${inter.variable} ${amiri.variable} font-sans antialiased`}
+      >
         <NuqsAdapter>
           <ServerLocaleProvider locale={locale}>
             <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>

@@ -21,10 +21,8 @@ describe("desktop app shell viewport contract", () => {
       'className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
     );
     expect(sidebar).toContain(
-      '"flex h-full min-h-0 flex-col overflow-hidden bg-sidebar',
+      '"flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-e border-sidebar-border bg-sidebar"',
     );
-    expect(sidebar).toContain(
-      '<ScrollArea className="min-h-0 flex-1 px-3 py-4">',
-    );
+    expect(sidebar).toContain('<ScrollArea className="min-h-0 flex-1">');
   });
 });

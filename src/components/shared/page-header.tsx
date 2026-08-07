@@ -1,4 +1,5 @@
 import * as React from "react";
+
 import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {
@@ -10,30 +11,53 @@ interface PageHeaderProps {
 }
 
 /**
- * Page header — sticky, compact, premium.
- * 
- * Pattern: shadcn v4 + Trigger.dev
- * - Sticky top with backdrop blur
- * - text-2xl font-semibold tracking-tight title
- * - text-sm text-muted-foreground description
- * - Actions on the end side
+ * Compact work-surface header.
+ *
+ * The application frame already owns global navigation and search. Page headers
+ * therefore identify the current work surface and host only contextual actions;
+ * they are intentionally denser than marketing/SaaS hero headers.
  */
-export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  description,
+  icon: Icon,
+  actions,
+  className,
+}: PageHeaderProps) {
   return (
-    <div className={cn(
-      "flex flex-col gap-3 border-b border-border/50 pb-5 text-start sm:flex-row sm:items-center sm:justify-between",
-      className,
-    )}>
-      <div className="space-y-1 text-start">
-        {/* tracking-tight breaks Arabic connected letters — use rtl:tracking-normal */}
-        <h1 className="text-start text-xl font-semibold tracking-tight text-balance rtl:tracking-normal sm:text-2xl">{title}</h1>
-        {description && (
-          <p className="text-start text-sm text-muted-foreground/80 text-pretty">{description}</p>
-        )}
-      </div>
-      {actions && (
-        <div className="flex shrink-0 items-center gap-2">{actions}</div>
+    <header
+      className={cn(
+        "flex min-w-0 flex-col gap-3 border-b border-border/70 pb-3 text-start sm:flex-row sm:items-end sm:justify-between",
+        className,
       )}
-    </div>
+      data-slot="page-header"
+    >
+      <div className="flex min-w-0 items-start gap-2.5">
+        {Icon ? (
+          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border bg-muted/45 text-muted-foreground">
+            <Icon className="size-4" aria-hidden="true" />
+          </div>
+        ) : null}
+        <div className="min-w-0 space-y-0.5">
+          <h1 className="text-balance text-start text-lg font-semibold leading-6 tracking-tight text-foreground rtl:tracking-normal sm:text-xl">
+            {title}
+          </h1>
+          {description ? (
+            <p className="max-w-3xl text-pretty text-start text-sm leading-5 text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {actions ? (
+        <div
+          className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end"
+          data-slot="page-actions"
+        >
+          {actions}
+        </div>
+      ) : null}
+    </header>
   );
 }

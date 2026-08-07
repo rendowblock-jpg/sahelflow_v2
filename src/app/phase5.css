@@ -1,0 +1,125 @@
+/*
+ * SahelFlow Phase 5 — desktop operational experience layer.
+ *
+ * Scoped to the authenticated software frame so setup/login/public storefront
+ * surfaces retain their own interaction context. This layer intentionally
+ * neutralizes legacy SaaS-style page choreography and wide presentation spacing
+ * while the route families migrate onto the governed workbench primitives.
+ */
+
+[data-sahelflow-shell="desktop"] {
+  --sf-workbench-inline: clamp(0.75rem, 1.25vw, 1.25rem);
+  --sf-workbench-block: 0.875rem;
+  --sf-section-gap: 1rem;
+  --sf-panel-radius: 0.5rem;
+}
+
+[data-sahelflow-shell="desktop"] .app-content {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  padding-block: var(--sf-workbench-block);
+  padding-inline: var(--sf-workbench-inline);
+}
+
+[data-sahelflow-shell="desktop"] .app-content-narrow {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: 0;
+  padding-block: var(--sf-workbench-block);
+  padding-inline: var(--sf-workbench-inline);
+}
+
+[data-sahelflow-shell="desktop"] .page-sections {
+  row-gap: var(--sf-section-gap);
+}
+
+/* Tailwind's legacy `space-y-*` utilities implement rhythm with child margins,
+ * so `row-gap` alone cannot tighten them. Normalize those margins inside the
+ * authenticated workbench until route families migrate to explicit grid/gap. */
+[data-sahelflow-shell="desktop"] .page-sections > :not(:last-child) {
+  --tw-space-y-reverse: 0 !important;
+  margin-block-start: 0 !important;
+  margin-block-end: var(--sf-section-gap) !important;
+}
+
+[data-sahelflow-shell="desktop"] :is(.card-grid-2, .card-grid-3, .card-grid-4) {
+  gap: 0.75rem;
+}
+
+/*
+ * Repeated page-load entrances and hover lifts make a dense operational product
+ * feel like a marketing dashboard and add unnecessary paint work in WebView2.
+ * Keep transitions on direct controls/dialog continuity, not every page card.
+ */
+[data-sahelflow-shell="desktop"] :is(
+  .stagger-grid > *,
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-in,
+  .animate-scale-in,
+  .animate-slide-right
+) {
+  animation: none !important;
+}
+
+[data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover) {
+  transform: none !important;
+  transition-property: border-color, background-color, box-shadow;
+  transition-duration: 120ms;
+}
+
+[data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover):hover {
+  transform: none !important;
+}
+
+/* Restraint for the existing card primitive until each workbench adopts its
+ * specific list/panel hierarchy. The border carries grouping; elevation is
+ * reserved for overlays and genuinely floating controls. */
+[data-sahelflow-shell="desktop"] [data-slot="card"] {
+  border-radius: var(--sf-panel-radius);
+  box-shadow: none;
+}
+
+[data-sahelflow-shell="desktop"] :is(
+  [data-slot="dialog-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="popover-content"]
+) {
+  box-shadow: var(--shadow-popover);
+}
+
+/* Sticky application chrome must never hide keyboard focus. */
+[data-sahelflow-shell="desktop"] :focus-visible {
+  scroll-margin-block: 3.5rem 1rem;
+}
+
+/* Technical/business numbers are easier to scan when columns remain aligned. */
+[data-sahelflow-shell="desktop"] :is(
+  [data-money],
+  [data-quantity],
+  [data-order-number],
+  [data-tracking-number]
+) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The software frame is dense on desktop but touch remains intentionally roomy. */
+@media (pointer: coarse) {
+  [data-sahelflow-shell="desktop"] {
+    --sf-workbench-block: 1rem;
+    --sf-section-gap: 1rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  [data-sahelflow-shell="desktop"] {
+    --sf-workbench-inline: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sahelflow-shell="desktop"] * {
+    scroll-behavior: auto !important;
+  }
+}

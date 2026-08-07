@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import {
+  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
+
 import { useI18n } from "@/hooks/use-i18n";
 import { useUIStore } from "@/stores/ui-store";
-import { navItems, navGroups } from "./navigation";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
   TooltipContent,
@@ -16,148 +20,246 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { Locale } from "@/lib/i18n";
+import {
+  navigationDomainForPathname,
+  navigationDomains,
+  pathMatchesNavigation,
+  utilityNavigationItems,
+  type NavigationItem,
+} from "./navigation";
 
 interface SidebarProps {
-  /** Server-rendered locale (from cookie) — used for initial render */
   serverLocale: Locale;
-  /** Server-rendered direction (from cookie) — used for initial render */
   serverDir: "ltr" | "rtl";
 }
 
-export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps) {
-  const pathname = usePathname();
-  // useI18n() for translations. The hook now uses ServerLocaleContext for the
-  // initial render (hydration-safe) + the store locale after mount.
+interface SidebarLinkProps {
+  item: NavigationItem;
+  selected: boolean;
+  current: boolean;
+  collapsed: boolean;
+  isRtl: boolean;
+  nested?: boolean;
+}
+
+function SidebarLink({
+  item,
+  selected,
+  current,
+  collapsed,
+  isRtl,
+  nested = false,
+}: SidebarLinkProps) {
   const { t } = useI18n();
-  const collapsed = useUIStore((s) => s.sidebarCollapsed);
-  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const Icon = item.icon;
 
-  // Use the server-rendered dir ONLY — it comes from the cookie (via the server
-  // layout) and matches on both server + client (no hydration mismatch).
-  // Live locale switching is handled by router.refresh() in the Topbar.
-  const isRtl = serverDir === "rtl";
-
-  const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
-
-  const navContent = (
-    <nav className="flex flex-col gap-6">
-      {navGroups.map((group) => {
-        const groupItems = navItems.filter((item) => item.group === group.id);
-        if (groupItems.length === 0) return null;
-        return (
-          <div key={group.id} className="flex flex-col gap-1">
-            {!collapsed && (
-              <span className={cn(
-                "px-3 pb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground/60",
-                isRtl ? "text-end" : "text-start",
-              )}>
-                {t(group.labelKey)}
-              </span>
-            )}
-            {groupItems.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-              const Icon = item.icon;
-              const linkContent = (
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "group relative flex items-center gap-3 rounded-lg text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
-                    // In RTL, flex-row + dir="rtl" naturally puts icon on the right
-                    collapsed ? "justify-center px-0 py-2" : "px-3 py-2",
-                    isActive
-                      ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                      : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-                  )}
-                >
-                  {/* Active indicator follows the logical start edge. */}
-                  {isActive && (
-                    <span className="absolute start-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-primary" />
-                  )}
-                  <Icon className={cn(
-                    "h-5 w-5 shrink-0 transition-transform duration-200",
-                    isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
-                  )} />
-                  {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
-                </Link>
-              );
-
-              // When collapsed, wrap in tooltip for label
-              if (collapsed) {
-                return (
-                  <Tooltip key={item.href} delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      {linkContent}
-                    </TooltipTrigger>
-                    <TooltipContent side={isRtl ? "left" : "right"} sideOffset={8}>
-                      {t(item.labelKey)}
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              }
-
-              return <div key={item.href}>{linkContent}</div>;
-            })}
-          </div>
-        );
-      })}
-    </nav>
+  const link = (
+    <Link
+      href={item.href}
+      aria-current={current ? "page" : undefined}
+      data-selected={selected ? "true" : undefined}
+      className={cn(
+        "group relative flex min-h-9 items-center rounded-md text-sm outline-none transition-colors",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar",
+        collapsed
+          ? nested
+            ? "min-h-8 justify-center px-0 py-1.5"
+            : "justify-center px-0 py-2"
+          : nested
+            ? "gap-2 px-2.5 py-1.5 text-[13px]"
+            : "gap-3 px-3 py-2",
+        selected
+          ? nested
+            ? "bg-sidebar-accent/70 font-medium text-sidebar-accent-foreground"
+            : "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+          : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+      )}
+    >
+      {!nested && selected && (
+        <span
+          className="absolute inset-y-2 start-0 w-0.5 rounded-full bg-primary"
+          aria-hidden="true"
+        />
+      )}
+      <Icon
+        className={cn(
+          "shrink-0",
+          nested ? "size-3.5" : "size-[18px]",
+          selected
+            ? "text-foreground"
+            : "text-muted-foreground group-hover:text-foreground",
+        )}
+        aria-hidden="true"
+      />
+      {!collapsed && (
+        <span className="min-w-0 flex-1 truncate">{t(item.labelKey)}</span>
+      )}
+    </Link>
   );
+
+  if (!collapsed) return link;
+
+  return (
+    <Tooltip delayDuration={0}>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side={isRtl ? "left" : "right"} sideOffset={8}>
+        {t(item.labelKey)}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * Phase 5 desktop navigation.
+ *
+ * The sidebar exposes seven durable business domains. Secondary destinations are
+ * revealed inside the active domain. In expanded mode they use compact labels;
+ * in rail mode the same destinations remain reachable as icon links with
+ * tooltips, so collapsing navigation never removes product capability. Profile
+ * and settings stay in the utility footer and do not compete with daily work.
+ */
+export function Sidebar({
+  serverLocale: _serverLocale,
+  serverDir,
+}: SidebarProps) {
+  const pathname = usePathname();
+  const { t } = useI18n();
+  const collapsed = useUIStore((state) => state.sidebarCollapsed);
+  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const isRtl = serverDir === "rtl";
+  const activeDomain = navigationDomainForPathname(pathname);
+  const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
 
   return (
     <aside
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        // Explicit physical border: LTR = border-right (sidebar on left),
-        // RTL = border-left (sidebar on right). Don't rely on border-e.
-        "border-e border-sidebar-border",
-        collapsed ? "w-[68px]" : "w-64",
+        "flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-e border-sidebar-border bg-sidebar",
+        "transition-[width] duration-200 ease-out motion-reduce:transition-none",
+        collapsed ? "w-16" : "w-[248px]",
       )}
       aria-label={t("nav.sidebarLabel")}
       dir={isRtl ? "rtl" : "ltr"}
+      data-navigation-density={collapsed ? "rail" : "expanded"}
     >
-      {/* Logo / brand */}
-      <div className={cn(
-        "flex h-16 shrink-0 items-center gap-3 border-b border-sidebar-border px-4",
-        collapsed && "justify-center px-0",
-        // In RTL, reverse the logo layout (icon on right, text on left)
-              )}>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-sm ring-1 ring-primary/20">
-          <span className="text-sm font-bold text-primary-foreground tracking-tight">SF</span>
+      <div
+        className={cn(
+          "flex h-14 shrink-0 items-center gap-3 border-b border-sidebar-border px-3",
+          collapsed && "justify-center px-0",
+        )}
+      >
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-[11px] font-bold tracking-tight text-primary">
+          SF
         </div>
         {!collapsed && (
-          <div className="flex flex-col">
-            <span className="font-semibold text-base tracking-tight text-sidebar-foreground leading-none">SahelFlow</span>
-            <span className="text-xs text-muted-foreground/60 mt-1">{t('nav.subtitle')}</span>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold leading-none text-sidebar-foreground">
+              SahelFlow
+            </div>
+            <div className="mt-1 truncate text-[11px] text-muted-foreground">
+              {t("nav.subtitle")}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Navigation */}
-      <ScrollArea className="min-h-0 flex-1 px-3 py-4">
-        {collapsed ? (
-          <TooltipProvider delayDuration={0}>
-            {navContent}
-          </TooltipProvider>
-        ) : (
-          navContent
-        )}
+      <ScrollArea className="min-h-0 flex-1">
+        <TooltipProvider delayDuration={0}>
+          <nav
+            className="flex flex-col gap-1 px-2 py-3"
+            aria-label={t("nav.sidebarLabel")}
+          >
+            {navigationDomains.map((domain) => {
+              const domainSelected = activeDomain?.id === domain.id;
+
+              return (
+                <div key={domain.id} className="space-y-1">
+                  <div className="relative">
+                    <SidebarLink
+                      item={domain}
+                      selected={domainSelected}
+                      current={pathname === domain.href}
+                      collapsed={collapsed}
+                      isRtl={isRtl}
+                    />
+                    {!collapsed && domain.children?.length ? (
+                      <ChevronRight
+                        className={cn(
+                          "pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none",
+                          domainSelected && "rotate-90",
+                          isRtl && !domainSelected && "rotate-180",
+                        )}
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                  </div>
+
+                  {domainSelected && domain.children?.length ? (
+                    <div
+                      className={cn(
+                        "space-y-0.5",
+                        collapsed
+                          ? "px-1"
+                          : "ms-4 border-s border-sidebar-border ps-2",
+                      )}
+                      data-navigation-children={domain.id}
+                    >
+                      {domain.children.map((child) => (
+                        <SidebarLink
+                          key={child.href}
+                          item={child}
+                          selected={pathMatchesNavigation(pathname, child.href)}
+                          current={pathname === child.href}
+                          collapsed={collapsed}
+                          isRtl={isRtl}
+                          nested
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </nav>
+        </TooltipProvider>
       </ScrollArea>
 
-      {/* Collapse toggle — footer */}
-      <div className="shrink-0 border-t border-sidebar-border p-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleSidebar}
-          className={cn(
-            "w-full text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60",
-            collapsed ? "justify-center" : isRtl ? "justify-end" : "justify-start",
-          )}
-          aria-label={t("nav.collapse")}
-        >
-          <CollapseIcon className={cn("h-4 w-4", isRtl && "icon-rtl-flip")} />
-          {!collapsed && <span className={cn("text-sm", isRtl ? "me-3" : "ms-3")}>{t("nav.collapse")}</span>}
-        </Button>
+      <div className="shrink-0 border-t border-sidebar-border p-2">
+        <TooltipProvider delayDuration={0}>
+          <div className="space-y-1">
+            {utilityNavigationItems.map((item) => (
+              <SidebarLink
+                key={item.href}
+                item={item}
+                selected={pathMatchesNavigation(pathname, item.href)}
+                current={pathname === item.href}
+                collapsed={collapsed}
+                isRtl={isRtl}
+              />
+            ))}
+          </div>
+        </TooltipProvider>
+
+        <div className="mt-2 border-t border-sidebar-border pt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleSidebar}
+            className={cn(
+              "h-9 w-full text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              collapsed ? "justify-center px-0" : "justify-start px-3",
+            )}
+            aria-label={t("nav.collapse")}
+            aria-pressed={collapsed}
+          >
+            <CollapseIcon
+              className={cn("size-4", isRtl && "icon-rtl-flip")}
+              aria-hidden="true"
+            />
+            {!collapsed && (
+              <span className="ms-2 text-sm">{t("nav.collapse")}</span>
+            )}
+          </Button>
+        </div>
       </div>
     </aside>
   );

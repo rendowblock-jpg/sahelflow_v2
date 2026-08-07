@@ -1,7 +1,8 @@
 import * as React from "react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+
+import { Button } from "@/components/ui/button";
+import { StateSurface } from "@/components/shared/state-surface";
 
 interface EmptyStateProps {
   icon: React.ComponentType<{ className?: string }>;
@@ -14,16 +15,16 @@ interface EmptyStateProps {
 }
 
 /**
- * Premium empty state — taxonomy + Dub pattern.
+ * Canonical first-use/no-data state.
  *
- * - min-h-[400px] for consistent vertical space
- * - Dashed border container
- * - Square icon tile (rounded-2xl, not circle)
- * - text-balance for description
- * - Centered, max-w-[420px] content
+ * Phase 5 removes the oversized dashed "marketing empty state" treatment and
+ * routes empty-state composition through the same persistent state surface used
+ * for degraded/error/recovery experiences. Filtered-empty, permission, offline
+ * and recovery states remain distinct callers rather than being mislabeled as
+ * ordinary empty data.
  */
 export function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
   actionLabel,
@@ -31,33 +32,27 @@ export function EmptyState({
   onAction,
   className,
 }: EmptyStateProps) {
+  const action =
+    actionLabel && (actionHref || onAction) ? (
+      actionHref ? (
+        <Button asChild size="sm">
+          <Link href={actionHref}>{actionLabel}</Link>
+        </Button>
+      ) : (
+        <Button type="button" size="sm" onClick={onAction}>
+          {actionLabel}
+        </Button>
+      )
+    ) : null;
+
   return (
-    <div className={cn(
-      "flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center",
-      className,
-    )}>
-      <div className="mx-auto flex max-w-[420px] flex-col items-center gap-4">
-        <div className="flex size-14 items-center justify-center rounded-2xl border bg-muted">
-          <Icon className="size-6 text-muted-foreground" />
-        </div>
-        <div className="space-y-1.5">
-          <h3 className="text-base font-semibold text-foreground">{title}</h3>
-          {description ? (
-            <p className="text-balance text-sm text-muted-foreground">{description}</p>
-          ) : null}
-        </div>
-        {actionLabel && (actionHref || onAction) && (
-          <div className="mt-2">
-            {actionHref ? (
-              <Button asChild>
-                <Link href={actionHref}>{actionLabel}</Link>
-              </Button>
-            ) : (
-              <Button onClick={onAction}>{actionLabel}</Button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+    <StateSurface
+      icon={icon}
+      title={title}
+      description={description}
+      actions={action}
+      size="panel"
+      className={className}
+    />
   );
 }

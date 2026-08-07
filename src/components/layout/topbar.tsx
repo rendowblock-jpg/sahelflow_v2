@@ -1,44 +1,49 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { useI18n } from "@/hooks/use-i18n";
-import { useShopStore } from "@/stores/shop-store";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  AlertCircle,
+  Bell,
+  Check,
+  ChevronDown,
+  Command,
+  Globe,
+  HelpCircle,
+  LogOut,
+  Menu,
+  Package,
+  RotateCcw,
+  Search,
+  Settings,
+  ShoppingCart,
+  Store,
+  Truck,
+  User,
+} from "lucide-react";
+
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Sidebar } from "./sidebar";
-import {
-  Globe,
-  Store,
-  ChevronDown,
-  Menu,
-  Bell,
-  Search,
-  Command,
-  User,
-  Settings,
-  HelpCircle,
-  LogOut,
-  ShoppingCart,
-  Truck,
-  Package, RotateCcw, AlertCircle} from "lucide-react";
-import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import { logoutAndRedirect } from "@/lib/auth/logout-client";
+import { useShopStore } from "@/stores/shop-store";
+import { navigationItemForPathname } from "./navigation";
+import { Sidebar } from "./sidebar";
 
 const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
   { value: "fr", label: "Français", flag: "🇫🇷" },
@@ -48,9 +53,7 @@ const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
 
 interface TopbarProps {
   onCommandPaletteOpen: () => void;
-  /** Server-rendered locale (from cookie) — used for initial render */
   serverLocale: Locale;
-  /** Server-rendered direction (from cookie) — used for initial render */
   serverDir: "ltr" | "rtl";
 }
 
@@ -64,35 +67,47 @@ interface Notification {
   link?: string;
 }
 
-const NOTIFICATION_ICONS: Record<string, typeof ShoppingCart> = {
-  order: ShoppingCart,
-  delivery: Truck,
-  stock: Package,
-  info: Bell,
-  return: RotateCcw,
-  alert: AlertCircle,
+const NOTIFICATION_PRESENTATION: Record<
+  Notification["type"],
+  {
+    icon: typeof ShoppingCart;
+    className: string;
+  }
+> = {
+  order: { icon: ShoppingCart, className: "bg-primary/10 text-primary" },
+  delivery: { icon: Truck, className: "bg-success/10 text-success" },
+  stock: { icon: Package, className: "bg-warning/10 text-warning" },
+  info: { icon: Bell, className: "bg-muted text-muted-foreground" },
+  return: { icon: RotateCcw, className: "bg-warning/10 text-warning" },
+  alert: { icon: AlertCircle, className: "bg-destructive/10 text-destructive" },
 };
 
-const NOTIFICATION_COLORS: Record<string, string> = {
-  order: "bg-primary",
-  delivery: "bg-success",
-  stock: "bg-warning",
-  info: "bg-teal-500",
-  return: "bg-violet-500",
-  alert: "bg-destructive",
-};
-
-export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: TopbarProps) {
+/**
+ * Phase 5 application command/title bar.
+ *
+ * The bar carries only durable workspace context and universal controls: current
+ * route context, exact shop switch authority, command/search, notifications and
+ * compact user/environment controls. Decorative "live" chrome and page-specific
+ * actions stay out of the application frame.
+ */
+export function Topbar({
+  onCommandPaletteOpen,
+  serverLocale,
+  serverDir,
+}: TopbarProps) {
   const { t, locale, setLocale } = useI18n();
+  const pathname = usePathname();
   const router = useRouter();
-  const shops = useShopStore((s) => s.shops);
-  const activeShopId = useShopStore((s) => s.activeShopId);
-  const loaded = useShopStore((s) => s.loaded);
-  const switchStatus = useShopStore((s) => s.switchStatus);
-  const switchTargetId = useShopStore((s) => s.switchTargetId);
-  const switchError = useShopStore((s) => s.switchError);
-  const setActiveShop = useShopStore((s) => s.setActiveShop);
-  const loadShops = useShopStore((s) => s.loadShops);
+  const currentNavigation = navigationItemForPathname(pathname);
+
+  const shops = useShopStore((state) => state.shops);
+  const activeShopId = useShopStore((state) => state.activeShopId);
+  const loaded = useShopStore((state) => state.loaded);
+  const switchStatus = useShopStore((state) => state.switchStatus);
+  const switchTargetId = useShopStore((state) => state.switchTargetId);
+  const switchError = useShopStore((state) => state.switchError);
+  const setActiveShop = useShopStore((state) => state.setActiveShop);
+  const loadShops = useShopStore((state) => state.loadShops);
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -103,39 +118,53 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
 
   const loadNotifications = useCallback(async () => {
     try {
-      const res = await fetch("/api/notifications");
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications ?? []);
-      }
+      const response = await fetch("/api/notifications");
+      if (!response.ok) return;
+      const payload = (await response.json()) as {
+        notifications?: Notification[];
+      };
+      setNotifications(payload.notifications ?? []);
     } catch {
-      // Silently fail — notifications are non-critical
+      // Notifications are a projection. Their failure must not block work.
     }
   }, []);
 
   useEffect(() => {
-    const initial = setTimeout(() => void loadNotifications(), 0);
-    const interval = setInterval(() => void loadNotifications(), 60_000);
+    const initial = window.setTimeout(() => void loadNotifications(), 0);
+    const interval = window.setInterval(
+      () => void loadNotifications(),
+      60_000,
+    );
     return () => {
-      clearTimeout(initial);
-      clearInterval(interval);
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
     };
   }, [loadNotifications]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const activeShop = shops.find((s) => s.id === activeShopId) ?? null;
-  const switchTarget = shops.find((s) => s.id === switchTargetId) ?? null;
+  const unreadCount = notifications.filter((notification) => !notification.read)
+    .length;
+  const activeShop = shops.find((shop) => shop.id === activeShopId) ?? null;
+  const switchTarget =
+    shops.find((shop) => shop.id === switchTargetId) ?? null;
   const isRtl = serverDir === "rtl";
+  const activeLocaleLabel =
+    LOCALE_OPTIONS.find((option) => option.value === locale)?.label ??
+    locale.toUpperCase();
 
-  const handleShopSwitch = useCallback(async (shopId: string) => {
-    try {
-      await setActiveShop(shopId);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("topbar.shopSwitchBlocked"),
-      );
-    }
-  }, [setActiveShop, t]);
+  const handleShopSwitch = useCallback(
+    async (shopId: string) => {
+      try {
+        await setActiveShop(shopId);
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : t("topbar.shopSwitchBlocked"),
+        );
+      }
+    },
+    [setActiveShop, t],
+  );
 
   const handleLogout = useCallback(async () => {
     if (isLoggingOut) return;
@@ -149,228 +178,273 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
     }
   }, [isLoggingOut, t]);
 
+  const shopLabel =
+    switchStatus === "pending"
+      ? t("topbar.shopSwitchPending", { shop: switchTarget?.name ?? "" })
+      : switchStatus === "blocked"
+        ? t("topbar.shopSwitchBlocked", { shop: switchTarget?.name ?? "" })
+        : loaded
+          ? (activeShop?.name ?? t("topbar.selectShop"))
+          : t("topbar.loading");
+
   return (
-    <header className="sticky top-0 z-30 flex h-14 lg:h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md sm:gap-3 sm:px-4 lg:px-3">
-      {/* Start: Mobile sidebar toggle + shop selector */}
-      <div className="flex items-center gap-2">
-        {/* Mobile sidebar (hidden on desktop) */}
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-2.5 sm:px-3 lg:h-12 lg:px-3">
+      <div className="flex min-w-0 items-center gap-2">
         <div className="lg:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label={t("common.openMenu")}>
-                <Menu className="h-4 w-4" />
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("common.openMenu")}
+              >
+                <Menu className="size-4" aria-hidden="true" />
               </Button>
             </SheetTrigger>
-            <SheetContent side={isRtl ? "right" : "left"} className="w-72 p-0">
+            <SheetContent
+              side={isRtl ? "right" : "left"}
+              className="w-[min(290px,88vw)] p-0"
+            >
               <Sidebar serverLocale={serverLocale} serverDir={serverDir} />
             </SheetContent>
           </Sheet>
         </div>
+
+        {currentNavigation ? (
+          <div className="hidden max-w-40 truncate text-sm font-medium text-foreground lg:block">
+            {t(currentNavigation.labelKey)}
+          </div>
+        ) : null}
+
+        {currentNavigation ? (
+          <div className="hidden h-5 w-px bg-border lg:block" aria-hidden="true" />
+        ) : null}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              className="gap-2 px-2 font-medium"
+              className="h-8 w-8 max-w-56 justify-center gap-2 px-0 font-medium sm:w-auto sm:justify-start sm:px-2"
+              aria-label={shopLabel}
               aria-live="polite"
-              title={switchStatus === "blocked" ? (switchError ?? undefined) : undefined}
+              title={
+                switchStatus === "blocked" ? (switchError ?? undefined) : shopLabel
+              }
             >
-              <Store className="h-4 w-4 text-muted-foreground" />
-              <span className="hidden sm:inline">
-                {switchStatus === "pending"
-                  ? t("topbar.shopSwitchPending", { shop: switchTarget?.name ?? "" })
-                  : switchStatus === "blocked"
-                    ? t("topbar.shopSwitchBlocked", { shop: switchTarget?.name ?? "" })
-                    : loaded
-                      ? (activeShop?.name ?? t("topbar.selectShop"))
-                      : t("topbar.loading")}
+              <Store
+                className="size-4 shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <span className="hidden min-w-0 truncate text-start sm:inline">
+                {shopLabel}
               </span>
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              <ChevronDown
+                className="hidden size-3.5 shrink-0 text-muted-foreground sm:block"
+                aria-hidden="true"
+              />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56 shadow-dropdown">
+          <DropdownMenuContent align="start" className="w-64 shadow-dropdown">
             <DropdownMenuLabel>{t("nav.groupWorkspace")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {shops.map((shop) => (
               <DropdownMenuItem
                 key={shop.id}
                 onClick={() => void handleShopSwitch(shop.id)}
-                disabled={switchStatus === "pending" || shop.id === activeShopId}
+                disabled={
+                  switchStatus === "pending" || shop.id === activeShopId
+                }
                 className="gap-2"
               >
-                <span className="text-base">{shop.icon ?? "🏪"}</span>
-                <span className="flex-1">{shop.name}</span>
-                {shop.id === activeShopId && (
-                  <span className="size-1.5 rounded-full bg-primary" />
-                )}
+                <span className="text-base" aria-hidden="true">
+                  {shop.icon ?? "🏪"}
+                </span>
+                <span className="min-w-0 flex-1 truncate">{shop.name}</span>
+                {shop.id === activeShopId ? (
+                  <Check className="size-4 text-primary" aria-hidden="true" />
+                ) : null}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {/* Center: Search / Command Palette Trigger */}
-      {onCommandPaletteOpen && (
-        <button
+      <button
+        type="button"
+        onClick={onCommandPaletteOpen}
+        className="mx-auto hidden h-8 min-w-0 max-w-xl flex-1 items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex"
+        aria-label={t("topbar.searchPlaceholder")}
+      >
+        <Search className="size-3.5 shrink-0" aria-hidden="true" />
+        <span className="min-w-0 flex-1 truncate text-start">
+          {t("topbar.searchPlaceholder")}
+        </span>
+        <kbd className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+          <Command className="size-2.5" aria-hidden="true" />K
+        </kbd>
+      </button>
+
+      <div className="ms-auto flex shrink-0 items-center gap-0.5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="sm:hidden"
           onClick={onCommandPaletteOpen}
-          className="hidden sm:flex h-8 flex-1 max-w-md items-center gap-2 rounded-lg border bg-muted/50 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:border-border"
+          aria-label={t("topbar.searchPlaceholder")}
         >
-          <Search className="size-3.5 shrink-0" />
-          <span className="flex-1 text-start truncate">{t("topbar.searchPlaceholder")}</span>
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border bg-background px-1.5 font-mono text-xs font-medium text-muted-foreground">
-            <Command className="size-2.5" />K
-          </kbd>
-        </button>
-      )}
+          <Search className="size-4" aria-hidden="true" />
+        </Button>
 
-      {/* End: Live indicator + Language + Theme + Notifications + Avatar */}
-      <div className="flex items-center gap-1 ms-auto">
-        {/* Live indicator — hidden on mobile */}
-        <div className="hidden md:flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-0.5">
-          <span className="size-1.5 rounded-full bg-success animate-pulse-subtle" />
-          <span className="text-xs font-medium text-success">{t("common.live")}</span>
-        </div>
-
-        <Separator orientation="vertical" className="mx-1 h-5 hidden md:block" />
-
-        {/* Language switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-1.5 px-2">
-              <Globe className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase">{locale}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 gap-1.5 px-0 sm:w-auto sm:px-2"
+              aria-label={activeLocaleLabel}
+            >
+              <Globe className="size-4" aria-hidden="true" />
+              <span className="hidden text-[11px] font-semibold uppercase sm:inline">
+                {locale}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="shadow-dropdown">
-            {LOCALE_OPTIONS.map((opt) => (
+            {LOCALE_OPTIONS.map((option) => (
               <DropdownMenuItem
-                key={opt.value}
+                key={option.value}
                 onClick={() => {
-                  setLocale(opt.value);
-                  // Refresh the server layout so it re-reads the cookie and
-                  // re-renders with the new locale + dir (no full page reload).
+                  setLocale(option.value);
                   router.refresh();
                 }}
                 className="gap-2"
               >
-                <span className="text-base">{opt.flag}</span>
-                <span className="flex-1">{opt.label}</span>
-                {opt.value === locale && <span className="size-1.5 rounded-full bg-primary" />}
+                <span className="text-base" aria-hidden="true">
+                  {option.flag}
+                </span>
+                <span className="flex-1">{option.label}</span>
+                {option.value === locale ? (
+                  <Check className="size-4 text-primary" aria-hidden="true" />
+                ) : null}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Theme toggle */}
         <ThemeToggle />
 
-        {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="relative">
-              <Bell className="size-4" />
-              {unreadCount > 0 && (
-                <span className="absolute end-0 top-0 flex size-3.5 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="relative"
+              aria-label={t("common.notifications")}
+            >
+              <Bell className="size-4" aria-hidden="true" />
+              {unreadCount > 0 ? (
+                <span className="absolute end-0 top-0 flex min-w-3.5 -translate-y-0.5 translate-x-0.5 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-3.5 text-white rtl:-translate-x-0.5">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
-              )}
-              <span className="sr-only">{t("common.notifications")}</span>
+              ) : null}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80 shadow-dropdown">
-            <DropdownMenuLabel className="flex items-center justify-between">
+            <DropdownMenuLabel className="flex items-center justify-between gap-3">
               <span>{t("common.notifications")}</span>
-              {unreadCount > 0 && (
-                <Badge variant="secondary" className="text-xs px-1.5">
+              {unreadCount > 0 ? (
+                <Badge variant="secondary" className="px-1.5 text-xs">
                   {t("topbar.newNotifications", { n: String(unreadCount) })}
                 </Badge>
-              )}
+              ) : null}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Bell className="h-6 w-6 text-muted-foreground/40 mb-2" />
+                <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
+                  <Bell
+                    className="mb-2 size-5 text-muted-foreground/50"
+                    aria-hidden="true"
+                  />
                   <p className="text-xs text-muted-foreground">
                     {t("topbar.noNotifications")}
                   </p>
                 </div>
               ) : (
-                notifications.slice(0, 5).map((notif) => {
-                  const IconComp = NOTIFICATION_ICONS[notif.type] ?? Bell;
-                  const dotColor = NOTIFICATION_COLORS[notif.type] ?? "bg-primary";
-                  return (
+                notifications.slice(0, 6).map((notification) => {
+                  const presentation =
+                    NOTIFICATION_PRESENTATION[notification.type];
+                  const Icon = presentation.icon;
+                  const content = (
+                    <>
+                      <span
+                        className={`flex size-8 shrink-0 items-center justify-center rounded-md ${presentation.className}`}
+                      >
+                        <Icon className="size-3.5" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1.5">
+                          {!notification.read ? (
+                            <span
+                              className="size-1.5 shrink-0 rounded-full bg-primary"
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                          <span className="truncate text-sm font-medium">
+                            {notification.title}
+                          </span>
+                        </span>
+                        {notification.body ? (
+                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                            {notification.body}
+                          </span>
+                        ) : null}
+                        <span className="block text-[11px] text-muted-foreground/70">
+                          {notification.time}
+                        </span>
+                      </span>
+                    </>
+                  );
+
+                  return notification.link ? (
                     <DropdownMenuItem
-                      key={notif.id}
-                      className="flex items-start gap-3 p-3 cursor-pointer"
-                      asChild={notif.link ? true : undefined}
+                      key={notification.id}
+                      asChild
+                      className="cursor-pointer p-0"
                     >
-                      {notif.link ? (
-                        <Link href={notif.link}>
-                          <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${dotColor} text-white`}>
-                            <IconComp className="h-3.5 w-3.5" />
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              {!notif.read && (
-                                <span className={`size-1.5 rounded-full ${dotColor} shrink-0`} />
-                              )}
-                              <span className={`text-sm font-medium truncate ${notif.read ? "text-muted-foreground" : ""}`}>
-                                {notif.title}
-                              </span>
-                            </div>
-                            {notif.body && (
-                              <p className="text-xs text-muted-foreground truncate mt-0.5">{notif.body}</p>
-                            )}
-                            <span className="text-xs text-muted-foreground/70">{notif.time}</span>
-                          </div>
-                        </Link>
-                      ) : (
-                        <>
-                          <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${dotColor} text-white`}>
-                            <IconComp className="h-3.5 w-3.5" />
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              {!notif.read && (
-                                <span className={`size-1.5 rounded-full ${dotColor} shrink-0`} />
-                              )}
-                              <span className={`text-sm font-medium truncate ${notif.read ? "text-muted-foreground" : ""}`}>
-                                {notif.title}
-                              </span>
-                            </div>
-                            {notif.body && (
-                              <p className="text-xs text-muted-foreground truncate mt-0.5">{notif.body}</p>
-                            )}
-                            <span className="text-xs text-muted-foreground/70">{notif.time}</span>
-                          </div>
-                        </>
-                      )}
+                      <Link
+                        href={notification.link}
+                        className="flex w-full items-start gap-3 p-3"
+                      >
+                        {content}
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem
+                      key={notification.id}
+                      className="flex items-start gap-3 p-3"
+                    >
+                      {content}
                     </DropdownMenuItem>
                   );
                 })
               )}
             </DropdownMenuGroup>
-            {notifications.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-center justify-center text-primary text-sm cursor-pointer" asChild>
-                  <Link href="/settings">
-                    {t("topbar.viewAllNotifications")}
-                  </Link>
-                </DropdownMenuItem>
-              </>
-            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="rounded-full ms-0.5" aria-label={t("common.openMenu")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="ms-0.5 rounded-full"
+              aria-label={t("common.openMenu")}
+            >
               <Avatar className="size-7 ring-1 ring-border">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                   {activeShop?.name.charAt(0).toUpperCase() ?? "S"}
                 </AvatarFallback>
               </Avatar>
@@ -379,25 +453,31 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
           <DropdownMenuContent align="end" className="w-56 shadow-dropdown">
             <DropdownMenuLabel className="flex flex-col gap-0.5">
               <span className="text-sm font-medium">{t("topbar.user")}</span>
-              <span className="text-xs text-muted-foreground font-normal">SahelFlow</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                SahelFlow
+              </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="cursor-pointer" asChild>
+              <DropdownMenuItem asChild>
                 <Link href="/profile">
-                  <User className="me-2 size-4" />
+                  <User className="me-2 size-4" aria-hidden="true" />
                   {t("topbar.profile")}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" asChild>
+              <DropdownMenuItem asChild>
                 <Link href="/settings">
-                  <Settings className="me-2 size-4" />
+                  <Settings className="me-2 size-4" aria-hidden="true" />
                   {t("nav.settings")}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" asChild>
-                <a href="https://sahelflow.com/help" target="_blank" rel="noopener noreferrer">
-                  <HelpCircle className="me-2 size-4" />
+              <DropdownMenuItem asChild>
+                <a
+                  href="https://sahelflow.com/help"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <HelpCircle className="me-2 size-4" aria-hidden="true" />
                   {t("topbar.helpSupport")}
                 </a>
               </DropdownMenuItem>
@@ -405,11 +485,10 @@ export function Topbar({ onCommandPaletteOpen, serverLocale, serverDir }: Topbar
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
-              className="cursor-pointer"
               disabled={isLoggingOut}
               onClick={() => void handleLogout()}
             >
-              <LogOut className="me-2 size-4" />
+              <LogOut className="me-2 size-4" aria-hidden="true" />
               {t("topbar.logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
