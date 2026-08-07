@@ -30,21 +30,19 @@ jobs:
           harness_path = Path('scripts/verify-phase4-replacement-install.ps1')
           harness = harness_path.read_text(encoding='utf-8')
 
-          old = '''    return [pscustomobject]@{
-              status = [int]$response.StatusCode
-              body = $decoded
-          }
-          }
+          needle = '        body = $decoded\n'
+          if harness.count(needle) != 1:
+              raise SystemExit('response-body anchor drifted')
+          harness = harness.replace(
+              needle,
+              needle + '        setCookies = @($response.Headers["Set-Cookie"])\n',
+              1,
+          )
 
-          function Read-CdpMessage {'''
-          new = '''    return [pscustomobject]@{
-              status = [int]$response.StatusCode
-              body = $decoded
-              setCookies = @($response.Headers["Set-Cookie"])
-          }
-          }
-
-          function Import-SellerSessionCookieFromResponse {
+          marker = 'function Read-CdpMessage {'
+          if harness.count(marker) != 1:
+              raise SystemExit('CDP helper anchor drifted')
+          helper = r'''function Import-SellerSessionCookieFromResponse {
               param(
                   [Parameter(Mandatory = $true)][string]$BaseUrl,
                   [Parameter(Mandatory = $true)][Microsoft.PowerShell.Commands.WebRequestSession]$Session,
@@ -59,7 +57,7 @@ jobs:
               $header = @($Response.setCookies) -join ","
               $match = [regex]::Match(
                   $header,
-                  "(?:^|,\\s*)sf_session=([^;,\\s]+)"
+                  "(?:^|,\s*)sf_session=([^;,\s]+)"
               )
               if (-not $match.Success) {
                   throw "Seller session response did not contain the expected auth cookie."
@@ -77,65 +75,64 @@ jobs:
               $header = $null
           }
 
-          function Read-CdpMessage {'''
-          if harness.count(old) != 1:
-              raise SystemExit('Invoke-SahelFlowJson anchor drifted')
-          harness = harness.replace(old, new, 1)
+          '''
+          harness = harness.replace(marker, helper + marker, 1)
 
-          old = '''    $setup = Invoke-SahelFlowJson -Method POST -BaseUrl $BaseUrl -Path "/api/auth/setup" -Session $Session -Body @{ pin = $pin }
-              if ($setup.status -eq 200) { return }
-              if ($setup.status -ne 409) {
-                  throw "Owner setup failed with HTTP $($setup.status)."
-              }
-              $login = Invoke-SahelFlowJson -Method POST -BaseUrl $BaseUrl -Path "/api/auth/login" -Session $Session -Body @{ pin = $pin }
-              if ($login.status -ne 200) {
-                  throw "Owner login failed with HTTP $($login.status)."
-              }
-          }'''
-          new = '''    $setup = Invoke-SahelFlowJson -Method POST -BaseUrl $BaseUrl -Path "/api/auth/setup" -Session $Session -Body @{ pin = $pin }
-              if ($setup.status -eq 200) {
+          needle = '    if ($setup.status -eq 200) { return }'
+          if harness.count(needle) != 1:
+              raise SystemExit('setup success anchor drifted')
+          harness = harness.replace(
+              needle,
+              '''    if ($setup.status -eq 200) {
                   Import-SellerSessionCookieFromResponse -BaseUrl $BaseUrl -Session $Session -Response $setup
                   return
-              }
-              if ($setup.status -ne 409) {
-                  throw "Owner setup failed with HTTP $($setup.status)."
-              }
-              $login = Invoke-SahelFlowJson -Method POST -BaseUrl $BaseUrl -Path "/api/auth/login" -Session $Session -Body @{ pin = $pin }
-              if ($login.status -ne 200) {
-                  throw "Owner login failed with HTTP $($login.status)."
-              }
+              }''',
+              1,
+          )
+
+          old = '''    if ($login.status -ne 200) {
+              throw "Owner login failed with HTTP $($login.status)."
+          }
+          }'''
+          new = '''    if ($login.status -ne 200) {
+              throw "Owner login failed with HTTP $($login.status)."
+          }
               Import-SellerSessionCookieFromResponse -BaseUrl $BaseUrl -Session $Session -Response $login
           }'''
           if harness.count(old) != 1:
-              raise SystemExit('Establish-OwnerSession anchor drifted')
+              raise SystemExit('login success anchor drifted')
           harness = harness.replace(old, new, 1)
 
-          old = '''if ($search.status -ne 200) { throw "Source customer search failed." }'''
-          new = '''if ($search.status -ne 200) {
+          needle = 'if ($search.status -ne 200) { throw "Source customer search failed." }'
+          if harness.count(needle) != 1:
+              raise SystemExit('source search anchor drifted')
+          harness = harness.replace(
+              needle,
+              '''if ($search.status -ne 200) {
               $safeCode = if ($null -ne $search.body -and $null -ne $search.body.code) {
                   [string]$search.body.code
               } else {
                   "none"
               }
               throw "Source customer search failed with HTTP $($search.status) and code $safeCode."
-          }'''
-          if harness.count(old) != 1:
-              raise SystemExit('source-search diagnostic anchor drifted')
-          harness = harness.replace(old, new, 1)
+          }''',
+              1,
+          )
           harness_path.write_text(harness, encoding='utf-8', newline='\n')
 
           test_path = Path('src/lib/__tests__/phase4-replacement-installed-contract.test.ts')
           test = test_path.read_text(encoding='utf-8')
-          old = '''    expect(harness).toContain("Import-RuntimeCookieFromWebView");
-              expect(harness).toContain("written to evidence or emitted to the Actions log");'''
-          new = '''    expect(harness).toContain("Import-RuntimeCookieFromWebView");
-              expect(harness).toContain("Import-SellerSessionCookieFromResponse");
-              expect(harness).toContain('"sf_session"');
-              expect(harness).toContain("$cookie.Secure = $false");
-              expect(harness).toContain("written to evidence or emitted to the Actions log");'''
-          if test.count(old) != 1:
-              raise SystemExit('installed-contract test anchor drifted')
-          test = test.replace(old, new, 1)
+          needle = '    expect(harness).toContain("Import-RuntimeCookieFromWebView");\n'
+          if test.count(needle) != 1:
+              raise SystemExit('installed contract anchor drifted')
+          test = test.replace(
+              needle,
+              needle +
+              '    expect(harness).toContain("Import-SellerSessionCookieFromResponse");\n' +
+              "    expect(harness).toContain('\\\"sf_session\\\"');\n" +
+              '    expect(harness).toContain("$cookie.Secure = $false");\n',
+              1,
+          )
           test_path.write_text(test, encoding='utf-8', newline='\n')
 
           Path('.github/workflows/phase4-fast-patch.yml').unlink()
