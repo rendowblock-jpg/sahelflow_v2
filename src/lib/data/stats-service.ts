@@ -92,10 +92,7 @@ export const statsService = {
         : Promise.resolve(0),
       canReadDeliveries
         ? ctx.prisma.delivery.count({
-            where: {
-              status: { in: ["pending", "created"] },
-              deletedAt: null,
-            },
+            where: { status: "pending", deletedAt: null },
           })
         : Promise.resolve(0),
       canReadProducts
