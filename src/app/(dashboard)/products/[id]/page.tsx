@@ -139,19 +139,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
         />
       </div>
 
-      {product.description ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("common.description")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-              {product.description}
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
-
       {productVariants.length > 0 ? (
         <Card>
           <CardHeader>
