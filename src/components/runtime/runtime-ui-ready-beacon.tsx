@@ -24,12 +24,14 @@ function delay(milliseconds: number, signal: AbortSignal): Promise<void> {
 }
 
 /**
- * Proves the packaged desktop WebView loaded and hydrated a real SahelFlow page
- * with its native HttpOnly per-launch runtime cookie. The Rust host keeps the
- * window hidden until the corresponding acknowledgment file is durable.
+ * Proves the page has hydrated before any desktop/native readiness side effect.
+ * Browser evidence also waits on this marker so form interaction can never race
+ * React hydration and accidentally test pre-hydration HTML.
  */
 export function RuntimeUiReadyBeacon() {
   useEffect(() => {
+    document.documentElement.dataset.sfHydrated = "true";
+
     // Packaged SahelFlow always binds the mandatory server to 127.0.0.1.
     // Browser development uses localhost and must not produce desktop evidence.
     if (window.location.hostname !== "127.0.0.1") return;
@@ -68,7 +70,10 @@ export function RuntimeUiReadyBeacon() {
       }
     })();
 
-    return () => controller.abort();
+    return () => {
+      delete document.documentElement.dataset.sfHydrated;
+      controller.abort();
+    };
   }, []);
 
   return null;
