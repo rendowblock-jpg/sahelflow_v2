@@ -33,6 +33,7 @@ export type OrdersWorkbenchSort =
 
 export interface OrdersWorkbenchQuery {
   status?: OrderStatus;
+  risk?: "high";
   page?: number;
   pageSize?: number;
   sort?: string | null;
@@ -81,6 +82,14 @@ export function resolveOrdersWorkbenchAccess(
     update: allowed(actorContext, "orders.update"),
     delete: allowed(actorContext, "orders.delete"),
   });
+}
+
+function assertHighRiskQueueAccess(actorContext: TrustedActorContext): void {
+  const resource = { shopId: actorContext.shop.shopId };
+  assertTrustedAction(actorContext, "risk.read", resource);
+  assertTrustedAction(actorContext, "customers.read", resource);
+  assertTrustedAction(actorContext, "customers.contact.read", resource);
+  assertTrustedAction(actorContext, "orders.financials.read", resource);
 }
 
 function clampPage(value: number | undefined): number {
@@ -141,46 +150,11 @@ function mutationAuthority(
   return "legacy_compatibility";
 }
 
-export async function getOrdersWorkbenchPage(
-  actorContext: TrustedActorContext,
-  query: OrdersWorkbenchQuery = {},
-): Promise<OrdersWorkbenchResponse> {
-  const access = resolveOrdersWorkbenchAccess(actorContext);
-  const page = clampPage(query.page);
-  const pageSize = clampPageSize(query.pageSize);
-  const sort = normalizedSort(query.sort, access.financials);
-  const where = {
-    deletedAt: null,
-    ...(query.status ? { status: query.status } : {}),
-  } as const;
-
-  const [sourceRows, total] = await Promise.all([
-    db.order.findMany({
-      where,
-      select: {
-        id: true,
-        orderNumber: true,
-        status: true,
-        totalPrice: access.financials,
-        wilaya: access.contact,
-        phone: access.contact,
-        createdAt: true,
-        source: true,
-        sourceMetadata: true,
-        items: { select: { id: true } },
-        customer: access.contact
-          ? { select: { name: true, phone: true } }
-          : false,
-      },
-      orderBy: orderByFor(sort),
-      take: pageSize,
-      skip: (page - 1) * pageSize,
-    }),
-    db.order.count({ where }),
-  ]);
-
-  const rows = sourceRows as unknown as OrderListSourceRow[];
-  const orders = rows.map((row) => ({
+function projectRows(
+  sourceRows: readonly OrderListSourceRow[],
+  access: WorkbenchFieldAccess,
+): OrdersWorkbenchResponse["orders"] {
+  return sourceRows.map((row) => ({
     id: row.id,
     orderNumber: row.orderNumber,
     status: row.status,
@@ -197,7 +171,100 @@ export async function getOrdersWorkbenchPage(
       : null,
     mutationAuthority: mutationAuthority(row.source, row.sourceMetadata),
   }));
+}
 
+export async function getOrdersWorkbenchPage(
+  actorContext: TrustedActorContext,
+  query: OrdersWorkbenchQuery = {},
+): Promise<OrdersWorkbenchResponse> {
+  const access = resolveOrdersWorkbenchAccess(actorContext);
+  if (query.risk === "high") {
+    assertHighRiskQueueAccess(actorContext);
+  }
+
+  const page = clampPage(query.page);
+  const pageSize = clampPageSize(query.pageSize);
+  const sort = normalizedSort(query.sort, access.financials);
+  const where = {
+    deletedAt: null,
+    ...(query.status ? { status: query.status } : {}),
+  } as const;
+  const select = {
+    id: true,
+    orderNumber: true,
+    status: true,
+    totalPrice: access.financials,
+    wilaya: access.contact,
+    phone: access.contact,
+    createdAt: true,
+    source: true,
+    sourceMetadata: true,
+    items: { select: { id: true } },
+    customer: access.contact
+      ? { select: { name: true, phone: true } }
+      : false,
+  } as const;
+  const orderBy = orderByFor(sort);
+
+  if (query.risk === "high") {
+    const candidates = await db.order.findMany({
+      where,
+      select: { id: true },
+      orderBy,
+    });
+    const assessments = await batchAssessOrders(
+      { prisma: db, shop: shopContext },
+      candidates.map((row) => row.id),
+    );
+    const filteredIds = candidates
+      .map((row) => row.id)
+      .filter((id) => {
+        const level = assessments.get(id)?.level;
+        return level === "high" || level === "critical";
+      });
+    const total = filteredIds.length;
+    const pageIds = filteredIds.slice((page - 1) * pageSize, page * pageSize);
+    const sourceRows = pageIds.length
+      ? await db.order.findMany({
+          where: { ...where, id: { in: pageIds } },
+          select,
+          orderBy,
+        })
+      : [];
+    const rows = sourceRows as unknown as OrderListSourceRow[];
+    const riskData = Object.fromEntries(
+      pageIds.flatMap((id) => {
+        const assessment = assessments.get(id);
+        return assessment
+          ? [[id, { level: assessment.level, score: assessment.score }] as const]
+          : [];
+      }),
+    );
+
+    return {
+      orders: projectRows(rows, access),
+      riskData,
+      fieldAccess: access,
+      total,
+      hasNextPage: page * pageSize < total,
+      page,
+      pageSize,
+      sort,
+    };
+  }
+
+  const [sourceRows, total] = await Promise.all([
+    db.order.findMany({
+      where,
+      select,
+      orderBy,
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    }),
+    db.order.count({ where }),
+  ]);
+
+  const rows = sourceRows as unknown as OrderListSourceRow[];
   let riskData: OrdersWorkbenchResponse["riskData"];
   if (access.risk && rows.length > 0) {
     const assessments = await batchAssessOrders(
@@ -213,7 +280,7 @@ export async function getOrdersWorkbenchPage(
   }
 
   return {
-    orders,
+    orders: projectRows(rows, access),
     ...(riskData ? { riskData } : {}),
     fieldAccess: access,
     total,
