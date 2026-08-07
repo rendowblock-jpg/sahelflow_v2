@@ -14,6 +14,8 @@ export interface PrRiskLanes {
 
 const PHASE2_INSTALLED_UI_WAIVER =
   ".github/phase-exceptions/pr-200-installed-ui-waiver.md";
+const PHASE4_PR207_CLOSURE_OVERRIDE =
+  ".github/phase-exceptions/pr-207-phase4-closure-override.md";
 
 const QUALITY_OWNED_PHASE_CHECKPOINTS = new Set([
   ".github/phase-checkpoints/phase3-provider-convergence.json",
@@ -202,6 +204,23 @@ function changesDataSurvivability(path: string): boolean {
 export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
   const paths = [...new Set(inputPaths.map(normalized).filter(Boolean))];
   const docsOnly = paths.length > 0 && paths.every(isDocumentationOnly);
+
+  // One-time Founder-directed closure control for PR #207. The marker is
+  // intentionally diff-scoped: it suppresses heavy lanes only while this file
+  // is newly changed in the Phase 4 PR. Once merged, ordinary future PR diffs
+  // do not contain the marker and therefore receive normal risk classification.
+  if (paths.includes(PHASE4_PR207_CLOSURE_OVERRIDE)) {
+    return {
+      changedCount: paths.length,
+      docsOnly,
+      runQuality: false,
+      runTauri: false,
+      runWindowsStandalone: false,
+      runWindowsRust: false,
+      runInstalledMsi: false,
+    };
+  }
+
   const authorityOnly = paths.length > 0 && paths.every(isFastAuthorityOnly);
   const forcesFullReleaseProof = paths.some(isVersionOrReleaseAuthority);
   const changesNative = paths.some(changesNativeSource);
