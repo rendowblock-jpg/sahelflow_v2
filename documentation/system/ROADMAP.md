@@ -195,6 +195,9 @@ Phase 6 closes only when:
    observation;
 7. no Phase 1–5 authority has been weakened.
 
+Phases 5–6 normally trigger a Level 3 installed-UI, visual-regression and
+accessibility checkpoint.
+
 ---
 
 ## Phase 7 — performance and reliability budgets
@@ -202,20 +205,69 @@ Phase 6 closes only when:
 **Objective:** certify representative low-end Windows performance and sustained
 operational reliability after the accessibility/RTL surface is stable.
 
-Focus on startup, route latency, large workbench datasets, memory, provider
-recovery, long-running desktop sessions and measurable regressions. Use explicit
-budgets and retained evidence rather than subjective speed claims.
+### T470 targets
+
+- cold launch no slower than 8 seconds p95;
+- ordinary navigation no slower than 700 ms p95;
+- indexed search no slower than 350 ms p95;
+- ordinary local mutation no slower than 500 ms p95.
+
+### Declared floor targets
+
+- usable shell within 15 seconds p95 on entry SSD and 25 seconds p95 on HDD;
+- input acknowledgement within 100 ms;
+- navigation within 1.5 seconds p95;
+- indexed search within 750 ms p95;
+- local mutation within 1 second p95;
+- no ordinary freeze over 200 ms;
+- steady working set no greater than 750 MB with WhatsApp connected;
+- no sustained memory growth across eight hours.
+
+### Required outcomes
+
+- cold/warm startup stage measurement;
+- query/index and rendering budgets;
+- virtualized large tables and bounded charts where representative scale requires them;
+- low-resource scheduling and sidecar limits;
+- clean close/reopen and crash-loop recovery;
+- eight-hour stability and resource-trend evidence;
+- representative database scale.
+
+### Exit gate
+
+All T470 and declared-floor targets pass on representative data with no authority,
+feature or durability reduction. Eight-hour resource trends show no sustained
+memory growth or ordinary UI freeze beyond the stated budgets, and no actionable
+latest-head P0/P1 reliability finding remains.
 
 ---
 
 ## Phase 8 — connected platform and growth completeness
 
-**Objective:** complete remaining connected-service/growth/admin functionality
-that is intentionally later than the core COD operating system, while preserving
-all canonical business/effect/privacy authorities.
+**Objective:** complete remote work, hosted storefront, licensing/control and
+zero-knowledge recovery without weakening desktop canonical authority.
 
-Do not promote speculative integrations or third-party features above the local
-seller operations core.
+### Required outcomes
+
+- authenticated encrypted projection/command protocol;
+- desktop-commit truth for remote success;
+- shared multi-tenant Cloudflare control plane;
+- hosted storefront with durable checkout receipt and atomic publish/rollback;
+- PWA operational companion within desktop-owned authority;
+- zero-knowledge encrypted backup transport and explicit quotas;
+- Founder Console with bounded metadata and offline permanent signing;
+- outage, cost, abuse and cross-tenant controls.
+
+### Exit gate
+
+Cloud outage cannot corrupt or block permanent local work. Remote success appears
+only after desktop commit. Storefront success has a durable receipt. Cross-tenant
+leakage and duplicate external effects are zero in certification. SahelFlow alone
+cannot decrypt seller backups. All required outage/replay/rollback/tenant-isolation
+journeys pass with zero actionable latest-head P0/P1.
+
+Phases 7–8 normally trigger a Level 3 performance, remote-protocol, storefront,
+cloud-outage and installed-desktop checkpoint.
 
 ---
 
@@ -225,8 +277,47 @@ seller operations core.
 release candidate and, only after all gates are met, an appropriate Beta/Stable
 claim.
 
-Requires the applicable signed build, clean install/upgrade/uninstall/recovery,
-Founder-installed acceptance, retained evidence reconciliation, support/security/
-privacy readiness and no unresolved ship-blocking consequence.
+### Required certification
+
+- clean install, upgrade, reopen and in-app update;
+- migration, backup, restore and replacement installation;
+- identity, permissions, revocation and shop lifecycle;
+- trial expiry, permanent activation, transfer and recovery;
+- Golden COD and provider reconciliation;
+- storefront checkout and remote command;
+- complete AAA UI, Arabic/RTL and accessibility;
+- T470/floor performance and eight-hour stability;
+- independent security, privacy, legal and provider review;
+- incident response, support and rollout readiness;
+- representative Algerian seller beta;
+- retained evidence obligations reconciled or superseded by stronger exact-source proof.
+
+### Stable gate
+
+Every Required capability is proven at its required layer; zero P0/P1 remains;
+provider, recovery, security/privacy/Law 18-07, performance, Arabic/RTL,
+accessibility and representative-beta gates pass; a signed Windows artifact and
+immutable manifest pass; and the Founder explicitly promotes Stable.
+
+Issue #214 must be closed before Stable if its replacement-install certification
+obligation has not already been superseded by stronger exact-source evidence.
+Issue #221 must be reconciled before any claim that depends on Founder-installed
+Phase 5/6 visual acceptance.
 
 A source-complete phase is never itself a release claim.
+
+---
+
+## Definition of done
+
+A phase is complete only when its exit gate has objective evidence, its selected
+Level 2 checkpoint passes and every known P0/P1 is closed, unless the Founder
+records an explicit scoped exception that names the unproven evidence, preserves
+it in a follow-up issue and forbids claims that the retained evidence passed. A
+major checkpoint is complete only when all selected installed and external-risk
+evidence passes on one exact source.
+
+“100% sure” means every defined gate passes, representative evidence exists at the
+required layer and no contradiction remains between product promise, source,
+artifact, installed behavior and public claim. A scoped phase-closure exception is
+not “100% sure” certification and must never be described that way.
