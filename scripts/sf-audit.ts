@@ -340,8 +340,9 @@ requireMarkers("documentation/system/ROADMAP.md", [
 requireMarkers("documentation/system/CURRENT_STATE.md", [
   "Latest protected source closures",
   "Phase 3 protected-source closure — PR #203",
-  "Active Phase 4 frontier",
-  "issue #204",
+  "Phase 4 protected-source closure — PR #207",
+  "Active Phase 5 frontier",
+  "issue #214",
   "It is not yet a commercially complete or class-AAA SahelFlow 1.0 product",
 ]);
 requireMarkers("documentation/operations/WORKFLOW.md", [
@@ -374,8 +375,7 @@ requireMarkers("scripts/sf-verify.ts", [
   ".sf-vitest-failures.txt",
 ]);
 
-const expectedPhase =
-  "Phase 4 — data protection, recovery, migrations and security";
+const expectedPhase = "Phase 5 — whole-product AAA UI/UX";
 for (const relativePath of [
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
@@ -729,5 +729,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 3 protected-source closed; Phase 4 audit active; provider/installed evidence retained for later gates).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 4 protected-source closed; Phase 5 active; retained installed evidence tracked in issues #201 and #214).`,
 );

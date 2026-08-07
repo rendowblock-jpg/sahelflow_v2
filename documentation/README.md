@@ -2,36 +2,40 @@
 
 > **Status:** Active documentation entry point
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary
-> **Live protected main:** `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
-> **Latest application-changing protected merge:** PR #203 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
-> **Latest protected authority merge:** PR #206 at `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
+> **Live protected main:** `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
+> **Latest application-changing protected merge:** PR #207 at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
+> **Latest protected authority merge:** PR #207 at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active product phase:** Phase 4 — data protection, recovery, migrations and security
+> **Active product phase:** Phase 5 — whole-product AAA UI/UX
 > **Execution mode:** single-agent, audit-first, batch remediation and tiered CI
-> **Active implementation outcome:** issue #204 through PR #207 — complete Phase 4 candidate under exact-head review and validation
-> **Active agent:** ChatGPT Web Agent owns the next Phase 4 closure action; Desktop Agent has released the implementation seat
-> **Active branch/PR:** `agent/phase4-protected-data-authority` / PR #207
-> **Last executable candidate:** `33500fd8c7e968f1244a444f6fb130d9d897d6a1`
-> **Last installed evidence:** run `31127743699` — MSI lifecycle and hydrated UI green; replacement setup HTTP 500
-> **Phase execution issue:** issue #204
-> **Retained installed evidence:** issue #201
+> **Active implementation outcome:** Phase 5 package not yet opened; begin from protected `main`
+> **Active product branch/PR:** none
+> **Phase 4 closure:** PR #207 merged; issue #204 completed
+> **Retained installed evidence:** issues #201 and #214
 > **Execution epic:** issue #164
-> **Last updated:** 2026-08-06
+> **Last updated:** 2026-08-07
 
 Live protected `main` must be re-read directly from GitHub before every session.
-The commit above is the exact current protected source at this update; it is not a
+The commit above is the exact protected source frontier at this update; it is not a
 permanent substitute for live repository state.
 
-The original installed-UI blocker is closed on the unmerged candidate: the
-request-derived absolute redirect passed real installed WebView proof. The final
-run also proved that the replacement harness reaches the application through the
-native WebView's HttpOnly runtime authority. Phase 4 remains open because the
-replacement drill then reached `/api/auth/setup` and received HTTP 500 before
-source backup creation. This is the exact next bounded application boundary; it
-is not another WebView2 or cookie failure.
+Phase 4 — data protection, recovery, migrations and security — is now
+**protected-source closed** through PR #207. The complete P4-A…P4-F source package
+is on protected `main`, and issue #204 is closed. The final product head before the
+closure-control commits had green source quality, documentation audit, coverage,
+production dependency audit, Tauri release smoke, Windows standalone and Windows
+Rust parity. Its exact MSI also built, installed, launched, closed/reopened and
+passed authenticated hydrated WebView UI proof twice.
+
+One evidence boundary is deliberately retained rather than misrepresented as
+passing: the installed replacement-install drill did not reach backup/restore
+because disposable CI trial activation returned HTTP 503 with
+`LICENSE_TRIAL_SERVICE_UNAVAILABLE`. Issue #214 owns that post-Phase 4
+release/certification proof. It does not reopen Phase 4 or block Phase 5, but it
+still blocks any claim that replacement-install recovery is installed/certified.
 
 This directory is the durable shared brain for SahelFlow. It defines the finished
 product, required experience, engineering invariants, merged-source truth, final
@@ -39,9 +43,9 @@ dependency order, research/delivery process and exact execution frontier.
 
 The active authority remains intentionally limited to ten Markdown documents.
 Issue #164 tracks execution but is not an eleventh product or architecture
-authority. Issue #204 owns active Phase 4 execution; issue #201 retains the later installed evidence obligation. Historical
-reports under `archive/` are context only until revalidated and adopted by an
-active owner.
+authority. Historical Phase 4 issue #204 records the completed phase; issues #201
+and #214 retain later installed-evidence obligations. Reports under `archive/` are
+context only until revalidated and adopted by an active owner.
 
 ## Read order
 
@@ -60,7 +64,7 @@ active owner.
 7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — single-agent execution,
    audit-first planning, Problem Register, tiered CI, review, release and evidence.
 8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact live
-   Phase 4 frontier, audit status, Problem Register and exact next task.
+   Phase 5 frontier, retained evidence and exact next task.
 9. [`research/RESEARCH.md`](research/RESEARCH.md) — research protocol, adopted
    findings and revalidation triggers.
 10. This file — documentation map and authority rules.
@@ -105,17 +109,20 @@ A lower reality cannot claim a higher one.
 - PR #197 protected signed installation-level licensing.
 - PR #199 protected the single-agent AAA execution model.
 - PR #200 protected Tauri-owned native multi-shop lifecycle authority; issue #201
-  retains its bounded installed hydrated-WebView evidence obligation.
-- PR #203 merged Phase 3 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3` from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`.
-- Final required run `30901725446` passed source/database/migration tests,
+  retains its bounded installed-evidence/waiver-cleanup obligation.
+- PR #203 merged Phase 3 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+  from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`.
+- Final required Phase 3 run `30901725446` passed source/database/migration tests,
   TypeScript, ESLint, 80%+ coverage and a zero-vulnerability production audit.
 - Issue #202 is closed and no known Phase 3 P0/P1 remains.
-- FD-030 retains real provider certification for Phase 9 representative beta and
-  issue #201 for the applicable Level 3/installed gate.
-- Internal.13 remains the published and Founder-installed executable; no Phase 3
-  version bump, MSI, Founder acceptance, Beta or Stable claim followed.
-- PR #206 protected the Phase 4 audit, P4-001…P4-013 Problem Register,
-  contracts and risk lanes; issue #204 now owns closure through PR #207.
+- FD-030 retains real provider certification for Phase 9 representative beta.
+- PR #206 protected the Phase 4 exhaustive audit and contract freeze, including
+  the P4-001…P4-013 Problem Register and consequence-based risk lanes.
+- PR #207 protected the complete Phase 4 implementation at
+  `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`; issue #204 is completed.
+- Issue #214 retains the unproven installed replacement-install recovery drill.
+- Internal.13 remains the published and Founder-installed executable; no Phase 4
+  version bump, new signed MSI, Founder acceptance, Beta or Stable claim followed.
 
 ## Current execution model
 
@@ -126,15 +133,17 @@ The Founder-selected permanent operating pattern remains:
 - one consolidated Problem Register grouped by root cause;
 - coherent batch remediation rather than drip-fed loops;
 - Level 1 Task Gate after every coherent task;
-- Level 2 Phase Checkpoint before closure;
+- Level 2 Phase Checkpoint before closure, except for an explicit scoped Founder
+  closure exception that carries named unproven evidence forward;
 - Level 3 Major Full Checkpoint after two phases by default or earlier for
   security, data, recovery, migration, native and irreversible-provider risk;
 - complete whole-product AAA frontend, multilingual, accessibility, performance,
   recovery and evidence obligations.
 
-PR #206 completed the Phase 4 audit, primary-source research and shared contract
-freeze. PR #207 is the sole authorized production candidate; no Phase 5 work
-starts until its exact-head evidence, review and protected merge are reconciled.
+The PR #207 exception is narrow and historical: it closed Phase 4 at the
+protected-source program layer while preserving installed replacement proof in
+#214. It is not passing certification evidence and must never be used to support a
+release, Beta, Stable or installed-recovery claim.
 
 ## Final completion model
 
@@ -152,26 +161,26 @@ starts until its exact-head evidence, review and protected merge are reconciled.
 Experience, Arabic/RTL, accessibility, performance, security, migration, recovery
 and evidence travel continuously across functional phases.
 
-## Active Phase 4 contract
+## Active Phase 5 contract
 
-Phase 4 must make seller data survivable and the product commercially defensible.
-PR #206 completed the audit and contract freeze; PR #207 implements the complete
-authorized P4-A…P4-F candidate and remains unmerged pending closure evidence.
+Phase 5 transforms the complete application into one coherent top-tier
+operational system. Before broad production edits, the active agent must inspect
+the exact protected frontend and real authority paths, group defects by root cause
+and freeze one coherent AAA implementation package.
 
-The audit covers every store, protected field, key, blind index, secret,
-backup/export path, migration, journal, recovery, reset/delete path, production
-caller, test, native boundary and legacy competitor. It must adopt current primary
-sources for SQLite/Windows/cryptography/migration/SBOM/privacy/Law 18-07, produce
-one Problem Register and freeze:
+The complete whole-product AAA frontend target includes:
 
-- purpose-separated protected key hierarchy;
-- encrypted all-shop backup and authenticated manifest;
-- independent recovery kit and replacement-install restore;
-- failed-restore rollback and migration failure matrix;
-- minimization, retention, deletion, threat-model and security-review evidence.
+- one SahelFlow-owned design system and governed chart foundation;
+- professional information architecture, navigation and operational density;
+- complete tables, filters, forms, bulk work and destructive ceremonies;
+- complete happy, loading, empty, validation, permission, offline, pending, stale,
+  conflict, error, retry, recovery and history states;
+- every Required page using real authority and data;
+- route-by-route visual regression and Founder visual acceptance.
 
-Historical Phase 4 branches and PRs are evidence only until revalidated against
-current protected main.
+Phase 5 must not reopen Phase 4 implementation. If work encounters the retained
+installed replacement proof, reference issue #214 and keep it in its evidence
+lane unless a Phase 5 change materially affects that boundary.
 
 ## AAA frontend rule
 
@@ -212,9 +221,10 @@ happy, validation, permission, duplicate, concurrency, loading, empty, offline,
 stale, conflict, failure, retry, recovery, audit, Arabic/RTL, accessibility,
 performance and preservation behavior pass at the required evidence layers.
 
-A phase closes only after its Level 2 checkpoint. High-risk phase groups also pass
-the Level 3 checkpoint. Public Stable additionally requires real external and
-representative evidence.
+A phase normally closes after its Level 2 checkpoint. A named Founder-directed
+scoped exception may close protected-source phase status only when its unproven
+evidence is explicitly retained and cannot be represented as passed. Public
+Stable additionally requires real external and representative evidence.
 
 ## Update ownership
 
