@@ -61,7 +61,11 @@ function dateText(value: string | null, locale: string): string {
   ).format(new Date(value));
 }
 
-export function WhatsAppIngressRecoveryPanel() {
+export function WhatsAppIngressRecoveryPanel({
+  canRetry = false,
+}: {
+  canRetry?: boolean;
+}) {
   const { locale } = useI18n();
   const tr = useCallback(
     (key: WhatsAppIngressRecoveryKey) =>
@@ -134,6 +138,7 @@ export function WhatsAppIngressRecoveryPanel() {
   );
 
   const retry = async (event: IngressEvent) => {
+    if (!canRetry) return;
     const reason = (reasons[event.id] ?? "").trim();
     if (reason.length < 3) return;
     setRetryingId(event.id);
@@ -169,9 +174,9 @@ export function WhatsAppIngressRecoveryPanel() {
         <div className="space-y-1">
           <CardTitle className="flex items-center gap-2 text-base">
             {recoveryEvents.length > 0 ? (
-              <AlertTriangle className="h-4 w-4 text-warning" aria-hidden="true" />
+              <AlertTriangle className="size-4 text-warning" aria-hidden="true" />
             ) : (
-              <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
+              <CheckCircle2 className="size-4 text-success" aria-hidden="true" />
             )}
             {tr("title")}
           </CardTitle>
@@ -187,9 +192,9 @@ export function WhatsAppIngressRecoveryPanel() {
           disabled={loading}
         >
           {loading ? (
-            <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            <Loader2 className="me-1.5 size-3.5 animate-spin" aria-hidden="true" />
           ) : (
-            <RefreshCw className="me-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            <RefreshCw className="me-1.5 size-3.5" aria-hidden="true" />
           )}
           {tr("refresh")}
         </Button>
@@ -197,7 +202,7 @@ export function WhatsAppIngressRecoveryPanel() {
       <CardContent>
         {loading && events.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             {tr("processing")}
           </div>
         ) : recoveryEvents.length === 0 ? (
@@ -249,36 +254,38 @@ export function WhatsAppIngressRecoveryPanel() {
                     </ol>
                   </details>
 
-                  <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`retry-reason-${event.id}`}>{tr("retryReason")}</Label>
-                      <Input
-                        id={`retry-reason-${event.id}`}
-                        value={reason}
-                        onChange={(input) =>
-                          setReasons((current) => ({
-                            ...current,
-                            [event.id]: input.target.value,
-                          }))
-                        }
-                        placeholder={tr("retryPlaceholder")}
-                        maxLength={500}
-                        disabled={retrying}
-                      />
+                  {canRetry ? (
+                    <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`retry-reason-${event.id}`}>{tr("retryReason")}</Label>
+                        <Input
+                          id={`retry-reason-${event.id}`}
+                          value={reason}
+                          onChange={(input) =>
+                            setReasons((current) => ({
+                              ...current,
+                              [event.id]: input.target.value,
+                            }))
+                          }
+                          placeholder={tr("retryPlaceholder")}
+                          maxLength={500}
+                          disabled={retrying}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => void retry(event)}
+                        disabled={retrying || reason.trim().length < 3}
+                      >
+                        {retrying ? (
+                          <Loader2 className="me-1.5 size-4 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <RotateCcw className="me-1.5 size-4" aria-hidden="true" />
+                        )}
+                        {retrying ? tr("retryingAction") : tr("retry")}
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      onClick={() => void retry(event)}
-                      disabled={retrying || reason.trim().length < 3}
-                    >
-                      {retrying ? (
-                        <Loader2 className="me-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
-                      ) : (
-                        <RotateCcw className="me-1.5 h-4 w-4" aria-hidden="true" />
-                      )}
-                      {retrying ? tr("retryingAction") : tr("retry")}
-                    </Button>
-                  </div>
+                  ) : null}
                 </section>
               );
             })}
