@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import {
   AlertTriangle,
   Banknote,
@@ -21,12 +22,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: `${t("confirmationQueue.title")} — SahelFlow` };
 }
 
-/**
- * Confirmation is a first-class operational queue, not a sampled dashboard
- * table. All summary values are exact across the complete pending population;
- * the visible workbench is one URL-addressable FIFO page using the shared table
- * and state contract.
- */
 export default async function ConfirmationQueuePage({
   searchParams,
 }: {
@@ -40,6 +35,10 @@ export default async function ConfirmationQueuePage({
     page,
     pageSize: 25,
   });
+  const lastPage = Math.max(1, Math.ceil(fallback.total / fallback.pageSize));
+  if (fallback.total > 0 && page > lastPage) {
+    redirect(`/orders/confirmation-queue?page=${lastPage}`);
+  }
   const freshCount = Math.max(0, fallback.total - fallback.staleCount);
 
   return (
