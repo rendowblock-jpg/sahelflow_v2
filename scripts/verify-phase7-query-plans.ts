@@ -111,7 +111,9 @@ function sameColumns(actual: readonly string[], expected: readonly string[]) {
 }
 
 async function indexesFor(table: string) {
-  const list = await dbRaw.$queryRawUnsafe<IndexListRow[]>(`PRAGMA index_list('${table.replaceAll("'", "''")}')`);
+  const list = await dbRaw.$queryRawUnsafe<IndexListRow[]>(
+    `PRAGMA index_list('${table.replaceAll("'", "''")}')`,
+  );
   const indexes: Array<{ name: string; columns: string[]; unique: boolean }> = [];
   for (const entry of list) {
     const info = await dbRaw.$queryRawUnsafe<IndexInfoRow[]>(
@@ -141,9 +143,14 @@ for (const requirement of requiredIndexes) {
 
 // SQLite recommends PRAGMA optimize rather than direct ANALYZE management. The
 // 0x10002 form on a newly opened long-lived connection allows the optimizer to
-// consider every table once; a normal optimize pass then remains bounded.
-await dbRaw.$executeRawUnsafe("PRAGMA optimize=0x10002");
-await dbRaw.$executeRawUnsafe("PRAGMA optimize");
+// consider every table once; a normal optimize pass then remains bounded. Query
+// form is used because SQLite may return advisory rows from the pragma.
+const optimizeInitial = await dbRaw.$queryRawUnsafe<Array<Record<string, unknown>>>(
+  "PRAGMA optimize=0x10002",
+);
+const optimizeBounded = await dbRaw.$queryRawUnsafe<Array<Record<string, unknown>>>(
+  "PRAGMA optimize",
+);
 
 const plans: Record<string, QueryPlanRow[]> = {};
 for (const query of hotQueries) {
@@ -160,6 +167,10 @@ writeFileSync(
       generatedAt: new Date().toISOString(),
       indexEvidence,
       queryPlans: plans,
+      optimize: {
+        initialConnectionPass: optimizeInitial,
+        boundedPass: optimizeBounded,
+      },
       blockingFindings: errors,
       note: "Planner choices on the small CI fixture are retained as trend evidence; required index shape is the blocking contract. T470/floor latency remains installed hardware evidence.",
     },
