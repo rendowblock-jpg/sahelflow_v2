@@ -1,0 +1,82 @@
+name: Phase 4 js-yaml lock regeneration
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - .github/workflows/phase4-js-yaml-lock-regeneration.yml
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_SHA: 755e4dadcb6a1482e0b0543fb154178c5df27f00
+
+jobs:
+  regenerate-and-audit:
+    name: Regenerate fixed js-yaml lock with Bun 1.3.14
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact Phase 4 source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Pin fixed js-yaml override
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          if (p.overrides?.['js-yaml'] !== '4.3.0') {
+            throw new Error(`unexpected current js-yaml override: ${p.overrides?.['js-yaml']}`);
+          }
+          p.overrides['js-yaml'] = '4.3.1';
+          fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+          NODE
+
+      - name: Regenerate Bun lock only
+        run: bun install --lockfile-only --ignore-scripts --linker=hoisted
+
+      - name: Prove frozen install and production audit
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --linker=hoisted
+          bun audit --production
+          bun run lint
+
+      - name: Record exact dependency result
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const lock = fs.readFileSync('bun.lock', 'utf8');
+          if (!lock.includes('"js-yaml": "4.3.1"')) throw new Error('override not regenerated');
+          if (!lock.includes('"js-yaml@4.3.1"')) throw new Error('fixed package not locked');
+          if (lock.includes('"js-yaml@4.3.0"')) throw new Error('vulnerable js-yaml 4.3.0 remains locked');
+          NODE
+          mkdir -p "$RUNNER_TEMP/phase4-js-yaml-lock"
+          cp package.json bun.lock "$RUNNER_TEMP/phase4-js-yaml-lock/"
+          git diff -- package.json bun.lock > "$RUNNER_TEMP/phase4-js-yaml-lock/diff.patch"
+          git rev-parse HEAD > "$RUNNER_TEMP/phase4-js-yaml-lock/source-sha.txt"
+          bun --version > "$RUNNER_TEMP/phase4-js-yaml-lock/bun-version.txt"
+
+      - name: Upload regenerated dependency authority
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase4-js-yaml-lock-${{ github.run_id }}
+          path: ${{ runner.temp }}/phase4-js-yaml-lock/**
+          retention-days: 7
