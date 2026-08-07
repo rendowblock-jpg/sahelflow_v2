@@ -19,12 +19,16 @@ import type {
 export function ExpensesDataTable({
   fallback,
   locale,
+  from,
+  to,
 }: {
   fallback: ExpensesWorkbenchResponse;
   locale: Locale;
+  from?: string;
+  to?: string;
 }) {
   const { t } = useI18n();
-  const { data, error, isLoading, pagination } = useExpenses({ fallback });
+  const { data, error, isLoading, pagination } = useExpenses({ fallback, from, to });
   const response = data ?? fallback;
   const columns: ColumnDef<ExpenseWorkbenchItem, unknown>[] = [
     {

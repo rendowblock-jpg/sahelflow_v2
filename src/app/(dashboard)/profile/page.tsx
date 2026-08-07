@@ -18,11 +18,81 @@ import { toast } from "@/lib/toast";
 interface Profile { name?: string; email?: string; phone?: string; photo?: string; bio?: string; }
 
 export default function ProfilePage() {
-  const { t } = useI18n(); const [profile, setProfile] = useState<Profile>({}); const [baseline, setBaseline] = useState("{}"); const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState<string | null>(null); const [saving, setSaving] = useState(false);
-  const load = useCallback(async () => { setLoading(true); setLoadError(null); try { const response = await fetch("/api/profile", { cache: "no-store" }); const data = await response.json().catch(() => ({})) as Profile & { error?: string }; if (!response.ok) throw new Error(data.error ?? t("error.requestFailed")); const next = { name: data.name, email: data.email, phone: data.phone, photo: data.photo, bio: data.bio }; setProfile(next); setBaseline(JSON.stringify(next)); } catch (error) { setLoadError(error instanceof Error ? error.message : t("error.requestFailed")); } finally { setLoading(false); } }, [t]);
-  useEffect(() => { void load(); }, [load]);
+  const { t } = useI18n();
+  const [profile, setProfile] = useState<Profile>({});
+  const [baseline, setBaseline] = useState("{}");
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const applyProfile = useCallback((data: Profile) => {
+    const next = { name: data.name, email: data.email, phone: data.phone, photo: data.photo, bio: data.bio };
+    setProfile(next);
+    setBaseline(JSON.stringify(next));
+  }, []);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const response = await fetch("/api/profile", { cache: "no-store" });
+      const data = await response.json().catch(() => ({})) as Profile & { error?: string };
+      if (!response.ok) throw new Error(data.error ?? t("error.requestFailed"));
+      applyProfile(data);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : t("error.requestFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }, [applyProfile, t]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    void fetch("/api/profile", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({})) as Profile & { error?: string };
+        if (!response.ok) throw new Error(data.error ?? t("error.requestFailed"));
+        return data;
+      })
+      .then((data) => {
+        if (active) applyProfile(data);
+      })
+      .catch((error) => {
+        if (active && (error as Error).name !== "AbortError") {
+          setLoadError(error instanceof Error ? error.message : t("error.requestFailed"));
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [applyProfile, t]);
+
   const dirty = useMemo(() => JSON.stringify(profile) !== baseline, [baseline, profile]);
-  const handleSave = useCallback(async () => { if (!dirty) return; setSaving(true); try { const res = await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(profile) }); const data = await res.json().catch(() => ({})) as { error?: string }; if (!res.ok) throw new Error(data.error ?? t("profile.saveFailed")); setBaseline(JSON.stringify(profile)); toast.success(t("profile.saved")); } catch (error) { toast.error(error instanceof Error ? error.message : t("profile.saveFailed")); } finally { setSaving(false); } }, [dirty, profile, t]);
+  const handleSave = useCallback(async () => {
+    if (!dirty) return;
+    setSaving(true);
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profile),
+      });
+      const data = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? t("profile.saveFailed"));
+      setBaseline(JSON.stringify(profile));
+      toast.success(t("profile.saved"));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("profile.saveFailed"));
+    } finally {
+      setSaving(false);
+    }
+  }, [dirty, profile, t]);
+
   if (loading) return <FormLoading />;
   if (loadError) return <div className="app-content page-sections"><PageHeader title={t("profile.title")} description={t("profile.description")} /><StateSurface icon={AlertTriangle} title={t("error.requestFailed")} description={loadError} tone="danger" actions={<Button type="button" variant="outline" onClick={() => void load()}><RefreshCw className="me-2 size-4" />{t("common.retry")}</Button>} /></div>;
   const initials = profile.name?.slice(0, 2) ?? "SF";

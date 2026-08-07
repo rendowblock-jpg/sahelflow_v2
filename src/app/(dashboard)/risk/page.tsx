@@ -55,7 +55,7 @@ export default async function RiskPage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="app-content page-sections">
-      <PageHeader title={t("risk.title")} description={t("risk.subtitle")} actions={<Link href="/orders?risk=high" className="inline-flex min-h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"><ShieldAlert className="size-4" />{t("risk.kpi.highRiskOrders")}</Link>} />
+      <PageHeader title={t("risk.title")} description={t("risk.subtitle")} actions={<Link href="/orders?risk=high" className="inline-flex min-h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"><ShieldAlert className="size-4" />{t("risk.kpi.highRiskOrders")}<Badge variant={k.highRiskOrderCount > 0 ? "destructive" : "secondary"}>{k.highRiskOrderCount}</Badge></Link>} />
       <div className="flex flex-wrap gap-1 rounded-md border p-1">{RANGES.map((range) => <Link key={range} href={`/risk?days=${range}&tab=${activeTab}`} className={`rounded px-3 py-1.5 text-xs font-medium ${days === range ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t(`risk.ranges.last${range}`)}</Link>)}</div>
       <div className="card-grid-3">
         <StatCard label={t("risk.kpi.avgScore")} value={k.avgRiskScore} icon={<ShieldAlert />} subtitle="/ 100" />

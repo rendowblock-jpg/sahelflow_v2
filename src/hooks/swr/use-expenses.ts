@@ -8,7 +8,12 @@ import { fetcher } from "@/lib/swr/fetcher";
 import type { ExpensesWorkbenchResponse } from "@/types/workbench";
 
 export function useExpenses(
-  opts: { pageSize?: number; fallback?: ExpensesWorkbenchResponse } = {},
+  opts: {
+    pageSize?: number;
+    fallback?: ExpensesWorkbenchResponse;
+    from?: string;
+    to?: string;
+  } = {},
 ) {
   const [page, setPage] = useQueryState("page", {
     defaultValue: "1",
@@ -16,7 +21,11 @@ export function useExpenses(
   });
   const currentPage = Number.parseInt(page, 10) || 1;
   const pageSize = opts.pageSize ?? 25;
-  const key = `/api/expenses?page=${currentPage}&pageSize=${pageSize}`;
+  const rangeParams = new URLSearchParams();
+  if (opts.from) rangeParams.set("from", opts.from);
+  if (opts.to) rangeParams.set("to", opts.to);
+  const rangeQuery = rangeParams.toString();
+  const key = `/api/expenses?page=${currentPage}&pageSize=${pageSize}${rangeQuery ? `&${rangeQuery}` : ""}`;
   const fallbackData =
     opts.fallback &&
     opts.fallback.page === currentPage &&

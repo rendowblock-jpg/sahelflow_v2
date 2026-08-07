@@ -14,9 +14,54 @@ import { useI18n } from "@/hooks/use-i18n";
 
 interface ExtractionData { total: number; completionRate: number; byMethod: Array<{ method: string; count: number; avgConfidence: number; avgLatencyMs: number }>; trend: Array<{ date: string; count: number; avgConfidence: number; completeRate: number }>; }
 export function ExtractionAnalytics() {
-  const { t } = useI18n(); const [data, setData] = useState<ExtractionData | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
-  const load = useCallback(async () => { setLoading(true); setError(null); try { const response = await fetch("/api/analytics/extraction", { headers: { "x-requested-with": "sahelflow" }, cache: "no-store" }); if (!response.ok) throw new Error(t("error.requestFailed")); const next = await response.json() as ExtractionData; setData(next); } catch (caught) { setError(caught instanceof Error ? caught.message : t("error.requestFailed")); } finally { setLoading(false); } }, [t]);
-  useEffect(() => { void load(); }, [load]);
+  const { t } = useI18n();
+  const [data, setData] = useState<ExtractionData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/analytics/extraction", { headers: { "x-requested-with": "sahelflow" }, cache: "no-store" });
+      if (!response.ok) throw new Error(t("error.requestFailed"));
+      setData(await response.json() as ExtractionData);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : t("error.requestFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    void fetch("/api/analytics/extraction", {
+      headers: { "x-requested-with": "sahelflow" },
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(t("error.requestFailed"));
+        return response.json() as Promise<ExtractionData>;
+      })
+      .then((next) => {
+        if (active) setData(next);
+      })
+      .catch((caught) => {
+        if (active && (caught as Error).name !== "AbortError") {
+          setError(caught instanceof Error ? caught.message : t("error.requestFailed"));
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [t]);
+
   if (loading && !data) return <PageLoading statCount={3} showTable={false} />;
   if (error && !data) return <div className="app-content page-sections"><PageHeader title={t("analytics.extraction.title")} /><StateSurface icon={AlertTriangle} title={t("error.requestFailed")} description={error} tone="danger" actions={<Button variant="outline" onClick={() => void load()}><RefreshCw className="me-2 size-4" />{t("common.retry")}</Button>} /></div>;
   if (!data || !Array.isArray(data.byMethod) || !Array.isArray(data.trend) || data.total === 0) return <div className="app-content page-sections"><PageHeader title={t("analytics.extraction.title")} /><StateSurface icon={Zap} title={t("analytics.extraction.empty")} /></div>;

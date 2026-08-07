@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, shopContext } from "@/lib/db";
+import { db } from "@/lib/db";
 import { createExpenseSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireTrustedAction } from "@/lib/identity/authorization";
@@ -20,14 +20,23 @@ function parseMonthFilter(monthParam: string | null): { gte: Date; lt: Date } | 
   };
 }
 
+function parseDateParam(raw: string | null): Date | undefined {
+  if (!raw) return undefined;
+  const value = new Date(raw);
+  return Number.isNaN(value.getTime()) ? undefined : value;
+}
+
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("accounting.read");
   const params = req.nextUrl.searchParams;
-  const range = parseMonthFilter(params.get("month"));
+  const monthRange = parseMonthFilter(params.get("month"));
+  const from = monthRange?.gte ?? parseDateParam(params.get("from"));
+  const to = monthRange?.lt ?? parseDateParam(params.get("to"));
   const result = await getExpensesWorkbenchPage(actorContext, {
     page: Number.parseInt(params.get("page") ?? "1", 10),
     pageSize: Number.parseInt(params.get("pageSize") ?? "25", 10),
-    ...(range ? { from: range.gte, to: range.lt } : {}),
+    ...(from ? { from } : {}),
+    ...(to ? { to } : {}),
   });
   return NextResponse.json(result);
 }, "GET /api/expenses");
