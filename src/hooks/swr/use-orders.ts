@@ -1,64 +1,45 @@
 "use client";
 
-/**
- * useOrders — SWR hook for the paginated orders list (Phase 1).
- *
- * Fetches from /api/orders with page-based pagination + optional status filter.
- * SWR handles dedup, cache, and refetch. Mutations use mutatePrefix to
- * revalidate all order-related keys.
- *
- * Usage:
- *   const { data, isLoading, pagination } = useOrders({ status: "pending" });
- *   // data.orders, data.total, data.hasNextPage
- *   // pagination.page, pagination.onPageChange
- *
- * For mutations:
- *   import { mutatePrefix } from "@/lib/swr/mutate";
- *   await fetch("/api/orders/bulk", { method: "POST", body: ... });
- *   await mutatePrefix("/api/orders");
- */
 import useSWR from "swr";
 import { useQueryState } from "nuqs";
+
 import { fetcher } from "@/lib/swr/fetcher";
 import type { OrderStatus } from "@/types/domain";
+import type {
+  OrderListItem as WorkbenchOrderListItem,
+  OrdersWorkbenchResponse,
+} from "@/types/workbench";
 
-export interface OrderListItem {
-  id: string;
-  orderNumber: string;
-  status: string;
-  totalPrice: number;
-  wilaya: string;
-  phone: string;
-  createdAt: Date | string;
-  items: Array<{ id: string }>;
-  customer: { name: string | null; phone: string | null } | null;
-  mutationAuthority?:
-    | "canonical_v1"
-    | "confirmation_blocked"
-    | "legacy_compatibility";
-}
-
-export interface OrdersResponse {
-  orders: OrderListItem[];
-  total: number;
-  hasNextPage: boolean;
-  page: number;
-  pageSize: number;
-}
+export type OrderListItem = WorkbenchOrderListItem;
+export type OrdersResponse = OrdersWorkbenchResponse;
 
 interface UseOrdersOptions {
   status?: OrderStatus | "all";
   pageSize?: number;
-  /** SWR fallback data (from RSC initial render). */
   fallback?: OrdersResponse;
 }
 
+/**
+ * Paginated Orders workbench query.
+ *
+ * Page and sort live in URL state. Because the API owns the same sort contract,
+ * changing a sortable header fetches the correctly ordered dataset page instead
+ * of reordering only the rows already in memory.
+ */
 export function useOrders(opts: UseOrdersOptions = {}) {
-  const [page, setPage] = useQueryState("page", { defaultValue: "1", shallow: true });
+  const [page, setPage] = useQueryState("page", {
+    defaultValue: "1",
+    shallow: true,
+  });
+  const [sort] = useQueryState("sort", {
+    defaultValue: "createdAt.desc",
+    shallow: true,
+  });
   const pageSize = opts.pageSize ?? 25;
-
-  const statusParam = opts.status && opts.status !== "all" ? `&status=${opts.status}` : "";
-  const key = `/api/orders?page=${page}&pageSize=${pageSize}${statusParam}`;
+  const statusParam =
+    opts.status && opts.status !== "all" ? `&status=${opts.status}` : "";
+  const sortParam = sort ? `&sort=${encodeURIComponent(sort)}` : "";
+  const key = `/api/orders?page=${page}&pageSize=${pageSize}${statusParam}${sortParam}`;
 
   const { data, error, isLoading, mutate } = useSWR<OrdersResponse>(key, fetcher, {
     fallbackData: opts.fallback,
@@ -66,7 +47,7 @@ export function useOrders(opts: UseOrdersOptions = {}) {
     dedupingInterval: 5000,
   });
 
-  const currentPage = parseInt(page, 10) || 1;
+  const currentPage = Number.parseInt(page, 10) || 1;
 
   return {
     data,
@@ -78,8 +59,9 @@ export function useOrders(opts: UseOrdersOptions = {}) {
       pageSize,
       total: data?.total,
       hasNextPage: data?.hasNextPage ?? false,
-      onPageChange: (p: number) => setPage(String(p)),
-      isLoading: isLoading && !!data,
+      onPageChange: (nextPage: number) => setPage(String(nextPage)),
+      isLoading: isLoading && Boolean(data),
+      serverSort: true,
     },
   };
 }
