@@ -175,7 +175,6 @@ export async function getProductWorkbenchDetail(
       id: true,
       name: true,
       sku: true,
-      description: true,
       price: true,
       cost: access.cost,
       stock: true,
@@ -192,7 +191,6 @@ export async function getProductWorkbenchDetail(
           name: true,
           sku: true,
           price: true,
-          cost: access.cost,
           stock: true,
           isActive: true,
           sortOrder: true,
@@ -204,10 +202,6 @@ export async function getProductWorkbenchDetail(
   return {
     ...product,
     cost: access.cost ? product.cost : null,
-    productVariants: product.productVariants.map((variant) => ({
-      ...variant,
-      cost: access.cost ? variant.cost : null,
-    })),
     fieldAccess: access,
   };
 }
