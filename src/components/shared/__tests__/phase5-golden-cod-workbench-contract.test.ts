@@ -36,6 +36,20 @@ describe("Phase 5 Golden COD workbench source contract", () => {
     expect(client).toContain("riskData: data?.riskData");
   });
 
+  it("keeps high-risk review as an exact actionable Orders queue", () => {
+    const page = read("src/app/(dashboard)/orders/page.tsx");
+    const route = read("src/app/api/orders/route.ts");
+    const hook = read("src/hooks/swr/use-orders.ts");
+    const workbench = read("src/lib/orders/order-list-workbench.ts");
+    expect(page).not.toContain('redirect("/risk")');
+    expect(page).toContain('href={riskFilter ? "/orders" : "/orders?risk=high"}');
+    expect(page).toContain("risk: riskFilter");
+    expect(route).toContain('searchParams.get("risk") === "high"');
+    expect(hook).toContain('opts.risk === "high" ? "&risk=high" : ""');
+    expect(workbench).toContain('query.risk === "high"');
+    expect(workbench).toContain('level === "high" || level === "critical"');
+  });
+
   it("matches Orders import and export controls to endpoint authority independently", () => {
     const page = read("src/app/(dashboard)/orders/page.tsx");
     const controls = read("src/components/shared/import-export-buttons.tsx");
