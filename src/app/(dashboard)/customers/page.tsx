@@ -6,12 +6,13 @@ import { CustomersDataTable } from "@/components/customers/customers-data-table"
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
-import { getI18n } from "@/lib/i18n-server";
 import {
   getCustomersWorkbenchPage,
   getCustomerWorkbenchSummary,
   resolveCustomerWorkbenchAccess,
 } from "@/lib/customers/customer-workbench";
+import { getI18n } from "@/lib/i18n-server";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import { formatDZD } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,6 @@ type CustomersPageProps = {
 
 export default async function CustomersPage({ searchParams }: CustomersPageProps) {
   const { t, locale } = await getI18n();
-  const { requireTrustedAction } = await import("@/lib/identity/authorization");
   const actorContext = await requireTrustedAction("customers.read");
   const access = resolveCustomerWorkbenchAccess(actorContext);
   const requestedPage = Number.parseInt((await searchParams).page ?? "1", 10);
