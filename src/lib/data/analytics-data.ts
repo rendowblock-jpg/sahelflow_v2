@@ -14,6 +14,16 @@ export async function getAnalyticsReport(days = 30): Promise<AnalyticsReport> {
   return analyticsService.getReport({ prisma: db, shop: shopContext }, days);
 }
 
+type DashboardAnalytics = Readonly<{
+  revenueSeries: AnalyticsReport["revenueTimeSeries"];
+  customerGrowth: AnalyticsReport["customerGrowth"];
+  statusDistribution: AnalyticsReport["statusDistribution"];
+  topProducts: AnalyticsReport["topProducts"];
+  salesByHour: AnalyticsReport["salesByHour"];
+  deliveryPerformance: AnalyticsReport["deliveryPerformance"];
+  summary: AnalyticsReport["summary"];
+}>;
+
 type DashboardSeriesOrder = {
   status: string;
   createdAt: Date;
@@ -32,14 +42,28 @@ function addLocalDays(value: Date, days: number): Date {
   return result;
 }
 
-const EMPTY_DELIVERY_PERFORMANCE = Object.freeze({
+const EMPTY_DELIVERY_PERFORMANCE: AnalyticsReport["deliveryPerformance"] = {
   deliveryRate: 0,
   delivered: 0,
   inTransit: 0,
   pending: 0,
   returned: 0,
-  byProvider: [] as Array<{ key: string; label: string; value: number }>,
-});
+  byProvider: [],
+};
+
+const EMPTY_SUMMARY: AnalyticsReport["summary"] = {
+  totalRevenue: 0,
+  totalOrders: 0,
+  avgOrderValue: 0,
+  deliveryRate: 0,
+  realizedRevenue: 0,
+  netRevenue: 0,
+  netProfit: 0,
+  profitabilityComplete: false,
+  revenueDelta: 0,
+  ordersDelta: 0,
+  aovDelta: 0,
+};
 
 /**
  * Lightweight 7-day Dashboard analytics.
@@ -47,9 +71,12 @@ const EMPTY_DELIVERY_PERFORMANCE = Object.freeze({
  * With no field access argument this preserves the historical full-authority
  * facade for trusted internal callers. The Dashboard passes its resolved access,
  * which keeps financial order values, customer rows and delivery aggregates out
- * of the query plan entirely when the actor lacks those domains.
+ * of the query plan entirely when the actor lacks those domains. Both paths keep
+ * one stable return shape so downstream code never weakens its type contract.
  */
-export async function getDashboardAnalytics(fieldAccess?: DashboardFieldAccess) {
+export async function getDashboardAnalytics(
+  fieldAccess?: DashboardFieldAccess,
+): Promise<DashboardAnalytics> {
   if (!fieldAccess) {
     const report = await analyticsService.getReport(
       { prisma: db, shop: shopContext },
@@ -110,12 +137,18 @@ export async function getDashboardAnalytics(fieldAccess?: DashboardFieldAccess) 
       fieldAccess.analytics && fieldAccess.customers
         ? analyticsService.buildCustomerGrowth(customerRows, periodStart, now)
         : [],
+    statusDistribution: [],
+    topProducts: [],
+    salesByHour: [],
     deliveryPerformance,
+    summary: EMPTY_SUMMARY,
   };
 }
 
 /** All-time delivery performance from the Delivery model (matches /deliveries). */
-async function getDeliveryPerformance() {
+async function getDeliveryPerformance(): Promise<
+  AnalyticsReport["deliveryPerformance"]
+> {
   const groups = await db.delivery.groupBy({
     by: ["status"],
     where: { deletedAt: null },
