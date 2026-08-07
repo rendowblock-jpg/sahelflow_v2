@@ -21,6 +21,8 @@ interface StatCardProps {
   /** @deprecated Phase 5 owns metric icon color semantically. */
   accentIcon?: string;
   trend?: number;
+  /** Explicitly render trend as direction only; real ±1% values remain numeric by default. */
+  trendDirectionOnly?: boolean;
   trendLabel?: React.ReactNode;
   subtitle?: React.ReactNode;
   spark?: Array<{ value: number }>;
@@ -37,8 +39,7 @@ interface StatCardProps {
  * Values render immediately and never count up: financial, stock and queue truth
  * must not look provisional while animation catches up. Page-local accent colors
  * are retained only as deprecated input compatibility and deliberately ignored.
- * Existing ±1 direction sentinels remain arrow-only so they cannot fabricate a
- * percentage change on legacy operational surfaces.
+ * Direction-only trends are explicit so a genuine +1%/-1% change is never hidden.
  */
 export function StatCard({
   label,
@@ -47,6 +48,7 @@ export function StatCard({
   accentBg: _accentBg,
   accentIcon: _accentIcon,
   trend,
+  trendDirectionOnly = false,
   trendLabel,
   subtitle,
   spark,
@@ -60,7 +62,6 @@ export function StatCard({
     typeof trend === "number" && Number.isFinite(trend) && trend !== 0;
   const positive = hasTrend && trend > 0;
   const negative = hasTrend && trend < 0;
-  const directionOnly = hasTrend && Math.abs(trend) === 1;
 
   return (
     <section
@@ -113,7 +114,7 @@ export function StatCard({
                   ) : (
                     <ArrowDownRight className="size-3" aria-hidden="true" />
                   )}
-                  {!directionOnly ? (
+                  {!trendDirectionOnly ? (
                     <>
                       {trend > 0 ? "+" : ""}
                       {trend.toFixed(1)}%
