@@ -24,14 +24,20 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * Confirmation is a first-class operational queue, not a sampled dashboard
  * table. All summary values are exact across the complete pending population;
- * the visible workbench is one paginated FIFO page using the shared table/state
- * contract.
+ * the visible workbench is one URL-addressable FIFO page using the shared table
+ * and state contract.
  */
-export default async function ConfirmationQueuePage() {
+export default async function ConfirmationQueuePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const { t, locale } = await getI18n();
   const actorContext = await requireTrustedAction("orders.read");
+  const { page: pageRaw } = await searchParams;
+  const page = Math.max(1, Number.parseInt(pageRaw ?? "1", 10) || 1);
   const fallback = await getConfirmationWorkbenchPage(actorContext, {
-    page: 1,
+    page,
     pageSize: 25,
   });
   const freshCount = Math.max(0, fallback.total - fallback.staleCount);
