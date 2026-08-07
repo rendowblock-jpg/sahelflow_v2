@@ -63,10 +63,92 @@ jobs:
           include-hidden-files: true
           retention-days: 14
 
+  source-quality-diagnostics:
+    name: Complete source-quality diagnostics
+    if: ${{ github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      SF_TEST_ROOT: /tmp/sahelflow-phase67-source
+      SF_DATA_DIR: /tmp/sahelflow-phase67-source/data
+      DATABASE_URL: file:/tmp/sahelflow-phase67-source/data/shops/test.db
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Prepare disposable source-quality sandbox
+        run: bun run test:sandbox -- /tmp/sahelflow-phase67-source
+
+      - id: typecheck
+        name: TypeScript
+        continue-on-error: true
+        run: bun run typecheck
+
+      - id: lint
+        name: ESLint
+        continue-on-error: true
+        run: bun run lint
+
+      - id: tests
+        name: Complete Vitest
+        continue-on-error: true
+        run: bun run test
+
+      - id: dependency_audit
+        name: Production dependency audit
+        continue-on-error: true
+        run: bun audit --production
+
+      - id: migration_status
+        name: Migration status
+        continue-on-error: true
+        run: bunx prisma migrate status
+
+      - name: Require complete source-quality set
+        if: always()
+        env:
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+          LINT: ${{ steps.lint.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+          DEP_AUDIT: ${{ steps.dependency_audit.outcome }}
+          MIGRATIONS: ${{ steps.migration_status.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed=0
+          for pair in \
+            "TypeScript:${TYPECHECK}" \
+            "ESLint:${LINT}" \
+            "Vitest:${TESTS}" \
+            "Dependency audit:${DEP_AUDIT}" \
+            "Migration status:${MIGRATIONS}"; do
+            name="${pair%%:*}"
+            result="${pair#*:}"
+            echo "${name}: ${result}"
+            if [[ "${result}" != "success" ]]; then failed=1; fi
+          done
+          exit "${failed}"
+
   browser-evidence:
     name: AR-FR-EN accessibility, reflow and performance
-    if: ${{ github.event.pull_request.draft == false }}
-    needs: static-contract
+    if: ${{ always() && github.event.pull_request.draft == false }}
+    needs:
+      - static-contract
+      - source-quality-diagnostics
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -127,6 +209,7 @@ jobs:
     if: always()
     needs:
       - static-contract
+      - source-quality-diagnostics
       - browser-evidence
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -135,6 +218,7 @@ jobs:
         env:
           IS_DRAFT: ${{ github.event.pull_request.draft }}
           STATIC_RESULT: ${{ needs.static-contract.result }}
+          SOURCE_RESULT: ${{ needs.source-quality-diagnostics.result }}
           BROWSER_RESULT: ${{ needs.browser-evidence.result }}
         shell: bash
         run: |
@@ -144,5 +228,6 @@ jobs:
             exit 0
           fi
           [[ "${STATIC_RESULT}" == "success" ]] || { echo "Static Phase 6-7 verification failed or was skipped: ${STATIC_RESULT}"; exit 1; }
+          [[ "${SOURCE_RESULT}" == "success" ]] || { echo "Source-quality diagnostics failed or were skipped: ${SOURCE_RESULT}"; exit 1; }
           [[ "${BROWSER_RESULT}" == "success" ]] || { echo "Rendered Phase 6-7 evidence failed or was skipped: ${BROWSER_RESULT}"; exit 1; }
           echo "Phase 6-7 source/browser evidence is complete for this exact PR head."
