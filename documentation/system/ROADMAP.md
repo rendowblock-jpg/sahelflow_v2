@@ -2,9 +2,9 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Live protected main:** `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
-> **Latest application-changing protected merge:** PR #203 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
-> **Latest protected authority merge:** PR #206 at `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
+> **Live protected main:** `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
+> **Latest application-changing protected merge:** PR #207 at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
+> **Latest protected authority merge:** PR #207 at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
 > **Founder-accepted baseline:** Internal.5
@@ -12,11 +12,12 @@
 > **Phase 1 status:** Protected-source closed through PR #195
 > **Phase 2 status:** Protected-source closed through PR #200 with issue #201 retained
 > **Phase 3 status:** Protected-source closed through PR #203 under FD-030
-> **Active product phase:** Phase 4 — data protection, recovery, migrations and security
-> **Active phase package:** issue #204 through PR #207 — complete P4-A…P4-F candidate under exact-head review and validation
-> **Phase issue:** #204
+> **Phase 4 status:** Protected-source closed through PR #207 under the explicit Founder-directed closure exception; installed replacement proof retained in issue #214
+> **Active product phase:** Phase 5 — whole-product AAA UI/UX
+> **Active phase package:** not yet opened; begin Phase 5 from protected `main`
+> **Retained evidence:** issues #201 and #214
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-08-06
+> **Last consolidated:** 2026-08-07
 
 Live protected `main` must be re-read directly from GitHub. The SHAs above record
 the exact source frontier used for this consolidation and the latest protected
@@ -41,6 +42,12 @@ No known P0/P1 may remain.
 A page, model, route, adapter, screenshot, mock, test count or artifact does not
 alone complete a capability.
 
+A Founder-directed scoped phase-closure exception may close a protected-source
+phase while retaining a named installed/external certification obligation for a
+later gate. Such an exception must be explicit, evidence-bounded and issue-backed;
+it does not convert the retained obligation into passing proof and cannot be used
+to make a release, Beta, Stable or certification claim.
+
 ## Program execution rules
 
 1. One active implementation agent at a time.
@@ -51,7 +58,9 @@ alone complete a capability.
    applicable layer.
 5. Shared contracts freeze before dependent implementation.
 6. Level 1 Task Gate runs after every coherent completed task.
-7. Level 2 Phase Checkpoint passes before a phase closes.
+7. Level 2 Phase Checkpoint passes before a phase closes, except where the Founder
+   records a scoped phase-closure exception that explicitly carries unproven
+   installed/external evidence forward.
 8. Level 3 Major Full Checkpoint runs after every two phases by default and
    earlier for high-risk native/security/data/recovery/provider authority.
 9. Research, UX, Arabic/RTL, accessibility, performance, security, migration,
@@ -227,9 +236,11 @@ PR #200 merged at `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`:
 ### Retained evidence boundary
 
 The MSI built, installed, launched, closed and reopened, but the ephemeral runner
-did not observe the authenticated hydrated-WebView receipt twice. The Founder
-allowed PR #200 to merge with that single limitation retained in issue #201.
-This is not passing installed-UI evidence and does not reopen lifecycle authority.
+originally did not observe the authenticated hydrated-WebView receipt twice. The
+Founder allowed PR #200 to merge with that single limitation retained in issue
+#201. Later Phase 4 evidence materially improved this path and passed hydrated
+WebView proof twice, but issue #201 remains open until its cleanup/waiver
+obligations are explicitly reconciled.
 
 ## Phase 2 closure meaning
 
@@ -286,21 +297,32 @@ Phase 3 is protected-source closed. It does not claim a new signed artifact,
 installed Windows/T470 proof for newly merged source, Founder acceptance, Beta or
 Stable. Published/installed executable truth remains Internal.13.
 
-## Phase 4 execution frontier
+## Phase 4 closure and Phase 5 frontier
 
-PR #206 completed the exhaustive audit, primary-source research, consolidated
-P4-001…P4-013 Problem Register and shared contract freeze. Issue #204 now owns
-the complete Phase 4 candidate through PR #207. Phase 5 remains blocked until
-PR #207 passes exact-head evidence and independent review, merges to protected
-`main`, and issue #204 is reconciled against the exit gate below.
+PR #206 completed the exhaustive Phase 4 audit, primary-source research,
+consolidated P4-001…P4-013 Problem Register and shared contract freeze.
+PR #207 then merged the complete Phase 4 protected-source package at
+`8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`; issue #204 is closed.
 
-Executable candidate `33500fd8c7e968f1244a444f6fb130d9d897d6a1` passed the
-MSI build, installed launch/close/reopen and three authenticated hydrated WebView
-launches in run `31127743699`. The same run proved the CI replacement harness can
-reuse the native WebView's per-launch HttpOnly runtime authority, then stopped at
-HTTP 500 from `/api/auth/setup` before the backup/replace/restore sequence began.
-Phase 4 and Phase 5 therefore remain gated on diagnosing that first app-level
-setup failure, completing the replacement drill and clearing exact-head review.
+The exact product head immediately before the closure-control commits was
+`ccba7ec138b6aa1a77bf9d972bb1127a3270267d`. Source quality, documentation audit,
+coverage, dependency audit, Tauri release smoke, Windows standalone and Windows
+Rust parity were green on that product head. Its exact MSI also built, installed,
+launched, closed/reopened and passed authenticated hydrated WebView UI proof
+ twice.
+
+The remaining installed job failure occurred before the replacement
+backup/corrupt/replace/restore sequence when CI trial activation returned HTTP
+503 with `LICENSE_TRIAL_SERVICE_UNAVAILABLE`.
+
+At the Founder’s explicit direction, PR #207 used the one-PR, diff-scoped marker
+`.github/phase-exceptions/pr-207-phase4-closure-override.md` to keep that evidence
+harness from holding Phase 4 open indefinitely. The unresolved installed
+replacement-install proof is retained in issue #214. It does not reopen Phase 4
+or block Phase 5, but it still blocks any installed/certified replacement-recovery
+claim and remains required before Stable if applicable.
+
+Phase 5 may therefore begin from protected `main`.
 
 ---
 
@@ -320,14 +342,42 @@ Make seller data survivable and the product commercially defensible.
 - threat models, minimization, retention and deletion;
 - Law 18-07 mapping, SBOM and independent security/privacy review.
 
-## Exit gate
+## Result — protected-source closed through PR #207
+
+Protected `main` now carries:
+
+- purpose-separated protected-data authority and migration convergence;
+- encrypted all-shop backup with authenticated manifests/objects and independent
+  recovery-kit authority;
+- replacement-install restore machinery with staging, rescue, compensation,
+  rollback and identity rebinding;
+- authenticated migration/restore journals and replay-protected native bridge;
+- privacy lifecycle, data inventory, threat/legal mapping, vulnerability triage,
+  SBOM/VEX and closure evidence authority.
+
+Product head `ccba7ec138b6aa1a77bf9d972bb1127a3270267d` had green
+source/quality/security and Windows release-path evidence plus exact MSI lifecycle
+and authenticated WebView proof. The installed replacement restore drill itself
+remains unproven because disposable CI trial activation failed before that
+sequence began; issue #214 retains that release/certification evidence obligation.
+
+The Founder-directed closure exception changes Phase 4 protected-source program
+status only. It does not claim installed replacement-recovery certification,
+Founder acceptance, release readiness, Beta or Stable.
+
+## Original exit gate
 
 A full installation can be backed up, corrupted, replaced and restored without
 silent loss, authority confusion or key compromise. Migration/restore drills pass
 and independent review has no unresolved P0/P1.
 
-Phases 3–4 normally trigger the next Level 3 checkpoint; high-risk recovery work
-may require it earlier.
+The protected-source phase is closed by explicit scoped exception; the unproven
+installed replacement portion of this gate is carried forward to issue #214 and
+must not be represented as passed evidence.
+
+Phases 3–4 normally trigger the next Level 3 checkpoint; the retained installed
+recovery obligation remains available to the later applicable release/certification
+gate.
 
 ---
 
@@ -472,15 +522,21 @@ provider, recovery, security/privacy/Law 18-07, performance, Arabic/RTL,
 accessibility and representative beta gates pass; a signed Windows artifact and
 immutable manifest pass; and the Founder explicitly promotes Stable.
 
+Issue #214 must be closed before Stable if its replacement-install certification
+obligation has not already been superseded by stronger exact-source evidence.
+
 ---
 
 # Definition of done
 
 A phase is complete only when its exit gate has objective evidence, its Level 2
-checkpoint passes and every known P0/P1 is closed. A major checkpoint is complete
-only when all selected installed and external-risk evidence passes on one exact
-source.
+checkpoint passes and every known P0/P1 is closed, unless the Founder records an
+explicit scoped exception that names the unproven evidence, preserves it in a
+follow-up issue and forbids claims that the retained evidence passed. A major
+checkpoint is complete only when all selected installed and external-risk
+evidence passes on one exact source.
 
 “100% sure” means every defined gate passes, representative evidence exists at the
 required layer and no contradiction remains between product promise, source,
-artifact, installed behavior and public claim.
+artifact, installed behavior and public claim. A scoped phase-closure exception is
+not “100% sure” certification and must never be described that way.
