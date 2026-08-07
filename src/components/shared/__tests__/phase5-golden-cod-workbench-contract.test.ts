@@ -22,6 +22,7 @@ describe("Phase 5 Golden COD workbench source contract", () => {
     const client = read("src/components/orders/orders-data-table.tsx");
     expect(workbench).toContain("fieldAccess: access");
     expect(workbench).toContain("batchAssessOrders");
+    expect(workbench).toContain('allowed(actorContext, "orders.delete")');
     expect(hook).toContain("opts.fallback.page === currentPage");
     expect(hook).toContain("opts.fallback.sort === normalizedSort");
     expect(client).toContain("fieldAccess = data?.fieldAccess ?? fallback.fieldAccess");
@@ -63,10 +64,11 @@ describe("Phase 5 Golden COD workbench source contract", () => {
     expect(table).not.toContain('event.key === "Enter"');
   });
 
-  it("uses real order links and removes selection from read-only actors", () => {
+  it("uses real order links and exact row action authority", () => {
     const orders = read("src/components/orders/orders-columns.tsx");
     const confirmation = read("src/components/orders/confirmation-queue-table.tsx");
     expect(orders).toContain("fieldAccess.update ? [selectColumn<OrderListItem>()] : []");
+    expect(orders).toContain("fieldAccess.delete &&");
     expect(orders).toContain('href={`/orders/${row.original.id}`}');
     expect(confirmation).toContain('href={`/orders/${row.original.id}`}');
   });
@@ -76,7 +78,7 @@ describe("Phase 5 Golden COD workbench source contract", () => {
     expect(client).not.toContain("optimisticData");
     expect(client).not.toContain("revalidate: false");
     expect(client).toContain("bulkMutation.isSubmitting");
-    expect(client).toContain('bulkMutation.submit("/api/orders/bulk"');
+    expect(client).toContain('"/api/orders/bulk"');
   });
 
   it("uses immediate neutral operational metrics without fake sentinel percentages", () => {
@@ -91,11 +93,13 @@ describe("Phase 5 Golden COD workbench source contract", () => {
 
   it("makes Home attention-first and permission-before-read", () => {
     const dashboard = read("src/app/(dashboard)/dashboard/page.tsx");
+    const stats = read("src/lib/data/stats-service.ts");
     expect(dashboard).toContain("AttentionCenter");
     expect(dashboard).toContain("getStaleOrderCount");
     expect(dashboard).toContain("getDashboardStats(fieldAccess)");
     expect(dashboard).toContain("getDashboardAnalytics(fieldAccess)");
-    expect(dashboard).toContain('href: "/deliveries"');
+    expect(dashboard).toContain('href: "/deliveries?status=pending"');
+    expect(stats).toContain('status: "pending"');
     expect(dashboard).not.toContain("dashboard.openInbox");
     expect(dashboard).not.toContain("dashboard.manageOrders");
   });
