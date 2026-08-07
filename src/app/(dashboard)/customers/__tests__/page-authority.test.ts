@@ -8,27 +8,34 @@ function source(path: string): string {
 }
 
 describe("customer dashboard page authority", () => {
-  it("guards and projects the direct customer list read", () => {
+  it("uses a permission-before-read customer workbench for the list", () => {
     const page = source("src/app/(dashboard)/customers/page.tsx");
+    const workbench = source("src/lib/customers/customer-workbench.ts");
 
     expect(page).toContain('requireTrustedAction("customers.read")');
-    expect(page).toContain("projectCustomersForTrustedActor");
-    expect(page).toContain('"customers.manage"');
-    expect(page).toContain('"customers.contact.update"');
-    expect(page).toContain('"customers.contact.read"');
-    expect(page).toContain('"data.export"');
-    expect(page).toContain('"data.import"');
+    expect(page).toContain("getCustomersWorkbenchPage");
+    expect(page).toContain("getCustomerWorkbenchSummary");
+    expect(page).toContain("access.export");
+    expect(page).toContain("access.import");
+    expect(page).toContain("access.manage && access.contactUpdate");
+    expect(workbench).toContain("name: access.contact");
+    expect(workbench).toContain("phone: access.contact");
+    expect(workbench).toContain("totalSpent: access.financials");
+    expect(workbench).toContain("riskScore: access.risk");
+    expect(workbench).toContain("db.order.groupBy");
   });
 
-  it("projects detail contact and denies order/risk side reads by default", () => {
+  it("gates customer detail side reads before querying them", () => {
     const page = source("src/app/(dashboard)/customers/[id]/page.tsx");
+    const workbench = source("src/lib/customers/customer-workbench.ts");
 
     expect(page).toContain('requireTrustedAction("customers.read")');
-    expect(page).toContain("projectCustomerForTrustedActor");
-    expect(page).toContain("projectOrderForTrustedActor");
-    expect(page).toContain('"orders.read"');
-    expect(page).toContain('"orders.financials.read"');
-    expect(page).toContain('"risk.read"');
-    expect(page).toContain('"risk.manage"');
+    expect(page).toContain("getCustomerWorkbenchDetail");
+    expect(page).toContain("fieldAccess.orderFinancials");
+    expect(page).toContain("fieldAccess.riskManage");
+    expect(workbench).toContain('allowed(actorContext, "orders.read")');
+    expect(workbench).toContain("const orderFinancials = orders && access.financials");
+    expect(workbench).toContain('allowed(actorContext, "risk.manage")');
+    expect(workbench).toContain("totalPrice: orderFinancials");
   });
 });

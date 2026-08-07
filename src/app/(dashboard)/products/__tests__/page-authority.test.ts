@@ -8,26 +8,32 @@ function source(path: string): string {
 }
 
 describe("product dashboard page authority", () => {
-  it("guards and projects the direct product list read", () => {
+  it("uses one permission-aware product workbench for every role", () => {
     const page = source("src/app/(dashboard)/products/page.tsx");
+    const workbench = source("src/lib/products/product-workbench.ts");
 
     expect(page).toContain('requireTrustedAction("products.read")');
-    expect(page).toContain("projectProductsForTrustedActor");
-    expect(page).toContain('"products.manage"');
-    expect(page).toContain('"products.cost.read"');
-    expect(page).toContain("canManage ? (");
-    expect(page).toContain('"data.export"');
-    expect(page).toContain('"data.import"');
+    expect(page).toContain("getProductsWorkbenchPage");
+    expect(page).toContain("getProductWorkbenchSummary");
+    expect(page).toContain("<ProductsDataTable");
+    expect(page).not.toContain("<Table>");
+    expect(page).toContain("access.export");
+    expect(page).toContain("access.import");
+    expect(workbench).toContain("cost: access.cost");
+    expect(workbench).toContain("orderByFor(sort)");
   });
 
-  it("projects product cost and gates embedded order history", () => {
+  it("gates product cost and embedded order history before querying them", () => {
     const page = source("src/app/(dashboard)/products/[id]/page.tsx");
+    const workbench = source("src/lib/products/product-workbench.ts");
 
     expect(page).toContain('requireTrustedAction("products.read")');
-    expect(page).toContain("projectProductForTrustedActor");
-    expect(page).toContain('"orders.read"');
-    expect(page).toContain('"orders.financials.read"');
-    expect(page).toContain("canReadOrders && (");
-    expect(page).toContain("canReadOrderFinancials");
+    expect(page).toContain("getProductWorkbenchDetail");
+    expect(page).toContain("fieldAccess.orderFinancials");
+    expect(page).toContain("fieldAccess.manage");
+    expect(workbench).toContain('allowed(actorContext, "orders.read")');
+    expect(workbench).toContain('allowed(actorContext, "orders.financials.read")');
+    expect(workbench).toContain("unitPrice: orderFinancials");
+    expect(workbench).toContain("total: orderFinancials");
   });
 });

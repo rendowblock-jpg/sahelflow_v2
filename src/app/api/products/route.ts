@@ -8,7 +8,10 @@ import {
   requireTrustedAction,
 } from "@/lib/identity/authorization";
 import { projectProductForTrustedActor } from "@/lib/identity/product-projection";
-import { getProductsWorkbenchPage } from "@/lib/products/product-workbench";
+import {
+  getLegacyProductsList,
+  getProductsWorkbenchPage,
+} from "@/lib/products/product-workbench";
 
 export const dynamic = "force-dynamic";
 
@@ -21,21 +24,26 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     Math.max(1, Number.parseInt(searchParams.get("limit") ?? "50", 10) || 50),
     100,
   );
-  const offset = Math.max(0, Number.parseInt(searchParams.get("offset") ?? "0", 10) || 0);
+  const offset = Math.max(
+    0,
+    Number.parseInt(searchParams.get("offset") ?? "0", 10) || 0,
+  );
+
+  if (!pageParam) {
+    const products = await getLegacyProductsList(actorContext, {
+      limit,
+      offset,
+      activeOnly,
+    });
+    return NextResponse.json({ products });
+  }
+
   const result = await getProductsWorkbenchPage(actorContext, {
-    ...(pageParam
-      ? {
-          page: Number.parseInt(pageParam, 10),
-          pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
-        }
-      : { pageSize: limit, offset }),
+    page: Number.parseInt(pageParam, 10),
+    pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
     activeOnly,
     sort: searchParams.get("sort"),
   });
-
-  if (!pageParam) {
-    return NextResponse.json({ products: result.products });
-  }
   return NextResponse.json(result);
 }, "GET /api/products");
 

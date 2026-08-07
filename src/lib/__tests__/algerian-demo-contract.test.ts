@@ -125,7 +125,8 @@ describe("Algerian Founder demo contract", () => {
     expect(panel).toContain("رسالة واتساب من فاطمة الزهراء");
 
     expect(settings).toContain('{ id: "demo", icon: Database');
-    expect(settings).toContain('useState<Tab>("demo")');
+    expect(settings).toContain('useQueryState("tab"');
+    expect(settings).toContain('allowed: (a) => a.settingsManage');
     expect(settings).toContain("<DemoDataPanel />");
   });
 
