@@ -1,49 +1,18 @@
-/** GET /api/orders/confirmation-queue — 2-hour confirmation call queue. */
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import {
-  requireTrustedAction,
-  trustedActionAllowed,
-} from "@/lib/identity/authorization";
-import {
-  getConfirmationQueue,
-  getStaleOrderCount,
-} from "@/lib/data/confirmation-queue";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import { getConfirmationWorkbenchPage } from "@/lib/orders/confirmation-workbench";
 
 export const dynamic = "force-dynamic";
 
+/** GET /api/orders/confirmation-queue — exact paginated confirmation workbench. */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  void req;
   const actorContext = await requireTrustedAction("orders.read");
-  const contact = trustedActionAllowed(
-    actorContext,
-    "customers.contact.read",
-  );
-  const financials = trustedActionAllowed(
-    actorContext,
-    "orders.financials.read",
-  );
-  const [queue, staleCount] = await Promise.all([
-    getConfirmationQueue(),
-    getStaleOrderCount(),
-  ]);
-  const projectedQueue = queue.map((order) => ({
-    ...order,
-    totalPrice: financials ? order.totalPrice : null,
-    phone: contact ? order.phone : null,
-    customer: order.customer
-      ? {
-          ...order.customer,
-          name: contact ? order.customer.name : null,
-          phone: contact ? order.customer.phone : null,
-        }
-      : null,
-    fieldAccess: { contact, financials },
-  }));
-  return NextResponse.json({
-    queue: projectedQueue,
-    staleCount,
-    total: projectedQueue.length,
+  const searchParams = req.nextUrl.searchParams;
+  const result = await getConfirmationWorkbenchPage(actorContext, {
+    page: Number.parseInt(searchParams.get("page") ?? "1", 10),
+    pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
   });
+  return NextResponse.json(result);
 }, "GET /api/orders/confirmation-queue");
