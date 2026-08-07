@@ -10,20 +10,22 @@ import {
   trustedActorAuditIdentity,
 } from "@/lib/identity/authorization";
 import { projectProductForTrustedActor } from "@/lib/identity/product-projection";
+import { getProductWorkbenchDetail } from "@/lib/products/product-workbench";
+import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET /api/products/[id] — fetch a single product by id */
+/** GET /api/products/[id] — permission-before-read product detail. */
 export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
-  // W2-4: defense-in-depth — GET was unprotected, exposed product details.
   const actorContext = await requireTrustedAction("products.read");
   const { id } = await params;
-  const product = await productService.getById({ prisma: db, shop: shopContext }, id);
-  return NextResponse.json({
-    product: projectProductForTrustedActor(actorContext, product),
-  });
+  const product = await getProductWorkbenchDetail(actorContext, id);
+  if (!product) {
+    throw new SahelFlowError("Product not found", "NOT_FOUND", 404);
+  }
+  return NextResponse.json({ product });
 }, "GET /api/products/[id]");
 
 /** PATCH /api/products/[id] — update an existing product */
@@ -55,7 +57,6 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   const actorContext = await requireTrustedAction("products.manage");
   const { id } = await params;
-  // W2-5: capture before-state for audit (soft-delete — row stays in DB).
   const existing = await db.product.findUnique({ where: { id } });
   await productService.delete({ prisma: db, shop: shopContext }, id);
   await logAudit({ prisma: db, shop: shopContext }, {
