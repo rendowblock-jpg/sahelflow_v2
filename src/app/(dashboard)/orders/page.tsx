@@ -1,30 +1,32 @@
-import { getI18n } from "@/lib/i18n-server";
-import { db, shopContext } from "@/lib/db";
-import { formatDZD } from "@/lib/utils";
-import { batchAssessOrders } from "@/lib/risk-engine";
-import type { OrderStatus } from "@/types/domain";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { Package, TrendingUp, Clock, CheckCircle2, ShoppingBag, ShieldAlert } from "lucide-react";
+import { redirect } from "next/navigation";
+import {
+  CheckCircle2,
+  Clock,
+  ShieldAlert,
+  ShoppingBag,
+  TrendingUp,
+} from "lucide-react";
+
 import { OrderFormDialog } from "@/components/orders/order-form-dialog";
 import { OrdersDataTable } from "@/components/orders/orders-data-table";
-import { PageHeader } from "@/components/shared/page-header";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
-import { EmptyState } from "@/components/shared/empty-state";
+import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
-import { orderStatusSchema } from "@/lib/validation";
-import { computeActiveOrderCount } from "./active-orders";
-import type { Metadata } from "next";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { db } from "@/lib/db";
+import { getI18n } from "@/lib/i18n-server";
 import {
-  assertTrustedAction,
   requireTrustedAction,
+  trustedActionAllowed,
 } from "@/lib/identity/authorization";
-import {
-  isImportPendingOrderAuthority,
-  isTrustedManualOrderAuthority,
-} from "@/lib/orders/manual-order-authority";
+import { getOrdersWorkbenchPage } from "@/lib/orders/order-list-workbench";
+import { formatDZD } from "@/lib/utils";
+import { orderStatusSchema } from "@/lib/validation";
+import type { OrderStatus } from "@/types/domain";
+import { computeActiveOrderCount } from "./active-orders";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -41,123 +43,129 @@ const STATUS_FILTERS: Array<{ value: "all" | OrderStatus; labelKey: string }> = 
   { value: "cancelled", labelKey: "orders.status.cancelled" },
 ];
 
+function localDayBounds(now = new Date()): { start: Date; end: Date } {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+}
+
+/**
+ * Orders is now a real paginated operational workbench. Summary metrics are
+ * exact aggregates over the shop database; the displayed rows are one explicit
+ * page and never double as the source for totals, delivered-today truth or risk.
+ */
 export default async function OrdersPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string; risk?: string }>;
 }) {
   const actorContext = await requireTrustedAction("orders.read");
-  assertTrustedAction(actorContext, "customers.contact.read");
-  assertTrustedAction(actorContext, "orders.financials.read");
   const { t, locale } = await getI18n();
   const { status: statusFilterRaw, risk: riskFilter } = await searchParams;
 
-  // P-M11: validate statusFilter against the OrderStatus enum (safeParse).
-  // Invalid / unknown values are dropped to undefined (no filter) instead of
-  // being passed to Prisma as an arbitrary string (silent no-match or error).
+  if (riskFilter === "high") {
+    redirect("/risk");
+  }
+
   const statusFilter =
     statusFilterRaw && statusFilterRaw !== "all"
-      ? (orderStatusSchema.safeParse(statusFilterRaw).success
+      ? orderStatusSchema.safeParse(statusFilterRaw).success
         ? (statusFilterRaw as OrderStatus)
-        : undefined)
+        : undefined
       : undefined;
+  const resource = { shopId: actorContext.shop.shopId };
+  const can = (action: Parameters<typeof trustedActionAllowed>[1]) =>
+    trustedActionAllowed(actorContext, action, resource);
 
-  const isHighRiskFilter = riskFilter === "high";
+  const canCreateOrder =
+    can("orders.create") &&
+    can("customers.read") &&
+    can("customers.contact.read") &&
+    can("customers.contact.update") &&
+    can("orders.financials.read") &&
+    can("orders.financials.update") &&
+    can("products.read");
+  const canExport = can("data.export");
+  const canImport = can("data.import");
 
-  const where = statusFilter ? { status: statusFilter } : undefined;
-  // PERF-007: use select (not include) to avoid fetching + decrypting PII
-  // fields (phone, address, notes) that the table doesn't display. Was: 200
-  // AES-256-GCM decryptions per page load. Now: zero (only name is fetched).
-  const orderSelect = {
-    id: true,
-    orderNumber: true,
-    status: true,
-    totalPrice: true,
-    deliveryCost: true,
-    wilaya: true,
-    commune: true,
-    source: true,
-    sourceMetadata: true,
-    createdAt: true,
-    deliveredAt: true,
-    items: { select: { id: true, productName: true, quantity: true, unitPrice: true, total: true } },
-    customer: { select: { id: true, name: true, phone: true, phoneEnc: true } },
-    phone: true,
-  } as const;
+  const { start, end } = localDayBounds();
+  const [fallback, statusGroups, totalCount, deliveredToday, creationData] =
+    await Promise.all([
+      getOrdersWorkbenchPage(actorContext, {
+        status: statusFilter,
+        page: 1,
+        pageSize: 25,
+        sort: "createdAt.desc",
+      }),
+      db.order.groupBy({
+        by: ["status"],
+        where: { deletedAt: null },
+        _count: { _all: true },
+      }),
+      db.order.count({ where: { deletedAt: null } }),
+      db.order.aggregate({
+        where: {
+          deletedAt: null,
+          status: "delivered",
+          deliveredAt: { gte: start, lt: end },
+        },
+        _count: { _all: true },
+        _sum: { totalPrice: true },
+      }),
+      canCreateOrder
+        ? Promise.all([
+            db.customer.findMany({
+              where: { deletedAt: null },
+              orderBy: { createdAt: "desc" },
+              select: {
+                id: true,
+                name: true,
+                phone: true,
+                phoneEnc: true,
+                wilaya: true,
+                commune: true,
+                address: true,
+              },
+            }),
+            db.product.findMany({
+              where: { isActive: true, deletedAt: null },
+              orderBy: { name: "asc" },
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                stock: true,
+                isActive: true,
+                productVariants: {
+                  orderBy: { sortOrder: "asc" },
+                  select: {
+                    id: true,
+                    name: true,
+                    sku: true,
+                    price: true,
+                    stock: true,
+                    isActive: true,
+                  },
+                },
+              },
+            }),
+          ])
+        : Promise.resolve(null),
+    ]);
 
-  // PERF-008: when no status filter is active, filteredOrders === allOrders.
-  // Skip the second query (was: two identical queries on the default landing).
-  const hasFilter = !!statusFilter;
-  // Status-tab counts come from a separate groupBy (uncapped) so they are
-  // NOT capped by the display list's take:200 (S2-6). Full pagination of the
-  // display list itself is a follow-up.
-  const [allOrders, filteredOrders, customers, products, statusGroups, totalCount] = await Promise.all([
-    db.order.findMany({ where: { deletedAt: null }, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 }),
-    hasFilter
-      ? db.order.findMany({ where: { ...where, deletedAt: null }, select: orderSelect, orderBy: { createdAt: "desc" }, take: 200 })
-      : Promise.resolve([]),
-    db.customer.findMany({ where: { deletedAt: null }, orderBy: { createdAt: "desc" }, select: { id: true, name: true, phone: true, phoneEnc: true, wilaya: true, commune: true, address: true } }),
-    db.product.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true, stock: true, isActive: true, productVariants: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, sku: true, price: true, stock: true, isActive: true } } } }),
-    db.order.groupBy({ by: ["status"], where: { deletedAt: null }, _count: { _all: true } }),
-    db.order.count({ where: { deletedAt: null } }),
-  ]);
-
-  // Batch-assess risk for ALL orders (used for the risk column + high-risk filter).
-  // This loads config+rules once, then builds inputs for each order in parallel.
-  const riskMap = await batchAssessOrders(
-    { prisma: db, shop: shopContext },
-    allOrders.map((o) => o.id),
-  );
-  const highRiskCount = Array.from(riskMap.values()).filter(
-    (a) => a.level === "high" || a.level === "critical",
-  ).length;
-
-  // P-M12: status + risk filters combine with AND. ?status=pending&risk=high
-  // now shows only high+critical-risk orders whose status is pending (not ALL
-  // high-risk orders regardless of status). Start from the status-filtered
-  // list (filteredOrders when a status is set, else allOrders), then apply
-  // the risk filter on top.
-  const baseOrders = hasFilter ? filteredOrders : allOrders;
-  const displayOrders = isHighRiskFilter
-    ? baseOrders.filter((o) => {
-        const a = riskMap.get(o.id);
-        return a && (a.level === "high" || a.level === "critical");
-      })
-    : baseOrders;
-  const displayOrdersWithAuthority = displayOrders.map((order) => ({
-    ...order,
-    mutationAuthority: isTrustedManualOrderAuthority(
-      order.source,
-      order.sourceMetadata,
-    )
-      ? ("canonical_v1" as const)
-      : isImportPendingOrderAuthority(order.source, order.sourceMetadata)
-        ? ("confirmation_blocked" as const)
-        : ("legacy_compatibility" as const),
-  }));
-
-  // Serialize risk map for the client (orderId → {level, score})
-  const riskData: Record<string, { level: string; score: number }> = {};
-  for (const [orderId, assessment] of riskMap) {
-    riskData[orderId] = { level: assessment.level, score: assessment.score };
-  }
-
-  // Counts come from the groupBy (uncapped) — not the capped display list.
   const counts: Record<string, number> = { all: totalCount };
-  for (const g of statusGroups) {
-    counts[g.status] = g._count._all;
-  }
+  for (const group of statusGroups) counts[group.status] = group._count._all;
 
-  // Active orders = pending + confirmed + shipped. Computed from the uncapped
-  // `counts` groupBy (S2-6) so shops with >200 orders aren't undercounted —
-  // `allOrders` is fetched with `take: 200` and would silently cap this stat.
   const activeOrders = computeActiveOrderCount(statusGroups);
-  const deliveredToday = allOrders.filter(
-    (o) => o.status === "delivered" && o.deliveredAt &&
-    new Date(o.deliveredAt).toDateString() === new Date().toDateString(),
-  );
-  const todayRevenue = deliveredToday.reduce((sum, o) => sum + o.totalPrice, 0);
-  const pendingCount = counts["pending"] ?? 0;
+  const pendingCount = counts.pending ?? 0;
+  const todayDeliveredCount = deliveredToday._count._all;
+  const todayRevenue = fallback.fieldAccess.financials
+    ? (deliveredToday._sum.totalPrice ?? 0)
+    : null;
+  const customers = creationData?.[0] ?? [];
+  const products = creationData?.[1] ?? [];
 
   return (
     <div className="app-content page-sections">
@@ -165,123 +173,86 @@ export default async function OrdersPage({
         title={t("nav.orders")}
         description={t("orders.subtitle")}
         actions={
-          <div className="flex items-center gap-2">
-            <ImportExportButtons exportRoute="/api/export/orders" importRoute="/api/import/orders" />
-            <OrderFormDialog customers={customers} products={products} />
-          </div>
+          canExport || canCreateOrder ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {canExport ? (
+                <ImportExportButtons
+                  exportRoute="/api/export/orders"
+                  importRoute={canImport ? "/api/import/orders" : undefined}
+                />
+              ) : null}
+              {canCreateOrder ? (
+                <OrderFormDialog customers={customers} products={products} />
+              ) : null}
+            </div>
+          ) : null
         }
       />
 
-      {/* KPI stat cards */}
-      <div className="card-grid-4 stagger-grid">
+      <div className="card-grid-4">
         <StatCard
           label={t("orders.activeOrders")}
           value={activeOrders}
           icon={<ShoppingBag />}
-          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
-          accentIcon="text-teal-600 dark:text-teal-400"
-          style={{ animationDelay: "60ms" }}
         />
         <StatCard
           label={t("orders.pendingLabel")}
           value={pendingCount}
           icon={<Clock />}
-          accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-warning"
-          style={{ animationDelay: "120ms" }}
         />
         <StatCard
           label={t("orders.deliveredToday")}
-          value={deliveredToday.length}
+          value={todayDeliveredCount}
           icon={<CheckCircle2 />}
-          accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-success"
-          style={{ animationDelay: "180ms" }}
         />
         <StatCard
           label={t("orders.todayRevenue")}
-          value={formatDZD(todayRevenue)}
+          value={todayRevenue === null ? "—" : formatDZD(todayRevenue, locale)}
           icon={<TrendingUp />}
-          accentBg="bg-violet-500/10 dark:bg-violet-500/15"
-          accentIcon="text-violet-600 dark:text-violet-400"
-          style={{ animationDelay: "240ms" }}
         />
       </div>
 
-      {/* Status filter tabs */}
-      <Tabs defaultValue={isHighRiskFilter ? "high-risk" : (statusFilter ?? "all")}>
-        <TabsList className="flex-wrap h-auto">
-          {STATUS_FILTERS.map((filter) => (
-            <TabsTrigger key={filter.value} value={filter.value} asChild>
-              <Link
-                href={filter.value === "all" ? "/orders" : `/orders?status=${filter.value}`}
-                className="flex items-center gap-1.5"
-              >
-                {t(filter.labelKey)}
-                {counts[filter.value] !== undefined && (
-                  <Badge variant="secondary" className="me-1 text-xs px-1.5 py-0">
-                    {counts[filter.value]}
-                  </Badge>
-                )}
-              </Link>
-            </TabsTrigger>
-          ))}
-          {/* High-risk review queue tab */}
-          <TabsTrigger value="high-risk" asChild>
-            <Link
-              href="/orders?risk=high"
-              className="flex items-center gap-1.5"
-            >
-              <ShieldAlert className="h-3.5 w-3.5" />
-              {t("risk.level.high")}/{t("risk.level.critical")}
-              {highRiskCount > 0 && (
-                <Badge variant="destructive" className="me-1 text-xs px-1.5 py-0">
-                  {highRiskCount}
-                </Badge>
-              )}
-            </Link>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Tabs defaultValue={statusFilter ?? "all"}>
+          <TabsList className="h-auto flex-wrap">
+            {STATUS_FILTERS.map((filter) => (
+              <TabsTrigger key={filter.value} value={filter.value} asChild>
+                <Link
+                  href={
+                    filter.value === "all"
+                      ? "/orders"
+                      : `/orders?status=${filter.value}`
+                  }
+                  className="flex items-center gap-1.5"
+                >
+                  {t(filter.labelKey)}
+                  {counts[filter.value] !== undefined ? (
+                    <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+                      {counts[filter.value]}
+                    </Badge>
+                  ) : null}
+                </Link>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
-      {/* Orders table with bulk selection + pagination (Phase 1: SWR + DataTable v2) */}
-      <Card className="animate-fade-up" style={{ animationDelay: "240ms" }}>
-        <CardContent className="p-0">
-          {displayOrders.length === 0 ? (
-            <EmptyState
-              icon={isHighRiskFilter ? ShieldAlert : Package}
-              title={isHighRiskFilter ? t("orders.empty.highRiskTitle") : t("orders.empty.title")}
-              description={isHighRiskFilter ? t("orders.empty.highRiskDesc") : t("orders.empty.description")}
-              actionLabel={t("orders.createOrder")}
-              actionHref="/orders"
-            />
-          ) : (
-            <div className="space-y-3 p-4">
-              <OrdersDataTable
-                fallback={{
-                  orders: (isHighRiskFilter
-                    ? displayOrdersWithAuthority
-                    : displayOrdersWithAuthority.slice(0, 25)
-                  ) as unknown as Array<{
-                    id: string; orderNumber: string; status: string; totalPrice: number;
-                    wilaya: string; phone: string; createdAt: Date;
-                    items: Array<{ id: string }>;
-                    customer: { name: string | null; phone: string | null } | null;
-                    mutationAuthority: "canonical_v1" | "confirmation_blocked" | "legacy_compatibility";
-                  }>,
-                  total: displayOrders.length,
-                  hasNextPage: isHighRiskFilter ? false : displayOrders.length > 25,
-                  page: 1,
-                  pageSize: isHighRiskFilter ? displayOrders.length : 25,
-                }}
-                locale={locale}
-                statusFilter={isHighRiskFilter ? "all" : (statusFilter as OrderStatus | "all") ?? "all"}
-                riskData={riskData}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {fallback.fieldAccess.risk ? (
+          <Link
+            href="/risk"
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ShieldAlert className="size-4" aria-hidden="true" />
+            {t("nav.risk")}
+          </Link>
+        ) : null}
+      </div>
+
+      <OrdersDataTable
+        fallback={fallback}
+        locale={locale}
+        statusFilter={statusFilter ?? "all"}
+      />
     </div>
   );
 }
