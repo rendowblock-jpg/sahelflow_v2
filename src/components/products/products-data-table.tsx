@@ -1,14 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { AlertTriangle, Eye } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table/data-table";
+import {
+  EntityInspector,
+  EntityLink,
+  EntityPreview,
+} from "@/components/entities/entity-context";
+import { ProductRowActions } from "@/components/products/product-row-actions";
 import { ProductsEmptyState } from "@/components/shared/empty-states";
 import { StateSurface } from "@/components/shared/state-surface";
-import { ProductRowActions } from "@/components/products/product-row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,12 +41,7 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
       accessorKey: "name",
       header: () => t("products.productName"),
       cell: ({ row }) => (
-        <Link
-          href={`/products/${row.original.id}`}
-          className="font-medium text-primary hover:underline"
-        >
-          {row.original.name}
-        </Link>
+        <EntityLink href={`/products/${row.original.id}`} label={row.original.name} />
       ),
     },
     {
@@ -109,24 +108,66 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
     {
       id: "actions",
       header: () => t("common.actions"),
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" size="icon-sm" asChild>
-            <Link href={`/products/${row.original.id}`}>
-              <Eye className="size-4" aria-hidden="true" />
-              <span className="sr-only">
-                {t("products.viewDetails", { name: row.original.name })}
-              </span>
-            </Link>
-          </Button>
-          {fieldAccess.manage ? (
-            <ProductRowActions
-              product={row.original}
-              categories={categories}
-            />
-          ) : null}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const product = row.original;
+        const category = product.categoryId
+          ? categoryNames.get(product.categoryId)
+          : undefined;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <EntityInspector
+              title={product.name}
+              description={product.sku ?? category}
+              fullHref={`/products/${product.id}`}
+              fullLabel={t("products.viewDetails", { name: product.name })}
+              trigger={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("products.viewDetails", { name: product.name })}
+                >
+                  <Eye className="size-4" aria-hidden="true" />
+                </Button>
+              }
+            >
+              <EntityPreview
+                title={product.name}
+                description={category}
+                metadata={product.sku ? `${t("products.sku")}: ${product.sku}` : undefined}
+              >
+                <dl className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-muted-foreground">{t("orders.price")}</dt>
+                    <dd className="mt-1 font-medium tabular-nums">{formatDZD(product.price)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">{t("products.stock")}</dt>
+                    <dd className="mt-1 font-medium tabular-nums">{product.stock}</dd>
+                  </div>
+                  {fieldAccess.cost ? (
+                    <div>
+                      <dt className="text-xs text-muted-foreground">{t("products.cost")}</dt>
+                      <dd className="mt-1 font-medium tabular-nums">
+                        {product.cost === null ? "—" : formatDZD(product.cost)}
+                      </dd>
+                    </div>
+                  ) : null}
+                  <div>
+                    <dt className="text-xs text-muted-foreground">{t("common.status")}</dt>
+                    <dd className="mt-1 font-medium">
+                      {product.isActive ? t("common.active") : t("common.inactive")}
+                    </dd>
+                  </div>
+                </dl>
+              </EntityPreview>
+            </EntityInspector>
+            {fieldAccess.manage ? (
+              <ProductRowActions product={product} categories={categories} />
+            ) : null}
+          </div>
+        );
+      },
       meta: { align: "end", width: "w-20" },
       enableSorting: false,
     },
