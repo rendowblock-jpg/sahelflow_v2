@@ -52,8 +52,8 @@ function SortIcon({ dir }: { dir: false | "asc" | "desc" }) {
 /**
  * Orders columns follow server-projected field and action access. A member
  * without contact/financial authority does not receive a decorative redacted
- * column that can accidentally become an inference oracle, and read-only members
- * receive neither selection controls nor mutation controls that merely fail.
+ * column that can accidentally become an inference oracle, while update/delete
+ * controls appear only for their exact action authority.
  */
 export function useOrdersColumns(
   opts: UseOrdersColumnsOptions,
@@ -173,13 +173,13 @@ export function useOrdersColumns(
       ),
       enableSorting: false,
     },
-    ...(fieldAccess.risk && riskData
+    ...(fieldAccess.risk
       ? [
           {
             id: "risk",
             header: () => t("risk.assessment.score"),
             cell: ({ row }: { row: { original: OrderListItem } }) => {
-              const risk = riskData[row.original.id];
+              const risk = riskData?.[row.original.id];
               return risk ? (
                 <RiskBadge
                   level={risk.level as RiskLevel}
@@ -239,7 +239,7 @@ export function useOrdersColumns(
                   </Link>
                 </DropdownMenuItem>
               ) : null}
-              {fieldAccess.update &&
+              {fieldAccess.delete &&
               order.mutationAuthority !== "canonical_v1" &&
               (order.status === "draft" || order.status === "cancelled") &&
               onDelete ? (
