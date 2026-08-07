@@ -19,22 +19,11 @@ import type { OrdersWorkbenchResponse } from "@/types/workbench";
 import { useOrdersColumns } from "./orders-columns";
 
 interface OrdersDataTableProps {
-  /** Exact server page matching the initial URL workbench state. */
   fallback: OrdersWorkbenchResponse;
   locale: Locale;
   statusFilter?: OrderStatus | "all";
 }
 
-/**
- * Orders operational workbench.
- *
- * Field access and risk projections travel with every paginated response, so the
- * second page has the same permission/redaction semantics as the RSC first paint.
- * Bulk actions remain compatibility-only: governed canonical orders require their
- * dedicated command flow and cannot be flattened into legacy status mutation.
- * Business status is never painted optimistically: the visible state changes only
- * after the authoritative server mutation succeeds and the workbench revalidates.
- */
 export function OrdersDataTable({
   fallback,
   locale,
@@ -59,6 +48,7 @@ export function OrdersDataTable({
     fallback,
   });
   const fieldAccess = data?.fieldAccess ?? fallback.fieldAccess;
+  const canOpenDetail = fieldAccess.contact && fieldAccess.financials;
 
   const columns = useOrdersColumns({
     locale,
@@ -160,7 +150,7 @@ export function OrdersDataTable({
       data={data?.orders ?? []}
       isLoading={isLoading}
       pagination={pagination}
-      onRowClick={(row) => router.push(`/orders/${row.id}`)}
+      onRowClick={canOpenDetail ? (row) => router.push(`/orders/${row.id}`) : undefined}
       bulkActions={fieldAccess.update ? bulkActions : undefined}
       getRowId={(row) => row.id}
       emptyState={<OrdersEmptyState />}
