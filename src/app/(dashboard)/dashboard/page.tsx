@@ -100,7 +100,7 @@ export default async function DashboardPage() {
             id: "delivery-pending",
             label: t("nav.delivery"),
             value: stats.pendingDeliveries,
-            href: "/deliveries",
+            href: "/deliveries?status=pending",
             icon: Truck,
             tone: "warning" as const,
           },
