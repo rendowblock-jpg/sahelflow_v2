@@ -135,7 +135,13 @@ async function assertSemanticBasics(page: Page, route: string) {
       if (labelledByText(element)) return true;
       if (element.getAttribute("title")?.trim()) return true;
       if (element.textContent?.trim()) return true;
-      if (element instanceof HTMLInputElement && element.value.trim()) return true;
+      if (
+        element instanceof HTMLInputElement &&
+        ["button", "submit", "reset"].includes(element.type) &&
+        element.value.trim()
+      ) {
+        return true;
+      }
       if (element.querySelector("img[alt]:not([alt=''])")) return true;
 
       if (
