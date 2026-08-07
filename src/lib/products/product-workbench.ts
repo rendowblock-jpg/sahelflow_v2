@@ -8,6 +8,7 @@ import {
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 import type {
   ProductWorkbenchFieldAccess,
+  ProductWorkbenchItem,
   ProductsWorkbenchResponse,
 } from "@/types/workbench";
 
@@ -56,6 +57,51 @@ function clampPageSize(value: number | undefined): number {
   return Math.min(value!, MAX_PAGE_SIZE);
 }
 
+function parseImages(value: string | null): string[] | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) && parsed.every((item) => typeof item === "string")
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function projectRow(
+  row: {
+    id: string;
+    name: string;
+    sku: string | null;
+    price: number;
+    cost?: number | null;
+    stock: number;
+    lowStockThreshold: number;
+    categoryId: string | null;
+    images: string | null;
+    isActive: boolean;
+    createdAt: Date;
+    productVariants: ProductWorkbenchItem["productVariants"];
+  },
+  access: ProductWorkbenchFieldAccess,
+): ProductWorkbenchItem {
+  return {
+    id: row.id,
+    name: row.name,
+    sku: row.sku,
+    price: row.price,
+    cost: access.cost ? (row.cost ?? null) : null,
+    stock: row.stock,
+    lowStockThreshold: row.lowStockThreshold,
+    categoryId: row.categoryId,
+    images: parseImages(row.images),
+    productVariants: row.productVariants,
+    isActive: row.isActive,
+    createdAt: row.createdAt,
+  };
+}
+
 async function queryProducts(
   actorContext: TrustedActorContext,
   opts: { take: number; skip: number; activeOnly?: boolean },
@@ -65,7 +111,7 @@ async function queryProducts(
     deletedAt: null,
     ...(opts.activeOnly ? { isActive: true } : {}),
   } as const;
-  const rows = await db.product.findMany({
+  const sourceRows = await db.product.findMany({
     where,
     select: {
       id: true,
@@ -76,13 +122,27 @@ async function queryProducts(
       stock: true,
       lowStockThreshold: true,
       categoryId: true,
+      images: true,
       isActive: true,
       createdAt: true,
+      productVariants: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          price: true,
+          stock: true,
+          isActive: true,
+          sortOrder: true,
+        },
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      },
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: opts.take,
     skip: opts.skip,
   });
+  const rows = sourceRows as unknown as Parameters<typeof projectRow>[0][];
   return { access, rows, where };
 }
 
@@ -100,10 +160,7 @@ export async function getProductsWorkbenchPage(
   const total = await db.product.count({ where });
 
   return {
-    products: rows.map((row) => ({
-      ...row,
-      cost: access.cost ? row.cost : null,
-    })),
+    products: rows.map((row) => projectRow(row, access)),
     fieldAccess: access,
     total,
     hasNextPage: page * pageSize < total,
@@ -126,10 +183,7 @@ export async function getProductsWorkbenchSlice(
     activeOnly: query.activeOnly,
   });
   return {
-    products: rows.map((row) => ({
-      ...row,
-      cost: access.cost ? row.cost : null,
-    })),
+    products: rows.map((row) => projectRow(row, access)),
     fieldAccess: access,
   };
 }
@@ -169,7 +223,7 @@ export async function getProductWorkbenchDetail(
   id: string,
 ) {
   const access = resolveProductWorkbenchAccess(actorContext);
-  const product = await db.product.findFirst({
+  const source = await db.product.findFirst({
     where: { id, deletedAt: null },
     select: {
       id: true,
@@ -180,6 +234,7 @@ export async function getProductWorkbenchDetail(
       stock: true,
       lowStockThreshold: true,
       categoryId: true,
+      images: true,
       isActive: true,
       createdAt: true,
       updatedAt: true,
@@ -198,10 +253,27 @@ export async function getProductWorkbenchDetail(
       },
     },
   });
-  if (!product) return null;
+  if (!source) return null;
+  const product = source as unknown as {
+    id: string;
+    name: string;
+    sku: string | null;
+    price: number;
+    cost?: number | null;
+    stock: number;
+    lowStockThreshold: number;
+    categoryId: string | null;
+    images: string | null;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    category: { id: string; name: string } | null;
+    productVariants: ProductWorkbenchItem["productVariants"];
+  };
   return {
     ...product,
-    cost: access.cost ? product.cost : null,
+    cost: access.cost ? (product.cost ?? null) : null,
+    images: parseImages(product.images),
     fieldAccess: access,
   };
 }
