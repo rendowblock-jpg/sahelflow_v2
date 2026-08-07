@@ -53,7 +53,7 @@ function SortIcon({ dir }: { dir: false | "asc" | "desc" }) {
  * Orders columns follow server-projected field and action access. A member
  * without contact/financial authority does not receive a decorative redacted
  * column that can accidentally become an inference oracle, and read-only members
- * do not receive controls that merely fail after click.
+ * receive neither selection controls nor mutation controls that merely fail.
  */
 export function useOrdersColumns(
   opts: UseOrdersColumnsOptions,
@@ -62,7 +62,7 @@ export function useOrdersColumns(
   const { locale, fieldAccess, riskData, onDelete } = opts;
 
   const columns: ColumnDef<OrderListItem, unknown>[] = [
-    selectColumn<OrderListItem>(),
+    ...(fieldAccess.update ? [selectColumn<OrderListItem>()] : []),
     {
       accessorKey: "orderNumber",
       header: ({ column }) => (
@@ -72,9 +72,13 @@ export function useOrdersColumns(
         </span>
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-sm font-medium" data-order-number>
+        <Link
+          href={`/orders/${row.original.id}`}
+          className="font-mono text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+          data-order-number
+        >
           {row.original.orderNumber}
-        </span>
+        </Link>
       ),
     },
     ...(fieldAccess.contact
