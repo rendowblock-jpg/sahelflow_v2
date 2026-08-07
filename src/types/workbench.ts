@@ -108,6 +108,16 @@ export interface ProductWorkbenchFieldAccess {
   export: boolean;
 }
 
+export interface ProductWorkbenchVariant {
+  id: string;
+  name: string;
+  sku: string | null;
+  price: number | null;
+  stock: number;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export interface ProductWorkbenchItem {
   id: string;
   name: string;
@@ -117,6 +127,8 @@ export interface ProductWorkbenchItem {
   stock: number;
   lowStockThreshold: number;
   categoryId: string | null;
+  images: string[] | null;
+  productVariants: ProductWorkbenchVariant[];
   isActive: boolean;
   createdAt: Date | string;
 }
