@@ -110,6 +110,98 @@ async function assertNoLeakedTranslationKeys(page: Page, route: string) {
   expect(leaks, `${route} must not expose dotted translation identifiers`).toEqual([]);
 }
 
+async function assertSemanticBasics(page: Page, route: string) {
+  const findings = await page.evaluate(() => {
+    const visible = (element: HTMLElement) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return (
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        rect.width > 0 &&
+        rect.height > 0
+      );
+    };
+
+    const labelledByText = (element: HTMLElement) => {
+      const ids = (element.getAttribute("aria-labelledby") ?? "")
+        .split(/\s+/)
+        .filter(Boolean);
+      return ids.some((id) => document.getElementById(id)?.textContent?.trim());
+    };
+
+    const hasLabel = (element: HTMLElement) => {
+      if (element.getAttribute("aria-label")?.trim()) return true;
+      if (labelledByText(element)) return true;
+      if (element.getAttribute("title")?.trim()) return true;
+      if (element.textContent?.trim()) return true;
+      if (element instanceof HTMLInputElement && element.value.trim()) return true;
+      if (element.querySelector("img[alt]:not([alt=''])")) return true;
+
+      if (
+        element instanceof HTMLInputElement ||
+        element instanceof HTMLSelectElement ||
+        element instanceof HTMLTextAreaElement
+      ) {
+        if (element.id) {
+          const explicit = document.querySelector<HTMLLabelElement>(
+            `label[for="${CSS.escape(element.id)}"]`,
+          );
+          if (explicit?.textContent?.trim()) return true;
+        }
+        if (element.closest("label")?.textContent?.trim()) return true;
+      }
+      return false;
+    };
+
+    const selectors = [
+      "button",
+      "a[href]",
+      "input:not([type='hidden'])",
+      "select",
+      "textarea",
+      "[role='button']",
+      "[role='checkbox']",
+      "[role='switch']",
+      "[role='tab']",
+    ];
+    const elements = new Set<HTMLElement>();
+    for (const selector of selectors) {
+      for (const element of document.querySelectorAll<HTMLElement>(selector)) {
+        elements.add(element);
+      }
+    }
+
+    const unnamed: string[] = [];
+    for (const element of elements) {
+      if (!visible(element) || element.getAttribute("aria-hidden") === "true") continue;
+      if (!hasLabel(element)) {
+        unnamed.push(
+          `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ""}${element.getAttribute("role") ? `[role=${element.getAttribute("role")}]` : ""}`,
+        );
+      }
+    }
+
+    const imagesMissingAlt = [...document.querySelectorAll<HTMLImageElement>("img")]
+      .filter((image) => visible(image) && !image.hasAttribute("alt"))
+      .map((image) => image.currentSrc || image.src || "img")
+      .slice(0, 20);
+
+    const main = document.querySelector("main");
+    const levelOneHeadings = main?.querySelectorAll("h1, [role='heading'][aria-level='1']").length ?? 0;
+
+    return {
+      unnamed: unnamed.slice(0, 30),
+      imagesMissingAlt,
+      levelOneHeadings,
+    };
+  });
+
+  expect(findings.unnamed, `${route} visible interactive controls need accessible names`).toEqual([]);
+  expect(findings.imagesMissingAlt, `${route} visible images need explicit alt semantics`).toEqual([]);
+  expect(findings.levelOneHeadings, `${route} needs one work-surface level-one heading`).toBeGreaterThanOrEqual(1);
+}
+
 async function assertRenderedRoute(
   page: Page,
   route: string,
@@ -126,6 +218,7 @@ async function assertRenderedRoute(
   await expect(page.locator("body")).not.toContainText("Application error");
   await assertContained(page, route);
   await assertNoLeakedTranslationKeys(page, route);
+  await assertSemanticBasics(page, route);
 }
 
 async function assertTargetFloor(page: Page) {
@@ -164,6 +257,18 @@ function percentile95(values: number[]): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)]!;
+}
+
+function selectMetrics(
+  rows: ReadonlyArray<{ name: string; value: number }>,
+  names: readonly string[],
+) {
+  const selected: Record<string, number> = {};
+  for (const name of names) {
+    const value = rows.find((entry) => entry.name === name)?.value;
+    if (typeof value === "number") selected[name] = value;
+  }
+  return selected;
 }
 
 test.describe.serial("Phase 6 and 7 integrated completion evidence", () => {
@@ -242,13 +347,48 @@ test.describe.serial("Phase 6 and 7 integrated completion evidence", () => {
     await page.goto("/settings", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
     await assertTargetFloor(page);
+
+    const settingsTabs = page.locator('[role="tab"]');
+    if ((await settingsTabs.count()) > 1) {
+      await settingsTabs.first().focus();
+      await page.keyboard.press("ArrowRight");
+      await expect(settingsTabs.nth(1)).toBeFocused();
+    }
   });
 
-  test("Phase 7 browser performance trend stays bounded", async ({ page, context }, testInfo) => {
-    test.setTimeout(180_000);
+  test("Arabic settings keyboard direction follows RTL", async ({ page, context }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize(DESKTOP);
+    await setLocale(context, "ar");
+    await ensureOwnerSession(page);
+    await page.goto("/settings", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+
+    const tabs = page.locator('[role="tab"]');
+    if ((await tabs.count()) > 1) {
+      await tabs.first().focus();
+      await page.keyboard.press("ArrowLeft");
+      await expect(tabs.nth(1)).toBeFocused();
+    }
+  });
+
+  test("Phase 7 throttled browser performance trend stays bounded", async ({ page, context }, testInfo) => {
+    test.setTimeout(210_000);
     await page.setViewportSize(DESKTOP);
     await setLocale(context, "fr");
     await ensureOwnerSession(page);
+
+    // Warm the development-server route modules before measuring. These values
+    // remain CI regression evidence only and are never presented as T470/floor
+    // product certification.
+    for (const route of PERF_ROUTES) {
+      await assertRenderedRoute(page, route, "fr", "ltr");
+    }
+
+    const session = await context.newCDPSession(page);
+    await session.send("Performance.enable");
+    const before = await session.send("Performance.getMetrics");
+    await session.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 
     const routeDurations: Record<string, number> = {};
     for (const route of PERF_ROUTES) {
@@ -260,6 +400,11 @@ test.describe.serial("Phase 6 and 7 integrated completion evidence", () => {
     const searchDurations: number[] = [];
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
+    await page.evaluate(async () => {
+      const response = await fetch("/api/orders/search?q=DZ&limit=5", { cache: "no-store" });
+      if (!response.ok) throw new Error(`search warmup returned ${response.status}`);
+      await response.json();
+    });
     for (let index = 0; index < 8; index += 1) {
       const duration = await page.evaluate(async () => {
         const started = performance.now();
@@ -273,24 +418,36 @@ test.describe.serial("Phase 6 and 7 integrated completion evidence", () => {
       searchDurations.push(duration);
     }
 
+    const after = await session.send("Performance.getMetrics");
+    await session.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+
+    const metricNames = [
+      "JSHeapUsedSize",
+      "JSHeapTotalSize",
+      "Nodes",
+      "Documents",
+      "JSEventListeners",
+      "TaskDuration",
+    ] as const;
     const routeP95 = percentile95(Object.values(routeDurations));
     const searchP95 = percentile95(searchDurations);
     const evidence = {
-      environment: "controlled Chromium CI trend only — not T470 certification",
+      environment: "controlled Chromium CI trend with 4x renderer CPU throttling — not T470 certification",
       routeDurationsMs: routeDurations,
       routeP95Ms: routeP95,
       searchDurationsMs: searchDurations,
       searchP95Ms: searchP95,
+      rendererMetricsBefore: selectMetrics(before.metrics, metricNames),
+      rendererMetricsAfter: selectMetrics(after.metrics, metricNames),
     };
     await testInfo.attach("phase7-browser-performance.json", {
       body: Buffer.from(`${JSON.stringify(evidence, null, 2)}\n`),
       contentType: "application/json",
     });
 
-    // These are regression tripwires for clean CI, deliberately looser than the
-    // Founder T470/floor acceptance budgets. Hardware targets are proven only on
-    // the named installed devices.
-    expect(routeP95).toBeLessThan(6_000);
-    expect(searchP95).toBeLessThan(1_500);
+    // Regression tripwires for clean CI, deliberately looser than the product's
+    // named installed-hardware budgets.
+    expect(routeP95).toBeLessThan(8_000);
+    expect(searchP95).toBeLessThan(2_000);
   });
 });
