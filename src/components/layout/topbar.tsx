@@ -42,9 +42,7 @@ import type { Locale } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import { logoutAndRedirect } from "@/lib/auth/logout-client";
 import { useShopStore } from "@/stores/shop-store";
-import {
-  navigationItemForPathname,
-} from "./navigation";
+import { navigationItemForPathname } from "./navigation";
 import { Sidebar } from "./sidebar";
 
 const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
@@ -167,6 +165,9 @@ export function Topbar({
   const switchTarget =
     shops.find((shop) => shop.id === switchTargetId) ?? null;
   const isRtl = serverDir === "rtl";
+  const activeLocaleLabel =
+    LOCALE_OPTIONS.find((option) => option.value === locale)?.label ??
+    locale.toUpperCase();
 
   const handleShopSwitch = useCallback(
     async (shopId: string) => {
@@ -317,7 +318,7 @@ export function Topbar({
               variant="ghost"
               size="sm"
               className="hidden gap-1.5 px-2 sm:flex"
-              aria-label={t("language.en")}
+              aria-label={activeLocaleLabel}
             >
               <Globe className="size-4" aria-hidden="true" />
               <span className="text-[11px] font-semibold uppercase">{locale}</span>
