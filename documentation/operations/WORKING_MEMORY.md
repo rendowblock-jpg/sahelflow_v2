@@ -12,7 +12,7 @@
 > **Retained evidence:** #201, #214, #221
 > **Active product program:** combined Phase 6 → Phase 7 source completion
 > **Active implementation branch:** `agent/phase6-7-completion`
-> **Active implementation PR:** not opened until the coherent source/evidence batch is frozen
+> **Active implementation PR:** #223 — frozen coherent implementation awaiting one complete selected gate
 
 Live GitHub is authority. Re-read protected `main`, current open PRs/issues and
 Actions before any merge. This branch starts from the documentation-reconciled
