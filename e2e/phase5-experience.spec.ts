@@ -43,6 +43,13 @@ function screenshotName(prefix: string, route: string): string {
   return `${prefix}-${slug}.png`;
 }
 
+async function waitForHydration(page: Page) {
+  await page.locator('html[data-sf-hydrated="true"]').waitFor({
+    state: "attached",
+    timeout: 30_000,
+  });
+}
+
 async function assertRenderedRoute(
   page: Page,
   route: string,
@@ -53,6 +60,7 @@ async function assertRenderedRoute(
   expect(response, `${route} should return a document response`).not.toBeNull();
   expect(response!.status(), `${route} should not return an HTTP error`).toBeLessThan(400);
   await page.locator("body").waitFor({ state: "visible" });
+  await waitForHydration(page);
   await expect(page.locator("body")).not.toContainText("Internal Server Error");
   await expect(page.locator("body")).not.toContainText("Application error");
 
@@ -77,16 +85,28 @@ async function assertRenderedRoute(
   });
 }
 
+async function loginOwner(page: Page) {
+  await waitForHydration(page);
+  const pin = page.locator("#pin");
+  await pin.fill(OWNER_PIN);
+  await expect(pin).toHaveValue(OWNER_PIN);
+  const submit = page.locator('button[type="submit"]');
+  await expect(submit).toBeEnabled();
+  await submit.click();
+  await page.waitForURL((url) => !url.pathname.includes("/login"), {
+    timeout: 30_000,
+  });
+}
+
 async function ensureOwnerSession(page: Page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   if (page.url().includes("/login")) {
-    await page.locator("#pin").fill(OWNER_PIN);
-    await page.locator('button[type="submit"]').click();
-    await page.waitForURL((url) => !url.pathname.includes("/login"));
+    await loginOwner(page);
   } else if (page.url().includes("/setup")) {
     throw new Error("Representative Phase 5 evidence requires the rich seeded owner authority");
   }
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+  await waitForHydration(page);
   expect(page.url()).toContain("/dashboard");
 }
 
@@ -106,6 +126,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     }
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
     await page.keyboard.press("Control+K");
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
@@ -113,10 +134,9 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
 
   test("owner login works from a fresh browser context", async ({ page }) => {
     await page.goto("/login", { waitUntil: "domcontentloaded" });
-    await page.locator("#pin").fill(OWNER_PIN);
-    await page.locator('button[type="submit"]').click();
-    await page.waitForURL((url) => url.pathname === "/" || url.pathname === "/dashboard");
+    await loginOwner(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
     expect(page.url()).toContain("/dashboard");
   });
 
