@@ -181,7 +181,7 @@ export default async function OrdersPage({
       : Promise.resolve(null),
   ]);
 
-  const lastPage = Math.max(1, Math.ceil(totalCount / fallback.pageSize));
+  const lastPage = Math.max(1, Math.ceil(fallback.total / fallback.pageSize));
   if (page > lastPage) {
     const params = new URLSearchParams();
     if (statusFilter) params.set("status", statusFilter);
@@ -224,21 +224,9 @@ export default async function OrdersPage({
       />
 
       <div className="card-grid-4">
-        <StatCard
-          label={t("orders.activeOrders")}
-          value={activeOrders}
-          icon={<ShoppingBag />}
-        />
-        <StatCard
-          label={t("orders.pendingLabel")}
-          value={pendingCount}
-          icon={<Clock />}
-        />
-        <StatCard
-          label={t("orders.deliveredToday")}
-          value={deliveredTodayCount}
-          icon={<CheckCircle2 />}
-        />
+        <StatCard label={t("orders.activeOrders")} value={activeOrders} icon={<ShoppingBag />} />
+        <StatCard label={t("orders.pendingLabel")} value={pendingCount} icon={<Clock />} />
+        <StatCard label={t("orders.deliveredToday")} value={deliveredTodayCount} icon={<CheckCircle2 />} />
         <StatCard
           label={t("orders.todayRevenue")}
           value={todayRevenue === null ? "—" : formatDZD(todayRevenue, locale)}
@@ -252,11 +240,7 @@ export default async function OrdersPage({
             {STATUS_FILTERS.map((filter) => (
               <TabsTrigger key={filter.value} value={filter.value} asChild>
                 <Link
-                  href={
-                    filter.value === "all"
-                      ? "/orders"
-                      : `/orders?status=${filter.value}`
-                  }
+                  href={filter.value === "all" ? "/orders" : `/orders?status=${filter.value}`}
                   className="flex items-center gap-1.5"
                 >
                   {t(filter.labelKey)}
