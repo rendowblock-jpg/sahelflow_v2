@@ -37,8 +37,8 @@ interface StatCardProps {
  * Values render immediately and never count up: financial, stock and queue truth
  * must not look provisional while animation catches up. Page-local accent colors
  * are retained only as deprecated input compatibility and deliberately ignored.
- * Trend and spark context remain when they carry real data, but the surface stays
- * restrained and desktop-software-like.
+ * Existing ±1 direction sentinels remain arrow-only so they cannot fabricate a
+ * percentage change on legacy operational surfaces.
  */
 export function StatCard({
   label,
@@ -60,6 +60,7 @@ export function StatCard({
     typeof trend === "number" && Number.isFinite(trend) && trend !== 0;
   const positive = hasTrend && trend > 0;
   const negative = hasTrend && trend < 0;
+  const directionOnly = hasTrend && Math.abs(trend) === 1;
 
   return (
     <section
@@ -112,8 +113,12 @@ export function StatCard({
                   ) : (
                     <ArrowDownRight className="size-3" aria-hidden="true" />
                   )}
-                  {trend > 0 ? "+" : ""}
-                  {trend.toFixed(1)}%
+                  {!directionOnly ? (
+                    <>
+                      {trend > 0 ? "+" : ""}
+                      {trend.toFixed(1)}%
+                    </>
+                  ) : null}
                 </span>
               ) : null}
               {trendLabel ? <span>{trendLabel}</span> : null}
