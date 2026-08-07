@@ -61,10 +61,12 @@ function SidebarLink({
       className={cn(
         "group relative flex min-h-9 items-center rounded-md text-sm outline-none transition-colors",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar",
-        nested
-          ? "gap-2 px-2.5 py-1.5 text-[13px]"
-          : collapsed
-            ? "justify-center px-0 py-2"
+        collapsed
+          ? nested
+            ? "min-h-8 justify-center px-0 py-1.5"
+            : "justify-center px-0 py-2"
+          : nested
+            ? "gap-2 px-2.5 py-1.5 text-[13px]"
             : "gap-3 px-3 py-2",
         selected
           ? nested
@@ -111,9 +113,10 @@ function SidebarLink({
  * Phase 5 desktop navigation.
  *
  * The sidebar exposes seven durable business domains. Secondary destinations are
- * revealed only inside the active domain, so sellers navigate by job/context
- * instead of scanning a long module inventory. Profile/settings stay in the
- * utility footer and do not compete with daily work.
+ * revealed inside the active domain. In expanded mode they use compact labels;
+ * in rail mode the same destinations remain reachable as icon links with
+ * tooltips, so collapsing navigation never removes product capability. Profile
+ * and settings stay in the utility footer and do not compete with daily work.
  */
 export function Sidebar({
   serverLocale: _serverLocale,
@@ -190,15 +193,23 @@ export function Sidebar({
                     ) : null}
                   </div>
 
-                  {!collapsed && domainSelected && domain.children?.length ? (
-                    <div className="ms-4 space-y-0.5 border-s border-sidebar-border ps-2">
+                  {domainSelected && domain.children?.length ? (
+                    <div
+                      className={cn(
+                        "space-y-0.5",
+                        collapsed
+                          ? "px-1"
+                          : "ms-4 border-s border-sidebar-border ps-2",
+                      )}
+                      data-navigation-children={domain.id}
+                    >
                       {domain.children.map((child) => (
                         <SidebarLink
                           key={child.href}
                           item={child}
                           selected={pathMatchesNavigation(pathname, child.href)}
                           current={pathname === child.href}
-                          collapsed={false}
+                          collapsed={collapsed}
                           isRtl={isRtl}
                           nested
                         />
