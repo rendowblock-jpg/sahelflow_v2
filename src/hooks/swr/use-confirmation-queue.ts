@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import useSWR from "swr";
 import { useQueryState } from "nuqs";
 
@@ -11,13 +12,6 @@ interface UseConfirmationQueueOptions {
   fallback: ConfirmationQueueResponse;
 }
 
-/**
- * Paginated confirmation queue query.
- *
- * The server-rendered fallback is valid only for the exact page it represents.
- * Later pages must show a real loading/error state while their own response is
- * fetched; page-one rows are never relabelled as another page.
- */
 export function useConfirmationQueue({
   pageSize = 25,
   fallback,
@@ -44,6 +38,13 @@ export function useConfirmationQueue({
   );
   const response = data ?? fallbackData;
   const knownTotal = response?.total ?? fallback.total;
+  const lastPage = Math.max(1, Math.ceil(knownTotal / pageSize));
+
+  useEffect(() => {
+    if (knownTotal > 0 && currentPage > lastPage) {
+      void setPage(String(lastPage));
+    }
+  }, [currentPage, knownTotal, lastPage, setPage]);
 
   return {
     data: response,
