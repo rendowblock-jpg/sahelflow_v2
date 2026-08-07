@@ -1,5 +1,4 @@
 import * as React from "react";
-import type { LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -44,8 +43,10 @@ const SIZE_CLASSES: Record<StateSurfaceSize, string> = {
   page: "min-h-[min(520px,60vh)] px-6 py-10",
 };
 
+type StateIcon = React.ComponentType<{ className?: string }>;
+
 interface StateSurfaceProps {
-  icon: LucideIcon;
+  icon: StateIcon;
   title: React.ReactNode;
   description?: React.ReactNode;
   tone?: StateSurfaceTone;
