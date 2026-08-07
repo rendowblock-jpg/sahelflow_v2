@@ -10,17 +10,16 @@ const mocks = vi.hoisted(() => ({
   isImportPendingOrderAuthority: vi.fn(
     (source: unknown) => source === "import_pending",
   ),
+  shop: Object.freeze({
+    workspaceId: "1".repeat(32),
+    installationId: "2".repeat(32),
+    shopId: "shop-a",
+    shopIncarnationId: "3".repeat(32),
+    registryRevision: 1,
+    databaseFileId: "shop-a.db",
+    migrationSetSha256: "4".repeat(64),
+  }),
 }));
-
-const SHOP = Object.freeze({
-  workspaceId: "1".repeat(32),
-  installationId: "2".repeat(32),
-  shopId: "shop-a",
-  shopIncarnationId: "3".repeat(32),
-  registryRevision: 1,
-  databaseFileId: "shop-a.db",
-  migrationSetSha256: "4".repeat(64),
-});
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -29,7 +28,7 @@ vi.mock("@/lib/db", () => ({
       count: mocks.count,
     },
   },
-  shopContext: SHOP,
+  shopContext: mocks.shop,
 }));
 
 vi.mock("@/lib/risk-engine/service", () => ({
@@ -72,7 +71,7 @@ function context(
       revocationEpoch: 0,
       ...(permissions ? { permissions } : {}),
     },
-    shop: SHOP,
+    shop: mocks.shop,
   } as TrustedActorContext;
 }
 
