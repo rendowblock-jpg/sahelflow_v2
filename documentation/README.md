@@ -50,9 +50,9 @@ Phase 5 is now also closed at the protected-source + controlled-browser layer:
   viewport containment and command-search evidence passed;
 - latest-head review threads were zero before merge.
 
-Issue #221 retains the original Phase 5 Founder-installed visual-acceptance item.
-That human observation is not current evidence and does not reopen the merged
-Phase 5 source/browser architecture.
+Retained evidence issue #221 owns the original Phase 5 Founder-installed
+visual-acceptance item. That human observation is not current evidence and does
+not reopen the merged Phase 5 source/browser architecture.
 
 The active implementation frontier is **Phase 6 — Arabic, RTL and accessibility
 parity**. Start from live protected `main`, reuse the Phase 5 evidence/workbench
