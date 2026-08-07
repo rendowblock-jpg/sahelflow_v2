@@ -1,5 +1,7 @@
 import "server-only";
 
+import { SahelFlowError } from "@/types/errors";
+
 export interface ExportColumn<Row extends Record<string, unknown>> {
   key: string;
   label: string;
@@ -37,11 +39,6 @@ function rowLine<Row extends Record<string, unknown>>(
     .join(",");
 }
 
-/**
- * Stream a complete CSV in bounded database pages. No page or transformed-row
- * array survives after its chunk is enqueued, so very large exports remain
- * usable on the local desktop server.
- */
 export function createPagedCsvStream<Row extends Record<string, unknown>>(
   columns: readonly ExportColumn<Row>[],
   loadPage: ExportPageLoader<Row>,
@@ -58,7 +55,6 @@ export function createPagedCsvStream<Row extends Record<string, unknown>>(
         controller.close();
         return;
       }
-
       if (!started) {
         started = true;
         const header = columns.map((column) => escapeField(column.label)).join(",");
@@ -72,7 +68,6 @@ export function createPagedCsvStream<Row extends Record<string, unknown>>(
         controller.close();
         return;
       }
-
       skip += rows.length;
       controller.enqueue(
         encoder.encode(`${rows.map((row) => rowLine(row, columns)).join("\r\n")}\r\n`),
@@ -82,11 +77,6 @@ export function createPagedCsvStream<Row extends Record<string, unknown>>(
   });
 }
 
-/**
- * XLSX generation is inherently in-memory with the current library. Keep that
- * path explicitly bounded and direct larger exports to the complete streaming
- * CSV path instead of silently truncating or risking an OOM.
- */
 export async function collectBoundedXlsxRows<
   Row extends Record<string, unknown>,
 >(
@@ -97,8 +87,10 @@ export async function collectBoundedXlsxRows<
   const maxRows = options.maxRows ?? MAX_XLSX_EXPORT_ROWS;
   const pageSize = options.pageSize ?? DEFAULT_EXPORT_PAGE_SIZE;
   if (total > maxRows) {
-    throw new RangeError(
+    throw new SahelFlowError(
       `XLSX export is limited to ${maxRows} rows. Use CSV for the complete export.`,
+      "XLSX_EXPORT_TOO_LARGE",
+      413,
     );
   }
 
