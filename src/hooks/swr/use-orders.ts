@@ -16,6 +16,7 @@ export type OrdersResponse = OrdersWorkbenchResponse;
 
 interface UseOrdersOptions {
   status?: OrderStatus | "all";
+  risk?: "high";
   pageSize?: number;
   fallback?: OrdersResponse;
 }
@@ -52,8 +53,9 @@ export function useOrders(opts: UseOrdersOptions = {}) {
   );
   const statusParam =
     opts.status && opts.status !== "all" ? `&status=${opts.status}` : "";
+  const riskParam = opts.risk === "high" ? "&risk=high" : "";
   const sortParam = `&sort=${encodeURIComponent(normalizedSort)}`;
-  const key = `/api/orders?page=${currentPage}&pageSize=${pageSize}${statusParam}${sortParam}`;
+  const key = `/api/orders?page=${currentPage}&pageSize=${pageSize}${statusParam}${riskParam}${sortParam}`;
   const fallbackData =
     opts.fallback &&
     opts.fallback.page === currentPage &&
