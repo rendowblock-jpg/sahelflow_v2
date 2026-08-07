@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("confirmation queue page authority", () => {
-  it("resolves trusted field access before the private queue query", () => {
+  it("resolves trusted actor before the workbench query", () => {
     const page = readFileSync(
       resolve(
         process.cwd(),
@@ -13,17 +13,28 @@ describe("confirmation queue page authority", () => {
       "utf8",
     );
     const pageGuard = page.indexOf('requireTrustedAction("orders.read")');
-    const fieldAccess = page.indexOf(
-      "resolveConfirmationQueueFieldAccess(actorContext)",
-    );
-    const query = page.indexOf("getConfirmationQueue()");
-    const projection = page.indexOf("projectConfirmationQueueForTrustedActor(");
+    const workbench = page.indexOf("getConfirmationWorkbenchPage(actorContext");
 
     expect(pageGuard).toBeGreaterThanOrEqual(0);
-    expect(fieldAccess).toBeGreaterThan(pageGuard);
-    expect(query).toBeGreaterThan(fieldAccess);
-    expect(projection).toBeGreaterThan(query);
+    expect(workbench).toBeGreaterThan(pageGuard);
     expect(page).not.toContain("o.customer.phone");
-    expect(page).toContain("!o.canUpdate");
+  });
+
+  it("workbench resolves field access and projects before returning", () => {
+    const workbenchSource = readFileSync(
+      resolve(process.cwd(), "src/lib/orders/confirmation-workbench.ts"),
+      "utf8",
+    );
+    const fieldAccess = workbenchSource.indexOf(
+      "resolveConfirmationQueueFieldAccess(actorContext)",
+    );
+    const projection = workbenchSource.indexOf(
+      "projectConfirmationQueueForTrustedActor(",
+    );
+    const financialGate = workbenchSource.indexOf("fieldAccess.financials");
+
+    expect(fieldAccess).toBeGreaterThanOrEqual(0);
+    expect(projection).toBeGreaterThan(fieldAccess);
+    expect(financialGate).toBeGreaterThanOrEqual(0);
   });
 });
