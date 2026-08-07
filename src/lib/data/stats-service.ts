@@ -41,8 +41,6 @@ export const statsService = {
     const startOfTomorrow = new Date(startOfDay);
     startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
 
-    // Half-open periods: today = [startOfDay, startOfTomorrow);
-    // yesterday = [startOfYesterday, startOfDay).
     const todayPeriod = { from: startOfDay, to: startOfTomorrow };
     const yesterdayPeriod = { from: startOfYesterday, to: startOfDay };
 
@@ -92,7 +90,10 @@ export const statsService = {
         : Promise.resolve(0),
       canReadDeliveries
         ? ctx.prisma.delivery.count({
-            where: { status: "pending", deletedAt: null },
+            where: {
+              status: { in: ["pending", "created"] },
+              deletedAt: null,
+            },
           })
         : Promise.resolve(0),
       canReadProducts
