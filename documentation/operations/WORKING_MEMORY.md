@@ -1,45 +1,75 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
-> **Last updated:** 2026-08-06
-> **Live protected main:** `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
-> **Latest application-changing protected merge:** PR #203 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
-> **Latest protected authority merge:** PR #206 at `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
+> **Last updated:** 2026-08-07
+> **Live protected main:** `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
+> **Latest application-changing protected merge:** PR #207 at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
+> **Latest protected authority merge:** PR #207 at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Founder-accepted baseline:** Internal.5
 > **Execution epic:** issue #164
-> **Active phase issue:** issue #204
-> **Retained installed evidence:** issue #201
-> **Active product phase:** Phase 4 — data protection, recovery, migrations and security
-> **Active branch:** `agent/phase4-protected-data-authority`
-> **Active PR:** PR #207 — complete Phase 4 candidate plus installed-runtime root fix
-> **Final exact candidate head:** re-fetch the live PR #207 head; this file intentionally avoids a self-referential commit SHA
-> **Last executable candidate:** `33500fd8c7e968f1244a444f6fb130d9d897d6a1`
-> **Last installed run:** `31127743699` — MSI lifecycle/UI green; replacement setup HTTP 500
-> **Active agent:** ChatGPT Web Agent; Desktop Agent stopped implementation after this handoff
-> **Current session purpose:** diagnose the first installed setup failure, complete replacement proof, exact-head review/checks and protected closure
-> **Authorized package:** issue #204 through PR #207 only
+> **Active phase issue:** not yet opened
+> **Retained installed evidence:** issues #201 and #214
+> **Active product phase:** Phase 5 — whole-product AAA UI/UX
+> **Active product branch:** none
+> **Active product PR:** none
+> **Current session purpose:** begin Phase 5 from protected main; audit the whole frontend before broad production edits
+> **Authorized package:** no Phase 5 production package until reconnaissance, Problem Register and contract freeze are complete
 
-Live GitHub is authority. Re-read protected `main`, issue #204, PR #207 and issue
-#201 before relying on copied state or a recorded head SHA.
+Live GitHub is authority. Re-read protected `main`, the active documentation
+authorities, issue #164 and retained evidence issues #201/#214 before relying on
+copied state.
 
 ## Phase 3 protected closure
 
 PR #203 merged Phase 3 at
 `aa4ca0758fd696f4b02fc1975629ac698f9349c3`; exact validated head
 `f0db4116874238d0c415b4725cd2c5f3ef6201da` passed final required run
-`30901725446`. PR #206 then merged the Phase 4 audit frontier, P4-001…P4-013
-Problem Register, frozen contracts and consequence classifier at
+`30901725446`.
+
+## Phase 4 protected-source closure
+
+PR #206 merged the Phase 4 exhaustive audit, P4-001…P4-013 Problem Register,
+frozen contracts and consequence classifier at
 `9306564ce5b5ea4b3b13b219aa45d4672ae13184`.
 
-Internal.13 remains the only published and Founder-installed executable. The
-unmerged PR #207 candidate does not change the product version, publish an MSI,
-prove Founder acceptance or claim Beta/Stable.
+PR #207 then merged the complete Phase 4 protected-source package by squash at
+`8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`; issue #204 is completed.
 
-## PR #207 implementation frontier
+The exact product head immediately before the closure-control commits was
+`ccba7ec138b6aa1a77bf9d972bb1127a3270267d`. On that head:
 
-### P4-A / P4-B — protected data
+- source quality, documentation audit, coverage and production dependency audit
+  were green;
+- Tauri release smoke was green;
+- Windows standalone and Windows Rust parity were green;
+- the exact MSI built, installed, launched, closed and reopened;
+- authenticated hydrated WebView UI proof passed twice.
+
+The remaining installed failure occurred before replacement backup/restore: CI
+trial activation returned HTTP 503 with `LICENSE_TRIAL_SERVICE_UNAVAILABLE`.
+The Founder explicitly directed Phase 4 to close rather than remain indefinitely
+blocked on that disposable evidence boundary.
+
+PR #207 therefore contains the one-PR, diff-scoped closure marker
+`.github/phase-exceptions/pr-207-phase4-closure-override.md`. The closure commit's
+fast authority passed while heavy lanes were intentionally skipped. The marker is
+already in the base for future work and therefore does not silently bypass future
+PRs unless deliberately changed again.
+
+Issue #214 owns the unproven installed replacement-install recovery drill. It does
+not reopen Phase 4 and does not block Phase 5, but it must be satisfied before any
+claim that replacement-install recovery is installed/certified and before Stable
+if still applicable.
+
+Issue #201 remains a retained installed-evidence/waiver-cleanup obligation. Phase
+4 evidence materially improved that path and passed hydrated WebView proof twice;
+#201 does not reopen Phase 2 or block Phase 5.
+
+## Phase 4 protected capabilities now on main
+
+### Protected data and migration
 
 - purpose-separated HKDF installation keys and random per-shop data,
   blind-index and secret authorities;
@@ -48,135 +78,84 @@ prove Founder acceptance or claim Beta/Stable.
   access;
 - installation-root re-wrap and exclusive restart-safe protected-data migration.
 
-### P4-C — all-shop backup and independent recovery
+### All-shop backup and recovery authority
 
 - native SQLite Online Backup snapshot per registered shop;
 - immutable encrypted descriptor, manifest and ordered object set;
-- per-license BRK, fresh per-backup DEK and complete exact-identity bindings;
-- independent recovery kit/code, persisted verification receipt, verified listing
-  and governed deletion.
+- per-license BRK, fresh per-backup DEK and exact identity bindings;
+- independent recovery kit/code, verification receipt, verified listing and
+  governed deletion;
+- replacement restore machinery with staging, rescue, compensation, rollback and
+  identity rebinding;
+- authenticated migration/restore journals and replay-protected native bridge.
 
-### P4-D / P4-E — replacement restore and convergence
+### Privacy/security/evidence authority
 
-- complete preflight, all-shop staging, rescue generation, authenticated applying
-  journal, post-apply verification and compensation;
-- replacement installation identity retained, imported keys re-wrapped and source
-  `Session` plus `AuthSecret` removed;
-- previous runtime stop proof before cutover;
-- wrong key/kit/workspace/schema, corruption, missing objects, low disk and
-  interruption fail closed before runtime exposure;
-- localhost-only framed bridge with authenticated handshake, exact action/resource
-  binding, short-lived single-use tokens and durable replay protection.
-
-### P4-F — privacy/security/release authority
-
-- machine-readable classification for every Prisma model, protected field and
-  installation-level file store;
-- complete export/reset/erase lifecycle, credential deletion, active-session
-  revocation and governed native shop deletion reuse;
-- amended Algeria Law 18-07/Law 25-11 engineering mapping with qualified legal
-  review boundary;
-- threat model, independent-review protocol and Level 1/2/3 matrix;
-- deterministic resolved npm/Cargo CycloneDX SBOM, explicit VEX triage policy and
-  evidence manifest retained in the inventory artifact;
-- executable closure verifier covering model/lifecycle drift, native includes,
-  legacy backup paths, replacement auth re-enrollment and evidence generation.
-
-## Process correction and durability
-
-An earlier survivability draft was incorrectly reported as published while its
-Git tree had not been committed or attached. The implementation was subsequently
-recovered and attached as durable commit
-`839cf90b707333c14e56577c5dcca1410c84f425`. The complete P4-A…P4-F source and
-archived security/legal/evidence candidate was then durably attached through
-`da9d31ca420a751d36a27479da28692b6303db1f`. Every later implementation step is a
-real `[skip ci]` GitHub commit and the PR head/file set is re-fetched before claims.
-
-Do not claim a file or package landed from a temporary blob/tree, tool label or
-local draft. Required proof is: commit succeeds, branch head moves and GitHub
-returns the expected file on that exact head.
+- machine-readable classification for Prisma models, protected fields and
+  installation-level file stores;
+- export/reset/erase lifecycle, credential deletion, session revocation and
+  governed native shop deletion reuse;
+- Algeria Law 18-07/Law 25-11 engineering mapping with qualified legal-review
+  boundary;
+- threat model, review protocol and Level 1/2/3 evidence matrix;
+- deterministic npm/Cargo CycloneDX SBOM, VEX triage and evidence manifest;
+- executable closure verifier for model/lifecycle drift and legacy backup paths.
 
 ## Documentation-audit continuity
 
 The historical heading **Phase 4 first package — exhaustive audit and contract freeze**
 and its historical restriction **Broad Phase 4 production work:** not authorized
-are retained here solely as semantic continuity markers. PR #206 superseded that
-restriction when it authorized PR #207; these phrases are not current execution
-limits.
+are retained here solely as semantic continuity markers. They describe the state
+before PR #207 implementation authorization and are not current Phase 5 limits.
 
-## Final candidate freeze
+Historical issue #204 is retained in this closure record because it owns the now
+completed Phase 4 execution history.
 
-The complete static audit is finished. The final repair batch:
+## Active Phase 5 frontier
 
-- scans both `upsert.create` and `upsert.update` for protected nested writes;
-- detects raw Prisma access through parenthesized, cast, non-null and `satisfies`
-  canonical-client receivers;
-- binds closure and SBOM/VEX generation to the governed archived Phase 4 evidence;
-- restores documentation-audit continuity without reactivating superseded limits;
-- leaves every historical P1 review conversation resolved.
+Phase 5 starts from protected `main` at
+`8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`.
 
-The original installed UI blocker is source-diagnosed and repaired. PR #195 had
-introduced a relative configured-session redirect that Next.js 16 rejected in
-the packaged server with `TypeError: Invalid URL`. Commit
-`80f03768d5c45c9df24412ce750e766ad9dcb13f` restores a request-derived absolute
-same-origin 307 and removes the speculative renderer-prime workaround. Manual
-Windows run `31126124211` proved install, launch/reopen and three authenticated
-hydrated WebView launches on that exact repair.
+Objective: transform the complete application into one coherent top-tier
+operational system rather than another isolated UI polish wave.
 
-The subsequent replacement-drill 401 was a stale harness boundary: direct HTTP
-requests lacked the native WebView's per-launch HttpOnly runtime cookie. Exact
-executable head `33500fd8c7e968f1244a444f6fb130d9d897d6a1` gives only the
-disposable evidence MSI a supported Tauri/WebView2 loopback debugging argument,
-keeps the bearer in process memory and leaves production configuration and
-authentication unchanged.
+Before broad Phase 5 production edits:
 
-Run `31127743699` passed the MSI build, installed launch/close/reopen and three
-authenticated hydrated WebView launches. It also proved the replacement harness
-obtained the runtime cookie: `/api/auth/setup` was authorized and reached the
-application. That request returned HTTP 500 before customer/secret creation,
-recovery-kit generation, backup or replacement began. The artifact did not retain
-an inner safe error code. Treat the first missing transition as the bounded setup
-chain `setupAuth` -> `createSession` -> durable identity binding -> session cookie;
-do not reopen the already-green redirect, WebView or cookie diagnoses.
+1. inspect the exact current frontend, route tree, design primitives, tables,
+   forms, charts, navigation, responsive behavior and real authority bindings;
+2. map every Required route and journey against happy/loading/empty/validation/
+   permission/offline/pending/stale/conflict/error/retry/recovery/history states;
+3. identify competing design systems, legacy patterns, mocked or incomplete
+   surfaces and accessibility/RTL/performance risks;
+4. group findings by root cause into one Phase 5 Problem Register;
+5. freeze one SahelFlow-owned design system, chart foundation, information
+   architecture and page-completion contract;
+6. define coherent implementation packages and Level 1/2/3 evidence before
+   changing broad UI surfaces.
 
-Two historical P1 review threads remain unresolved in GitHub even though their
-dependency-pin and migration-root findings are already repaired in the exact
-branch tree. They remain for the independent reviewer to verify and resolve.
+Do not reopen Phase 4 unless a Phase 5 change materially breaks a protected Phase
+4 authority. Retained installed replacement evidence remains in #214.
 
-## Final closure sequence
+## Phase 5 target
 
-1. Instrument or reproduce the installed setup chain once and determine its first
-   failing transition; do not begin another speculative CI loop.
-2. Apply one consolidated repair and complete the replacement-install drill on
-   that exact executable head.
-3. Request exact-head security/privacy review using
-   `documentation/archive/phase4/PHASE4_INDEPENDENT_REVIEW.md`.
-4. Run one complete selected Phase 4 gate.
-5. If anything fails, collect all jobs/logs/artifacts and all review findings before
-   one consolidated repair; do not patch one failure at a time.
-6. Resolve every P0/P1 conversation on the exact repaired head.
-7. Merge with `expected_head_sha`, verify protected `main`, then reconcile issue
-   #204 only when the exit gate is actually satisfied.
+- one SahelFlow-owned design system and governed chart foundation;
+- coherent information architecture and navigation;
+- professional operational density without module-maze noise;
+- complete tables, filters, forms, bulk actions and destructive ceremonies;
+- complete state coverage on every Required page;
+- real data and authority, not mocked happy paths;
+- route-by-route visual regression;
+- Founder visual acceptance at the defined checkpoint.
 
-## Required final evidence
+Arabic/RTL/accessibility are formally Phase 6 but must not be made harder by Phase
+5 architecture. Performance is formally Phase 7 but obvious regressions are not
+acceptable during Phase 5.
 
-- version/documentation authority;
-- frozen Bun install, Prisma generation/deployment/status;
-- TypeScript, ESLint, complete Vitest/database/integration and 80%+ coverage;
-- zero unresolved blocking production dependency finding;
-- generated SBOM/VEX/evidence manifest;
-- Rust format and release check on Linux plus Windows Rust parity;
-- Windows database, standalone, contained launcher and runtime readiness;
-- installed MSI launch, hydrated WebView, close/reopen and applicable issue #201;
-- realistic replacement-install all-shop backup/corrupt/replace/restore/rollback
-  drill with business digests and new local identity proof;
-- exact-head review with no unresolved P0/P1.
+## Current non-claims
 
-## Non-claims
-
-- PR #207 is unmerged and Phase 4 is not closed until the final gates pass.
-- The legal document is engineering mapping, not legal advice or certification.
-- The review protocol is not a self-issued independent approval.
-- Internal.13 remains the published and installed executable.
-- No release, Founder acceptance, Beta, Stable, penetration-test or live-provider
-  certification claim exists.
+- Phase 4 protected-source closure is not a new signed release.
+- Installed replacement-install recovery is not certified; issue #214 retains it.
+- The Law 18-07 document is engineering mapping, not legal advice or certification.
+- Internal.13 remains the latest published and Founder-installed executable.
+- No Founder acceptance, Beta, Stable, penetration-test or live-provider
+  certification claim exists for current protected Phase 1–4 source.
