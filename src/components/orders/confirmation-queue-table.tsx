@@ -3,7 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Phone } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Phone } from "lucide-react";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
@@ -17,7 +17,6 @@ import type {
   ConfirmationQueueItem,
   ConfirmationQueueResponse,
 } from "@/types/workbench";
-import { CheckCircle2 } from "lucide-react";
 
 interface ConfirmationQueueTableProps {
   fallback: ConfirmationQueueResponse;
@@ -30,8 +29,8 @@ export function ConfirmationQueueTable({
 }: ConfirmationQueueTableProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const { data, isLoading, pagination } = useConfirmationQueue({ fallback });
-  const access = data.fieldAccess;
+  const { data, error, isLoading, pagination } = useConfirmationQueue({ fallback });
+  const access = data?.fieldAccess ?? fallback.fieldAccess;
 
   const columns: ColumnDef<ConfirmationQueueItem, unknown>[] = [
     {
@@ -167,10 +166,23 @@ export function ConfirmationQueueTable({
     },
   ];
 
+  if (error && !data) {
+    return (
+      <StateSurface
+        icon={AlertTriangle}
+        title={t("error.requestFailed")}
+        description={error.message}
+        tone="danger"
+        size="inline"
+        role="alert"
+      />
+    );
+  }
+
   return (
     <DataTable
       columns={columns}
-      data={data.queue}
+      data={data?.queue ?? []}
       isLoading={isLoading}
       pagination={pagination}
       showDensityToggle
