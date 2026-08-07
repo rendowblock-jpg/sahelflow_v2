@@ -1,0 +1,156 @@
+name: Phase 4 exact-head repair
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.event.pull_request.head.ref == 'agent/phase4-protected-data-authority'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply exact Phase 4 loopback-session repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          harness_path = Path('scripts/verify-phase4-replacement-install.ps1')
+          harness = harness_path.read_text(encoding='utf-8')
+
+          old = '''    return [pscustomobject]@{
+              status = [int]$response.StatusCode
+              body = $decoded
+          }
+          }
+
+          function Read-CdpMessage {'''
+          new = '''    return [pscustomobject]@{
+              status = [int]$response.StatusCode
+              body = $decoded
+              setCookies = @($response.Headers["Set-Cookie"])
+          }
+          }
+
+          function Import-SellerSessionCookieFromResponse {
+              param(
+                  [Parameter(Mandatory = $true)][string]$BaseUrl,
+                  [Parameter(Mandatory = $true)][Microsoft.PowerShell.Commands.WebRequestSession]$Session,
+                  [Parameter(Mandatory = $true)]$Response
+              )
+              # The installed app correctly marks the seller session Secure in
+              # production. This evidence client speaks only to the app's HTTP
+              # loopback listener, and System.Net therefore will not resend that
+              # Secure cookie. Reuse the exact server-minted value only inside
+              # this ephemeral runner by copying it into a host-only non-Secure
+              # loopback cookie. Production cookie policy is never changed.
+              $header = @($Response.setCookies) -join ","
+              $match = [regex]::Match(
+                  $header,
+                  "(?:^|,\\s*)sf_session=([^;,\\s]+)"
+              )
+              if (-not $match.Success) {
+                  throw "Seller session response did not contain the expected auth cookie."
+              }
+              $cookie = [System.Net.Cookie]::new(
+                  "sf_session",
+                  $match.Groups[1].Value,
+                  "/"
+              )
+              $cookie.HttpOnly = $true
+              $cookie.Secure = $false
+              $Session.Cookies.Add([Uri]$BaseUrl, $cookie)
+              $cookie = $null
+              $match = $null
+              $header = $null
+          }
+
+          function Read-CdpMessage {'''
+          if harness.count(old) != 1:
+              raise SystemExit('Invoke-SahelFlowJson anchor drifted')
+          harness = harness.replace(old, new, 1)
+
+          old = '''    $setup = Invoke-SahelFlowJson -Method POST -BaseUrl $BaseUrl -Path "/api/auth/setup" -Session $Session -Body @{ pin = $pin }
+              if ($setup.status -eq 200) { return }
+              if ($setup.status -ne 409) {
+                  throw "Owner setup failed with HTTP $($setup.status)."
+              }
+              $login = Invoke-SahelFlowJson -Method POST -BaseUrl $BaseUrl -Path "/api/auth/login" -Session $Session -Body @{ pin = $pin }
+              if ($login.status -ne 200) {
+                  throw "Owner login failed with HTTP $($login.status)."
+              }
+          }'''
+          new = '''    $setup = Invoke-SahelFlowJson -Method POST -BaseUrl $BaseUrl -Path "/api/auth/setup" -Session $Session -Body @{ pin = $pin }
+              if ($setup.status -eq 200) {
+                  Import-SellerSessionCookieFromResponse -BaseUrl $BaseUrl -Session $Session -Response $setup
+                  return
+              }
+              if ($setup.status -ne 409) {
+                  throw "Owner setup failed with HTTP $($setup.status)."
+              }
+              $login = Invoke-SahelFlowJson -Method POST -BaseUrl $BaseUrl -Path "/api/auth/login" -Session $Session -Body @{ pin = $pin }
+              if ($login.status -ne 200) {
+                  throw "Owner login failed with HTTP $($login.status)."
+              }
+              Import-SellerSessionCookieFromResponse -BaseUrl $BaseUrl -Session $Session -Response $login
+          }'''
+          if harness.count(old) != 1:
+              raise SystemExit('Establish-OwnerSession anchor drifted')
+          harness = harness.replace(old, new, 1)
+
+          old = '''if ($search.status -ne 200) { throw "Source customer search failed." }'''
+          new = '''if ($search.status -ne 200) {
+              $safeCode = if ($null -ne $search.body -and $null -ne $search.body.code) {
+                  [string]$search.body.code
+              } else {
+                  "none"
+              }
+              throw "Source customer search failed with HTTP $($search.status) and code $safeCode."
+          }'''
+          if harness.count(old) != 1:
+              raise SystemExit('source-search diagnostic anchor drifted')
+          harness = harness.replace(old, new, 1)
+          harness_path.write_text(harness, encoding='utf-8', newline='\n')
+
+          test_path = Path('src/lib/__tests__/phase4-replacement-installed-contract.test.ts')
+          test = test_path.read_text(encoding='utf-8')
+          old = '''    expect(harness).toContain("Import-RuntimeCookieFromWebView");
+              expect(harness).toContain("written to evidence or emitted to the Actions log");'''
+          new = '''    expect(harness).toContain("Import-RuntimeCookieFromWebView");
+              expect(harness).toContain("Import-SellerSessionCookieFromResponse");
+              expect(harness).toContain('"sf_session"');
+              expect(harness).toContain("$cookie.Secure = $false");
+              expect(harness).toContain("written to evidence or emitted to the Actions log");'''
+          if test.count(old) != 1:
+              raise SystemExit('installed-contract test anchor drifted')
+          test = test.replace(old, new, 1)
+          test_path.write_text(test, encoding='utf-8', newline='\n')
+
+          Path('.github/workflows/phase4-fast-patch.yml').unlink()
+          PY
+
+          git diff --check
+
+      - name: Commit exact repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'sahelflow-phase4-closer'
+          git config user.email 'actions@users.noreply.github.com'
+          git add scripts/verify-phase4-replacement-install.ps1 \
+                  src/lib/__tests__/phase4-replacement-installed-contract.test.ts \
+                  .github/workflows/phase4-fast-patch.yml
+          git commit -m 'fix(phase4): preserve seller session in installed loopback evidence'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
