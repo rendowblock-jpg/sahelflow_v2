@@ -22,7 +22,10 @@ import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
-import { getOrdersWorkbenchPage } from "@/lib/orders/order-list-workbench";
+import {
+  getOrdersWorkbenchPage,
+  resolveOrdersWorkbenchAccess,
+} from "@/lib/orders/order-list-workbench";
 import { formatDZD } from "@/lib/utils";
 import { orderStatusSchema } from "@/lib/validation";
 import type { OrderStatus } from "@/types/domain";
@@ -91,6 +94,7 @@ export default async function OrdersPage({
   const canImport = can("data.import");
 
   const { start, end } = localDayBounds();
+  const fieldAccess = resolveOrdersWorkbenchAccess(actorContext);
   const [fallback, statusGroups, totalCount, deliveredToday, creationData] =
     await Promise.all([
       getOrdersWorkbenchPage(actorContext, {
@@ -112,7 +116,7 @@ export default async function OrdersPage({
           deliveredAt: { gte: start, lt: end },
         },
         _count: { _all: true },
-        _sum: { totalPrice: true },
+        ...(fieldAccess.financials ? { _sum: { totalPrice: true } } : {}),
       }),
       canCreateOrder
         ? Promise.all([
@@ -161,8 +165,8 @@ export default async function OrdersPage({
   const activeOrders = computeActiveOrderCount(statusGroups);
   const pendingCount = counts.pending ?? 0;
   const todayDeliveredCount = deliveredToday._count._all;
-  const todayRevenue = fallback.fieldAccess.financials
-    ? (deliveredToday._sum.totalPrice ?? 0)
+  const todayRevenue = fieldAccess.financials
+    ? (deliveredToday._sum?.totalPrice ?? 0)
     : null;
   const customers = creationData?.[0] ?? [];
   const products = creationData?.[1] ?? [];
