@@ -163,7 +163,7 @@ export function Sidebar({
         <TooltipProvider delayDuration={0}>
           <nav
             className="flex flex-col gap-1 px-2 py-3"
-            aria-label={t("nav.groupOperations")}
+            aria-label={t("nav.sidebarLabel")}
           >
             {navigationDomains.map((domain) => {
               const domainSelected = activeDomain?.id === domain.id;
