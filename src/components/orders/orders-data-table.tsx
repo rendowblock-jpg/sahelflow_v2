@@ -110,10 +110,12 @@ export function OrdersDataTable({
         return;
       }
 
-      void bulkMutation.submit("/api/orders/bulk", {
-        method: "POST",
-        body: JSON.stringify({ ids: selectedIds, status }),
-      });
+      void bulkMutation
+        .submit("/api/orders/bulk", {
+          method: "POST",
+          body: JSON.stringify({ ids: selectedIds, status }),
+        })
+        .catch(() => undefined);
     },
     [bulkMutation, data, locale],
   );
