@@ -117,10 +117,9 @@ interface DataTableProps<TData> {
  * SahelFlow operational table.
  *
  * This remains a semantic HTML table rather than pretending every list is an
- * ARIA grid. Sortable headers contain real buttons, pagination may opt into a
- * server-authoritative sort contract, and selection is cleared deliberately
- * when the visible page/sort context changes so hidden rows are never acted on
- * by accident.
+ * ARIA grid. Sortable headers contain real buttons. A paginated table exposes
+ * sort only when its backend declares a matching server contract; otherwise it
+ * avoids the false impression that reordering one page sorted the complete set.
  */
 export function DataTable<TData>({
   columns,
@@ -150,13 +149,16 @@ export function DataTable<TData>({
     return [{ id, desc: direction === "desc" }];
   }, [sortUrl.sort]);
 
+  const sortingEnabled = pagination ? Boolean(pagination.serverSort) : true;
   const table = useReactTable({
     data,
     columns,
     state: { sorting, rowSelection },
     enableRowSelection: true,
+    enableSorting: sortingEnabled,
     onRowSelectionChange: setRowSelection,
     onSortingChange: (updater) => {
+      if (!sortingEnabled) return;
       const next = typeof updater === "function" ? updater(sorting) : updater;
       const first = next[0];
       setRowSelection({});
@@ -172,9 +174,16 @@ export function DataTable<TData>({
     manualSorting: Boolean(pagination?.serverSort),
   });
 
+  const visibleIds = React.useMemo(
+    () => new Set(data.map((row) => getRowId(row))),
+    [data, getRowId],
+  );
   const selectedIds = React.useMemo(
-    () => Object.keys(rowSelection).filter((key) => rowSelection[key]),
-    [rowSelection],
+    () =>
+      Object.keys(rowSelection).filter(
+        (key) => rowSelection[key] && visibleIds.has(key),
+      ),
+    [rowSelection, visibleIds],
   );
   const dens = DENSITY_CLASSES[density];
   const currentPage = pagination?.page ?? 1;
@@ -195,6 +204,14 @@ export function DataTable<TData>({
     },
     [pagination],
   );
+
+  const paginationLabel = pagination
+    ? t("dataTable.pageOf", {
+        current: currentPage,
+        total: totalPages ?? currentPage,
+        count: pagination.total ?? data.length,
+      })
+    : undefined;
 
   return (
     <div className={cn("space-y-3", className)} data-table-density={density}>
@@ -332,10 +349,11 @@ export function DataTable<TData>({
                 table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
+                    tabIndex={onRowClick ? 0 : undefined}
                     className={cn(
                       "transition-colors hover:bg-muted/40",
                       onRowClick &&
-                        "cursor-pointer focus-within:bg-muted/30",
+                        "cursor-pointer outline-none focus-visible:bg-muted/30 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                       row.getIsSelected() && "bg-primary/5",
                     )}
                     onClick={
@@ -353,6 +371,17 @@ export function DataTable<TData>({
                               return;
                             }
                             onRowClick(row.original);
+                          }
+                        : undefined
+                    }
+                    onKeyDown={
+                      onRowClick
+                        ? (event) => {
+                            if (event.target !== event.currentTarget) return;
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              onRowClick(row.original);
+                            }
                           }
                         : undefined
                     }
@@ -437,16 +466,10 @@ export function DataTable<TData>({
         {pagination ? (
           <nav
             className="flex items-center gap-2"
-            aria-label={t("dataTable.pagination")}
+            aria-label={paginationLabel}
           >
             <span className="text-xs text-muted-foreground" aria-live="polite">
-              {pagination.total != null
-                ? t("dataTable.pageOf", {
-                    current: currentPage,
-                    total: totalPages ?? 1,
-                    count: pagination.total,
-                  })
-                : `${currentPage}`}
+              {pagination.total != null ? paginationLabel : `${currentPage}`}
             </span>
             <div className="flex items-center gap-1">
               {totalPages !== undefined ? (
