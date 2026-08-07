@@ -1,3 +1,4 @@
+// Phase 6: Trend accessibility
 "use client";
 
 import * as React from "react";
