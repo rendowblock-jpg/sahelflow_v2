@@ -74,30 +74,12 @@ const NOTIFICATION_PRESENTATION: Record<
     className: string;
   }
 > = {
-  order: {
-    icon: ShoppingCart,
-    className: "bg-primary/10 text-primary",
-  },
-  delivery: {
-    icon: Truck,
-    className: "bg-success/10 text-success",
-  },
-  stock: {
-    icon: Package,
-    className: "bg-warning/10 text-warning",
-  },
-  info: {
-    icon: Bell,
-    className: "bg-muted text-muted-foreground",
-  },
-  return: {
-    icon: RotateCcw,
-    className: "bg-warning/10 text-warning",
-  },
-  alert: {
-    icon: AlertCircle,
-    className: "bg-destructive/10 text-destructive",
-  },
+  order: { icon: ShoppingCart, className: "bg-primary/10 text-primary" },
+  delivery: { icon: Truck, className: "bg-success/10 text-success" },
+  stock: { icon: Package, className: "bg-warning/10 text-warning" },
+  info: { icon: Bell, className: "bg-muted text-muted-foreground" },
+  return: { icon: RotateCcw, className: "bg-warning/10 text-warning" },
+  alert: { icon: AlertCircle, className: "bg-destructive/10 text-destructive" },
 };
 
 /**
@@ -243,19 +225,22 @@ export function Topbar({
             <Button
               variant="ghost"
               size="sm"
-              className="min-w-0 max-w-56 justify-start gap-2 px-2 font-medium"
+              className="h-8 w-8 max-w-56 justify-center gap-2 px-0 font-medium sm:w-auto sm:justify-start sm:px-2"
+              aria-label={shopLabel}
               aria-live="polite"
               title={
-                switchStatus === "blocked" ? (switchError ?? undefined) : undefined
+                switchStatus === "blocked" ? (switchError ?? undefined) : shopLabel
               }
             >
               <Store
                 className="size-4 shrink-0 text-muted-foreground"
                 aria-hidden="true"
               />
-              <span className="truncate text-start">{shopLabel}</span>
+              <span className="hidden min-w-0 truncate text-start sm:inline">
+                {shopLabel}
+              </span>
               <ChevronDown
-                className="size-3.5 shrink-0 text-muted-foreground"
+                className="hidden size-3.5 shrink-0 text-muted-foreground sm:block"
                 aria-hidden="true"
               />
             </Button>
@@ -317,11 +302,13 @@ export function Topbar({
             <Button
               variant="ghost"
               size="sm"
-              className="hidden gap-1.5 px-2 sm:flex"
+              className="h-8 w-8 gap-1.5 px-0 sm:w-auto sm:px-2"
               aria-label={activeLocaleLabel}
             >
               <Globe className="size-4" aria-hidden="true" />
-              <span className="text-[11px] font-semibold uppercase">{locale}</span>
+              <span className="hidden text-[11px] font-semibold uppercase sm:inline">
+                {locale}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="shadow-dropdown">
@@ -369,9 +356,7 @@ export function Topbar({
               <span>{t("common.notifications")}</span>
               {unreadCount > 0 ? (
                 <Badge variant="secondary" className="px-1.5 text-xs">
-                  {t("topbar.newNotifications", {
-                    n: String(unreadCount),
-                  })}
+                  {t("topbar.newNotifications", { n: String(unreadCount) })}
                 </Badge>
               ) : null}
             </DropdownMenuLabel>
