@@ -31,6 +31,8 @@ type BlockedPayload = Readonly<{
   checks?: ReadinessChecks;
 }>;
 
+class RuntimeProtectedSearchNotReadyError extends Error {}
+
 function bearerToken(request: Request): string | null {
   const authorization = request.headers.get("authorization") ?? "";
   const match = /^Bearer\s+([0-9a-f]{64})$/i.exec(authorization);
@@ -90,6 +92,25 @@ async function blocked(payload: BlockedPayload) {
 
 async function databaseAuthState(): Promise<DatabaseAuthState> {
   const { dbRaw } = await import("@/lib/db");
+
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.SF_INSTALLATION_ROOT_SOURCE === "native-stdin-v1"
+  ) {
+    try {
+      await migratePhoneReputationBlindIndexes(dbRaw, {
+        mode: "apply",
+        shopContext: processShopContext(),
+        installationRoot: getMasterKey(),
+      });
+    } catch (cause) {
+      throw new RuntimeProtectedSearchNotReadyError(
+        "Phone-reputation protected search authority did not converge",
+        { cause },
+      );
+    }
+  }
+
   const canonicalRows = await dbRaw.$queryRaw<CanonicalAuthRow[]>`
     SELECT "id", "pinHash", "secret" FROM "AuthSecret"
   `;
@@ -127,16 +148,6 @@ async function databaseAuthState(): Promise<DatabaseAuthState> {
     throw new Error("Invalid legacy auth upgrade state");
   }
   return { mode: AUTH_MODE_CONFIGURED, secret: legacySecret };
-}
-
-async function convergePhoneReputationAuthority(): Promise<void> {
-  if (process.env.SF_INSTALLATION_ROOT_SOURCE !== "native-stdin-v1") return;
-  const { dbRaw } = await import("@/lib/db");
-  await migratePhoneReputationBlindIndexes(dbRaw, {
-    mode: "apply",
-    shopContext: processShopContext(),
-    installationRoot: getMasterKey(),
-  });
 }
 
 /**
@@ -194,10 +205,13 @@ export async function GET(request: Request) {
         checks: { app: "blocked", database: "blocked", auth: "blocked" },
       });
     }
+  }
 
-    try {
-      await convergePhoneReputationAuthority();
-    } catch {
+  let databaseAuth: DatabaseAuthState;
+  try {
+    databaseAuth = await databaseAuthState();
+  } catch (error) {
+    if (error instanceof RuntimeProtectedSearchNotReadyError) {
       return blocked({
         status: "blocked",
         code: "RUNTIME_PROTECTED_SEARCH_NOT_READY",
@@ -209,12 +223,6 @@ export async function GET(request: Request) {
         },
       });
     }
-  }
-
-  let databaseAuth: DatabaseAuthState;
-  try {
-    databaseAuth = await databaseAuthState();
-  } catch {
     return blocked({
       status: "blocked",
       code: "RUNTIME_AUTH_DATABASE_INVALID",
