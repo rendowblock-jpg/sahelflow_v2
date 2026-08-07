@@ -3,15 +3,17 @@
 SahelFlow is a Windows-first operations system for Algerian cash-on-delivery
 sellers.
 
-> **Protected main:** `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
-> **Latest application-changing merge:** PR #203 Phase 3 closure at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Protected main:** `18f56b06eb66f652aa6904d3f93f2e8f4bcfd7c6`
+> **Latest application-changing merge:** PR #207 Phase 4 protected-source closure at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
+> **Latest authority reconciliation:** PR #215 at `18f56b06eb66f652aa6904d3f93f2e8f4bcfd7c6`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Current program:** FD-028 Final Completion Program, FD-029 AAA delivery and FD-030 provider-certification boundary
-> **Active phase:** Phase 4 — data protection, recovery, migrations and security
-> **Active package:** issue #204 audit, Problem Register and shared contract freeze
+> **Active phase:** Phase 5 — whole-product AAA UI/UX
+> **Active package:** not yet opened; begin with Phase 5 reconnaissance and one consolidated Problem Register
+> **Retained installed evidence:** issues #201 and #214
 > **Stable status:** SahelFlow 1.0 Stable has not been released
 
 ## Current truth
@@ -24,27 +26,42 @@ source now includes:
 - Teams, permissions, exact shop grants and revocation;
 - signed installation-level trial/permanent licensing;
 - Tauri-owned journaled create, rename, switch, archive, recover and delete;
-- all-shop migration/recovery, process containment and authenticated readiness;
 - durable inbound/outbound WhatsApp and database-authoritative inbox;
 - truthful durable automations and proposal-bound sensitive AI actions;
 - durable commerce runs/pages/encrypted items and one canonical courier facade;
 - fail-closed server-side provider capability authority;
+- Phase 4 purpose-separated protected-data authority and protected migration;
+- encrypted all-shop backup, independent recovery-kit authority and replacement
+  restore machinery;
+- authenticated migration/restore journals, privacy lifecycle, threat/legal
+  mapping, SBOM/VEX and closure evidence;
 - strong exact-source Windows release infrastructure.
 
-PR #200 merged native multi-shop authority at
-`e9c92f08f39e8d87ddfd72d2e698418ae81fc084`; issue #201 retains its bounded
-installed hydrated-WebView evidence obligation.
+PR #203 Phase 3 closure landed at
+`aa4ca0758fd696f4b02fc1975629ac698f9349c3`. Real provider certification remains
+a Phase 9 representative-beta obligation under FD-030.
 
-PR #203 merged Phase 3 protected source at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`. Durable inbound WhatsApp,
-database-authoritative inbox, truthful automations, proposal-bound sensitive AI,
-durable commerce, canonical courier authority and fail-closed provider capability
-contracts are now integrated. Real provider certification remains a Phase 9 beta
-obligation under FD-030.
+PR #206 froze the **Phase 4 exhaustive audit and contract freeze** under issue
+#204. PR #207 then merged the complete Phase 4 protected-source package at
+`8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`, and issue #204 is completed.
+
+The Phase 4 product head before its closure-control commits had green source
+quality, documentation audit, coverage, production dependency audit, Tauri release
+smoke, Windows standalone and Windows Rust parity. Its exact MSI built, installed,
+launched, closed/reopened and passed authenticated hydrated WebView UI proof twice.
+
+The installed replacement-install recovery drill itself is **not certified**. It
+stopped before backup/restore because disposable CI trial activation returned HTTP
+503 with `LICENSE_TRIAL_SERVICE_UNAVAILABLE`. Issue #214 retains that bounded
+release/certification obligation. It does not reopen Phase 4 and does not block
+starting Phase 5.
+
+Issue #201 remains a bounded installed-evidence/waiver-cleanup obligation. It does
+not reopen Phase 2 or block Phase 5.
 
 The published and Founder-installed executable remains Internal.13. It predates
-the protected Phase 1/Teams/licensing/native-multi-shop closures and cannot prove
-current source behavior. Recorded T470 launch times of 68.863 seconds and 31.834
-seconds remain beyond the eight-second target. Founder acceptance remains open.
+the current protected Phase 1–4 source and therefore cannot prove current merged
+behavior. Founder acceptance remains open.
 
 SahelFlow is not yet a complete AAA candidate or Stable product.
 
@@ -66,11 +83,9 @@ The active authority remains exactly ten documents:
 9. [`RESEARCH.md`](documentation/research/RESEARCH.md)
 10. [`documentation/README.md`](documentation/README.md)
 
-Issue #164 is the live Phase 0–9 execution dashboard, issue #204 owns active
-Phase 4 execution and issue #201 retains the installed hydrated-WebView evidence. Issues are not
-additional product, experience, architecture, roadmap or workflow authorities.
-Archived reports are context only until current evidence is revalidated and
-adopted by an active owner.
+Issue #164 is the live Phase 0–9 execution dashboard. Historical issue #204 owns
+the completed Phase 4 record. Issues #201 and #214 retain installed evidence; they
+are not additional product, architecture or roadmap authorities.
 
 ## Final completion program
 
@@ -87,23 +102,23 @@ FD-028 Final Completion Program and FD-029 define one binding program:
 8. Connected SahelFlow platform.
 9. Certification, representative beta and Stable.
 
-A phase exits only through objective research, implementation and evidence gates.
-Session completion, elapsed time, amount of code or agent confidence is not an
-exit condition.
+A phase normally exits through objective research, implementation and evidence
+gates. A scoped Founder-directed exception may close protected-source phase status
+only when its unproven evidence is named, preserved in a follow-up issue and never
+represented as passing certification.
 
-## Active Phase 4 objective
+## Active Phase 5 objective
 
-Make seller data survivable and the product commercially defensible.
+Transform the complete application into one coherent top-tier operational system.
+Before broad UI edits, inspect the exact current frontend, route tree, design
+primitives, tables, forms, charts, navigation, responsive behavior, real authority
+bindings and complete state coverage. Group defects by root cause, create one
+Phase 5 Problem Register and freeze one coherent design-system/information-
+architecture/page-completion contract.
 
-The active package in issue #204 is audit and contract freeze only. It inventories
-all data/key/backup/migration/recovery/security/privacy surfaces, researches current
-primary standards and official platform guidance, creates one Problem Register
-and freezes the shared key hierarchy, encrypted all-shop backup, recovery kit,
-replacement-install restore, migration matrix and security/privacy evidence
-contracts.
-
-No broad Phase 4 production implementation, version bump, MSI or readiness claim
-is authorized before that audit and contract freeze.
+The target is the complete whole-product AAA frontend, not another isolated polish
+wave: professional operational density, complete states, real authority and data,
+route-by-route visual regression and Founder visual acceptance.
 
 ## Binding product shape
 
@@ -118,48 +133,3 @@ is authorized before that audit and contract freeze.
 - Shared cloud, PWA, hosted storefront and zero-knowledge backup remain bounded by
   authority, security, recovery and economics gates.
 - Seller-owned Gemini key supports optional privacy-controlled AI.
-- Internal, Beta and Stable remain separate signed release channels.
-
-## Golden COD Journey
-
-The binding product-completion journey is:
-
-```text
-Product or variant
-→ customer and risk
-→ order intake
-→ confirmation or rejection
-→ stock reservation
-→ fulfillment and shipment
-→ delivered, failed, refused or returned
-→ COD receivable and remittance
-→ discrepancy reconciliation
-→ exchange or refund
-→ inventory and financial compensation
-→ analytics and audit
-→ restart, update, backup and restore preservation
-```
-
-No route, provider callback, automation or AI tool may bypass the canonical
-transition, movement, audit, idempotency, outbox or compensation rules.
-
-## Development and validation
-
-Follow [`AGENTS.md`](AGENTS.md) and
-[`WORKFLOW.md`](documentation/operations/WORKFLOW.md).
-
-Shared validation commands include:
-
-```bash
-bun install --frozen-lockfile
-bun run sf-version
-bun run sf-audit
-bun run sf-inventory
-bun run sf-verify
-bun run sf-verify --fast
-```
-
-The storage-constrained Founder machine does not run builds, automated tests,
-coverage or dependency installation when GitHub Actions can validate the exact
-pushed commit. Installed work uses exact signed artifacts and preserves canonical
-AppData.
