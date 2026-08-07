@@ -88,16 +88,16 @@ export function DashboardLayout({
         </main>
       </div>
 
-      {commandOpen ? (
+      {commandOpen && (
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-      ) : null}
+      )}
 
-      {cheatsheetOpen ? (
+      {cheatsheetOpen && (
         <CheatsheetModal
           open={cheatsheetOpen}
           onOpenChange={setCheatsheetOpen}
         />
-      ) : null}
+      )}
     </div>
   );
 }
