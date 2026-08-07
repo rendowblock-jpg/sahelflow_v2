@@ -51,7 +51,8 @@ function formatAge(minutes: number): string {
  *
  * Queue totals and stale counts are database aggregates, not the length of a
  * sampled list. Protected contact/financial columns are not selected when the
- * actor lacks their exact field authority.
+ * actor lacks their exact field authority. FIFO pagination uses a unique id
+ * tie-breaker so equal creation timestamps cannot duplicate or omit orders.
  */
 export async function getConfirmationWorkbenchPage(
   actorContext: TrustedActorContext,
@@ -81,7 +82,7 @@ export async function getConfirmationWorkbenchPage(
           ? { select: { name: true, phone: true } }
           : false,
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       take: pageSize,
       skip: (page - 1) * pageSize,
     }),
