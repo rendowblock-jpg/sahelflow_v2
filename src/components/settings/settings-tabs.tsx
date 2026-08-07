@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -84,7 +84,6 @@ export function SettingsTabs({
     [access],
   );
   const [active, setActive] = useState<Tab>(visibleTabs[0]?.id ?? "profile");
-  const tabListRef = useRef<HTMLElement>(null);
   const effectiveActive = access[active] ? active : (visibleTabs[0]?.id ?? "profile");
 
   const renderPanel = () => {
@@ -136,9 +135,7 @@ export function SettingsTabs({
   return (
     <div className="flex flex-col gap-6 lg:flex-row">
       <nav
-        ref={tabListRef}
         role="tablist"
-        aria-orientation={typeof window !== "undefined" && window.innerWidth >= 1024 ? "vertical" : "horizontal"}
         className="flex gap-1 overflow-x-auto pb-2 lg:w-56 lg:flex-col lg:overflow-visible lg:pb-0"
       >
         {visibleTabs.map((tab, index) => {
