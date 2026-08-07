@@ -2647,5 +2647,9 @@
   "integrations.placeholder.noestTrackingsUrl": "Coller l’endpoint de suivi exact fourni par NOEST",
   "integrations.placeholder.noestFeesUrl": "Coller l’endpoint des tarifs exact fourni par NOEST",
   "delivery.certified": "Certifié",
-  "delivery.uncertified": "Non certifié"
+  "delivery.uncertified": "Non certifié",
+  "stat.trend_announcement": "Tendance {{direction}} de {{value}} pour cent",
+  "stat.up": "hausse",
+  "stat.down": "baisse",
+  "table.scroll_region": "Zone de défilement du tableau de données"
 }

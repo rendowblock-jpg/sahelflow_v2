@@ -2647,5 +2647,9 @@
   "integrations.placeholder.noestTrackingsUrl": "ألصق رابط التتبع الرسمي من NOEST",
   "integrations.placeholder.noestFeesUrl": "ألصق رابط التعريفات الرسمي من NOEST",
   "delivery.certified": "معتمد",
-  "delivery.uncertified": "غير معتمد"
+  "delivery.uncertified": "غير معتمد",
+  "stat.trend_announcement": "اتجاه {{direction}} بنسبة {{value}} بالمئة",
+  "stat.up": "صاعد",
+  "stat.down": "هابط",
+  "table.scroll_region": "منطقة تمرير جدول البيانات"
 }

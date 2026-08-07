@@ -106,6 +106,7 @@ export function StatCard({
                     positive && "text-success",
                     negative && "text-destructive",
                   )}
+                  aria-label={t('stat.trend_announcement', { direction: positive ? t('stat.up') : t('stat.down'), value: Math.abs(trend).toFixed(1) })}
                 >
                   {positive ? (
                     <ArrowUpRight className="size-3" aria-hidden="true" />

@@ -13,6 +13,7 @@ import {
   type Table,
 } from "@tanstack/react-table";
 import { useQueryStates } from "nuqs";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ChevronLeft,
   ChevronRight,
@@ -213,6 +214,15 @@ export function DataTable<TData>({
     [pagination],
   );
 
+  const parentRef = React.useRef<HTMLDivElement>(null);
+  const { rows } = table.getRowModel();
+  const rowVirtualizer = useVirtualizer({
+    count: isLoading ? skeletonRows : rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => (density === "compact" ? 36 : 48),
+    overscan: 10,
+  });
+
   const paginationLabel = pagination
     ? t("dataTable.pageOf", {
         current: currentPage,
@@ -260,7 +270,8 @@ export function DataTable<TData>({
       ) : null}
 
       <div className="overflow-hidden rounded-md border bg-background">
-        <div className="overflow-x-auto">
+        <div ref={parentRef} className="max-h-[600px] overflow-auto" role="region" aria-label={t("table.scroll_region")}>
+          <div className="overflow-x-auto">
           <table className="w-full" aria-busy={isLoading}>
             <thead className="sticky top-0 z-10 border-b bg-muted/80 backdrop-blur-sm">
               {table.getHeaderGroups().map((headerGroup) => (
@@ -354,77 +365,84 @@ export function DataTable<TData>({
                   </td>
                 </tr>
               ) : (
-                table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className={cn(
-                      "transition-colors hover:bg-muted/40",
-                      onRowClick && "cursor-pointer",
-                      row.getIsSelected() && "bg-primary/5",
-                    )}
-                    onClick={
-                      onRowClick
-                        ? (event) => {
-                            const target = event.target as HTMLElement;
-                            if (
-                              target.closest("button") ||
-                              target.closest("a") ||
-                              target.closest("input") ||
-                              target.closest("select") ||
-                              target.closest('[role="checkbox"]') ||
-                              target.closest("[data-no-row-click]")
-                            ) {
-                              return;
+                rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const row = rows[virtualRow.index] as Row<TData>;
+                  if (!row) return null;
+                  return (
+                    <tr
+                      key={row.id}
+                      data-index={virtualRow.index}
+                      ref={(node) => rowVirtualizer.measureElement(node)}
+                      className={cn(
+                        "transition-colors hover:bg-muted/40",
+                        onRowClick && "cursor-pointer",
+                        row.getIsSelected() && "bg-primary/5",
+                      )}
+                      onClick={
+                        onRowClick
+                          ? (event) => {
+                              const target = event.target as HTMLElement;
+                              if (
+                                target.closest("button") ||
+                                target.closest("a") ||
+                                target.closest("input") ||
+                                target.closest("select") ||
+                                target.closest('[role="checkbox"]') ||
+                                target.closest("[data-no-row-click]")
+                              ) {
+                                return;
+                              }
+                              onRowClick(row.original);
                             }
-                            onRowClick(row.original);
-                          }
-                        : undefined
-                    }
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const meta = cell.column.columnDef.meta;
-                      const hideClass =
-                        meta?.hideOn === "sm"
-                          ? "hidden sm:table-cell"
-                          : meta?.hideOn === "md"
-                            ? "hidden md:table-cell"
-                            : meta?.hideOn === "lg"
-                              ? "hidden lg:table-cell"
-                              : "";
-                      const alignClass =
-                        meta?.align === "end"
-                          ? "text-end"
-                          : meta?.align === "center"
-                            ? "text-center"
-                            : "text-start";
-                      return (
-                        <td
-                          key={cell.id}
-                          className={cn(
-                            "whitespace-nowrap text-sm align-middle",
-                            dens.cell,
-                            alignClass,
-                            hideClass,
-                            meta?.width,
-                          )}
-                          onClick={(event) => {
-                            if (cell.column.id === "select") {
-                              event.stopPropagation();
-                            }
-                          }}
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
+                          : undefined
+                      }
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const meta = cell.column.columnDef.meta;
+                        const hideClass =
+                          meta?.hideOn === "sm"
+                            ? "hidden sm:table-cell"
+                            : meta?.hideOn === "md"
+                              ? "hidden md:table-cell"
+                              : meta?.hideOn === "lg"
+                                ? "hidden lg:table-cell"
+                                : "";
+                        const alignClass =
+                          meta?.align === "end"
+                            ? "text-end"
+                            : meta?.align === "center"
+                              ? "text-center"
+                              : "text-start";
+                        return (
+                          <td
+                            key={cell.id}
+                            className={cn(
+                              "whitespace-nowrap text-sm align-middle",
+                              dens.cell,
+                              alignClass,
+                              hideClass,
+                              meta?.width,
+                            )}
+                            onClick={(event) => {
+                              if (cell.column.id === "select") {
+                                event.stopPropagation();
+                              }
+                            }}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
+        </div>
         </div>
       </div>
 

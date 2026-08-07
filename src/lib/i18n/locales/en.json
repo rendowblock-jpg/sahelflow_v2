@@ -2647,5 +2647,9 @@
   "integrations.placeholder.noestTrackingsUrl": "Paste the exact tracking endpoint from NOEST docs",
   "integrations.placeholder.noestFeesUrl": "Paste the exact fees endpoint from NOEST docs",
   "delivery.certified": "Certified",
-  "delivery.uncertified": "Not certified"
+  "delivery.uncertified": "Not certified",
+  "stat.trend_announcement": "Trend {{direction}} {{value}} percent",
+  "stat.up": "up",
+  "stat.down": "down",
+  "table.scroll_region": "Data table scroll region"
 }
