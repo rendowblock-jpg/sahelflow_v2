@@ -1,542 +1,232 @@
 # SahelFlow — Final completion roadmap
 
 > **Status:** Binding dependency and completion order
-> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Live protected main:** `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
-> **Latest application-changing protected merge:** PR #207 at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
-> **Latest protected authority merge:** PR #207 at `8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`
+> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary
+> **Latest application-changing protected merge:** PR #220
+> **Phase 5 product baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
 > **Founder-accepted baseline:** Internal.5
-> **Phase 0 status:** Complete
-> **Phase 1 status:** Protected-source closed through PR #195
-> **Phase 2 status:** Protected-source closed through PR #200 with issue #201 retained
-> **Phase 3 status:** Protected-source closed through PR #203 under FD-030
-> **Phase 4 status:** Protected-source closed through PR #207 under the explicit Founder-directed closure exception; installed replacement proof retained in issue #214
-> **Active product phase:** Phase 5 — whole-product AAA UI/UX
-> **Active phase package:** not yet opened; begin Phase 5 from protected `main`
-> **Retained evidence:** issues #201 and #214
+> **Phase 0:** Complete
+> **Phase 1:** Protected-source closed through PR #195
+> **Phase 2:** Protected-source closed through PR #200; issue #201 retained
+> **Phase 3:** Protected-source closed through PR #203 under FD-030
+> **Phase 4:** Protected-source closed through PR #207; issue #214 retained
+> **Phase 5:** Protected-source + controlled-browser closed through PR #220 / issue #208; issue #221 retained
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Execution epic:** issue #164
 > **Last consolidated:** 2026-08-07
 
-Live protected `main` must be re-read directly from GitHub. The SHAs above record
-the exact source frontier used for this consolidation and the latest protected
-merge that changed application behavior.
+Live protected `main` is authority. The SHA above is the latest application-changing
+product baseline; documentation-only merges may advance `main` without changing
+application behavior.
 
-This document owns Phase 0–9 dependency order and phase exit gates. Product detail
-belongs to `../product/PRODUCT.md` and `../product/EXPERIENCE.md`; technical
-invariants belong to `ARCHITECTURE.md`. No lower document, issue, branch or agent
-may silently weaken a Founder, product, experience or architecture requirement.
+## Program rule
 
-## Binding completion rule
+The phases are dependency ordered. A later phase may inspect or pre-plan while an
+earlier phase is validating, but it must not weaken, bypass or silently redefine
+an earlier phase authority.
 
-SahelFlow is complete only when it is one coherent, installed, production-quality
-Windows-first operations system for Algerian COD sellers.
-
-Every Required journey must work end to end. Money, stock, identity, provider
-effects and recovery must remain correct under duplicate input, concurrency,
-restart, update, interruption and failure. Arabic/French/English, RTL,
-accessibility, performance, security and public claims must match exact evidence.
-No known P0/P1 may remain.
-
-A page, model, route, adapter, screenshot, mock, test count or artifact does not
-alone complete a capability.
-
-A Founder-directed scoped phase-closure exception may close a protected-source
-phase while retaining a named installed/external certification obligation for a
-later gate. Such an exception must be explicit, evidence-bounded and issue-backed;
-it does not convert the retained obligation into passing proof and cannot be used
-to make a release, Beta, Stable or certification claim.
-
-## Program execution rules
-
-1. One active implementation agent at a time.
-2. Every material phase/package begins with complete reconnaissance and one
-   consolidated Problem Register.
-3. Findings are grouped by root cause and repaired in coherent batches.
-4. Work packages deliver observable seller/Founder outcomes across every
-   applicable layer.
-5. Shared contracts freeze before dependent implementation.
-6. Level 1 Task Gate runs after every coherent completed task.
-7. Level 2 Phase Checkpoint passes before a phase closes, except where the Founder
-   records a scoped phase-closure exception that explicitly carries unproven
-   installed/external evidence forward.
-8. Level 3 Major Full Checkpoint runs after every two phases by default and
-   earlier for high-risk native/security/data/recovery/provider authority.
-9. Research, UX, Arabic/RTL, accessibility, performance, security, migration,
-   recovery, diagnostics and evidence travel with each package.
-10. P0/P1 block the affected outcome. P2/P3 receive an explicit owner and
-    dependency position.
-11. Routine source packages remain version-neutral.
-12. Protected merge, release, Beta, Stable and Founder acceptance remain explicit
-    decisions.
-13. With one agent, frozen review is a separated adversarial pass, not independent
-    review.
-14. Competing legacy mutation and effect paths are removed or made read-only after
-    parity and recovery proof.
-
-## Validation cadence
-
-### Level 1 — Task Gate
-
-After each coherent task: authority/docs, Prisma where applicable, TypeScript,
-ESLint, complete Vitest and risk-selected browser/provider/Rust/native checks.
-
-### Level 2 — Phase Checkpoint
-
-At every phase exit: clean complete source/database/migration suites, production
-build, affected journeys, authorization/shop isolation, duplicate/concurrency/
-restart/interruption/recovery, AR/FR/EN, RTL, accessibility, performance,
-documentation and applicable native/Windows/provider evidence.
-
-### Level 3 — Major Full Checkpoint
-
-After two phases by default: exact-source Windows release, Rust parity, signed
-MSI, clean install, upgrade, reopen, process cleanup, preserved data,
-backup/restore/recovery, complete UI journeys, visual regression, security,
-performance, stability and evidence bundle.
-
-Run Level 3 immediately at the affected phase exit for licensing, identity,
-cryptography, installer/updater, migrations, backup/restore, destructive shop/data
-lifecycle or provider effects involving stock, money or irreversible external
-work.
-
-## Critical path
+Each phase follows:
 
 ```text
-0. Authority freeze and execution reset
-        ↓
-1. Canonical Golden COD business core
-        ↓
-2. Identity, authorization, licensing and multi-shop
-        ↓
-3. Durable providers, inbox, AI and automations
-        ↓
-4. Data protection, recovery, migrations and security
-        ↓
-5. Whole-product AAA UI/UX
-        ↓
-6. Arabic, RTL and accessibility parity
-        ↓
-7. Performance and reliability
-        ↓
-8. Connected SahelFlow platform
-        ↓
-9. Certification, representative beta and Stable
+complete reconnaissance
+→ consolidated Problem Register
+→ freeze shared contracts
+→ coherent root-cause implementation
+→ self-review
+→ exact-head adversarial review
+→ selected blocking gates/evidence
+→ consolidated repair
+→ expected-head merge
+→ protected-main verification
+→ documentation reconciliation
 ```
 
-Phases 5–7 travel continuously where contracts permit, but cannot be declared
-complete before real business behavior exists.
+Retained evidence issues are allowed when a Founder-directed closure explicitly
+separates protected-source truth from installed/external proof. A retained issue
+is not a passing result.
 
 ---
 
-# Phase 0 — Authority freeze and execution reset
+## Phase 0 — baseline contract and repository control
 
-## Objective
+**Status:** Complete.
 
-Establish one authority chain, one roadmap, one execution epic and a resumable
-frontier.
-
-## Exit gate
-
-- no contradictory active next action;
-- no unowned Required capability;
-- documentation audit passes;
-- a fresh session reconstructs the exact next package without chat.
-
-## Result
-
-Complete through FD-028, FD-029 and the single-agent audit-first operating model.
+Established completion governance, documentation authority, release truth,
+repository hygiene and the initial final-program contract.
 
 ---
 
-# Phase 1 — Canonical Golden COD business core
+## Phase 1 — Golden COD business authority
 
-## Objective
+**Status:** Closed through PR #195.
 
-Make the canonical COD foundation the real operating path:
-
-```text
-product / customer / risk
-→ order intake and confirmation
-→ stock reservation and fulfillment
-→ courier effect, tracking and reconciliation
-→ COD receivable, collection and remittance
-→ return, exchange, refund and compensation
-→ governed profitability, audit and preservation
-```
-
-## Exit gate
-
-The representative Golden COD journey passes happy, validation, permission,
-duplicate, concurrency, interruption, stale, conflict, provider-failure,
-cancellation, return, restart, update and interrupted-command recovery in
-AR/FR/EN. Disposable backup/restore compatibility preserves exact facts.
-Production native all-shop restore remains Phase 4.
-
-## Result — protected-source closed through PR #195
-
-PR #195 merged at `a3d53cdd21afa8f4d03eefa7088304a9f728e2a0`.
-Protected source includes trusted manual intake, decision, reservation,
-fulfillment, delivery, COD receivable, settlement/return/compensation boundaries
-and shared replay/authorization repairs.
-
-This result is source closure, not a current signed, installed or Stable claim.
-Remaining provider and source-intake adoption is executed under Phase 3 without
-reopening the canonical Golden COD contracts.
+Established the canonical order/confirmation/stock/money/compensation/provider
+business boundaries and durable audit authority. Later work may improve
+presentation and evidence but must not bypass these canonical transitions.
 
 ---
 
-# Phase 2 — Identity, authorization, licensing and multi-shop
+## Phase 2 — durable identity, licensing and native multi-shop
 
-## Objective
+**Status:** Closed through PR #200; issue #201 retained.
 
-Deliver durable commercial identity, permissions, entitlement and native shop
-lifecycle authority without making mutable browser or shop-database state the
-source of truth.
-
-## Result — protected-source closed through PR #200
-
-### Identity, Teams and permissions
-
-Protected through PR #195:
-
-- setup is onboarding only;
-- sessions enforce timeout, revocation and reauthentication;
-- installation-owned Workspace, Installation, Person, Member, Device and session
-  authority exists outside shop databases;
-- exact shop grants, policy freshness and protected projections;
-- invitations, roles, custom permissions, workgroups, queues, assignments,
-  comments, mentions, handovers and immediate revocation.
-
-### Signed licensing
-
-PR #197 merged at `04d4c51831c6e043ab39a614a7e947e6b27d01e6`:
-
-- machine-bound signed online trial and offline permanent claims;
-- separate signing authorities;
-- reinstall recovery and one-device trial authority;
-- protected local state, clock, revocation and recovery floors;
-- transfer, recovery and revocation ceremonies;
-- complete data-preserving lockout and AR/FR/EN recovery states.
-
-### Native multi-shop
-
-PR #200 merged at `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`:
-
-- Tauri owns create, rename, switch, archive, recover and delete;
-- operation authority binds registry revision, workspace, installation, actor,
-  session, policy/revocation, entitlement/slots, migration set and shop
-  incarnations;
-- one durable native journal owns quiescence, mutation, runtime restart,
-  authenticated readiness, compensation and startup reconciliation;
-- browser registry mutation and generic relaunch authority are removed;
-- destructive delete requires exact owner reauthentication and confirmation.
-
-### Retained evidence boundary
-
-The MSI built, installed, launched, closed and reopened, but the ephemeral runner
-originally did not observe the authenticated hydrated-WebView receipt twice. The
-Founder allowed PR #200 to merge with that single limitation retained in issue
-#201. Later Phase 4 evidence materially improved this path and passed hydrated
-WebView proof twice, but issue #201 remains open until its cleanup/waiver
-obligations are explicitly reconciled.
-
-## Phase 2 closure meaning
-
-Phase 2 is protected-source closed. It does not claim a current signed Phase 2
-artifact, installed activation/transfer/full lifecycle certification, Founder
-acceptance or Stable. Issue #201 and later exact-source milestone evidence remain
-required for higher evidence levels.
+Established durable actor/session/permission authority, signed licensing,
+installation/shop identity and native multi-shop switching/recovery contracts.
 
 ---
 
-# Phase 3 — Durable providers, inbox, AI and automations
+## Phase 3 — providers, inbox, AI and automations
 
-## Objective
+**Status:** Closed through PR #203 under FD-030.
 
-Make every external input and effect durable, replayable, observable and safe:
-
-```text
-authenticated ingress
-→ durable inbox
-→ validation and deduplication
-→ canonical command
-→ committed result
-→ durable outbox
-→ external effect
-→ receipt and reconciliation
-```
-
-## Result — protected-source closed through PR #203
-
-PR #203 merged at `aa4ca0758fd696f4b02fc1975629ac698f9349c3` from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`. Final required
-CI run `30901725446` passed version/documentation authority, frozen dependency
-installation, Prisma generation/migration status, TypeScript, ESLint, the complete
-Vitest suite, coverage above 80% and the production dependency audit.
-
-Protected source includes durable WhatsApp ingress and inbox truth, truthful
-automations, proposal-bound sensitive AI actions, one canonical courier facade,
-durable commerce and fail-closed provider capability authority.
-
-Post-review repairs closed storefront trigger replay, parent-directory spool
-rename durability, monotonic conversation timestamps, governed automation editor
-values and bounded commerce page yields. All review threads are resolved and issue
-#202 is closed. No known Phase 3 P0/P1 remains.
-
-## FD-030 evidence boundary
-
-Real courier and communication-provider certification remains mandatory at Phase
-9 representative beta. Issue #201 remains mandatory at the applicable Level 3 /
-installed evidence gate. Neither is mislabeled as current proof or a Phase 3
-closure blocker.
-
-## Phase 3 closure meaning
-
-Phase 3 is protected-source closed. It does not claim a new signed artifact,
-installed Windows/T470 proof for newly merged source, Founder acceptance, Beta or
-Stable. Published/installed executable truth remains Internal.13.
-
-## Phase 4 closure and Phase 5 frontier
-
-PR #206 completed the exhaustive Phase 4 audit, primary-source research,
-consolidated P4-001…P4-013 Problem Register and shared contract freeze.
-PR #207 then merged the complete Phase 4 protected-source package at
-`8ebf78ddbbfcbdc5a61c607b591dc9d3beb4a59f`; issue #204 is closed.
-
-The exact product head immediately before the closure-control commits was
-`ccba7ec138b6aa1a77bf9d972bb1127a3270267d`. Source quality, documentation audit,
-coverage, dependency audit, Tauri release smoke, Windows standalone and Windows
-Rust parity were green on that product head. Its exact MSI also built, installed,
-launched, closed/reopened and passed authenticated hydrated WebView UI proof
- twice.
-
-The remaining installed job failure occurred before the replacement
-backup/corrupt/replace/restore sequence when CI trial activation returned HTTP
-503 with `LICENSE_TRIAL_SERVICE_UNAVAILABLE`.
-
-At the Founder’s explicit direction, PR #207 used the one-PR, diff-scoped marker
-`.github/phase-exceptions/pr-207-phase4-closure-override.md` to keep that evidence
-harness from holding Phase 4 open indefinitely. The unresolved installed
-replacement-install proof is retained in issue #214. It does not reopen Phase 4
-or block Phase 5, but it still blocks any installed/certified replacement-recovery
-claim and remains required before Stable if applicable.
-
-Phase 5 may therefore begin from protected `main`.
+Established durable provider effects, WhatsApp ingress/outbox recovery, AI action
+proposal/recovery semantics and automation run/effect authority. External/provider
+certification remains separate from source truth where explicitly retained.
 
 ---
 
-# Phase 4 — Data protection, recovery, migrations and security
+## Phase 4 — data, recovery, migration and survivability
 
-## Objective
+**Status:** Closed through PR #207; replacement-install proof retained in #214.
 
-Make seller data survivable and the product commercially defensible.
-
-## Required outcomes
-
-- purpose-separated protected key hierarchy;
-- verified encrypted all-shop backup and authenticated manifests;
-- independent recovery kit and optional assisted recovery;
-- replacement-install restore and failed-restore rollback;
-- clean/mixed/interrupted/low-disk/corrupt migration matrix;
-- threat models, minimization, retention and deletion;
-- Law 18-07 mapping, SBOM and independent security/privacy review.
-
-## Result — protected-source closed through PR #207
-
-Protected `main` now carries:
-
-- purpose-separated protected-data authority and migration convergence;
-- encrypted all-shop backup with authenticated manifests/objects and independent
-  recovery-kit authority;
-- replacement-install restore machinery with staging, rescue, compensation,
-  rollback and identity rebinding;
-- authenticated migration/restore journals and replay-protected native bridge;
-- privacy lifecycle, data inventory, threat/legal mapping, vulnerability triage,
-  SBOM/VEX and closure evidence authority.
-
-Product head `ccba7ec138b6aa1a77bf9d972bb1127a3270267d` had green
-source/quality/security and Windows release-path evidence plus exact MSI lifecycle
-and authenticated WebView proof. The installed replacement restore drill itself
-remains unproven because disposable CI trial activation failed before that
-sequence began; issue #214 retains that release/certification evidence obligation.
-
-The Founder-directed closure exception changes Phase 4 protected-source program
-status only. It does not claim installed replacement-recovery certification,
-Founder acceptance, release readiness, Beta or Stable.
-
-## Original exit gate
-
-A full installation can be backed up, corrupted, replaced and restored without
-silent loss, authority confusion or key compromise. Migration/restore drills pass
-and independent review has no unresolved P0/P1.
-
-The protected-source phase is closed by explicit scoped exception; the unproven
-installed replacement portion of this gate is carried forward to issue #214 and
-must not be represented as passed evidence.
-
-Phases 3–4 normally trigger the next Level 3 checkpoint; the retained installed
-recovery obligation remains available to the later applicable release/certification
-gate.
+Established backup/restore, migration, destructive lifecycle, identity/license
+survivability and native recovery authority. Do not reopen Phase 4 except for a
+specific later-phase defect with real consequence.
 
 ---
 
-# Phase 5 — Whole-product AAA UI/UX
+## Phase 5 — whole-product AAA desktop experience
 
-## Objective
+**Status:** Closed at protected-source + controlled-browser layer through PR #220
+and issue #208. Founder-installed visual acceptance is retained in #221.
 
-Transform the complete application into one coherent top-tier operational system.
+### Closed outcomes
 
-## Required outcomes
+- workflow/domain desktop navigation and one universal command-search authority;
+- server-authoritative operational workbenches and exact pagination/sort truth;
+- permission-before-read protected-field queries and truthful action authority;
+- shared DataTable/state/metric/chart desktop grammar;
+- shared EntityLink/EntityPreview/EntityInspector/EntityTimeline context layer;
+- governed import preview/commit and complete streaming CSV / bounded XLSX export;
+- batched Risk analytics and read/manage separation;
+- Inbox/AI/Automation authority-aligned surfaces and recovery controls;
+- Accounting/COD read vs mutation authority separation;
+- capability-driven Settings/Profile and governed destructive ceremonies;
+- quiet login/setup/join and inherited loading/error boundaries;
+- blocking route-completion inventory and controlled browser evidence.
 
-- one SahelFlow-owned design system and governed chart foundation;
-- complete information architecture, navigation and operational density;
-- professional tables, filters, forms, bulk work and destructive ceremonies;
-- complete happy/loading/empty/validation/permission/offline/pending/stale/
-  conflict/error/retry/recovery/history states;
-- every Required page uses real authority and data;
-- route-by-route visual regression and Founder visual acceptance.
+### Phase 5 closure evidence
 
-## Exit gate
+The exact final PR #220 head passed the Required PR gate and Required Phase 5
+Experience gate, including TypeScript, ESLint, full Vitest, Prisma, dependency
+audit, migration status, route matrix, fresh install/login, representative LTR,
+Arabic RTL/viewport containment, command search and zero unresolved latest-head
+review threads.
 
-Every Required route passes the page-completion matrix with representative real
-data and no mocked happy-path dependency. No legacy-looking or state-incomplete
-page remains.
+Coverage remains informational by Founder direction and does not weaken the
+blocking source/security/browser/native evidence model.
 
----
+### Retained Phase 5 evidence
 
-# Phase 6 — Arabic, RTL and accessibility parity
-
-## Objective
-
-Make Arabic and accessibility equivalent behavior, not a visual afterthought.
-
-## Required outcomes
-
-- semantic AR/FR/EN copy and non-concatenated translations;
-- Arabic joining and professional typography;
-- logical RTL geometry and mixed-direction isolation;
-- intentional directional icons and charts;
-- WCAG 2.2 AA target;
-- keyboard-only completion, focus management, semantics and announcements;
-- contrast, reduced motion, 100–200% zoom and 1366×768 containment;
-- equivalent error/recovery behavior in all languages.
-
-## Exit gate
-
-Every Required journey works in Arabic RTL, French LTR and English LTR with
-equivalent capability and accessibility evidence.
-
-Phases 5–6 normally trigger a Level 3 installed-UI, visual-regression and
-accessibility checkpoint.
+Issue #221 owns Founder visual acceptance on the actual installed Windows/Tauri
+app. Browser CI is not that proof. Phase 5 closure does not claim a new signed
+Internal, Founder acceptance, Beta, Stable or installed certification.
 
 ---
 
-# Phase 7 — Performance and reliability
+# Active frontier
 
-## T470 targets
+## Phase 6 — Arabic, RTL and accessibility parity
 
-- cold launch no slower than 8 seconds p95;
-- ordinary navigation no slower than 700 ms p95;
-- indexed search no slower than 350 ms p95;
-- ordinary local mutation no slower than 500 ms p95.
+**Objective:** make Arabic and accessibility equivalent product behavior, not a
+partial translation layer or cosmetic mirror.
 
-## Floor targets
+### Audit scope
 
-- usable shell within 15 seconds p95 on entry SSD and 25 seconds on HDD;
-- input acknowledgement within 100 ms;
-- navigation within 1.5 seconds p95;
-- indexed search within 750 ms p95;
-- local mutation within 1 second p95;
-- no ordinary freeze over 200 ms;
-- steady working set no greater than 750 MB with WhatsApp connected;
-- no sustained memory growth across eight hours.
+Audit every user-facing route and reusable interaction primitive for:
 
-## Required outcomes
+- AR/FR/EN semantic parity and missing/concatenated/page-local strings;
+- plurals, gender/grammar, dates, currency, numbers and business terminology;
+- Arabic font/joining/line-height and mixed-direction text isolation;
+- logical start/end geometry and remaining physical left/right assumptions;
+- directional icon semantics and chart/timeline/table direction;
+- keyboard-only navigation and action completion;
+- focus entry, return, trapping, restoration and visible focus;
+- dialog/sheet/menu/table/list semantics;
+- accessible names/descriptions and status/error/recovery announcements;
+- WCAG 2.2 AA contrast targets;
+- reduced motion;
+- 100–200% zoom/reflow and 1366×768 containment;
+- equivalent permission/loading/offline/pending/stale/conflict/error/retry/
+  recovery states across locales.
 
-- cold/warm startup stage measurement;
-- query/index and rendering budgets;
-- virtualized large tables and bounded charts;
-- low-resource scheduling and sidecar limits;
-- clean close/reopen and crash-loop recovery;
-- eight-hour stability and resource trend evidence;
-- representative database scale.
+### Shared-contract requirements
 
-## Exit gate
+Prefer root-cause repairs in shared primitives over route-by-route patching.
+Reuse/generalize the Phase 5 route inventory and Playwright browser-evidence
+workflow. Phase 6 should strengthen, not duplicate, the installed evidence stack.
 
-Targets pass on the Founder T470 and declared floor profile with no authority or
-feature reduction.
+### Required evidence
 
----
+At minimum:
 
-# Phase 8 — Connected SahelFlow platform
+- exhaustive route/component semantic inventory;
+- controlled English/French/Arabic browser journeys;
+- LTR/RTL viewport and zoom matrices;
+- keyboard-only Required journeys;
+- automated accessibility checks where reliable plus manual semantic review;
+- reduced-motion evidence;
+- screen-reader-focused critical-flow review;
+- applicable installed Windows/Tauri Founder inspection.
 
-## Objective
+### Exit gate
 
-Complete remote work, hosted storefront, licensing/control and zero-knowledge
-recovery without weakening desktop canonical authority.
+Phase 6 closes only when:
 
-## Required outcomes
-
-- authenticated encrypted projection/command protocol;
-- desktop-commit truth for remote success;
-- shared multi-tenant Cloudflare control plane;
-- hosted storefront with durable checkout receipt and atomic publish/rollback;
-- PWA operational companion within desktop-owned authority;
-- zero-knowledge encrypted backup transport and quotas;
-- Founder Console with bounded metadata and offline permanent signing;
-- outage, cost, abuse and cross-tenant controls.
-
-## Exit gate
-
-Cloud outage cannot corrupt or block permanent local work. Remote success appears
-only after desktop commit. Storefront success has a durable receipt. Cross-tenant
-leakage and duplicate effects are zero in certification. SahelFlow alone cannot
-decrypt backups.
-
-Phases 7–8 normally trigger a Level 3 performance, remote-protocol, storefront,
-cloud-outage and installed-desktop checkpoint.
+1. all Phase 6 Problem Register items are resolved or explicitly retained by
+   consequence;
+2. no actionable latest-head P0/P1 accessibility/RTL finding remains;
+3. blocking source/authority gates are green;
+4. AR/FR/EN browser evidence is green at required viewports/zoom;
+5. keyboard/focus/semantics/reduced-motion evidence is retained;
+6. installed evidence is recorded where the roadmap requires a human Windows
+   observation;
+7. no Phase 1–5 authority has been weakened.
 
 ---
 
-# Phase 9 — Certification, representative beta and Stable
+## Phase 7 — performance and reliability budgets
 
-## Required certification
+**Objective:** certify representative low-end Windows performance and sustained
+operational reliability after the accessibility/RTL surface is stable.
 
-- clean install, upgrade, reopen and in-app update;
-- migration, backup, restore and replacement installation;
-- identity, permissions, revocation and shop lifecycle;
-- trial expiry, permanent activation, transfer and recovery;
-- Golden COD and provider reconciliation;
-- storefront checkout and remote command;
-- complete AAA UI, Arabic/RTL and accessibility;
-- T470/floor performance and eight-hour stability;
-- independent security, privacy, legal and provider review;
-- incident response, support and rollout readiness;
-- representative Algerian seller beta.
-
-## Stable gate
-
-Every Required capability is proven at its required layer; zero P0/P1 remains;
-provider, recovery, security/privacy/Law 18-07, performance, Arabic/RTL,
-accessibility and representative beta gates pass; a signed Windows artifact and
-immutable manifest pass; and the Founder explicitly promotes Stable.
-
-Issue #214 must be closed before Stable if its replacement-install certification
-obligation has not already been superseded by stronger exact-source evidence.
+Focus on startup, route latency, large workbench datasets, memory, provider
+recovery, long-running desktop sessions and measurable regressions. Use explicit
+budgets and retained evidence rather than subjective speed claims.
 
 ---
 
-# Definition of done
+## Phase 8 — connected platform and growth completeness
 
-A phase is complete only when its exit gate has objective evidence, its Level 2
-checkpoint passes and every known P0/P1 is closed, unless the Founder records an
-explicit scoped exception that names the unproven evidence, preserves it in a
-follow-up issue and forbids claims that the retained evidence passed. A major
-checkpoint is complete only when all selected installed and external-risk
-evidence passes on one exact source.
+**Objective:** complete remaining connected-service/growth/admin functionality
+that is intentionally later than the core COD operating system, while preserving
+all canonical business/effect/privacy authorities.
 
-“100% sure” means every defined gate passes, representative evidence exists at the
-required layer and no contradiction remains between product promise, source,
-artifact, installed behavior and public claim. A scoped phase-closure exception is
-not “100% sure” certification and must never be described that way.
+Do not promote speculative integrations or third-party features above the local
+seller operations core.
+
+---
+
+## Phase 9 — release certification and launch readiness
+
+**Objective:** convert the completed protected product into a fully evidenced
+release candidate and, only after all gates are met, an appropriate Beta/Stable
+claim.
+
+Requires the applicable signed build, clean install/upgrade/uninstall/recovery,
+Founder-installed acceptance, retained evidence reconciliation, support/security/
+privacy readiness and no unresolved ship-blocking consequence.
+
+A source-complete phase is never itself a release claim.
