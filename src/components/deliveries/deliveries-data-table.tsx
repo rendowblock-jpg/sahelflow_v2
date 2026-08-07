@@ -1,26 +1,25 @@
 "use client";
 
-/**
- * DeliveriesDataTable — DataTable v2 wrapper for the deliveries list page.
- *
- * Replaces the old PremiumTable + take:200 pattern. Paginated, skeleton
- * loading, density toggle, URL-synced sort/page. Row click navigates to the
- * delivery detail page.
- */
-import { useRouter } from "next/navigation";
-import { DataTable, selectColumn } from "@/components/data-table/data-table";
-import type { ColumnDef } from "@tanstack/react-table";
-import { DeliveriesEmptyState } from "@/components/shared/empty-states";
-import { useDeliveries, type DeliveryListItem, type DeliveriesResponse } from "@/hooks/swr/use-deliveries";
-import { useI18n } from "@/hooks/use-i18n";
-import { formatDZD, formatDate } from "@/lib/utils";
-import { DeliveryStatusBadge } from "@/components/deliveries/delivery-status-badge";
-import { DeliveryRowActions } from "@/components/deliveries/delivery-row-actions";
-import { getBrandIcon } from "@/components/brand/brand-icons";
-import { deliveryProviderConfig } from "@/lib/shared";
-
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AlertTriangle } from "lucide-react";
+import type { ColumnDef } from "@tanstack/react-table";
+
+import { getBrandIcon } from "@/components/brand/brand-icons";
+import { DataTable } from "@/components/data-table/data-table";
+import { DeliveryRowActions } from "@/components/deliveries/delivery-row-actions";
+import { DeliveryStatusBadge } from "@/components/deliveries/delivery-status-badge";
+import { DeliveriesEmptyState } from "@/components/shared/empty-states";
+import { StateSurface } from "@/components/shared/state-surface";
+import {
+  useDeliveries,
+  type DeliveryListItem,
+  type DeliveriesResponse,
+} from "@/hooks/swr/use-deliveries";
+import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
+import { deliveryProviderConfig } from "@/lib/shared";
+import { formatDZD, formatDate } from "@/lib/utils";
 
 interface DeliveriesDataTableProps {
   fallback: DeliveriesResponse;
@@ -28,19 +27,34 @@ interface DeliveriesDataTableProps {
   locale: Locale;
 }
 
-export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesDataTableProps) {
+export function DeliveriesDataTable({
+  fallback,
+  status,
+  locale,
+}: DeliveriesDataTableProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const { data, isLoading, pagination } = useDeliveries({ fallback, status });
+  const { data, error, isLoading, pagination } = useDeliveries({ fallback, status });
+  const access = data?.fieldAccess ?? fallback.fieldAccess;
+  const canViewDetail = access.contact && access.financials;
 
   const columns: ColumnDef<DeliveryListItem, unknown>[] = [
-    selectColumn<DeliveryListItem>(),
     {
       accessorKey: "trackingNumber",
       header: () => t("deliveries.table.tracking"),
-      cell: ({ row }) => (
-        <span className="font-mono text-xs">{row.original.trackingNumber ?? "—"}</span>
-      ),
+      cell: ({ row }) =>
+        canViewDetail ? (
+          <Link
+            href={`/deliveries/${row.original.id}`}
+            className="font-mono text-xs font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {row.original.trackingNumber ?? row.original.id}
+          </Link>
+        ) : (
+          <span className="font-mono text-xs">
+            {row.original.trackingNumber ?? row.original.id}
+          </span>
+        ),
     },
     {
       id: "order",
@@ -48,26 +62,42 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
       header: () => t("deliveries.table.order"),
       cell: ({ row }) =>
         row.original.order ? (
-          <Link
-            href={`/orders/${row.original.order.id}`}
-            className="font-mono text-sm font-medium text-primary hover:underline"
-          >
-            {row.original.order.orderNumber}
-          </Link>
+          canViewDetail ? (
+            <Link
+              href={`/orders/${row.original.order.id}`}
+              className="font-mono text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {row.original.order.orderNumber}
+            </Link>
+          ) : (
+            <span className="font-mono text-sm font-medium">
+              {row.original.order.orderNumber}
+            </span>
+          )
         ) : (
           "—"
         ),
+      enableSorting: false,
     },
-    {
-      id: "customer",
-      header: () => t("deliveries.table.customer"),
-      cell: ({ row }) => (
-        <div>
-          <div className="text-sm font-medium">{row.original.order?.customer?.name ?? "—"}</div>
-          <div className="text-xs text-muted-foreground">{row.original.order?.wilaya ?? "—"}</div>
-        </div>
-      ),
-    },
+    ...(access.contact
+      ? [
+          {
+            id: "customer",
+            header: () => t("deliveries.table.customer"),
+            cell: ({ row }: { row: { original: DeliveryListItem } }) => (
+              <div>
+                <div className="text-sm font-medium">
+                  {row.original.order?.customer?.name ?? "—"}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {row.original.order?.wilaya ?? "—"}
+                </div>
+              </div>
+            ),
+            enableSorting: false,
+          } satisfies ColumnDef<DeliveryListItem, unknown>,
+        ]
+      : []),
     {
       accessorKey: "provider",
       header: () => t("deliveries.table.carrier"),
@@ -77,9 +107,9 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
         return config ? (
           <span className="inline-flex items-center gap-1.5 text-sm">
             {BrandIcon ? (
-              <BrandIcon className="h-4 w-4 text-muted-foreground" />
+              <BrandIcon className="size-4 text-muted-foreground" />
             ) : (
-              <span className={`size-2 rounded-full ${config.color}`} />
+              <span className="size-2 rounded-full bg-muted-foreground" aria-hidden="true" />
             )}
             {config.label}
           </span>
@@ -88,24 +118,36 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
         );
       },
       meta: { hideOn: "sm" },
+      enableSorting: false,
     },
-    {
-      accessorKey: "cost",
-      header: () => t("deliveries.table.cost"),
-      cell: ({ row }) => (
-        <span className="tabular-nums">
-          {row.original.cost != null ? formatDZD(row.original.cost) : "—"}
-        </span>
-      ),
-      meta: { align: "end", hideOn: "md" },
-    },
+    ...(access.financials
+      ? [
+          {
+            accessorKey: "cost",
+            header: () => t("deliveries.table.cost"),
+            cell: ({ row }: { row: { original: DeliveryListItem } }) => (
+              <span className="tabular-nums">
+                {row.original.cost != null ? formatDZD(row.original.cost, locale) : "—"}
+              </span>
+            ),
+            meta: { align: "end" as const, hideOn: "md" as const },
+            enableSorting: false,
+          } satisfies ColumnDef<DeliveryListItem, unknown>,
+        ]
+      : []),
     {
       accessorKey: "status",
       header: () => t("deliveries.table.status"),
       cell: ({ row }) => (
-        <DeliveryStatusBadge deliveryId={row.original.id} status={row.original.status} size="sm" />
+        <DeliveryStatusBadge
+          deliveryId={row.original.id}
+          status={row.original.status}
+          size="sm"
+          disabled={!access.manage}
+        />
       ),
       meta: { align: "center" },
+      enableSorting: false,
     },
     {
       accessorKey: "createdAt",
@@ -116,6 +158,7 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
         </span>
       ),
       meta: { hideOn: "lg" },
+      enableSorting: false,
     },
     {
       id: "actions",
@@ -125,7 +168,8 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
           deliveryId={row.original.id}
           provider={row.original.provider}
           trackingNumber={row.original.trackingNumber}
-          orderId={row.original.order?.id ?? null}
+          canManage={access.manage}
+          canViewDetail={canViewDetail}
         />
       ),
       meta: { align: "end", width: "w-20" },
@@ -133,15 +177,26 @@ export function DeliveriesDataTable({ fallback, status, locale }: DeliveriesData
     },
   ];
 
-  const deliveries = data?.deliveries ?? fallback.deliveries;
+  if (error && !data) {
+    return (
+      <StateSurface
+        icon={AlertTriangle}
+        title={t("error.requestFailed")}
+        description={error.message}
+        tone="danger"
+        size="inline"
+        role="alert"
+      />
+    );
+  }
 
   return (
     <DataTable
       columns={columns}
-      data={deliveries}
+      data={data?.deliveries ?? []}
       isLoading={isLoading}
       pagination={pagination}
-      onRowClick={(row) => router.push(`/deliveries/${row.id}`)}
+      onRowClick={canViewDetail ? (row) => router.push(`/deliveries/${row.id}`) : undefined}
       getRowId={(row) => row.id}
       emptyState={<DeliveriesEmptyState />}
     />
