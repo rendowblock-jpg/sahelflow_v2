@@ -11,6 +11,8 @@ import {
   AUTH_MODE_CONFIGURED,
   AUTH_MODE_ENV,
   AUTH_MODE_SETUP,
+  RUNTIME_BOOTSTRAP_CONFIRM_PATH,
+  RUNTIME_BOOTSTRAP_HANDOFF_PATH,
   RUNTIME_BOOTSTRAP_PATH,
   RUNTIME_COOKIE,
   RUNTIME_READY_PATH,
@@ -18,14 +20,17 @@ import {
   RUNTIME_UI_READY_PATH,
 } from "@/lib/runtime-auth";
 
-function sameOriginRedirect(pathname: "/setup" | "/login"): NextResponse {
-  return new NextResponse(null, {
-    status: 307,
-    headers: {
-      Location: pathname,
-      "Cache-Control": "no-store",
-    },
-  });
+function sameOriginRedirect(
+  request: NextRequest,
+  pathname: "/setup" | "/login",
+): NextResponse {
+  const destination = request.nextUrl.clone();
+  destination.pathname = pathname;
+  destination.search = "";
+  destination.hash = "";
+  const response = NextResponse.redirect(destination, 307);
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }
 
 /**
@@ -97,6 +102,19 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // The bootstrap response sets the HttpOnly launch cookie and then loads this
+  // exact same-origin static script. WebView2 may request the subresource before
+  // exposing the newly committed cookie to proxy middleware, so this harmless
+  // one-purpose handoff asset must remain reachable without runtime authority.
+  // Every other script/page/API request stays behind the launch-cookie boundary.
+  if (
+    pathname === RUNTIME_BOOTSTRAP_HANDOFF_PATH &&
+    (request.nextUrl.hostname === "127.0.0.1" ||
+      request.nextUrl.hostname === "localhost")
+  ) {
+    return NextResponse.next();
+  }
+
   const runtimeAppToken = process.env.SF_RUNTIME_APP_TOKEN;
   if (runtimeAppToken) {
     const supplied = request.cookies.get(RUNTIME_COOKIE)?.value;
@@ -108,7 +126,13 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (pathname === RUNTIME_UI_READY_PATH) {
+  // Both internal browser endpoints are available only after the launch-cookie
+  // boundary above succeeds. Their route handlers repeat the runtime authority
+  // checks so an accidental middleware exclusion still fails closed.
+  if (
+    pathname === RUNTIME_BOOTSTRAP_CONFIRM_PATH ||
+    pathname === RUNTIME_UI_READY_PATH
+  ) {
     return NextResponse.next();
   }
 
@@ -130,7 +154,7 @@ export async function proxy(request: NextRequest) {
         },
       );
     }
-    return sameOriginRedirect(decision.destination);
+    return sameOriginRedirect(request, decision.destination);
   }
 
   if (!secret) {
@@ -162,7 +186,7 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get(AUTH_COOKIE)?.value;
   const valid = await verifySessionToken(token, secret);
   if (!valid) {
-    return sameOriginRedirect("/login");
+    return sameOriginRedirect(request, "/login");
   }
 
   return NextResponse.next();

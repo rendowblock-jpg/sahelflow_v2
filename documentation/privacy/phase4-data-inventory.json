@@ -1,0 +1,196 @@
+{
+  "formatVersion": 1,
+  "authority": "Phase 4 data/privacy lifecycle",
+  "fieldResolution": {
+    "rule": "Every scalar and relation field inherits its model group's classification and lifecycle unless an exact field override exists.",
+    "unclassifiedBehavior": "fail-closed"
+  },
+  "retentionClasses": {
+    "installation-security": "Retained for the life of the local installation or until an explicit installation reset; active sessions are revoked by privacy erase.",
+    "public-reference": "Retained or deterministically rebuilt because it contains no seller or customer personal data.",
+    "seller-record": "Retained while required for the seller's active business and legal/accounting obligations; exportable and erased by an authorized lifecycle command subject to documented holds.",
+    "operational-security": "Retained only as long as needed for replay protection, incident response, authorization, recovery or audit; diagnostics remain PII-safe.",
+    "recovery-artifact": "Retained by seller choice or pin policy; encrypted; deleted through governed backup/kit lifecycle.",
+    "ephemeral": "Rebuilt and never included as authoritative backup content."
+  },
+  "modelGroups": [
+    {
+      "id": "retained-installation-security",
+      "models": ["AuthSecret", "Session", "ProtectedKeyAuthority"],
+      "classification": "security-metadata-or-credential",
+      "purpose": "Authenticate the local installation, revoke sessions and unwrap independently rotatable shop keys.",
+      "retentionClass": "installation-security",
+      "export": "excluded",
+      "encryptedBackup": "included-in-shop-snapshot-but-re-enrolled-or-rewrapped-on-replacement",
+      "erase": "retain-authority; revoke-active-sessions",
+      "diagnostics": "identifiers and secrets never emitted"
+    },
+    {
+      "id": "retained-public-reference",
+      "models": ["WilayaRiskProfile"],
+      "classification": "public-business-reference",
+      "purpose": "Deterministic Algerian wilaya reference/risk data.",
+      "retentionClass": "public-reference",
+      "export": "excluded-from-subject-export",
+      "encryptedBackup": "included-but-rebuildable",
+      "erase": "retain-or-rebuild",
+      "diagnostics": "allowed without seller/customer identifiers"
+    },
+    {
+      "id": "credential-secret",
+      "models": ["Secret"],
+      "classification": "credential-secret",
+      "purpose": "Third-party provider and application credentials.",
+      "retentionClass": "seller-record",
+      "export": "excluded",
+      "encryptedBackup": "included-encrypted",
+      "erase": "delete",
+      "diagnostics": "never"
+    },
+    {
+      "id": "personal-data",
+      "models": [
+        "AiActionProposal", "AiChatMessage", "AiChatSession", "AuditLog",
+        "CollaborationAssignment", "CollaborationComment", "CollaborationHandover", "CollaborationMention",
+        "CommerceSyncItem", "Conversation", "Customer", "Delivery", "Message", "Order", "OrderItem",
+        "PhoneReputation", "ProviderIngressEvent", "Return", "ReturnNote", "StorefrontConfig"
+      ],
+      "classification": "personal-data",
+      "purpose": "Seller-authorized commerce, support, fulfillment, fraud prevention, AI assistance and accountability.",
+      "retentionClass": "seller-record",
+      "export": "included-through-protected-client-except-secrets",
+      "encryptedBackup": "included-encrypted",
+      "erase": "delete",
+      "diagnostics": "redacted-or-stable-non-PII-identifiers-only"
+    },
+    {
+      "id": "operational-security-metadata",
+      "models": [
+        "AiActionApproval", "AiActionExecution", "AutomationLog", "AutomationRun", "AutomationStepAttempt",
+        "AutomationStepRun", "BusinessAggregateVersion", "BusinessCommand", "CommerceSyncItemAttempt",
+        "CommerceSyncPage", "CommerceSyncRun", "CommerceSyncRunAttempt", "CompensationFact", "DomainEvent",
+        "ExtractionMetric", "OutboxIntent", "ProjectionInvalidation", "ProviderCapabilityCertification",
+        "ProviderIngressAttempt", "WhatsAppOutboundEffect"
+      ],
+      "classification": "security-metadata",
+      "purpose": "Authorization, idempotency, durable effects, incident response, provider ingress, recovery and audit.",
+      "retentionClass": "operational-security",
+      "export": "included-when-subject-or-business-relevant; secrets excluded",
+      "encryptedBackup": "included-encrypted",
+      "erase": "delete",
+      "diagnostics": "reason codes, counts and hashes only"
+    },
+    {
+      "id": "confidential-business",
+      "models": [
+        "Automation", "CannedResponse", "CanonicalDeliveryEvent", "CanonicalExchangeOrder",
+        "CanonicalExchangeRequest", "CanonicalExchangeRequestItem", "CanonicalRefund", "CanonicalRefundReversal",
+        "CanonicalReturnCase", "CanonicalReturnEvent", "CanonicalReturnInspection", "CanonicalReturnItem", "Category",
+        "CodCollection", "CodCollectionCorrection", "CodSettlement", "CodSettlementCorrection", "CodSettlementLine",
+        "CodSettlementLineMatch", "CollaborationQueue", "CollaborationWorkgroup", "CollaborationWorkgroupMember",
+        "Counter", "Expense", "FinancialMovement", "Integration", "InventoryMovement", "InventoryReservation",
+        "OrderChange", "Product", "ProductVariant", "ProfitabilityCostSnapshot", "Refund", "Setting", "WhatsAppTemplate"
+      ],
+      "classification": "confidential-business",
+      "purpose": "Catalog, inventory, COD accounting, returns, automations, provider configuration and operational business truth.",
+      "retentionClass": "seller-record",
+      "export": "included-when business/subject relevant",
+      "encryptedBackup": "included-encrypted",
+      "erase": "delete",
+      "diagnostics": "no free-form payloads or contact data"
+    }
+  ],
+  "fieldOverrides": {
+    "Customer.name": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
+    "Customer.phone": {"classification": "personal-data-blind-index", "protection": "purpose-separated-hmac", "export": "plaintext-through-protected-client"},
+    "Customer.phoneEnc": {"classification": "personal-data", "protection": "contextual-aead", "export": "not-exposed-as-ciphertext"},
+    "Customer.phone2": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
+    "Customer.address": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
+    "Customer.notes": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
+    "Order.phone": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
+    "Order.phoneBlindIndex": {"classification": "personal-data-blind-index", "protection": "purpose-separated-hmac", "export": "excluded"},
+    "Order.address": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
+    "Conversation.contactName": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
+    "Conversation.contactPhone": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
+    "Message.body": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
+    "Secret.ciphertext": {"classification": "credential-secret", "protection": "contextual-aead", "export": "excluded"},
+    "AuthSecret.pinHash": {"classification": "credential-secret", "protection": "slow-password-hash", "export": "excluded"},
+    "AuthSecret.secret": {"classification": "credential-secret", "protection": "local-auth-secret", "export": "excluded"},
+    "ProtectedKeyAuthority.wrappedKey": {"classification": "credential-secret", "protection": "installation-local-key-wrap", "export": "excluded"},
+    "Setting.value": {"classification": "confidential-business-or-personal-by-key", "protection": "secret keys prohibited; dedicated Secret model required", "export": "excluded; key metadata only"},
+    "AuditLog.before": {"classification": "personal-or-confidential-snapshot", "protection": "redacted/protected before persistence", "export": "included"},
+    "AuditLog.after": {"classification": "personal-or-confidential-snapshot", "protection": "redacted/protected before persistence", "export": "included"},
+    "AuditLog.metadata": {"classification": "security-metadata", "protection": "PII-safe structured JSON", "export": "included"}
+  },
+  "fileStores": {
+    "shops.json": {
+      "classification": "security-metadata",
+      "purpose": "workspace, installation, shop and incarnation registry",
+      "retentionClass": "installation-security",
+      "encryptedBackup": "included-encrypted",
+      "replacementRestore": "workspace adopted; installation identity remains local",
+      "erase": "retained until explicit shop/installation deletion"
+    },
+    "shops/*.db": {
+      "classification": "mixed-durable-store",
+      "purpose": "one authoritative SQLite database per shop",
+      "retentionClass": "seller-record",
+      "encryptedBackup": "online-snapshot then encrypted",
+      "replacementRestore": "all shops staged and cut over atomically",
+      "erase": "canonical model lifecycle plus governed shop deletion"
+    },
+    "system/installation-root*.json": {
+      "classification": "credential-secret",
+      "purpose": "DPAPI-protected local KEK/derivation root",
+      "retentionClass": "installation-security",
+      "encryptedBackup": "excluded",
+      "replacementRestore": "new local root; imported keys rewrapped",
+      "erase": "only explicit installation reset"
+    },
+    "Downloads/SahelFlow Backups/*.sfbackup": {
+      "classification": "encrypted-recovery-artifact",
+      "purpose": "immutable all-shop backup",
+      "retentionClass": "recovery-artifact",
+      "encryptedBackup": "not nested",
+      "replacementRestore": "authenticated with BRK/kit",
+      "erase": "governed deletion with non-PII receipt"
+    },
+    "Documents/SahelFlow Recovery Kits/*.sfkit": {
+      "classification": "credential-secret-recovery-artifact",
+      "purpose": "independent BRK recovery",
+      "retentionClass": "recovery-artifact",
+      "encryptedBackup": "excluded",
+      "replacementRestore": "requires independent recovery code",
+      "erase": "seller-controlled; app receipt contains no code"
+    },
+    "system/*migration*|*restore*|*rotation*journal*.json": {
+      "classification": "security-metadata",
+      "purpose": "authenticated restart-safe operation state",
+      "retentionClass": "operational-security",
+      "encryptedBackup": "excluded",
+      "replacementRestore": "converged before runtime exposure",
+      "erase": "collected only after committed/rolled-back receipt"
+    },
+    "system/*receipt*.json": {
+      "classification": "security-metadata",
+      "purpose": "non-PII proof of backup, deletion, migration, restore or lifecycle result",
+      "retentionClass": "operational-security",
+      "encryptedBackup": "classified per receipt",
+      "replacementRestore": "never treated as seller data authority",
+      "erase": "retention policy; no secrets or free-form PII"
+    },
+    "runtime-endpoint.json|survivability-endpoint.json|*.lock|*-wal|*-shm": {
+      "classification": "ephemeral",
+      "purpose": "process coordination and SQLite runtime state",
+      "retentionClass": "ephemeral",
+      "encryptedBackup": "excluded",
+      "replacementRestore": "rebuilt",
+      "erase": "removed or superseded on clean shutdown/startup"
+    }
+  },
+  "diagnosticPolicy": {
+    "allow": ["stable non-PII identifiers", "counts", "sizes", "hashes", "reason codes", "state transitions"],
+    "deny": ["names", "phone numbers", "addresses", "message bodies", "credential material", "recovery codes", "raw encrypted payloads", "filesystem paths containing seller data"]
+  },
+  "legalReviewBoundary": "Engineering mapping only. Qualified Algerian legal review is required before any compliance certification or public claim."
+}

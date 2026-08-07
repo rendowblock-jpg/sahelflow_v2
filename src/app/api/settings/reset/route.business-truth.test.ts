@@ -20,13 +20,12 @@ vi.mock("@/lib/identity/authorization", () => ({
 vi.mock("@/lib/audit", () => ({
   logAudit: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/lib/shops/authority", () => ({
+  assertProcessShopAuthority: vi.fn(),
+}));
 
 import { BUSINESS_ENVELOPE_SECRET_KEY } from "@/lib/business-truth/envelope-key";
-import {
-  getJson,
-  mockPost,
-  rawDb,
-} from "@/app/api/__tests__/helpers";
+import { getJson, mockPost, rawDb } from "@/app/api/__tests__/helpers";
 import { POST } from "./route";
 
 async function clearBusinessTruth(): Promise<void> {
@@ -62,7 +61,7 @@ afterAll(async () => {
 });
 
 describe("POST /api/settings/reset business-truth authority", () => {
-  it("purges canonical authority in foreign-key-safe order and preserves the wrapped key", async () => {
+  it("purges canonical authority and credentials in foreign-key-safe order", async () => {
     const commandId = "reset-business-command";
     const reservationId = "reset-reservation";
 
@@ -265,7 +264,9 @@ describe("POST /api/settings/reset business-truth authority", () => {
       ]),
     ).resolves.toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     await expect(
-      rawDb.secret.findUnique({ where: { key: BUSINESS_ENVELOPE_SECRET_KEY } }),
-    ).resolves.toMatchObject({ key: BUSINESS_ENVELOPE_SECRET_KEY });
+      rawDb.secret.findUnique({
+        where: { key: BUSINESS_ENVELOPE_SECRET_KEY },
+      }),
+    ).resolves.toBeNull();
   });
 });

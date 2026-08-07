@@ -1,24 +1,11 @@
 /**
- * Field-level cryptography — AES-256-GCM for secrets & PII at rest.
+ * Legacy field-level cryptography — AES-256-GCM for existing secrets and PII.
  *
- * ARCHITECTURE (ADR-003, decided):
- *   Prisma's built-in SQLite driver does NOT support SQLCipher (the `?key=`
- *   connection param is silently ignored). Rather than migrate the working
- *   19-model schema to Drizzle/raw better-sqlite3 (high-risk, low marginal
- *   benefit mid-build), we encrypt sensitive fields at the application layer.
- *
- *   - Random-IV AES-256-GCM for secrets & non-searchable PII (names, addresses, notes, API keys).
- *   - Deterministic HMAC-SHA256 "blind index" for fields that must remain
- *     searchable by exact equality (e.g. customer phone). The blind index is
- *     stored alongside the ciphertext so `WHERE phoneIndex = ?` lookups work
- *     without ever decrypting.
- *
- * THREAT MODEL: protects the SQLite file at rest (laptop stolen, file copied).
- * The master key lives in a separate mode-600 keyfile (later: OS keychain via
- * Tauri Stronghold). Key + ciphertext are never co-located.
- *
- * NOT a threat model: an attacker with live memory access, or an attacker who
- * also has the master key file. For those, use full-disk encryption + OS auth.
+ * New protected values use the contextual envelope in `protected-value.ts`.
+ * This module remains the compatibility codec until the Phase 4 protected-data
+ * migration rewrites existing rows. A malformed or unauthentic legacy payload
+ * becomes an explicit corruption error; callers must never substitute the raw
+ * stored ciphertext or a blind index as if it were seller plaintext.
  */
 
 import {
@@ -27,49 +14,50 @@ import {
   randomBytes,
   createHmac,
   timingSafeEqual,
-} from "crypto";
+} from "node:crypto";
+
+import { ProtectedDataCorruptionError } from "@/lib/crypto/protected-data-error";
 
 const ALGORITHM = "aes-256-gcm";
-const IV_LENGTH = 12; // 96-bit IV — the GCM standard
-const KEY_LENGTH = 32; // 256-bit key
+const IV_LENGTH = 12;
+const KEY_LENGTH = 32;
 const TAG_LENGTH = 16;
+const CANONICAL_FORMAT = "sahelflow-protected-value";
 
-/** A random-IV encrypted payload. Safe for secrets & non-searchable PII. */
 export interface EncryptedPayload {
-  /** base64 — 12-byte initialization vector */
   iv: string;
-  /** base64 — ciphertext */
   ciphertext: string;
-  /** base64 — 16-byte GCM auth tag */
   tag: string;
 }
 
 /**
- * True if a string looks like an encrypted JSON payload (iv/ciphertext/tag).
- * Used by the encrypt helpers to detect already-encrypted values (idempotency)
- * and by the decrypt helpers to skip already-plaintext values.
- *
- * Lives here (next to `EncryptedPayload`) so all PII modules can share it
- * without a circular dependency on customer-encryption.ts.
+ * Detect only the legacy three-field shape. A JSON object that declares the
+ * canonical Phase 4 format but fails its strict parser is corruption, not a
+ * legacy/plaintext value that callers may return or encrypt again.
  */
 export function isEncryptedPayload(value: string | null | undefined): boolean {
   if (!value) return false;
   try {
-    const parsed = JSON.parse(value) as Partial<EncryptedPayload>;
+    const parsed = JSON.parse(value) as Partial<EncryptedPayload> & {
+      format?: unknown;
+    };
+    if (parsed.format === CANONICAL_FORMAT) {
+      throw new ProtectedDataCorruptionError(
+        "format",
+        "Canonical protected value declaration is malformed or unsupported",
+      );
+    }
     return (
       typeof parsed.iv === "string" &&
       typeof parsed.ciphertext === "string" &&
       typeof parsed.tag === "string"
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof ProtectedDataCorruptionError) throw error;
     return false;
   }
 }
 
-/**
- * Encrypt a string with AES-256-GCM and a fresh random IV.
- * Each call produces a different ciphertext (non-deterministic).
- */
 export function encryptString(plaintext: string, key: Buffer): EncryptedPayload {
   assertKeyLength(key);
   const iv = randomBytes(IV_LENGTH);
@@ -78,49 +66,76 @@ export function encryptString(plaintext: string, key: Buffer): EncryptedPayload 
     cipher.update(plaintext, "utf8"),
     cipher.final(),
   ]);
-  const tag = cipher.getAuthTag();
   return {
     iv: iv.toString("base64"),
     ciphertext: ciphertext.toString("base64"),
-    tag: tag.toString("base64"),
+    tag: cipher.getAuthTag().toString("base64"),
   };
 }
 
-/**
- * Decrypt an EncryptedPayload. Throws if the auth tag doesn't verify
- * (tamper detection) — callers should catch and treat as "corrupt/invalid".
- */
+function decodeCanonicalBase64(
+  value: string,
+  label: string,
+  expectedLength?: number,
+): Buffer {
+  if (
+    value !== "" &&
+    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(
+      value,
+    )
+  ) {
+    throw new ProtectedDataCorruptionError(
+      "format",
+      `${label} is not canonical base64`,
+    );
+  }
+  const decoded = Buffer.from(value, "base64");
+  if (
+    decoded.toString("base64") !== value ||
+    (expectedLength !== undefined && decoded.length !== expectedLength)
+  ) {
+    throw new ProtectedDataCorruptionError(
+      "format",
+      `${label} has invalid dimensions`,
+    );
+  }
+  return decoded;
+}
+
 export function decryptString(payload: EncryptedPayload, key: Buffer): string {
   assertKeyLength(key);
-  const iv = Buffer.from(payload.iv, "base64");
-  const ciphertext = Buffer.from(payload.ciphertext, "base64");
-  const tag = Buffer.from(payload.tag, "base64");
-  if (iv.length !== IV_LENGTH) {
-    throw new Error(`Invalid IV length: expected ${IV_LENGTH}, got ${iv.length}`);
+  const iv = decodeCanonicalBase64(payload.iv, "Legacy protected IV", IV_LENGTH);
+  const ciphertext = decodeCanonicalBase64(
+    payload.ciphertext,
+    "Legacy protected ciphertext",
+  );
+  const tag = decodeCanonicalBase64(
+    payload.tag,
+    "Legacy protected tag",
+    TAG_LENGTH,
+  );
+  try {
+    const decipher = createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
+      "utf8",
+    );
+  } catch (cause) {
+    throw new ProtectedDataCorruptionError(
+      "authentication",
+      "Legacy protected value failed authentication",
+      cause,
+    );
   }
-  if (tag.length !== TAG_LENGTH) {
-    throw new Error(`Invalid auth tag length: expected ${TAG_LENGTH}, got ${tag.length}`);
-  }
-  const decipher = createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
 }
 
-/**
- * Derive a deterministic blind index for a searchable field (e.g. phone).
- * Returns a 64-char hex string. The SAME input + key always yields the SAME
- * index, enabling `WHERE phoneIndex = deriveBlindIndex(phone, key)` lookups
- * without decrypting every row. The index does NOT reveal the plaintext
- * (HMAC is one-way).
- */
 export function deriveBlindIndex(value: string, key: Buffer): string {
   assertKeyLength(key);
-  // Normalize: trim + lowercase so " 0555 " matches "0555"
-  const normalized = value.trim().toLowerCase();
-  return createHmac("sha256", key).update(normalized).digest("hex");
+  return createHmac("sha256", key)
+    .update(value.trim().toLowerCase())
+    .digest("hex");
 }
 
-/** Constant-time comparison of two strings of equal length. */
 export function timingSafeEqualString(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
@@ -129,9 +144,9 @@ export function timingSafeEqualString(a: string, b: string): boolean {
 }
 
 function assertKeyLength(key: Buffer): void {
-  if (key.length !== KEY_LENGTH) {
-    throw new Error(
-      `Master key must be ${KEY_LENGTH} bytes (256-bit). Got ${key.length} bytes.`,
+  if (!Buffer.isBuffer(key) || key.length !== KEY_LENGTH) {
+    throw new TypeError(
+      `Protected key must be ${KEY_LENGTH} bytes (256-bit). Got ${key.length} bytes.`,
     );
   }
 }
@@ -141,4 +156,5 @@ export const CRYPTO_META = {
   keyLengthBits: KEY_LENGTH * 8,
   ivLength: IV_LENGTH,
   tagLength: TAG_LENGTH,
+  legacyFormat: true,
 } as const;

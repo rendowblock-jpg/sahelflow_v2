@@ -44,7 +44,7 @@ describe("installed Windows runtime contract", () => {
     expect(protocol).not.toContain("runtime_token: &self.runtime_token");
   });
 
-  it("keeps the workspace hidden until bounded authenticated UI-ready evidence", () => {
+  it("keeps one hidden workspace non-authoritative until bounded authenticated UI-ready evidence", () => {
     const desktop = read("src-tauri/src/lib.rs");
     const recovery = read("src-tauri/src/startup_recovery.rs");
     const tauriConfig = read("src-tauri/tauri.conf.json");
@@ -53,6 +53,7 @@ describe("installed Windows runtime contract", () => {
         app?: { windows?: Array<Record<string, unknown>> };
       }
     ).app?.windows;
+    const mainWindow = windows?.find((window) => window.label === "main");
     const beacon = read("src/components/runtime/runtime-ui-ready-beacon.tsx");
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
     const uiRoute = read("src/app/api/internal/runtime-ui-ready/route.ts");
@@ -84,15 +85,39 @@ describe("installed Windows runtime contract", () => {
     );
     expect(recovery).toContain('"SF-RUNTIME-UI-SESSION-BLOCKED"');
     expect(recovery).toContain('"SF-RUNTIME-UI-BEACON-MISSING"');
+    expect(recovery).toContain('MAIN_WINDOW_LABEL: &str = "main"');
+    expect(recovery).toContain('RUNTIME_COOKIE: &str = "sf_runtime"');
+    expect(recovery).toContain("mod shop_lifecycle_host;");
+    expect(recovery).toContain("shop_lifecycle_host::ensure_started(app)?;");
+    expect(recovery).toContain("window.hide()?;");
+    expect(recovery).toContain(
+      "window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;",
+    );
+    expect(recovery).toContain("window.navigate(handoff.workspace_url)?;");
+    expect(recovery).toContain("workspace_url.set_path(\"/\")");
+    expect(recovery).toContain("workspace_url.set_query(None)");
+    expect(recovery).toContain("workspace_url.set_fragment(None)");
+    expect(recovery).toContain(".http_only(true)");
+    expect(recovery).toContain(".same_site(SameSite::Lax)");
     expect(recovery).not.toContain("STARTUP_WINDOW_LABEL");
-    expect(recovery).not.toContain("STARTUP_WINDOW_TITLE");
+    expect(recovery).not.toContain("activate_startup_renderer(");
+    expect(recovery).not.toContain("activate_configured_workspace(");
+    expect(recovery).not.toContain("renderer_prime_html(");
+    expect(recovery).not.toContain("run_on_main_thread");
+    expect(recovery).not.toContain("WebviewWindowBuilder::new(");
+    expect(recovery).not.toContain("WebviewUrl::External(url)");
+    expect(recovery).not.toContain("WORKSPACE_RENDERER_PROBE_SCRIPT");
     expect(recovery).toContain(
       "if wait_for_matching_ui_ready(&app_data_dir, PACKAGED_UI_READY_TIMEOUT)",
     );
     expect(recovery).toContain("window.show().and_then(|_| window.set_focus())");
     expect(recovery).toContain("SahelFlow - Startup blocked");
     expect(windows).toHaveLength(1);
-    expect(windows?.[0]).toMatchObject({ label: "main", visible: false });
+    expect(mainWindow).toMatchObject({
+      label: "main",
+      title: "SahelFlow",
+      visible: false,
+    });
 
     expect(beacon).toContain("const RETRY_WINDOW_MS = 75_000");
     expect(beacon).toContain("const REQUEST_TIMEOUT_MS = 5_000");
@@ -153,7 +178,12 @@ describe("installed Windows runtime contract", () => {
     };
     const tauriConfig = JSON.parse(read("src-tauri/tauri.conf.json")) as {
       app?: {
-        windows?: Array<{ label?: string; title?: string; visible?: boolean }>;
+        windows?: Array<{
+          label?: string;
+          title?: string;
+          visible?: boolean;
+          focus?: boolean;
+        }>;
         security?: { csp?: string };
       };
     };
@@ -161,6 +191,9 @@ describe("installed Windows runtime contract", () => {
     const updater = read("src/components/updater/update-checker.tsx");
     const rootLayout = read("src/app/layout.tsx");
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
+    const mainWindow = tauriConfig.app?.windows?.find(
+      (window) => window.label === "main",
+    );
 
     expect(capability.windows).toContain("main");
     expect(capability.remote?.urls).toEqual([
@@ -173,7 +206,7 @@ describe("installed Windows runtime contract", () => {
       "connect-src 'self' ipc: http://ipc.localhost",
     );
     expect(tauriConfig.app?.windows).toHaveLength(1);
-    expect(tauriConfig.app?.windows?.[0]).toMatchObject({
+    expect(mainWindow).toMatchObject({
       label: "main",
       title: "SahelFlow",
       visible: false,
@@ -245,9 +278,7 @@ describe("installed Windows runtime contract", () => {
     expect(uiHarness).not.toContain("Reset-NodeCompileCacheForCloseProof");
     expect(
       uiHarness.lastIndexOf("$closures += Close-SahelFlowNormally"),
-    ).toBeLessThan(
-      uiHarness.lastIndexOf("Wait-ForNodeCompileCache"),
-    );
+    ).toBeLessThan(uiHarness.lastIndexOf("Wait-ForNodeCompileCache"));
     expect(uiHarness).toContain("Wait-ForCompleteStartupTrace");
     expect(uiHarness).toContain("startup trace did not settle within 5 seconds");
     expect(uiHarness).toContain("executableOrSourceFiles = 0");

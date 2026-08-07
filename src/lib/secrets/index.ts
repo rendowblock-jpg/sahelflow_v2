@@ -1,36 +1,29 @@
 /**
- * Secrets service — encrypted key/value store backed by the `Secret` Prisma model.
+ * Secrets service — contextual encrypted key/value store backed by `Secret`.
  *
- * Used for third-party API keys (Gemini, delivery providers, e-commerce) and
- * any other small secret the app needs at runtime. Values are AES-256-GCM
- * encrypted with the master key before hitting SQLite.
- *
- * Per ADR-004 (amended): the interim store is this encrypted SQLite table;
- * the production target is Tauri Stronghold / OS keychain. The interface here
- * (getSecret / setSecret / hasSecret / deleteSecret) stays the same when the
- * backing store changes — only the implementation swaps.
- *
- * Well-known secret keys (convention: snake_case):
- *   - "gemini_api_key"                    — Google AI Studio key for order extraction
- *   - "yalidine_api_token"                — (future) Yalidine delivery API
- *   - "zrexpress_api_key"                 — (future) ZR Express delivery API
- *   - "maystro_api_token"                 — (future) Maystro delivery API
- *   - "business_truth_envelope_key_v1"    — internal random key that encrypts
- *                                             command/event/outbox/compensation
- *                                             envelopes. It is not user-editable;
- *                                             master-key rotation re-wraps it as
- *                                             an ordinary Secret.
+ * Phase 4 stores the complete authenticated protected-value envelope in the
+ * existing `ciphertext` column. The legacy `iv`/`tag` columns retain the public
+ * nonce/tag from that same envelope for compatibility diagnostics; they are not
+ * a second decryption authority. Legacy three-column AES-GCM rows remain
+ * readable only as migration input; all new writes use the purpose-separated
+ * shop-secret key.
  */
 import "server-only";
 
-
 import type { ServiceContext } from "@/lib/data/service-base";
 import {
-  encryptString,
   decryptString,
   type EncryptedPayload,
 } from "@/lib/crypto/field-crypto";
 import { getMasterKey } from "@/lib/crypto/master-key";
+import { resolveShopProtectedKey } from "@/lib/crypto/protected-key-authority";
+import { classifyProtectedValue } from "@/lib/crypto/protected-value-classification";
+import {
+  openProtectedString,
+  sealProtectedString,
+  type ShopRecordProtectedValueBinding,
+} from "@/lib/crypto/protected-value";
+import { processShopContext, type ShopContext } from "@/lib/shops/context";
 
 export interface SecretRow {
   key: string;
@@ -41,19 +34,120 @@ export interface SecretRow {
   updatedAt: Date;
 }
 
-function rowToPayload(row: SecretRow): EncryptedPayload {
+export interface SecretCryptoOptions {
+  installationRoot?: Buffer;
+  createIfMissing?: boolean;
+}
+
+type KeyAuthorityClient = Parameters<typeof resolveShopProtectedKey>[0];
+
+function authorityClient(context: ServiceContext): KeyAuthorityClient {
+  return context.prisma as unknown as KeyAuthorityClient;
+}
+
+function shopContext(context: ServiceContext): ShopContext {
+  return context.shop ?? processShopContext();
+}
+
+function secretBinding(
+  context: ShopContext,
+  key: string,
+): ShopRecordProtectedValueBinding {
+  if (!key || key !== key.trim() || key.length > 256 || /[\u0000-\u001f\u007f]/.test(key)) {
+    throw new TypeError("Secret key is invalid");
+  }
+  return {
+    scope: "shop-record",
+    workspaceId: context.workspaceId,
+    shopId: context.shopId,
+    shopIncarnationId: context.shopIncarnationId,
+    recordType: "Secret",
+    recordId: key,
+    field: "value",
+  };
+}
+
+function rowToLegacyPayload(row: SecretRow): EncryptedPayload {
   return { iv: row.iv, ciphertext: row.ciphertext, tag: row.tag };
 }
 
-/** Get a decrypted secret value, or null if it doesn't exist. */
-export async function getSecret(context: ServiceContext, key: string): Promise<string | null> {
-  const row = await context.prisma.secret.findUnique({ where: { key } });
-  if (!row) return null;
-  return decryptString(rowToPayload(row), getMasterKey());
+function isUniqueConstraintError(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "P2002",
+  );
 }
 
-/** True if a secret is configured for this key (no decryption — cheap check). */
-export async function hasSecret(context: ServiceContext, key: string): Promise<boolean> {
+async function resolveSecretAuthority(
+  context: ServiceContext,
+  options: SecretCryptoOptions = {},
+) {
+  return resolveShopProtectedKey(authorityClient(context), "shop-secret", {
+    shopContext: shopContext(context),
+    installationRoot: options.installationRoot,
+    createIfMissing: options.createIfMissing,
+  });
+}
+
+async function protectedSecretData(
+  context: ServiceContext,
+  key: string,
+  value: string,
+  options: SecretCryptoOptions = {},
+): Promise<{ ciphertext: string; iv: string; tag: string }> {
+  const contextValue = shopContext(context);
+  const authority = await resolveSecretAuthority(context, {
+    ...options,
+    createIfMissing: true,
+  });
+  const ciphertext = sealProtectedString(
+    value,
+    authority.key,
+    authority.descriptor,
+    secretBinding(contextValue, key),
+  );
+  const envelope = JSON.parse(ciphertext) as { iv?: unknown; tag?: unknown };
+  if (typeof envelope.iv !== "string" || typeof envelope.tag !== "string") {
+    throw new Error("Canonical secret envelope omitted public nonce/tag metadata");
+  }
+  return { ciphertext, iv: envelope.iv, tag: envelope.tag };
+}
+
+/** Get a decrypted secret value, or null if it doesn't exist. */
+export async function getSecret(
+  context: ServiceContext,
+  key: string,
+  options: SecretCryptoOptions = {},
+): Promise<string | null> {
+  const row = await context.prisma.secret.findUnique({ where: { key } });
+  if (!row) return null;
+
+  if (classifyProtectedValue(row.ciphertext) === "canonical") {
+    const contextValue = shopContext(context);
+    const authority = await resolveSecretAuthority(context, {
+      ...options,
+      createIfMissing: false,
+    });
+    return openProtectedString(
+      row.ciphertext,
+      authority.key,
+      authority.descriptor,
+      secretBinding(contextValue, key),
+    );
+  }
+
+  return decryptString(
+    rowToLegacyPayload(row),
+    options.installationRoot ?? getMasterKey(),
+  );
+}
+
+export async function hasSecret(
+  context: ServiceContext,
+  key: string,
+): Promise<boolean> {
   const row = await context.prisma.secret.findUnique({
     where: { key },
     select: { id: true },
@@ -61,29 +155,43 @@ export async function hasSecret(context: ServiceContext, key: string): Promise<b
   return row !== null;
 }
 
-/** Set (upsert) a secret. The value is encrypted before storage. */
 export async function setSecret(
   context: ServiceContext,
   key: string,
   value: string,
+  options: SecretCryptoOptions = {},
 ): Promise<void> {
-  const payload = encryptString(value, getMasterKey());
+  const data = await protectedSecretData(context, key, value, options);
   await context.prisma.secret.upsert({
     where: { key },
-    create: { key, ...payload },
-    update: { ...payload },
+    create: { key, ...data },
+    update: data,
   });
 }
 
-/** Delete a secret. No-op if it doesn't exist. */
-export async function deleteSecret(context: ServiceContext, key: string): Promise<void> {
+export async function createSecretIfAbsent(
+  context: ServiceContext,
+  key: string,
+  value: string,
+  options: SecretCryptoOptions = {},
+): Promise<boolean> {
+  const data = await protectedSecretData(context, key, value, options);
+  try {
+    await context.prisma.secret.create({ data: { key, ...data } });
+    return true;
+  } catch (error) {
+    if (isUniqueConstraintError(error)) return false;
+    throw error;
+  }
+}
+
+export async function deleteSecret(
+  context: ServiceContext,
+  key: string,
+): Promise<void> {
   await context.prisma.secret.deleteMany({ where: { key } });
 }
 
-/**
- * List configured secret keys (without values) — for UI status display.
- * Returns the well-known keys with a boolean `configured` flag.
- */
 export async function listSecretStatus(
   context: ServiceContext,
   knownKeys: readonly string[],
@@ -92,8 +200,8 @@ export async function listSecretStatus(
     where: { key: { in: [...knownKeys] } },
     select: { key: true },
   });
-  const present = new Set(rows.map((r) => r.key));
-  const out: Record<string, boolean> = {};
-  for (const k of knownKeys) out[k] = present.has(k);
-  return out;
+  const present = new Set(rows.map((row) => row.key));
+  const output: Record<string, boolean> = {};
+  for (const key of knownKeys) output[key] = present.has(key);
+  return output;
 }

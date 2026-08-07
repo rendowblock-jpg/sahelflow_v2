@@ -1,8 +1,9 @@
 # SahelFlow — Current state
 
 > **Authority:** merged protected source and named evidence only
-> **Live protected main:** `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Live protected main:** `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
 > **Latest application-changing protected merge:** PR #203 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Latest protected authority merge:** PR #206 at `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Protected signed run:** `30366866703`
@@ -10,14 +11,14 @@
 > **Founder-accepted baseline:** Internal.5
 > **Observed reference machine:** Founder ThinkPad T470
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
-> **Active phase package:** issue #204 — exhaustive audit, primary-source research, Problem Register and shared contract freeze
+> **Active phase package:** issue #204 through PR #207 — complete P4-A…P4-F implementation candidate awaiting exact-head review and validation
 > **Retained installed evidence:** issue #201
 > **Execution epic:** issue #164
-> **Last assessed:** 2026-08-04
+> **Last assessed:** 2026-08-06
 
-This document states what merged protected source and named evidence prove now.
-The exact live execution frontier belongs in
-[`../operations/WORKING_MEMORY.md`](../operations/WORKING_MEMORY.md).
+This document states merged protected truth and the exact unmerged implementation
+frontier without converting either into a release or phase-closure claim. Re-fetch
+GitHub before relying on any active PR SHA.
 
 ## Executive truth
 
@@ -25,15 +26,17 @@ SahelFlow is a broad real internal Windows application, not an empty prototype o
 generic dashboard shell. It is not yet a commercially complete or class-AAA
 SahelFlow 1.0 product.
 
-Protected source now includes the canonical Golden COD foundation; durable
-identity, Teams, permissions and licensing; Tauri-owned native multi-shop
-lifecycle; durable provider ingress/effects; database-authoritative inbox;
-truthful automations; proposal-bound sensitive AI actions; durable commerce; and
-one canonical courier facade.
+Protected main includes the canonical Golden COD foundation; durable identity,
+Teams, permissions and licensing; Tauri-owned native multi-shop lifecycle;
+durable provider ingress/effects; database-authoritative inbox; truthful
+automations; proposal-bound sensitive AI actions; durable commerce; and one
+canonical courier facade.
 
-The next completion boundary is Phase 4 data protection, backup/restore,
-replacement-install recovery, migration safety, key separation and security/privacy
-assurance. Another broad architecture reset is not required.
+Protected PR #206 froze Phase 4 contracts and consequence-based CI lanes. PR #207
+is the only active production package. Its branch now carries the complete Phase 4
+source candidate, but that candidate is not protected or phase-closed until the
+exact final head passes the selected source, Rust, Windows, installed-MSI and
+review-conversation gates.
 
 ## Latest protected source closures
 
@@ -68,39 +71,47 @@ native lifecycle authority.
 
 ### Phase 3 protected-source closure — PR #203
 
-PR #203 merged at `aa4ca0758fd696f4b02fc1975629ac698f9349c3` from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`. Final required CI
-run `30901725446` passed version/documentation authority, frozen install, Prisma
-generation and migration status, TypeScript, ESLint, the complete Vitest suite,
-80%+ coverage and a zero-vulnerability production dependency audit.
+PR #203 merged at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`.
+Final required CI run `30901725446` passed version/documentation authority,
+frozen install, Prisma generation and migration status, TypeScript, ESLint, the
+complete Vitest suite, 80%+ coverage and a zero-vulnerability production
+dependency audit.
 
-Protected-source outcomes include:
-
-- authenticated persistence-before-acknowledgement and durable WhatsApp ingress;
-- database-authoritative inbox, exact identities, leases, immutable attempts and recovery;
-- truthful durable automations and receipt-safe external effects;
-- immutable proposal/approval/execution binding for sensitive AI actions;
-- one canonical courier facade and internal durable effect/tracking runtime;
-- durable commerce run/page/item/attempt truth, opaque continuation, bounded
-  yields, monotonic watermarks and audited recovery;
-- deterministic provider conformance and fail-closed unverified capabilities;
-- repaired storefront trigger replay, POSIX spool rename durability, monotonic
-  inbox timestamps, governed automation catalogs and commerce page budgets.
+Protected-source outcomes include authenticated persistence-before-acknowledgement,
+durable WhatsApp ingress/effects, database-authoritative inbox, truthful
+automations, proposal-bound sensitive AI actions, one canonical courier facade,
+durable commerce run/page/item/attempt truth and fail-closed provider capability
+authority.
 
 Issue #202 is closed. No known Phase 3 P0/P1 remains. FD-030 defers real-provider
 certification to Phase 9 representative beta and retains issue #201 at the
 applicable Level 3/installed evidence gate.
 
+### Phase 4 contract freeze and risk lanes — PR #206
+
+PR #206 merged at `9306564ce5b5ea4b3b13b219aa45d4672ae13184`.
+It protected the exhaustive audit, P4-001 through P4-013 Problem Register, frozen
+key/backup/recovery/migration/evidence contracts and CI consequence mapping.
+Crypto, migration, storage, backup/restore and secret-store changes select Windows
+packaged-runtime and installed-MSI evidence; native authority changes also select
+Rust parity where applicable.
+
 ## Current implementation shape
 
 ```text
 Tauri Windows host
-├── installation root, licensing, device and clock authority
+├── DPAPI installation KEK / purpose-separated key derivation
 ├── versioned workspace/shop registry and native lifecycle journal
-├── all-shop migration and recovery coordinator
+├── authenticated all-shop migration and replacement-restore convergence
+├── encrypted all-shop backup, BRK/DEK authority and independent recovery kit
+├── localhost-only replay-protected survivability command bridge
 ├── exact runtime containment, readiness and shutdown
 ├── packaged Node/Next.js standalone runtime
 │   ├── App Router UI and API routes
 │   ├── Prisma and one SQLite database per shop
+│   ├── contextual protected-value and blind-index authority
+│   ├── governed export/reset/erase/shop-delete lifecycle
 │   ├── identity, permissions and licensing authority
 │   ├── canonical business commands, events and durable effects
 │   ├── database-authoritative inbox, automations, AI and commerce
@@ -111,42 +122,105 @@ Tauri Windows host
 The Node process is bound to one immutable exact `ShopContext`. Shop switching
 remains a native lifecycle operation.
 
-## Active Phase 4 frontier
+## Active Phase 4 frontier — PR #207
 
-Issue #204 owns the active phase. No Phase 4 branch or implementation PR is active.
-The first package is audit and contract freeze only.
+The unmerged branch now implements all authorized packages as one dependency-correct
+candidate:
 
-The audit must inventory and reconcile:
+### P4-A / P4-B — protected data and migration
 
-- installation, registry and per-shop database data authorities;
-- field encryption, blind indexes, master/root/backup/provider/session keys and secret storage;
-- SQLite online backup, WAL/SHM/journal handling and authenticated manifests;
-- native migration journals, all-shop rollback and interrupted recovery;
-- exports, imports, reset, delete, archive/recover and replacement-install paths;
-- retention, minimization, deletion and diagnostic redaction;
-- SBOM, production dependency security and threat models;
-- Law 18-07 and independent security/privacy review requirements;
-- AR/FR/EN, RTL, accessibility and low-resource recovery UX;
-- historical Phase 4 branches/PRs as evidence only until revalidated on current main.
+- HKDF-SHA-256 versioned purpose-separated installation keys;
+- random persisted per-shop data, blind-index and secret authorities;
+- contextual versioned AES-256-GCM envelopes and explicit corruption;
+- authoritative protected Prisma reads/writes, nested relations, bulk/upsert
+  boundaries and purpose-separated exact searches;
+- guarded raw Prisma access, installation-root re-wrap and restart-safe
+  all-registered-shop protected-data migration.
 
-Broad Phase 4 production edits are not authorized until one consolidated Problem
-Register and the shared key/backup/recovery/migration/security contracts are frozen.
+### P4-C — encrypted all-shop backup and independent recovery
+
+- native SQLite Online Backup snapshots for every registered shop;
+- immutable encrypted descriptor, manifest and ordered object set;
+- per-license BRK and fresh random DEK per backup;
+- exact workspace/install/shop/incarnation and migration bindings;
+- independent recovery kit, one-time recovery code, persisted round-trip proof,
+  verified listing and governed deletion receipt.
+
+### P4-D / P4-E — replacement restore and migration convergence
+
+- full verification before live mutation, all-shop staging, rescue generation,
+  authenticated applying journal, post-apply proof and compensation;
+- local replacement installation identity preserved while imported shop keys are
+  re-wrapped and source sessions/auth secret are removed;
+- wrong kit, corrupt/missing object, unsupported schema, low disk and interrupted
+  cutover fail closed;
+- bounded localhost bridge with authenticated handshake, exact action/resource
+  binding, short-lived single-use tokens and durable replay protection;
+- pending restore converges before Node, Prisma or WebView exposure and proves the
+  previous packaged runtime stopped before mutation.
+
+### P4-F — privacy, security and release authority
+
+- machine-readable classification for every Prisma model, protected field and
+  installation-level file store;
+- one complete dependency-ordered export/reset/erase lifecycle, active-session
+  revocation and reuse of governed native shop deletion;
+- amended Algeria Law 18-07 / Law 25-11 engineering mapping with qualified legal
+  review boundary;
+- threat model, independent-review protocol and Level 1/2/3 evidence matrix;
+- resolved npm/Cargo CycloneDX SBOM, checked-in VEX triage authority and
+  deterministic evidence manifest retained through the repository inventory;
+- executable closure verifier that blocks new unclassified models/stores, legacy
+  backup paths, incomplete erase authority or missing security evidence.
+
+### Installed runtime diagnosis and repair — PR #207
+
+The missing installed UI beacon was one narrow application regression, not a
+general WebView2, Windows profile or data-architecture failure. PR #195 changed
+the configured-session root redirect to a relative `Location: /login`; Next.js 16
+rejects that packaged proxy response as an invalid URL, so authenticated root
+navigation returned HTTP 500 before React or the UI-ready beacon could run.
+
+PR #207 commit `80f03768d5c45c9df24412ce750e766ad9dcb13f` restores a
+request-derived absolute same-origin 307 redirect and removes the speculative
+renderer-prime workaround. Manual Windows run `31126124211` then proved the MSI
+build, installed launch/reopen and three authenticated hydrated WebView launches
+on the exact repair. The replacement drill's later HTTP 401 was independently
+identified as stale evidence-harness authentication: production correctly
+required the per-launch HttpOnly runtime cookie.
+
+Executable candidate `33500fd8c7e968f1244a444f6fb130d9d897d6a1` makes that
+boundary deterministic through an evidence-MSI-only Tauri WebView2 argument; the
+checked-in production configuration remains unchanged. Run `31127743699` passed
+the MSI build, installed launch/close/reopen and three authenticated hydrated
+WebView launches. Its process evidence contains the expected loopback debugging
+argument, and the replacement request passed runtime-cookie authorization.
+
+The same exact-head run then reached `/api/auth/setup` and returned HTTP 500.
+This is now the first missing replacement-drill transition. It occurs before the
+source customer/secret, recovery kit or all-shop backup is created, so the run
+does not prove replacement restore. The artifact captured no safe inner error
+code, and no further CI retry is authorized by this handoff. The next owner must
+diagnose the setup path once across `setupAuth`, `createSession`, durable identity
+binding and session-cookie creation, then make one consolidated repair.
+
+## Remaining before Phase 4 can close
+
+1. diagnose the installed `/api/auth/setup` HTTP 500 at the first failing setup,
+   session or durable-identity transition and make one consolidated repair;
+2. complete the replacement backup/corrupt/replace/restore/rollback drill on the
+   repaired exact executable head;
+3. finish the exact-head source/quality gate and request separated security/privacy
+   review with no unresolved P0/P1 conversation;
+4. merge with expected-head binding, verify protected main, then reconcile issues
+   #201 and #204 only if every applicable exit condition is actually satisfied.
 
 ## Release and installed truth
 
 Internal.13 remains the latest published and Founder-installed release. It predates
-the protected Phase 1–3 closures and cannot prove current merged behavior.
+the protected Phase 1–4 source packages and cannot prove current merged behavior.
 Recorded T470 launches remain beyond the eight-second target. Founder acceptance
 remains open.
 
-The Phase 3 merge changed protected source only. It did not bump the version,
-publish an MSI, prove installed Phase 3/4 behavior or promote Beta/Stable.
-
-## Exact next session
-
-1. read the ten active authorities and issues #164, #204 and #201;
-2. verify protected main `aa4ca0758fd696f4b02fc1975629ac698f9349c3`;
-3. perform the complete Phase 4 source/data/migration/recovery/security audit;
-4. research current primary standards and official platform documentation;
-5. freeze one Problem Register and shared contracts;
-6. only then create the first bounded implementation branch and PR.
+No active Phase 4 source package authorizes a version bump, release publication,
+Founder acceptance, Beta, Stable, legal-certification or penetration-test claim.

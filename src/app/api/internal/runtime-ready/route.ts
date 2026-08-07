@@ -3,12 +3,14 @@ import { isAbsolute, resolve } from "node:path";
 import { NextResponse } from "next/server";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { getMasterKey } from "@/lib/crypto/master-key";
+import { migratePhoneReputationBlindIndexes } from "@/lib/maintenance/phone-reputation-protected-migration";
 import {
   AUTH_MODE_CONFIGURED,
   AUTH_MODE_ENV,
   AUTH_MODE_SETUP,
   RUNTIME_PROTOCOL_VERSION,
 } from "@/lib/runtime-auth";
+import { processShopContext } from "@/lib/shops/context";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,6 +30,8 @@ type BlockedPayload = Readonly<{
   code: string;
   checks?: ReadinessChecks;
 }>;
+
+class RuntimeProtectedSearchNotReadyError extends Error {}
 
 function bearerToken(request: Request): string | null {
   const authorization = request.headers.get("authorization") ?? "";
@@ -67,7 +71,6 @@ async function recordReadinessFailure(payload: BlockedPayload): Promise<void> {
     await rename(tempPath, path);
     recordedFailureKey = failureKey;
   } catch {
-    // Diagnostic persistence must never change the readiness decision.
     await rm(tempPath, { force: true }).catch(() => undefined);
   }
 }
@@ -89,6 +92,25 @@ async function blocked(payload: BlockedPayload) {
 
 async function databaseAuthState(): Promise<DatabaseAuthState> {
   const { dbRaw } = await import("@/lib/db");
+
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.SF_INSTALLATION_ROOT_SOURCE === "native-stdin-v1"
+  ) {
+    try {
+      await migratePhoneReputationBlindIndexes(dbRaw, {
+        mode: "apply",
+        shopContext: processShopContext(),
+        installationRoot: getMasterKey(),
+      });
+    } catch (cause) {
+      throw new RuntimeProtectedSearchNotReadyError(
+        "Phone-reputation protected search authority did not converge",
+        { cause },
+      );
+    }
+  }
+
   const canonicalRows = await dbRaw.$queryRaw<CanonicalAuthRow[]>`
     SELECT "id", "pinHash", "secret" FROM "AuthSecret"
   `;
@@ -108,7 +130,6 @@ async function databaseAuthState(): Promise<DatabaseAuthState> {
     return { mode: AUTH_MODE_CONFIGURED, secret: row.secret };
   }
 
-  // Both Setting values are required for the only supported legacy upgrade.
   const legacyRows = await dbRaw.$queryRaw<LegacyAuthRow[]>`
     SELECT "key", "value" FROM "Setting"
     WHERE "key" IN ('auth_secret', 'auth_pin_hash')
@@ -131,7 +152,8 @@ async function databaseAuthState(): Promise<DatabaseAuthState> {
 
 /**
  * Credentialed semantic readiness for the Tauri runtime supervisor. Readiness
- * proves the exact child, active database, and desktop-declared auth mode.
+ * proves the exact child, active database, desktop-declared auth mode, and the
+ * final Phase 4 shop-local protected search authority before UI exposure.
  */
 export async function GET(request: Request) {
   const expectedToken = process.env.SF_RUNTIME_TOKEN;
@@ -175,8 +197,6 @@ export async function GET(request: Request) {
 
   if (process.env.SF_INSTALLATION_ROOT_SOURCE === "native-stdin-v1") {
     try {
-      // This is the semantic consumption gate for the one-use native transfer.
-      // The key remains only in the server module cache after this succeeds.
       getMasterKey();
     } catch {
       return blocked({
@@ -190,7 +210,19 @@ export async function GET(request: Request) {
   let databaseAuth: DatabaseAuthState;
   try {
     databaseAuth = await databaseAuthState();
-  } catch {
+  } catch (error) {
+    if (error instanceof RuntimeProtectedSearchNotReadyError) {
+      return blocked({
+        status: "blocked",
+        code: "RUNTIME_PROTECTED_SEARCH_NOT_READY",
+        checks: {
+          app: "ready",
+          database: "blocked",
+          migration: "blocked",
+          auth: "blocked",
+        },
+      });
+    }
     return blocked({
       status: "blocked",
       code: "RUNTIME_AUTH_DATABASE_INVALID",
@@ -211,7 +243,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    // DATABASE_URL is the exact path selected and migrated by the desktop.
     const { dbRaw } = await import("@/lib/db");
     await dbRaw.$queryRaw`SELECT 1`;
   } catch {

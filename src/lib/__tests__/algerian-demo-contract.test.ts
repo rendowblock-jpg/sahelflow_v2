@@ -129,9 +129,10 @@ describe("Algerian Founder demo contract", () => {
     expect(settings).toContain("<DemoDataPanel />");
   });
 
-  it("serializes settings, reset and report effects with demo lifecycle authority", () => {
+  it("serializes settings, erase and report effects with demo lifecycle authority", () => {
     const settingsRoute = read("src/app/api/settings/route.ts");
     const resetRoute = read("src/app/api/settings/reset/route.ts");
+    const privacyLifecycle = read("src/lib/privacy/lifecycle.ts");
     const reportRoute = read("src/app/api/reports/daily/route.ts");
 
     expect(settingsRoute).toContain("await withDemoPolicyLock(() =>");
@@ -155,15 +156,22 @@ describe("Algerian Founder demo contract", () => {
       reportRoute.indexOf("queueDailyWhatsAppReport(context"),
     );
 
-    expect(resetRoute).toContain("await withDemoPolicyLock(() =>");
-    expect(resetRoute).toContain("await tx.returnNote.deleteMany({})");
-    expect(resetRoute).toContain("await tx.whatsAppTemplate.deleteMany({})");
-    expect(resetRoute).toContain("await tx.storefrontConfig.deleteMany({})");
-    expect(resetRoute).toContain("await tx.phoneReputation.deleteMany({})");
-    expect(resetRoute).toContain("await tx.counter.deleteMany({})");
-    expect(resetRoute.indexOf("storefrontConfig.deleteMany")).toBeLessThan(
-      resetRoute.indexOf("product.deleteMany"),
+    expect(resetRoute).toContain('executeShopErase("business-reset")');
+    expect(privacyLifecycle).toContain("await withDemoPolicyLock(() =>");
+    expect(privacyLifecycle).toContain("await tx.returnNote.deleteMany({})");
+    expect(privacyLifecycle).toContain(
+      "await tx.whatsAppTemplate.deleteMany({})",
     );
+    expect(privacyLifecycle).toContain(
+      "await tx.storefrontConfig.deleteMany({})",
+    );
+    expect(privacyLifecycle).toContain(
+      "await tx.phoneReputation.deleteMany({})",
+    );
+    expect(privacyLifecycle).toContain("await tx.counter.deleteMany({})");
+    expect(
+      privacyLifecycle.indexOf("storefrontConfig.deleteMany"),
+    ).toBeLessThan(privacyLifecycle.indexOf("product.deleteMany"));
   });
 
   it("keeps demo browsing available while ordinary mutations stay blocked", () => {

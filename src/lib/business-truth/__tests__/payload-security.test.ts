@@ -1,16 +1,20 @@
-process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.SF_MASTER_KEY =
+  process.env.SF_MASTER_KEY ??
+  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 import { randomBytes } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  decryptString,
-  encryptString,
-} from "@/lib/crypto/field-crypto";
-import { getMasterKey } from "@/lib/crypto/master-key";
+import { rewrapShopProtectedKeys } from "@/lib/crypto/protected-key-authority";
+import { isProtectedValueEnvelope } from "@/lib/crypto/protected-value";
+import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { getSecret, setSecret } from "@/lib/secrets";
 import { executeBusinessCommand } from "../command-kernel";
 import {
   BUSINESS_ENVELOPE_SECRET_KEY,
@@ -20,13 +24,20 @@ import { openBusinessPayloadWithKey } from "../payload-codec";
 import { openBusinessCommandResultWithKey } from "../result-codec";
 
 const db = new PrismaClient();
-const context = { prisma: db as never } satisfies ServiceContext;
+const context = {
+  prisma: db as never,
+  shop: TEST_SHOP_CONTEXT,
+} satisfies ServiceContext;
 
 const sensitive = {
   phone: "0555000111",
   address: "12 Rue Ciphertext",
   notes: "private business payload",
 };
+
+function sqliteLiteral(value: string): string {
+  return value.replaceAll("\\", "/").replaceAll("'", "''");
+}
 
 async function cleanBusinessTruth(): Promise<void> {
   await db.$transaction([
@@ -44,9 +55,7 @@ async function cleanBusinessTruth(): Promise<void> {
   ]);
 }
 
-beforeEach(async () => {
-  await cleanBusinessTruth();
-});
+beforeEach(cleanBusinessTruth);
 
 afterAll(async () => {
   await cleanBusinessTruth();
@@ -132,44 +141,55 @@ describe("business envelope security", () => {
     }
 
     const envelopeKey = await getBusinessEnvelopeKey(context);
-    expect(
-      openBusinessPayloadWithKey(event.payloadJson, {
-        kind: "domain-event",
-        recordKey: event.eventKey,
-        recordType: event.eventType,
-        commandId: event.commandId,
-      }, envelopeKey),
-    ).toEqual(sensitive);
-    expect(
-      openBusinessPayloadWithKey(intent.payloadJson, {
-        kind: "outbox-intent",
-        recordKey: intent.effectKey,
-        recordType: intent.effectType,
-        commandId: intent.commandId,
-      }, envelopeKey),
-    ).toEqual(sensitive);
-    expect(
-      openBusinessPayloadWithKey(fact.payloadJson, {
-        kind: "compensation-fact",
-        recordKey: fact.factKey,
-        recordType: fact.factType,
-        commandId: fact.commandId,
-      }, envelopeKey),
-    ).toEqual(sensitive);
+    try {
+      expect(
+        openBusinessPayloadWithKey(
+          event.payloadJson,
+          {
+            kind: "domain-event",
+            recordKey: event.eventKey,
+            recordType: event.eventType,
+            commandId: event.commandId,
+          },
+          envelopeKey,
+        ),
+      ).toEqual(sensitive);
+      expect(
+        openBusinessPayloadWithKey(
+          intent.payloadJson,
+          {
+            kind: "outbox-intent",
+            recordKey: intent.effectKey,
+            recordType: intent.effectType,
+            commandId: intent.commandId,
+          },
+          envelopeKey,
+        ),
+      ).toEqual(sensitive);
+      expect(
+        openBusinessPayloadWithKey(
+          fact.payloadJson,
+          {
+            kind: "compensation-fact",
+            recordKey: fact.factKey,
+            recordType: fact.factType,
+            commandId: fact.commandId,
+          },
+          envelopeKey,
+        ),
+      ).toEqual(sensitive);
 
-    const unwrappedHex = decryptString(
-      {
-        ciphertext: secret.ciphertext,
-        iv: secret.iv,
-        tag: secret.tag,
-      },
-      getMasterKey(),
-    );
-    expect(Buffer.from(unwrappedHex, "hex").equals(envelopeKey)).toBe(true);
-    expect(secret.ciphertext).not.toContain(unwrappedHex);
+      expect(isProtectedValueEnvelope(secret.ciphertext)).toBe(true);
+      const storedHex = await getSecret(context, BUSINESS_ENVELOPE_SECRET_KEY);
+      expect(storedHex).toMatch(/^[0-9a-f]{64}$/);
+      expect(Buffer.from(storedHex ?? "", "hex").equals(envelopeKey)).toBe(true);
+      expect(secret.ciphertext).not.toContain(storedHex ?? "");
+    } finally {
+      envelopeKey.fill(0);
+    }
   });
 
-  it("keeps historical envelopes readable when the stable key is re-wrapped under a new master key", async () => {
+  it("keeps historical envelopes readable when the shop-secret key is re-wrapped", async () => {
     const result = await executeBusinessCommand(
       context,
       {
@@ -204,55 +224,98 @@ describe("business envelope security", () => {
       }),
     );
 
-    const [command, event, secret] = await Promise.all([
+    const [command, event] = await Promise.all([
       db.businessCommand.findUniqueOrThrow({
         where: { idempotencyKey: "rotation-command-1" },
       }),
       db.domainEvent.findUniqueOrThrow({ where: { eventKey: "rotation-event-1" } }),
-      db.secret.findUniqueOrThrow({ where: { key: BUSINESS_ENVELOPE_SECRET_KEY } }),
     ]);
+    const stableKey = await getBusinessEnvelopeKey(context);
 
-    const stableKeyHex = decryptString(
-      {
-        ciphertext: secret.ciphertext,
-        iv: secret.iv,
-        tag: secret.tag,
-      },
-      getMasterKey(),
+    const temporaryDirectory = mkdtempSync(
+      join(tmpdir(), "sahelflow-business-key-rewrap-"),
     );
-    const replacementMasterKey = randomBytes(32);
-    const rewrapped = encryptString(stableKeyHex, replacementMasterKey);
-    const stableKeyAfterRotation = Buffer.from(
-      decryptString(rewrapped, replacementMasterKey),
-      "hex",
+    const databasePath = join(temporaryDirectory, "rewrap.db");
+    await db.$executeRawUnsafe(
+      `VACUUM INTO '${sqliteLiteral(databasePath)}'`,
     );
 
-    const reopenedResult = openBusinessCommandResultWithKey<{
-      createdAt: Date;
-      customer: typeof sensitive;
-    }>(
-      command.resultJson ?? "",
-      {
-        commandId: command.id,
-        idempotencyKey: command.idempotencyKey,
-        requestHash: command.requestHash,
-      },
-      stableKeyAfterRotation,
-    );
-    const reopenedEvent = openBusinessPayloadWithKey<typeof sensitive>(
-      event.payloadJson,
-      {
-        kind: "domain-event",
-        recordKey: event.eventKey,
-        recordType: event.eventType,
-        commandId: event.commandId,
-      },
-      stableKeyAfterRotation,
-    );
+    const isolated = new PrismaClient({ datasourceUrl: `file:${databasePath}` });
+    const isolatedContext = {
+      prisma: isolated as never,
+      shop: TEST_SHOP_CONTEXT,
+    } satisfies ServiceContext;
+    const oldInstallationRoot = randomBytes(32);
+    const replacementInstallationRoot = randomBytes(32);
+    let reopenedStableKey: Buffer | null = null;
 
-    expect(reopenedResult.createdAt).toBeInstanceOf(Date);
-    expect(reopenedResult.customer).toEqual(sensitive);
-    expect(reopenedEvent).toEqual(sensitive);
-    expect(result.result.customer).toEqual(sensitive);
+    try {
+      await isolated.$connect();
+      await isolated.$transaction([
+        isolated.secret.deleteMany(),
+        isolated.protectedKeyAuthority.deleteMany(),
+      ]);
+      await setSecret(
+        isolatedContext,
+        BUSINESS_ENVELOPE_SECRET_KEY,
+        stableKey.toString("hex"),
+        { installationRoot: oldInstallationRoot },
+      );
+
+      const rewrapped = await rewrapShopProtectedKeys(
+        isolated,
+        TEST_SHOP_CONTEXT,
+        oldInstallationRoot,
+        replacementInstallationRoot,
+      );
+      expect(rewrapped).toMatchObject({ total: 1, rewrapped: 1 });
+
+      const reopenedHex = await getSecret(
+        isolatedContext,
+        BUSINESS_ENVELOPE_SECRET_KEY,
+        {
+          installationRoot: replacementInstallationRoot,
+          createIfMissing: false,
+        },
+      );
+      expect(reopenedHex).toMatch(/^[0-9a-f]{64}$/);
+      reopenedStableKey = Buffer.from(reopenedHex ?? "", "hex");
+      expect(reopenedStableKey.equals(stableKey)).toBe(true);
+
+      const reopenedResult = openBusinessCommandResultWithKey<{
+        createdAt: Date;
+        customer: typeof sensitive;
+      }>(
+        command.resultJson ?? "",
+        {
+          commandId: command.id,
+          idempotencyKey: command.idempotencyKey,
+          requestHash: command.requestHash,
+        },
+        reopenedStableKey,
+      );
+      const reopenedEvent = openBusinessPayloadWithKey<typeof sensitive>(
+        event.payloadJson,
+        {
+          kind: "domain-event",
+          recordKey: event.eventKey,
+          recordType: event.eventType,
+          commandId: event.commandId,
+        },
+        reopenedStableKey,
+      );
+
+      expect(reopenedResult.createdAt).toBeInstanceOf(Date);
+      expect(reopenedResult.customer).toEqual(sensitive);
+      expect(reopenedEvent).toEqual(sensitive);
+      expect(result.result.customer).toEqual(sensitive);
+    } finally {
+      reopenedStableKey?.fill(0);
+      stableKey.fill(0);
+      oldInstallationRoot.fill(0);
+      replacementInstallationRoot.fill(0);
+      await isolated.$disconnect();
+      rmSync(temporaryDirectory, { recursive: true, force: true });
+    }
   });
 });

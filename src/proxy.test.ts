@@ -7,6 +7,11 @@ import { proxy } from "./proxy";
 const RUNTIME_TOKEN = "e".repeat(64);
 const INSTANCE_ID = "a".repeat(32);
 const AUTH_SECRET = "proxy-test-auth-secret";
+// Self-hosted Next middleware deliberately exposes its server-populated
+// canonical loopback hostname instead of trusting the request Host header. The
+// installed WebView evidence likewise hydrates on localhost even though the
+// native runtime endpoint is published as 127.0.0.1.
+const CANONICAL_PROXY_ORIGIN = "http://localhost:49152";
 
 type RequestOptions = Readonly<{
   method?: string;
@@ -78,7 +83,7 @@ describe("runtime proxy boundary", () => {
     }
   });
 
-  it("redirects non-setup pages with a relative same-origin location", async () => {
+  it("redirects non-setup pages with an absolute canonical loopback location", async () => {
     for (const pathname of [
       "/",
       "/login",
@@ -88,7 +93,9 @@ describe("runtime proxy boundary", () => {
     ]) {
       const response = await proxy(request(pathname));
       expect(response.status).toBe(307);
-      expect(response.headers.get("location")).toBe("/setup");
+      expect(response.headers.get("location")).toBe(
+        `${CANONICAL_PROXY_ORIGIN}/setup`,
+      );
     }
   });
 
@@ -97,7 +104,9 @@ describe("runtime proxy boundary", () => {
       request("/", { headers: { host: "attacker.example" } }),
     );
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("/setup");
+    expect(response.headers.get("location")).toBe(
+      `${CANONICAL_PROXY_ORIGIN}/setup`,
+    );
   });
 
   it("allows only exact loopback shutdown authority without browser cookies", async () => {
@@ -200,14 +209,16 @@ describe("runtime proxy boundary", () => {
     }
   });
 
-  it("keeps login and setup descendants protected with a relative redirect", async () => {
+  it("keeps login and setup descendants protected with an absolute redirect", async () => {
     process.env.SF_AUTH_MODE = "configured";
     process.env.AUTH_SECRET = AUTH_SECRET;
 
     for (const pathname of ["/login/recovery", "/setup/profile"]) {
       const response = await proxy(request(pathname));
       expect(response.status).toBe(307);
-      expect(response.headers.get("location")).toBe("/login");
+      expect(response.headers.get("location")).toBe(
+        `${CANONICAL_PROXY_ORIGIN}/login`,
+      );
     }
   });
 

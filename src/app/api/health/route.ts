@@ -18,16 +18,15 @@ export async function GET() {
     app: "ok",
   };
 
-  // Check DB
   try {
     const { db } = await import("@/lib/db");
-    await db.$queryRaw`SELECT 1`;
+    await db.setting.count();
     checks.db = "ok";
   } catch {
     checks.db = "fail";
   }
 
-  const allOk = Object.values(checks).every((v) => v === "ok");
+  const allOk = Object.values(checks).every((value) => value === "ok");
   return NextResponse.json(
     {
       status: allOk ? "healthy" : "degraded",

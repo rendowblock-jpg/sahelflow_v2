@@ -50,6 +50,7 @@ playwright/.cache/
 .sf-windows-runtime-smoke.log
 .sf-inventory/
 .sf-evidence/
+.sf-phase4-evidence/
 .sf-build/
 
 # OS

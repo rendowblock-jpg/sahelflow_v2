@@ -1,105 +1,81 @@
-/**
- * Tests for Order + Conversation PII encryption (ADR-003 extension).
- *
- * These hit a real SQLite DB (the dev DB) via the extended `db` client + the
- * raw `dbRaw` client. Each test creates its own rows (cuid IDs) and cleans up,
- * so they're isolated from seeded data and parallel runs.
- *
- * Coverage:
- *   ORDER
- *     - create → DB stores ciphertext for phone/address/notes; read returns plaintext
- *     - findUnique by id returns plaintext
- *     - findMany returns plaintext for all rows
- *     - include { items: true } works (relations not affected)
- *     - partial update (only phone) → only phone re-encrypted, others untouched
- *     - update with all PII fields → all re-encrypted
- *     - null notes → stays null (nullable field passthrough)
- *     - tampered ciphertext → decrypt fails gracefully (raw preserved, no crash)
- *
- *   CONVERSATION
- *     - create → DB stores ciphertext for contactName/contactPhone; read returns plaintext
- *     - findMany returns plaintext
- *     - nullable contactPhone → null stays null
- *     - update contactName → re-encrypted
- *     - tampered contactName → graceful degradation
- */
+import { afterEach, describe, expect, it } from "vitest";
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { deriveShopBlindIndex } from "@/lib/crypto/protected-record";
+import { isProtectedValueEnvelope } from "@/lib/crypto/protected-value";
+import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 import { db, dbRaw } from "@/lib/db";
-import { _resetMasterKeyCacheForTests } from "@/lib/crypto/master-key";
-import { isEncryptedPayload } from "@/lib/crypto/field-crypto";
-import { mkdtempSync, rmSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
 
-// Unique-per-run generators (avoid collisions with seeded data + parallel runs)
 let counter = 0;
 function uniquePhone(): string {
   counter += 1;
   const seed = (Date.now() % 100_000_000) * 100 + counter;
-  return "0" + String(seed).padStart(9, "0").slice(-9);
+  return `0${String(seed).padStart(9, "0").slice(-9)}`;
 }
+
 function uniqueName(label: string): string {
   counter += 1;
   return `Test ${label} ${counter}`;
 }
 
+function uniqueOrderNumber(): string {
+  counter += 1;
+  return `PHASE4-${Date.now()}-${counter}`;
+}
+
+function tamperEnvelope(value: string): string {
+  const envelope = JSON.parse(value) as { ciphertext: string };
+  const ciphertext = Buffer.from(envelope.ciphertext, "base64");
+  ciphertext[0] = (ciphertext[0] ?? 0) ^ 1;
+  envelope.ciphertext = ciphertext.toString("base64");
+  return JSON.stringify(envelope);
+}
+
 const TEST_ADDRESS = "12 Rue des Test, Alger";
 const TEST_NOTES = "Livrer après 18h, sonner 2x";
-
-let tmpDir: string;
 const createdOrderIds: string[] = [];
 const createdCustomerIds: string[] = [];
 const createdConversationIds: string[] = [];
-const oldEnv = { ...process.env };
 
-beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), "sf-pii-oc-"));
-  _resetMasterKeyCacheForTests();
-  process.env.SF_DATA_DIR = tmpDir;
-  process.env.SF_MASTER_KEY = "ab".repeat(32); // deterministic 256-bit key
-  _resetMasterKeyCacheForTests();
-});
+async function makeCustomer(): Promise<string> {
+  const customer = await db.customer.create({
+    data: { name: uniqueName("Customer"), phone: uniquePhone() },
+  });
+  createdCustomerIds.push(customer.id);
+  return customer.id;
+}
 
 afterEach(async () => {
-  // Clean up test rows (order matters for FK constraints)
   if (createdOrderIds.length > 0) {
-    await dbRaw.orderItem.deleteMany({ where: { orderId: { in: createdOrderIds } } });
+    await dbRaw.orderItem.deleteMany({
+      where: { orderId: { in: createdOrderIds } },
+    });
     await dbRaw.order.deleteMany({ where: { id: { in: createdOrderIds } } });
   }
-  if (createdCustomerIds.length > 0) {
-    await dbRaw.customer.deleteMany({ where: { id: { in: createdCustomerIds } } });
-  }
   if (createdConversationIds.length > 0) {
-    await dbRaw.message.deleteMany({ where: { conversationId: { in: createdConversationIds } } });
-    await dbRaw.conversation.deleteMany({ where: { id: { in: createdConversationIds } } });
+    await dbRaw.message.deleteMany({
+      where: { conversationId: { in: createdConversationIds } },
+    });
+    await dbRaw.conversation.deleteMany({
+      where: { id: { in: createdConversationIds } },
+    });
+  }
+  if (createdCustomerIds.length > 0) {
+    await dbRaw.customer.deleteMany({
+      where: { id: { in: createdCustomerIds } },
+    });
   }
   createdOrderIds.length = 0;
   createdCustomerIds.length = 0;
   createdConversationIds.length = 0;
-  rmSync(tmpDir, { recursive: true, force: true });
-  process.env = { ...oldEnv };
-  _resetMasterKeyCacheForTests();
 });
 
-/** Helper: create a customer (needed because Order requires customerId). */
-async function makeCustomer(): Promise<string> {
-  const c = await db.customer.create({
-    data: { name: uniqueName("Cust"), phone: uniquePhone() },
-  });
-  createdCustomerIds.push(c.id);
-  return c.id;
-}
-
-// ── ORDER PII ENCRYPTION ───────────────────────────────────────────────────
-
-describe("Order PII encryption: create + read", () => {
-  it("create stores ciphertext for phone/address/notes; read returns plaintext", async () => {
+describe("Order contextual PII authority", () => {
+  it("stores canonical envelopes and a separate exact-phone index", async () => {
     const customerId = await makeCustomer();
     const phone = uniquePhone();
     const created = await db.order.create({
       data: {
-        orderNumber: `TEST-${counter}`,
+        orderNumber: uniqueOrderNumber(),
         customerId,
         totalPrice: 5000,
         wilaya: "Alger",
@@ -107,132 +83,82 @@ describe("Order PII encryption: create + read", () => {
         address: TEST_ADDRESS,
         phone,
         notes: TEST_NOTES,
-        items: { create: [] },
       },
     });
     createdOrderIds.push(created.id);
 
-    // Returned row is already decrypted
-    expect(created.phone).toBe(phone);
-    expect(created.address).toBe(TEST_ADDRESS);
-    expect(created.notes).toBe(TEST_NOTES);
-
-    // Raw DB stores ciphertext
-    const raw = await dbRaw.order.findUnique({ where: { id: created.id } });
-    expect(raw).not.toBeNull();
-    expect(isEncryptedPayload(raw!.phone)).toBe(true);
-    expect(raw!.phone).not.toBe(phone);
-    expect(isEncryptedPayload(raw!.address!)).toBe(true);
-    expect(raw!.address).not.toBe(TEST_ADDRESS);
-    expect(isEncryptedPayload(raw!.notes!)).toBe(true);
-    expect(raw!.notes).not.toBe(TEST_NOTES);
-  });
-
-  it("findUnique by id returns plaintext", async () => {
-    const customerId = await makeCustomer();
-    const phone = uniquePhone();
-    const created = await db.order.create({
-      data: {
-        orderNumber: `TEST-${counter}`,
-        customerId,
-        totalPrice: 1000,
-        wilaya: "Oran",
-        commune: "Oran",
-        address: TEST_ADDRESS,
-        phone,
-        items: { create: [] },
-      },
+    expect(created).toMatchObject({
+      phone,
+      address: TEST_ADDRESS,
+      notes: TEST_NOTES,
     });
-    createdOrderIds.push(created.id);
 
-    const found = await db.order.findUnique({
+    const raw = await dbRaw.order.findUniqueOrThrow({
       where: { id: created.id },
-      include: { items: true },
     });
-    expect(found).not.toBeNull();
-    expect(found!.phone).toBe(phone);
-    expect(found!.address).toBe(TEST_ADDRESS);
+    expect(isProtectedValueEnvelope(raw.phone)).toBe(true);
+    expect(isProtectedValueEnvelope(raw.address)).toBe(true);
+    expect(isProtectedValueEnvelope(raw.notes ?? "")).toBe(true);
+    expect(raw.phone).not.toBe(phone);
+    expect(raw.phoneBlindIndex).toBe(
+      await deriveShopBlindIndex(
+        dbRaw,
+        phone,
+        { recordType: "Order", field: "phone" },
+        { shopContext: TEST_SHOP_CONTEXT, createIfMissing: false },
+      ),
+    );
   });
 
-  it("findMany returns plaintext for all rows", async () => {
+  it("decrypts single and multiple rows", async () => {
     const customerId = await makeCustomer();
-    const p1 = uniquePhone();
-    const p2 = uniquePhone();
-    const o1 = await db.order.create({
+    const firstPhone = uniquePhone();
+    const secondPhone = uniquePhone();
+    const first = await db.order.create({
       data: {
-        orderNumber: `TEST-${counter}-1`,
+        orderNumber: uniqueOrderNumber(),
         customerId,
         totalPrice: 1000,
         wilaya: "Alger",
         commune: "Hydra",
         address: TEST_ADDRESS,
-        phone: p1,
-        items: { create: [] },
+        phone: firstPhone,
       },
     });
-    const o2 = await db.order.create({
+    const second = await db.order.create({
       data: {
-        orderNumber: `TEST-${counter}-2`,
+        orderNumber: uniqueOrderNumber(),
         customerId,
         totalPrice: 2000,
-        wilaya: "Alger",
-        commune: "Bab Ezzouar",
+        wilaya: "Oran",
+        commune: "Oran",
         address: "Autre adresse",
-        phone: p2,
-        items: { create: [] },
+        phone: secondPhone,
       },
     });
-    createdOrderIds.push(o1.id, o2.id);
+    createdOrderIds.push(first.id, second.id);
 
-    const all = await db.order.findMany({
-      where: { id: { in: [o1.id, o2.id] } },
+    await expect(
+      db.order.findUnique({ where: { id: first.id } }),
+    ).resolves.toMatchObject({ phone: firstPhone, address: TEST_ADDRESS });
+
+    const rows = await db.order.findMany({
+      where: { id: { in: [first.id, second.id] } },
     });
-    expect(all).toHaveLength(2);
-    for (const o of all) {
-      expect(isEncryptedPayload(o.phone)).toBe(false); // plaintext
-      expect(o.phone).toMatch(/^0\d{9}$/);
-      expect(isEncryptedPayload(o.address)).toBe(false);
+    expect(rows.map((row) => row.phone).sort()).toEqual(
+      [firstPhone, secondPhone].sort(),
+    );
+    for (const row of rows) {
+      expect(isProtectedValueEnvelope(row.phone)).toBe(false);
+      expect(isProtectedValueEnvelope(row.address)).toBe(false);
     }
   });
-});
 
-describe("Order PII encryption: update", () => {
-  it("partial update (only phone) re-encrypts phone, leaves address/notes untouched", async () => {
+  it("re-encrypts only the changed protected field and preserves null", async () => {
     const customerId = await makeCustomer();
     const created = await db.order.create({
       data: {
-        orderNumber: `TEST-${counter}`,
-        customerId,
-        totalPrice: 1000,
-        wilaya: "Alger",
-        commune: "Hydra",
-        address: TEST_ADDRESS,
-        phone: uniquePhone(),
-        notes: TEST_NOTES,
-        items: { create: [] },
-      },
-    });
-    createdOrderIds.push(created.id);
-    const rawBefore = await dbRaw.order.findUnique({ where: { id: created.id } });
-    const newPhone = uniquePhone();
-
-    await db.order.update({
-      where: { id: created.id },
-      data: { phone: newPhone },
-    });
-
-    const rawAfter = await dbRaw.order.findUnique({ where: { id: created.id } });
-    expect(rawAfter!.phone).not.toBe(rawBefore!.phone); // phone changed
-    expect(isEncryptedPayload(rawAfter!.phone)).toBe(true);
-    expect(rawAfter!.address).toBe(rawBefore!.address); // address unchanged
-    expect(rawAfter!.notes).toBe(rawBefore!.notes); // notes unchanged
-  });
-
-  it("null notes stays null (nullable field passthrough)", async () => {
-    const customerId = await makeCustomer();
-    const created = await db.order.create({
-      data: {
-        orderNumber: `TEST-${counter}`,
+        orderNumber: uniqueOrderNumber(),
         customerId,
         totalPrice: 1000,
         wilaya: "Alger",
@@ -240,55 +166,62 @@ describe("Order PII encryption: update", () => {
         address: TEST_ADDRESS,
         phone: uniquePhone(),
         notes: null,
-        items: { create: [] },
       },
     });
     createdOrderIds.push(created.id);
+    const before = await dbRaw.order.findUniqueOrThrow({
+      where: { id: created.id },
+    });
 
-    const raw = await dbRaw.order.findUnique({ where: { id: created.id } });
-    expect(raw!.notes).toBeNull(); // null passes through, not encrypted
-
-    const found = await db.order.findUnique({ where: { id: created.id } });
-    expect(found!.notes).toBeNull();
+    const newPhone = uniquePhone();
+    await db.order.update({
+      where: { id: created.id },
+      data: { phone: newPhone },
+    });
+    const after = await dbRaw.order.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    expect(after.phone).not.toBe(before.phone);
+    expect(after.address).toBe(before.address);
+    expect(after.notes).toBeNull();
+    await expect(
+      db.order.findUnique({ where: { id: created.id } }),
+    ).resolves.toMatchObject({ phone: newPhone, notes: null });
   });
-});
 
-describe("Order PII encryption: tamper resistance", () => {
-  it("tampered phone ciphertext does not crash reads (raw value preserved)", async () => {
+  it("surfaces tampering as typed corruption", async () => {
     const customerId = await makeCustomer();
     const created = await db.order.create({
       data: {
-        orderNumber: `TEST-${counter}`,
+        orderNumber: uniqueOrderNumber(),
         customerId,
         totalPrice: 1000,
         wilaya: "Alger",
         commune: "Hydra",
         address: TEST_ADDRESS,
         phone: uniquePhone(),
-        items: { create: [] },
       },
     });
     createdOrderIds.push(created.id);
-
-    // Tamper with the encrypted phone directly in the DB
+    const raw = await dbRaw.order.findUniqueOrThrow({
+      where: { id: created.id },
+    });
     await dbRaw.order.update({
       where: { id: created.id },
-      data: { phone: '{"iv":"AAAAAAAA","ciphertext":"BBBB","tag":"CCCC"}' },
+      data: { phone: tamperEnvelope(raw.phone) },
     });
 
-    // Reading should not throw — the extension catches the decrypt error and
-    // leaves the raw (tampered) value so corruption is visible
-    const found = await db.order.findUnique({ where: { id: created.id } });
-    expect(found).not.toBeNull();
-    expect(found!.phone).toContain("ciphertext"); // raw tampered JSON preserved
+    await expect(
+      db.order.findUnique({ where: { id: created.id } }),
+    ).rejects.toMatchObject({
+      code: "PROTECTED_DATA_AUTHENTICATION_FAILED",
+    });
   });
 });
 
-// ── CONVERSATION PII ENCRYPTION ─────────────────────────────────────────────
-
-describe("Conversation PII encryption: create + read", () => {
-  it("create stores ciphertext for contactName/contactPhone; read returns plaintext", async () => {
-    const name = uniqueName("Conv");
+describe("Conversation contextual PII authority", () => {
+  it("stores canonical envelopes and returns plaintext", async () => {
+    const name = uniqueName("Conversation");
     const phone = uniquePhone();
     const created = await db.conversation.create({
       data: {
@@ -298,136 +231,84 @@ describe("Conversation PII encryption: create + read", () => {
       },
     });
     createdConversationIds.push(created.id);
+    expect(created).toMatchObject({ contactName: name, contactPhone: phone });
 
-    // Returned row is already decrypted
-    expect(created.contactName).toBe(name);
-    expect(created.contactPhone).toBe(phone);
-
-    // Raw DB stores ciphertext
-    const raw = await dbRaw.conversation.findUnique({ where: { id: created.id } });
-    expect(raw).not.toBeNull();
-    expect(isEncryptedPayload(raw!.contactName)).toBe(true);
-    expect(raw!.contactName).not.toBe(name);
-    expect(isEncryptedPayload(raw!.contactPhone!)).toBe(true);
-    expect(raw!.contactPhone).not.toBe(phone);
+    const raw = await dbRaw.conversation.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    expect(isProtectedValueEnvelope(raw.contactName)).toBe(true);
+    expect(isProtectedValueEnvelope(raw.contactPhone ?? "")).toBe(true);
   });
 
-  it("nullable contactPhone → null stays null", async () => {
-    const created = await db.conversation.create({
+  it("preserves null and decrypts multiple rows", async () => {
+    const first = await db.conversation.create({
       data: {
         channel: "tiktok",
-        contactName: uniqueName("TikTok"),
+        contactName: uniqueName("No phone"),
         contactPhone: null,
       },
     });
-    createdConversationIds.push(created.id);
+    const secondName = uniqueName("With phone");
+    const secondPhone = uniquePhone();
+    const second = await db.conversation.create({
+      data: {
+        channel: "whatsapp",
+        contactName: secondName,
+        contactPhone: secondPhone,
+      },
+    });
+    createdConversationIds.push(first.id, second.id);
 
-    const raw = await dbRaw.conversation.findUnique({ where: { id: created.id } });
-    expect(raw!.contactPhone).toBeNull();
+    const rawFirst = await dbRaw.conversation.findUniqueOrThrow({
+      where: { id: first.id },
+    });
+    expect(rawFirst.contactPhone).toBeNull();
 
-    const found = await db.conversation.findUnique({ where: { id: created.id } });
-    expect(found!.contactPhone).toBeNull();
+    const rows = await db.conversation.findMany({
+      where: { id: { in: [first.id, second.id] } },
+    });
+    expect(rows).toHaveLength(2);
+    expect(rows.find((row) => row.id === first.id)?.contactPhone).toBeNull();
+    expect(rows.find((row) => row.id === second.id)).toMatchObject({
+      contactName: secondName,
+      contactPhone: secondPhone,
+    });
   });
 
-  it("findMany returns plaintext for all rows", async () => {
-    const n1 = uniqueName("A");
-    const n2 = uniqueName("B");
-    const c1 = await db.conversation.create({
-      data: { channel: "whatsapp", contactName: n1, contactPhone: uniquePhone() },
-    });
-    const c2 = await db.conversation.create({
-      data: { channel: "whatsapp", contactName: n2, contactPhone: uniquePhone() },
-    });
-    createdConversationIds.push(c1.id, c2.id);
-
-    const all = await db.conversation.findMany({
-      where: { id: { in: [c1.id, c2.id] } },
-    });
-    expect(all).toHaveLength(2);
-    for (const c of all) {
-      expect(isEncryptedPayload(c.contactName)).toBe(false); // plaintext
-      expect(isEncryptedPayload(c.contactPhone!)).toBe(false);
-    }
-  });
-});
-
-describe("Conversation PII encryption: update", () => {
-  it("update contactName re-encrypts", async () => {
+  it("re-encrypts updates and surfaces tampering", async () => {
     const created = await db.conversation.create({
-      data: { channel: "whatsapp", contactName: uniqueName("Orig"), contactPhone: uniquePhone() },
+      data: {
+        channel: "whatsapp",
+        contactName: uniqueName("Original"),
+        contactPhone: uniquePhone(),
+      },
     });
     createdConversationIds.push(created.id);
-    const newName = uniqueName("Renamed");
+    const before = await dbRaw.conversation.findUniqueOrThrow({
+      where: { id: created.id },
+    });
 
+    const renamed = uniqueName("Renamed");
     await db.conversation.update({
       where: { id: created.id },
-      data: { contactName: newName },
+      data: { contactName: renamed },
     });
-
-    const found = await db.conversation.findUnique({ where: { id: created.id } });
-    expect(found!.contactName).toBe(newName);
-
-    const raw = await dbRaw.conversation.findUnique({ where: { id: created.id } });
-    expect(isEncryptedPayload(raw!.contactName)).toBe(true);
-    expect(raw!.contactName).not.toBe(newName);
-  });
-});
-
-describe("Conversation PII encryption: tamper resistance", () => {
-  it("tampered contactName does not crash reads (raw value preserved)", async () => {
-    const created = await db.conversation.create({
-      data: { channel: "whatsapp", contactName: uniqueName("Tamp"), contactPhone: uniquePhone() },
+    const after = await dbRaw.conversation.findUniqueOrThrow({
+      where: { id: created.id },
     });
-    createdConversationIds.push(created.id);
+    expect(after.contactName).not.toBe(before.contactName);
+    await expect(
+      db.conversation.findUnique({ where: { id: created.id } }),
+    ).resolves.toMatchObject({ contactName: renamed });
 
     await dbRaw.conversation.update({
       where: { id: created.id },
-      data: { contactName: '{"iv":"AAAAAAAA","ciphertext":"BBBB","tag":"CCCC"}' },
+      data: { contactName: tamperEnvelope(after.contactName) },
     });
-
-    const found = await db.conversation.findUnique({ where: { id: created.id } });
-    expect(found).not.toBeNull();
-    expect(found!.contactName).toContain("ciphertext"); // raw tampered JSON preserved
-  });
-});
-
-// ── CROSS-MODEL: master key rotation safety ────────────────────────────────
-
-describe("PII encryption: key rotation safety", () => {
-  it("rows encrypted with key A cannot be decrypted with key B (tamper path)", async () => {
-    const customerId = await makeCustomer();
-    const phone = uniquePhone();
-    const created = await db.order.create({
-      data: {
-        orderNumber: `TEST-${counter}`,
-        customerId,
-        totalPrice: 1000,
-        wilaya: "Alger",
-        commune: "Hydra",
-        address: TEST_ADDRESS,
-        phone,
-        items: { create: [] },
-      },
+    await expect(
+      db.conversation.findUnique({ where: { id: created.id } }),
+    ).rejects.toMatchObject({
+      code: "PROTECTED_DATA_AUTHENTICATION_FAILED",
     });
-    createdOrderIds.push(created.id);
-
-    // Switch master key — existing ciphertext can't be decrypted
-    _resetMasterKeyCacheForTests();
-    process.env.SF_MASTER_KEY = "cd".repeat(32); // different 256-bit key
-    _resetMasterKeyCacheForTests();
-
-    const found = await db.order.findUnique({ where: { id: created.id } });
-    expect(found).not.toBeNull();
-    // Decrypt fails gracefully — raw ciphertext JSON preserved (not plaintext)
-    expect(found!.phone).toContain("ciphertext");
-    expect(found!.phone).not.toBe(phone);
-
-    // Restore original key — decryption works again
-    _resetMasterKeyCacheForTests();
-    process.env.SF_MASTER_KEY = "ab".repeat(32);
-    _resetMasterKeyCacheForTests();
-
-    const foundAgain = await db.order.findUnique({ where: { id: created.id } });
-    expect(foundAgain!.phone).toBe(phone);
   });
 });

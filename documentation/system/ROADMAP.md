@@ -2,8 +2,9 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Live protected main:** `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Live protected main:** `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
 > **Latest application-changing protected merge:** PR #203 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Latest protected authority merge:** PR #206 at `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
 > **Founder-accepted baseline:** Internal.5
@@ -12,10 +13,10 @@
 > **Phase 2 status:** Protected-source closed through PR #200 with issue #201 retained
 > **Phase 3 status:** Protected-source closed through PR #203 under FD-030
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
-> **Active phase package:** issue #204 audit, Problem Register and shared contract freeze
+> **Active phase package:** issue #204 through PR #207 — complete P4-A…P4-F candidate under exact-head review and validation
 > **Phase issue:** #204
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-08-04
+> **Last consolidated:** 2026-08-06
 
 Live protected `main` must be re-read directly from GitHub. The SHAs above record
 the exact source frontier used for this consolidation and the latest protected
@@ -285,11 +286,21 @@ Phase 3 is protected-source closed. It does not claim a new signed artifact,
 installed Windows/T470 proof for newly merged source, Founder acceptance, Beta or
 Stable. Published/installed executable truth remains Internal.13.
 
-## Phase 4 handoff
+## Phase 4 execution frontier
 
-Issue #204 owns the next phase. The first package is exhaustive audit,
-primary-source research, one consolidated Problem Register and shared contract
-freeze. Broad production edits wait until those contracts are frozen.
+PR #206 completed the exhaustive audit, primary-source research, consolidated
+P4-001…P4-013 Problem Register and shared contract freeze. Issue #204 now owns
+the complete Phase 4 candidate through PR #207. Phase 5 remains blocked until
+PR #207 passes exact-head evidence and independent review, merges to protected
+`main`, and issue #204 is reconciled against the exit gate below.
+
+Executable candidate `33500fd8c7e968f1244a444f6fb130d9d897d6a1` passed the
+MSI build, installed launch/close/reopen and three authenticated hydrated WebView
+launches in run `31127743699`. The same run proved the CI replacement harness can
+reuse the native WebView's per-launch HttpOnly runtime authority, then stopped at
+HTTP 500 from `/api/auth/setup` before the backup/replace/restore sequence began.
+Phase 4 and Phase 5 therefore remain gated on diagnosing that first app-level
+setup failure, completing the replacement drill and clearing exact-head review.
 
 ---
 

@@ -65,6 +65,8 @@ export async function cleanDb(): Promise<void> {
   await rawDb.$executeRawUnsafe('DELETE FROM "BusinessCommand"');
   await rawDb.$executeRawUnsafe('DELETE FROM "BusinessAggregateVersion"');
 
+  await rawDb.message.deleteMany();
+  await rawDb.conversation.deleteMany();
   await rawDb.auditLog.deleteMany();
   await rawDb.session.deleteMany();
   await rawDb.returnNote.deleteMany();
@@ -91,6 +93,11 @@ export async function cleanDb(): Promise<void> {
   await rawDb.aiChatSession.deleteMany();
   await rawDb.extractionMetric.deleteMany();
   await rawDb.wilayaRiskProfile.deleteMany();
+  await rawDb.secret.deleteMany();
+  // ProtectedKeyAuthority is installation/shop authority, not per-test business
+  // data. The canonical db client keeps one authenticated process-bound session,
+  // matching packaged runtime semantics; deleting the rows underneath it would
+  // manufacture corruption and invalidate unrelated integration tests.
 }
 
 let _ipCounter = 0;

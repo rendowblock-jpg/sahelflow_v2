@@ -5,8 +5,7 @@ process.env.SF_MASTER_KEY =
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cleanDb, rawDb } from "@/app/api/__tests__/helpers";
-import { db } from "@/lib/db";
-import type { ShopContext } from "@/lib/shops/context";
+import { db, shopContext } from "@/lib/db";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 
 const harness = vi.hoisted(() => ({
@@ -30,15 +29,7 @@ import {
   listInternalComments,
 } from "../comments";
 
-const SHOP: ShopContext = Object.freeze({
-  workspaceId: "1".repeat(32),
-  installationId: "2".repeat(32),
-  shopId: "default",
-  shopIncarnationId: "3".repeat(32),
-  registryRevision: 1,
-  databaseFileId: "default.db",
-  migrationSetSha256: "4".repeat(64),
-});
+const SHOP = shopContext;
 const CONTEXT = Object.freeze({ prisma: db, shop: SHOP });
 
 function actorContext(sessionId = "session-1"): TrustedActorContext {

@@ -19,9 +19,11 @@ import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 
 export const dynamic = "force-dynamic";
 
-const mutationKindSchema = z.object({
-  kind: z.enum(["workgroup", "queue"]),
-}).passthrough();
+const mutationKindSchema = z
+  .object({
+    kind: z.enum(["workgroup", "queue"]),
+  })
+  .passthrough();
 
 function assertAdministrationMutationAuthority(
   actorContext: TrustedActorContext,
@@ -62,15 +64,18 @@ export const GET = withErrorHandler(async () => {
   });
   const [view, aggregateVersions] = await Promise.all([
     getCollaborationAdministrationView({ prisma: db, shop: shopContext }),
-    db.$queryRaw<Array<{
-      aggregateType: string;
-      aggregateId: string;
-      version: number | bigint;
-    }>>`
-      SELECT "aggregateType", "aggregateId", "version"
-      FROM "BusinessAggregateVersion"
-      WHERE "aggregateType" IN ('collaboration-workgroup', 'collaboration-queue')
-    `,
+    db.businessAggregateVersion.findMany({
+      where: {
+        aggregateType: {
+          in: ["collaboration-workgroup", "collaboration-queue"],
+        },
+      },
+      select: {
+        aggregateType: true,
+        aggregateId: true,
+        version: true,
+      },
+    }),
   ]);
   const versionByAggregate = new Map(
     aggregateVersions.map((entry) => [
@@ -164,9 +169,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   );
 
   const context = { prisma: db, shop: shopContext };
-  const command = kind === "workgroup"
-    ? await executeWorkgroupMutation(context, actorContext, body)
-    : await executeQueueMutation(context, actorContext, body);
+  const command =
+    kind === "workgroup"
+      ? await executeWorkgroupMutation(context, actorContext, body)
+      : await executeQueueMutation(context, actorContext, body);
 
   return NextResponse.json({
     result: command.result,

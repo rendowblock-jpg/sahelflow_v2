@@ -1,25 +1,19 @@
 /**
- * Verification test: does the PII encryption extension fire for nested includes?
+ * Protected PII extension relation/decryption coverage.
  *
- * The AAA audit (D-001) claims it does NOT — that `db.order.findUnique({ include: { customer: true } })`
- * returns the nested customer with ciphertext `name` and blind-index `phone`. This test verifies
- * that claim. If the test PASSES (assertion holds), the audit is wrong. If it FAILS, the audit is
- * right and we need to fix the extension.
- *
- * Hermetic: tracks created IDs and cleans up only those in afterAll. Does NOT
- * wipe the dev DB (T-001 from tests-perf audit).
+ * Hermetic: tracks created IDs and cleans up only those in afterAll.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/lib/db";
 
-describe("PII extension — nested includes (D-001 verification)", () => {
+describe("PII extension — nested includes", () => {
   let customerId: string;
   let orderId: string;
+  let orderItemId: string;
   const customerName = `Test Customer ${Date.now()}`;
   const customerPhone = `05${Date.now().toString().slice(-8)}`;
 
   beforeAll(async () => {
-    // Create a customer (extension encrypts on write, decrypts on return)
     const customer = await db.customer.create({
       data: {
         name: customerName,
@@ -31,7 +25,6 @@ describe("PII extension — nested includes (D-001 verification)", () => {
     });
     customerId = customer.id;
 
-    // Create an order for that customer
     const order = await db.order.create({
       data: {
         orderNumber: `TEST-${Date.now()}`,
@@ -44,15 +37,27 @@ describe("PII extension — nested includes (D-001 verification)", () => {
         phone: customerPhone,
         source: "manual",
         items: {
-          create: [{ productName: "Test Product", quantity: 1, unitPrice: 1000, total: 1000 }],
+          create: [
+            {
+              productName: "Test Product",
+              quantity: 1,
+              unitPrice: 1000,
+              total: 1000,
+            },
+          ],
         },
       },
     });
     orderId = order.id;
+    const item = await db.orderItem.findFirst({
+      where: { orderId },
+      select: { id: true },
+    });
+    if (!item) throw new Error("test order item was not created");
+    orderItemId = item.id;
   });
 
   afterAll(async () => {
-    // Clean up ONLY the records we created — do NOT wipe the dev DB (T-001).
     if (orderId) {
       await db.orderItem.deleteMany({ where: { orderId } });
       await db.order.deleteMany({ where: { id: orderId } });
@@ -76,7 +81,6 @@ describe("PII extension — nested includes (D-001 verification)", () => {
     });
     expect(order).not.toBeNull();
     expect(order!.customer).toBeDefined();
-    // The critical assertion: nested customer.name should be the PLAINTEXT, not ciphertext
     expect(order!.customer!.name).toBe(customerName);
     expect(order!.customer!.phone).toBe(customerPhone);
   });
@@ -91,5 +95,40 @@ describe("PII extension — nested includes (D-001 verification)", () => {
     expect(order.customer).toBeDefined();
     expect(order.customer!.name).toBe(customerName);
     expect(order.customer!.phone).toBe(customerPhone);
+    expect("id" in order.customer!).toBe(false);
+    expect("phoneEnc" in order.customer!).toBe(false);
+  });
+
+  it("decrypts and preserves projection through an unprotected relation", async () => {
+    const item = await db.orderItem.findUnique({
+      where: { id: orderItemId },
+      select: {
+        productName: true,
+        order: {
+          select: {
+            phone: true,
+            customer: { select: { name: true, phone: true } },
+          },
+        },
+      },
+    });
+
+    expect(item).toEqual({
+      productName: "Test Product",
+      order: {
+        phone: customerPhone,
+        customer: { name: customerName, phone: customerPhone },
+      },
+    });
+    expect("id" in item!.order).toBe(false);
+    expect("phoneEnc" in item!.order.customer).toBe(false);
+  });
+
+  it("does not expose hidden record identity in protected partial selects", async () => {
+    const customer = await db.customer.findUnique({
+      where: { id: customerId },
+      select: { name: true },
+    });
+    expect(customer).toEqual({ name: customerName });
   });
 });

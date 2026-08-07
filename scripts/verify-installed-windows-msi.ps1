@@ -109,25 +109,67 @@ function Get-SahelFlowProcessTree {
     )
 }
 
-function Get-DescendantProcessIds {
+function Get-ProcessIdentityKey {
+    param([Parameter(Mandatory = $true)]$Process)
+
+    if ($null -eq $Process.CreationDate) {
+        throw "Windows did not expose a creation timestamp for process $($Process.ProcessId)."
+    }
+    $createdAtUtcTicks = ([datetime]$Process.CreationDate).ToUniversalTime().Ticks
+    return "$([int64]$Process.ProcessId):$createdAtUtcTicks"
+}
+
+function Get-DescendantProcessIdentities {
     param([Parameter(Mandatory = $true)][int64]$RootProcessId)
 
     $snapshot = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
-    $frontier = @($RootProcessId)
+    $rootProcess = @(
+        $snapshot | Where-Object { [int64]$_.ProcessId -eq $RootProcessId }
+    ) | Select-Object -First 1
+    if ($null -eq $rootProcess -or $null -eq $rootProcess.CreationDate) {
+        throw "Windows did not expose the root process identity for descendant capture."
+    }
+
+    $frontier = @(
+        [pscustomobject]@{
+            processId = $RootProcessId
+            createdAtUtcTicks = ([datetime]$rootProcess.CreationDate).ToUniversalTime().Ticks
+        }
+    )
     $seen = @{}
     $descendants = @()
     while ($frontier.Count -gt 0) {
         $next = @()
-        foreach ($parentId in $frontier) {
+        foreach ($parent in $frontier) {
             foreach ($child in @($snapshot | Where-Object {
-                [int64]$_.ParentProcessId -eq [int64]$parentId
+                [int64]$_.ParentProcessId -eq [int64]$parent.processId
             })) {
+                if ($null -eq $child.CreationDate) {
+                    throw "Windows did not expose a creation timestamp for candidate descendant $($child.ProcessId)."
+                }
+                $childCreatedAtUtcTicks = ([datetime]$child.CreationDate).ToUniversalTime().Ticks
+                # ParentProcessId is only a numeric historical PID. Reject a
+                # candidate created before its alleged parent so PID reuse by
+                # long-lived Windows session processes cannot forge ancestry.
+                if ($childCreatedAtUtcTicks -lt [int64]$parent.createdAtUtcTicks) {
+                    continue
+                }
+
                 $childId = [int64]$child.ProcessId
-                $key = [string]$childId
-                if (-not $seen.ContainsKey($key)) {
-                    $seen[$key] = $true
-                    $descendants += $childId
-                    $next += $childId
+                $identityKey = Get-ProcessIdentityKey -Process $child
+                if (-not $seen.ContainsKey($identityKey)) {
+                    $seen[$identityKey] = $true
+                    $descendants += [pscustomobject]@{
+                        processId = $childId
+                        name = [string]$child.Name
+                        executablePath = [string]$child.ExecutablePath
+                        creationDate = [datetime]$child.CreationDate
+                        identityKey = $identityKey
+                    }
+                    $next += [pscustomobject]@{
+                        processId = $childId
+                        createdAtUtcTicks = $childCreatedAtUtcTicks
+                    }
                 }
             }
         }
@@ -340,9 +382,13 @@ function Close-SahelFlowNormally {
         throw "SahelFlow exited before the normal close request could be proven."
     }
     # WebView2 descendants run outside the SahelFlow installation directory and
-    # may outlive the desktop process briefly. Capture the exact descendant
-    # identities before closing so a relaunch cannot race stale WebView teardown.
-    $descendantProcessIds = @(Get-DescendantProcessIds -RootProcessId $Process.Id)
+    # may outlive the desktop process briefly. Capture PID plus creation time so
+    # rapid Windows PID reuse cannot turn an unrelated runner process into a
+    # false application descendant.
+    $descendantProcesses = @(Get-DescendantProcessIdentities -RootProcessId $Process.Id)
+    $descendantProcessIds = @(
+        $descendantProcesses | ForEach-Object { [int64]$_.processId }
+    )
 
     $handles = @(
         [SahelFlowWindowCloser]::FindTopLevelWindows([uint32]$Process.Id)
@@ -384,9 +430,19 @@ function Close-SahelFlowNormally {
                     $_.Name -ieq "sahelflow-whatsapp.exe"
                 }
         )
-        $liveProcessIds = @($processSnapshot | ForEach-Object { [int64]$_.ProcessId })
+        $liveProcessIdentityKeys = @{}
+        foreach ($candidate in $processSnapshot) {
+            if ($null -ne $candidate.CreationDate) {
+                $identityKey = Get-ProcessIdentityKey -Process $candidate
+                $liveProcessIdentityKeys[$identityKey] = $true
+            }
+        }
+        $remainingDescendants = @(
+            $descendantProcesses |
+                Where-Object { $liveProcessIdentityKeys.ContainsKey($_.identityKey) }
+        )
         $remainingDescendantIds = @(
-            $descendantProcessIds | Where-Object { $liveProcessIds -contains $_ }
+            $remainingDescendants | ForEach-Object { [int64]$_.processId }
         )
         $endpointPresent = Test-Path -LiteralPath $runtimeEndpointPath -PathType Leaf
         if (
@@ -411,10 +467,10 @@ function Close-SahelFlowNormally {
     } else {
         ($remaining | ForEach-Object { "$($_.Name):$($_.ProcessId)" }) -join ", "
     }
-    $descendantSummary = if ($remainingDescendantIds.Count -eq 0) {
+    $descendantSummary = if ($remainingDescendants.Count -eq 0) {
         "none"
     } else {
-        $remainingDescendantIds -join ", "
+        ($remainingDescendants | ForEach-Object { "$($_.name):$($_.processId)" }) -join ", "
     }
     throw "Normal close was incomplete; remaining processes: $remainingSummary; remaining captured descendants: $descendantSummary; runtime endpoint present: $endpointPresent"
 }

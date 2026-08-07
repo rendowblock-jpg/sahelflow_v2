@@ -1,0 +1,18 @@
+// Phase 4 protected-data key authority.
+//
+// Each shop database stores only wrapped, purpose-specific random keys. The
+// installation root never encrypts PII/secrets directly: it derives local
+// wrapping keys, while the random shop keys remain independently rotatable and
+// can be re-wrapped during replacement-install recovery.
+
+model ProtectedKeyAuthority {
+  purpose        String   @id
+  formatVersion  Int      @default(1)
+  algorithm      String
+  keyVersion     Int
+  keyId          String   @unique
+  wrappingKeyId  String
+  wrappedKey     String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

@@ -2,25 +2,36 @@
 
 > **Status:** Active documentation entry point
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary
-> **Live protected main:** `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Live protected main:** `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
 > **Latest application-changing protected merge:** PR #203 at `aa4ca0758fd696f4b02fc1975629ac698f9349c3`
+> **Latest protected authority merge:** PR #206 at `9306564ce5b5ea4b3b13b219aa45d4672ae13184`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 4 — data protection, recovery, migrations and security
 > **Execution mode:** single-agent, audit-first, batch remediation and tiered CI
-> **Active implementation outcome:** issue #204 Phase 4 audit, Problem Register and shared contract freeze
-> **Active agent:** selected at session start; one active implementation agent at a time
-> **Active branch/PR:** none until the Phase 4 audit and contract freeze identify the first bounded implementation package
+> **Active implementation outcome:** issue #204 through PR #207 — complete Phase 4 candidate under exact-head review and validation
+> **Active agent:** ChatGPT Web Agent owns the next Phase 4 closure action; Desktop Agent has released the implementation seat
+> **Active branch/PR:** `agent/phase4-protected-data-authority` / PR #207
+> **Last executable candidate:** `33500fd8c7e968f1244a444f6fb130d9d897d6a1`
+> **Last installed evidence:** run `31127743699` — MSI lifecycle and hydrated UI green; replacement setup HTTP 500
 > **Phase execution issue:** issue #204
 > **Retained installed evidence:** issue #201
 > **Execution epic:** issue #164
-> **Last updated:** 2026-08-04
+> **Last updated:** 2026-08-06
 
 Live protected `main` must be re-read directly from GitHub before every session.
 The commit above is the exact current protected source at this update; it is not a
 permanent substitute for live repository state.
+
+The original installed-UI blocker is closed on the unmerged candidate: the
+request-derived absolute redirect passed real installed WebView proof. The final
+run also proved that the replacement harness reaches the application through the
+native WebView's HttpOnly runtime authority. Phase 4 remains open because the
+replacement drill then reached `/api/auth/setup` and received HTTP 500 before
+source backup creation. This is the exact next bounded application boundary; it
+is not another WebView2 or cookie failure.
 
 This directory is the durable shared brain for SahelFlow. It defines the finished
 product, required experience, engineering invariants, merged-source truth, final
@@ -103,7 +114,8 @@ A lower reality cannot claim a higher one.
   issue #201 for the applicable Level 3/installed gate.
 - Internal.13 remains the published and Founder-installed executable; no Phase 3
   version bump, MSI, Founder acceptance, Beta or Stable claim followed.
-- Issue #204 owns the active Phase 4 audit and contract freeze.
+- PR #206 protected the Phase 4 audit, P4-001…P4-013 Problem Register,
+  contracts and risk lanes; issue #204 now owns closure through PR #207.
 
 ## Current execution model
 
@@ -120,8 +132,9 @@ The Founder-selected permanent operating pattern remains:
 - complete whole-product AAA frontend, multilingual, accessibility, performance,
   recovery and evidence obligations.
 
-For Phase 4, production work is frozen until issue #204's exhaustive audit,
-primary-source research and shared contract freeze are complete.
+PR #206 completed the Phase 4 audit, primary-source research and shared contract
+freeze. PR #207 is the sole authorized production candidate; no Phase 5 work
+starts until its exact-head evidence, review and protected merge are reconciled.
 
 ## Final completion model
 
@@ -142,7 +155,8 @@ and evidence travel continuously across functional phases.
 ## Active Phase 4 contract
 
 Phase 4 must make seller data survivable and the product commercially defensible.
-The first session is audit and contract freeze only.
+PR #206 completed the audit and contract freeze; PR #207 implements the complete
+authorized P4-A…P4-F candidate and remains unmerged pending closure evidence.
 
 The audit covers every store, protected field, key, blind index, secret,
 backup/export path, migration, journal, recovery, reset/delete path, production

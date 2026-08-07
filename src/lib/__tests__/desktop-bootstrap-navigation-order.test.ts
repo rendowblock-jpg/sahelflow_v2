@@ -7,33 +7,107 @@ function readRepositoryFile(path: string): string {
 }
 
 describe("packaged desktop bootstrap navigation", () => {
-  it("returns control to WebView2 before issuing the loopback navigation", () => {
-    const recovery = readRepositoryFile("src-tauri/src/startup_recovery.rs");
-    const packagedTitle = recovery.indexOf(
-      "window.set_title(BOOTSTRAP_WINDOW_TITLE)?;",
+  it("keeps lifecycle authority behind the durable hydrated-UI gate", () => {
+    const wrapper = readRepositoryFile("src-tauri/src/startup_recovery.rs");
+    const proven = readRepositoryFile(
+      "src-tauri/src/startup_recovery/proven.rs",
     );
-    const visibleStartingDocument = recovery.indexOf(
-      "window.show()?;",
-      packagedTitle,
+    const configuration = JSON.parse(
+      readRepositoryFile("src-tauri/tauri.conf.json"),
+    ) as {
+      app?: {
+        windows?: Array<{
+          label?: string;
+          title?: string;
+          visible?: boolean;
+          focus?: boolean;
+          url?: string;
+        }>;
+      };
+    };
+    const windows = configuration.app?.windows ?? [];
+    const mainWindow = windows[0];
+
+    const delegatedHandoff = wrapper.indexOf(
+      "proven::show_ready(app, app_url)?;",
     );
-    const deferredNavigation = recovery.indexOf(
-      "schedule_packaged_navigation(",
-      visibleStartingDocument,
+    const postUiAuthority = wrapper.indexOf(
+      "start_post_ui_authorities(app.clone())?;",
+      delegatedHandoff,
     );
-    const directNavigation = recovery.indexOf(
-      "window.navigate(handoff.bootstrap_url)?;",
+    const durableUiGate = wrapper.indexOf(
+      "if matching_ui_ready_is_durable(&app_data_dir) {",
+    );
+    const lifecycleHost = wrapper.indexOf(
+      "ensure_shop_lifecycle_started(&app)",
+      durableUiGate,
+    );
+    const validatedHandoff = proven.indexOf(
+      "let Some(handoff) = packaged_handoff(&requested_url)? else {",
+    );
+    const clearUiReady = proven.indexOf(
+      "clear_file(&app_data_dir.join(RUNTIME_UI_READY_FILE))?;",
+      validatedHandoff,
+    );
+    const hideWorkspace = proven.indexOf("window.hide()?;", clearUiReady);
+    const nativeCookie = proven.indexOf(
+      "window.set_cookie(runtime_cookie(&handoff.host, &handoff.token)?)?;",
+      hideWorkspace,
+    );
+    const directRootNavigation = proven.indexOf(
+      "window.navigate(handoff.workspace_url)?;",
+      nativeCookie,
+    );
+    const readinessMonitor = proven.indexOf(
+      "monitor_packaged_ui(app.clone(), window, app_data_dir);",
+      directRootNavigation,
     );
 
-    expect(packagedTitle).toBeGreaterThan(-1);
-    expect(visibleStartingDocument).toBeGreaterThan(packagedTitle);
-    expect(deferredNavigation).toBeGreaterThan(visibleStartingDocument);
-    expect(directNavigation).toBe(-1);
-    expect(recovery).toContain(
-      "const BOOTSTRAP_NAVIGATION_DELAY: Duration = Duration::from_millis(250);",
+    expect(delegatedHandoff).toBeGreaterThan(-1);
+    expect(postUiAuthority).toBeGreaterThan(delegatedHandoff);
+    expect(durableUiGate).toBeGreaterThan(-1);
+    expect(lifecycleHost).toBeGreaterThan(durableUiGate);
+    expect(validatedHandoff).toBeGreaterThan(-1);
+    expect(clearUiReady).toBeGreaterThan(validatedHandoff);
+    expect(hideWorkspace).toBeGreaterThan(clearUiReady);
+    expect(nativeCookie).toBeGreaterThan(hideWorkspace);
+    expect(directRootNavigation).toBeGreaterThan(nativeCookie);
+    expect(readinessMonitor).toBeGreaterThan(directRootNavigation);
+
+    expect(windows).toHaveLength(1);
+    expect(mainWindow).toMatchObject({
+      label: "main",
+      title: "SahelFlow",
+      visible: false,
+    });
+    expect(windows.some((window) => window.label === "startup")).toBe(false);
+    expect(mainWindow?.url).toMatch(/^data:text\/html/);
+    expect(decodeURIComponent(mainWindow?.url ?? "")).not.toContain("<script");
+
+    expect(proven).toContain('MAIN_WINDOW_LABEL: &str = "main"');
+    expect(proven).toContain('RUNTIME_COOKIE: &str = "sf_runtime"');
+    expect(wrapper).toContain("mod shop_lifecycle_host;");
+    expect(wrapper).toContain('RUNTIME_UI_READY_FILE: &str = "runtime-ui-ready.json"');
+    expect(proven).toContain("workspace_url.set_path(\"/\")");
+    expect(proven).toContain("workspace_url.set_query(None)");
+    expect(proven).toContain("workspace_url.set_fragment(None)");
+    expect(proven).toContain(".http_only(true)");
+    expect(proven).toContain(".same_site(SameSite::Lax)");
+    expect(proven).toContain(
+      "if wait_for_matching_ui_ready(&app_data_dir, PACKAGED_UI_READY_TIMEOUT)",
     );
-    expect(recovery).toContain(
-      "thread::sleep(BOOTSTRAP_NAVIGATION_DELAY);",
-    );
-    expect(recovery).toContain("window.navigate(bootstrap_url)");
+    expect(proven).toContain("window.show().and_then(|_| window.set_focus())");
+
+    const combined = `${wrapper}\n${proven}`;
+    expect(combined).not.toContain("STARTUP_WINDOW_LABEL");
+    expect(combined).not.toContain("STARTUP_RENDERER_MARKER");
+    expect(combined).not.toContain("activate_startup_renderer(");
+    expect(combined).not.toContain("activate_configured_workspace(");
+    expect(combined).not.toContain("renderer_prime_html(");
+    expect(combined).not.toContain("run_on_main_thread");
+    expect(combined).not.toContain("WebviewWindowBuilder::new(");
+    expect(combined).not.toContain("WebviewUrl::External(url)");
+    expect(combined).not.toContain("handoff.bootstrap_url");
+    expect(combined).not.toContain("window.location.replace(target)");
   });
 });

@@ -23,9 +23,6 @@ interface ReturnOrderProjectionRow {
   deliveryCost: number | bigint | null;
   wilaya: string;
   commune: string;
-  address: string;
-  phone: string;
-  notes: string | null;
   fulfillmentState: string | null;
   deliveryState: string | null;
   inventoryState: string | null;
@@ -116,13 +113,16 @@ export async function loadCanonicalReturnOrder(
   tx: BusinessTransaction,
   orderId: string,
 ): Promise<CanonicalReturnOrder> {
+  // The projection-only lifecycle columns are intentionally outside the
+  // Prisma Order model, so load only non-protected authority through raw SQL.
+  // Record-bound address, phone and notes must be opened by the protected
+  // transaction delegate against the source Order ID.
   const rows = await tx.$queryRaw<ReturnOrderProjectionRow[]>`
     SELECT
       "id", "orderNumber", "customerId", "source", "sourceMetadata",
       "status", "version", "totalPrice", "deliveryCost", "wilaya",
-      "commune", "address", "phone", "notes", "fulfillmentState",
-      "deliveryState", "inventoryState", "codState", "returnState",
-      "refundState"
+      "commune", "fulfillmentState", "deliveryState", "inventoryState",
+      "codState", "returnState", "refundState"
     FROM "Order"
     WHERE "id" = ${orderId}
       AND "deletedAt" IS NULL
@@ -137,7 +137,11 @@ export async function loadCanonicalReturnOrder(
     );
   }
 
-  const [items, customer] = await Promise.all([
+  const [protectedFields, items, customer] = await Promise.all([
+    tx.order.findFirst({
+      where: { id: orderId, deletedAt: null },
+      select: { address: true, phone: true, notes: true },
+    }),
     tx.orderItem.findMany({
       where: { orderId },
       include: { product: { select: { cost: true } } },
@@ -153,12 +157,14 @@ export async function loadCanonicalReturnOrder(
       },
     }),
   ]);
+  if (!protectedFields) throw new NotFoundError("Order", orderId);
   if (!customer) {
     throw new ConflictError("Customer authority is missing for canonical return");
   }
 
   return {
     ...projection,
+    ...protectedFields,
     version: integer(projection.version, "order version"),
     totalPrice: integer(projection.totalPrice, "order total"),
     deliveryCost: integer(projection.deliveryCost, "delivery cost"),

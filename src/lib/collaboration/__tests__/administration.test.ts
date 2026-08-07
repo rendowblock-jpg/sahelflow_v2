@@ -5,8 +5,7 @@ process.env.SF_MASTER_KEY =
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cleanDb, rawDb } from "@/app/api/__tests__/helpers";
-import { db } from "@/lib/db";
-import type { ShopContext } from "@/lib/shops/context";
+import { db, shopContext } from "@/lib/db";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 
 const harness = vi.hoisted(() => ({
@@ -29,15 +28,7 @@ import {
   executeWorkgroupMutation,
 } from "../administration";
 
-const SHOP: ShopContext = Object.freeze({
-  workspaceId: "1".repeat(32),
-  installationId: "2".repeat(32),
-  shopId: "default",
-  shopIncarnationId: "3".repeat(32),
-  registryRevision: 1,
-  databaseFileId: "default.db",
-  migrationSetSha256: "4".repeat(64),
-});
+const SHOP = shopContext;
 const CONTEXT = Object.freeze({ prisma: db, shop: SHOP });
 
 function actorContext(options?: {
@@ -137,9 +128,11 @@ describe("collaboration administration authority", () => {
     });
     expect(await rawDb.collaborationWorkgroup.count()).toBe(1);
     expect(await rawDb.collaborationWorkgroupMember.count()).toBe(2);
-    expect(await rawDb.auditLog.count({
-      where: { entityId: first.result.workgroupId },
-    })).toBe(1);
+    expect(
+      await rawDb.auditLog.count({
+        where: { entityId: first.result.workgroupId },
+      }),
+    ).toBe(1);
   });
 
   it("blocks workgroup archive until active queues are archived", async () => {
@@ -161,13 +154,15 @@ describe("collaboration administration authority", () => {
       idempotencyKey: "queue-inbox-open",
     });
 
-    await expect(executeWorkgroupMutation(CONTEXT, actor, {
-      operation: "archive",
-      workgroupId: group.result.workgroupId,
-      memberIds: [],
-      expectedVersion: 1,
-      idempotencyKey: "workgroup-archive-blocked",
-    })).rejects.toMatchObject({ statusCode: 409 });
+    await expect(
+      executeWorkgroupMutation(CONTEXT, actor, {
+        operation: "archive",
+        workgroupId: group.result.workgroupId,
+        memberIds: [],
+        expectedVersion: 1,
+        idempotencyKey: "workgroup-archive-blocked",
+      }),
+    ).rejects.toMatchObject({ statusCode: 409 });
 
     await executeQueueMutation(CONTEXT, actor, {
       operation: "archive",
@@ -212,11 +207,17 @@ describe("collaboration administration authority", () => {
       }),
     ]);
 
-    expect(outcomes.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
-    expect(outcomes.filter((outcome) => outcome.status === "rejected")).toHaveLength(1);
-    expect(await rawDb.auditLog.count({
-      where: { entityId: group.result.workgroupId },
-    })).toBe(2);
+    expect(
+      outcomes.filter((outcome) => outcome.status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(
+      outcomes.filter((outcome) => outcome.status === "rejected"),
+    ).toHaveLength(1);
+    expect(
+      await rawDb.auditLog.count({
+        where: { entityId: group.result.workgroupId },
+      }),
+    ).toBe(2);
   });
 
   it("rejects a queue whose entity type does not match routing authority", async () => {
@@ -234,8 +235,10 @@ describe("collaboration administration authority", () => {
       state: "active",
       version: 1,
     });
-    await expect(rawDb.$executeRawUnsafe(
-      `UPDATE "CollaborationQueue" SET "entityType" = 'invalid' WHERE "id" = '${queue.result.queueId}'`,
-    )).rejects.toThrow();
+    await expect(
+      rawDb.$executeRawUnsafe(
+        `UPDATE "CollaborationQueue" SET "entityType" = 'invalid' WHERE "id" = '${queue.result.queueId}'`,
+      ),
+    ).rejects.toThrow();
   });
 });

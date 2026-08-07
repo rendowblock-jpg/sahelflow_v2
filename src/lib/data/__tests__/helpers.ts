@@ -99,6 +99,10 @@ async function cleanTestDatabase(db: PrismaClient): Promise<void> {
     db.extractionMetric.deleteMany(),
     db.wilayaRiskProfile.deleteMany(),
     db.phoneReputation.deleteMany(),
+    // Canonical secrets are test-owned data and are cleared between cases. The
+    // process-lifetime ProtectedKeyAuthority remains stable, matching packaged
+    // runtime semantics and avoiding stale in-memory PII codecs.
+    db.secret.deleteMany(),
   ]);
 }
 

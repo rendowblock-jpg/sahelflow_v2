@@ -19,7 +19,7 @@ function handoffHeaders(): Record<string, string> {
     ...noStoreHeaders(),
     "Content-Type": "text/html; charset=utf-8",
     "Content-Security-Policy":
-      "default-src 'none'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "default-src 'none'; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
     "X-Content-Type-Options": "nosniff",
   };
 }
@@ -30,9 +30,9 @@ const HANDOFF_HTML = `<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SahelFlow</title>
+  <script src="/runtime-bootstrap-handoff.js" defer></script>
 </head>
 <body>
-  <script>window.location.replace("/");</script>
   <noscript>SahelFlow requires JavaScript to finish secure desktop startup.</noscript>
 </body>
 </html>`;
@@ -64,9 +64,11 @@ export async function GET(request: Request) {
 
   bootstrapConsumed = true;
 
-  // WebView2 can follow a 303 redirect before persisting the Set-Cookie header
-  // from the bootstrap response. Return a same-origin HTML handoff instead so
-  // the HttpOnly launch cookie is committed before workspace navigation.
+  // WebView2 can follow a redirect or start a replacement navigation before it
+  // persists Set-Cookie from the bootstrap response. Return same-origin HTML and
+  // let its external handoff script poll a cookie-authenticated confirmation
+  // endpoint before navigating to the workspace. The token remains HttpOnly and
+  // CSP permits only this origin for scripts and the confirmation request.
   const response = new NextResponse(HANDOFF_HTML, {
     status: 200,
     headers: handoffHeaders(),

@@ -1,7 +1,11 @@
 import "server-only";
 
 import { PrismaClient } from "@prisma/client";
-import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import {
+  randomBytes,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
@@ -21,21 +25,14 @@ import { connect } from "node:net";
 import { basename, isAbsolute, join, resolve } from "node:path";
 
 import {
-  decryptCustomerRow,
-  encryptCustomerData,
-} from "@/lib/crypto/customer-encryption";
-import {
   decryptString,
+  deriveBlindIndex,
   encryptString,
   isEncryptedPayload,
   type EncryptedPayload,
 } from "@/lib/crypto/field-crypto";
-import {
-  CONVERSATION_PII_FIELDS,
-  ORDER_PII_FIELDS,
-  decryptPiiRow,
-  encryptPiiFields,
-} from "@/lib/crypto/pii-fields";
+import { rewrapShopProtectedKeys } from "@/lib/crypto/protected-key-authority";
+import { isProtectedValueEnvelope } from "@/lib/crypto/protected-value";
 import { rotateIdentityAuthorityAuthentication } from "@/lib/identity/control-authority";
 import {
   MASTER_KEY_ROTATION_LOCK_FILE,
@@ -43,20 +40,7 @@ import {
   parseMasterKeyRotationLock,
   type MasterKeyRotationLockRecord,
 } from "@/lib/maintenance/master-key-rotation";
-
-/**
- * Installation-wide master-key rotation.
- *
- * Usage:
- *   bun run scripts/rotate-master-key.ts
- *   bun run scripts/rotate-master-key.ts --dry-run
- *   bun run scripts/rotate-master-key.ts --recover-stale-lock
- *
- * The script acquires a maintenance lease before inspecting any database,
- * refuses to rotate while a live desktop runtime exists, re-wraps every
- * registered shop and the provisioning template with one old/new key pair,
- * and commits the shared keyfile only after every target succeeds.
- */
+import type { ShopContext } from "@/lib/shops/context";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const FORCE = process.argv.includes("--force");
@@ -77,12 +61,17 @@ const RUNTIME_MANIFEST_FORMAT_VERSION = 1;
 interface RotationTarget {
   id: string;
   databasePath: string;
+  context: ShopContext | null;
 }
 
 interface RegistryShape {
   formatVersion: number;
+  revision: number;
+  workspaceId: string;
+  installationId: string;
   shops: Array<{
     id: string;
+    incarnationId: string;
     databaseFile: string;
   }>;
 }
@@ -108,6 +97,7 @@ type RotationStage =
   | "root-loading"
   | "database-client"
   | "database-connect"
+  | "protected-key-authority"
   | "customers"
   | "orders"
   | "conversations"
@@ -128,6 +118,14 @@ interface RuntimeEndpointManifest {
 interface NativeRotationRoots {
   oldKey: Buffer;
   newKey: Buffer;
+}
+
+type ValueState = "plaintext" | "canonical" | "rotated" | "already-new";
+
+interface ValueRotation {
+  stored: string | null;
+  plaintext: string | null;
+  state: ValueState;
 }
 
 let nativeRotationRoots: NativeRotationRoots | null = null;
@@ -155,7 +153,10 @@ function readNativeRotationRoots(): NativeRotationRoots {
     try {
       if (
         readSync(0, extra, 0, 1, null) !== 0 ||
-        !timingSafeEqual(frame.subarray(0, NATIVE_ROTATION_MAGIC.length), NATIVE_ROTATION_MAGIC)
+        !timingSafeEqual(
+          frame.subarray(0, NATIVE_ROTATION_MAGIC.length),
+          NATIVE_ROTATION_MAGIC,
+        )
       ) {
         throw new Error("The native protected rotation frame is invalid");
       }
@@ -246,11 +247,7 @@ function processIsAlive(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (error) {
-    const code = errorCode(error);
-    if (code === "ESRCH") return false;
-    // EPERM means the process exists but cannot be signalled. Unknown failures
-    // also fail closed rather than declaring a live owner stale.
-    return true;
+    return errorCode(error) !== "ESRCH";
   }
 }
 
@@ -280,6 +277,7 @@ function loadOldKey(): Buffer {
 }
 
 function fsyncDirectory(directoryPath: string): void {
+  if (process.platform === "win32") return;
   const directoryHandle = openSync(directoryPath, "r");
   try {
     fsyncSync(directoryHandle);
@@ -334,9 +332,6 @@ function writeDurableSidecar(newKey: Buffer): void {
   const sidecarHandle = openSync(temporaryPath, "wx", 0o600);
   try {
     writeFileSync(sidecarHandle, newKey.toString("hex"), "utf8");
-    // Database rewrites must never begin until the complete new key has reached
-    // stable storage. Closing a file descriptor alone does not provide that
-    // authority after power loss.
     fsyncSync(sidecarHandle);
   } finally {
     closeSync(sidecarHandle);
@@ -344,8 +339,6 @@ function writeDurableSidecar(newKey: Buffer): void {
 
   try {
     if (process.platform === "win32") {
-      // Windows has no POSIX directory fsync. MOVEFILE_WRITE_THROUGH is the
-      // platform authority that flushes the durable directory-entry update.
       moveFileWriteThroughWindows(temporaryPath, SIDECAR_PATH);
     } else {
       renameSync(temporaryPath, SIDECAR_PATH);
@@ -458,8 +451,13 @@ function acquireRotationLease(): RotationLease {
         );
       }
 
+      if (!RECOVER_STALE_LOCK && !FORCE) {
+        throw new Error(
+          `Stale rotation lease from dead PID ${existing.ownerPid}. Rerun with --recover-stale-lock to resume the durable sidecar generation.`,
+        );
+      }
       console.warn(
-        `Recovering stale rotation lease from dead PID ${existing.ownerPid}; the existing sidecar will preserve crash-resume authority.`,
+        `Recovering stale rotation lease from dead PID ${existing.ownerPid}; the existing sidecar preserves crash-resume authority.`,
       );
       removeStaleRotationLock(existing.token);
     }
@@ -483,21 +481,19 @@ function finishRotationLease(
   try {
     const current = readExistingRotationLock();
     if (current.token !== lease.record.token) {
-      console.warn(
-        `Rotation lease ownership changed; refusing to remove ${LOCK_PATH}`,
-      );
+      console.warn(`Rotation lease ownership changed; refusing to remove ${LOCK_PATH}`);
       return;
     }
     unlinkSync(LOCK_PATH);
   } catch {
-    console.warn(
-      `Rotation lease became unreadable; refusing to remove ${LOCK_PATH}`,
-    );
+    console.warn(`Rotation lease became unreadable; refusing to remove ${LOCK_PATH}`);
   }
 }
 
 function readRuntimeManifest(): RuntimeEndpointManifest {
-  const value = JSON.parse(readFileSync(RUNTIME_MANIFEST_PATH, "utf8")) as Partial<RuntimeEndpointManifest>;
+  const value = JSON.parse(
+    readFileSync(RUNTIME_MANIFEST_PATH, "utf8"),
+  ) as Partial<RuntimeEndpointManifest>;
   if (
     value.formatVersion !== RUNTIME_MANIFEST_FORMAT_VERSION ||
     value.state !== "ready" ||
@@ -514,8 +510,8 @@ function readRuntimeManifest(): RuntimeEndpointManifest {
     formatVersion: RUNTIME_MANIFEST_FORMAT_VERSION,
     state: "ready",
     host: "127.0.0.1",
-    appPort: value.appPort,
-    processId: value.processId,
+    appPort: value.appPort!,
+    processId: value.processId!,
   };
 }
 
@@ -576,7 +572,38 @@ function databasePathFromUrl(databaseUrl: string): string {
   return isAbsolute(path) ? path : resolve(process.cwd(), path);
 }
 
-function validateRegistryTarget(shop: RegistryShape["shops"][number]): RotationTarget {
+function isIdentity(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{32}$/i.test(value);
+}
+
+function registryContext(
+  registry: RegistryShape,
+  shop: RegistryShape["shops"][number],
+): ShopContext {
+  if (
+    !Number.isSafeInteger(registry.revision) ||
+    registry.revision < 1 ||
+    !isIdentity(registry.workspaceId) ||
+    !isIdentity(registry.installationId) ||
+    !isIdentity(shop.incarnationId)
+  ) {
+    throw new Error("Shop registry identity is incomplete for protected-key rotation");
+  }
+  return Object.freeze({
+    workspaceId: registry.workspaceId,
+    installationId: registry.installationId,
+    shopId: shop.id,
+    shopIncarnationId: shop.incarnationId,
+    registryRevision: registry.revision,
+    databaseFileId: shop.databaseFile,
+    migrationSetSha256: "0".repeat(64),
+  });
+}
+
+function validateRegistryTarget(
+  registry: RegistryShape,
+  shop: RegistryShape["shops"][number],
+): RotationTarget {
   if (!shop.id || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(shop.id)) {
     throw new Error("Shop registry contains an invalid shop ID");
   }
@@ -591,7 +618,40 @@ function validateRegistryTarget(shop: RegistryShape["shops"][number]): RotationT
   if (!existsSync(databasePath)) {
     throw new Error(`Registered shop database is missing: ${databasePath}`);
   }
-  return { id: shop.id, databasePath };
+  return {
+    id: shop.id,
+    databasePath,
+    context: registryContext(registry, shop),
+  };
+}
+
+function environmentContext(databasePath: string): ShopContext | null {
+  const workspaceId = process.env.SF_WORKSPACE_ID;
+  const installationId = process.env.SF_INSTALLATION_ID;
+  const shopId = process.env.SF_ACTIVE_SHOP_ID;
+  const shopIncarnationId = process.env.SF_SHOP_INCARNATION_ID;
+  const databaseFileId = process.env.SF_DATABASE_FILE_ID;
+  const registryRevision = Number.parseInt(process.env.SF_REGISTRY_REVISION ?? "", 10);
+  if (
+    !isIdentity(workspaceId) ||
+    !isIdentity(installationId) ||
+    !shopId ||
+    !isIdentity(shopIncarnationId) ||
+    databaseFileId !== basename(databasePath) ||
+    !Number.isSafeInteger(registryRevision) ||
+    registryRevision < 1
+  ) {
+    return null;
+  }
+  return Object.freeze({
+    workspaceId,
+    installationId,
+    shopId,
+    shopIncarnationId,
+    registryRevision,
+    databaseFileId,
+    migrationSetSha256: process.env.SF_MIGRATION_SET_SHA256 ?? "0".repeat(64),
+  });
 }
 
 function loadRotationTargets(): RotationTarget[] {
@@ -605,11 +665,15 @@ function loadRotationTargets(): RotationTarget[] {
     ) {
       throw new Error("The canonical shop registry is invalid or unsupported");
     }
-    targets.push(...parsed.shops.map(validateRegistryTarget));
+    targets.push(...parsed.shops.map((shop) => validateRegistryTarget(parsed, shop)));
   }
 
   if (existsSync(SHOP_TEMPLATE_PATH)) {
-    targets.push({ id: "system-shop-template", databasePath: SHOP_TEMPLATE_PATH });
+    targets.push({
+      id: "system-shop-template",
+      databasePath: SHOP_TEMPLATE_PATH,
+      context: null,
+    });
   }
 
   if (targets.length === 0) {
@@ -623,7 +687,11 @@ function loadRotationTargets(): RotationTarget[] {
     if (!existsSync(databasePath)) {
       throw new Error(`DATABASE_URL database is missing: ${databasePath}`);
     }
-    targets.push({ id: "database-url", databasePath });
+    targets.push({
+      id: "database-url",
+      databasePath,
+      context: environmentContext(databasePath),
+    });
   }
 
   const unique = new Map<string, RotationTarget>();
@@ -652,44 +720,36 @@ function encryptedPayload(json: string): EncryptedPayload {
   };
 }
 
-function tryDecryptCustomer(
-  row: Record<string, unknown>,
-  key: Buffer,
-): Record<string, unknown> | null {
-  try {
-    const decrypted = decryptCustomerRow({ ...row }, key);
-    for (const field of ["name", "phoneEnc", "phone2", "address", "notes"]) {
-      if (isEncryptedPayload(decrypted[field] as string | null | undefined)) {
-        return null;
-      }
-    }
-    if (
-      row.phoneEnc &&
-      typeof decrypted.phone === "string" &&
-      /^[0-9a-f]{64}$/.test(decrypted.phone)
-    ) {
-      return null;
-    }
-    return decrypted;
-  } catch {
-    return null;
+function rotateStoredValue(
+  value: string | null,
+  oldKey: Buffer,
+  newKey: Buffer,
+): ValueRotation {
+  if (value === null) {
+    return { stored: null, plaintext: null, state: "plaintext" };
   }
-}
+  if (isProtectedValueEnvelope(value)) {
+    return { stored: value, plaintext: null, state: "canonical" };
+  }
+  if (!isEncryptedPayload(value)) {
+    return { stored: value, plaintext: value, state: "plaintext" };
+  }
 
-function tryDecryptPiiRow(
-  row: Record<string, unknown>,
-  fields: readonly string[],
-  key: Buffer,
-): Record<string, unknown> | null {
+  const payload = encryptedPayload(value);
   try {
-    const decrypted = decryptPiiRow({ ...row }, fields, key);
-    return fields.some((field) =>
-      isEncryptedPayload(decrypted[field] as string | null | undefined),
-    )
-      ? null
-      : decrypted;
+    const plaintext = decryptString(payload, oldKey);
+    return {
+      stored: JSON.stringify(encryptString(plaintext, newKey)),
+      plaintext,
+      state: "rotated",
+    };
   } catch {
-    return null;
+    try {
+      const plaintext = decryptString(payload, newKey);
+      return { stored: value, plaintext, state: "already-new" };
+    } catch {
+      throw new Error("Legacy protected value is undecryptable under both rotation roots");
+    }
   }
 }
 
@@ -704,6 +764,20 @@ function stats(shopId: string, model: string, total: number): ModelStats {
   };
 }
 
+function recordRowState(result: ModelStats, values: readonly ValueRotation[]): void {
+  if (values.some((value) => value.state === "rotated")) {
+    result.rotated += 1;
+  } else if (
+    values.some(
+      (value) => value.state === "canonical" || value.state === "already-new",
+    )
+  ) {
+    result.alreadyNew += 1;
+  } else {
+    result.plaintext += 1;
+  }
+}
+
 async function rotateCustomers(
   client: PrismaClient,
   shopId: string,
@@ -715,38 +789,43 @@ async function rotateCustomers(
 
   await client.$transaction(async (tx) => {
     for (const row of rows) {
-      const raw = row as unknown as Record<string, unknown>;
-      const encrypted = ["name", "phoneEnc", "phone2", "address", "notes"].some(
-        (field) => isEncryptedPayload(raw[field] as string | null | undefined),
-      );
-      if (!encrypted) {
-        result.plaintext += 1;
-        continue;
+      let name: ValueRotation;
+      let phone: ValueRotation;
+      let phone2: ValueRotation;
+      let address: ValueRotation;
+      let notes: ValueRotation;
+      try {
+        name = rotateStoredValue(row.name, oldKey, newKey);
+        phone = rotateStoredValue(row.phoneEnc, oldKey, newKey);
+        phone2 = rotateStoredValue(row.phone2, oldKey, newKey);
+        address = rotateStoredValue(row.address, oldKey, newKey);
+        notes = rotateStoredValue(row.notes, oldKey, newKey);
+      } catch (cause) {
+        throw new Error(`Shop ${shopId}: Customer ${row.id} is undecryptable`, {
+          cause,
+        });
       }
+      const values = [name, phone, phone2, address, notes];
+      recordRowState(result, values);
+      const changed = values.some((value) => value.state === "rotated");
+      if (DRY_RUN || !changed) continue;
 
-      const oldPlaintext = tryDecryptCustomer(raw, oldKey);
-      if (oldPlaintext === null) {
-        if (tryDecryptCustomer(raw, newKey) !== null) {
-          result.alreadyNew += 1;
-          continue;
-        }
-        throw new Error(`Shop ${shopId}: Customer ${row.id} is undecryptable`);
-      }
-
-      result.rotated += 1;
-      if (DRY_RUN) continue;
-      const reEncrypted = encryptCustomerData(oldPlaintext, newKey);
       await tx.customer.update({
         where: { id: row.id },
         data: {
-          name: reEncrypted.name as string,
-          phone: reEncrypted.phone as string,
-          phoneEnc: (reEncrypted.phoneEnc as string | undefined) ?? null,
+          name: name.stored!,
+          phone:
+            phone.state === "rotated" && phone.plaintext !== null
+              ? deriveBlindIndex(phone.plaintext, newKey)
+              : row.phone,
+          phoneEnc: phone.stored,
           nameBlindIndex:
-            (reEncrypted.nameBlindIndex as string | undefined) ?? null,
-          phone2: (reEncrypted.phone2 as string | undefined) ?? null,
-          address: (reEncrypted.address as string | undefined) ?? null,
-          notes: (reEncrypted.notes as string | undefined) ?? null,
+            name.state === "rotated" && name.plaintext !== null
+              ? deriveBlindIndex(name.plaintext, newKey)
+              : row.nameBlindIndex,
+          phone2: phone2.stored,
+          address: address.stored,
+          notes: notes.stored,
         },
       });
     }
@@ -765,40 +844,33 @@ async function rotateOrders(
 
   await client.$transaction(async (tx) => {
     for (const row of rows) {
-      const raw = row as unknown as Record<string, unknown>;
-      const encrypted = ORDER_PII_FIELDS.some((field) =>
-        isEncryptedPayload(raw[field] as string | null | undefined),
-      );
-      if (!encrypted) {
-        result.plaintext += 1;
-        continue;
+      let phone: ValueRotation;
+      let address: ValueRotation;
+      let notes: ValueRotation;
+      try {
+        phone = rotateStoredValue(row.phone, oldKey, newKey);
+        address = rotateStoredValue(row.address, oldKey, newKey);
+        notes = rotateStoredValue(row.notes, oldKey, newKey);
+      } catch (cause) {
+        throw new Error(`Shop ${shopId}: Order ${row.id} is undecryptable`, {
+          cause,
+        });
       }
+      const values = [phone, address, notes];
+      recordRowState(result, values);
+      const changed = values.some((value) => value.state === "rotated");
+      if (DRY_RUN || !changed) continue;
 
-      const oldPlaintext = tryDecryptPiiRow(raw, ORDER_PII_FIELDS, oldKey);
-      if (oldPlaintext === null) {
-        if (tryDecryptPiiRow(raw, ORDER_PII_FIELDS, newKey) !== null) {
-          result.alreadyNew += 1;
-          continue;
-        }
-        throw new Error(`Shop ${shopId}: Order ${row.id} is undecryptable`);
-      }
-
-      result.rotated += 1;
-      if (DRY_RUN) continue;
-      const reEncrypted = encryptPiiFields(
-        oldPlaintext,
-        ORDER_PII_FIELDS,
-        newKey,
-        { sourceField: "phone", indexField: "phoneBlindIndex" },
-      );
       await tx.order.update({
         where: { id: row.id },
         data: {
-          phone: reEncrypted.phone as string,
+          phone: phone.stored!,
           phoneBlindIndex:
-            (reEncrypted.phoneBlindIndex as string | undefined) ?? null,
-          address: reEncrypted.address as string,
-          notes: (reEncrypted.notes as string | undefined) ?? null,
+            phone.state === "rotated" && phone.plaintext !== null
+              ? deriveBlindIndex(phone.plaintext, newKey)
+              : row.phoneBlindIndex,
+          address: address.stored!,
+          notes: notes.stored,
         },
       });
     }
@@ -817,45 +889,26 @@ async function rotateConversations(
 
   await client.$transaction(async (tx) => {
     for (const row of rows) {
-      const raw = row as unknown as Record<string, unknown>;
-      const encrypted = CONVERSATION_PII_FIELDS.some((field) =>
-        isEncryptedPayload(raw[field] as string | null | undefined),
-      );
-      if (!encrypted) {
-        result.plaintext += 1;
-        continue;
+      let name: ValueRotation;
+      let phone: ValueRotation;
+      try {
+        name = rotateStoredValue(row.contactName, oldKey, newKey);
+        phone = rotateStoredValue(row.contactPhone, oldKey, newKey);
+      } catch (cause) {
+        throw new Error(`Shop ${shopId}: Conversation ${row.id} is undecryptable`, {
+          cause,
+        });
       }
+      const values = [name, phone];
+      recordRowState(result, values);
+      const changed = values.some((value) => value.state === "rotated");
+      if (DRY_RUN || !changed) continue;
 
-      const oldPlaintext = tryDecryptPiiRow(
-        raw,
-        CONVERSATION_PII_FIELDS,
-        oldKey,
-      );
-      if (oldPlaintext === null) {
-        if (
-          tryDecryptPiiRow(raw, CONVERSATION_PII_FIELDS, newKey) !== null
-        ) {
-          result.alreadyNew += 1;
-          continue;
-        }
-        throw new Error(
-          `Shop ${shopId}: Conversation ${row.id} is undecryptable`,
-        );
-      }
-
-      result.rotated += 1;
-      if (DRY_RUN) continue;
-      const reEncrypted = encryptPiiFields(
-        oldPlaintext,
-        CONVERSATION_PII_FIELDS,
-        newKey,
-      );
       await tx.conversation.update({
         where: { id: row.id },
         data: {
-          contactName: reEncrypted.contactName as string,
-          contactPhone:
-            (reEncrypted.contactPhone as string | undefined) ?? null,
+          contactName: name.stored!,
+          contactPhone: phone.stored,
         },
       });
     }
@@ -874,29 +927,19 @@ async function rotateMessages(
 
   await client.$transaction(async (tx) => {
     for (const row of rows) {
-      if (!row.body || !isEncryptedPayload(row.body)) {
-        result.plaintext += 1;
-        continue;
-      }
-
-      let plaintext: string;
+      let body: ValueRotation;
       try {
-        plaintext = decryptString(encryptedPayload(row.body), oldKey);
-      } catch {
-        try {
-          decryptString(encryptedPayload(row.body), newKey);
-          result.alreadyNew += 1;
-          continue;
-        } catch {
-          throw new Error(`Shop ${shopId}: Message ${row.id} is undecryptable`);
-        }
+        body = rotateStoredValue(row.body, oldKey, newKey);
+      } catch (cause) {
+        throw new Error(`Shop ${shopId}: Message ${row.id} is undecryptable`, {
+          cause,
+        });
       }
-
-      result.rotated += 1;
-      if (DRY_RUN) continue;
+      recordRowState(result, [body]);
+      if (DRY_RUN || body.state !== "rotated") continue;
       await tx.message.update({
         where: { id: row.id },
-        data: { body: JSON.stringify(encryptString(plaintext, newKey)) },
+        data: { body: body.stored! },
       });
     }
   });
@@ -914,6 +957,10 @@ async function rotateSecrets(
 
   await client.$transaction(async (tx) => {
     for (const row of rows) {
+      if (isProtectedValueEnvelope(row.ciphertext)) {
+        result.alreadyNew += 1;
+        continue;
+      }
       const payload: EncryptedPayload = {
         iv: row.iv,
         ciphertext: row.ciphertext,
@@ -927,9 +974,10 @@ async function rotateSecrets(
           decryptString(payload, newKey);
           result.alreadyNew += 1;
           continue;
-        } catch {
+        } catch (cause) {
           throw new Error(
             `Shop ${shopId}: Secret ${row.id} (${row.key}) is undecryptable`,
+            { cause },
           );
         }
       }
@@ -946,6 +994,36 @@ async function rotateSecrets(
   return result;
 }
 
+async function rotateProtectedKeyAuthority(
+  client: PrismaClient,
+  target: RotationTarget,
+  oldKey: Buffer,
+  newKey: Buffer,
+): Promise<ModelStats> {
+  const count = await client.protectedKeyAuthority.count();
+  if (count === 0) return stats(target.id, "ProtectedKeyAuthority", 0);
+  if (!target.context) {
+    throw new Error(
+      `Shop ${target.id} contains protected key authority without an exact registry context`,
+    );
+  }
+  const rewrapped = await rewrapShopProtectedKeys(
+    client,
+    target.context,
+    oldKey,
+    newKey,
+    DRY_RUN,
+  );
+  return {
+    shopId: target.id,
+    model: "ProtectedKeyAuthority",
+    total: rewrapped.total,
+    rotated: rewrapped.rewrapped,
+    alreadyNew: rewrapped.alreadyCurrent,
+    plaintext: 0,
+  };
+}
+
 async function rotateTarget(
   target: RotationTarget,
   oldKey: Buffer,
@@ -956,10 +1034,6 @@ async function rotateTarget(
   const client = new PrismaClient({
     datasourceUrl: `file:${target.databasePath}`,
     log: ["error"],
-    // Rotation runs only while the application is stopped and the maintenance
-    // lease blocks every packaged writer. Prisma's five-second interactive
-    // transaction default is too short for a realistic HDD-backed seller
-    // table, so keep each atomic model re-wrap explicitly bounded instead.
     transactionOptions: {
       maxWait: ROTATION_TRANSACTION_MAX_WAIT_MS,
       timeout: ROTATION_TRANSACTION_TIMEOUT_MS,
@@ -969,6 +1043,10 @@ async function rotateTarget(
     reportStage("database-connect");
     await client.$connect();
     const result: ModelStats[] = [];
+    reportStage("protected-key-authority");
+    result.push(
+      await rotateProtectedKeyAuthority(client, target, oldKey, newKey),
+    );
     reportStage("customers");
     result.push(await rotateCustomers(client, target.id, oldKey, newKey));
     reportStage("orders");
@@ -1007,7 +1085,7 @@ function commitKeyfile(newKey: Buffer): string {
   try {
     chmodSync(backupPath, 0o600);
   } catch {
-    // Best effort on platforms that do not expose POSIX modes.
+    // Best effort.
   }
 
   try {
@@ -1020,7 +1098,7 @@ function commitKeyfile(newKey: Buffer): string {
   try {
     chmodSync(KEYFILE_PATH, 0o600);
   } catch {
-    // Best effort on platforms that do not expose POSIX modes.
+    // Best effort.
   }
   if (!readKey(KEYFILE_PATH).equals(newKey)) {
     copyFileSync(backupPath, KEYFILE_PATH);
@@ -1032,14 +1110,14 @@ function commitKeyfile(newKey: Buffer): string {
 function printStats(allStats: readonly ModelStats[]): void {
   console.log("");
   console.log(
-    `${"Shop".padEnd(24)} ${"Model".padEnd(14)} ${"Total".padStart(7)} ${
+    `${"Shop".padEnd(24)} ${"Model".padEnd(24)} ${"Total".padStart(7)} ${
       (DRY_RUN ? "WouldRotate" : "Rotated").padStart(12)
     } ${"AlreadyNew".padStart(11)} ${"Plaintext".padStart(10)}`,
   );
-  console.log("-".repeat(84));
+  console.log("-".repeat(94));
   for (const item of allStats) {
     console.log(
-      `${item.shopId.padEnd(24)} ${item.model.padEnd(14)} ${String(
+      `${item.shopId.padEnd(24)} ${item.model.padEnd(24)} ${String(
         item.total,
       ).padStart(7)} ${String(item.rotated).padStart(12)} ${String(
         item.alreadyNew,
@@ -1049,16 +1127,15 @@ function printStats(allStats: readonly ModelStats[]): void {
 }
 
 async function main(): Promise<void> {
-  // The Windows staged-runtime lane executes the exact packaged worker with
-  // the pinned Node binary before MSI construction. This proves that the
-  // bundle format and every static runtime import load successfully without
-  // acquiring a lease, reading key material, or touching a database.
   if (BOOTSTRAP_CHECK) {
     console.log(BOOTSTRAP_READY_MARKER);
     return;
   }
 
-  if (!NATIVE_ROTATION && PROTECTED_INSTALLATION_ROOT_PATHS.some((path) => existsSync(path))) {
+  if (
+    !NATIVE_ROTATION &&
+    PROTECTED_INSTALLATION_ROOT_PATHS.some((path) => existsSync(path))
+  ) {
     delegateProtectedRotation();
     return;
   }
@@ -1073,9 +1150,6 @@ async function main(): Promise<void> {
   try {
     lease = acquireRotationLease();
     stage = "runtime-stop";
-    // Acquire the maintenance lease first, then prove the old runtime is gone.
-    // A packaged Node process launched after this point refuses startup, and an
-    // already-running process refuses every process-bound production write.
     await assertApplicationStopped();
 
     stage = "target-discovery";
@@ -1104,14 +1178,8 @@ async function main(): Promise<void> {
     }
 
     const allStats: ModelStats[] = [];
-    // Once the first target is entered, a later failure cannot prove that no
-    // database transaction committed. Keep the installation blocked until a
-    // successful resume commits the shared keyfile.
     if (!DRY_RUN) mutationWindowEntered = true;
 
-    // The shared keyfile is deliberately not committed until every registered
-    // shop and the provisioning template have been processed with this exact
-    // old/new key pair. A crash leaves the old keyfile plus reusable sidecar.
     for (const target of targets) {
       allStats.push(
         ...(await rotateTarget(target, oldKey, newKey, (nextStage) => {
@@ -1145,7 +1213,7 @@ async function main(): Promise<void> {
         : `New keyfile: ${KEYFILE_PATH}`,
     );
     console.log(
-      "All registered shop Secrets—including business-truth envelope wrappers—and installation identity authority were re-authenticated before the shared root commit.",
+      "Every protected shop key was re-wrapped without changing seller ciphertext; remaining authenticated legacy values and installation identity were rotated before the shared root commit.",
     );
   } catch (error) {
     console.error(
