@@ -1,17 +1,18 @@
 /**
  * Server-side i18n — for server components.
  *
- * Reads the locale from a cookie (set by the client UI store) or defaults to 'fr'.
- * Loads translations synchronously via require().
+ * Reads the locale from a cookie or defaults to French. Static locale JSON and
+ * runtime-owned copy share the same fallback resolver as the hydrated client so
+ * Server Components cannot leak a dotted key that the client later translates.
  */
 import "server-only";
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import type { Locale } from "@/lib/i18n";
 import { getDirection, DEFAULT_LOCALE } from "@/lib/i18n";
+import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 import { cookies } from "next/headers";
 
-// Cache translations (module-level)
 const translationCache = new Map<Locale, Record<string, string>>();
 
 export function loadTranslationsSync(locale: Locale): Record<string, string> {
@@ -32,7 +33,11 @@ export function loadTranslationsSync(locale: Locale): Record<string, string> {
 async function getLocaleFromCookie(): Promise<Locale> {
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get("sahelflow-locale");
-  if (localeCookie?.value === "ar" || localeCookie?.value === "fr" || localeCookie?.value === "en") {
+  if (
+    localeCookie?.value === "ar" ||
+    localeCookie?.value === "fr" ||
+    localeCookie?.value === "en"
+  ) {
     return localeCookie.value;
   }
   return DEFAULT_LOCALE;
@@ -44,15 +49,21 @@ export async function getI18n() {
   const dir = getDirection(locale);
 
   const t = (key: string, params?: Record<string, string | number>): string => {
-    let value = translations[key] ?? key;
-    // UX-008: CLDR plural support
+    let value = translations[key] ?? getRuntimeTranslation(locale, key) ?? key;
     if (params && "count" in params) {
       const pluralRule = new Intl.PluralRules(locale).select(Number(params.count));
-      if (translations[`${key}_${pluralRule}`]) value = translations[`${key}_${pluralRule}`]!;
+      const pluralKey = `${key}_${pluralRule}`;
+      value =
+        translations[pluralKey] ??
+        getRuntimeTranslation(locale, pluralKey) ??
+        value;
     }
     if (params) {
       for (const [param, val] of Object.entries(params)) {
-        value = value.replace(new RegExp(`\\{\\{${param}\\}\\}`, "g"), String(val));
+        value = value.replace(
+          new RegExp(`\\{\\{${param}\\}\\}`, "g"),
+          String(val),
+        );
       }
     }
     return value;
