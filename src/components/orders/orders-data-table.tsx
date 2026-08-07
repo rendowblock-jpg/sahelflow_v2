@@ -2,23 +2,25 @@
 
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 
 import { DataTable, type BulkAction } from "@/components/data-table/data-table";
 import { OrdersEmptyState } from "@/components/shared/empty-states";
+import { StateSurface } from "@/components/shared/state-surface";
 import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useUndoableDelete } from "@/hooks/use-undoable-delete";
-import { useOrders, type OrdersResponse } from "@/hooks/swr/use-orders";
+import { useOrders } from "@/hooks/swr/use-orders";
 import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { toast } from "@/lib/toast";
 import type { OrderStatus } from "@/types/domain";
+import type { OrdersWorkbenchResponse } from "@/types/workbench";
 import { useOrdersColumns } from "./orders-columns";
 
 interface OrdersDataTableProps {
-  /** Exact first page from the same server workbench contract as later pages. */
-  fallback: OrdersResponse;
+  /** Exact server page matching the initial URL workbench state. */
+  fallback: OrdersWorkbenchResponse;
   locale: Locale;
   statusFilter?: OrderStatus | "all";
 }
@@ -30,6 +32,8 @@ interface OrdersDataTableProps {
  * second page has the same permission/redaction semantics as the RSC first paint.
  * Bulk actions remain compatibility-only: governed canonical orders require their
  * dedicated command flow and cannot be flattened into legacy status mutation.
+ * Business status is never painted optimistically: the visible state changes only
+ * after the authoritative server mutation succeeds and the workbench revalidates.
  */
 export function OrdersDataTable({
   fallback,
@@ -50,24 +54,24 @@ export function OrdersDataTable({
     onAfter: () => mutatePrefix("/api/orders"),
   });
 
-  const { data, isLoading, mutate, pagination } = useOrders({
+  const { data, error, isLoading, mutate, pagination } = useOrders({
     status: statusFilter,
     fallback,
   });
-  const response = data ?? fallback;
+  const fieldAccess = data?.fieldAccess ?? fallback.fieldAccess;
 
   const columns = useOrdersColumns({
     locale,
-    fieldAccess: response.fieldAccess,
-    riskData: response.riskData,
+    fieldAccess,
+    riskData: data?.riskData,
     onDelete: (id) => deleteOrder(id),
   });
 
   const bulkMutation = useApiMutation({
     onSuccess: async (result) => {
-      const response = result as { succeeded?: string[]; failed?: string[] };
-      const succeeded = response.succeeded?.length ?? 0;
-      const failed = response.failed?.length ?? 0;
+      const payload = result as { succeeded?: string[]; failed?: string[] };
+      const succeeded = payload.succeeded?.length ?? 0;
+      const failed = payload.failed?.length ?? 0;
       if (failed === 0) {
         toast.success(t("orders.bulkSuccess", { n: String(succeeded) }));
       } else {
@@ -78,14 +82,18 @@ export function OrdersDataTable({
           }),
         );
       }
-      await Promise.all([mutatePrefix("/api/orders"), router.refresh()]);
+      await Promise.all([
+        mutate(),
+        mutatePrefix("/api/orders"),
+        router.refresh(),
+      ]);
     },
   });
 
   const handleBulk = useCallback(
     (status: OrderStatus, selectedIds: string[]) => {
-      if (selectedIds.length === 0) return;
-      const governedSelected = response.orders.some(
+      if (selectedIds.length === 0 || bulkMutation.isSubmitting || !data) return;
+      const governedSelected = data.orders.some(
         (order) =>
           selectedIds.includes(order.id) &&
           (order.mutationAuthority === "canonical_v1" ||
@@ -102,24 +110,12 @@ export function OrdersDataTable({
         return;
       }
 
-      const optimisticData: OrdersResponse = {
-        ...response,
-        orders: response.orders.map((order) =>
-          selectedIds.includes(order.id) ? { ...order, status } : order,
-        ),
-      };
-      void mutate(optimisticData, { revalidate: false });
-
-      void bulkMutation
-        .submit("/api/orders/bulk", {
-          method: "POST",
-          body: JSON.stringify({ ids: selectedIds, status }),
-        })
-        .catch(() => {
-          void mutate();
-        });
+      void bulkMutation.submit("/api/orders/bulk", {
+        method: "POST",
+        body: JSON.stringify({ ids: selectedIds, status }),
+      });
     },
-    [bulkMutation, locale, mutate, response],
+    [bulkMutation, data, locale],
   );
 
   const bulkActions: BulkAction[] = [
@@ -127,27 +123,43 @@ export function OrdersDataTable({
       label: t("orders.confirmSelected"),
       onClick: (ids) => handleBulk("confirmed", ids),
       icon: CheckCircle2,
+      disabled: bulkMutation.isSubmitting,
     },
     {
       label: t("orders.shipSelected"),
       onClick: (ids) => handleBulk("shipped", ids),
+      disabled: bulkMutation.isSubmitting,
     },
     {
       label: t("orders.cancelSelectedShort"),
       onClick: (ids) => handleBulk("cancelled", ids),
       variant: "destructive",
       icon: XCircle,
+      disabled: bulkMutation.isSubmitting,
     },
   ];
+
+  if (error && !data) {
+    return (
+      <StateSurface
+        icon={AlertTriangle}
+        title={t("error.requestFailed")}
+        description={error.message}
+        tone="danger"
+        size="inline"
+        role="alert"
+      />
+    );
+  }
 
   return (
     <DataTable
       columns={columns}
-      data={response.orders}
+      data={data?.orders ?? []}
       isLoading={isLoading}
       pagination={pagination}
       onRowClick={(row) => router.push(`/orders/${row.id}`)}
-      bulkActions={response.fieldAccess.update ? bulkActions : undefined}
+      bulkActions={fieldAccess.update ? bulkActions : undefined}
       getRowId={(row) => row.id}
       emptyState={<OrdersEmptyState />}
     />
