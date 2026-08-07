@@ -15,17 +15,16 @@ export default async function SettingsPage() {
   const can = (action: Parameters<typeof trustedActionAllowed>[1]) => trustedActionAllowed(actorContext, action, resource);
   const access: SettingsSurfaceAccess = {
     settingsManage: can("settings.manage"),
-    sessionsRead: can("sessions.read") || can("devices.read"),
-    membersRead: can("members.read"),
-    licenseRead: can("license.read"),
+    sessionsManage: can("sessions.revoke") && can("devices.manage"),
+    membersManage: can("members.manage"),
     licenseManage: can("license.manage"),
-    integrationsRead: can("integrations.read"),
     integrationsManage: can("integrations.manage"),
     deliveryCredentialsManage: can("delivery.credentials.manage"),
-    backups: can("backups.read") || can("backups.create") || can("backups.restore"),
-    riskRead: can("risk.read"),
+    backupManage: can("backups.read") && can("backups.create") && can("backups.restore"),
+    riskManage: can("risk.manage"),
+    dangerManage: can("settings.manage") && can("shops.delete"),
   };
-  const integrations = access.integrationsRead
+  const integrations = access.integrationsManage
     ? await db.integration.findMany({ orderBy: { platform: "asc" } })
     : [];
   const { t } = await getI18n();
