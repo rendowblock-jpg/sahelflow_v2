@@ -31,15 +31,20 @@ describe("Phase 5 whole-product completion contract", () => {
   });
 
   it("keeps list navigation truthful when detail routes need stronger authority", () => {
-    const sources = [
-      read("src/components/orders/orders-columns.tsx"),
-      read("src/components/orders/orders-data-table.tsx"),
-      read("src/components/orders/confirmation-queue-table.tsx"),
-      read("src/components/deliveries/deliveries-data-table.tsx"),
-      read("src/components/returns/returns-data-table.tsx"),
-    ];
-    for (const source of sources) {
+    const orderColumns = read("src/components/orders/orders-columns.tsx");
+    const orderTable = read("src/components/orders/orders-data-table.tsx");
+    const confirmation = read("src/components/orders/confirmation-queue-table.tsx");
+    const deliveries = read("src/components/deliveries/deliveries-data-table.tsx");
+    const returns = read("src/components/returns/returns-data-table.tsx");
+
+    for (const source of [orderColumns, orderTable, confirmation]) {
       expect(source).toContain("canOpenDetail");
+      expect(source).toContain("contact &&");
+      expect(source).toContain("financials");
+    }
+    for (const source of [deliveries, returns]) {
+      expect(source).toContain("canViewDetail");
+      expect(source).toContain("access.contact && access.financials");
     }
   });
 
@@ -55,11 +60,15 @@ describe("Phase 5 whole-product completion contract", () => {
   it("routes imports through visible preview and canonical writes", () => {
     const controls = read("src/components/shared/import-export-buttons.tsx");
     const imports = read("src/app/(dashboard)/imports/page.tsx");
+    const orderImport = read("src/app/api/import/orders/route.ts");
     const customerImport = read("src/app/api/import/customers/route.ts");
     const productImport = read("src/app/api/import/products/route.ts");
     expect(controls).toContain("/imports#import-");
     expect(controls).not.toContain('formData.append("commit", "true")');
-    expect(imports).toContain("ImportPanel");
+    expect(imports).toContain('entity="orders"');
+    expect(imports).toContain('id="import-orders"');
+    expect(orderImport).toContain("createCanonicalSourceOrder");
+    expect(orderImport).toContain("if (!commit)");
     expect(customerImport).toContain("customerService.create");
     expect(productImport).toContain("productService.create");
     expect(customerImport).toContain("if (!commit)");
