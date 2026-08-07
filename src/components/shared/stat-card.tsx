@@ -56,7 +56,8 @@ export function StatCard({
   tooltip,
   hint,
 }: StatCardProps) {
-  const hasTrend = typeof trend === "number" && Number.isFinite(trend) && trend !== 0;
+  const hasTrend =
+    typeof trend === "number" && Number.isFinite(trend) && trend !== 0;
   const positive = hasTrend && trend > 0;
   const negative = hasTrend && trend < 0;
 
@@ -111,9 +112,8 @@ export function StatCard({
                   ) : (
                     <ArrowDownRight className="size-3" aria-hidden="true" />
                   )}
-                  {!trendLabel && Math.abs(trend) !== 1
-                    ? `${Math.abs(trend).toFixed(1)}%`
-                    : null}
+                  {trend > 0 ? "+" : ""}
+                  {trend.toFixed(1)}%
                 </span>
               ) : null}
               {trendLabel ? <span>{trendLabel}</span> : null}
