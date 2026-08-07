@@ -39,7 +39,7 @@ next implementation frontier is Phase 6 accessibility/Arabic/RTL parity.
 
 ## Phase 5 merged result
 
-PR #220 merged one whole-product convergence wave. Important installed source
+PR #220 merged one whole-product convergence wave. Important merged source
 contracts include:
 
 ### Desktop shell and navigation
@@ -150,7 +150,7 @@ Beta, Stable or installed certification.
 ## Active Phase 6 frontier
 
 Phase 6 must start from live protected `main` and treat the Phase 5 primitives as
-installed contracts, not disposable scaffolding.
+merged source contracts, not disposable scaffolding.
 
 Primary work:
 
