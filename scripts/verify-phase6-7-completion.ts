@@ -2,6 +2,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import * as ts from "typescript";
 
 interface RouteAudit {
   route: string;
@@ -24,6 +25,7 @@ interface RouteAudit {
 interface Inventory {
   commit: string;
   dirty: boolean;
+  files: string[];
   experience: { routeAudits: RouteAudit[] };
 }
 
@@ -126,6 +128,117 @@ for (const key of [...allLocaleKeys].sort()) {
   }
 }
 
+const SAFE_LITERAL_COPY = new Set([
+  "SahelFlow",
+  "SF",
+  "DZD",
+  "PIN",
+  "API",
+  "CSV",
+  "XLSX",
+  "JSON",
+  "WhatsApp",
+  "Gemini",
+  "Google",
+  "Shopify",
+  "WooCommerce",
+  "YouCan",
+  "Yalidine",
+  "ZR Express",
+  "Maystro",
+  "NOEST",
+  "Cloudflare",
+  "Windows",
+  "WebView2",
+  "Ctrl",
+  "ESC",
+  "English",
+  "Français",
+  "العربية",
+]);
+const USER_FACING_LITERAL_ATTRIBUTES = new Set([
+  "aria-label",
+  "placeholder",
+  "title",
+  "alt",
+]);
+
+function normalizeLiteral(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function safeLiteral(value: string, parentTag?: string) {
+  const text = normalizeLiteral(value);
+  if (!text) return true;
+  if (parentTag && ["code", "kbd", "pre"].includes(parentTag)) return true;
+  if (SAFE_LITERAL_COPY.has(text)) return true;
+  if (/^v\d+(?:\.\d+)*$/i.test(text)) return true;
+  if (/^(?:https?:\/\/|mailto:|tel:|\/)/i.test(text)) return true;
+  if (/^[\d\s.,:+%#@()\[\]{}\-–—·•…×÷=<>|/\\]+$/u.test(text)) return true;
+  return false;
+}
+
+function jsxTagName(node: ts.Node): string | undefined {
+  const parent = node.parent;
+  if (ts.isJsxElement(parent)) return parent.openingElement.tagName.getText();
+  if (ts.isJsxFragment(parent)) return undefined;
+  if (ts.isJsxElement(parent?.parent)) return parent.parent.openingElement.tagName.getText();
+  return undefined;
+}
+
+const hardcodedCopyFindings: string[] = [];
+for (const path of inventory.files.filter(
+  (file) =>
+    /^(?:src\/app|src\/components)\/.+\.tsx$/.test(file) &&
+    !file.includes("/__tests__/") &&
+    !/\.(?:test|spec)\.tsx$/.test(file),
+)) {
+  const content = source(path);
+  const ast = ts.createSourceFile(path, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+  const report = (node: ts.Node, kind: string, literal: string) => {
+    const text = normalizeLiteral(literal);
+    if (safeLiteral(text, jsxTagName(node))) return;
+    const { line, character } = ast.getLineAndCharacterOfPosition(node.getStart(ast));
+    hardcodedCopyFindings.push(
+      `${path}:${line + 1}:${character + 1} ${kind}: ${JSON.stringify(text.slice(0, 120))}`,
+    );
+  };
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isJsxText(node)) {
+      report(node, "JSX text", node.getText(ast));
+    } else if (ts.isJsxAttribute(node)) {
+      const name = node.name.getText(ast);
+      if (USER_FACING_LITERAL_ATTRIBUTES.has(name) && node.initializer) {
+        if (ts.isStringLiteral(node.initializer)) {
+          if (!(name === "alt" && node.initializer.text === "")) {
+            report(node, `${name} literal`, node.initializer.text);
+          }
+        } else if (
+          ts.isJsxExpression(node.initializer) &&
+          node.initializer.expression &&
+          (ts.isStringLiteral(node.initializer.expression) ||
+            ts.isNoSubstitutionTemplateLiteral(node.initializer.expression))
+        ) {
+          report(node, `${name} literal`, node.initializer.expression.text);
+        }
+      }
+    } else if (
+      ts.isJsxExpression(node) &&
+      node.expression &&
+      (ts.isStringLiteral(node.expression) || ts.isNoSubstitutionTemplateLiteral(node.expression))
+    ) {
+      report(node, "JSX expression text", node.expression.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+}
+for (const finding of hardcodedCopyFindings) {
+  errors.push(`hard-coded user copy: ${finding}`);
+}
+
 const clientI18n = source("src/hooks/use-i18n.ts");
 const serverI18n = source("src/lib/i18n-server.ts");
 const runtimeI18n = source("src/lib/i18n/runtime-translations.ts");
@@ -184,6 +297,19 @@ for (const [name, content, marker] of targetContracts) {
   if (!content.includes(marker)) errors.push(`target size: ${name} does not expose the 24px shared target floor`);
 }
 
+const stateSurface = source("src/components/shared/state-surface.tsx");
+if (!stateSurface.includes("aria-live={live}") || !stateSurface.includes("role={role}")) {
+  errors.push("state surface: shared async status announcement hooks are missing");
+}
+const chartFrame = source("src/components/charts/chart-primitives.tsx");
+if (!chartFrame.includes("accessibleSummary") || !chartFrame.includes("aria-describedby={summaryId}")) {
+  errors.push("charts: non-visual analytical summary contract is missing");
+}
+const dataTable = source("src/components/data-table/data-table.tsx");
+if (!dataTable.includes('<table className="w-full"') || dataTable.includes("tabIndex={onRowClick")) {
+  errors.push("data table: semantic HTML table / non-focusable row contract regressed");
+}
+
 const speculation = source("src/components/shared/speculation-rules.tsx");
 if (speculation.includes("prerender:")) {
   errors.push("performance: whole-document speculative prerender remains enabled");
@@ -205,13 +331,14 @@ const result = {
   routeCount: routes.length,
   requiredRoutes: [...requiredRoutes],
   localeKeyCounts: { en: Object.keys(en).length, fr: Object.keys(fr).length, ar: Object.keys(ar).length },
+  hardcodedCopyFindings,
   blockingFindings: errors,
   manualReviewWarnings: warnings,
 };
 writeFileSync(contractPath, `${JSON.stringify(result, null, 2)}\n`);
 writeFileSync(
   summaryPath,
-  `# Phase 6/7 static completion contract\n\nCommit: \`${inventory.commit}\`\n\n- Routes inventoried: ${routes.length}\n- EN keys: ${Object.keys(en).length}\n- FR keys: ${Object.keys(fr).length}\n- AR keys: ${Object.keys(ar).length}\n- Blocking findings: ${errors.length}\n- Manual-review warnings: ${warnings.length}\n\n## Blocking findings\n\n${errors.length ? errors.map((error) => `- ${error}`).join("\n") : "None."}\n\n## Manual-review warnings\n\n${warnings.length ? warnings.map((warning) => `- ${warning}`).join("\n") : "None."}\n`,
+  `# Phase 6/7 static completion contract\n\nCommit: \`${inventory.commit}\`\n\n- Routes inventoried: ${routes.length}\n- EN keys: ${Object.keys(en).length}\n- FR keys: ${Object.keys(fr).length}\n- AR keys: ${Object.keys(ar).length}\n- Hard-coded user-copy findings: ${hardcodedCopyFindings.length}\n- Blocking findings: ${errors.length}\n- Manual-review warnings: ${warnings.length}\n\n## Blocking findings\n\n${errors.length ? errors.map((error) => `- ${error}`).join("\n") : "None."}\n\n## Manual-review warnings\n\n${warnings.length ? warnings.map((warning) => `- ${warning}`).join("\n") : "None."}\n`,
 );
 
 if (errors.length > 0) {
