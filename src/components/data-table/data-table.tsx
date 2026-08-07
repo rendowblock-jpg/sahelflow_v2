@@ -80,6 +80,8 @@ export interface DataTablePagination {
    * table must not locally reorder one page as though it sorted the dataset.
    */
   serverSort?: boolean;
+  /** Authoritative normalized server sort, for example `createdAt.desc`. */
+  sort?: string;
 }
 
 export interface BulkAction {
@@ -120,6 +122,8 @@ interface DataTableProps<TData> {
  * ARIA grid. Sortable headers contain real buttons. A paginated table exposes
  * sort only when its backend declares a matching server contract; otherwise it
  * avoids the false impression that reordering one page sorted the complete set.
+ * Row navigation remains a pointer convenience only; keyboard navigation belongs
+ * to real labelled links rendered inside the row rather than focusable <tr>s.
  */
 export function DataTable<TData>({
   columns,
@@ -141,13 +145,16 @@ export function DataTable<TData>({
     { sort: sortParser, page: pageParser },
     { shallow: true },
   );
+  const effectiveSort = pagination?.serverSort
+    ? (pagination.sort ?? sortUrl.sort)
+    : sortUrl.sort;
 
   const sorting = React.useMemo<SortingState>(() => {
-    if (!sortUrl.sort) return [];
-    const [id, direction] = sortUrl.sort.split(".");
+    if (!effectiveSort) return [];
+    const [id, direction] = effectiveSort.split(".");
     if (!id) return [];
     return [{ id, desc: direction === "desc" }];
-  }, [sortUrl.sort]);
+  }, [effectiveSort]);
 
   const sortingEnabled = pagination ? Boolean(pagination.serverSort) : true;
   const table = useReactTable({
@@ -156,16 +163,17 @@ export function DataTable<TData>({
     state: { sorting, rowSelection },
     enableRowSelection: true,
     enableSorting: sortingEnabled,
+    enableSortingRemoval: !pagination?.serverSort,
     onRowSelectionChange: setRowSelection,
     onSortingChange: (updater) => {
       if (!sortingEnabled) return;
       const next = typeof updater === "function" ? updater(sorting) : updater;
       const first = next[0];
+      const nextSort = first
+        ? `${first.id}.${first.desc ? "desc" : "asc"}`
+        : (pagination?.sort ?? "");
       setRowSelection({});
-      void setSortUrl({
-        sort: first ? `${first.id}.${first.desc ? "desc" : "asc"}` : "",
-        page: 1,
-      });
+      void setSortUrl({ sort: nextSort, page: 1 });
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -349,11 +357,9 @@ export function DataTable<TData>({
                 table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
-                    tabIndex={onRowClick ? 0 : undefined}
                     className={cn(
                       "transition-colors hover:bg-muted/40",
-                      onRowClick &&
-                        "cursor-pointer outline-none focus-visible:bg-muted/30 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                      onRowClick && "cursor-pointer",
                       row.getIsSelected() && "bg-primary/5",
                     )}
                     onClick={
@@ -371,17 +377,6 @@ export function DataTable<TData>({
                               return;
                             }
                             onRowClick(row.original);
-                          }
-                        : undefined
-                    }
-                    onKeyDown={
-                      onRowClick
-                        ? (event) => {
-                            if (event.target !== event.currentTarget) return;
-                            if (event.key === "Enter") {
-                              event.preventDefault();
-                              onRowClick(row.original);
-                            }
                           }
                         : undefined
                     }
