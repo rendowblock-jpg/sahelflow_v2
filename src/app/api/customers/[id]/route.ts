@@ -11,20 +11,22 @@ import {
 } from "@/lib/identity/authorization";
 import { assertCustomerUpdateFieldAuthority } from "@/lib/identity/customer-authorization";
 import { projectCustomerForTrustedActor } from "@/lib/identity/customer-projection";
+import { getCustomerWorkbenchDetail } from "@/lib/customers/customer-workbench";
+import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET /api/customers/[id] — fetch a single customer by id */
+/** GET /api/customers/[id] — permission-before-read customer detail. */
 export const GET = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
-  // W2-4: defense-in-depth — GET was unprotected, exposed customer PII to unauthenticated callers.
   const actorContext = await requireTrustedAction("customers.read");
   const { id } = await params;
-  const customer = await customerService.getById({ prisma: db, shop: shopContext }, id);
-  return NextResponse.json({
-    customer: projectCustomerForTrustedActor(actorContext, customer),
-  });
+  const customer = await getCustomerWorkbenchDetail(actorContext, id);
+  if (!customer) {
+    throw new SahelFlowError("Customer not found", "NOT_FOUND", 404);
+  }
+  return NextResponse.json({ customer });
 }, "GET /api/customers/[id]");
 
 /** PATCH /api/customers/[id] — update an existing customer */
@@ -49,7 +51,6 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   const actorContext = await requireTrustedAction("customers.manage");
   const { id } = await params;
-  // W2-5: capture before-state for audit (soft-delete — row stays in DB).
   const existing = await db.customer.findUnique({ where: { id } });
   await customerService.delete({ prisma: db, shop: shopContext }, id);
   await logAudit({ prisma: db, shop: shopContext }, {
