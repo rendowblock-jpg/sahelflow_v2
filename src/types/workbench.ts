@@ -67,3 +67,65 @@ export interface ConfirmationQueueResponse {
   page: number;
   pageSize: number;
 }
+
+export interface CustomerWorkbenchFieldAccess {
+  contact: boolean;
+  financials: boolean;
+  risk: boolean;
+  manage: boolean;
+  contactUpdate: boolean;
+  import: boolean;
+  export: boolean;
+}
+
+export interface CustomerWorkbenchItem {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  wilaya: string | null;
+  commune: string | null;
+  orderCount: number;
+  totalSpent: number | null;
+  riskScore: number | null;
+  isBlacklisted: boolean | null;
+  createdAt: Date | string;
+}
+
+export interface CustomersWorkbenchResponse {
+  customers: CustomerWorkbenchItem[];
+  fieldAccess: CustomerWorkbenchFieldAccess;
+  total: number;
+  hasNextPage: boolean;
+  page: number;
+  pageSize: number;
+}
+
+export interface ProductWorkbenchFieldAccess {
+  cost: boolean;
+  manage: boolean;
+  costUpdate: boolean;
+  import: boolean;
+  export: boolean;
+}
+
+export interface ProductWorkbenchItem {
+  id: string;
+  name: string;
+  sku: string | null;
+  price: number;
+  cost: number | null;
+  stock: number;
+  lowStockThreshold: number;
+  categoryId: string | null;
+  isActive: boolean;
+  createdAt: Date | string;
+}
+
+export interface ProductsWorkbenchResponse {
+  products: ProductWorkbenchItem[];
+  fieldAccess: ProductWorkbenchFieldAccess;
+  total: number;
+  hasNextPage: boolean;
+  page: number;
+  pageSize: number;
+}
