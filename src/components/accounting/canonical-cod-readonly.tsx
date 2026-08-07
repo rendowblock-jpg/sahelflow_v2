@@ -25,13 +25,15 @@ const COPY = {
     awaitingRemittance: "Awaiting remittance",
     review: "Reconciliation review",
     recent: "Recent remittance batches",
-    order: "Order",
+    order: "Order / line",
     customer: "Customer",
     provider: "Provider",
-    outstanding: "Outstanding",
+    outstanding: "Discrepancy / outstanding",
     reference: "Reference",
     date: "Date",
     state: "State",
+    unmatched: "Unmatched provider line",
+    needsReview: "Needs review",
     noReview: "No COD discrepancy currently needs review.",
     readonly: "Read-only financial workspace",
   },
@@ -44,13 +46,15 @@ const COPY = {
     awaitingRemittance: "À verser",
     review: "Contrôle du rapprochement",
     recent: "Versements récents",
-    order: "Commande",
+    order: "Commande / ligne",
     customer: "Client",
     provider: "Transporteur",
-    outstanding: "Restant",
+    outstanding: "Écart / restant",
     reference: "Référence",
     date: "Date",
     state: "État",
+    unmatched: "Ligne fournisseur non rapprochée",
+    needsReview: "À vérifier",
     noReview: "Aucun écart COD ne nécessite de contrôle.",
     readonly: "Espace financier en lecture seule",
   },
@@ -63,13 +67,15 @@ const COPY = {
     awaitingRemittance: "بانتظار التحويل",
     review: "مراجعة المطابقة",
     recent: "التحويلات الأخيرة",
-    order: "الطلبية",
+    order: "الطلبية / السطر",
     customer: "الزبون",
     provider: "شركة التوصيل",
-    outstanding: "المتبقي",
+    outstanding: "الفرق / المتبقي",
     reference: "المرجع",
     date: "التاريخ",
     state: "الحالة",
+    unmatched: "سطر مزوّد غير مطابق",
+    needsReview: "بحاجة إلى مراجعة",
     noReview: "لا يوجد فرق دفع عند الاستلام يحتاج إلى مراجعة.",
     readonly: "مساحة مالية للقراءة فقط",
   },
@@ -94,19 +100,19 @@ export async function CanonicalCodReadOnly({
       />
 
       <div className="card-grid-4">
-        <StatCard label={text.expected} value={formatDZD(summary.totals.expectedReceivable)} icon={<ReceiptText />} />
-        <StatCard label={text.collected} value={formatDZD(summary.totals.effectiveCollected)} icon={<CheckCircle2 />} />
-        <StatCard label={text.remitted} value={formatDZD(summary.totals.grossRemitted)} icon={<ReceiptText />} />
-        <StatCard label={text.net} value={formatDZD(summary.totals.netReceived)} icon={<Scale />} />
-        <StatCard label={text.awaitingCollection} value={formatDZD(summary.totals.outstandingCollection)} icon={<Clock3 />} />
-        <StatCard label={text.awaitingRemittance} value={formatDZD(summary.totals.outstandingRemittance)} icon={<Clock3 />} />
+        <StatCard label={text.expected} value={formatDZD(summary.totals.expectedReceivable, locale)} icon={<ReceiptText />} />
+        <StatCard label={text.collected} value={formatDZD(summary.totals.effectiveCollected, locale)} icon={<CheckCircle2 />} />
+        <StatCard label={text.remitted} value={formatDZD(summary.totals.grossRemitted, locale)} icon={<ReceiptText />} />
+        <StatCard label={text.net} value={formatDZD(summary.totals.netReceived, locale)} icon={<Scale />} />
+        <StatCard label={text.awaitingCollection} value={formatDZD(summary.totals.outstandingCollection, locale)} icon={<Clock3 />} />
+        <StatCard label={text.awaitingRemittance} value={formatDZD(summary.totals.outstandingRemittance, locale)} icon={<Clock3 />} />
         <StatCard label={text.review} value={reviewCount} icon={<AlertTriangle />} />
       </div>
 
       <Card>
         <CardHeader><CardTitle className="text-base">{text.review}</CardTitle></CardHeader>
         <CardContent>
-          {summary.disputed.length === 0 && summary.reviewLines.length === 0 ? (
+          {reviewCount === 0 ? (
             <StateSurface icon={CheckCircle2} title={text.noReview} tone="success" size="inline" />
           ) : (
             <div className="overflow-x-auto">
@@ -122,12 +128,29 @@ export async function CanonicalCodReadOnly({
                 </TableHeader>
                 <TableBody>
                   {summary.disputed.map((item) => (
-                    <TableRow key={item.orderId}>
+                    <TableRow key={`order-${item.orderId}`}>
                       <TableCell className="font-mono">{item.orderNumber}</TableCell>
                       <TableCell>{item.customerName}</TableCell>
                       <TableCell>{item.provider ?? "—"}</TableCell>
-                      <TableCell className="text-end tabular-nums">{formatDZD(item.outstandingRemittance)}</TableCell>
+                      <TableCell className="text-end tabular-nums">
+                        {formatDZD(Math.max(item.outstandingRemittance, Math.abs(item.discrepancy)), locale)}
+                      </TableCell>
                       <TableCell>{item.codState}</TableCell>
+                    </TableRow>
+                  ))}
+                  {summary.reviewLines.map((line) => (
+                    <TableRow key={`line-${line.lineId}`}>
+                      <TableCell className="font-mono">
+                        {line.orderNumber ?? line.providerLineReference ?? line.externalReference}
+                      </TableCell>
+                      <TableCell>—</TableCell>
+                      <TableCell>{line.provider}</TableCell>
+                      <TableCell className="text-end tabular-nums">
+                        {formatDZD(Math.abs(line.effectiveDiscrepancy), locale)}
+                      </TableCell>
+                      <TableCell>
+                        {line.unresolvedUnmatched ? text.unmatched : text.needsReview}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -160,7 +183,7 @@ export async function CanonicalCodReadOnly({
                       <TableCell>{settlement.provider}</TableCell>
                       <TableCell className="font-mono">{settlement.externalReference}</TableCell>
                       <TableCell>{formatDate(settlement.receivedAt, locale)}</TableCell>
-                      <TableCell className="text-end tabular-nums">{formatDZD(settlement.netAmount)}</TableCell>
+                      <TableCell className="text-end tabular-nums">{formatDZD(settlement.netAmount, locale)}</TableCell>
                       <TableCell>{settlement.status}</TableCell>
                     </TableRow>
                   ))}
