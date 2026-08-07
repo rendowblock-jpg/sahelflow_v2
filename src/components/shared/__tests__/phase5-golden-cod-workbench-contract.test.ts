@@ -10,54 +10,92 @@ describe("Phase 5 Golden COD workbench source contract", () => {
     const page = read("src/app/(dashboard)/orders/page.tsx");
     const route = read("src/app/api/orders/route.ts");
     expect(page).toContain("getOrdersWorkbenchPage");
-    expect(page).toContain("db.order.aggregate");
     expect(page).not.toContain("take: 200");
+    expect(page).toContain("page,");
+    expect(page).toContain("sort: sortRaw");
     expect(route).toContain("getOrdersWorkbenchPage");
   });
 
-  it("keeps later Orders pages permission and risk aware", () => {
+  it("keeps later Orders pages permission, risk and fallback aware", () => {
     const workbench = read("src/lib/orders/order-list-workbench.ts");
+    const hook = read("src/hooks/swr/use-orders.ts");
     const client = read("src/components/orders/orders-data-table.tsx");
     expect(workbench).toContain("fieldAccess: access");
     expect(workbench).toContain("batchAssessOrders");
-    expect(client).toContain("fieldAccess: response.fieldAccess");
-    expect(client).toContain("riskData: response.riskData");
+    expect(hook).toContain("opts.fallback.page === currentPage");
+    expect(hook).toContain("opts.fallback.sort === normalizedSort");
+    expect(client).toContain("fieldAccess = data?.fieldAccess ?? fallback.fieldAccess");
+    expect(client).toContain("riskData: data?.riskData");
   });
 
-  it("makes confirmation a real paginated workbench rather than a raw sampled table", () => {
+  it("uses deterministic total ordering for every offset-paginated queue", () => {
+    const orders = read("src/lib/orders/order-list-workbench.ts");
+    const confirmation = read("src/lib/orders/confirmation-workbench.ts");
+    expect(orders).toContain("{ id: direction }");
+    expect(confirmation).toContain('[{ createdAt: "asc" }, { id: "asc" }]');
+  });
+
+  it("makes confirmation a truthful paginated workbench", () => {
     const page = read(
       "src/app/(dashboard)/orders/confirmation-queue/page.tsx",
     );
     const helper = read("src/lib/orders/confirmation-workbench.ts");
+    const hook = read("src/hooks/swr/use-confirmation-queue.ts");
     expect(page).toContain("ConfirmationQueueTable");
     expect(page).not.toContain("<table");
+    expect(page).toContain("page,");
     expect(helper).toContain("staleCount");
     expect(helper).toContain("hasNextPage");
     expect(helper).not.toContain("take: 100");
+    expect(hook).toContain("fallback.page === currentPage");
+    expect(hook).not.toContain("data: data ?? fallback");
   });
 
-  it("keeps paginated tables truthful about sorting and keyboard row activation", () => {
+  it("keeps server sorting truthful without focusable custom table rows", () => {
     const table = read("src/components/data-table/data-table.tsx");
     expect(table).toContain("serverSort?: boolean");
-    expect(table).toContain("enableSorting: sortingEnabled");
+    expect(table).toContain("sort?: string");
+    expect(table).toContain("pagination.sort ?? sortUrl.sort");
+    expect(table).toContain("enableSortingRemoval: !pagination?.serverSort");
     expect(table).toContain("manualSorting: Boolean(pagination?.serverSort)");
     expect(table).toContain('type="button"');
-    expect(table).toContain('event.key === "Enter"');
-    expect(table).not.toContain('role={canSort ? "button"');
+    expect(table).not.toContain("tabIndex={onRowClick");
+    expect(table).not.toContain('event.key === "Enter"');
   });
 
-  it("uses immediate neutral operational metrics instead of animated KPI cards", () => {
+  it("uses real order links and removes selection from read-only actors", () => {
+    const orders = read("src/components/orders/orders-columns.tsx");
+    const confirmation = read("src/components/orders/confirmation-queue-table.tsx");
+    expect(orders).toContain("fieldAccess.update ? [selectColumn<OrderListItem>()] : []");
+    expect(orders).toContain('href={`/orders/${row.original.id}`}');
+    expect(confirmation).toContain('href={`/orders/${row.original.id}`}');
+  });
+
+  it("keeps bulk business status authoritative instead of optimistic", () => {
+    const client = read("src/components/orders/orders-data-table.tsx");
+    expect(client).not.toContain("optimisticData");
+    expect(client).not.toContain("revalidate: false");
+    expect(client).toContain("bulkMutation.isSubmitting");
+    expect(client).toContain('bulkMutation.submit("/api/orders/bulk"');
+  });
+
+  it("uses immediate neutral operational metrics without fake sentinel percentages", () => {
     const metric = read("src/components/shared/stat-card.tsx");
     expect(metric).toContain('data-slot="operational-metric"');
     expect(metric).not.toContain("requestAnimationFrame");
     expect(metric).not.toContain("bg-gradient-to-br");
     expect(metric).not.toContain("hover:-translate-y");
+    expect(metric).toContain("Math.abs(trend) === 1");
+    expect(metric).toContain("!directionOnly");
   });
 
-  it("makes Home attention-first instead of a quick-action launcher", () => {
+  it("makes Home attention-first and permission-before-read", () => {
     const dashboard = read("src/app/(dashboard)/dashboard/page.tsx");
     expect(dashboard).toContain("AttentionCenter");
     expect(dashboard).toContain("getStaleOrderCount");
+    expect(dashboard).toContain("getDashboardStats(fieldAccess)");
+    expect(dashboard).toContain("getDashboardAnalytics(fieldAccess)");
+    expect(dashboard).toContain('href: "/deliveries"');
     expect(dashboard).not.toContain("dashboard.openInbox");
     expect(dashboard).not.toContain("dashboard.manageOrders");
   });
