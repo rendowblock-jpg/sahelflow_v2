@@ -1,20 +1,24 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { InfoHint } from "@/components/shared/info-hint";
-import { cn } from "@/lib/utils";
+import * as React from "react";
+import { ArrowDownRight, ArrowUpRight, Info } from "lucide-react";
+
 import { Sparkline } from "@/components/charts/sparkline";
-import { useI18n } from "@/hooks/use-i18n";
+import { InfoHint } from "@/components/shared/info-hint";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface StatCardProps {
   label: React.ReactNode;
   value: React.ReactNode;
   icon: React.ReactNode;
+  /** @deprecated Phase 5 owns metric surface color semantically. */
   accentBg?: string;
+  /** @deprecated Phase 5 owns metric icon color semantically. */
   accentIcon?: string;
   trend?: number;
   trendLabel?: React.ReactNode;
@@ -24,174 +28,110 @@ interface StatCardProps {
   className?: string;
   style?: React.CSSProperties;
   tooltip?: string;
-  /** Inline education hint (info icon + popover). Phase 2. */
   hint?: React.ReactNode;
 }
 
 /**
- * Parse a string value into prefix + number + suffix for count-up animation.
- * Handles: "75", "75 DA", "75%", "1,234 DA", "12.5%", "DA 75", etc.
- * Returns null if the value isn't a parseable numeric string.
- */
-function parseNumeric(value: React.ReactNode): { prefix: string; num: number; suffix: string } | null {
-  if (typeof value !== "string") return null;
-  // Match: optional non-digit prefix + digits/commas/dots + optional non-digit suffix
-  const match = value.match(/^([^0-9-]*)([0-9][0-9,.]*)([^0-9]*)$/);
-  if (!match) return null;
-  const prefix = match[1] ?? "";
-  const suffix = match[3] ?? "";
-  const num = parseFloat(match[2]!.replace(/[,\s]/g, ""));
-  if (isNaN(num)) return null;
-  return { prefix, num, suffix };
-}
-
-/**
- * Premium KPI stat card — shadcn v4 pattern.
- * 
- * Features:
- * - Gradient tint background (from-primary/5 to-card)
- * - Container-query responsive number sizing
- * - Count-up animation with cubic ease-out
- * - Trend badge in CardAction slot
- * - Optional sparkline with gradient fill
- * - Subtle hover elevation
+ * SahelFlow operational metric.
+ *
+ * Values render immediately and never count up: financial, stock and queue truth
+ * must not look provisional while animation catches up. Page-local accent colors
+ * are retained only as deprecated input compatibility and deliberately ignored.
+ * Trend and spark context remain when they carry real data, but the surface stays
+ * restrained and desktop-software-like.
  */
 export function StatCard({
   label,
   value,
   icon,
-  accentBg = "bg-primary/10 dark:bg-primary/15",
-  accentIcon = "text-primary",
+  accentBg: _accentBg,
+  accentIcon: _accentIcon,
   trend,
   trendLabel,
   subtitle,
   spark,
-  sparkColor,
+  sparkColor = "var(--color-chart-1)",
   className,
   style,
   tooltip,
   hint,
 }: StatCardProps) {
-  const { locale } = useI18n();
-  const isPositive = (trend ?? 0) > 0;
-  const isNegative = (trend ?? 0) < 0;
-  const showTrend = trend !== undefined && trend !== 0;
-
-  // Memoize parsed so the animation effect only restarts when the VALUE changes,
-  // not on every parent re-render (the old code recreated `parsed` every render).
-  const parsed = useMemo(() => parseNumeric(value), [value]);
-  const [displayValue, setDisplayValue] = useState(value);
-  const rafRef = useRef<number | undefined>(undefined);
-
-  useEffect(() => {
-    if (!parsed || parsed.num === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDisplayValue(value);
-      return;
-    }
-
-    const duration = 800;
-    const startTime = performance.now();
-
-    const tick = (now: number) => {
-      const elapsed = now - startTime;
-      const t = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3);
-      const current = Math.round(eased * parsed.num);
-      // C-P4: use the current locale for number formatting so Arabic
-      // users see Eastern-Arabic numerals (٠١٢٣) instead of Western
-      // (0123) during the count-up animation.
-      setDisplayValue(
-        `${parsed.prefix}${current.toLocaleString(locale)}${parsed.suffix}`,
-      );
-      if (t < 1) rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick) ?? undefined;
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [value, parsed, locale]);
+  const hasTrend = typeof trend === "number" && Number.isFinite(trend) && trend !== 0;
+  const positive = hasTrend && trend > 0;
+  const negative = hasTrend && trend < 0;
 
   return (
-    <Card
+    <section
       className={cn(
-        "@container/card overflow-hidden border shadow-xs transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        "hover:shadow-elevated hover:-translate-y-0.5",
-        // Gradient tint — shadcn v4 pattern
-        "bg-gradient-to-t from-primary/5 to-card dark:from-primary/10 dark:to-card",
+        "min-w-0 rounded-md border border-border/80 bg-background px-3 py-3",
         className,
       )}
       style={style}
+      data-slot="operational-metric"
     >
-      <CardHeader className="relative pb-2 sm:pb-3">
-        {/* Accent icon — top end */}
-        <div className={cn(
-          "absolute end-4 top-4 flex size-8 items-center justify-center rounded-lg",
-          accentBg,
-          accentIcon,
-          "[&>svg]:h-4 [&>svg]:w-4",
-        )}>
-          {icon}
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <span className="min-w-0 truncate">{label}</span>
+            {tooltip ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={tooltip}
+                  >
+                    <Info className="size-3.5" aria-hidden="true" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs">
+                  {tooltip}
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
+            {hint ? <InfoHint content={hint} size="sm" /> : null}
+          </div>
+
+          <div className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums text-foreground rtl:tracking-normal">
+            {value}
+          </div>
+
+          {subtitle || trendLabel || hasTrend ? (
+            <div className="mt-1.5 flex min-h-4 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+              {hasTrend ? (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-0.5 font-medium tabular-nums",
+                    positive && "text-success",
+                    negative && "text-destructive",
+                  )}
+                >
+                  {positive ? (
+                    <ArrowUpRight className="size-3" aria-hidden="true" />
+                  ) : (
+                    <ArrowDownRight className="size-3" aria-hidden="true" />
+                  )}
+                  {!trendLabel && Math.abs(trend) !== 1
+                    ? `${Math.abs(trend).toFixed(1)}%`
+                    : null}
+                </span>
+              ) : null}
+              {trendLabel ? <span>{trendLabel}</span> : null}
+              {subtitle ? <span>{subtitle}</span> : null}
+            </div>
+          ) : null}
         </div>
 
-        <CardDescription className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
-          {label}
-          {tooltip && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="size-3.5 cursor-help text-muted-foreground/60 hover:text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <p className="text-xs">{tooltip}</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {hint && <InfoHint content={hint} size="sm" />}
-        </CardDescription>
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/35 text-muted-foreground [&_svg]:size-4">
+          {icon}
+        </div>
+      </div>
 
-        <CardTitle className="text-xl font-semibold tabular-nums tracking-tight sm:text-2xl @[250px]/card:text-3xl">
-          {displayValue}
-        </CardTitle>
-
-      </CardHeader>
-
-      {(spark || trendLabel || subtitle || showTrend) && (
-        <CardFooter className="flex-col items-start gap-2 border-t bg-muted/20 px-6 py-4">
-          {spark && spark.length > 1 && (
-            <div className="w-full -mx-1">
-              <Sparkline data={spark} color={sparkColor} height={32} />
-            </div>
-          )}
-          <div className="flex w-full items-center justify-between gap-2 text-sm">
-            {trendLabel && (
-              <span className="line-clamp-1 font-medium text-foreground/80">{trendLabel}</span>
-            )}
-            {subtitle && (
-              <span className="text-muted-foreground">{subtitle}</span>
-            )}
-            {showTrend && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "gap-0.5 rounded-full px-1.5 py-0 text-xs font-medium shrink-0",
-                  isPositive
-                    ? "border-emerald-500/20 bg-emerald-500/5 text-success"
-                    : "border-red-500/20 bg-red-500/5 text-destructive",
-                )}
-              >
-                {isPositive && <ArrowUpRight className="size-2.5" />}
-                {isNegative && <ArrowDownRight className="size-2.5" />}
-                {/* `trend` is overloaded: ±1 = direction flag (arrow only, no number —
-                    was rendering a stray "1%"); any other number = a real percentage delta
-                    (show "{n}%"). When trendLabel is present the label itself conveys
-                    meaning, so never show the number alongside it. */}
-                {!trendLabel && Math.abs(trend!) !== 1 && `${Math.abs(trend!)}%`}
-              </Badge>
-            )}
-          </div>
-        </CardFooter>
-      )}
-    </Card>
+      {spark && spark.length > 1 ? (
+        <div className="mt-2 h-5 overflow-hidden opacity-75" aria-hidden="true">
+          <Sparkline data={spark} color={sparkColor} height={20} />
+        </div>
+      ) : null}
+    </section>
   );
 }
