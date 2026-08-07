@@ -11,6 +11,13 @@ interface UseConfirmationQueueOptions {
   fallback: ConfirmationQueueResponse;
 }
 
+/**
+ * Paginated confirmation queue query.
+ *
+ * The server-rendered fallback is valid only for the exact page it represents.
+ * Later pages must show a real loading/error state while their own response is
+ * fetched; page-one rows are never relabelled as another page.
+ */
 export function useConfirmationQueue({
   pageSize = 25,
   fallback,
@@ -21,29 +28,36 @@ export function useConfirmationQueue({
   });
   const currentPage = Number.parseInt(page, 10) || 1;
   const key = `/api/orders/confirmation-queue?page=${currentPage}&pageSize=${pageSize}`;
+  const fallbackData =
+    fallback.page === currentPage && fallback.pageSize === pageSize
+      ? fallback
+      : undefined;
 
   const { data, error, isLoading, mutate } = useSWR<ConfirmationQueueResponse>(
     key,
     fetcher,
     {
-      fallbackData: fallback,
+      fallbackData,
       revalidateOnFocus: false,
       dedupingInterval: 5000,
     },
   );
+  const response = data ?? fallbackData;
+  const knownTotal = response?.total ?? fallback.total;
 
   return {
-    data: data ?? fallback,
+    data: response,
     error,
     mutate,
-    isLoading: isLoading && !data,
+    isLoading: isLoading && !response,
     pagination: {
       page: currentPage,
       pageSize,
-      total: data?.total ?? fallback.total,
-      hasNextPage: data?.hasNextPage ?? fallback.hasNextPage,
+      total: knownTotal,
+      hasNextPage:
+        response?.hasNextPage ?? currentPage * pageSize < knownTotal,
       onPageChange: (nextPage: number) => setPage(String(nextPage)),
-      isLoading: isLoading && Boolean(data),
+      isLoading,
     },
   };
 }
