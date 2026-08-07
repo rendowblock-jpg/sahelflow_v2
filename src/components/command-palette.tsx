@@ -58,6 +58,7 @@ export function CommandPalette({
   const [query, setQuery] = React.useState("");
   const [records, setRecords] = React.useState<RecordResult[]>([]);
   const [searching, setSearching] = React.useState(false);
+  const searchGeneration = React.useRef(0);
 
   React.useEffect(() => {
     if (!open) {
@@ -71,7 +72,9 @@ export function CommandPalette({
   }, [open]);
 
   React.useEffect(() => {
+    const generation = ++searchGeneration.current;
     if (!open) return;
+
     const q = query.trim();
     if (q.length < 2) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -143,11 +146,18 @@ export function CommandPalette({
             });
           }
         }
-        setRecords(next.slice(0, 8));
+
+        if (searchGeneration.current === generation) {
+          setRecords(next.slice(0, 8));
+        }
       } catch {
-        setRecords([]);
+        if (searchGeneration.current === generation) {
+          setRecords([]);
+        }
       } finally {
-        setSearching(false);
+        if (searchGeneration.current === generation) {
+          setSearching(false);
+        }
       }
     }, 220);
 
