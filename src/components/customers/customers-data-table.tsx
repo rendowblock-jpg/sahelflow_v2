@@ -1,16 +1,21 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { DataTable } from "@/components/data-table/data-table";
+import { AlertTriangle, Ban } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { selectColumn } from "@/components/data-table/data-table";
+
+import { DataTable } from "@/components/data-table/data-table";
+import { EntityLink } from "@/components/shared/entity-link";
 import { CustomersEmptyState } from "@/components/shared/empty-states";
-import { useCustomers, type CustomerListItem, type CustomersResponse } from "@/hooks/swr/use-customers";
-import { useI18n } from "@/hooks/use-i18n";
-import { formatDZD, formatDate } from "@/lib/utils";
+import { StateSurface } from "@/components/shared/state-surface";
 import { Badge } from "@/components/ui/badge";
-import { Ban } from "lucide-react";
+import {
+  useCustomers,
+  type CustomerListItem,
+  type CustomersResponse,
+} from "@/hooks/swr/use-customers";
+import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
+import { formatDZD, formatDate } from "@/lib/utils";
 
 interface CustomersDataTableProps {
   fallback: CustomersResponse;
@@ -19,71 +24,104 @@ interface CustomersDataTableProps {
 
 export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps) {
   const { t } = useI18n();
-  const router = useRouter();
-  const { data, isLoading, pagination } = useCustomers({ fallback });
+  const { data, error, isLoading, pagination } = useCustomers({ fallback });
+  const response = data ?? fallback;
+  const access = response.fieldAccess;
 
   const columns: ColumnDef<CustomerListItem, unknown>[] = [
-    selectColumn<CustomerListItem>(),
     {
       accessorKey: "name",
       header: () => t("customers.name"),
+      enableSorting: false,
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <span className="font-medium">{row.original.name}</span>
-          {row.original.isBlacklisted && (
-            <Badge variant="outline" className="border-red-500/20 bg-red-500/10 text-destructive gap-1">
-              <Ban className="h-3 w-3" /> {t("customers.blacklisted")}
+          <EntityLink href={`/customers/${row.original.id}`}>
+            {row.original.name ?? t("inbox.restrictedContact")}
+          </EntityLink>
+          {access.risk && row.original.isBlacklisted ? (
+            <Badge variant="outline" className="gap-1 border-destructive/20 bg-destructive/5 text-destructive">
+              <Ban className="size-3" aria-hidden="true" />
+              {t("customers.blacklisted")}
             </Badge>
-          )}
+          ) : null}
         </div>
       ),
     },
-    {
-      accessorKey: "phone",
-      header: () => t("customers.phone"),
-      cell: ({ row }) => <span className="font-mono text-sm">{row.original.phone}</span>,
-    },
-    {
-      accessorKey: "wilaya",
-      header: () => t("customers.wilaya"),
-      cell: ({ row }) => <span className="text-sm">{row.original.wilaya ?? "—"}</span>,
-      meta: { hideOn: "sm" },
-    },
+    ...(access.contact
+      ? [
+          {
+            accessorKey: "phone",
+            header: () => t("customers.phone"),
+            enableSorting: false,
+            cell: ({ row }: { row: { original: CustomerListItem } }) => (
+              <span className="font-mono text-sm">{row.original.phone ?? "—"}</span>
+            ),
+          } satisfies ColumnDef<CustomerListItem, unknown>,
+          {
+            accessorKey: "wilaya",
+            header: () => t("customers.wilaya"),
+            enableSorting: false,
+            cell: ({ row }: { row: { original: CustomerListItem } }) => (
+              <span className="text-sm">{row.original.wilaya ?? "—"}</span>
+            ),
+            meta: { hideOn: "sm" as const },
+          } satisfies ColumnDef<CustomerListItem, unknown>,
+        ]
+      : []),
     {
       accessorKey: "orderCount",
       header: () => t("customers.orders"),
+      enableSorting: false,
       cell: ({ row }) => <span className="tabular-nums">{row.original.orderCount}</span>,
       meta: { align: "end" },
     },
-    {
-      accessorKey: "totalSpent",
-      header: () => t("customers.totalSpent"),
-      cell: ({ row }) => (
-        <span className="tabular-nums font-medium">
-          {row.original.totalSpent === null
-            ? "—"
-            : formatDZD(row.original.totalSpent)}
-        </span>
-      ),
-      meta: { align: "end" },
-    },
+    ...(access.financials
+      ? [
+          {
+            accessorKey: "totalSpent",
+            header: () => t("customers.totalSpent"),
+            enableSorting: false,
+            cell: ({ row }: { row: { original: CustomerListItem } }) => (
+              <span className="tabular-nums font-medium">
+                {formatDZD(row.original.totalSpent ?? 0, locale)}
+              </span>
+            ),
+            meta: { align: "end" as const },
+          } satisfies ColumnDef<CustomerListItem, unknown>,
+        ]
+      : []),
     {
       accessorKey: "createdAt",
       header: () => t("customers.joined"),
-      cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.createdAt, locale)}</span>,
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {formatDate(row.original.createdAt, locale)}
+        </span>
+      ),
       meta: { hideOn: "lg" },
     },
   ];
 
-  const customers = data?.customers ?? fallback.customers;
+  if (error && !data) {
+    return (
+      <StateSurface
+        icon={AlertTriangle}
+        title={t("error.requestFailed")}
+        description={error.message}
+        tone="danger"
+        size="inline"
+        role="alert"
+      />
+    );
+  }
 
   return (
     <DataTable
       columns={columns}
-      data={customers}
+      data={response.customers}
       isLoading={isLoading}
       pagination={pagination}
-      onRowClick={(row) => router.push(`/customers/${row.id}`)}
       getRowId={(row) => row.id}
       emptyState={<CustomersEmptyState />}
     />

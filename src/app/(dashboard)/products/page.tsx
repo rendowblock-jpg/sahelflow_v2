@@ -1,277 +1,113 @@
-import { getI18n } from "@/lib/i18n-server";
-import { db, shopContext } from "@/lib/db";
-import { productService } from "@/lib/data";
-import { formatDZD } from "@/lib/utils";
-import { Package, AlertTriangle, Boxes, DollarSign } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
-import { StatCard } from "@/components/shared/stat-card";
-import { ImportExportButtons } from "@/components/shared/import-export-buttons";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { AlertTriangle, Boxes, DollarSign, Package } from "lucide-react";
+
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { ProductsDataTable } from "@/components/products/products-data-table";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
+import { ImportExportButtons } from "@/components/shared/import-export-buttons";
+import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { productService } from "@/lib/data/product-service";
+import { db, shopContext } from "@/lib/db";
+import { getI18n } from "@/lib/i18n-server";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  requireTrustedAction,
-  trustedActionAllowed,
-} from "@/lib/identity/authorization";
-import { projectProductsForTrustedActor } from "@/lib/identity/product-projection";
+  getProductsWorkbenchPage,
+  getProductWorkbenchSummary,
+} from "@/lib/products/product-workbench";
+import { formatDZD } from "@/lib/utils";
 
-// Always fetch fresh data (local-first app, no ISR)
 export const dynamic = "force-dynamic";
 
-type ProductsPageProps = {
-  searchParams: Promise<{ page?: string }>;
-};
-
-export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
+  return { title: t("metadata.title.products") };
+}
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; sort?: string }>;
+}) {
   const actorContext = await requireTrustedAction("products.read");
-  const resource = { shopId: actorContext.shop.shopId };
-  const canManage = trustedActionAllowed(
-    actorContext,
-    "products.manage",
-    resource,
-  );
-  const canReadCost = trustedActionAllowed(
-    actorContext,
-    "products.cost.read",
-    resource,
-  );
-  const canExport = canReadCost && trustedActionAllowed(
-    actorContext,
-    "data.export",
-    resource,
-  );
-  const canImport = canManage && trustedActionAllowed(
-    actorContext,
-    "data.import",
-    resource,
-  );
-
-  const PAGE_SIZE = 25;
-  const requestedPage = parseInt((await searchParams).page ?? "1", 10);
-  const currentPage = Number.isSafeInteger(requestedPage) && requestedPage > 0
-    ? requestedPage
-    : 1;
-  const offset = (currentPage - 1) * PAGE_SIZE;
-
-  // Page-1 fallback for the DataTable (SWR takes over on navigation).
-  // Aggregates (active count, low-stock count, inventory value) are computed
-  // across ALL products — not just page 1 — so the stat cards are correct
-  // regardless of pagination. Low-stock needs stock <= lowStockThreshold
-  // (a field-to-field comparison Prisma can't express in where), so we fetch
-  // the relevant columns once and compute both low-stock count + inventory
-  // value in JS (single round trip, cheap on local SQLite).
-  //
-  // W3-14: low-stock count now filters isActive=true so retired/archived
-  // products don't inflate the alert — matches the dashboard + notification-
-  // bell definitions (DATA_INTEGRITY_PLAN scenario #9 fix). Inventory value
-  // still spans ALL non-deleted products (capital tied up in inactive stock
-  // is still real). Two separate queries: the low-stock query fetches fewer
-  // rows (perf win) and only the columns it needs; the inventory query
-  // fetches price+stock across everything.
-  const [products, categories, totalProducts, activeCount, lowStockRows, inventoryRows] = await Promise.all([
-    productService.list({ prisma: db, shop: shopContext }, { limit: PAGE_SIZE, offset }),
-    productService.listCategories({ prisma: db, shop: shopContext }),
-    db.product.count({ where: { deletedAt: null } }),
-    db.product.count({ where: { isActive: true, deletedAt: null } }),
-    db.product.findMany({
-      where: { isActive: true, deletedAt: null },
-      select: { stock: true, lowStockThreshold: true },
+  const { t, locale } = await getI18n();
+  const params = await searchParams;
+  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const [fallback, summary] = await Promise.all([
+    getProductsWorkbenchPage(actorContext, {
+      page,
+      pageSize: 25,
+      sort: params.sort,
     }),
-    db.product.findMany({
-      where: { deletedAt: null },
-      select: { price: true, stock: true },
-    }),
+    getProductWorkbenchSummary(actorContext),
   ]);
-
-  const lowStockCount = lowStockRows.filter((p) => p.stock <= p.lowStockThreshold).length;
-  const inventoryValue = inventoryRows.reduce((sum, p) => sum + p.price * Math.max(0, p.stock), 0);
-  const projectedProducts = projectProductsForTrustedActor(
-    actorContext,
-    products,
-  );
-  const hasNextPage = offset + products.length < totalProducts;
+  const access = fallback.fieldAccess;
+  const categories = access.manage
+    ? await productService.listCategories({ prisma: db, shop: shopContext })
+    : [];
+  const lastPage = Math.max(1, Math.ceil(fallback.total / fallback.pageSize));
+  if (page > lastPage) {
+    const query = new URLSearchParams({ page: String(lastPage), sort: fallback.sort });
+    redirect(`/products?${query.toString()}`);
+  }
 
   return (
     <div className="app-content page-sections">
-      {/* Low stock alert banner */}
-      {lowStockCount > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-950/30 p-3 animate-fade-up">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/10">
-            <AlertTriangle className="h-4 w-4 text-warning" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-              {lowStockCount > 1
-                ? t("products.lowStockAlertMany", { count: lowStockCount })
-                : t("products.lowStockAlertOne", { count: lowStockCount })}
+      {summary.lowStockProducts > 0 ? (
+        <div className="flex items-start gap-3 rounded-md border border-warning/25 bg-warning/[0.04] p-3">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-medium">
+              {summary.lowStockProducts > 1
+                ? t("products.lowStockAlertMany", { count: summary.lowStockProducts })
+                : t("products.lowStockAlertOne", { count: summary.lowStockProducts })}
             </p>
-            <p className="text-xs text-warning">
-              {t("products.lowStockAlertHint")}
-            </p>
+            <p className="text-xs text-muted-foreground">{t("products.lowStockAlertHint")}</p>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Header */}
       <PageHeader
         title={t("products.title")}
-        description={`${t("products.totalStock")}: ${totalProducts} · ${t("products.inventoryValue")}: ${formatDZD(inventoryValue)}`}
-        actions={canExport || canManage ? (
-          <div className="flex items-center gap-2">
-            {canExport && (
-              <ImportExportButtons
-                exportRoute="/api/export/products"
-                importRoute={canImport ? "/api/import/products" : undefined}
-              />
-            )}
-            {canManage && <ProductFormDialog categories={categories} />}
-          </div>
-        ) : undefined}
+        description={`${t("products.totalStock")}: ${summary.totalProducts} · ${t("products.inventoryValue")}: ${formatDZD(summary.inventoryValue, locale)}`}
+        actions={
+          access.export || access.import || access.manage ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {access.export || access.import ? (
+                <ImportExportButtons
+                  exportRoute={access.export ? "/api/export/products" : undefined}
+                  importRoute={access.import ? "/api/import/products" : undefined}
+                />
+              ) : null}
+              {access.manage ? <ProductFormDialog categories={categories} /> : null}
+            </div>
+          ) : undefined
+        }
       />
 
-      {/* Stat strip */}
-      <div className="card-grid-4 stagger-grid">
-        <StatCard
-          label={t("products.total")}
-          value={totalProducts}
-          icon={<Package />}
-          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
-          accentIcon="text-teal-600 dark:text-teal-400"
-          style={{ animationDelay: "60ms" }}
-        />
+      <div className="card-grid-4">
+        <StatCard label={t("products.total")} value={summary.totalProducts} icon={<Package />} />
         <StatCard
           label={t("common.active")}
-          value={activeCount}
+          value={summary.activeProducts}
           icon={<Boxes />}
-          accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-success"
-          subtitle={t("products.activeOutOf", { total: totalProducts })}
-          style={{ animationDelay: "120ms" }}
+          subtitle={t("products.activeOutOf", { total: summary.totalProducts })}
         />
         <StatCard
           label={t("products.lowStock")}
-          value={lowStockCount}
+          value={summary.lowStockProducts}
           icon={<AlertTriangle />}
-          accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-warning"
-          trend={lowStockCount > 0 ? -1 : 0}
-          trendLabel={lowStockCount > 0 ? t("products.needsRestock") : t("products.stockOk")}
-          style={{ animationDelay: "180ms" }}
+          trend={summary.lowStockProducts > 0 ? -1 : 0}
+          trendLabel={summary.lowStockProducts > 0 ? t("products.needsRestock") : t("products.stockOk")}
         />
         <StatCard
           label={t("products.inventoryValue")}
-          value={formatDZD(inventoryValue)}
+          value={formatDZD(summary.inventoryValue, locale)}
           icon={<DollarSign />}
-          accentBg="bg-violet-500/10 dark:bg-violet-500/15"
-          accentIcon="text-violet-600 dark:text-violet-400"
-          style={{ animationDelay: "240ms" }}
         />
       </div>
 
-      {/* Products table (DataTable v2: paginated, skeleton loading, density toggle) */}
-      <div className="animate-fade-up" style={{ animationDelay: "240ms" }}>
-        {canManage ? (
-          <ProductsDataTable
-          fallback={{
-            products: projectedProducts.map((p) => ({
-              id: p.id,
-              name: p.name,
-              sku: p.sku,
-              price: p.price,
-              cost: p.cost,
-              stock: p.stock,
-              lowStockThreshold: p.lowStockThreshold,
-              categoryId: p.categoryId,
-              isActive: p.isActive,
-              createdAt: p.createdAt.toISOString(),
-            })),
-            total: totalProducts,
-            hasNextPage,
-            page: currentPage,
-            pageSize: PAGE_SIZE,
-          }}
-          categories={categories}
-          />
-        ) : (
-          <>
-          <div className="overflow-x-auto rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("products.productName")}</TableHead>
-                  <TableHead>{t("products.sku")}</TableHead>
-                  <TableHead className="text-end">{t("orders.price")}</TableHead>
-                  <TableHead className="text-end">{t("products.stock")}</TableHead>
-                  <TableHead>{t("common.status")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {projectedProducts.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                      {t("products.noProductsTitle")}
-                    </TableCell>
-                  </TableRow>
-                ) : projectedProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <Link
-                        href={`/products/${product.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {product.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="font-mono text-muted-foreground">
-                      {product.sku ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-end tabular-nums">
-                      {formatDZD(product.price)}
-                    </TableCell>
-                    <TableCell className="text-end tabular-nums">
-                      {product.stock}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.isActive ? "secondary" : "outline"}>
-                        {product.isActive ? t("common.active") : t("common.inactive")}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="mt-3 flex items-center justify-end gap-2">
-            {currentPage > 1 && (
-              <Link
-                href={`/products?page=${currentPage - 1}`}
-                className="rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted"
-              >
-                {t("common.back")}
-              </Link>
-            )}
-            {hasNextPage && (
-              <Link
-                href={`/products?page=${currentPage + 1}`}
-                className="rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted"
-              >
-                {t("common.next")}
-              </Link>
-            )}
-          </div>
-          </>
-        )}
-      </div>
+      <ProductsDataTable fallback={fallback} locale={locale} />
     </div>
   );
 }

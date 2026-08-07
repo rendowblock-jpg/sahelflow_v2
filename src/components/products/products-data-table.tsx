@@ -1,59 +1,54 @@
 "use client";
 
-/**
- * ProductsDataTable — DataTable v2 wrapper for the products list page.
- *
- * Replaces the old PremiumTable + take:200 pattern with paginated,
- * skeleton-loading, density-toggleable, URL-synced table (Phase 1 pattern).
- */
-import { useRouter } from "next/navigation";
-import { DataTable, selectColumn } from "@/components/data-table/data-table";
+import { AlertTriangle } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
+
+import { DataTable } from "@/components/data-table/data-table";
+import { EntityLink } from "@/components/shared/entity-link";
 import { ProductsEmptyState } from "@/components/shared/empty-states";
-import { useProducts, type ProductListItem, type ProductsResponse } from "@/hooks/swr/use-products";
-import { useI18n } from "@/hooks/use-i18n";
-import { formatDZD } from "@/lib/utils";
+import { StateSurface } from "@/components/shared/state-surface";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { AlertTriangle, Eye } from "lucide-react";
-import Link from "next/link";
-import { ProductRowActions } from "@/components/products/product-row-actions";
-import type { Product } from "@/types/domain";
-import type { Category } from "@/types/domain";
+import {
+  useProducts,
+  type ProductListItem,
+  type ProductsResponse,
+} from "@/hooks/swr/use-products";
+import { useI18n } from "@/hooks/use-i18n";
+import { formatDZD, formatDate } from "@/lib/utils";
+import type { Locale } from "@/lib/i18n";
 
 interface ProductsDataTableProps {
   fallback: ProductsResponse;
-  categories: Category[];
+  locale: Locale;
 }
 
-export function ProductsDataTable({ fallback, categories }: ProductsDataTableProps) {
+export function ProductsDataTable({ fallback, locale }: ProductsDataTableProps) {
   const { t } = useI18n();
-  const router = useRouter();
-  const { data, isLoading, pagination } = useProducts({ fallback });
-
-  const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
+  const { data, error, isLoading, pagination } = useProducts({ fallback });
+  const response = data ?? fallback;
+  const access = response.fieldAccess;
 
   const columns: ColumnDef<ProductListItem, unknown>[] = [
-    selectColumn<ProductListItem>(),
     {
       accessorKey: "name",
       header: () => t("products.productName"),
-      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
-    },
-    {
-      accessorKey: "sku",
-      header: () => t("products.sku"),
+      enableSorting: false,
       cell: ({ row }) => (
-        <span className="font-mono text-sm text-muted-foreground">{row.original.sku ?? "—"}</span>
+        <EntityLink
+          href={`/products/${row.original.id}`}
+          secondary={row.original.sku ?? undefined}
+        >
+          {row.original.name}
+        </EntityLink>
       ),
-      meta: { hideOn: "md" },
     },
     {
-      accessorKey: "categoryId",
+      accessorKey: "categoryName",
       header: () => t("products.category"),
+      enableSorting: false,
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
-          {row.original.categoryId ? (categoryNames.get(row.original.categoryId) ?? "—") : "—"}
+          {row.original.categoryName ?? "—"}
         </span>
       ),
       meta: { hideOn: "lg" },
@@ -61,23 +56,41 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
     {
       accessorKey: "price",
       header: () => t("orders.price"),
-      cell: ({ row }) => <span className="tabular-nums">{formatDZD(row.original.price)}</span>,
+      cell: ({ row }) => (
+        <span className="tabular-nums">{formatDZD(row.original.price, locale)}</span>
+      ),
       meta: { align: "end" },
     },
+    ...(access.cost
+      ? [
+          {
+            accessorKey: "cost",
+            header: () => t("products.cost"),
+            cell: ({ row }: { row: { original: ProductListItem } }) => (
+              <span className="tabular-nums text-muted-foreground">
+                {row.original.cost == null ? "—" : formatDZD(row.original.cost, locale)}
+              </span>
+            ),
+            meta: { align: "end" as const, hideOn: "md" as const },
+          } satisfies ColumnDef<ProductListItem, unknown>,
+        ]
+      : []),
     {
       accessorKey: "stock",
       header: () => t("products.stock"),
       cell: ({ row }) => {
-        const isLowStock = row.original.stock <= row.original.lowStockThreshold;
+        const low = row.original.stock <= row.original.lowStockThreshold;
         return (
-          <span className="tabular-nums flex items-center justify-end gap-1.5">
-            <span className={isLowStock ? "text-destructive font-medium" : ""}>{row.original.stock}</span>
-            {isLowStock && (
-              <Badge variant="destructive" className="gap-0.5 py-0">
-                <AlertTriangle className="h-3 w-3" />
+          <span className="flex items-center justify-end gap-1.5 tabular-nums">
+            <span className={low ? "font-medium text-destructive" : ""}>
+              {row.original.stock}
+            </span>
+            {low ? (
+              <Badge variant="outline" className="gap-1 border-warning/25 text-warning">
+                <AlertTriangle className="size-3" aria-hidden="true" />
                 {t("products.low")}
               </Badge>
-            )}
+            ) : null}
           </span>
         );
       },
@@ -86,48 +99,45 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
     {
       accessorKey: "isActive",
       header: () => t("common.status"),
-      cell: ({ row }) =>
-        row.original.isActive ? (
-          <span className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-success dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50">
-            <span className="size-1.5 rounded-full bg-success" />
-            {t("common.active")}
-          </span>
-        ) : (
-          <Badge variant="secondary">{t("common.inactive")}</Badge>
-        ),
+      enableSorting: false,
+      cell: ({ row }) => (
+        <Badge variant={row.original.isActive ? "secondary" : "outline"}>
+          {row.original.isActive ? t("common.active") : t("common.inactive")}
+        </Badge>
+      ),
       meta: { align: "center", hideOn: "sm" },
     },
     {
-      id: "actions",
-      header: () => t("common.actions"),
+      accessorKey: "createdAt",
+      header: () => t("common.date"),
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" size="icon-sm" asChild>
-            <Link href={`/products/${row.original.id}`}>
-              <Eye className="h-4 w-4" />
-              <span className="sr-only">{t("products.viewDetails", { name: row.original.name })}</span>
-            </Link>
-          </Button>
-          <ProductRowActions
-            product={row.original as unknown as Product}
-            categories={categories}
-          />
-        </div>
+        <span className="text-sm text-muted-foreground">
+          {formatDate(row.original.createdAt, locale)}
+        </span>
       ),
-      meta: { align: "end", width: "w-20" },
-      enableSorting: false,
+      meta: { hideOn: "lg" },
     },
   ];
 
-  const products = data?.products ?? fallback.products;
+  if (error && !data) {
+    return (
+      <StateSurface
+        icon={AlertTriangle}
+        title={t("error.requestFailed")}
+        description={error.message}
+        tone="danger"
+        size="inline"
+        role="alert"
+      />
+    );
+  }
 
   return (
     <DataTable
       columns={columns}
-      data={products}
+      data={response.products}
       isLoading={isLoading}
       pagination={pagination}
-      onRowClick={(row) => router.push(`/products/${row.id}`)}
       getRowId={(row) => row.id}
       emptyState={<ProductsEmptyState />}
     />
