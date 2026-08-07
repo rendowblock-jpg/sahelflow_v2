@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 
 import { DataTable, type BulkAction } from "@/components/data-table/data-table";
-import { OrdersEmptyState } from "@/components/shared/empty-states";
+import {
+  OrdersEmptyState,
+  RiskEmptyState,
+} from "@/components/shared/empty-states";
 import { StateSurface } from "@/components/shared/state-surface";
 import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useUndoableDelete } from "@/hooks/use-undoable-delete";
@@ -23,6 +26,7 @@ interface OrdersDataTableProps {
   fallback: OrdersWorkbenchResponse;
   locale: Locale;
   statusFilter?: OrderStatus | "all";
+  riskFilter?: "high";
 }
 
 /**
@@ -39,6 +43,7 @@ export function OrdersDataTable({
   fallback,
   locale,
   statusFilter = "all",
+  riskFilter,
 }: OrdersDataTableProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -56,6 +61,7 @@ export function OrdersDataTable({
 
   const { data, error, isLoading, mutate, pagination } = useOrders({
     status: statusFilter,
+    risk: riskFilter,
     fallback,
   });
   const fieldAccess = data?.fieldAccess ?? fallback.fieldAccess;
@@ -163,7 +169,7 @@ export function OrdersDataTable({
       onRowClick={(row) => router.push(`/orders/${row.id}`)}
       bulkActions={fieldAccess.update ? bulkActions : undefined}
       getRowId={(row) => row.id}
-      emptyState={<OrdersEmptyState />}
+      emptyState={riskFilter ? <RiskEmptyState /> : <OrdersEmptyState />}
     />
   );
 }
