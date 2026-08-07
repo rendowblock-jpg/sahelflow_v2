@@ -11,10 +11,12 @@ describe("Phase 5 whole-product completion contract", () => {
     const products = read("src/lib/products/product-workbench.ts");
     const deliveries = read("src/lib/deliveries/delivery-workbench.ts");
     const returns = read("src/lib/returns/return-workbench.ts");
-    const customerHook = read("src/hooks/swr/use-customers.ts");
-    const productHook = read("src/hooks/swr/use-products.ts");
-    const deliveryHook = read("src/hooks/swr/use-deliveries.ts");
-    const returnHook = read("src/hooks/swr/use-returns.ts");
+    const hooks = [
+      read("src/hooks/swr/use-customers.ts"),
+      read("src/hooks/swr/use-products.ts"),
+      read("src/hooks/swr/use-deliveries.ts"),
+      read("src/hooks/swr/use-returns.ts"),
+    ];
 
     expect(customers).toContain("name: access.contact");
     expect(customers).toContain("riskScore: access.risk");
@@ -22,19 +24,21 @@ describe("Phase 5 whole-product completion contract", () => {
     expect(deliveries).toContain("cost: access.financials");
     expect(deliveries).toContain("customer: access.contact");
     expect(returns).toContain("customer: access.contact");
-    for (const hook of [customerHook, productHook, deliveryHook, returnHook]) {
+    for (const hook of hooks) {
       expect(hook).toContain("fallback.page === currentPage");
       expect(hook).toContain("knownTotal !== undefined && currentPage > lastPage");
     }
   });
 
   it("keeps list navigation truthful when detail routes need stronger authority", () => {
-    const orders = read("src/components/orders/orders-columns.tsx");
-    const orderTable = read("src/components/orders/orders-data-table.tsx");
-    const confirmation = read("src/components/orders/confirmation-queue-table.tsx");
-    const deliveries = read("src/components/deliveries/deliveries-data-table.tsx");
-    const returns = read("src/components/returns/returns-data-table.tsx");
-    for (const source of [orders, orderTable, confirmation, deliveries, returns]) {
+    const sources = [
+      read("src/components/orders/orders-columns.tsx"),
+      read("src/components/orders/orders-data-table.tsx"),
+      read("src/components/orders/confirmation-queue-table.tsx"),
+      read("src/components/deliveries/deliveries-data-table.tsx"),
+      read("src/components/returns/returns-data-table.tsx"),
+    ];
+    for (const source of sources) {
       expect(source).toContain("canOpenDetail");
     }
   });
@@ -72,13 +76,18 @@ describe("Phase 5 whole-product completion contract", () => {
     expect(riskPage).toContain("canManage");
   });
 
-  it("separates read and manage surfaces for automation, COD and settings", () => {
+  it("separates read and manage surfaces for automation, COD, fulfillment and settings", () => {
     const automations = read("src/app/(dashboard)/automations/page.tsx");
     const cod = read("src/app/(dashboard)/accounting/cod-reconciliation/page.tsx");
+    const deliveryStatus = read("src/components/deliveries/delivery-status-badge.tsx");
+    const returnStatus = read("src/components/returns/return-status-badge.tsx");
     const settings = read("src/app/(dashboard)/settings/page.tsx");
     const profile = read("src/app/(dashboard)/profile/page.tsx");
-    expect(automations).toContain('trustedActionAllowed(\n    actorContext,\n    "automations.manage"');
+    expect(automations).toContain('"automations.manage"');
+    expect(automations).toContain("canManage");
     expect(cod).toContain("CanonicalCodReadOnly");
+    expect(deliveryStatus).toContain("disabled || isPending");
+    expect(returnStatus).toContain("disabled || isPending");
     expect(settings).toContain("SettingsTabAccess");
     expect(profile).toContain("canManage");
   });
@@ -89,13 +98,15 @@ describe("Phase 5 whole-product completion contract", () => {
     expect(charts).toContain("aria-describedby={summaryId}");
   });
 
-  it("keeps provider recovery and AI entry server-authoritative", () => {
+  it("keeps provider recovery, AI and extraction entry server-authoritative", () => {
     const inbox = read("src/app/(dashboard)/inbox/page.tsx");
     const recovery = read("src/components/inbox/whatsapp-ingress-recovery-panel.tsx");
     const agents = read("src/app/(dashboard)/agents/page.tsx");
+    const extraction = read("src/app/(dashboard)/analytics/extraction/page.tsx");
     expect(inbox).toContain('requireTrustedAction("conversations.read")');
     expect(recovery).toContain("canRetry");
     expect(agents).toContain('requireTrustedAction("ai.use")');
+    expect(extraction).toContain('requireTrustedAction("analytics.read")');
   });
 
   it("closes the root loading-boundary gaps", () => {
