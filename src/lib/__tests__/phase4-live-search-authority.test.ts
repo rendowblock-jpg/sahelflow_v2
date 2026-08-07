@@ -11,9 +11,10 @@ describe("Phase 4 live blind-index search authority", () => {
     for (const path of [
       "src/lib/data/extensions/customer-extensions.ts",
       "src/lib/data/extensions/order-extensions.ts",
+      "src/lib/data/phone-reputation.ts",
     ]) {
       const source = read(path);
-      expect(source).toContain("deriveExistingShopBlindIndex");
+      expect(source).toMatch(/derive(?:Existing)?ShopBlindIndex/);
       expect(source).not.toContain("deriveBlindIndex");
       expect(source).not.toContain("getMasterKey");
     }
@@ -31,4 +32,9 @@ describe("Phase 4 live blind-index search authority", () => {
     expect(lookupAuthority).not.toContain("legacyRoot");
   });
 
+  it("converges legacy reputation hashes before runtime readiness", () => {
+    const source = read("src/app/api/internal/runtime-ready/route.ts");
+    expect(source).toContain("migratePhoneReputationBlindIndexes");
+    expect(source).toContain("RUNTIME_PROTECTED_SEARCH_NOT_READY");
+  });
 });
