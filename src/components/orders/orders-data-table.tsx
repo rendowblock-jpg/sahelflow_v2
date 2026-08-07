@@ -23,6 +23,7 @@ interface OrdersDataTableProps {
   fallback: OrdersWorkbenchResponse;
   locale: Locale;
   statusFilter?: OrderStatus | "all";
+  riskFilter?: "high";
 }
 
 /**
@@ -39,6 +40,7 @@ export function OrdersDataTable({
   fallback,
   locale,
   statusFilter = "all",
+  riskFilter,
 }: OrdersDataTableProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -56,6 +58,7 @@ export function OrdersDataTable({
 
   const { data, error, isLoading, mutate, pagination } = useOrders({
     status: statusFilter,
+    risk: riskFilter,
     fallback,
   });
   const fieldAccess = data?.fieldAccess ?? fallback.fieldAccess;
