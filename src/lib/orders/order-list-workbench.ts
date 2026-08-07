@@ -15,6 +15,7 @@ import type { OrderStatus } from "@/types/domain";
 import type {
   MutationAuthority,
   OrdersWorkbenchResponse,
+  WorkbenchFieldAccess,
 } from "@/types/workbench";
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -33,12 +34,6 @@ export interface OrdersWorkbenchQuery {
   page?: number;
   pageSize?: number;
   sort?: string | null;
-}
-
-interface OrdersListAccess {
-  contact: boolean;
-  financials: boolean;
-  risk: boolean;
 }
 
 interface OrderListSourceRow {
@@ -66,7 +61,7 @@ function allowed(
 
 export function resolveOrdersWorkbenchAccess(
   actorContext: TrustedActorContext,
-): OrdersListAccess {
+): WorkbenchFieldAccess {
   assertTrustedAction(actorContext, "orders.read", {
     shopId: actorContext.shop.shopId,
   });
@@ -207,6 +202,7 @@ export async function getOrdersWorkbenchPage(
   return {
     orders,
     ...(riskData ? { riskData } : {}),
+    fieldAccess: access,
     total,
     hasNextPage: page * pageSize < total,
     page,
