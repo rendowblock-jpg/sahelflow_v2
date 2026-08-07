@@ -38,7 +38,9 @@ interface UseOrdersColumnsOptions {
 
 function SortIcon({ dir }: { dir: false | "asc" | "desc" }) {
   if (!dir) {
-    return <ArrowUpDown className="ms-1 inline size-3 opacity-40" aria-hidden="true" />;
+    return (
+      <ArrowUpDown className="ms-1 inline size-3 opacity-40" aria-hidden="true" />
+    );
   }
   return dir === "asc" ? (
     <ArrowUp className="ms-1 inline size-3" aria-hidden="true" />
@@ -48,10 +50,10 @@ function SortIcon({ dir }: { dir: false | "asc" | "desc" }) {
 }
 
 /**
- * Orders columns follow server-projected field access. A member without contact
- * or financial authority does not receive a decorative redacted column that can
- * accidentally become a new inference oracle; the workbench shape itself is
- * permission-aware.
+ * Orders columns follow server-projected field and action access. A member
+ * without contact/financial authority does not receive a decorative redacted
+ * column that can accidentally become an inference oracle, and read-only members
+ * do not receive controls that merely fail after click.
  */
 export function useOrdersColumns(
   opts: UseOrdersColumnsOptions,
@@ -86,7 +88,10 @@ export function useOrdersColumns(
                 <div className="truncate font-medium">
                   {row.original.customer?.name ?? "—"}
                 </div>
-                <div className="truncate font-mono text-xs text-muted-foreground" dir="ltr">
+                <div
+                  className="truncate font-mono text-xs text-muted-foreground"
+                  dir="ltr"
+                >
                   {row.original.customer?.phone ?? row.original.phone ?? "—"}
                 </div>
               </div>
@@ -128,10 +133,12 @@ export function useOrdersColumns(
       ? [
           {
             accessorKey: "totalPrice",
-            header: ({ column }: { column: { getIsSorted: () => false | "asc" | "desc" } }) => (
+            header: ({ column }) => (
               <span className="inline-flex items-center">
                 {t("orders.total")}
-                <SortIcon dir={column.getIsSorted()} />
+                <SortIcon
+                  dir={column.getIsSorted() as false | "asc" | "desc"}
+                />
               </span>
             ),
             cell: ({ row }: { row: { original: OrderListItem } }) => (
@@ -154,6 +161,7 @@ export function useOrdersColumns(
           status={row.original.status as never}
           size="sm"
           disabled={
+            !fieldAccess.update ||
             row.original.mutationAuthority === "canonical_v1" ||
             row.original.mutationAuthority === "confirmation_blocked"
           }
@@ -218,7 +226,8 @@ export function useOrdersColumns(
                   {t("orders.viewDetails")}
                 </Link>
               </DropdownMenuItem>
-              {order.mutationAuthority !== "canonical_v1" ? (
+              {fieldAccess.update &&
+              order.mutationAuthority !== "canonical_v1" ? (
                 <DropdownMenuItem asChild>
                   <Link href={`/orders/${order.id}`}>
                     <Pencil className="me-2 size-4" aria-hidden="true" />
@@ -226,7 +235,8 @@ export function useOrdersColumns(
                   </Link>
                 </DropdownMenuItem>
               ) : null}
-              {order.mutationAuthority !== "canonical_v1" &&
+              {fieldAccess.update &&
+              order.mutationAuthority !== "canonical_v1" &&
               (order.status === "draft" || order.status === "cancelled") &&
               onDelete ? (
                 <>
