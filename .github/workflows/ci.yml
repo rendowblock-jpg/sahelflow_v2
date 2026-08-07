@@ -306,8 +306,7 @@ jobs:
         with:
           name: windows-packaged-runtime-diagnostics-${{ github.run_id }}
           path: .sf-windows-runtime-smoke.log
-          if-no-files-found: error
-          include-hidden-files: true
+          if-no-files-found: ignore
           retention-days: 2
 
   # T-M9: Tauri release-path smoke — catches Rust compile errors + Cargo.toml
