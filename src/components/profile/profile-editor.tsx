@@ -101,9 +101,10 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
       <CardContent className="space-y-6">
         <PhotoUpload
           value={profile.photo ?? null}
-          onChange={(url) => canManage && setProfile((current) => ({ ...current, photo: url ?? undefined }))}
+          onChange={(url) => setProfile((current) => ({ ...current, photo: url ?? undefined }))}
           fallback={initials}
           size={96}
+          disabled={!canManage}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
