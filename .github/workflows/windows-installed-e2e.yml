@@ -200,7 +200,7 @@ jobs:
             if ($msis.Count -ne 1) {
               throw "expected exactly one MSI, found $($msis.Count)"
             }
-            ./scripts/verify-phase4-replacement-install.ps1 -MsiPath $msis[0].FullName
+            ./scripts/verify-phase4-replacement-install-ci.ps1 -MsiPath $msis[0].FullName
           } catch {
             $_ | Format-List * -Force | Out-String |
               Set-Content -LiteralPath (Join-Path $destination 'replacement-restore-error.txt') -Encoding UTF8
