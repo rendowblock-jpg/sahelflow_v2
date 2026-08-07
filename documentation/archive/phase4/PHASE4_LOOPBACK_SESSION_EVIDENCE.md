@@ -24,6 +24,12 @@ Commit `a7106ac856d5403d682f8aa06f96a48317d433ad` keeps the production cookie co
 
 The installed contract test now requires this bounded evidence adapter and continues to require the native WebView runtime-cookie boundary.
 
+## Final live-search authority review
+
+Exact-head independent review subsequently found that live customer/order search services and direct plaintext customer-phone lookups still retained installation-root blind-index candidates alongside the independently rotatable per-shop blind-index authority.
+
+The closure branch removes those competing live-search candidates. Customer and order service search predicates now use only `deriveExistingShopBlindIndex`, and the protected Prisma codec's `customerPhoneIndexes()` returns only the existing per-shop blind-index result. The installation root remains available for legacy protected-value decryption during governed migration compatibility; it is no longer a production customer-search authority. Regression coverage fails if service search or direct customer-phone lookup reintroduces the legacy root-derived candidate.
+
 ## Closure rule
 
-This repair is not sufficient by assertion. Phase 4 remains open until the repaired exact PR head passes the selected source, native, Windows, installed replacement/restore and required PR gates and final review is clean. Only then may PR #207 merge and issue #204 close.
+These repairs are not sufficient by assertion. Phase 4 remains open until the repaired exact PR head passes the selected source, native, Windows, installed replacement/restore and required PR gates and final review is clean. Only then may PR #207 merge and issue #204 close.
