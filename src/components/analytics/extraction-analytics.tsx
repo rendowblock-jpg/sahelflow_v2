@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Loader2, TrendingUp, Zap } from "lucide-react";
+import {
+  AlertTriangle,
+  BarChart3,
+  CheckCircle2,
+  Loader2,
+  TrendingUp,
+  Zap,
+} from "lucide-react";
 
 import { StateSurface } from "@/components/shared/state-surface";
 import { StatCard } from "@/components/shared/stat-card";
@@ -41,8 +48,6 @@ export function ExtractionAnalytics() {
 
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true);
-    setError(null);
     void fetch("/api/analytics/extraction", {
       headers: { "x-requested-with": "sahelflow" },
       signal: controller.signal,
@@ -55,7 +60,10 @@ export function ExtractionAnalytics() {
         }
         return response.json() as Promise<ExtractionData>;
       })
-      .then(setData)
+      .then((result) => {
+        setError(null);
+        setData(result);
+      })
       .catch((caught) => {
         if (caught instanceof DOMException && caught.name === "AbortError") return;
         setError(caught instanceof Error ? caught.message : t("error.requestFailed"));
@@ -66,7 +74,10 @@ export function ExtractionAnalytics() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 rounded-md border p-4 text-sm text-muted-foreground" role="status">
+      <div
+        className="flex items-center gap-2 rounded-md border p-4 text-sm text-muted-foreground"
+        role="status"
+      >
         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
         {t("common.loading")}
       </div>
@@ -75,6 +86,7 @@ export function ExtractionAnalytics() {
   if (error) {
     return (
       <StateSurface
+        icon={AlertTriangle}
         title={t("error.requestFailed")}
         description={error}
         tone="danger"
@@ -83,9 +95,15 @@ export function ExtractionAnalytics() {
       />
     );
   }
-  if (!data || !Array.isArray(data.byMethod) || !Array.isArray(data.trend) || data.total === 0) {
+  if (
+    !data ||
+    !Array.isArray(data.byMethod) ||
+    !Array.isArray(data.trend) ||
+    data.total === 0
+  ) {
     return (
       <StateSurface
+        icon={BarChart3}
         title={t("analytics.extraction.empty")}
         tone="neutral"
         size="panel"
@@ -96,13 +114,27 @@ export function ExtractionAnalytics() {
   return (
     <div className="space-y-6">
       <div className="card-grid-3">
-        <StatCard label={t("analytics.extraction.total")} value={data.total} icon={<Zap />} />
-        <StatCard label={t("analytics.extraction.completionRate")} value={`${(data.completionRate * 100).toFixed(1)}%`} icon={<CheckCircle2 />} />
-        <StatCard label={t("analytics.extraction.methods")} value={data.byMethod.length} icon={<TrendingUp />} />
+        <StatCard
+          label={t("analytics.extraction.total")}
+          value={data.total}
+          icon={<Zap />}
+        />
+        <StatCard
+          label={t("analytics.extraction.completionRate")}
+          value={`${(data.completionRate * 100).toFixed(1)}%`}
+          icon={<CheckCircle2 />}
+        />
+        <StatCard
+          label={t("analytics.extraction.methods")}
+          value={data.byMethod.length}
+          icon={<TrendingUp />}
+        />
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">{t("analytics.extraction.byMethod")}</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">{t("analytics.extraction.byMethod")}</CardTitle>
+        </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -118,8 +150,12 @@ export function ExtractionAnalytics() {
                 <TableRow key={method.method}>
                   <TableCell className="font-medium">{method.method}</TableCell>
                   <TableCell className="text-end tabular-nums">{method.count}</TableCell>
-                  <TableCell className="text-end tabular-nums">{(method.avgConfidence * 100).toFixed(0)}%</TableCell>
-                  <TableCell className="text-end tabular-nums">{Math.round(method.avgLatencyMs)}</TableCell>
+                  <TableCell className="text-end tabular-nums">
+                    {(method.avgConfidence * 100).toFixed(0)}%
+                  </TableCell>
+                  <TableCell className="text-end tabular-nums">
+                    {Math.round(method.avgLatencyMs)}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -128,7 +164,9 @@ export function ExtractionAnalytics() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">{t("analytics.extraction.trend")}</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">{t("analytics.extraction.trend")}</CardTitle>
+        </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -144,8 +182,12 @@ export function ExtractionAnalytics() {
                 <TableRow key={day.date}>
                   <TableCell className="font-mono text-muted-foreground">{day.date}</TableCell>
                   <TableCell className="text-end tabular-nums">{day.count}</TableCell>
-                  <TableCell className="text-end tabular-nums">{(day.avgConfidence * 100).toFixed(0)}%</TableCell>
-                  <TableCell className="text-end tabular-nums">{(day.completeRate * 100).toFixed(0)}%</TableCell>
+                  <TableCell className="text-end tabular-nums">
+                    {(day.avgConfidence * 100).toFixed(0)}%
+                  </TableCell>
+                  <TableCell className="text-end tabular-nums">
+                    {(day.completeRate * 100).toFixed(0)}%
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
