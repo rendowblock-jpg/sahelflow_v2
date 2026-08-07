@@ -76,5 +76,5 @@ export function getPhase5RuntimeTranslation(
   locale: Locale,
   key: string,
 ): string | undefined {
-  return COPY[locale][key as keyof (typeof COPY)[typeof locale]];
+  return (COPY[locale] as Readonly<Record<string, string>>)[key];
 }
