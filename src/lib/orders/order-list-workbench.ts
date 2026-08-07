@@ -67,10 +67,17 @@ export function resolveOrdersWorkbenchAccess(
   assertTrustedAction(actorContext, "orders.read", {
     shopId: actorContext.shop.shopId,
   });
+  const contact = allowed(actorContext, "customers.contact.read");
+  const financials = allowed(actorContext, "orders.financials.read");
+  const risk =
+    allowed(actorContext, "risk.read") &&
+    allowed(actorContext, "customers.read") &&
+    contact &&
+    financials;
   return Object.freeze({
-    contact: allowed(actorContext, "customers.contact.read"),
-    financials: allowed(actorContext, "orders.financials.read"),
-    risk: allowed(actorContext, "risk.read"),
+    contact,
+    financials,
+    risk,
     update: allowed(actorContext, "orders.update"),
     delete: allowed(actorContext, "orders.delete"),
   });
@@ -134,13 +141,6 @@ function mutationAuthority(
   return "legacy_compatibility";
 }
 
-/**
- * One permission-aware list contract shared by the RSC first paint and the
- * paginated API. Denied contact/financial fields are omitted from the Prisma
- * selection before protected values are opened; action authority travels with
- * every page. Every offset-paginated sort is total and deterministic by
- * appending the unique order id as a tie-breaker.
- */
 export async function getOrdersWorkbenchPage(
   actorContext: TrustedActorContext,
   query: OrdersWorkbenchQuery = {},
