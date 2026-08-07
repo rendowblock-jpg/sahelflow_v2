@@ -35,7 +35,8 @@ interface SidebarProps {
 
 interface SidebarLinkProps {
   item: NavigationItem;
-  active: boolean;
+  selected: boolean;
+  current: boolean;
   collapsed: boolean;
   isRtl: boolean;
   nested?: boolean;
@@ -43,7 +44,8 @@ interface SidebarLinkProps {
 
 function SidebarLink({
   item,
-  active,
+  selected,
+  current,
   collapsed,
   isRtl,
   nested = false,
@@ -54,7 +56,8 @@ function SidebarLink({
   const link = (
     <Link
       href={item.href}
-      aria-current={active ? "page" : undefined}
+      aria-current={current ? "page" : undefined}
+      data-selected={selected ? "true" : undefined}
       className={cn(
         "group relative flex min-h-9 items-center rounded-md text-sm outline-none transition-colors",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar",
@@ -63,14 +66,14 @@ function SidebarLink({
           : collapsed
             ? "justify-center px-0 py-2"
             : "gap-3 px-3 py-2",
-        active
+        selected
           ? nested
             ? "bg-sidebar-accent/70 font-medium text-sidebar-accent-foreground"
             : "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
           : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
       )}
     >
-      {!nested && active && (
+      {!nested && selected && (
         <span
           className="absolute inset-y-2 start-0 w-0.5 rounded-full bg-primary"
           aria-hidden="true"
@@ -80,13 +83,15 @@ function SidebarLink({
         className={cn(
           "shrink-0",
           nested ? "size-3.5" : "size-[18px]",
-          active
+          selected
             ? "text-foreground"
             : "text-muted-foreground group-hover:text-foreground",
         )}
         aria-hidden="true"
       />
-      {!collapsed && <span className="min-w-0 flex-1 truncate">{t(item.labelKey)}</span>}
+      {!collapsed && (
+        <span className="min-w-0 flex-1 truncate">{t(item.labelKey)}</span>
+      )}
     </Link>
   );
 
@@ -110,7 +115,10 @@ function SidebarLink({
  * instead of scanning a long module inventory. Profile/settings stay in the
  * utility footer and do not compete with daily work.
  */
-export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps) {
+export function Sidebar({
+  serverLocale: _serverLocale,
+  serverDir,
+}: SidebarProps) {
   const pathname = usePathname();
   const { t } = useI18n();
   const collapsed = useUIStore((state) => state.sidebarCollapsed);
@@ -153,17 +161,20 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
 
       <ScrollArea className="min-h-0 flex-1">
         <TooltipProvider delayDuration={0}>
-          <nav className="flex flex-col gap-1 px-2 py-3" aria-label={t("nav.groupOperations")}>
+          <nav
+            className="flex flex-col gap-1 px-2 py-3"
+            aria-label={t("nav.groupOperations")}
+          >
             {navigationDomains.map((domain) => {
-              const domainActive = activeDomain?.id === domain.id;
-              const DomainIcon = domain.icon;
+              const domainSelected = activeDomain?.id === domain.id;
 
               return (
                 <div key={domain.id} className="space-y-1">
                   <div className="relative">
                     <SidebarLink
                       item={domain}
-                      active={domainActive && pathname === domain.href}
+                      selected={domainSelected}
+                      current={pathname === domain.href}
                       collapsed={collapsed}
                       isRtl={isRtl}
                     />
@@ -171,30 +182,22 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
                       <ChevronRight
                         className={cn(
                           "pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none",
-                          domainActive && "rotate-90",
-                          isRtl && !domainActive && "rotate-180",
+                          domainSelected && "rotate-90",
+                          isRtl && !domainSelected && "rotate-180",
                         )}
                         aria-hidden="true"
                       />
                     ) : null}
-                    {collapsed && domainActive ? (
-                      <span
-                        className="pointer-events-none absolute inset-y-2 start-0 w-0.5 rounded-full bg-primary"
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                    {collapsed && domainActive ? (
-                      <DomainIcon className="sr-only" aria-hidden="true" />
-                    ) : null}
                   </div>
 
-                  {!collapsed && domainActive && domain.children?.length ? (
+                  {!collapsed && domainSelected && domain.children?.length ? (
                     <div className="ms-4 space-y-0.5 border-s border-sidebar-border ps-2">
                       {domain.children.map((child) => (
                         <SidebarLink
                           key={child.href}
                           item={child}
-                          active={pathMatchesNavigation(pathname, child.href)}
+                          selected={pathMatchesNavigation(pathname, child.href)}
+                          current={pathname === child.href}
                           collapsed={false}
                           isRtl={isRtl}
                           nested
@@ -216,7 +219,8 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
               <SidebarLink
                 key={item.href}
                 item={item}
-                active={pathMatchesNavigation(pathname, item.href)}
+                selected={pathMatchesNavigation(pathname, item.href)}
+                current={pathname === item.href}
                 collapsed={collapsed}
                 isRtl={isRtl}
               />
@@ -240,7 +244,9 @@ export function Sidebar({ serverLocale: _serverLocale, serverDir }: SidebarProps
               className={cn("size-4", isRtl && "icon-rtl-flip")}
               aria-hidden="true"
             />
-            {!collapsed && <span className="ms-2 text-sm">{t("nav.collapse")}</span>}
+            {!collapsed && (
+              <span className="ms-2 text-sm">{t("nav.collapse")}</span>
+            )}
           </Button>
         </div>
       </div>
