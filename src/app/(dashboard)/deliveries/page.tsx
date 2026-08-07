@@ -35,6 +35,7 @@ const FILTER_I18N: Record<string, string> = {
   returned: "deliveries.filter.returned",
 };
 
+const PENDING_STATUSES = ["pending", "created"] as const;
 const ACTIVE_STATUSES = ["pending", "created", "picked_up", "in_transit", "at_hub", "out_for_delivery"];
 const RETURN_STATUSES = ["returned", "refused", "failed"];
 
@@ -51,15 +52,14 @@ export default async function DeliveriesPage({
   const status = statusFilter ?? "all";
 
   const PAGE_SIZE = 25;
-  const where = status !== "all" ? { status, deletedAt: null } : { deletedAt: null };
+  const where =
+    status === "pending"
+      ? { status: { in: [...PENDING_STATUSES] }, deletedAt: null }
+      : status !== "all"
+        ? { status, deletedAt: null }
+        : { deletedAt: null };
   const offset = 0;
 
-  // P-M14: previously `allDeliveries` was a findMany that loaded every
-  // delivery row (status + cost) into memory just to compute 4 stat-card
-  // numbers. Now: use the existing status groupBy (already fires for the tab
-  // counts) + a single-row aggregate for the cost sum. Per-status counts
-  // cover active / delivered / returned; the "all" total is derived from the
-  // groupBy sum (no separate count query needed).
   const [deliveries, total, statusCounts, costAggregate] = await Promise.all([
     db.delivery.findMany({
       where,
@@ -80,21 +80,27 @@ export default async function DeliveriesPage({
     }),
   ]);
 
-  // Tab counts: derive "all" from the groupBy sum (covers every status,
-  // including any not explicitly listed in FILTER_I18N).
   const counts: Record<string, number> = {};
   let allCount = 0;
-  for (const g of statusCounts) {
-    counts[g.status] = g._count;
-    allCount += g._count;
+  for (const group of statusCounts) {
+    counts[group.status] = group._count;
+    allCount += group._count;
   }
   counts.all = allCount;
 
-  // Stat-card aggregates from the groupBy + costAggregate (no row-level data).
-  const activeCount = ACTIVE_STATUSES.reduce((sum, s) => sum + (counts[s] ?? 0), 0);
-  const deliveredCount = counts["delivered"] ?? 0;
-  const returnedCount = RETURN_STATUSES.reduce((sum, s) => sum + (counts[s] ?? 0), 0);
+  const activeCount = ACTIVE_STATUSES.reduce(
+    (sum, activeStatus) => sum + (counts[activeStatus] ?? 0),
+    0,
+  );
+  const deliveredCount = counts.delivered ?? 0;
+  const returnedCount = RETURN_STATUSES.reduce(
+    (sum, returnStatus) => sum + (counts[returnStatus] ?? 0),
+    0,
+  );
   const totalCost = costAggregate._sum.cost ?? 0;
+  // Seller-facing pending is one operational bucket: provider `pending` plus
+  // freshly `created` rows that have not yet advanced to pickup/transit.
+  counts.pending = (counts.pending ?? 0) + (counts.created ?? 0);
 
   const STATUS_FILTERS = Object.entries(FILTER_I18N).map(([value, key]) => ({
     value,
@@ -109,7 +115,6 @@ export default async function DeliveriesPage({
         actions={<ImportExportButtons exportRoute="/api/export/deliveries" />}
       />
 
-      {/* Stat cards */}
       <div className="card-grid-4 stagger-grid">
         <StatCard
           label={t("deliveries.activeDeliveries")}
@@ -146,7 +151,6 @@ export default async function DeliveriesPage({
         />
       </div>
 
-      {/* Status filter */}
       <Tabs defaultValue={status}>
         <TabsList className="flex-wrap h-auto">
           {STATUS_FILTERS.map((filter) => (
@@ -167,38 +171,40 @@ export default async function DeliveriesPage({
         </TabsList>
       </Tabs>
 
-      {/* Deliveries table (DataTable v2) */}
       <div className="animate-fade-up" style={{ animationDelay: "240ms" }}>
         <DeliveriesDataTable
-            fallback={{
-              deliveries: deliveries.map((d) => ({
-                id: d.id,
-                orderId: d.orderId,
-                provider: d.provider,
-                trackingNumber: d.trackingNumber,
-                cost: d.cost,
-                status: d.status,
-                estimatedDelivery: d.estimatedDelivery?.toISOString() ?? null,
-                createdAt: d.createdAt.toISOString(),
-                order: d.order
-                  ? {
-                      id: d.order.id,
-                      orderNumber: d.order.orderNumber,
-                      wilaya: d.order.wilaya,
-                      customer: d.order.customer
-                        ? { name: d.order.customer.name, phone: d.order.customer.phone }
-                        : null,
-                    }
-                  : null,
-              })),
-              total,
-              hasNextPage: total > PAGE_SIZE,
-              page: 1,
-              pageSize: PAGE_SIZE,
-            }}
-            status={status}
-            locale={locale}
-          />
+          fallback={{
+            deliveries: deliveries.map((delivery) => ({
+              id: delivery.id,
+              orderId: delivery.orderId,
+              provider: delivery.provider,
+              trackingNumber: delivery.trackingNumber,
+              cost: delivery.cost,
+              status: delivery.status,
+              estimatedDelivery: delivery.estimatedDelivery?.toISOString() ?? null,
+              createdAt: delivery.createdAt.toISOString(),
+              order: delivery.order
+                ? {
+                    id: delivery.order.id,
+                    orderNumber: delivery.order.orderNumber,
+                    wilaya: delivery.order.wilaya,
+                    customer: delivery.order.customer
+                      ? {
+                          name: delivery.order.customer.name,
+                          phone: delivery.order.customer.phone,
+                        }
+                      : null,
+                  }
+                : null,
+            })),
+            total,
+            hasNextPage: total > PAGE_SIZE,
+            page: 1,
+            pageSize: PAGE_SIZE,
+          }}
+          status={status}
+          locale={locale}
+        />
       </div>
     </div>
   );
