@@ -9,19 +9,14 @@ import { trustedActionAllowed } from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
 
+const PENDING_DELIVERY_STATUSES = ["pending", "created"] as const satisfies readonly DeliveryStatus[];
+
 /**
  * GET /api/delivery — list deliveries with pagination + optional status filter.
  *
- * Query params:
- *   page, pageSize — pagination (1-based, default 25, max 100)
- *   status         — filter by delivery status (pending/in_transit/delivered/...)
- *
- * Returns { deliveries, total, hasNextPage, page, pageSize }.
- * Each delivery includes its order + customer (name, phone) for the table.
- *
- * Routed through `deliveryService.list` (with the optional `include` param) so
- * the service's soft-delete filter + pagination logic is the single source of
- * truth (was previously duplicated in this route as a direct `db.delivery.findMany`).
+ * The seller-facing `status=pending` bucket intentionally includes both
+ * provider-pending and newly-created delivery rows; Dashboard attention and the
+ * Deliveries workbench therefore resolve to the same operational population.
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireAuth("deliveries.read");
@@ -39,9 +34,6 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const status = sp.get("status");
   const offset = (page - 1) * pageSize;
 
-  // Service.list applies the soft-delete filter (deletedAt: null) + status filter.
-  // We pass `include` so the joined order + customer rows come back in the same
-  // query (avoids an N+1 enrichment pass).
   const include = {
     order: { include: { customer: { select: { name: true, phone: true } } } },
   } satisfies Prisma.DeliveryInclude;
@@ -49,8 +41,17 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     include: typeof include;
   }>;
 
-  const statusFilter =
-    status && status !== "all" ? { status: status as DeliveryStatus } : {};
+  const listStatus: DeliveryStatus | readonly DeliveryStatus[] | undefined =
+    status === "pending"
+      ? PENDING_DELIVERY_STATUSES
+      : status && status !== "all"
+        ? (status as DeliveryStatus)
+        : undefined;
+  const statusFilter = Array.isArray(listStatus)
+    ? { status: { in: [...listStatus] } }
+    : listStatus
+      ? { status: listStatus }
+      : {};
 
   const [deliveries, total] = await Promise.all([
     deliveryService.list(
@@ -58,7 +59,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       {
         limit: pageSize,
         offset,
-        ...(status && status !== "all" ? { status: status as DeliveryStatus } : {}),
+        ...(listStatus ? { status: listStatus } : {}),
         include,
       },
     ) as Promise<DeliveryWithOrder[]>,
