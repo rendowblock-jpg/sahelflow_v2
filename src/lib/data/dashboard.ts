@@ -7,8 +7,25 @@ import { db, shopContext } from "@/lib/db";
 import { statsService } from "@/lib/data/stats-service";
 import type { DashboardFieldAccess } from "@/lib/identity/dashboard-projection";
 
-export async function getDashboardStats() {
-  return statsService.getDashboard({ prisma: db, shop: shopContext });
+/**
+ * Dashboard aggregates are permission-aware before query execution. Omitting
+ * fieldAccess preserves the historical full-authority service behavior for
+ * internal callers that already enforce their own trusted boundary.
+ */
+export async function getDashboardStats(fieldAccess?: DashboardFieldAccess) {
+  return statsService.getDashboard(
+    { prisma: db, shop: shopContext },
+    fieldAccess
+      ? {
+          orders: fieldAccess.orders,
+          financials: fieldAccess.analyticsFinancials,
+          customers: fieldAccess.customers,
+          conversations: fieldAccess.conversations,
+          deliveries: fieldAccess.deliveries,
+          products: fieldAccess.products,
+        }
+      : undefined,
+  );
 }
 
 /**
@@ -25,7 +42,7 @@ export async function getRecentOrders(
   return db.order.findMany({
     where: { deletedAt: null },
     take: limit,
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     select: {
       id: true,
       orderNumber: true,
