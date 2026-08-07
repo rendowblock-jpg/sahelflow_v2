@@ -21,7 +21,11 @@ interface StatCardProps {
   /** @deprecated Phase 5 owns metric icon color semantically. */
   accentIcon?: string;
   trend?: number;
-  /** Explicitly render trend as direction only; real ±1% values remain numeric by default. */
+  /**
+   * Explicit trend semantics. Legacy ±1 callers default to direction-only until
+   * migrated; calculated trend callers should pass false so a real ±1% remains
+   * visible rather than being mistaken for the legacy sentinel convention.
+   */
   trendDirectionOnly?: boolean;
   trendLabel?: React.ReactNode;
   subtitle?: React.ReactNode;
@@ -33,14 +37,6 @@ interface StatCardProps {
   hint?: React.ReactNode;
 }
 
-/**
- * SahelFlow operational metric.
- *
- * Values render immediately and never count up: financial, stock and queue truth
- * must not look provisional while animation catches up. Page-local accent colors
- * are retained only as deprecated input compatibility and deliberately ignored.
- * Direction-only trends are explicit so a genuine +1%/-1% change is never hidden.
- */
 export function StatCard({
   label,
   value,
@@ -48,7 +44,7 @@ export function StatCard({
   accentBg: _accentBg,
   accentIcon: _accentIcon,
   trend,
-  trendDirectionOnly = false,
+  trendDirectionOnly,
   trendLabel,
   subtitle,
   spark,
@@ -62,6 +58,8 @@ export function StatCard({
     typeof trend === "number" && Number.isFinite(trend) && trend !== 0;
   const positive = hasTrend && trend > 0;
   const negative = hasTrend && trend < 0;
+  const directionOnly =
+    trendDirectionOnly ?? (hasTrend && Math.abs(trend) === 1);
 
   return (
     <section
@@ -114,7 +112,7 @@ export function StatCard({
                   ) : (
                     <ArrowDownRight className="size-3" aria-hidden="true" />
                   )}
-                  {!trendDirectionOnly ? (
+                  {!directionOnly ? (
                     <>
                       {trend > 0 ? "+" : ""}
                       {trend.toFixed(1)}%
