@@ -25,7 +25,7 @@ The closure evidence includes the route matrix, fresh-install/login journey,
 representative LTR route sweep, Arabic RTL/viewport sweep and zero unresolved
 latest-head review threads.
 
-Installed product contracts now include:
+Merged source product contracts now include:
 
 - one workflow/domain navigation + command-search authority;
 - shared desktop shell, DataTable, StateSurface, StatCard and ChartCard grammar;
@@ -49,9 +49,10 @@ specific RTL/accessibility/semantic defect.
 
 - #201 — prior native/install evidence obligation.
 - #214 — replacement-install recovery certification evidence.
-- #221 — Founder-installed Phase 5 visual acceptance.
+- issue #221 — Founder-installed Phase 5 visual acceptance.
 
-#221 is human-only. Do not claim it passed from browser screenshots or CI.
+Retained evidence issue #221 is human-only. Do not claim it passed from browser
+screenshots or CI.
 
 ## Phase 6 next action
 
