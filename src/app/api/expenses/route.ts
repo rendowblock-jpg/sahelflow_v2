@@ -2,67 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, shopContext } from "@/lib/db";
 import { createExpenseSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
+import { requireTrustedAction } from "@/lib/identity/authorization";
+import { getExpensesWorkbenchPage } from "@/lib/accounting/expense-workbench";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Parse a `?month=YYYY-MM` query param into a `[gte, lt)` Date range for the
- * month (UTC midnight boundaries). Returns `null` when the param is absent or
- * malformed so callers can list unfiltered.
- */
-function parseMonthFilter(
-  monthParam: string | null,
-): { gte: Date; lt: Date } | null {
+function parseMonthFilter(monthParam: string | null): { gte: Date; lt: Date } | null {
   if (!monthParam) return null;
-  const m = /^(\d{4})-(\d{2})$/.exec(monthParam);
-  if (!m) return null;
-  const year = Number(m[1]);
-  const month = Number(m[2]); // 1-12
-  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
-    return null;
-  }
-  const gte = new Date(Date.UTC(year, month - 1, 1));
-  const lt = new Date(Date.UTC(year, month, 1));
-  return { gte, lt };
+  const match = /^(\d{4})-(\d{2})$/.exec(monthParam);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
+  return {
+    gte: new Date(Date.UTC(year, month - 1, 1)),
+    lt: new Date(Date.UTC(year, month, 1)),
+  };
 }
 
-/**
- * GET /api/expenses — list expenses.
- *
- * Optional `?month=YYYY-MM` filter scopes results to that calendar month.
- * Always ordered by date desc, capped at 100 rows.
- */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth("accounting.read");
-  const monthParam = req.nextUrl.searchParams.get("month");
-  const range = parseMonthFilter(monthParam);
-
-  const expenses = await db.expense.findMany({
-    where: {
-      deletedAt: null,
-      ...(range ? { date: { gte: range.gte, lt: range.lt } } : {}),
-    },
-    orderBy: { date: "desc" },
-    take: 100,
+  const actorContext = await requireTrustedAction("accounting.read");
+  const params = req.nextUrl.searchParams;
+  const range = parseMonthFilter(params.get("month"));
+  const result = await getExpensesWorkbenchPage(actorContext, {
+    page: Number.parseInt(params.get("page") ?? "1", 10),
+    pageSize: Number.parseInt(params.get("pageSize") ?? "25", 10),
+    ...(range ? { from: range.gte, to: range.lt } : {}),
   });
-
-  return NextResponse.json({ expenses });
+  return NextResponse.json(result);
 }, "GET /api/expenses");
 
-/**
- * POST /api/expenses — create a new expense.
- *
- * Body: { category, amount (positive int DZD), date (ISO datetime string),
- *         notes? }
- */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth("accounting.update");
-  const body = await req.json();
-  const data = createExpenseSchema.parse(body);
-  const context = { prisma: db, shop: shopContext };
-
-  const expense = await context.prisma.expense.create({
+  await requireTrustedAction("accounting.update");
+  const data = createExpenseSchema.parse(await req.json());
+  const expense = await db.expense.create({
     data: {
       category: data.category,
       amount: data.amount,
@@ -70,6 +43,5 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       notes: data.notes ?? null,
     },
   });
-
   return NextResponse.json({ expense }, { status: 201 });
 }, "POST /api/expenses");
