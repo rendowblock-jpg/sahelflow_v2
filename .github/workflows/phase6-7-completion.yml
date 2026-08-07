@@ -101,6 +101,9 @@ jobs:
       - name: Seed representative Algerian COD data
         run: bun run seed:rich
 
+      - name: Verify hot-query index and planner contracts
+        run: bun --conditions react-server scripts/verify-phase7-query-plans.ts
+
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
 
@@ -112,7 +115,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: phase67-browser-evidence-${{ github.run_id }}
-          path: test-results
+          path: |
+            test-results
+            .sf-inventory/phase7-performance
           if-no-files-found: warn
           include-hidden-files: true
           retention-days: 14
