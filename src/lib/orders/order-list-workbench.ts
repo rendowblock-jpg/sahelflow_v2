@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { Prisma } from "@prisma/client";
+
 import { db, shopContext } from "@/lib/db";
 import {
   assertTrustedAction,
@@ -70,6 +72,7 @@ export function resolveOrdersWorkbenchAccess(
     financials: allowed(actorContext, "orders.financials.read"),
     risk: allowed(actorContext, "risk.read"),
     update: allowed(actorContext, "orders.update"),
+    delete: allowed(actorContext, "orders.delete"),
   });
 }
 
@@ -102,18 +105,20 @@ function normalizedSort(
   }
 }
 
-function orderByFor(sort: OrdersWorkbenchSort) {
+function orderByFor(
+  sort: OrdersWorkbenchSort,
+): Prisma.OrderOrderByWithRelationInput[] {
   const [field, direction] = sort.split(".") as [
     "createdAt" | "orderNumber" | "totalPrice",
     "asc" | "desc",
   ];
   if (field === "orderNumber") {
-    return [{ orderNumber: direction }, { id: direction }] as const;
+    return [{ orderNumber: direction }, { id: direction }];
   }
   if (field === "totalPrice") {
-    return [{ totalPrice: direction }, { id: direction }] as const;
+    return [{ totalPrice: direction }, { id: direction }];
   }
-  return [{ createdAt: direction }, { id: direction }] as const;
+  return [{ createdAt: direction }, { id: direction }];
 }
 
 function mutationAuthority(
@@ -132,9 +137,9 @@ function mutationAuthority(
 /**
  * One permission-aware list contract shared by the RSC first paint and the
  * paginated API. Denied contact/financial fields are omitted from the Prisma
- * selection before protected values are opened; risk is emitted only when the
- * trusted actor has explicit risk.read authority. Every offset-paginated sort is
- * total and deterministic by appending the unique order id as a tie-breaker.
+ * selection before protected values are opened; action authority travels with
+ * every page. Every offset-paginated sort is total and deterministic by
+ * appending the unique order id as a tie-breaker.
  */
 export async function getOrdersWorkbenchPage(
   actorContext: TrustedActorContext,
