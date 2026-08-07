@@ -1,18 +1,18 @@
 /**
- * Internationalization module — AR/FR/EN with RTL support.
+ * Internationalization foundation — AR/FR/EN with RTL support.
  *
- * Design system Section 12.2: "Full AR/FR/EN. No hardcoded strings. RTL support."
- *
- * Architecture: Translations are JSON files in src/lib/i18n/locales/.
- * The active locale is stored in Zustand (user preference, persisted).
- * RTL is applied automatically when locale === "ar".
+ * Static translations live in src/lib/i18n/locales/. The locale cookie is the
+ * shared server/client source of truth; the client UI store mirrors that cookie
+ * for immediate interaction without persisting a competing locale value.
+ * Runtime-owned copy is resolved through runtime-translations.ts by both server
+ * and client translators.
  */
 
 export type Locale = "ar" | "fr" | "en";
 
 export const LOCALES: readonly Locale[] = ["ar", "fr", "en"] as const;
 
-export const DEFAULT_LOCALE: Locale = "fr"; // French is the business default in Algeria
+export const DEFAULT_LOCALE: Locale = "fr";
 
 export const RTL_LOCALES: readonly Locale[] = ["ar"] as const;
 
@@ -24,10 +24,10 @@ export function getDirection(locale: Locale): "ltr" | "rtl" {
   return isRTL(locale) ? "rtl" : "ltr";
 }
 
-/** Type-safe translation key lookup (dotted path: "orders.status.confirmed") */
+/** Type-safe translation key lookup surface (dotted path: "orders.status.confirmed"). */
 export type TranslationKey = string;
 
-/** Load translations for a locale (dynamically imported for code-splitting) */
+/** Load the static locale bundle dynamically for client code-splitting. */
 export async function loadTranslations(locale: Locale): Promise<Record<string, string>> {
   switch (locale) {
     case "ar":
