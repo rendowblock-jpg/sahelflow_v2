@@ -6,8 +6,6 @@ import type { ServiceContext } from "../service-base";
 import type { Order, OrderStatus } from "@/types/domain";
 import { orderService } from "../order-service";
 import { logger } from "@/lib/logger";
-import { deriveBlindIndex } from "@/lib/crypto/field-crypto";
-import { getMasterKey } from "@/lib/crypto/master-key";
 import { deriveExistingShopBlindIndex } from "@/lib/crypto/protected-record";
 
 export interface BulkResult {
@@ -27,14 +25,13 @@ async function searchableIndexes(
   recordType: "Customer" | "Order",
   field: "name" | "phone",
 ): Promise<string[]> {
-  const legacy = deriveBlindIndex(value, getMasterKey());
   const canonical = await deriveExistingShopBlindIndex(
     ctx.prisma as unknown as BlindIndexClient,
     value,
     { recordType, field },
     ctx.shop ? { shopContext: ctx.shop } : {},
   );
-  return [...new Set([legacy, ...(canonical ? [canonical] : [])])];
+  return canonical ? [canonical] : [];
 }
 
 async function searchIndexes(ctx: ServiceContext, query: string) {
