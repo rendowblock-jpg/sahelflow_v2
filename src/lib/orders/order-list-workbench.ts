@@ -69,6 +69,7 @@ export function resolveOrdersWorkbenchAccess(
     contact: allowed(actorContext, "customers.contact.read"),
     financials: allowed(actorContext, "orders.financials.read"),
     risk: allowed(actorContext, "risk.read"),
+    update: allowed(actorContext, "orders.update"),
   });
 }
 
@@ -77,7 +78,9 @@ function clampPage(value: number | undefined): number {
 }
 
 function clampPageSize(value: number | undefined): number {
-  if (!Number.isSafeInteger(value) || (value ?? 0) <= 0) return DEFAULT_PAGE_SIZE;
+  if (!Number.isSafeInteger(value) || (value ?? 0) <= 0) {
+    return DEFAULT_PAGE_SIZE;
+  }
   return Math.min(value!, MAX_PAGE_SIZE);
 }
 
