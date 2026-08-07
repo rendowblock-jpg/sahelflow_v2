@@ -47,11 +47,12 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       : status && status !== "all"
         ? (status as DeliveryStatus)
         : undefined;
-  const statusFilter = Array.isArray(listStatus)
-    ? { status: { in: [...listStatus] } }
-    : listStatus
+  const statusFilter =
+    typeof listStatus === "string"
       ? { status: listStatus }
-      : {};
+      : listStatus
+        ? { status: { in: [...listStatus] } }
+        : {};
 
   const [deliveries, total] = await Promise.all([
     deliveryService.list(
