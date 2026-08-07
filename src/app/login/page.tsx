@@ -17,16 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
 
-const MEMBER_COPY = {
-  en: { owner: "Owner", member: "Team member", loginId: "Login ID", loginPlaceholder: "e.g. amina.ops", join: "Accept a team invitation" },
-  fr: { owner: "Propriétaire", member: "Membre de l’équipe", loginId: "Identifiant de connexion", loginPlaceholder: "ex. amina.ops", join: "Accepter une invitation d’équipe" },
-  ar: { owner: "المالك", member: "عضو الفريق", loginId: "معرّف تسجيل الدخول", loginPlaceholder: "مثال: amina.ops", join: "قبول دعوة فريق" },
-} as const;
-
 export default function LoginPage() {
   const router = useRouter();
-  const { t, locale } = useI18n();
-  const copy = MEMBER_COPY[locale];
+  const { t } = useI18n();
   const [mode, setMode] = useState<"owner" | "member">("owner");
   const [loginId, setLoginId] = useState("");
   const [pin, setPin] = useState("");
@@ -92,7 +85,7 @@ export default function LoginPage() {
               onClick={() => { setMode("owner"); setError(""); }}
               className={`rounded-sm px-3 py-2 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "owner" ? "bg-background text-foreground" : "text-muted-foreground"}`}
             >
-              {copy.owner}
+              {t("phase5.auth.owner")}
             </button>
             <button
               type="button"
@@ -101,20 +94,20 @@ export default function LoginPage() {
               onClick={() => { setMode("member"); setError(""); }}
               className={`rounded-sm px-3 py-2 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "member" ? "bg-background text-foreground" : "text-muted-foreground"}`}
             >
-              {copy.member}
+              {t("phase5.auth.member")}
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "member" ? (
               <div className="space-y-2">
-                <Label htmlFor="login-id">{copy.loginId}</Label>
+                <Label htmlFor="login-id">{t("phase5.auth.loginId")}</Label>
                 <Input
                   id="login-id"
                   dir="ltr"
                   value={loginId}
                   onChange={(event) => setLoginId(event.target.value.toLowerCase())}
-                  placeholder={copy.loginPlaceholder}
+                  placeholder={t("phase5.auth.loginPlaceholder")}
                   pattern="[a-z0-9][a-z0-9._-]{2,31}"
                   autoComplete="username"
                   disabled={loading}
@@ -148,7 +141,7 @@ export default function LoginPage() {
               {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <>{t("auth.login")}<ArrowRight className="ms-2 size-4 rtl:rotate-180" aria-hidden="true" /></>}
             </Button>
 
-            {mode === "member" ? <Button type="button" variant="outline" className="w-full" onClick={() => router.push("/join")}>{copy.join}</Button> : null}
+            {mode === "member" ? <Button type="button" variant="outline" className="w-full" onClick={() => router.push("/join")}>{t("phase5.auth.join")}</Button> : null}
             {needsSetup ? <Button type="button" variant="outline" className="w-full" onClick={() => router.push("/setup")}>{t("auth.goToSetup")}</Button> : null}
 
             <div className="flex items-center justify-center gap-1.5 pt-2 text-xs text-muted-foreground">
