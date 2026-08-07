@@ -22,6 +22,7 @@
     "sf-inventory": "bun run scripts/sf-inventory.ts && bun run scripts/augment-prisma-inventory.ts && bun run scripts/generate-phase4-evidence.ts --out .sf-inventory/phase4-security",
     "sf-phase5-experience": "bun run scripts/verify-phase5-experience.ts",
     "sf-phase67": "bun run scripts/verify-phase6-7-completion.ts",
+    "sf-phase7-query-plans": "bun --conditions react-server scripts/verify-phase7-query-plans.ts",
     "sf-version": "bun run scripts/sf-version.ts && bun run scripts/verify-updater-contract.ts",
     "sf-updater-contract": "bun run scripts/verify-updater-contract.ts",
     "sf-evidence": "bun run scripts/generate-evidence-manifest.ts",
