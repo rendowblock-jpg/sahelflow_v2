@@ -30,6 +30,9 @@ jobs:
     env:
       SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       SF_TEST_FAIL_FAST: "1"
+      SF_LICENSE_SERVICE_URL: ${{ secrets.SF_LICENSE_SERVICE_URL || vars.SF_LICENSE_SERVICE_URL }}
+      SF_LICENSE_TRIAL_PUBLIC_KEYS: ${{ secrets.SF_LICENSE_TRIAL_PUBLIC_KEYS || vars.SF_LICENSE_TRIAL_PUBLIC_KEYS }}
+      SF_LICENSE_PERMANENT_PUBLIC_KEYS: ${{ secrets.SF_LICENSE_PERMANENT_PUBLIC_KEYS || vars.SF_LICENSE_PERMANENT_PUBLIC_KEYS }}
     steps:
       - name: Validate exact source and protected main
         shell: pwsh
@@ -51,6 +54,33 @@ jobs:
             -Uri "https://api.github.com/repos/${{ github.repository }}/branches/main"
           if (-not $branch.protected) {
             throw 'origin/main is not protected; internal updater build is blocked'
+          }
+
+      - name: Verify protected licensing build configuration
+        shell: pwsh
+        run: |
+          foreach ($name in @(
+            'SF_LICENSE_SERVICE_URL',
+            'SF_LICENSE_TRIAL_PUBLIC_KEYS',
+            'SF_LICENSE_PERMANENT_PUBLIC_KEYS'
+          )) {
+            $value = [Environment]::GetEnvironmentVariable($name)
+            if ([string]::IsNullOrWhiteSpace($value)) {
+              throw "$name is missing from the protected internal-updater environment"
+            }
+          }
+          if ($env:SF_LICENSE_SERVICE_URL -cnotmatch '^https://\S+$') {
+            throw 'SF_LICENSE_SERVICE_URL must be an absolute HTTPS URL without whitespace'
+          }
+          foreach ($name in @('SF_LICENSE_TRIAL_PUBLIC_KEYS', 'SF_LICENSE_PERMANENT_PUBLIC_KEYS')) {
+            try {
+              $parsed = [Environment]::GetEnvironmentVariable($name) | ConvertFrom-Json
+            } catch {
+              throw "$name is not valid JSON"
+            }
+            if ($null -eq $parsed -or $parsed.PSObject.Properties.Count -lt 1) {
+              throw "$name must be a non-empty JSON object"
+            }
           }
 
       - name: Checkout exact source
@@ -486,7 +516,8 @@ jobs:
             --pattern "${env:SF_MSI_NAME}.sig" `
             --pattern 'latest.json' `
             --dir $downloadDir
-          if ($LASTEXITCODE -ne 0) { throw 'failed to download the exact draft assets for publication' }
+          if ($LASTEXITCODE -ne 0) { throw 'failed to download the exact draft assets for publication'
+          }
 
           $remoteMsi = Join-Path $downloadDir $env:SF_MSI_NAME
           $remoteSignature = Join-Path $downloadDir "${env:SF_MSI_NAME}.sig"
