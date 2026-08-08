@@ -14,159 +14,175 @@
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active branch:** `agent/internal-14-phase6-founder-checkpoint`
 > **Active PR:** #227 — Internal.14 Phase 5–6 Founder checkpoint release request
-> **PR state:** ready for review; merge and publication remain evidence-gated
+> **PR state:** draft, unmerged, unpublished; installed replacement evidence is still blocking
+> **Last installed-tested code head:** `8640ddc2b616aaf5e6d5027f7302e80062673110`
+> **Session handoff:** [`SESSION_HANDOFF_2026-08-08_INTERNAL14.md`](SESSION_HANDOFF_2026-08-08_INTERNAL14.md)
 
 Live GitHub is authority. Re-fetch protected `main`, PR #227, its exact current
-head, review threads and Actions before any merge or release action. Do not copy a
-historical PR-head SHA from this document into a write action.
+head, review threads and Actions before any write. The branch may advance through
+documentation-only reconciliation after the last installed-tested code SHA; never
+promote such a docs head into installed evidence.
 
 ## Phase 5 closure snapshot
 
 Phase 5 remains closed at the protected-source + controlled-browser layer through
-PR #220 / issue #208. Its exact final head passed the Required PR gate and the
-Required Phase 5 Experience gate, including the route matrix, fresh install/login,
-representative LTR journeys, Arabic RTL/viewport containment and review closure.
+PR #220 / issue #208. The Phase 5 product baseline is
+`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 
-Issue #221 deliberately retains Founder-installed visual acceptance. It does not
-reopen the Phase 5 source/browser result and must be reconciled at the Phase 5→6
-installed UI/accessibility checkpoint.
+Issue #221 retains Founder-installed visual acceptance. It does not reopen the
+source/browser result.
 
 ## Phase 6 source/browser closure
 
-PR #223 merged the integrated Phase 6 shared-correctness and Phase 7 measurement
-package from exact validated head
-`fa0ff6de649421c879f62364383a363b61c71bfc` to protected merge
+PR #223 merged the integrated Phase 6 correctness and Phase 7 measurement package
+from exact validated head `fa0ff6de649421c879f62364383a363b61c71bfc` to
+protected application-changing merge
 `23f1bc3912aecfd2a32c591a18fcca70bf454daa`.
 
-The exact source head passed:
+That source/browser package passed the Required PR and Phase 5 gates, static
+AR/FR/EN localization/RTL/accessibility contracts, source quality, migration and
+query-plan evidence, all nine integrated Phase 6/7 Playwright journeys, complete
+route/reflow sweeps, keyboard/focus/reduced-motion checks and review closure.
 
-- Required PR gate;
-- Required Phase 5 Experience gate;
-- static AR/FR/EN localization, RTL and accessibility contract;
-- TypeScript, ESLint, complete Vitest, production dependency audit and migration status;
-- hot-query index and SQLite planner evidence;
-- all nine integrated Phase 6/7 Playwright journeys;
-- English/French/Arabic full-route and 200%-equivalent reflow evidence;
-- keyboard/focus, reduced-motion and LTR/RTL Settings behavior;
-- controlled throttled browser performance/resource evidence;
-- zero unresolved P0/P1 review threads.
+The active dependency is installed/human evidence, retained in #221, #226 after
+the current installed checkpoint is satisfied. Do not restart a general Phase 5/6
+source wave.
 
-No Phase 1–5 business, permission, provider, recovery, native or experience
-authority was weakened by the closure package.
+## Internal.14 release checkpoint
 
-## Documentation reconciliation already protected
+PR #227 requests one unique Founder-test milestone:
 
-PR #225 reconciled `WORKING_MEMORY.md`, `CURRENT_STATE.md` and `ROADMAP.md` after
-PR #223 and merged to protected `main` as
-`6a9c3e9372e9994428e65dbbc79303cf08160db0`.
+- app `1.0.0-internal.14`;
+- MSI `1.0.0.14`;
+- `release-on-version-authority.yml` remains the single signed-release dispatcher;
+- `dispatch-internal-14.yml` remains observer/reporting only;
+- ordinary signed release licensing remains protected HTTPS authority;
+- the deterministic loopback trial issuer remains confined to the explicit
+  Phase 4 restore-evidence build;
+- published truth remains Internal.13 until the exact protected signed workflow
+  publishes Internal.14.
 
-That documentation correctly distinguishes:
+Do not merge/publish #227 until the installed replacement blocker below is closed,
+the exact final code head is fully gated/reviewed, and expected-head merge rules
+are satisfied.
 
-- Phase 6 source/browser closure from installed/human Phase 6 exit evidence;
-- Phase 7 controlled browser/query evidence from installed T470/floor certification;
-- published Internal.13 from an Internal.14 candidate;
-- Founder acceptance from automated evidence.
+## 2026-08-08 installed replacement frontier — session stop
 
-Issue #221 owns the installed Phase 5–6 visual/Arabic/RTL/accessibility checkpoint.
-Issue #226 owns Phase 7 T470/floor/eight-hour performance and reliability
-certification.
+Founder direction for this session was explicit: make one final professional,
+evidence-driven attempt; if the focused installed proof still failed, stop
+engineering and leave a complete next-session handoff. That stopping condition
+was reached. **Do not make another code repair or manually trigger another installed
+run from this session.**
 
-## Active Internal.14 checkpoint
+### Last installed-tested code
 
-PR #227 exists to create one unique installed Founder-test milestone containing
-the protected PR #223 result. It does not reopen or add Phase 6/7 product behavior.
+`8640ddc2b616aaf5e6d5027f7302e80062673110`
 
-Current PR #227 contract:
+Commit: `fix(windows): restore blocking survivability sockets`
 
-- app `1.0.0-internal.14`, MSI `1.0.0.14`;
-- ready for review, but unmerged and unpublished until exact-head gates and review pass;
-- `release-on-version-authority.yml` is the **single signed-release dispatcher**;
-- `dispatch-internal-14.yml` is observer/reporting only and cannot dispatch a second build;
-- the observer waits for the exact SHA-tagged Internal.14 publication, verifies one
-  MSI, one `.msi.sig` and one `latest.json`, then reports idempotently to issue #164;
-- `AGENTS.md` and the current-frontier audit guard now point agents at PR #223 / PR
-  #225 and the installed Phase 6 exit checkpoint rather than the old PR #220 frontier;
-- the installed-MSI replacement drill compiles only its explicit CI evidence build
-  against a deterministic loopback trial issuer; ordinary release builds still
-  require HTTPS licensing authority;
-- the signed `release.yml` job imports `SF_LICENSE_SERVICE_URL`,
-  `SF_LICENSE_TRIAL_PUBLIC_KEYS` and `SF_LICENSE_PERMANENT_PUBLIC_KEYS` from the
-  protected `internal-updater` GitHub Environment and fails closed before build if
-  that protected configuration is missing or malformed.
+This commit restored accepted survivability client streams to blocking mode while
+keeping the listener nonblocking for shutdown polling. It was a bounded Windows
+transport repair only.
 
-The source-controlled release workflow does not contain the commercial private
-licensing keys. The existing protected Tauri updater signing secret remains owned
-by the `internal-updater` Environment.
+Exact-head green runs at that code SHA:
 
-The published release remains Internal.13 until the exact protected signed workflow
-publishes Internal.14. PR CI, an unsigned evidence MSI, or an observer run alone
-must never be described as a published release.
+- Phase 6-7 Completion Gate `31281407605`;
+- Phase 5 Experience Gate `31281407619`;
+- Phase 4 CI trial issuer smoke `31281407662`;
+- CI / Required PR gate `31281407722`;
+- License Node and authority Windows smoke `31281407608`.
 
-## Phase 6 next action
+### Final focused installed proof
 
-Resume in this order and do not broaden scope:
+- run `31281491280`;
+- job `93163466194`;
+- exact checkout `8640ddc2b616aaf5e6d5027f7302e80062673110`;
+- artifact `windows-installed-e2e-31281491280`;
+- artifact ID `9028790269`;
+- artifact digest `sha256:9541eb2d8799bbdbb0203415c21c9a3b1b2fd56003fd5de405cecf0064d07ef4`.
 
-1. Re-fetch PR #227 and freeze its **live exact head**.
-2. Require the selected exact-head gates to be green: Required PR, Phase 5,
-   Phase 6-7, Native, Windows standalone/Rust parity and installed-MSI evidence.
-3. In the installed-MSI lane, require the replacement-install backup, restore,
-   identity and rollback drill to pass; do not substitute source/browser evidence.
-4. Confirm zero unresolved P0/P1 review threads and perform one separated
-   adversarial review of the exact final head.
-5. Squash-merge PR #227 only with expected-head binding and verify the protected
-   main SHA returned by GitHub.
-6. Allow the existing `release-on-version-authority.yml` workflow to dispatch the
-   one exact-source `release.yml` run. Do not create or refresh a second dispatch
-   branch/ref and do not manually dispatch a duplicate candidate.
-7. Keep other protected-main release changes out of the lane until the exact
-   Internal.14 publication finishes.
-8. Require the signed workflow to verify protected-main/reviewed-tree identity,
-   protected license configuration, signing authority, signed MSI, installed
-   launch/reopen, hydrated WebView UI, updater signature, `latest.json`, draft
-   bytes, exact tag and final publication.
-9. Require the Internal.14 observer to verify the exact published SHA-tagged asset
-   set and reconcile issue #164. Do not claim Internal.14 is available before this.
-10. Founder updates the installed T470 **in place** through the normal app updater;
-    preserve AppData, registry, databases and keys.
-11. Record the installed Phase 5–6 checkpoint in issue #221: native Arabic quality,
-    RTL geometry, keyboard/focus, critical semantics, representative zoom/reflow
-    and explicit Founder accept/reject evidence.
-12. If #221 has no actionable P0/P1, reconcile formal Phase 6 closure. If it exposes
-    a concrete defect, open one bounded repair PR for that observed defect only.
-13. After Phase 6 installed closure, begin issue #226 Phase 7 T470/floor/eight-hour
-    certification. Optimize only from measured failures.
+Passed before failure:
 
-## Phase 7 next action after Phase 6 exit
+- MSI build;
+- installed launch/close/reopen;
+- authenticated hydrated WebView UI twice;
+- the previous survivability raw request-write boundary;
+- independent recovery-kit creation.
 
-PR #223 protected measurement infrastructure and controlled browser/query evidence,
-but did **not** certify Phase 7 installed performance/reliability. Issue #226 owns
-the remaining installed package:
+Exact first failure from `replacement-restore-error.txt`:
 
-- ThinkPad T470 cold launch ≤8 s p95;
-- navigation ≤700 ms p95;
-- indexed search ≤350 ms p95;
-- ordinary local mutation ≤500 ms p95;
-- declared-floor SSD/HDD and 4 GB evidence;
-- representative large-database behavior;
-- clean close/reopen and crash-recovery observation;
-- eight-hour stability/resource evidence with no sustained memory growth.
+`All-shop source backup was not created.`
 
-Optimize only from measured failures. Do not remove accessibility, durability,
-canonical state, recovery or required background work to improve a stopwatch.
+The failing harness assertion follows `/api/backup/create` and currently combines
+three predicates: HTTP status must be 201, returned `shopCount` must be at least 2,
+and returned `location` must exist as a file. The artifact does not record enough
+safe response detail to identify which predicate failed. **That is the exact
+remaining diagnostic boundary. Do not guess.**
 
-## Evidence boundaries
+### Previous installed boundary now closed
 
-Controlled Chromium is not installed Windows/Tauri certification. The following
-remain explicit external/installed obligations:
+Run `31279741140` at code head
+`4e10200b7b8149e0666304aa21b258559b2873cf` failed earlier with
+`SURVIVABILITY_REQUEST_WRITE_FAILED`, despite matching endpoint/source PID 5596.
+After `8640ddc2…`, the final installed run advanced beyond that raw write boundary
+and through recovery-kit creation. Treat the socket/request-write blocker as closed
+unless new direct evidence contradicts it.
 
-- issue #201 — retained native/install evidence;
-- issue #214 — replacement-install recovery certification;
-- issue #221 — Founder-installed Phase 5/6 visual/accessibility acceptance;
-- issue #226 — Phase 7 T470/floor/eight-hour reliability certification.
+Also closed by prior focused evidence in this repair sequence:
 
-No new signed Internal, Founder acceptance, Beta or Stable claim exists until the
-matching evidence is recorded. Published release truth remains Internal.13 and
-Founder-accepted truth remains Internal.5 until stronger evidence is explicit.
+- deterministic trial issuer/signing fixture;
+- Node Ed25519 entitlement verification;
+- Windows license authority fsync/persistence;
+- packaged installation-root cache across Next server realms;
+- repeated root/context lookup inside one survivability request;
+- app/Node/WebView process-lifetime and endpoint/PID mismatch theories;
+- independent recovery-kit creation.
+
+Do not restart these investigations without contradictory evidence.
+
+## Exact next-session action
+
+1. Re-read `AGENTS.md`, `CURRENT_STATE.md`, `ROADMAP.md`, this file and
+   `SESSION_HANDOFF_2026-08-08_INTERNAL14.md`.
+2. Re-fetch protected `main`, live PR #227/head, review threads and Actions; inspect
+   any concurrent-agent delta before writing.
+3. Preserve `8640ddc2…` as the **last installed-tested code head** even though the
+   PR head is expected to be newer from documentation-only commits.
+4. Reuse final run `31281491280`, job `93163466194`, artifact `9028790269`.
+5. **Before product changes, decompose/capture the three `/api/backup/create`
+   predicates safely**: response status/code, returned shop count, and returned
+   location existence. Do not expose private seller data or secrets.
+6. Only after the exact failing predicate is known, inspect the backup-create API,
+   JavaScript/native wrapper and Rust backup implementation that own it.
+7. Make one bounded repair and run the smallest direct source/Windows validation.
+8. Trigger one focused installed replacement lane only.
+9. If and only if that lane becomes fully green, freeze that exact code head, run
+   the final required matrix once, complete exact-head adversarial review, merge
+   with expected-head binding and observe the one protected signed Internal.14
+   publication.
+10. Then perform Founder/T470 issue #221. Begin Phase 7 issue #226 only after the
+    Phase 6 installed exit is reconciled.
+
+## Phase 7 boundary
+
+Issue #226 remains later work. Required installed evidence still includes T470 cold
+launch ≤8 s p95, navigation ≤700 ms p95, indexed search ≤350 ms p95, ordinary local
+mutation ≤500 ms p95, declared-floor SSD/HDD/4 GB evidence, large-database behavior,
+clean close/reopen/crash recovery and eight-hour stability/resource evidence.
+
+Optimize only from measured failures. Do not weaken accessibility, durability,
+canonical state, recovery or required background work for performance.
+
+## Evidence boundaries and non-claims
+
+- #201 — retained native/install evidence;
+- #214 — replacement-install recovery certification;
+- #221 — Founder-installed Phase 5/6 visual/accessibility acceptance;
+- #226 — Phase 7 installed performance/reliability certification.
+
+PR #227 is unmerged. Internal.14 is unpublished. The documentation handoff head is
+not installed-tested. Published truth remains Internal.13; Founder-accepted truth
+remains Internal.5. No Beta or Stable release exists.
 
 ## Hard rules
 
@@ -179,4 +195,5 @@ Founder-accepted truth remains Internal.5 until stronger evidence is explicit.
 - draft/skipped checks are never promoted into evidence they did not run;
 - retained evidence is never described as passed;
 - no duplicate release dispatch;
+- no production localhost licensing bypass;
 - no release/Beta/Stable/Founder-acceptance claim without matching evidence.
