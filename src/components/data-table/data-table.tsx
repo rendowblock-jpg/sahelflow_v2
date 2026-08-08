@@ -260,7 +260,7 @@ export function DataTable<TData>({
       ) : null}
 
       <div className="overflow-hidden rounded-md border bg-background">
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full" aria-busy={isLoading}>
             <thead className="sticky top-0 z-10 border-b bg-muted/80 backdrop-blur-sm">
               {table.getHeaderGroups().map((headerGroup) => (
