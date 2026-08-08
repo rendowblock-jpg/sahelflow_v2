@@ -56,7 +56,7 @@ requireMarkers("AGENTS.md", [
   validatedPhase67Head,
   "Phase 6 source/browser package: complete and protected through PR #223",
   "installed/human exit checkpoint",
-  "issue #226",
+  "#226",
   phase5Baseline,
 ]);
 
