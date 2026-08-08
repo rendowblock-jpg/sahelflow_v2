@@ -22,9 +22,8 @@
 Live protected `main` is authority. Documentation-only commits may advance an active
 branch or protected `main` without changing application behavior. In particular,
 the documentation handoff after `8640ddc2…` must not be described as installed-tested.
-
-Detailed continuity for the current blocker is in
-[`../operations/SESSION_HANDOFF_2026-08-08_INTERNAL14.md`](../operations/SESSION_HANDOFF_2026-08-08_INTERNAL14.md).
+The detailed next-session continuity record is retained directly in
+`documentation/operations/WORKING_MEMORY.md`.
 
 ## Executive truth
 
@@ -52,6 +51,13 @@ pagination/sort/mutation state, shared table/state/stat/chart grammar, entity
 context, governed import/export, Risk/financial authority separation, Inbox/AI/
 Automation surfaces, Settings/Profile capability behavior and quiet auth/state
 boundaries.
+
+## Phase 5 evidence
+
+The exact final PR #220 head passed the Required PR and Required Phase 5 Experience
+gates, including source quality, route inventory, fresh install/login,
+representative LTR journeys, Arabic RTL/viewport containment, command search and
+review closure.
 
 Issue #221 retains Founder-installed visual acceptance. Browser CI does not satisfy
 that human evidence requirement.
@@ -140,7 +146,7 @@ backup-create assertion**, not licensing, request transport, recovery-kit creati
 restore commit, or Founder UI acceptance.
 
 Founder direction ended the engineering session at this failure. No later repair or
-rerun belongs to the 2026-08-08 session.
+manual installed rerun belongs to the 2026-08-08 session.
 
 ### Boundaries already closed in the repair sequence
 
@@ -197,7 +203,7 @@ accessibility, canonical state, durability, recovery or required background work
 - issue #221 — Founder-installed Phase 5/6 visual/accessibility acceptance;
 - issue #226 — Phase 7 T470/floor/eight-hour performance and reliability certification.
 
-PR #227 is not merged. Internal.14 is not published. The documentation-only handoff
-head is not installed-tested. Founder acceptance remains open. No Beta or Stable
-release exists. Published truth remains Internal.13 and Founder-accepted truth
-remains Internal.5 until stronger named evidence is recorded.
+PR #227 is not merged. Internal.14 is not published. Documentation-only handoff
+commits are not installed-tested. Founder acceptance remains open. No Beta or
+Stable release exists. Published truth remains Internal.13 and Founder-accepted
+truth remains Internal.5 until stronger named evidence is recorded.
