@@ -189,6 +189,18 @@ fn bridge_loop(listener: TcpListener, shutdown: Arc<AtomicBool>, context: Bridge
                 if peer.ip() != Ipv4Addr::LOCALHOST {
                     continue;
                 }
+                // Winsock accepted sockets inherit the listening socket's
+                // nonblocking property. The listener polls so controller
+                // shutdown stays responsive, but the framed handshake/request
+                // protocol below is intentionally blocking with bounded I/O
+                // timeouts. Restore that mode before the first protocol read.
+                if let Err(error) = stream.set_nonblocking(false) {
+                    eprintln!(
+                        "[sahelflow] protected survivability connection mode failed ({})",
+                        classify_log_error(&error)
+                    );
+                    continue;
+                }
                 let _ = stream.set_read_timeout(Some(CONNECTION_TIMEOUT));
                 let _ = stream.set_write_timeout(Some(CONNECTION_TIMEOUT));
                 let _ = stream.set_nodelay(true);
