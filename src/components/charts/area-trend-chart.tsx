@@ -48,7 +48,7 @@ export function AreaTrendChart({
   curve = "natural",
   emptyMessage,
 }: AreaTrendChartProps) {
-  const { dir } = useI18n();
+  const { dir, t } = useI18n();
   const isRtl = dir === "rtl";
   const fmtY = resolveFormatter(formatY);
   const gradientId = useGradientId("area");
@@ -62,7 +62,7 @@ export function AreaTrendChart({
   }
 
   return (
-    <ChartContainer role="img" aria-label="Area trend chart" config={config} style={{ height }} className="aspect-auto w-full">
+    <ChartContainer role="img" aria-label={t("charts.areaTrend")} config={config} style={{ height }} className="aspect-auto w-full">
       <AreaChart data={data} margin={{ left: isRtl ? 12 : 4, right: isRtl ? 4 : 12, top: 8, bottom: 0 }}>
         <defs>
           {series.map((s) => (
