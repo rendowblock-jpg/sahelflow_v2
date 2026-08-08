@@ -632,6 +632,10 @@ export function CanonicalCodDashboard({
               {summary.awaitingCollection.map((item) => {
                 const draft = collectionDraft(item);
                 const operationKey = `collection:${item.orderId}:${item.orderVersion}`;
+                const amountId = `cod-collection-amount-${item.orderId}`;
+                const providerId = `cod-collection-provider-${item.orderId}`;
+                const referenceId = `cod-collection-reference-${item.orderId}`;
+                const dateId = `cod-collection-date-${item.orderId}`;
                 return (
                   <div key={item.orderId} className="rounded-lg border p-4">
                     <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -642,10 +646,10 @@ export function CanonicalCodDashboard({
                       <p className="text-sm">{text.expectedAmount}: <strong>{formatDZD(item.expectedReceivable)}</strong></p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <div className="space-y-1.5"><Label>{text.amount}</Label><Input inputMode="numeric" value={draft.amount} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, amount: event.target.value } }))} /></div>
-                      <div className="space-y-1.5"><Label>{text.provider}</Label><Input dir="auto" value={draft.provider} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, provider: event.target.value } }))} /></div>
-                      <div className="space-y-1.5"><Label>{text.reference}</Label><Input dir="auto" value={draft.reference} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, reference: event.target.value } }))} /></div>
-                      <div className="space-y-1.5"><Label>{text.date}</Label><Input type="datetime-local" value={draft.at} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, at: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label htmlFor={amountId}>{text.amount}</Label><Input id={amountId} inputMode="numeric" value={draft.amount} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, amount: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label htmlFor={providerId}>{text.provider}</Label><Input id={providerId} dir="auto" value={draft.provider} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, provider: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label htmlFor={referenceId}>{text.reference}</Label><Input id={referenceId} dir="auto" value={draft.reference} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, reference: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label htmlFor={dateId}>{text.date}</Label><Input id={dateId} type="datetime-local" value={draft.at} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, at: event.target.value } }))} /></div>
                     </div>
                     <div className="mt-4 flex justify-end">
                       <Button disabled={Boolean(busy) || integer(draft.amount) <= 0 || !draft.provider.trim()} onClick={() => void commit(operationKey, `/api/orders/${item.orderId}/cod/collection`, { expectedVersion: item.orderVersion, amount: integer(draft.amount), provider: draft.provider.trim(), reference: draft.reference.trim() || undefined, collectedAt: new Date(draft.at).toISOString() })}>
@@ -693,10 +697,10 @@ export function CanonicalCodDashboard({
                         <td className="p-3"><p className="font-mono font-medium">{item.orderNumber}</p><p className="text-xs text-muted-foreground">{item.customerName}</p></td>
                         <td className="p-3" dir="auto">{item.provider}</td>
                         <td className="p-3 text-end tabular-nums">{formatDZD(item.outstandingRemittance)}</td>
-                        <td className="p-3"><Input className="min-w-28 text-end" inputMode="numeric" disabled={!draft.selected} value={draft.gross} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, gross: event.target.value } }))} /></td>
-                        <td className="p-3"><Input className="min-w-24 text-end" inputMode="numeric" disabled={!draft.selected} value={draft.fee} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, fee: event.target.value } }))} /></td>
-                        <td className="p-3"><Input className="min-w-24 text-end" inputMode="numeric" disabled={!draft.selected} value={draft.adjustment} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, adjustment: event.target.value } }))} /></td>
-                        <td className="p-3 text-center"><Checkbox disabled={!draft.selected} checked={draft.isFinal} onCheckedChange={(value) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, isFinal: value === true } }))} aria-label={text.final} /></td>
+                        <td className="p-3"><Input className="min-w-28 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${text.gross} ${item.orderNumber}`} value={draft.gross} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, gross: event.target.value } }))} /></td>
+                        <td className="p-3"><Input className="min-w-24 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${text.fees} ${item.orderNumber}`} value={draft.fee} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, fee: event.target.value } }))} /></td>
+                        <td className="p-3"><Input className="min-w-24 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${text.adjustment} ${item.orderNumber}`} value={draft.adjustment} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, adjustment: event.target.value } }))} /></td>
+                        <td className="p-3 text-center"><Checkbox disabled={!draft.selected} checked={draft.isFinal} onCheckedChange={(value) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, isFinal: value === true } }))} aria-label={`${text.final} ${item.orderNumber}`} /></td>
                       </tr>
                     );
                   })}
@@ -707,20 +711,20 @@ export function CanonicalCodDashboard({
 
           <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="space-y-1.5"><Label>{text.provider}</Label><Input dir="auto" disabled={Boolean(selectedProvider)} value={selectedProvider ?? batch.provider} onChange={(event) => setBatch((current) => ({ ...current, provider: event.target.value }))} /></div>
-              <div className="space-y-1.5"><Label>{text.batchReference}</Label><Input dir="auto" value={batch.reference} onChange={(event) => setBatch((current) => ({ ...current, reference: event.target.value }))} /></div>
-              <div className="space-y-1.5"><Label>{text.date}</Label><Input type="datetime-local" value={batch.receivedAt} onChange={(event) => setBatch((current) => ({ ...current, receivedAt: event.target.value }))} /></div>
-              <div className="space-y-1.5"><Label>{text.evidenceName}</Label><Input dir="auto" value={batch.evidenceName} onChange={(event) => setBatch((current) => ({ ...current, evidenceName: event.target.value }))} /></div>
-              <div className="space-y-1.5 md:col-span-2"><Label>{text.evidenceHash}</Label><Input dir="ltr" value={batch.evidenceHash} onChange={(event) => setBatch((current) => ({ ...current, evidenceHash: event.target.value }))} /></div>
+              <div className="space-y-1.5"><Label htmlFor="cod-batch-provider">{text.provider}</Label><Input id="cod-batch-provider" dir="auto" disabled={Boolean(selectedProvider)} value={selectedProvider ?? batch.provider} onChange={(event) => setBatch((current) => ({ ...current, provider: event.target.value }))} /></div>
+              <div className="space-y-1.5"><Label htmlFor="cod-batch-reference">{text.batchReference}</Label><Input id="cod-batch-reference" dir="auto" value={batch.reference} onChange={(event) => setBatch((current) => ({ ...current, reference: event.target.value }))} /></div>
+              <div className="space-y-1.5"><Label htmlFor="cod-batch-date">{text.date}</Label><Input id="cod-batch-date" type="datetime-local" value={batch.receivedAt} onChange={(event) => setBatch((current) => ({ ...current, receivedAt: event.target.value }))} /></div>
+              <div className="space-y-1.5"><Label htmlFor="cod-batch-evidence-name">{text.evidenceName}</Label><Input id="cod-batch-evidence-name" dir="auto" value={batch.evidenceName} onChange={(event) => setBatch((current) => ({ ...current, evidenceName: event.target.value }))} /></div>
+              <div className="space-y-1.5 md:col-span-2"><Label htmlFor="cod-batch-evidence-hash">{text.evidenceHash}</Label><Input id="cod-batch-evidence-hash" dir="ltr" value={batch.evidenceHash} onChange={(event) => setBatch((current) => ({ ...current, evidenceHash: event.target.value }))} /></div>
               <div className="flex items-end gap-2"><Checkbox checked={batch.includeUnmatched} onCheckedChange={(value) => setBatch((current) => ({ ...current, includeUnmatched: value === true }))} aria-label={text.addUnmatched} /><Label>{text.addUnmatched}</Label></div>
             </div>
 
             {batch.includeUnmatched ? (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="space-y-1.5"><Label>{text.unmatchedReference}</Label><Input dir="auto" value={batch.unmatchedReference} onChange={(event) => setBatch((current) => ({ ...current, unmatchedReference: event.target.value }))} /></div>
-                <div className="space-y-1.5"><Label>{text.gross}</Label><Input inputMode="numeric" value={batch.unmatchedGross} onChange={(event) => setBatch((current) => ({ ...current, unmatchedGross: event.target.value }))} /></div>
-                <div className="space-y-1.5"><Label>{text.fees}</Label><Input inputMode="numeric" value={batch.unmatchedFee} onChange={(event) => setBatch((current) => ({ ...current, unmatchedFee: event.target.value }))} /></div>
-                <div className="space-y-1.5"><Label>{text.adjustment}</Label><Input inputMode="numeric" value={batch.unmatchedAdjustment} onChange={(event) => setBatch((current) => ({ ...current, unmatchedAdjustment: event.target.value }))} /></div>
+                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-reference">{text.unmatchedReference}</Label><Input id="cod-unmatched-reference" dir="auto" value={batch.unmatchedReference} onChange={(event) => setBatch((current) => ({ ...current, unmatchedReference: event.target.value }))} /></div>
+                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-gross">{text.gross}</Label><Input id="cod-unmatched-gross" inputMode="numeric" value={batch.unmatchedGross} onChange={(event) => setBatch((current) => ({ ...current, unmatchedGross: event.target.value }))} /></div>
+                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-fee">{text.fees}</Label><Input id="cod-unmatched-fee" inputMode="numeric" value={batch.unmatchedFee} onChange={(event) => setBatch((current) => ({ ...current, unmatchedFee: event.target.value }))} /></div>
+                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-adjustment">{text.adjustment}</Label><Input id="cod-unmatched-adjustment" inputMode="numeric" value={batch.unmatchedAdjustment} onChange={(event) => setBatch((current) => ({ ...current, unmatchedAdjustment: event.target.value }))} /></div>
               </div>
             ) : null}
 
@@ -751,6 +755,8 @@ export function CanonicalCodDashboard({
                 const operationKey = line.unresolvedUnmatched
                   ? `match:${line.lineId}:${matchingOrder?.orderVersion ?? "none"}`
                   : `line-correction:${line.lineId}:${line.orderVersion ?? "unmatched"}`;
+                const orderSelectId = `cod-review-order-${line.lineId}`;
+                const reasonId = `cod-review-reason-${line.lineId}`;
                 return (
                   <div key={line.lineId} className="rounded-lg border p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -760,18 +766,18 @@ export function CanonicalCodDashboard({
 
                     {line.unresolvedUnmatched ? (
                       <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-                        <div className="space-y-1.5"><Label>{text.matchOrder}</Label><select className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={draft.orderId} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, orderId: event.target.value } }))}><option value="">—</option>{matchCandidates.filter((item) => item.provider === line.provider).map((item) => <option key={item.orderId} value={item.orderId}>{item.orderNumber} · {item.customerName} · {formatDZD(item.outstandingRemittance)}</option>)}</select></div>
-                        <div className="space-y-1.5"><Label>{text.reason}</Label><Input dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
+                        <div className="space-y-1.5"><Label htmlFor={orderSelectId}>{text.matchOrder}</Label><select id={orderSelectId} className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={draft.orderId} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, orderId: event.target.value } }))}><option value="">—</option>{matchCandidates.filter((item) => item.provider === line.provider).map((item) => <option key={item.orderId} value={item.orderId}>{item.orderNumber} · {item.customerName} · {formatDZD(item.outstandingRemittance)}</option>)}</select></div>
+                        <div className="space-y-1.5"><Label htmlFor={reasonId}>{text.reason}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
                         <Button disabled={Boolean(busy) || !matchingOrder || !draft.reason.trim()} onClick={() => matchingOrder && void commit(operationKey, `/api/accounting/cod-settlements/lines/${line.lineId}/match`, { orderId: matchingOrder.orderId, expectedVersion: matchingOrder.orderVersion, reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{text.match}</Button>
                       </div>
                     ) : (
                       <div className="mt-4 space-y-3">
                         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                          <div className="space-y-1.5"><Label>{text.grossDelta}</Label><Input inputMode="numeric" value={draft.grossDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, grossDelta: event.target.value } }))} /></div>
-                          <div className="space-y-1.5"><Label>{text.feeDelta}</Label><Input inputMode="numeric" value={draft.feeDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, feeDelta: event.target.value } }))} /></div>
-                          <div className="space-y-1.5"><Label>{text.adjustmentDelta}</Label><Input inputMode="numeric" value={draft.adjustmentDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, adjustmentDelta: event.target.value } }))} /></div>
-                          <div className="space-y-1.5"><Label>{text.discrepancyDelta}</Label><Input inputMode="numeric" value={draft.discrepancyDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, discrepancyDelta: event.target.value } }))} /></div>
-                          <div className="space-y-1.5"><Label>{text.reason}</Label><Input dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
+                          <div className="space-y-1.5"><Label htmlFor={`cod-gross-delta-${line.lineId}`}>{text.grossDelta}</Label><Input id={`cod-gross-delta-${line.lineId}`} inputMode="numeric" value={draft.grossDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, grossDelta: event.target.value } }))} /></div>
+                          <div className="space-y-1.5"><Label htmlFor={`cod-fee-delta-${line.lineId}`}>{text.feeDelta}</Label><Input id={`cod-fee-delta-${line.lineId}`} inputMode="numeric" value={draft.feeDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, feeDelta: event.target.value } }))} /></div>
+                          <div className="space-y-1.5"><Label htmlFor={`cod-adjustment-delta-${line.lineId}`}>{text.adjustmentDelta}</Label><Input id={`cod-adjustment-delta-${line.lineId}`} inputMode="numeric" value={draft.adjustmentDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, adjustmentDelta: event.target.value } }))} /></div>
+                          <div className="space-y-1.5"><Label htmlFor={`cod-discrepancy-delta-${line.lineId}`}>{text.discrepancyDelta}</Label><Input id={`cod-discrepancy-delta-${line.lineId}`} inputMode="numeric" value={draft.discrepancyDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, discrepancyDelta: event.target.value } }))} /></div>
+                          <div className="space-y-1.5"><Label htmlFor={reasonId}>{text.reason}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
                         </div>
                         <div className="flex justify-end"><Button disabled={Boolean(busy) || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/accounting/cod-settlements/lines/${line.lineId}/correction`, { expectedVersion: line.orderVersion ?? undefined, grossDelta: integer(draft.grossDelta), feeDelta: integer(draft.feeDelta), adjustmentDelta: integer(draft.adjustmentDelta), discrepancyDelta: integer(draft.discrepancyDelta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{text.correction}</Button></div>
                       </div>
@@ -783,10 +789,12 @@ export function CanonicalCodDashboard({
               {summary.disputed.filter((item) => item.collectionId && item.discrepancy !== 0).map((item) => {
                 const draft = collectionCorrectionDraft(item);
                 const operationKey = `collection-correction:${item.orderId}:${item.orderVersion}`;
+                const deltaId = `cod-collection-delta-${item.orderId}`;
+                const reasonId = `cod-collection-reason-${item.orderId}`;
                 return (
                   <div key={operationKey} className="rounded-lg border border-warning/40 p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3"><div><Badge variant="outline">{text.collectionCorrection}</Badge><p className="mt-2 font-mono text-sm font-semibold">{item.orderNumber}</p><p className="text-sm text-muted-foreground">{item.customerName}</p></div><div className="text-end text-sm"><p>{text.expectedAmount}: {formatDZD(item.expectedReceivable)}</p><p>{text.collected}: {formatDZD(item.effectiveCollected)}</p><p className="text-destructive">{text.reviewCount}: {formatDZD(item.discrepancy)}</p></div></div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end"><div className="space-y-1.5"><Label>{text.collectionDelta}</Label><Input inputMode="numeric" value={draft.delta} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, delta: event.target.value } }))} /></div><div className="space-y-1.5"><Label>{text.reason}</Label><Input dir="auto" value={draft.reason} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, reason: event.target.value } }))} /></div><Button disabled={Boolean(busy) || integer(draft.delta) === 0 || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/orders/${item.orderId}/cod/collection/correction`, { expectedVersion: item.orderVersion, amountDelta: integer(draft.delta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{text.correction}</Button></div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end"><div className="space-y-1.5"><Label htmlFor={deltaId}>{text.collectionDelta}</Label><Input id={deltaId} inputMode="numeric" value={draft.delta} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, delta: event.target.value } }))} /></div><div className="space-y-1.5"><Label htmlFor={reasonId}>{text.reason}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, reason: event.target.value } }))} /></div><Button disabled={Boolean(busy) || integer(draft.delta) === 0 || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/orders/${item.orderId}/cod/collection/correction`, { expectedVersion: item.orderVersion, amountDelta: integer(draft.delta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{text.correction}</Button></div>
                   </div>
                 );
               })}

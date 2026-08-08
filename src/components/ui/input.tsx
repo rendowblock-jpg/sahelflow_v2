@@ -16,13 +16,29 @@ const TECHNICAL_INPUT_TYPES = new Set([
   "week",
 ])
 
-function Input({ className, type, dir, ...props }: React.ComponentProps<"input">) {
+function Input({
+  className,
+  type,
+  dir,
+  disabled,
+  placeholder,
+  "aria-label": ariaLabel,
+  ...props
+}: React.ComponentProps<"input">) {
   const resolvedDir = dir ?? (type && TECHNICAL_INPUT_TYPES.has(type) ? "ltr" : "auto")
+  // Disabled explanatory fields cannot be reached to expose their placeholder.
+  // Use that already-localized placeholder as a bounded accessible-name fallback
+  // while keeping enabled form controls dependent on their explicit labels.
+  const resolvedAriaLabel =
+    ariaLabel ?? (disabled && typeof placeholder === "string" ? placeholder : undefined)
 
   return (
     <input
       type={type}
       dir={resolvedDir}
+      disabled={disabled}
+      placeholder={placeholder}
+      aria-label={resolvedAriaLabel}
       data-slot="input"
       className={cn(
         "h-[var(--control-height)] w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30",

@@ -234,14 +234,14 @@ export default async function OrdersPage({
         />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Tabs defaultValue={statusFilter ?? "all"}>
-          <TabsList className="h-auto flex-wrap">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <Tabs defaultValue={statusFilter ?? "all"} className="w-full min-w-0">
+          <TabsList className="h-auto w-full min-w-0 flex-wrap justify-start">
             {STATUS_FILTERS.map((filter) => (
               <TabsTrigger key={filter.value} value={filter.value} asChild>
                 <Link
                   href={filter.value === "all" ? "/orders" : `/orders?status=${filter.value}`}
-                  className="flex items-center gap-1.5"
+                  className="flex max-w-full !flex-none items-center gap-1.5"
                 >
                   {t(filter.labelKey)}
                   {counts[filter.value] !== undefined ? (

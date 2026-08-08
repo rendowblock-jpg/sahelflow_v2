@@ -59,7 +59,7 @@ export function ComposedTrendChart({
   formatRightY,
   emptyMessage,
 }: ComposedTrendChartProps) {
-  const { dir } = useI18n();
+  const { dir, t } = useI18n();
   const isRtl = dir === "rtl";
   const fmtLeft = resolveFormatter(formatLeftY);
   const fmtRight = resolveFormatter(formatRightY);
@@ -72,7 +72,7 @@ export function ComposedTrendChart({
   }
   const hasRight = series.some((s) => s.yAxis === "right");
   return (
-    <ChartContainer role="img" aria-label="Composed trend chart" config={config} style={{ height }} className="aspect-auto w-full">
+    <ChartContainer role="img" aria-label={t("charts.composedTrend")} config={config} style={{ height }} className="aspect-auto w-full">
       <ComposedChart data={data} margin={{ left: isRtl ? 12 : 4, right: isRtl ? 4 : 12, top: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis

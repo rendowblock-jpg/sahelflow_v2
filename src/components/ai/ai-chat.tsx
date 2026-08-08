@@ -648,7 +648,9 @@ export function AiChat() {
             <div className="p-3 border-b bg-background flex items-center gap-2">
               {isMobile && (
                 <button
+                  type="button"
                   onClick={() => setActiveSessionId(null)}
+                  aria-label={t("common.backToConversations")}
                   className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4 icon-rtl-flip" />
@@ -665,7 +667,7 @@ export function AiChat() {
 
             <ScrollArea
               className="flex-1 p-4"
-              aria-label="AI chat messages"
+              aria-label={t("ai.chatMessages")}
               role="log"
               aria-live="polite"
             >
@@ -879,6 +881,7 @@ export function AiChat() {
                                   [proposal.id]: event.target.value,
                                 }))
                               }
+                              aria-label={copy.recoveryReason}
                               placeholder={copy.recoveryReason}
                               maxLength={1000}
                               disabled={approving}
@@ -925,6 +928,7 @@ export function AiChat() {
               <div className="flex items-center gap-2 max-w-3xl mx-auto">
                 <Input
                   type="text"
+                  aria-label={t("ai.askPlaceholder")}
                   placeholder={t("ai.askPlaceholder")}
                   value={input}
                   onChange={(event) => setInput(event.target.value)}

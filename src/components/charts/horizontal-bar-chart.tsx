@@ -36,7 +36,7 @@ export function HorizontalBarChart({
   formatValue,
   emptyMessage,
 }: HorizontalBarChartProps) {
-  const { dir } = useI18n();
+  const { dir, t } = useI18n();
   const isRtl = dir === "rtl";
   const fmt = resolveFormatter(formatValue);
   if (!data.length) {
@@ -50,7 +50,7 @@ export function HorizontalBarChart({
   const maxLabelLen = Math.max(...data.map((d) => d.label.length), 4);
 
   return (
-    <ChartContainer role="img" aria-label="Horizontal bar chart" config={config} style={{ height }} className="aspect-auto w-full">
+    <ChartContainer role="img" aria-label={t("charts.horizontalBar")} config={config} style={{ height }} className="aspect-auto w-full">
       <BarChart
         data={data}
         layout="vertical"

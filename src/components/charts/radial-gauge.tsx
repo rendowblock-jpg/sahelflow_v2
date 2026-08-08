@@ -10,6 +10,7 @@
  */
 import { RadialBar, RadialBarChart, PolarAngleAxis } from "recharts";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+import { useI18n } from "@/hooks/use-i18n";
 
 interface RadialGaugeProps {
   /** 0–100 */
@@ -29,12 +30,13 @@ export function RadialGauge({
   centerLabel,
   colorVar,
 }: RadialGaugeProps) {
+  const { t } = useI18n();
   const clamped = Math.max(0, Math.min(100, value));
   const data = [{ [dataKey]: clamped }];
 
   return (
     <div className="relative" style={{ height }}>
-      <ChartContainer role="img" aria-label="Radial gauge" config={config} style={{ height }} className="aspect-auto w-full">
+      <ChartContainer role="img" aria-label={t("charts.radialGauge")} config={config} style={{ height }} className="aspect-auto w-full">
         <RadialBarChart
           data={data}
           startAngle={90}

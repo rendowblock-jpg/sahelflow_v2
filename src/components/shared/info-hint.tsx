@@ -13,9 +13,9 @@ import { useI18n } from "@/hooks/use-i18n";
 interface InfoHintProps {
   /** The hint content. Can be a string or rich JSX. */
   content: React.ReactNode;
-  /** Accessible label for screen readers (defaults to "More information"). */
+  /** Accessible label for screen readers (localized when omitted). */
   label?: string;
-  /** Icon size (default h-4 w-4). */
+  /** Visual icon size; the interactive target always remains at least 24px. */
   size?: "sm" | "md";
   /** Optional className for the trigger wrapper. */
   className?: string;
@@ -24,20 +24,9 @@ interface InfoHintProps {
 }
 
 /**
- * InfoHint — inline education affordance (Phase 0 foundation).
- *
- * An info icon that opens a popover with explanatory text. The "what does
- * this mean?" affordance that top-tier apps put next to every stat label,
- * settings field, and risk/automation control.
- *
- * Usage:
- *   <InfoHint content={t("dashboard.revenueTooltip")} />
- *   <InfoHint content={<RichExplainer />} side="right" />
- *
- * Accessibility:
- *   - Trigger is a real <button> with aria-label
- *   - Popover content has role="tooltip" via Radix
- *   - Keyboard: focus trigger → Enter/Space opens → Esc closes
+ * Inline education affordance. The trigger is a real button and the explanatory
+ * content is an interactive popover, so it remains available to keyboard and
+ * touch users instead of existing only as hover text.
  */
 export function InfoHint({
   content,
@@ -57,13 +46,13 @@ export function InfoHint({
           type="button"
           aria-label={ariaLabel}
           className={cn(
-            "inline-flex shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors",
+            "inline-flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors",
             "hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
             "cursor-help",
             className,
           )}
         >
-          <Info className={iconSize} />
+          <Info className={iconSize} aria-hidden="true" />
         </button>
       </PopoverTrigger>
       <PopoverContent

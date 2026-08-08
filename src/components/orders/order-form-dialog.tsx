@@ -447,7 +447,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                       })
                       .map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.name} — {formatDZD(p.price)} (stock: {p.stock})
+                          {p.name} — {formatDZD(p.price)} ({t("common.stock")}: {p.stock})
                         </SelectItem>
                       ))}
                   </SelectContent>

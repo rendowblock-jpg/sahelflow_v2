@@ -625,6 +625,7 @@ export function InboxLive() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label={t("inbox.searchPlaceholder")}
                 placeholder={t("inbox.searchPlaceholder")}
                 className="w-full rounded-md border bg-background ps-8 pe-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
@@ -710,7 +711,9 @@ export function InboxLive() {
                 <div className="flex items-center gap-3">
                   {isMobile && (
                     <button
+                      type="button"
                       onClick={() => setActiveChatId(null)}
+                      aria-label={t("common.backToConversations")}
                       className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted transition-colors"
                     >
                       <ArrowLeft className="h-4 w-4 icon-rtl-flip" />
@@ -836,6 +839,11 @@ export function InboxLive() {
                     <CannedResponsePicker disabled onSelect={() => undefined} />
                     <Input
                       type="text"
+                      aria-label={
+                        activeChat.channel === "seeded"
+                          ? t("inbox.seededReplyPlaceholder")
+                          : t("inbox.disconnectedReplyPlaceholder")
+                      }
                       placeholder={
                         activeChat.channel === "seeded"
                           ? t("inbox.seededReplyPlaceholder")

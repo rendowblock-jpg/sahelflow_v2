@@ -1,10 +1,11 @@
 /**
- * SpeculationRules — hover-prerender for instant navigation (Phase 1, R-3).
+ * SpeculationRules — bounded intent-based prefetch for desktop navigation.
  *
- * Uses the Speculation Rules API to prerender sidebar-linked pages on hover.
- * Browser support: Chrome 121+. Other browsers silently ignore the tag.
- *
- * Placed in the dashboard layout so it's present on every dashboard page.
+ * Whole-document prerendering can retain additional renderer state and compete
+ * with the canonical WebView on low-memory Windows machines. Phase 7 keeps the
+ * useful hover/intent prefetch signal but does not pre-create complete pages
+ * before the seller actually navigates. Chromium/WebView versions that do not
+ * support Speculation Rules ignore the tag safely.
  */
 import Script from "next/script";
 
@@ -38,13 +39,6 @@ export function SpeculationRules() {
             { selector_matches: "a[href]" },
           ],
         },
-        eagerness: "moderate",
-      },
-    ],
-    prerender: [
-      {
-        source: "document",
-        where: { href_matches: ["/orders", "/customers", "/dashboard"] },
         eagerness: "moderate",
       },
     ],

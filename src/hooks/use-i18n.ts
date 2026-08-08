@@ -9,10 +9,7 @@ import {
 } from "react";
 
 import { getDirection, loadTranslations, type Locale } from "@/lib/i18n";
-import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
-import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
-import { getPhase5RuntimeTranslation } from "@/lib/i18n/phase5-runtime";
-import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
+import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 import { useServerLocale } from "@/lib/i18n/server-locale-context";
 import { useUIStore } from "@/stores/ui-store";
 
@@ -51,20 +48,16 @@ export function useI18n() {
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
-      let value =
-        translations[key] ??
-        getAutomationRuntimeTranslation(locale, key) ??
-        getCommerceRuntimeTranslation(locale, key) ??
-        getPhase5RuntimeTranslation(locale, key) ??
-        getWhatsAppRecoveryTranslation(locale, key) ??
-        key;
+      let value = translations[key] ?? getRuntimeTranslation(locale, key) ?? key;
       if (params && "count" in params) {
         const pluralRule = new Intl.PluralRules(locale).select(
           Number(params.count),
         );
-        if (translations[`${key}_${pluralRule}`]) {
-          value = translations[`${key}_${pluralRule}`]!;
-        }
+        const pluralKey = `${key}_${pluralRule}`;
+        value =
+          translations[pluralKey] ??
+          getRuntimeTranslation(locale, pluralKey) ??
+          value;
       }
       if (params) {
         for (const [param, replacement] of Object.entries(params)) {

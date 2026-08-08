@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useI18n } from "@/hooks/use-i18n";
@@ -29,11 +30,11 @@ interface DashboardLayoutProps {
 /**
  * SahelFlow desktop application frame.
  *
- * Phase 5 deliberately removes the floating rounded "web dashboard inside a
- * page" treatment. The canonical workspace is one edge-to-edge software frame:
- * durable domain navigation, one command/title bar and one scroll authority for
- * the active work surface. This keeps focus, keyboard navigation, zoom and
- * contained WebView behavior predictable.
+ * The workspace is one edge-to-edge software frame with durable domain
+ * navigation, one command/title bar and one scroll authority for the active work
+ * surface. Client route transitions move focus to the new main surface after the
+ * first render so keyboard and screen-reader users receive an explicit page-entry
+ * point without stealing focus during initial startup.
  */
 export function DashboardLayout({
   children,
@@ -43,6 +44,8 @@ export function DashboardLayout({
   const [commandOpen, setCommandOpen] = useState(false);
   const { cheatsheetOpen, setCheatsheetOpen } = useKeyboardShortcuts();
   const { t } = useI18n();
+  const pathname = usePathname();
+  const previousPath = useRef<string | null>(null);
   const dir = serverDir;
 
   useEffect(() => {
@@ -55,6 +58,20 @@ export function DashboardLayout({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    const previous = previousPath.current;
+    previousPath.current = pathname;
+    if (previous === null || previous === pathname) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const main = document.getElementById("main-content");
+      if (main instanceof HTMLElement) {
+        main.focus({ preventScroll: true });
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
 
   return (
     <div
