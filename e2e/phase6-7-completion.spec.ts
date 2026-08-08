@@ -227,6 +227,23 @@ async function assertRenderedRoute(
   await assertSemanticBasics(page, route);
 }
 
+async function assertRouteSweep(
+  page: Page,
+  locale: Locale,
+  dir: "ltr" | "rtl",
+) {
+  const failures: string[] = [];
+  for (const route of REQUIRED_ROUTES) {
+    try {
+      await assertRenderedRoute(page, route, locale, dir);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push(`${route}: ${message}`);
+    }
+  }
+  expect(failures, `${locale} route sweep must pass completely`).toEqual([]);
+}
+
 async function assertTargetFloor(page: Page) {
   const failures = await page.evaluate(() => {
     const selectors = [
@@ -277,6 +294,17 @@ function selectMetrics(
   return selected;
 }
 
+function maxCssDurationMs(value: string): number {
+  return Math.max(
+    ...value.split(",").map((duration) => {
+      const normalized = duration.trim();
+      if (normalized.endsWith("ms")) return Number.parseFloat(normalized);
+      if (normalized.endsWith("s")) return Number.parseFloat(normalized) * 1000;
+      return Number.POSITIVE_INFINITY;
+    }),
+  );
+}
+
 test.describe("Phase 6 and 7 integrated completion evidence", () => {
   for (const { locale, dir } of LOCALES) {
     test(`${locale} complete desktop route sweep`, async ({ page, context }, testInfo) => {
@@ -285,9 +313,7 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
       await setLocale(context, locale);
       await ensureOwnerSession(page);
 
-      for (const route of REQUIRED_ROUTES) {
-        await assertRenderedRoute(page, route, locale, dir);
-      }
+      await assertRouteSweep(page, locale, dir);
 
       await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
       await waitForHydration(page);
@@ -303,9 +329,7 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
       await setLocale(context, locale);
       await ensureOwnerSession(page);
 
-      for (const route of REQUIRED_ROUTES) {
-        await assertRenderedRoute(page, route, locale, dir);
-      }
+      await assertRouteSweep(page, locale, dir);
     });
   }
 
@@ -345,8 +369,8 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
         transitionDuration: style.transitionDuration,
       };
     });
-    expect(motion.animationDuration).toMatch(/(?:0s|0\.0*1?ms)/);
-    expect(motion.transitionDuration).toMatch(/(?:0s|0\.0*1?ms)/);
+    expect(maxCssDurationMs(motion.animationDuration)).toBeLessThanOrEqual(0.1);
+    expect(maxCssDurationMs(motion.transitionDuration)).toBeLessThanOrEqual(0.1);
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
 
