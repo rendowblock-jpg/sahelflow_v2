@@ -6,232 +6,122 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
-  group: phase6-7-completion-${{ github.ref }}
-  cancel-in-progress: true
+  group: internal-14-version-authority-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
-env:
-  SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-  NEXT_TELEMETRY_DISABLED: "1"
-
 jobs:
-  static-contract:
-    name: Static localization, RTL and accessibility contract
-    if: ${{ github.event.pull_request.draft == false }}
+  internal14-version-authority:
+    name: Apply exact Internal.14 version authority
+    if: ${{ github.event.pull_request.head.ref == 'agent/internal-14-phase6-founder-checkpoint' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 12
-    env:
-      SF_TEST_ROOT: /tmp/sahelflow-phase67-static
-      SF_DATA_DIR: /tmp/sahelflow-phase67-static/data
-      DATABASE_URL: file:/tmp/sahelflow-phase67-static/data/shops/test.db
+    permissions:
+      contents: write
     steps:
-      - name: Checkout exact PR head
+      - name: Checkout exact milestone head
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
+          fetch-depth: 0
+          persist-credentials: true
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.14
+      - name: Synchronize Internal.14 authority and milestone truth
+        shell: python
+        run: |
+          from pathlib import Path
 
-      - name: Install frozen dependencies
-        run: bun install --frozen-lockfile
+          def transition(path: str, old: str, new: str, label: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding='utf-8')
+              old_count = text.count(old)
+              new_count = text.count(new)
+              if old_count == 1:
+                  file.write_text(text.replace(old, new, 1), encoding='utf-8')
+                  return
+              if old_count == 0 and new_count == 1:
+                  return
+              raise SystemExit(f'{label}: expected old once or new once in {path}; old={old_count}, new={new_count}')
 
-      - name: Generate Prisma client
-        run: bunx prisma generate
+          transition('sahelflow.version.json', '"version": "1.0.0-internal.13"', '"version": "1.0.0-internal.14"', 'version authority')
+          transition('sahelflow.version.json', '"windowsMsiVersion": "1.0.0.13"', '"windowsMsiVersion": "1.0.0.14"', 'MSI authority')
+          transition('package.json', '"version": "1.0.0-internal.13"', '"version": "1.0.0-internal.14"', 'package version')
+          transition('src-tauri/Cargo.toml', 'version = "1.0.0-internal.13"', 'version = "1.0.0-internal.14"', 'Cargo manifest version')
+          transition('src-tauri/Cargo.lock', 'name = "sahelflow"\nversion = "1.0.0-internal.13"', 'name = "sahelflow"\nversion = "1.0.0-internal.14"', 'Cargo lock root version')
+          transition('src-tauri/tauri.conf.json', '"version": "1.0.0-internal.13"', '"version": "1.0.0-internal.14"', 'Tauri app version')
+          transition('src-tauri/tauri.conf.json', '"version": "1.0.0.13"', '"version": "1.0.0.14"', 'WiX MSI version')
+          transition('scripts/install-founder-windows.ps1', "[string]$ExpectedDisplayVersion = '1.0.0.13'", "[string]$ExpectedDisplayVersion = '1.0.0.14'", 'Founder MSI expectation')
+          transition('scripts/install-founder-windows.ps1', "[string]$ExpectedAppVersion = '1.0.0-internal.13'", "[string]$ExpectedAppVersion = '1.0.0-internal.14'", 'Founder app expectation')
 
-      - name: Prepare disposable static-evidence sandbox
-        run: bun run test:sandbox -- /tmp/sahelflow-phase67-static
+          transition(
+              'README.md',
+              '- Latest application-changing protected merge: **PR #220 — Phase 5 whole-product AAA experience convergence**.',
+              '- Latest application-changing protected merge: **PR #223 — Phase 6/7 source-browser completion**, protected application SHA `23f1bc3912aecfd2a32c591a18fcca70bf454daa`.',
+              'root README application baseline',
+          )
+          transition(
+              'README.md',
+              '- Retained installed/human evidence: issues **#201, #214 and #221**.',
+              '- Retained installed/human evidence: issues **#201, #214, #221 and #226**.',
+              'root README retained evidence',
+          )
+          transition(
+              'README.md',
+              '- Published release remains `1.0.0-internal.13` / MSI `1.0.0.13`.',
+              '- Requested Founder checkpoint candidate is `1.0.0-internal.14` / MSI `1.0.0.14`; it is **not published** until the exact protected-main signed workflow succeeds.\n- Published release remains `1.0.0-internal.13` / MSI `1.0.0.13`.',
+              'root README milestone request',
+          )
 
-      - name: Generate exact-head repository inventory
-        run: bun run sf-inventory
+          transition(
+              'documentation/README.md',
+              '> **Latest application-changing protected merge:** PR #220',
+              '> **Latest application-changing protected merge:** PR #223 at `23f1bc3912aecfd2a32c591a18fcca70bf454daa`\n> **Validated Phase 6/7 source head:** `fa0ff6de649421c879f62364383a363b61c71bfc`',
+              'documentation entry application baseline',
+          )
+          transition(
+              'documentation/README.md',
+              '> **Retained evidence:** issues #201, #214 and #221',
+              '> **Retained evidence:** issues #201, #214, #221 and #226',
+              'documentation entry retained evidence',
+          )
+          transition(
+              'documentation/README.md',
+              'The active implementation frontier is **Phase 6 — Arabic, RTL and accessibility\nparity**. Start from live protected `main`, reuse the Phase 5 evidence/workbench\ninfrastructure and repair only concrete Phase 6 defects rather than restarting\nwhole-product Phase 5 transformation.',
+              'The active product frontier remains **Phase 6 — Arabic, RTL and accessibility\nparity**, but its protected source/browser package is complete through PR #223.\nThe next dependency is the installed/human Phase 5–6 accessibility checkpoint in\nissue #221; do not reopen a broad source audit. Phase 7 installed T470/floor and\neight-hour certification is retained in issue #226 and follows Phase 6 exit.',
+              'documentation entry frontier',
+          )
 
-      - name: Verify integrated Phase 6-7 contract
-        run: bun run scripts/verify-phase6-7-completion.ts
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text(encoding='utf-8')
+          heading = '### Internal.14 Phase 5–6 installed checkpoint candidate request'
+          if heading not in text:
+              marker = '## [Unreleased]\n'
+              if text.count(marker) != 1:
+                  raise SystemExit('CHANGELOG: expected one Unreleased marker')
+              entry = '''## [Unreleased]\n\n### Internal.14 Phase 5–6 installed checkpoint candidate request\n\n- Requests one unique `1.0.0-internal.14` / MSI `1.0.0.14` milestone from the protected Phase 6 source/browser baseline.\n- Includes Phase 5 whole-product experience closure through PR #220 and Phase 6 Arabic/RTL/accessibility plus controlled Phase 7 measurement infrastructure through PR #223.\n- Intended evidence: protected signed MSI, install/reopen and hydrated UI proof, followed by Founder-installed Phase 5–6 visual/accessibility observation and later Phase 7 hardware certification.\n- This source version is a release request only until the exact protected-main signed workflow passes and publishes it; it is not Beta, Stable or Founder acceptance.\n'''
+              changelog.write_text(text.replace(marker, entry, 1), encoding='utf-8')
 
-      - name: Upload static completion evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase67-static-completion-${{ github.run_id }}
-          path: .sf-inventory/phase6-7-completion
-          if-no-files-found: warn
-          include-hidden-files: true
-          retention-days: 14
-
-  source-quality-diagnostics:
-    name: Complete source-quality diagnostics
-    if: ${{ github.event.pull_request.draft == false }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 22
-    env:
-      SF_TEST_ROOT: /tmp/sahelflow-phase67-source
-      SF_DATA_DIR: /tmp/sahelflow-phase67-source/data
-      DATABASE_URL: file:/tmp/sahelflow-phase67-source/data/shops/test.db
-    steps:
-      - name: Checkout exact PR head
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.14
-
-      - name: Install frozen dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: bunx prisma generate
-
-      - name: Prepare disposable source-quality sandbox
-        run: bun run test:sandbox -- /tmp/sahelflow-phase67-source
-
-      - name: Deploy migrations to source-quality sandbox
-        run: bunx prisma migrate deploy
-
-      - id: typecheck
-        name: TypeScript
-        continue-on-error: true
-        run: bun run typecheck
-
-      - id: lint
-        name: ESLint
-        continue-on-error: true
-        run: bun run lint
-
-      - id: tests
-        name: Complete Vitest
-        continue-on-error: true
-        run: bun run test
-
-      - id: dependency_audit
-        name: Production dependency audit
-        continue-on-error: true
-        run: bun audit --production
-
-      - id: migration_status
-        name: Migration status
-        continue-on-error: true
-        run: bunx prisma migrate status
-
-      - name: Require complete source-quality set
-        if: always()
-        env:
-          TYPECHECK: ${{ steps.typecheck.outcome }}
-          LINT: ${{ steps.lint.outcome }}
-          TESTS: ${{ steps.tests.outcome }}
-          DEP_AUDIT: ${{ steps.dependency_audit.outcome }}
-          MIGRATIONS: ${{ steps.migration_status.outcome }}
+      - name: Commit synchronized Internal.14 milestone request
         shell: bash
         run: |
           set -euo pipefail
-          echo "TypeScript: ${TYPECHECK}"
-          echo "ESLint: ${LINT}"
-          echo "Vitest: ${TESTS}"
-          echo "Dependency audit: ${DEP_AUDIT}"
-          echo "Migration status: ${MIGRATIONS}"
-          case "${TYPECHECK}:${LINT}:${TESTS}:${DEP_AUDIT}:${MIGRATIONS}" in
-            success:success:success:success:success)
-              echo "All source-quality diagnostics succeeded."
-              ;;
-            *)
-              echo "One or more source-quality diagnostics failed."
-              exit 1
-              ;;
-          esac
-
-  browser-evidence:
-    name: AR-FR-EN accessibility, reflow and performance
-    if: ${{ always() && github.event.pull_request.draft == false }}
-    needs:
-      - static-contract
-      - source-quality-diagnostics
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    env:
-      SF_TEST_ROOT: /tmp/sahelflow-phase67-browser
-      SF_DATA_DIR: /tmp/sahelflow-phase67-browser/data
-      DATABASE_URL: file:/tmp/sahelflow-phase67-browser/data/shops/test.db
-      AUTH_SECRET: dev-auth-secret-for-testing-only-not-production
-    steps:
-      - name: Checkout exact PR head
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.14
-
-      - name: Install frozen dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: bunx prisma generate
-
-      - name: Prepare disposable representative-data sandbox
-        run: bun run test:sandbox -- /tmp/sahelflow-phase67-browser
-
-      - name: Deploy migrations
-        run: bunx prisma migrate deploy
-
-      - name: Seed representative Algerian COD data
-        run: bun run seed:rich
-
-      - name: Verify hot-query index and planner contracts
-        run: bun --conditions react-server scripts/verify-phase7-query-plans.ts
-
-      - name: Install Chromium
-        run: bunx playwright install --with-deps chromium
-
-      - name: Run Phase 6-7 browser evidence
-        run: bunx playwright test e2e/phase6-7-completion.spec.ts
-
-      - name: Upload rendered and performance evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase67-browser-evidence-${{ github.run_id }}
-          path: |
-            test-results
-            .sf-inventory/phase7-performance
-          if-no-files-found: warn
-          include-hidden-files: true
-          retention-days: 14
-
-  phase67-gate:
-    name: Required Phase 6-7 completion gate
-    if: always()
-    needs:
-      - static-contract
-      - source-quality-diagnostics
-      - browser-evidence
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Require exact-head Phase 6-7 evidence
-        env:
-          IS_DRAFT: ${{ github.event.pull_request.draft }}
-          STATIC_RESULT: ${{ needs.static-contract.result }}
-          SOURCE_RESULT: ${{ needs.source-quality-diagnostics.result }}
-          BROWSER_RESULT: ${{ needs.browser-evidence.result }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "${IS_DRAFT}" == "true" ]]; then
-            echo "Draft PR: integrated Phase 6-7 evidence is intentionally deferred."
+          git add \
+            sahelflow.version.json \
+            package.json \
+            src-tauri/Cargo.toml \
+            src-tauri/Cargo.lock \
+            src-tauri/tauri.conf.json \
+            scripts/install-founder-windows.ps1 \
+            README.md \
+            documentation/README.md \
+            CHANGELOG.md
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'Internal.14 authority already synchronized.'
             exit 0
           fi
-          [[ "${STATIC_RESULT}" == "success" ]] || { echo "Static Phase 6-7 verification failed or was skipped: ${STATIC_RESULT}"; exit 1; }
-          [[ "${SOURCE_RESULT}" == "success" ]] || { echo "Source-quality diagnostics failed or was skipped: ${SOURCE_RESULT}"; exit 1; }
-          [[ "${BROWSER_RESULT}" == "success" ]] || { echo "Rendered Phase 6-7 evidence failed or was skipped: ${BROWSER_RESULT}"; exit 1; }
-          echo "Phase 6-7 source/browser evidence is complete for this exact PR head."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(release): request Internal.14 founder checkpoint"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
