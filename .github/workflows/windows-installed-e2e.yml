@@ -20,7 +20,7 @@ jobs:
       SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       SF_TEST_FAIL_FAST: "1"
       SF_LICENSE_SERVICE_URL: "https://license.invalid"
-      SF_LICENSE_TRIAL_PUBLIC_KEYS: '{"ci-trial-key-v1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}'
+      SF_LICENSE_TRIAL_PUBLIC_KEYS: '{"ci-trial-key-v1":"ebVWLo/mVPlAeLES6KmLp5AfhTrmlb7X4OORC60ElmQ="}'
       SF_LICENSE_PERMANENT_PUBLIC_KEYS: '{"ci-permanent-key-v1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}'
 
     steps:
@@ -85,7 +85,8 @@ jobs:
           foreach ($relative in @(
               '.\scripts\install-founder-windows.ps1',
               '.\scripts\verify-installed-windows-ui.ps1',
-              '.\scripts\verify-phase4-replacement-install.ps1'
+              '.\scripts\verify-phase4-replacement-install.ps1',
+              '.\scripts\verify-phase4-replacement-install-ci.ps1'
           )) {
               $resolved = (Resolve-Path -LiteralPath $relative).Path
               & $windowsPowerShell `
@@ -124,23 +125,40 @@ jobs:
           # receipts. Ordinary release builds do not define this compile-time
           # marker and cannot activate the evidence boundaries at runtime.
           $env:SF_PHASE4_RESTORE_EVIDENCE_BUILD = '1'
-          # The replacement drill must call authenticated APIs through the same
-          # per-launch HttpOnly authority as the installed WebView. Give only
-          # this disposable evidence MSI a loopback CDP endpoint; release builds
-          # continue to use the checked-in Tauri configuration unchanged.
-          $listener = [System.Net.Sockets.TcpListener]::new(
+
+          # Packaged licensing configuration is intentionally compile-time
+          # authority. Reserve one loopback issuer port before this evidence MSI
+          # is compiled, publish that exact origin to later harness steps, and
+          # compile the disposable MSI against it. Production/signed workflows
+          # provide their own protected licensing configuration and never inherit
+          # this CI-only loopback issuer.
+          $trialListener = [System.Net.Sockets.TcpListener]::new(
+            [System.Net.IPAddress]::Loopback,
+            0
+          )
+          $webViewListener = [System.Net.Sockets.TcpListener]::new(
             [System.Net.IPAddress]::Loopback,
             0
           )
           try {
-            $listener.Start()
-            $webViewDebugPort = ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
+            $trialListener.Start()
+            $webViewListener.Start()
+            $trialServicePort = ([System.Net.IPEndPoint]$trialListener.LocalEndpoint).Port
+            $webViewDebugPort = ([System.Net.IPEndPoint]$webViewListener.LocalEndpoint).Port
           } finally {
-            $listener.Stop()
+            $webViewListener.Stop()
+            $trialListener.Stop()
           }
+          $env:SF_LICENSE_SERVICE_URL = "http://127.0.0.1:$trialServicePort"
+          "SF_LICENSE_SERVICE_URL=$env:SF_LICENSE_SERVICE_URL" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "SF_PHASE4_WEBVIEW_DEBUG_PORT=$webViewDebugPort" |
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
+          # The replacement drill must call authenticated APIs through the same
+          # per-launch HttpOnly authority as the installed WebView. Give only
+          # this disposable evidence MSI a loopback CDP endpoint; release builds
+          # continue to use the checked-in Tauri configuration unchanged.
           $evidenceConfig = Get-Content -LiteralPath 'src-tauri/tauri.conf.json' -Raw |
             ConvertFrom-Json
           $browserArguments =
