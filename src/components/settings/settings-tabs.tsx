@@ -54,19 +54,25 @@ type Tab =
 
 export type SettingsTabAccess = Record<Tab, boolean>;
 
-const TABS: Array<{ id: Tab; icon: typeof Shield; labelKey: string }> = [
+const DEMO_TAB_LABEL: Record<"ar" | "fr" | "en", string> = {
+  ar: "بيانات تجريبية",
+  fr: "Données de démonstration",
+  en: "Demo data",
+};
+
+const TABS: Array<{ id: Tab; icon: typeof Shield; labelKey?: string }> = [
   { id: "profile", icon: UserCircle, labelKey: "settings.tabs.profile" },
-  { id: "security", icon: ShieldCheck, labelKey: "settings.tabs.security" },
-  { id: "team", icon: Users, labelKey: "settings.tabs.team" },
+  { id: "security", icon: ShieldCheck, labelKey: "settings.security" },
+  { id: "team", icon: Users, labelKey: "team.title" },
   { id: "appearance", icon: Palette, labelKey: "settings.tabs.appearance" },
-  { id: "license", icon: Shield, labelKey: "settings.tabs.license" },
-  { id: "demo", icon: Database, labelKey: "settings.tabs.demo" },
-  { id: "ai", icon: Bot, labelKey: "settings.tabs.ai" },
-  { id: "delivery", icon: Truck, labelKey: "settings.tabs.delivery" },
-  { id: "reports", icon: Bell, labelKey: "settings.tabs.reports" },
-  { id: "integrations", icon: Store, labelKey: "settings.tabs.integrations" },
+  { id: "license", icon: Shield, labelKey: "settings.tab.license" },
+  { id: "demo", icon: Database },
+  { id: "ai", icon: Bot, labelKey: "settings.tab.ai" },
+  { id: "delivery", icon: Truck, labelKey: "settings.tab.delivery" },
+  { id: "reports", icon: Bell, labelKey: "settings.tab.reports" },
+  { id: "integrations", icon: Store, labelKey: "settings.tab.integrations" },
   { id: "phone", icon: Phone, labelKey: "settings.tabs.phoneReputation" },
-  { id: "backup", icon: DatabaseBackup, labelKey: "settings.tabs.backup" },
+  { id: "backup", icon: DatabaseBackup, labelKey: "settings.tab.backup" },
   { id: "danger", icon: AlertTriangle, labelKey: "settings.tabs.dangerZone" },
 ];
 
@@ -182,7 +188,7 @@ export function SettingsTabs({
               )}
             >
               <Icon className="size-4 shrink-0" aria-hidden="true" />
-              <span>{t(tab.labelKey)}</span>
+              <span>{tab.labelKey ? t(tab.labelKey) : DEMO_TAB_LABEL[locale]}</span>
             </button>
           );
         })}
