@@ -1,0 +1,24 @@
+name: Phase 4 focused installed replacement
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, converted_to_draft]
+    paths:
+      - scripts/phase4-ci-trial-issuer.mjs
+      - scripts/verify-phase4-replacement-install-ci.ps1
+      - scripts/verify-phase4-replacement-install.ps1
+      - .github/workflows/windows-installed-e2e.yml
+      - .github/workflows/phase4-focused-installed-replacement.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase4-focused-installed-replacement-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installed-replacement:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == true
+    uses: ./.github/workflows/windows-installed-e2e.yml
