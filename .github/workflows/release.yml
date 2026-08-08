@@ -516,8 +516,7 @@ jobs:
             --pattern "${env:SF_MSI_NAME}.sig" `
             --pattern 'latest.json' `
             --dir $downloadDir
-          if ($LASTEXITCODE -ne 0) { throw 'failed to download the exact draft assets for publication'
-          }
+          if ($LASTEXITCODE -ne 0) { throw 'failed to download the exact draft assets for publication' }
 
           $remoteMsi = Join-Path $downloadDir $env:SF_MSI_NAME
           $remoteSignature = Join-Path $downloadDir "${env:SF_MSI_NAME}.sig"
