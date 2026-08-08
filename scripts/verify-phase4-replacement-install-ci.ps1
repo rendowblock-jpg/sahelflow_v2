@@ -109,6 +109,50 @@ if ($kit.status -ne 201 -or -not (Test-Path -LiteralPath ([string]$kit.body.path
 }
 '@
     $kitAssertion = @'
+# Runtime HTTP readiness precedes the native survivability controller by a
+# separate authority handoff. A retained endpoint from an abnormal prior stop
+# must never be accepted as current evidence. Wait only for the endpoint owned
+# by this exact source sahelflow.exe process, then prove one read-only native
+# round-trip before issuing the non-idempotent recovery-kit command.
+$survivabilityEndpointPath = Join-Path (Join-Path $roamingRoot "system") "survivability-endpoint.json"
+$bridgeDeadline = (Get-Date).AddSeconds(20)
+$currentBridge = $null
+do {
+    if (Test-Path -LiteralPath $survivabilityEndpointPath -PathType Leaf) {
+        try {
+            $candidateBridge = Get-Content -LiteralPath $survivabilityEndpointPath -Raw | ConvertFrom-Json
+            $candidateInstanceId = [string]$candidateBridge.instanceId
+            $candidatePort = [int]$candidateBridge.port
+            if (
+                [int]$candidateBridge.formatVersion -eq 1 -and
+                [string]$candidateBridge.state -ceq "ready" -and
+                [string]$candidateBridge.host -ceq "127.0.0.1" -and
+                [int]$candidateBridge.processId -eq $sourceProcess.Id -and
+                $candidateInstanceId -cmatch '^[0-9a-f]{32}$' -and
+                $candidatePort -ge 1 -and
+                $candidatePort -le 65535
+            ) {
+                $currentBridge = $candidateBridge
+                break
+            }
+        } catch {
+            # The controller writes the endpoint atomically; tolerate only the
+            # short replacement/read race while waiting for the current PID.
+        }
+    }
+    Start-Sleep -Milliseconds 100
+} while ((Get-Date) -lt $bridgeDeadline)
+if ($null -eq $currentBridge) {
+    throw "The current source installation survivability bridge did not become ready for process $($sourceProcess.Id)."
+}
+
+$bridgeProbe = Invoke-SahelFlowJson -Method GET -BaseUrl $sourceBaseUrl -Path "/api/backup/list" -Session $sourceSession
+if ($bridgeProbe.status -ne 200) {
+    $bridgeCode = if ($null -ne $bridgeProbe.body -and $null -ne $bridgeProbe.body.code) { [string]$bridgeProbe.body.code } else { "none" }
+    $bridgeDetail = if ($null -ne $bridgeProbe.body -and $null -ne $bridgeProbe.body.error) { [string]$bridgeProbe.body.error } else { "none" }
+    throw "Current survivability bridge probe failed with HTTP $($bridgeProbe.status), code $bridgeCode, detail $bridgeDetail, endpoint PID $($currentBridge.processId), source PID $($sourceProcess.Id)."
+}
+
 $kit = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/backup/recovery-kit" -Session $sourceSession
 if ($kit.status -ne 201) {
     $kitCode = if ($null -ne $kit.body -and $null -ne $kit.body.code) { [string]$kit.body.code } else { "none" }
