@@ -41,24 +41,29 @@ installed/human Windows accessibility evidence in addition to the now-green
 source/browser package. Phase 7 installed low-end certification therefore remains
 a later evidence checkpoint, even though its measurement infrastructure is merged.
 
-## Phase 5 protected result
+## Phase 5 merged result
 
-PR #220 remains the protected Phase 5 source/browser baseline. Its exact final
-head passed the Required PR and Required Phase 5 Experience gates, including
-source quality, route inventory, fresh install/login, representative LTR journeys,
-Arabic RTL/viewport containment, command search and review closure.
+PR #220 remains the protected Phase 5 source/browser baseline. Shared Phase 5
+contracts remain protected: workflow/domain navigation, command search,
+server-authoritative workbenches, permission-before-read field access, truthful
+pagination/sort/mutation state, shared DataTable/StateSurface/StatCard/chart
+grammar, entity context, governed imports/exports, Risk and financial authority
+separation, Inbox/AI/Automation surfaces, Settings/Profile capability behavior and
+quiet auth/state boundaries.
 
-Shared Phase 5 contracts remain protected: workflow/domain navigation, command
-search, server-authoritative workbenches, permission-before-read field access,
-truthful pagination/sort/mutation state, shared DataTable/StateSurface/StatCard/
-chart grammar, entity context, governed imports/exports, Risk and financial
-authority separation, Inbox/AI/Automation surfaces, Settings/Profile capability
-behavior and quiet auth/state boundaries.
+## Phase 5 evidence
+
+The exact final PR #220 head passed the Required PR and Required Phase 5 Experience
+gates, including source quality, route inventory, fresh install/login,
+representative LTR journeys, Arabic RTL/viewport containment, command search and
+review closure.
 
 Issue #221 retains Founder-installed visual acceptance. Browser CI does not satisfy
 that human evidence requirement.
 
-## Phase 6 protected source/browser result
+## Active Phase 6 frontier
+
+### Protected source/browser result
 
 PR #223 merged the integrated Phase 6 correctness and Phase 7 measurement package
 from validated source head `fa0ff6de649421c879f62364383a363b61c71bfc`.
@@ -107,7 +112,7 @@ The final PR #223 head passed:
 No collected evidence requires reopening Phase 1–5 business, permissions, provider,
 recovery, native or Phase 5 experience authority.
 
-## Remaining Phase 6 exit evidence
+### Remaining Phase 6 exit evidence
 
 The remaining Phase 6 work is not another general source wave. The roadmap still
 requires the applicable Level 3 installed UI/accessibility checkpoint on a current
@@ -147,9 +152,9 @@ accessibility, canonical state, durability, recovery or required background work
 
 The following remain explicit evidence obligations:
 
-- #201 — prior native/install evidence;
-- #214 — replacement-install recovery certification;
-- #221 — Founder-installed Phase 5/6 visual acceptance;
+- issue #201 — prior native/install evidence;
+- issue #214 — replacement-install recovery certification;
+- issue #221 — Founder-installed Phase 5/6 visual acceptance;
 - native-Arabic human accessibility review;
 - Phase 7 T470/floor and eight-hour reliability certification.
 
