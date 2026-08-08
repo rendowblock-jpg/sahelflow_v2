@@ -93,6 +93,9 @@ jobs:
       - name: Prepare disposable source-quality sandbox
         run: bun run test:sandbox -- /tmp/sahelflow-phase67-source
 
+      - name: Deploy migrations to source-quality sandbox
+        run: bunx prisma migrate deploy
+
       - id: typecheck
         name: TypeScript
         continue-on-error: true
