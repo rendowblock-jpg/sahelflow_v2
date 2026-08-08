@@ -129,19 +129,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          failed=0
-          for pair in \
-            "TypeScript:${TYPECHECK}" \
-            "ESLint:${LINT}" \
-            "Vitest:${TESTS}" \
-            "Dependency audit:${DEP_AUDIT}" \
-            "Migration status:${MIGRATIONS}"; do
-            name="${pair%%:*}"
-            result="${pair#*:}"
-            echo "${name}: ${result}"
-            if [[ "${result}" != "success" ]]; then failed=1; fi
-          done
-          exit "${failed}"
+          echo "TypeScript: ${TYPECHECK}"
+          echo "ESLint: ${LINT}"
+          echo "Vitest: ${TESTS}"
+          echo "Dependency audit: ${DEP_AUDIT}"
+          echo "Migration status: ${MIGRATIONS}"
+          [[ "${TYPECHECK}" == "success" ]]
+          [[ "${LINT}" == "success" ]]
+          [[ "${TESTS}" == "success" ]]
+          [[ "${DEP_AUDIT}" == "success" ]]
+          [[ "${MIGRATIONS}" == "success" ]]
 
   browser-evidence:
     name: AR-FR-EN accessibility, reflow and performance
@@ -228,6 +225,6 @@ jobs:
             exit 0
           fi
           [[ "${STATIC_RESULT}" == "success" ]] || { echo "Static Phase 6-7 verification failed or was skipped: ${STATIC_RESULT}"; exit 1; }
-          [[ "${SOURCE_RESULT}" == "success" ]] || { echo "Source-quality diagnostics failed or were skipped: ${SOURCE_RESULT}"; exit 1; }
+          [[ "${SOURCE_RESULT}" == "success" ]] || { echo "Source-quality diagnostics failed or was skipped: ${SOURCE_RESULT}"; exit 1; }
           [[ "${BROWSER_RESULT}" == "success" ]] || { echo "Rendered Phase 6-7 evidence failed or was skipped: ${BROWSER_RESULT}"; exit 1; }
           echo "Phase 6-7 source/browser evidence is complete for this exact PR head."
