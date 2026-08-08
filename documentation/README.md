@@ -10,7 +10,8 @@
 > **Published release:** `1.0.0-internal.13`, protected run `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
-> **Active product phase:** Phase 6 — installed/human Arabic, RTL and accessibility exit checkpoint
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
+> **Current Phase 6 sub-frontier:** installed/human Arabic, RTL and accessibility exit checkpoint
 > **Active release-preparation PR:** #227 — Internal.14 Phase 5–6 Founder checkpoint; draft/unmerged at this handoff
 > **Phase 5 closure:** issue #208 closed at protected-source + controlled-browser level through PR #220
 > **Phase 6 source/browser closure:** protected through PR #223
@@ -44,9 +45,9 @@ cannot silently weaken product, experience, architecture or roadmap authority.
 ## Current phase truth
 
 Phases 0–4 are protected-source closed under their recorded evidence boundaries.
-Phase 5 is closed at the protected-source + controlled-browser layer through PR
-#220 / issue #208. Issue #221 retains the installed Founder visual checkpoint and
-does not reopen the Phase 5 source/browser result.
+Phase 5 is now also closed at the protected-source + controlled-browser layer
+through PR #220 / issue #208. Issue #221 retains the installed Founder visual
+checkpoint and does not reopen the Phase 5 source/browser result.
 
 Phase 6 source/browser work is now also complete and protected through PR #223.
 The exact validated head passed the Required PR gate, Required Phase 5 Experience
@@ -55,10 +56,10 @@ quality, SQLite hot-query/query-plan evidence, all nine integrated Phase 6/7
 Playwright journeys, full-route and 200%-equivalent reflow coverage and zero
 unresolved P0/P1 review threads.
 
-The product nevertheless remains in **Phase 6** because the roadmap also requires
-applicable installed/human Windows accessibility evidence. Issue #221 owns that
-checkpoint. Do not restart a broad Phase 6 source audit unless the installed app
-reveals a concrete defect.
+The product nevertheless remains in **Phase 6 — Arabic, RTL and accessibility parity**
+because the roadmap also requires applicable installed/human Windows accessibility
+evidence. Issue #221 owns that checkpoint. Do not restart a broad Phase 6 source
+audit unless the installed app reveals a concrete defect.
 
 Phase 7 query/index and controlled-browser measurement infrastructure is protected
 through PR #223, but installed low-end performance and reliability certification
@@ -101,10 +102,11 @@ Keep these layers distinct:
 - phase closure;
 - Beta/Stable certification.
 
-Retained issues #201, #214, #221 and #226 are evidence obligations, not proof.
-Internal.14 remains unclaimed until its protected signed workflow and exact
-release state prove publication. Founder acceptance, Beta and Stable remain
-separate explicit decisions.
+Retained issues #201, #214 and #221 remain evidence obligations, not proof. Issue
+#226 additionally owns Phase 7 T470/floor/eight-hour certification. Internal.14
+remains unclaimed until its protected signed workflow and exact release state prove
+publication. Founder acceptance, Beta and Stable remain separate explicit
+decisions.
 
 ## Archive policy
 
