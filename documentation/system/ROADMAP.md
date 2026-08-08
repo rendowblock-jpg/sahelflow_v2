@@ -2,7 +2,8 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary
-> **Latest application-changing protected merge:** PR #220
+> **Latest application-changing protected merge:** PR #223 at `23f1bc3912aecfd2a32c591a18fcca70bf454daa`
+> **Validated Phase 6/7 source head:** `fa0ff6de649421c879f62364383a363b61c71bfc`
 > **Phase 5 product baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13`, run `30366866703`
@@ -13,9 +14,11 @@
 > **Phase 3:** Protected-source closed through PR #203 under FD-030
 > **Phase 4:** Protected-source closed through PR #207; issue #214 retained
 > **Phase 5:** Protected-source + controlled-browser closed through PR #220 / issue #208; issue #221 retained
+> **Phase 6:** Protected-source + controlled-browser package merged through PR #223; installed/human exit evidence pending
+> **Phase 7:** Query/measurement infrastructure merged through PR #223; installed low-end/reliability certification pending Phase 6 exit
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-08-07
+> **Last consolidated:** 2026-08-08
 
 Live protected `main` is authority. The SHA above is the latest application-changing
 product baseline; documentation-only merges may advance `main` without changing
@@ -140,8 +143,23 @@ Internal, Founder acceptance, Beta, Stable or installed certification.
 
 ## Phase 6 — Arabic, RTL and accessibility parity
 
+**Status:** Protected-source + controlled-browser package merged through PR #223;
+applicable installed/human Windows accessibility evidence remains before exit.
+
 **Objective:** make Arabic and accessibility equivalent product behavior, not a
 partial translation layer or cosmetic mirror.
+
+### Protected source/browser checkpoint
+
+PR #223 merged the shared-root Phase 6 correction package and generalized evidence
+stack from exact validated head `fa0ff6de649421c879f62364383a363b61c71bfc`.
+That head passed the Required PR gate, Required Phase 5 Experience gate, static
+AR/FR/EN localization/RTL/accessibility contract, complete source-quality set,
+SQLite planner evidence and all nine integrated Phase 6/7 Playwright journeys,
+including 200%-equivalent reflow. It had zero unresolved P0/P1 review threads.
+
+The remaining Phase 6 work is therefore an installed evidence checkpoint, not
+permission for another broad page-by-page source audit.
 
 ### Audit scope
 
@@ -195,12 +213,20 @@ Phase 6 closes only when:
    observation;
 7. no Phase 1–5 authority has been weakened.
 
+Items 1–5 and 7 are satisfied at the protected PR #223 source/browser checkpoint.
+The active exit dependency is item 6 plus the manual/human semantic review that
+cannot be fabricated from browser CI.
+
 Phases 5–6 normally trigger a Level 3 installed-UI, visual-regression and
 accessibility checkpoint.
 
 ---
 
 ## Phase 7 — performance and reliability budgets
+
+**Status:** Query/index and controlled-browser measurement infrastructure is
+protected through PR #223. Installed low-end/reliability certification remains
+pending and follows Phase 6 installed exit evidence.
 
 **Objective:** certify representative low-end Windows performance and sustained
 operational reliability after the accessibility/RTL surface is stable.
