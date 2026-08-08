@@ -16,7 +16,6 @@
 > **Active PR:** #227 — Internal.14 Phase 5–6 Founder checkpoint release request
 > **PR state:** draft, unmerged, unpublished; installed replacement evidence is still blocking
 > **Last installed-tested code head:** `8640ddc2b616aaf5e6d5027f7302e80062673110`
-> **Session handoff:** [`SESSION_HANDOFF_2026-08-08_INTERNAL14.md`](SESSION_HANDOFF_2026-08-08_INTERNAL14.md)
 
 Live GitHub is authority. Re-fetch protected `main`, PR #227, its exact current
 head, review threads and Actions before any write. The branch may advance through
@@ -82,7 +81,8 @@ Commit: `fix(windows): restore blocking survivability sockets`
 
 This commit restored accepted survivability client streams to blocking mode while
 keeping the listener nonblocking for shutdown polling. It was a bounded Windows
-transport repair only.
+transport repair only; it did not change licensing semantics, backup semantics,
+restore semantics, schema, business authority or release authority.
 
 Exact-head green runs at that code SHA:
 
@@ -94,73 +94,134 @@ Exact-head green runs at that code SHA:
 
 ### Final focused installed proof
 
+- workflow `Phase 4 focused installed replacement`;
 - run `31281491280`;
 - job `93163466194`;
 - exact checkout `8640ddc2b616aaf5e6d5027f7302e80062673110`;
 - artifact `windows-installed-e2e-31281491280`;
 - artifact ID `9028790269`;
+- artifact size `1182255` bytes;
 - artifact digest `sha256:9541eb2d8799bbdbb0203415c21c9a3b1b2fd56003fd5de405cecf0064d07ef4`.
 
 Passed before failure:
 
-- MSI build;
-- installed launch/close/reopen;
-- authenticated hydrated WebView UI twice;
+- exact checkout, Rust setup and formatting;
+- Founder Windows PowerShell 5.1 installer self-test;
+- installed/replacement harness PowerShell 5.1 parsing;
+- frozen dependencies and signed local libsodium fixture;
+- **Internal.14 MSI build**;
+- **installed launch/close/reopen**;
+- **authenticated hydrated WebView UI twice**;
 - the previous survivability raw request-write boundary;
-- independent recovery-kit creation.
+- source owner/session and protected-data setup required by the drill;
+- **independent recovery-kit creation**.
 
 Exact first failure from `replacement-restore-error.txt`:
 
 `All-shop source backup was not created.`
 
-The failing harness assertion follows `/api/backup/create` and currently combines
-three predicates: HTTP status must be 201, returned `shopCount` must be at least 2,
-and returned `location` must exist as a file. The artifact does not record enough
-safe response detail to identify which predicate failed. **That is the exact
-remaining diagnostic boundary. Do not guess.**
+PowerShell stack:
+
+- generated `verify-phase4-replacement-install.licensed.ps1`, line 494;
+- `scripts/verify-phase4-replacement-install-ci.ps1`, line 186.
+
+The failing harness boundary is:
+
+```powershell
+$backup = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/backup/create" -Session $sourceSession
+if ($backup.status -ne 201 -or [int]$backup.body.shopCount -lt 2 -or -not (Test-Path -LiteralPath ([string]$backup.body.location))) {
+    throw "All-shop source backup was not created."
+}
+```
+
+Therefore the retained evidence proves only that at least one of these predicates
+failed:
+
+1. `/api/backup/create` did not return HTTP 201; or
+2. returned `shopCount` was less than 2; or
+3. returned `location` did not exist as a file from the harness process.
+
+The artifact does not safely preserve enough API response detail to distinguish
+them. **That is the exact unresolved diagnostic boundary. Do not guess which
+predicate failed and do not modify backup/restore product code until it is known.**
+
+### Final artifact observations
+
+The final artifact also retains process, runtime, installation-root, shop-registry
+and migration evidence. At failure collection:
+
+- installed `sahelflow.exe` was alive;
+- packaged `node.exe` was alive as a SahelFlow child;
+- WebView2 processes were alive;
+- `sahelflow-whatsapp.exe` was alive;
+- runtime endpoint was `ready` for `1.0.0-internal.14`;
+- installation-root rotation receipt existed;
+- migration journal was `complete` with no recorded failure.
+
+These facts reinforce that the next session should start at the actual backup-create
+result rather than restarting basic startup/process/root-rotation/migration work.
 
 ### Previous installed boundary now closed
 
 Run `31279741140` at code head
 `4e10200b7b8149e0666304aa21b258559b2873cf` failed earlier with
 `SURVIVABILITY_REQUEST_WRITE_FAILED`, despite matching endpoint/source PID 5596.
-After `8640ddc2…`, the final installed run advanced beyond that raw write boundary
-and through recovery-kit creation. Treat the socket/request-write blocker as closed
-unless new direct evidence contradicts it.
+The client had connected, read and verified the native handshake, verified
+PID/authority, built authorization, then failed while writing the framed request.
 
-Also closed by prior focused evidence in this repair sequence:
+After `8640ddc2…`, the final installed run advanced beyond that raw write boundary,
+beyond the bridge probe, and through recovery-kit creation. Treat the socket/request-
+write blocker as closed unless new direct evidence contradicts it.
+
+### Earlier failure progression now closed
+
+Do not restart these investigations without contradictory evidence:
 
 - deterministic trial issuer/signing fixture;
 - Node Ed25519 entitlement verification;
-- Windows license authority fsync/persistence;
-- packaged installation-root cache across Next server realms;
-- repeated root/context lookup inside one survivability request;
+- Windows license authority fsync/persistence (`EPERM: fsync` was fixed by writing
+  and fsyncing through a writable descriptor before rename);
+- packaged installation-root cache across duplicated Next server realms (moved to
+  the actual Node `process` with Windows regression coverage);
+- repeated root/context acquisition inside one survivability request (single
+  request snapshot now used);
 - app/Node/WebView process-lifetime and endpoint/PID mismatch theories;
+- raw survivability request write from run `31279741140`;
 - independent recovery-kit creation.
 
-Do not restart these investigations without contradictory evidence.
+An older focused run `31274022840` at head
+`4872bbdd936a8859656d9a2ffa38838351811350` had stopped at
+`Independent recovery kit was not created.` The final run has moved past that
+boundary, so recovery-kit creation is no longer the current blocker.
 
-## Exact next-session action
+## Phase 6 next action — next session
 
-1. Re-read `AGENTS.md`, `CURRENT_STATE.md`, `ROADMAP.md`, this file and
-   `SESSION_HANDOFF_2026-08-08_INTERNAL14.md`.
+Resume in this order and do not broaden scope:
+
+1. Re-read `AGENTS.md`, `CURRENT_STATE.md`, `ROADMAP.md` and this file.
 2. Re-fetch protected `main`, live PR #227/head, review threads and Actions; inspect
    any concurrent-agent delta before writing.
-3. Preserve `8640ddc2…` as the **last installed-tested code head** even though the
-   PR head is expected to be newer from documentation-only commits.
-4. Reuse final run `31281491280`, job `93163466194`, artifact `9028790269`.
+3. Preserve `8640ddc2b616aaf5e6d5027f7302e80062673110` as the **last installed-tested
+   code head** even though the PR head is newer from documentation-only commits.
+4. Reuse final run `31281491280`, job `93163466194`, artifact `9028790269` rather
+   than rediscovering the failure history.
 5. **Before product changes, decompose/capture the three `/api/backup/create`
    predicates safely**: response status/code, returned shop count, and returned
    location existence. Do not expose private seller data or secrets.
-6. Only after the exact failing predicate is known, inspect the backup-create API,
-   JavaScript/native wrapper and Rust backup implementation that own it.
-7. Make one bounded repair and run the smallest direct source/Windows validation.
-8. Trigger one focused installed replacement lane only.
-9. If and only if that lane becomes fully green, freeze that exact code head, run
-   the final required matrix once, complete exact-head adversarial review, merge
-   with expected-head binding and observe the one protected signed Internal.14
-   publication.
-10. Then perform Founder/T470 issue #221. Begin Phase 7 issue #226 only after the
+6. Only after the exact failing predicate is known, inspect the exact
+   `/api/backup/create` route, JavaScript/native backup wrapper and Rust backup
+   creation implementation that own it.
+7. Build one consolidated problem statement for that predicate. Do not reopen
+   licensing, Ed25519, fsync, root cache, handshake/PID/request-write or recovery-kit
+   layers unless new evidence points there.
+8. Make **one bounded repair**.
+9. Run the smallest source/Windows validation that directly proves that repair.
+10. Trigger **one focused installed replacement lane only**.
+11. If and only if that lane becomes fully green, freeze that exact code head, run
+    the final required matrix once, complete exact-head adversarial review, merge
+    with expected-head binding and observe the one protected signed Internal.14
+    publication.
+12. Then perform Founder/T470 issue #221. Begin Phase 7 issue #226 only after the
     Phase 6 installed exit is reconciled.
 
 ## Phase 7 boundary
@@ -180,9 +241,9 @@ canonical state, recovery or required background work for performance.
 - #221 — Founder-installed Phase 5/6 visual/accessibility acceptance;
 - #226 — Phase 7 installed performance/reliability certification.
 
-PR #227 is unmerged. Internal.14 is unpublished. The documentation handoff head is
-not installed-tested. Published truth remains Internal.13; Founder-accepted truth
-remains Internal.5. No Beta or Stable release exists.
+PR #227 is unmerged. Internal.14 is unpublished. Documentation-only handoff commits
+are not installed-tested. Published truth remains Internal.13; Founder-accepted
+truth remains Internal.5. No Beta or Stable release exists.
 
 ## Hard rules
 
