@@ -2,14 +2,7 @@ name: Phase 4 focused installed replacement
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, converted_to_draft]
-    paths:
-      - src/app/api/license/trial/route.ts
-      - scripts/phase4-ci-trial-issuer.mjs
-      - scripts/verify-phase4-replacement-install-ci.ps1
-      - scripts/verify-phase4-replacement-install.ps1
-      - .github/workflows/windows-installed-e2e.yml
-      - .github/workflows/phase4-focused-installed-replacement.yml
+    types: [synchronize]
   workflow_dispatch:
 
 permissions:
@@ -21,5 +14,9 @@ concurrency:
 
 jobs:
   installed-replacement:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == true
+    # During the narrow diagnostic loop, branch synchronizations intentionally
+    # create only a skipped run so they cancel any stale expensive MSI build.
+    # Re-enable the draft PR condition in the exact fix commit that is ready
+    # for installed replacement evidence, or invoke this workflow manually.
+    if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/windows-installed-e2e.yml
