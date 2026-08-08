@@ -1,0 +1,221 @@
+name: Ensure and report signed Internal.14
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/dispatch-internal-14.yml
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+concurrency:
+  group: dispatch-signed-internal-14
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 200
+    env:
+      SOURCE_SHA: ${{ github.sha }}
+      RELEASE_TAG: sahelflow-v1.0.0-internal.14-${{ github.sha }}
+      DISPATCH_REF: release/internal-14-dispatch-ref
+    steps:
+      - name: Checkout protected main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact Internal.14 protected authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python -c 'import json; print(json.load(open("sahelflow.version.json", encoding="utf-8"))["version"])')"
+          msi="$(python -c 'import json; print(json.load(open("sahelflow.version.json", encoding="utf-8"))["windowsMsiVersion"])')"
+          [[ "${version}" == "1.0.0-internal.14" ]] || { echo "Expected Internal.14, found ${version}" >&2; exit 1; }
+          [[ "${msi}" == "1.0.0.14" ]] || { echo "Expected MSI 1.0.0.14, found ${msi}" >&2; exit 1; }
+          git fetch --force --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          [[ "$(git rev-parse HEAD)" == "${SOURCE_SHA}" ]] || { echo 'checkout/source mismatch' >&2; exit 1; }
+          git merge-base --is-ancestor "${SOURCE_SHA}" refs/remotes/origin/main
+
+      - name: Wait for release lane and capture prior run ids
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_code="$(curl -sS -o exact-release.json -w '%{http_code}' \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}")"
+          if [[ "${release_code}" == '200' ]]; then
+            echo 'dispatch=false' >> "${GITHUB_OUTPUT}"
+            echo 'release_exists=true' >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          [[ "${release_code}" == '404' ]] || { cat exact-release.json >&2; exit 1; }
+
+          for attempt in $(seq 1 360); do
+            gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/runs?event=workflow_dispatch&per_page=100" > release-runs.json
+            active="$(python - <<'PY'
+          import json
+          data=json.load(open('release-runs.json', encoding='utf-8'))
+          states={'queued','in_progress','waiting','pending','requested'}
+          print('true' if any(r.get('status') in states for r in data.get('workflow_runs',[])) else 'false')
+          PY
+            )"
+            if [[ "${active}" == 'true' ]]; then
+              sleep 5
+              continue
+            fi
+            python - <<'PY' >> "${GITHUB_OUTPUT}"
+          import json, os
+          data=json.load(open('release-runs.json', encoding='utf-8'))
+          ref=os.environ['DISPATCH_REF']
+          ids=[str(r.get('id')) for r in data.get('workflow_runs',[]) if r.get('head_branch')==ref and r.get('id')]
+          print('previous_ids=' + ','.join(ids))
+          print('dispatch=true')
+          print('release_exists=false')
+          PY
+            exit 0
+          done
+          echo 'Signed updater lane did not become idle in the bounded window.' >&2
+          exit 1
+
+      - name: Dispatch exact-source signed updater
+        if: steps.guard.outputs.dispatch == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' > dispatch.json
+          import json, os
+          print(json.dumps({
+            'ref': os.environ['DISPATCH_REF'],
+            'inputs': {
+              'source_ref': os.environ['SOURCE_SHA'],
+              'release_notes': 'Internal.14 is the Phase 5–6 Founder checkpoint candidate containing the protected Phase 5 whole-product experience and Phase 6 Arabic/RTL/accessibility source-browser closure. It is intended for installed visual/accessibility observation and subsequent Phase 7 hardware certification; it is not Beta or Stable.'
+            }
+          }))
+          PY
+          status="$(curl -sS -o dispatch-response.txt -w '%{http_code}' -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/dispatches" \
+            --data @dispatch.json)"
+          [[ "${status}" == '204' ]] || { cat dispatch-response.txt >&2; echo "Dispatch failed: HTTP ${status}" >&2; exit 1; }
+
+      - name: Resolve exact dispatched run
+        id: resolved
+        if: steps.guard.outputs.dispatch == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_IDS: ${{ steps.guard.outputs.previous_ids }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 120); do
+            gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/runs?event=workflow_dispatch&per_page=100" > current-runs.json
+            python - <<'PY'
+          import json, os
+          data=json.load(open('current-runs.json', encoding='utf-8'))
+          previous={x for x in os.environ.get('PREVIOUS_IDS','').split(',') if x}
+          ref=os.environ['DISPATCH_REF']
+          matches=[r for r in data.get('workflow_runs',[]) if r.get('head_branch')==ref and str(r.get('id','')) not in previous]
+          if matches:
+              run=max(matches,key=lambda r:r.get('id',0))
+              json.dump(run,open('resolved-run.json','w',encoding='utf-8'))
+          PY
+            if [[ -f resolved-run.json ]]; then
+              python - <<'PY' >> "${GITHUB_OUTPUT}"
+          import json
+          run=json.load(open('resolved-run.json',encoding='utf-8'))
+          print(f"run_id={run.get('id','')}")
+          print(f"run_url={run.get('html_url','')}")
+          PY
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Dispatch was accepted but the exact run was not resolved.' >&2
+          exit 1
+
+      - name: Follow exact signed run to completion
+        id: completed
+        if: steps.guard.outputs.dispatch == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.resolved.outputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 720); do
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" > exact-run.json
+            status="$(python -c 'import json; print(json.load(open("exact-run.json",encoding="utf-8")).get("status",""))')"
+            if [[ "${status}" == 'completed' ]]; then
+              conclusion="$(python -c 'import json; print(json.load(open("exact-run.json",encoding="utf-8")).get("conclusion",""))')"
+              echo "run_conclusion=${conclusion}" >> "${GITHUB_OUTPUT}"
+              [[ "${conclusion}" == 'success' ]] || { echo "Signed updater run concluded ${conclusion}" >&2; exit 1; }
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'Signed updater run exceeded the bounded completion window.' >&2
+          exit 1
+
+      - name: Verify exact published Internal.14
+        id: publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            code="$(curl -sS -o exact-release.json -w '%{http_code}' \
+              -H 'Accept: application/vnd.github+json' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}")"
+            if [[ "${code}" == '404' ]]; then sleep 10; continue; fi
+            [[ "${code}" == '200' ]] || { cat exact-release.json >&2; exit 1; }
+            python - <<'PY'
+          import json, os, sys
+          r=json.load(open('exact-release.json',encoding='utf-8'))
+          if r.get('draft'): sys.exit('Internal.14 release is still draft')
+          if r.get('tag_name') != os.environ['RELEASE_TAG']: sys.exit('release tag mismatch')
+          names=[a.get('name','') for a in r.get('assets',[])]
+          if len([n for n in names if n.endswith('.msi')]) != 1: sys.exit('expected exactly one MSI')
+          if len([n for n in names if n.endswith('.msi.sig')]) != 1: sys.exit('expected exactly one MSI signature')
+          if names.count('latest.json') != 1: sys.exit('expected exactly one latest.json')
+          PY
+            echo "release_url=$(python -c 'import json; print(json.load(open("exact-release.json",encoding="utf-8")).get("html_url",""))')" >> "${GITHUB_OUTPUT}"
+            exit 0
+          done
+          echo 'Exact Internal.14 release was not published in the bounded window.' >&2
+          exit 1
+
+      - name: Report Internal.14 publication to execution epic
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ steps.resolved.outputs.run_url }}
+          RELEASE_URL: ${{ steps.publication.outputs.release_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ steps.guard.outputs.release_exists }}" == 'true' ]]; then
+            body="Internal.14 signed release already existed for exact protected source \`${SOURCE_SHA}\`: ${RELEASE_TAG}. No duplicate dispatch was performed."
+          else
+            body="Internal.14 signed updater workflow passed for exact protected source \`${SOURCE_SHA}\`. Run: ${RUN_URL}. Published release: ${RELEASE_URL}. This is an Internal Founder checkpoint, not Beta/Stable or Founder acceptance."
+          fi
+          gh issue comment 164 --repo "${GITHUB_REPOSITORY}" --body "${body}"
