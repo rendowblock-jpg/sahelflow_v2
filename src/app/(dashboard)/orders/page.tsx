@@ -241,7 +241,7 @@ export default async function OrdersPage({
               <TabsTrigger key={filter.value} value={filter.value} asChild>
                 <Link
                   href={filter.value === "all" ? "/orders" : `/orders?status=${filter.value}`}
-                  className="flex min-w-0 items-center gap-1.5"
+                  className="flex max-w-full !flex-none items-center gap-1.5"
                 >
                   {t(filter.labelKey)}
                   {counts[filter.value] !== undefined ? (
