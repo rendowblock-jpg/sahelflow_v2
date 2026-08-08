@@ -10,20 +10,35 @@ registry, keys or retained evidence merely to simplify development.
 
 ## Verified product frontier
 
-- Latest application-changing protected merge: PR #220.
-- Phase 5 protected product baseline: `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- Latest application-changing protected merge: PR #223 at
+  `23f1bc3912aecfd2a32c591a18fcca70bf454daa`.
+- Protected documentation reconciliation: PR #225 at
+  `6a9c3e9372e9994428e65dbbc79303cf08160db0`.
+- Validated Phase 6/7 source head:
+  `fa0ff6de649421c879f62364383a363b61c71bfc`.
+- Phase 5 protected product baseline:
+  `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 - Phase 5 issue #208: closed at protected-source + controlled-browser level.
+- Phase 6 source/browser package: complete and protected through PR #223.
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
+- Current Phase 6 sub-frontier: **installed/human exit checkpoint**, not another
+  broad source/browser implementation wave.
+- Active release-preparation PR: #227 — Internal.14 Phase 5–6 Founder checkpoint.
 - Execution epic: issue #164.
-- Retained installed/human evidence: issues #201, #214 and #221.
-- Published executable source remains `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
+- Retained installed/human evidence: issues #201, #214, #221 and #226.
+- Published executable source remains
+  `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
+- Requested Founder checkpoint candidate is `1.0.0-internal.14` / MSI
+  `1.0.0.14`; it is not published until the exact protected-main signed workflow
+  succeeds.
 - Published release remains `1.0.0-internal.13` / MSI `1.0.0.13`.
 - Founder-installed Internal.13 is observed but not Founder-accepted; accepted
   baseline remains Internal.5.
 
 Always re-read live protected `main`, open PRs/issues and current Actions state at
-the start of a session. The Phase 5 SHA above is the latest application-changing
-baseline; docs-only reconciliations may make the current `main` SHA newer.
+the start of a session. Documentation-only reconciliation can advance `main`
+without changing the latest application-changing product SHA, and an active PR
+may be newer than both.
 
 ## Start here
 
@@ -52,39 +67,52 @@ viewport containment and zero unresolved review threads.
 
 Phase 5 introduced/closed the shared desktop workbench, state, chart, entity
 context, import/export, permission-truth and browser-evidence contracts. Reopen a
-Phase 5 surface only when a concrete Phase 6 accessibility/RTL defect requires a
-bounded repair.
+Phase 5 surface only when a concrete installed Phase 6 accessibility/RTL defect
+requires one bounded repair.
 
-Retained evidence issue #221 owns the one human-only Phase 5 gate that CI cannot
-prove: Founder visual acceptance on the actual installed Windows/Tauri
-application. Never report that evidence as passed unless the Founder actually
-records it.
+Retained evidence issue #221 owns the human installed Phase 5 visual checkpoint
+and the applicable Phase 6 Arabic/RTL/accessibility Windows checkpoint. Never
+report that evidence as passed unless the Founder actually records it.
 
 ## Active Phase 6 contract
 
-Phase 6 makes Arabic and accessibility equivalent behavior, not decoration.
-Before broad edits, inspect the exact current source/evidence and build one
-consolidated Problem Register grouped by root cause.
+Phase 6 source/browser work is complete through PR #223. The current objective is
+to prove the already-protected result on an installed Windows/Tauri build, not to
+repeat the exhaustive route/source audit.
 
-Required outcomes include:
+The exact validated Phase 6/7 head already passed the Required PR gate, Required
+Phase 5 Experience gate, static localization/RTL/accessibility contract, complete
+source-quality diagnostics, SQLite planner checks, full EN/FR/AR route sweeps,
+200%-equivalent reflow, keyboard/focus/dialog/reduced-motion evidence and the
+integrated Phase 6/7 browser gate.
 
-- semantic AR/FR/EN parity; eliminate remaining page-local/concatenated copy;
-- correct Arabic joining/typography and mixed-direction isolation;
-- logical RTL geometry throughout layout, controls, charts and timelines;
-- deliberate directional-icon mirroring rather than blanket transforms;
-- WCAG 2.2 AA target;
-- keyboard-only completion of Required journeys;
-- correct focus entry/return, modal/dialog behavior and announcements;
-- screen-reader semantics, labels, status/error/recovery messages;
-- contrast, reduced motion and 100–200% zoom;
-- 1366×768 containment and representative responsive widths;
-- equivalent permission/loading/offline/pending/stale/conflict/error/retry/
-  recovery behavior in Arabic, French and English;
-- controlled browser evidence plus applicable installed Founder review.
+The remaining Phase 6 exit evidence is:
 
-Reuse the Phase 5 `Phase 5 Experience Gate`, route-completion inventory and
-Playwright infrastructure rather than inventing another parallel evidence stack.
-Phase 6 may strengthen those gates and rename/generalize them when appropriate.
+- native-Arabic human language, joining, line-height and reading-flow review;
+- installed keyboard-only critical journeys and focus entry/return behavior;
+- critical accessible names/descriptions and status/error/recovery semantics;
+- representative Arabic RTL geometry at 1366×768 and applicable zoom/reflow;
+- signed installed Windows/Tauri observation;
+- explicit Founder accept/reject evidence reconciling issue #221.
+
+If that checkpoint exposes a concrete P0/P1 defect, open one bounded repair PR for
+the demonstrated defect and rerun consequence-selected evidence. Do not restart a
+whole-product Phase 5/6 source loop.
+
+Issue #226 owns Phase 7 installed performance/reliability certification and begins
+after the Phase 6 installed checkpoint is satisfied. Performance changes are
+measurement-driven only.
+
+## Internal.14 release checkpoint
+
+PR #227 exists only to bind the protected Phase 5–6 source result to one unique
+signed Founder checkpoint. It may change version/release orchestration and active
+authority wording, but it must not change Phase 6/7 product behavior, schema,
+business/provider authority, AppData, databases, registry or keys.
+
+Until the exact protected signed workflow publishes the candidate, public release
+truth remains Internal.13. A source version bump or draft PR is not publication,
+installed observation, Founder acceptance, Beta or Stable.
 
 ## Permanent engineering rules
 
@@ -172,8 +200,8 @@ Keep these realities separate:
 - Founder acceptance;
 - Beta/Stable certification.
 
-A lower layer cannot claim a higher one. Retained issues #201, #214 and #221 are
-explicit evidence obligations, not passing proof.
+A lower layer cannot claim a higher one. Retained issues #201, #214, #221 and
+#226 are explicit evidence obligations, not passing proof.
 
 ## Review/merge rule
 
