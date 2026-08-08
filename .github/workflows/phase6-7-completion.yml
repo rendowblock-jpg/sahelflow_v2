@@ -27,7 +27,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 2
+          fetch-depth: 3
           persist-credentials: true
 
       - name: Patch unnamed controls
@@ -35,92 +35,112 @@ jobs:
         run: |
           from pathlib import Path
 
-          def replace_once(path: str, old: str, new: str) -> None:
+          def replace_once(label: str, path: str, old: str, new: str) -> None:
               file = Path(path)
               text = file.read_text(encoding="utf-8")
               count = text.count(old)
               if count != 1:
-                  raise SystemExit(f"{path}: expected one match, found {count}")
+                  raise SystemExit(f"{label}: expected one match in {path}, found {count}")
               file.write_text(text.replace(old, new, 1), encoding="utf-8")
 
           replace_once(
+              "AI mobile back",
               "src/components/ai/ai-chat.tsx",
-              '''                <button
-                  onClick={() => setActiveSessionId(null)}
-                  className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted transition-colors"
-                >''',
-              '''                <button
-                  type="button"
-                  onClick={() => setActiveSessionId(null)}
-                  aria-label={
-                    locale === "ar"
-                      ? "العودة إلى المحادثات"
-                      : locale === "en"
-                        ? "Back to conversations"
-                        : "Retour aux conversations"
-                  }
-                  className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted transition-colors"
-                >''',
+              '                  onClick={() => setActiveSessionId(null)}',
+              "\n".join([
+                  '                  type="button"',
+                  '                  onClick={() => setActiveSessionId(null)}',
+                  '                  aria-label={t("common.backToConversations")}',
+              ]),
           )
-
           replace_once(
+              "AI recovery reason",
               "src/components/ai/ai-chat.tsx",
-              '''                            <Input
-                              value={recoveryReasons[proposal.id] ?? ""}
-                              onChange={(event) =>''',
-              '''                            <Input
-                              aria-label={copy.recoveryReason}
-                              value={recoveryReasons[proposal.id] ?? ""}
-                              onChange={(event) =>''',
+              '                              placeholder={copy.recoveryReason}',
+              "\n".join([
+                  '                              aria-label={copy.recoveryReason}',
+                  '                              placeholder={copy.recoveryReason}',
+              ]),
           )
-
           replace_once(
+              "AI composer",
               "src/components/ai/ai-chat.tsx",
-              '''                <Input
-                  type="text"
-                  placeholder={t("ai.askPlaceholder")}''',
-              '''                <Input
-                  type="text"
-                  aria-label={t("ai.askPlaceholder")}
-                  placeholder={t("ai.askPlaceholder")}''',
+              '                  placeholder={t("ai.askPlaceholder")}',
+              "\n".join([
+                  '                  aria-label={t("ai.askPlaceholder")}',
+                  '                  placeholder={t("ai.askPlaceholder")}',
+              ]),
           )
-
           replace_once(
+              "Inbox search",
               "src/components/inbox/inbox-live.tsx",
-              '''                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t("inbox.searchPlaceholder")}''',
-              '''                onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label={t("inbox.searchPlaceholder")}
-                placeholder={t("inbox.searchPlaceholder")}''',
+              '                placeholder={t("inbox.searchPlaceholder")}',
+              "\n".join([
+                  '                aria-label={t("inbox.searchPlaceholder")}',
+                  '                placeholder={t("inbox.searchPlaceholder")}',
+              ]),
           )
-
           replace_once(
+              "Inbox mobile back",
               "src/components/inbox/inbox-live.tsx",
-              '''                      placeholder={
-                        activeChat.channel === "seeded"
-                          ? t("inbox.seededReplyPlaceholder")
-                          : t("inbox.disconnectedReplyPlaceholder")
-                      }
-                      disabled''',
-              '''                      aria-label={
-                        activeChat.channel === "seeded"
-                          ? t("inbox.seededReplyPlaceholder")
-                          : t("inbox.disconnectedReplyPlaceholder")
-                      }
-                      placeholder={
-                        activeChat.channel === "seeded"
-                          ? t("inbox.seededReplyPlaceholder")
-                          : t("inbox.disconnectedReplyPlaceholder")
-                      }
-                      disabled''',
+              '                      onClick={() => setActiveChatId(null)}',
+              "\n".join([
+                  '                      type="button"',
+                  '                      onClick={() => setActiveChatId(null)}',
+                  '                      aria-label={t("common.backToConversations")}',
+              ]),
+          )
+          replace_once(
+              "Inbox disabled reply",
+              "src/components/inbox/inbox-live.tsx",
+              '                      placeholder={',
+              "\n".join([
+                  '                      aria-label={',
+                  '                        activeChat.channel === "seeded"',
+                  '                          ? t("inbox.seededReplyPlaceholder")',
+                  '                          : t("inbox.disconnectedReplyPlaceholder")',
+                  '                      }',
+                  '                      placeholder={',
+              ]),
+          )
+          replace_once(
+              "English back copy",
+              "src/lib/i18n/runtime-translations.ts",
+              '    "common.breadcrumb": "Breadcrumb",',
+              "\n".join([
+                  '    "common.breadcrumb": "Breadcrumb",',
+                  '    "common.backToConversations": "Back to conversations",',
+              ]),
+          )
+          replace_once(
+              "French back copy",
+              "src/lib/i18n/runtime-translations.ts",
+              '    "common.breadcrumb": "Fil d’Ariane",',
+              "\n".join([
+                  '    "common.breadcrumb": "Fil d’Ariane",',
+                  '    "common.backToConversations": "Retour aux conversations",',
+              ]),
+          )
+          replace_once(
+              "Arabic back copy",
+              "src/lib/i18n/runtime-translations.ts",
+              '    "common.breadcrumb": "مسار التنقل",',
+              "\n".join([
+                  '    "common.breadcrumb": "مسار التنقل",',
+                  '    "common.backToConversations": "العودة إلى المحادثات",',
+              ]),
           )
 
       - name: Commit source repair and restore workflow
         shell: bash
         run: |
           set -euo pipefail
-          git checkout HEAD^ -- .github/workflows/phase6-7-completion.yml
-          git add .github/workflows/phase6-7-completion.yml src/components/ai/ai-chat.tsx src/components/inbox/inbox-live.tsx
+          git checkout HEAD^^ -- .github/workflows/phase6-7-completion.yml
+          git add \
+            .github/workflows/phase6-7-completion.yml \
+            src/components/ai/ai-chat.tsx \
+            src/components/inbox/inbox-live.tsx \
+            src/lib/i18n/runtime-translations.ts
           git diff --cached --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
