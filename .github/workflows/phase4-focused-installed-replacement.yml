@@ -4,6 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, converted_to_draft]
     paths:
+      - src/app/api/license/trial/route.ts
       - scripts/phase4-ci-trial-issuer.mjs
       - scripts/verify-phase4-replacement-install-ci.ps1
       - scripts/verify-phase4-replacement-install.ps1
