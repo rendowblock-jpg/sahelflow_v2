@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   issuer-smoke:
-    name: Sign and verify disposable trial entitlement
+    name: Prove disposable trial issuer over HTTP
     runs-on: windows-latest
     timeout-minutes: 5
     steps:
@@ -27,8 +27,74 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
-      - name: Prove CI trial signer and canonical entitlement
+      - name: Prove signer and live trial endpoint
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $issuer = 'scripts/phase4-ci-trial-issuer.mjs'
+          $trialKeyHex = '0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20'
           node --version
-          node scripts/phase4-ci-trial-issuer.mjs --self-test
+          node $issuer --self-test $trialKeyHex
+          if ($LASTEXITCODE -ne 0) { throw 'CI trial issuer self-test failed.' }
+
+          $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+          try {
+            $listener.Start()
+            $port = ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
+          } finally {
+            $listener.Stop()
+          }
+
+          $stdout = Join-Path $env:RUNNER_TEMP 'phase4-trial-issuer.stdout.log'
+          $stderr = Join-Path $env:RUNNER_TEMP 'phase4-trial-issuer.stderr.log'
+          $server = Start-Process -FilePath 'node' -ArgumentList @(
+            $issuer,
+            '--serve',
+            $port,
+            $trialKeyHex
+          ) -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru -WindowStyle Hidden
+
+          try {
+            $origin = "http://127.0.0.1:$port"
+            $deadline = (Get-Date).AddSeconds(15)
+            $health = $null
+            do {
+              try {
+                $health = Invoke-WebRequest -Uri "$origin/health" -UseBasicParsing -TimeoutSec 2
+                if ($health.StatusCode -eq 200) { break }
+              } catch {
+                Start-Sleep -Milliseconds 150
+              }
+            } while ((Get-Date) -lt $deadline)
+            if ($null -eq $health -or $health.StatusCode -ne 200) {
+              throw 'Live CI trial issuer did not become healthy.'
+            }
+
+            $request = @{
+              workspaceId = '0123456789abcdef0123456789abcdef'
+              installationId = 'fedcba9876543210fedcba9876543210'
+              deviceBinding = ('sfdb1_' + ('a' * 64))
+              appVersion = '1.0.0-internal.14'
+            } | ConvertTo-Json -Compress
+            $response = Invoke-WebRequest -Method POST -Uri "$origin/v1/trials" -ContentType 'application/json' -Body $request -UseBasicParsing -SkipHttpErrorCheck
+            if ($response.StatusCode -ne 200) {
+              $serverError = if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr -Raw } else { '' }
+              throw "Live CI trial issuance failed with HTTP $($response.StatusCode): $($response.Content)`n$serverError"
+            }
+            $entitlement = $response.Content | ConvertFrom-Json
+            if (
+              $entitlement.claims.workspaceId -cne '0123456789abcdef0123456789abcdef' -or
+              $entitlement.claims.installationId -cne 'fedcba9876543210fedcba9876543210' -or
+              $entitlement.claims.deviceBinding -cne ('sfdb1_' + ('a' * 64)) -or
+              $entitlement.claims.keyId -cne 'ci-trial-key-v1' -or
+              $entitlement.claims.type -cne 'trial' -or
+              [string]::IsNullOrWhiteSpace([string]$entitlement.signature)
+            ) {
+              throw 'Live CI trial issuer returned an unexpected entitlement.'
+            }
+            Write-Host 'Live CI trial issuer HTTP proof passed.'
+          } finally {
+            Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+            if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout }
+            if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr }
+          }
