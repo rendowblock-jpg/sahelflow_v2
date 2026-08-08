@@ -101,6 +101,42 @@ if ($trialActivation.status -ne 200 -or $trialActivation.body.status -cne "valid
         $replacement = $activationTemplate.Replace('__OWNER__', [string]$binding.owner).Replace('__BASE__', [string]$binding.base).Replace('__SESSION__', [string]$binding.session)
         $source = $source.Replace([string]$binding.owner, $replacement.TrimEnd())
     }
+
+    $kitAnchor = @'
+$kit = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/backup/recovery-kit" -Session $sourceSession
+if ($kit.status -ne 201 -or -not (Test-Path -LiteralPath ([string]$kit.body.path) -PathType Leaf)) {
+    throw "Independent recovery kit was not created."
+}
+'@
+    $kitAssertion = @'
+$kit = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/backup/recovery-kit" -Session $sourceSession
+if ($kit.status -ne 201) {
+    $kitCode = if ($null -ne $kit.body -and $null -ne $kit.body.code) { [string]$kit.body.code } else { "none" }
+    $kitDetail = if ($null -ne $kit.body -and $null -ne $kit.body.error) { [string]$kit.body.error } else { "none" }
+    throw "Independent recovery kit creation failed with HTTP $($kit.status), code $kitCode, detail $kitDetail."
+}
+$kitPath = if ($null -ne $kit.body -and $null -ne $kit.body.path) { [string]$kit.body.path } else { "" }
+if ([string]::IsNullOrWhiteSpace($kitPath)) {
+    throw "Independent recovery kit creation returned HTTP 201 without a persisted path."
+}
+# Tauri/Windows may surface an extended-length Win32 path. Windows PowerShell
+# filesystem providers do not handle every \\?\ form consistently even though
+# the underlying native file is valid. Probe the same absolute path in its
+# conventional drive form without changing the product response or restore key.
+$kitProbePath = if ($kitPath.StartsWith('\\?\') -and $kitPath.Length -gt 4) {
+    $kitPath.Substring(4)
+} else {
+    $kitPath
+}
+if (-not (Test-Path -LiteralPath $kitProbePath -PathType Leaf)) {
+    throw "Independent recovery kit creation returned HTTP 201 but the persisted file was not found at $kitPath."
+}
+'@
+    if (-not $source.Contains($kitAnchor.TrimEnd())) {
+        throw "Replacement harness recovery-kit assertion anchor drifted."
+    }
+    $source = $source.Replace($kitAnchor.TrimEnd(), $kitAssertion.TrimEnd())
+
     Set-Content -LiteralPath $patchedScript -Value $source -Encoding UTF8
 
     & $patchedScript -MsiPath $MsiPath
