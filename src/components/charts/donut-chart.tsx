@@ -6,6 +6,7 @@
  */
 import { Pie, PieChart, Cell } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { useI18n } from "@/hooks/use-i18n";
 
 export interface DonutDatum {
   key: string;
@@ -35,6 +36,7 @@ export function DonutChart({
   innerRadius = 60,
   outerRadius = 90,
 }: DonutChartProps) {
+  const { t } = useI18n();
   const total = data.reduce((sum, d) => sum + d.value, 0);
 
   if (!total) {
@@ -47,7 +49,7 @@ export function DonutChart({
 
   return (
     <div className="relative" style={{ height }}>
-      <ChartContainer role="img" aria-label="Donut chart" config={config} style={{ height }} className="w-full">
+      <ChartContainer role="img" aria-label={t("charts.donut")} config={config} style={{ height }} className="w-full">
         <PieChart>
           <ChartTooltip
             content={
