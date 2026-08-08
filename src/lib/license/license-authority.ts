@@ -165,8 +165,8 @@ function atomicWrite(envelope: LicenseAuthorityEnvelope): void {
   const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
   let descriptor: number | null = null;
   try {
-    writeFileSync(temporary, `${JSON.stringify(envelope)}\n`, { flag: "wx", mode: 0o600 });
-    descriptor = openSync(temporary, "r");
+    descriptor = openSync(temporary, "wx", 0o600);
+    writeFileSync(descriptor, `${JSON.stringify(envelope)}\n`, "utf8");
     fsyncSync(descriptor);
     closeSync(descriptor);
     descriptor = null;
