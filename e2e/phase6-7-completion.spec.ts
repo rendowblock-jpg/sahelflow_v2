@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
@@ -277,7 +277,7 @@ function selectMetrics(
   return selected;
 }
 
-test.describe.serial("Phase 6 and 7 integrated completion evidence", () => {
+test.describe("Phase 6 and 7 integrated completion evidence", () => {
   for (const { locale, dir } of LOCALES) {
     test(`${locale} complete desktop route sweep`, async ({ page, context }, testInfo) => {
       test.setTimeout(ROUTE_TIMEOUT_MS);
