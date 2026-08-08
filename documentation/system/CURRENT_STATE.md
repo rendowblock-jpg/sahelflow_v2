@@ -12,7 +12,7 @@
 > **Phase 5 status:** protected-source + controlled-browser closed through PR #220 / issue #208
 > **Phase 6 status:** protected-source + controlled-browser package merged through PR #223; installed/human exit evidence pending
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Retained evidence:** issues #201, #214 and #221
+> **Retained evidence:** issues #201, #214, #221 and #226
 > **Execution epic:** issue #164
 > **Last assessed:** 2026-08-08
 
@@ -133,8 +133,10 @@ close under the roadmap exit gate.
 ## Phase 7 evidence boundary
 
 PR #223 protects measurement and controlled-browser evidence; it does not claim
-installed performance/reliability certification. After Phase 6 installed closure,
-Phase 7 still requires representative hardware evidence:
+installed performance/reliability certification. Issue #226 owns the remaining
+installed Phase 7 certification after Phase 6 exit.
+
+Representative hardware evidence still required:
 
 - T470 cold launch ≤8 s p95;
 - ordinary navigation ≤700 ms p95;
@@ -154,9 +156,8 @@ The following remain explicit evidence obligations:
 
 - issue #201 — prior native/install evidence;
 - issue #214 — replacement-install recovery certification;
-- issue #221 — Founder-installed Phase 5/6 visual acceptance;
-- native-Arabic human accessibility review;
-- Phase 7 T470/floor and eight-hour reliability certification.
+- issue #221 — Founder-installed Phase 5/6 visual/accessibility acceptance;
+- issue #226 — Phase 7 T470/floor/eight-hour performance and reliability certification.
 
 PR #223 does **not** publish a new executable, change the signed release, establish
 Founder acceptance, or claim Beta/Stable. Published truth remains Internal.13 and
