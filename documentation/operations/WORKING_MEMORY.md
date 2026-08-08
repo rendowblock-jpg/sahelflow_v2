@@ -128,7 +128,9 @@ If publication succeeds, the existing installed Internal.13 updater should disco
 Internal.14 through the normal in-app updater path. Do not claim that outcome until
 the exact protected signed workflow and release state prove it.
 
-## Exact next session
+## Phase 6 next action
+
+### Exact next session
 
 Resume in this order and do not broaden scope:
 
