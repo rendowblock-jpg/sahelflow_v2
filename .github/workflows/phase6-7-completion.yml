@@ -6,15 +6,11 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
-  group: phase6-7-completion-${{ github.ref }}
-  cancel-in-progress: true
+  group: phase6-7-repair-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
-
-env:
-  SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-  NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
   repair-accessibility:
@@ -23,11 +19,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout repair branch
+      - name: Checkout exact repair head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 3
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: true
 
       - name: Patch unnamed controls
@@ -131,11 +127,11 @@ jobs:
               ]),
           )
 
-      - name: Commit source repair and restore workflow
+      - name: Commit source repair and restore completion gate
         shell: bash
         run: |
           set -euo pipefail
-          git checkout HEAD^^ -- .github/workflows/phase6-7-completion.yml
+          git checkout 0050f12fbf9d2b9cd2ad994dd7a5c3e97ce62d51 -- .github/workflows/phase6-7-completion.yml
           git add \
             .github/workflows/phase6-7-completion.yml \
             src/components/ai/ai-chat.tsx \
@@ -146,222 +142,3 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Fix phase 6 accessibility control names"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
-
-  static-contract:
-    name: Static localization, RTL and accessibility contract
-    if: ${{ github.event.pull_request.draft == false }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    env:
-      SF_TEST_ROOT: /tmp/sahelflow-phase67-static
-      SF_DATA_DIR: /tmp/sahelflow-phase67-static/data
-      DATABASE_URL: file:/tmp/sahelflow-phase67-static/data/shops/test.db
-    steps:
-      - name: Checkout exact PR head
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.14
-
-      - name: Install frozen dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: bunx prisma generate
-
-      - name: Prepare disposable static-evidence sandbox
-        run: bun run test:sandbox -- /tmp/sahelflow-phase67-static
-
-      - name: Generate exact-head repository inventory
-        run: bun run sf-inventory
-
-      - name: Verify integrated Phase 6-7 contract
-        run: bun run scripts/verify-phase6-7-completion.ts
-
-      - name: Upload static completion evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase67-static-completion-${{ github.run_id }}
-          path: .sf-inventory/phase6-7-completion
-          if-no-files-found: warn
-          include-hidden-files: true
-          retention-days: 14
-
-  source-quality-diagnostics:
-    name: Complete source-quality diagnostics
-    if: ${{ github.event.pull_request.draft == false }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 22
-    env:
-      SF_TEST_ROOT: /tmp/sahelflow-phase67-source
-      SF_DATA_DIR: /tmp/sahelflow-phase67-source/data
-      DATABASE_URL: file:/tmp/sahelflow-phase67-source/data/shops/test.db
-    steps:
-      - name: Checkout exact PR head
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.14
-
-      - name: Install frozen dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: bunx prisma generate
-
-      - name: Prepare disposable source-quality sandbox
-        run: bun run test:sandbox -- /tmp/sahelflow-phase67-source
-
-      - name: Deploy migrations to source-quality sandbox
-        run: bunx prisma migrate deploy
-
-      - id: typecheck
-        name: TypeScript
-        continue-on-error: true
-        run: bun run typecheck
-
-      - id: lint
-        name: ESLint
-        continue-on-error: true
-        run: bun run lint
-
-      - id: tests
-        name: Complete Vitest
-        continue-on-error: true
-        run: bun run test
-
-      - id: dependency_audit
-        name: Production dependency audit
-        continue-on-error: true
-        run: bun audit --production
-
-      - id: migration_status
-        name: Migration status
-        continue-on-error: true
-        run: bunx prisma migrate status
-
-      - name: Require complete source-quality set
-        if: always()
-        env:
-          TYPECHECK: ${{ steps.typecheck.outcome }}
-          LINT: ${{ steps.lint.outcome }}
-          TESTS: ${{ steps.tests.outcome }}
-          DEP_AUDIT: ${{ steps.dependency_audit.outcome }}
-          MIGRATIONS: ${{ steps.migration_status.outcome }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "TypeScript: ${TYPECHECK}"
-          echo "ESLint: ${LINT}"
-          echo "Vitest: ${TESTS}"
-          echo "Dependency audit: ${DEP_AUDIT}"
-          echo "Migration status: ${MIGRATIONS}"
-          case "${TYPECHECK}:${LINT}:${TESTS}:${DEP_AUDIT}:${MIGRATIONS}" in
-            success:success:success:success:success)
-              echo "All source-quality diagnostics succeeded."
-              ;;
-            *)
-              echo "One or more source-quality diagnostics failed."
-              exit 1
-              ;;
-          esac
-
-  browser-evidence:
-    name: AR-FR-EN accessibility, reflow and performance
-    if: ${{ always() && github.event.pull_request.draft == false }}
-    needs:
-      - static-contract
-      - source-quality-diagnostics
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    env:
-      SF_TEST_ROOT: /tmp/sahelflow-phase67-browser
-      SF_DATA_DIR: /tmp/sahelflow-phase67-browser/data
-      DATABASE_URL: file:/tmp/sahelflow-phase67-browser/data/shops/test.db
-      AUTH_SECRET: dev-auth-secret-for-testing-only-not-production
-    steps:
-      - name: Checkout exact PR head
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.14
-
-      - name: Install frozen dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: bunx prisma generate
-
-      - name: Prepare disposable representative-data sandbox
-        run: bun run test:sandbox -- /tmp/sahelflow-phase67-browser
-
-      - name: Deploy migrations
-        run: bunx prisma migrate deploy
-
-      - name: Seed representative Algerian COD data
-        run: bun run seed:rich
-
-      - name: Verify hot-query index and planner contracts
-        run: bun --conditions react-server scripts/verify-phase7-query-plans.ts
-
-      - name: Install Chromium
-        run: bunx playwright install --with-deps chromium
-
-      - name: Run Phase 6-7 browser evidence
-        run: bunx playwright test e2e/phase6-7-completion.spec.ts
-
-      - name: Upload rendered and performance evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase67-browser-evidence-${{ github.run_id }}
-          path: |
-            test-results
-            .sf-inventory/phase7-performance
-          if-no-files-found: warn
-          include-hidden-files: true
-          retention-days: 14
-
-  phase67-gate:
-    name: Required Phase 6-7 completion gate
-    if: always()
-    needs:
-      - static-contract
-      - source-quality-diagnostics
-      - browser-evidence
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Require exact-head Phase 6-7 evidence
-        env:
-          IS_DRAFT: ${{ github.event.pull_request.draft }}
-          STATIC_RESULT: ${{ needs.static-contract.result }}
-          SOURCE_RESULT: ${{ needs.source-quality-diagnostics.result }}
-          BROWSER_RESULT: ${{ needs.browser-evidence.result }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "${IS_DRAFT}" == "true" ]]; then
-            echo "Draft PR: integrated Phase 6-7 evidence is intentionally deferred."
-            exit 0
-          fi
-          [[ "${STATIC_RESULT}" == "success" ]] || { echo "Static Phase 6-7 verification failed or was skipped: ${STATIC_RESULT}"; exit 1; }
-          [[ "${SOURCE_RESULT}" == "success" ]] || { echo "Source-quality diagnostics failed or was skipped: ${SOURCE_RESULT}"; exit 1; }
-          [[ "${BROWSER_RESULT}" == "success" ]] || { echo "Rendered Phase 6-7 evidence failed or was skipped: ${BROWSER_RESULT}"; exit 1; }
-          echo "Phase 6-7 source/browser evidence is complete for this exact PR head."
