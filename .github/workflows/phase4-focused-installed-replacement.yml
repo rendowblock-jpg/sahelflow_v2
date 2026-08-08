@@ -14,9 +14,5 @@ concurrency:
 
 jobs:
   installed-replacement:
-    # During the narrow diagnostic loop, branch synchronizations intentionally
-    # create only a skipped run so they cancel any stale expensive MSI build.
-    # Re-enable the draft PR condition in the exact fix commit that is ready
-    # for installed replacement evidence, or invoke this workflow manually.
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == true
     uses: ./.github/workflows/windows-installed-e2e.yml
