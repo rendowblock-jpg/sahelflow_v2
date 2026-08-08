@@ -7,18 +7,27 @@ import { resolve } from "node:path";
 
 import { dbRaw } from "@/lib/db";
 
+type SqliteInteger = number | bigint;
+
 interface IndexListRow {
-  seq: number;
+  seq: SqliteInteger;
   name: string;
-  unique: number;
+  unique: SqliteInteger;
   origin: string;
-  partial: number;
+  partial: SqliteInteger;
 }
 
 interface IndexInfoRow {
-  seqno: number;
-  cid: number;
+  seqno: SqliteInteger;
+  cid: SqliteInteger;
   name: string;
+}
+
+interface RawQueryPlanRow {
+  id: SqliteInteger;
+  parent: SqliteInteger;
+  notused: SqliteInteger;
+  detail: string;
 }
 
 interface QueryPlanRow {
@@ -110,6 +119,28 @@ function sameColumns(actual: readonly string[], expected: readonly string[]) {
   return actual.length === expected.length && actual.every((value, index) => value === expected[index]);
 }
 
+function normalizeSqliteInteger(value: SqliteInteger, field: string): number {
+  const normalized = typeof value === "bigint" ? Number(value) : value;
+  if (!Number.isSafeInteger(normalized)) {
+    throw new Error(`SQLite evidence field '${field}' is outside the safe integer range: ${String(value)}`);
+  }
+  return normalized;
+}
+
+function normalizeSqliteEvidence(value: unknown): unknown {
+  if (typeof value === "bigint") {
+    const normalized = Number(value);
+    return Number.isSafeInteger(normalized) ? normalized : value.toString();
+  }
+  if (Array.isArray(value)) return value.map(normalizeSqliteEvidence);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => [key, normalizeSqliteEvidence(nested)]),
+    );
+  }
+  return value;
+}
+
 async function indexesFor(table: string) {
   const list = await dbRaw.$queryRawUnsafe<IndexListRow[]>(
     `PRAGMA index_list('${table.replaceAll("'", "''")}')`,
@@ -121,8 +152,14 @@ async function indexesFor(table: string) {
     );
     indexes.push({
       name: entry.name,
-      columns: [...info].sort((a, b) => a.seqno - b.seqno).map((column) => column.name),
-      unique: entry.unique === 1,
+      columns: [...info]
+        .sort(
+          (a, b) =>
+            normalizeSqliteInteger(a.seqno, `${entry.name}.seqno`) -
+            normalizeSqliteInteger(b.seqno, `${entry.name}.seqno`),
+        )
+        .map((column) => column.name),
+      unique: normalizeSqliteInteger(entry.unique, `${entry.name}.unique`) === 1,
     });
   }
   return indexes;
@@ -154,7 +191,13 @@ const optimizeBounded = await dbRaw.$queryRawUnsafe<Array<Record<string, unknown
 
 const plans: Record<string, QueryPlanRow[]> = {};
 for (const query of hotQueries) {
-  plans[query.name] = await dbRaw.$queryRawUnsafe<QueryPlanRow[]>(query.sql);
+  const rows = await dbRaw.$queryRawUnsafe<RawQueryPlanRow[]>(query.sql);
+  plans[query.name] = rows.map((row) => ({
+    id: normalizeSqliteInteger(row.id, `${query.name}.id`),
+    parent: normalizeSqliteInteger(row.parent, `${query.name}.parent`),
+    notused: normalizeSqliteInteger(row.notused, `${query.name}.notused`),
+    detail: row.detail,
+  }));
 }
 
 const outDir = resolve(process.cwd(), ".sf-inventory/phase7-performance");
@@ -168,8 +211,8 @@ writeFileSync(
       indexEvidence,
       queryPlans: plans,
       optimize: {
-        initialConnectionPass: optimizeInitial,
-        boundedPass: optimizeBounded,
+        initialConnectionPass: normalizeSqliteEvidence(optimizeInitial),
+        boundedPass: normalizeSqliteEvidence(optimizeBounded),
       },
       blockingFindings: errors,
       note: "Planner choices on the small CI fixture are retained as trend evidence; required index shape is the blocking contract. T470/floor latency remains installed hardware evidence.",
