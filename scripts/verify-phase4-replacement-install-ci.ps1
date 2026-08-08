@@ -86,7 +86,8 @@ __OWNER__
 $trialActivation = Invoke-SahelFlowJson -Method POST -BaseUrl __BASE__ -Path "/api/license/trial" -Session __SESSION__
 if ($trialActivation.status -ne 200 -or $trialActivation.body.status -cne "valid") {
     $trialCode = if ($null -ne $trialActivation.body -and $null -ne $trialActivation.body.code) { [string]$trialActivation.body.code } else { "none" }
-    throw "CI trial activation failed with HTTP $($trialActivation.status) and code $trialCode."
+    $trialDetail = if ($null -ne $trialActivation.body -and $null -ne $trialActivation.body.error) { [string]$trialActivation.body.error } else { "none" }
+    throw "CI trial activation failed with HTTP $($trialActivation.status), code $trialCode, detail $trialDetail."
 }
 '@
     foreach ($binding in @(
