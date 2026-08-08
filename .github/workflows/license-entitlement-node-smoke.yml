@@ -1,11 +1,13 @@
-name: License entitlement Node verification smoke
+name: License Node and authority Windows smoke
 
 on:
   pull_request:
     paths:
       - src/lib/license/entitlement.ts
       - src/lib/license/entitlement-canonical.ts
+      - src/lib/license/license-authority.ts
       - src/lib/license/__tests__/entitlement-node-runtime.test.ts
+      - src/lib/license/__tests__/license-authority.test.ts
       - .github/workflows/license-entitlement-node-smoke.yml
   workflow_dispatch:
 
@@ -17,8 +19,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  entitlement-node-smoke:
-    name: Verify Ed25519 without global WebCrypto
+  license-windows-smoke:
+    name: Verify Node crypto and durable license authority on Windows
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
@@ -38,3 +40,6 @@ jobs:
 
       - name: Run packaged Node entitlement regression
         run: bunx vitest run src/lib/license/__tests__/entitlement-node-runtime.test.ts
+
+      - name: Run license authority persistence regression
+        run: bunx vitest run src/lib/license/__tests__/license-authority.test.ts
