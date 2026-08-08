@@ -1,247 +1,163 @@
 # SahelFlow — Current state
 
 > **Authority:** merged protected source and named evidence only
-> **Latest application-changing protected merge:** PR #220
-> **Phase 5 product baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
+> **Latest application-changing protected merge:** PR #223 at `23f1bc3912aecfd2a32c591a18fcca70bf454daa`
+> **Validated Phase 6/7 source head:** `fa0ff6de649421c879f62364383a363b61c71bfc`
+> **Phase 5 product baseline:** PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
 > **Published release:** `1.0.0-internal.13` / MSI `1.0.0.13`
 > **Protected signed run:** `30366866703`
 > **Founder-installed release:** Internal.13 confirmed on the ThinkPad T470; acceptance open
 > **Founder-accepted baseline:** Internal.5
 > **Phase 5 status:** protected-source + controlled-browser closed through PR #220 / issue #208
+> **Phase 6 status:** protected-source + controlled-browser package merged through PR #223; installed/human exit evidence pending
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Retained evidence:** issues #201, #214 and #221
 > **Execution epic:** issue #164
 > **Last assessed:** 2026-08-08
 
-This file states merged truth and named evidence. Re-fetch live protected `main`,
-open issues/PRs and current Actions state before relying on a SHA. Documentation-
-only commits may advance a branch or `main` beyond a named application checkpoint
-without changing product behavior.
+Live protected `main` is authority. Documentation-only commits may advance `main`
+beyond the named application-changing SHA without changing application behavior.
 
 ## Executive truth
 
-SahelFlow is a broad, real Windows-first local application for Algerian COD
-operations. It is not a generic web dashboard and it is not yet a commercially
-certified Stable release.
+SahelFlow is a Windows-first local application for Algerian COD operations with
+protected canonical business, identity, licensing, provider, recovery and desktop
+experience authority. It is not yet a commercially certified Stable release.
 
-Protected source now contains:
+Protected source now includes:
 
-- Golden COD business authority and lifecycle truth;
-- durable identity/session/permission authority;
-- signed licensing and native multi-shop authority;
-- durable provider, inbox, AI and automation effects/recovery;
-- Phase 4 data/recovery/migration survivability authority;
-- Phase 5 whole-product desktop experience/workbench convergence.
+- Golden COD lifecycle, stock, money and compensation authority;
+- durable identity/session/permission and native multi-shop authority;
+- signed licensing;
+- durable provider, Inbox, AI and automation effects/recovery;
+- Phase 4 backup/recovery/migration survivability authority;
+- Phase 5 whole-product operational desktop convergence;
+- Phase 6 shared AR/FR/EN localization, RTL, accessibility and reflow corrections;
+- Phase 7 query-plan and controlled-browser measurement infrastructure.
 
-Phase 5 is complete at the source and controlled-browser evidence layers. The
-active product frontier is Phase 6 accessibility/Arabic/RTL parity. PR #223 may
-carry integrated Phase 6→7 source/evidence infrastructure, but that does not
-advance the product to Phase 7 before Phase 6 exit evidence is satisfied.
+The product remains in **Phase 6** because the roadmap requires applicable
+installed/human Windows accessibility evidence in addition to the now-green
+source/browser package. Phase 7 installed low-end certification therefore remains
+a later evidence checkpoint, even though its measurement infrastructure is merged.
 
 ## Phase 5 merged result
 
-PR #220 merged one whole-product convergence wave. Important merged source
-contracts include:
-
-### Desktop shell and navigation
-
-- one workflow/domain navigation registry;
-- one Ctrl/Cmd+K command-search authority;
-- edge-to-edge desktop application frame;
-- restrained density/motion rather than floating SaaS-card behavior;
-- compact headers and shared persistent state surfaces.
-
-### Operational workbenches
-
-Orders, confirmation, Customers, Products, Deliveries and Returns use shared
-server-authoritative workbench patterns with:
-
-- exact pagination and stable ordering;
-- URL/page fallback truth and out-of-range clamping;
-- permission-before-read protected-field selection;
-- explicit field/action authority in responses;
-- no fake read-only mutation affordances;
-- no optimistic committed business-state painting;
-- real keyboard-accessible entity links rather than custom focusable rows.
-
-### Entity context
-
-Shared `EntityLink`, `EntityPreview`, `EntityInspector` and `EntityTimeline`
-primitives preserve context across Customer/Product/Delivery relationships and
-provide a reusable Phase 6 accessibility surface.
-
-### Imports and exports
-
-- Orders, Customers and Products use preview → validate → explicit commit;
-- canonical mutation authorities are preserved;
-- CSV exports stream complete deterministic DB pages;
-- XLSX is explicitly bounded by the current in-memory workbook implementation
-  and returns a clear 413 instruction to use complete CSV rather than silently
-  truncate or exhaust memory.
-
-### Risk, money and COD
-
-- Risk analytics uses bounded/bulk data access rather than per-order DB fan-out;
-- `risk.read` and `risk.manage` surfaces are separated;
-- Accounting preserves canonical profitability formulas;
-- COD read-only financial inspection is separated from exact
-  `accounting.update` command authority;
-- order-level disputes and settlement review lines are visible to read-only
-  financial actors.
-
-### Inbox, providers, AI and automations
-
-- server authority gates Inbox and AI entry;
-- WhatsApp ingress recovery exposes retry only under exact mutation authority;
-- Automation read/manage and recovery controls are separated;
-- Phase 1–4 durable provider/AI/automation effect authority remains unchanged.
-
-### Settings, profile and auth surfaces
-
-- Settings tabs are capability-driven with RTL-aware keyboard navigation;
-- Profile becomes genuinely read-only without `settings.manage`, including
-  photo controls;
-- login/setup/join use quiet desktop surfaces and centralized runtime copy;
-- root/join/authenticated loading/error boundaries are present;
-- Demo Data removal uses the shared governed destructive confirmation ceremony.
-
-### Shared analytical/state grammar
-
-- quiet neutral `StatCard` operational metrics;
-- shared `StateSurface` for persistent empty/degraded/blocked/error/recovery;
-- governed chart frames always provide textual analytical context;
-- Phase 5 source contracts prevent regression into fake table sorting/selection,
-  hidden export caps or inaccessible keyboard-row semantics.
+PR #220 remains the protected Phase 5 source/browser baseline. Shared Phase 5
+contracts remain protected: workflow/domain navigation, command search,
+server-authoritative workbenches, permission-before-read field access, truthful
+pagination/sort/mutation state, shared DataTable/StateSurface/StatCard/chart
+grammar, entity context, governed imports/exports, Risk and financial authority
+separation, Inbox/AI/Automation surfaces, Settings/Profile capability behavior and
+quiet auth/state boundaries.
 
 ## Phase 5 evidence
 
-The exact PR #220 head before merge passed:
+The exact final PR #220 head passed the Required PR and Required Phase 5 Experience
+gates, including source quality, route inventory, fresh install/login,
+representative LTR journeys, Arabic RTL/viewport containment, command search and
+review closure.
 
-- Required PR gate;
-- TypeScript;
-- ESLint;
-- complete Vitest;
-- Prisma generation and migration checks;
-- production dependency audit;
-- migration status;
-- Phase 5 static route-completion matrix;
-- fresh-install owner setup at 1366×768;
-- fresh-context owner login;
-- representative Algerian COD LTR route traversal;
-- Arabic RTL route traversal and viewport containment;
-- Ctrl/Cmd+K interaction;
-- latest-head review with zero unresolved threads.
-
-Coverage remains reported as an informational trend by Founder direction. It is
-not allowed to weaken the blocking source/security/browser/native evidence lanes.
-
-## Retained evidence and non-claims
-
-The following remain retained evidence obligations:
-
-- issue #201 — prior native/install evidence obligation;
-- issue #214 — replacement-install recovery certification evidence;
-- issue #221 — Phase 5 Founder-installed visual acceptance.
-
-Issue #221 exists because browser CI cannot prove how the actual installed
-Windows/Tauri application looks/feels to the Founder. Phase 5 closure therefore
-does **not** claim Founder-installed visual acceptance, a new signed Internal,
-Beta, Stable or installed certification.
-
-## Active Phase 6 in-flight checkpoint
-
-The active implementation is PR #223 on branch
-`agent/phase6-7-completion`. Its source diagnostic checkpoint before the
-2026-08-08 documentation-only continuation commits is
-`7de771e52affa8d938c44d0d3a06da68cc7c3204`.
-
-That checkpoint established a healthy source foundation:
-
-- TypeScript passed;
-- ESLint passed;
-- complete Vitest passed;
-- production dependency audit passed;
-- migration status passed;
-- the Phase 5 Experience Gate passed.
-
-The selected completion program is not yet green. Four bounded blocker domains
-remain recorded at this checkpoint:
-
-1. documentation authority continuity drift in `WORKING_MEMORY.md`;
-2. a source-quality aggregate assertion failing despite its five underlying
-   source checks passing;
-3. the integrated static localization/RTL/accessibility contract remaining red;
-4. the hot-query index/planner precheck failing before Chromium evidence could
-   execute.
-
-The documentation-only continuation checkpoint restores the missing working-memory
-continuity markers and canonical active Phase 6 field. That repair is not counted
-as closed until the documentation authority gate passes on the new PR head.
-
-Because the query/index precheck stopped before Chromium installation/execution,
-the recorded run does **not** establish a browser product regression. Required
-Phase 6-7 and PR gates are red consequentially while upstream selected gates are
-red. GitHub may report PR #223 as structurally mergeable, but it is not
-merge-ready at this checkpoint.
-
-No collected failure requires reopening Phase 1–5 business, permission, provider,
-recovery, native or Phase 5 experience authority.
+Issue #221 retains Founder-installed visual acceptance. Browser CI does not satisfy
+that human evidence requirement.
 
 ## Active Phase 6 frontier
 
-Phase 6 must treat the Phase 5 primitives as protected source contracts, not
-disposable scaffolding.
+### Protected source/browser result
 
-Primary work remains:
+PR #223 merged the integrated Phase 6 correctness and Phase 7 measurement package
+from validated source head `fa0ff6de649421c879f62364383a363b61c71bfc`.
+The protected application-changing merge is
+`23f1bc3912aecfd2a32c591a18fcca70bf454daa`.
 
-1. exhaustive AR/FR/EN semantic copy parity;
-2. remove remaining concatenated/page-local copy and broken plural/grammar cases;
-3. Arabic font/joining/line-height and mixed-direction isolation;
-4. logical RTL geometry and explicit directional icon decisions;
-5. chart/table/timeline RTL equivalence;
-6. keyboard-only completion of Required journeys;
-7. focus entry/return, dialog/modal, status/error/recovery announcements;
-8. WCAG 2.2 AA contrast/semantics target;
-9. reduced-motion and 100–200% zoom behavior;
-10. 1366×768 and representative responsive containment;
-11. equivalent permission/loading/offline/pending/stale/conflict/retry/recovery
-    states across locales;
-12. controlled browser evidence and applicable installed Founder review.
+Important protected outcomes include:
 
-PR #223 intentionally combines the shared Phase 6 correction/evidence surface
-with Phase 7 measurement infrastructure to avoid an open-ended micro-fix loop.
-The next source action is therefore not another broad audit: re-fetch and freeze
-the live PR head, verify documentation authority, reconcile the exact current
-source-aggregate/static/query-plan failure set, perform one consolidated
-shared-cause repair batch, then rerun selected gates on that exact repaired head.
+- unified server/client runtime translation fallback authority;
+- canonical AR/FR/EN runtime-copy parity on representative dynamic surfaces;
+- localized shared Sheet, entity-timeline, chart and interaction semantics;
+- explicit RTL submenu/directional behavior and mixed-direction isolation;
+- route-transition focus entry without stealing initial-load focus;
+- compact accessible target floors and preserved reduced-motion foundations;
+- hard-coded user-copy inventory with bounded non-copy classification;
+- visible interactive accessible names across Inbox and AI/Agents flows;
+- responsive shared DataTable containment that preserves horizontal table scroll
+  without inflating the document root at 200% reflow;
+- corrected Settings translation-key authority;
+- bounded intent prefetch rather than whole-document speculative prerender;
+- hot-query index/SQLite planner evidence and `PRAGMA optimize` verification;
+- controlled throttled browser route/search/resource trend evidence;
+- dedicated exact-head Phase 6-7 completion workflow.
 
-Reuse/generalize the Phase 5 route inventory and Playwright experience gate. Do
-not restart Phase 5 or broaden into release work unless a concrete Phase 6 finding
-requires a bounded source repair.
+### Exact-head evidence
+
+The final PR #223 head passed:
+
+- Required PR gate;
+- Required Phase 5 Experience gate;
+- static localization, RTL and accessibility contract;
+- TypeScript;
+- ESLint;
+- complete Vitest;
+- production dependency audit;
+- migration status;
+- hot-query index and SQLite planner contract;
+- all nine integrated Playwright Phase 6/7 journeys;
+- EN/FR/AR complete desktop route sweeps;
+- EN/FR/AR 200%-equivalent reflow sweeps;
+- keyboard/focus/dialog/reduced-motion/Settings direction evidence;
+- controlled Phase 7 browser performance/resource trend;
+- Required Phase 6-7 completion gate;
+- zero unresolved P0/P1 review threads.
+
+No collected evidence requires reopening Phase 1–5 business, permissions, provider,
+recovery, native or Phase 5 experience authority.
+
+### Remaining Phase 6 exit evidence
+
+The remaining Phase 6 work is not another general source wave. The roadmap still
+requires the applicable Level 3 installed UI/accessibility checkpoint on a current
+Windows/Tauri build derived from protected source that includes PR #223.
+
+Record, at minimum:
+
+- native-Arabic human language/reading review;
+- installed keyboard/focus and critical semantic inspection;
+- representative Arabic RTL geometry at 1366×768 and applicable zoom;
+- signed installed Windows/Tauri observation;
+- explicit Founder accept/reject evidence reconciling issue #221.
+
+If the installed checkpoint exposes a concrete defect, repair that demonstrated
+defect in one bounded package. If it passes with no actionable P0/P1, Phase 6 may
+close under the roadmap exit gate.
 
 ## Phase 7 evidence boundary
 
-Controlled Chromium route/search/resource evidence is useful source-level trend
-evidence but is not installed low-end certification. Phase 7 installed closure
-still requires the declared T470/floor evidence after the Phase 6 semantic UI is
-stable, including:
+PR #223 protects measurement and controlled-browser evidence; it does not claim
+installed performance/reliability certification. After Phase 6 installed closure,
+Phase 7 still requires representative hardware evidence:
 
-- T470 p95 targets for cold launch, navigation, indexed search and normal local
-  mutation;
+- T470 cold launch ≤8 s p95;
+- ordinary navigation ≤700 ms p95;
+- indexed search ≤350 ms p95;
+- ordinary local mutation ≤500 ms p95;
 - declared-floor SSD/HDD and 4 GB evidence;
 - representative large-database behavior;
 - clean close/reopen and crash-recovery observation;
 - eight-hour stability/resource evidence with no sustained memory growth.
 
-Native-Arabic human review, signed installed Windows/Tauri observation and issue
-#221 reconciliation remain explicit installed checkpoint work. They must not be
-fabricated from browser CI and they do not justify another coding loop unless a
-concrete defect is found.
+Performance remediation must be measurement-driven and may not weaken
+accessibility, canonical state, durability, recovery or required background work.
 
-## Release truth
+## Retained evidence and non-claims
 
-The application-changing Phase 5 merge and the in-flight Phase 6/7 PR do not
-change release certification. The latest published executable remains Internal.13
-from the source/run recorded above. Internal.5 remains the Founder-accepted
-baseline. Beta/Stable remain unclaimed.
+The following remain explicit evidence obligations:
+
+- issue #201 — prior native/install evidence;
+- issue #214 — replacement-install recovery certification;
+- issue #221 — Founder-installed Phase 5/6 visual acceptance;
+- native-Arabic human accessibility review;
+- Phase 7 T470/floor and eight-hour reliability certification.
+
+PR #223 does **not** publish a new executable, change the signed release, establish
+Founder acceptance, or claim Beta/Stable. Published truth remains Internal.13 and
+Founder-accepted truth remains Internal.5 until stronger evidence is recorded.
