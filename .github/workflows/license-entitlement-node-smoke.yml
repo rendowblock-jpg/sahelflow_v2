@@ -8,6 +8,10 @@ on:
       - src/lib/license/license-authority.ts
       - src/lib/license/__tests__/entitlement-node-runtime.test.ts
       - src/lib/license/__tests__/license-authority.test.ts
+      - src/lib/crypto/master-key.ts
+      - src/lib/crypto/__tests__/master-key-process-cache.test.ts
+      - src/lib/survivability/native-bridge.ts
+      - src/lib/backup/native-command-authorization.ts
       - .github/workflows/license-entitlement-node-smoke.yml
   workflow_dispatch:
 
@@ -65,3 +69,6 @@ jobs:
 
       - name: Run license authority persistence regression
         run: bunx vitest run src/lib/license/__tests__/license-authority.test.ts
+
+      - name: Run packaged installation-root cache regression
+        run: bunx vitest run src/lib/crypto/__tests__/master-key-process-cache.test.ts
