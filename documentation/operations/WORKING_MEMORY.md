@@ -14,11 +14,12 @@
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active branch:** `agent/internal-14-phase6-founder-checkpoint`
 > **Active PR:** #227 — Internal.14 Phase 5–6 Founder checkpoint release request
-> **Active PR head at session stop:** `4c8a0c073656dd0bbb2a7fdf8389ec0b039f4968`
+> **Last validated pre-handoff release head:** `4c8a0c073656dd0bbb2a7fdf8389ec0b039f4968`
 
-Live GitHub is authority. Re-fetch protected `main`, PR #227, its exact head,
-review threads and Actions before resuming. Do not infer current state from this
-file if GitHub has moved.
+Live GitHub is authority. The documentation handoff commits intentionally advance
+PR #227 beyond the pre-handoff release head above. Re-fetch protected `main`, PR
+#227, its exact current head, review threads and Actions before resuming; do not
+copy the historical pre-handoff SHA into a merge or release action.
 
 ## Phase 5 closure snapshot
 
@@ -81,35 +82,30 @@ Phase 7 T470/floor/eight-hour performance and reliability certification.
 PR #227 exists only to create one unique installed Founder-test milestone that
 contains the protected PR #223 result. It does not add Phase 6/7 product behavior.
 
-At session stop, PR #227 is:
+At this session handoff, PR #227 is intended to remain:
 
 - open and **draft**;
-- mergeable;
-- exact head `4c8a0c073656dd0bbb2a7fdf8389ec0b039f4968`;
-- zero review threads;
+- unmerged and unpublished;
 - version authority synchronized to app `1.0.0-internal.14` and MSI `1.0.0.14`;
 - the normal Phase 6/7 workflow restored after the deterministic version-authority edit;
 - changed files limited to release/version authority, Founder installer expectations,
-  release-truth entry documentation and the guarded Internal.14 dispatcher.
+  release-truth/entry documentation, the guarded Internal.14 dispatcher and this
+  resumable handoff documentation.
 
-The final PR #227 changed-file set at this checkpoint is:
+The release/version package reached exact head
+`4c8a0c073656dd0bbb2a7fdf8389ec0b039f4968` before the final documentation
+handoff commits. On that pre-handoff head:
 
-- `.github/workflows/dispatch-internal-14.yml`;
-- `CHANGELOG.md`;
-- `README.md`;
-- `documentation/README.md`;
-- `package.json`;
-- `sahelflow.version.json`;
-- `scripts/install-founder-windows.ps1`;
-- `src-tauri/Cargo.lock`;
-- `src-tauri/Cargo.toml`;
-- `src-tauri/tauri.conf.json`;
-- this `WORKING_MEMORY.md` handoff commit after session stop.
+- Fast authority/version+documentation passed;
+- Required PR gate passed;
+- PR review threads were zero;
+- Phase 5 and Phase 6-7 workflow runs concluded success while the PR was draft;
+- draft-specific component jobs may have been intentionally skipped and are not
+  installed evidence.
 
-The exact pre-handoff head had successful Fast authority/version+documentation and
-Required PR checks. Phase 5/Phase 6-7 workflow runs also concluded success while
-the PR was draft; draft-specific component jobs may be intentionally skipped and
-must not be misrepresented as fresh installed certification.
+The handoff documentation commits after `4c8a0c...` must pass their current
+risk-selected authority checks before the next session treats the new live PR head
+as the frozen candidate.
 
 The published release remains Internal.13. Internal.14 is **not merged, not built,
 not published and not installed** at this checkpoint.
@@ -136,13 +132,14 @@ the exact protected signed workflow and release state prove it.
 
 Resume in this order and do not broaden scope:
 
-1. Re-fetch protected `main` and PR #227. Freeze the current PR head; if it moved,
-   the new head supersedes `4c8a0c073656dd0bbb2a7fdf8389ec0b039f4968`.
+1. Re-fetch protected `main` and PR #227. Freeze the **live** current PR head; it
+   will be newer than the pre-handoff `4c8a0c...` SHA recorded above.
 2. Confirm PR #227 remains one release-request outcome only. Inspect changed files,
    version authority, dispatcher, review threads and exact current checks.
-3. Verify `sf-version`/documentation authority and determine whether the current
-   risk classification is sufficient for a version-only Internal candidate. Do
-   not treat draft-skipped Windows/Rust/browser jobs as installed evidence.
+3. Verify the post-handoff `sf-version`/documentation authority results and
+   determine whether the current risk classification is sufficient for a
+   version-only Internal candidate. Do not treat draft-skipped Windows/Rust/browser
+   jobs as installed evidence.
 4. Complete one frozen-head review of the dispatcher and synchronized version
    authority. Repair only concrete findings.
 5. Create or refresh the frozen `release/internal-14-dispatch-ref` only from the
