@@ -1,0 +1,34 @@
+name: Phase 4 CI trial issuer smoke
+
+on:
+  pull_request:
+    paths:
+      - scripts/phase4-ci-trial-issuer.mjs
+      - scripts/verify-phase4-replacement-install-ci.ps1
+      - .github/workflows/phase4-trial-issuer-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase4-trial-issuer-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  issuer-smoke:
+    name: Sign and verify disposable trial entitlement
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Prove CI trial signer and canonical entitlement
+        shell: pwsh
+        run: |
+          node --version
+          node scripts/phase4-ci-trial-issuer.mjs --self-test
