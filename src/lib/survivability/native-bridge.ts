@@ -10,7 +10,7 @@ import { createConnection, type Socket } from "node:net";
 import { isAbsolute, join, resolve } from "node:path";
 
 import {
-  issueNativeCommandAuthorization,
+  createNativeCommandAuthorization,
   NATIVE_SURVIVABILITY_ACTIONS,
   type NativeSurvivabilityAction,
 } from "@/lib/backup/native-command-authorization";
@@ -58,6 +58,14 @@ export const SURVIVABILITY_OPERATIONS = {
 
 export type SurvivabilityOperation =
   (typeof SURVIVABILITY_OPERATIONS)[keyof typeof SURVIVABILITY_OPERATIONS];
+
+type NativeBridgeStage =
+  | "HANDSHAKE_READ"
+  | "AUTHORITY"
+  | "HANDSHAKE_VERIFY"
+  | "AUTHORIZATION"
+  | "REQUEST_WRITE"
+  | "RESPONSE_READ";
 
 export interface EndpointManifest {
   formatVersion: typeof ENDPOINT_FORMAT_VERSION;
@@ -570,8 +578,8 @@ export async function invokeNativeSurvivability<T>(
       503,
     );
   });
-  const context = processShopContext();
   const requestId = randomBytes(16).toString("hex");
+  let stage: NativeBridgeStage = "HANDSHAKE_READ";
   let handshakeBytes: Buffer | null = null;
   let requestBytes: Buffer | null = null;
   let responseBytes: Buffer | null = null;
@@ -588,13 +596,22 @@ export async function invokeNativeSurvivability<T>(
         503,
       );
     }
-    verifyBridgeHandshake(endpoint, handshake, getMasterKey(), context);
+
+    stage = "AUTHORITY";
+    const context = processShopContext();
+    const installationRoot = getMasterKey();
+
+    stage = "HANDSHAKE_VERIFY";
+    verifyBridgeHandshake(endpoint, handshake, installationRoot, context);
 
     const resource = canonicalResource(operation, options.backupId);
-    const authorization = issueNativeCommandAuthorization(
-      operation.action as NativeSurvivabilityAction,
+    stage = "AUTHORIZATION";
+    const authorization = createNativeCommandAuthorization({
+      installationRoot,
+      shopContext: context,
+      action: operation.action as NativeSurvivabilityAction,
       resource,
-    );
+    });
     const request: BridgeRequest = {
       formatVersion: REQUEST_FORMAT_VERSION,
       requestId,
@@ -605,8 +622,11 @@ export async function invokeNativeSurvivability<T>(
       recoveryCode: options.recoveryCode?.trim() || null,
     };
     requestBytes = Buffer.from(JSON.stringify(request), "utf8");
+
+    stage = "REQUEST_WRITE";
     await writeFrame(socket, requestBytes);
 
+    stage = "RESPONSE_READ";
     responseBytes = await readFrame(socket, MAX_RESPONSE_BYTES);
     let response: BridgeResponse;
     try {
@@ -628,7 +648,7 @@ export async function invokeNativeSurvivability<T>(
     if (error instanceof SahelFlowError) throw error;
     throw new SahelFlowError(
       "The protected desktop operation could not be completed safely",
-      "SURVIVABILITY_NATIVE_FAILED",
+      `SURVIVABILITY_${stage}_FAILED`,
       503,
     );
   } finally {
