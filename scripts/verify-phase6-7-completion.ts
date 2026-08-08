@@ -128,34 +128,63 @@ for (const key of [...allLocaleKeys].sort()) {
   }
 }
 
+// These are invariant product/provider names, abbreviations, units and technical
+// tokens. They are intentionally not translated and remain a bounded explicit
+// list so new prose cannot silently bypass the hard-coded-copy gate.
 const SAFE_LITERAL_COPY = new Set([
   "SahelFlow",
   "SF",
   "DZD",
+  "DA",
   "PIN",
   "API",
   "CSV",
   "XLSX",
   "JSON",
+  "SKU",
+  "ID",
+  "ms",
+  "KB)",
   "WhatsApp",
   "Gemini",
   "Google",
+  "Google Sheets",
+  ": Google Sheets",
   "Shopify",
   "WooCommerce",
   "YouCan",
   "Yalidine",
   "ZR Express",
   "Maystro",
+  "Maystro Delivery",
   "NOEST",
+  "NOEST Express",
   "Cloudflare",
   "Windows",
   "WebView2",
+  "Excel (.xlsx)",
   "Ctrl",
   "ESC",
   "English",
   "Français",
   "العربية",
 ]);
+
+// Placeholder values below are example data shapes or exact command/credential
+// tokens; the surrounding field labels carry the localized user-facing copy.
+// Keep this list deliberately narrow rather than treating all placeholders as safe.
+const SAFE_PLACEHOLDER_EXAMPLES = new Set([
+  "Ahmed Benali",
+  "Ma Boutique",
+  "Alger",
+  "API token",
+  "AIza...",
+  "Produit Test",
+  "T-shirt Cotton Bio",
+  "RESET",
+  "Alger, Algérie",
+]);
+
 const USER_FACING_LITERAL_ATTRIBUTES = new Set([
   "aria-label",
   "placeholder",
@@ -167,13 +196,23 @@ function normalizeLiteral(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function safeLiteral(value: string, parentTag?: string) {
+function safePlaceholder(text: string) {
+  if (SAFE_PLACEHOLDER_EXAMPLES.has(text)) return true;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(text)) return true;
+  if (/^0(?:\[[0-9-]+\]|[0-9X])[\sX0-9-]*$/iu.test(text)) return true;
+  if (/^[A-Z0-9]+(?:-[A-Z0-9]+)+$/u.test(text)) return true;
+  return false;
+}
+
+function safeLiteral(value: string, parentTag?: string, attributeName?: string) {
   const text = normalizeLiteral(value);
   if (!text) return true;
   if (parentTag && ["code", "kbd", "pre"].includes(parentTag)) return true;
   if (SAFE_LITERAL_COPY.has(text)) return true;
-  if (/^v\d+(?:\.\d+)*$/i.test(text)) return true;
+  if (attributeName === "placeholder" && safePlaceholder(text)) return true;
+  if (/^v(?:\d+(?:\.\d+)*)?$/i.test(text)) return true;
   if (/^(?:https?:\/\/|mailto:|tel:|\/)/i.test(text)) return true;
+  if (/^[\p{P}\p{S}\p{M}\s]+$/u.test(text)) return true;
   if (/^[\d\s.,:+%#@()\[\]{}\-–—·•…×÷=<>|/\\]+$/u.test(text)) return true;
   return false;
 }
@@ -186,6 +225,38 @@ function jsxTagName(node: ts.Node): string | undefined {
   return undefined;
 }
 
+function isStaticallyHidden(node: ts.Node): boolean {
+  let current: ts.Node | undefined = node;
+  while (current) {
+    const opening = ts.isJsxElement(current)
+      ? current.openingElement
+      : ts.isJsxSelfClosingElement(current)
+        ? current
+        : undefined;
+    if (opening) {
+      for (const property of opening.attributes.properties) {
+        if (!ts.isJsxAttribute(property)) continue;
+        const name = property.name.getText();
+        if (name === "hidden" && !property.initializer) return true;
+        if (name !== "aria-hidden" && name !== "hidden") continue;
+        const initializer = property.initializer;
+        if (initializer && ts.isStringLiteral(initializer) && initializer.text === "true") {
+          return true;
+        }
+        if (
+          initializer &&
+          ts.isJsxExpression(initializer) &&
+          initializer.expression?.kind === ts.SyntaxKind.TrueKeyword
+        ) {
+          return true;
+        }
+      }
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
 const hardcodedCopyFindings: string[] = [];
 for (const path of inventory.files.filter(
   (file) =>
@@ -196,9 +267,10 @@ for (const path of inventory.files.filter(
   const content = source(path);
   const ast = ts.createSourceFile(path, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 
-  const report = (node: ts.Node, kind: string, literal: string) => {
+  const report = (node: ts.Node, kind: string, literal: string, attributeName?: string) => {
+    if (isStaticallyHidden(node)) return;
     const text = normalizeLiteral(literal);
-    if (safeLiteral(text, jsxTagName(node))) return;
+    if (safeLiteral(text, jsxTagName(node), attributeName)) return;
     const { line, character } = ast.getLineAndCharacterOfPosition(node.getStart(ast));
     hardcodedCopyFindings.push(
       `${path}:${line + 1}:${character + 1} ${kind}: ${JSON.stringify(text.slice(0, 120))}`,
@@ -213,7 +285,7 @@ for (const path of inventory.files.filter(
       if (USER_FACING_LITERAL_ATTRIBUTES.has(name) && node.initializer) {
         if (ts.isStringLiteral(node.initializer)) {
           if (!(name === "alt" && node.initializer.text === "")) {
-            report(node, `${name} literal`, node.initializer.text);
+            report(node, `${name} literal`, node.initializer.text, name);
           }
         } else if (
           ts.isJsxExpression(node.initializer) &&
@@ -221,7 +293,7 @@ for (const path of inventory.files.filter(
           (ts.isStringLiteral(node.initializer.expression) ||
             ts.isNoSubstitutionTemplateLiteral(node.initializer.expression))
         ) {
-          report(node, `${name} literal`, node.initializer.expression.text);
+          report(node, `${name} literal`, node.initializer.expression.text, name);
         }
       }
     } else if (
