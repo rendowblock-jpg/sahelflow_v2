@@ -16,16 +16,6 @@ $trialKeyHex = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20
 $trialKeyId = "ci-trial-key-v1"
 $trialServer = $null
 
-function Reserve-LoopbackPort {
-    $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
-    try {
-        $listener.Start()
-        return ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
-    } finally {
-        $listener.Stop()
-    }
-}
-
 try {
     $publicKey = @(
         & node --input-type=module -e @'
@@ -37,11 +27,39 @@ console.log(Buffer.from(await getPublicKeyAsync(secret)).toString("base64"));
     if ($LASTEXITCODE -ne 0) {
         throw "Could not derive the CI trial verification key: $($publicKey -join [Environment]::NewLine)"
     }
-    $publicKey = [string]($publicKey | Select-Object -Last 1)
-    $env:SF_LICENSE_TRIAL_PUBLIC_KEYS = (@{ $trialKeyId = $publicKey.Trim() } | ConvertTo-Json -Compress)
+    $publicKey = ([string]($publicKey | Select-Object -Last 1)).Trim()
 
-    $trialPort = Reserve-LoopbackPort
-    $env:SF_LICENSE_SERVICE_URL = "http://127.0.0.1:$trialPort"
+    if ([string]::IsNullOrWhiteSpace($env:SF_LICENSE_SERVICE_URL)) {
+        throw "The evidence MSI did not publish its compiled CI trial-service URL."
+    }
+    try {
+        $trialServiceUri = [Uri]$env:SF_LICENSE_SERVICE_URL
+    } catch {
+        throw "The compiled CI trial-service URL is invalid."
+    }
+    if (
+        $trialServiceUri.Scheme -cne "http" -or
+        $trialServiceUri.Host -cne "127.0.0.1" -or
+        $trialServiceUri.Port -lt 1 -or
+        $trialServiceUri.Port -gt 65535 -or
+        $trialServiceUri.AbsolutePath -cne "/"
+    ) {
+        throw "The replacement evidence MSI must bind its trial issuer to one exact loopback HTTP origin."
+    }
+    $trialPort = $trialServiceUri.Port
+
+    if ([string]::IsNullOrWhiteSpace($env:SF_LICENSE_TRIAL_PUBLIC_KEYS)) {
+        throw "The evidence MSI did not publish its compiled CI trial verification keyring."
+    }
+    try {
+        $compiledTrialKeys = $env:SF_LICENSE_TRIAL_PUBLIC_KEYS | ConvertFrom-Json
+    } catch {
+        throw "The compiled CI trial verification keyring is invalid JSON."
+    }
+    $compiledTrialKey = $compiledTrialKeys.PSObject.Properties[$trialKeyId]
+    if ($null -eq $compiledTrialKey -or [string]$compiledTrialKey.Value -cne $publicKey) {
+        throw "The replacement evidence issuer key does not match the trial key compiled into the MSI."
+    }
 
     @'
 import http from "node:http";
@@ -135,6 +153,7 @@ server.listen(port, "127.0.0.1");
 
     $trialServer = Start-Process -FilePath "node" -ArgumentList @($trialServerScript, $trialPort, $trialKeyHex) -PassThru -WindowStyle Hidden
     $deadline = (Get-Date).AddSeconds(15)
+    $health = $null
     do {
         try {
             $health = Invoke-WebRequest -Uri "$env:SF_LICENSE_SERVICE_URL/health" -UseBasicParsing -TimeoutSec 2
@@ -144,7 +163,7 @@ server.listen(port, "127.0.0.1");
         }
     } while ((Get-Date) -lt $deadline)
     if ($null -eq $health -or $health.StatusCode -ne 200) {
-        throw "CI trial service did not become ready."
+        throw "CI trial service did not become ready at the exact origin compiled into the evidence MSI."
     }
 
     $source = Get-Content -LiteralPath $sourceScript -Raw
