@@ -134,11 +134,15 @@ jobs:
           echo "Vitest: ${TESTS}"
           echo "Dependency audit: ${DEP_AUDIT}"
           echo "Migration status: ${MIGRATIONS}"
-          [[ "${TYPECHECK}" == "success" ]]
-          [[ "${LINT}" == "success" ]]
-          [[ "${TESTS}" == "success" ]]
-          [[ "${DEP_AUDIT}" == "success" ]]
-          [[ "${MIGRATIONS}" == "success" ]]
+          case "${TYPECHECK}:${LINT}:${TESTS}:${DEP_AUDIT}:${MIGRATIONS}" in
+            success:success:success:success:success)
+              echo "All source-quality diagnostics succeeded."
+              ;;
+            *)
+              echo "One or more source-quality diagnostics failed."
+              exit 1
+              ;;
+          esac
 
   browser-evidence:
     name: AR-FR-EN accessibility, reflow and performance
