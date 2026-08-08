@@ -1,18 +1,15 @@
 name: Phase 4 focused installed replacement
 
 on:
-  pull_request:
-    types: [synchronize]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: phase4-focused-installed-replacement-${{ github.event.pull_request.number || github.ref }}
+  group: phase4-focused-installed-replacement-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   installed-replacement:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == true
     uses: ./.github/workflows/windows-installed-e2e.yml
