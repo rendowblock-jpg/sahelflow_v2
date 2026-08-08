@@ -2,7 +2,7 @@
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-08-08
-> **Protected main at session stop:** `6a9c3e9372e9994428e65dbbc79303cf08160db0`
+> **Protected main before the active release PR:** `6a9c3e9372e9994428e65dbbc79303cf08160db0`
 > **Latest application-changing protected merge:** PR #223 at `23f1bc3912aecfd2a32c591a18fcca70bf454daa`
 > **Validated Phase 6/7 source head:** `fa0ff6de649421c879f62364383a363b61c71bfc`
 > **Phase 5 product baseline:** PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
@@ -14,12 +14,11 @@
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active branch:** `agent/internal-14-phase6-founder-checkpoint`
 > **Active PR:** #227 — Internal.14 Phase 5–6 Founder checkpoint release request
-> **Last validated pre-handoff release head:** `4c8a0c073656dd0bbb2a7fdf8389ec0b039f4968`
+> **PR state:** ready for review; merge and publication remain evidence-gated
 
-Live GitHub is authority. The documentation handoff commits intentionally advance
-PR #227 beyond the pre-handoff release head above. Re-fetch protected `main`, PR
-#227, its exact current head, review threads and Actions before resuming; do not
-copy the historical pre-handoff SHA into a merge or release action.
+Live GitHub is authority. Re-fetch protected `main`, PR #227, its exact current
+head, review threads and Actions before any merge or release action. Do not copy a
+historical PR-head SHA from this document into a write action.
 
 ## Phase 5 closure snapshot
 
@@ -52,11 +51,6 @@ The exact source head passed:
 - controlled throttled browser performance/resource evidence;
 - zero unresolved P0/P1 review threads.
 
-The final browser blocker was root document overflow caused by the shared semantic
-DataTable at the reflow viewport. The horizontal scroller now establishes a
-positioning context while preserving full table scroll width. The exact final
-browser gate passed after that repair.
-
 No Phase 1–5 business, permission, provider, recovery, native or experience
 authority was weakened by the closure package.
 
@@ -70,106 +64,83 @@ That documentation correctly distinguishes:
 
 - Phase 6 source/browser closure from installed/human Phase 6 exit evidence;
 - Phase 7 controlled browser/query evidence from installed T470/floor certification;
-- published Internal.13 from any future Internal.14 candidate;
+- published Internal.13 from an Internal.14 candidate;
 - Founder acceptance from automated evidence.
 
-Issue #164 was reconciled to the same protected truth. Issue #221 owns the
-installed Phase 5–6 visual/Arabic/RTL/accessibility checkpoint. Issue #226 owns
-Phase 7 T470/floor/eight-hour performance and reliability certification.
+Issue #221 owns the installed Phase 5–6 visual/Arabic/RTL/accessibility checkpoint.
+Issue #226 owns Phase 7 T470/floor/eight-hour performance and reliability
+certification.
 
 ## Active Internal.14 checkpoint
 
-PR #227 exists only to create one unique installed Founder-test milestone that
-contains the protected PR #223 result. It does not add Phase 6/7 product behavior.
+PR #227 exists to create one unique installed Founder-test milestone containing
+the protected PR #223 result. It does not reopen or add Phase 6/7 product behavior.
 
-At this session handoff, PR #227 is intended to remain:
+Current PR #227 contract:
 
-- open and **draft**;
-- unmerged and unpublished;
-- version authority synchronized to app `1.0.0-internal.14` and MSI `1.0.0.14`;
-- the normal Phase 6/7 workflow restored after the deterministic version-authority edit;
-- changed files limited to release/version authority, Founder installer expectations,
-  release-truth/entry documentation, the guarded Internal.14 dispatcher and this
-  resumable handoff documentation.
+- app `1.0.0-internal.14`, MSI `1.0.0.14`;
+- ready for review, but unmerged and unpublished until exact-head gates and review pass;
+- `release-on-version-authority.yml` is the **single signed-release dispatcher**;
+- `dispatch-internal-14.yml` is observer/reporting only and cannot dispatch a second build;
+- the observer waits for the exact SHA-tagged Internal.14 publication, verifies one
+  MSI, one `.msi.sig` and one `latest.json`, then reports idempotently to issue #164;
+- `AGENTS.md` and the current-frontier audit guard now point agents at PR #223 / PR
+  #225 and the installed Phase 6 exit checkpoint rather than the old PR #220 frontier;
+- the installed-MSI replacement drill compiles only its explicit CI evidence build
+  against a deterministic loopback trial issuer; ordinary release builds still
+  require HTTPS licensing authority;
+- the signed `release.yml` job imports `SF_LICENSE_SERVICE_URL`,
+  `SF_LICENSE_TRIAL_PUBLIC_KEYS` and `SF_LICENSE_PERMANENT_PUBLIC_KEYS` from the
+  protected `internal-updater` GitHub Environment and fails closed before build if
+  that protected configuration is missing or malformed.
 
-The release/version package reached exact head
-`4c8a0c073656dd0bbb2a7fdf8389ec0b039f4968` before the final documentation
-handoff commits. On that pre-handoff head:
+The source-controlled release workflow does not contain the commercial private
+licensing keys. The existing protected Tauri updater signing secret remains owned
+by the `internal-updater` Environment.
 
-- Fast authority/version+documentation passed;
-- Required PR gate passed;
-- PR review threads were zero;
-- Phase 5 and Phase 6-7 workflow runs concluded success while the PR was draft;
-- draft-specific component jobs may have been intentionally skipped and are not
-  installed evidence.
-
-The handoff documentation commits after `4c8a0c...` must pass their current
-risk-selected authority checks before the next session treats the new live PR head
-as the frozen candidate.
-
-The published release remains Internal.13. Internal.14 is **not merged, not built,
-not published and not installed** at this checkpoint.
-
-## Internal.14 release intent
-
-After PR #227 is genuinely ready and merged, the guarded Internal.14 dispatcher is
-intended to bind the exact protected-main merge SHA to the existing protected
-`release.yml` workflow. That signed workflow owns the authoritative Windows
-candidate ceremony:
-
-- exact protected-main source and reviewed-tree binding;
-- signed MSI/updater artifact creation;
-- packaged runtime verification;
-- Windows install, launch/reopen and hydrated UI proof;
-- updater signature and `latest.json` verification;
-- exact release/tag/asset publication only after protected gates pass.
-
-If publication succeeds, the existing installed Internal.13 updater should discover
-Internal.14 through the normal in-app updater path. Do not claim that outcome until
-the exact protected signed workflow and release state prove it.
+The published release remains Internal.13 until the exact protected signed workflow
+publishes Internal.14. PR CI, an unsigned evidence MSI, or an observer run alone
+must never be described as a published release.
 
 ## Phase 6 next action
 
-### Exact next session
-
 Resume in this order and do not broaden scope:
 
-1. Re-fetch protected `main` and PR #227. Freeze the **live** current PR head; it
-   will be newer than the pre-handoff `4c8a0c...` SHA recorded above.
-2. Confirm PR #227 remains one release-request outcome only. Inspect changed files,
-   version authority, dispatcher, review threads and exact current checks.
-3. Verify the post-handoff `sf-version`/documentation authority results and
-   determine whether the current risk classification is sufficient for a
-   version-only Internal candidate. Do not treat draft-skipped Windows/Rust/browser
-   jobs as installed evidence.
-4. Complete one frozen-head review of the dispatcher and synchronized version
-   authority. Repair only concrete findings.
-5. Create or refresh the frozen `release/internal-14-dispatch-ref` only from the
-   exact reviewed candidate head required by the dispatcher contract.
-6. Mark PR #227 ready only when its real merge prerequisites are satisfied. Run
-   the consequence-selected exact-head gates and keep the candidate frozen.
-7. Squash-merge PR #227 only with expected-head binding. Verify protected `main`
-   after merge before treating Internal.14 as a release source.
-8. Follow the exact guarded signed `release.yml` run. Do not claim Internal.14 is
-   available until the signed workflow succeeds and the exact release/tag/MSI/
-   signature/`latest.json` state is verified.
-9. Founder updates the installed T470 **in place** through the normal app updater
-   when Internal.14 is actually published; preserve AppData, registry, databases
-   and keys.
-10. Record the installed Phase 5–6 checkpoint in issue #221: native Arabic quality,
+1. Re-fetch PR #227 and freeze its **live exact head**.
+2. Require the selected exact-head gates to be green: Required PR, Phase 5,
+   Phase 6-7, Native, Windows standalone/Rust parity and installed-MSI evidence.
+3. In the installed-MSI lane, require the replacement-install backup, restore,
+   identity and rollback drill to pass; do not substitute source/browser evidence.
+4. Confirm zero unresolved P0/P1 review threads and perform one separated
+   adversarial review of the exact final head.
+5. Squash-merge PR #227 only with expected-head binding and verify the protected
+   main SHA returned by GitHub.
+6. Allow the existing `release-on-version-authority.yml` workflow to dispatch the
+   one exact-source `release.yml` run. Do not create or refresh a second dispatch
+   branch/ref and do not manually dispatch a duplicate candidate.
+7. Keep other protected-main release changes out of the lane until the exact
+   Internal.14 publication finishes.
+8. Require the signed workflow to verify protected-main/reviewed-tree identity,
+   protected license configuration, signing authority, signed MSI, installed
+   launch/reopen, hydrated WebView UI, updater signature, `latest.json`, draft
+   bytes, exact tag and final publication.
+9. Require the Internal.14 observer to verify the exact published SHA-tagged asset
+   set and reconcile issue #164. Do not claim Internal.14 is available before this.
+10. Founder updates the installed T470 **in place** through the normal app updater;
+    preserve AppData, registry, databases and keys.
+11. Record the installed Phase 5–6 checkpoint in issue #221: native Arabic quality,
     RTL geometry, keyboard/focus, critical semantics, representative zoom/reflow
     and explicit Founder accept/reject evidence.
-11. If the installed checkpoint has no actionable P0/P1, reconcile formal Phase 6
-    closure. If it exposes a concrete defect, open one bounded repair PR for that
-    observed defect only.
-12. After Phase 6 installed closure, begin issue #226 Phase 7 T470/floor/eight-hour
+12. If #221 has no actionable P0/P1, reconcile formal Phase 6 closure. If it exposes
+    a concrete defect, open one bounded repair PR for that observed defect only.
+13. After Phase 6 installed closure, begin issue #226 Phase 7 T470/floor/eight-hour
     certification. Optimize only from measured failures.
 
 ## Phase 7 next action after Phase 6 exit
 
-PR #223 protected measurement infrastructure and controlled browser/query
-evidence, but did **not** certify Phase 7 installed performance/reliability.
-Issue #226 owns the remaining installed package:
+PR #223 protected measurement infrastructure and controlled browser/query evidence,
+but did **not** certify Phase 7 installed performance/reliability. Issue #226 owns
+the remaining installed package:
 
 - ThinkPad T470 cold launch ≤8 s p95;
 - navigation ≤700 ms p95;
@@ -193,13 +164,13 @@ remain explicit external/installed obligations:
 - issue #221 — Founder-installed Phase 5/6 visual/accessibility acceptance;
 - issue #226 — Phase 7 T470/floor/eight-hour reliability certification.
 
-No new signed Internal, Founder acceptance, Beta or Stable claim exists at this
-checkpoint. Published release truth remains Internal.13 and Founder-accepted truth
-remains Internal.5 until stronger evidence is explicitly recorded.
+No new signed Internal, Founder acceptance, Beta or Stable claim exists until the
+matching evidence is recorded. Published release truth remains Internal.13 and
+Founder-accepted truth remains Internal.5 until stronger evidence is explicit.
 
 ## Hard rules
 
-- one active implementation owner and one coherent branch/PR per product outcome;
+- one active implementation agent and one coherent branch/PR per product outcome;
 - no direct protected-main edits;
 - no Phase 1–5 authority weakening;
 - active product phase stays Phase 6 until installed exit evidence is recorded;
@@ -207,4 +178,5 @@ remains Internal.5 until stronger evidence is explicitly recorded.
 - exact-head evidence before merge, protected-main verification after merge;
 - draft/skipped checks are never promoted into evidence they did not run;
 - retained evidence is never described as passed;
+- no duplicate release dispatch;
 - no release/Beta/Stable/Founder-acceptance claim without matching evidence.
