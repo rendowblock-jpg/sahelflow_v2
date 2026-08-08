@@ -11,19 +11,18 @@ if ($env:GITHUB_ACTIONS -cne "true") {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $sourceScript = Join-Path $PSScriptRoot "verify-phase4-replacement-install.ps1"
 $patchedScript = Join-Path $env:RUNNER_TEMP "verify-phase4-replacement-install.licensed.ps1"
-$trialServerScript = Join-Path $repoRoot ".phase4-trial-service.mjs"
+$trialServerScript = Join-Path $PSScriptRoot "phase4-ci-trial-issuer.mjs"
 $trialKeyHex = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
 $trialKeyId = "ci-trial-key-v1"
 $trialServer = $null
 
 try {
-    $publicKey = @(
-        & node --input-type=module -e @'
-import { getPublicKeyAsync } from "@noble/ed25519";
-const secret = Buffer.from(process.argv[1], "hex");
-console.log(Buffer.from(await getPublicKeyAsync(secret)).toString("base64"));
-'@ $trialKeyHex 2>&1
-    )
+    $issuerSelfTest = @(& node $trialServerScript --self-test $trialKeyHex 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        throw "CI trial issuer self-test failed: $($issuerSelfTest -join [Environment]::NewLine)"
+    }
+
+    $publicKey = @(& node $trialServerScript --public-key $trialKeyHex 2>&1)
     if ($LASTEXITCODE -ne 0) {
         throw "Could not derive the CI trial verification key: $($publicKey -join [Environment]::NewLine)"
     }
@@ -61,97 +60,12 @@ console.log(Buffer.from(await getPublicKeyAsync(secret)).toString("base64"));
         throw "The replacement evidence issuer key does not match the trial key compiled into the MSI."
     }
 
-    @'
-import http from "node:http";
-import { signAsync } from "@noble/ed25519";
-
-const port = Number.parseInt(process.argv[2], 10);
-const secret = Buffer.from(process.argv[3], "hex");
-const keyId = "ci-trial-key-v1";
-
-function canonicalBytes(claims) {
-  const canonical = [
-    claims.domain,
-    claims.formatVersion,
-    claims.licenseId,
-    claims.workspaceId,
-    claims.installationId,
-    claims.deviceBinding,
-    claims.productMajor,
-    claims.type,
-    claims.issuedAt,
-    claims.expiresAt,
-    claims.supportEndsAt,
-    claims.shopSlots,
-    claims.memberLimit,
-    claims.deviceLimit,
-    claims.backupBytes,
-    claims.mediaBytes,
-    [...claims.features].sort(),
-    claims.transferState,
-    claims.transferEpoch,
-    claims.recoveryEpoch,
-    claims.revocationEpoch,
-    claims.keyId,
-    claims.issuer,
-  ];
-  return new TextEncoder().encode(JSON.stringify(canonical));
-}
-
-const server = http.createServer(async (req, res) => {
-  if (req.method === "GET" && req.url === "/health") {
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end('{"ok":true}');
-    return;
-  }
-  if (req.method !== "POST" || req.url !== "/v1/trials") {
-    res.writeHead(404).end();
-    return;
-  }
-  try {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const request = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    const now = new Date();
-    const expires = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const support = new Date(now.getTime() + 5 * 365 * 24 * 60 * 60 * 1000);
-    const claims = {
-      domain: "sahelflow.license.entitlement.v2",
-      formatVersion: 2,
-      licenseId: "ci-phase4-trial-0001",
-      workspaceId: request.workspaceId,
-      installationId: request.installationId,
-      deviceBinding: request.deviceBinding,
-      productMajor: 1,
-      type: "trial",
-      issuedAt: now.toISOString(),
-      expiresAt: expires.toISOString(),
-      supportEndsAt: support.toISOString(),
-      shopSlots: 10,
-      memberLimit: 10,
-      deviceLimit: 10,
-      backupBytes: 50 * 1024 * 1024 * 1024,
-      mediaBytes: 10 * 1024 * 1024 * 1024,
-      features: ["core"],
-      transferState: "active",
-      transferEpoch: 0,
-      recoveryEpoch: 0,
-      revocationEpoch: 0,
-      keyId,
-      issuer: "trial-service",
-    };
-    const signature = Buffer.from(await signAsync(canonicalBytes(claims), secret)).toString("base64");
-    res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-    res.end(JSON.stringify({ claims, signature }));
-  } catch {
-    res.writeHead(500, { "content-type": "application/json" });
-    res.end('{"error":"ci_trial_failure"}');
-  }
-});
-server.listen(port, "127.0.0.1");
-'@ | Set-Content -LiteralPath $trialServerScript -Encoding UTF8
-
-    $trialServer = Start-Process -FilePath "node" -ArgumentList @($trialServerScript, $trialPort, $trialKeyHex) -PassThru -WindowStyle Hidden
+    $trialServer = Start-Process -FilePath "node" -ArgumentList @(
+        $trialServerScript,
+        "--serve",
+        $trialPort,
+        $trialKeyHex
+    ) -PassThru -WindowStyle Hidden
     $deadline = (Get-Date).AddSeconds(15)
     $health = $null
     do {
@@ -194,5 +108,5 @@ if ($trialActivation.status -ne 200 -or $trialActivation.body.status -cne "valid
     if ($null -ne $trialServer) {
         Stop-Process -Id $trialServer.Id -Force -ErrorAction SilentlyContinue
     }
-    Remove-Item -LiteralPath $patchedScript, $trialServerScript -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $patchedScript -Force -ErrorAction SilentlyContinue
 }
