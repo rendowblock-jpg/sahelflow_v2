@@ -665,7 +665,7 @@ export function AiChat() {
 
             <ScrollArea
               className="flex-1 p-4"
-              aria-label="AI chat messages"
+              aria-label={t("ai.chatMessages")}
               role="log"
               aria-live="polite"
             >
