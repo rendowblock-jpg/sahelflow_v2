@@ -1,0 +1,117 @@
+name: Apply Phase 6 Accessibility Hotfix
+
+on:
+  push:
+    branches:
+      - agent/phase6-7-completion
+    paths:
+      - .github/workflows/phase67-accessibility-hotfix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message != 'Fix phase 6 accessibility control names'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/phase6-7-completion
+          fetch-depth: 0
+
+      - name: Apply surgical accessibility fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}")
+              file.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          replace_once(
+              "src/components/ai/ai-chat.tsx",
+              '''                <button
+                  onClick={() => setActiveSessionId(null)}
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted transition-colors"
+                >''',
+              '''                <button
+                  type="button"
+                  onClick={() => setActiveSessionId(null)}
+                  aria-label={
+                    locale === "ar"
+                      ? "العودة إلى المحادثات"
+                      : locale === "en"
+                        ? "Back to conversations"
+                        : "Retour aux conversations"
+                  }
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted transition-colors"
+                >''',
+          )
+
+          replace_once(
+              "src/components/ai/ai-chat.tsx",
+              '''                            <Input
+                              value={recoveryReasons[proposal.id] ?? ""}
+                              onChange={(event) =>''',
+              '''                            <Input
+                              aria-label={copy.recoveryReason}
+                              value={recoveryReasons[proposal.id] ?? ""}
+                              onChange={(event) =>''',
+          )
+
+          replace_once(
+              "src/components/ai/ai-chat.tsx",
+              '''                <Input
+                  type="text"
+                  placeholder={t("ai.askPlaceholder")}''',
+              '''                <Input
+                  type="text"
+                  aria-label={t("ai.askPlaceholder")}
+                  placeholder={t("ai.askPlaceholder")}''',
+          )
+
+          replace_once(
+              "src/components/inbox/inbox-live.tsx",
+              '''                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t("inbox.searchPlaceholder")}''',
+              '''                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label={t("inbox.searchPlaceholder")}
+                placeholder={t("inbox.searchPlaceholder")}''',
+          )
+
+          replace_once(
+              "src/components/inbox/inbox-live.tsx",
+              '''                      placeholder={
+                        activeChat.channel === "seeded"
+                          ? t("inbox.seededReplyPlaceholder")
+                          : t("inbox.disconnectedReplyPlaceholder")
+                      }
+                      disabled''',
+              '''                      aria-label={
+                        activeChat.channel === "seeded"
+                          ? t("inbox.seededReplyPlaceholder")
+                          : t("inbox.disconnectedReplyPlaceholder")
+                      }
+                      placeholder={
+                        activeChat.channel === "seeded"
+                          ? t("inbox.seededReplyPlaceholder")
+                          : t("inbox.disconnectedReplyPlaceholder")
+                      }
+                      disabled''',
+          )
+
+      - name: Commit accessibility fixes
+        shell: bash
+        run: |
+          git rm --force .github/workflows/phase67-accessibility-hotfix.yml
+          git add src/components/ai/ai-chat.tsx src/components/inbox/inbox-live.tsx
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Fix phase 6 accessibility control names"
+          git push origin HEAD:agent/phase6-7-completion
