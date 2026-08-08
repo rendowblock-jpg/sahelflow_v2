@@ -1,15 +1,24 @@
 name: Phase 4 focused installed replacement
 
 on:
+  pull_request:
+    types: [assigned]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: phase4-focused-installed-replacement-${{ github.ref }}
+  group: phase4-focused-installed-replacement-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   installed-replacement:
+    # Deliberate one-shot trigger for the narrow diagnostic loop. Ordinary
+    # synchronize events do not schedule the expensive MSI lane.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.assignee.login == 'rendowblock-jpg' &&
+       github.event.pull_request.draft == true)
     uses: ./.github/workflows/windows-installed-e2e.yml
