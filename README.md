@@ -8,13 +8,14 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 ## Current repository truth
 
-- Latest application-changing protected merge: **PR #220 — Phase 5 whole-product AAA experience convergence**.
+- Latest application-changing protected merge: **PR #223 — Phase 6/7 source-browser completion**, protected application SHA `23f1bc3912aecfd2a32c591a18fcca70bf454daa`.
 - Phase 5 product baseline on protected history: `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 - Phase 5 issue #208: **closed at the protected-source + controlled-browser layer**.
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
 - Execution epic: issue #164.
-- Retained installed/human evidence: issues **#201, #214 and #221**.
+- Retained installed/human evidence: issues **#201, #214, #221 and #226**.
 - Published executable source remains `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
+- Requested Founder checkpoint candidate is `1.0.0-internal.14` / MSI `1.0.0.14`; it is **not published** until the exact protected-main signed workflow succeeds.
 - Published release remains `1.0.0-internal.13` / MSI `1.0.0.13`.
 - Founder-installed release remains Internal.13; Founder acceptance remains open.
 - Founder-accepted baseline remains Internal.5.
