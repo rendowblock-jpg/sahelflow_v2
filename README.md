@@ -13,10 +13,10 @@ settings, licensing, multi-shop and recovery under one protected authority model
 - Phase 5 product baseline on protected history: `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 - Phase 5 issue #208: **closed at the protected-source + controlled-browser layer**.
 - Phase 6 source/browser package: **complete and protected through PR #223**.
-- Active product phase: **Phase 6 — installed/human Arabic, RTL and accessibility exit checkpoint**.
+- Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**; the current sub-frontier is the installed/human exit checkpoint.
 - Active release-preparation PR: **#227 — Internal.14 Phase 5–6 Founder checkpoint**, still draft/unmerged at the current handoff.
 - Execution epic: issue #164.
-- Retained installed/human evidence: issues **#201, #214, #221 and #226**.
+- Retained issues #201, #214 and #221 remain evidence obligations; issue #226 additionally owns Phase 7 installed performance/reliability certification.
 - Published executable source remains `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
 - Requested Founder checkpoint candidate is `1.0.0-internal.14` / MSI `1.0.0.14`; it is **not published** until PR #227 is merged and the exact protected-main signed workflow succeeds.
 - Published release remains `1.0.0-internal.13` / MSI `1.0.0.13`.
