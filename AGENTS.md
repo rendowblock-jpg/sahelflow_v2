@@ -32,8 +32,8 @@ registry, keys or retained evidence merely to simplify development.
   distinguish HTTP status, returned shop count, or returned backup-path existence.
 - Final stopped-session installed run: `31281491280`, job `93163466194`, artifact
   `windows-installed-e2e-31281491280` / ID `9028790269`.
-- Detailed handoff:
-  `documentation/operations/SESSION_HANDOFF_2026-08-08_INTERNAL14.md`.
+- Detailed next-session handoff is consolidated in
+  `documentation/operations/WORKING_MEMORY.md`.
 - Execution epic: issue #164.
 - Retained installed/human evidence: issues #201, #214, #221 and #226.
 - Published executable source remains
@@ -79,8 +79,8 @@ fsync/persistence, process-wide packaged root cache, single request root/context
 snapshot, app/Node/WebView lifetime, endpoint/PID mismatch, raw survivability
 request write, or independent recovery-kit creation.
 
-See `documentation/operations/SESSION_HANDOFF_2026-08-08_INTERNAL14.md` for exact
-run IDs, artifact digest, failure progression and the required next-session order.
+`documentation/operations/WORKING_MEMORY.md` contains exact run IDs, artifact
+digest, failure progression and the required next-session order.
 
 ## Start here
 
@@ -95,8 +95,7 @@ Read these active authorities in order:
 7. [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md)
 8. [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md)
 9. [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md)
-10. [`documentation/operations/SESSION_HANDOFF_2026-08-08_INTERNAL14.md`](documentation/operations/SESSION_HANDOFF_2026-08-08_INTERNAL14.md)
-11. [`documentation/research/RESEARCH.md`](documentation/research/RESEARCH.md)
+10. [`documentation/research/RESEARCH.md`](documentation/research/RESEARCH.md)
 
 Issue #164 is the execution dashboard, not an extra product/architecture authority.
 
