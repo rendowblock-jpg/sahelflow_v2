@@ -21,11 +21,11 @@ interface BreadcrumbsProps {
  * The last item is the current page (non-clickable, muted).
  */
 export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
-  const { dir } = useI18n();
+  const { dir, t } = useI18n();
   const isRtl = dir === "rtl";
 
   return (
-    <nav aria-label="Breadcrumb" className={cn("flex items-center gap-1 text-sm", className)}>
+    <nav aria-label={t("common.breadcrumb")} className={cn("flex items-center gap-1 text-sm", className)}>
       {items.map((item, i) => {
         const isLast = i === items.length - 1;
         return (
