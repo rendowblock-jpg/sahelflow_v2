@@ -127,13 +127,11 @@ jobs:
               ]),
           )
 
-      - name: Commit source repair and restore completion gate
+      - name: Commit accessibility source repair
         shell: bash
         run: |
           set -euo pipefail
-          git checkout 0050f12fbf9d2b9cd2ad994dd7a5c3e97ce62d51 -- .github/workflows/phase6-7-completion.yml
           git add \
-            .github/workflows/phase6-7-completion.yml \
             src/components/ai/ai-chat.tsx \
             src/components/inbox/inbox-live.tsx \
             src/lib/i18n/runtime-translations.ts
