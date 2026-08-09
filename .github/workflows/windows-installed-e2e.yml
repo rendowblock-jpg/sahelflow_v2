@@ -148,6 +148,18 @@ jobs:
               -MsiPath $placeholderMsi `
               -RepositoryRoot (Resolve-Path '.').Path `
               -ValidateHarnessOnly
+            & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" `
+              -NoProfile `
+              -NonInteractive `
+              -ExecutionPolicy Bypass `
+              -File '.\scripts\verify-phase4-durable-parity-contract.ps1'
+            if ($LASTEXITCODE -ne 0) {
+              throw 'Replacement PowerShell durable parity contract failed.'
+            }
+            & bun scripts/verify-phase4-database-digest-contract.ts
+            if ($LASTEXITCODE -ne 0) {
+              throw 'Replacement durable database digest contract failed.'
+            }
             & bunx vitest run src/lib/__tests__/phase4-replacement-installed-contract.test.ts
             if ($LASTEXITCODE -ne 0) {
               throw 'Replacement harness native path contract failed.'

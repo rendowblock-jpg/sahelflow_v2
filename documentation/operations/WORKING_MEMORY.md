@@ -1,7 +1,7 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
-> **Last updated:** 2026-08-08
+> **Last updated:** 2026-08-09
 > **Protected main before the active release PR:** `6a9c3e9372e9994428e65dbbc79303cf08160db0`
 > **Latest application-changing protected merge:** PR #223 at `23f1bc3912aecfd2a32c591a18fcca70bf454daa`
 > **Validated Phase 6/7 source head:** `fa0ff6de649421c879f62364383a363b61c71bfc`
@@ -14,8 +14,8 @@
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active branch:** `agent/internal-14-phase6-founder-checkpoint`
 > **Active PR:** #227 — Internal.14 Phase 5–6 Founder checkpoint release request
-> **PR state:** draft, unmerged, unpublished; installed replacement evidence is still blocking
-> **Last installed-tested code head:** `8640ddc2b616aaf5e6d5027f7302e80062673110`
+> **PR state:** draft, unmerged, unpublished; deterministic parity repair and exact-head final matrix remain required
+> **Last installed-tested code head:** `c7849fc49ef26d5e2b4803d0181d3fc177e87a7b`
 
 Live GitHub is authority. Re-fetch protected `main`, PR #227, its exact current
 head, review threads and Actions before any write. The branch may advance through
@@ -61,17 +61,92 @@ PR #227 requests one unique Founder-test milestone:
 - published truth remains Internal.13 until the exact protected signed workflow
   publishes Internal.14.
 
-Do not merge/publish #227 until the installed replacement blocker below is closed,
+Do not merge/publish #227 until the exact closure gate below is closed,
 the exact final code head is fully gated/reviewed, and expected-head merge rules
 are satisfied.
 
-## 2026-08-08 installed replacement frontier — session stop
+## 2026-08-09 exact closure frontier
 
-Founder direction for this session was explicit: make one final professional,
+Focused installed run `31331257331` checked out exact head
+`c7849fc49ef26d5e2b4803d0181d3fc177e87a7b`. It built the exact evidence MSI and
+passed installed launch/close/reopen, authenticated hydrated WebView UI, rollback,
+the two-shop committed replacement restore, protected customer readback and
+protected secret readback. The final aggregator recorded `replacementRestore` as
+its sole failing outcome:
+
+`Restored business digest changed for shop default.`
+
+Source inspection and the retained phase evidence support a deterministic oracle
+defect as the cause. The old digest included every `Setting` row. Replacement
+restore intentionally deletes the exact local identity footprint
+`identity_authority_initialized_v1`; owner re-enrollment then recreates it with the
+replacement installation ID. Raw Setting equality is therefore an invalid oracle
+after replacement. Because the old run did not emit per-table diffs, it is retained
+as diagnostic evidence rather than exact-head closure proof.
+
+The exact candidate repair is consolidated and evidence-only:
+
+- inventory and hash every non-local durable table, not the former 12-table
+  allowlist;
+- exclude only the exact case-sensitive identity-footprint key plus PIN/session
+  tables; preserve protected-key purpose, format, algorithm, version, key identity
+  and creation authority while excluding only replacement-local wrapping fields;
+- canonical-sort normalized fields and rows so SQLite row enumeration order cannot
+  produce a false mismatch;
+- emit per-table counts/digests as well as the aggregate;
+- compare full durable parity before owner re-enrollment;
+- require every restored shop to have zero PIN/session authority and no footprint,
+  require owner setup rather than login fallback, then prove the active authority
+  is new and replacement-bound while inactive shops remain clear;
+- preserve the exact registry and full replacement-local authority across rollback,
+  preserve active-shop and complete shop-record continuity after restore, and prove
+  every protected-key purpose keeps its identity while installation wrapping
+  changes;
+- run an executable SQLite fixture matrix and Windows PowerShell comparison
+  contract before MSI build, proving local-authority and insertion-order
+  independence while detecting seller Setting, Customer, AuditLog, protected-key,
+  missing-table, row-count and aggregate mismatches.
+
+The official [SQLite SELECT contract](https://www.sqlite.org/lang_select.html) does
+not guarantee row order without `ORDER BY`, so the oracle canonical-sorts normalized
+rows before hashing. Revalidate this classification whenever the schema adds a
+local-authority table or native recovery changes its included/re-enrolled data sets.
+
+Local bounded validation passed the executable digest fixture, Windows PowerShell
+parser and `git diff --check`. Clean-checkout CI remains authority for the complete
+toolchain and installed Windows result.
+
+## Phase 6 next action — exact-head closure
+
+1. Push one candidate while PR #227 remains draft and require the exact-head
+   lightweight draft checks to pass.
+2. Freeze that SHA, complete exact-head adversarial review and mark the PR ready
+   once.
+3. Let the normal risk-selected exact-head workflows run. Required Phase 5,
+   Required Phase 6-7 and native-source remain separate gates. CI must run its
+   selected source quality, Tauri, Windows standalone, Windows Rust and reusable
+   installed-MSI jobs on the same SHA.
+4. Require the CI Required PR aggregator and every separate selected gate to be
+   green before any expected-head squash merge.
+
+Do not rerun `31331257331`: GitHub's
+[rerun contract](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)
+keeps the original SHA, so it remains pinned to `c7849fc4…` and cannot test the
+repair. Do not manually dispatch the focused wrapper: it would duplicate the
+installed work and cannot satisfy the normal CI aggregator. The normal caller owns
+the exact reusable-workflow source under GitHub's
+[reusable workflow contract](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows).
+
+Founder/T470 visual and accessibility acceptance remains separate in issue #221;
+clean runner evidence must not be promoted into that human decision.
+
+## 2026-08-08 installed replacement frontier — superseded history
+
+Founder direction for that session was explicit: make one final professional,
 evidence-driven attempt; if the focused installed proof still failed, stop
 engineering and leave a complete next-session handoff. That stopping condition
-was reached. **Do not make another code repair or manually trigger another installed
-run from this session.**
+was reached. This section is retained as diagnostic history only; the 2026-08-09
+frontier above supersedes its blocker and execution route.
 
 ### Last installed-tested code
 
@@ -194,35 +269,12 @@ An older focused run `31274022840` at head
 `Independent recovery kit was not created.` The final run has moved past that
 boundary, so recovery-kit creation is no longer the current blocker.
 
-## Phase 6 next action — next session
+### Superseded 2026-08-08 next action
 
-Resume in this order and do not broaden scope:
-
-1. Re-read `AGENTS.md`, `CURRENT_STATE.md`, `ROADMAP.md` and this file.
-2. Re-fetch protected `main`, live PR #227/head, review threads and Actions; inspect
-   any concurrent-agent delta before writing.
-3. Preserve `8640ddc2b616aaf5e6d5027f7302e80062673110` as the **last installed-tested
-   code head** even though the PR head is newer from documentation-only commits.
-4. Reuse final run `31281491280`, job `93163466194`, artifact `9028790269` rather
-   than rediscovering the failure history.
-5. **Before product changes, decompose/capture the three `/api/backup/create`
-   predicates safely**: response status/code, returned shop count, and returned
-   location existence. Do not expose private seller data or secrets.
-6. Only after the exact failing predicate is known, inspect the exact
-   `/api/backup/create` route, JavaScript/native backup wrapper and Rust backup
-   creation implementation that own it.
-7. Build one consolidated problem statement for that predicate. Do not reopen
-   licensing, Ed25519, fsync, root cache, handshake/PID/request-write or recovery-kit
-   layers unless new evidence points there.
-8. Make **one bounded repair**.
-9. Run the smallest source/Windows validation that directly proves that repair.
-10. Trigger **one focused installed replacement lane only**.
-11. If and only if that lane becomes fully green, freeze that exact code head, run
-    the final required matrix once, complete exact-head adversarial review, merge
-    with expected-head binding and observe the one protected signed Internal.14
-    publication.
-12. Then perform Founder/T470 issue #221. Begin Phase 7 issue #226 only after the
-    Phase 6 installed exit is reconciled.
+The former instruction to diagnose the compound backup-create assertion and run a
+focused lane was executed by the later session and must not be repeated. Run
+`31331257331` advanced through backup creation and the committed restore, isolating
+the parity-oracle defect recorded in the current frontier above.
 
 ## Phase 7 boundary
 

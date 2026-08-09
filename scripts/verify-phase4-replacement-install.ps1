@@ -23,6 +23,7 @@ $pendingRestorePath = Join-Path $recoveryJournalRoot "pending-restore.json"
 $restoreReceiptPath = Join-Path $recoveryJournalRoot "last-restore.json"
 $identityAuthorityPath = Join-Path $roamingRoot "system\identity-authority.json"
 $digestScript = Join-Path $repositoryRoot "scripts\phase4-installed-database-digest.ts"
+$parityScript = Join-Path $repositoryRoot "scripts\phase4-durable-parity.ps1"
 $canonicalHarness = Join-Path $repositoryRoot "scripts\verify-phase4-replacement-install.ps1"
 $pin = "Phase4-Owner-8642"
 $sourcePhone = "0550008642"
@@ -35,6 +36,10 @@ if (-not (Test-Path -LiteralPath $digestScript -PathType Leaf)) {
 if (-not (Test-Path -LiteralPath $canonicalHarness -PathType Leaf)) {
     throw "The replacement harness repository root does not contain the canonical harness."
 }
+if (-not (Test-Path -LiteralPath $parityScript -PathType Leaf)) {
+    throw "The replacement harness repository root does not contain its durable parity dependency."
+}
+. $parityScript
 $bunCommand = Get-Command bun -CommandType Application -ErrorAction SilentlyContinue
 if ($null -eq $bunCommand) {
     throw "The replacement harness requires Bun on PATH."
@@ -330,13 +335,17 @@ function Import-RuntimeCookieFromWebView {
 function Establish-OwnerSession {
     param(
         [Parameter(Mandatory = $true)][string]$BaseUrl,
-        [Parameter(Mandatory = $true)][Microsoft.PowerShell.Commands.WebRequestSession]$Session
+        [Parameter(Mandatory = $true)][Microsoft.PowerShell.Commands.WebRequestSession]$Session,
+        [switch]$RequireSetup
     )
     Import-RuntimeCookieFromWebView -BaseUrl $BaseUrl -Session $Session
     $setup = Invoke-SahelFlowJson -Method POST -BaseUrl $BaseUrl -Path "/api/auth/setup" -Session $Session -Body @{ pin = $pin }
     if ($setup.status -eq 200) {
         Import-SellerSessionCookieFromResponse -BaseUrl $BaseUrl -Session $Session -Response $setup
         return
+    }
+    if ($RequireSetup -and $setup.status -eq 409) {
+        throw "Replacement owner authority was not cleared before re-enrollment."
     }
     if ($setup.status -ne 409) {
         throw "Owner setup failed with HTTP $($setup.status)."
@@ -401,7 +410,7 @@ function Get-ProfileEvidence {
     $registry = Read-JsonFile $registryPath
     if ($null -eq $registry) { throw "Shop registry is missing." }
     $shops = @(
-        foreach ($shop in @($registry.shops | Sort-Object id)) {
+        foreach ($shop in @($registry.shops)) {
             $databasePath = Join-Path (Join-Path $roamingRoot "shops") ([string]$shop.databaseFile)
             if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) {
                 throw "Registered shop database is missing."
@@ -409,31 +418,102 @@ function Get-ProfileEvidence {
             [pscustomobject]@{
                 shopId = [string]$shop.id
                 incarnationId = [string]$shop.incarnationId
+                name = [string]$shop.name
+                databaseFile = [string]$shop.databaseFile
+                icon = if ($null -eq $shop.icon) { $null } else { [string]$shop.icon }
+                createdAt = [string]$shop.createdAt
                 digest = Get-DatabaseDigest $databasePath
             }
         }
     )
     return [pscustomobject]@{
+        formatVersion = [int]$registry.formatVersion
+        revision = [int64]$registry.revision
         workspaceId = [string]$registry.workspaceId
         installationId = [string]$registry.installationId
         activeShopId = [string]$registry.activeShopId
         shopCount = $shops.Count
+        registrySha256 = Get-FileSha256OrNull $registryPath
         identityAuthoritySha256 = Get-FileSha256OrNull $identityAuthorityPath
         shops = $shops
     }
 }
 
-function Assert-BusinessParity {
-    param($Expected, $Actual)
-    if ($Expected.shopCount -ne $Actual.shopCount) { throw "Restored shop count changed." }
-    foreach ($expectedShop in @($Expected.shops)) {
-        $actualShop = @($Actual.shops | Where-Object { $_.shopId -eq $expectedShop.shopId })
-        if ($actualShop.Count -ne 1) { throw "Restored shop set changed." }
-        if ($actualShop[0].digest.businessDigest -cne $expectedShop.digest.businessDigest) {
-            throw "Restored business digest changed for shop $($expectedShop.shopId)."
+function Assert-ActiveIdentityFootprint {
+    param(
+        $Evidence,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("bound", "absent")]
+        [string]$ExpectedState
+    )
+    $activeShop = @(
+        $Evidence.shops | Where-Object { $_.shopId -ceq $Evidence.activeShopId }
+    )
+    if ($activeShop.Count -ne 1) {
+        throw "Identity-footprint evidence did not resolve exactly one active shop."
+    }
+    $footprint = $activeShop[0].digest.identityAuthorityFootprint
+    if ($ExpectedState -ceq "absent") {
+        if ($null -ne $footprint) {
+            throw "Replacement restore retained the source installation identity footprint."
         }
-        if ($actualShop[0].digest.migrationDigest -cne $expectedShop.digest.migrationDigest) {
-            throw "Restored migration set changed for shop $($expectedShop.shopId)."
+        return
+    }
+    if (
+        $null -eq $footprint -or
+        [int]$footprint.formatVersion -ne 1 -or
+        [string]$footprint.workspaceId -cne [string]$Evidence.workspaceId -or
+        [string]$footprint.installationId -cne [string]$Evidence.installationId
+    ) {
+        throw "Active identity footprint does not bind the current workspace and installation."
+    }
+}
+
+function Assert-RestoredIdentityAuthorityCleared {
+    param($Evidence)
+    foreach ($shop in @($Evidence.shops)) {
+        if ($null -ne $shop.digest.identityAuthorityFootprint) {
+            throw "Replacement restore retained an identity footprint for shop $($shop.shopId)."
+        }
+        if (
+            [int64]$shop.digest.authSecretCount -ne 0 -or
+            (Get-ExactTableCount $shop.digest "AuthSecret") -ne 0 -or
+            (Get-ExactTableCount $shop.digest "Session") -ne 0
+        ) {
+            throw "Replacement restore retained PIN or session authority for shop $($shop.shopId)."
+        }
+    }
+}
+
+function Assert-ReenrolledIdentityAuthority {
+    param($Evidence, $SourceEvidence)
+    Assert-ActiveIdentityFootprint $Evidence "bound"
+    $activeShop = @(
+        $Evidence.shops | Where-Object { $_.shopId -ceq $Evidence.activeShopId }
+    )[0]
+    $sourceActiveShop = @(
+        $SourceEvidence.shops | Where-Object { $_.shopId -ceq $Evidence.activeShopId }
+    )
+    if ($sourceActiveShop.Count -ne 1) {
+        throw "Re-enrollment evidence did not resolve the restored active shop in source evidence."
+    }
+    if (
+        [int64]$activeShop.digest.authSecretCount -ne 1 -or
+        (Get-ExactTableCount $activeShop.digest "AuthSecret") -ne 1 -or
+        (Get-ExactTableCount $activeShop.digest "Session") -lt 1 -or
+        [string]$activeShop.digest.authSecretAuthorityDigest -ceq
+            [string]$sourceActiveShop[0].digest.authSecretAuthorityDigest
+    ) {
+        throw "Replacement owner PIN/session authority was not independently re-enrolled."
+    }
+    foreach ($shop in @($Evidence.shops | Where-Object { $_.shopId -cne $Evidence.activeShopId })) {
+        if (
+            $null -ne $shop.digest.identityAuthorityFootprint -or
+            [int64]$shop.digest.authSecretCount -ne 0 -or
+            (Get-ExactTableCount $shop.digest "AuthSecret") -ne 0 -or
+            (Get-ExactTableCount $shop.digest "Session") -ne 0
+        ) {
+            throw "Inactive restored shop $($shop.shopId) retained or created local identity authority."
         }
     }
 }
@@ -495,6 +575,9 @@ if (-not [System.IO.Path]::IsPathRooted($kitProbePath)) {
 if (-not (Test-Path -LiteralPath $kitProbePath -PathType Leaf)) {
     throw "Independent recovery kit creation returned HTTP 201, but its $kitPathKind persisted file was not found."
 }
+$sourceEvidence = Get-ProfileEvidence
+if ($sourceEvidence.shopCount -lt 2) { throw "Source profile is not a realistic multi-shop installation." }
+Assert-ActiveIdentityFootprint $sourceEvidence "bound"
 $backup = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/backup/create" -Session $sourceSession
 if ($backup.status -ne 201) {
     $backupCode = if ($null -ne $backup.body -and $null -ne $backup.body.code) { [string]$backup.body.code } else { "none" }
@@ -522,8 +605,6 @@ if ($sourceSearch.status -ne 200 -or [int]$sourceSearch.body.total -lt 1 -or $so
     throw "Source protected-data readback failed."
 }
 Close-SahelFlow $sourceProcess
-$sourceEvidence = Get-ProfileEvidence
-if ($sourceEvidence.shopCount -lt 2) { throw "Source profile is not a realistic multi-shop installation." }
 Stop-ResidualSahelFlow
 
 # Prove source loss, then install into a new local profile/root.
@@ -553,6 +634,7 @@ $restore = Invoke-SahelFlowJson -Method POST -BaseUrl $replacementBaseUrl -Path 
 if ($restore.status -ne 202 -or $restore.body.restartRequired -ne $true) { throw "Replacement restore was not staged." }
 Close-SahelFlow $replacementProcess
 $replacementBeforeRestore = Get-ProfileEvidence
+Assert-ActiveIdentityFootprint $replacementBeforeRestore "bound"
 
 # First installed launch performs one real shop replacement and exits at the
 # evidence-only boundary. The next launch rolls the partial cutover back to the
@@ -574,21 +656,30 @@ if ($rolledBack.ExitCode -ne 87) { throw "Restore rollback did not reach the gov
 $rollbackJournal = Read-JsonFile $pendingRestorePath
 if ($null -eq $rollbackJournal -or $rollbackJournal.state -ne "rescue-ready") { throw "Rollback did not return the journal to rescue-ready." }
 $replacementAfterRollback = Get-ProfileEvidence
-Assert-BusinessParity $replacementBeforeRestore $replacementAfterRollback
+Assert-RollbackAuthorityParity $replacementBeforeRestore $replacementAfterRollback
+Assert-ActiveIdentityFootprint $replacementAfterRollback "bound"
 if ($replacementAfterRollback.installationId -cne $replacementBeforeRestore.installationId) { throw "Rollback changed replacement installation authority." }
 
 $committedProcess = Start-SahelFlow
 $committedEndpoint = Wait-ForRuntime $committedProcess "committed replacement restore"
 $committedBaseUrl = [string]$committedEndpoint.appUrl
+$restoredBeforeReenrollment = Get-ProfileEvidence
+Assert-DurableDataParity $sourceEvidence $restoredBeforeReenrollment
+Assert-ProtectedKeyRewrap $sourceEvidence $restoredBeforeReenrollment
+Assert-RestoredIdentityAuthorityCleared $restoredBeforeReenrollment
+if ($restoredBeforeReenrollment.workspaceId -cne $sourceEvidence.workspaceId) { throw "Restored workspace identity changed." }
+if ($restoredBeforeReenrollment.installationId -cne $replacementBeforeRestore.installationId) { throw "Restore did not retain replacement installation identity." }
+if ($restoredBeforeReenrollment.installationId -ceq $sourceEvidence.installationId) { throw "Restore cloned the source installation identity." }
+if ($restoredBeforeReenrollment.revision -le $sourceEvidence.revision) { throw "Restore did not advance registry revision authority." }
 $committedSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
-Establish-OwnerSession $committedBaseUrl $committedSession
+Establish-OwnerSession $committedBaseUrl $committedSession -RequireSetup
 $restoredSearch = Invoke-SahelFlowJson -Method GET -BaseUrl $committedBaseUrl -Path "/api/customers/search?q=$sourcePhone" -Session $committedSession
 $restoredSecretState = Invoke-SahelFlowJson -Method GET -BaseUrl $committedBaseUrl -Path "/api/secrets/gemini-key" -Session $committedSession
 if ($restoredSearch.status -ne 200 -or [int]$restoredSearch.body.total -lt 1) { throw "Restored protected customer was not searchable by blind index." }
 if ($restoredSecretState.status -ne 200 -or $restoredSecretState.body.configured -ne $true) { throw "Restored protected secret was unavailable." }
 Close-SahelFlow $committedProcess
 $restoredEvidence = Get-ProfileEvidence
-Assert-BusinessParity $sourceEvidence $restoredEvidence
+Assert-ReenrolledIdentityAuthority $restoredEvidence $sourceEvidence
 if ($restoredEvidence.workspaceId -cne $sourceEvidence.workspaceId) { throw "Restored workspace identity changed." }
 if ($restoredEvidence.installationId -cne $replacementBeforeRestore.installationId) { throw "Restore did not retain replacement installation identity." }
 if ($restoredEvidence.installationId -ceq $sourceEvidence.installationId) { throw "Restore cloned the source installation identity." }
@@ -624,8 +715,13 @@ if (
     protectedSecretVerified = $true
     interruptedExitCode = 86
     rollbackExitCode = 87
-    rollbackBusinessParityVerified = $true
-    restoredBusinessParityVerified = $true
+    rollbackDurableDataParityVerified = $true
+    rollbackLocalAuthorityParityVerified = $true
+    restoredDurableDataParityVerified = $true
+    restoredProtectedKeyRewrapVerified = $true
+    restoredIdentityAuthorityCleared = $true
+    restoredIdentityFootprintBound = $true
+    replacementOwnerAuthorityReenrolled = $true
     sourceSessionNonCloningVerified = $true
     recoveryKitIndependent = $backup.body.independentRecoveryReady -eq $true
     committedReceiptVerified = $true

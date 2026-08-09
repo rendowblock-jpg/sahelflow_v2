@@ -17,6 +17,13 @@ describe("Phase 4 installed replacement evidence", () => {
     const harness = read("scripts/verify-phase4-replacement-install.ps1");
     const wrapper = read("scripts/verify-phase4-replacement-install-ci.ps1");
     const digest = read("scripts/phase4-installed-database-digest.ts");
+    const digestContract = read(
+      "scripts/verify-phase4-database-digest-contract.ts",
+    );
+    const parity = read("scripts/phase4-durable-parity.ps1");
+    const parityContract = read(
+      "scripts/verify-phase4-durable-parity-contract.ps1",
+    );
 
     expect(coordinator).toContain(
       'option_env!("SF_PHASE4_RESTORE_EVIDENCE_BUILD") == Some("1")',
@@ -44,6 +51,15 @@ describe("Phase 4 installed replacement evidence", () => {
     );
     expect(workflow).toContain("phase4-harness-relocation");
     expect(workflow).toContain("-ValidateHarnessOnly");
+    expect(workflow).toContain(
+      "bun scripts/verify-phase4-database-digest-contract.ts",
+    );
+    expect(workflow).toContain(
+      "verify-phase4-durable-parity-contract.ps1",
+    );
+    expect(
+      workflow.indexOf("bun scripts/verify-phase4-database-digest-contract.ts"),
+    ).toBeLessThan(workflow.indexOf("bunx tauri build --bundles msi"));
     expect(workflow).toContain("recovery-journal\\pending-restore.json");
     expect(workflow).toContain("recovery-journal\\last-restore.json");
     expect(workflow).not.toContain("system\\pending-restore.json");
@@ -82,16 +98,81 @@ describe("Phase 4 installed replacement evidence", () => {
     expect(harness).toContain('$interruptedJournal.state -ne "applying"');
     expect(harness).toContain('$rollbackJournal.state -ne "rescue-ready"');
     expect(harness).not.toContain(".unsigned.state");
-    expect(harness).toContain("Assert-BusinessParity $replacementBeforeRestore");
-    expect(harness).toContain("Assert-BusinessParity $sourceEvidence");
+    expect(harness).toContain(
+      "Assert-DurableDataParity $sourceEvidence $restoredBeforeReenrollment",
+    );
+    expect(harness).toContain(
+      "Assert-RollbackAuthorityParity $replacementBeforeRestore",
+    );
+    expect(harness).toContain(
+      "Assert-ProtectedKeyRewrap $sourceEvidence $restoredBeforeReenrollment",
+    );
+    expect(harness).toContain(
+      "Assert-RestoredIdentityAuthorityCleared $restoredBeforeReenrollment",
+    );
+    expect(harness).toContain(
+      "Assert-ReenrolledIdentityAuthority $restoredEvidence $sourceEvidence",
+    );
+    expect(harness).toContain(
+      "Establish-OwnerSession $committedBaseUrl $committedSession -RequireSetup",
+    );
+    expect(wrapper).toContain(
+      "@{ owner = 'Establish-OwnerSession $committedBaseUrl $committedSession -RequireSetup'",
+    );
+    expect(wrapper).not.toContain(
+      "@{ owner = 'Establish-OwnerSession $committedBaseUrl $committedSession';",
+    );
     expect(harness).toContain("sourceSessionNonCloningVerified = $true");
     expect(harness).toContain('[string]$restoreReceipt.state -cne "committed"');
     expect(harness).toContain("committedReceiptVerified = $true");
     expect(harness).not.toContain("recoveryCode = Get-");
 
     expect(digest).toContain('import { Database } from "bun:sqlite"');
-    expect(digest).toContain("businessDigest");
+    expect(digest).toContain("durableDataDigest");
+    expect(digest).toContain("durableTableDigests");
+    expect(digest).toContain('"identity_authority_initialized_v1"');
+    expect(digest).toContain("canonicalRows");
+    expect(digest).toContain("sort(compareCanonical)");
+    expect(digest).toContain("REPLACEMENT_LOCAL_TABLES");
+    expect(digest).not.toContain("const businessTables = [");
     expect(digest).toContain("protectedKeyWrapDigest");
+    expect(digest).toContain("protectedKeyWrapDigests");
+    expect(digest).toContain("protectedKeyCount");
+    expect(digest).toContain("replacementLocalAuthorityDigest");
+    expect(digest).toContain("authSecretAuthorityDigest");
     expect(digest).toContain("sessionIdentityHashes");
+    expect(digestContract).toContain(
+      "installation-local authority and insertion order changed durable parity",
+    );
+    expect(digestContract).toContain('key: "identity_authority_future"');
+    expect(digestContract).toContain('name: "seller setting deletion"');
+    expect(digestContract).toContain('name: "seller setting addition"');
+    expect(digestContract).toContain('name: "customer row"');
+    expect(digestContract).toContain('name: "audit row"');
+    expect(digestContract).toContain('name: "protected key identity"');
+    expect(digestContract).toContain(
+      "partial protected-key rewrap was not exposed per purpose",
+    );
+    expect(digestContract).toContain(
+      "missing AuthSecret table was not exposed",
+    );
+    expect(digestContract).toContain(
+      "pending identity re-enrollment changed durable parity",
+    );
+    expect(parity).toContain("function Get-DurableParityChanges");
+    expect(parity).toContain("function Get-ExactTableCount");
+    expect(parity).toContain("function Assert-RegistryContinuity");
+    expect(parity).toContain("function Assert-DurableDataParity");
+    expect(parity).toContain("function Assert-RollbackAuthorityParity");
+    expect(parity).toContain("function Assert-ProtectedKeyRewrap");
+    expect(parityContract).toContain(
+      "Aggregate-only parity mismatch did not fail closed.",
+    );
+    expect(parityContract).toContain(
+      "Partial protected-key wrapping did not fail closed.",
+    );
+    expect(parityContract).toContain(
+      "Missing AuthSecret table did not fail closed.",
+    );
   });
 });

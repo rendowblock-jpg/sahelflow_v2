@@ -13,16 +13,15 @@
 > **Phase 6 status:** protected-source + controlled-browser package merged through PR #223; installed/human exit evidence pending
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active release PR:** #227 — Internal.14 Founder checkpoint, draft/unmerged/unpublished
-> **Last installed-tested Internal.14 code head:** `8640ddc2b616aaf5e6d5027f7302e80062673110`
-> **Current installed blocker:** `/api/backup/create` all-shop source-backup assertion in focused replacement evidence
+> **Last installed-tested Internal.14 code head:** `c7849fc49ef26d5e2b4803d0181d3fc177e87a7b`
+> **Current installed blocker:** false-negative durable parity oracle after a committed replacement restore; exact-head closure remains required
 > **Retained evidence:** issues #201, #214, #221 and #226
 > **Execution epic:** issue #164
-> **Last assessed:** 2026-08-08
+> **Last assessed:** 2026-08-09
 
 Live protected `main` is authority. Documentation-only commits may advance an active
-branch or protected `main` without changing application behavior. In particular,
-the documentation handoff after `8640ddc2…` must not be described as installed-tested.
-The detailed next-session continuity record is retained directly in
+branch or protected `main` without changing application behavior. The exact-head
+candidate and closure route are retained directly in
 `documentation/operations/WORKING_MEMORY.md`.
 
 ## Executive truth
@@ -106,47 +105,49 @@ limited to the explicit restore-evidence build.
 
 ### Last installed-tested code head
 
-`8640ddc2b616aaf5e6d5027f7302e80062673110`
+`c7849fc49ef26d5e2b4803d0181d3fc177e87a7b`
 
-This code head contains the bounded Windows fix that restores accepted native
-survivability sockets to blocking mode while leaving the listener nonblocking for
-shutdown polling.
+Focused installed run `31331257331` checked out that exact code head. The MSI build,
+installed launch/close/reopen, authenticated hydrated WebView UI, rollback path,
+two-shop replacement restore commit, protected customer readback and protected
+secret readback all completed. The retained committed restore receipt proves that
+the restore operation itself succeeded.
 
-Exact-head green evidence includes:
+The supported root cause is a deterministic oracle defect: the old aggregate
+business digest included the `Setting` row
+`identity_authority_initialized_v1`. Native replacement restore deliberately
+removes that source-installation footprint, and successful owner re-enrollment
+recreates it for the replacement installation. Comparing that machine-local row
+as seller business data therefore makes raw Setting equality impossible by design.
+The old run did not emit per-table diffs, so it remains diagnostic evidence rather
+than exact-head closure proof.
 
-- Phase 6-7 Completion Gate `31281407605`;
-- Phase 5 Experience Gate `31281407619`;
-- Phase 4 CI trial issuer smoke `31281407662`;
-- CI / Required PR gate `31281407722`;
-- License Node and authority Windows smoke `31281407608`.
+### Exact closure candidate
 
-### Final focused installed run
+The branch candidate repairs the evidence contract rather than weakening restore:
 
-Run `31281491280`, job `93163466194`, checked out exact code head `8640ddc2…`.
-Artifact `windows-installed-e2e-31281491280`, ID `9028790269`, digest
-`sha256:9541eb2d8799bbdbb0203415c21c9a3b1b2fd56003fd5de405cecf0064d07ef4`.
+- durable parity inventories every non-local database table instead of a partial
+  business-table allowlist, while preserving stable protected-key identity and
+  excluding only installation-specific wrapping fields;
+- only the exact case-sensitive identity-footprint setting is excluded;
+- rows and fields are canonicalized and sorted before hashing;
+- per-table row counts and digests identify any real mismatch;
+- every restored shop must have zero PIN/session authority and no footprint before
+  re-enrollment; the active footprint must then bind the restored workspace plus
+  replacement installation while inactive shops remain clear;
+- registry active-shop and complete shop-record continuity must survive;
+- every protected-key purpose must retain identity while its installation wrapping
+  changes, and rollback must preserve the exact registry plus complete
+  replacement-local authority;
+- an executable SQLite fixture matrix proves insertion-order independence, local
+  authority replacement, exact-key filtering and failure on seller Setting,
+  Customer, AuditLog and protected-key identity changes before any MSI build;
+- an executable Windows PowerShell contract proves missing-table, row-count,
+  per-table-digest and aggregate-only comparison failures.
 
-That installed candidate passed:
-
-- MSI build;
-- installed launch/close/reopen;
-- hydrated authenticated WebView proof twice;
-- the previously failing native survivability request-write boundary;
-- independent recovery-kit creation.
-
-It then failed at the source all-shop backup check with:
-
-`All-shop source backup was not created.`
-
-The harness currently combines three requirements after `POST /api/backup/create`:
-HTTP status 201, returned `shopCount >= 2`, and existence of the returned backup
-`location`. The retained artifact does not identify which predicate failed.
-Therefore the **current exact blocker is diagnostic resolution of that compound
-backup-create assertion**, not licensing, request transport, recovery-kit creation,
-restore commit, or Founder UI acceptance.
-
-Founder direction ended the engineering session at this failure. No later repair or
-manual installed rerun belongs to the 2026-08-08 session.
+Run `31331257331` is retained diagnostic evidence for `c7849fc4…`; it must not be
+rerun as proof for a later source head. The final authoritative installed result
+must come from the normal exact-head CI route.
 
 ### Boundaries already closed in the repair sequence
 
@@ -164,19 +165,17 @@ Do not reopen without contradictory evidence:
 
 ## Exact next engineering action
 
-Next session must first re-fetch live PR #227 and inspect any concurrent delta.
-Preserve `8640ddc2…` as the last installed-tested code head even though the branch
-now has later documentation-only commits.
+Freeze one candidate head after its draft checks pass, mark PR #227 ready once and
+let the risk-selected exact-head workflows run. Required Phase 5, Required Phase
+6-7 and native-source checks remain separate gates. Inside CI, the Required PR gate
+must consume its selected source-quality, Tauri, Windows standalone, Windows Rust
+and reusable installed-MSI jobs. Do not rerun the obsolete diagnostic SHA and do
+not dispatch a duplicate focused installed workflow.
 
-Before changing product code, safely split or record the three
-`/api/backup/create` predicates so the failing status/shop-count/path condition is
-known. Then inspect only the owning API/JavaScript-native/Rust backup layer, make
-one bounded repair, run the smallest direct validation and trigger one focused
-installed replacement lane.
-
-Only after that lane is fully green should the team freeze the exact code head, run
-the final required matrix once, complete exact-head adversarial review, merge with
-expected-head binding and allow the one protected signed Internal.14 publication.
+Only a fully green exact-head matrix plus clean exact-head adversarial review may
+permit an expected-head squash merge and the one protected signed Internal.14
+publication. Installed CI is not Founder/T470 acceptance; issue #221 remains the
+separate human checkpoint.
 
 ## Phase 7 evidence boundary
 
