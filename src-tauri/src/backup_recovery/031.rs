@@ -130,6 +130,9 @@ fn validate_manifest(
         "shop-secret",
     ]);
     for keys in manifest.shop_keys.values() {
+        if keys.is_empty() {
+            continue;
+        }
         let purposes = keys
             .iter()
             .map(|key| key.purpose.as_str())

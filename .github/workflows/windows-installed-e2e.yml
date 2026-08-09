@@ -210,6 +210,14 @@ jobs:
             --release `
             --manifest-path src-tauri/Cargo.toml `
             --lib `
+            protected_key_transport::tests::empty_shop_keys_require_an_unkeyed_database_without_protected_values `
+            -- `
+            --exact
+          if ($LASTEXITCODE -ne 0) { throw 'Empty-shop protected-key recovery contract failed' }
+          cargo test `
+            --release `
+            --manifest-path src-tauri/Cargo.toml `
+            --lib `
             survivability_bridge::tests::permission_errors_preserve_the_authorization_storage_boundary `
             -- `
             --exact
