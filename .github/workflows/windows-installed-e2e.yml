@@ -114,6 +114,26 @@ jobs:
       - name: Install frozen dependencies
         run: bun install --frozen-lockfile --linker=hoisted
 
+      - name: Prepare disposable replacement-contract sandbox
+        shell: pwsh
+        run: |
+          $tempRoot = (& bun -e "console.log(require('node:os').tmpdir())").Trim()
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tempRoot)) {
+            throw 'Failed to resolve the Bun OS temporary directory.'
+          }
+          $sandboxRoot = Join-Path $tempRoot "sahelflow-replacement-contract-$env:GITHUB_RUN_ID"
+          $output = @(& bun run scripts/prepare-test-sandbox.ts $sandboxRoot)
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Canonical replacement-contract sandbox preparation failed.'
+          }
+          foreach ($name in @('SF_TEST_ROOT', 'SF_DATA_DIR', 'DATABASE_URL')) {
+            $line = $output | Where-Object { $_ -like "$name=*" } | Select-Object -Last 1
+            if ([string]::IsNullOrWhiteSpace($line)) {
+              throw "Canonical replacement-contract sandbox did not return $name."
+            }
+            $line >> $env:GITHUB_ENV
+          }
+
       - name: Prove relocated replacement harness and native journal paths
         shell: pwsh
         run: |

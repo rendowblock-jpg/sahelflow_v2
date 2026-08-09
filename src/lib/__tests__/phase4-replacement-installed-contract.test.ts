@@ -37,6 +37,10 @@ describe("Phase 4 installed replacement evidence", () => {
       "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection",
     );
     expect(workflow).toContain("verify-phase4-replacement-install.ps1");
+    expect(workflow).toContain("sahelflow-replacement-contract-$env:GITHUB_RUN_ID");
+    expect(workflow.indexOf("prepare-test-sandbox.ts")).toBeLessThan(
+      workflow.indexOf("phase4-harness-relocation"),
+    );
     expect(workflow).toContain("phase4-harness-relocation");
     expect(workflow).toContain("-ValidateHarnessOnly");
     expect(workflow).toContain("recovery-journal\\pending-restore.json");
