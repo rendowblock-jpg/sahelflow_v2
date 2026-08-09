@@ -187,7 +187,7 @@ jobs:
             ConvertTo-Json -Depth 4 |
             Set-Content -LiteralPath .sf-installed-e2e-build-authority.json -Encoding UTF8
 
-      - name: Prove focused Windows backup durability and safe error contracts
+      - name: Prove backup durability, shop-key compatibility, and safe error contracts
         shell: pwsh
         run: |
           cargo test `
@@ -198,6 +198,14 @@ jobs:
             -- `
             --exact
           if ($LASTEXITCODE -ne 0) { throw 'Focused Windows backup durability contract failed' }
+          cargo test `
+            --release `
+            --manifest-path src-tauri/Cargo.toml `
+            --lib `
+            protected_key_transport::tests::typescript_shop_key_vector_uses_distinct_authority_and_envelope_ids `
+            -- `
+            --exact
+          if ($LASTEXITCODE -ne 0) { throw 'TypeScript to Rust shop-key transport contract failed' }
           cargo test `
             --release `
             --manifest-path src-tauri/Cargo.toml `
@@ -224,6 +232,9 @@ jobs:
           name: windows-installed-e2e-msi-${{ github.run_id }}
           path: |
             src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/resources/standalone/sahelflow-standalone-manifest.json
+            src-tauri/resources/standalone/server.js
+            src-tauri/resources/runtime/runtime-manifest.json
             .sf-installed-e2e-build-authority.json
             .sf-installed-e2e-build.log
           if-no-files-found: error
@@ -333,10 +344,11 @@ jobs:
               throw "expected exactly one MSI, found $($msis.Count)"
             }
 
-            # The lifecycle gate deliberately mutates migration, rotation and
-            # recovery authority. Replacement/restore must begin from its own
-            # clean ephemeral profile so one acceptance gate cannot contaminate
-            # another. This runner contains no Founder or canonical AppData.
+            # Replacement/restore must begin from its own deterministic
+            # two-shop legacy fixture. Re-run the lifecycle verifier after the
+            # isolated uninstall so the backup gate never inherits state from
+            # the earlier lifecycle/UI acceptance steps. This runner contains
+            # no Founder or canonical AppData.
             Get-Process -Name sahelflow -ErrorAction SilentlyContinue |
               Stop-Process -Force -ErrorAction SilentlyContinue
             Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
@@ -354,19 +366,7 @@ jobs:
             if ($uninstall.ExitCode -notin @(0, 1605)) {
               throw "independent replacement preflight uninstall failed with exit code $($uninstall.ExitCode)"
             }
-            Remove-Item -LiteralPath `
-              (Join-Path $env:APPDATA 'com.sahelflow.desktop'), `
-              (Join-Path $env:LOCALAPPDATA 'com.sahelflow.desktop') `
-              -Recurse `
-              -Force `
-              -ErrorAction SilentlyContinue
-            $install = Start-Process -FilePath "$env:SystemRoot\System32\msiexec.exe" `
-              -ArgumentList "/i `"$($msis[0].FullName)`" /qn /norestart" `
-              -Wait `
-              -PassThru
-            if ($install.ExitCode -ne 0) {
-              throw "independent replacement preflight install failed with exit code $($install.ExitCode)"
-            }
+            ./scripts/verify-installed-windows-msi.ps1 -MsiPath $msis[0].FullName
             ./scripts/verify-phase4-replacement-install-ci.ps1 -MsiPath $msis[0].FullName
           } catch {
             $_ | Format-List * -Force | Out-String |

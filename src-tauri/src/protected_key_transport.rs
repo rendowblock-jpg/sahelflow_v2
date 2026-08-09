@@ -47,6 +47,18 @@ struct AuthorityRow {
     wrapped_key: String,
 }
 
+struct WrappingAuthority {
+    key: [u8; 32],
+    authority_key_id: String,
+    envelope_key_id: String,
+}
+
+impl Drop for WrappingAuthority {
+    fn drop(&mut self) {
+        clear_bytes(&mut self.key);
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct ProtectedValueKeyDescriptor {
@@ -197,7 +209,7 @@ pub(crate) fn rewrap_imported_shop_keys(
                 ),
             ));
         }
-        let (wrapping_key, wrapping_key_id) = wrapping_key(
+        let wrapping = wrapping_key(
             installation_root,
             workspace_id,
             installation_id,
@@ -207,8 +219,8 @@ pub(crate) fn rewrap_imported_shop_keys(
             &key,
             exported.key_version,
             &exported.purpose,
-            &wrapping_key,
-            &wrapping_key_id,
+            &wrapping.key,
+            &wrapping.envelope_key_id,
             workspace_id,
             installation_id,
             shop_id,
@@ -224,7 +236,7 @@ pub(crate) fn rewrap_imported_shop_keys(
                     AUTHORITY_ALGORITHM,
                     i64::from(exported.key_version),
                     exported.key_id,
-                    wrapping_key_id,
+                    wrapping.authority_key_id.as_str(),
                     wrapped_key,
                     exported.purpose,
                 ],
@@ -352,13 +364,13 @@ fn open_wrapped_key(
     shop_id: &str,
     shop_incarnation_id: &str,
 ) -> Result<[u8; 32], IoError> {
-    let (wrapping_key, wrapping_key_id) = wrapping_key(
+    let wrapping = wrapping_key(
         installation_root,
         workspace_id,
         installation_id,
         &row.purpose,
     )?;
-    if row.wrapping_key_id != wrapping_key_id {
+    if row.wrapping_key_id.as_str() != wrapping.authority_key_id.as_str() {
         return Err(IoError::new(
             ErrorKind::InvalidData,
             format!(
@@ -374,7 +386,7 @@ fn open_wrapped_key(
                 format!("protected key envelope is malformed: {error}"),
             )
         })?;
-    validate_envelope(&envelope, &wrapping_key_id)?;
+    validate_envelope(&envelope, &wrapping.envelope_key_id)?;
     let (binding_json, binding_digest) = binding_material(
         workspace_id,
         installation_id,
@@ -393,7 +405,7 @@ fn open_wrapped_key(
     let nonce = decode_base64_exact::<12>(&envelope.iv, "protected key IV")?;
     let ciphertext = decode_base64(&envelope.ciphertext, "protected key ciphertext")?;
     let tag = decode_base64_exact::<16>(&envelope.tag, "protected key tag")?;
-    let plaintext = open_raw_aes_256_gcm(&wrapping_key, &aad, &nonce, &ciphertext, &tag)?;
+    let plaintext = open_raw_aes_256_gcm(&wrapping.key, &aad, &nonce, &ciphertext, &tag)?;
     let encoded = std::str::from_utf8(plaintext.as_slice()).map_err(|_| {
         IoError::new(
             ErrorKind::InvalidData,
@@ -456,7 +468,7 @@ fn wrapping_key(
     workspace_id: &str,
     installation_id: &str,
     protected_purpose: &str,
-) -> Result<([u8; 32], String), IoError> {
+) -> Result<WrappingAuthority, IoError> {
     let installation_purpose = match protected_purpose {
         "shop-data" => PURPOSE_SHOP_DATA_WRAP,
         "shop-blind-index" => PURPOSE_SHOP_BLIND_INDEX_WRAP,
@@ -475,8 +487,12 @@ fn wrapping_key(
         installation_purpose,
         1,
     )?;
-    let key_id = protected_value_key_id(&derived.key, WRAPPING_PURPOSE, WRAPPING_VERSION);
-    Ok((derived.key, key_id))
+    let envelope_key_id = protected_value_key_id(&derived.key, WRAPPING_PURPOSE, WRAPPING_VERSION);
+    Ok(WrappingAuthority {
+        key: derived.key,
+        authority_key_id: derived.key_id.clone(),
+        envelope_key_id,
+    })
 }
 
 fn binding_material(
@@ -759,5 +775,48 @@ mod tests {
             protected_value_key_id(&key, "shop-data", 1),
             protected_value_key_id(&key, "shop-secret", 1)
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn typescript_shop_key_vector_uses_distinct_authority_and_envelope_ids() {
+        let root = [0x11_u8; 32];
+        let workspace_id = "10101010101010101010101010101010";
+        let installation_id = "20202020202020202020202020202020";
+        let shop_incarnation_id = "30303030303030303030303030303030";
+        let wrapping = wrapping_key(&root, workspace_id, installation_id, "shop-data").unwrap();
+        assert_eq!(
+            wrapping.authority_key_id,
+            "1505e6c0dbab5cb7d8bc61a80a031b0733a28d22432033322f8bcb734955f0cf"
+        );
+        assert_eq!(
+            wrapping.envelope_key_id,
+            "a2e9176e15afe14cf23ac9425ea180ecd2d69260067286ab462e7a5527d1dd69"
+        );
+
+        let row = AuthorityRow {
+            purpose: "shop-data".to_owned(),
+            format_version: 1,
+            algorithm: AUTHORITY_ALGORITHM.to_owned(),
+            key_version: 1,
+            key_id: "9aec01135e317c479f34ac63489c681a14e54a3ab97b293457464a563818e30c"
+                .to_owned(),
+            wrapping_key_id:
+                "1505e6c0dbab5cb7d8bc61a80a031b0733a28d22432033322f8bcb734955f0cf"
+                    .to_owned(),
+            wrapped_key: r#"{"format":"sahelflow-protected-value","version":1,"algorithm":"aes-256-gcm","key":{"formatVersion":1,"purpose":"key-wrap","version":1,"keyId":"a2e9176e15afe14cf23ac9425ea180ecd2d69260067286ab462e7a5527d1dd69"},"bindingSha256":"f0193b82c111db19830f86f3c9db5a6db02ebb6a993f4c148e9409f5c0425ad1","iv":"PwvhS0AecQ6JXug0","ciphertext":"esHlNyPHONMatOX6m+sjTXpHsRey12wJ5QXr6mSBERB0BWPLa5tCaCtWhuCI/xVPijp64TCRLUi8nP1q8kXMdA==","tag":"JiYhkVvGuM4FIz/6OgG57g=="}"#
+                .to_owned(),
+        };
+        let opened = open_wrapped_key(
+            &row,
+            1,
+            &root,
+            workspace_id,
+            installation_id,
+            "default",
+            shop_incarnation_id,
+        )
+        .unwrap();
+        assert_eq!(opened, [0x42_u8; 32]);
     }
 }
