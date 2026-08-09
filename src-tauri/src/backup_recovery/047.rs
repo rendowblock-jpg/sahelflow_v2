@@ -25,6 +25,6 @@ fn create_verified_snapshot(source: &Path, target: &Path) -> Result<(), IoError>
         .map_err(sqlite_error)?;
     drop(connection);
     preflight_database(target)?;
-    File::open(target)?.sync_all()?;
+    sync_file_durable(target)?;
     Ok(())
 }

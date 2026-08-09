@@ -4,6 +4,23 @@
 mod tests {
     use super::*;
 
+    #[cfg(windows)]
+    #[test]
+    fn durability_sync_uses_a_write_capable_windows_file_handle() {
+        let root = std::env::temp_dir().join(format!(
+            "sahelflow-durability-sync-{}-{}",
+            std::process::id(),
+            random_hex(8).expect("random suffix")
+        ));
+        fs::create_dir_all(&root).expect("durability sync test directory");
+        let file = root.join("snapshot.db");
+        fs::write(&file, b"snapshot").expect("durability sync fixture");
+
+        sync_tree(&root).expect("write-capable Windows durability sync");
+
+        fs::remove_dir_all(root).expect("remove durability sync test directory");
+    }
+
     fn test_restore_journal(state: RestoreJournalState) -> RestoreJournal {
         RestoreJournal {
             unsigned: RestoreJournalUnsigned {

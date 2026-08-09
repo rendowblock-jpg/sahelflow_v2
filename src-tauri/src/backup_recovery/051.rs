@@ -9,13 +9,21 @@ fn sync_tree(path: &Path) -> Result<(), IoError> {
         ));
     }
     if metadata.is_file() {
-        File::open(path)?.sync_all()?;
+        sync_file_durable(path)?;
         return Ok(());
     }
     for entry in fs::read_dir(path)? {
         sync_tree(&entry?.path())?;
     }
     sync_directory(path)
+}
+
+fn sync_file_durable(path: &Path) -> Result<(), IoError> {
+    OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(path)?
+        .sync_all()
 }
 
 fn remove_stale_staging(root: &Path) -> Result<(), IoError> {
