@@ -60,10 +60,23 @@ jobs:
               continue
             fi
             [[ "${code}" == '200' ]] || { cat exact-release.json >&2; exit 1; }
+            release_state="$(python -c 'import json; d=json.load(open("exact-release.json",encoding="utf-8")).get("draft"); print("draft" if d is True else "published" if d is False else "invalid")')"
+            case "${release_state}" in
+              draft)
+                sleep 15
+                continue
+                ;;
+              published)
+                ;;
+              *)
+                echo 'Internal.14 release returned an invalid draft state.' >&2
+                exit 1
+                ;;
+            esac
             python - <<'PY'
           import json, os, sys
           r=json.load(open('exact-release.json',encoding='utf-8'))
-          if r.get('draft'): sys.exit('Internal.14 release is still draft')
+          if r.get('draft') is not False: sys.exit('Internal.14 release draft state is invalid')
           if r.get('tag_name') != os.environ['RELEASE_TAG']: sys.exit('release tag mismatch')
           names=[a.get('name','') for a in r.get('assets',[])]
           if len([n for n in names if n.endswith('.msi')]) != 1: sys.exit('expected exactly one MSI')
