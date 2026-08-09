@@ -704,9 +704,12 @@ $installationRootRotation = $null
 $lifecyclePasses = 3
 
 for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
-    if ($attempt -eq 1) {
-        Remove-Item -LiteralPath $runtimeEndpointPath -Force -ErrorAction SilentlyContinue
-    }
+    # Each launch must publish its own readiness evidence. In particular, a
+    # blocked diagnostic from the previous pass can otherwise satisfy the
+    # filesystem timestamp tolerance while the new desktop process continues
+    # starting, which would leave it alive when native rotation begins.
+    Remove-Item -LiteralPath $runtimeEndpointPath, $startupDiagnosticPath `
+        -Force -ErrorAction SilentlyContinue
     $startedAt = Get-Date
     $process = Start-Process -FilePath $exe -PassThru
     $launch = Wait-ForLaunchOutcome -Process $process -StartedAt $startedAt -Phase "launch-$attempt"

@@ -262,6 +262,19 @@ describe("installed Windows runtime contract", () => {
     expect(harness).toContain(
       "for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++)",
     );
+    const lifecycleLoop = harness.indexOf(
+      "for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++)",
+    );
+    const lifecycleEvidenceReset = harness.indexOf(
+      "Remove-Item -LiteralPath $runtimeEndpointPath, $startupDiagnosticPath",
+      lifecycleLoop,
+    );
+    const lifecycleLaunch = harness.indexOf(
+      "$process = Start-Process -FilePath $exe -PassThru",
+      lifecycleLoop,
+    );
+    expect(lifecycleEvidenceReset).toBeGreaterThan(lifecycleLoop);
+    expect(lifecycleEvidenceReset).toBeLessThan(lifecycleLaunch);
     expect(uiHarness).toContain("$lifecyclePasses = 3");
     expect(uiHarness).toContain(
       "for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++)",
