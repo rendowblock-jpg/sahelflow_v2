@@ -11,6 +11,7 @@ describe("Phase 4 installed replacement evidence", () => {
     const workflow = read(".github/workflows/windows-installed-e2e.yml");
     const coordinator = read("src-tauri/src/backup_recovery/028.rs");
     const cutover = read("src-tauri/src/backup_recovery/041.rs");
+    const journalShape = read("src-tauri/src/backup_recovery/005.rs");
     const restorePaths = read("src-tauri/src/backup_recovery/007.rs");
     const receiptPaths = read("src-tauri/src/backup_recovery/008.rs");
     const harness = read("scripts/verify-phase4-replacement-install.ps1");
@@ -75,6 +76,12 @@ describe("Phase 4 installed replacement evidence", () => {
     expect(harness).toContain("written to evidence or emitted to the Actions log");
     expect(harness).toContain("ExitCode -ne 86");
     expect(harness).toContain("ExitCode -ne 87");
+    expect(journalShape).toContain(
+      '#[serde(flatten)]\n    unsigned: RestoreJournalUnsigned',
+    );
+    expect(harness).toContain('$interruptedJournal.state -ne "applying"');
+    expect(harness).toContain('$rollbackJournal.state -ne "rescue-ready"');
+    expect(harness).not.toContain(".unsigned.state");
     expect(harness).toContain("Assert-BusinessParity $replacementBeforeRestore");
     expect(harness).toContain("Assert-BusinessParity $sourceEvidence");
     expect(harness).toContain("sourceSessionNonCloningVerified = $true");

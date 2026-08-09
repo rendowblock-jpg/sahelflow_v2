@@ -564,7 +564,7 @@ if (-not $interrupted.WaitForExit(120000)) { Stop-Process -Id $interrupted.Id -F
 Remove-Item Env:SF_PHASE4_RESTORE_INTERRUPT_AFTER_SHOPS -ErrorAction SilentlyContinue
 if ($interrupted.ExitCode -ne 86) { throw "Restore interruption did not exit at the governed shop boundary." }
 $interruptedJournal = Read-JsonFile $pendingRestorePath
-if ($null -eq $interruptedJournal -or $interruptedJournal.unsigned.state -ne "applying") { throw "Interrupted restore did not retain applying journal authority." }
+if ($null -eq $interruptedJournal -or $interruptedJournal.state -ne "applying") { throw "Interrupted restore did not retain applying journal authority." }
 
 $env:SF_PHASE4_RESTORE_STOP_AFTER_ROLLBACK = "1"
 $rolledBack = Start-SahelFlow
@@ -572,7 +572,7 @@ if (-not $rolledBack.WaitForExit(120000)) { Stop-Process -Id $rolledBack.Id -For
 Remove-Item Env:SF_PHASE4_RESTORE_STOP_AFTER_ROLLBACK -ErrorAction SilentlyContinue
 if ($rolledBack.ExitCode -ne 87) { throw "Restore rollback did not reach the governed rescue boundary." }
 $rollbackJournal = Read-JsonFile $pendingRestorePath
-if ($null -eq $rollbackJournal -or $rollbackJournal.unsigned.state -ne "rescue-ready") { throw "Rollback did not return the journal to rescue-ready." }
+if ($null -eq $rollbackJournal -or $rollbackJournal.state -ne "rescue-ready") { throw "Rollback did not return the journal to rescue-ready." }
 $replacementAfterRollback = Get-ProfileEvidence
 Assert-BusinessParity $replacementBeforeRestore $replacementAfterRollback
 if ($replacementAfterRollback.installationId -cne $replacementBeforeRestore.installationId) { throw "Rollback changed replacement installation authority." }
