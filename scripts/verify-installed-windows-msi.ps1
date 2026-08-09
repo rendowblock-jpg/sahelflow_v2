@@ -44,6 +44,8 @@ $resolvedMsi = (Resolve-Path -LiteralPath $MsiPath).Path
 $evidenceRoot = Join-Path $env:RUNNER_TEMP "sahelflow-installed-e2e"
 $installLog = Join-Path $evidenceRoot "install.log"
 $resultPath = Join-Path $evidenceRoot "result.json"
+$rotationDiagnosticPath = Join-Path $evidenceRoot "installation-root-rotation-diagnostic.json"
+$rotationStderrPath = Join-Path $evidenceRoot "installation-root-rotation-stderr.tmp"
 $roamingRoot = Join-Path $env:APPDATA "com.sahelflow.desktop"
 $localRoot = Join-Path $env:LOCALAPPDATA "com.sahelflow.desktop"
 $runtimeCacheRoot = Join-Path $localRoot "runtime-cache"
@@ -702,9 +704,12 @@ $installationRootRotation = $null
 $lifecyclePasses = 3
 
 for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
-    if ($attempt -eq 1) {
-        Remove-Item -LiteralPath $runtimeEndpointPath -Force -ErrorAction SilentlyContinue
-    }
+    # Each launch must publish its own readiness evidence. In particular, a
+    # blocked diagnostic from the previous pass can otherwise satisfy the
+    # filesystem timestamp tolerance while the new desktop process continues
+    # starting, which would leave it alive when native rotation begins.
+    Remove-Item -LiteralPath $runtimeEndpointPath, $startupDiagnosticPath `
+        -Force -ErrorAction SilentlyContinue
     $startedAt = Get-Date
     $process = Start-Process -FilePath $exe -PassThru
     $launch = Wait-ForLaunchOutcome -Process $process -StartedAt $startedAt -Phase "launch-$attempt"
@@ -1083,11 +1088,85 @@ if (
 ) {
     throw "Protected installation-root authority is invalid before rotation."
 }
+$rotationStartedAt = Get-Date
+Remove-Item -LiteralPath $rotationStderrPath -Force -ErrorAction SilentlyContinue
 $rotationProcess = Start-Process -FilePath $exe `
     -ArgumentList @("--rotate-installation-root") `
-    -Wait -PassThru -WindowStyle Hidden
+    -PassThru -WindowStyle Hidden `
+    -RedirectStandardError $rotationStderrPath
+$rotationInvocation = $null
+$rotationInvocationDeadline = (Get-Date).AddSeconds(3)
+do {
+    $rotationInvocation = Get-CimInstance Win32_Process `
+        -Filter "ProcessId = $($rotationProcess.Id)" `
+        -ErrorAction SilentlyContinue
+    if ($null -ne $rotationInvocation) { break }
+    Start-Sleep -Milliseconds 50
+} while ((Get-Date) -lt $rotationInvocationDeadline)
+$rotationArgumentObserved = (
+    $null -ne $rotationInvocation -and
+    [string]$rotationInvocation.CommandLine -match '(?i)(^|\s)--rotate-installation-root(\s|$)'
+)
+$rotationProcess.WaitForExit()
+Start-Sleep -Milliseconds 250
+$rotationStderr = if (Test-Path -LiteralPath $rotationStderrPath -PathType Leaf) {
+    Get-Content -LiteralPath $rotationStderrPath -Raw
+} else {
+    ""
+}
+$rotationStderrCategories = @()
+foreach ($classification in @(
+    @{ signature = 'another SahelFlow desktop or installation-root rotation process is active'; category = 'process-authority-conflict' },
+    @{ signature = 'protected installation-root rotation application setup failed'; category = 'rotation-application-setup-failed' },
+    @{ signature = 'error while building SahelFlow application'; category = 'tauri-build-failed' },
+    @{ signature = 'protected installation-root rotation blocked'; category = 'native-rotation-blocked' },
+    @{ signature = 'pending replacement recovery'; category = 'pending-recovery-blocked' }
+)) {
+    if ($rotationStderr.IndexOf(
+        [string]$classification.signature,
+        [System.StringComparison]::OrdinalIgnoreCase
+    ) -ge 0) {
+        $rotationStderrCategories += [string]$classification.category
+    }
+}
+if (-not [string]::IsNullOrWhiteSpace($rotationStderr) -and $rotationStderrCategories.Count -eq 0) {
+    $rotationStderrCategories += 'raw-output-suppressed'
+}
+$rotationStderrBytes = if (Test-Path -LiteralPath $rotationStderrPath -PathType Leaf) {
+    [int64](Get-Item -LiteralPath $rotationStderrPath).Length
+} else {
+    0
+}
+$rotationStderrSha256 = if ($rotationStderrBytes -gt 0) {
+    (Get-FileHash -LiteralPath $rotationStderrPath -Algorithm SHA256).Hash.ToLowerInvariant()
+} else {
+    $null
+}
+$rotationSurvivors = @(
+    Get-SahelFlowProcessTree |
+        Select-Object Name, ProcessId, ParentProcessId, CreationDate
+)
+[ordered]@{
+    formatVersion = 1
+    startedAt = $rotationStartedAt.ToUniversalTime().ToString('o')
+    processId = $rotationProcess.Id
+    argumentObserved = $rotationArgumentObserved
+    exitCode = $rotationProcess.ExitCode
+    stderrBytes = $rotationStderrBytes
+    stderrSha256 = $rotationStderrSha256
+    stderrCategories = @($rotationStderrCategories)
+    survivingInstalledProcesses = @($rotationSurvivors)
+} |
+    ConvertTo-Json -Depth 8 |
+    Set-Content -LiteralPath $rotationDiagnosticPath -Encoding UTF8
+Remove-Item -LiteralPath $rotationStderrPath -Force -ErrorAction SilentlyContinue
 if ($rotationProcess.ExitCode -ne 0) {
-    throw "Native protected installation-root rotation failed with exit code $($rotationProcess.ExitCode)."
+    $safeCategories = if ($rotationStderrCategories.Count -eq 0) {
+        "none"
+    } else {
+        $rotationStderrCategories -join ","
+    }
+    throw "Native protected installation-root rotation failed with exit code $($rotationProcess.ExitCode), argument observed $rotationArgumentObserved, stderr categories $safeCategories, and $($rotationSurvivors.Count) surviving installed process(es)."
 }
 if (@(Get-SahelFlowProcessTree).Count -ne 0) {
     throw "Native protected rotation left an installed process running."

@@ -189,6 +189,18 @@ fn bridge_loop(listener: TcpListener, shutdown: Arc<AtomicBool>, context: Bridge
                 if peer.ip() != Ipv4Addr::LOCALHOST {
                     continue;
                 }
+                // Winsock accepted sockets inherit the listening socket's
+                // nonblocking property. The listener polls so controller
+                // shutdown stays responsive, but the framed handshake/request
+                // protocol below is intentionally blocking with bounded I/O
+                // timeouts. Restore that mode before the first protocol read.
+                if let Err(error) = stream.set_nonblocking(false) {
+                    eprintln!(
+                        "[sahelflow] protected survivability connection mode failed ({})",
+                        classify_log_error(&error)
+                    );
+                    continue;
+                }
                 let _ = stream.set_read_timeout(Some(CONNECTION_TIMEOUT));
                 let _ = stream.set_write_timeout(Some(CONNECTION_TIMEOUT));
                 let _ = stream.set_nodelay(true);
@@ -309,13 +321,13 @@ fn execute_request(context: &BridgeContext, request: BridgeRequest) -> Result<Va
         || request.instance_id != context.instance_id
         || !is_lower_hex(&request.request_id, 32)
     {
-        return Err(IoError::new(
+        return Err(authorization_failure(IoError::new(
             ErrorKind::PermissionDenied,
             "survivability request belongs to another runtime instance",
-        ));
+        )));
     }
 
-    let (action, resource) = request_contract(&request)?;
+    let (action, resource) = request_contract(&request).map_err(authorization_failure)?;
     native_command::verify_authorization(
         &context.replay,
         &context.installation_root,
@@ -324,7 +336,8 @@ fn execute_request(context: &BridgeContext, request: BridgeRequest) -> Result<Va
         action,
         resource,
         &request.authorization,
-    )?;
+    )
+    .map_err(authorization_failure)?;
 
     match request.operation.as_str() {
         "create-backup" => to_value(backup_recovery::create_backup(
@@ -388,11 +401,43 @@ fn execute_request(context: &BridgeContext, request: BridgeRequest) -> Result<Va
             )?;
             Ok(json!({ "deleted": true }))
         }
-        _ => Err(IoError::new(
+        _ => Err(authorization_failure(IoError::new(
             ErrorKind::PermissionDenied,
             "survivability operation is unsupported",
-        )),
+        ))),
     }
+}
+
+#[derive(Debug)]
+struct AuthorizationFailure {
+    source: IoError,
+}
+
+impl std::fmt::Display for AuthorizationFailure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "protected native authorization failed: {}",
+            self.source
+        )
+    }
+}
+
+impl std::error::Error for AuthorizationFailure {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.source)
+    }
+}
+
+fn authorization_failure(source: IoError) -> IoError {
+    IoError::new(ErrorKind::PermissionDenied, AuthorizationFailure { source })
+}
+
+fn is_authorization_failure(error: &IoError) -> bool {
+    error
+        .get_ref()
+        .and_then(|source| source.downcast_ref::<AuthorizationFailure>())
+        .is_some()
 }
 
 fn request_contract<'a>(request: &'a BridgeRequest) -> Result<(&'static str, &'a str), IoError> {
@@ -589,11 +634,20 @@ fn sync_parent(path: &Path) -> Result<(), IoError> {
 
 fn public_error(error: &IoError) -> (&'static str, &'static str) {
     let lower = error.to_string().to_ascii_lowercase();
-    if error.kind() == ErrorKind::PermissionDenied {
+    let backup_stage = backup_recovery::backup_create_failure_stage(error);
+    if error.kind() == ErrorKind::PermissionDenied && is_authorization_failure(error) {
         (
             "SF-SURVIVABILITY-AUTHORIZATION",
             "The desktop rejected this backup or recovery authorization. Sign in again and retry.",
         )
+    } else if error.kind() == ErrorKind::PermissionDenied {
+        if backup_stage.is_some() {
+            backup_access_error(backup_stage)
+        } else if let Some(reason) = backup_recovery::survivability_permission_reason(error) {
+            survivability_permission_error(reason)
+        } else {
+            backup_access_error(None)
+        }
     } else if error.kind() == ErrorKind::NotFound {
         (
             "SF-SURVIVABILITY-NOT-FOUND",
@@ -610,9 +664,12 @@ fn public_error(error: &IoError) -> (&'static str, &'static str) {
             "There is not enough free disk space to complete this operation with rollback protection.",
         )
     } else if error.kind() == ErrorKind::InvalidData || error.kind() == ErrorKind::InvalidInput {
-        (
-            "SF-SURVIVABILITY-VERIFICATION",
-            "The backup or recovery material could not be authenticated. Verify the selected backup and recovery code.",
+        backup_stage.map_or(
+            (
+                "SF-SURVIVABILITY-VERIFICATION",
+                "The backup or recovery material could not be authenticated. Verify the selected backup and recovery code.",
+            ),
+            backup_verification_error,
         )
     } else {
         (
@@ -622,9 +679,115 @@ fn public_error(error: &IoError) -> (&'static str, &'static str) {
     }
 }
 
+fn survivability_permission_error(
+    reason: backup_recovery::SurvivabilityPermissionReason,
+) -> (&'static str, &'static str) {
+    match reason {
+        backup_recovery::SurvivabilityPermissionReason::RecoveryMaterial => (
+            "SF-SURVIVABILITY-RECOVERY-KIT",
+            "The selected backup requires its matching recovery kit and recovery code.",
+        ),
+        backup_recovery::SurvivabilityPermissionReason::ReplacementAuthority => (
+            "SF-SURVIVABILITY-REPLACEMENT-AUTHORIZATION",
+            "This operation requires authenticated replacement-install recovery authority.",
+        ),
+    }
+}
+
+fn backup_access_error(
+    stage: Option<backup_recovery::BackupCreateStage>,
+) -> (&'static str, &'static str) {
+    match stage {
+        Some(backup_recovery::BackupCreateStage::Preflight) => (
+            "SF-SURVIVABILITY-BACKUP-PREFLIGHT-ACCESS",
+            "Windows denied access while preparing protected backup storage. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::KeyAuthority) => (
+            "SF-SURVIVABILITY-BACKUP-KEY-ACCESS",
+            "Windows denied access to the protected backup key authority. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::Staging) => (
+            "SF-SURVIVABILITY-BACKUP-STAGING-ACCESS",
+            "Windows denied access while creating protected backup staging. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::ShopSnapshot) => (
+            "SF-SURVIVABILITY-BACKUP-SNAPSHOT-ACCESS",
+            "Windows denied access while taking a consistent shop snapshot. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::ShopKeyExport) => (
+            "SF-SURVIVABILITY-BACKUP-SHOP-KEY-ACCESS",
+            "Windows denied access while protecting shop recovery keys. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::ObjectWrite) => (
+            "SF-SURVIVABILITY-BACKUP-OBJECT-ACCESS",
+            "Windows denied access while writing encrypted backup objects. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::Commit) => (
+            "SF-SURVIVABILITY-BACKUP-COMMIT-ACCESS",
+            "Windows denied access while committing the verified backup. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::RecoveryReadiness) => (
+            "SF-SURVIVABILITY-BACKUP-RECOVERY-ACCESS",
+            "Windows denied access while verifying independent recovery readiness. Close competing file tools and retry.",
+        ),
+        None => (
+            "SF-SURVIVABILITY-STORAGE-ACCESS",
+            "Windows denied access to protected backup or recovery storage. Close competing file tools and retry.",
+        ),
+    }
+}
+
+fn backup_verification_error(
+    stage: backup_recovery::BackupCreateStage,
+) -> (&'static str, &'static str) {
+    match stage {
+        backup_recovery::BackupCreateStage::Preflight => (
+            "SF-SURVIVABILITY-BACKUP-PREFLIGHT-VERIFICATION",
+            "The current installation did not pass protected backup preflight verification.",
+        ),
+        backup_recovery::BackupCreateStage::KeyAuthority => (
+            "SF-SURVIVABILITY-BACKUP-KEY-VERIFICATION",
+            "The protected backup key authority did not pass verification.",
+        ),
+        backup_recovery::BackupCreateStage::Staging => (
+            "SF-SURVIVABILITY-BACKUP-STAGING-VERIFICATION",
+            "The protected backup staging boundary did not pass verification.",
+        ),
+        backup_recovery::BackupCreateStage::ShopSnapshot => (
+            "SF-SURVIVABILITY-BACKUP-SNAPSHOT-VERIFICATION",
+            "A consistent shop snapshot did not pass integrity and migration verification.",
+        ),
+        backup_recovery::BackupCreateStage::ShopKeyExport => (
+            "SF-SURVIVABILITY-BACKUP-SHOP-KEY-VERIFICATION",
+            "A shop recovery-key authority did not pass backup verification.",
+        ),
+        backup_recovery::BackupCreateStage::ObjectWrite => (
+            "SF-SURVIVABILITY-BACKUP-OBJECT-VERIFICATION",
+            "An encrypted backup object did not pass round-trip verification.",
+        ),
+        backup_recovery::BackupCreateStage::Commit => (
+            "SF-SURVIVABILITY-BACKUP-COMMIT-VERIFICATION",
+            "The completed backup container did not pass commit verification.",
+        ),
+        backup_recovery::BackupCreateStage::RecoveryReadiness => (
+            "SF-SURVIVABILITY-BACKUP-RECOVERY-VERIFICATION",
+            "Independent recovery readiness did not pass verification.",
+        ),
+    }
+}
+
 fn classify_log_error(error: &IoError) -> &'static str {
+    if is_authorization_failure(error) {
+        return "authorization";
+    }
+    if let Some(reason) = backup_recovery::survivability_permission_reason(error) {
+        return match reason {
+            backup_recovery::SurvivabilityPermissionReason::RecoveryMaterial => "verification",
+            backup_recovery::SurvivabilityPermissionReason::ReplacementAuthority => "authorization",
+        };
+    }
     match error.kind() {
-        ErrorKind::PermissionDenied => "authorization",
+        ErrorKind::PermissionDenied => "storage-access",
         ErrorKind::NotFound => "not-found",
         ErrorKind::WouldBlock => "busy",
         ErrorKind::InvalidData | ErrorKind::InvalidInput => "verification",
@@ -675,5 +838,53 @@ mod tests {
         assert!(!message.contains("Amira"));
         assert!(!message.contains("0555"));
         assert!(!message.contains("shop.db"));
+    }
+
+    #[test]
+    fn permission_errors_preserve_the_authorization_storage_boundary() {
+        let authorization = authorization_failure(IoError::new(
+            ErrorKind::PermissionDenied,
+            "private authorization detail",
+        ));
+        assert_eq!(
+            public_error(&authorization).0,
+            "SF-SURVIVABILITY-AUTHORIZATION"
+        );
+        assert_eq!(classify_log_error(&authorization), "authorization");
+
+        let storage = backup_recovery::staged_backup_create_error_for_test(
+            backup_recovery::BackupCreateStage::ShopSnapshot,
+            IoError::new(ErrorKind::PermissionDenied, "C:\\private\\shop.db"),
+        );
+        let (code, message) = public_error(&storage);
+        assert_eq!(code, "SF-SURVIVABILITY-BACKUP-SNAPSHOT-ACCESS");
+        assert_eq!(classify_log_error(&storage), "storage-access");
+        assert!(!message.contains("private"));
+        assert!(!message.contains("shop.db"));
+
+        let verification = backup_recovery::staged_backup_create_error_for_test(
+            backup_recovery::BackupCreateStage::ShopKeyExport,
+            IoError::new(ErrorKind::InvalidData, "private wrapped key detail"),
+        );
+        let (code, message) = public_error(&verification);
+        assert_eq!(code, "SF-SURVIVABILITY-BACKUP-SHOP-KEY-VERIFICATION");
+        assert_eq!(classify_log_error(&verification), "verification");
+        assert!(!message.contains("private"));
+        assert!(!message.contains("wrapped key"));
+
+        assert_eq!(
+            survivability_permission_error(
+                backup_recovery::SurvivabilityPermissionReason::RecoveryMaterial,
+            )
+            .0,
+            "SF-SURVIVABILITY-RECOVERY-KIT"
+        );
+        assert_eq!(
+            survivability_permission_error(
+                backup_recovery::SurvivabilityPermissionReason::ReplacementAuthority,
+            )
+            .0,
+            "SF-SURVIVABILITY-REPLACEMENT-AUTHORIZATION"
+        );
     }
 }

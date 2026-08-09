@@ -1,6 +1,6 @@
 {
   "name": "sahelflow",
-  "version": "1.0.0-internal.13",
+  "version": "1.0.0-internal.14",
   "private": true,
   "packageManager": "bun@1.3.14",
   "description": "SahelFlow — AI-powered back-office for Algerian COD sellers. Local-first desktop app.",
@@ -18,7 +18,7 @@
     "test:phase67:e2e": "playwright test e2e/phase6-7-completion.spec.ts",
     "test:sandbox": "bun run scripts/prepare-test-sandbox.ts",
     "sf-verify": "bun run scripts/sf-verify.ts",
-    "sf-audit": "bun run scripts/sf-audit.ts",
+    "sf-audit": "bun run scripts/sf-audit.ts && bun run scripts/verify-current-frontier.ts",
     "sf-inventory": "bun run scripts/sf-inventory.ts && bun run scripts/augment-prisma-inventory.ts && bun run scripts/generate-phase4-evidence.ts --out .sf-inventory/phase4-security",
     "sf-phase5-experience": "bun run scripts/verify-phase5-experience.ts",
     "sf-phase67": "bun run scripts/verify-phase6-7-completion.ts",

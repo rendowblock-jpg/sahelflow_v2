@@ -31,7 +31,7 @@
  * RESOLUTION ORDER (getMasterKey):
  *   1. Explicit offline protected-data maintenance export, when that command runs
  *   2. This compiled module's in-memory cache
- *   3. Process-memory packaged cache shared by duplicated Next.js chunks
+ *   3. Process-memory packaged cache shared by duplicated Next.js chunks/realms
  *   4. One-use native bridge (packaged runtime)
  *   5. SF_MASTER_KEY env var (development / tests only)
  *   6. Compatibility keyfile (development / tests only)
@@ -141,22 +141,27 @@ function validateNativeRoot(value: unknown, label: string): Buffer {
   return value;
 }
 
+function processNativeRootHolder(): NativeRootHolder {
+  return process as unknown as NativeRootHolder;
+}
+
 /**
- * Next.js standalone output can contain more than one compiled copy of this
- * module. A module-local cache is therefore insufficient after the one-use
- * native bridge has been consumed. Keep the resolved root only in process
- * memory under a non-enumerable symbol so every compiled copy shares the same
- * authority without introducing an environment, argument, or file fallback.
+ * Next.js standalone output can contain more than one compiled copy/realm of
+ * this module. A module-local cache and a realm-local globalThis cache are both
+ * insufficient after the one-use native bridge has been consumed. Keep the
+ * resolved root only in process memory under a non-enumerable symbol so every
+ * compiled server realm shares the same authority without introducing an
+ * environment, argument, or file fallback.
  */
 function processCachedNativeRoot(): Buffer | null {
-  const holder = globalThis as NativeRootHolder;
+  const holder = processNativeRootHolder();
   const candidate = holder[NATIVE_ROOT_CACHE_SYMBOL];
   if (candidate === undefined) return null;
   return validateNativeRoot(candidate, "The process-cached installation root");
 }
 
 function cacheNativeRootForProcess(key: Buffer): Buffer {
-  const holder = globalThis as NativeRootHolder;
+  const holder = processNativeRootHolder();
   const existing = holder[NATIVE_ROOT_CACHE_SYMBOL];
   if (existing !== undefined) {
     return validateNativeRoot(
@@ -328,7 +333,7 @@ export function rotateMasterKey(): Buffer {
 /** For tests: reset this module and the process-wide packaged cache. */
 export function _resetMasterKeyCacheForTests(): void {
   cachedKey = null;
-  delete (globalThis as NativeRootHolder)[NATIVE_ROOT_CACHE_SYMBOL];
+  delete processNativeRootHolder()[NATIVE_ROOT_CACHE_SYMBOL];
 }
 
 function parseHexKey(hex: string, label: string): Buffer {

@@ -1,8 +1,50 @@
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_snapshot_verification_and_commit_use_write_capable_handles() {
+        let root = std::env::temp_dir().join(format!(
+            "sahelflow-durability-sync-{}-{}",
+            std::process::id(),
+            random_hex(8).expect("random suffix")
+        ));
+        fs::create_dir_all(&root).expect("durability sync test directory");
+        let source = root.join("source.db");
+        let snapshot = root.join("staging").join("snapshot.db");
+        let connection = Connection::open(&source).expect("snapshot source database");
+        connection
+            .execute_batch(&format!(
+                r#"
+                PRAGMA foreign_keys = ON;
+                CREATE TABLE "_prisma_migrations" (
+                    migration_name TEXT NOT NULL,
+                    checksum TEXT NOT NULL,
+                    started_at INTEGER NOT NULL,
+                    finished_at INTEGER,
+                    rolled_back_at INTEGER
+                );
+                INSERT INTO "_prisma_migrations"
+                    (migration_name, checksum, started_at, finished_at, rolled_back_at)
+                VALUES ('20260809000000_windows_snapshot', '{}', 1, 2, NULL);
+                CREATE TABLE durable_fixture (id INTEGER PRIMARY KEY, value TEXT NOT NULL);
+                INSERT INTO durable_fixture (value) VALUES ('preserved');
+                "#,
+                "a".repeat(64)
+            ))
+            .expect("snapshot source authority");
+        drop(connection);
+        let migrations = applied_migration_vector(&source).expect("source migration authority");
+        let migration_set_sha256 = migration_set_hash_from_applied(&migrations);
+
+        create_verified_snapshot(&source, &snapshot).expect("verified Windows SQLite snapshot");
+        verify_database_migration_set(&snapshot, &migration_set_sha256)
+            .expect("snapshot migration authority");
+        sync_tree(&root).expect("write-capable Windows durability sync");
+
+        fs::remove_dir_all(root).expect("remove durability sync test directory");
+    }
 
     fn test_restore_journal(state: RestoreJournalState) -> RestoreJournal {
         RestoreJournal {
@@ -39,10 +81,8 @@ mod tests {
             restore_staging_root(&app_data).join(&journal.unsigned.staging_directory),
         )
         .expect("staging directory");
-        fs::create_dir_all(
-            restore_rescue_root(&app_data).join(&journal.unsigned.rescue_directory),
-        )
-        .expect("rescue directory");
+        fs::create_dir_all(restore_rescue_root(&app_data).join(&journal.unsigned.rescue_directory))
+            .expect("rescue directory");
         let replay = system_dir(&app_data).join(NATIVE_COMMAND_REPLAY_FILE);
         fs::write(&replay, b"old-workspace-replay-authority").expect("replay authority");
         let pending = pending_restore_path(&app_data);

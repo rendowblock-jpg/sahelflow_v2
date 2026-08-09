@@ -26,11 +26,31 @@ fn validate_keyring(name: &str, value: &str) {
     }
 }
 
+fn exact_restore_evidence_loopback_url(value: &str) -> bool {
+    const PREFIX: &str = "http://127.0.0.1:";
+    let Some(port) = value.strip_prefix(PREFIX) else {
+        return false;
+    };
+    if port.is_empty() || !port.bytes().all(|byte| byte.is_ascii_digit()) {
+        return false;
+    }
+    port.parse::<u16>().is_ok_and(|port| port != 0)
+}
+
 fn main() {
     if std::env::var("PROFILE").as_deref() == Ok("release") {
         let service_url = required_release_value("SF_LICENSE_SERVICE_URL");
-        if !service_url.starts_with("https://") || service_url.contains(char::is_whitespace) {
-            panic!("SF_LICENSE_SERVICE_URL must be an absolute HTTPS URL without whitespace");
+        println!("cargo:rerun-if-env-changed=SF_PHASE4_RESTORE_EVIDENCE_BUILD");
+        let restore_evidence_build =
+            std::env::var("SF_PHASE4_RESTORE_EVIDENCE_BUILD").as_deref() == Ok("1");
+        let production_https =
+            service_url.starts_with("https://") && !service_url.contains(char::is_whitespace);
+        let evidence_loopback =
+            restore_evidence_build && exact_restore_evidence_loopback_url(&service_url);
+        if !production_https && !evidence_loopback {
+            panic!(
+                "SF_LICENSE_SERVICE_URL must be an absolute HTTPS URL without whitespace; only the explicit Phase 4 restore-evidence build may use an exact http://127.0.0.1:<port> origin"
+            );
         }
         for name in [
             "SF_LICENSE_TRIAL_PUBLIC_KEYS",

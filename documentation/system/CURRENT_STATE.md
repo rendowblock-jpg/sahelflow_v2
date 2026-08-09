@@ -12,12 +12,17 @@
 > **Phase 5 status:** protected-source + controlled-browser closed through PR #220 / issue #208
 > **Phase 6 status:** protected-source + controlled-browser package merged through PR #223; installed/human exit evidence pending
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Retained evidence:** issues #201, #214 and #221
+> **Active release PR:** #227 — Internal.14 Founder checkpoint, draft/unmerged/unpublished
+> **Last installed-tested Internal.14 code head:** `c7849fc49ef26d5e2b4803d0181d3fc177e87a7b`
+> **Current installed blocker:** false-negative durable parity oracle after a committed replacement restore; exact-head closure remains required
+> **Retained evidence:** issues #201, #214, #221 and #226
 > **Execution epic:** issue #164
-> **Last assessed:** 2026-08-08
+> **Last assessed:** 2026-08-09
 
-Live protected `main` is authority. Documentation-only commits may advance `main`
-beyond the named application-changing SHA without changing application behavior.
+Live protected `main` is authority. Documentation-only commits may advance an active
+branch or protected `main` without changing application behavior. The exact-head
+candidate and closure route are retained directly in
+`documentation/operations/WORKING_MEMORY.md`.
 
 ## Executive truth
 
@@ -25,31 +30,26 @@ SahelFlow is a Windows-first local application for Algerian COD operations with
 protected canonical business, identity, licensing, provider, recovery and desktop
 experience authority. It is not yet a commercially certified Stable release.
 
-Protected source now includes:
+Protected source includes Golden COD lifecycle/stock/money authority, durable
+identity/session/permissions and native multi-shop authority, signed licensing,
+durable provider/Inbox/AI/automation recovery, Phase 4 survivability authority,
+Phase 5 desktop convergence, Phase 6 AR/FR/EN localization/RTL/accessibility work,
+and Phase 7 measurement/query-plan infrastructure.
 
-- Golden COD lifecycle, stock, money and compensation authority;
-- durable identity/session/permission and native multi-shop authority;
-- signed licensing;
-- durable provider, Inbox, AI and automation effects/recovery;
-- Phase 4 backup/recovery/migration survivability authority;
-- Phase 5 whole-product operational desktop convergence;
-- Phase 6 shared AR/FR/EN localization, RTL, accessibility and reflow corrections;
-- Phase 7 query-plan and controlled-browser measurement infrastructure.
-
-The product remains in **Phase 6** because the roadmap requires applicable
-installed/human Windows accessibility evidence in addition to the now-green
-source/browser package. Phase 7 installed low-end certification therefore remains
-a later evidence checkpoint, even though its measurement infrastructure is merged.
+The product remains in **Phase 6**. The source/browser package is already protected;
+the remaining exit dependency is installed Windows/Tauri evidence and Founder
+accept/reject reconciliation. Phase 7 installed low-end/reliability certification
+remains later work under issue #226.
 
 ## Phase 5 merged result
 
-PR #220 remains the protected Phase 5 source/browser baseline. Shared Phase 5
+PR #220 remains the protected Phase 5 source/browser baseline. Its whole-product
 contracts remain protected: workflow/domain navigation, command search,
-server-authoritative workbenches, permission-before-read field access, truthful
-pagination/sort/mutation state, shared DataTable/StateSurface/StatCard/chart
-grammar, entity context, governed imports/exports, Risk and financial authority
-separation, Inbox/AI/Automation surfaces, Settings/Profile capability behavior and
-quiet auth/state boundaries.
+server-authoritative workbenches, permission-before-read behavior, truthful
+pagination/sort/mutation state, shared table/state/stat/chart grammar, entity
+context, governed import/export, Risk/financial authority separation, Inbox/AI/
+Automation surfaces, Settings/Profile capability behavior and quiet auth/state
+boundaries.
 
 ## Phase 5 evidence
 
@@ -70,71 +70,118 @@ from validated source head `fa0ff6de649421c879f62364383a363b61c71bfc`.
 The protected application-changing merge is
 `23f1bc3912aecfd2a32c591a18fcca70bf454daa`.
 
-Important protected outcomes include:
+The exact source result passed Required PR / Phase 5 gates, localization/RTL/
+accessibility contracts, TypeScript, ESLint, complete Vitest, dependency/migration
+checks, hot-query planner evidence, all nine integrated Phase 6/7 Playwright
+journeys, EN/FR/AR desktop/reflow sweeps, keyboard/focus/dialog/reduced-motion
+checks, controlled browser performance/resource evidence and review closure.
 
-- unified server/client runtime translation fallback authority;
-- canonical AR/FR/EN runtime-copy parity on representative dynamic surfaces;
-- localized shared Sheet, entity-timeline, chart and interaction semantics;
-- explicit RTL submenu/directional behavior and mixed-direction isolation;
-- route-transition focus entry without stealing initial-load focus;
-- compact accessible target floors and preserved reduced-motion foundations;
-- hard-coded user-copy inventory with bounded non-copy classification;
-- visible interactive accessible names across Inbox and AI/Agents flows;
-- responsive shared DataTable containment that preserves horizontal table scroll
-  without inflating the document root at 200% reflow;
-- corrected Settings translation-key authority;
-- bounded intent prefetch rather than whole-document speculative prerender;
-- hot-query index/SQLite planner evidence and `PRAGMA optimize` verification;
-- controlled throttled browser route/search/resource trend evidence;
-- dedicated exact-head Phase 6-7 completion workflow.
-
-### Exact-head evidence
-
-The final PR #223 head passed:
-
-- Required PR gate;
-- Required Phase 5 Experience gate;
-- static localization, RTL and accessibility contract;
-- TypeScript;
-- ESLint;
-- complete Vitest;
-- production dependency audit;
-- migration status;
-- hot-query index and SQLite planner contract;
-- all nine integrated Playwright Phase 6/7 journeys;
-- EN/FR/AR complete desktop route sweeps;
-- EN/FR/AR 200%-equivalent reflow sweeps;
-- keyboard/focus/dialog/reduced-motion/Settings direction evidence;
-- controlled Phase 7 browser performance/resource trend;
-- Required Phase 6-7 completion gate;
-- zero unresolved P0/P1 review threads.
-
-No collected evidence requires reopening Phase 1–5 business, permissions, provider,
-recovery, native or Phase 5 experience authority.
+No current evidence requires reopening Phase 1–5 business, permission, provider,
+recovery or general Phase 5 experience authority.
 
 ### Remaining Phase 6 exit evidence
 
-The remaining Phase 6 work is not another general source wave. The roadmap still
-requires the applicable Level 3 installed UI/accessibility checkpoint on a current
-Windows/Tauri build derived from protected source that includes PR #223.
+The roadmap still requires the installed Level 3 checkpoint on Windows/Tauri:
 
-Record, at minimum:
-
-- native-Arabic human language/reading review;
+- native-Arabic human reading/language quality;
 - installed keyboard/focus and critical semantic inspection;
-- representative Arabic RTL geometry at 1366×768 and applicable zoom;
+- representative Arabic RTL geometry at 1366×768 and applicable zoom/reflow;
 - signed installed Windows/Tauri observation;
-- explicit Founder accept/reject evidence reconciling issue #221.
+- explicit Founder accept/reject evidence in issue #221.
 
-If the installed checkpoint exposes a concrete defect, repair that demonstrated
-defect in one bounded package. If it passes with no actionable P0/P1, Phase 6 may
-close under the roadmap exit gate.
+Before that Founder checkpoint can use Internal.14, PR #227 must first close the
+installed replacement-survivability evidence described below and then pass the
+normal exact-head release closure.
+
+## Internal.14 candidate and installed evidence
+
+PR #227 requests app `1.0.0-internal.14` / MSI `1.0.0.14`. It remains draft,
+unmerged and unpublished. Internal.13 remains the shipping release.
+
+`release-on-version-authority.yml` remains the single signed-release dispatcher.
+`dispatch-internal-14.yml` remains observer/reporting only. Ordinary signed release
+licensing remains protected HTTPS authority; the deterministic loopback issuer is
+limited to the explicit restore-evidence build.
+
+### Last installed-tested code head
+
+`c7849fc49ef26d5e2b4803d0181d3fc177e87a7b`
+
+Focused installed run `31331257331` checked out that exact code head. The MSI build,
+installed launch/close/reopen, authenticated hydrated WebView UI, rollback path,
+two-shop replacement restore commit, protected customer readback and protected
+secret readback all completed. The retained committed restore receipt proves that
+the restore operation itself succeeded.
+
+The supported root cause is a deterministic oracle defect: the old aggregate
+business digest included the `Setting` row
+`identity_authority_initialized_v1`. Native replacement restore deliberately
+removes that source-installation footprint, and successful owner re-enrollment
+recreates it for the replacement installation. Comparing that machine-local row
+as seller business data therefore makes raw Setting equality impossible by design.
+The old run did not emit per-table diffs, so it remains diagnostic evidence rather
+than exact-head closure proof.
+
+### Exact closure candidate
+
+The branch candidate repairs the evidence contract rather than weakening restore:
+
+- durable parity inventories every non-local database table instead of a partial
+  business-table allowlist, while preserving stable protected-key identity and
+  excluding only installation-specific wrapping fields;
+- only the exact case-sensitive identity-footprint setting is excluded;
+- rows and fields are canonicalized and sorted before hashing;
+- per-table row counts and digests identify any real mismatch;
+- every restored shop must have zero PIN/session authority and no footprint before
+  re-enrollment; the active footprint must then bind the restored workspace plus
+  replacement installation while inactive shops remain clear;
+- registry active-shop and complete shop-record continuity must survive;
+- every protected-key purpose must retain identity while its installation wrapping
+  changes, and rollback must preserve the exact registry plus complete
+  replacement-local authority;
+- an executable SQLite fixture matrix proves insertion-order independence, local
+  authority replacement, exact-key filtering and failure on seller Setting,
+  Customer, AuditLog and protected-key identity changes before any MSI build;
+- an executable Windows PowerShell contract proves missing-table, row-count,
+  per-table-digest and aggregate-only comparison failures.
+
+Run `31331257331` is retained diagnostic evidence for `c7849fc4…`; it must not be
+rerun as proof for a later source head. The final authoritative installed result
+must come from the normal exact-head CI route.
+
+### Boundaries already closed in the repair sequence
+
+Do not reopen without contradictory evidence:
+
+- deterministic CI trial issuer/signing fixture;
+- Node Ed25519 entitlement verification;
+- Windows license-authority fsync/persistence;
+- packaged installation-root cache across Next server realms;
+- single root/context snapshot per survivability request;
+- basic installed app/Node/WebView process lifetime and endpoint/PID matching;
+- raw native request write (`SURVIVABILITY_REQUEST_WRITE_FAILED` from prior run
+  `31279741140` at head `4e10200b…`);
+- independent recovery-kit creation.
+
+## Exact next engineering action
+
+Freeze one candidate head after its draft checks pass, mark PR #227 ready once and
+let the risk-selected exact-head workflows run. Required Phase 5, Required Phase
+6-7 and native-source checks remain separate gates. Inside CI, the Required PR gate
+must consume its selected source-quality, Tauri, Windows standalone, Windows Rust
+and reusable installed-MSI jobs. Do not rerun the obsolete diagnostic SHA and do
+not dispatch a duplicate focused installed workflow.
+
+Only a fully green exact-head matrix plus clean exact-head adversarial review may
+permit an expected-head squash merge and the one protected signed Internal.14
+publication. Installed CI is not Founder/T470 acceptance; issue #221 remains the
+separate human checkpoint.
 
 ## Phase 7 evidence boundary
 
-PR #223 protects measurement and controlled-browser evidence; it does not claim
-installed performance/reliability certification. After Phase 6 installed closure,
-Phase 7 still requires representative hardware evidence:
+PR #223 protects measurement infrastructure and controlled-browser evidence; it
+does not claim installed performance/reliability certification. Issue #226 begins
+after Phase 6 installed exit and still requires:
 
 - T470 cold launch ≤8 s p95;
 - ordinary navigation ≤700 ms p95;
@@ -150,14 +197,12 @@ accessibility, canonical state, durability, recovery or required background work
 
 ## Retained evidence and non-claims
 
-The following remain explicit evidence obligations:
-
 - issue #201 — prior native/install evidence;
 - issue #214 — replacement-install recovery certification;
-- issue #221 — Founder-installed Phase 5/6 visual acceptance;
-- native-Arabic human accessibility review;
-- Phase 7 T470/floor and eight-hour reliability certification.
+- issue #221 — Founder-installed Phase 5/6 visual/accessibility acceptance;
+- issue #226 — Phase 7 T470/floor/eight-hour performance and reliability certification.
 
-PR #223 does **not** publish a new executable, change the signed release, establish
-Founder acceptance, or claim Beta/Stable. Published truth remains Internal.13 and
-Founder-accepted truth remains Internal.5 until stronger evidence is recorded.
+PR #227 is not merged. Internal.14 is not published. Documentation-only handoff
+commits are not installed-tested. Founder acceptance remains open. No Beta or
+Stable release exists. Published truth remains Internal.13 and Founder-accepted
+truth remains Internal.5 until stronger named evidence is recorded.

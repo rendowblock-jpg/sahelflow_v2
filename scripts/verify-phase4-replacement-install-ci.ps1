@@ -11,130 +11,63 @@ if ($env:GITHUB_ACTIONS -cne "true") {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $sourceScript = Join-Path $PSScriptRoot "verify-phase4-replacement-install.ps1"
 $patchedScript = Join-Path $env:RUNNER_TEMP "verify-phase4-replacement-install.licensed.ps1"
-$trialServerScript = Join-Path $repoRoot ".phase4-trial-service.mjs"
+$trialServerScript = Join-Path $PSScriptRoot "phase4-ci-trial-issuer.mjs"
 $trialKeyHex = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
 $trialKeyId = "ci-trial-key-v1"
 $trialServer = $null
 
-function Reserve-LoopbackPort {
-    $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
-    try {
-        $listener.Start()
-        return ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
-    } finally {
-        $listener.Stop()
-    }
-}
-
 try {
-    $publicKey = @(
-        & node --input-type=module -e @'
-import { getPublicKeyAsync } from "@noble/ed25519";
-const secret = Buffer.from(process.argv[1], "hex");
-console.log(Buffer.from(await getPublicKeyAsync(secret)).toString("base64"));
-'@ $trialKeyHex 2>&1
-    )
+    $issuerSelfTest = @(& node $trialServerScript --self-test $trialKeyHex 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        throw "CI trial issuer self-test failed: $($issuerSelfTest -join [Environment]::NewLine)"
+    }
+
+    $publicKey = @(& node $trialServerScript --public-key $trialKeyHex 2>&1)
     if ($LASTEXITCODE -ne 0) {
         throw "Could not derive the CI trial verification key: $($publicKey -join [Environment]::NewLine)"
     }
-    $publicKey = [string]($publicKey | Select-Object -Last 1)
-    $env:SF_LICENSE_TRIAL_PUBLIC_KEYS = (@{ $trialKeyId = $publicKey.Trim() } | ConvertTo-Json -Compress)
+    $publicKey = ([string]($publicKey | Select-Object -Last 1)).Trim()
 
-    $trialPort = Reserve-LoopbackPort
-    $env:SF_LICENSE_SERVICE_URL = "http://127.0.0.1:$trialPort"
+    if ([string]::IsNullOrWhiteSpace($env:SF_LICENSE_SERVICE_URL)) {
+        throw "The evidence MSI did not publish its compiled CI trial-service URL."
+    }
+    try {
+        $trialServiceUri = [Uri]$env:SF_LICENSE_SERVICE_URL
+    } catch {
+        throw "The compiled CI trial-service URL is invalid."
+    }
+    if (
+        $trialServiceUri.Scheme -cne "http" -or
+        $trialServiceUri.Host -cne "127.0.0.1" -or
+        $trialServiceUri.Port -lt 1 -or
+        $trialServiceUri.Port -gt 65535 -or
+        $trialServiceUri.AbsolutePath -cne "/"
+    ) {
+        throw "The replacement evidence MSI must bind its trial issuer to one exact loopback HTTP origin."
+    }
+    $trialPort = $trialServiceUri.Port
 
-    @'
-import http from "node:http";
-import { signAsync } from "@noble/ed25519";
+    if ([string]::IsNullOrWhiteSpace($env:SF_LICENSE_TRIAL_PUBLIC_KEYS)) {
+        throw "The evidence MSI did not publish its compiled CI trial verification keyring."
+    }
+    try {
+        $compiledTrialKeys = $env:SF_LICENSE_TRIAL_PUBLIC_KEYS | ConvertFrom-Json
+    } catch {
+        throw "The compiled CI trial verification keyring is invalid JSON."
+    }
+    $compiledTrialKey = $compiledTrialKeys.PSObject.Properties[$trialKeyId]
+    if ($null -eq $compiledTrialKey -or [string]$compiledTrialKey.Value -cne $publicKey) {
+        throw "The replacement evidence issuer key does not match the trial key compiled into the MSI."
+    }
 
-const port = Number.parseInt(process.argv[2], 10);
-const secret = Buffer.from(process.argv[3], "hex");
-const keyId = "ci-trial-key-v1";
-
-function canonicalBytes(claims) {
-  const canonical = [
-    claims.domain,
-    claims.formatVersion,
-    claims.licenseId,
-    claims.workspaceId,
-    claims.installationId,
-    claims.deviceBinding,
-    claims.productMajor,
-    claims.type,
-    claims.issuedAt,
-    claims.expiresAt,
-    claims.supportEndsAt,
-    claims.shopSlots,
-    claims.memberLimit,
-    claims.deviceLimit,
-    claims.backupBytes,
-    claims.mediaBytes,
-    [...claims.features].sort(),
-    claims.transferState,
-    claims.transferEpoch,
-    claims.recoveryEpoch,
-    claims.revocationEpoch,
-    claims.keyId,
-    claims.issuer,
-  ];
-  return new TextEncoder().encode(JSON.stringify(canonical));
-}
-
-const server = http.createServer(async (req, res) => {
-  if (req.method === "GET" && req.url === "/health") {
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end('{"ok":true}');
-    return;
-  }
-  if (req.method !== "POST" || req.url !== "/v1/trials") {
-    res.writeHead(404).end();
-    return;
-  }
-  try {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const request = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    const now = new Date();
-    const expires = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const support = new Date(now.getTime() + 5 * 365 * 24 * 60 * 60 * 1000);
-    const claims = {
-      domain: "sahelflow.license.entitlement.v2",
-      formatVersion: 2,
-      licenseId: "ci-phase4-trial-0001",
-      workspaceId: request.workspaceId,
-      installationId: request.installationId,
-      deviceBinding: request.deviceBinding,
-      productMajor: 1,
-      type: "trial",
-      issuedAt: now.toISOString(),
-      expiresAt: expires.toISOString(),
-      supportEndsAt: support.toISOString(),
-      shopSlots: 10,
-      memberLimit: 10,
-      deviceLimit: 10,
-      backupBytes: 50 * 1024 * 1024 * 1024,
-      mediaBytes: 10 * 1024 * 1024 * 1024,
-      features: ["core"],
-      transferState: "active",
-      transferEpoch: 0,
-      recoveryEpoch: 0,
-      revocationEpoch: 0,
-      keyId,
-      issuer: "trial-service",
-    };
-    const signature = Buffer.from(await signAsync(canonicalBytes(claims), secret)).toString("base64");
-    res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-    res.end(JSON.stringify({ claims, signature }));
-  } catch {
-    res.writeHead(500, { "content-type": "application/json" });
-    res.end('{"error":"ci_trial_failure"}');
-  }
-});
-server.listen(port, "127.0.0.1");
-'@ | Set-Content -LiteralPath $trialServerScript -Encoding UTF8
-
-    $trialServer = Start-Process -FilePath "node" -ArgumentList @($trialServerScript, $trialPort, $trialKeyHex) -PassThru -WindowStyle Hidden
+    $trialServer = Start-Process -FilePath "node" -ArgumentList @(
+        $trialServerScript,
+        "--serve",
+        $trialPort,
+        $trialKeyHex
+    ) -PassThru -WindowStyle Hidden
     $deadline = (Get-Date).AddSeconds(15)
+    $health = $null
     do {
         try {
             $health = Invoke-WebRequest -Uri "$env:SF_LICENSE_SERVICE_URL/health" -UseBasicParsing -TimeoutSec 2
@@ -144,7 +77,7 @@ server.listen(port, "127.0.0.1");
         }
     } while ((Get-Date) -lt $deadline)
     if ($null -eq $health -or $health.StatusCode -ne 200) {
-        throw "CI trial service did not become ready."
+        throw "CI trial service did not become ready at the exact origin compiled into the evidence MSI."
     }
 
     $source = Get-Content -LiteralPath $sourceScript -Raw
@@ -153,13 +86,14 @@ __OWNER__
 $trialActivation = Invoke-SahelFlowJson -Method POST -BaseUrl __BASE__ -Path "/api/license/trial" -Session __SESSION__
 if ($trialActivation.status -ne 200 -or $trialActivation.body.status -cne "valid") {
     $trialCode = if ($null -ne $trialActivation.body -and $null -ne $trialActivation.body.code) { [string]$trialActivation.body.code } else { "none" }
-    throw "CI trial activation failed with HTTP $($trialActivation.status) and code $trialCode."
+    $trialDetail = if ($null -ne $trialActivation.body -and $null -ne $trialActivation.body.error) { [string]$trialActivation.body.error } else { "none" }
+    throw "CI trial activation failed with HTTP $($trialActivation.status), code $trialCode, detail $trialDetail."
 }
 '@
     foreach ($binding in @(
         @{ owner = 'Establish-OwnerSession $sourceBaseUrl $sourceSession'; base = '$sourceBaseUrl'; session = '$sourceSession' },
         @{ owner = 'Establish-OwnerSession $replacementBaseUrl $replacementSession'; base = '$replacementBaseUrl'; session = '$replacementSession' },
-        @{ owner = 'Establish-OwnerSession $committedBaseUrl $committedSession'; base = '$committedBaseUrl'; session = '$committedSession' }
+        @{ owner = 'Establish-OwnerSession $committedBaseUrl $committedSession -RequireSetup'; base = '$committedBaseUrl'; session = '$committedSession' }
     )) {
         if (-not $source.Contains([string]$binding.owner)) {
             throw "Replacement harness activation anchor drifted: $($binding.owner)"
@@ -167,13 +101,72 @@ if ($trialActivation.status -ne 200 -or $trialActivation.body.status -cne "valid
         $replacement = $activationTemplate.Replace('__OWNER__', [string]$binding.owner).Replace('__BASE__', [string]$binding.base).Replace('__SESSION__', [string]$binding.session)
         $source = $source.Replace([string]$binding.owner, $replacement.TrimEnd())
     }
+
+    $kitAnchor = @'
+$kit = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/backup/recovery-kit" -Session $sourceSession
+'@
+    $kitPrelude = @'
+# Runtime HTTP readiness precedes the native survivability controller by a
+# separate authority handoff. A retained endpoint from an abnormal prior stop
+# must never be accepted as current evidence. Wait only for the endpoint owned
+# by this exact source sahelflow.exe process, then prove one read-only native
+# round-trip before issuing the non-idempotent recovery-kit command.
+$survivabilityEndpointPath = Join-Path (Join-Path $roamingRoot "system") "survivability-endpoint.json"
+$bridgeDeadline = (Get-Date).AddSeconds(20)
+$currentBridge = $null
+do {
+    if (Test-Path -LiteralPath $survivabilityEndpointPath -PathType Leaf) {
+        try {
+            $candidateBridge = Get-Content -LiteralPath $survivabilityEndpointPath -Raw | ConvertFrom-Json
+            $candidateInstanceId = [string]$candidateBridge.instanceId
+            $candidatePort = [int]$candidateBridge.port
+            if (
+                [int]$candidateBridge.formatVersion -eq 1 -and
+                [string]$candidateBridge.state -ceq "ready" -and
+                [string]$candidateBridge.host -ceq "127.0.0.1" -and
+                [int]$candidateBridge.processId -eq $sourceProcess.Id -and
+                $candidateInstanceId -cmatch '^[0-9a-f]{32}$' -and
+                $candidatePort -ge 1 -and
+                $candidatePort -le 65535
+            ) {
+                $currentBridge = $candidateBridge
+                break
+            }
+        } catch {
+            # The controller writes the endpoint atomically; tolerate only the
+            # short replacement/read race while waiting for the current PID.
+        }
+    }
+    Start-Sleep -Milliseconds 100
+} while ((Get-Date) -lt $bridgeDeadline)
+if ($null -eq $currentBridge) {
+    throw "The current source installation survivability bridge did not become ready for process $($sourceProcess.Id)."
+}
+
+$bridgeProbe = Invoke-SahelFlowJson -Method GET -BaseUrl $sourceBaseUrl -Path "/api/backup/list" -Session $sourceSession
+if ($bridgeProbe.status -ne 200) {
+    $bridgeCode = if ($null -ne $bridgeProbe.body -and $null -ne $bridgeProbe.body.code) { [string]$bridgeProbe.body.code } else { "none" }
+    $bridgeDetail = if ($null -ne $bridgeProbe.body -and $null -ne $bridgeProbe.body.error) { [string]$bridgeProbe.body.error } else { "none" }
+    throw "Current survivability bridge probe failed with HTTP $($bridgeProbe.status), code $bridgeCode, detail $bridgeDetail, endpoint PID $($currentBridge.processId), source PID $($sourceProcess.Id)."
+}
+
+$kit = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/backup/recovery-kit" -Session $sourceSession
+'@
+    $kitCommand = $kitAnchor.TrimEnd()
+    $kitCommandFirst = $source.IndexOf($kitCommand, [StringComparison]::Ordinal)
+    $kitCommandLast = $source.LastIndexOf($kitCommand, [StringComparison]::Ordinal)
+    if ($kitCommandFirst -lt 0 -or $kitCommandFirst -ne $kitCommandLast) {
+        throw "Replacement harness recovery-kit command anchor drifted."
+    }
+    $source = $source.Replace($kitCommand, $kitPrelude.TrimEnd())
+
     Set-Content -LiteralPath $patchedScript -Value $source -Encoding UTF8
 
-    & $patchedScript -MsiPath $MsiPath
+    & $patchedScript -MsiPath $MsiPath -RepositoryRoot $repoRoot
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } finally {
     if ($null -ne $trialServer) {
         Stop-Process -Id $trialServer.Id -Force -ErrorAction SilentlyContinue
     }
-    Remove-Item -LiteralPath $patchedScript, $trialServerScript -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $patchedScript -Force -ErrorAction SilentlyContinue
 }

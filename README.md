@@ -8,20 +8,24 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 ## Current repository truth
 
-- Latest application-changing protected merge: **PR #220 — Phase 5 whole-product AAA experience convergence**.
+- Latest application-changing protected merge: **PR #223 — Phase 6/7 source-browser completion**, protected application SHA `23f1bc3912aecfd2a32c591a18fcca70bf454daa`.
+- Protected documentation reconciliation after that merge: **PR #225** at `6a9c3e9372e9994428e65dbbc79303cf08160db0`.
 - Phase 5 product baseline on protected history: `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 - Phase 5 issue #208: **closed at the protected-source + controlled-browser layer**.
-- Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
+- Phase 6 source/browser package: **complete and protected through PR #223**.
+- Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**; the current sub-frontier is the installed/human exit checkpoint.
+- Active release-preparation PR: **#227 — Internal.14 Phase 5–6 Founder checkpoint**, still draft/unmerged at the current handoff.
 - Execution epic: issue #164.
-- Retained installed/human evidence: issues **#201, #214 and #221**.
+- Retained issues #201, #214 and #221 remain evidence obligations; issue #226 additionally owns Phase 7 installed performance/reliability certification.
 - Published executable source remains `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
+- Requested Founder checkpoint candidate is `1.0.0-internal.14` / MSI `1.0.0.14`; it is **not published** until PR #227 is merged and the exact protected-main signed workflow succeeds.
 - Published release remains `1.0.0-internal.13` / MSI `1.0.0.13`.
 - Founder-installed release remains Internal.13; Founder acceptance remains open.
 - Founder-accepted baseline remains Internal.5.
 
-Always re-read live protected `main` before implementation or merge. The Phase 5
-SHA above records the latest application-changing product baseline; documentation-
-only reconciliation commits may advance `main` without changing product behavior.
+Always re-read live protected `main` and the active PR before implementation or
+merge. Documentation-only commits may advance `main` without changing the latest
+application-changing product SHA.
 
 ## Phase 5 closure
 
@@ -51,48 +55,49 @@ browser CI. Issue #221 owns it. Therefore Phase 5 closure does **not** claim a n
 signed release, Founder-installed visual acceptance, Beta, Stable or installed
 certification.
 
-## Active Phase 6 objective
+## Phase 6 protected source/browser result
 
-Phase 6 makes Arabic and accessibility equivalent behavior across the complete
-product. Start from the live protected Phase 5 result and do not reopen completed
-workbenches unless a concrete accessibility/RTL defect requires it.
+PR #223 completed the shared Phase 6 correctness package and the controlled Phase
+7 measurement/query infrastructure. Its exact validated head
+`fa0ff6de649421c879f62364383a363b61c71bfc` passed the Required PR gate, Phase 5
+Experience gate, AR/FR/EN localization/RTL/accessibility contract, complete source
+quality, SQLite query-plan evidence, all nine Phase 6/7 Playwright journeys,
+200%-equivalent reflow coverage and zero unresolved P0/P1 review threads.
 
-Primary outcomes:
+Do **not** restart a broad Phase 6 source audit. The remaining Phase 6 exit work is
+installed/human evidence on a Windows/Tauri build containing PR #223.
 
-- semantic AR/FR/EN parity and removal of remaining concatenated/page-local copy;
-- Arabic typography/joining and mixed-direction isolation;
-- logical RTL geometry, deliberate directional icons and chart parity;
-- WCAG 2.2 AA target;
-- keyboard-only completion, focus management, semantics and announcements;
-- contrast, reduced motion, 100–200% zoom and 1366×768 containment;
-- equivalent loading/error/permission/retry/recovery behavior across locales;
-- controlled browser evidence plus applicable installed Founder review.
+## Exact active frontier
+
+PR #227 prepares one unique **Internal.14** installed Founder-test milestone. It is
+a release/version-authority package, not another Phase 6 feature wave.
+
+The next session starts from `documentation/operations/WORKING_MEMORY.md` and must:
+
+1. re-fetch protected `main` and PR #227;
+2. freeze the current PR #227 head and inspect its exact checks/review state;
+3. finish the guarded Internal.14 release request without broadening product scope;
+4. merge only with exact-head evidence;
+5. follow the protected signed release workflow until Internal.14 is actually
+   published and updater metadata is verified;
+6. update the Founder T470 in place through the normal app updater;
+7. record the installed Arabic/RTL/accessibility checkpoint in issue #221;
+8. close Phase 6 only if that installed checkpoint has no actionable P0/P1;
+9. then begin issue #226 Phase 7 T470/floor/eight-hour certification.
 
 ## Documentation
 
 Start with [`AGENTS.md`](AGENTS.md), then read the active authority chain in
-[`documentation/README.md`](documentation/README.md).
+[`documentation/README.md`](documentation/README.md), especially
+[`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md)
+for the exact resumable frontier.
 
 The ten active Markdown authorities are owned under `documentation/`; issue #164
 tracks execution but does not replace product/architecture documentation.
 
 ## Execution model
 
-SahelFlow uses **one active implementation agent at a time** with an audit-first,
-root-cause, coherent-batch workflow:
-
-```text
-live protected source
-→ complete reconnaissance
-→ consolidated Problem Register
-→ frozen shared contracts
-→ coherent implementation batch
-→ exact-head adversarial review
-→ selected full gates/evidence
-→ consolidated repair if needed
-→ expected-head merge
-→ protected-main verification
-```
-
-Do not turn missing installed/external evidence into a passing claim. Retained
-issues #201, #214 and #221 stay evidence boundaries until explicitly reconciled.
+SahelFlow uses one active implementation owner, one coherent branch/PR per outcome,
+audit-first work, exact-head review, risk-selected CI and explicit separation
+between source-proven, artifact-proven, installed, Founder-accepted, phase-closed
+and Stable truth.

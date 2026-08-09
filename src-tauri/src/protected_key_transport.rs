@@ -24,6 +24,25 @@ const AAD_DOMAIN: &[u8] = b"sahelflow.protected-value.aad.v1\0";
 const BINDING_DOMAIN: &[u8] = b"sahelflow.protected-value.binding.v1\0";
 const KEY_ID_DOMAIN: &[u8] = b"sahelflow.protected-value.key-id.v1\0";
 const REQUIRED_PURPOSES: [&str; 3] = ["shop-blind-index", "shop-data", "shop-secret"];
+const PROTECTED_VALUE_MARKER: &str = "sahelflow-protected-value";
+const LEGACY_CIPHERTEXT_MARKER: &str = "\"ciphertext\"";
+const LEGACY_IV_MARKER: &str = "\"iv\"";
+const LEGACY_TAG_MARKER: &str = "\"tag\"";
+const PROTECTED_VALUE_LOCATIONS: [(&str, &str); 13] = [
+    ("Customer", "name"),
+    ("Customer", "phoneEnc"),
+    ("Customer", "phone2"),
+    ("Customer", "address"),
+    ("Customer", "notes"),
+    ("Order", "phone"),
+    ("Order", "address"),
+    ("Order", "notes"),
+    ("Conversation", "contactName"),
+    ("Conversation", "contactPhone"),
+    ("Message", "body"),
+    ("Secret", "ciphertext"),
+    ("Setting", "value"),
+];
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -45,6 +64,18 @@ struct AuthorityRow {
     key_id: String,
     wrapping_key_id: String,
     wrapped_key: String,
+}
+
+struct WrappingAuthority {
+    key: [u8; 32],
+    authority_key_id: String,
+    envelope_key_id: String,
+}
+
+impl Drop for WrappingAuthority {
+    fn drop(&mut self) {
+        clear_bytes(&mut self.key);
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -104,6 +135,10 @@ pub(crate) fn export_shop_keys(
     let connection = Connection::open(database_path)
         .map_err(|error| IoError::other(format!("protected key database open failed: {error}")))?;
     let rows = read_rows(&connection)?;
+    if rows.is_empty() {
+        validate_unkeyed_database(&connection)?;
+        return Ok(Vec::new());
+    }
     validate_complete_rows(&rows)?;
 
     let mut exported = Vec::with_capacity(REQUIRED_PURPOSES.len());
@@ -160,29 +195,38 @@ pub(crate) fn rewrap_imported_shop_keys(
     shop_incarnation_id: &str,
 ) -> Result<(), IoError> {
     validate_context(workspace_id, installation_id, shop_id, shop_incarnation_id)?;
-    validate_exported_keys(keys)?;
     validate_database_file(database_path)?;
     let mut connection = Connection::open(database_path)
         .map_err(|error| IoError::other(format!("restored key database open failed: {error}")))?;
-    let transaction = connection
-        .transaction_with_behavior(TransactionBehavior::Immediate)
-        .map_err(|error| {
-            IoError::other(format!("protected key re-wrap transaction failed: {error}"))
-        })?;
-
-    let existing_count: i64 = transaction
+    let existing_count: i64 = connection
         .query_row("SELECT COUNT(*) FROM ProtectedKeyAuthority", [], |row| {
             row.get(0)
         })
         .map_err(|error| {
             IoError::other(format!("protected key authority count failed: {error}"))
         })?;
+    if keys.is_empty() {
+        if existing_count != 0 {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "backup has no protected keys but the restored database has key authority",
+            ));
+        }
+        validate_unkeyed_database(&connection)?;
+        return Ok(());
+    }
+    validate_exported_keys(keys)?;
     if existing_count != REQUIRED_PURPOSES.len() as i64 {
         return Err(IoError::new(
             ErrorKind::InvalidData,
             "restored database has an incomplete or competing protected-key authority",
         ));
     }
+    let transaction = connection
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(|error| {
+            IoError::other(format!("protected key re-wrap transaction failed: {error}"))
+        })?;
 
     for exported in keys {
         let mut key = decode_key_hex(&exported.key_hex)?;
@@ -197,7 +241,7 @@ pub(crate) fn rewrap_imported_shop_keys(
                 ),
             ));
         }
-        let (wrapping_key, wrapping_key_id) = wrapping_key(
+        let wrapping = wrapping_key(
             installation_root,
             workspace_id,
             installation_id,
@@ -207,8 +251,8 @@ pub(crate) fn rewrap_imported_shop_keys(
             &key,
             exported.key_version,
             &exported.purpose,
-            &wrapping_key,
-            &wrapping_key_id,
+            &wrapping.key,
+            &wrapping.envelope_key_id,
             workspace_id,
             installation_id,
             shop_id,
@@ -224,7 +268,7 @@ pub(crate) fn rewrap_imported_shop_keys(
                     AUTHORITY_ALGORITHM,
                     i64::from(exported.key_version),
                     exported.key_id,
-                    wrapping_key_id,
+                    wrapping.authority_key_id.as_str(),
                     wrapped_key,
                     exported.purpose,
                 ],
@@ -299,6 +343,75 @@ fn validate_complete_rows(rows: &[AuthorityRow]) -> Result<(), IoError> {
     Ok(())
 }
 
+fn validate_unkeyed_database(connection: &Connection) -> Result<(), IoError> {
+    for (table, column) in PROTECTED_VALUE_LOCATIONS {
+        let query = format!(
+            "SELECT EXISTS(SELECT 1 FROM \"{table}\" WHERE instr(\"{column}\", ?1) > 0 OR (instr(\"{column}\", ?2) > 0 AND instr(\"{column}\", ?3) > 0 AND instr(\"{column}\", ?4) > 0) LIMIT 1)"
+        );
+        let found: i64 = connection
+            .query_row(
+                &query,
+                params![
+                    PROTECTED_VALUE_MARKER,
+                    LEGACY_CIPHERTEXT_MARKER,
+                    LEGACY_IV_MARKER,
+                    LEGACY_TAG_MARKER,
+                ],
+                |row| row.get(0),
+            )
+            .map_err(|error| {
+                IoError::new(
+                    ErrorKind::InvalidData,
+                    format!("unkeyed protected-value verification failed: {error}"),
+                )
+            })?;
+        if found != 0 {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "shop database contains protected values without key authority",
+            ));
+        }
+    }
+
+    for table in ["Secret", "PhoneReputation"] {
+        let query = format!("SELECT EXISTS(SELECT 1 FROM \"{table}\" LIMIT 1)");
+        let found: i64 = connection
+            .query_row(&query, [], |row| row.get(0))
+            .map_err(|error| {
+                IoError::new(
+                    ErrorKind::InvalidData,
+                    format!("unkeyed protected-authority verification failed: {error}"),
+                )
+            })?;
+        if found != 0 {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "shop database contains protected authority data without shop keys",
+            ));
+        }
+    }
+
+    let orphaned_customer_index: i64 = connection
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM \"Customer\" WHERE \"phoneEnc\" IS NULL AND length(\"phone\") = 64 LIMIT 1)",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|error| {
+            IoError::new(
+                ErrorKind::InvalidData,
+                format!("unkeyed blind-index verification failed: {error}"),
+            )
+        })?;
+    if orphaned_customer_index != 0 {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "shop database contains a blind index without recoverable protected authority",
+        ));
+    }
+    Ok(())
+}
+
 fn validate_exported_keys(keys: &[ExportedShopKey]) -> Result<(), IoError> {
     let purposes = keys
         .iter()
@@ -352,13 +465,13 @@ fn open_wrapped_key(
     shop_id: &str,
     shop_incarnation_id: &str,
 ) -> Result<[u8; 32], IoError> {
-    let (wrapping_key, wrapping_key_id) = wrapping_key(
+    let wrapping = wrapping_key(
         installation_root,
         workspace_id,
         installation_id,
         &row.purpose,
     )?;
-    if row.wrapping_key_id != wrapping_key_id {
+    if row.wrapping_key_id.as_str() != wrapping.authority_key_id.as_str() {
         return Err(IoError::new(
             ErrorKind::InvalidData,
             format!(
@@ -374,7 +487,7 @@ fn open_wrapped_key(
                 format!("protected key envelope is malformed: {error}"),
             )
         })?;
-    validate_envelope(&envelope, &wrapping_key_id)?;
+    validate_envelope(&envelope, &wrapping.envelope_key_id)?;
     let (binding_json, binding_digest) = binding_material(
         workspace_id,
         installation_id,
@@ -393,7 +506,7 @@ fn open_wrapped_key(
     let nonce = decode_base64_exact::<12>(&envelope.iv, "protected key IV")?;
     let ciphertext = decode_base64(&envelope.ciphertext, "protected key ciphertext")?;
     let tag = decode_base64_exact::<16>(&envelope.tag, "protected key tag")?;
-    let plaintext = open_raw_aes_256_gcm(&wrapping_key, &aad, &nonce, &ciphertext, &tag)?;
+    let plaintext = open_raw_aes_256_gcm(&wrapping.key, &aad, &nonce, &ciphertext, &tag)?;
     let encoded = std::str::from_utf8(plaintext.as_slice()).map_err(|_| {
         IoError::new(
             ErrorKind::InvalidData,
@@ -456,7 +569,7 @@ fn wrapping_key(
     workspace_id: &str,
     installation_id: &str,
     protected_purpose: &str,
-) -> Result<([u8; 32], String), IoError> {
+) -> Result<WrappingAuthority, IoError> {
     let installation_purpose = match protected_purpose {
         "shop-data" => PURPOSE_SHOP_DATA_WRAP,
         "shop-blind-index" => PURPOSE_SHOP_BLIND_INDEX_WRAP,
@@ -475,8 +588,12 @@ fn wrapping_key(
         installation_purpose,
         1,
     )?;
-    let key_id = protected_value_key_id(&derived.key, WRAPPING_PURPOSE, WRAPPING_VERSION);
-    Ok((derived.key, key_id))
+    let envelope_key_id = protected_value_key_id(&derived.key, WRAPPING_PURPOSE, WRAPPING_VERSION);
+    Ok(WrappingAuthority {
+        key: derived.key,
+        authority_key_id: derived.key_id.clone(),
+        envelope_key_id,
+    })
 }
 
 fn binding_material(
@@ -734,6 +851,70 @@ fn clear_string(value: &mut String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct TestDatabase(PathBuf);
+
+    impl TestDatabase {
+        fn new(label: &str) -> Self {
+            let suffix = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock")
+                .as_nanos();
+            let path = std::env::temp_dir().join(format!(
+                "sahelflow-protected-key-{label}-{}-{suffix}.db",
+                std::process::id()
+            ));
+            let connection = Connection::open(&path).expect("create test database");
+            connection
+                .execute_batch(
+                    r#"
+                    CREATE TABLE "ProtectedKeyAuthority" (
+                        "purpose" TEXT NOT NULL PRIMARY KEY,
+                        "formatVersion" INTEGER NOT NULL,
+                        "algorithm" TEXT NOT NULL,
+                        "keyVersion" INTEGER NOT NULL,
+                        "keyId" TEXT NOT NULL,
+                        "wrappingKeyId" TEXT NOT NULL,
+                        "wrappedKey" TEXT NOT NULL
+                    );
+                    CREATE TABLE "Customer" (
+                        "name" TEXT NOT NULL DEFAULT '',
+                        "phone" TEXT NOT NULL DEFAULT '',
+                        "phoneEnc" TEXT,
+                        "phone2" TEXT,
+                        "address" TEXT,
+                        "notes" TEXT
+                    );
+                    CREATE TABLE "Order" (
+                        "phone" TEXT NOT NULL DEFAULT '',
+                        "address" TEXT NOT NULL DEFAULT '',
+                        "notes" TEXT
+                    );
+                    CREATE TABLE "Conversation" (
+                        "contactName" TEXT NOT NULL DEFAULT '',
+                        "contactPhone" TEXT
+                    );
+                    CREATE TABLE "Message" ("body" TEXT NOT NULL DEFAULT '');
+                    CREATE TABLE "Secret" ("ciphertext" TEXT NOT NULL DEFAULT '');
+                    CREATE TABLE "Setting" ("value" TEXT NOT NULL DEFAULT '');
+                    CREATE TABLE "PhoneReputation" ("phoneHash" TEXT NOT NULL DEFAULT '');
+                    "#,
+                )
+                .expect("create protected-value tables");
+            drop(connection);
+            Self(path)
+        }
+    }
+
+    impl Drop for TestDatabase {
+        fn drop(&mut self) {
+            let _ = fs::remove_file(&self.0);
+            let _ = fs::remove_file(self.0.with_extension("db-wal"));
+            let _ = fs::remove_file(self.0.with_extension("db-shm"));
+        }
+    }
 
     #[test]
     fn base64_codec_is_canonical() {
@@ -759,5 +940,133 @@ mod tests {
             protected_value_key_id(&key, "shop-data", 1),
             protected_value_key_id(&key, "shop-secret", 1)
         );
+    }
+
+    #[test]
+    fn empty_shop_keys_require_an_unkeyed_database_without_protected_values() {
+        let database = TestDatabase::new("empty-authority");
+        let root = [0x44_u8; 32];
+        let workspace_id = "10".repeat(16);
+        let installation_id = "20".repeat(16);
+        let incarnation_id = "30".repeat(16);
+
+        let exported = export_shop_keys(
+            &database.0,
+            &root,
+            &workspace_id,
+            &installation_id,
+            "inactive-shop",
+            &incarnation_id,
+        )
+        .expect("an unused shop needs no recovery keys");
+        assert!(exported.is_empty());
+        rewrap_imported_shop_keys(
+            &database.0,
+            &exported,
+            &root,
+            &workspace_id,
+            &installation_id,
+            "inactive-shop",
+            &incarnation_id,
+        )
+        .expect("empty recovery keys preserve an unused shop");
+
+        let connection = Connection::open(&database.0).expect("reopen test database");
+        connection
+            .execute(
+                "INSERT INTO \"Message\" (\"body\") VALUES (?1)",
+                [r#"{"format":"sahelflow-protected-value"}"#],
+            )
+            .expect("seed orphaned protected value");
+        drop(connection);
+        let error = export_shop_keys(
+            &database.0,
+            &root,
+            &workspace_id,
+            &installation_id,
+            "inactive-shop",
+            &incarnation_id,
+        )
+        .expect_err("orphaned protected values must fail closed");
+        assert_eq!(error.kind(), ErrorKind::InvalidData);
+        assert!(error.to_string().contains("without key authority"));
+
+        let connection = Connection::open(&database.0).expect("reopen partial database");
+        connection
+            .execute("DELETE FROM \"Message\"", [])
+            .expect("remove orphan fixture");
+        connection
+            .execute(
+                "INSERT INTO \"ProtectedKeyAuthority\" (\"purpose\", \"formatVersion\", \"algorithm\", \"keyVersion\", \"keyId\", \"wrappingKeyId\", \"wrappedKey\") VALUES ('shop-data', 1, ?1, 1, ?2, ?2, 'fixture')",
+                params![AUTHORITY_ALGORITHM, "a".repeat(64)],
+            )
+            .expect("seed partial key authority");
+        drop(connection);
+        assert!(export_shop_keys(
+            &database.0,
+            &root,
+            &workspace_id,
+            &installation_id,
+            "inactive-shop",
+            &incarnation_id,
+        )
+        .expect_err("partial key sets must fail closed")
+        .to_string()
+        .contains("incomplete"));
+        assert!(rewrap_imported_shop_keys(
+            &database.0,
+            &[],
+            &root,
+            &workspace_id,
+            &installation_id,
+            "inactive-shop",
+            &incarnation_id,
+        )
+        .expect_err("empty backup keys cannot replace existing authority")
+        .to_string()
+        .contains("has key authority"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn typescript_shop_key_vector_uses_distinct_authority_and_envelope_ids() {
+        let root = [0x11_u8; 32];
+        let workspace_id = "10101010101010101010101010101010";
+        let installation_id = "20202020202020202020202020202020";
+        let shop_incarnation_id = "30303030303030303030303030303030";
+        let wrapping = wrapping_key(&root, workspace_id, installation_id, "shop-data").unwrap();
+        assert_eq!(
+            wrapping.authority_key_id,
+            "1505e6c0dbab5cb7d8bc61a80a031b0733a28d22432033322f8bcb734955f0cf"
+        );
+        assert_eq!(
+            wrapping.envelope_key_id,
+            "a2e9176e15afe14cf23ac9425ea180ecd2d69260067286ab462e7a5527d1dd69"
+        );
+
+        let row = AuthorityRow {
+            purpose: "shop-data".to_owned(),
+            format_version: 1,
+            algorithm: AUTHORITY_ALGORITHM.to_owned(),
+            key_version: 1,
+            key_id: "9aec01135e317c479f34ac63489c681a14e54a3ab97b293457464a563818e30c"
+                .to_owned(),
+            wrapping_key_id:
+                "1505e6c0dbab5cb7d8bc61a80a031b0733a28d22432033322f8bcb734955f0cf"
+                    .to_owned(),
+            wrapped_key: r#"{"format":"sahelflow-protected-value","version":1,"algorithm":"aes-256-gcm","key":{"formatVersion":1,"purpose":"key-wrap","version":1,"keyId":"a2e9176e15afe14cf23ac9425ea180ecd2d69260067286ab462e7a5527d1dd69"},"bindingSha256":"f0193b82c111db19830f86f3c9db5a6db02ebb6a993f4c148e9409f5c0425ad1","iv":"PwvhS0AecQ6JXug0","ciphertext":"esHlNyPHONMatOX6m+sjTXpHsRey12wJ5QXr6mSBERB0BWPLa5tCaCtWhuCI/xVPijp64TCRLUi8nP1q8kXMdA==","tag":"JiYhkVvGuM4FIz/6OgG57g=="}"#
+                .to_owned(),
+        };
+        let opened = open_wrapped_key(
+            &row,
+            1,
+            &root,
+            workspace_id,
+            installation_id,
+            "default",
+            shop_incarnation_id,
+        )
+        .unwrap();
+        assert_eq!(opened, [0x42_u8; 32]);
     }
 }

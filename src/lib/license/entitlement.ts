@@ -1,4 +1,4 @@
-import { verifyAsync } from "@noble/ed25519";
+import { createPublicKey, verify as verifySignature } from "node:crypto";
 import { z } from "zod";
 import {
   LICENSE_ENTITLEMENT_DOMAIN,
@@ -13,6 +13,8 @@ export {
 } from "./entitlement-canonical";
 export const LICENSE_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
+const ED25519_RAW_PUBLIC_KEY_BYTES = 32;
+const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 const exactAuthorityId = z.string().regex(/^[0-9a-f]{32}$/i);
 const opaqueId = z.string().regex(/^[a-z0-9][a-z0-9_-]{7,127}$/);
 const deviceBinding = z.string().regex(/^sfdb1_[0-9a-f]{64}$/);
@@ -124,8 +126,21 @@ export type EntitlementValidationResult = Readonly<{
   message: string;
 }>;
 
-function decodeBase64(value: string): Uint8Array {
-  return new Uint8Array(Buffer.from(value, "base64"));
+function decodeBase64(value: string): Buffer {
+  return Buffer.from(value, "base64");
+}
+
+function verifyEd25519Signature(signature: string, message: Uint8Array, publicKey: string): boolean {
+  const rawPublicKey = decodeBase64(publicKey);
+  if (rawPublicKey.length !== ED25519_RAW_PUBLIC_KEY_BYTES) {
+    throw new Error("Entitlement Ed25519 public key must be exactly 32 bytes");
+  }
+  const key = createPublicKey({
+    key: Buffer.concat([ED25519_SPKI_PREFIX, rawPublicKey]),
+    format: "der",
+    type: "spki",
+  });
+  return verifySignature(null, Buffer.from(message), key, decodeBase64(signature));
 }
 
 function appMajor(version: string): number | null {
@@ -154,10 +169,10 @@ export async function validateSignedEntitlement(
 
   let signatureValid = false;
   try {
-    signatureValid = await verifyAsync(
-      decodeBase64(entitlement.signature),
+    signatureValid = verifyEd25519Signature(
+      entitlement.signature,
       canonicalEntitlementBytes(claims),
-      decodeBase64(publicKey),
+      publicKey,
     );
   } catch {
     return invalid("Entitlement signature could not be verified");
