@@ -118,7 +118,7 @@ jobs:
         shell: pwsh
         run: ./scripts/prepare-libsodium-windows.ps1
 
-      - name: Build unsigned MSI for ephemeral installed test
+      - name: Prepare exact evidence build authority
         shell: pwsh
         run: |
           # This exact CI-only build enables deterministic restore interruption
@@ -154,6 +154,8 @@ jobs:
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "SF_PHASE4_WEBVIEW_DEBUG_PORT=$webViewDebugPort" |
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SF_PHASE4_RESTORE_EVIDENCE_BUILD=1" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
           # The replacement drill must call authenticated APIs through the same
           # per-launch HttpOnly authority as the installed WebView. Give only
@@ -170,14 +172,6 @@ jobs:
           $evidenceConfig |
             ConvertTo-Json -Depth 100 |
             Set-Content -LiteralPath .sf-installed-e2e-tauri.json -Encoding UTF8
-          # The Rust cache contains target/ for compile speed, but may also retain
-          # MSI bundles from an older candidate. Build evidence must contain only
-          # the exact installer produced by this job.
-          Remove-Item -LiteralPath 'src-tauri/target/release/bundle/msi' -Recurse -Force -ErrorAction SilentlyContinue
-          & bunx tauri build --bundles msi --config .sf-installed-e2e-tauri.json 2>&1 |
-            Tee-Object -FilePath .sf-installed-e2e-build.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
           [ordered]@{
             formatVersion = 1
             exactSource = '${{ github.event.pull_request.head.sha || github.sha }}'
@@ -206,6 +200,17 @@ jobs:
             -- `
             --exact
           if ($LASTEXITCODE -ne 0) { throw 'Safe survivability error contract failed' }
+
+      - name: Build unsigned MSI for ephemeral installed test
+        shell: pwsh
+        run: |
+          # The Rust cache contains target/ for compile speed, but may also retain
+          # MSI bundles from an older candidate. Build evidence must contain only
+          # the exact installer produced by this job.
+          Remove-Item -LiteralPath 'src-tauri/target/release/bundle/msi' -Recurse -Force -ErrorAction SilentlyContinue
+          & bunx tauri build --bundles msi --config .sf-installed-e2e-tauri.json 2>&1 |
+            Tee-Object -FilePath .sf-installed-e2e-build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Publish reusable exact evidence MSI
         uses: actions/upload-artifact@v4
