@@ -91,7 +91,11 @@ describe("packaged Node entitlement verification", () => {
   it("still rejects a tampered signature", async () => {
     const entitlement = signedEntitlement();
     const signature = Buffer.from(entitlement.signature, "base64");
-    signature[0] ^= 0x01;
+    const firstByte = signature[0];
+    if (firstByte === undefined) {
+      throw new Error("the test entitlement signature is empty");
+    }
+    signature[0] = firstByte ^ 0x01;
 
     await expect(
       validateSignedEntitlement(

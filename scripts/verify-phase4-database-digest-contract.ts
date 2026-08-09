@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { digestInstalledDatabase } from "./phase4-installed-database-digest.ts";
+import { digestInstalledDatabase } from "./phase4-installed-database-digest";
 
 const SOURCE_WORKSPACE = "10".repeat(16);
 const SOURCE_INSTALLATION = "20".repeat(16);
@@ -45,7 +45,7 @@ function writeFixture(
 ): void {
   const database = new Database(path, { create: true, strict: true });
   try {
-    database.exec(`
+    database.run(`
       CREATE TABLE "Setting" (
         "key" TEXT PRIMARY KEY,
         "value" TEXT NOT NULL,
@@ -76,7 +76,7 @@ function writeFixture(
       );
     `);
     if (!options.omitAuthSecretTable) {
-      database.exec(`
+      database.run(`
         CREATE TABLE "AuthSecret" (
           "id" TEXT PRIMARY KEY,
           "pinHash" TEXT NOT NULL,
@@ -86,32 +86,32 @@ function writeFixture(
       `);
     }
     for (const setting of fixture.settings) {
-      database.exec(
+      database.run(
         `INSERT INTO "Setting" VALUES (${sql(setting.key)}, ${sql(setting.value)}, ${sql(setting.updatedAt)})`,
       );
     }
     for (const customer of fixture.customers) {
-      database.exec(
+      database.run(
         `INSERT INTO "Customer" VALUES (${sql(customer.id)}, ${sql(customer.name)})`,
       );
     }
     for (const audit of fixture.auditLogs) {
-      database.exec(
+      database.run(
         `INSERT INTO "AuditLog" VALUES (${sql(audit.id)}, ${sql(audit.action)})`,
       );
     }
     for (const session of fixture.sessions) {
-      database.exec(
+      database.run(
         `INSERT INTO "Session" VALUES (${sql(session.id)}, ${sql(session.issuedAt)})`,
       );
     }
     if (fixture.authSecret && !options.omitAuthSecretTable) {
-      database.exec(
+      database.run(
         `INSERT INTO "AuthSecret" VALUES (${sql(fixture.authSecret.id)}, ${sql(fixture.authSecret.pinHash)}, ${sql(fixture.authSecret.secret)}, ${sql(fixture.authSecret.updatedAt)})`,
       );
     }
     for (const key of fixture.protectedKeys) {
-      database.exec(
+      database.run(
         `INSERT INTO "ProtectedKeyAuthority" VALUES (${sql(key.purpose)}, ${key.formatVersion}, ${sql(key.algorithm)}, ${key.keyVersion}, ${sql(key.keyId)}, ${sql(key.wrappingKeyId)}, ${sql(key.wrappedKey)}, ${sql(key.createdAt)}, ${sql(key.updatedAt)})`,
       );
     }

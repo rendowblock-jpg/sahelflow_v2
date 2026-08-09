@@ -374,14 +374,32 @@ describe("installed Windows runtime contract", () => {
     );
     expect(rotationBranchStart).toBeGreaterThan(-1);
     expect(ordinaryStartupStart).toBeGreaterThan(rotationBranchStart);
+    const applicationBuildFailureStart = desktop.indexOf(
+      "let application = match application",
+      ordinaryStartupStart,
+    );
+    const applicationRunStart = desktop.indexOf(
+      "application.run(",
+      applicationBuildFailureStart,
+    );
+    expect(applicationBuildFailureStart).toBeGreaterThan(ordinaryStartupStart);
+    expect(applicationRunStart).toBeGreaterThan(applicationBuildFailureStart);
     const rotationBranch = desktop.slice(rotationBranchStart, ordinaryStartupStart);
-    const ordinaryDesktop =
-      desktop.slice(0, rotationBranchStart) + desktop.slice(ordinaryStartupStart);
+    const ordinaryStartup = desktop.slice(
+      ordinaryStartupStart,
+      applicationBuildFailureStart,
+    );
+    const applicationBuildFailure = desktop.slice(
+      applicationBuildFailureStart,
+      applicationRunStart,
+    );
     expect(rotationBranch).toContain("std::process::exit(0);");
     expect(rotationBranch).toContain("std::process::exit(1);");
     expect(rotationBranch).not.toContain("runtime_protocol::remove_manifest");
-    expect(ordinaryDesktop).not.toContain("std::process::exit(0);");
-    expect(ordinaryDesktop).not.toContain("std::process::exit(1);");
+    expect(ordinaryStartup).not.toContain("std::process::exit(0);");
+    expect(ordinaryStartup).not.toContain("std::process::exit(1);");
+    expect(applicationBuildFailure).toContain('"desktop startup"');
+    expect(applicationBuildFailure).toContain("std::process::exit(1);");
     expect(desktop).toContain("let builder = if rotate_installation_root");
   });
 

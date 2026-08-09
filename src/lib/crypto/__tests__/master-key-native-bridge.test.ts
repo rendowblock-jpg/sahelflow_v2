@@ -26,7 +26,7 @@ function restoreEnvironment(): void {
 afterEach(() => {
   const holder = globalThis as NativeRootHolder;
   delete holder[NATIVE_ROOT_SYMBOL];
-  delete holder[NATIVE_ROOT_CACHE_SYMBOL];
+  delete (process as unknown as NativeRootHolder)[NATIVE_ROOT_CACHE_SYMBOL];
   restoreEnvironment();
   vi.resetModules();
 });

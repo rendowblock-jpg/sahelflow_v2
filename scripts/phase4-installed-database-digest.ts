@@ -101,7 +101,7 @@ export function digestInstalledDatabase(databasePath: string) {
   try {
     // Hold one read transaction so a live installed runtime cannot produce a
     // mixed-generation digest across the per-table queries.
-    database.exec("BEGIN");
+    database.run("BEGIN");
     transactionOpen = true;
 
     const tables = new Set<string>(
@@ -246,7 +246,7 @@ export function digestInstalledDatabase(databasePath: string) {
   } finally {
     if (transactionOpen) {
       try {
-        database.exec("ROLLBACK");
+        database.run("ROLLBACK");
       } catch {
         // Preserve the primary digest failure; this connection is read-only and
         // closes immediately below.
