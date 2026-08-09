@@ -321,13 +321,13 @@ fn execute_request(context: &BridgeContext, request: BridgeRequest) -> Result<Va
         || request.instance_id != context.instance_id
         || !is_lower_hex(&request.request_id, 32)
     {
-        return Err(IoError::new(
+        return Err(authorization_failure(IoError::new(
             ErrorKind::PermissionDenied,
             "survivability request belongs to another runtime instance",
-        ));
+        )));
     }
 
-    let (action, resource) = request_contract(&request)?;
+    let (action, resource) = request_contract(&request).map_err(authorization_failure)?;
     native_command::verify_authorization(
         &context.replay,
         &context.installation_root,
@@ -336,7 +336,8 @@ fn execute_request(context: &BridgeContext, request: BridgeRequest) -> Result<Va
         action,
         resource,
         &request.authorization,
-    )?;
+    )
+    .map_err(authorization_failure)?;
 
     match request.operation.as_str() {
         "create-backup" => to_value(backup_recovery::create_backup(
@@ -400,11 +401,43 @@ fn execute_request(context: &BridgeContext, request: BridgeRequest) -> Result<Va
             )?;
             Ok(json!({ "deleted": true }))
         }
-        _ => Err(IoError::new(
+        _ => Err(authorization_failure(IoError::new(
             ErrorKind::PermissionDenied,
             "survivability operation is unsupported",
-        )),
+        ))),
     }
+}
+
+#[derive(Debug)]
+struct AuthorizationFailure {
+    source: IoError,
+}
+
+impl std::fmt::Display for AuthorizationFailure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "protected native authorization failed: {}",
+            self.source
+        )
+    }
+}
+
+impl std::error::Error for AuthorizationFailure {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.source)
+    }
+}
+
+fn authorization_failure(source: IoError) -> IoError {
+    IoError::new(ErrorKind::PermissionDenied, AuthorizationFailure { source })
+}
+
+fn is_authorization_failure(error: &IoError) -> bool {
+    error
+        .get_ref()
+        .and_then(|source| source.downcast_ref::<AuthorizationFailure>())
+        .is_some()
 }
 
 fn request_contract<'a>(request: &'a BridgeRequest) -> Result<(&'static str, &'a str), IoError> {
@@ -601,11 +634,13 @@ fn sync_parent(path: &Path) -> Result<(), IoError> {
 
 fn public_error(error: &IoError) -> (&'static str, &'static str) {
     let lower = error.to_string().to_ascii_lowercase();
-    if error.kind() == ErrorKind::PermissionDenied {
+    if error.kind() == ErrorKind::PermissionDenied && is_authorization_failure(error) {
         (
             "SF-SURVIVABILITY-AUTHORIZATION",
             "The desktop rejected this backup or recovery authorization. Sign in again and retry.",
         )
+    } else if error.kind() == ErrorKind::PermissionDenied {
+        backup_access_error(backup_recovery::backup_create_failure_stage(error))
     } else if error.kind() == ErrorKind::NotFound {
         (
             "SF-SURVIVABILITY-NOT-FOUND",
@@ -634,9 +669,55 @@ fn public_error(error: &IoError) -> (&'static str, &'static str) {
     }
 }
 
+fn backup_access_error(
+    stage: Option<backup_recovery::BackupCreateStage>,
+) -> (&'static str, &'static str) {
+    match stage {
+        Some(backup_recovery::BackupCreateStage::Preflight) => (
+            "SF-SURVIVABILITY-BACKUP-PREFLIGHT-ACCESS",
+            "Windows denied access while preparing protected backup storage. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::KeyAuthority) => (
+            "SF-SURVIVABILITY-BACKUP-KEY-ACCESS",
+            "Windows denied access to the protected backup key authority. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::Staging) => (
+            "SF-SURVIVABILITY-BACKUP-STAGING-ACCESS",
+            "Windows denied access while creating protected backup staging. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::ShopSnapshot) => (
+            "SF-SURVIVABILITY-BACKUP-SNAPSHOT-ACCESS",
+            "Windows denied access while taking a consistent shop snapshot. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::ShopKeyExport) => (
+            "SF-SURVIVABILITY-BACKUP-SHOP-KEY-ACCESS",
+            "Windows denied access while protecting shop recovery keys. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::ObjectWrite) => (
+            "SF-SURVIVABILITY-BACKUP-OBJECT-ACCESS",
+            "Windows denied access while writing encrypted backup objects. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::Commit) => (
+            "SF-SURVIVABILITY-BACKUP-COMMIT-ACCESS",
+            "Windows denied access while committing the verified backup. Close competing file tools and retry.",
+        ),
+        Some(backup_recovery::BackupCreateStage::RecoveryReadiness) => (
+            "SF-SURVIVABILITY-BACKUP-RECOVERY-ACCESS",
+            "Windows denied access while verifying independent recovery readiness. Close competing file tools and retry.",
+        ),
+        None => (
+            "SF-SURVIVABILITY-STORAGE-ACCESS",
+            "Windows denied access to protected backup or recovery storage. Close competing file tools and retry.",
+        ),
+    }
+}
+
 fn classify_log_error(error: &IoError) -> &'static str {
+    if is_authorization_failure(error) {
+        return "authorization";
+    }
     match error.kind() {
-        ErrorKind::PermissionDenied => "authorization",
+        ErrorKind::PermissionDenied => "storage-access",
         ErrorKind::NotFound => "not-found",
         ErrorKind::WouldBlock => "busy",
         ErrorKind::InvalidData | ErrorKind::InvalidInput => "verification",
@@ -686,6 +767,29 @@ mod tests {
         let (_, message) = public_error(&error);
         assert!(!message.contains("Amira"));
         assert!(!message.contains("0555"));
+        assert!(!message.contains("shop.db"));
+    }
+
+    #[test]
+    fn permission_errors_preserve_the_authorization_storage_boundary() {
+        let authorization = authorization_failure(IoError::new(
+            ErrorKind::PermissionDenied,
+            "private authorization detail",
+        ));
+        assert_eq!(
+            public_error(&authorization).0,
+            "SF-SURVIVABILITY-AUTHORIZATION"
+        );
+        assert_eq!(classify_log_error(&authorization), "authorization");
+
+        let storage = backup_recovery::staged_backup_create_error_for_test(
+            backup_recovery::BackupCreateStage::ShopSnapshot,
+            IoError::new(ErrorKind::PermissionDenied, "C:\\private\\shop.db"),
+        );
+        let (code, message) = public_error(&storage);
+        assert_eq!(code, "SF-SURVIVABILITY-BACKUP-SNAPSHOT-ACCESS");
+        assert_eq!(classify_log_error(&storage), "storage-access");
+        assert!(!message.contains("private"));
         assert!(!message.contains("shop.db"));
     }
 }

@@ -1,4 +1,59 @@
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum BackupCreateStage {
+    Preflight,
+    KeyAuthority,
+    Staging,
+    ShopSnapshot,
+    ShopKeyExport,
+    ObjectWrite,
+    Commit,
+    RecoveryReadiness,
+}
 
+#[derive(Debug)]
+struct BackupCreateStageError {
+    stage: BackupCreateStage,
+    source: IoError,
+}
+
+impl std::fmt::Display for BackupCreateStageError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "protected backup failed during {:?}: {}",
+            self.stage, self.source
+        )
+    }
+}
+
+impl std::error::Error for BackupCreateStageError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.source)
+    }
+}
+
+pub(crate) fn backup_create_failure_stage(error: &IoError) -> Option<BackupCreateStage> {
+    error
+        .get_ref()?
+        .downcast_ref::<BackupCreateStageError>()
+        .map(|failure| failure.stage)
+}
+
+fn backup_create_stage<T>(
+    stage: BackupCreateStage,
+    result: Result<T, IoError>,
+) -> Result<T, IoError> {
+    result.map_err(|source| IoError::new(source.kind(), BackupCreateStageError { stage, source }))
+}
+
+#[cfg(test)]
+pub(crate) fn staged_backup_create_error_for_test(
+    stage: BackupCreateStage,
+    source: IoError,
+) -> IoError {
+    backup_create_stage::<()>(stage, Err(source))
+        .expect_err("staged test error must remain an error")
+}
 
 pub(crate) fn create_backup(
     app_data_dir: &Path,
@@ -7,8 +62,11 @@ pub(crate) fn create_backup(
     installation_root: &[u8; 32],
     authority: &BackupAuthority,
 ) -> Result<BackupSummary, IoError> {
-    let _lock = FileLock::acquire(&system_dir(app_data_dir).join(BACKUP_LOCK_FILE))?;
-    let registry = read_registry(app_data_dir)?;
+    let _lock = backup_create_stage(
+        BackupCreateStage::Preflight,
+        FileLock::acquire(&system_dir(app_data_dir).join(BACKUP_LOCK_FILE)),
+    )?;
+    let registry = backup_create_stage(BackupCreateStage::Preflight, read_registry(app_data_dir))?;
     if registry.workspace_id != authority.workspace_id
         || registry.installation_id != authority.installation_id
     {
@@ -17,34 +75,41 @@ pub(crate) fn create_backup(
             "backup authority does not match the canonical shop registry",
         ));
     }
-    let root = backup_root(download_dir)?;
-    let kit_root = recovery_kit_root(document_dir)?;
-    remove_stale_staging(&root)?;
-    let estimated_plaintext = registry.shops.iter().try_fold(
-        fs::metadata(app_data_dir.join(REGISTRY_FILE))?.len(),
-        |total, shop| {
-            Ok::<u64, IoError>(
-                total.saturating_add(
+    let root = backup_create_stage(BackupCreateStage::Preflight, backup_root(download_dir))?;
+    let kit_root = backup_create_stage(
+        BackupCreateStage::Preflight,
+        recovery_kit_root(document_dir),
+    )?;
+    backup_create_stage(BackupCreateStage::Preflight, remove_stale_staging(&root))?;
+    let estimated_plaintext = backup_create_stage(
+        BackupCreateStage::Preflight,
+        registry.shops.iter().try_fold(
+            fs::metadata(app_data_dir.join(REGISTRY_FILE))?.len(),
+            |total, shop| {
+                Ok::<u64, IoError>(total.saturating_add(
                     fs::metadata(app_data_dir.join("shops").join(&shop.database_file))?.len(),
-                ),
-            )
-        },
+                ))
+            },
+        ),
     )?;
     let required = estimated_plaintext
         .saturating_mul(2)
         .saturating_add(RESTORE_RESERVE_BYTES);
-    let available = fs2::available_space(&root)?;
+    let available = backup_create_stage(BackupCreateStage::Preflight, fs2::available_space(&root))?;
     if available < required {
         return Err(IoError::other(format!(
             "insufficient free space for an all-shop encrypted backup: required {required} bytes, available {available} bytes"
         )));
     }
 
-    let (brk, brk_id) = load_or_create_local_brk(
-        app_data_dir,
-        installation_root,
-        &authority.workspace_id,
-        &authority.installation_id,
+    let (brk, brk_id) = backup_create_stage(
+        BackupCreateStage::KeyAuthority,
+        load_or_create_local_brk(
+            app_data_dir,
+            installation_root,
+            &authority.workspace_id,
+            &authority.installation_id,
+        ),
     )?;
     let dek = SecretKey::new(random_array::<32>()?);
     let dek_id = key_id(dek.as_array());
@@ -52,20 +117,26 @@ pub(crate) fn create_backup(
     let backup_id = format!("backup-{created_at_unix_ms}-{}", random_hex(8)?);
     let staging = root.join(format!(".staging-{backup_id}"));
     let final_path = root.join(format!("{backup_id}{BACKUP_SUFFIX}"));
-    fs::create_dir(&staging)?;
-    fs::create_dir(staging.join(OBJECTS_DIRECTORY))?;
+    backup_create_stage(BackupCreateStage::Staging, fs::create_dir(&staging))?;
+    backup_create_stage(
+        BackupCreateStage::Staging,
+        fs::create_dir(staging.join(OBJECTS_DIRECTORY)),
+    )?;
 
     let result = (|| -> Result<BackupSummary, IoError> {
         let mut objects = Vec::with_capacity(registry.shops.len() + 1);
         let mut shop_keys = BTreeMap::new();
         let registry_source = app_data_dir.join(REGISTRY_FILE);
         let registry_object = staging.join(OBJECTS_DIRECTORY).join("registry.sfo");
-        let registry_stats = encrypt_object_file(
-            &registry_source,
-            &registry_object,
-            dek.as_array(),
-            &backup_id,
-            "registry",
+        let registry_stats = backup_create_stage(
+            BackupCreateStage::ObjectWrite,
+            encrypt_object_file(
+                &registry_source,
+                &registry_object,
+                dek.as_array(),
+                &backup_id,
+                "registry",
+            ),
         )?;
         objects.push(BackupObject {
             name: "registry".to_owned(),
@@ -80,33 +151,42 @@ pub(crate) fn create_backup(
         });
 
         let snapshot_root = staging.join("snapshots");
-        fs::create_dir(&snapshot_root)?;
+        backup_create_stage(BackupCreateStage::Staging, fs::create_dir(&snapshot_root))?;
         for (index, shop) in registry.shops.iter().enumerate() {
             let source = app_data_dir.join("shops").join(&shop.database_file);
             let snapshot = snapshot_root.join(&shop.database_file);
-            create_verified_snapshot(&source, &snapshot)?;
-            verify_database_migration_set(
-                &snapshot,
-                &authority.migration_set_sha256,
+            backup_create_stage(
+                BackupCreateStage::ShopSnapshot,
+                create_verified_snapshot(&source, &snapshot),
             )?;
-            let keys = export_shop_keys(
-                &snapshot,
-                installation_root,
-                &registry.workspace_id,
-                &registry.installation_id,
-                &shop.id,
-                &shop.incarnation_id,
+            backup_create_stage(
+                BackupCreateStage::ShopSnapshot,
+                verify_database_migration_set(&snapshot, &authority.migration_set_sha256),
+            )?;
+            let keys = backup_create_stage(
+                BackupCreateStage::ShopKeyExport,
+                export_shop_keys(
+                    &snapshot,
+                    installation_root,
+                    &registry.workspace_id,
+                    &registry.installation_id,
+                    &shop.id,
+                    &shop.incarnation_id,
+                ),
             )?;
             shop_keys.insert(shop.id.clone(), keys);
             let object_name = format!("shop:{index}:{}", shop.id);
             let object_file_name = format!("shop-{index:02}.sfo");
             let object_path = staging.join(OBJECTS_DIRECTORY).join(&object_file_name);
-            let stats = encrypt_object_file(
-                &snapshot,
-                &object_path,
-                dek.as_array(),
-                &backup_id,
-                &object_name,
+            let stats = backup_create_stage(
+                BackupCreateStage::ObjectWrite,
+                encrypt_object_file(
+                    &snapshot,
+                    &object_path,
+                    dek.as_array(),
+                    &backup_id,
+                    &object_name,
+                ),
             )?;
             objects.push(BackupObject {
                 name: object_name,
@@ -119,9 +199,9 @@ pub(crate) fn create_backup(
                 encrypted_bytes: stats.encrypted_bytes,
                 chunk_count: stats.chunk_count,
             });
-            fs::remove_file(&snapshot)?;
+            backup_create_stage(BackupCreateStage::Commit, fs::remove_file(&snapshot))?;
         }
-        fs::remove_dir(&snapshot_root)?;
+        backup_create_stage(BackupCreateStage::Commit, fs::remove_dir(&snapshot_root))?;
         if objects.len() > MAX_BACKUP_OBJECTS {
             return Err(IoError::new(
                 ErrorKind::InvalidData,
@@ -151,11 +231,10 @@ pub(crate) fn create_backup(
             objects,
             shop_keys,
         };
-        let manifest_plaintext = SensitiveBytes(
-            serde_json::to_vec(&manifest).map_err(|error| {
+        let manifest_plaintext =
+            SensitiveBytes(serde_json::to_vec(&manifest).map_err(|error| {
                 IoError::other(format!("backup manifest serialization failed: {error}"))
-            })?,
-        );
+            })?);
         let manifest_aad = manifest_aad(
             &backup_id,
             created_at_unix_ms,
@@ -175,10 +254,13 @@ pub(crate) fn create_backup(
             &manifest_aad,
             manifest_plaintext.as_slice(),
         )?;
-        let manifest_bytes = serde_json::to_vec(&manifest_envelope)
-            .map_err(|error| IoError::other(format!("encrypted manifest serialization failed: {error}")))?;
+        let manifest_bytes = serde_json::to_vec(&manifest_envelope).map_err(|error| {
+            IoError::other(format!("encrypted manifest serialization failed: {error}"))
+        })?;
         let parsed_manifest_envelope: NativeAeadEnvelope = serde_json::from_slice(&manifest_bytes)
-            .map_err(|error| IoError::other(format!("encrypted manifest round-trip failed: {error}")))?;
+            .map_err(|error| {
+                IoError::other(format!("encrypted manifest round-trip failed: {error}"))
+            })?;
         let verified_manifest_plaintext = open(
             dek.as_array(),
             BACKUP_MANIFEST_CONTEXT,
@@ -191,10 +273,16 @@ pub(crate) fn create_backup(
                 "encrypted manifest round-trip changed its plaintext",
             ));
         }
-        verify_staged_backup_objects(&staging, &manifest, dek.as_array())?;
+        backup_create_stage(
+            BackupCreateStage::ObjectWrite,
+            verify_staged_backup_objects(&staging, &manifest, dek.as_array()),
+        )?;
         clear_exported_shop_keys(&mut manifest.shop_keys);
         let manifest_path = staging.join(MANIFEST_FILE);
-        write_bytes_atomic(&manifest_path, &manifest_bytes)?;
+        backup_create_stage(
+            BackupCreateStage::Commit,
+            write_bytes_atomic(&manifest_path, &manifest_bytes),
+        )?;
         let manifest_sha256 = hex_encode(&sha256(&[&manifest_bytes]));
         let plaintext_bytes = manifest
             .objects
@@ -261,17 +349,24 @@ pub(crate) fn create_backup(
             wrapped_dek,
             state: "complete".to_owned(),
         };
-        write_json_atomic(&staging.join(DESCRIPTOR_FILE), &descriptor)?;
-        sync_tree(&staging)?;
+        backup_create_stage(
+            BackupCreateStage::Commit,
+            write_json_atomic(&staging.join(DESCRIPTOR_FILE), &descriptor),
+        )?;
+        backup_create_stage(BackupCreateStage::Commit, sync_tree(&staging))?;
         if final_path.exists() {
             return Err(IoError::new(
                 ErrorKind::AlreadyExists,
                 "backup destination already exists",
             ));
         }
-        fs::rename(&staging, &final_path)?;
-        sync_parent_directory(&final_path)?;
-        let container_bytes = directory_size(&final_path)?;
+        backup_create_stage(BackupCreateStage::Commit, fs::rename(&staging, &final_path))?;
+        backup_create_stage(
+            BackupCreateStage::Commit,
+            sync_parent_directory(&final_path),
+        )?;
+        let container_bytes =
+            backup_create_stage(BackupCreateStage::Commit, directory_size(&final_path))?;
         Ok(BackupSummary {
             backup_id,
             created_at_unix_ms,
@@ -286,13 +381,16 @@ pub(crate) fn create_backup(
             status: "verified".to_owned(),
             location: final_path.to_string_lossy().into_owned(),
             requires_recovery_kit: false,
-            independent_recovery_ready: matching_recovery_kit_exists(
-                app_data_dir,
-                &kit_root,
-                Some(&brk),
-                &authority.workspace_id,
-                &authority.installation_id,
-                &brk_id,
+            independent_recovery_ready: backup_create_stage(
+                BackupCreateStage::RecoveryReadiness,
+                matching_recovery_kit_exists(
+                    app_data_dir,
+                    &kit_root,
+                    Some(&brk),
+                    &authority.workspace_id,
+                    &authority.installation_id,
+                    &brk_id,
+                ),
             )?,
         })
     })();
