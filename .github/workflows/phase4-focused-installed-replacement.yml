@@ -14,8 +14,9 @@ concurrency:
 
 jobs:
   installed-replacement:
-    # Deliberate one-shot trigger for the narrow diagnostic loop. Ordinary
-    # synchronize events do not schedule the expensive MSI lane.
+    # Deliberate checkpoint trigger. The reusable lane builds one exact MSI,
+    # preserves it as an artifact, and runs the installed gates from that
+    # authority. Ordinary synchronize events do not schedule the expensive lane.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&

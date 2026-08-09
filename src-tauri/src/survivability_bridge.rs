@@ -634,13 +634,13 @@ fn sync_parent(path: &Path) -> Result<(), IoError> {
 
 fn public_error(error: &IoError) -> (&'static str, &'static str) {
     let lower = error.to_string().to_ascii_lowercase();
+    let backup_stage = backup_recovery::backup_create_failure_stage(error);
     if error.kind() == ErrorKind::PermissionDenied && is_authorization_failure(error) {
         (
             "SF-SURVIVABILITY-AUTHORIZATION",
             "The desktop rejected this backup or recovery authorization. Sign in again and retry.",
         )
     } else if error.kind() == ErrorKind::PermissionDenied {
-        let backup_stage = backup_recovery::backup_create_failure_stage(error);
         if backup_stage.is_some() {
             backup_access_error(backup_stage)
         } else if let Some(reason) = backup_recovery::survivability_permission_reason(error) {
@@ -664,9 +664,12 @@ fn public_error(error: &IoError) -> (&'static str, &'static str) {
             "There is not enough free disk space to complete this operation with rollback protection.",
         )
     } else if error.kind() == ErrorKind::InvalidData || error.kind() == ErrorKind::InvalidInput {
-        (
-            "SF-SURVIVABILITY-VERIFICATION",
-            "The backup or recovery material could not be authenticated. Verify the selected backup and recovery code.",
+        backup_stage.map_or(
+            (
+                "SF-SURVIVABILITY-VERIFICATION",
+                "The backup or recovery material could not be authenticated. Verify the selected backup and recovery code.",
+            ),
+            backup_verification_error,
         )
     } else {
         (
@@ -730,6 +733,45 @@ fn backup_access_error(
         None => (
             "SF-SURVIVABILITY-STORAGE-ACCESS",
             "Windows denied access to protected backup or recovery storage. Close competing file tools and retry.",
+        ),
+    }
+}
+
+fn backup_verification_error(
+    stage: backup_recovery::BackupCreateStage,
+) -> (&'static str, &'static str) {
+    match stage {
+        backup_recovery::BackupCreateStage::Preflight => (
+            "SF-SURVIVABILITY-BACKUP-PREFLIGHT-VERIFICATION",
+            "The current installation did not pass protected backup preflight verification.",
+        ),
+        backup_recovery::BackupCreateStage::KeyAuthority => (
+            "SF-SURVIVABILITY-BACKUP-KEY-VERIFICATION",
+            "The protected backup key authority did not pass verification.",
+        ),
+        backup_recovery::BackupCreateStage::Staging => (
+            "SF-SURVIVABILITY-BACKUP-STAGING-VERIFICATION",
+            "The protected backup staging boundary did not pass verification.",
+        ),
+        backup_recovery::BackupCreateStage::ShopSnapshot => (
+            "SF-SURVIVABILITY-BACKUP-SNAPSHOT-VERIFICATION",
+            "A consistent shop snapshot did not pass integrity and migration verification.",
+        ),
+        backup_recovery::BackupCreateStage::ShopKeyExport => (
+            "SF-SURVIVABILITY-BACKUP-SHOP-KEY-VERIFICATION",
+            "A shop recovery-key authority did not pass backup verification.",
+        ),
+        backup_recovery::BackupCreateStage::ObjectWrite => (
+            "SF-SURVIVABILITY-BACKUP-OBJECT-VERIFICATION",
+            "An encrypted backup object did not pass round-trip verification.",
+        ),
+        backup_recovery::BackupCreateStage::Commit => (
+            "SF-SURVIVABILITY-BACKUP-COMMIT-VERIFICATION",
+            "The completed backup container did not pass commit verification.",
+        ),
+        backup_recovery::BackupCreateStage::RecoveryReadiness => (
+            "SF-SURVIVABILITY-BACKUP-RECOVERY-VERIFICATION",
+            "Independent recovery readiness did not pass verification.",
         ),
     }
 }
@@ -819,6 +861,16 @@ mod tests {
         assert_eq!(classify_log_error(&storage), "storage-access");
         assert!(!message.contains("private"));
         assert!(!message.contains("shop.db"));
+
+        let verification = backup_recovery::staged_backup_create_error_for_test(
+            backup_recovery::BackupCreateStage::ShopKeyExport,
+            IoError::new(ErrorKind::InvalidData, "private wrapped key detail"),
+        );
+        let (code, message) = public_error(&verification);
+        assert_eq!(code, "SF-SURVIVABILITY-BACKUP-SHOP-KEY-VERIFICATION");
+        assert_eq!(classify_log_error(&verification), "verification");
+        assert!(!message.contains("private"));
+        assert!(!message.contains("wrapped key"));
 
         assert_eq!(
             survivability_permission_error(

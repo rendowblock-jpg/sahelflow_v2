@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  installed-msi:
-    name: Build, install, launch, close, and reopen MSI
+  build-msi:
+    name: Build exact evidence MSI once
     runs-on: windows-latest
     timeout-minutes: 180
     env:
@@ -178,6 +178,101 @@ jobs:
             Tee-Object -FilePath .sf-installed-e2e-build.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+          [ordered]@{
+            formatVersion = 1
+            exactSource = '${{ github.event.pull_request.head.sha || github.sha }}'
+            licenseServiceUrl = $env:SF_LICENSE_SERVICE_URL
+            webViewDebugPort = $webViewDebugPort
+          } |
+            ConvertTo-Json -Depth 4 |
+            Set-Content -LiteralPath .sf-installed-e2e-build-authority.json -Encoding UTF8
+
+      - name: Prove focused Windows backup durability and safe error contracts
+        shell: pwsh
+        run: |
+          cargo test `
+            --release `
+            --manifest-path src-tauri/Cargo.toml `
+            --lib `
+            backup_recovery::tests::windows_snapshot_verification_and_commit_use_write_capable_handles `
+            -- `
+            --exact
+          if ($LASTEXITCODE -ne 0) { throw 'Focused Windows backup durability contract failed' }
+          cargo test `
+            --release `
+            --manifest-path src-tauri/Cargo.toml `
+            --lib `
+            survivability_bridge::tests::permission_errors_preserve_the_authorization_storage_boundary `
+            -- `
+            --exact
+          if ($LASTEXITCODE -ne 0) { throw 'Safe survivability error contract failed' }
+
+      - name: Publish reusable exact evidence MSI
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installed-e2e-msi-${{ github.run_id }}
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            .sf-installed-e2e-build-authority.json
+            .sf-installed-e2e-build.log
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
+          overwrite: true
+
+  installed-msi:
+    name: Install and collect every installed gate
+    needs: build-msi
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SF_TEST_FAIL_FAST: "1"
+      SF_LICENSE_SERVICE_URL: "https://license.invalid"
+      SF_LICENSE_TRIAL_PUBLIC_KEYS: '{"ci-trial-key-v1":"ebVWLo/mVPlAeLES6KmLp5AfhTrmlb7X4OORC60ElmQ="}'
+      SF_LICENSE_PERMANENT_PUBLIC_KEYS: '{"ci-permanent-key-v1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}'
+
+    steps:
+      - name: Checkout exact branch source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile --linker=hoisted
+
+      - name: Download reusable exact evidence MSI
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installed-e2e-msi-${{ github.run_id }}
+          path: .
+
+      - name: Restore and verify compiled evidence authority
+        shell: pwsh
+        run: |
+          $authority = Get-Content -LiteralPath '.sf-installed-e2e-build-authority.json' -Raw |
+            ConvertFrom-Json
+          if (
+            [int]$authority.formatVersion -ne 1 -or
+            [string]$authority.exactSource -cne '${{ github.event.pull_request.head.sha || github.sha }}' -or
+            [string]$authority.licenseServiceUrl -cnotmatch '^http://127\.0\.0\.1:[0-9]{1,5}$' -or
+            [int]$authority.webViewDebugPort -lt 1 -or
+            [int]$authority.webViewDebugPort -gt 65535
+          ) {
+            throw 'Downloaded evidence MSI authority does not match the exact workflow source.'
+          }
+          "SF_LICENSE_SERVICE_URL=$($authority.licenseServiceUrl)" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SF_PHASE4_WEBVIEW_DEBUG_PORT=$($authority.webViewDebugPort)" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Install and prove runtime launch/reopen
         id: installed_lifecycle
         continue-on-error: true
@@ -225,6 +320,41 @@ jobs:
             $msis = @(Get-ChildItem -File 'src-tauri/target/release/bundle/msi/*.msi')
             if ($msis.Count -ne 1) {
               throw "expected exactly one MSI, found $($msis.Count)"
+            }
+
+            # The lifecycle gate deliberately mutates migration, rotation and
+            # recovery authority. Replacement/restore must begin from its own
+            # clean ephemeral profile so one acceptance gate cannot contaminate
+            # another. This runner contains no Founder or canonical AppData.
+            Get-Process -Name sahelflow -ErrorAction SilentlyContinue |
+              Stop-Process -Force -ErrorAction SilentlyContinue
+            Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+              Where-Object {
+                ($_.Name -ieq 'node.exe' -and [string]$_.ExecutablePath -like 'C:\Program Files\SahelFlow\*') -or
+                ($_.Name -ieq 'msedgewebview2.exe' -and [string]$_.CommandLine -match 'com\.sahelflow\.desktop')
+              } |
+              ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+            Start-Sleep -Milliseconds 500
+
+            $uninstall = Start-Process -FilePath "$env:SystemRoot\System32\msiexec.exe" `
+              -ArgumentList "/x `"$($msis[0].FullName)`" /qn /norestart" `
+              -Wait `
+              -PassThru
+            if ($uninstall.ExitCode -notin @(0, 1605)) {
+              throw "independent replacement preflight uninstall failed with exit code $($uninstall.ExitCode)"
+            }
+            Remove-Item -LiteralPath `
+              (Join-Path $env:APPDATA 'com.sahelflow.desktop'), `
+              (Join-Path $env:LOCALAPPDATA 'com.sahelflow.desktop') `
+              -Recurse `
+              -Force `
+              -ErrorAction SilentlyContinue
+            $install = Start-Process -FilePath "$env:SystemRoot\System32\msiexec.exe" `
+              -ArgumentList "/i `"$($msis[0].FullName)`" /qn /norestart" `
+              -Wait `
+              -PassThru
+            if ($install.ExitCode -ne 0) {
+              throw "independent replacement preflight install failed with exit code $($install.ExitCode)"
             }
             ./scripts/verify-phase4-replacement-install-ci.ps1 -MsiPath $msis[0].FullName
           } catch {
@@ -360,6 +490,7 @@ jobs:
             ${{ runner.temp }}/sahelflow-installed-e2e/**
             .sf-installed-e2e-build.log
           if-no-files-found: warn
+          include-hidden-files: true
           retention-days: 7
 
       - name: Require every installed gate
