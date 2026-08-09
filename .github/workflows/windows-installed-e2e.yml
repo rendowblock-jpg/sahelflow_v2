@@ -118,6 +118,9 @@ jobs:
         shell: pwsh
         run: ./scripts/prepare-libsodium-windows.ps1
 
+      - name: Prepare pinned Windows runtime for Tauri test compilation
+        run: bun run scripts/prepare-runtime.ts
+
       - name: Build bundled WhatsApp sidecar for Tauri test compilation
         run: bun run build:sidecar
 
