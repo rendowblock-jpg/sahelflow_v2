@@ -10,6 +10,52 @@ pub(crate) enum BackupCreateStage {
     RecoveryReadiness,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum SurvivabilityPermissionReason {
+    RecoveryMaterial,
+    ReplacementAuthority,
+}
+
+#[derive(Debug)]
+struct SurvivabilityPermissionError {
+    reason: SurvivabilityPermissionReason,
+    source: IoError,
+}
+
+impl std::fmt::Display for SurvivabilityPermissionError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{}", self.source)
+    }
+}
+
+impl std::error::Error for SurvivabilityPermissionError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.source)
+    }
+}
+
+fn survivability_permission_failure(
+    reason: SurvivabilityPermissionReason,
+    message: &'static str,
+) -> IoError {
+    IoError::new(
+        ErrorKind::PermissionDenied,
+        SurvivabilityPermissionError {
+            reason,
+            source: IoError::new(ErrorKind::PermissionDenied, message),
+        },
+    )
+}
+
+pub(crate) fn survivability_permission_reason(
+    error: &IoError,
+) -> Option<SurvivabilityPermissionReason> {
+    error
+        .get_ref()?
+        .downcast_ref::<SurvivabilityPermissionError>()
+        .map(|failure| failure.reason)
+}
+
 #[derive(Debug)]
 struct BackupCreateStageError {
     stage: BackupCreateStage,

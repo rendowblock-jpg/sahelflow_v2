@@ -179,6 +179,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Install and prove runtime launch/reopen
+        id: installed_lifecycle
+        continue-on-error: true
         shell: pwsh
         run: |
           $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
@@ -196,6 +198,9 @@ jobs:
           }
 
       - name: Prove authenticated hydrated WebView UI twice
+        id: installed_ui
+        if: always()
+        continue-on-error: true
         shell: pwsh
         run: |
           $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
@@ -209,6 +214,9 @@ jobs:
           }
 
       - name: Prove replacement-install backup, restore, identity, and rollback
+        id: replacement_restore
+        if: always()
+        continue-on-error: true
         shell: pwsh
         run: |
           $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
@@ -224,6 +232,22 @@ jobs:
               Set-Content -LiteralPath (Join-Path $destination 'replacement-restore-error.txt') -Encoding UTF8
             throw
           }
+
+      - name: Record installed gate outcome matrix
+        if: always()
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          [ordered]@{
+            formatVersion = 1
+            exactSource = '${{ github.event.pull_request.head.sha || github.sha }}'
+            lifecycle = '${{ steps.installed_lifecycle.outcome }}'
+            authenticatedUi = '${{ steps.installed_ui.outcome }}'
+            replacementRestore = '${{ steps.replacement_restore.outcome }}'
+          } |
+            ConvertTo-Json -Depth 4 |
+            Set-Content -LiteralPath (Join-Path $destination 'installed-gate-outcomes.json') -Encoding UTF8
 
       - name: Collect installed Windows evidence
         if: always()
@@ -331,9 +355,27 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-installed-e2e-${{ github.run_id }}
+          name: windows-installed-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/sahelflow-installed-e2e/**
             .sf-installed-e2e-build.log
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Require every installed gate
+        if: always()
+        shell: pwsh
+        run: |
+          $outcomes = [ordered]@{
+            lifecycle = '${{ steps.installed_lifecycle.outcome }}'
+            authenticatedUi = '${{ steps.installed_ui.outcome }}'
+            replacementRestore = '${{ steps.replacement_restore.outcome }}'
+          }
+          $failed = @(
+            $outcomes.GetEnumerator() |
+              Where-Object { $_.Value -cne 'success' } |
+              ForEach-Object { "$($_.Key)=$($_.Value)" }
+          )
+          if ($failed.Count -ne 0) {
+            throw "Installed gate failures: $($failed -join ', '). See the single outcome/evidence artifact."
+          }

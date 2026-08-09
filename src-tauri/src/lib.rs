@@ -308,7 +308,7 @@ pub fn run() {
             }
         }))
     };
-    builder
+    let application = builder
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_os::init())
@@ -557,35 +557,46 @@ pub fn run() {
             startup_recovery::show_ready(app.handle(), "http://localhost:3000")?;
             Ok(())
         })
-        .build(tauri::generate_context!())
-        .expect("error while building SahelFlow application")
-        .run(|_app_handle, _event| {
-            #[cfg(not(debug_assertions))]
-            {
-                use tauri::Manager;
-                let shutdown = matches!(
-                    _event,
-                    tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
-                );
-                if shutdown {
-                    let normal_close_finished = _app_handle
-                        .try_state::<ShutdownCoordinator>()
-                        .is_some_and(|state| state.is_finished());
-                    if !normal_close_finished {
-                        if let Some(state) =
-                            _app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
-                        {
-                            if let Ok(mut children) = state.lock() {
-                                children.kill_all();
-                            }
+        .build(tauri::generate_context!());
+    let application = match application {
+        Ok(application) => application,
+        Err(error) => {
+            let operation = if rotate_installation_root {
+                "protected installation-root rotation"
+            } else {
+                "desktop startup"
+            };
+            eprintln!("[sahelflow] FATAL: {operation} application setup failed: {error}");
+            std::process::exit(1);
+        }
+    };
+    application.run(|_app_handle, _event| {
+        #[cfg(not(debug_assertions))]
+        {
+            use tauri::Manager;
+            let shutdown = matches!(
+                _event,
+                tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
+            );
+            if shutdown {
+                let normal_close_finished = _app_handle
+                    .try_state::<ShutdownCoordinator>()
+                    .is_some_and(|state| state.is_finished());
+                if !normal_close_finished {
+                    if let Some(state) =
+                        _app_handle.try_state::<std::sync::Mutex<SpawnedChildren>>()
+                    {
+                        if let Ok(mut children) = state.lock() {
+                            children.kill_all();
                         }
                     }
-                    if let Ok(app_data_dir) = _app_handle.path().app_data_dir() {
-                        runtime_protocol::remove_manifest(&app_data_dir);
-                    }
+                }
+                if let Ok(app_data_dir) = _app_handle.path().app_data_dir() {
+                    runtime_protocol::remove_manifest(&app_data_dir);
                 }
             }
-        });
+        }
+    });
 }
 
 #[cfg(not(debug_assertions))]

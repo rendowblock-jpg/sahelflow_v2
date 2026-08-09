@@ -1,5 +1,3 @@
-
-
 pub(crate) fn delete_backup(
     app_data_dir: &Path,
     download_dir: &Path,
@@ -25,9 +23,8 @@ pub(crate) fn delete_backup(
     }
     let root = backup_root(download_dir)?;
     let path = root.join(format!("{backup_id}{BACKUP_SUFFIX}"));
-    let metadata = fs::symlink_metadata(&path).map_err(|error| {
-        IoError::new(error.kind(), format!("backup is unavailable: {error}"))
-    })?;
+    let metadata = fs::symlink_metadata(&path)
+        .map_err(|error| IoError::new(error.kind(), format!("backup is unavailable: {error}")))?;
     if path_is_link(&metadata) || !metadata.is_dir() {
         return Err(IoError::new(
             ErrorKind::InvalidData,
@@ -35,14 +32,14 @@ pub(crate) fn delete_backup(
         ));
     }
     let descriptor_path = path.join(DESCRIPTOR_FILE);
-    let descriptor_digest = sha256_file(&descriptor_path).unwrap_or_else(|_| "unreadable".to_owned());
+    let descriptor_digest =
+        sha256_file(&descriptor_path).unwrap_or_else(|_| "unreadable".to_owned());
     // Deletion must remain available for a corrupt/tampered container, but its
     // durable receipt must not trust attacker-controlled descriptor metadata.
     // Record the backup workspace only after the local BRK authenticates the
     // descriptor, wrapped DEK, encrypted manifest and ciphertext digests.
     let authenticated_workspace = (|| -> Result<String, IoError> {
-        let descriptor: BackupDescriptor =
-            read_json_limited(&descriptor_path, MAX_JSON_BYTES)?;
+        let descriptor: BackupDescriptor = read_json_limited(&descriptor_path, MAX_JSON_BYTES)?;
         validate_descriptor(&descriptor)?;
         if descriptor.backup_id != backup_id {
             return Err(IoError::new(
@@ -53,8 +50,8 @@ pub(crate) fn delete_backup(
         if descriptor.workspace_id != authority.workspace_id
             || descriptor.source_installation_id != authority.installation_id
         {
-            return Err(IoError::new(
-                ErrorKind::PermissionDenied,
+            return Err(survivability_permission_failure(
+                SurvivabilityPermissionReason::ReplacementAuthority,
                 "backup requires replacement-install recovery authority",
             ));
         }

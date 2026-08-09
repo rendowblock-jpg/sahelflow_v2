@@ -54,6 +54,32 @@ function Get-SahelFlowProcesses {
     )
 }
 
+function Stop-ResidualInstalledUiProcesses {
+    # Every proof step runs only on an ephemeral Actions account. Isolate this
+    # UI gate from a failed earlier lifecycle gate without touching AppData so
+    # preservation and migration evidence remain observable.
+    $deadline = (Get-Date).AddSeconds(15)
+    do {
+        $installed = @(Get-SahelFlowProcesses)
+        $webViews = @(
+            Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+                Where-Object {
+                    $_.Name -ieq "msedgewebview2.exe" -and
+                    [string]$_.CommandLine -match "com\.sahelflow\.desktop"
+                }
+        )
+        foreach ($candidate in @($installed) + @($webViews)) {
+            Stop-Process -Id ([int64]$candidate.ProcessId) -Force -ErrorAction SilentlyContinue
+        }
+        if ($installed.Count -eq 0 -and $webViews.Count -eq 0) {
+            return
+        }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+
+    throw "Residual installed UI processes did not stop before the independent UI gate."
+}
+
 if (-not ("SahelFlowUiWindow" -as [type])) {
     Add-Type -TypeDefinition @"
 using System;
@@ -395,6 +421,7 @@ function Close-SahelFlowNormally {
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
     throw "Installed executable is missing: $exe"
 }
+Stop-ResidualInstalledUiProcesses
 if ((Get-SahelFlowProcesses).Count -ne 0) {
     throw "Installed UI verification requires a clean process boundary."
 }

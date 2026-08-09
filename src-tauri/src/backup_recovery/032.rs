@@ -1,13 +1,11 @@
-
-
 fn load_recovery_brk(
     kit_root: &Path,
     descriptor: &BackupDescriptor,
     recovery_code: Option<&str>,
 ) -> Result<SecretKey, IoError> {
     let code = recovery_code.ok_or_else(|| {
-        IoError::new(
-            ErrorKind::PermissionDenied,
+        survivability_permission_failure(
+            SurvivabilityPermissionReason::RecoveryMaterial,
             "this backup requires its independent recovery kit and recovery code",
         )
     })?;
@@ -72,8 +70,8 @@ fn load_recovery_brk(
         }
     }
     if matches.len() != 1 {
-        return Err(IoError::new(
-            ErrorKind::PermissionDenied,
+        return Err(survivability_permission_failure(
+            SurvivabilityPermissionReason::RecoveryMaterial,
             "no unique recovery kit authenticated the requested backup",
         ));
     }

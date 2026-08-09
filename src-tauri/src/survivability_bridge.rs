@@ -640,7 +640,14 @@ fn public_error(error: &IoError) -> (&'static str, &'static str) {
             "The desktop rejected this backup or recovery authorization. Sign in again and retry.",
         )
     } else if error.kind() == ErrorKind::PermissionDenied {
-        backup_access_error(backup_recovery::backup_create_failure_stage(error))
+        let backup_stage = backup_recovery::backup_create_failure_stage(error);
+        if backup_stage.is_some() {
+            backup_access_error(backup_stage)
+        } else if let Some(reason) = backup_recovery::survivability_permission_reason(error) {
+            survivability_permission_error(reason)
+        } else {
+            backup_access_error(None)
+        }
     } else if error.kind() == ErrorKind::NotFound {
         (
             "SF-SURVIVABILITY-NOT-FOUND",
@@ -666,6 +673,21 @@ fn public_error(error: &IoError) -> (&'static str, &'static str) {
             "SF-SURVIVABILITY-FAILED",
             "The protected backup or recovery operation could not be completed safely. No successful completion was recorded.",
         )
+    }
+}
+
+fn survivability_permission_error(
+    reason: backup_recovery::SurvivabilityPermissionReason,
+) -> (&'static str, &'static str) {
+    match reason {
+        backup_recovery::SurvivabilityPermissionReason::RecoveryMaterial => (
+            "SF-SURVIVABILITY-RECOVERY-KIT",
+            "The selected backup requires its matching recovery kit and recovery code.",
+        ),
+        backup_recovery::SurvivabilityPermissionReason::ReplacementAuthority => (
+            "SF-SURVIVABILITY-REPLACEMENT-AUTHORIZATION",
+            "This operation requires authenticated replacement-install recovery authority.",
+        ),
     }
 }
 
@@ -715,6 +737,12 @@ fn backup_access_error(
 fn classify_log_error(error: &IoError) -> &'static str {
     if is_authorization_failure(error) {
         return "authorization";
+    }
+    if let Some(reason) = backup_recovery::survivability_permission_reason(error) {
+        return match reason {
+            backup_recovery::SurvivabilityPermissionReason::RecoveryMaterial => "verification",
+            backup_recovery::SurvivabilityPermissionReason::ReplacementAuthority => "authorization",
+        };
     }
     match error.kind() {
         ErrorKind::PermissionDenied => "storage-access",
@@ -791,5 +819,20 @@ mod tests {
         assert_eq!(classify_log_error(&storage), "storage-access");
         assert!(!message.contains("private"));
         assert!(!message.contains("shop.db"));
+
+        assert_eq!(
+            survivability_permission_error(
+                backup_recovery::SurvivabilityPermissionReason::RecoveryMaterial,
+            )
+            .0,
+            "SF-SURVIVABILITY-RECOVERY-KIT"
+        );
+        assert_eq!(
+            survivability_permission_error(
+                backup_recovery::SurvivabilityPermissionReason::ReplacementAuthority,
+            )
+            .0,
+            "SF-SURVIVABILITY-REPLACEMENT-AUTHORIZATION"
+        );
     }
 }
