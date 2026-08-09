@@ -48,6 +48,47 @@ function Get-FileSha256OrNull {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
+# Tauri may surface Windows known folders in Win32 verbatim form. Convert only
+# the evidence probe passed to PowerShell's filesystem provider; retain the
+# native response, backup identity, recovery code and restore payload unchanged.
+function Get-SahelFlowProviderPathKind {
+    param([AllowEmptyString()][string]$Path)
+    if ($Path.StartsWith('\\?\UNC\', [StringComparison]::OrdinalIgnoreCase)) { return "extended-unc" }
+    if ($Path.StartsWith('\\?\')) { return "extended-drive" }
+    return "conventional"
+}
+
+function ConvertTo-SahelFlowProviderPath {
+    param([AllowEmptyString()][string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path)) { return "" }
+    if ($Path.StartsWith('\\?\UNC\', [StringComparison]::OrdinalIgnoreCase) -and $Path.Length -gt 8) {
+        return "\\$($Path.Substring(8))"
+    }
+    if ($Path.StartsWith('\\?\') -and $Path.Length -gt 4) {
+        $conventional = $Path.Substring(4)
+        if ($conventional -cmatch '^[A-Za-z]:\\') { return $conventional }
+        throw "The native operation returned an unsupported extended Windows path kind."
+    }
+    return $Path
+}
+
+function Assert-SahelFlowProviderPathContract {
+    $cases = @(
+        @{ input = '\\?\C:\SahelFlow\evidence'; expected = 'C:\SahelFlow\evidence' },
+        @{ input = '\\?\UNC\server\share\evidence'; expected = '\\server\share\evidence' },
+        @{ input = '\\?\unc\server\share\evidence'; expected = '\\server\share\evidence' },
+        @{ input = 'C:\SahelFlow\evidence'; expected = 'C:\SahelFlow\evidence' }
+    )
+    foreach ($case in $cases) {
+        $actual = ConvertTo-SahelFlowProviderPath ([string]$case.input)
+        if ($actual -cne [string]$case.expected) {
+            throw "The Windows provider-path normalization contract failed."
+        }
+    }
+}
+
+Assert-SahelFlowProviderPathContract
+
 function Stop-ResidualSahelFlow {
     Get-Process -Name sahelflow -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     Get-Process -Name node -ErrorAction SilentlyContinue |
@@ -418,12 +459,42 @@ if ([int]$search.body.total -eq 0) {
 $secretWrite = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/secrets/gemini-key" -Session $sourceSession -Body @{ key = $sourceSecret; test = $false }
 if ($secretWrite.status -ne 200) { throw "Protected source secret creation failed." }
 $kit = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/backup/recovery-kit" -Session $sourceSession
-if ($kit.status -ne 201 -or -not (Test-Path -LiteralPath ([string]$kit.body.path) -PathType Leaf)) {
-    throw "Independent recovery kit was not created."
+if ($kit.status -ne 201) {
+    $kitCode = if ($null -ne $kit.body -and $null -ne $kit.body.code) { [string]$kit.body.code } else { "none" }
+    throw "Independent recovery kit creation failed with HTTP $($kit.status) and code $kitCode."
+}
+$kitPath = if ($null -ne $kit.body -and $null -ne $kit.body.path) { [string]$kit.body.path } else { "" }
+if ([string]::IsNullOrWhiteSpace($kitPath)) {
+    throw "Independent recovery kit creation returned HTTP 201 without a persisted path."
+}
+$kitPathKind = Get-SahelFlowProviderPathKind $kitPath
+$kitProbePath = ConvertTo-SahelFlowProviderPath $kitPath
+if (-not [System.IO.Path]::IsPathRooted($kitProbePath)) {
+    throw "Independent recovery kit creation returned a non-absolute $kitPathKind path."
+}
+if (-not (Test-Path -LiteralPath $kitProbePath -PathType Leaf)) {
+    throw "Independent recovery kit creation returned HTTP 201, but its $kitPathKind persisted file was not found."
 }
 $backup = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/backup/create" -Session $sourceSession
-if ($backup.status -ne 201 -or [int]$backup.body.shopCount -lt 2 -or -not (Test-Path -LiteralPath ([string]$backup.body.location))) {
-    throw "All-shop source backup was not created."
+if ($backup.status -ne 201) {
+    $backupCode = if ($null -ne $backup.body -and $null -ne $backup.body.code) { [string]$backup.body.code } else { "none" }
+    throw "All-shop source backup creation failed with HTTP $($backup.status) and code $backupCode."
+}
+$backupShopCount = if ($null -ne $backup.body -and $null -ne $backup.body.shopCount) { [int]$backup.body.shopCount } else { -1 }
+if ($backupShopCount -lt 2) {
+    throw "All-shop source backup returned HTTP 201 with shopCount $backupShopCount; expected at least 2."
+}
+$backupPath = if ($null -ne $backup.body -and $null -ne $backup.body.location) { [string]$backup.body.location } else { "" }
+if ([string]::IsNullOrWhiteSpace($backupPath)) {
+    throw "All-shop source backup returned HTTP 201 and shopCount $backupShopCount without a persisted location."
+}
+$backupPathKind = Get-SahelFlowProviderPathKind $backupPath
+$backupProbePath = ConvertTo-SahelFlowProviderPath $backupPath
+if (-not [System.IO.Path]::IsPathRooted($backupProbePath)) {
+    throw "All-shop source backup returned a non-absolute $backupPathKind location."
+}
+if (-not (Test-Path -LiteralPath $backupProbePath -PathType Container)) {
+    throw "All-shop source backup returned HTTP 201 and shopCount $backupShopCount, but its $backupPathKind persisted directory was not found."
 }
 $sourceSearch = Invoke-SahelFlowJson -Method GET -BaseUrl $sourceBaseUrl -Path "/api/customers/search?q=$sourcePhone" -Session $sourceSession
 $sourceSecretState = Invoke-SahelFlowJson -Method GET -BaseUrl $sourceBaseUrl -Path "/api/secrets/gemini-key" -Session $sourceSession
