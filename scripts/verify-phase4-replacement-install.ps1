@@ -1,6 +1,9 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$MsiPath
+    [string]$MsiPath,
+    [Parameter(Mandatory = $true)]
+    [string]$RepositoryRoot,
+    [switch]$ValidateHarnessOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,24 +11,41 @@ if ($env:GITHUB_ACTIONS -cne "true") {
     throw "The replacement-install drill is restricted to an ephemeral GitHub Actions Windows runner."
 }
 
-$repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$repositoryRoot = (Resolve-Path -LiteralPath $RepositoryRoot).Path
 $resolvedMsi = (Resolve-Path -LiteralPath $MsiPath).Path
 $exe = "C:\Program Files\SahelFlow\sahelflow.exe"
 $roamingRoot = Join-Path $env:APPDATA "com.sahelflow.desktop"
 $localRoot = Join-Path $env:LOCALAPPDATA "com.sahelflow.desktop"
 $endpointPath = Join-Path $roamingRoot "runtime-endpoint.json"
 $registryPath = Join-Path $roamingRoot "shop-registry.json"
-$pendingRestorePath = Join-Path $roamingRoot "system\pending-restore.json"
-$restoreReceiptPath = Join-Path $roamingRoot "system\last-restore.json"
+$recoveryJournalRoot = Join-Path $roamingRoot "recovery-journal"
+$pendingRestorePath = Join-Path $recoveryJournalRoot "pending-restore.json"
+$restoreReceiptPath = Join-Path $recoveryJournalRoot "last-restore.json"
 $identityAuthorityPath = Join-Path $roamingRoot "system\identity-authority.json"
-$evidenceRoot = Join-Path $env:RUNNER_TEMP "sahelflow-installed-e2e"
-$resultPath = Join-Path $evidenceRoot "phase4-replacement-result.json"
 $digestScript = Join-Path $repositoryRoot "scripts\phase4-installed-database-digest.ts"
+$canonicalHarness = Join-Path $repositoryRoot "scripts\verify-phase4-replacement-install.ps1"
 $pin = "Phase4-Owner-8642"
 $sourcePhone = "0550008642"
 $localPhone = "0550008643"
 $sourceSecret = "phase4-evidence-secret-8642"
 
+if (-not (Test-Path -LiteralPath $digestScript -PathType Leaf)) {
+    throw "The replacement harness repository root does not contain its database digest dependency."
+}
+if (-not (Test-Path -LiteralPath $canonicalHarness -PathType Leaf)) {
+    throw "The replacement harness repository root does not contain the canonical harness."
+}
+$bunCommand = Get-Command bun -CommandType Application -ErrorAction SilentlyContinue
+if ($null -eq $bunCommand) {
+    throw "The replacement harness requires Bun on PATH."
+}
+if ($ValidateHarnessOnly) {
+    Write-Host "Phase 4 replacement harness dependency and relocation contract passed."
+    return
+}
+
+$evidenceRoot = Join-Path $env:RUNNER_TEMP "sahelflow-installed-e2e"
+$resultPath = Join-Path $evidenceRoot "phase4-replacement-result.json"
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
 if ($env:SF_PHASE4_WEBVIEW_DEBUG_PORT -cnotmatch "^[0-9]{1,5}$") {
@@ -370,7 +390,7 @@ function Close-SahelFlow {
 
 function Get-DatabaseDigest {
     param([Parameter(Mandatory = $true)][string]$DatabasePath)
-    $output = @(& bun $digestScript $DatabasePath 2>&1)
+    $output = @(& $bunCommand.Source $digestScript $DatabasePath 2>&1)
     if ($LASTEXITCODE -ne 0) {
         throw "Database digest failed: $($output -join [Environment]::NewLine)"
     }
@@ -578,7 +598,19 @@ foreach ($sourceShop in @($sourceEvidence.shops)) {
     $overlap = @($sourceShop.digest.sessionIdentityHashes | Where-Object { $restoredShop.digest.sessionIdentityHashes -contains $_ })
     if ($overlap.Count -ne 0) { throw "Restore cloned a source session authority." }
 }
-if (-not (Test-Path -LiteralPath $restoreReceiptPath -PathType Leaf)) { throw "Committed restore receipt is missing." }
+$restoreReceipt = Read-JsonFile $restoreReceiptPath
+if ($null -eq $restoreReceipt) { throw "Committed restore receipt is missing." }
+if (
+    [int]$restoreReceipt.formatVersion -ne 1 -or
+    [string]$restoreReceipt.state -cne "committed" -or
+    [string]$restoreReceipt.backupId -cne [string]$backup.body.backupId -or
+    [string]$restoreReceipt.sourceWorkspaceId -cne [string]$sourceEvidence.workspaceId -or
+    [string]$restoreReceipt.installationId -cne [string]$restoredEvidence.installationId -or
+    [int]$restoreReceipt.shopCount -ne [int]$restoredEvidence.shopCount -or
+    $null -ne $restoreReceipt.failureCode
+) {
+    throw "Committed restore receipt does not bind the proven backup, workspace, replacement installation, and restored shop set."
+}
 
 [pscustomobject]@{
     formatVersion = 1
@@ -596,6 +628,7 @@ if (-not (Test-Path -LiteralPath $restoreReceiptPath -PathType Leaf)) { throw "C
     restoredBusinessParityVerified = $true
     sourceSessionNonCloningVerified = $true
     recoveryKitIndependent = $backup.body.independentRecoveryReady -eq $true
+    committedReceiptVerified = $true
     restoreReceiptSha256 = Get-FileSha256OrNull $restoreReceiptPath
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $resultPath -Encoding UTF8
 

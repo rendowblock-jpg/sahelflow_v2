@@ -162,7 +162,7 @@ $kit = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/bac
 
     Set-Content -LiteralPath $patchedScript -Value $source -Encoding UTF8
 
-    & $patchedScript -MsiPath $MsiPath
+    & $patchedScript -MsiPath $MsiPath -RepositoryRoot $repoRoot
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } finally {
     if ($null -ne $trialServer) {
