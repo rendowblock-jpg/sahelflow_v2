@@ -308,6 +308,38 @@ jobs:
               throw "expected exactly one MSI, found $($msis.Count)"
             }
             ./scripts/verify-installed-windows-msi.ps1 -MsiPath $msis[0].FullName
+
+            # Freeze the already-proven two-shop source profile before the UI
+            # gate can mutate it. Replacement/restore receives an isolated copy
+            # of this exact profile, not another migration/rotation execution.
+            $roamingRoot = Join-Path $env:APPDATA 'com.sahelflow.desktop'
+            $registryPath = Join-Path $roamingRoot 'shop-registry.json'
+            $registry = Get-Content -LiteralPath $registryPath -Raw | ConvertFrom-Json
+            if (@($registry.shops).Count -ne 2) {
+              throw "replacement source fixture expected exactly two shops, found $(@($registry.shops).Count)"
+            }
+            $fixtureRoot = Join-Path $env:RUNNER_TEMP 'sahelflow-replacement-source-fixture'
+            $fixtureRoaming = Join-Path $fixtureRoot 'roaming'
+            Remove-Item -LiteralPath $fixtureRoot -Recurse -Force -ErrorAction SilentlyContinue
+            New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
+            Copy-Item -LiteralPath $roamingRoot -Destination $fixtureRoaming -Recurse -Force
+            $registrySha256 = (Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash.ToLowerInvariant()
+            $fixtureRegistryPath = Join-Path $fixtureRoaming 'shop-registry.json'
+            $fixtureRegistrySha256 = (
+              Get-FileHash -LiteralPath $fixtureRegistryPath -Algorithm SHA256
+            ).Hash.ToLowerInvariant()
+            if ($fixtureRegistrySha256 -cne $registrySha256) {
+              throw 'replacement source fixture copy changed registry authority'
+            }
+            [ordered]@{
+              formatVersion = 1
+              registrySha256 = $registrySha256
+              workspaceId = [string]$registry.workspaceId
+              installationId = [string]$registry.installationId
+              shopIds = @($registry.shops | Sort-Object id | ForEach-Object { [string]$_.id })
+            } |
+              ConvertTo-Json -Depth 6 |
+              Set-Content -LiteralPath (Join-Path $destination 'replacement-source-fixture.json') -Encoding UTF8
           } catch {
             $_ | Format-List * -Force | Out-String |
               Set-Content -LiteralPath (Join-Path $destination 'lifecycle-error.txt') -Encoding UTF8
@@ -344,29 +376,72 @@ jobs:
               throw "expected exactly one MSI, found $($msis.Count)"
             }
 
-            # Replacement/restore must begin from its own deterministic
-            # two-shop legacy fixture. Re-run the lifecycle verifier after the
-            # isolated uninstall so the backup gate never inherits state from
-            # the earlier lifecycle/UI acceptance steps. This runner contains
-            # no Founder or canonical AppData.
-            Get-Process -Name sahelflow -ErrorAction SilentlyContinue |
-              Stop-Process -Force -ErrorAction SilentlyContinue
-            Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
-              Where-Object {
-                ($_.Name -ieq 'node.exe' -and [string]$_.ExecutablePath -like 'C:\Program Files\SahelFlow\*') -or
-                ($_.Name -ieq 'msedgewebview2.exe' -and [string]$_.CommandLine -match 'com\.sahelflow\.desktop')
-              } |
-              ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-            Start-Sleep -Milliseconds 500
-
-            $uninstall = Start-Process -FilePath "$env:SystemRoot\System32\msiexec.exe" `
-              -ArgumentList "/x `"$($msis[0].FullName)`" /qn /norestart" `
-              -Wait `
-              -PassThru
-            if ($uninstall.ExitCode -notin @(0, 1605)) {
-              throw "independent replacement preflight uninstall failed with exit code $($uninstall.ExitCode)"
+            # Restore the isolated post-lifecycle snapshot so this gate cannot
+            # inherit authenticated-UI mutations or repeat the migration and
+            # native rotation contracts. This runner contains no Founder or
+            # canonical AppData.
+            $stopDeadline = (Get-Date).AddSeconds(15)
+            do {
+              $installedProcesses = @(
+                Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+                  Where-Object {
+                    $path = [string]$_.ExecutablePath
+                    -not [string]::IsNullOrWhiteSpace($path) -and
+                    $path.StartsWith('C:\Program Files\SahelFlow\', [StringComparison]::OrdinalIgnoreCase)
+                  }
+              )
+              $webViewProcesses = @(
+                Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+                  Where-Object {
+                    $_.Name -ieq 'msedgewebview2.exe' -and
+                    [string]$_.CommandLine -match 'com\.sahelflow\.desktop'
+                  }
+              )
+              foreach ($candidate in @($installedProcesses) + @($webViewProcesses)) {
+                Stop-Process -Id ([int64]$candidate.ProcessId) -Force -ErrorAction SilentlyContinue
+              }
+              if ($installedProcesses.Count -eq 0 -and $webViewProcesses.Count -eq 0) {
+                break
+              }
+              Start-Sleep -Milliseconds 250
+            } while ((Get-Date) -lt $stopDeadline)
+            if ($installedProcesses.Count -ne 0 -or $webViewProcesses.Count -ne 0) {
+              throw 'installed processes did not stop before replacement fixture restoration'
             }
-            ./scripts/verify-installed-windows-msi.ps1 -MsiPath $msis[0].FullName
+
+            $fixtureRoot = Join-Path $env:RUNNER_TEMP 'sahelflow-replacement-source-fixture'
+            $fixtureRoaming = Join-Path $fixtureRoot 'roaming'
+            $fixtureAuthorityPath = Join-Path $destination 'replacement-source-fixture.json'
+            if (
+              -not (Test-Path -LiteralPath $fixtureRoaming -PathType Container) -or
+              -not (Test-Path -LiteralPath $fixtureAuthorityPath -PathType Leaf)
+            ) {
+              throw 'validated replacement source fixture is missing'
+            }
+            $fixtureAuthority = Get-Content -LiteralPath $fixtureAuthorityPath -Raw | ConvertFrom-Json
+            $roamingRoot = Join-Path $env:APPDATA 'com.sahelflow.desktop'
+            $localRoot = Join-Path $env:LOCALAPPDATA 'com.sahelflow.desktop'
+            Remove-Item -LiteralPath $roamingRoot, $localRoot -Recurse -Force -ErrorAction SilentlyContinue
+            Copy-Item -LiteralPath $fixtureRoaming -Destination $roamingRoot -Recurse -Force
+            $restoredRegistryPath = Join-Path $roamingRoot 'shop-registry.json'
+            $restoredRegistry = Get-Content -LiteralPath $restoredRegistryPath -Raw | ConvertFrom-Json
+            $restoredRegistrySha256 = (
+              Get-FileHash -LiteralPath $restoredRegistryPath -Algorithm SHA256
+            ).Hash.ToLowerInvariant()
+            $expectedShopIds = @($fixtureAuthority.shopIds | ForEach-Object { [string]$_ }) -join "`n"
+            $restoredShopIds = @(
+              $restoredRegistry.shops | Sort-Object id | ForEach-Object { [string]$_.id }
+            ) -join "`n"
+            if (
+              [int]$fixtureAuthority.formatVersion -ne 1 -or
+              $restoredRegistrySha256 -cne [string]$fixtureAuthority.registrySha256 -or
+              [string]$restoredRegistry.workspaceId -cne [string]$fixtureAuthority.workspaceId -or
+              [string]$restoredRegistry.installationId -cne [string]$fixtureAuthority.installationId -or
+              $restoredShopIds -cne $expectedShopIds -or
+              @($restoredRegistry.shops).Count -ne 2
+            ) {
+              throw 'restored replacement source fixture changed authority or shop coverage'
+            }
             ./scripts/verify-phase4-replacement-install-ci.ps1 -MsiPath $msis[0].FullName
           } catch {
             $_ | Format-List * -Force | Out-String |
