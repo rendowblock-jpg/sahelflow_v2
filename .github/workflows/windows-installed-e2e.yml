@@ -118,6 +118,9 @@ jobs:
         shell: pwsh
         run: ./scripts/prepare-libsodium-windows.ps1
 
+      - name: Build bundled WhatsApp sidecar for Tauri test compilation
+        run: bun run build:sidecar
+
       - name: Prepare exact evidence build authority
         shell: pwsh
         run: |
