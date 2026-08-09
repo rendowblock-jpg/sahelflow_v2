@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { createHash } from "node:crypto";
+import { createHash, createPublicKey, verify } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -102,6 +102,42 @@ function keyIdFromRawBytes(bytes: Uint8Array): string {
   return Buffer.from(bytes).reverse().toString("hex").toUpperCase();
 }
 
+function signatureTextBox(box: string): string {
+  const trimmed = box.trim();
+  if (/^untrusted comment:/imu.test(trimmed)) return trimmed;
+
+  const decoded = Buffer.from(
+    decodeBase64Strict(trimmed, "signature file"),
+  ).toString("utf8");
+  if (!/^untrusted comment:/imu.test(decoded)) {
+    fail("signature file must contain a complete minisign text box");
+  }
+  return decoded.trim();
+}
+
+function parseSignatureBox(box: string): {
+  payload: Uint8Array;
+  trustedComment: string;
+  globalSignature: Uint8Array;
+} {
+  const lines = signatureTextBox(box).split(/\r?\n/u);
+  if (lines.length !== 4 || !lines[0]?.startsWith("untrusted comment:")) {
+    fail("signature file must contain exactly one complete minisign signature");
+  }
+  const trustedPrefix = "trusted comment: ";
+  if (!lines[2]?.startsWith(trustedPrefix)) {
+    fail("signature file trusted comment is missing");
+  }
+  return {
+    payload: decodeBase64Strict(lines[1] ?? "", "signature file payload"),
+    trustedComment: lines[2].slice(trustedPrefix.length),
+    globalSignature: decodeBase64Strict(
+      lines[3] ?? "",
+      "signature file global signature",
+    ),
+  };
+}
+
 const [artifactArg, signatureArg] = process.argv.slice(2);
 if (!artifactArg || !signatureArg) {
   fail("usage: verify-updater-artifact.ts <artifact.msi> <artifact.msi.sig>");
@@ -143,7 +179,8 @@ if (!signingKeyId.toLowerCase().endsWith(expectedPublicKeyId.toLowerCase())) {
 }
 
 const signatureBox = readFileSync(signaturePath, "utf8").trim();
-const signaturePayload = decodeMinisignPayload(signatureBox, "signature file", 74);
+const parsedSignature = parseSignatureBox(signatureBox);
+const signaturePayload = parsedSignature.payload;
 if (signaturePayload.length !== 74) {
   fail(`signature payload must contain 74 bytes, found ${signaturePayload.length}`);
 }
@@ -158,14 +195,45 @@ if (!Buffer.from(signatureKeyNumber).equals(Buffer.from(publicKeyNumber))) {
   );
 }
 const signatureBytes = signaturePayload.subarray(10);
-if (signatureBytes.every((byte) => byte === 0)) {
-  fail("signature bytes are empty");
+if (parsedSignature.globalSignature.length !== 64) {
+  fail(
+    `signature global payload must contain 64 bytes, found ${parsedSignature.globalSignature.length}`,
+  );
 }
 
+const artifact = readFileSync(artifactPath);
 const artifactSize = statSync(artifactPath).size;
 if (artifactSize < 1) fail("MSI artifact is empty");
+const rawPublicKey = publicKeyPayload.subarray(10);
+const spkiPrefix = Buffer.from("302a300506032b6570032100", "hex");
+const verifierKey = createPublicKey({
+  key: Buffer.concat([spkiPrefix, rawPublicKey]),
+  format: "der",
+  type: "spki",
+});
+const signedArtifact =
+  algorithm === "ED"
+    ? createHash("blake2b512").update(artifact).digest()
+    : artifact;
+if (!verify(null, signedArtifact, verifierKey, signatureBytes)) {
+  fail("MSI signature does not verify against the compiled public key");
+}
+const globalPayload = Buffer.concat([
+  signatureBytes,
+  Buffer.from(parsedSignature.trustedComment, "utf8"),
+]);
+if (
+  !verify(
+    null,
+    globalPayload,
+    verifierKey,
+    parsedSignature.globalSignature,
+  )
+) {
+  fail("signature trusted comment does not verify against the compiled public key");
+}
 const artifactSha256 = createHash("sha256")
-  .update(readFileSync(artifactPath))
+  .update(artifact)
   .digest("hex");
 const signatureSha256 = createHash("sha256")
   .update(readFileSync(signaturePath))

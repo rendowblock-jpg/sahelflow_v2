@@ -48,6 +48,79 @@ function requireCondition(condition: boolean, message: string): void {
   if (!condition) failures.push(message);
 }
 
+function decodeBase64Strict(value: string, label: string): Uint8Array {
+  const compact = value.replace(/\s+/g, "");
+  if (!compact || compact.length % 4 === 1) {
+    throw new Error(`${label} is not valid base64`);
+  }
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(compact)) {
+    throw new Error(`${label} is not valid base64`);
+  }
+
+  const decoded = Buffer.from(compact, "base64");
+  const canonical = decoded.toString("base64").replace(/=+$/u, "");
+  if (canonical !== compact.replace(/=+$/u, "")) {
+    throw new Error(`${label} is not canonical base64`);
+  }
+  return decoded;
+}
+
+function minisignPayloadLine(box: string, label: string): string {
+  const line = box
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .find(
+      (entry) =>
+        entry.length > 0 &&
+        !entry.toLowerCase().startsWith("untrusted comment:") &&
+        !entry.toLowerCase().startsWith("trusted comment:"),
+    );
+  if (!line) throw new Error(`${label} has no encoded payload line`);
+  return line;
+}
+
+function minisignPublicKeyId(box: string): string {
+  const trimmed = box.trim();
+  if (!trimmed) throw new Error("Tauri updater public key is empty");
+
+  let payload: Uint8Array;
+  if (/^(?:untrusted|trusted) comment:/imu.test(trimmed) || /\r?\n/u.test(trimmed)) {
+    payload = decodeBase64Strict(
+      minisignPayloadLine(trimmed, "Tauri updater public key"),
+      "Tauri updater public key payload",
+    );
+  } else {
+    const firstLayer = decodeBase64Strict(trimmed, "Tauri updater public key");
+    if (firstLayer.length === 42) {
+      payload = firstLayer;
+    } else {
+      const decodedBox = Buffer.from(firstLayer).toString("utf8");
+      if (!/(?:untrusted|trusted) comment:/iu.test(decodedBox)) {
+        throw new Error(
+          `Tauri updater public key decoded to ${firstLayer.length} bytes instead of a 42-byte payload or minisign text box`,
+        );
+      }
+      payload = decodeBase64Strict(
+        minisignPayloadLine(decodedBox, "Tauri updater public key"),
+        "Tauri updater public key payload",
+      );
+    }
+  }
+
+  if (payload.length !== 42) {
+    throw new Error(
+      `Tauri updater public key payload must contain 42 bytes, found ${payload.length}`,
+    );
+  }
+  if (Buffer.from(payload.subarray(0, 2)).toString("ascii") !== "Ed") {
+    throw new Error("Tauri updater public key algorithm marker is not Ed25519");
+  }
+  return Buffer.from(payload.subarray(2, 10))
+    .reverse()
+    .toString("hex")
+    .toUpperCase();
+}
+
 const authority = readJson<VersionAuthority>("sahelflow.version.json");
 const tauri = readJson<TauriConfiguration>("src-tauri/tauri.conf.json");
 const workflow = readFileSync(
@@ -71,11 +144,18 @@ const installMode = tauriUpdater?.windows?.installMode;
 const signingKeyVariable = /\bTAURI_SIGNING_PRIVATE_KEY\b/;
 const signingPasswordVariable = /\bTAURI_SIGNING_PRIVATE_KEY_PASSWORD\b/;
 let decodedPublicKey = "";
+let compiledPublicKeyId = "";
 
 try {
   decodedPublicKey = Buffer.from(pubkey, "base64").toString("utf8");
 } catch {
   failures.push("Tauri updater public key must be valid base64-encoded key content");
+}
+
+try {
+  compiledPublicKeyId = minisignPublicKeyId(pubkey);
+} catch (error) {
+  failures.push(error instanceof Error ? error.message : String(error));
 }
 
 requireCondition(
@@ -158,6 +238,10 @@ requireCondition(pubkey.length > 0, "Tauri updater public key must not be empty"
 requireCondition(
   decodedPublicKey.includes(`minisign public key: ${updater.publicKeyId}`),
   "Tauri updater public key content must contain the approved publicKeyId",
+);
+requireCondition(
+  compiledPublicKeyId === updater.publicKeyId,
+  `Tauri updater public key payload ID (${compiledPublicKeyId || "unavailable"}) must equal version authority (${updater.publicKeyId})`,
 );
 
 if (updater.enabled) {
@@ -421,6 +505,23 @@ if (updater.enabled) {
       `automatic Internal publication must run after gate: ${gate}`,
     );
   }
+  const localArtifactGateIndex = signedJob.indexOf(
+    "- name: Verify local MSI and updater signature",
+  );
+  const installedRuntimeGateIndex = signedJob.indexOf(
+    "- name: Install and prove signed runtime launch/reopen",
+  );
+  const localArtifactGate =
+    localArtifactGateIndex >= 0 &&
+    installedRuntimeGateIndex > localArtifactGateIndex
+      ? signedJob.slice(localArtifactGateIndex, installedRuntimeGateIndex)
+      : "";
+  requireCondition(
+    /bun run scripts\/verify-updater-artifact\.ts -- \$msis\[0\]\.FullName \$signatures\[0\]\.FullName/.test(
+      localArtifactGate,
+    ),
+    "signed candidates must cryptographically verify the local MSI signature before installed-runtime work",
+  );
   requireCondition(
     publishIndex >= 0 &&
       signedJob.indexOf("\n      - name:", publishIndex + 1) < 0,

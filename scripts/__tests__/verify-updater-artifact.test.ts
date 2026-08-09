@@ -1,5 +1,10 @@
 import { spawnSync } from "node:child_process";
 import {
+  createHash,
+  generateKeyPairSync,
+  sign,
+} from "node:crypto";
+import {
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -15,16 +20,22 @@ const scriptPath = fileURLToPath(
 );
 const fixtureRoots: string[] = [];
 
-function makeFixture(signatureKeyMatches = true): string {
+function makeFixture(options?: {
+  signatureKeyMatches?: boolean;
+  corruptSignature?: boolean;
+}): string {
   const root = mkdtempSync(resolve(tmpdir(), "sahelflow-updater-artifact-"));
   fixtureRoots.push(root);
 
   const keyNumber = Buffer.from("559b58a0933618c7", "hex");
   const wrongKeyNumber = Buffer.from("0011223344556677", "hex");
+  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+  const publicKeyDer = publicKey.export({ format: "der", type: "spki" });
+  const rawPublicKey = publicKeyDer.subarray(-32);
   const publicPayload = Buffer.concat([
     Buffer.from("Ed", "ascii"),
     keyNumber,
-    Buffer.alloc(32, 7),
+    rawPublicKey,
   ]);
   const publicKeyBox = Buffer.from(
     [
@@ -34,16 +45,29 @@ function makeFixture(signatureKeyMatches = true): string {
     ].join("\n"),
   ).toString("base64");
 
+  const artifact = Buffer.from("fixture MSI bytes");
+  const signatureBytes = sign(
+    null,
+    createHash("blake2b512").update(artifact).digest(),
+    privateKey,
+  );
+  if (options?.corruptSignature) signatureBytes[0]! ^= 1;
   const signaturePayload = Buffer.concat([
     Buffer.from("ED", "ascii"),
-    signatureKeyMatches ? keyNumber : wrongKeyNumber,
-    Buffer.alloc(64, 9),
+    options?.signatureKeyMatches ?? true ? keyNumber : wrongKeyNumber,
+    signatureBytes,
   ]);
+  const trustedComment = "timestamp:1\tfile:fixture.msi\tprehashed";
+  const globalSignature = sign(
+    null,
+    Buffer.concat([signatureBytes, Buffer.from(trustedComment)]),
+    privateKey,
+  );
   const signatureBox = [
     "untrusted comment: signature from minisign secret key",
     signaturePayload.toString("base64"),
-    "trusted comment: timestamp:1\tfile:fixture.msi\tprehashed",
-    Buffer.alloc(64, 11).toString("base64"),
+    `trusted comment: ${trustedComment}`,
+    globalSignature.toString("base64"),
     "",
   ].join("\n");
 
@@ -61,7 +85,7 @@ function makeFixture(signatureKeyMatches = true): string {
         },
       }),
     ],
-    ["fixture.msi", Buffer.from("fixture MSI bytes")],
+    ["fixture.msi", artifact],
     ["fixture.msi.sig", signatureBox],
   ]);
 
@@ -101,9 +125,18 @@ describe("verify-updater-artifact", () => {
   });
 
   it("rejects a signature produced by another updater key", () => {
-    const result = verify(makeFixture(false));
+    const result = verify(makeFixture({ signatureKeyMatches: false }));
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("does not match compiled public key");
+  });
+
+  it("rejects corrupted signature bytes even when the key ID still matches", () => {
+    const result = verify(makeFixture({ corruptSignature: true }));
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "MSI signature does not verify against the compiled public key",
+    );
   });
 });
