@@ -123,6 +123,15 @@ describe("Phase 4 installed replacement evidence", () => {
       "Assert-ReenrolledIdentityAuthority $restoredEvidence $sourceEvidence",
     );
     expect(harness).toContain("function Invoke-CommittedWebViewAcceptance");
+    expect(harness).toContain("function Test-AppWebViewTarget");
+    expect(harness).toContain("$baseUri.IsLoopback");
+    expect(harness).toContain("$targetUri.IsLoopback");
+    expect(harness).toContain(
+      'Test-AppWebViewTarget -BaseUrl "http://127.0.0.1:62899"',
+    );
+    expect(harness).toContain('url = "http://localhost:62899/setup"');
+    expect(harness).toContain('url = "http://localhost:62900/setup"');
+    expect(harness).toContain('url = "https://example.com:62899/setup"');
     expect(harness).toContain('request("/api/auth/setup", "POST"');
     expect(harness).toContain('request("/api/license/trial", "POST")');
     expect(harness).toContain('request("/api/secrets/gemini-key")');

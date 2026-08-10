@@ -44,7 +44,46 @@ $bunCommand = Get-Command bun -CommandType Application -ErrorAction SilentlyCont
 if ($null -eq $bunCommand) {
     throw "The replacement harness requires Bun on PATH."
 }
+
+function Test-AppWebViewTarget {
+    param(
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [Parameter(Mandatory = $true)]$Target
+    )
+    if ([string]::IsNullOrWhiteSpace([string]$Target.webSocketDebuggerUrl)) {
+        return $false
+    }
+    try {
+        $baseUri = [Uri]$BaseUrl
+        $targetUri = [Uri]([string]$Target.url)
+        return (
+            $baseUri.Scheme -ceq "http" -and
+            $targetUri.Scheme -ceq $baseUri.Scheme -and
+            $baseUri.IsLoopback -and
+            $targetUri.IsLoopback -and
+            $targetUri.Port -eq $baseUri.Port
+        )
+    } catch {
+        return $false
+    }
+}
+
 if ($ValidateHarnessOnly) {
+    $contractTarget = [pscustomobject]@{
+        url = "http://localhost:62899/setup"
+        webSocketDebuggerUrl = "ws://127.0.0.1:64411/devtools/page/contract"
+    }
+    if (-not (Test-AppWebViewTarget -BaseUrl "http://127.0.0.1:62899" -Target $contractTarget)) {
+        throw "The replacement harness rejected the equivalent Windows loopback WebView authority."
+    }
+    $contractTarget.url = "http://localhost:62900/setup"
+    if (Test-AppWebViewTarget -BaseUrl "http://127.0.0.1:62899" -Target $contractTarget) {
+        throw "The replacement harness accepted a WebView target on the wrong app port."
+    }
+    $contractTarget.url = "https://example.com:62899/setup"
+    if (Test-AppWebViewTarget -BaseUrl "http://127.0.0.1:62899" -Target $contractTarget) {
+        throw "The replacement harness accepted a non-loopback WebView target."
+    }
     Write-Host "Phase 4 replacement harness dependency and relocation contract passed."
     return
 }
@@ -371,23 +410,9 @@ function Invoke-CommittedWebViewAcceptance {
             $targets = @()
             $lastTransportFailure = $_.Exception.GetType().Name
         }
-        $base = [Uri]$BaseUrl
         $candidates = @(
             $targets | Where-Object {
-                if (
-                    [string]$_.type -cne "page" -or
-                    [string]::IsNullOrWhiteSpace([string]$_.webSocketDebuggerUrl)
-                ) { return $false }
-                try {
-                    $targetUri = [Uri]([string]$_.url)
-                    return (
-                        $targetUri.Scheme -ceq $base.Scheme -and
-                        $targetUri.Host -ceq $base.Host -and
-                        $targetUri.Port -eq $base.Port
-                    )
-                } catch {
-                    return $false
-                }
+                Test-AppWebViewTarget -BaseUrl $BaseUrl -Target $_
             }
         )
         foreach ($target in $candidates) {
