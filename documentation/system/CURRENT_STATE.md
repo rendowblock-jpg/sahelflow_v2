@@ -1,7 +1,7 @@
 # SahelFlow — Current state
 
 > **Authority:** merged protected source and named evidence only
-> **Protected `main`:** `23fb2e0ee4956132fafe8dd6973be42d3cfc8032` after merged documentation PR #229
+> **Protected `main` before this documentation package:** `23fb2e0ee4956132fafe8dd6973be42d3cfc8032` after merged documentation PR #229
 > **Latest application-changing protected merge:** PR #228 at `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Validated Phase 6/7 source head:** `fa0ff6de649421c879f62364383a363b61c71bfc`
 > **Phase 5 protected source/browser baseline:** PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
@@ -16,14 +16,14 @@
 > **Phase 7 status:** query/measurement infrastructure protected through PR #223; installed performance/reliability certification remains open
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Mandatory gate before Phase 8:** pre-Phase-8 engineering stabilization + whole-product Founder experience acceptance
-> **Open pull request:** PR #231 documentation authority reconciliation
+> **Documentation reconciliation package:** PR #231; read live GitHub for its merge state
 > **Retained evidence/issues:** #201, #214, #221, #226 and #230
 > **Execution epic:** issue #164
 > **Last assessed:** 2026-08-10
 
 Live protected `main`, published release state, open pull requests and retained
-issues are authority. Documentation-only commits may advance `main` without
-changing the published executable source.
+issues are authority. Documentation/authority-only commits may advance `main`
+without changing the published executable source.
 
 ## Executive truth
 
