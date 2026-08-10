@@ -16,6 +16,9 @@ const TRIAL_SCHEMA_HEALTH_QUERY =
   "SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1";
 const TRIAL_SCHEMA_DEFINITION_QUERY =
   "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'trial_entitlement'";
+const D1_WRITE_HEALTH_QUERY = `INSERT INTO licensing_readiness (probe_key, observed_at)
+VALUES ('worker-health', CURRENT_TIMESTAMP)
+ON CONFLICT(probe_key) DO UPDATE SET observed_at = excluded.observed_at`;
 const TRIAL_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS trial_entitlement (
   device_binding TEXT PRIMARY KEY NOT NULL,
   license_id TEXT UNIQUE NOT NULL,
@@ -114,7 +117,7 @@ async function health(env: LicensingWorkerEnvironment) {
 }
 
 describe("online trial authority", () => {
-  it("exposes a non-secret health probe backed by schema, shared keyring and limiter binding", async () => {
+  it("exposes a non-secret health probe backed by reads, bounded write, shared keyring and limiter", async () => {
     const database = new MemoryD1();
     const env = environment(database);
     const rateLimitKeys: string[] = [];
@@ -133,6 +136,7 @@ describe("online trial authority", () => {
     expect(database.preparedQueries).toEqual([
       TRIAL_SCHEMA_HEALTH_QUERY,
       TRIAL_SCHEMA_DEFINITION_QUERY,
+      D1_WRITE_HEALTH_QUERY,
     ]);
     expect(rateLimitKeys).toEqual([RATE_LIMITER_HEALTH_KEY]);
   });
@@ -181,6 +185,37 @@ describe("online trial authority", () => {
     const response = await health(env);
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it("fails health closed when D1 is readable but cannot accept the bounded readiness write", async () => {
+    for (const mode of ["false", "throw"] as const) {
+      const database = new MemoryD1();
+      const env = environment(database);
+      env.DB = {
+        prepare: (query: string) => {
+          if (query !== D1_WRITE_HEALTH_QUERY) {
+            return database.prepare(query) as unknown as ReturnType<
+              LicensingWorkerEnvironment["DB"]["prepare"]
+            >;
+          }
+          return {
+            bind: () => {
+              throw new Error("unused");
+            },
+            first: async <T>() => null as T | null,
+            run: async () => {
+              if (mode === "throw") throw new Error("D1 write unavailable");
+              return { success: false };
+            },
+          };
+        },
+      } as LicensingWorkerEnvironment["DB"];
+
+      const response = await health(env);
+      expect(response.status, mode).toBe(503);
+      await expect(response.json()).resolves.toEqual({ status: "unavailable" });
+      expect(database.records.size).toBe(0);
+    }
   });
 
   it("fails health closed when signing or entitlement configuration cannot issue a valid contract", async () => {
