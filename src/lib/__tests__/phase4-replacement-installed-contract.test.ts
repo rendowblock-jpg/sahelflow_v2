@@ -84,7 +84,13 @@ describe("Phase 4 installed replacement evidence", () => {
     expect(harness).toContain("SF_PHASE4_WEBVIEW_DEBUG_PORT");
     expect(harness).not.toContain("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS");
     expect(harness).not.toContain("HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge\\WebView2");
-    expect(harness).toContain('method = "Network.getCookies"');
+    expect(harness).toContain('method = "Storage.getCookies"');
+    expect(harness).toContain(
+      '"http://127.0.0.1:$runtimeDebuggingPort"',
+    );
+    expect(workflow).toContain(
+      "--remote-allow-origins=http://127.0.0.1:$webViewDebugPort",
+    );
     expect(harness).toContain("Import-RuntimeCookieFromWebView");
     expect(harness).toContain("Import-SellerSessionCookieFromResponse");
     expect(harness).toContain('\"sf_session\"');

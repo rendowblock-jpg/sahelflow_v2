@@ -253,17 +253,20 @@ function Get-RuntimeCookieFromTarget {
     $socket = [System.Net.WebSockets.ClientWebSocket]::new()
     $timeout = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds(5))
     try {
+        # Chromium rejects CDP WebSocket requests carrying an unapproved Origin.
+        # Bind this disposable evidence client and evidence-only MSI to one exact
+        # loopback origin instead of opening the endpoint to a wildcard origin.
+        $socket.Options.SetRequestHeader(
+            "Origin",
+            "http://127.0.0.1:$runtimeDebuggingPort"
+        )
+        $socket.Options.Proxy = $null
         $socket.ConnectAsync([Uri]$WebSocketUrl, $timeout.Token).GetAwaiter().GetResult()
         $base = [Uri]$BaseUrl
         $command = @{
             id = 1
-            method = "Network.getCookies"
-            params = @{
-                urls = @(
-                    "http://127.0.0.1:$($base.Port)/"
-                    "http://localhost:$($base.Port)/"
-                )
-            }
+            method = "Storage.getCookies"
+            params = @{}
         } | ConvertTo-Json -Depth 5 -Compress
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($command)
         $socket.SendAsync(
@@ -277,7 +280,13 @@ function Get-RuntimeCookieFromTarget {
             $message = Read-CdpMessage -Socket $socket -CancellationToken $timeout.Token
         } while ([int]$message.id -ne 1)
 
-        return @($message.result.cookies | Where-Object { $_.name -ceq "sf_runtime" }) |
+        return @(
+            $message.result.cookies | Where-Object {
+                $_.name -ceq "sf_runtime" -and
+                ([string]$_.domain -ceq $base.Host -or [string]$_.domain -ceq "localhost") -and
+                [string]$_.path -ceq "/"
+            }
+        ) |
             Select-Object -First 1
     } finally {
         $timeout.Dispose()
@@ -645,6 +654,8 @@ $interrupted = Start-SahelFlow
 if (-not $interrupted.WaitForExit(120000)) { Stop-Process -Id $interrupted.Id -Force; throw "Interrupted restore did not stop." }
 Remove-Item Env:SF_PHASE4_RESTORE_INTERRUPT_AFTER_SHOPS -ErrorAction SilentlyContinue
 if ($interrupted.ExitCode -ne 86) { throw "Restore interruption did not exit at the governed shop boundary." }
+$interrupted.Dispose()
+Stop-ResidualSahelFlow
 $interruptedJournal = Read-JsonFile $pendingRestorePath
 if ($null -eq $interruptedJournal -or $interruptedJournal.state -ne "applying") { throw "Interrupted restore did not retain applying journal authority." }
 
@@ -653,6 +664,8 @@ $rolledBack = Start-SahelFlow
 if (-not $rolledBack.WaitForExit(120000)) { Stop-Process -Id $rolledBack.Id -Force; throw "Rollback proof did not stop." }
 Remove-Item Env:SF_PHASE4_RESTORE_STOP_AFTER_ROLLBACK -ErrorAction SilentlyContinue
 if ($rolledBack.ExitCode -ne 87) { throw "Restore rollback did not reach the governed rescue boundary." }
+$rolledBack.Dispose()
+Stop-ResidualSahelFlow
 $rollbackJournal = Read-JsonFile $pendingRestorePath
 if ($null -eq $rollbackJournal -or $rollbackJournal.state -ne "rescue-ready") { throw "Rollback did not return the journal to rescue-ready." }
 $replacementAfterRollback = Get-ProfileEvidence
