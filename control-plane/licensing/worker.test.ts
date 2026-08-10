@@ -85,7 +85,9 @@ function environment(database: MemoryD1): LicensingWorkerEnvironment {
     TRIAL_PRIVATE_KEY_PKCS8: Buffer.concat([PKCS8_HEADER, Buffer.from(PRIVATE_KEY)]).toString(
       "base64",
     ),
-    TRIAL_PUBLIC_KEY: PUBLIC_KEY_BASE64,
+    SF_LICENSE_TRIAL_PUBLIC_KEYS: JSON.stringify({
+      trial_test_001: PUBLIC_KEY_BASE64,
+    }),
     TRIAL_KEY_ID: "trial_test_001",
     PRODUCT_MAJOR: "1",
     TRIAL_SHOP_SLOTS: "1",
@@ -112,14 +114,13 @@ async function health(env: LicensingWorkerEnvironment) {
 }
 
 describe("online trial authority", () => {
-  it("exposes a non-secret health probe backed by schema, signer identity and limiter binding", async () => {
+  it("exposes a non-secret health probe backed by schema, shared keyring and limiter binding", async () => {
     const database = new MemoryD1();
     const env = environment(database);
     const rateLimitKeys: string[] = [];
     env.TRIAL_RATE_LIMITER = {
       limit: async ({ key }) => {
         rateLimitKeys.push(key);
-        // A probe-key quota decision is deliberately not readiness authority.
         return { success: false };
       },
     };
@@ -185,8 +186,9 @@ describe("online trial authority", () => {
   it("fails health closed when signing or entitlement configuration cannot issue a valid contract", async () => {
     const cases: Array<[keyof LicensingWorkerEnvironment, string]> = [
       ["TRIAL_PRIVATE_KEY_PKCS8", "!!!not-base64!!!"],
-      ["TRIAL_PUBLIC_KEY", "!!!not-base64!!!"],
-      ["TRIAL_PUBLIC_KEY", OTHER_PUBLIC_KEY_BASE64],
+      ["SF_LICENSE_TRIAL_PUBLIC_KEYS", "not-json"],
+      ["SF_LICENSE_TRIAL_PUBLIC_KEYS", JSON.stringify({ trial_test_001: OTHER_PUBLIC_KEY_BASE64 })],
+      ["SF_LICENSE_TRIAL_PUBLIC_KEYS", JSON.stringify({ other_key_001: PUBLIC_KEY_BASE64 })],
       ["TRIAL_KEY_ID", "short"],
       ["PRODUCT_MAJOR", "0"],
       ["PRODUCT_MAJOR", "1001"],
