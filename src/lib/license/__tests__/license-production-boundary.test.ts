@@ -54,7 +54,8 @@ describe("production licensing authority inventory", () => {
     expect(build).toContain("primary and recovery HTTPS origins");
     expect(build).toContain("workers.dev must not be packaged");
     expect(build).toContain("production trial primary and recovery origins must be distinct");
-    expect(build).toContain('std::env::var("GITHUB_ACTIONS")');
+    expect(build).toContain('std::env::var("GITHUB_WORKFLOW")');
+    expect(build).toContain('"CI" | "Native source contract" | "Windows Rust release parity"');
     expect(build).toContain('routes == ["https://license.invalid"]');
     expect(build).toContain("validate_keyring");
   });
