@@ -1,12 +1,12 @@
 # SahelFlow — Final completion roadmap
 
 > **Status:** Binding dependency and completion order
-> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary
-> **Latest application-changing protected merge:** PR #223 at `23f1bc3912aecfd2a32c591a18fcca70bf454daa`
+> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary; FD-031 — one-time Internal.14 installed-evidence exception
+> **Latest application-changing protected merge:** PR #228 at `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Validated Phase 6/7 source head:** `fa0ff6de649421c879f62364383a363b61c71bfc`
 > **Phase 5 product baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
-> **Published executable source:** `fb32faedc5ecfc1718e395824f437b805cbb9ef2`
-> **Published release:** `1.0.0-internal.13`, run `30366866703`
+> **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
+> **Published release:** `1.0.0-internal.14`, run `31388777098`
 > **Founder-accepted baseline:** Internal.5
 > **Phase 0:** Complete
 > **Phase 1:** Protected-source closed through PR #195
@@ -18,7 +18,7 @@
 > **Phase 7:** Query/measurement infrastructure merged through PR #223; installed low-end/reliability certification pending Phase 6 exit
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-08-08
+> **Last consolidated:** 2026-08-10
 
 Live protected `main` is authority. The SHA above is the latest application-changing
 product baseline; documentation-only merges may advance `main` without changing
@@ -216,6 +216,12 @@ Phase 6 closes only when:
 Items 1–5 and 7 are satisfied at the protected PR #223 source/browser checkpoint.
 The active exit dependency is item 6 plus the manual/human semantic review that
 cannot be fabricated from browser CI.
+
+Internal.14 is now the published signed checkpoint for this installed observation.
+FD-031 retains the PR #228 post-restore CDP/page-evidence gap in issue #214; it does
+not satisfy item 6 and does not establish Founder acceptance. The immediate Phase
+6 action is to update the Founder T470 in place and record issue #221, not to rerun
+PR #228 or dispatch another Internal.14 build.
 
 Phases 5–6 normally trigger a Level 3 installed-UI, visual-regression and
 accessibility checkpoint.

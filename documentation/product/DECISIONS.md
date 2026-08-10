@@ -579,6 +579,31 @@ This decision records the Founder’s 2026-08-04 provider-evidence boundary.
   FD-028/FD-029 Public Stable, representative beta, security, privacy, recovery,
   provider, Windows, Founder-acceptance or evidence-honesty requirements.
 
+## FD-031 — One-time Internal.14 installed-evidence exception
+
+This decision records the Founder's explicit 2026-08-10 direction for PR #228 and
+Internal.14 only.
+
+- PR #228 exact head `15e9c2e9f8e7dd2ca2ee9ddc7a49df781fcf08f6`
+  passed the Phase 5, Phase 6-7, native-source, source-quality, Windows standalone,
+  Tauri, Windows Rust and exact MSI-build gates.
+- Installed evidence proved launch/close/reopen, authenticated hydrated WebView UI
+  and a committed exact two-shop replacement restore with no restore failure code.
+- The CI-only post-restore CDP acceptance client remained red. It did not prove
+  page-level owner re-enrollment, protected-customer blind-index readback or
+  protected-secret readback. Exact-head review also found that its broadened target
+  selector was not restricted to the installed page target.
+- After explicitly directing that the final run be the last repair cycle, the
+  Founder authorized an administrative squash merge and signed Internal.14 release
+  despite that retained evidence gap.
+- Protected source `2d60e2e74109b6e03626a5ccdff727c029a34591` was
+  published by signed run `31388777098`. Main protection was restored immediately.
+- The missing post-restore page-level evidence remains retained in issue #214 and
+  may not be described as passed, Founder-accepted, Beta-certified or Stable-ready.
+- This is a one-time exception. It does not weaken future Required PR, installed,
+  recovery, release, review or Stable gates and is not precedent for greenwashing
+  an unknown product failure.
+
 ---
 
 ## Change control

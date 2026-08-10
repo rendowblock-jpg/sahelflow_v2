@@ -299,29 +299,30 @@ requireMarkers("README.md", [
   "Phase 5 closure",
   "PR #220",
   "Phase 6 — Arabic, RTL and accessibility parity",
-  "issues #201, #214 and #221",
+  "issues #201, #214, #221 and #226",
+  "Published release: `1.0.0-internal.14`",
   "Founder acceptance remains open",
 ]);
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   "Verified product frontier",
-  "Phase 5 is closed",
-  "Active Phase 6 contract",
+  "Exact next outcome",
   "selected Level 1/2/3 gates",
   "issue #221",
   "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734",
 ]);
 requireMarkers("documentation/README.md", [
-  "Phase 5 is now also closed at the protected-source + controlled-browser layer",
+  "Published Internal.14 checkpoint",
   "Phase 6 — Arabic, RTL and accessibility parity",
   "PR #220",
   "issue #221",
-  "Retained issues #201, #214 and #221",
+  "issues #201, #214, #221 and #226",
 ]);
 requireMarkers("documentation/product/DECISIONS.md", [
   "## FD-028",
   "## FD-029",
   "## FD-030",
+  "## FD-031",
   "Whole-product AAA rule",
   "The Founder decides whether the Web Agent or Desktop Agent is active",
 ]);
@@ -334,9 +335,10 @@ requireMarkers("documentation/system/ROADMAP.md", [
   "expected-head merge",
 ]);
 requireMarkers("documentation/system/CURRENT_STATE.md", [
-  "Phase 5 merged result",
-  "Phase 5 evidence",
+  "Phase 5 merged result and evidence",
   "Active Phase 6 frontier",
+  "Internal.14 publication evidence",
+  "FD-031 exception boundary",
   "issue #214",
   "not yet a commercially certified Stable release",
 ]);
@@ -751,5 +753,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 5 protected-source/browser closed; Phase 6 active; retained evidence tracked in issues #201, #214 and #221).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 5 protected-source/browser closed; Phase 6 active; retained evidence tracked in issues #201, #214, #221 and #226).`,
 );
