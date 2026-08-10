@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ShopContext } from "@/lib/shops/context";
 import { SahelFlowError } from "@/types/errors";
+import {
+  LICENSE_ENTITLEMENT_DOMAIN,
+  LICENSE_ENTITLEMENT_FORMAT,
+} from "../entitlement-canonical";
 import { requestOnlineTrial } from "../trial-client";
 
 const ORIGINAL_ENV = {
@@ -18,8 +22,8 @@ const shop = {
 function entitlement() {
   return {
     claims: {
-      domain: "sahelflow.entitlement.v1",
-      formatVersion: 1,
+      domain: LICENSE_ENTITLEMENT_DOMAIN,
+      formatVersion: LICENSE_ENTITLEMENT_FORMAT,
       licenseId: "trial_test_001",
       workspaceId: shop.workspaceId,
       installationId: shop.installationId,
