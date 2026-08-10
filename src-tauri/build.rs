@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 fn required_release_value(name: &str) -> String {
     println!("cargo:rerun-if-env-changed={name}");
     let value = std::env::var(name)
@@ -50,7 +52,76 @@ fn configured_service_urls(value: &str) -> Vec<&str> {
     routes
 }
 
-fn production_https_origin(value: &str) -> String {
+fn valid_dns_hostname(value: &str) -> bool {
+    if value.len() > 253 || value.starts_with('.') || value.ends_with('.') {
+        return false;
+    }
+    let labels = value.split('.').collect::<Vec<_>>();
+    labels.len() >= 2
+        && labels.iter().all(|label| {
+            let bytes = label.as_bytes();
+            !bytes.is_empty()
+                && bytes.len() <= 63
+                && bytes.first().is_some_and(u8::is_ascii_alphanumeric)
+                && bytes.last().is_some_and(u8::is_ascii_alphanumeric)
+                && bytes
+                    .iter()
+                    .all(|byte| byte.is_ascii_alphanumeric() || *byte == b'-')
+        })
+}
+
+fn public_dns_hostname(value: &str) -> bool {
+    if !valid_dns_hostname(value) || value.parse::<std::net::IpAddr>().is_ok() {
+        return false;
+    }
+    if value
+        .split('.')
+        .all(|label| label.bytes().all(|byte| byte.is_ascii_digit()))
+    {
+        return false;
+    }
+    let tld = value.rsplit('.').next().unwrap_or_default();
+    !matches!(
+        tld,
+        "invalid" | "example" | "test" | "localhost" | "local" | "internal" | "lan" | "home" | "arpa"
+    )
+}
+
+fn configured_owned_host_suffix() -> String {
+    let manifest_dir = PathBuf::from(
+        std::env::var("CARGO_MANIFEST_DIR")
+            .expect("CARGO_MANIFEST_DIR is unavailable to the Tauri build script"),
+    );
+    let authority_path = manifest_dir.join("../sahelflow.version.json");
+    println!("cargo:rerun-if-changed={}", authority_path.display());
+    let document = std::fs::read_to_string(&authority_path).unwrap_or_else(|error| {
+        panic!(
+            "SahelFlow version authority could not be read from {}: {error}",
+            authority_path.display()
+        )
+    });
+    let parsed: serde_json::Value = serde_json::from_str(&document)
+        .unwrap_or_else(|_| panic!("sahelflow.version.json is not valid JSON"));
+    let suffix = parsed
+        .get("licensing")
+        .and_then(|value| value.get("ownedHostSuffix"))
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_else(|| {
+            panic!(
+                "sahelflow.version.json licensing.ownedHostSuffix must be provisioned before any customer release build"
+            )
+        });
+    let canonical = suffix.to_ascii_lowercase();
+    if suffix != canonical || !public_dns_hostname(&canonical) {
+        panic!("licensing.ownedHostSuffix must be a lowercase public DNS hostname");
+    }
+    if canonical == "workers.dev" || canonical.ends_with(".workers.dev") {
+        panic!("workers.dev cannot be the SahelFlow-owned licensing suffix");
+    }
+    canonical
+}
+
+fn production_https_origin(value: &str, owned_host_suffix: &str) -> String {
     const PREFIX: &str = "https://";
     if !value.starts_with(PREFIX) || value.contains(char::is_whitespace) {
         panic!("production trial routes must be absolute HTTPS origins without whitespace");
@@ -70,15 +141,15 @@ fn production_https_origin(value: &str) -> String {
         panic!("production trial routes must use hostname-only HTTPS origins on the default port");
     }
     let host = authority.to_ascii_lowercase();
-    let valid_host = host.contains('.')
-        && host
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'.');
-    if !valid_host || host.starts_with('.') || host.ends_with('.') || host.contains("..") {
-        panic!("production trial routes must use valid hostnames");
+    if !public_dns_hostname(&host) {
+        panic!("production trial routes must use public DNS hostnames, not IP/reserved/private-style destinations");
     }
     if host == "workers.dev" || host.ends_with(".workers.dev") {
         panic!("workers.dev must not be packaged as production customer licensing authority");
+    }
+    let owned_subdomain = format!(".{owned_host_suffix}");
+    if host != owned_host_suffix && !host.ends_with(&owned_subdomain) {
+        panic!("production trial routes must belong to the provisioned SahelFlow-owned host suffix");
     }
     format!("https://{host}")
 }
@@ -110,8 +181,9 @@ fn main() {
                     "production SF_LICENSE_SERVICE_URL must contain distinct primary and recovery HTTPS origins separated by '|'"
                 );
             }
-            let primary_origin = production_https_origin(routes[0]);
-            let recovery_origin = production_https_origin(routes[1]);
+            let owned_host_suffix = configured_owned_host_suffix();
+            let primary_origin = production_https_origin(routes[0], &owned_host_suffix);
+            let recovery_origin = production_https_origin(routes[1], &owned_host_suffix);
             if primary_origin == recovery_origin {
                 panic!("production trial primary and recovery origins must be distinct");
             }
