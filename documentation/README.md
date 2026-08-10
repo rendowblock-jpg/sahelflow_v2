@@ -62,7 +62,7 @@ program spanning existing Phase 5 experience, Phase 6 Arabic/accessibility and
 Phase 7 performance obligations. This is not a new numbered phase and it does not
 reopen proven Phase 1–4 canonical authority without a concrete defect.
 
-Issue #221 remains the installed Founder Phase 5/6 visual/accessibility acceptance
+issue #221 remains the installed Founder Phase 5/6 visual/accessibility acceptance
 record and must be reconciled on the repaired signed candidate.
 
 ## Known engineering obligations in the same gate
