@@ -83,6 +83,12 @@ describe("production licensing authority inventory", () => {
     expect(worker).toContain(
       '"SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1"',
     );
+    expect(worker).toContain(
+      '"SELECT sql FROM sqlite_master WHERE type = \'table\' AND name = \'trial_entitlement\'"',
+    );
+    expect(worker).toContain("assertTrialSchemaDefinition");
+    expect(worker).toContain('"device_binding text primary key not null"');
+    expect(worker).toContain('"license_id text unique not null"');
     expect(worker).toContain("trialConfiguration(environment)");
     expect(worker).toContain("await importTrialPrivateKey(environment)");
     expect(worker).toContain("TRIAL_KEY_ID_PATTERN");
