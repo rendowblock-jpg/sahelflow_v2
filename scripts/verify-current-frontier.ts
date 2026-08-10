@@ -35,6 +35,8 @@ function rejectMarkers(relativePath: string, markers: readonly string[]): void {
   }
 }
 
+const protectedMainBeforeDocsPackage =
+  "23fb2e0ee4956132fafe8dd6973be42d3cfc8032";
 const protectedApplicationSha = "2d60e2e74109b6e03626a5ccdff727c029a34591";
 const validatedPhase67Head = "fa0ff6de649421c879f62364383a363b61c71bfc";
 const phase5Baseline = "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734";
@@ -42,6 +44,7 @@ const signedReleaseRun = "31388777098";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 
 requireMarkers("README.md", [
+  protectedMainBeforeDocsPackage,
   "Latest application-changing protected merge: **PR #228",
   protectedApplicationSha,
   "Published release: `1.0.0-internal.14`",
@@ -60,6 +63,7 @@ requireMarkers("README.md", [
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   "Verified product frontier",
+  protectedMainBeforeDocsPackage,
   "Latest application-changing protected merge: PR #228",
   protectedApplicationSha,
   validatedPhase67Head,
@@ -73,6 +77,7 @@ requireMarkers("AGENTS.md", [
 ]);
 
 requireMarkers("documentation/README.md", [
+  protectedMainBeforeDocsPackage,
   "**Latest application-changing protected merge:** PR #228",
   protectedApplicationSha,
   "**Published release:** `1.0.0-internal.14`",
@@ -86,6 +91,7 @@ requireMarkers("documentation/README.md", [
 ]);
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
+  protectedMainBeforeDocsPackage,
   "Latest application-changing protected merge:** PR #228",
   protectedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
@@ -101,6 +107,7 @@ requireMarkers("documentation/system/CURRENT_STATE.md", [
 ]);
 
 requireMarkers("documentation/system/ROADMAP.md", [
+  protectedMainBeforeDocsPackage,
   "Latest application-changing protected merge:** PR #228",
   protectedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
@@ -115,6 +122,7 @@ requireMarkers("documentation/system/ROADMAP.md", [
 ]);
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
+  protectedMainBeforeDocsPackage,
   "Latest application-changing protected merge:** PR #228",
   protectedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
