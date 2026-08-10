@@ -61,6 +61,7 @@ A lower layer cannot silently weaken a higher one.
   Founder-accepted baseline remains Internal.5.
 - Open PR at this reconciliation: #231.
 - Retained evidence: issues #201, #214, #221, #226 and #230.
+- Issue #221 remains the installed Founder visual/accessibility acceptance record.
 
 Always re-fetch live truth before a write. Never use a copied SHA for destructive,
 merge or release authority without verifying it.
@@ -114,7 +115,7 @@ The screenshots and installed observations establish systemic frontend failures:
 Phase 8 implementation is frozen until the cross-phase gate in `ROADMAP.md`
 passes. Phase 8 research/read-only planning may continue when useful.
 
-## Exact implementation order after documentation PR #231
+## Exact next outcome and implementation order after documentation PR #231
 
 ### 1. CI authority hardening
 
@@ -256,7 +257,8 @@ with idempotency, conflict/recovery semantics and explicit capability truth.
 
 ## Delivery workflow
 
-Use the audit-first sequence:
+Use the audit-first sequence with the **selected Level 1/2/3 gates** appropriate
+to consequence:
 
 ```text
 live protected source
