@@ -10,6 +10,8 @@ import {
 const PRIVATE_KEY_HEX = "883e9345ecd41c7cc2d2761720aabada5fd6e1316d6799206cd2707537ea968b";
 const PRIVATE_KEY = new Uint8Array(Buffer.from(PRIVATE_KEY_HEX, "hex"));
 const PKCS8_HEADER = Buffer.from("302e020100300506032b657004220420", "hex");
+const TRIAL_SCHEMA_HEALTH_QUERY =
+  "SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1";
 
 type RecordRow = {
   license_id: string;
@@ -19,16 +21,17 @@ type RecordRow = {
 
 class MemoryD1 {
   readonly records = new Map<string, RecordRow>();
+  readonly preparedQueries: string[] = [];
 
   prepare(query: string) {
+    this.preparedQueries.push(query);
     let values: unknown[] = [];
     return {
       bind: (...input: unknown[]) => {
         values = input;
         return this.prepareBound(query, () => values);
       },
-      first: async <T>() =>
-        (query === "SELECT 1 AS ok" ? ({ ok: 1 } as T) : (null as T | null)),
+      first: async <T>() => null as T | null,
       run: async () => ({ success: true }),
     };
   }
@@ -37,7 +40,6 @@ class MemoryD1 {
     return {
       bind: (...input: unknown[]) => this.prepareBound(query, () => input),
       first: async <T>() => {
-        if (query === "SELECT 1 AS ok") return { ok: 1 } as T;
         if (!query.startsWith("SELECT")) return null;
         return (this.records.get(String(values()[0])) ?? null) as T | null;
       },
@@ -87,29 +89,28 @@ function request(workspaceId: string, installationId: string, binding: string) {
 }
 
 describe("online trial authority", () => {
-  it("exposes a non-secret health probe backed by D1 readiness", async () => {
+  it("exposes a non-secret health probe backed by the exact trial issuance schema", async () => {
+    const database = new MemoryD1();
     const response = await handleLicensingRequest(
       new Request("https://licensing.example/healthz"),
-      environment(new MemoryD1()),
+      environment(database),
     );
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ status: "ok" });
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(database.preparedQueries).toEqual([TRIAL_SCHEMA_HEALTH_QUERY]);
   });
 
-  it("fails health closed when the D1 readiness probe is unavailable", async () => {
+  it("fails health closed when the required trial table or columns are unavailable", async () => {
     const env = environment(new MemoryD1());
     env.DB = {
-      prepare: () => ({
-        bind: () => {
-          throw new Error("unused");
-        },
-        first: async () => {
-          throw new Error("D1 unavailable");
-        },
-        run: async () => ({ success: false }),
-      }),
+      prepare: (query: string) => {
+        if (query === TRIAL_SCHEMA_HEALTH_QUERY) {
+          throw new Error("no such table: trial_entitlement");
+        }
+        throw new Error("unexpected query");
+      },
     } as LicensingWorkerEnvironment["DB"];
 
     const response = await handleLicensingRequest(
