@@ -52,6 +52,8 @@ type TrialConfiguration = Readonly<{
 
 const TRIAL_SCHEMA_HEALTH_QUERY =
   "SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1";
+const TRIAL_SCHEMA_DEFINITION_QUERY =
+  "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'trial_entitlement'";
 const TRIAL_KEY_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{7,127}$/;
 
 function json(value: unknown, status = 200): Response {
@@ -213,6 +215,25 @@ async function issueTrial(
   };
 }
 
+function normalizedSchemaSql(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function assertTrialSchemaDefinition(sql: string | null | undefined): void {
+  if (!sql) throw new Error("trial_entitlement schema definition is unavailable");
+  const normalized = normalizedSchemaSql(sql);
+  for (const required of [
+    "device_binding text primary key not null",
+    "license_id text unique not null",
+    "issued_at text not null",
+    "expires_at text not null",
+  ]) {
+    if (!normalized.includes(required)) {
+      throw new Error(`trial_entitlement schema is missing required authority: ${required}`);
+    }
+  }
+}
+
 async function health(environment: LicensingWorkerEnvironment): Promise<Response> {
   try {
     // Read the exact table/columns used by issuance. An empty correct table is
@@ -223,6 +244,13 @@ async function health(environment: LicensingWorkerEnvironment): Promise<Response
       issued_at: string;
       expires_at: string;
     }>();
+
+    // Exactly-one trial semantics rely on the reviewed D1 primary/unique keys,
+    // not merely the presence of similarly named columns.
+    const definition = await environment.DB.prepare(TRIAL_SCHEMA_DEFINITION_QUERY).first<{
+      sql: string;
+    }>();
+    assertTrialSchemaDefinition(definition?.sql);
 
     // Readiness also proves the configured claims fit the current entitlement
     // contract and that the deployed Ed25519 PKCS#8 key is actually importable.
