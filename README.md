@@ -15,7 +15,7 @@ settings, licensing, multi-shop and recovery under one protected authority model
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
 - Published release: `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`.
 - Founder-installed release: **Internal.14**, permanently licensed and reopen-observed.
-- Founder-accepted baseline remains **Internal.5**.
+- Founder-accepted baseline remains **Internal.5**; Founder acceptance remains open.
 - Current documentation reconciliation: **PR #231**.
 - Retained evidence: issues #201, #214, #221, #226 and #230.
 
@@ -23,7 +23,7 @@ Always re-read live protected `main`, open PRs/issues and current Actions before
 implementation. Documentation-only commits may advance `main` without changing the
 published executable source.
 
-## Founder-installed reconciliation
+## Phase 5 closure and Founder-installed reconciliation
 
 The exact Phase 5/6 source/browser checkpoints remain valid evidence for what they
 proved, but Internal.14 installed use is **not Founder-accepted**. The Founder
