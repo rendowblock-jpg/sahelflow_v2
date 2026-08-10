@@ -12,11 +12,6 @@ export interface PrRiskLanes {
   runInstalledMsi: boolean;
 }
 
-const PHASE2_INSTALLED_UI_WAIVER =
-  ".github/phase-exceptions/pr-200-installed-ui-waiver.md";
-const PHASE4_PR207_CLOSURE_OVERRIDE =
-  ".github/phase-exceptions/pr-207-phase4-closure-override.md";
-
 const QUALITY_OWNED_PHASE_CHECKPOINTS = new Set([
   ".github/phase-checkpoints/phase3-provider-convergence.json",
   ".github/phase-checkpoints/phase3-commerce-runtime.json",
@@ -49,13 +44,16 @@ function isFastPhaseCheckpoint(path: string): boolean {
  * version truth, documentation structure, links, and audit rules for every PR.
  * Changed Vitest files and checkpoints with Vitest-owned content contracts are
  * deliberately excluded because their assertions must execute on the quality lane.
+ *
+ * Historical `.github/phase-exceptions/**` records are deliberately excluded as
+ * well. They are retained only as evidence of past Founder decisions and have no
+ * live lane-selection authority. If one is touched, the quality lane must execute.
  */
 function isFastAuthorityOnly(path: string): boolean {
   return (
     isDocumentationOnly(path) ||
     path === "scripts/sf-audit.ts" ||
-    isFastPhaseCheckpoint(path) ||
-    path.startsWith(".github/phase-exceptions/")
+    isFastPhaseCheckpoint(path)
   );
 }
 
@@ -205,28 +203,11 @@ export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
   const paths = [...new Set(inputPaths.map(normalized).filter(Boolean))];
   const docsOnly = paths.length > 0 && paths.every(isDocumentationOnly);
 
-  // One-time Founder-directed closure control for PR #207. The marker is
-  // intentionally diff-scoped: it suppresses heavy lanes only while this file
-  // is newly changed in the Phase 4 PR. Once merged, ordinary future PR diffs
-  // do not contain the marker and therefore receive normal risk classification.
-  if (paths.includes(PHASE4_PR207_CLOSURE_OVERRIDE)) {
-    return {
-      changedCount: paths.length,
-      docsOnly,
-      runQuality: false,
-      runTauri: false,
-      runWindowsStandalone: false,
-      runWindowsRust: false,
-      runInstalledMsi: false,
-    };
-  }
-
   const authorityOnly = paths.length > 0 && paths.every(isFastAuthorityOnly);
   const forcesFullReleaseProof = paths.some(isVersionOrReleaseAuthority);
   const changesNative = paths.some(changesNativeSource);
   const changesSurvivability = paths.some(changesDataSurvivability);
   const changesNativeSurvivability = paths.some(changesNativeDataSurvivability);
-  const waivesPhase2InstalledUi = paths.includes(PHASE2_INSTALLED_UI_WAIVER);
 
   return {
     changedCount: paths.length,
@@ -244,14 +225,10 @@ export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
       forcesFullReleaseProof ||
       changesNativeSurvivability ||
       paths.some(changesWindowsRustProof),
-    // PR #200 carries one explicit Founder-directed exception for the installed
-    // hydrated-WebView receipt. The exception may waive only that retained UI
-    // proof; it must not suppress source, standalone, or Windows Rust evidence.
     runInstalledMsi:
-      !waivesPhase2InstalledUi &&
-      (forcesFullReleaseProof ||
-        changesSurvivability ||
-        paths.some(changesInstalledMsiProof)),
+      forcesFullReleaseProof ||
+      changesSurvivability ||
+      paths.some(changesInstalledMsiProof),
   };
 }
 

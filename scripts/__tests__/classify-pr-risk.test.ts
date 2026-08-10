@@ -259,35 +259,50 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("keeps the documented PR 200 exception on fast authority by itself", () => {
-    expect(
-      classifyPrRisk([
-        ".github/phase-checkpoints/phase2-native-multishop.json",
-        ".github/phase-exceptions/pr-200-installed-ui-waiver.md",
-      ]),
-    ).toMatchObject({
-      docsOnly: false,
-      runQuality: false,
-      runTauri: false,
-      runWindowsStandalone: false,
-      runWindowsRust: false,
-      runInstalledMsi: false,
-    });
+  it("treats historical phase exception records as inert quality-owned evidence", () => {
+    for (const path of [
+      ".github/phase-exceptions/pr-200-installed-ui-waiver.md",
+      ".github/phase-exceptions/pr-207-phase4-closure-override.md",
+    ]) {
+      expect(classifyPrRisk([path])).toMatchObject({
+        docsOnly: false,
+        runQuality: true,
+        runTauri: false,
+        runWindowsStandalone: false,
+        runWindowsRust: false,
+        runInstalledMsi: false,
+      });
+    }
   });
 
-  it("waives only installed UI proof when a protected path also changes", () => {
-    expect(
-      classifyPrRisk([
-        "src-tauri/src/migration_coordinator.rs",
-        ".github/phase-exceptions/pr-200-installed-ui-waiver.md",
-      ]),
-    ).toMatchObject({
-      runQuality: true,
-      runTauri: true,
-      runWindowsStandalone: true,
-      runWindowsRust: true,
-      runInstalledMsi: false,
-    });
+  it("does not let either historical exception suppress native survivability proof", () => {
+    const protectedPath = "src-tauri/src/migration_coordinator.rs";
+    const baseline = classifyPrRisk([protectedPath]);
+
+    for (const exceptionPath of [
+      ".github/phase-exceptions/pr-200-installed-ui-waiver.md",
+      ".github/phase-exceptions/pr-207-phase4-closure-override.md",
+    ]) {
+      expect(classifyPrRisk([protectedPath, exceptionPath])).toEqual({
+        ...baseline,
+        changedCount: 2,
+      });
+    }
+  });
+
+  it("does not let either historical exception suppress full release proof", () => {
+    const releaseAuthority = "sahelflow.version.json";
+    const baseline = classifyPrRisk([releaseAuthority]);
+
+    for (const exceptionPath of [
+      ".github/phase-exceptions/pr-200-installed-ui-waiver.md",
+      ".github/phase-exceptions/pr-207-phase4-closure-override.md",
+    ]) {
+      expect(classifyPrRisk([releaseAuthority, exceptionPath])).toEqual({
+        ...baseline,
+        changedCount: 2,
+      });
+    }
   });
 
   it("runs a reusable Windows lane when its own proof harness changes", () => {
