@@ -64,7 +64,7 @@ an explicit pre-Phase-8 dependency. This does not reopen proven Phase 1–4
 canonical business, identity, licensing, provider or recovery authority without a
 concrete defect.
 
-Issue #221 remains the installed Founder Phase 5/6 visual/accessibility acceptance
+issue #221 remains the installed Founder Phase 5/6 visual/accessibility acceptance
 record and must be reconciled on the repaired candidate.
 
 ## Known engineering defects/debt to close in the same program
