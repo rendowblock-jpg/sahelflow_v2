@@ -1,6 +1,14 @@
 name = "sahelflow-licensing"
 main = "worker.ts"
 compatibility_date = "2026-08-01"
+workers_dev = false
+
+# Production must attach an actual SahelFlow-owned Cloudflare zone hostname as a
+# Custom Domain. Do not use the workers.dev route as customer licensing authority.
+# Example only — replace with an owned production hostname before deployment:
+# [[routes]]
+# pattern = "license.<sahelflow-owned-zone>"
+# custom_domain = true
 
 [[d1_databases]]
 binding = "DB"
@@ -21,5 +29,9 @@ namespace_id = "1001"
 [ratelimits.simple]
 limit = 10
 period = 60
+
+[observability]
+enabled = true
+head_sampling_rate = 1
 
 # Set TRIAL_PRIVATE_KEY_PKCS8 only with `wrangler secret put`.
