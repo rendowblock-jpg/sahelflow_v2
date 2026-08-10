@@ -24,6 +24,7 @@ export default defineConfig({
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
       "tests/**/*.test.ts",
+      "control-plane/licensing/worker.test.ts",
       "scripts/__tests__/classify-pr-risk.test.ts",
       "scripts/__tests__/sf-audit*.test.ts",
       "scripts/__tests__/verify-protected-raw-access.test.ts",
