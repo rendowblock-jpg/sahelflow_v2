@@ -319,6 +319,7 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($signature)) {
             throw 'MSI updater signature is empty'
           }
+          bun run scripts/verify-updater-artifact.ts -- $msis[0].FullName $signatures[0].FullName
           "SF_MSI_PATH=$($msis[0].FullName)" >> $env:GITHUB_ENV
           "SF_MSI_NAME=$($msis[0].Name)" >> $env:GITHUB_ENV
           "SF_MSI_SIG_PATH=$($signatures[0].FullName)" >> $env:GITHUB_ENV

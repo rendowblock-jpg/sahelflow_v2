@@ -92,8 +92,7 @@ if ($trialActivation.status -ne 200 -or $trialActivation.body.status -cne "valid
 '@
     foreach ($binding in @(
         @{ owner = 'Establish-OwnerSession $sourceBaseUrl $sourceSession'; base = '$sourceBaseUrl'; session = '$sourceSession' },
-        @{ owner = 'Establish-OwnerSession $replacementBaseUrl $replacementSession'; base = '$replacementBaseUrl'; session = '$replacementSession' },
-        @{ owner = 'Establish-OwnerSession $committedBaseUrl $committedSession -RequireSetup'; base = '$committedBaseUrl'; session = '$committedSession' }
+        @{ owner = 'Establish-OwnerSession $replacementBaseUrl $replacementSession'; base = '$replacementBaseUrl'; session = '$replacementSession' }
     )) {
         if (-not $source.Contains([string]$binding.owner)) {
             throw "Replacement harness activation anchor drifted: $($binding.owner)"

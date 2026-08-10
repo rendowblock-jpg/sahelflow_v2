@@ -7,7 +7,7 @@ function read(path: string): string {
 }
 
 describe("Phase 4 installed replacement evidence", () => {
-  it("keeps interruption authority compile-gated and proves rollback plus resume", () => {
+  it("keeps interruption authority compile-gated and proves rollback plus resume", async () => {
     const workflow = read(".github/workflows/windows-installed-e2e.yml");
     const coordinator = read("src-tauri/src/backup_recovery/028.rs");
     const cutover = read("src-tauri/src/backup_recovery/041.rs");
@@ -84,7 +84,16 @@ describe("Phase 4 installed replacement evidence", () => {
     expect(harness).toContain("SF_PHASE4_WEBVIEW_DEBUG_PORT");
     expect(harness).not.toContain("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS");
     expect(harness).not.toContain("HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge\\WebView2");
-    expect(harness).toContain('method = "Network.getCookies"');
+    expect(harness).toContain('method = "Storage.getCookies"');
+    expect(harness).toContain('method = "Runtime.evaluate"');
+    expect(harness).toContain("awaitPromise = $true");
+    expect(harness).toContain("returnByValue = $true");
+    expect(harness).toContain(
+      '"http://127.0.0.1:$runtimeDebuggingPort"',
+    );
+    expect(workflow).toContain(
+      "--remote-allow-origins=http://127.0.0.1:$webViewDebugPort",
+    );
     expect(harness).toContain("Import-RuntimeCookieFromWebView");
     expect(harness).toContain("Import-SellerSessionCookieFromResponse");
     expect(harness).toContain('\"sf_session\"');
@@ -113,15 +122,87 @@ describe("Phase 4 installed replacement evidence", () => {
     expect(harness).toContain(
       "Assert-ReenrolledIdentityAuthority $restoredEvidence $sourceEvidence",
     );
+    expect(harness).toContain("function Invoke-CommittedWebViewAcceptance");
+    expect(harness).toContain("function Test-AppWebViewTarget");
+    expect(harness).toContain("$baseUri.IsLoopback");
+    expect(harness).toContain("$targetUri.IsLoopback");
     expect(harness).toContain(
+      'Test-AppWebViewTarget -BaseUrl "http://127.0.0.1:62899"',
+    );
+    expect(harness).toContain('url = "http://localhost:62899/setup"');
+    expect(harness).toContain('url = "http://localhost:62900/setup"');
+    expect(harness).toContain('url = "https://example.com:62899/setup"');
+    expect(harness).toContain('request("/api/auth/setup", "POST"');
+    expect(harness).toContain('request("/api/license/trial", "POST")');
+    expect(harness).toContain('request("/api/secrets/gemini-key")');
+    expect(harness).toContain(
+      "$committedAcceptance = Invoke-CommittedWebViewAcceptance",
+    );
+    expect(harness).toContain("-ActivateTrial");
+    expect(harness).not.toContain(
       "Establish-OwnerSession $committedBaseUrl $committedSession -RequireSetup",
     );
-    expect(wrapper).toContain(
-      "@{ owner = 'Establish-OwnerSession $committedBaseUrl $committedSession -RequireSetup'",
+    expect(wrapper).not.toContain(
+      "@{ owner = 'Establish-OwnerSession $committedBaseUrl",
     );
     expect(wrapper).not.toContain(
       "@{ owner = 'Establish-OwnerSession $committedBaseUrl $committedSession';",
     );
+
+    const expressionMatch = harness.match(
+      /\$expressionTemplate = @'\n([\s\S]*?)\n'@/,
+    );
+    expect(expressionMatch?.[1]).toBeDefined();
+    const encodedInput = btoa(
+      JSON.stringify({
+        pin: "Phase4-Owner-8642",
+        phone: "0550008642",
+        activateTrial: true,
+      }),
+    );
+    const expression = expressionMatch![1]!.replace(
+      "__INPUT_BASE64__",
+      encodedInput,
+    );
+    const replies = [
+      { status: 200, body: { success: true } },
+      { status: 200, body: { status: "valid" } },
+      { status: 200, body: { total: 1 } },
+      { status: 200, body: { configured: true } },
+    ];
+    const previousFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      const reply = replies.shift();
+      if (!reply) throw new Error("Unexpected WebView acceptance request");
+      return new Response(JSON.stringify(reply.body), {
+        status: reply.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+    try {
+      const execute = new Function(`return ${expression}`) as () => Promise<{
+        setupStatus: number;
+        trialStatus: number;
+        trialState: string | null;
+        searchStatus: number;
+        customerTotal: number;
+        secretStatus: number;
+        secretConfigured: boolean;
+      }>;
+      await expect(execute()).resolves.toEqual({
+        setupStatus: 200,
+        trialStatus: 200,
+        trialState: "valid",
+        searchStatus: 200,
+        customerTotal: 1,
+        secretStatus: 200,
+        secretConfigured: true,
+      });
+      expect(replies).toHaveLength(0);
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+
     expect(harness).toContain("sourceSessionNonCloningVerified = $true");
     expect(harness).toContain('[string]$restoreReceipt.state -cne "committed"');
     expect(harness).toContain("committedReceiptVerified = $true");

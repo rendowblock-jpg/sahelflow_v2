@@ -44,7 +44,46 @@ $bunCommand = Get-Command bun -CommandType Application -ErrorAction SilentlyCont
 if ($null -eq $bunCommand) {
     throw "The replacement harness requires Bun on PATH."
 }
+
+function Test-AppWebViewTarget {
+    param(
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [Parameter(Mandatory = $true)]$Target
+    )
+    if ([string]::IsNullOrWhiteSpace([string]$Target.webSocketDebuggerUrl)) {
+        return $false
+    }
+    try {
+        $baseUri = [Uri]$BaseUrl
+        $targetUri = [Uri]([string]$Target.url)
+        return (
+            $baseUri.Scheme -ceq "http" -and
+            $targetUri.Scheme -ceq $baseUri.Scheme -and
+            $baseUri.IsLoopback -and
+            $targetUri.IsLoopback -and
+            $targetUri.Port -eq $baseUri.Port
+        )
+    } catch {
+        return $false
+    }
+}
+
 if ($ValidateHarnessOnly) {
+    $contractTarget = [pscustomobject]@{
+        url = "http://localhost:62899/setup"
+        webSocketDebuggerUrl = "ws://127.0.0.1:64411/devtools/page/contract"
+    }
+    if (-not (Test-AppWebViewTarget -BaseUrl "http://127.0.0.1:62899" -Target $contractTarget)) {
+        throw "The replacement harness rejected the equivalent Windows loopback WebView authority."
+    }
+    $contractTarget.url = "http://localhost:62900/setup"
+    if (Test-AppWebViewTarget -BaseUrl "http://127.0.0.1:62899" -Target $contractTarget) {
+        throw "The replacement harness accepted a WebView target on the wrong app port."
+    }
+    $contractTarget.url = "https://example.com:62899/setup"
+    if (Test-AppWebViewTarget -BaseUrl "http://127.0.0.1:62899" -Target $contractTarget) {
+        throw "The replacement harness accepted a non-loopback WebView target."
+    }
     Write-Host "Phase 4 replacement harness dependency and relocation contract passed."
     return
 }
@@ -235,7 +274,7 @@ function Read-CdpMessage {
             $segment = [System.ArraySegment[byte]]::new($buffer)
             $result = $Socket.ReceiveAsync($segment, $CancellationToken).GetAwaiter().GetResult()
             if ($result.MessageType -eq [System.Net.WebSockets.WebSocketMessageType]::Close) {
-                throw "The WebView2 CDP target closed before returning its runtime cookie."
+                throw "The WebView2 CDP target closed before returning its command result."
             }
             $stream.Write($buffer, 0, $result.Count)
         } while (-not $result.EndOfMessage)
@@ -243,6 +282,153 @@ function Read-CdpMessage {
     } finally {
         $stream.Dispose()
     }
+}
+
+function Invoke-WebViewExpressionForTarget {
+    param(
+        [Parameter(Mandatory = $true)][string]$WebSocketUrl,
+        [Parameter(Mandatory = $true)][string]$Expression
+    )
+    $socket = [System.Net.WebSockets.ClientWebSocket]::new()
+    $timeout = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds(15))
+    try {
+        $socket.Options.SetRequestHeader(
+            "Origin",
+            "http://127.0.0.1:$runtimeDebuggingPort"
+        )
+        $socket.Options.Proxy = $null
+        $socket.ConnectAsync([Uri]$WebSocketUrl, $timeout.Token).GetAwaiter().GetResult()
+        $command = @{
+            id = 2
+            method = "Runtime.evaluate"
+            params = @{
+                expression = $Expression
+                awaitPromise = $true
+                returnByValue = $true
+            }
+        } | ConvertTo-Json -Depth 6 -Compress
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($command)
+        $socket.SendAsync(
+            [System.ArraySegment[byte]]::new($bytes),
+            [System.Net.WebSockets.WebSocketMessageType]::Text,
+            $true,
+            $timeout.Token
+        ).GetAwaiter().GetResult()
+
+        do {
+            $message = Read-CdpMessage -Socket $socket -CancellationToken $timeout.Token
+        } while ([int]$message.id -ne 2)
+
+        if ($null -ne $message.error) {
+            throw "The WebView2 CDP command was rejected."
+        }
+        if ($null -ne $message.result.exceptionDetails) {
+            throw "The WebView2 acceptance expression raised an exception."
+        }
+        if ($null -eq $message.result.result.value) {
+            throw "The WebView2 acceptance expression returned no bounded result."
+        }
+        return $message.result.result.value
+    } finally {
+        $timeout.Dispose()
+        $socket.Dispose()
+    }
+}
+
+function Invoke-CommittedWebViewAcceptance {
+    param(
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [Parameter(Mandatory = $true)][string]$Pin,
+        [Parameter(Mandatory = $true)][string]$Phone,
+        [switch]$ActivateTrial
+    )
+
+    # Execute the post-restore owner journey in the actual installed WebView.
+    # Chromium retains the HttpOnly runtime and seller-session cookies; this
+    # evidence path never exports either bearer into PowerShell or artifacts.
+    $inputJson = @{
+        pin = $Pin
+        phone = $Phone
+        activateTrial = [bool]$ActivateTrial
+    } | ConvertTo-Json -Depth 3 -Compress
+    $inputBase64 = [Convert]::ToBase64String(
+        [System.Text.Encoding]::UTF8.GetBytes($inputJson)
+    )
+    $expressionTemplate = @'
+(async () => {
+  const bytes = Uint8Array.from(atob("__INPUT_BASE64__"), (character) => character.charCodeAt(0));
+  const input = JSON.parse(new TextDecoder().decode(bytes));
+  const request = async (path, method = "GET", body = undefined) => {
+    const response = await fetch(path, {
+      method,
+      credentials: "same-origin",
+      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    let decoded = null;
+    try { decoded = await response.json(); } catch {}
+    return { status: response.status, body: decoded };
+  };
+
+  const setup = await request("/api/auth/setup", "POST", { pin: input.pin });
+  if (setup.status !== 200) {
+    return {
+      setupStatus: setup.status,
+      trialStatus: 0,
+      trialState: null,
+      searchStatus: 0,
+      customerTotal: 0,
+      secretStatus: 0,
+      secretConfigured: false,
+    };
+  }
+
+  const trial = input.activateTrial
+    ? await request("/api/license/trial", "POST")
+    : { status: 200, body: { status: "not-requested" } };
+  const search = await request(`/api/customers/search?q=${encodeURIComponent(input.phone)}`);
+  const secret = await request("/api/secrets/gemini-key");
+  return {
+    setupStatus: setup.status,
+    trialStatus: trial.status,
+    trialState: typeof trial.body?.status === "string" ? trial.body.status : null,
+    searchStatus: search.status,
+    customerTotal: Number.isFinite(Number(search.body?.total)) ? Number(search.body.total) : 0,
+    secretStatus: secret.status,
+    secretConfigured: secret.body?.configured === true,
+  };
+})()
+'@
+    $expression = $expressionTemplate.Replace("__INPUT_BASE64__", $inputBase64)
+    $deadline = (Get-Date).AddSeconds(30)
+    $debugEndpoint = "http://127.0.0.1:$runtimeDebuggingPort/json/list"
+    $lastTransportFailure = "none"
+    do {
+        try {
+            $targets = @(Invoke-RestMethod -Uri $debugEndpoint -TimeoutSec 2)
+        } catch {
+            $targets = @()
+            $lastTransportFailure = $_.Exception.GetType().Name
+        }
+        $candidates = @(
+            $targets | Where-Object {
+                Test-AppWebViewTarget -BaseUrl $BaseUrl -Target $_
+            }
+        )
+        foreach ($target in $candidates) {
+            try {
+                return Invoke-WebViewExpressionForTarget `
+                    -WebSocketUrl ([string]$target.webSocketDebuggerUrl) `
+                    -Expression $expression
+            } catch {
+                # A page target can rotate during startup. Try the remaining
+                # exact-origin targets without ever widening to another app.
+                $lastTransportFailure = $_.Exception.GetType().Name
+            }
+        }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+    throw "The installed WebView did not complete the bounded committed-restore acceptance request (target count $($candidates.Count), transport $lastTransportFailure)."
 }
 
 function Get-RuntimeCookieFromTarget {
@@ -253,17 +439,20 @@ function Get-RuntimeCookieFromTarget {
     $socket = [System.Net.WebSockets.ClientWebSocket]::new()
     $timeout = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds(5))
     try {
+        # Chromium rejects CDP WebSocket requests carrying an unapproved Origin.
+        # Bind this disposable evidence client and evidence-only MSI to one exact
+        # loopback origin instead of opening the endpoint to a wildcard origin.
+        $socket.Options.SetRequestHeader(
+            "Origin",
+            "http://127.0.0.1:$runtimeDebuggingPort"
+        )
+        $socket.Options.Proxy = $null
         $socket.ConnectAsync([Uri]$WebSocketUrl, $timeout.Token).GetAwaiter().GetResult()
         $base = [Uri]$BaseUrl
         $command = @{
             id = 1
-            method = "Network.getCookies"
-            params = @{
-                urls = @(
-                    "http://127.0.0.1:$($base.Port)/"
-                    "http://localhost:$($base.Port)/"
-                )
-            }
+            method = "Storage.getCookies"
+            params = @{}
         } | ConvertTo-Json -Depth 5 -Compress
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($command)
         $socket.SendAsync(
@@ -277,7 +466,13 @@ function Get-RuntimeCookieFromTarget {
             $message = Read-CdpMessage -Socket $socket -CancellationToken $timeout.Token
         } while ([int]$message.id -ne 1)
 
-        return @($message.result.cookies | Where-Object { $_.name -ceq "sf_runtime" }) |
+        return @(
+            $message.result.cookies | Where-Object {
+                $_.name -ceq "sf_runtime" -and
+                ([string]$_.domain -ceq $base.Host -or [string]$_.domain -ceq "localhost") -and
+                [string]$_.path -ceq "/"
+            }
+        ) |
             Select-Object -First 1
     } finally {
         $timeout.Dispose()
@@ -645,6 +840,8 @@ $interrupted = Start-SahelFlow
 if (-not $interrupted.WaitForExit(120000)) { Stop-Process -Id $interrupted.Id -Force; throw "Interrupted restore did not stop." }
 Remove-Item Env:SF_PHASE4_RESTORE_INTERRUPT_AFTER_SHOPS -ErrorAction SilentlyContinue
 if ($interrupted.ExitCode -ne 86) { throw "Restore interruption did not exit at the governed shop boundary." }
+$interrupted.Dispose()
+Stop-ResidualSahelFlow
 $interruptedJournal = Read-JsonFile $pendingRestorePath
 if ($null -eq $interruptedJournal -or $interruptedJournal.state -ne "applying") { throw "Interrupted restore did not retain applying journal authority." }
 
@@ -653,6 +850,8 @@ $rolledBack = Start-SahelFlow
 if (-not $rolledBack.WaitForExit(120000)) { Stop-Process -Id $rolledBack.Id -Force; throw "Rollback proof did not stop." }
 Remove-Item Env:SF_PHASE4_RESTORE_STOP_AFTER_ROLLBACK -ErrorAction SilentlyContinue
 if ($rolledBack.ExitCode -ne 87) { throw "Restore rollback did not reach the governed rescue boundary." }
+$rolledBack.Dispose()
+Stop-ResidualSahelFlow
 $rollbackJournal = Read-JsonFile $pendingRestorePath
 if ($null -eq $rollbackJournal -or $rollbackJournal.state -ne "rescue-ready") { throw "Rollback did not return the journal to rescue-ready." }
 $replacementAfterRollback = Get-ProfileEvidence
@@ -671,12 +870,28 @@ if ($restoredBeforeReenrollment.workspaceId -cne $sourceEvidence.workspaceId) { 
 if ($restoredBeforeReenrollment.installationId -cne $replacementBeforeRestore.installationId) { throw "Restore did not retain replacement installation identity." }
 if ($restoredBeforeReenrollment.installationId -ceq $sourceEvidence.installationId) { throw "Restore cloned the source installation identity." }
 if ($restoredBeforeReenrollment.revision -le $sourceEvidence.revision) { throw "Restore did not advance registry revision authority." }
-$committedSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
-Establish-OwnerSession $committedBaseUrl $committedSession -RequireSetup
-$restoredSearch = Invoke-SahelFlowJson -Method GET -BaseUrl $committedBaseUrl -Path "/api/customers/search?q=$sourcePhone" -Session $committedSession
-$restoredSecretState = Invoke-SahelFlowJson -Method GET -BaseUrl $committedBaseUrl -Path "/api/secrets/gemini-key" -Session $committedSession
-if ($restoredSearch.status -ne 200 -or [int]$restoredSearch.body.total -lt 1) { throw "Restored protected customer was not searchable by blind index." }
-if ($restoredSecretState.status -ne 200 -or $restoredSecretState.body.configured -ne $true) { throw "Restored protected secret was unavailable." }
+$committedAcceptance = Invoke-CommittedWebViewAcceptance `
+    -BaseUrl $committedBaseUrl `
+    -Pin $pin `
+    -Phone $sourcePhone `
+    -ActivateTrial
+if ([int]$committedAcceptance.setupStatus -ne 200) {
+    throw "Replacement owner setup in the installed WebView failed with HTTP $([int]$committedAcceptance.setupStatus)."
+}
+if (
+    [int]$committedAcceptance.trialStatus -ne 200 -or
+    [string]$committedAcceptance.trialState -cne "valid"
+) {
+    throw "Replacement trial activation in the installed WebView failed with HTTP $([int]$committedAcceptance.trialStatus)."
+}
+if (
+    [int]$committedAcceptance.searchStatus -ne 200 -or
+    [int]$committedAcceptance.customerTotal -lt 1
+) { throw "Restored protected customer was not searchable by blind index." }
+if (
+    [int]$committedAcceptance.secretStatus -ne 200 -or
+    $committedAcceptance.secretConfigured -ne $true
+) { throw "Restored protected secret was unavailable." }
 Close-SahelFlow $committedProcess
 $restoredEvidence = Get-ProfileEvidence
 Assert-ReenrolledIdentityAuthority $restoredEvidence $sourceEvidence

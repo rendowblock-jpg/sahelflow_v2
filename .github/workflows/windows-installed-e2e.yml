@@ -225,7 +225,8 @@ jobs:
             ConvertFrom-Json
           $browserArguments =
             "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection " +
-            "--remote-debugging-port=$webViewDebugPort"
+            "--remote-debugging-port=$webViewDebugPort " +
+            "--remote-allow-origins=http://127.0.0.1:$webViewDebugPort"
           $evidenceConfig.app.windows[0] |
             Add-Member -NotePropertyName additionalBrowserArgs -NotePropertyValue $browserArguments
           $evidenceConfig.bundle.createUpdaterArtifacts = $false

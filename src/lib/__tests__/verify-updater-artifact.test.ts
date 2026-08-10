@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
@@ -15,6 +16,13 @@ const verifier = resolve(repoRoot, "scripts", "verify-updater-artifact.ts");
 const fixtures: string[] = [];
 const PUBLIC_KEY_ID = "C7183693A0589B55";
 const SIGNING_KEY_ID = "tauri-internal-c7183693a0589b55";
+const ARTIFACT = Buffer.from("SahelFlow MSI fixture\n", "utf8");
+const TRUSTED_COMMENT =
+  "timestamp:1700000000\tfile:candidate.msi\tprehashed";
+const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+const rawPublicKey = publicKey
+  .export({ format: "der", type: "spki" })
+  .subarray(-32);
 
 function write(path: string, content: string | Uint8Array): void {
   mkdirSync(dirname(path), { recursive: true });
@@ -29,7 +37,7 @@ function minisignPublicKeyBox(): string {
   const payload = Buffer.concat([
     Buffer.from("Ed", "ascii"),
     keyNumber(),
-    Buffer.alloc(32, 0x21),
+    rawPublicKey,
   ]);
   const text = [
     `untrusted comment: minisign public key: ${PUBLIC_KEY_ID}`,
@@ -39,20 +47,37 @@ function minisignPublicKeyBox(): string {
   return Buffer.from(text, "utf8").toString("base64");
 }
 
-function signaturePayload(id = PUBLIC_KEY_ID): Buffer {
-  return Buffer.concat([
-    Buffer.from("ED", "ascii"),
-    keyNumber(id),
-    Buffer.alloc(64, 0x5a),
-  ]);
+function signaturePayload(id = PUBLIC_KEY_ID): {
+  payload: Buffer;
+  signature: Buffer;
+} {
+  const signature = sign(
+    null,
+    createHash("blake2b512").update(ARTIFACT).digest(),
+    privateKey,
+  );
+  return {
+    payload: Buffer.concat([
+      Buffer.from("ED", "ascii"),
+      keyNumber(id),
+      signature,
+    ]),
+    signature,
+  };
 }
 
 function plainSignatureBox(id = PUBLIC_KEY_ID): string {
+  const { payload, signature } = signaturePayload(id);
+  const globalSignature = sign(
+    null,
+    Buffer.concat([signature, Buffer.from(TRUSTED_COMMENT)]),
+    privateKey,
+  );
   return [
     "untrusted comment: signature from minisign secret key",
-    signaturePayload(id).toString("base64"),
-    "trusted comment: timestamp:1700000000\tfile:candidate.msi",
-    Buffer.alloc(64, 0x33).toString("base64"),
+    payload.toString("base64"),
+    `trusted comment: ${TRUSTED_COMMENT}`,
+    globalSignature.toString("base64"),
     "",
   ].join("\n");
 }
@@ -75,7 +100,7 @@ function fixture(signature: string): {
     resolve(root, "sahelflow.version.json"),
     `${JSON.stringify({ updater: { publicKeyId: PUBLIC_KEY_ID, signingKeyId: SIGNING_KEY_ID } }, null, 2)}\n`,
   );
-  write(artifact, Buffer.from("SahelFlow MSI fixture\n", "utf8"));
+  write(artifact, ARTIFACT);
   write(signaturePath, signature);
 
   return { root, artifact, signature: signaturePath };
@@ -142,7 +167,7 @@ describe("updater artifact signature envelope", () => {
 
     expect(result.status).not.toBe(0);
     expect(output(result)).toContain(
-      "instead of a 74-byte payload or minisign text box",
+      "signature file must contain a complete minisign text box",
     );
   });
 });

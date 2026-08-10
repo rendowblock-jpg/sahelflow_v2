@@ -16,9 +16,23 @@ const scriptPath = fileURLToPath(
 const fixtureRoots: string[] = [];
 const publicKeyId = "C7183693A0589B55";
 const signingKeyId = "tauri-internal-c7183693a0589b55";
-const publicKey = Buffer.from(
-  `untrusted comment: minisign public key: ${publicKeyId}\nfixture-key-material\n`,
-).toString("base64");
+const publicKeyNumber = Buffer.from("559b58a0933618c7", "hex");
+const mismatchedPublicKeyNumber = Buffer.from("558f58a0933618c7", "hex");
+
+function publicKeyBox(payloadMatchesAuthority: boolean): string {
+  const payload = Buffer.concat([
+    Buffer.from("Ed", "ascii"),
+    payloadMatchesAuthority ? publicKeyNumber : mismatchedPublicKeyNumber,
+    Buffer.alloc(32, 7),
+  ]);
+  return Buffer.from(
+    [
+      `untrusted comment: minisign public key: ${publicKeyId}`,
+      payload.toString("base64"),
+      "",
+    ].join("\n"),
+  ).toString("base64");
+}
 
 function writeFixture(options?: {
   authorityEnabled?: boolean;
@@ -49,6 +63,8 @@ function writeFixture(options?: {
   draftTargetBindingGuard?: boolean;
   protectedEnvironment?: boolean;
   serializedPublication?: boolean;
+  publicKeyPayloadMatchesAuthority?: boolean;
+  verifyLocalArtifact?: boolean;
 }): string {
   const root = mkdtempSync(resolve(tmpdir(), "sahelflow-updater-contract-"));
   fixtureRoots.push(root);
@@ -96,7 +112,9 @@ function writeFixture(options?: {
     "        run: echo verified",
     "      - name: Verify local MSI and updater signature",
     ...(options?.continueOnGateError ? ["        continue-on-error: true"] : []),
-    "        run: echo verified",
+    options?.verifyLocalArtifact ?? true
+      ? "        run: bun run scripts/verify-updater-artifact.ts -- $msis[0].FullName $signatures[0].FullName"
+      : "        run: echo verified",
     "      - name: Install and prove signed runtime launch/reopen",
     "        run: echo verified",
     "      - name: Prove signed authenticated hydrated WebView UI twice",
@@ -308,7 +326,9 @@ function writeFixture(options?: {
             updater: {
               active: tauriActive,
               endpoints: [endpoint],
-              pubkey: publicKey,
+              pubkey: publicKeyBox(
+                options?.publicKeyPayloadMatchesAuthority ?? true,
+              ),
               windows: { installMode: "passive" },
             },
           },
@@ -372,6 +392,16 @@ describe("verify-updater-contract", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Tauri updater.active");
+  });
+
+  it("rejects a public key payload whose comment only claims the authority ID", () => {
+    const result = verify(
+      writeFixture({ publicKeyPayloadMatchesAuthority: false }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("public key payload ID");
+    expect(result.stderr).toContain("C7183693A0588F55");
   });
 
   it("rejects an enabled updater that retains the unsigned workflow", () => {
@@ -692,6 +722,21 @@ describe("verify-updater-contract", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("must not continue after errors");
+  });
+
+  it("rejects a signed workflow that delays cryptographic artifact verification until after install", () => {
+    const result = verify(
+      writeFixture({
+        authorityEnabled: true,
+        signedWorkflow: true,
+        verifyLocalArtifact: false,
+      }),
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "cryptographically verify the local MSI signature before installed-runtime work",
+    );
   });
 
   it("accepts a coherently approved signed and auto-published Internal configuration", () => {
