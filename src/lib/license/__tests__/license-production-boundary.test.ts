@@ -73,14 +73,16 @@ describe("production licensing authority inventory", () => {
     expect(build).not.toContain('"Build Signed Internal Windows Update" |');
   });
 
-  it("keeps the production worker off workers.dev and exposes bounded health/observability", () => {
+  it("keeps the production worker off workers.dev and makes health prove the issuance schema", () => {
     const wrangler = read("control-plane/licensing/wrangler.toml.example");
     const worker = read("control-plane/licensing/worker.ts");
     expect(wrangler).toContain("workers_dev = false");
     expect(wrangler).toContain("[observability]");
     expect(wrangler).toContain("enabled = true");
     expect(worker).toContain('url.pathname === "/healthz"');
-    expect(worker).toContain('prepare("SELECT 1 AS ok")');
+    expect(worker).toContain(
+      '"SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1"',
+    );
     expect(worker).toContain('return json({ status: "unavailable" }, 503)');
   });
 
