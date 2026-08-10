@@ -21,6 +21,7 @@ const TRIAL_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS trial_entitlement (
   expires_at TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`;
+const RATE_LIMITER_HEALTH_KEY = "health:licensing-readiness";
 
 type RecordRow = {
   license_id: string;
@@ -108,9 +109,19 @@ async function health(env: LicensingWorkerEnvironment) {
 }
 
 describe("online trial authority", () => {
-  it("exposes a non-secret health probe backed by exact issuance schema, uniqueness and signer", async () => {
+  it("exposes a non-secret health probe backed by schema, uniqueness, signer and limiter binding", async () => {
     const database = new MemoryD1();
-    const response = await health(environment(database));
+    const env = environment(database);
+    const rateLimitKeys: string[] = [];
+    env.TRIAL_RATE_LIMITER = {
+      limit: async ({ key }) => {
+        rateLimitKeys.push(key);
+        // A probe-key quota decision is deliberately not readiness authority.
+        return { success: false };
+      },
+    };
+
+    const response = await health(env);
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ status: "ok" });
@@ -119,6 +130,7 @@ describe("online trial authority", () => {
       TRIAL_SCHEMA_HEALTH_QUERY,
       TRIAL_SCHEMA_DEFINITION_QUERY,
     ]);
+    expect(rateLimitKeys).toEqual([RATE_LIMITER_HEALTH_KEY]);
   });
 
   it("fails health closed when the required trial table or columns are unavailable", async () => {
@@ -183,6 +195,22 @@ describe("online trial authority", () => {
       Object.assign(env, { [name]: value });
       const response = await health(env);
       expect(response.status, `${name}=${value}`).toBe(503);
+      await expect(response.json()).resolves.toEqual({ status: "unavailable" });
+    }
+  });
+
+  it("fails health closed when the rate-limiter binding is missing, throws or returns an invalid result", async () => {
+    const cases: unknown[] = [
+      undefined,
+      { limit: async () => { throw new Error("binding unavailable"); } },
+      { limit: async () => ({ success: "yes" }) },
+    ];
+
+    for (const limiter of cases) {
+      const env = environment(new MemoryD1());
+      env.TRIAL_RATE_LIMITER = limiter as LicensingWorkerEnvironment["TRIAL_RATE_LIMITER"];
+      const response = await health(env);
+      expect(response.status).toBe(503);
       await expect(response.json()).resolves.toEqual({ status: "unavailable" });
     }
   });
