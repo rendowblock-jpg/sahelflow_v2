@@ -37,9 +37,11 @@ describe("production licensing authority inventory", () => {
     expect(worker).not.toContain("PERMANENT_PRIVATE");
   });
 
-  it("fails every release build closed when licensing configuration is absent", () => {
+  it("fails customer release builds closed until two owned public trial routes are provisioned", () => {
     const build = read("src-tauri/build.rs");
     const tauri = read("src-tauri/src/lib.rs");
+    const release = read(".github/workflows/release.yml");
+    const versionAuthority = read("sahelflow.version.json");
     for (const name of [
       "SF_LICENSE_SERVICE_URL",
       "SF_LICENSE_TRIAL_PUBLIC_KEYS",
@@ -49,8 +51,68 @@ describe("production licensing authority inventory", () => {
       expect(tauri).toContain(`env!("${name}")`);
     }
     expect(build).toContain("required_release_value(name)");
-    expect(build).toContain('starts_with("https://")');
+    expect(build).toContain("configured_service_urls");
+    expect(build).toContain("split('|')");
+    expect(build).toContain("primary and recovery HTTPS origins");
+    expect(build).toContain("workers.dev must not be packaged");
+    expect(build).toContain("production trial primary and recovery origins must be distinct");
+    expect(build).toContain("configured_owned_host_suffix");
+    expect(build).toContain("../sahelflow.version.json");
+    expect(build).toContain("std::net::IpAddr");
+    expect(build).toContain("public DNS hostnames, not IP/reserved/private-style destinations");
+    expect(build).toContain("provisioned SahelFlow-owned host suffix");
+    expect(versionAuthority).toContain('"ownedHostSuffix": null');
+    expect(build).toContain('std::env::var("GITHUB_WORKFLOW")');
+    expect(build).toContain('"CI" | "Native source contract" | "Windows Rust release parity"');
+    expect(build).toContain('routes == ["https://license.invalid"]');
     expect(build).toContain("validate_keyring");
+    expect(release).toContain("name: Build Signed Internal Windows Update");
+    expect(release).toContain(
+      "SF_LICENSE_SERVICE_URL: ${{ secrets.SF_LICENSE_SERVICE_URL || vars.SF_LICENSE_SERVICE_URL }}",
+    );
+    expect(build).not.toContain('"Build Signed Internal Windows Update" |');
+  });
+
+  it("keeps the production worker off workers.dev and makes health prove issuance readiness", () => {
+    const wrangler = read("control-plane/licensing/wrangler.toml.example");
+    const worker = read("control-plane/licensing/worker.ts");
+    const schema = read("control-plane/licensing/schema.sql");
+    expect(wrangler).toContain("workers_dev = false");
+    expect(wrangler).toContain("[observability]");
+    expect(wrangler).toContain("enabled = true");
+    expect(wrangler).toContain("SF_LICENSE_TRIAL_PUBLIC_KEYS =");
+    expect(worker).toContain('url.pathname === "/healthz"');
+    expect(worker).toContain(
+      '"SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1"',
+    );
+    expect(worker).toContain(
+      '"SELECT sql FROM sqlite_master WHERE type = \'table\' AND name = \'trial_entitlement\'"',
+    );
+    expect(worker).toContain("assertTrialSchemaDefinition");
+    expect(worker).toContain('"device_binding text primary key not null"');
+    expect(worker).toContain('"license_id text unique not null"');
+    expect(worker).toContain("trialConfiguration(environment)");
+    expect(worker).toContain("publishedTrialPublicKey");
+    expect(worker).toContain("assertTrialSignerIdentity");
+    expect(worker).toContain("importTrialPublicKey");
+    expect(worker).toContain(
+      "TRIAL_PRIVATE_KEY_PKCS8 does not match SF_LICENSE_TRIAL_PUBLIC_KEYS[TRIAL_KEY_ID]",
+    );
+    expect(worker).toContain("TRIAL_KEY_ID is absent from SF_LICENSE_TRIAL_PUBLIC_KEYS");
+    expect(worker).toContain("TRIAL_KEY_ID_PATTERN");
+    expect(worker).toContain("TRIAL_MEMBER_LIMIT, \"TRIAL_MEMBER_LIMIT\", 25");
+    expect(schema).toContain("CREATE TABLE IF NOT EXISTS licensing_readiness");
+    expect(schema).toContain("probe_key TEXT PRIMARY KEY NOT NULL");
+    expect(worker).toContain("INSERT INTO licensing_readiness (probe_key, observed_at)");
+    expect(worker).toContain("ON CONFLICT(probe_key) DO UPDATE");
+    expect(worker).toContain("await assertD1WriteReadiness(environment)");
+    expect(worker).toContain("D1 licensing readiness write failed");
+    expect(worker).toContain('RATE_LIMITER_HEALTH_KEY = "health:licensing-readiness"');
+    expect(worker).toContain("await limitForKey(environment, RATE_LIMITER_HEALTH_KEY)");
+    expect(worker).toContain("TRIAL_RATE_LIMITER binding is unavailable");
+    expect(worker).toContain("const signingKey = await assertTrialSignerIdentity(environment)");
+    expect(worker).toContain("signature: await signTrial(claims, signingKey)");
+    expect(worker).toContain('return json({ status: "unavailable" }, 503)');
   });
 
   it("anchors trial time outside replayable AppData before starting the server", () => {
