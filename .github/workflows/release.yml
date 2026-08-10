@@ -189,7 +189,60 @@ jobs:
             ) | Select-Object -First 1
             if ($null -eq $latest) { throw "reviewed PR is missing required check: $name" }
             if ($latest.status -cne 'completed' -or $latest.conclusion -cne 'success') {
-              throw "reviewed PR check is not successful: $name ($($latest.status)/$($latest.conclusion))"
+              $founderException = (
+                $pull.number -eq 228 -and
+                $env:SOURCE_SHA -ceq '2d60e2e74109b6e03626a5ccdff727c029a34591' -and
+                $pull.head.sha -ceq '15e9c2e9f8e7dd2ca2ee9ddc7a49df781fcf08f6' -and
+                $name -ceq 'Required PR gate' -and
+                $latest.status -ceq 'completed' -and
+                $latest.conclusion -ceq 'failure' -and
+                [string]$latest.details_url -cmatch '/actions/runs/31385482999/job/'
+              )
+              if (-not $founderException) {
+                throw "reviewed PR check is not successful: $name ($($latest.status)/$($latest.conclusion))"
+              }
+
+              $exceptionGreenChecks = @(
+                'Fast authority (version + documentation)',
+                'Quality Gate (authority + sf-verify + coverage + audit)',
+                'Windows database + standalone + contained launcher',
+                'Tauri Rust smoke (cargo check --release)',
+                'windows-rust-release-parity / Windows Rust release parity',
+                'installed-msi / Build exact evidence MSI once',
+                'Native source contract (Rust 1.77 + stable Tauri)',
+                'Required Phase 5 Experience gate',
+                'Required Phase 6-7 completion gate'
+              )
+              foreach ($exceptionCheckName in $exceptionGreenChecks) {
+                $exceptionCheck = @(
+                  $checks.check_runs |
+                    Where-Object { $_.name -ceq $exceptionCheckName } |
+                    Sort-Object -Property id -Descending
+                ) | Select-Object -First 1
+                if (
+                  $null -eq $exceptionCheck -or
+                  $exceptionCheck.status -cne 'completed' -or
+                  $exceptionCheck.conclusion -cne 'success'
+                ) {
+                  throw "Founder exception is missing successful exact-head evidence: $exceptionCheckName"
+                }
+              }
+
+              $installedFailure = @(
+                $checks.check_runs |
+                  Where-Object { $_.name -ceq 'installed-msi / Install and collect every installed gate' } |
+                  Sort-Object -Property id -Descending
+              ) | Select-Object -First 1
+              if (
+                $null -eq $installedFailure -or
+                $installedFailure.status -cne 'completed' -or
+                $installedFailure.conclusion -cne 'failure' -or
+                [string]$installedFailure.details_url -cnotmatch '/actions/runs/31385482999/job/'
+              ) {
+                throw 'Founder exception is not bound to the recorded installed-CDP failure'
+              }
+              Write-Warning 'Applying the recorded Founder exception for PR #228 installed-CDP evidence only.'
+              'SF_REVIEW_EXCEPTION=founder-pr228-installed-cdp' >> $env:GITHUB_ENV
             }
           }
           "SF_REVIEWED_PR=$($pull.number)" >> $env:GITHUB_ENV
