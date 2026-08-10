@@ -12,7 +12,7 @@
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Mandatory gate before Phase 8:** engineering stabilization + frontend experience reset + installed Phase 6/7 closure + explicit Founder acceptance
-> **Open pull request:** PR #231 documentation authority reconciliation
+> **Documentation reconciliation package:** PR #231; read live GitHub for its merge state
 > **Retained evidence:** issues #201, #214, #221, #226 and #230
 > **Execution epic:** issue #164
 > **Last reconciled:** 2026-08-10
