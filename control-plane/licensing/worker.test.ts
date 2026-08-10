@@ -88,13 +88,14 @@ function request(workspaceId: string, installationId: string, binding: string) {
   });
 }
 
+async function health(env: LicensingWorkerEnvironment) {
+  return handleLicensingRequest(new Request("https://licensing.example/healthz"), env);
+}
+
 describe("online trial authority", () => {
-  it("exposes a non-secret health probe backed by the exact trial issuance schema", async () => {
+  it("exposes a non-secret health probe backed by the exact trial issuance schema and signer", async () => {
     const database = new MemoryD1();
-    const response = await handleLicensingRequest(
-      new Request("https://licensing.example/healthz"),
-      environment(database),
-    );
+    const response = await health(environment(database));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ status: "ok" });
@@ -113,12 +114,29 @@ describe("online trial authority", () => {
       },
     } as LicensingWorkerEnvironment["DB"];
 
-    const response = await handleLicensingRequest(
-      new Request("https://licensing.example/healthz"),
-      env,
-    );
+    const response = await health(env);
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it("fails health closed when signing or entitlement configuration cannot issue a valid contract", async () => {
+    const cases: Array<[keyof LicensingWorkerEnvironment, string]> = [
+      ["TRIAL_PRIVATE_KEY_PKCS8", "!!!not-base64!!!"],
+      ["TRIAL_KEY_ID", "short"],
+      ["PRODUCT_MAJOR", "0"],
+      ["PRODUCT_MAJOR", "1001"],
+      ["TRIAL_SHOP_SLOTS", "1001"],
+      ["TRIAL_MEMBER_LIMIT", "26"],
+      ["TRIAL_BACKUP_BYTES", "9007199254740992"],
+    ];
+
+    for (const [name, value] of cases) {
+      const env = environment(new MemoryD1());
+      Object.assign(env, { [name]: value });
+      const response = await health(env);
+      expect(response.status, `${name}=${value}`).toBe(503);
+      await expect(response.json()).resolves.toEqual({ status: "unavailable" });
+    }
   });
 
   it("issues once per opaque device and recovers original dates for a reinstallation", async () => {
