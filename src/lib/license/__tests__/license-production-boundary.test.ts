@@ -40,6 +40,7 @@ describe("production licensing authority inventory", () => {
   it("fails every production release build closed on one-route or workers.dev trial authority", () => {
     const build = read("src-tauri/build.rs");
     const tauri = read("src-tauri/src/lib.rs");
+    const release = read(".github/workflows/release.yml");
     for (const name of [
       "SF_LICENSE_SERVICE_URL",
       "SF_LICENSE_TRIAL_PUBLIC_KEYS",
@@ -58,6 +59,11 @@ describe("production licensing authority inventory", () => {
     expect(build).toContain('"CI" | "Native source contract" | "Windows Rust release parity"');
     expect(build).toContain('routes == ["https://license.invalid"]');
     expect(build).toContain("validate_keyring");
+    expect(release).toContain("name: Build Signed Internal Windows Update");
+    expect(release).toContain(
+      "SF_LICENSE_SERVICE_URL: ${{ secrets.SF_LICENSE_SERVICE_URL || vars.SF_LICENSE_SERVICE_URL }}",
+    );
+    expect(build).not.toContain('"Build Signed Internal Windows Update" |');
   });
 
   it("keeps the production worker off workers.dev and exposes bounded health/observability", () => {
