@@ -22,7 +22,7 @@ export type LicensingWorkerEnvironment = {
     limit: (input: { key: string }) => Promise<{ success: boolean }>;
   };
   TRIAL_PRIVATE_KEY_PKCS8: string;
-  TRIAL_PUBLIC_KEY: string;
+  SF_LICENSE_TRIAL_PUBLIC_KEYS: string;
   TRIAL_KEY_ID: string;
   PRODUCT_MAJOR: string;
   TRIAL_SHOP_SLOTS: string;
@@ -134,6 +134,23 @@ function bytesBase64(value: ArrayBuffer): string {
   return btoa(binary);
 }
 
+function publishedTrialPublicKey(environment: LicensingWorkerEnvironment): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(environment.SF_LICENSE_TRIAL_PUBLIC_KEYS);
+  } catch {
+    throw new Error("SF_LICENSE_TRIAL_PUBLIC_KEYS is not valid JSON");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("SF_LICENSE_TRIAL_PUBLIC_KEYS must be a key-id object");
+  }
+  const value = (parsed as Record<string, unknown>)[environment.TRIAL_KEY_ID];
+  if (typeof value !== "string") {
+    throw new Error("TRIAL_KEY_ID is absent from SF_LICENSE_TRIAL_PUBLIC_KEYS");
+  }
+  return value;
+}
+
 async function importTrialPrivateKey(environment: LicensingWorkerEnvironment): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "pkcs8",
@@ -145,9 +162,9 @@ async function importTrialPrivateKey(environment: LicensingWorkerEnvironment): P
 }
 
 async function importTrialPublicKey(environment: LicensingWorkerEnvironment): Promise<CryptoKey> {
-  const raw = base64Bytes(environment.TRIAL_PUBLIC_KEY);
+  const raw = base64Bytes(publishedTrialPublicKey(environment));
   if (raw.byteLength !== 32) {
-    throw new Error("TRIAL_PUBLIC_KEY must be exactly 32 Ed25519 bytes");
+    throw new Error("Published trial key must be exactly 32 Ed25519 bytes");
   }
   return crypto.subtle.importKey(
     "raw",
@@ -177,7 +194,9 @@ async function assertTrialSignerIdentity(
     arrayBuffer(SIGNER_HEALTH_CHALLENGE),
   );
   if (!matches) {
-    throw new Error("TRIAL_PRIVATE_KEY_PKCS8 does not match TRIAL_PUBLIC_KEY");
+    throw new Error(
+      "TRIAL_PRIVATE_KEY_PKCS8 does not match SF_LICENSE_TRIAL_PUBLIC_KEYS[TRIAL_KEY_ID]",
+    );
   }
   return privateKey;
 }
@@ -305,15 +324,11 @@ async function health(environment: LicensingWorkerEnvironment): Promise<Response
     assertTrialSchemaDefinition(definition?.sql);
 
     // The deployed issuer must be capable of emitting claims that fit the
-    // contract and the private signer must match the public key identity that
-    // deployment publishes for the same TRIAL_KEY_ID.
+    // contract and its private signer must match the exact TRIAL_KEY_ID entry in
+    // the same public-keyring shape consumed by signed SahelFlow clients.
     trialConfiguration(environment);
     await assertTrialSignerIdentity(environment);
 
-    // Exercise the same Cloudflare binding used by issuance with a dedicated
-    // non-customer key. The quota decision itself is irrelevant to readiness:
-    // a false result can mean only that this probe key is exhausted; a missing,
-    // malformed or unavailable binding throws and correctly fails health.
     await limitForKey(environment, RATE_LIMITER_HEALTH_KEY);
 
     return json({ status: "ok" });
