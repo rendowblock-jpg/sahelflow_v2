@@ -27,7 +27,8 @@ class MemoryD1 {
         values = input;
         return this.prepareBound(query, () => values);
       },
-      first: async <T>() => null as T | null,
+      first: async <T>() =>
+        (query === "SELECT 1 AS ok" ? ({ ok: 1 } as T) : (null as T | null)),
       run: async () => ({ success: true }),
     };
   }
@@ -36,6 +37,7 @@ class MemoryD1 {
     return {
       bind: (...input: unknown[]) => this.prepareBound(query, () => input),
       first: async <T>() => {
+        if (query === "SELECT 1 AS ok") return { ok: 1 } as T;
         if (!query.startsWith("SELECT")) return null;
         return (this.records.get(String(values()[0])) ?? null) as T | null;
       },
@@ -79,12 +81,45 @@ function request(workspaceId: string, installationId: string, binding: string) {
       workspaceId,
       installationId,
       deviceBinding: binding,
-      appVersion: "1.0.0-internal.13",
+      appVersion: "1.0.0-internal.14",
     }),
   });
 }
 
 describe("online trial authority", () => {
+  it("exposes a non-secret health probe backed by D1 readiness", async () => {
+    const response = await handleLicensingRequest(
+      new Request("https://licensing.example/healthz"),
+      environment(new MemoryD1()),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ status: "ok" });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("fails health closed when the D1 readiness probe is unavailable", async () => {
+    const env = environment(new MemoryD1());
+    env.DB = {
+      prepare: () => ({
+        bind: () => {
+          throw new Error("unused");
+        },
+        first: async () => {
+          throw new Error("D1 unavailable");
+        },
+        run: async () => ({ success: false }),
+      }),
+    } as LicensingWorkerEnvironment["DB"];
+
+    const response = await handleLicensingRequest(
+      new Request("https://licensing.example/healthz"),
+      env,
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ status: "unavailable" });
+  });
+
   it("issues once per opaque device and recovers original dates for a reinstallation", async () => {
     const database = new MemoryD1();
     const env = environment(database);
@@ -110,7 +145,7 @@ describe("online trial authority", () => {
           workspaceId: "3".repeat(32),
           installationId: "4".repeat(32),
           deviceBinding: binding,
-          appVersion: "1.0.0-internal.13",
+          appVersion: "1.0.0-internal.14",
           minimumRevocationEpoch: 0,
         },
         {
