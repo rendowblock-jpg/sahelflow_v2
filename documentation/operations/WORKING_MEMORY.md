@@ -52,7 +52,7 @@ The supporting research packet is
 `documentation/archive/research/PRE_PHASE8_FRONTEND_STABILIZATION_RESEARCH-2026-08-10.md`.
 It is evidence, not a second roadmap.
 
-## Protected evidence that remains valid
+## Phase 5 closure snapshot
 
 PR #220 remains the exact Phase 5 protected source/browser checkpoint and PR #223
 remains the exact Phase 6 source/browser + Phase 7 measurement checkpoint. Their
@@ -63,6 +63,9 @@ whole-product visual/interaction acceptance. Root-cause frontend redesign is now
 an explicit pre-Phase-8 dependency. This does not reopen proven Phase 1–4
 canonical business, identity, licensing, provider or recovery authority without a
 concrete defect.
+
+Issue #221 remains the installed Founder Phase 5/6 visual/accessibility acceptance
+record and must be reconciled on the repaired candidate.
 
 ## Known engineering defects/debt to close in the same program
 
@@ -88,7 +91,11 @@ concrete defect.
 7. Review remaining legacy compatibility paths after higher-risk work; retire them
    only when canonical parity and recovery proof are preserved.
 
-## Exact dependency order after PR #231
+## Phase 6 next action
+
+The active work is the dependency-ordered pre-Phase-8 stabilization program below.
+It replaces the obsolete assumption that Phase 6 needs only passive installed
+observation; the protected PR #223 checkpoint remains regression evidence.
 
 ### Outcome A — CI authority hardening
 
