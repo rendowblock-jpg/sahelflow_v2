@@ -37,20 +37,64 @@ fn exact_restore_evidence_loopback_url(value: &str) -> bool {
     port.parse::<u16>().is_ok_and(|port| port != 0)
 }
 
+fn production_https_origin(name: &str, value: &str) -> String {
+    const PREFIX: &str = "https://";
+    if !value.starts_with(PREFIX) || value.contains(char::is_whitespace) {
+        panic!("{name} must be an absolute HTTPS origin without whitespace");
+    }
+    let remainder = &value[PREFIX.len()..];
+    if remainder.is_empty()
+        || remainder.contains('?')
+        || remainder.contains('#')
+        || remainder.contains('@')
+    {
+        panic!("{name} must contain only an HTTPS origin");
+    }
+    let (authority, path) = remainder
+        .split_once('/')
+        .map_or((remainder, ""), |(authority, path)| (authority, path));
+    if authority.is_empty() || !path.is_empty() || authority.contains(':') {
+        panic!("{name} must use a hostname-only HTTPS origin on the default port");
+    }
+    let host = authority.to_ascii_lowercase();
+    let valid_host = host.contains('.')
+        && host
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'.');
+    if !valid_host || host.starts_with('.') || host.ends_with('.') || host.contains("..") {
+        panic!("{name} must use a valid production hostname");
+    }
+    if host == "workers.dev" || host.ends_with(".workers.dev") {
+        panic!("{name} must not use workers.dev as production licensing authority");
+    }
+    format!("https://{host}")
+}
+
 fn main() {
     if std::env::var("PROFILE").as_deref() == Ok("release") {
         let service_url = required_release_value("SF_LICENSE_SERVICE_URL");
+        let recovery_url = required_release_value("SF_LICENSE_RECOVERY_SERVICE_URL");
         println!("cargo:rerun-if-env-changed=SF_PHASE4_RESTORE_EVIDENCE_BUILD");
         let restore_evidence_build =
             std::env::var("SF_PHASE4_RESTORE_EVIDENCE_BUILD").as_deref() == Ok("1");
-        let production_https =
-            service_url.starts_with("https://") && !service_url.contains(char::is_whitespace);
-        let evidence_loopback =
-            restore_evidence_build && exact_restore_evidence_loopback_url(&service_url);
-        if !production_https && !evidence_loopback {
-            panic!(
-                "SF_LICENSE_SERVICE_URL must be an absolute HTTPS URL without whitespace; only the explicit Phase 4 restore-evidence build may use an exact http://127.0.0.1:<port> origin"
-            );
+        if restore_evidence_build {
+            if !exact_restore_evidence_loopback_url(&service_url)
+                || !exact_restore_evidence_loopback_url(&recovery_url)
+                || service_url != recovery_url
+            {
+                panic!(
+                    "the explicit Phase 4 restore-evidence build must bind both trial routes to the same exact http://127.0.0.1:<port> disposable issuer"
+                );
+            }
+        } else {
+            let primary_origin = production_https_origin("SF_LICENSE_SERVICE_URL", &service_url);
+            let recovery_origin =
+                production_https_origin("SF_LICENSE_RECOVERY_SERVICE_URL", &recovery_url);
+            if primary_origin == recovery_origin {
+                panic!(
+                    "SF_LICENSE_SERVICE_URL and SF_LICENSE_RECOVERY_SERVICE_URL must use distinct production origins"
+                );
+            }
         }
         for name in [
             "SF_LICENSE_TRIAL_PUBLIC_KEYS",
