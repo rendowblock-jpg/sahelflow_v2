@@ -8,6 +8,7 @@ import { assessOnlineTrialCandidate } from "./online-trial-candidate";
 
 const TRIAL_ENDPOINT_TIMEOUT_MS = 7_500;
 const TRIAL_ROUTE_SEPARATOR = "|";
+const TERMINAL_TRIAL_REJECTION_CODES = new Set(["invalid_json", "invalid_request"]);
 
 type TrialEndpointRole = "primary" | "recovery";
 type TrialFailureKind =
@@ -132,8 +133,18 @@ function classifyTransportFailure(error: unknown): TrialFailureKind {
   return "transport";
 }
 
-function retryableHttpStatus(status: number): boolean {
-  return [404, 405, 408, 421, 425].includes(status) || status >= 500;
+async function canonicalTrialRejection(response: Response): Promise<string | null> {
+  let value: unknown;
+  try {
+    value = await response.json();
+  } catch {
+    return null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const code = (value as { error?: unknown }).error;
+  return typeof code === "string" && TERMINAL_TRIAL_REJECTION_CODES.has(code)
+    ? code
+    : null;
 }
 
 function recordFailure(diagnostic: TrialAttemptDiagnostic): void {
@@ -205,11 +216,13 @@ export async function requestOnlineTrial(
       };
       diagnostics.push(diagnostic);
       recordFailure(diagnostic);
-      if (retryableHttpStatus(response.status)) continue;
+
+      const rejection = await canonicalTrialRejection(response);
+      if (!rejection) continue;
       throw new SahelFlowError(
         "Online trial service rejected the request",
         "LICENSE_TRIAL_ISSUANCE_FAILED",
-        response.status >= 500 ? 503 : 409,
+        409,
       );
     }
 
