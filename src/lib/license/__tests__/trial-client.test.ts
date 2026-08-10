@@ -6,7 +6,6 @@ import { requestOnlineTrial } from "../trial-client";
 
 const ORIGINAL_ENV = {
   SF_LICENSE_SERVICE_URL: process.env.SF_LICENSE_SERVICE_URL,
-  SF_LICENSE_RECOVERY_SERVICE_URL: process.env.SF_LICENSE_RECOVERY_SERVICE_URL,
   SF_DEVICE_BINDING: process.env.SF_DEVICE_BINDING,
   APP_VERSION: process.env.APP_VERSION,
 };
@@ -48,8 +47,10 @@ function entitlement() {
 }
 
 function configure() {
-  process.env.SF_LICENSE_SERVICE_URL = "https://license-primary.example";
-  process.env.SF_LICENSE_RECOVERY_SERVICE_URL = "https://license-recovery.example";
+  process.env.SF_LICENSE_SERVICE_URL = JSON.stringify([
+    "https://license-primary.example",
+    "https://license-recovery.example",
+  ]);
   process.env.SF_DEVICE_BINDING = `sfdb1_${"a".repeat(64)}`;
   process.env.APP_VERSION = "1.0.0-internal.14";
 }
@@ -62,7 +63,6 @@ function restore(name: keyof typeof ORIGINAL_ENV) {
 
 afterEach(() => {
   restore("SF_LICENSE_SERVICE_URL");
-  restore("SF_LICENSE_RECOVERY_SERVICE_URL");
   restore("SF_DEVICE_BINDING");
   restore("APP_VERSION");
   vi.restoreAllMocks();
@@ -166,12 +166,22 @@ describe("resilient online trial transport", () => {
 
   it("keeps a single configured route working for development and historical evidence harnesses", async () => {
     configure();
-    delete process.env.SF_LICENSE_RECOVERY_SERVICE_URL;
+    process.env.SF_LICENSE_SERVICE_URL = "https://license-primary.example";
     const fetcher = vi.fn(async () => Response.json(entitlement())) as unknown as typeof fetch;
 
     await expect(requestOnlineTrial(shop, fetcher)).resolves.toMatchObject({
       claims: { licenseId: "trial_test_001" },
     });
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails closed on a malformed packaged route set", async () => {
+    configure();
+    process.env.SF_LICENSE_SERVICE_URL = '["https://license-primary.example", 42]';
+
+    await expect(requestOnlineTrial(shop, vi.fn() as unknown as typeof fetch)).rejects.toMatchObject({
+      code: "LICENSE_TRIAL_SERVICE_UNAVAILABLE",
+      statusCode: 503,
+    });
   });
 });
