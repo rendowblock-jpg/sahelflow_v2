@@ -37,7 +37,7 @@ describe("production licensing authority inventory", () => {
     expect(worker).not.toContain("PERMANENT_PRIVATE");
   });
 
-  it("fails every release build closed when licensing configuration is absent", () => {
+  it("fails every production release build closed on one-route or workers.dev trial authority", () => {
     const build = read("src-tauri/build.rs");
     const tauri = read("src-tauri/src/lib.rs");
     for (const name of [
@@ -49,8 +49,25 @@ describe("production licensing authority inventory", () => {
       expect(tauri).toContain(`env!("${name}")`);
     }
     expect(build).toContain("required_release_value(name)");
-    expect(build).toContain('starts_with("https://")');
+    expect(build).toContain("configured_service_urls");
+    expect(build).toContain("split('|')");
+    expect(build).toContain("primary and recovery HTTPS origins");
+    expect(build).toContain("workers.dev must not be packaged");
+    expect(build).toContain("production trial primary and recovery origins must be distinct");
+    expect(build).toContain('std::env::var("GITHUB_ACTIONS")');
+    expect(build).toContain('routes == ["https://license.invalid"]');
     expect(build).toContain("validate_keyring");
+  });
+
+  it("keeps the production worker off workers.dev and exposes bounded health/observability", () => {
+    const wrangler = read("control-plane/licensing/wrangler.toml.example");
+    const worker = read("control-plane/licensing/worker.ts");
+    expect(wrangler).toContain("workers_dev = false");
+    expect(wrangler).toContain("[observability]");
+    expect(wrangler).toContain("enabled = true");
+    expect(worker).toContain('url.pathname === "/healthz"');
+    expect(worker).toContain('prepare("SELECT 1 AS ok")');
+    expect(worker).toContain('return json({ status: "unavailable" }, 503)');
   });
 
   it("anchors trial time outside replayable AppData before starting the server", () => {
