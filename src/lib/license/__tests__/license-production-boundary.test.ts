@@ -93,6 +93,9 @@ describe("production licensing authority inventory", () => {
     expect(worker).toContain("await importTrialPrivateKey(environment)");
     expect(worker).toContain("TRIAL_KEY_ID_PATTERN");
     expect(worker).toContain("TRIAL_MEMBER_LIMIT, \"TRIAL_MEMBER_LIMIT\", 25");
+    expect(worker).toContain('RATE_LIMITER_HEALTH_KEY = "health:licensing-readiness"');
+    expect(worker).toContain("await limitForKey(environment, RATE_LIMITER_HEALTH_KEY)");
+    expect(worker).toContain("TRIAL_RATE_LIMITER binding is unavailable");
     expect(worker).toContain('return json({ status: "unavailable" }, 503)');
   });
 
