@@ -73,7 +73,7 @@ describe("production licensing authority inventory", () => {
     expect(build).not.toContain('"Build Signed Internal Windows Update" |');
   });
 
-  it("keeps the production worker off workers.dev and makes health prove the issuance schema", () => {
+  it("keeps the production worker off workers.dev and makes health prove issuance readiness", () => {
     const wrangler = read("control-plane/licensing/wrangler.toml.example");
     const worker = read("control-plane/licensing/worker.ts");
     expect(wrangler).toContain("workers_dev = false");
@@ -83,6 +83,10 @@ describe("production licensing authority inventory", () => {
     expect(worker).toContain(
       '"SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1"',
     );
+    expect(worker).toContain("trialConfiguration(environment)");
+    expect(worker).toContain("await importTrialPrivateKey(environment)");
+    expect(worker).toContain("TRIAL_KEY_ID_PATTERN");
+    expect(worker).toContain("TRIAL_MEMBER_LIMIT, \"TRIAL_MEMBER_LIMIT\", 25");
     expect(worker).toContain('return json({ status: "unavailable" }, 503)');
   });
 
