@@ -320,6 +320,22 @@ function assertTrialSchemaDefinition(sql: string | null | undefined): void {
 
 async function health(environment: LicensingWorkerEnvironment): Promise<Response> {
   try {
+    // Protect the public readiness surface before any D1, signer, or write work.
+    // This quota is isolated from customer device keys and does not become
+    // entitlement authority; it only bounds how often the expensive probe runs.
+    const readinessLimit = await limitForKey(environment, RATE_LIMITER_HEALTH_KEY);
+    if (!readinessLimit.success) {
+      return new Response(JSON.stringify({ status: "rate_limited" }), {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+          "Content-Security-Policy": "default-src 'none'",
+          "Retry-After": "60",
+        },
+      });
+    }
+
     await environment.DB.prepare(TRIAL_SCHEMA_HEALTH_QUERY).first<{
       device_binding: string;
       license_id: string;
@@ -336,8 +352,6 @@ async function health(environment: LicensingWorkerEnvironment): Promise<Response
     await assertTrialSignerIdentity(environment);
 
     await assertD1WriteReadiness(environment);
-
-    await limitForKey(environment, RATE_LIMITER_HEALTH_KEY);
 
     return json({ status: "ok" });
   } catch {
