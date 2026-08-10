@@ -241,6 +241,24 @@ describe("online trial authority", () => {
     }
   });
 
+  it("fails issuance closed before trial state when signer identity does not match the published keyring", async () => {
+    const database = new MemoryD1();
+    const env = environment(database);
+    env.SF_LICENSE_TRIAL_PUBLIC_KEYS = JSON.stringify({
+      trial_test_001: OTHER_PUBLIC_KEY_BASE64,
+    });
+
+    const response = await handleLicensingRequest(
+      request("1".repeat(32), "2".repeat(32), `sfdb1_${"a".repeat(64)}`),
+      env,
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: "issuance_unavailable" });
+    expect(database.records.size).toBe(0);
+    expect(database.preparedQueries).toEqual([]);
+  });
+
   it("fails health closed when the rate-limiter binding is missing, throws or returns an invalid result", async () => {
     const cases: unknown[] = [
       undefined,
