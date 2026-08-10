@@ -110,6 +110,8 @@ describe("production licensing authority inventory", () => {
     expect(worker).toContain('RATE_LIMITER_HEALTH_KEY = "health:licensing-readiness"');
     expect(worker).toContain("await limitForKey(environment, RATE_LIMITER_HEALTH_KEY)");
     expect(worker).toContain("TRIAL_RATE_LIMITER binding is unavailable");
+    expect(worker).toContain("const signingKey = await assertTrialSignerIdentity(environment)");
+    expect(worker).toContain("signature: await signTrial(claims, signingKey)");
     expect(worker).toContain('return json({ status: "unavailable" }, 503)');
   });
 
