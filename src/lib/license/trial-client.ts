@@ -4,6 +4,7 @@ import type { ShopContext } from "@/lib/shops/context";
 import { logger } from "@/lib/logger";
 import { SahelFlowError } from "@/types/errors";
 import { signedEntitlementSchema, type SignedEntitlement } from "./entitlement";
+import { assessOnlineTrialCandidate } from "./online-trial-candidate";
 
 const TRIAL_ENDPOINT_TIMEOUT_MS = 7_500;
 const TRIAL_ROUTE_SEPARATOR = "|";
@@ -16,7 +17,8 @@ type TrialFailureKind =
   | "timeout"
   | "transport"
   | "http"
-  | "invalid_response";
+  | "invalid_response"
+  | "invalid_entitlement";
 
 type TrialEndpoint = Readonly<{
   role: TrialEndpointRole;
@@ -228,13 +230,30 @@ export async function requestOnlineTrial(
       recordFailure(diagnostic);
       continue;
     }
+
+    if ((await assessOnlineTrialCandidate(parsed.data, shop)) === "retry") {
+      const diagnostic: TrialAttemptDiagnostic = {
+        role: candidate.role,
+        host: candidate.origin.host,
+        failure: "invalid_entitlement",
+      };
+      diagnostics.push(diagnostic);
+      recordFailure(diagnostic);
+      continue;
+    }
+
     return parsed.data;
   }
 
   const summary = diagnosticSummary(diagnostics);
-  if (diagnostics.some(({ failure }) => failure === "invalid_response")) {
+  if (
+    diagnostics.some(
+      ({ failure }) =>
+        failure === "invalid_response" || failure === "invalid_entitlement",
+    )
+  ) {
     throw new SahelFlowError(
-      `Online trial service returned no valid entitlement response (${summary})`,
+      `Online trial service returned no authoritative entitlement response (${summary})`,
       "LICENSE_TRIAL_RESPONSE_INVALID",
       503,
     );
