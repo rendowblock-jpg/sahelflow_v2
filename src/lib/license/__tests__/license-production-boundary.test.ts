@@ -76,6 +76,7 @@ describe("production licensing authority inventory", () => {
   it("keeps the production worker off workers.dev and makes health prove issuance readiness", () => {
     const wrangler = read("control-plane/licensing/wrangler.toml.example");
     const worker = read("control-plane/licensing/worker.ts");
+    const schema = read("control-plane/licensing/schema.sql");
     expect(wrangler).toContain("workers_dev = false");
     expect(wrangler).toContain("[observability]");
     expect(wrangler).toContain("enabled = true");
@@ -100,6 +101,12 @@ describe("production licensing authority inventory", () => {
     expect(worker).toContain("TRIAL_KEY_ID is absent from SF_LICENSE_TRIAL_PUBLIC_KEYS");
     expect(worker).toContain("TRIAL_KEY_ID_PATTERN");
     expect(worker).toContain("TRIAL_MEMBER_LIMIT, \"TRIAL_MEMBER_LIMIT\", 25");
+    expect(schema).toContain("CREATE TABLE IF NOT EXISTS licensing_readiness");
+    expect(schema).toContain("probe_key TEXT PRIMARY KEY NOT NULL");
+    expect(worker).toContain("INSERT INTO licensing_readiness (probe_key, observed_at)");
+    expect(worker).toContain("ON CONFLICT(probe_key) DO UPDATE");
+    expect(worker).toContain("await assertD1WriteReadiness(environment)");
+    expect(worker).toContain("D1 licensing readiness write failed");
     expect(worker).toContain('RATE_LIMITER_HEALTH_KEY = "health:licensing-readiness"');
     expect(worker).toContain("await limitForKey(environment, RATE_LIMITER_HEALTH_KEY)");
     expect(worker).toContain("TRIAL_RATE_LIMITER binding is unavailable");
