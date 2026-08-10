@@ -22,6 +22,7 @@ export type LicensingWorkerEnvironment = {
     limit: (input: { key: string }) => Promise<{ success: boolean }>;
   };
   TRIAL_PRIVATE_KEY_PKCS8: string;
+  TRIAL_PUBLIC_KEY: string;
   TRIAL_KEY_ID: string;
   PRODUCT_MAJOR: string;
   TRIAL_SHOP_SLOTS: string;
@@ -56,6 +57,9 @@ const TRIAL_SCHEMA_DEFINITION_QUERY =
   "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'trial_entitlement'";
 const TRIAL_KEY_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{7,127}$/;
 const RATE_LIMITER_HEALTH_KEY = "health:licensing-readiness";
+const SIGNER_HEALTH_CHALLENGE = new TextEncoder().encode(
+  "sahelflow.licensing.signer-readiness.v1",
+);
 
 function json(value: unknown, status = 200): Response {
   return Response.json(value, {
@@ -118,11 +122,9 @@ function arrayBuffer(value: Uint8Array): ArrayBuffer {
   return copy;
 }
 
-function base64Bytes(value: string): ArrayBuffer {
+function base64Bytes(value: string): Uint8Array {
   const binary = atob(value);
-  return arrayBuffer(
-    Uint8Array.from(binary, (character) => character.charCodeAt(0)),
-  );
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
 function bytesBase64(value: ArrayBuffer): string {
@@ -135,11 +137,49 @@ function bytesBase64(value: ArrayBuffer): string {
 async function importTrialPrivateKey(environment: LicensingWorkerEnvironment): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "pkcs8",
-    base64Bytes(environment.TRIAL_PRIVATE_KEY_PKCS8),
+    arrayBuffer(base64Bytes(environment.TRIAL_PRIVATE_KEY_PKCS8)),
     { name: "Ed25519" },
     false,
     ["sign"],
   );
+}
+
+async function importTrialPublicKey(environment: LicensingWorkerEnvironment): Promise<CryptoKey> {
+  const raw = base64Bytes(environment.TRIAL_PUBLIC_KEY);
+  if (raw.byteLength !== 32) {
+    throw new Error("TRIAL_PUBLIC_KEY must be exactly 32 Ed25519 bytes");
+  }
+  return crypto.subtle.importKey(
+    "raw",
+    arrayBuffer(raw),
+    { name: "Ed25519" },
+    false,
+    ["verify"],
+  );
+}
+
+async function assertTrialSignerIdentity(
+  environment: LicensingWorkerEnvironment,
+): Promise<CryptoKey> {
+  const [privateKey, publicKey] = await Promise.all([
+    importTrialPrivateKey(environment),
+    importTrialPublicKey(environment),
+  ]);
+  const signature = await crypto.subtle.sign(
+    { name: "Ed25519" },
+    privateKey,
+    arrayBuffer(SIGNER_HEALTH_CHALLENGE),
+  );
+  const matches = await crypto.subtle.verify(
+    { name: "Ed25519" },
+    publicKey,
+    signature,
+    arrayBuffer(SIGNER_HEALTH_CHALLENGE),
+  );
+  if (!matches) {
+    throw new Error("TRIAL_PRIVATE_KEY_PKCS8 does not match TRIAL_PUBLIC_KEY");
+  }
+  return privateKey;
 }
 
 async function signTrial(
@@ -252,8 +292,6 @@ function assertTrialSchemaDefinition(sql: string | null | undefined): void {
 
 async function health(environment: LicensingWorkerEnvironment): Promise<Response> {
   try {
-    // Read the exact table/columns used by issuance. An empty correct table is
-    // healthy; a missing table or required column fails closed.
     await environment.DB.prepare(TRIAL_SCHEMA_HEALTH_QUERY).first<{
       device_binding: string;
       license_id: string;
@@ -261,17 +299,16 @@ async function health(environment: LicensingWorkerEnvironment): Promise<Response
       expires_at: string;
     }>();
 
-    // Exactly-one trial semantics rely on the reviewed D1 primary/unique keys,
-    // not merely the presence of similarly named columns.
     const definition = await environment.DB.prepare(TRIAL_SCHEMA_DEFINITION_QUERY).first<{
       sql: string;
     }>();
     assertTrialSchemaDefinition(definition?.sql);
 
-    // Readiness also proves the configured claims fit the current entitlement
-    // contract and that the deployed Ed25519 PKCS#8 key is actually importable.
+    // The deployed issuer must be capable of emitting claims that fit the
+    // contract and the private signer must match the public key identity that
+    // deployment publishes for the same TRIAL_KEY_ID.
     trialConfiguration(environment);
-    await importTrialPrivateKey(environment);
+    await assertTrialSignerIdentity(environment);
 
     // Exercise the same Cloudflare binding used by issuance with a dedicated
     // non-customer key. The quota decision itself is irrelevant to readiness:
