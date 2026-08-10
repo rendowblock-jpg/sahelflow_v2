@@ -2,9 +2,10 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary; FD-031 — one-time Internal.14 installed-evidence exception
+> **Protected `main` before documentation PR #231:** `23fb2e0ee4956132fafe8dd6973be42d3cfc8032`
 > **Latest application-changing protected merge:** PR #228 at `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Validated Phase 6/7 source head:** `fa0ff6de649421c879f62364383a363b61c71bfc`
-> **Phase 5 product baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
+> **Phase 5 protected source/browser baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14`, run `31388777098`
 > **Founder-accepted baseline:** Internal.5
@@ -13,28 +14,30 @@
 > **Phase 2:** Protected-source closed through PR #200; issue #201 retained
 > **Phase 3:** Protected-source closed through PR #203 under FD-030
 > **Phase 4:** Protected-source closed through PR #207; issue #214 retained
-> **Phase 5:** Protected-source + controlled-browser closed through PR #220 / issue #208; issue #221 retained
-> **Phase 6:** Protected-source + controlled-browser package merged through PR #223; installed/human exit evidence pending
-> **Phase 7:** Query/measurement infrastructure merged through PR #223; installed low-end/reliability certification pending Phase 6 exit
+> **Phase 5:** Protected-source + controlled-browser checkpoint through PR #220 / issue #208; installed Founder experience rejected on Internal.14 and must be repaired before Phase 8
+> **Phase 6:** Protected-source + controlled-browser checkpoint through PR #223; installed/human evidence and root-cause frontend repair remain
+> **Phase 7:** Query/measurement infrastructure protected through PR #223; installed low-end/reliability certification remains
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
+> **Mandatory pre-Phase-8 gate:** engineering stabilization + frontend experience reset + Phase 6/7 installed evidence + explicit Founder acceptance
 > **Execution epic:** issue #164
 > **Last consolidated:** 2026-08-10
 
-Live protected `main` is authority. The SHA above is the latest application-changing
-product baseline; documentation-only merges may advance `main` without changing
-application behavior.
+Live protected `main` is authority. The application SHA above is the latest
+application-changing product baseline; documentation-only merges may advance
+`main` without changing application behavior.
 
 ## Program rule
 
-The phases are dependency ordered. A later phase may inspect or pre-plan while an
-earlier phase is validating, but it must not weaken, bypass or silently redefine
-an earlier phase authority.
+The phases are dependency ordered. A later phase may inspect, research or pre-plan
+while an earlier phase is validating, but it must not weaken, bypass or silently
+redefine an earlier authority.
 
-Each phase follows:
+Each material phase/package follows:
 
 ```text
 complete reconnaissance
 → consolidated Problem Register
+→ current research + alternatives
 → freeze shared contracts
 → coherent root-cause implementation
 → self-review
@@ -46,9 +49,14 @@ complete reconnaissance
 → documentation reconciliation
 ```
 
-Retained evidence issues are allowed when a Founder-directed closure explicitly
-separates protected-source truth from installed/external proof. A retained issue
-is not a passing result.
+Retained evidence issues are allowed only when a Founder-directed closure
+explicitly separates protected-source truth from installed/external proof. A
+retained issue is not a passing result.
+
+A protected source/browser checkpoint remains valid evidence for the exact thing
+it proved. Later installed evidence may still reveal a real product defect or an
+insufficient experience contract. Such a finding does not erase the checkpoint;
+it creates a new bounded obligation at the appropriate shared root.
 
 ---
 
@@ -57,7 +65,7 @@ is not a passing result.
 **Status:** Complete.
 
 Established completion governance, documentation authority, release truth,
-repository hygiene and the initial final-program contract.
+repository hygiene and the final-program contract.
 
 ---
 
@@ -65,7 +73,7 @@ repository hygiene and the initial final-program contract.
 
 **Status:** Closed through PR #195.
 
-Established the canonical order/confirmation/stock/money/compensation/provider
+Established canonical order/confirmation/stock/money/compensation/provider
 business boundaries and durable audit authority. Later work may improve
 presentation and evidence but must not bypass these canonical transitions.
 
@@ -77,6 +85,8 @@ presentation and evidence but must not bypass these canonical transitions.
 
 Established durable actor/session/permission authority, signed licensing,
 installation/shop identity and native multi-shop switching/recovery contracts.
+Concrete later defects may receive bounded repair without reopening the whole
+phase.
 
 ---
 
@@ -88,6 +98,11 @@ Established durable provider effects, WhatsApp ingress/outbox recovery, AI actio
 proposal/recovery semantics and automation run/effect authority. External/provider
 certification remains separate from source truth where explicitly retained.
 
+A later Inbox or AI workspace redesign must preserve these authority boundaries.
+It may improve product structure and expose already-supported capability more
+clearly; it may not turn raw implementation traces into user authority or invent
+unsupported backend success.
+
 ---
 
 ## Phase 4 — data, recovery, migration and survivability
@@ -98,44 +113,83 @@ Established backup/restore, migration, destructive lifecycle, identity/license
 survivability and native recovery authority. Do not reopen Phase 4 except for a
 specific later-phase defect with real consequence.
 
+Issue #214 retains post-restore page-level owner re-enrollment, protected customer
+blind-index readback and protected secret readback evidence before Stable unless a
+stronger exact-source certification supersedes it.
+
 ---
 
 ## Phase 5 — whole-product AAA desktop experience
 
-**Status:** Closed at protected-source + controlled-browser layer through PR #220
-and issue #208. Founder-installed visual acceptance is retained in #221.
+**Status:** Protected-source + controlled-browser checkpoint preserved through PR
+#220 and issue #208. Installed Founder visual/interaction acceptance is **not
+passed**; Internal.14 whole-product use rejects the current frontend as the AAA
+baseline.
 
-### Closed outcomes
+### Protected checkpoint that remains valid
+
+PR #220 established and proved, for its exact source/browser layer:
 
 - workflow/domain desktop navigation and one universal command-search authority;
 - server-authoritative operational workbenches and exact pagination/sort truth;
 - permission-before-read protected-field queries and truthful action authority;
 - shared DataTable/state/metric/chart desktop grammar;
-- shared EntityLink/EntityPreview/EntityInspector/EntityTimeline context layer;
-- governed import preview/commit and complete streaming CSV / bounded XLSX export;
+- shared entity context and timeline primitives;
+- governed import preview/commit and bounded export;
 - batched Risk analytics and read/manage separation;
-- Inbox/AI/Automation authority-aligned surfaces and recovery controls;
+- authority-aligned Inbox/AI/Automation surfaces and recovery controls;
 - Accounting/COD read vs mutation authority separation;
 - capability-driven Settings/Profile and governed destructive ceremonies;
 - quiet login/setup/join and inherited loading/error boundaries;
 - blocking route-completion inventory and controlled browser evidence.
 
-### Phase 5 closure evidence
+The exact PR #220 head passed the Required PR gate and Required Phase 5 Experience
+gate, including TypeScript, ESLint, full Vitest, Prisma, dependency audit,
+migration status, route matrix, fresh install/login, representative LTR, Arabic
+RTL/viewport containment, command search and review closure.
 
-The exact final PR #220 head passed the Required PR gate and Required Phase 5
-Experience gate, including TypeScript, ESLint, full Vitest, Prisma, dependency
-audit, migration status, route matrix, fresh install/login, representative LTR,
-Arabic RTL/viewport containment, command search and zero unresolved latest-head
-review threads.
+### Founder-installed reconciliation
 
-Coverage remains informational by Founder direction and does not weaken the
-blocking source/security/browser/native evidence model.
+Internal.14 installed use demonstrates that source/browser completion was not
+sufficient as a whole-product AAA acceptance gate. The Founder explicitly values
+the backend/engine and rejects the current frontend experience. The observed
+problems are systemic: Arabic typography, overly small text/elements, non-atomic
+locale and direction switching, glitchy/cold themes, missing motion language,
+incorrect RTL geometry, over-nested navigation, oversized warnings,
+low-information charts and unacceptable Inbox, AI Agents and Settings workspaces.
 
-### Retained Phase 5 evidence
+This activates **root-cause frontend redesign** under the existing Phase 5 quality
+contract. It is not permission to rewrite Phase 1–4 canonical authority for visual
+convenience, and it is not a screen-by-screen polish campaign.
 
-Issue #221 owns Founder visual acceptance on the actual installed Windows/Tauri
-app. Browser CI is not that proof. Phase 5 closure does not claim a new signed
-Internal, Founder acceptance, Beta, Stable or installed certification.
+### Required Phase 5 repair outcomes before Phase 8
+
+- one semantic design-token authority for typography, density, spacing, surfaces,
+  borders/radius/elevation, semantic status, focus, charts and motion;
+- deliberate Arabic/Latin typography and a readable type/density scale validated
+  with representative mixed Arabic/French/English, DZD, phone, SKU and table data;
+- curated multi-theme architecture with excellent light/dark foundations and
+  coordinated accent/color families, without semantic status or contrast drift;
+- restrained, interruptible, reduced-motion-safe motion that explains navigation
+  and state transitions without delaying work;
+- atomic locale/direction switching and logical flow-relative RTL primitives;
+- a shallow, seller-task-shaped shell where primary destinations are visible and
+  only genuine children are nested;
+- compact severity-based notices/warnings instead of dominant banners for routine
+  configuration or data-quality states;
+- a decision-oriented chart grammar with useful comparison, context, inspection
+  and drill-down where the data supports it;
+- product-level redesign of Inbox, AI Agents and Settings from actual backend
+  capabilities and seller jobs;
+- adoption of the shared system across the entire route inventory, including
+  complete loading, empty, permission, stale, offline, conflict, retry and
+  recovery states;
+- installed Founder observation of the repaired whole product on the reference
+  hardware.
+
+Research evidence and current implementation questions are retained in
+`documentation/archive/research/PRE_PHASE8_FRONTEND_STABILIZATION_RESEARCH-2026-08-10.md`.
+The archive is supporting evidence, not another roadmap.
 
 ---
 
@@ -143,8 +197,10 @@ Internal, Founder acceptance, Beta, Stable or installed certification.
 
 ## Phase 6 — Arabic, RTL and accessibility parity
 
-**Status:** Protected-source + controlled-browser package merged through PR #223;
-applicable installed/human Windows accessibility evidence remains before exit.
+**Status:** Protected-source + controlled-browser checkpoint merged through PR
+#223. The installed Founder assessment invalidates the assumption that the only
+remaining task is passive observation: shared-root frontend repairs are now
+required before final installed/human exit evidence can be meaningful.
 
 **Objective:** make Arabic and accessibility equivalent product behavior, not a
 partial translation layer or cosmetic mirror.
@@ -152,22 +208,25 @@ partial translation layer or cosmetic mirror.
 ### Protected source/browser checkpoint
 
 PR #223 merged the shared-root Phase 6 correction package and generalized evidence
-stack from exact validated head `fa0ff6de649421c879f62364383a363b61c71bfc`.
+stack from validated source head `fa0ff6de649421c879f62364383a363b61c71bfc`.
 That head passed the Required PR gate, Required Phase 5 Experience gate, static
 AR/FR/EN localization/RTL/accessibility contract, complete source-quality set,
 SQLite planner evidence and all nine integrated Phase 6/7 Playwright journeys,
 including 200%-equivalent reflow. It had zero unresolved P0/P1 review threads.
 
-The remaining Phase 6 work is therefore an installed evidence checkpoint, not
-permission for another broad page-by-page source audit.
+Those checks remain regression evidence. They did not prove that later installed
+Internal.14 provided a coherent Founder-acceptable Arabic/RTL experience.
 
-### Audit scope
+### Active audit/repair scope
 
-Audit every user-facing route and reusable interaction primitive for:
+Audit the shared roots and representative user-facing routes for:
 
 - AR/FR/EN semantic parity and missing/concatenated/page-local strings;
 - plurals, gender/grammar, dates, currency, numbers and business terminology;
-- Arabic font/joining/line-height and mixed-direction text isolation;
+- Arabic font choice, joining, weight, size, line-height and mixed-script metric
+  harmony;
+- atomic locale/direction changes without stale server/client tree, layout or
+  navigation-side state;
 - logical start/end geometry and remaining physical left/right assumptions;
 - directional icon semantics and chart/timeline/table direction;
 - keyboard-only navigation and action completion;
@@ -180,51 +239,41 @@ Audit every user-facing route and reusable interaction primitive for:
 - equivalent permission/loading/offline/pending/stale/conflict/error/retry/
   recovery states across locales.
 
-### Shared-contract requirements
-
-Prefer root-cause repairs in shared primitives over route-by-route patching.
-Reuse/generalize the Phase 5 route inventory and Playwright browser-evidence
-workflow. Phase 6 should strengthen, not duplicate, the installed evidence stack.
+Prefer root-cause repairs in shared primitives over route-by-route patches.
 
 ### Required evidence
 
 At minimum:
 
-- exhaustive route/component semantic inventory;
+- exhaustive direction/typography/localization inventory for the changed system;
 - controlled English/French/Arabic browser journeys;
 - LTR/RTL viewport and zoom matrices;
+- direct tests for locale and theme transitions with no restart requirement;
 - keyboard-only Required journeys;
 - automated accessibility checks where reliable plus manual semantic review;
 - reduced-motion evidence;
 - screen-reader-focused critical-flow review;
-- applicable installed Windows/Tauri Founder inspection.
+- native-Arabic human reading/joining/terminology review;
+- installed Windows/Tauri Founder inspection on the repaired build.
 
 ### Exit gate
 
 Phase 6 closes only when:
 
-1. all Phase 6 Problem Register items are resolved or explicitly retained by
-   consequence;
-2. no actionable latest-head P0/P1 accessibility/RTL finding remains;
+1. all applicable Phase 6 and Founder-installed Problem Register items are resolved
+   or explicitly retained by consequence;
+2. no actionable latest-head P0/P1 accessibility/RTL/localization finding remains;
 3. blocking source/authority gates are green;
 4. AR/FR/EN browser evidence is green at required viewports/zoom;
 5. keyboard/focus/semantics/reduced-motion evidence is retained;
-6. installed evidence is recorded where the roadmap requires a human Windows
-   observation;
-7. no Phase 1–5 authority has been weakened.
+6. installed Arabic/RTL/locale-switching evidence is recorded on Windows;
+7. the Founder accepts or explicitly rejects the resulting experience;
+8. no Phase 1–5 canonical authority has been weakened.
 
-Items 1–5 and 7 are satisfied at the protected PR #223 source/browser checkpoint.
-The active exit dependency is item 6 plus the manual/human semantic review that
-cannot be fabricated from browser CI.
-
-Internal.14 is the published and Founder-installed signed checkpoint. Its permanent
-Founder entitlement and dashboard reopen are observed, but item 6 and Founder
-acceptance remain open in issue #221. FD-031 retains the PR #228 post-restore
-CDP/page-evidence gap in issue #214. Issue #230 retains resilient live trial
-activation, and issue #226 owns the measured multi-minute startup observation.
-
-Phases 5–6 normally trigger a Level 3 installed-UI, visual-regression and
-accessibility checkpoint.
+Internal.14 is only the published Founder-installed rejected checkpoint. Issue
+#221 retains installed Founder visual/accessibility acceptance. Issue #230 retains
+resilient live trial activation. Issue #226 owns measured performance/reliability.
+FD-031 retains the PR #228 post-restore evidence gap in #214.
 
 ---
 
@@ -232,10 +281,11 @@ accessibility checkpoint.
 
 **Status:** Query/index and controlled-browser measurement infrastructure is
 protected through PR #223. Installed low-end/reliability certification remains
-pending and follows Phase 6 installed exit evidence.
+open and is part of the mandatory gate before Phase 8.
 
 **Objective:** certify representative low-end Windows performance and sustained
-operational reliability after the accessibility/RTL surface is stable.
+operational reliability after the repaired accessibility/RTL/frontend surface is
+stable enough to measure.
 
 ### T470 targets
 
@@ -263,18 +313,80 @@ operational reliability after the accessibility/RTL surface is stable.
 - low-resource scheduling and sidecar limits;
 - clean close/reopen and crash-loop recovery;
 - eight-hour stability and resource-trend evidence;
-- representative database scale.
+- representative database scale;
+- locale/theme/motion implementation proven not to introduce unacceptable
+  low-end interaction or memory cost.
 
 ### Exit gate
 
 All T470 and declared-floor targets pass on representative data with no authority,
-feature or durability reduction. Eight-hour resource trends show no sustained
-memory growth or ordinary UI freeze beyond the stated budgets, and no actionable
-latest-head P0/P1 reliability finding remains.
+feature, accessibility or durability reduction. Eight-hour resource trends show no
+sustained memory growth or ordinary UI freeze beyond the stated budgets, and no
+actionable latest-head P0/P1 reliability finding remains.
+
+---
+
+# Mandatory pre-Phase-8 stabilization and Founder-acceptance gate
+
+This is a **cross-phase gate, not a new Phase 7.5**. It reconciles the existing
+Phase 5 experience, Phase 6 Arabic/accessibility and Phase 7 performance obligations
+with concrete Internal.14 installed findings. Phase 8 remains Phase 8 in the
+binding Phase 0–9 program.
+
+Phase 8 implementation may not begin until all of the following are true. Phase 8
+research/read-only planning may continue when useful.
+
+### A. Engineering safety and demonstrated defects
+
+1. Historical PR #200 and PR #207 CI exception mechanisms are retired as live
+   evidence-lane bypasses and anti-bypass tests prove they cannot suppress lanes
+   selected by current consequential changes.
+2. Successful permanent and trial activation transition directly to a usable
+   authenticated workspace without blank-window/restart behavior.
+3. Issue #230 has a production-resilient trial-service path and representative
+   Algerian-network evidence sufficient for the customer trial claim.
+4. Any additional P0/P1 discovered during frontend adoption is fixed at its root,
+   not hidden by presentation.
+
+### B. Frontend foundation and whole-product adoption
+
+1. Typography, density, tokens/themes, motion, locale/RTL and shell/navigation
+   contracts are researched against current source and frozen before broad page
+   adoption.
+2. Shared primitives carry those contracts into real production routes; no
+   parallel demo-only design system is accepted.
+3. Inbox, AI Agents and Settings are redesigned as operational workspaces against
+   their real data/actions/permissions/recovery behavior.
+4. Dashboard, orders/confirmation, customers/risk, products/inventory, delivery/
+   returns, COD/accounting, analytics, automations, setup/login/license and the
+   remaining route inventory use the same coherent system.
+5. Warnings, charts, loading/empty/degraded states and navigation no longer depend
+   on one-off page styling.
+
+### C. Installed Phase 6/7 evidence
+
+1. Representative AR/FR/EN and mixed-direction content passes installed
+   1366×768/zoom review without stale direction or restart requirements.
+2. Keyboard/focus/semantics/reduced motion remain valid after visual changes.
+3. Startup, navigation, search, mutation and resource budgets pass the Phase 7
+   exact installed checkpoint.
+4. Retained issue #214 remains an explicit non-claim until its Stable-level
+   replacement-install evidence is closed or superseded; it does not get silently
+   converted into a pass.
+
+### D. Founder acceptance
+
+A coherent signed candidate is installed on the Founder T470 and the Founder runs
+the real product, not a screenshot-only review. No applicable P0/P1 remains. The
+Founder explicitly accepts the whole-product experience before Phase 8
+implementation begins.
 
 ---
 
 ## Phase 8 — connected platform and growth completeness
+
+**Status:** Implementation frozen behind the mandatory pre-Phase-8 gate. Research
+and dependency planning may continue.
 
 **Objective:** complete remote work, hosted storefront, licensing/control and
 zero-knowledge recovery without weakening desktop canonical authority.

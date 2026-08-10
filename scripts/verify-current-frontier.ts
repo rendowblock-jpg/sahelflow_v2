@@ -35,82 +35,143 @@ function rejectMarkers(relativePath: string, markers: readonly string[]): void {
   }
 }
 
+const protectedMainBeforeDocsPackage =
+  "23fb2e0ee4956132fafe8dd6973be42d3cfc8032";
 const protectedApplicationSha = "2d60e2e74109b6e03626a5ccdff727c029a34591";
-const documentationReconciliationBaseSha = "07a0b5ebd3d9ccb7ad89603c3d936f88b82bb515";
 const validatedPhase67Head = "fa0ff6de649421c879f62364383a363b61c71bfc";
 const phase5Baseline = "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734";
 const signedReleaseRun = "31388777098";
+const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 
 requireMarkers("README.md", [
+  protectedMainBeforeDocsPackage,
   "Latest application-changing protected merge: **PR #228",
   protectedApplicationSha,
-  documentationReconciliationBaseSha,
   "Published release: `1.0.0-internal.14`",
   signedReleaseRun,
-  "Phase 6 source/browser package is complete and protected through PR #223",
-  "installed/human exit checkpoint",
+  activePhase,
   "Founder-installed release: **Internal.14**",
-  "issue #230",
-  "issue #226",
+  "Founder-accepted baseline remains **Internal.5**",
+  "mandatory pre-Phase-8 stabilization",
+  "CI exception mechanisms",
+  "successful-license-activation",
+  "#230",
+  "#226",
   phase5Baseline,
 ]);
 
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   "Verified product frontier",
+  protectedMainBeforeDocsPackage,
   "Latest application-changing protected merge: PR #228",
   protectedApplicationSha,
-  documentationReconciliationBaseSha,
   validatedPhase67Head,
   "Published release: `1.0.0-internal.14`",
-  "Exact next outcome",
+  activePhase,
+  "Mandatory pre-Phase-8 Founder gate",
+  "Exact next outcome and implementation order",
   "issue #221",
-  "issue #230",
+  "#230",
   phase5Baseline,
 ]);
 
 requireMarkers("documentation/README.md", [
+  protectedMainBeforeDocsPackage,
   "**Latest application-changing protected merge:** PR #228",
   protectedApplicationSha,
-  documentationReconciliationBaseSha,
   "**Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
+  activePhase,
+  "Mandatory gate before Phase 8",
   "Published Internal.14 checkpoint",
-  "installed/human Arabic, RTL and accessibility exit checkpoint",
-  "Founder-installed release:** Internal.14",
+  "issue #221",
   "#226",
+  "#230",
 ]);
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
+  protectedMainBeforeDocsPackage,
   "Latest application-changing protected merge:** PR #228",
   protectedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
-  "Active Phase 6 frontier",
+  activePhase,
+  "Mandatory gate before Phase 8",
+  "Founder-installed frontend assessment",
+  "Mandatory pre-Phase-8 execution order",
   "FD-031 exception boundary",
   "issue #214",
+  "issue #226",
   "issue #230",
 ]);
 
 requireMarkers("documentation/system/ROADMAP.md", [
+  protectedMainBeforeDocsPackage,
   "Latest application-changing protected merge:** PR #228",
   protectedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   validatedPhase67Head,
-  "Phase 6:** Protected-source + controlled-browser package merged through PR #223; installed/human exit evidence pending",
-  "Phase 7:** Query/measurement infrastructure merged through PR #223; installed low-end/reliability certification pending Phase 6 exit",
+  activePhase,
+  "Mandatory pre-Phase-8 stabilization and Founder-acceptance gate",
+  "Phase 5 — whole-product AAA desktop experience",
+  "Phase 6 — Arabic, RTL and accessibility parity",
+  "Phase 7 — performance and reliability budgets",
+  "Phase 8 — connected platform and growth completeness",
+  "Implementation frozen behind the mandatory pre-Phase-8 gate",
 ]);
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
+  protectedMainBeforeDocsPackage,
   "Latest application-changing protected merge:** PR #228",
   protectedApplicationSha,
-  documentationReconciliationBaseSha,
   "Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
-  "Phase 6 source/browser closure",
+  activePhase,
+  "Phase 5 closure snapshot",
+  "Known engineering defects/debt to close in the same program",
   "Phase 6 next action",
-  "#221, #226, #230",
+  "Outcome A — CI authority hardening",
+  "Outcome F — installed Phase 6/7 + Founder acceptance",
+  "issue #221",
+  "#226",
+  "#230",
 ]);
+
+const stalePr229Markers = [
+  "Open pull requests:** PR #229 documentation reconciliation",
+  "Open PRs:** #229 documentation reconciliation",
+  "Active documentation reconciliation: **PR #229**",
+  "PR #229 is documentation-only",
+];
+
+for (const path of [
+  "README.md",
+  "AGENTS.md",
+  "documentation/README.md",
+  "documentation/system/CURRENT_STATE.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/operations/WORKING_MEMORY.md",
+]) {
+  rejectMarkers(path, stalePr229Markers);
+}
+
+const staleInstalledOnlyMarkers = [
+  "The next work is installed observation, not broad source implementation",
+  "The active dependency is the installed/human checkpoint in issue #221; issue #226 follows after Phase 6 exit",
+  "close Phase 6 or open one bounded defect package",
+];
+
+for (const path of [
+  "README.md",
+  "AGENTS.md",
+  "documentation/README.md",
+  "documentation/system/CURRENT_STATE.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/operations/WORKING_MEMORY.md",
+]) {
+  rejectMarkers(path, staleInstalledOnlyMarkers);
+}
 
 rejectMarkers("README.md", [
   "Active release-preparation PR: **#227",
@@ -143,6 +204,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: Internal.14 is published, Founder-installed and permanently licensed; issue #221 visual acceptance, issue #226 startup evidence and issue #230 trial certification remain open.",
+    "Current execution frontier verified: Internal.14 is published but not Founder-accepted; the mandatory pre-Phase-8 stabilization gate owns engineering hardening, frontend root-cause repair, installed Phase 6/7 evidence and explicit Founder acceptance before Phase 8 implementation.",
   );
 }
