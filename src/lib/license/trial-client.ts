@@ -6,6 +6,7 @@ import { SahelFlowError } from "@/types/errors";
 import { signedEntitlementSchema, type SignedEntitlement } from "./entitlement";
 
 const TRIAL_ENDPOINT_TIMEOUT_MS = 7_500;
+const TRIAL_ROUTE_SEPARATOR = "|";
 
 type TrialEndpointRole = "primary" | "recovery";
 type TrialFailureKind =
@@ -49,18 +50,11 @@ function configuredOrigins(raw: string | undefined): string[] {
       503,
     );
   }
-  if (!raw.trimStart().startsWith("[")) return [raw];
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    parsed = null;
-  }
+  const routes = raw.split(TRIAL_ROUTE_SEPARATOR);
   if (
-    !Array.isArray(parsed) ||
-    parsed.length < 1 ||
-    parsed.length > 2 ||
-    parsed.some((value) => typeof value !== "string" || value.length === 0)
+    routes.length < 1 ||
+    routes.length > 2 ||
+    routes.some((value) => value.length === 0 || value.trim() !== value)
   ) {
     throw new SahelFlowError(
       "Online trial service route set is misconfigured",
@@ -68,7 +62,7 @@ function configuredOrigins(raw: string | undefined): string[] {
       503,
     );
   }
-  return parsed as string[];
+  return routes;
 }
 
 function configuredEndpoints(): TrialEndpoint[] {
