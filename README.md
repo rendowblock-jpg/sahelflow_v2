@@ -10,7 +10,7 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 - Protected `main` before documentation PR #231: `23fb2e0ee4956132fafe8dd6973be42d3cfc8032`.
 - Latest application-changing protected merge: **PR #228 — Internal.14 updater and installed-release authority**, application SHA `2d60e2e74109b6e03626a5ccdff727c029a34591`.
-- Phase 5 protected source/browser baseline: `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- Phase 5 protected source/browser baseline: PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 - Phase 6 source/browser + Phase 7 measurement checkpoint is protected through PR #223.
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
 - Published release: `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`.
