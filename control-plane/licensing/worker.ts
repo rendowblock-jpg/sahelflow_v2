@@ -204,15 +204,10 @@ async function assertTrialSignerIdentity(
   return privateKey;
 }
 
-async function signTrial(
-  claims: EntitlementClaims,
-  environment: LicensingWorkerEnvironment,
-  signingKey?: CryptoKey,
-) {
-  const privateKey = signingKey ?? (await importTrialPrivateKey(environment));
+async function signTrial(claims: EntitlementClaims, signingKey: CryptoKey) {
   const signature = await crypto.subtle.sign(
     { name: "Ed25519" },
-    privateKey,
+    signingKey,
     arrayBuffer(canonicalEntitlementBytes(claims)),
   );
   return bytesBase64(signature);
@@ -246,6 +241,10 @@ async function issueTrial(
   now = new Date(),
 ): Promise<SignedEntitlement> {
   const configuration = trialConfiguration(environment);
+  // Runtime issuance reuses the same signer-identity proof as readiness before
+  // touching trial state. A stale or mismatched private signer therefore fails
+  // closed instead of persisting a trial whose signature clients reject.
+  const signingKey = await assertTrialSignerIdentity(environment);
   let stored = await environment.DB.prepare(
     "SELECT license_id, issued_at, expires_at FROM trial_entitlement WHERE device_binding = ?1",
   )
@@ -296,7 +295,7 @@ async function issueTrial(
   };
   return {
     claims,
-    signature: await signTrial(claims, environment),
+    signature: await signTrial(claims, signingKey),
   };
 }
 
@@ -333,15 +332,9 @@ async function health(environment: LicensingWorkerEnvironment): Promise<Response
     }>();
     assertTrialSchemaDefinition(definition?.sql);
 
-    // The deployed issuer must be capable of emitting claims that fit the
-    // contract and its private signer must match the exact TRIAL_KEY_ID entry in
-    // the same public-keyring shape consumed by signed SahelFlow clients.
     trialConfiguration(environment);
     await assertTrialSignerIdentity(environment);
 
-    // Prove D1 can accept the kind of write required for a new trial without
-    // creating any synthetic customer/trial row. This idempotently updates one
-    // fixed readiness record and cannot grow unbounded state.
     await assertD1WriteReadiness(environment);
 
     await limitForKey(environment, RATE_LIMITER_HEALTH_KEY);
