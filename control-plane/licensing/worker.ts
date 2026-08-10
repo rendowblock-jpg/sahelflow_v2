@@ -42,6 +42,9 @@ type StoredTrial = {
   expires_at: string;
 };
 
+const TRIAL_SCHEMA_HEALTH_QUERY =
+  "SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1";
+
 function json(value: unknown, status = 200): Response {
   return Response.json(value, {
     status,
@@ -170,8 +173,15 @@ async function issueTrial(
 
 async function health(environment: LicensingWorkerEnvironment): Promise<Response> {
   try {
-    const result = await environment.DB.prepare("SELECT 1 AS ok").first<{ ok: number }>();
-    if (result?.ok !== 1) throw new Error("D1 health probe did not return ok=1");
+    // Preparing and executing this exact read proves the D1 binding contains the
+    // table and every column required by the canonical trial issuance path. An
+    // empty table is healthy; a missing/wrong schema throws and fails closed.
+    await environment.DB.prepare(TRIAL_SCHEMA_HEALTH_QUERY).first<{
+      device_binding: string;
+      license_id: string;
+      issued_at: string;
+      expires_at: string;
+    }>();
     return json({ status: "ok" });
   } catch {
     return json({ status: "unavailable" }, 503);
