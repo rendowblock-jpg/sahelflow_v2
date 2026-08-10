@@ -17,6 +17,9 @@
     "endpoint": "https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest/download/latest.json",
     "installMode": "passive"
   },
+  "licensing": {
+    "ownedHostSuffix": null
+  },
   "runtimeProtocolVersion": 1,
   "shopRegistryFormatVersion": 2,
   "backupFormatVersion": 1
