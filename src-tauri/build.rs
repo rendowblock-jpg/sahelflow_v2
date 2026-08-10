@@ -37,30 +37,17 @@ fn exact_restore_evidence_loopback_url(value: &str) -> bool {
     port.parse::<u16>().is_ok_and(|port| port != 0)
 }
 
-fn configured_service_urls(value: &str) -> Vec<String> {
-    if !value.trim_start().starts_with('[') {
-        return vec![value.to_string()];
+fn configured_service_urls(value: &str) -> Vec<&str> {
+    let routes = value.split('|').collect::<Vec<_>>();
+    if routes.is_empty()
+        || routes.len() > 2
+        || routes
+            .iter()
+            .any(|route| route.is_empty() || route.trim() != *route)
+    {
+        panic!("SF_LICENSE_SERVICE_URL must contain one or two non-empty origins separated by '|'");
     }
-    let parsed: serde_json::Value = serde_json::from_str(value)
-        .unwrap_or_else(|_| panic!("SF_LICENSE_SERVICE_URL route set must be valid JSON"));
-    let routes = parsed
-        .as_array()
-        .filter(|routes| !routes.is_empty() && routes.len() <= 2)
-        .unwrap_or_else(|| {
-            panic!("SF_LICENSE_SERVICE_URL route set must contain one or two origins")
-        });
     routes
-        .iter()
-        .map(|route| {
-            route
-                .as_str()
-                .filter(|route| !route.is_empty())
-                .unwrap_or_else(|| {
-                    panic!("SF_LICENSE_SERVICE_URL route set entries must be non-empty strings")
-                })
-                .to_string()
-        })
-        .collect()
 }
 
 fn production_https_origin(value: &str) -> String {
@@ -96,6 +83,11 @@ fn production_https_origin(value: &str) -> String {
     format!("https://{host}")
 }
 
+fn github_ci_release_placeholder(routes: &[&str]) -> bool {
+    std::env::var("GITHUB_ACTIONS").as_deref() == Ok("true")
+        && routes == ["https://license.invalid"]
+}
+
 fn main() {
     if std::env::var("PROFILE").as_deref() == Ok("release") {
         let service_authority = required_release_value("SF_LICENSE_SERVICE_URL");
@@ -104,19 +96,19 @@ fn main() {
             std::env::var("SF_PHASE4_RESTORE_EVIDENCE_BUILD").as_deref() == Ok("1");
         let routes = configured_service_urls(&service_authority);
         if restore_evidence_build {
-            if routes.len() != 1 || !exact_restore_evidence_loopback_url(&routes[0]) {
+            if routes.len() != 1 || !exact_restore_evidence_loopback_url(routes[0]) {
                 panic!(
                     "the explicit Phase 4 restore-evidence build must use one exact http://127.0.0.1:<port> disposable trial issuer"
                 );
             }
-        } else {
+        } else if !github_ci_release_placeholder(&routes) {
             if routes.len() != 2 {
                 panic!(
-                    "production SF_LICENSE_SERVICE_URL must be a JSON array with distinct primary and recovery HTTPS origins"
+                    "production SF_LICENSE_SERVICE_URL must contain distinct primary and recovery HTTPS origins separated by '|'"
                 );
             }
-            let primary_origin = production_https_origin(&routes[0]);
-            let recovery_origin = production_https_origin(&routes[1]);
+            let primary_origin = production_https_origin(routes[0]);
+            let recovery_origin = production_https_origin(routes[1]);
             if primary_origin == recovery_origin {
                 panic!("production trial primary and recovery origins must be distinct");
             }
