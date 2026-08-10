@@ -47,10 +47,8 @@ function entitlement() {
 }
 
 function configure() {
-  process.env.SF_LICENSE_SERVICE_URL = JSON.stringify([
-    "https://license-primary.example",
-    "https://license-recovery.example",
-  ]);
+  process.env.SF_LICENSE_SERVICE_URL =
+    "https://license-primary.example|https://license-recovery.example";
   process.env.SF_DEVICE_BINDING = `sfdb1_${"a".repeat(64)}`;
   process.env.APP_VERSION = "1.0.0-internal.14";
 }
@@ -175,13 +173,20 @@ describe("resilient online trial transport", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
-  it("fails closed on a malformed packaged route set", async () => {
+  it("fails closed on malformed packaged route sets", async () => {
     configure();
-    process.env.SF_LICENSE_SERVICE_URL = '["https://license-primary.example", 42]';
-
-    await expect(requestOnlineTrial(shop, vi.fn() as unknown as typeof fetch)).rejects.toMatchObject({
-      code: "LICENSE_TRIAL_SERVICE_UNAVAILABLE",
-      statusCode: 503,
-    });
+    for (const value of [
+      "https://primary.example|",
+      "https://primary.example| https://recovery.example",
+      "https://one.example|https://two.example|https://three.example",
+    ]) {
+      process.env.SF_LICENSE_SERVICE_URL = value;
+      await expect(
+        requestOnlineTrial(shop, vi.fn() as unknown as typeof fetch),
+      ).rejects.toMatchObject({
+        code: "LICENSE_TRIAL_SERVICE_UNAVAILABLE",
+        statusCode: 503,
+      });
+    }
   });
 });
