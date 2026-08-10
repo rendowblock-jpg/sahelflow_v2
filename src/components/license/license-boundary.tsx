@@ -1,9 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
+import { needsLicensedServerTreeRefresh } from "@/components/license/license-boundary-state";
 import { LicensePanel } from "@/components/settings/license-panel";
 import { useI18n } from "@/hooks/use-i18n";
 import { useLicense } from "@/hooks/use-license";
@@ -12,8 +13,20 @@ export function LicenseBoundary({ children }: { children: ReactNode }) {
   const { projection, isLoading } = useLicense();
   const { t } = useI18n();
   const pathname = usePathname();
+  const router = useRouter();
+  const hasServerChildren = children !== null && children !== undefined;
+  const needsServerTreeRefresh = needsLicensedServerTreeRefresh(
+    projection?.status,
+    hasServerChildren,
+  );
 
-  if (isLoading) {
+  useEffect(() => {
+    if (needsServerTreeRefresh) {
+      router.refresh();
+    }
+  }, [needsServerTreeRefresh, router]);
+
+  if (isLoading || needsServerTreeRefresh) {
     return (
       <main className="flex min-h-screen items-center justify-center p-6" role="status">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
