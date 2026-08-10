@@ -79,6 +79,7 @@ describe("production licensing authority inventory", () => {
     expect(wrangler).toContain("workers_dev = false");
     expect(wrangler).toContain("[observability]");
     expect(wrangler).toContain("enabled = true");
+    expect(wrangler).toContain("TRIAL_PUBLIC_KEY =");
     expect(worker).toContain('url.pathname === "/healthz"');
     expect(worker).toContain(
       '"SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1"',
@@ -90,7 +91,9 @@ describe("production licensing authority inventory", () => {
     expect(worker).toContain('"device_binding text primary key not null"');
     expect(worker).toContain('"license_id text unique not null"');
     expect(worker).toContain("trialConfiguration(environment)");
-    expect(worker).toContain("await importTrialPrivateKey(environment)");
+    expect(worker).toContain("assertTrialSignerIdentity");
+    expect(worker).toContain("importTrialPublicKey");
+    expect(worker).toContain("TRIAL_PRIVATE_KEY_PKCS8 does not match TRIAL_PUBLIC_KEY");
     expect(worker).toContain("TRIAL_KEY_ID_PATTERN");
     expect(worker).toContain("TRIAL_MEMBER_LIMIT, \"TRIAL_MEMBER_LIMIT\", 25");
     expect(worker).toContain('RATE_LIMITER_HEALTH_KEY = "health:licensing-readiness"');
