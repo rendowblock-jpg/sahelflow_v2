@@ -124,7 +124,7 @@ describe("online trial authority", () => {
     env.TRIAL_RATE_LIMITER = {
       limit: async ({ key }) => {
         rateLimitKeys.push(key);
-        return { success: false };
+        return { success: true };
       },
     };
 
@@ -139,6 +139,27 @@ describe("online trial authority", () => {
       D1_WRITE_HEALTH_QUERY,
     ]);
     expect(rateLimitKeys).toEqual([RATE_LIMITER_HEALTH_KEY]);
+  });
+
+  it("rate-limits the public health probe before D1 or signer readiness work", async () => {
+    const database = new MemoryD1();
+    const env = environment(database);
+    const rateLimitKeys: string[] = [];
+    env.TRIAL_RATE_LIMITER = {
+      limit: async ({ key }) => {
+        rateLimitKeys.push(key);
+        return { success: false };
+      },
+    };
+
+    const response = await health(env);
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toEqual({ status: "rate_limited" });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Retry-After")).toBe("60");
+    expect(rateLimitKeys).toEqual([RATE_LIMITER_HEALTH_KEY]);
+    expect(database.preparedQueries).toEqual([]);
   });
 
   it("fails health closed when the required trial table or columns are unavailable", async () => {
@@ -259,7 +280,7 @@ describe("online trial authority", () => {
     expect(database.preparedQueries).toEqual([]);
   });
 
-  it("fails health closed when the rate-limiter binding is missing, throws or returns an invalid result", async () => {
+  it("fails health closed before D1 work when the rate-limiter binding is missing, throws or returns an invalid result", async () => {
     const cases: unknown[] = [
       undefined,
       {
@@ -271,11 +292,13 @@ describe("online trial authority", () => {
     ];
 
     for (const limiter of cases) {
-      const env = environment(new MemoryD1());
+      const database = new MemoryD1();
+      const env = environment(database);
       env.TRIAL_RATE_LIMITER = limiter as LicensingWorkerEnvironment["TRIAL_RATE_LIMITER"];
       const response = await health(env);
       expect(response.status).toBe(503);
       await expect(response.json()).resolves.toEqual({ status: "unavailable" });
+      expect(database.preparedQueries).toEqual([]);
     }
   });
 
