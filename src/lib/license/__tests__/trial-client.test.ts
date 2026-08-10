@@ -117,10 +117,13 @@ describe("resilient online trial transport", () => {
     ]);
   });
 
-  it("falls back on route/provider HTTP failures and malformed responses", async () => {
+  it("falls back on route/provider HTTP failures, edge denials and malformed responses", async () => {
     await configure();
     const valid = await entitlement();
     for (const primaryResponse of [
+      new Response("unauthorized edge", { status: 401 }),
+      new Response("forbidden by route policy", { status: 403 }),
+      new Response("opaque bad request", { status: 400 }),
       new Response("missing", { status: 404 }),
       new Response("down", { status: 503 }),
       Response.json({ unexpected: true }),
@@ -181,17 +184,19 @@ describe("resilient online trial transport", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
-  it("never uses recovery to bypass a business/input rejection", async () => {
+  it("never uses recovery to bypass a canonical Worker business/input rejection", async () => {
     await configure();
-    const fetcher = vi.fn(async () =>
-      Response.json({ error: "invalid_request" }, { status: 400 }),
-    ) as unknown as typeof fetch;
+    for (const error of ["invalid_json", "invalid_request"]) {
+      const fetcher = vi.fn(async () =>
+        Response.json({ error }, { status: 400 }),
+      ) as unknown as typeof fetch;
 
-    await expect(requestOnlineTrial(shop, fetcher)).rejects.toMatchObject({
-      code: "LICENSE_TRIAL_ISSUANCE_FAILED",
-      statusCode: 409,
-    });
-    expect(fetcher).toHaveBeenCalledTimes(1);
+      await expect(requestOnlineTrial(shop, fetcher)).rejects.toMatchObject({
+        code: "LICENSE_TRIAL_ISSUANCE_FAILED",
+        statusCode: 409,
+      });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    }
   });
 
   it("reports privacy-safe failure classes after both routes are exhausted", async () => {
