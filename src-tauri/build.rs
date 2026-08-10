@@ -83,7 +83,15 @@ fn public_dns_hostname(value: &str) -> bool {
     let tld = value.rsplit('.').next().unwrap_or_default();
     !matches!(
         tld,
-        "invalid" | "example" | "test" | "localhost" | "local" | "internal" | "lan" | "home" | "arpa"
+        "invalid"
+            | "example"
+            | "test"
+            | "localhost"
+            | "local"
+            | "internal"
+            | "lan"
+            | "home"
+            | "arpa"
     )
 }
 
@@ -149,7 +157,9 @@ fn production_https_origin(value: &str, owned_host_suffix: &str) -> String {
     }
     let owned_subdomain = format!(".{owned_host_suffix}");
     if host != owned_host_suffix && !host.ends_with(&owned_subdomain) {
-        panic!("production trial routes must belong to the provisioned SahelFlow-owned host suffix");
+        panic!(
+            "production trial routes must belong to the provisioned SahelFlow-owned host suffix"
+        );
     }
     format!("https://{host}")
 }
