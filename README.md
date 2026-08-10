@@ -16,12 +16,12 @@ settings, licensing, multi-shop and recovery under one protected authority model
 - Published release: `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`.
 - Founder-installed release: **Internal.14**, permanently licensed and reopen-observed.
 - Founder-accepted baseline remains **Internal.5**; Founder acceptance remains open.
-- Current documentation reconciliation: **PR #231**.
+- Documentation reconciliation package: **PR #231**; read live GitHub for its merge state.
 - Retained evidence: issues #201, #214, #221, #226 and #230.
 
 Always re-read live protected `main`, open PRs/issues and current Actions before
-implementation. Documentation-only commits may advance `main` without changing the
-published executable source.
+implementation. Documentation/authority-only commits may advance `main` without
+changing the published executable source.
 
 ## Phase 5 closure and Founder-installed reconciliation
 
@@ -53,7 +53,7 @@ proven Phase 1–4 canonical authority without a concrete defect.
 5. adopt those roots across the real product, including product-level redesign of
    Inbox, AI Agents and Settings plus the whole route inventory;
 6. complete installed Phase 6 Arabic/RTL/accessibility evidence and Phase 7
-   T470/floor performance/reliability certification;
+   T470/floor performance/reliability certification under issue #226;
 7. run a coherent signed Founder whole-product acceptance pass;
 8. only then begin Phase 8 implementation.
 
