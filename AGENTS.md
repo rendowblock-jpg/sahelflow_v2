@@ -61,7 +61,7 @@ A lower layer cannot silently weaken a higher one.
   Founder-accepted baseline remains Internal.5.
 - Open PR at this reconciliation: #231.
 - Retained evidence: issues #201, #214, #221, #226 and #230.
-- Issue #221 remains the installed Founder visual/accessibility acceptance record.
+- issue #221 remains the installed Founder visual/accessibility acceptance record.
 
 Always re-fetch live truth before a write. Never use a copied SHA for destructive,
 merge or release authority without verifying it.
