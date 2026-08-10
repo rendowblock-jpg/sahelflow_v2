@@ -17,6 +17,10 @@ database_id = "replace-with-production-d1-id"
 
 [vars]
 TRIAL_KEY_ID = "trial-2026-01"
+# Raw 32-byte Ed25519 public key in base64. This is intentionally public and
+# must correspond to TRIAL_PRIVATE_KEY_PKCS8 and the client keyring used by the
+# signed candidate; /healthz signs + verifies a fixed readiness challenge.
+TRIAL_PUBLIC_KEY = "replace-with-base64-raw-ed25519-public-key"
 PRODUCT_MAJOR = "1"
 TRIAL_SHOP_SLOTS = "1"
 TRIAL_MEMBER_LIMIT = "25"
