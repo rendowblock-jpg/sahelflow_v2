@@ -8,71 +8,73 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 ## Current repository truth
 
-- Latest application-changing protected merge: **PR #228 — Internal.14 updater and installed-release authority**, protected application SHA `2d60e2e74109b6e03626a5ccdff727c029a34591`.
-- Protected-main reconciliation base before docs PR #229: `07a0b5ebd3d9ccb7ad89603c3d936f88b82bb515`.
-- Phase 5 protected product baseline: `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
-- Phase 5 issue #208 is closed at the protected-source + controlled-browser layer.
-- Phase 6 source/browser package is complete and protected through PR #223.
-- Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**; the current sub-frontier is the installed/human exit checkpoint.
-- Active documentation reconciliation: **PR #229**.
-- Published executable source: `2d60e2e74109b6e03626a5ccdff727c029a34591`.
+- Protected `main` before documentation PR #231: `23fb2e0ee4956132fafe8dd6973be42d3cfc8032`.
+- Latest application-changing protected merge: **PR #228 — Internal.14 updater and installed-release authority**, application SHA `2d60e2e74109b6e03626a5ccdff727c029a34591`.
+- Phase 5 protected source/browser baseline: `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- Phase 6 source/browser + Phase 7 measurement checkpoint is protected through PR #223.
+- Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
 - Published release: `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`.
-- Release tag: `sahelflow-v1.0.0-internal.14-2d60e2e74109b6e03626a5ccdff727c029a34591`.
-- Founder-installed release: **Internal.14**, with a permanent Founder entitlement
-  surviving close/reopen and the existing dashboard visible.
-- Founder-accepted baseline remains Internal.5; Founder acceptance remains open.
+- Founder-installed release: **Internal.14**, permanently licensed and reopen-observed.
+- Founder-accepted baseline remains **Internal.5**.
+- Current documentation reconciliation: **PR #231**.
 - Retained evidence: issues #201, #214, #221, #226 and #230.
 
 Always re-read live protected `main`, open PRs/issues and current Actions before
 implementation. Documentation-only commits may advance `main` without changing the
 published executable source.
 
-## Phase 5 closure
+## Founder-installed reconciliation
 
-PR #220 completed the whole-product desktop experience program at the
-protected-source + controlled-browser layer. Its exact source passed the dedicated
-Phase 5 Experience Gate, full source quality, fresh install/login, representative
-LTR and Arabic RTL journeys, viewport containment and review closure.
+The exact Phase 5/6 source/browser checkpoints remain valid evidence for what they
+proved, but Internal.14 installed use is **not Founder-accepted**. The Founder
+explicitly values the backend/engine and rejects the current frontend as the
+whole-product quality baseline.
 
-Issue #221 retains Founder visual acceptance on the actual installed Windows app.
-That human evidence is not fabricated from browser CI.
+The observed frontend problems are systemic rather than isolated page polish:
+Arabic typography, small text/controls, non-atomic locale/RTL switching, cold and
+glitchy themes, missing motion language, incorrect RTL placement, over-nested
+navigation, oversized warning banners, weak charts, and unacceptable Inbox, AI
+Agents and Settings workspaces. The remaining route inventory must be audited by
+the implementation team instead of requiring the Founder to enumerate every
+small defect.
 
-## Phase 6 protected source/browser result
+The binding roadmap therefore has a **mandatory pre-Phase-8 stabilization and
+Founder-acceptance gate**. This is not a new numbered phase and does not reopen
+proven Phase 1–4 canonical authority without a concrete defect.
 
-PR #223 completed the shared Phase 6 correctness package and the controlled Phase
-7 measurement/query infrastructure. The source/browser package is closed; do not
-restart a broad Phase 6 source audit without a concrete installed defect.
+## Exact pre-Phase-8 order
 
-The remaining Phase 6 exit dependency is the installed/human Arabic, RTL and
-accessibility checkpoint in issue #221.
+1. retire historical PR #200/PR #207 CI exception mechanisms as live evidence
+   bypasses and prove anti-bypass behavior;
+2. repair the successful-license-activation blank workspace/restart defect;
+3. resolve resilient customer trial activation under issue #230;
+4. audit, research and freeze shared frontend typography/density, design tokens,
+   themes, motion, locale/RTL, shell/navigation and component/state contracts;
+5. adopt those roots across the real product, including product-level redesign of
+   Inbox, AI Agents and Settings plus the whole route inventory;
+6. complete installed Phase 6 Arabic/RTL/accessibility evidence and Phase 7
+   T470/floor performance/reliability certification;
+7. run a coherent signed Founder whole-product acceptance pass;
+8. only then begin Phase 8 implementation.
+
+Issue #214 remains an explicit replacement-install evidence non-claim until its
+Stable-level obligation is closed or superseded by stronger exact-source proof.
 
 ## Internal.14 release truth
 
-Internal.14 is published and is the latest updater release. Protected signed run
-`31388777098` passed its exact-source, signing, staged-runtime, MSI installation,
-authenticated UI, updater metadata, tag-binding and publication gates.
+Internal.14 remains the current public Internal updater release. FD-031 is a
+one-time exception for PR #228/Internal.14 only. Installed CI proved exact MSI
+lifecycle, authenticated UI and a committed two-shop restore; post-restore
+page-level owner re-enrollment/protected-data readback remained unproven and is
+retained in issue #214.
 
-PR #228 merged under the one-time FD-031 Founder exception. Installed CI proved
-the exact MSI lifecycle, authenticated UI and committed two-shop restore, but the
-post-restore page-level owner re-enrollment/readback remained unproven because the
-CI-only CDP evidence harness failed. Issue #214 retains that gap. It is not a
-passing claim and it does not block installing the published Internal checkpoint.
-
-## Exact active frontier
-
-The signed update, permanent entitlement and ordinary dashboard reopen are now
-observed on the Founder T470. This does not close Phase 6 or establish Founder
-acceptance. The next session must:
-
-1. complete issue #221 representative Arabic/RTL/accessibility inspection;
-2. measure and diagnose the reported multi-minute cold startup under issue #226;
-3. own the post-activation blank-window/restart behavior as installed evidence;
-4. resolve issue #230 before claiming customer trial onboarding is production-ready;
-5. close Phase 6 only when no applicable installed P0/P1 remains.
-
-No release rerun is active. Use one bounded package per confirmed defect.
+No Beta or Stable claim exists. Do not rerun PR #228 or dispatch another
+Internal.14 workflow.
 
 ## Documentation
 
 Start with [`AGENTS.md`](AGENTS.md), then read the active authority chain in
-[`documentation/README.md`](documentation/README.md).
+[`documentation/README.md`](documentation/README.md). Supporting research for the
+pre-Phase-8 frontend program is archived under
+`documentation/archive/research/`; archived material is evidence/context, not a
+replacement authority.
