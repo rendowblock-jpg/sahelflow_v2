@@ -59,7 +59,7 @@ A lower layer cannot silently weaken a higher one.
   `31388777098`.
 - Founder-installed Internal.14 is permanently licensed and reopen-observed;
   Founder-accepted baseline remains Internal.5.
-- Open PR at this reconciliation: #231.
+- Documentation reconciliation package: PR #231; read live GitHub for merge state.
 - Retained evidence: issues #201, #214, #221, #226 and #230.
 - issue #221 remains the installed Founder visual/accessibility acceptance record.
 
@@ -276,9 +276,9 @@ live protected source
 → documentation reconciliation
 ```
 
-Documentation-only packages should select lightweight risk-aware gates. Full MSI,
-signed, installed and recovery lanes remain necessary only when consequence
-selection or release authority requires them.
+Documentation/authority-only packages should select lightweight risk-aware gates.
+Full MSI, signed, installed and recovery lanes remain necessary only when
+consequence selection or release authority requires them.
 
 ## Review severity
 
