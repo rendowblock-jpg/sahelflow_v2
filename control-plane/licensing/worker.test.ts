@@ -12,6 +12,15 @@ const PRIVATE_KEY = new Uint8Array(Buffer.from(PRIVATE_KEY_HEX, "hex"));
 const PKCS8_HEADER = Buffer.from("302e020100300506032b657004220420", "hex");
 const TRIAL_SCHEMA_HEALTH_QUERY =
   "SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1";
+const TRIAL_SCHEMA_DEFINITION_QUERY =
+  "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'trial_entitlement'";
+const TRIAL_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS trial_entitlement (
+  device_binding TEXT PRIMARY KEY NOT NULL,
+  license_id TEXT UNIQUE NOT NULL,
+  issued_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+)`;
 
 type RecordRow = {
   license_id: string;
@@ -31,7 +40,10 @@ class MemoryD1 {
         values = input;
         return this.prepareBound(query, () => values);
       },
-      first: async <T>() => null as T | null,
+      first: async <T>() =>
+        (query === TRIAL_SCHEMA_DEFINITION_QUERY
+          ? ({ sql: TRIAL_SCHEMA_SQL } as T)
+          : (null as T | null)),
       run: async () => ({ success: true }),
     };
   }
@@ -40,6 +52,9 @@ class MemoryD1 {
     return {
       bind: (...input: unknown[]) => this.prepareBound(query, () => input),
       first: async <T>() => {
+        if (query === TRIAL_SCHEMA_DEFINITION_QUERY) {
+          return { sql: TRIAL_SCHEMA_SQL } as T;
+        }
         if (!query.startsWith("SELECT")) return null;
         return (this.records.get(String(values()[0])) ?? null) as T | null;
       },
@@ -93,14 +108,17 @@ async function health(env: LicensingWorkerEnvironment) {
 }
 
 describe("online trial authority", () => {
-  it("exposes a non-secret health probe backed by the exact trial issuance schema and signer", async () => {
+  it("exposes a non-secret health probe backed by exact issuance schema, uniqueness and signer", async () => {
     const database = new MemoryD1();
     const response = await health(environment(database));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ status: "ok" });
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(database.preparedQueries).toEqual([TRIAL_SCHEMA_HEALTH_QUERY]);
+    expect(database.preparedQueries).toEqual([
+      TRIAL_SCHEMA_HEALTH_QUERY,
+      TRIAL_SCHEMA_DEFINITION_QUERY,
+    ]);
   });
 
   it("fails health closed when the required trial table or columns are unavailable", async () => {
@@ -112,6 +130,36 @@ describe("online trial authority", () => {
         }
         throw new Error("unexpected query");
       },
+    } as LicensingWorkerEnvironment["DB"];
+
+    const response = await health(env);
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it("fails health closed when device or license uniqueness authority is missing", async () => {
+    const env = environment(new MemoryD1());
+    env.DB = {
+      prepare: (query: string) => ({
+        bind: () => {
+          throw new Error("unused");
+        },
+        first: async <T>() => {
+          if (query === TRIAL_SCHEMA_HEALTH_QUERY) return null as T | null;
+          if (query === TRIAL_SCHEMA_DEFINITION_QUERY) {
+            return {
+              sql: `CREATE TABLE trial_entitlement (
+                device_binding TEXT NOT NULL,
+                license_id TEXT NOT NULL,
+                issued_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL
+              )`,
+            } as T;
+          }
+          throw new Error("unexpected query");
+        },
+        run: async () => ({ success: true }),
+      }),
     } as LicensingWorkerEnvironment["DB"];
 
     const response = await health(env);
