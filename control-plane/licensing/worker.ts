@@ -168,11 +168,24 @@ async function issueTrial(
   };
 }
 
+async function health(environment: LicensingWorkerEnvironment): Promise<Response> {
+  try {
+    const result = await environment.DB.prepare("SELECT 1 AS ok").first<{ ok: number }>();
+    if (result?.ok !== 1) throw new Error("D1 health probe did not return ok=1");
+    return json({ status: "ok" });
+  } catch {
+    return json({ status: "unavailable" }, 503);
+  }
+}
+
 export async function handleLicensingRequest(
   request: Request,
   environment: LicensingWorkerEnvironment,
 ): Promise<Response> {
   const url = new URL(request.url);
+  if (request.method === "GET" && url.pathname === "/healthz") {
+    return health(environment);
+  }
   if (request.method !== "POST" || url.pathname !== "/v1/trials") {
     return json({ error: "not_found" }, 404);
   }
