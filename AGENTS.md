@@ -43,7 +43,7 @@ A lower layer cannot silently weaken a higher one.
 
 - Latest application-changing protected merge: PR #228 at
   `2d60e2e74109b6e03626a5ccdff727c029a34591`.
-- Protected release-governance reconciliation:
+- Protected-main reconciliation base before docs PR #229:
   `07a0b5ebd3d9ccb7ad89603c3d936f88b82bb515`.
 - Validated Phase 6/7 source head:
   `fa0ff6de649421c879f62364383a363b61c71bfc`.
@@ -58,10 +58,10 @@ A lower layer cannot silently weaken a higher one.
   `2d60e2e74109b6e03626a5ccdff727c029a34591`.
 - Published release: `1.0.0-internal.14` / MSI `1.0.0.14`.
 - Protected signed release run: `31388777098`.
-- Founder-installed release remains Internal.13 until the in-app update is
-  observed; Founder-accepted baseline remains Internal.5.
-- Open PRs at reconciliation: none.
-- Retained evidence: issues #201, #214, #221 and #226.
+- Founder-installed release is Internal.14 with a permanent Founder entitlement
+  and dashboard reopen observed; Founder-accepted baseline remains Internal.5.
+- Open PR: #229 documentation reconciliation.
+- Retained evidence: issues #201, #214, #221, #226 and #230.
 
 Always re-fetch live truth before a write. Do not copy a SHA from this document
 into a destructive or release action without verifying it.
@@ -102,16 +102,15 @@ Do not reopen PR #228, rerun its jobs or dispatch another Internal.14 release.
 
 ## Exact next outcome
 
-Run an installed Founder observation on the T470:
+Continue from the installed Founder checkpoint on the T470:
 
-1. open Internal.13 and install Internal.14 through the normal updater;
-2. verify displayed version, preserved AppData/shop state, owner login and
-   ordinary close/reopen;
-3. preserve `scripts/Founder-install-result.json`;
-4. inspect representative Arabic/RTL/accessibility flows required by issue #221;
-5. record explicit Founder accept/reject evidence in issues #221 and #164;
-6. close Phase 6 only if no actionable installed P0/P1 remains;
-7. then begin issue #226 Phase 7 installed performance/reliability certification.
+1. preserve `scripts/Founder-install-result.json`;
+2. inspect representative Arabic/RTL/accessibility flows required by issue #221;
+3. measure the reported multi-minute cold start under issue #226;
+4. triage the blank first render after permanent activation;
+5. retain issue #230 as a launch-blocking live trial-certification package;
+6. record explicit Founder accept/reject evidence in issues #221 and #164;
+7. close Phase 6 only if no applicable installed P0/P1 remains.
 
 If the installed checkpoint reveals a concrete defect, open one bounded repair PR
 for that defect. Do not restart a broad Phase 5/6 audit.

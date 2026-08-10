@@ -2,18 +2,18 @@
 
 > **Purpose:** Compact execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-08-10
-> **Protected main:** `07a0b5ebd3d9ccb7ad89603c3d936f88b82bb515`
+> **Protected-main reconciliation base before docs PR #229:** `07a0b5ebd3d9ccb7ad89603c3d936f88b82bb515`
 > **Latest application-changing protected merge:** PR #228 at `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Validated Phase 6/7 source head:** `fa0ff6de649421c879f62364383a363b61c71bfc`
 > **Phase 5 product baseline:** PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`
 > **Protected signed run:** `31388777098`
-> **Founder-installed release:** Internal.13; Internal.14 installation pending
+> **Founder-installed release:** Internal.14; permanent entitlement and dashboard reopen observed
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Open PRs:** none at reconciliation
-> **Retained evidence:** #201, #214, #221, #226
+> **Open PRs:** #229 documentation reconciliation
+> **Retained evidence:** #201, #214, #221, #226, #230
 > **Execution epic:** issue #164
 
 Live GitHub is authority. Re-fetch protected `main`, open PRs, release state and
@@ -77,18 +77,21 @@ FD-031 is one-use only. Future PR/release protection remains unchanged.
 
 ## Phase 6 next action
 
-This is an installed Founder session:
+Internal.14 is installed on the Founder T470. The permanent Founder entitlement
+survived restart and the existing dashboard/workspace was visible. Retain the
+exact local observation in `scripts/Founder-install-result.json`.
 
-1. open Internal.13 on the Founder T470;
-2. use the normal in-app updater to install Internal.14;
-3. verify version `1.0.0-internal.14`;
-4. verify preserved AppData/shop state, owner login and ordinary close/reopen;
-5. retain the exact observation in `scripts/Founder-install-result.json`;
-6. inspect issue #221 representative AR/FR/EN, Arabic RTL, keyboard, focus,
+Next:
+
+1. inspect issue #221 representative AR/FR/EN, Arabic RTL, keyboard, focus,
    semantics and 1366×768 behavior;
-7. record explicit Founder accept/reject evidence in #221 and #164;
-8. if accepted with no P0/P1, close Phase 6 and begin #226;
-9. if a concrete defect appears, open one bounded repair package only.
+2. measure the multi-minute cold start under issue #226 before changing code;
+3. triage the blank render immediately after license activation, which recovered
+   only after close/reopen;
+4. keep issue #230 open until live resilient trial activation passes on
+   representative Algerian networks;
+5. record explicit Founder accept/reject evidence in #221 and #164;
+6. close Phase 6 only with no applicable P0/P1.
 
 No source build, dependency installation or broad automated suite belongs on the
 storage-constrained Founder machine. Use the published signed artifact.

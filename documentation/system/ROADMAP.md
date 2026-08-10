@@ -217,11 +217,11 @@ Items 1–5 and 7 are satisfied at the protected PR #223 source/browser checkpoi
 The active exit dependency is item 6 plus the manual/human semantic review that
 cannot be fabricated from browser CI.
 
-Internal.14 is now the published signed checkpoint for this installed observation.
-FD-031 retains the PR #228 post-restore CDP/page-evidence gap in issue #214; it does
-not satisfy item 6 and does not establish Founder acceptance. The immediate Phase
-6 action is to update the Founder T470 in place and record issue #221, not to rerun
-PR #228 or dispatch another Internal.14 build.
+Internal.14 is the published and Founder-installed signed checkpoint. Its permanent
+Founder entitlement and dashboard reopen are observed, but item 6 and Founder
+acceptance remain open in issue #221. FD-031 retains the PR #228 post-restore
+CDP/page-evidence gap in issue #214. Issue #230 retains resilient live trial
+activation, and issue #226 owns the measured multi-minute startup observation.
 
 Phases 5–6 normally trigger a Level 3 installed-UI, visual-regression and
 accessibility checkpoint.

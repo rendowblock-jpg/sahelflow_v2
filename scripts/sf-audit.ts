@@ -299,7 +299,7 @@ requireMarkers("README.md", [
   "Phase 5 closure",
   "PR #220",
   "Phase 6 — Arabic, RTL and accessibility parity",
-  "issues #201, #214, #221 and #226",
+  "issues #201, #214, #221, #226 and #230",
   "Published release: `1.0.0-internal.14`",
   "Founder acceptance remains open",
 ]);
@@ -316,7 +316,7 @@ requireMarkers("documentation/README.md", [
   "Phase 6 — Arabic, RTL and accessibility parity",
   "PR #220",
   "issue #221",
-  "issues #201, #214, #221 and #226",
+  "issues #201, #214, #221, #226 and #230",
 ]);
 requireMarkers("documentation/product/DECISIONS.md", [
   "## FD-028",
@@ -753,5 +753,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 5 protected-source/browser closed; Phase 6 active; retained evidence tracked in issues #201, #214, #221 and #226).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 5 protected-source/browser closed; Phase 6 active; retained evidence tracked in issues #201, #214, #221, #226 and #230).`,
 );

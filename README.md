@@ -9,18 +9,19 @@ settings, licensing, multi-shop and recovery under one protected authority model
 ## Current repository truth
 
 - Latest application-changing protected merge: **PR #228 — Internal.14 updater and installed-release authority**, protected application SHA `2d60e2e74109b6e03626a5ccdff727c029a34591`.
-- Protected release-governance reconciliation: `07a0b5ebd3d9ccb7ad89603c3d936f88b82bb515`.
+- Protected-main reconciliation base before docs PR #229: `07a0b5ebd3d9ccb7ad89603c3d936f88b82bb515`.
 - Phase 5 protected product baseline: `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 - Phase 5 issue #208 is closed at the protected-source + controlled-browser layer.
 - Phase 6 source/browser package is complete and protected through PR #223.
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**; the current sub-frontier is the installed/human exit checkpoint.
-- Open pull requests at reconciliation: **none**.
+- Active documentation reconciliation: **PR #229**.
 - Published executable source: `2d60e2e74109b6e03626a5ccdff727c029a34591`.
 - Published release: `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`.
 - Release tag: `sahelflow-v1.0.0-internal.14-2d60e2e74109b6e03626a5ccdff727c029a34591`.
-- Founder-installed release remains Internal.13 until the in-app update is observed.
+- Founder-installed release: **Internal.14**, with a permanent Founder entitlement
+  surviving close/reopen and the existing dashboard visible.
 - Founder-accepted baseline remains Internal.5; Founder acceptance remains open.
-- Retained evidence: issues #201, #214, #221 and #226.
+- Retained evidence: issues #201, #214, #221, #226 and #230.
 
 Always re-read live protected `main`, open PRs/issues and current Actions before
 implementation. Documentation-only commits may advance `main` without changing the
@@ -59,16 +60,17 @@ passing claim and it does not block installing the published Internal checkpoint
 
 ## Exact active frontier
 
-The next session is an installed Founder observation session:
+The signed update, permanent entitlement and ordinary dashboard reopen are now
+observed on the Founder T470. This does not close Phase 6 or establish Founder
+acceptance. The next session must:
 
-1. update the Founder T470 in place from Internal.13 to Internal.14;
-2. verify the displayed version, preserved AppData, owner login and close/reopen;
-3. inspect representative Arabic/RTL/accessibility journeys and record issue #221;
-4. close Phase 6 only if the installed checkpoint has no actionable P0/P1;
-5. then begin issue #226 Phase 7 T470/floor/eight-hour certification.
+1. complete issue #221 representative Arabic/RTL/accessibility inspection;
+2. measure and diagnose the reported multi-minute cold startup under issue #226;
+3. own the post-activation blank-window/restart behavior as installed evidence;
+4. resolve issue #230 before claiming customer trial onboarding is production-ready;
+5. close Phase 6 only when no applicable installed P0/P1 remains.
 
-No release-engineering PR or CI rerun is active. If the Founder-installed checkpoint
-reveals a concrete defect, open one bounded repair package for that defect only.
+No release rerun is active. Use one bounded package per confirmed defect.
 
 ## Documentation
 

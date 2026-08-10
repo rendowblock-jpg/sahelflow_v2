@@ -2,20 +2,20 @@
 
 > **Authority:** merged protected source and named evidence only
 > **Latest application-changing protected merge:** PR #228 at `2d60e2e74109b6e03626a5ccdff727c029a34591`
-> **Protected release-governance reconciliation:** `07a0b5ebd3d9ccb7ad89603c3d936f88b82bb515`
+> **Protected-main reconciliation base before docs PR #229:** `07a0b5ebd3d9ccb7ad89603c3d936f88b82bb515`
 > **Validated Phase 6/7 source head:** `fa0ff6de649421c879f62364383a363b61c71bfc`
 > **Phase 5 product baseline:** PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`
 > **Protected signed run:** `31388777098`
 > **Release tag:** `sahelflow-v1.0.0-internal.14-2d60e2e74109b6e03626a5ccdff727c029a34591`
-> **Founder-installed release:** Internal.13; Internal.14 installation pending
+> **Founder-installed release:** Internal.14; permanent entitlement and dashboard reopen observed
 > **Founder-accepted baseline:** Internal.5
 > **Phase 5 status:** protected-source + controlled-browser closed through PR #220 / issue #208
 > **Phase 6 status:** protected-source + controlled-browser closed through PR #223; installed/human exit evidence pending
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Open pull requests:** none at reconciliation
-> **Retained evidence:** issues #201, #214, #221 and #226
+> **Open pull requests:** PR #229 documentation reconciliation
+> **Retained evidence:** issues #201, #214, #221, #226 and #230
 > **Execution epic:** issue #164
 > **Last assessed:** 2026-08-10
 
@@ -29,9 +29,15 @@ SahelFlow is a Windows-first local application for Algerian COD operations with
 protected business, identity, licensing, provider, recovery and desktop authority.
 It is not yet a commercially certified Stable release.
 
-Internal.14 is public and available through the normal updater. It contains the
-protected Phase 5/6 result and the updater/release authority merged through PR
-#228. It has not yet been installed or accepted by the Founder on the T470.
+Internal.14 is public and was installed through the normal updater on the Founder
+T470. The exact installed executable reports `1.0.0-internal.14`; a matching
+Founder-offline permanent entitlement activated and survived close/reopen, and the
+Founder reported the existing dashboard/workspace visible. It is not yet accepted.
+
+The same session exposed three material installed facts: the sole production
+`workers.dev` trial route was unreachable from the Founder network (issue #230),
+the first render after permanent activation was blank until restart, and ordinary
+startup still takes many minutes. These are retained evidence, not passing claims.
 
 The active product phase remains Phase 6. The next work is installed observation,
 not broad source implementation. Phase 7 installed performance/reliability
@@ -110,14 +116,14 @@ missing replacement-install evidence before Stable.
 
 ## Exact next engineering action
 
-1. Open the installed Internal.13 app on the Founder T470.
-2. Use the normal updater to install Internal.14.
-3. Verify displayed version, preserved AppData/shop state, owner login and ordinary
-   close/reopen; retain `scripts/Founder-install-result.json`.
-4. Perform the issue #221 installed Arabic/RTL/accessibility checkpoint.
-5. Record explicit Founder accept/reject evidence in issues #221 and #164.
-6. If accepted with no actionable P0/P1, close Phase 6 and start issue #226.
-7. If a concrete defect appears, open one bounded repair package for that defect.
+1. Preserve `scripts/Founder-install-result.json` as the local exact observation.
+2. Complete the issue #221 installed Arabic/RTL/accessibility checkpoint.
+3. Measure the reported multi-minute cold start before optimizing under issue #226.
+4. Triage the post-activation blank-window/restart behavior as one bounded defect.
+5. Treat issue #230 resilient live trial activation as a launch-blocking external
+   certification package; the permanent Founder license does not satisfy it.
+6. Record explicit Founder accept/reject evidence in issues #221 and #164.
+7. Close Phase 6 only if no applicable installed P0/P1 remains.
 
 Do not rerun PR #228, its old jobs or the Internal.14 publication workflow.
 
@@ -133,7 +139,9 @@ close/reopen/crash recovery and no sustained eight-hour memory growth.
 - issue #201 — prior native/install and provider evidence;
 - issue #214 — replacement-install recovery certification;
 - issue #221 — Founder-installed Phase 5/6 visual/accessibility acceptance;
-- issue #226 — Phase 7 installed performance/reliability certification.
+- issue #226 — Phase 7 installed performance/reliability certification;
+- issue #230 — resilient live trial activation on Algerian networks.
 
-Internal.14 is published but not Founder-installed or Founder-accepted. No Beta or
-Stable release exists. Founder-accepted truth remains Internal.5.
+Internal.14 is published, Founder-installed and permanently licensed, but not
+Founder-accepted. No Beta or Stable release exists. Founder-accepted truth remains
+Internal.5.
