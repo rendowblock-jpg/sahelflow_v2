@@ -41,40 +41,63 @@ function nativeDeviceBinding(): string {
   return binding;
 }
 
-function endpoint(role: TrialEndpointRole, raw: string | undefined): TrialEndpoint | null {
-  if (!raw) return null;
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    throw new SahelFlowError(
-      `Online trial ${role} service is misconfigured`,
-      "LICENSE_TRIAL_SERVICE_UNAVAILABLE",
-      503,
-    );
-  }
-  if (!/^https?:$/.test(parsed.protocol)) {
-    throw new SahelFlowError(
-      `Online trial ${role} service uses an unsupported protocol`,
-      "LICENSE_TRIAL_SERVICE_UNAVAILABLE",
-      503,
-    );
-  }
-  return { role, origin: parsed };
-}
-
-function configuredEndpoints(): TrialEndpoint[] {
-  const primary = endpoint("primary", process.env.SF_LICENSE_SERVICE_URL);
-  if (!primary) {
+function configuredOrigins(raw: string | undefined): string[] {
+  if (!raw) {
     throw new SahelFlowError(
       "Online trial service is not configured",
       "LICENSE_TRIAL_SERVICE_UNAVAILABLE",
       503,
     );
   }
-  const recovery = endpoint("recovery", process.env.SF_LICENSE_RECOVERY_SERVICE_URL);
-  if (!recovery || recovery.origin.origin === primary.origin.origin) return [primary];
-  return [primary, recovery];
+  if (!raw.trimStart().startsWith("[")) return [raw];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = null;
+  }
+  if (
+    !Array.isArray(parsed) ||
+    parsed.length < 1 ||
+    parsed.length > 2 ||
+    parsed.some((value) => typeof value !== "string" || value.length === 0)
+  ) {
+    throw new SahelFlowError(
+      "Online trial service route set is misconfigured",
+      "LICENSE_TRIAL_SERVICE_UNAVAILABLE",
+      503,
+    );
+  }
+  return parsed as string[];
+}
+
+function configuredEndpoints(): TrialEndpoint[] {
+  const roles: TrialEndpointRole[] = ["primary", "recovery"];
+  const endpoints: TrialEndpoint[] = [];
+  const seen = new Set<string>();
+  for (const [index, raw] of configuredOrigins(process.env.SF_LICENSE_SERVICE_URL).entries()) {
+    let parsed: URL;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      throw new SahelFlowError(
+        `Online trial ${roles[index] ?? "recovery"} service is misconfigured`,
+        "LICENSE_TRIAL_SERVICE_UNAVAILABLE",
+        503,
+      );
+    }
+    if (!/^https?:$/.test(parsed.protocol)) {
+      throw new SahelFlowError(
+        `Online trial ${roles[index] ?? "recovery"} service uses an unsupported protocol`,
+        "LICENSE_TRIAL_SERVICE_UNAVAILABLE",
+        503,
+      );
+    }
+    if (seen.has(parsed.origin)) continue;
+    seen.add(parsed.origin);
+    endpoints.push({ role: roles[index] ?? "recovery", origin: parsed });
+  }
+  return endpoints;
 }
 
 function errorCode(error: unknown): string | null {
