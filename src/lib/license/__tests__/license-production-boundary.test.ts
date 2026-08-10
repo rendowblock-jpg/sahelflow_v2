@@ -37,10 +37,11 @@ describe("production licensing authority inventory", () => {
     expect(worker).not.toContain("PERMANENT_PRIVATE");
   });
 
-  it("fails every production release build closed on one-route or workers.dev trial authority", () => {
+  it("fails customer release builds closed until two owned public trial routes are provisioned", () => {
     const build = read("src-tauri/build.rs");
     const tauri = read("src-tauri/src/lib.rs");
     const release = read(".github/workflows/release.yml");
+    const versionAuthority = read("sahelflow.version.json");
     for (const name of [
       "SF_LICENSE_SERVICE_URL",
       "SF_LICENSE_TRIAL_PUBLIC_KEYS",
@@ -55,6 +56,12 @@ describe("production licensing authority inventory", () => {
     expect(build).toContain("primary and recovery HTTPS origins");
     expect(build).toContain("workers.dev must not be packaged");
     expect(build).toContain("production trial primary and recovery origins must be distinct");
+    expect(build).toContain("configured_owned_host_suffix");
+    expect(build).toContain("../sahelflow.version.json");
+    expect(build).toContain("std::net::IpAddr");
+    expect(build).toContain("public DNS hostnames, not IP/reserved/private-style destinations");
+    expect(build).toContain("provisioned SahelFlow-owned host suffix");
+    expect(versionAuthority).toContain('"ownedHostSuffix": null');
     expect(build).toContain('std::env::var("GITHUB_WORKFLOW")');
     expect(build).toContain('"CI" | "Native source contract" | "Windows Rust release parity"');
     expect(build).toContain('routes == ["https://license.invalid"]');
