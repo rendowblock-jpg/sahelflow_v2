@@ -62,7 +62,7 @@ The Phase 5/6 protected source/browser checkpoints remain valid historical
 evidence for what those exact heads proved. They do **not** override the later
 installed Founder rejection and they do not certify the current frontend as AAA.
 
-## Founder-installed frontend assessment
+## Active Phase 6 frontier — Founder-installed frontend assessment
 
 The Founder does not need to enumerate every margin, label or page defect. The
 screenshots and installed use establish a systemic frontend-quality problem, so
@@ -115,7 +115,7 @@ Frontend work must consume server-authoritative permissions, projections,
 canonical business transitions and recovery states rather than inventing parallel
 client truth.
 
-## Phase 5/6 evidence reconciliation
+## Phase 5 merged result and evidence
 
 PR #220 remains the protected Phase 5 source/browser checkpoint. Its exact head
 passed the Required PR and Required Phase 5 Experience gates, including source
@@ -132,7 +132,7 @@ Internal.14 assessment now proves that they were insufficient as whole-product
 visual/interaction acceptance. Root-cause frontend implementation is therefore
 explicitly in scope before the installed Phase 6/7 exit evidence is repeated.
 
-## Internal.14 publication and FD-031 boundary
+## Internal.14 publication evidence
 
 PR #228 merged from reviewed head
 `15e9c2e9f8e7dd2ca2ee9ddc7a49df781fcf08f6` to protected source
@@ -143,6 +143,8 @@ source reachability, updater/version authority, signed MSI creation, staged
 packaged runtime readiness, MSI installation, close/reopen, authenticated
 hydrated WebView UI, local updater signature verification, source/tag binding and
 public release publication.
+
+## FD-031 exception boundary
 
 FD-031 is one-use only. The final installed matrix committed the exact two-shop
 replacement restore with no restore failure code, but the CI-only post-restore
