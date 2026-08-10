@@ -42,8 +42,17 @@ type StoredTrial = {
   expires_at: string;
 };
 
+type TrialConfiguration = Readonly<{
+  productMajor: number;
+  shopSlots: number;
+  memberLimit: number;
+  backupBytes: number;
+  keyId: string;
+}>;
+
 const TRIAL_SCHEMA_HEALTH_QUERY =
   "SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1";
+const TRIAL_KEY_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{7,127}$/;
 
 function json(value: unknown, status = 200): Response {
   return Response.json(value, {
@@ -70,10 +79,34 @@ function validRequest(value: unknown): value is TrialRequest {
   );
 }
 
-function positiveInteger(value: string, label: string): number {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) throw new Error(`${label} is invalid`);
+function boundedPositiveInteger(
+  value: string,
+  label: string,
+  maximum = Number.MAX_SAFE_INTEGER,
+): number {
+  const parsed = Number(value);
+  if (
+    !Number.isSafeInteger(parsed) ||
+    parsed < 1 ||
+    parsed > maximum ||
+    String(parsed) !== value
+  ) {
+    throw new Error(`${label} is invalid`);
+  }
   return parsed;
+}
+
+function trialConfiguration(environment: LicensingWorkerEnvironment): TrialConfiguration {
+  if (!TRIAL_KEY_ID_PATTERN.test(environment.TRIAL_KEY_ID)) {
+    throw new Error("TRIAL_KEY_ID is invalid");
+  }
+  return {
+    productMajor: boundedPositiveInteger(environment.PRODUCT_MAJOR, "PRODUCT_MAJOR", 1_000),
+    shopSlots: boundedPositiveInteger(environment.TRIAL_SHOP_SLOTS, "TRIAL_SHOP_SLOTS", 1_000),
+    memberLimit: boundedPositiveInteger(environment.TRIAL_MEMBER_LIMIT, "TRIAL_MEMBER_LIMIT", 25),
+    backupBytes: boundedPositiveInteger(environment.TRIAL_BACKUP_BYTES, "TRIAL_BACKUP_BYTES"),
+    keyId: environment.TRIAL_KEY_ID,
+  };
 }
 
 function arrayBuffer(value: Uint8Array): ArrayBuffer {
@@ -96,14 +129,22 @@ function bytesBase64(value: ArrayBuffer): string {
   return btoa(binary);
 }
 
-async function signTrial(claims: EntitlementClaims, environment: LicensingWorkerEnvironment) {
-  const privateKey = await crypto.subtle.importKey(
+async function importTrialPrivateKey(environment: LicensingWorkerEnvironment): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
     "pkcs8",
     base64Bytes(environment.TRIAL_PRIVATE_KEY_PKCS8),
     { name: "Ed25519" },
     false,
     ["sign"],
   );
+}
+
+async function signTrial(
+  claims: EntitlementClaims,
+  environment: LicensingWorkerEnvironment,
+  signingKey?: CryptoKey,
+) {
+  const privateKey = signingKey ?? (await importTrialPrivateKey(environment));
   const signature = await crypto.subtle.sign(
     { name: "Ed25519" },
     privateKey,
@@ -117,6 +158,7 @@ async function issueTrial(
   environment: LicensingWorkerEnvironment,
   now = new Date(),
 ): Promise<SignedEntitlement> {
+  const configuration = trialConfiguration(environment);
   let stored = await environment.DB.prepare(
     "SELECT license_id, issued_at, expires_at FROM trial_entitlement WHERE device_binding = ?1",
   )
@@ -147,22 +189,22 @@ async function issueTrial(
     workspaceId: request.workspaceId,
     installationId: request.installationId,
     deviceBinding: request.deviceBinding,
-    productMajor: positiveInteger(environment.PRODUCT_MAJOR, "PRODUCT_MAJOR"),
+    productMajor: configuration.productMajor,
     type: "trial",
     issuedAt: stored.issued_at,
     expiresAt: stored.expires_at,
     supportEndsAt: stored.expires_at,
-    shopSlots: positiveInteger(environment.TRIAL_SHOP_SLOTS, "TRIAL_SHOP_SLOTS"),
-    memberLimit: positiveInteger(environment.TRIAL_MEMBER_LIMIT, "TRIAL_MEMBER_LIMIT"),
+    shopSlots: configuration.shopSlots,
+    memberLimit: configuration.memberLimit,
     deviceLimit: 1,
-    backupBytes: positiveInteger(environment.TRIAL_BACKUP_BYTES, "TRIAL_BACKUP_BYTES"),
+    backupBytes: configuration.backupBytes,
     mediaBytes: 0,
     features: ["sahelflow.complete"],
     transferState: "active",
     transferEpoch: 0,
     recoveryEpoch: 0,
     revocationEpoch: 0,
-    keyId: environment.TRIAL_KEY_ID,
+    keyId: configuration.keyId,
     issuer: "trial-service",
   };
   return {
@@ -173,15 +215,20 @@ async function issueTrial(
 
 async function health(environment: LicensingWorkerEnvironment): Promise<Response> {
   try {
-    // Preparing and executing this exact read proves the D1 binding contains the
-    // table and every column required by the canonical trial issuance path. An
-    // empty table is healthy; a missing/wrong schema throws and fails closed.
+    // Read the exact table/columns used by issuance. An empty correct table is
+    // healthy; a missing table or required column fails closed.
     await environment.DB.prepare(TRIAL_SCHEMA_HEALTH_QUERY).first<{
       device_binding: string;
       license_id: string;
       issued_at: string;
       expires_at: string;
     }>();
+
+    // Readiness also proves the configured claims fit the current entitlement
+    // contract and that the deployed Ed25519 PKCS#8 key is actually importable.
+    trialConfiguration(environment);
+    await importTrialPrivateKey(environment);
+
     return json({ status: "ok" });
   } catch {
     return json({ status: "unavailable" }, 503);
