@@ -55,6 +55,9 @@ const TRIAL_SCHEMA_HEALTH_QUERY =
   "SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1";
 const TRIAL_SCHEMA_DEFINITION_QUERY =
   "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'trial_entitlement'";
+const D1_WRITE_HEALTH_QUERY = `INSERT INTO licensing_readiness (probe_key, observed_at)
+VALUES ('worker-health', CURRENT_TIMESTAMP)
+ON CONFLICT(probe_key) DO UPDATE SET observed_at = excluded.observed_at`;
 const TRIAL_KEY_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{7,127}$/;
 const RATE_LIMITER_HEALTH_KEY = "health:licensing-readiness";
 const SIGNER_HEALTH_CHALLENGE = new TextEncoder().encode(
@@ -230,6 +233,13 @@ async function limitForKey(
   return result;
 }
 
+async function assertD1WriteReadiness(environment: LicensingWorkerEnvironment): Promise<void> {
+  const result = await environment.DB.prepare(D1_WRITE_HEALTH_QUERY).run();
+  if (!result?.success) {
+    throw new Error("D1 licensing readiness write failed");
+  }
+}
+
 async function issueTrial(
   request: TrialRequest,
   environment: LicensingWorkerEnvironment,
@@ -328,6 +338,11 @@ async function health(environment: LicensingWorkerEnvironment): Promise<Response
     // the same public-keyring shape consumed by signed SahelFlow clients.
     trialConfiguration(environment);
     await assertTrialSignerIdentity(environment);
+
+    // Prove D1 can accept the kind of write required for a new trial without
+    // creating any synthetic customer/trial row. This idempotently updates one
+    // fixed readiness record and cannot grow unbounded state.
+    await assertD1WriteReadiness(environment);
 
     await limitForKey(environment, RATE_LIMITER_HEALTH_KEY);
 
