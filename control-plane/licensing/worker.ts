@@ -55,6 +55,7 @@ const TRIAL_SCHEMA_HEALTH_QUERY =
 const TRIAL_SCHEMA_DEFINITION_QUERY =
   "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'trial_entitlement'";
 const TRIAL_KEY_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{7,127}$/;
+const RATE_LIMITER_HEALTH_KEY = "health:licensing-readiness";
 
 function json(value: unknown, status = 200): Response {
   return Response.json(value, {
@@ -153,6 +154,21 @@ async function signTrial(
     arrayBuffer(canonicalEntitlementBytes(claims)),
   );
   return bytesBase64(signature);
+}
+
+async function limitForKey(
+  environment: LicensingWorkerEnvironment,
+  key: string,
+): Promise<{ success: boolean }> {
+  const limiter = environment.TRIAL_RATE_LIMITER;
+  if (!limiter || typeof limiter.limit !== "function") {
+    throw new Error("TRIAL_RATE_LIMITER binding is unavailable");
+  }
+  const result = await limiter.limit({ key });
+  if (!result || typeof result.success !== "boolean") {
+    throw new Error("TRIAL_RATE_LIMITER returned an invalid result");
+  }
+  return result;
 }
 
 async function issueTrial(
@@ -257,6 +273,12 @@ async function health(environment: LicensingWorkerEnvironment): Promise<Response
     trialConfiguration(environment);
     await importTrialPrivateKey(environment);
 
+    // Exercise the same Cloudflare binding used by issuance with a dedicated
+    // non-customer key. The quota decision itself is irrelevant to readiness:
+    // a false result can mean only that this probe key is exhausted; a missing,
+    // malformed or unavailable binding throws and correctly fails health.
+    await limitForKey(environment, RATE_LIMITER_HEALTH_KEY);
+
     return json({ status: "ok" });
   } catch {
     return json({ status: "unavailable" }, 503);
@@ -282,9 +304,7 @@ export async function handleLicensingRequest(
   }
   if (!validRequest(input)) return json({ error: "invalid_request" }, 400);
   try {
-    const deviceLimit = await environment.TRIAL_RATE_LIMITER.limit({
-      key: `trial:${input.deviceBinding}`,
-    });
+    const deviceLimit = await limitForKey(environment, `trial:${input.deviceBinding}`);
     if (!deviceLimit.success) {
       return new Response(JSON.stringify({ error: "rate_limited" }), {
         status: 429,
