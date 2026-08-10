@@ -83,9 +83,12 @@ fn production_https_origin(value: &str) -> String {
     format!("https://{host}")
 }
 
-fn github_ci_release_placeholder(routes: &[&str]) -> bool {
-    std::env::var("GITHUB_ACTIONS").as_deref() == Ok("true")
-        && routes == ["https://license.invalid"]
+fn non_release_ci_placeholder(routes: &[&str]) -> bool {
+    let workflow = std::env::var("GITHUB_WORKFLOW").unwrap_or_default();
+    matches!(
+        workflow.as_str(),
+        "CI" | "Native source contract" | "Windows Rust release parity"
+    ) && routes == ["https://license.invalid"]
 }
 
 fn main() {
@@ -101,7 +104,7 @@ fn main() {
                     "the explicit Phase 4 restore-evidence build must use one exact http://127.0.0.1:<port> disposable trial issuer"
                 );
             }
-        } else if !github_ci_release_placeholder(&routes) {
+        } else if !non_release_ci_placeholder(&routes) {
             if routes.len() != 2 {
                 panic!(
                     "production SF_LICENSE_SERVICE_URL must contain distinct primary and recovery HTTPS origins separated by '|'"
