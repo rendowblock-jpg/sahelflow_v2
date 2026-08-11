@@ -184,13 +184,9 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await page.keyboard.press("Escape");
   });
 
-  test("owner login works from a fresh browser context", async ({ page }) => {
-    await page.goto("/login", { waitUntil: "domcontentloaded" });
-    await loginOwner(page);
-    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await waitForHydration(page);
-    expect(page.url()).toContain("/dashboard");
-  });
+  // Fresh-install authentication is proved independently by phase5-auth-entry.spec.ts
+  // in the dedicated Phase 5 auth job. Repeating that ceremony inside this seeded
+  // serial suite can trip the server attempt limiter during Playwright group retries.
 
   test("persisted compact density hydrates through one server-safe snapshot", async ({
     page,
@@ -429,20 +425,27 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
       });
       await expect(expenseDialogTrigger).toBeVisible();
       await expenseDialogTrigger.click();
-      await assertTargetFloor(
-        page.locator('[data-slot="dialog-close"]').first(),
-        "portaled dialog close control",
-      );
 
-      const selectTrigger = page.locator('[data-slot="select-trigger"]').first();
-      await expect(selectTrigger).toBeVisible();
-      await selectTrigger.click();
+      const expenseDialog = page.getByRole("dialog", {
+        name: "Ajouter une dépense",
+      });
+      await expect(expenseDialog).toBeVisible();
+      const dialogClose = expenseDialog.getByRole("button", { name: "Fermer" });
+      await assertTargetFloor(dialogClose, "portaled dialog close control");
+
+      // FormControl composes the Radix trigger through a Slot, so user-facing
+      // combobox semantics are the stable evidence boundary rather than data-slot.
+      const categorySelect = expenseDialog.getByRole("combobox", {
+        name: "Catégorie",
+      });
+      await assertTargetFloor(categorySelect, "expense category select trigger");
+      await categorySelect.click();
       await assertTargetFloor(
-        page.locator('[data-slot="select-item"]').first(),
+        page.getByRole("option").first(),
         "portaled select option",
       );
       await page.keyboard.press("Escape");
-      await page.locator('[data-slot="dialog-close"]').first().click();
+      await dialogClose.click();
 
       await page.setViewportSize({ width: 640, height: 768 });
       const sheetTrigger = page.locator('[data-slot="sheet-trigger"]').first();
