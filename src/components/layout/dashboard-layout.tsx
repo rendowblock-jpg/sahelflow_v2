@@ -53,17 +53,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const previousPath = useRef<string | null>(null);
 
   // Radix dialogs/popovers are portaled under <body>, outside the dashboard shell.
-  // Mirror only the hydration-safe density state to the document root before
-  // paint. CSS owns the actual control-height mapping, including pointer:coarse,
-  // so shell and portals cannot disagree on touch-capable Windows hardware.
+  // Mirror the hydration-safe density to the document root before paint and use
+  // the same pointer:coarse contract as the shell CSS. This keeps portaled touch
+  // controls at the 44px accessibility floor on Windows touch hardware even when
+  // compact density is selected.
   useLayoutEffect(() => {
     const root = document.documentElement;
+    const coarsePointer = window.matchMedia("(pointer: coarse)");
     root.dataset.density = density;
 
+    const applyControlHeight = () => {
+      root.style.setProperty(
+        "--control-height",
+        coarsePointer.matches
+          ? "2.75rem"
+          : density === "compact"
+            ? "2.25rem"
+            : "2.5rem",
+      );
+    };
+
+    applyControlHeight();
+    coarsePointer.addEventListener("change", applyControlHeight);
+
     return () => {
+      coarsePointer.removeEventListener("change", applyControlHeight);
       if (root.dataset.density === density) {
         delete root.dataset.density;
       }
+      root.style.removeProperty("--control-height");
     };
   }, [density]);
 
