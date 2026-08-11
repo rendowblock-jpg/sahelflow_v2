@@ -182,12 +182,15 @@ export function DailyReportPanel() {
 
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
-            <Label className="cursor-pointer">{t("reports.enableDaily")}</Label>
+            <Label htmlFor="daily-report-enabled" className="cursor-pointer">
+              {t("reports.enableDaily")}
+            </Label>
             <p className="text-xs text-muted-foreground">
               {t("reports.enableDailyHint")}
             </p>
           </div>
           <Switch
+            id="daily-report-enabled"
             checked={settings.daily_report_enabled === "true"}
             onCheckedChange={(value) =>
               setSettings((current) => ({
