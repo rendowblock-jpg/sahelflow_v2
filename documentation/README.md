@@ -4,6 +4,7 @@
 > **Last reconciled:** 2026-08-11
 > **Protected `main` at handoff:** `04adb20fb5846499039eda61a9b765deb9c622e6` — PR #236
 > **Latest application-changing protected merge:** PR #236
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14`, protected signed run `31388777098`
 > **Founder-installed release:** Internal.14
@@ -51,6 +52,11 @@ baseline. The installed rejection is systemic across typography/density,
 locale/RTL transitions, themes, motion, navigation, warnings, charts, Inbox, AI
 Agents, Settings and route-wide coherence. The implementation team owns the
 root-cause route/component audit rather than using the Founder as manual pixel QA.
+
+Semantic continuity: the historical retained set was **issues #201, #214, #221,
+#226 and #230**. Current live truth is #201/#214 closed and **issue #221**, #226
+and #230 open. The Phase 5 baseline SHA above remains historical checkpoint
+identity, not the current application frontier.
 
 ## Shared frontend foundation now protected
 
