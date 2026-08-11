@@ -54,9 +54,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Radix dialogs/popovers are portaled under <body>, outside the dashboard shell.
   // Mirror the hydration-safe density to the document root before paint and use
-  // the same pointer:coarse contract as the shell CSS. This keeps portaled touch
-  // controls at the 44px accessibility floor on Windows touch hardware even when
-  // compact density is selected.
+  // the same pointer:coarse contract as the shell CSS. Touch hardware receives a
+  // 48px root control target so the bounded 95% open-scale motion still stays
+  // above the 44px accessibility floor throughout the interaction.
   useLayoutEffect(() => {
     const root = document.documentElement;
     const coarsePointer = window.matchMedia("(pointer: coarse)");
@@ -66,7 +66,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       root.style.setProperty(
         "--control-height",
         coarsePointer.matches
-          ? "2.75rem"
+          ? "3rem"
           : density === "compact"
             ? "2.25rem"
             : "2.5rem",
