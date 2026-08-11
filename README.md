@@ -11,19 +11,23 @@ settings, licensing, multi-shop and recovery under one protected authority model
 - Protected `main` at the 2026-08-11 handoff: `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — PR #234.
 - Latest application-changing protected merge: **PR #234 — resilient production trial transport source architecture**.
 - Published executable remains **Internal.14**, application source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed publication run `31388777098`.
-- Phase 5 protected source/browser checkpoint remains PR #220; Phase 6 source/browser + Phase 7 measurement checkpoint remains PR #223.
+- **Published release: `1.0.0-internal.14`** / MSI `1.0.0.14`.
+- Phase 5 protected source/browser checkpoint remains PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`; Phase 6 source/browser + Phase 7 measurement checkpoint remains PR #223.
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
 - Founder-installed release: **Internal.14**, permanently licensed.
-- Founder-accepted baseline remains **Internal.5**; Internal.14 is not accepted.
-- Open retained issues: **#221, #226, #230**.
-- Issues **#201 and #214 are closed** from stronger exact installed evidence on PR #234.
+- Founder-accepted baseline remains **Internal.5**; **Founder acceptance remains open**.
 - Phase 8 implementation remains frozen behind the mandatory pre-Phase-8 stabilization + Founder-acceptance gate.
 
 Always re-read live protected `main`, open PRs/issues and current Actions before
 implementation. Documentation-only commits may advance `main` without changing the
 published executable source.
 
-## Why the current stabilization gate exists
+## Phase 5 closure and Founder-installed reconciliation
+
+The Phase 5 closure checkpoint remains the protected source/browser evidence from
+PR #220. Phase 6/7 source/browser evidence remains protected through PR #223.
+Those checkpoints remain valid for what their exact heads proved, but the later
+Founder-installed Internal.14 use is not whole-product acceptance.
 
 The Founder installed and used Internal.14 on the T470 and explicitly values the
 backend/engine while rejecting the current frontend as the whole-product quality
@@ -46,6 +50,10 @@ small UI defect manually.
 
 PR #234 exact installed evidence also closed two retained historical gaps: hydrated
 WebView UI proof (#201) and replacement-install recovery certification (#214).
+
+The historical continuity set was **issues #201, #214, #221, #226 and #230**.
+Current live state is different: #201 and #214 are closed; #221, #226 and #230
+remain open.
 
 ## What remains open
 
