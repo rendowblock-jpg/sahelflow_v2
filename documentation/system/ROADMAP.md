@@ -5,6 +5,7 @@
 > **Protected `main` at 2026-08-11 handoff:** `04adb20fb5846499039eda61a9b765deb9c622e6` — PR #236
 > **Historical PR #231 program-freeze baseline:** `23fb2e0ee4956132fafe8dd6973be42d3cfc8032`
 > **Latest application-changing protected merge:** PR #236 at `04adb20fb5846499039eda61a9b765deb9c622e6`
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published Internal.14 executable source:** PR #228 / `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14`, run `31388777098`
 > **Founder-accepted baseline:** Internal.5
