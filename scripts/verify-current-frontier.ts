@@ -173,8 +173,6 @@ const staleFoundationNextMarkers = [
   "The next package is **frontend foundation authority**",
   "The next implementation package is **frontend foundation authority**",
   "The exact next implementation outcome is **frontend foundation authority**",
-  "## Phase 6 next action",
-  "## Exact next outcome — frontend foundation authority",
   "Start the frontend-foundation package",
   "Latest application-changing protected merge: PR #234",
   "Latest application-changing protected merge:** PR #234",
