@@ -48,6 +48,13 @@ const DEFAULT_PRESET: ThemePreset = "sahel";
 const PRESETS: ThemePreset[] = ["sahel", "atlas", "oasis", "dune"];
 let transitionTimer: number | undefined;
 
+// A WebView can deny/quota-fail localStorage while the application is otherwise
+// healthy. These bounded in-memory overrides keep context state and the DOM under
+// one authority for the current session when persistence is unavailable. A later
+// successful write or an external storage event releases the relevant override.
+let runtimeThemeOverride: ThemeMode | null = null;
+let runtimePresetOverride: ThemePreset | null = null;
+
 const ThemeContext = createContext<ThemeContextValue>({
   theme: DEFAULT_THEME,
   resolvedTheme: DEFAULT_THEME,
@@ -99,20 +106,32 @@ function applyAppearance(
   root.style.colorScheme = resolvedTheme;
 }
 
-// ── localStorage external stores ─────────────────────────────────────────────
+// ── persisted + in-memory appearance external stores ────────────────────────
 
 function subscribe(callback: () => void): () => void {
   if (typeof window === "undefined") return () => {};
-  const notify = () => callback();
-  window.addEventListener("storage", notify);
-  window.addEventListener(THEME_CHANGE_EVENT, notify);
+
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY || event.key === null) {
+      runtimeThemeOverride = null;
+    }
+    if (event.key === PRESET_STORAGE_KEY || event.key === null) {
+      runtimePresetOverride = null;
+    }
+    callback();
+  };
+  const onLocalChange = () => callback();
+
+  window.addEventListener("storage", onStorage);
+  window.addEventListener(THEME_CHANGE_EVENT, onLocalChange);
   return () => {
-    window.removeEventListener("storage", notify);
-    window.removeEventListener(THEME_CHANGE_EVENT, notify);
+    window.removeEventListener("storage", onStorage);
+    window.removeEventListener(THEME_CHANGE_EVENT, onLocalChange);
   };
 }
 
 function getThemeSnapshot(): ThemeMode {
+  if (runtimeThemeOverride !== null) return runtimeThemeOverride;
   try {
     return normalizeTheme(localStorage.getItem(STORAGE_KEY));
   } catch {
@@ -125,6 +144,7 @@ function getThemeServerSnapshot(): ThemeMode {
 }
 
 function getPresetSnapshot(): ThemePreset {
+  if (runtimePresetOverride !== null) return runtimePresetOverride;
   try {
     return normalizePreset(localStorage.getItem(PRESET_STORAGE_KEY));
   } catch {
@@ -134,6 +154,32 @@ function getPresetSnapshot(): ThemePreset {
 
 function getPresetServerSnapshot(): ThemePreset {
   return DEFAULT_PRESET;
+}
+
+function persistTheme(theme: ThemeMode): void {
+  runtimeThemeOverride = theme;
+  try {
+    localStorage.setItem(STORAGE_KEY, theme);
+    runtimeThemeOverride = null;
+  } catch {
+    // Keep the in-memory override. Persistence is optional; coherent live state is not.
+  }
+}
+
+function persistPreset(preset: ThemePreset): void {
+  runtimePresetOverride = preset;
+  try {
+    localStorage.setItem(PRESET_STORAGE_KEY, preset);
+    runtimePresetOverride = null;
+  } catch {
+    // Keep the in-memory override. Persistence is optional; coherent live state is not.
+  }
+}
+
+function notifyAppearanceChanged(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
+  }
 }
 
 // ── System theme external store ──────────────────────────────────────────────
@@ -185,38 +231,34 @@ export function ThemeProvider({
 
   const setTheme = useCallback((newTheme: string) => {
     const normalized = normalizeTheme(newTheme);
-    try {
-      const systemPrefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)",
-      ).matches;
-      beginAppearanceTransition();
-      applyAppearance(
-        resolveTheme(normalized, systemPrefersDark),
-        getPresetSnapshot(),
-      );
-      localStorage.setItem(STORAGE_KEY, normalized);
-      window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
-    } catch {
-      // Appearance persistence is a preference; failure must not block work.
-    }
+    const systemPrefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
+
+    beginAppearanceTransition();
+    persistTheme(normalized);
+    applyAppearance(
+      resolveTheme(normalized, systemPrefersDark),
+      getPresetSnapshot(),
+    );
+    // Always notify the external store, even when localStorage persistence failed.
+    notifyAppearanceChanged();
   }, []);
 
   const setPreset = useCallback((newPreset: ThemePreset) => {
     const normalized = normalizePreset(newPreset);
-    try {
-      const systemPrefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)",
-      ).matches;
-      beginAppearanceTransition();
-      applyAppearance(
-        resolveTheme(getThemeSnapshot(), systemPrefersDark),
-        normalized,
-      );
-      localStorage.setItem(PRESET_STORAGE_KEY, normalized);
-      window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
-    } catch {
-      // Appearance persistence is a preference; failure must not block work.
-    }
+    const systemPrefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
+
+    beginAppearanceTransition();
+    persistPreset(normalized);
+    applyAppearance(
+      resolveTheme(getThemeSnapshot(), systemPrefersDark),
+      normalized,
+    );
+    // Always notify the external store, even when localStorage persistence failed.
+    notifyAppearanceChanged();
   }, []);
 
   const value = useMemo<ThemeContextValue>(
