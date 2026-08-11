@@ -43,14 +43,20 @@ export type SettingsWorkspaceAccess = {
   appearance: boolean;
   license: boolean;
   demo: boolean;
-  ai: boolean;
+  aiKey: boolean;
+  aiConsent: boolean;
   delivery: boolean;
   reports: boolean;
-  integrations: boolean;
+  commerceRead: boolean;
+  commerceManage: boolean;
+  commerceSync: boolean;
   phone: boolean;
   phoneManage: boolean;
-  backup: boolean;
-  danger: boolean;
+  backupRead: boolean;
+  backupCreate: boolean;
+  backupRestore: boolean;
+  dataExport: boolean;
+  dangerReset: boolean;
 };
 
 type Group = "experience" | "connections" | "team" | "data";
@@ -79,11 +85,24 @@ function groupVisible(group: Group, access: SettingsWorkspaceAccess): boolean {
     case "experience":
       return access.profile || access.appearance || access.reports || access.phone;
     case "connections":
-      return access.integrations || access.delivery || access.ai;
+      return (
+        access.commerceRead ||
+        access.commerceManage ||
+        access.delivery ||
+        access.aiKey ||
+        access.aiConsent
+      );
     case "team":
       return access.security || access.team || access.license;
     case "data":
-      return access.backup || access.demo || access.danger;
+      return (
+        access.backupRead ||
+        access.backupCreate ||
+        access.backupRestore ||
+        access.demo ||
+        access.dataExport ||
+        access.dangerReset
+      );
   }
 }
 
@@ -141,14 +160,21 @@ export function SettingsWorkspace({
 
   const renderConnections = () => (
     <div className="space-y-6">
-      {access.integrations ? (
-        <>
-          <CommerceIntegrationsPanel integrations={integrations} />
-          <CommerceSyncRecoveryPanel />
-        </>
+      {access.commerceRead || access.commerceManage ? (
+        <CommerceIntegrationsPanel
+          integrations={integrations}
+          canManage={access.commerceManage}
+          canSync={access.commerceSync}
+        />
       ) : null}
+      {access.commerceManage ? <CommerceSyncRecoveryPanel /> : null}
       {access.delivery ? <DeliveryCredentialsPanel /> : null}
-      {access.ai ? <AiKeyPanel /> : null}
+      {access.aiKey || access.aiConsent ? (
+        <AiKeyPanel
+          canManageKey={access.aiKey}
+          canManageConsent={access.aiConsent}
+        />
+      ) : null}
     </div>
   );
 
@@ -168,9 +194,20 @@ export function SettingsWorkspace({
 
   const renderData = () => (
     <div className="space-y-6">
-      {access.backup ? <BackupRestorePanel /> : null}
+      {access.backupRead || access.backupCreate || access.backupRestore ? (
+        <BackupRestorePanel
+          canRead={access.backupRead}
+          canCreate={access.backupCreate}
+          canRestore={access.backupRestore}
+        />
+      ) : null}
       {access.demo ? <DemoDataPanel /> : null}
-      {access.danger ? <DangerZonePanel /> : null}
+      {access.dataExport || access.dangerReset ? (
+        <DangerZonePanel
+          canExport={access.dataExport}
+          canReset={access.dangerReset}
+        />
+      ) : null}
     </div>
   );
 
