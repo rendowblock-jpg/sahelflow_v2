@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import type { ComponentType } from "react";
 import { useState } from "react";
-import { CheckCircle2, ExternalLink, Loader2, Plug } from "lucide-react";
+import {
+  CheckCircle2,
+  ExternalLink,
+  KeyRound,
+  Loader2,
+  Plug,
+} from "lucide-react";
 
 import {
   GoogleSheetsIcon,
@@ -47,10 +53,19 @@ interface CommerceDefinition {
   docsUrl?: string;
 }
 
+type ApiResult = {
+  error?: string;
+  code?: string;
+};
+
 export function CommerceIntegrationsPanel({
   integrations,
+  canManage,
+  canSync,
 }: {
   integrations: Array<{ platform: string; status: string }>;
+  canManage: boolean;
+  canSync: boolean;
 }) {
   const { t, locale: rawLocale } = useI18n();
   const locale = rawLocale as SettingsWorkspaceLocale;
@@ -63,6 +78,10 @@ export function CommerceIntegrationsPanel({
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [reauthRequired, setReauthRequired] = useState(false);
+  const [pin, setPin] = useState("");
+  const [reauthBusy, setReauthBusy] = useState(false);
+  const [reauthError, setReauthError] = useState<string | null>(null);
 
   const definitions: CommerceDefinition[] = [
     {
@@ -142,31 +161,49 @@ export function CommerceIntegrationsPanel({
 
   const selected = definitions.find((definition) => definition.id === connecting);
 
-  const openConfiguration = (provider: CommerceDefinition["id"]) => {
-    setConnecting(provider);
+  const resetDialog = () => {
+    setConnecting(null);
     setFormData({});
+    setReauthRequired(false);
+    setPin("");
+    setReauthError(null);
   };
 
-  const handleSave = async () => {
-    if (!selected) return;
+  const openConfiguration = (provider: CommerceDefinition["id"]) => {
+    if (!canManage) return;
+    setConnecting(provider);
+    setFormData({});
+    setReauthRequired(false);
+    setPin("");
+    setReauthError(null);
+  };
+
+  const handleSave = async (proofRefreshed = false) => {
+    if (!selected || !canManage) return;
     setSaving(true);
+    setReauthError(null);
     try {
       const response = await fetch("/api/integrations/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider: selected.id, ...formData }),
       });
-      const data = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
+      const data = (await response.json().catch(() => ({}))) as ApiResult;
+      if (
+        response.status === 403 &&
+        data.code === "REAUTHENTICATION_REQUIRED" &&
+        !proofRefreshed
+      ) {
+        setReauthRequired(true);
+        return;
+      }
       if (!response.ok) {
         throw new Error(data.error ?? t("common.connectionFailed"));
       }
       toast.success(
         t("integrations.connectedSuccess", { name: selected.name }),
       );
-      setConnecting(null);
-      setFormData({});
+      resetDialog();
       router.refresh();
     } catch (error) {
       toast.error(
@@ -177,7 +214,33 @@ export function CommerceIntegrationsPanel({
     }
   };
 
+  const verifyPinAndSave = async () => {
+    if (!pin.trim()) return;
+    setReauthBusy(true);
+    setReauthError(null);
+    try {
+      const response = await fetch("/api/auth/reauthenticate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      const data = (await response.json().catch(() => ({}))) as ApiResult;
+      if (!response.ok) {
+        setReauthError(data.error ?? copy("reauthFailed"));
+        return;
+      }
+      setReauthRequired(false);
+      setPin("");
+      await handleSave(true);
+    } catch {
+      setReauthError(copy("reauthFailed"));
+    } finally {
+      setReauthBusy(false);
+    }
+  };
+
   const handleSyncNow = async () => {
+    if (!canSync) return;
     setSyncing(true);
     try {
       const response = await fetch("/api/integrations/sync", {
@@ -220,18 +283,20 @@ export function CommerceIntegrationsPanel({
             {copy("commerceDescription")}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void handleSyncNow()}
-          disabled={syncing}
-        >
-          {syncing ? (
-            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-          ) : null}
-          {syncing ? t("integrations.syncing") : t("integrations.syncNow")}
-        </Button>
+        {canSync ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void handleSyncNow()}
+            disabled={syncing}
+          >
+            {syncing ? (
+              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            ) : null}
+            {syncing ? t("integrations.syncing") : t("integrations.syncNow")}
+          </Button>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 md:grid-cols-3">
@@ -247,7 +312,10 @@ export function CommerceIntegrationsPanel({
                   <span
                     className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${definition.iconContainerClassName}`}
                   >
-                    <Icon className={`size-5 ${definition.iconClassName}`} />
+                    <Icon
+                      className={`size-5 ${definition.iconClassName}`}
+                      aria-hidden="true"
+                    />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -265,17 +333,19 @@ export function CommerceIntegrationsPanel({
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={isConnected ? "outline" : "default"}
-                    onClick={() => openConfiguration(definition.id)}
-                  >
-                    <Plug className="size-3.5" aria-hidden="true" />
-                    {isConnected
-                      ? t("integrations.configure")
-                      : t("integrations.connect")}
-                  </Button>
+                  {canManage ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={isConnected ? "outline" : "default"}
+                      onClick={() => openConfiguration(definition.id)}
+                    >
+                      <Plug className="size-3.5" aria-hidden="true" />
+                      {isConnected
+                        ? t("integrations.configure")
+                        : t("integrations.connect")}
+                    </Button>
+                  ) : null}
                   {definition.docsUrl ? (
                     <Button asChild size="sm" variant="ghost">
                       <a
@@ -295,7 +365,7 @@ export function CommerceIntegrationsPanel({
         </div>
 
         <div className="flex items-center gap-2 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-          <GoogleSheetsIcon className="size-4 shrink-0" />
+          <GoogleSheetsIcon className="size-4 shrink-0" aria-hidden="true" />
           <span>{t("common.comingSoon")}: Google Sheets</span>
         </div>
       </CardContent>
@@ -303,10 +373,7 @@ export function CommerceIntegrationsPanel({
       <Dialog
         open={Boolean(selected)}
         onOpenChange={(open) => {
-          if (!open) {
-            setConnecting(null);
-            setFormData({});
-          }
+          if (!open) resetDialog();
         }}
       >
         <DialogContent>
@@ -336,25 +403,59 @@ export function CommerceIntegrationsPanel({
                   }
                   placeholder={field.placeholder}
                   autoComplete="off"
+                  disabled={saving || reauthBusy}
                 />
               </div>
             ))}
+
+            {reauthRequired ? (
+              <div className="space-y-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <KeyRound className="size-4" aria-hidden="true" />
+                  {copy("reauthTitle")}
+                </div>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {copy("reauthDescription")}
+                </p>
+                <Input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="current-password"
+                  value={pin}
+                  onChange={(event) => setPin(event.target.value)}
+                  placeholder={copy("pinPlaceholder")}
+                  aria-label={copy("pinPlaceholder")}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void verifyPinAndSave();
+                  }}
+                />
+                {reauthError ? (
+                  <p role="alert" className="text-xs text-destructive">
+                    {reauthError}
+                  </p>
+                ) : null}
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void verifyPinAndSave()}
+                  disabled={!pin.trim() || reauthBusy}
+                >
+                  {reauthBusy ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : null}
+                  {copy("verify")}
+                </Button>
+              </div>
+            ) : null}
           </div>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setConnecting(null);
-                setFormData({});
-              }}
-            >
+            <Button type="button" variant="outline" onClick={resetDialog}>
               {t("common.cancel")}
             </Button>
             <Button
               type="button"
               onClick={() => void handleSave()}
-              disabled={saving}
+              disabled={saving || reauthBusy || reauthRequired}
             >
               {saving ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
