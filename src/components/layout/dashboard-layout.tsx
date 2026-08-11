@@ -53,21 +53,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const previousPath = useRef<string | null>(null);
 
   // Radix dialogs/popovers are portaled under <body>, outside the dashboard shell.
-  // Mirror the hydration-safe committed density onto the document root before
-  // paint so workbench and portaled controls converge in the same commit.
+  // Mirror only the hydration-safe density state to the document root before
+  // paint. CSS owns the actual control-height mapping, including pointer:coarse,
+  // so shell and portals cannot disagree on touch-capable Windows hardware.
   useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset.density = density;
-    root.style.setProperty(
-      "--control-height",
-      density === "compact" ? "2.25rem" : "2.5rem",
-    );
 
     return () => {
       if (root.dataset.density === density) {
         delete root.dataset.density;
       }
-      root.style.removeProperty("--control-height");
     };
   }, [density]);
 
