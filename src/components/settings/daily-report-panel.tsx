@@ -97,11 +97,16 @@ export function DailyReportPanel() {
         const data = (await response.json().catch(() => ({}))) as {
           ok?: boolean;
           accepted?: boolean;
+          skipped?: string;
           reason?: string;
           state?: string;
           error?: string;
         };
-        if (response.ok && data.ok) {
+        if (response.ok && data.ok && data.skipped) {
+          toast.info(
+            t("reports.reportInfo", { reason: String(data.skipped) }),
+          );
+        } else if (response.ok && data.ok) {
           toast.success(t("reports.reportSent"));
         } else if (data.accepted) {
           toast.info(
