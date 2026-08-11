@@ -1,17 +1,30 @@
 /*
- * SahelFlow Phase 5 — desktop operational experience layer.
+ * SahelFlow authenticated desktop experience layer.
  *
- * Scoped to the authenticated software frame so setup/login/public storefront
- * surfaces retain their own interaction context. This layer intentionally
- * neutralizes legacy SaaS-style page choreography and wide presentation spacing
- * while the route families migrate onto the governed workbench primitives.
+ * This file is the shell-level normalization boundary while route families adopt
+ * the shared frontend foundation. It must not become a second page-by-page design
+ * system: only cross-workspace density, motion, elevation and workbench contracts
+ * belong here.
  */
 
 [data-sahelflow-shell="desktop"] {
-  --sf-workbench-inline: clamp(0.75rem, 1.25vw, 1.25rem);
-  --sf-workbench-block: 0.875rem;
-  --sf-section-gap: 1rem;
-  --sf-panel-radius: 0.5rem;
+  --sf-workbench-inline: clamp(0.875rem, 1.35vw, 1.5rem);
+  --sf-workbench-block: 1rem;
+  --sf-section-gap: 1.125rem;
+  --sf-panel-radius: 0.625rem;
+  --sf-motion-fast: 140ms;
+  --sf-motion-normal: 180ms;
+  --sf-motion-slow: 260ms;
+  --sf-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Comfortable is the product default; compact is an explicit user choice. */
+  --control-height: 2.5rem;
+}
+
+[data-sahelflow-shell="desktop"][data-density="compact"] {
+  --sf-workbench-block: 0.75rem;
+  --sf-section-gap: 0.875rem;
+  --control-height: 2.25rem;
 }
 
 [data-sahelflow-shell="desktop"] .app-content {
@@ -35,8 +48,8 @@
 }
 
 /* Tailwind's legacy `space-y-*` utilities implement rhythm with child margins,
- * so `row-gap` alone cannot tighten them. Normalize those margins inside the
- * authenticated workbench until route families migrate to explicit grid/gap. */
+ * so `row-gap` alone cannot normalize them. Keep one workbench rhythm until route
+ * families migrate to explicit grid/gap primitives. */
 [data-sahelflow-shell="desktop"] .page-sections > :not(:last-child) {
   --tw-space-y-reverse: 0 !important;
   margin-block-start: 0 !important;
@@ -44,38 +57,52 @@
 }
 
 [data-sahelflow-shell="desktop"] :is(.card-grid-2, .card-grid-3, .card-grid-4) {
-  gap: 0.75rem;
+  gap: 0.875rem;
 }
 
 /*
- * Repeated page-load entrances and hover lifts make a dense operational product
- * feel like a marketing dashboard and add unnecessary paint work in WebView2.
- * Keep transitions on direct controls/dialog continuity, not every page card.
+ * Retire the old marketing-style stagger/lift language, but do not blanket-disable
+ * framework/component continuity. Radix/Tailwind `animate-in` transitions are
+ * allowed again so overlays and interactive state changes do not snap.
  */
 [data-sahelflow-shell="desktop"] :is(
   .stagger-grid > *,
   .animate-fade-up,
-  .animate-fade-in,
-  .animate-in,
   .animate-scale-in,
   .animate-slide-right
 ) {
   animation: none !important;
 }
 
+/* Existing route-level fade markers become a restrained product transition. */
+[data-sahelflow-shell="desktop"] .animate-fade-in {
+  animation: sf-workspace-enter var(--sf-motion-normal) var(--sf-motion-ease) both;
+}
+
+@keyframes sf-workspace-enter {
+  from {
+    opacity: 0.88;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 [data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover) {
   transform: none !important;
   transition-property: border-color, background-color, box-shadow;
-  transition-duration: 120ms;
+  transition-duration: var(--sf-motion-fast);
+  transition-timing-function: var(--sf-motion-ease);
 }
 
 [data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover):hover {
   transform: none !important;
 }
 
-/* Restraint for the existing card primitive until each workbench adopts its
- * specific list/panel hierarchy. The border carries grouping; elevation is
- * reserved for overlays and genuinely floating controls. */
+/* The border/surface hierarchy carries ordinary grouping. Elevation remains for
+ * overlays and genuinely floating controls rather than every dashboard card. */
 [data-sahelflow-shell="desktop"] [data-slot="card"] {
   border-radius: var(--sf-panel-radius);
   box-shadow: none;
@@ -104,22 +131,27 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The software frame is dense on desktop but touch remains intentionally roomy. */
+/* Touch remains intentionally roomy even when compact density is selected. */
 @media (pointer: coarse) {
   [data-sahelflow-shell="desktop"] {
     --sf-workbench-block: 1rem;
     --sf-section-gap: 1rem;
+    --control-height: 2.75rem;
   }
 }
 
 @media (min-width: 1440px) {
   [data-sahelflow-shell="desktop"] {
-    --sf-workbench-inline: 1.5rem;
+    --sf-workbench-inline: 1.625rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   [data-sahelflow-shell="desktop"] * {
     scroll-behavior: auto !important;
+  }
+
+  [data-sahelflow-shell="desktop"] .animate-fade-in {
+    animation: none !important;
   }
 }
