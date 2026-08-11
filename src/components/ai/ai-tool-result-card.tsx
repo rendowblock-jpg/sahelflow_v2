@@ -13,6 +13,7 @@ import type { AiToolCallView } from "@/components/ai/ai-workspace-types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/use-i18n";
+import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import {
   getAiWorkspaceCopy,
   type AiWorkspaceCopyKey,
@@ -116,12 +117,6 @@ function isProposalResult(value: unknown): boolean {
   return isRecord(value) && value.pending_action_proposal === true;
 }
 
-function humanizeTool(name: string): string {
-  return name
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
 function simpleValue(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") return value;
@@ -158,9 +153,7 @@ function recordFields(
     ),
   ];
   return ordered.flatMap((key) => {
-    if (["id", "createdAt", "updatedAt", "argsHash", "proposalDigest"].includes(key)) {
-      return [];
-    }
+    if (!FIELD_COPY[key]) return [];
     const formatted = formatValue(key, record[key], locale);
     if (formatted === null || formatted.length > 120) return [];
     return [{ key, value: formatted }];
@@ -183,7 +176,7 @@ function ResultRecord({
       {fields.map((field) => (
         <div key={field.key} className="min-w-0">
           <dt className="text-[11px] text-muted-foreground">
-            {FIELD_COPY[field.key] ? copy(FIELD_COPY[field.key]!) : field.key}
+            {copy(FIELD_COPY[field.key]!)}
           </dt>
           <dd dir="auto" className="truncate font-medium text-foreground">
             {field.value}
@@ -227,7 +220,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
             <Database className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
           )}
           <div className="min-w-0">
-            <p className="truncate text-xs font-semibold">{humanizeTool(tool.name)}</p>
+            <p className="truncate text-xs font-semibold">{getAiToolLabel(locale, tool.name)}</p>
             <p className="text-[10px] text-muted-foreground">
               {running ? copy("toolWorking") : failed ? copy("toolFailed") : copy("toolResult")}
             </p>
