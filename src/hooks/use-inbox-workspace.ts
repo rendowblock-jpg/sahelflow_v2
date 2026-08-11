@@ -414,8 +414,11 @@ export function useInboxWorkspace() {
   });
 
   useEffect(() => {
-    void loadChats();
+    const initialId = window.setTimeout(() => {
+      void loadChats();
+    }, 0);
     return () => {
+      window.clearTimeout(initialId);
       if (chatRefreshTimerRef.current !== null) {
         window.clearTimeout(chatRefreshTimerRef.current);
         chatRefreshTimerRef.current = null;
