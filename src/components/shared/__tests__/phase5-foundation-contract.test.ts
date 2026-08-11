@@ -52,16 +52,22 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(rootLayout).toContain("e.dataset.themePreset=p");
   });
 
-  it("keeps global table and portaled-overlay density on the same persisted UI authority", () => {
+  it("hydrates one persisted density authority through a server-safe snapshot", () => {
+    const store = read("src/stores/ui-store.ts");
+    const densityHook = read("src/hooks/use-ui-density.ts");
     const table = read("src/components/data-table/data-table.tsx");
     const appearance = read("src/components/settings/appearance-panel.tsx");
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
 
-    expect(table).toContain("useUIStore((state) => state.density)");
-    expect(table).toContain("useUIStore((state) => state.setDensity)");
+    expect(store).toContain('export const DEFAULT_UI_DENSITY: UiDensity = "comfortable"');
+    expect(store).toContain("density: DEFAULT_UI_DENSITY");
+    expect(densityHook).toContain("useSyncExternalStore(");
+    expect(densityHook).toContain("useUIStore.subscribe");
+    expect(densityHook).toContain("() => DEFAULT_UI_DENSITY");
+    expect(table).toContain("const { density, setDensity } = useUiDensity()");
     expect(table).not.toContain("sf-density");
-    expect(appearance).toContain("useUIStore((state) => state.density)");
-    expect(appearance).toContain("useUIStore((state) => state.setDensity)");
+    expect(appearance).toContain("const { density, setDensity } = useUiDensity()");
+    expect(dashboardLayout).toContain("const { density } = useUiDensity()");
     expect(dashboardLayout).toContain("root.dataset.density = density");
     expect(dashboardLayout).toContain('"--control-height"');
     expect(dashboardLayout).toContain(
