@@ -25,8 +25,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/hooks/use-i18n";
+import { useUiDensity } from "@/hooks/use-ui-density";
 import { cn } from "@/lib/utils";
-import { useUIStore, type UiDensity } from "@/stores/ui-store";
+import type { UiDensity } from "@/stores/ui-store";
 
 const DENSITY_CLASSES: Record<UiDensity, { cell: string; head: string }> = {
   compact: { cell: "px-3 py-1.5", head: "px-3 py-2" },
@@ -99,6 +100,8 @@ interface DataTableProps<TData> {
  * avoids the false impression that reordering one page sorted the complete set.
  * Row navigation remains a pointer convenience only; keyboard navigation belongs
  * to real labelled links rendered inside the row rather than focusable <tr>s.
+ * Density comes from the same hydration-safe persisted authority as the shell and
+ * Settings so table geometry cannot disagree during first client hydration.
  */
 export function DataTable<TData>({
   columns,
@@ -114,8 +117,7 @@ export function DataTable<TData>({
   className,
 }: DataTableProps<TData>) {
   const { t } = useI18n();
-  const density = useUIStore((state) => state.density);
-  const setDensity = useUIStore((state) => state.setDensity);
+  const { density, setDensity } = useUiDensity();
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [sortUrl, setSortUrl] = useQueryStates(
     { sort: sortParser, page: pageParser },
