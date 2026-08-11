@@ -13,17 +13,27 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(source).not.toContain("lg:p-2");
   });
 
-  it("keeps locale, document direction and shell geometry on one reactive authority", () => {
+  it("commits locale, server copy, document direction and shell geometry as one refreshed tree", () => {
     const routeLayout = read("src/app/(dashboard)/layout.tsx");
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
+    const topbar = read("src/components/layout/topbar.tsx");
     const store = read("src/stores/ui-store.ts");
     const hook = read("src/hooks/use-i18n.ts");
     const i18n = read("src/lib/i18n/index.ts");
+    const serverLocale = read("src/lib/i18n/server-locale-context.tsx");
 
     expect(routeLayout).not.toContain("serverDir");
     expect(dashboardLayout).toContain("const { t, locale, dir } = useI18n()");
     expect(dashboardLayout).toContain("serverDir={dir}");
+    expect(store).toContain("requestLocale(locale: Locale)");
     expect(store).toContain("applyDocumentLocale(locale)");
+    expect(hook).toContain("requestLocale(newLocale)");
+    expect(hook).toContain("startLocaleTransition(() => {");
+    expect(hook).toContain("router.refresh();");
+    expect(topbar).not.toContain("router.refresh()");
+    expect(topbar).toContain("isLocalePending");
+    expect(serverLocale).toContain("useLayoutEffect");
+    expect(serverLocale).toContain("commitLocale(locale)");
     expect(hook).toContain("const translations = getTranslations(locale)");
     expect(hook).not.toContain("use(getTranslationPromise(locale))");
     expect(i18n).toContain("const STATIC_TRANSLATIONS");
@@ -42,15 +52,21 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(rootLayout).toContain("e.dataset.themePreset=p");
   });
 
-  it("keeps global table density on the same persisted UI authority as Settings", () => {
+  it("keeps global table and portaled-overlay density on the same persisted UI authority", () => {
     const table = read("src/components/data-table/data-table.tsx");
     const appearance = read("src/components/settings/appearance-panel.tsx");
+    const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
 
     expect(table).toContain("useUIStore((state) => state.density)");
     expect(table).toContain("useUIStore((state) => state.setDensity)");
     expect(table).not.toContain("sf-density");
     expect(appearance).toContain("useUIStore((state) => state.density)");
     expect(appearance).toContain("useUIStore((state) => state.setDensity)");
+    expect(dashboardLayout).toContain("root.dataset.density = density");
+    expect(dashboardLayout).toContain('"--control-height"');
+    expect(dashboardLayout).toContain(
+      'density === "compact" ? "2.25rem" : "2.5rem"',
+    );
   });
 
   it("keeps user-authored search direction automatic and command chrome flow-relative", () => {
