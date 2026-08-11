@@ -27,6 +27,10 @@ function parseLabels(value: string | null): string[] {
   }
 }
 
+function isOutboundDirection(direction: string): boolean {
+  return direction === "outbound" || direction === "outgoing";
+}
+
 export const GET = withErrorHandler(async (request: NextRequest) => {
   const actorContext = await requireTrustedAction("conversations.read");
   assertTrustedAction(actorContext, "customers.contact.read", {
@@ -90,7 +94,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
           ? {
               text: last.body,
               timestamp: Math.floor(last.timestamp.getTime() / 1_000),
-              fromMe: last.direction === "outbound",
+              fromMe: isOutboundDirection(last.direction),
             }
           : undefined,
         workflow: {
