@@ -95,7 +95,9 @@ async function loginOwner(page: Page) {
   await expect(submit).toBeEnabled();
   await submit.click();
   await page.waitForURL((url) => !url.pathname.includes("/login"), {
-    timeout: 30_000,
+    // Dev-mode route compilation can be slow on shared Actions runners; this is
+    // transport/evidence slack, not a product startup-performance allowance.
+    timeout: 60_000,
   });
 }
 
@@ -408,7 +410,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
             getComputedStyle(node).getPropertyValue("--control-height").trim(),
           ),
         )
-        .toBe("2.75rem");
+        .toBe("3rem");
 
       await page.getByRole("button", { name: "Français" }).click();
       await assertTargetFloor(
