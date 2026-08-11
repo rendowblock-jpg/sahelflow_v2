@@ -1,19 +1,20 @@
 # SahelFlow documentation
 
 > **Status:** Active documentation entry point
-> **Last reconciled:** 2026-08-11
-> **Protected application-changing baseline:** `598e2a0dc0352227431614cf1527672aa78ec015` — PR #240
-> **Latest application-changing protected merge:** PR #240 — AI Agents operational workspace redesign
+> **Last reconciled:** 2026-08-12
+> **Protected application-changing baseline:** `6e4477198f33344cd48c9230b32ff726079cd64d` — PR #242
+> **Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign
 > **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
 > **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
+> **AI Agents route adoption:** PR #240 / `598e2a0dc0352227431614cf1527672aa78ec015`
+> **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
 > **Phase 5 historical application-changing checkpoint:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14`, protected signed run `31388777098`
 > **Founder-installed release:** Internal.14
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Next product implementation frontier:** Settings workspace redesign
-> **After Settings:** remaining route adoption
+> **Next product implementation frontier:** remaining route inventory
 > **Mandatory gate before Phase 8:** whole-product frontend adoption + installed Phase 6/7 closure + live #230 + explicit Founder acceptance
 > **Open retained issues:** #221, #226, #230
 > **Execution epic:** #164
@@ -59,7 +60,8 @@ frontend as the whole-product quality baseline, so the mandatory pre-Phase-8
 program continues under the existing Phase 5/6/7 authorities.
 
 PR #236 repaired the shared frontend roots. PR #237 protects Inbox route adoption.
-PR #240 now protects AI Agents route adoption.
+PR #240 protects AI Agents route adoption. PR #242 now protects Settings route
+adoption.
 
 ### PR #237 — Inbox protected
 
@@ -88,25 +90,56 @@ AR/FR/EN/RTL parity and exact seller-message preservation. Sensitive execution
 remains server-owned and bound to exact persisted proposal digest, permission,
 shop, license and target-state revalidation.
 
-PR #240 is source/browser evidence only. It does **not** close #221/#226/#230 and
-is not installed Founder acceptance.
+### PR #242 — Settings protected
 
-## Next product frontier — Settings
+Protected squash merge `6e4477198f33344cd48c9230b32ff726079cd64d`
+establishes the task-shaped Settings operational workspace while preserving the
+existing configuration, identity, provider, licensing, backup/recovery and
+lifecycle authorities. Final pre-merge head
+`e749b0af05741ee45b16c349750d44092bd3beb9` passed:
 
-Settings is the next implementation package. It must redesign the configuration
-surface around protected existing authority rather than invent a parallel settings
-engine:
+- CI `31546488691` and Required PR gate;
+- Phase 5 Experience `31546488465` and required aggregate gate;
+- Phase 6–7 Completion `31546488422` and required aggregate gate, including the
+  full AR/FR/EN accessibility, 200%-equivalent reflow and performance browser
+  evidence;
+- final review state with no unresolved material review thread before merge.
 
-- clear grouped seller tasks instead of a flat control inventory;
-- explicit capability/health/configured/degraded/recovery states;
-- safe secret presence/edit ceremonies without exposing protected values;
-- provider, AI, account, license, backup/recovery and operational preferences
-  linked to their real authority owners;
-- safe destructive/reset flows with explicit scope, consequences and recovery;
-- AR/FR/EN, RTL, keyboard, reduced-motion, reflow and accessibility parity;
-- no direct bypass of dedicated reserved/lifecycle/identity/license authorities.
+Settings now groups configuration into seller-oriented Experience & operations,
+Connections, Team & security and Data & recovery workspaces. It distinguishes
+loading/authoritative/unavailable or recent-PIN verification truth; separates
+commerce read/manage/sync, phone read/manage and backup read/create/restore
+capabilities; removes competing hard-coded integration status; keeps secret values
+server-side; preserves approval + recent-PIN destructive ceremonies; and routes
+manual daily-report execution through authenticated `settings.manage` rather than
+browser-visible cron authority.
 
-Remaining production routes follow Settings. Phase 8 remains frozen.
+PR #240 and PR #242 are source/browser evidence only. They do **not** close
+#221/#226/#230 and are not installed Founder acceptance.
+
+## Next product frontier — remaining route inventory
+
+The active implementation frontier is now the **remaining production route
+inventory**. Complete the inventory before choosing the next branch; do not infer a
+single next route from chat history.
+
+Binding adoption order from the roadmap:
+
+1. dashboard;
+2. orders and confirmation queue;
+3. customers and risk;
+4. products and inventory;
+5. delivery and returns;
+6. COD and accounting;
+7. analytics;
+8. automations;
+9. setup, login and license;
+10. remaining administration.
+
+Each selected package must consume protected Phase 1–4 authority and the #236
+frontend foundation, carry honest loading/empty/permission/offline/pending/stale/
+conflict/retry/recovery semantics, and prove AR/FR/EN, RTL, keyboard,
+reduced-motion, reflow and accessibility parity. Phase 8 remains frozen.
 
 ## Retained issue truth
 
