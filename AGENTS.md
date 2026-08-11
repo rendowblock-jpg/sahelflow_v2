@@ -39,18 +39,19 @@ handoff system.
 
 A lower layer cannot silently weaken a higher one.
 
-## Verified product frontier after PR #237
+## Verified product frontier after PR #240
 
-- Protected application-changing `main`: `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400` — PR #237.
-- Latest application-changing protected merge: **PR #237 — Inbox operational workspace redesign**.
+- Protected application-changing `main`: `598e2a0dc0352227431614cf1527672aa78ec015` — PR #240.
+- Latest application-changing protected merge: **PR #240 — AI Agents operational workspace redesign**.
 - Shared frontend foundation remains **PR #236** / `04adb20fb5846499039eda61a9b765deb9c622e6`.
+- Inbox workspace remains protected through **PR #237** / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`.
 - Published executable source remains `2d60e2e74109b6e03626a5ccdff727c029a34591`.
 - Published release remains `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`.
 - Founder-installed Internal.14 is permanently licensed but **not** Founder-accepted.
 - Founder-accepted baseline remains Internal.5.
 - Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**.
-- Inbox is now source/browser protected through PR #237.
-- The next product implementation package is **AI Agents**, followed by **Settings**, then the remaining route inventory.
+- Inbox is source/browser protected through PR #237; AI Agents is source/browser protected through PR #240.
+- The next product implementation package is **Settings**, followed by the remaining route inventory.
 - Open retained issues remain **#221, #226, #230**. Historical #201/#214 are closed.
 - Phase 8 implementation remains frozen behind route-wide frontend adoption,
   installed Phase 6/7, live #230 and explicit Founder acceptance.
@@ -96,8 +97,10 @@ coherent repair; do not ask the Founder to enumerate every remaining pixel defec
 
 The installed observations established systemic failures across Arabic typography,
 text/control scale, locale/direction coherence, themes, motion, RTL geometry,
-navigation nesting, warning hierarchy, chart usefulness and the Inbox/AI
-Agents/Settings workspaces.
+navigation nesting, warning hierarchy, chart usefulness and route-level product
+workspaces. PR #236 repairs shared roots; PR #237 and PR #240 protect the first two
+route-level task workspaces. Settings and remaining production routes still need
+coherent adoption.
 
 Phase 8 implementation is frozen until the cross-phase gate in `ROADMAP.md` passes.
 Phase 8 research/read-only planning may continue when useful.
@@ -138,56 +141,79 @@ installed Founder acceptance.
 Protected squash merge `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400` protects the first route-level
 workspace adoption on top of #236. Final pre-merge head
 `8e9d5aa365f0c5873909c1c8517f88519d743b9d` passed CI `31524083664`, Phase 5
-`31524083552`, Phase 6–7 `31524083460`, the required aggregate checks and review
-thread closure before expected-head squash merge.
+`31524083552`, Phase 6–7 `31524083460`, required aggregate checks and review-thread
+closure before expected-head squash merge.
 
-Inbox now keeps local DB history/workflow usable independently of WhatsApp
-transport, exposes task queues + durable thread/composer + context, observes
-recovery, reconciles workflow changes, batches assignment projection, coalesces
-WebSocket refreshes and preserves provider/outbox/collaboration/permission
-business authority. This is source/browser evidence only.
+Inbox keeps local DB history/workflow usable independently of WhatsApp transport,
+exposes task queues + durable thread/composer + context, observes recovery,
+reconciles workflow changes, batches assignment projection, coalesces WebSocket
+refreshes and preserves provider/outbox/collaboration/permission business authority.
 
-## Exact next outcome — AI Agents workspace redesign
+### PR #240 — AI Agents operational workspace
 
-Do not open Settings or another implementation package concurrently. After this
-post-Inbox documentation reconciliation is protected, branch AI Agents from the
-exact reconciled `main`.
+Protected squash merge `598e2a0dc0352227431614cf1527672aa78ec015` protects the second task-shaped
+workspace on top of #236. Final pre-merge head
+`6355cc4c797a597af52c90decfe7727e405749be` passed:
 
-Current reconnaissance already proves the product problem:
+- CI `31535669292` and Required PR gate;
+- Phase 5 Experience `31535668960` and required aggregate gate;
+- Phase 6–7 Completion `31535668966` and required aggregate gate;
+- fresh adversarial review with all four material threads resolved before merge.
 
-- `/agents` is a feature-gated shell around one large `src/components/ai/ai-chat.tsx` client;
-- session loading, message history, SSE streaming, tool events/results, proposal
-  approval/recovery, mobile navigation and rendering state are mixed in one monolith;
-- several lifecycle effects suppress `react-hooks/set-state-in-effect`;
-- tool results are shown as truncated raw JSON-like output;
-- session/action load and creation failures can be silent or generic;
-- consent/key/model/quota/degraded states are not first-class workspace states;
-- server/UI defaults still contain hard-coded French and component-local AR/FR/EN copy;
-- persisted proposal projection already exposes sanitized summary/status/expiry/
-  execution/error information;
-- server approval already binds exact proposal digest, trusted actor, permissions,
-  shop/license and current target state.
+AI now uses one typed state authority with separate session/thread/context views,
+recent durable history, localized product-shaped tool results, explicit setup/
+provider/persistence/action-history degradation, proposal-bound sensitive action
+review, mobile drill-in, live-log/tail-follow accessibility and AR/FR/EN/RTL parity.
+Locale guidance is model-system presentation context; the exact seller user turn
+remains unchanged. Exact proposal digest, trusted actor, permission/shop/license/
+target revalidation and server-owned execution remain protected.
 
-### AI product contract for the package
+This is source/browser evidence only and does not close #221/#226/#230.
 
-Build a task-shaped operational workspace rather than a generic chatbot:
+## Exact next outcome — Settings workspace redesign
 
-1. split transport/session/action state into a typed hook/view model;
-2. provide sessions/work list + central assistant thread/composer + contextual
-   tool/proposal/action rail on desktop, with coherent mobile drill-in;
-3. render typed tool-result cards and affected-record/source navigation where
-   supported; raw JSON is not user authority;
-4. make pending/approved/executing/succeeded/failed/conflict/expired proposals and
-   recovery explicit;
-5. make consent/key/model/quota/offline/degraded states actionable while keeping
-   durable local session history readable;
-6. move all user copy under one AR/FR/EN authority and use flow-relative RTL geometry;
-7. preserve server-owned proposal execution and every Phase 1–4 protected boundary;
-8. prove keyboard/focus/reflow/reduced-motion/touch behavior under #236 roots.
+Do not open another implementation package concurrently. After this post-AI
+documentation reconciliation is protected, branch Settings from the exact
+reconciled `main`.
 
-Likely branch: `agent/ai-agents-product-workspace-redesign`.
+Likely branch: `agent/settings-product-workspace-redesign`.
 
-After AI Agents: **Settings → remaining production route inventory**.
+### Required reconnaissance before implementation
+
+Audit the complete Settings vertical before changing it:
+
+- `src/app/(dashboard)/settings/**` routes and layouts;
+- settings components, hooks, dialogs and navigation;
+- Settings APIs plus `src/lib/settings/**` and `src/lib/secrets/**`;
+- auth/identity/license configuration paths and dedicated authority endpoints;
+- provider configuration and AI consent/key surfaces;
+- backup/recovery, import/export/reset and destructive flows reachable from Settings;
+- all reserved setting/lifecycle/identity/license keys and current callers;
+- AR/FR/EN copy, RTL geometry, keyboard/focus, mobile/reflow, loading/permission/
+  degraded/recovery behavior and current source/browser tests.
+
+Freeze one consolidated Settings Problem Register and typed workspace contract
+before implementation. Do not assume every control belongs to the generic Settings
+service merely because it appears on the Settings route.
+
+### Settings product contract for the package
+
+Build a task-shaped configuration workspace rather than a flat control inventory:
+
+1. group settings by seller task, consequence and authority owner;
+2. distinguish configured/healthy/degraded/unavailable/recovery state;
+3. expose secret presence/status rather than protected credential values;
+4. preserve dedicated identity/license/lifecycle/provider/backup write paths and
+   reserved-key protection;
+5. make destructive/reset ceremonies explicit about scope, consequence and recovery;
+6. link AI/provider/account/license/backup/recovery/preferences to their real
+   backend authorities instead of duplicating them in client state;
+7. consume #236 AR/FR/EN, RTL, density/theme, keyboard/focus, touch, reflow and
+   reduced-motion roots;
+8. avoid schema/migration/native/business-authority rewrites unless a concrete
+   Settings integration defect proves a narrow repair necessary.
+
+After Settings: **remaining production route inventory**.
 
 ## Protected backend/business boundaries
 
