@@ -6,9 +6,7 @@ import {
   ArrowLeft,
   BellRing,
   CheckCircle2,
-  ChevronRight,
   Circle,
-  Clock3,
   Flag,
   Info,
   Loader2,
@@ -21,7 +19,6 @@ import {
   Search,
   Send,
   Smartphone,
-  UsersRound,
   WifiOff,
 } from "lucide-react";
 
@@ -138,10 +135,16 @@ function TransportPill({
   transport: InboxTransportState;
   copy: ReturnType<typeof useInboxWorkspace>["copy"];
 }) {
-  const base = "inline-flex min-h-8 items-center gap-2 rounded-full border px-2.5 text-xs font-medium";
+  const base =
+    "inline-flex min-h-8 items-center gap-2 rounded-full border px-2.5 text-xs font-medium";
   if (transport.reachable === false) {
     return (
-      <span className={cn(base, "border-destructive/20 bg-destructive/6 text-destructive")}>
+      <span
+        className={cn(
+          base,
+          "border-destructive/20 bg-destructive/6 text-destructive",
+        )}
+      >
         <WifiOff className="size-3.5" aria-hidden="true" />
         {copy("transportUnavailable")}
       </span>
@@ -149,7 +152,12 @@ function TransportPill({
   }
   if (transport.status === "connected" && transport.wsOpen) {
     return (
-      <span className={cn(base, "border-success/20 bg-success/8 text-success")}>
+      <span
+        className={cn(
+          base,
+          "border-success/20 bg-success/8 text-success",
+        )}
+      >
         <CheckCircle2 className="size-3.5" aria-hidden="true" />
         {copy("transportConnected")}
       </span>
@@ -160,7 +168,12 @@ function TransportPill({
     (transport.status === "connected" && !transport.wsOpen)
   ) {
     return (
-      <span className={cn(base, "border-warning/20 bg-warning/8 text-warning")}>
+      <span
+        className={cn(
+          base,
+          "border-warning/20 bg-warning/8 text-warning",
+        )}
+      >
         <RefreshCw className="size-3.5 animate-spin" aria-hidden="true" />
         {copy("transportReconnecting")}
       </span>
@@ -168,7 +181,9 @@ function TransportPill({
   }
   if (transport.status === "qr") {
     return (
-      <span className={cn(base, "border-primary/20 bg-primary/8 text-primary")}>
+      <span
+        className={cn(base, "border-primary/20 bg-primary/8 text-primary")}
+      >
         <QrCode className="size-3.5" aria-hidden="true" />
         {copy("pair")}
       </span>
@@ -176,14 +191,24 @@ function TransportPill({
   }
   if (transport.status === "disconnected") {
     return (
-      <span className={cn(base, "border-border bg-muted/60 text-muted-foreground")}>
+      <span
+        className={cn(
+          base,
+          "border-border bg-muted/60 text-muted-foreground",
+        )}
+      >
         <Circle className="size-3.5" aria-hidden="true" />
         {copy("transportDisconnected")}
       </span>
     );
   }
   return (
-    <span className={cn(base, "border-border bg-muted/40 text-muted-foreground")}>
+    <span
+      className={cn(
+        base,
+        "border-border bg-muted/40 text-muted-foreground",
+      )}
+    >
       <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
       {copy("transportChecking")}
     </span>
@@ -208,6 +233,9 @@ function ConversationRow({
   return (
     <button
       type="button"
+      data-inbox-conversation={chat.id}
+      data-inbox-unread={chat.unread > 0 ? "true" : "false"}
+      data-inbox-status={status}
       onClick={onSelect}
       aria-current={active ? "true" : undefined}
       className={cn(
@@ -220,7 +248,9 @@ function ConversationRow({
       ) : null}
       <Avatar className="mt-0.5 size-10 shrink-0 border bg-background">
         <AvatarFallback className="bg-primary/8 text-sm font-semibold text-primary">
-          {chat.name.charAt(0).toUpperCase() || <MessageCircle className="size-4" />}
+          {chat.name.charAt(0).toUpperCase() || (
+            <MessageCircle className="size-4" />
+          )}
         </AvatarFallback>
       </Avatar>
       <span className="min-w-0 flex-1">
@@ -234,7 +264,10 @@ function ConversationRow({
         </span>
         <span className="mt-0.5 flex items-center gap-2">
           {chat.phone ? (
-            <span dir="ltr" className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
+            <span
+              dir="ltr"
+              className="min-w-0 truncate font-mono text-[11px] text-muted-foreground"
+            >
               {chat.phone}
             </span>
           ) : null}
@@ -249,10 +282,14 @@ function ConversationRow({
           </span>
         </span>
         <span className="mt-1.5 flex items-center gap-2">
-          <span className={cn(
-            "min-w-0 flex-1 truncate text-xs",
-            chat.unread > 0 ? "font-medium text-foreground" : "text-muted-foreground",
-          )}>
+          <span
+            className={cn(
+              "min-w-0 flex-1 truncate text-xs",
+              chat.unread > 0
+                ? "font-medium text-foreground"
+                : "text-muted-foreground",
+            )}
+          >
             {chat.lastMessageText || "—"}
           </span>
           {priority ? (
@@ -281,7 +318,11 @@ function ConversationRow({
   );
 }
 
-function QueuePane({ workspace }: { workspace: ReturnType<typeof useInboxWorkspace> }) {
+function QueuePane({
+  workspace,
+}: {
+  workspace: ReturnType<typeof useInboxWorkspace>;
+}) {
   const {
     copy,
     t,
@@ -297,11 +338,13 @@ function QueuePane({ workspace }: { workspace: ReturnType<typeof useInboxWorkspa
     loadingChats,
   } = workspace;
 
-  const unreadEmpty = queueFilter === "unread" && queueCounts.unread === 0 && !searchQuery;
+  const unreadEmpty =
+    queueFilter === "unread" && queueCounts.unread === 0 && !searchQuery;
   return (
     <section
+      data-inbox-queue="true"
       aria-label={copy("conversations")}
-      className="flex min-h-0 flex-col border-e bg-background md:w-[21rem] md:min-w-[21rem]"
+      className="flex min-h-0 w-full flex-1 flex-col bg-background md:w-[21rem] md:min-w-[21rem] md:flex-none md:border-e"
     >
       <div className="border-b px-3 py-3">
         <div className="flex items-center justify-between gap-3">
@@ -331,7 +374,11 @@ function QueuePane({ workspace }: { workspace: ReturnType<typeof useInboxWorkspa
           />
         </div>
 
-        <div className="mt-2 flex gap-1 overflow-x-auto pb-0.5" role="group" aria-label={copy("workflow")}>
+        <div
+          className="mt-2 flex gap-1 overflow-x-auto pb-0.5"
+          role="group"
+          aria-label={copy("workflow")}
+        >
           {QUEUE_FILTERS.map((filter) => {
             const selected = queueFilter === filter;
             const count = queueCounts[filter];
@@ -339,17 +386,23 @@ function QueuePane({ workspace }: { workspace: ReturnType<typeof useInboxWorkspa
               <button
                 key={filter}
                 type="button"
+                data-inbox-filter={filter}
                 aria-pressed={selected}
                 onClick={() => setQueueFilter(filter)}
                 className={cn(
-                  "inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md border px-2 text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  "inline-flex min-h-8 min-h-(--sf-touch-target) shrink-0 items-center gap-1.5 rounded-md border px-2 text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                   selected
                     ? "border-primary/25 bg-primary/10 text-primary"
                     : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 {queueLabel(filter, copy)}
-                <span className={cn("tabular-nums", selected ? "text-primary" : "text-muted-foreground/70")}>
+                <span
+                  className={cn(
+                    "tabular-nums",
+                    selected ? "text-primary" : "text-muted-foreground/70",
+                  )}
+                >
                   {count}
                 </span>
               </button>
@@ -362,7 +415,10 @@ function QueuePane({ workspace }: { workspace: ReturnType<typeof useInboxWorkspa
         {loadingChats ? (
           <div className="space-y-1 p-2" aria-label={t("common.loading")}>
             {[0, 1, 2, 3, 4].map((item) => (
-              <div key={item} className="h-[5.75rem] animate-pulse rounded-md bg-muted/55" />
+              <div
+                key={item}
+                className="h-[5.75rem] animate-pulse rounded-md bg-muted/55"
+              />
             ))}
           </div>
         ) : filteredChats.length === 0 ? (
@@ -370,16 +426,24 @@ function QueuePane({ workspace }: { workspace: ReturnType<typeof useInboxWorkspa
             <div className="max-w-56">
               <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-muted">
                 {unreadEmpty ? (
-                  <CheckCircle2 className="size-4 text-success" aria-hidden="true" />
+                  <CheckCircle2
+                    className="size-4 text-success"
+                    aria-hidden="true"
+                  />
                 ) : (
-                  <MessageSquareText className="size-4 text-muted-foreground" aria-hidden="true" />
+                  <MessageSquareText
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                  />
                 )}
               </div>
               <p className="mt-3 text-sm font-medium">
                 {unreadEmpty ? copy("allCaughtUp") : copy("queueEmpty")}
               </p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {unreadEmpty ? copy("allCaughtUpHint") : copy("queueEmptyHint")}
+                {unreadEmpty
+                  ? copy("allCaughtUpHint")
+                  : copy("queueEmptyHint")}
               </p>
             </div>
           </div>
@@ -430,17 +494,24 @@ function MessageBubble({
               : "rounded-ee-md border-primary/20 bg-primary text-primary-foreground",
           )}
         >
-          <p className="whitespace-pre-wrap break-words text-sm leading-6" dir="auto">
+          <p
+            className="whitespace-pre-wrap break-words text-sm leading-6"
+            dir="auto"
+          >
             {message.body}
           </p>
           <div
             className={cn(
               "mt-1 flex items-center justify-end gap-1 text-[10px] tabular-nums",
-              inbound ? "text-muted-foreground" : "text-primary-foreground/75",
+              inbound
+                ? "text-muted-foreground"
+                : "text-primary-foreground/75",
             )}
           >
             <span>{messageTime(message.timestamp, locale)}</span>
-            {!inbound ? <MessageStatus status={message.deliveryStatus ?? "sent"} /> : null}
+            {!inbound ? (
+              <MessageStatus status={message.deliveryStatus ?? "sent"} />
+            ) : null}
           </div>
         </div>
       </div>
@@ -455,9 +526,16 @@ function MessageBubble({
         </div>
       ) : null}
 
-      {!inbound && message.deliveryStatus === "failed" && message.outboxEffectKey ? (
+      {!inbound &&
+      message.deliveryStatus === "failed" &&
+      message.outboxEffectKey ? (
         <div className="flex justify-end">
-          <Button type="button" variant="outline" size="sm" onClick={() => onRetry(message)}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onRetry(message)}
+          >
             <RefreshCw className="size-3.5" aria-hidden="true" />
             {t("inbox.retry")}
           </Button>
@@ -479,7 +557,10 @@ function ConversationContext({
   const priority = workflow.priority;
   const labels = workflow.labels ?? [];
   return (
-    <div className="flex min-h-0 flex-col">
+    <div
+      data-inbox-context="true"
+      className="flex h-full min-h-0 flex-col"
+    >
       <div className="border-b px-4 py-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {copy("conversationContext")}
@@ -493,7 +574,10 @@ function ConversationContext({
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{chat.name}</p>
             {chat.phone ? (
-              <p dir="ltr" className="truncate font-mono text-[11px] text-muted-foreground">
+              <p
+                dir="ltr"
+                className="truncate font-mono text-[11px] text-muted-foreground"
+              >
                 {chat.phone}
               </p>
             ) : null}
@@ -504,11 +588,19 @@ function ConversationContext({
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-5 p-4">
           <section>
-            <h3 className="text-xs font-semibold text-foreground">{copy("workflow")}</h3>
+            <h3 className="text-xs font-semibold text-foreground">
+              {copy("workflow")}
+            </h3>
             <div className="mt-2 flex flex-wrap gap-1.5">
               <ConversationStatusBadge status={workflow.status ?? "open"} />
               {priority ? (
-                <Badge variant="outline" className={cn("gap-1", PRIORITY_CLASS[priority] ?? PRIORITY_CLASS.low)}>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "gap-1",
+                    PRIORITY_CLASS[priority] ?? PRIORITY_CLASS.low,
+                  )}
+                >
                   <Flag className="size-3" aria-hidden="true" />
                   {t(`inbox.priority.${priority}`)}
                 </Badge>
@@ -528,46 +620,70 @@ function ConversationContext({
           </section>
 
           <section className="border-t pt-4">
-            <h3 className="text-xs font-semibold text-foreground">{copy("labels")}</h3>
+            <h3 className="text-xs font-semibold text-foreground">
+              {copy("labels")}
+            </h3>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {labels.length > 0 ? (
                 labels.slice(0, 8).map((label) => (
-                  <Badge key={label} variant="secondary" className="max-w-full truncate text-[11px]">
+                  <Badge
+                    key={label}
+                    variant="secondary"
+                    className="max-w-full truncate text-[11px]"
+                  >
                     {label}
                   </Badge>
                 ))
               ) : (
-                <span className="text-xs text-muted-foreground">{copy("noLabels")}</span>
+                <span className="text-xs text-muted-foreground">
+                  {copy("noLabels")}
+                </span>
               )}
             </div>
           </section>
 
           <section className="border-t pt-4">
-            <h3 className="text-xs font-semibold text-foreground">{copy("collaboration")}</h3>
+            <h3 className="text-xs font-semibold text-foreground">
+              {copy("collaboration")}
+            </h3>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
               {workflow.assigneeId
                 ? `${copy("assignment")}: ${shortId(workflow.assigneeId)}`
                 : copy("unassigned")}
             </p>
             <div className="mt-2">
-              <ConversationCollaborationPanel conversationId={chat.conversationId} />
+              <ConversationCollaborationPanel
+                conversationId={chat.conversationId}
+              />
             </div>
           </section>
 
           <section className="border-t pt-4 text-xs">
-            <h3 className="font-semibold text-foreground">{copy("savedHistory")}</h3>
+            <h3 className="font-semibold text-foreground">
+              {copy("savedHistory")}
+            </h3>
             <dl className="mt-2 space-y-2 text-muted-foreground">
               <div className="flex items-center justify-between gap-3">
                 <dt>{copy("channel")}</dt>
-                <dd className="font-medium text-foreground">{chat.channel === "whatsapp" ? "WhatsApp" : copy("canonicalHistory")}</dd>
+                <dd className="font-medium text-foreground">
+                  {chat.channel === "whatsapp"
+                    ? "WhatsApp"
+                    : copy("canonicalHistory")}
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>{copy("status")}</dt>
-                <dd className="font-medium text-foreground">{workflow.status ?? "open"}</dd>
+                <dd className="font-medium text-foreground">
+                  {workflow.status ?? "open"}
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>{copy("priority")}</dt>
-                <dd className="font-medium text-foreground">{priority ? t(`inbox.priority.${priority}`) : copy("noPriority")}</dd>
+                <dd className="font-medium text-foreground">
+                  {priority
+                    ? t(`inbox.priority.${priority}`)
+                    : copy("noPriority")}
+                </dd>
               </div>
             </dl>
           </section>
@@ -577,7 +693,11 @@ function ConversationContext({
   );
 }
 
-function ThreadPane({ workspace }: { workspace: ReturnType<typeof useInboxWorkspace> }) {
+function ThreadPane({
+  workspace,
+}: {
+  workspace: ReturnType<typeof useInboxWorkspace>;
+}) {
   const {
     activeChat,
     clearActiveChat,
@@ -605,12 +725,20 @@ function ThreadPane({ workspace }: { workspace: ReturnType<typeof useInboxWorksp
 
   if (!activeChat) {
     return (
-      <section className="flex min-h-0 min-w-0 flex-1 items-center justify-center bg-muted/10 p-8">
+      <section
+        data-inbox-thread="empty"
+        className="flex min-h-0 min-w-0 flex-1 items-center justify-center bg-muted/10 p-8"
+      >
         <div className="max-w-sm text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl border bg-background">
-            <MessageSquareText className="size-5 text-muted-foreground" aria-hidden="true" />
+            <MessageSquareText
+              className="size-5 text-muted-foreground"
+              aria-hidden="true"
+            />
           </div>
-          <h2 className="mt-4 text-base font-semibold">{copy("selectConversation")}</h2>
+          <h2 className="mt-4 text-base font-semibold">
+            {copy("selectConversation")}
+          </h2>
           <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
             {copy("selectConversationHint")}
           </p>
@@ -620,12 +748,24 @@ function ThreadPane({ workspace }: { workspace: ReturnType<typeof useInboxWorksp
   }
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/10">
+    <section
+      data-inbox-thread="active"
+      className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/10"
+    >
       <header className="flex min-h-16 items-center justify-between gap-3 border-b bg-background px-3 py-2.5 sm:px-4">
         <div className="flex min-w-0 items-center gap-3">
           {isMobile ? (
-            <Button type="button" variant="ghost" size="icon-sm" onClick={clearActiveChat} aria-label={t("common.backToConversations")}>
-              <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={clearActiveChat}
+              aria-label={t("common.backToConversations")}
+            >
+              <ArrowLeft
+                className="size-4 icon-rtl-flip"
+                aria-hidden="true"
+              />
             </Button>
           ) : null}
           <Avatar className="size-9 border bg-background">
@@ -634,28 +774,50 @@ function ThreadPane({ workspace }: { workspace: ReturnType<typeof useInboxWorksp
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold">{activeChat.name}</h2>
+            <h2 className="truncate text-sm font-semibold">
+              {activeChat.name}
+            </h2>
             <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
               {activeChat.phone ? (
-                <span dir="ltr" className="truncate font-mono">{activeChat.phone}</span>
+                <span dir="ltr" className="truncate font-mono">
+                  {activeChat.phone}
+                </span>
               ) : null}
               <span aria-hidden="true">·</span>
-              <span>{activeChat.channel === "whatsapp" ? "WhatsApp" : copy("savedHistory")}</span>
+              <span>
+                {activeChat.channel === "whatsapp"
+                  ? "WhatsApp"
+                  : copy("savedHistory")}
+              </span>
             </div>
           </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
           <div className="hidden sm:block">
-            <ConversationStatusBadge status={activeChat.workflow.status ?? "open"} />
+            <ConversationStatusBadge
+              status={activeChat.workflow.status ?? "open"}
+            />
           </div>
           <Sheet>
             <SheetTrigger asChild>
-              <Button type="button" variant="outline" size="icon-sm" className="xl:hidden" aria-label={copy("conversationContext")}>
-                <PanelRight className="size-4 icon-rtl-flip" aria-hidden="true" />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="xl:hidden"
+                aria-label={copy("conversationContext")}
+              >
+                <PanelRight
+                  className="size-4 icon-rtl-flip"
+                  aria-hidden="true"
+                />
               </Button>
             </SheetTrigger>
-            <SheetContent side="end" className="w-[min(340px,92vw)] p-0">
+            <SheetContent
+              side={locale === "ar" ? "left" : "right"}
+              className="w-[min(340px,92vw)] p-0"
+            >
               <SheetHeader className="sr-only">
                 <SheetTitle>{copy("conversationContext")}</SheetTitle>
                 <SheetDescription>{activeChat.name}</SheetDescription>
@@ -675,8 +837,14 @@ function ThreadPane({ workspace }: { workspace: ReturnType<typeof useInboxWorksp
           aria-label={copy("messages")}
         >
           {loadingMessages ? (
-            <div className="flex min-h-40 items-center justify-center" role="status">
-              <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden="true" />
+            <div
+              className="flex min-h-40 items-center justify-center"
+              role="status"
+            >
+              <Loader2
+                className="size-5 animate-spin text-muted-foreground"
+                aria-hidden="true"
+              />
             </div>
           ) : messages.length === 0 ? (
             <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">
@@ -706,11 +874,14 @@ function ThreadPane({ workspace }: { workspace: ReturnType<typeof useInboxWorksp
                 disabled={sending}
                 onSelect={(text) =>
                   setReplyText((current) =>
-                    current.trim() ? `${current.trimEnd()}\n${text}` : text,
+                    current.trim()
+                      ? `${current.trimEnd()}\n${text}`
+                      : text,
                   )
                 }
               />
               <Textarea
+                dir="auto"
                 value={replyText}
                 onChange={(event) => setReplyText(event.target.value)}
                 onKeyDown={(event) => {
@@ -733,9 +904,15 @@ function ThreadPane({ workspace }: { workspace: ReturnType<typeof useInboxWorksp
                 aria-label={t("inbox.send")}
               >
                 {sending ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  <Loader2
+                    className="size-4 animate-spin"
+                    aria-hidden="true"
+                  />
                 ) : (
-                  <Send className="size-4 icon-rtl-flip" aria-hidden="true" />
+                  <Send
+                    className="size-4 icon-rtl-flip"
+                    aria-hidden="true"
+                  />
                 )}
               </Button>
             </div>
@@ -758,7 +935,10 @@ function ThreadPane({ workspace }: { workspace: ReturnType<typeof useInboxWorksp
         )}
         {sendError ? (
           <div className="mx-auto mt-2 flex max-w-4xl items-center gap-2 text-xs text-destructive">
-            <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+            <AlertCircle
+              className="size-3.5 shrink-0"
+              aria-hidden="true"
+            />
             <span>{sendError}</span>
           </div>
         ) : null}
@@ -767,8 +947,20 @@ function ThreadPane({ workspace }: { workspace: ReturnType<typeof useInboxWorksp
   );
 }
 
-function PairingDialog({ workspace }: { workspace: ReturnType<typeof useInboxWorkspace> }) {
-  const { copy, t, transport, canManageWhatsApp, connectWhatsApp, qrKey, refreshQr } = workspace;
+function PairingDialog({
+  workspace,
+}: {
+  workspace: ReturnType<typeof useInboxWorkspace>;
+}) {
+  const {
+    copy,
+    t,
+    transport,
+    canManageWhatsApp,
+    connectWhatsApp,
+    qrKey,
+    refreshQr,
+  } = workspace;
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -811,7 +1003,12 @@ function PairingDialog({ workspace }: { workspace: ReturnType<typeof useInboxWor
                 className="size-56"
               />
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={refreshQr}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={refreshQr}
+            >
               <RefreshCw className="size-3.5" aria-hidden="true" />
               {copy("refreshQr")}
             </Button>
@@ -822,7 +1019,11 @@ function PairingDialog({ workspace }: { workspace: ReturnType<typeof useInboxWor
   );
 }
 
-function WorkspaceHeader({ workspace }: { workspace: ReturnType<typeof useInboxWorkspace> }) {
+function WorkspaceHeader({
+  workspace,
+}: {
+  workspace: ReturnType<typeof useInboxWorkspace>;
+}) {
   const {
     t,
     copy,
@@ -841,8 +1042,12 @@ function WorkspaceHeader({ workspace }: { workspace: ReturnType<typeof useInboxW
               <MessageCircle className="size-4" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold tracking-tight">{t("nav.inbox")}</h1>
-              <p className="truncate text-xs text-muted-foreground">{t("inbox.subtitle")}</p>
+              <h1 className="truncate text-base font-semibold tracking-tight">
+                {t("nav.inbox")}
+              </h1>
+              <p className="truncate text-xs text-muted-foreground">
+                {t("inbox.subtitle")}
+              </p>
             </div>
           </div>
         </div>
@@ -850,16 +1055,30 @@ function WorkspaceHeader({ workspace }: { workspace: ReturnType<typeof useInboxW
         <div className="flex flex-wrap items-center justify-end gap-2">
           <TransportPill transport={transport} copy={copy} />
           {transport.user?.id ? (
-            <span dir="ltr" className="hidden max-w-32 truncate font-mono text-[10px] text-muted-foreground lg:inline">
+            <span
+              dir="ltr"
+              className="hidden max-w-32 truncate font-mono text-[10px] text-muted-foreground lg:inline"
+            >
               {transport.user.id.split("@")[0]}
             </span>
           ) : null}
-          <Button type="button" variant="ghost" size="icon-sm" onClick={() => void refreshChats()} aria-label={t("common.refresh")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => void refreshChats()}
+            aria-label={t("common.refresh")}
+          >
             <RefreshCw className="size-4" aria-hidden="true" />
           </Button>
           <PairingDialog workspace={workspace} />
           {transport.status === "connected" && canManageWhatsApp ? (
-            <Button type="button" variant="ghost" size="sm" onClick={() => setLogoutConfirmOpen(true)}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setLogoutConfirmOpen(true)}
+            >
               <PlugZap className="size-3.5" aria-hidden="true" />
               {copy("disconnect")}
             </Button>
@@ -867,7 +1086,10 @@ function WorkspaceHeader({ workspace }: { workspace: ReturnType<typeof useInboxW
         </div>
       </header>
       {dataDegraded ? (
-        <div className="flex items-center gap-2 border-b bg-warning/6 px-3 py-2 text-xs text-warning sm:px-4" role="status">
+        <div
+          className="flex items-center gap-2 border-b bg-warning/6 px-3 py-2 text-xs text-warning sm:px-4"
+          role="status"
+        >
           <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
           <span>{copy("dataDegraded")}</span>
         </div>
@@ -878,7 +1100,14 @@ function WorkspaceHeader({ workspace }: { workspace: ReturnType<typeof useInboxW
 
 export function InboxWorkspace() {
   const workspace = useInboxWorkspace();
-  const { activeChat, logoutConfirmOpen, setLogoutConfirmOpen, disconnectWhatsApp, t } = workspace;
+  const isMobile = useMobile();
+  const {
+    activeChat,
+    logoutConfirmOpen,
+    setLogoutConfirmOpen,
+    disconnectWhatsApp,
+    t,
+  } = workspace;
 
   return (
     <>
@@ -888,9 +1117,9 @@ export function InboxWorkspace() {
       >
         <WorkspaceHeader workspace={workspace} />
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <QueuePane workspace={workspace} />
-          <ThreadPane workspace={workspace} />
-          {activeChat ? (
+          {!isMobile || !activeChat ? <QueuePane workspace={workspace} /> : null}
+          {!isMobile || activeChat ? <ThreadPane workspace={workspace} /> : null}
+          {!isMobile && activeChat ? (
             <aside className="hidden min-h-0 w-72 min-w-72 border-s bg-background xl:block">
               <ConversationContext chat={activeChat} workspace={workspace} />
             </aside>
