@@ -34,7 +34,7 @@ const buttonVariants = cva(
         xs: "sf-button-size-xs h-7 min-h-(--sf-touch-target) gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "sf-button-size-sm h-9 min-h-(--sf-touch-target) gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
         lg: "sf-button-size-lg h-11 rounded-md px-6 has-[>svg]:px-4",
-        icon: "sf-button-size-icon size-[var(--control-height)]",
+        icon: "sf-button-size-icon size-[var(--control-height)] min-h-(--sf-touch-target) min-w-(--sf-touch-target)",
         "icon-xs": "sf-button-size-icon-xs size-7 min-h-(--sf-touch-target) min-w-(--sf-touch-target) rounded-md [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "sf-button-size-icon-sm size-9 min-h-(--sf-touch-target) min-w-(--sf-touch-target)",
         "icon-lg": "sf-button-size-icon-lg size-11",
