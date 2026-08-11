@@ -59,7 +59,7 @@ requireMarkers("README.md", [
   "PR #232",
   "PR #233",
   "PR #234",
-  "Issues **#201 and #214 are closed**",
+  "Current live state is different: #201 and #214 are closed",
   "#230 remains a P1 external-certification blocker",
   "#226",
   phase5Baseline,
@@ -163,7 +163,6 @@ requireMarkers(handoffPacket, [
   "Exact next implementation dependency",
   "Next-session resume checklist",
   protectedMainAtHandoff,
-  phase5Baseline,
   "#230 remains **open P1**",
 ]);
 
