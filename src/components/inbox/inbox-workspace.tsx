@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -552,7 +552,7 @@ function ConversationContext({
   chat: InboxChat;
   workspace: ReturnType<typeof useInboxWorkspace>;
 }) {
-  const { copy, t, canUpdateConversation } = workspace;
+  const { copy, t, canUpdateConversation, refreshChats } = workspace;
   const workflow = chat.workflow;
   const priority = workflow.priority;
   const labels = workflow.labels ?? [];
@@ -615,6 +615,7 @@ function ConversationContext({
                 conversationId={chat.conversationId}
                 initial={workflow}
                 canUpdate={canUpdateConversation}
+                onUpdated={() => void refreshChats()}
               />
             </div>
           </section>
@@ -917,7 +918,7 @@ function ThreadPane({
               </Button>
             </div>
             <div className="mt-1.5 flex items-center justify-between gap-3 px-1 text-[10px] text-muted-foreground">
-              <span>{t("inbox.send")}: Enter · Shift+Enter</span>
+              <span>{copy("composerShortcut")}</span>
               <span>{copy("savedHistory")}</span>
             </div>
           </div>
@@ -961,12 +962,7 @@ function PairingDialog({
     qrKey,
     refreshQr,
   } = workspace;
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (transport.status === "qr") setOpen(true);
-    if (transport.status === "connected") setOpen(false);
-  }, [transport.status]);
+  const [open, setOpen] = useState(transport.status === "qr");
 
   if (!canManageWhatsApp) return null;
 
@@ -1033,6 +1029,12 @@ function WorkspaceHeader({
     canManageWhatsApp,
     setLogoutConfirmOpen,
   } = workspace;
+  const pairingKey =
+    transport.status === "qr"
+      ? "qr"
+      : transport.status === "connected"
+        ? "connected"
+        : "other";
   return (
     <>
       <header className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b bg-background px-3 py-2.5 sm:px-4">
@@ -1071,7 +1073,7 @@ function WorkspaceHeader({
           >
             <RefreshCw className="size-4" aria-hidden="true" />
           </Button>
-          <PairingDialog workspace={workspace} />
+          <PairingDialog key={pairingKey} workspace={workspace} />
           {transport.status === "connected" && canManageWhatsApp ? (
             <Button
               type="button"
