@@ -115,12 +115,14 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(source).not.toContain('id: "action-new-order"');
   });
 
-  it("keeps seller destinations directly reachable and nests only explicit subflows", () => {
+  it("keeps seller destinations directly reachable, touch-sized and nests only explicit subflows", () => {
     const sidebar = read("src/components/layout/sidebar.tsx");
     const navigation = read("src/components/layout/navigation.ts");
 
     expect(sidebar).toContain("domain.children?.map((child) => (");
     expect(sidebar).toContain("nested={child.sidebarNested}");
+    expect(sidebar).toContain("group relative flex min-h-(--control-height) items-center");
+    expect(sidebar).toContain("min-h-(--control-height) w-full text-muted-foreground");
     expect(sidebar).not.toContain("domainSelected && domain.children?.length");
     expect(sidebar).not.toContain("data-navigation-children={domain.id}");
     expect(navigation).toContain("sidebarNested?: boolean");
