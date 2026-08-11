@@ -5,7 +5,9 @@ import {
   useEffect,
   useMemo,
   useSyncExternalStore,
+  useTransition,
 } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   getDirection,
@@ -14,7 +16,7 @@ import {
 } from "@/lib/i18n";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 import { useServerLocale } from "@/lib/i18n/server-locale-context";
-import { useUIStore } from "@/stores/ui-store";
+import { requestLocale, useUIStore } from "@/stores/ui-store";
 
 function useIsMounted(): boolean {
   return useSyncExternalStore(
@@ -25,20 +27,20 @@ function useIsMounted(): boolean {
 }
 
 export function useI18n() {
+  const router = useRouter();
   const serverLocale = useServerLocale();
   const storeLocale = useUIStore((state) => state.locale);
-  const setLocaleStore = useUIStore((state) => state.setLocale);
+  const [isLocalePending, startLocaleTransition] = useTransition();
   const mounted = useIsMounted();
   const locale = mounted ? storeLocale : serverLocale;
 
-  // All three compact product bundles are synchronously available. A language
-  // switch therefore cannot suspend between committing direction and rendering
-  // the matching copy, even if the user switches immediately after hydration.
+  // All three compact product bundles are synchronously available. The active
+  // bundle is therefore ready in the same commit as the server-confirmed locale.
   const translations = getTranslations(locale);
 
-  // The store applies lang/dir synchronously during an interactive switch. This
-  // effect is an idempotent reconciliation boundary for initial hydration and any
-  // future locale authority that updates the store outside that interaction.
+  // ServerLocaleProvider commits document language/direction in a layout effect
+  // when a refreshed server tree arrives. Keep this as an idempotent safeguard for
+  // initial hydration and any future committed-locale update path.
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = getDirection(locale);
@@ -70,14 +72,22 @@ export function useI18n() {
     [translations, locale],
   );
 
+  /**
+   * Request, then refresh. Do not mutate hydrated locale/direction here: server
+   * translated route copy still belongs to the current request until the new RSC
+   * tree arrives. ServerLocaleProvider commits the requested locale before paint.
+   */
   const setLocale = useCallback(
     (newLocale: Locale) => {
-      if (newLocale === locale) return;
-      setLocaleStore(newLocale);
+      if (newLocale === locale || isLocalePending) return;
+      requestLocale(newLocale);
+      startLocaleTransition(() => {
+        router.refresh();
+      });
     },
-    [locale, setLocaleStore],
+    [isLocalePending, locale, router],
   );
 
   const dir = useMemo(() => getDirection(locale), [locale]);
-  return { t, locale, setLocale, dir };
+  return { t, locale, setLocale, dir, isLocalePending };
 }
