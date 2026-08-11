@@ -56,6 +56,8 @@ function errorCode(value: unknown, fallback: AiWorkspaceErrorCode): AiWorkspaceE
   if (!value || typeof value !== "object") return { code: fallback };
   const record = value as Record<string, unknown>;
   const rawCode = typeof record.error === "string" ? record.error : null;
+  const normalizedCode =
+    rawCode === "consent_required" ? "AI_CONSENT_REQUIRED" : rawCode;
   const allowed: AiWorkspaceErrorCode[] = [
     "AI_CONSENT_REQUIRED",
     "AI_LICENSE_REQUIRED",
@@ -71,8 +73,8 @@ function errorCode(value: unknown, fallback: AiWorkspaceErrorCode): AiWorkspaceE
   ];
   return {
     code:
-      rawCode && allowed.includes(rawCode as AiWorkspaceErrorCode)
-        ? (rawCode as AiWorkspaceErrorCode)
+      normalizedCode && allowed.includes(normalizedCode as AiWorkspaceErrorCode)
+        ? (normalizedCode as AiWorkspaceErrorCode)
         : fallback,
     detail:
       typeof record.reason === "string"
@@ -156,8 +158,6 @@ export function useAiWorkspace() {
       setSetupError(false);
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
-      // Preserve the last known setup projection if one exists, but never turn
-      // an unknown read failure into a false "consent/key missing" claim.
       setSetupError(true);
     }
   }, []);
@@ -177,6 +177,11 @@ export function useAiWorkspace() {
           if (current && next.some((session) => session.id === current)) return current;
           return next[0]?.id ?? null;
         });
+        if (next.length === 0) {
+          setMessages([]);
+          setProposals([]);
+          setActionHistoryError(false);
+        }
         if (!options?.preserveError) setError(null);
       } catch (caught) {
         if (caught instanceof DOMException && caught.name === "AbortError") return;
@@ -208,8 +213,6 @@ export function useAiWorkspace() {
     conversationAbortRef.current = controller;
     const generation = ++conversationGenerationRef.current;
     setLoadingConversation(true);
-    setProposals([]);
-    setActionHistoryError(false);
     try {
       const [messagesResponse, actionsResponse] = await Promise.all([
         fetch(`/api/ai/sessions/${encodeURIComponent(sessionId)}/messages`, {
@@ -258,9 +261,6 @@ export function useAiWorkspace() {
         );
         setActionHistoryError(false);
       } else {
-        // An unavailable action projection is not equivalent to an empty action
-        // history. Keep that distinction visible in the review rail.
-        setProposals([]);
         setActionHistoryError(true);
       }
       setError(null);
@@ -279,12 +279,7 @@ export function useAiWorkspace() {
   }, []);
 
   useEffect(() => {
-    if (!activeSessionId) {
-      setMessages([]);
-      setProposals([]);
-      setActionHistoryError(false);
-      return;
-    }
+    if (!activeSessionId) return;
     const timeoutId = window.setTimeout(() => {
       void loadConversation(activeSessionId);
     }, 0);
@@ -299,11 +294,19 @@ export function useAiWorkspace() {
     [],
   );
 
-  const selectSession = useCallback((sessionId: string) => {
-    streamAbortRef.current?.abort();
-    setSending(false);
-    setActiveSessionId(sessionId);
-  }, []);
+  const selectSession = useCallback(
+    (sessionId: string) => {
+      streamAbortRef.current?.abort();
+      setSending(false);
+      if (sessionId !== activeSessionId) {
+        setMessages([]);
+        setProposals([]);
+        setActionHistoryError(false);
+      }
+      setActiveSessionId(sessionId);
+    },
+    [activeSessionId],
+  );
 
   const createSession = useCallback(async () => {
     if (creatingSession) return null;
@@ -610,8 +613,9 @@ export function useAiWorkspace() {
             data.message ?? data.error ?? data.code ?? "approval failed",
           );
         }
+        const proposal = data.proposal;
         setProposals((current) =>
-          mergeProposal(current, { ...handle, proposal: data.proposal! }),
+          mergeProposal(current, { ...handle, proposal }),
         );
         setActionHistoryError(false);
         return true;
