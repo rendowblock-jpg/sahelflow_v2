@@ -7,9 +7,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { useUiDensity } from "@/hooks/use-ui-density";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
-import { useUIStore } from "@/stores/ui-store";
 import { Check, Monitor, Moon, Sun } from "lucide-react";
 
 const PRESET_SWATCH: Record<ThemePreset, string> = {
@@ -22,8 +22,7 @@ const PRESET_SWATCH: Record<ThemePreset, string> = {
 export function AppearancePanel() {
   const { t } = useI18n();
   const { theme, setTheme, preset, setPreset, presets } = useTheme();
-  const density = useUIStore((state) => state.density);
-  const setDensity = useUIStore((state) => state.setDensity);
+  const { density, setDensity } = useUiDensity();
 
   const themeModes = [
     { id: "light" as const, label: t("theme.light"), icon: Sun },
