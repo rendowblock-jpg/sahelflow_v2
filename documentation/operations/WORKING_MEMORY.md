@@ -2,245 +2,372 @@
 
 > **Purpose:** Compact resumable execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-08-11
-> **Protected `main` at session handoff:** `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — PR #234
-> **Latest application-changing protected merge:** PR #234
+> **Protected application-changing baseline at session handoff:** `04adb20fb5846499039eda61a9b765deb9c622e6` — PR #236
+> **Latest application-changing protected merge:** PR #236
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
 > **Founder-installed release:** Internal.14
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Mandatory gate before Phase 8:** shared-root frontend stabilization + installed Phase 6/7 closure + explicit Founder acceptance
-> **Open retained issues at handoff:** #221, #226, #230
-> **Closed during this handoff:** #201, #214
+> **Active implementation PR:** #237 — Inbox operational workspace redesign
+> **Exact PR #237 handoff head:** `cf84491cfd7613728a86dc9157da3fc4631e9105`
+> **Mandatory gate before Phase 8:** whole-product frontend adoption + installed Phase 6/7 closure + live #230 + explicit Founder acceptance
+> **Open retained issues:** #221, #226, #230
+> **Closed historical retained issues:** #201, #214
 > **Execution epic:** #164
 
-Live GitHub is authority. Re-fetch protected `main`, open PRs, issues and Actions
-before any write. One active implementation agent/PR at a time.
+Live GitHub is authority. Re-fetch protected `main`, PR #237, open issues, review
+threads and Actions before any write. One active implementation agent/PR at a time.
+Documentation-only reconciliation may advance `main` after this application
+baseline without changing the latest application-changing merge.
 
-## Founder-installed truth
+## Founder-installed truth that must remain visible
 
-The Founder values the backend/engine and rejects the current Internal.14 frontend
-as the product-quality baseline. This is a systemic whole-product experience
-problem, not a request for isolated pixel patches.
+The Founder values the backend/engine and rejects the published Internal.14
+frontend as the product-quality baseline. This is a systemic whole-product
+experience problem, not a request for isolated pixel patches.
 
-The installed problem context that must remain visible during implementation:
+The installed problem context:
 
-- Arabic typography/font quality is not professional enough;
-- text and controls are frequently too small for daily operational reading;
-- AR/FR/EN and LTR/RTL switching is non-atomic; stale text/geometry and wrong-side
-  navigation were observed;
-- light/dark switching feels glitchy and the palette feels cold;
-- motion/micro-interaction language is weak or absent;
-- RTL geometry and direction-sensitive icons are inconsistent;
-- navigation is over-nested; primary seller destinations should be directly visible;
-- routine warnings are oversized/dominant;
-- charts are sparse and low-information rather than decision-oriented;
-- Inbox, AI Agents and Settings require workflow-level redesign;
-- the implementation team owns the remaining route/component audit so the Founder
-  is not used as manual pixel-by-pixel QA.
+- Arabic typography/font quality was not professional enough;
+- text and controls were too small for daily operational reading;
+- AR/FR/EN and LTR/RTL switching was non-atomic, including wrong-side/stale navigation;
+- light/dark switching felt glitchy and the palette felt cold;
+- motion/micro-interaction language was weak;
+- RTL geometry/directional icon behavior was inconsistent;
+- navigation was over-nested;
+- routine warnings were oversized/dominant;
+- charts were sparse/low-information;
+- Inbox, AI Agents and Settings required workflow-level redesign;
+- implementation owns the remaining route/component audit so the Founder is not
+  used as manual pixel-by-pixel QA.
 
-Do not reduce this program to whichever first UI defect is easiest to patch.
+Do not reduce this program to whichever UI defect is easiest to patch.
+
+## Protected backend/business engine boundaries
+
+These were deeply audited before the frontend program and are assets to preserve:
+
+1. **Golden COD:** `src/lib/business-truth/command-kernel.ts` owns canonical
+   transaction/idempotency/version/audit/event/outbox/projection authority.
+2. **Canonical source order:** server pricing, Algerian phone validation,
+   customer/product/variant authority and independent delivery/inventory/COD state
+   remain in `src/lib/orders/canonical-source-order.ts` and related business truth.
+3. **Identity/permissions:** trusted principal + exact shop + exact action authority
+   in `authorization.ts` / `permissions.ts`; malformed policy fails safely.
+4. **Protected data:** `src/lib/db.ts` is the canonical encrypted DB facade;
+   `dbRaw` is explicit low-level authority only.
+5. **Licensing:** license/trial/control-plane authority is strong; live #230 external
+   production/network certification remains open.
+6. **Providers:** evidence-tiered capabilities remain honest; uncertified capability
+   must not be presented as certified success. NOEST remains disabled where contract
+   evidence is insufficient.
+7. **AI:** action execution remains bound to proposal digest/tool/args/executionKey.
+8. **Automations:** durable leases/retry/waiting-effect/ambiguous/dead-letter semantics remain.
+9. **WhatsApp ingress:** exact shop, paired account, HMAC, idempotency and encrypted
+   persisted event authority remain.
+10. **Native:** runtime supervisor/backup/recovery/installation boundaries remain.
+11. **CI/evidence:** risk-selected evidence is authority; do not weaken gates to make
+    frontend work pass.
+12. Avoid schema/migration/native changes in frontend packages unless a concrete
+    defect requires them and consequence-selected evidence expands accordingly.
 
 ## Phase 5 closure snapshot
 
-PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` remains the protected
-Phase 5 source/browser checkpoint and PR #223 remains the Phase 6 source/browser +
-Phase 7 measurement checkpoint. Their exact-head evidence is retained for what it
-proved.
+PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` remains the earlier
+Phase 5 source/browser checkpoint. PR #223 remains the earlier Phase 6
+source/browser + Phase 7 measurement checkpoint. Their exact-head evidence remains
+valid for what they proved.
 
-The later Founder-installed Internal.14 rejection shows those checkpoints were not
-sufficient as whole-product visual/interaction acceptance. It does not erase their
-evidence and it does not generically reopen Phase 1–4 canonical business,
-identity, licensing, provider or recovery authority.
+The later Founder-installed rejection showed those checks were insufficient as
+whole-product visual/interaction acceptance. It does not erase them or generically
+reopen Phase 1–4 canonical authority.
 
-## Session-completed engineering work
+## Stabilization work protected before this session
 
-### Outcome A — CI authority hardening: CLOSED
+### PR #232 — CI authority hardening: CLOSED
 
-PR #232 merged as `876b0acdd2528df52ec106c22f231edf0b590739`.
-Historical PR #200/#207 exception records no longer suppress current evidence
-lanes; anti-bypass regression tests protect the classifier.
+`876b0acdd2528df52ec106c22f231edf0b590739` retired historical PR #200/#207
+exception records as live evidence-lane bypasses and added anti-bypass regression authority.
 
-### Outcome B — license activation continuity: CLOSED
+### PR #233 — license activation continuity: CLOSED
 
-PR #233 merged as `b91fd2a9008f529a5df3000d99bf426094f9daa9`.
-Successful permanent/trial entitlement transitions now refresh the server-authorized
-dashboard tree instead of leaving the server-supplied invalid-license `null`
-children visible until restart.
+`b91fd2a9008f529a5df3000d99bf426094f9daa9` refreshes the server-authorized
+dashboard tree after valid permanent/trial activation, removing the close/reopen requirement.
 
-### Outcome C — resilient trial source architecture: SOURCE CLOSED, EXTERNAL P1 OPEN
+### PR #234 — resilient trial source: SOURCE CLOSED / LIVE P1 OPEN
 
-PR #234 merged as `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647`.
-It protects bounded primary/recovery ingress, signed/bound route acceptance,
-privacy-safe failure classification, owned-host release authority, Worker
-readiness and blocking Worker tests.
+`bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` protects bounded primary/recovery
+trial ingress and authoritative signed response selection. Issue #230 still
+requires owned production DNS, sufficiently independent recovery routing,
+protected bindings, representative Algerian fixed/mobile reachability and exact
+signed installed customer trial/recovery evidence.
 
-Issue #230 remains **open**. Customer trial is not production-certified until real
-SahelFlow-owned DNS, a sufficiently independent recovery path, protected
-production bindings, representative Algerian fixed/mobile reachability and an
-exact signed installed trial/recovery journey are proven. GitHub auto-closed #230
-when #234 merged; it was intentionally reopened because the issue explicitly
-forbids closure from CI/unit evidence alone.
+Exact #234 installed evidence also satisfied historical #201 hydrated-WebView and
+#214 replacement-install obligations. Both are closed.
 
-## Known engineering defects/debt to close in the same program
+## This session — PR #236 frontend foundation CLOSED
 
-This is the complete disposition of the seven technical findings from the deep
-pre-Phase-8 audit. Preserve this context across sessions; do not recreate already
-closed work or silently drop remaining debt.
+PR #236 `feat(frontend): establish shared foundation authority` merged successfully.
 
-1. **Historical CI exception bypasses — CLOSED.** PR #232 retired the PR #200
-   installed-UI waiver and PR #207 closure override as live lane-suppression
-   mechanisms and added anti-bypass regression authority.
-2. **Successful activation blank workspace — CLOSED.** PR #233 refreshes the
-   server-authorized dashboard tree after valid permanent/trial entitlement
-   transition, removing the close/reopen requirement.
-3. **Single-route customer trial resilience — SOURCE PROTECTED / LIVE P1 OPEN.**
-   PR #234 protects bounded primary/recovery ingress and authoritative response
-   selection; issue #230 still requires owned production DNS, independent recovery
-   routing, protected bindings, Algerian fixed/mobile evidence and a signed
-   installed customer trial/recovery journey.
-4. **Startup/performance — OPEN under #226.** Internal.14 ordinary startup was
-   observed as taking many minutes. Measure exact cold-start stages before
-   optimization, then certify T470/floor navigation/search/mutation/resource and
-   eight-hour budgets.
-5. **Replacement-install recovery evidence — CLOSED.** Exact PR #234 installed
-   evidence passed backup/interruption/rollback/committed two-shop restore, owner
-   re-enrollment, protected customer blind-index readback, protected-secret
-   readback, protected-key rewrap, identity/session non-cloning and committed
-   receipt verification; #214 is closed.
-6. **Documentation/source-authority drift — ACTIVE MAINTENANCE DEBT.** This
-   reconciliation updates the active authority chain and current-frontier verifier.
-   Bounded stale historical source comments may be cleaned later without mixing
-   them into consequential schema/native changes merely for aesthetics.
-7. **Legacy compatibility seams — OPEN LOWER-PRIORITY DEBT.** Canonical order and
-   business fences are strong, but historical compatibility paths remain. Do not
-   mix compatibility retirement into the frontend-foundation package without a
-   concrete defect plus canonical parity, migration and recovery proof.
+- Base before merge: `e344a869c1820fe46454437f9aff228c1cccda67`.
+- Frozen PR head: `7d0b01a9f1989ad7e2cae25c3b0d39d6e92a64d8`.
+- Squash merge / protected application baseline:
+  `04adb20fb5846499039eda61a9b765deb9c622e6`.
+- CI `31497523385`: **PASS**.
+- Phase 5 Experience `31497523052`: **PASS**.
+- Phase 6–7 Completion `31497523030`: **PASS**.
+- Final fresh Codex review on `7d0b01a9f1`: **no major issues**.
+- All material review threads resolved before merge.
 
-## Retained issue reconciliation
+### #236 protected outcomes
 
-- **#201 CLOSED:** exact #234 installed evidence passed authenticated hydrated
-  WebView UI twice, launch/reopen and all consequence-selected Windows/source
-  gates; PR #232 had already retired the PR #200 waiver.
-- **#214 CLOSED:** exact #234 installed evidence passed replacement-install
-  backup → interruption → rollback → committed restore, owner re-enrollment,
-  protected-customer blind-index readback, protected-secret readback, key rewrap,
-  identity/session non-cloning and committed receipt verification.
-- **issue #221 OPEN:** Founder-installed Phase 5/6 visual/accessibility acceptance.
-  Do not close until the repaired coherent signed candidate is actually reviewed.
-- **#226 OPEN:** installed Phase 7 performance/reliability certification. Startup
-  must be measured before optimization; certify T470/floor/eight-hour budgets.
-- **#230 OPEN P1:** live resilient customer-trial certification as described above.
+- Noto Sans Arabic application typography paired with Inter;
+- atomic server-tree locale + document-direction transaction across AR/FR/EN;
+- custom theme authority with Sahel/Atlas/Oasis/Dune coordinated accents;
+- one hydration-safe persisted density authority;
+- shallow primary navigation;
+- compact contextual notices;
+- governed chart grammar;
+- restrained, interruptible, reduced-motion-safe motion;
+- logical RTL/mixed-direction primitives;
+- root toaster/direction coherence;
+- resilient best-effort UI preference storage;
+- independent coarse-pointer target authority for ordinary, slotted, portaled and
+  command-palette controls.
 
-## Exact #234 evidence checkpoint
+Codex raised fifteen material findings during development (one P1, fourteen P2).
+They were repaired rather than waived. The real Playwright touch evidence caught
+multiple ineffective intermediate repairs, which is why #236 took longer than
+planned.
 
-Exact PR head `04b04bbbc20124ccbee790b47855056155a1cc29` passed CI run
-`31442156721`, including:
+#236 is source/browser foundation evidence only. It does **not** close #221/#226/#230
+or create installed Founder acceptance.
 
-- Required PR Gate;
-- Quality (`tsc`, ESLint, Vitest, Prisma, audit/dependency/migration checks);
-- Tauri release smoke;
-- Windows standalone/contained runtime;
-- Windows Rust release parity;
-- exact evidence MSI build;
-- installed launch/reopen;
-- authenticated hydrated WebView UI twice;
-- replacement-install backup/restore/identity/rollback drill;
-- Native source contract;
-- Phase 5 Experience Gate;
-- Phase 6–7 Completion Gate;
-- fresh final-head Codex review with no major issue and zero unresolved addressed
-  review threads before merge.
+## Phase 6 next action — finish the active Inbox adoption package
 
-The earlier installed attempt had a transient WebView/CDP evidence transport failure
-after the restore itself committed. A retry on that same older product head passed
-the previously failing step before becoming stale, and the final exact head passed
-the full installed run. Treat it as evidence-harness flake, not a restore regression.
+The shared foundation root is already protected. The immediate Phase 6/Phase 5
+adoption dependency is to continue PR #237 from live GitHub, finish its red failure
+batch, prove the complete Inbox workspace on one exact head, and merge only after
+fresh review. After Inbox the adoption order is AI Agents, Settings, then remaining
+production routes.
 
-## Phase 6 next action
+## Active WIP — PR #237 Inbox operational workspace redesign
 
-The exact next implementation outcome is **frontend foundation authority**.
-Do **not** begin broad screen redesign yet. Start from then-current protected `main`
-after confirming no other active implementation PR.
+### Live handoff identity
 
-### Reconnaissance already established
+- PR: **#237 — `feat(inbox): rebuild operational workspace`**.
+- Branch: `agent/inbox-product-workspace-redesign`.
+- Base: protected #236 main `04adb20fb5846499039eda61a9b765deb9c622e6`.
+- Exact authoritative handoff head: **`cf84491cfd7613728a86dc9157da3fc4631e9105`**.
+- Live state at handoff: open, mergeable, not draft, not merged.
+- Last live metadata: 15 commits, 11 changed files, +2728/-20.
+- This is the only active implementation PR found at handoff.
 
-The locale/direction path contains a concrete shared-root mismatch:
+**Do not merge #237 at this state. It is red.**
 
-- `src/stores/ui-store.ts` uses the `sahelflow-locale` cookie as locale authority
-  and updates the client store immediately;
-- `src/hooks/use-i18n.ts` uses the client store after mount and mutates `<html
-  lang>` / `<html dir>` in an effect;
-- `src/app/(dashboard)/layout.tsx` reads locale/direction on the server and passes
-  `serverDir` into the client shell;
-- `src/components/layout/sidebar.tsx` derives `isRtl` from that server prop.
+### PR #237 product thesis
 
-A client locale switch can therefore update text/document direction while the
-sidebar still holds stale server-direction state until the server tree refreshes.
-This matches the installed wrong-side/stale-direction symptom. Fix locale +
-document direction + server-derived shell direction as one coherent transition;
-do not layer more route-local RTL patches.
+The redesign is intentionally product/workflow-level while preserving the backend:
 
-Theme reconnaissance found a custom `ThemeProvider` and the pre-hydration theme
-script in `src/app/layout.tsx`, both using `localStorage('theme')`. Audit every
-other theme mutator/selector before freezing the authority. The visual problem is
-not solved by palette changes alone.
+- the shop database is the visible inbox/history/workflow authority regardless of
+  WhatsApp connection state;
+- provider connected/reconnecting/disconnected/unavailable/QR is a separate compact
+  transport-health state, not a reason to silently switch the user into “demo” data;
+- `/api/whatsapp/chats` is an additive read projection with canonical
+  conversation/workflow metadata and assignment version;
+- Inbox state/transport behavior is split from presentation;
+- desktop workspace is queue + durable thread/composer + workflow/team context rail;
+- All / Unread / Open / Pending / Resolved queues expose attention state;
+- send/outbox/retry/read-receipt, message extraction, assignment/version/
+  idempotency and collaboration authority are preserved;
+- oversized ingress recovery becomes a compact issue dock + explicit recovery sheet;
+- permanent QR/status bands become bounded pairing/connection controls while saved
+  history remains readable offline;
+- AR/FR/EN and flow-relative RTL consume the #236 foundation.
 
-`src/app/globals.css` already contains accumulated older animation/status/hover
-rules plus a later “Foundation v2” spacing/type section. Inventory and normalize;
-do not append another disconnected design layer.
+### Authoritative changed-file set at handoff
 
-### Foundation contract to freeze before broad adoption
+- `.github/workflows/phase5-experience.yml`
+- `e2e/inbox-workspace.spec.ts`
+- `src/app/(dashboard)/inbox/page.tsx`
+- `src/app/api/whatsapp/chats/[jid]/messages/route.ts`
+- `src/app/api/whatsapp/chats/route.ts`
+- `src/components/inbox/__tests__/inbox-workspace-contract.test.ts`
+- `src/components/inbox/inbox-workspace-types.ts`
+- `src/components/inbox/inbox-workspace.tsx`
+- `src/components/inbox/whatsapp-ingress-recovery-dock.tsx`
+- `src/hooks/use-inbox-workspace.ts`
+- `src/lib/i18n/inbox-workspace.ts`
 
-- deliberate Arabic/Latin typography and readable density;
-- semantic design tokens for surfaces, spacing, borders, radius/elevation,
-  statuses, focus, charts and motion;
-- excellent light/dark foundations plus coordinated theme/accent families;
-- restrained reduced-motion-safe motion;
-- atomic locale/direction transitions;
-- logical RTL and mixed-direction primitives;
-- stable application shell + shallow task-shaped navigation;
-- shared notice/warning, table/list, form, KPI/status, chart, overlay,
-  loading/empty/degraded/recovery patterns.
+## Exact PR #237 red evidence — fully classified
 
-Then adopt those roots in real production routes. Inbox, AI Agents and Settings are
-priority redesign workspaces, followed by the complete route inventory.
+### CI run `31506227884` — FAIL
 
-## Outcome F — installed Phase 6/7 + Founder acceptance
+The quality job passed TypeScript, full Vitest, dependency audit and migration
+status. Vitest passed **285 files / 2309 tests**. ESLint failed on exactly **three
+new errors** (warnings are pre-existing/noise for this decision):
 
-After frontend foundation/adoption:
+1. `src/components/inbox/inbox-workspace.tsx:967`
+   `react-hooks/set-state-in-effect` — `PairingDialog` synchronously calls
+   `setOpen(true/false)` from an effect keyed by `transport.status`.
+2. `src/components/inbox/whatsapp-ingress-recovery-dock.tsx:106`
+   `react-hooks/set-state-in-effect` — mount effect calls `load()`, whose synchronous
+   prefix sets loading state.
+3. `src/hooks/use-inbox-workspace.ts:407`
+   `react-hooks/set-state-in-effect` — startup effect directly calls `loadChats()`,
+   whose synchronous prefix sets loading state.
 
-1. Re-run installed Phase 6 AR/FR/EN, Arabic joining/reading, RTL geometry,
-   1366×768/zoom, keyboard/focus/semantics and reduced-motion evidence under issue
-   #221.
-2. Measure and fix Phase 7 startup/navigation/search/mutation/resource budgets
-   under #226.
-3. Complete live #230 production/network trial evidence.
-4. Build one coherent signed Founder candidate.
-5. Run whole-product Founder acceptance on the T470.
-6. Begin Phase 8 implementation only after this mandatory gate passes.
+**Next-session fix rule:** repair all three as one React lifecycle/state-boundary
+batch. Do not disable the lint rule or hide the behavior behind eslint comments.
 
-## Hard rules
+### Phase 5 Experience run `31506226294` — FAIL
 
-- one active implementation agent and one coherent branch/PR per outcome;
+- Static route matrix: PASS.
+- Fresh install + owner login: PASS.
+- Representative workbench: FAIL in the new Inbox journey.
+- Inbox proof successfully established before failure:
+  - `/api/whatsapp/chats` returned `source: "database"`;
+  - 10 saved conversations were returned from the representative seed;
+  - every row had a canonical `conversationId`;
+  - `data-inbox-workspace="v2"` was visible;
+  - 10 conversation rows rendered;
+  - no `(démo)` marker was present;
+  - sidecar-unavailable state displayed `Service WhatsApp indisponible`.
+- Failure was evidence sequencing: the test expected the French offline-reply note
+  **before selecting a conversation**, but that note belongs to the active thread/composer.
+- Failed Phase 5 artifact: `9107262871`.
+
+**Next-session fix:** select a saved conversation before asserting the degraded/
+offline composer note. Preserve the core requirement that database history remains
+usable while transport is unavailable; do not delete the degraded-state assertion.
+
+### Phase 6–7 run `31506225287` — FAIL
+
+#### Source-quality diagnostics
+
+Failed only from the same three ESLint errors above. TypeScript, Vitest, production
+dependency audit and migration status passed.
+
+#### Static localization/RTL/accessibility job `93829178215`
+
+Exact failure from `verify-phase6-7-completion.ts`:
+
+`hard-coded user copy: src/components/inbox/inbox-workspace.tsx:920:38 JSX text: ": Enter · Shift+Enter"`
+
+Artifact: `9107225860`.
+
+**Next-session fix:** move the whole composer keyboard hint into governed AR/FR/EN
+copy; do not exempt the string or leave a concatenated hard-coded suffix.
+
+#### AR-FR-EN accessibility/reflow/performance job `93830638496`
+
+Eight of nine integrated journeys passed. The only failure was:
+
+`Phase 7 throttled browser performance trend stays bounded`
+
+Clean-CI route p95 tripwire expected `< 8000ms`:
+
+- attempt 1: **8300ms**;
+- retry: **9514ms**.
+
+Search p95 was not reported as the failing assertion. Artifact:
+`9107585095`.
+
+This job includes representative seed with **10 conversations + 40 messages**.
+
+**Next-session action:** inspect the performance artifact/trace and determine whether
+Inbox/workflow additions materially increased controlled dev-server route p95 or
+whether route compilation/test sequencing dominates. Do **not** simply raise the
+8s tripwire to get green. If product work is responsible, optimize the measured
+path; if the evidence design is wrong, repair it with proof while keeping Phase 7
+installed targets unchanged.
+
+## Connector branch anomaly — do not accidentally resurrect unreachable work
+
+During PR #237 implementation, several connector write calls returned later commit
+SHAs (examples included `3c3f6962...`, `dafbb2d2...` and other post-`cf844` values),
+but repeated live PR/branch reads still resolved the branch head to
+`cf84491cfd7613728a86dc9157da3fc4631e9105`; compare calls also reported the live
+branch identical to that head.
+
+Therefore **`cf84491...` is the authoritative WIP head at this handoff**. Those
+post-`cf844` returned SHAs are non-authoritative unless the next session can prove
+they are reachable from live GitHub refs. Do not cherry-pick, force-move or
+“recover” them merely from chat/tool history. Re-fetch the branch/PR and adopt only
+what live GitHub proves.
+
+## Current issue truth
+
+- **#201 CLOSED:** exact #234 installed hydrated-WebView/startup evidence passed.
+- **#214 CLOSED:** exact #234 replacement-install recovery evidence passed.
+- **issue #221 OPEN:** coherent repaired installed visual/accessibility + Founder acceptance.
+- **#226 OPEN:** installed Phase 7 performance/reliability certification.
+- **#230 OPEN P1:** live resilient customer-trial production/network certification.
+
+## Lower-priority engineering debt
+
+1. Startup/performance measurement remains open under #226; do not optimize from intuition.
+2. Documentation/source-authority drift is ongoing maintenance debt; this
+   reconciliation advances active docs/current-frontier verification.
+3. Legacy compatibility seams remain lower priority. Do not mix retirement into
+   Inbox/AI/Settings unless a concrete defect plus canonical parity/migration/
+   recovery evidence justifies it.
+4. Historical branch hygiene debt remains separate from product implementation.
+
+## Hard rules for the next session
+
+- one active implementation agent/PR; PR #237 already owns the Inbox outcome;
 - no ordinary direct protected-main edits;
-- no important decision remains only in chat;
-- preserve Phase 1–4 canonical authority unless a demonstrated defect requires a
-  bounded repair;
-- no screenshot-by-screenshot patch campaign before shared roots are frozen;
-- no competitor visual clone or demo-only parallel design system;
-- no performance optimization without measured evidence;
-- no #230 production claim from mocks/CI or permanent offline activation;
-- Internal.14 is not Founder-accepted; Founder-accepted truth remains Internal.5;
-- no Beta or Stable claim without matching evidence.
+- re-fetch live GitHub before any write or merge;
+- preserve Phase 1–4/Phase 3 canonical authority;
+- batch related fixes before full gate/review cycles;
+- do not weaken tests/thresholds merely to make WIP green;
+- do not claim browser/source evidence as installed acceptance;
+- no #230 production claim from mocks/CI/permanent offline activation;
+- Internal.14 remains Founder-rejected; Internal.5 remains Founder-accepted baseline;
+- no Beta/Stable claim;
+- Phase 8 implementation stays frozen.
 
-## Resume checklist
+## Exact next-session order
 
 1. Read `AGENTS.md`, `documentation/README.md`, `CURRENT_STATE.md`, `ROADMAP.md`,
-   `WORKFLOW.md` and this file.
-2. Re-fetch protected `main`, open PRs and issues #164/#221/#226/#230.
-3. Confirm no other implementation agent/PR is active.
-4. Start the frontend-foundation package from current protected `main`.
-5. Finish reconnaissance before choosing/fixing typography, token, theme, motion,
-   shell or locale/RTL implementation details.
+   `WORKFLOW.md` and this Working Memory.
+2. Re-fetch protected `main`, PR #237 exact head/changed files, open PRs/issues,
+   review threads and current Actions. **Live GitHub overrides this handoff SHA if it advanced.**
+3. Verify the connector-anomaly SHAs are not live/reachable before ignoring them;
+   never recover them from chat alone.
+4. Re-read failed exact-head logs/artifacts if necessary:
+   - CI `31506227884`;
+   - Phase 5 `31506226294`, artifact `9107262871`;
+   - Phase 6–7 `31506225287`;
+   - static job `93829178215`, artifact `9107225860`;
+   - browser job `93830638496`, artifact `9107585095`.
+5. Fix the **three ESLint lifecycle/state errors in one batch** without rule suppression.
+6. Move the hard-coded composer keyboard hint into governed AR/FR/EN copy.
+7. Fix the Phase 5 Inbox evidence sequencing by selecting a conversation before
+   asserting the offline composer note; keep database-authority/degraded proof.
+8. Inspect Phase 7 trace/evidence and diagnose the 8.3s/9.514s route-p95 failure;
+   fix product/evidence root cause without casually loosening thresholds.
+9. Self-audit the complete Inbox package coherently:
+   - DB authority vs transport status;
+   - permissions/protected contact behavior;
+   - message direction/history and activity rows;
+   - send/outbox/ambiguous/dead-letter retry;
+   - assignment/version/idempotency and collaboration;
+   - recovery reason/authorization;
+   - responsive mobile drill-in/back behavior;
+   - RTL context/recovery sheet edge and mixed-direction phone/message geometry;
+   - loading/empty/degraded/offline states and coarse-pointer targets.
+10. Run exact-head CI + Phase 5 + Phase 6–7 once the batch is complete.
+11. If green, request **one fresh adversarial Codex review on that exact frozen head**.
+12. Batch any real review findings, rerun only consequence-required gates, resolve
+    all material threads and update PR #237 body/evidence.
+13. Merge #237 only with expected-head protection when exact-head gates/review are green.
+14. Verify protected `main`.
+15. Start **AI Agents redesign**, then **Settings**, then remaining route adoption.
+16. After coherent frontend adoption, finish installed #221/#226, live #230 and
+    explicit Founder acceptance before Phase 8 implementation.
+
+No additional permanent handoff document is needed. This file is the resume owner.

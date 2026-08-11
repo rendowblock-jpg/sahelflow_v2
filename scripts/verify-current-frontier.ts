@@ -35,129 +35,130 @@ function rejectMarkers(relativePath: string, markers: readonly string[]): void {
   }
 }
 
-const protectedMainAtHandoff =
-  "bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647";
-const protectedApplicationSha = "2d60e2e74109b6e03626a5ccdff727c029a34591";
-const validatedPhase67Head = "fa0ff6de649421c879f62364383a363b61c71bfc";
-const phase5Baseline = "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734";
+// This verifier intentionally freezes durable application/release authority, not
+// transient Actions conclusions. Exact red/green WIP run IDs belong in Working
+// Memory and PR evidence, where they can change without making documentation
+// authority itself stale.
+const protectedApplicationBaseline =
+  "04adb20fb5846499039eda61a9b765deb9c622e6";
+const publishedApplicationSha =
+  "2d60e2e74109b6e03626a5ccdff727c029a34591";
 const signedReleaseRun = "31388777098";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
+const inboxHandoffHead = "cf84491cfd7613728a86dc9157da3fc4631e9105";
 
 requireMarkers("README.md", [
-  protectedMainAtHandoff,
-  "Latest application-changing protected merge: **PR #234",
-  protectedApplicationSha,
-  "Published release: `1.0.0-internal.14`",
+  protectedApplicationBaseline,
+  "Latest application-changing protected merge: **PR #236",
+  publishedApplicationSha,
+  "`1.0.0-internal.14`",
   signedReleaseRun,
   activePhase,
-  "Founder-installed release: **Internal.14**",
+  "Founder-installed release remains **Internal.14**",
   "Founder-accepted baseline remains **Internal.5**",
-  "Founder acceptance remains open",
-  "mandatory pre-Phase-8 stabilization",
-  "PR #232",
-  "PR #233",
-  "PR #234",
-  "Current live state is different: #201 and #214 are closed",
-  "#230 remains a P1 external-certification blocker",
-  "#226",
-  phase5Baseline,
-  "documentation/operations/WORKING_MEMORY.md",
+  "PR #237",
+  inboxHandoffHead,
+  "not green and must not be merged yet",
+  "AI Agents follows Inbox",
+  "Settings follows",
+  "#221, #226 and #230",
+  "WORKING_MEMORY.md",
 ]);
 
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   "Verified product frontier",
-  protectedMainAtHandoff,
-  "Latest application-changing protected merge: PR #234",
-  protectedApplicationSha,
+  protectedApplicationBaseline,
+  "Latest application-changing protected merge: **PR #236**",
+  publishedApplicationSha,
   "Published release remains `1.0.0-internal.14`",
   activePhase,
-  "Mandatory pre-Phase-8 Founder gate",
-  "Exact next outcome",
-  "issue #221",
-  "Issue #230 remains **open P1**",
-  "Issues **#201 and #214 are closed**",
-  phase5Baseline,
+  "PR #237",
+  inboxHandoffHead,
+  "Exact next outcome — continue PR #237 Inbox",
+  "three ESLint",
+  "Enter · Shift+Enter",
+  "8.3s",
+  "9.514s",
+  "#221, #226, #230",
   "WORKING_MEMORY.md` is the single",
 ]);
 
 requireMarkers("documentation/README.md", [
-  protectedMainAtHandoff,
-  "**Latest application-changing protected merge:** PR #234",
-  protectedApplicationSha,
+  protectedApplicationBaseline,
+  "**Latest application-changing protected merge:** PR #236",
+  publishedApplicationSha,
   "**Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
   activePhase,
-  "Mandatory gate before Phase 8",
-  "Published Internal.14 checkpoint",
-  "issue #221",
-  "**#201 — closed:**",
-  "**#214 — closed:**",
-  "**#230 — open P1:**",
-  phase5Baseline,
-  "single session-resume owner",
+  "**Active implementation PR:** #237",
+  inboxHandoffHead,
+  "Shared frontend foundation now protected",
+  "Active implementation frontier — PR #237 Inbox",
+  "AI Agents → Settings",
+  "#221, #226, #230",
+  "single detailed session-resume owner",
 ]);
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
-  protectedMainAtHandoff,
-  "Latest application-changing protected merge:** PR #234",
-  protectedApplicationSha,
+  protectedApplicationBaseline,
+  "**Latest application-changing protected merge:** PR #236",
+  publishedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
   activePhase,
-  "Mandatory gate before Phase 8",
-  "Founder-installed frontend problem register",
-  "Active Phase 6 frontier",
-  "Mandatory order from here",
-  "FD-031 exception boundary",
-  "issue #214 — CLOSED",
+  "PR #236 — shared frontend foundation authority",
+  "Active unmerged frontier — PR #237 Inbox",
+  inboxHandoffHead,
+  "do not merge",
+  "AI Agents",
+  "Settings",
+  "#221 — OPEN",
   "#226 — OPEN",
-  "Issue #230 — open P1 external-certification boundary",
-  phase5Baseline,
-  "Working Memory owns the compact resumable context",
+  "#230 — OPEN P1",
+  "Phase 8 implementation has not begun",
 ]);
 
 requireMarkers("documentation/system/ROADMAP.md", [
-  protectedMainAtHandoff,
-  "Historical PR #231 program-freeze baseline",
-  "Latest application-changing protected merge:** PR #234",
-  protectedApplicationSha,
+  protectedApplicationBaseline,
+  "Latest application-changing protected merge:** PR #236",
+  publishedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
-  validatedPhase67Head,
-  phase5Baseline,
   activePhase,
+  "PR #237 — Inbox operational workspace redesign",
+  inboxHandoffHead,
+  "Shared foundation — SATISFIED IN SOURCE/BROWSER BY PR #236",
+  "Inbox — ACTIVE PR #237",
+  "AI Agents — next after Inbox merge",
+  "Settings — after AI Agents",
   "Mandatory pre-Phase-8 stabilization and Founder-acceptance gate",
-  "retained issue #201 satisfied/closed",
-  "retained issue #214 satisfied/closed",
-  "Open retained issues:** #221 Founder visual/accessibility acceptance; #226 performance/reliability; #230 live resilient customer-trial certification",
-  "Satisfied — PR #232",
-  "Satisfied — PR #233",
-  "Open — issue #230",
-  "Satisfied historical prerequisite — issue #214",
-  "Phase 5 — whole-product AAA desktop experience",
-  "Phase 6 — Arabic, RTL and accessibility parity",
-  "Phase 7 — performance and reliability budgets",
-  "Phase 8 — connected platform and growth completeness",
+  "Shared foundation satisfied in source/browser — PR #236",
   "Implementation frozen behind the mandatory pre-Phase-8 gate",
 ]);
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
-  protectedMainAtHandoff,
-  "Latest application-changing protected merge:** PR #234",
-  protectedApplicationSha,
+  protectedApplicationBaseline,
+  "Latest application-changing protected merge:** PR #236",
+  publishedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
   activePhase,
-  "Phase 5 closure snapshot",
-  "Known engineering defects/debt to close in the same program",
-  "Phase 6 next action",
-  "Outcome A — CI authority hardening",
-  "Outcome F — installed Phase 6/7 + Founder acceptance",
-  "seven technical findings from the deep",
-  "issue #221 OPEN",
+  "This session — PR #236 frontend foundation CLOSED",
+  "Active WIP — PR #237 Inbox operational workspace redesign",
+  inboxHandoffHead,
+  "Exact PR #237 red evidence — fully classified",
+  "31506227884",
+  "31506226294",
+  "31506225287",
+  "93829178215",
+  "93830638496",
+  "8300ms",
+  "9514ms",
+  "Connector branch anomaly",
+  "Exact next-session order",
+  "#221 OPEN",
   "#226 OPEN",
   "#230 OPEN P1",
-  phase5Baseline,
 ]);
 
 const duplicateHandoffPath =
@@ -168,11 +169,13 @@ if (existsSync(resolve(repoRoot, duplicateHandoffPath))) {
   );
 }
 
-const stalePr229Markers = [
-  "Open pull requests:** PR #229 documentation reconciliation",
-  "Open PRs:** #229 documentation reconciliation",
-  "Active documentation reconciliation: **PR #229**",
-  "PR #229 is documentation-only",
+const staleFoundationNextMarkers = [
+  "The next package is **frontend foundation authority**",
+  "The next implementation package is **frontend foundation authority**",
+  "The exact next implementation outcome is **frontend foundation authority**",
+  "Start the frontend-foundation package",
+  "Latest application-changing protected merge: PR #234",
+  "Latest application-changing protected merge:** PR #234",
 ];
 
 for (const path of [
@@ -183,54 +186,28 @@ for (const path of [
   "documentation/system/ROADMAP.md",
   "documentation/operations/WORKING_MEMORY.md",
 ]) {
-  rejectMarkers(path, stalePr229Markers);
+  rejectMarkers(path, staleFoundationNextMarkers);
 }
 
-const staleInstalledOnlyMarkers = [
-  "The next work is installed observation, not broad source implementation",
-  "The active dependency is the installed/human checkpoint in issue #221; issue #226 follows after Phase 6 exit",
-  "close Phase 6 or open one bounded defect package",
-];
-
-for (const path of [
-  "README.md",
-  "AGENTS.md",
-  "documentation/README.md",
-  "documentation/system/CURRENT_STATE.md",
-  "documentation/system/ROADMAP.md",
-  "documentation/operations/WORKING_MEMORY.md",
-]) {
-  rejectMarkers(path, staleInstalledOnlyMarkers);
-}
-
-rejectMarkers("README.md", [
+const staleReleaseMarkers = [
   "Active release-preparation PR: **#227",
-  "Published release remains `1.0.0-internal.13`",
-  "it is **not published** until PR #227",
-]);
-rejectMarkers("AGENTS.md", [
   "Active release-preparation PR: #227",
   "Published release remains `1.0.0-internal.13`",
-  "For the current PR #227 blocker",
-]);
-rejectMarkers("documentation/README.md", [
-  "PR #227 prepares one unique **Internal.14**",
   "Internal.14 remains unclaimed until",
-]);
-rejectMarkers("documentation/system/CURRENT_STATE.md", [
-  "Active release PR:** #227",
-  "PR #227 is not merged",
   "Internal.14 is not published",
-  "historical PR #200/#207 CI exception mechanisms remain active",
-  "successful permanent activation became blank until close/reopen",
-]);
-rejectMarkers("documentation/operations/WORKING_MEMORY.md", [
-  "Active PR:** #227",
-  "PR #227 is unmerged",
   "Internal.14 is unpublished",
-  "scripts/classify-pr-risk.ts still contains the historical PR #200",
-  "Successful permanent/trial activation can produce a blank dashboard until restart",
-]);
+];
+
+for (const path of [
+  "README.md",
+  "AGENTS.md",
+  "documentation/README.md",
+  "documentation/system/CURRENT_STATE.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/operations/WORKING_MEMORY.md",
+]) {
+  rejectMarkers(path, staleReleaseMarkers);
+}
 
 if (findings.length > 0) {
   console.error("Current execution-frontier authority is stale or incomplete:");
@@ -238,6 +215,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: PRs #232/#233/#234 are protected; #201/#214 are closed from stronger exact installed evidence; #221/#226/#230 remain open; Working Memory owns the complete resumable context; the next implementation outcome is shared-root frontend foundation authority before installed Phase 6/7 and Founder acceptance, and Phase 8 implementation remains frozen.",
+    "Current execution frontier verified: PR #236 protects the shared frontend foundation; PR #237 is the active unmerged Inbox workspace; #221/#226/#230 remain open; Working Memory owns exact WIP failures and resume order; AI Agents then Settings follow Inbox; Phase 8 implementation remains frozen.",
   );
 }
