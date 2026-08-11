@@ -45,8 +45,10 @@ PR #236 protects the shared source/browser frontend roots:
 - resilient preference storage and coarse-pointer target authority.
 
 PR #237 protects the database-authoritative Inbox operational workspace on top of
-those roots. Local conversation/history/workflow authority remains usable when
-WhatsApp transport is degraded, while task queues, durable thread/composer,
+those roots. Final pre-merge #237 head
+`8e9d5aa365f0c5873909c1c8517f88519d743b9d` remains its exact source/browser
+continuity anchor. Local conversation/history/workflow authority remains usable
+when WhatsApp transport is degraded, while task queues, durable thread/composer,
 workflow/team context, recovery, workflow reconciliation, batched assignment
 projection and coalesced live refreshes preserve protected provider/outbox,
 collaboration and permission authority.
