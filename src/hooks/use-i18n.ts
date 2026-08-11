@@ -8,7 +8,12 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { getDirection, loadTranslations, type Locale } from "@/lib/i18n";
+import {
+  getDirection,
+  loadTranslations,
+  LOCALES,
+  type Locale,
+} from "@/lib/i18n";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 import { useServerLocale } from "@/lib/i18n/server-locale-context";
 import { useUIStore } from "@/stores/ui-store";
@@ -41,6 +46,21 @@ export function useI18n() {
   const locale = mounted ? storeLocale : serverLocale;
   const translations = use(getTranslationPromise(locale));
 
+  // SahelFlow ships only three compact locale bundles. Warm the inactive bundles
+  // once the client is mounted so subsequent language switches do not suspend on
+  // a first-time dynamic import before the shell can update.
+  useEffect(() => {
+    for (const candidate of LOCALES) {
+      if (candidate === locale) continue;
+      void getTranslationPromise(candidate).catch(() => {
+        translationPromiseCache.delete(candidate);
+      });
+    }
+  }, [locale]);
+
+  // The store applies lang/dir synchronously during an interactive switch. This
+  // effect is an idempotent reconciliation boundary for initial hydration and any
+  // future locale authority that updates the store outside that interaction.
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = getDirection(locale);
@@ -75,11 +95,6 @@ export function useI18n() {
   const setLocale = useCallback(
     (newLocale: Locale) => {
       setLocaleStore(newLocale);
-      if (typeof document !== "undefined") {
-        document.cookie = `sahelflow-locale=${newLocale}; path=/; max-age=${
-          60 * 60 * 24 * 365
-        }; samesite=lax`;
-      }
     },
     [setLocaleStore],
   );
