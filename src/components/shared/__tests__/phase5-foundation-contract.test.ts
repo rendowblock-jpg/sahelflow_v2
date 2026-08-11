@@ -81,31 +81,28 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(dashboardLayout).toContain("const { density } = useUiDensity()");
     expect(dashboardLayout).toContain("root.dataset.density = density");
     expect(dashboardLayout).toContain('window.matchMedia("(pointer: coarse)")');
-    expect(dashboardLayout).toContain('coarsePointer.matches\n          ? "3rem"');
-    expect(dashboardLayout).toContain('density === "compact"\n            ? "2.25rem"');
-    expect(dashboardLayout).toContain('coarsePointer.addEventListener("change", applyControlHeight)');
+    expect(dashboardLayout).toContain("const applyControlMetrics = () => {");
+    expect(dashboardLayout).toContain('isCoarse ? "3rem" : "0px"');
+    expect(dashboardLayout).toContain('"--sf-touch-target"');
+    expect(dashboardLayout).toContain('coarsePointer.addEventListener("change", applyControlMetrics)');
+    expect(dashboardLayout).toContain('root.style.removeProperty("--sf-touch-target")');
   });
 
-  it("sizes portaled and slotted coarse-pointer interaction primitives from the shared control-height authority", () => {
+  it("sizes portaled and slotted coarse-pointer interaction primitives from root authorities", () => {
     const button = read("src/components/ui/button.tsx");
     const dropdown = read("src/components/ui/dropdown-menu.tsx");
     const select = read("src/components/ui/select.tsx");
     const dialog = read("src/components/ui/dialog.tsx");
     const sheet = read("src/components/ui/sheet.tsx");
-    const foundation = read("src/app/phase5.css");
 
-    expect(button).toContain("sf-button-size-xs h-7");
-    expect(button).toContain("sf-button-size-sm h-9");
-    expect(button).toContain("sf-button-size-icon-xs size-7");
-    expect(button).toContain("sf-button-size-icon-sm size-9");
+    expect(button).toContain("sf-button-size-xs h-7 min-h-(--sf-touch-target)");
+    expect(button).toContain("sf-button-size-sm h-9 min-h-(--sf-touch-target)");
+    expect(button).toContain("sf-button-size-icon-xs size-7 min-h-(--sf-touch-target) min-w-(--sf-touch-target)");
+    expect(button).toContain("sf-button-size-icon-sm size-9 min-h-(--sf-touch-target) min-w-(--sf-touch-target)");
     expect(dropdown.match(/min-h-\(--control-height\)/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
     expect(select.match(/min-h-\(--control-height\)/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
     expect(dialog).toContain("min-h-(--control-height) min-w-(--control-height)");
     expect(sheet).toContain("min-h-(--control-height) min-w-(--control-height)");
-    expect(foundation).toContain(".sf-button-size-xs,");
-    expect(foundation).toContain(".sf-button-size-icon-sm");
-    expect(foundation).toContain("min-height: var(--control-height)");
-    expect(foundation).toContain("min-width: var(--control-height)");
   });
 
   it("keeps user-authored search direction automatic and command chrome flow-relative", () => {
