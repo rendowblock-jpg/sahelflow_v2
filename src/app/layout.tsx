@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { Inter, Amiri } from "next/font/google";
+import { Inter, Noto_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 import "./phase5.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,9 +19,11 @@ const inter = Inter({
   display: "swap",
 });
 
-const amiri = Amiri({
+// UI-first Arabic companion to Inter. Unlike the previous editorial serif face,
+// Noto Sans Arabic is used as an application text family across navigation,
+// controls, tables and operational reading surfaces.
+const arabicSans = Noto_Sans_Arabic({
   subsets: ["arabic"],
-  weight: ["400", "700"],
   variable: "--font-arabic",
   display: "swap",
 });
@@ -76,12 +78,12 @@ export default async function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme')||'dark';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.style.colorScheme=r;}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'&&t!=='system')t='dark';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.style.colorScheme=r;}catch(e){}})();`,
           }}
         />
       </head>
       <body
-        className={`${inter.variable} ${amiri.variable} font-sans antialiased`}
+        className={`${inter.variable} ${arabicSans.variable} font-sans antialiased`}
       >
         <NuqsAdapter>
           <ServerLocaleProvider locale={locale}>
