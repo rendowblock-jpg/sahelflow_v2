@@ -20,6 +20,7 @@ import { getDirection, type Locale } from "@/lib/i18n";
 const VALID_LOCALES: readonly Locale[] = ["ar", "fr", "en"];
 
 export type UiDensity = "comfortable" | "compact";
+export const DEFAULT_UI_DENSITY: UiDensity = "comfortable";
 
 /**
  * Read the locale from the `sahelflow-locale` cookie.
@@ -77,7 +78,7 @@ export const useUIStore = create<UIState>()(
       // Initial client mirror matches the same cookie read by server layouts.
       locale: getCookieLocale() ?? "fr",
       sidebarCollapsed: false,
-      density: "comfortable",
+      density: DEFAULT_UI_DENSITY,
       activeShopId: null,
 
       setLocale: (locale) => {
