@@ -63,6 +63,12 @@ A lower layer cannot silently weaken a higher one.
 - Phase 8 implementation remains frozen behind route-wide frontend adoption,
   installed Phase 6/7, live #230 and explicit Founder acceptance.
 
+Semantic continuity: the earlier Phase 5 application-changing protected baseline
+remains `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`; it is historical exact-head
+evidence, not the current application frontier. Retained **issue #221** remains the
+installed Founder visual/accessibility checkpoint. Use the **selected Level 1/2/3
+gates** appropriate to consequence; the workflow names those levels explicitly.
+
 Always re-fetch live truth before a write. Never use copied SHAs for merge,
 release or destructive authority without verifying them.
 
