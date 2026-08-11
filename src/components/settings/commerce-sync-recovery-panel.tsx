@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  Loader2,
   RefreshCw,
   RotateCcw,
 } from "lucide-react";
@@ -14,6 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
+import {
+  getSettingsWorkspaceCopy,
+  type SettingsWorkspaceLocale,
+} from "@/lib/i18n/settings-workspace";
 import { toast } from "@/lib/toast";
 
 interface CommerceAttemptHistory {
@@ -61,6 +66,8 @@ interface CommerceRunHistory {
   items: CommerceItemHistory[];
 }
 
+type LoadState = "loading" | "ready" | "error";
+
 function statusVariant(
   status: string,
 ): "default" | "secondary" | "destructive" | "outline" {
@@ -84,9 +91,12 @@ async function fetchCommerceRuns(): Promise<CommerceRunHistory[]> {
 }
 
 export function CommerceSyncRecoveryPanel() {
-  const { t, locale } = useI18n();
+  const { t, locale: rawLocale } = useI18n();
+  const locale = rawLocale as SettingsWorkspaceLocale;
+  const copy = (key: Parameters<typeof getSettingsWorkspaceCopy>[1]) =>
+    getSettingsWorkspaceCopy(locale, key);
   const [runs, setRuns] = useState<CommerceRunHistory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadState, setLoadState] = useState<LoadState>("loading");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [retrying, setRetrying] = useState<string | null>(null);
@@ -100,31 +110,21 @@ export function CommerceSyncRecoveryPanel() {
   );
 
   const loadRuns = useCallback(async () => {
+    setLoadState("loading");
     try {
       setRuns(await fetchCommerceRuns());
+      setLoadState("ready");
     } catch {
-      toast.error(t("commerce.runtime.retryFailed"));
-    } finally {
-      setLoading(false);
+      setLoadState("error");
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    void fetchCommerceRuns()
-      .then((history) => {
-        if (active) setRuns(history);
-      })
-      .catch(() => {
-        if (active) toast.error(t("commerce.runtime.retryFailed"));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [t]);
+    const timeoutId = window.setTimeout(() => {
+      void loadRuns();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [loadRuns]);
 
   const retryRun = async (runId: string) => {
     const reason = reasons[runId]?.trim() ?? "";
@@ -165,20 +165,47 @@ export function CommerceSyncRecoveryPanel() {
           type="button"
           variant="outline"
           size="sm"
-          disabled={loading}
-          onClick={() => {
-            setLoading(true);
-            void loadRuns();
-          }}
+          disabled={loadState === "loading"}
+          onClick={() => void loadRuns()}
         >
           <RefreshCw
-            className={`me-1 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+            className={`size-4 ${loadState === "loading" ? "animate-spin" : ""}`}
+            aria-hidden="true"
           />
           {t("commerce.runtime.refresh")}
         </Button>
       </CardHeader>
       <CardContent className="p-0">
-        {!loading && runs.length === 0 ? (
+        {loadState === "loading" ? (
+          <div className="flex items-center justify-center px-4 py-10 text-sm text-muted-foreground">
+            <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
+            {copy("loading")}
+          </div>
+        ) : loadState === "error" ? (
+          <div className="m-4 flex flex-wrap items-start justify-between gap-4 rounded-lg border border-warning/25 bg-warning/5 p-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <AlertTriangle
+                className="mt-0.5 size-5 shrink-0 text-warning"
+                aria-hidden="true"
+              />
+              <div>
+                <p className="text-sm font-semibold">{copy("unavailable")}</p>
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+                  {copy("unavailableDescription")}
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void loadRuns()}
+            >
+              <RefreshCw className="size-3.5" aria-hidden="true" />
+              {copy("retry")}
+            </Button>
+          </div>
+        ) : runs.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">
             {t("commerce.runtime.noRuns")}
           </p>
@@ -206,7 +233,7 @@ export function CommerceSyncRecoveryPanel() {
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {formatter.format(new Date(run.createdAt))} ·{" "}
+                        {formatter.format(new Date(run.createdAt))} · {" "}
                         {t("commerce.runtime.pages")}: {run.pagesFetched}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -228,9 +255,9 @@ export function CommerceSyncRecoveryPanel() {
                       onClick={() => setExpanded(isExpanded ? null : run.id)}
                     >
                       {isExpanded ? (
-                        <ChevronUp className="me-1 h-4 w-4" />
+                        <ChevronUp className="size-4" aria-hidden="true" />
                       ) : (
-                        <ChevronDown className="me-1 h-4 w-4" />
+                        <ChevronDown className="size-4" aria-hidden="true" />
                       )}
                       {isExpanded
                         ? t("commerce.runtime.hideDetails")
@@ -238,14 +265,14 @@ export function CommerceSyncRecoveryPanel() {
                     </Button>
                   </div>
 
-                  {run.nextAttemptAt && (
+                  {run.nextAttemptAt ? (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      {t("commerce.runtime.nextAttempt")}:{" "}
+                      {t("commerce.runtime.nextAttempt")}: {" "}
                       {formatter.format(new Date(run.nextAttemptAt))}
                     </p>
-                  )}
+                  ) : null}
 
-                  {run.recoverable && (
+                  {run.recoverable ? (
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <Input
                         value={reasons[run.id] ?? ""}
@@ -265,32 +292,32 @@ export function CommerceSyncRecoveryPanel() {
                         disabled={retrying === run.id}
                         onClick={() => void retryRun(run.id)}
                       >
-                        <RotateCcw className="me-1 h-4 w-4" />
+                        <RotateCcw className="size-4" aria-hidden="true" />
                         {t("commerce.runtime.retry")}
                       </Button>
                     </div>
-                  )}
+                  ) : null}
 
                   {!run.recoverable &&
-                    run.recoveryBlockCode &&
-                    ["partially_completed", "dead_letter"].includes(
-                      run.status,
-                    ) && (
-                      <div className="mt-3 flex items-start gap-2 rounded-md border p-3 text-sm text-muted-foreground">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                        <span>
-                          {run.recoveryBlockCode ===
-                          "COMMERCE_WATERMARK_CONFLICT"
-                            ? t("commerce.runtime.watermarkConflict")
-                            : run.recoveryBlockCode ===
-                                "COMMERCE_CREDENTIAL_CONTRACT_DRIFT"
-                              ? t("commerce.runtime.credentialDrift")
-                              : t("commerce.runtime.retryUnavailable")}
-                        </span>
-                      </div>
-                    )}
+                  run.recoveryBlockCode &&
+                  ["partially_completed", "dead_letter"].includes(run.status) ? (
+                    <div className="mt-3 flex items-start gap-2 rounded-md border p-3 text-sm text-muted-foreground">
+                      <AlertTriangle
+                        className="mt-0.5 size-4 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span>
+                        {run.recoveryBlockCode === "COMMERCE_WATERMARK_CONFLICT"
+                          ? t("commerce.runtime.watermarkConflict")
+                          : run.recoveryBlockCode ===
+                              "COMMERCE_CREDENTIAL_CONTRACT_DRIFT"
+                            ? t("commerce.runtime.credentialDrift")
+                            : t("commerce.runtime.retryUnavailable")}
+                      </span>
+                    </div>
+                  ) : null}
 
-                  {isExpanded && (
+                  {isExpanded ? (
                     <div
                       id={`commerce-run-details-${run.id}`}
                       className="mt-4 space-y-3"
@@ -313,15 +340,15 @@ export function CommerceSyncRecoveryPanel() {
                                 {t(`commerce.runtime.state.${item.status}`)}
                               </Badge>
                             </div>
-                            {item.lastErrorCode && (
+                            {item.lastErrorCode ? (
                               <p
                                 className="mt-2 text-xs text-destructive"
                                 dir="ltr"
                               >
                                 {item.lastErrorCode}
                               </p>
-                            )}
-                            {item.attempts.length > 0 && (
+                            ) : null}
+                            {item.attempts.length > 0 ? (
                               <div className="mt-3 space-y-1">
                                 <p className="text-xs font-medium">
                                   {t("commerce.runtime.attempts")}
@@ -331,22 +358,20 @@ export function CommerceSyncRecoveryPanel() {
                                     key={attempt.id}
                                     className="text-xs text-muted-foreground"
                                   >
-                                    #{attempt.attemptNumber} ·{" "}
-                                    {t(
-                                      `commerce.runtime.state.${attempt.state}`,
-                                    )}
+                                    #{attempt.attemptNumber} · {" "}
+                                    {t(`commerce.runtime.state.${attempt.state}`)}
                                     {attempt.errorCode
                                       ? ` · ${attempt.errorCode}`
                                       : ""}
                                   </p>
                                 ))}
                               </div>
-                            )}
+                            ) : null}
                           </div>
                         ))
                       )}
                     </div>
-                  )}
+                  ) : null}
                 </section>
               );
             })}

@@ -6,6 +6,7 @@ import { generateDailyReport } from "@/lib/reports/daily-report";
 import { queueDailyWhatsAppReport } from "@/lib/reports/durable-daily-whatsapp";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
+import { requireAuth } from "@/lib/auth/server";
 import { getI18n } from "@/lib/i18n-server";
 import {
   isAlgerianDemoLoaded,
@@ -30,7 +31,9 @@ function getAlgiersTodayDate(d: Date = new Date()): string {
 
 export const dynamic = "force-dynamic";
 
-function reportProjection(report: NonNullable<Awaited<ReturnType<typeof generateDailyReport>>>) {
+function reportProjection(
+  report: NonNullable<Awaited<ReturnType<typeof generateDailyReport>>>,
+) {
   return {
     date: report.date.toISOString(),
     ordersCount: report.ordersCount,
@@ -147,7 +150,7 @@ async function handleReport(
   return withDemoPolicyLock(() => executeReport(trigger));
 }
 
-/** Verify the cron secret from header or env. */
+/** Verify scheduled cron authority without exposing the production secret. */
 function verifyCronSecret(req: NextRequest): boolean {
   const headerSecret = req.headers.get("x-cron-secret");
   if (!headerSecret) return false;
@@ -165,6 +168,14 @@ function verifyCronSecret(req: NextRequest): boolean {
 }
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
+  if (req.nextUrl.searchParams.get("trigger") === "manual") {
+    // The in-app Test action is seller-authenticated Settings authority. It
+    // never receives or reuses the scheduler secret; the durable WhatsApp
+    // effect below remains the actual external-send authority.
+    await requireAuth("settings.manage");
+    return handleReport("manual");
+  }
+
   if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

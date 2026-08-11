@@ -97,7 +97,7 @@ describe("Phase 5 whole-product completion contract", () => {
     expect(cod).toContain("CanonicalCodReadOnly");
     expect(deliveryStatus).toContain("disabled || isPending");
     expect(returnStatus).toContain("disabled || isPending");
-    expect(settings).toContain("SettingsTabAccess");
+    expect(settings).toContain("SettingsWorkspaceAccess");
     expect(profile).toContain("canManage");
   });
 

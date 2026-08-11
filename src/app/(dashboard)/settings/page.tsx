@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 
-import { SettingsTabs, type SettingsTabAccess } from "@/components/settings/settings-tabs";
+import {
+  SettingsWorkspace,
+  type SettingsWorkspaceAccess,
+} from "@/components/settings/settings-workspace";
 import { PageHeader } from "@/components/shared/page-header";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
@@ -22,24 +25,48 @@ export default async function SettingsPage() {
   const resource = { shopId: actorContext.shop.shopId };
   const can = (action: Parameters<typeof trustedActionAllowed>[1]) =>
     trustedActionAllowed(actorContext, action, resource);
+  const canAll = (
+    actions: readonly Parameters<typeof trustedActionAllowed>[1][],
+  ) => actions.every((action) => can(action));
 
-  const access: SettingsTabAccess = {
+  const access: SettingsWorkspaceAccess = {
     profile: true,
     security: can("sessions.read") || can("devices.read"),
     team: can("members.read"),
     appearance: true,
     license: can("license.read"),
     demo: can("settings.manage"),
-    ai: can("integrations.manage") || can("settings.manage"),
-    delivery: can("delivery.credentials.manage") || can("integrations.read"),
+    aiKey: can("integrations.manage"),
+    aiConsent: can("settings.manage"),
+    delivery: can("delivery.credentials.manage"),
     reports: can("settings.manage"),
-    integrations: can("integrations.read"),
+    commerceRead: can("integrations.read"),
+    commerceManage: can("integrations.manage"),
+    commerceSync: canAll([
+      "integrations.manage",
+      "data.import",
+      "orders.create",
+      "customers.contact.read",
+      "customers.contact.update",
+      "orders.financials.read",
+      "orders.financials.update",
+    ]),
     phone: can("risk.read"),
-    backup: can("backups.read") || can("backups.create"),
-    danger: can("settings.manage"),
+    phoneManage: can("risk.manage"),
+    backupRead: can("backups.read"),
+    backupCreate: can("backups.create"),
+    backupRestore: can("backups.restore") && can("approvals.approve"),
+    dataExport: canAll([
+      "data.export",
+      "orders.read",
+      "customers.contact.read",
+      "orders.financials.read",
+    ]),
+    dangerReset: can("settings.manage") && can("approvals.approve"),
   };
-  const integrations = access.integrations
+  const integrations = access.commerceRead || access.commerceManage
     ? await db.integration.findMany({
+        where: { platform: { in: ["shopify", "woocommerce", "youcan"] } },
         orderBy: [{ platform: "asc" }, { id: "asc" }],
         select: { platform: true, isActive: true },
       })
@@ -48,7 +75,7 @@ export default async function SettingsPage() {
   return (
     <div className="app-content page-sections">
       <PageHeader title={t("nav.settings")} description={t("settings.subtitle")} />
-      <SettingsTabs
+      <SettingsWorkspace
         access={access}
         integrations={integrations.map((integration) => ({
           platform: integration.platform,

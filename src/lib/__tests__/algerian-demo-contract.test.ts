@@ -65,7 +65,7 @@ describe("Algerian Founder demo contract", () => {
     const policy = read("src/lib/demo/algerian-demo-policy.ts");
     const settingsService = read("src/lib/settings/index.ts");
     const panel = read("src/components/settings/demo-data-panel.tsx");
-    const settings = read("src/components/settings/settings-tabs.tsx");
+    const settings = read("src/components/settings/settings-workspace.tsx");
 
     expect(route).toContain('await requireAuth("settings.read")');
     expect(
@@ -126,10 +126,14 @@ describe("Algerian Founder demo contract", () => {
     expect(panel).toContain("Fatima Zohra WhatsApp message");
     expect(panel).toContain("رسالة واتساب من فاطمة الزهراء");
 
-    expect(settings).toContain('{ id: "demo", icon: Database');
-    expect(settings).toContain("TABS.filter((tab) => access[tab.id])");
-    expect(settings).toContain("visibleTabs[0]?.id");
-    expect(settings).toContain("<DemoDataPanel />");
+    expect(settings).toContain(
+      'type Group = "experience" | "connections" | "team" | "data"',
+    );
+    expect(settings).toContain(
+      "GROUPS.filter((group) => groupVisible(group.id, access))",
+    );
+    expect(settings).toContain("visibleGroups[0]?.id");
+    expect(settings).toContain("{access.demo ? <DemoDataPanel /> : null}");
   });
 
   it("serializes settings, erase and report effects with demo lifecycle authority", () => {
