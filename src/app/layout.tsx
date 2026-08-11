@@ -78,7 +78,9 @@ export default async function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'&&t!=='system')t='dark';var p=localStorage.getItem('sahelflow-theme-preset');if(p!=='atlas'&&p!=='oasis'&&p!=='dune')p='sahel';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.dataset.themePreset=p;e.style.colorScheme=r;}catch(e){}})();`,
+            // Storage is only persistence, never a prerequisite for a coherent
+            // first paint. Defaults still apply when a WebView denies localStorage.
+            __html: `(function(){var t='dark',p='sahel';try{var st=localStorage.getItem('theme');if(st==='light'||st==='dark'||st==='system')t=st;var sp=localStorage.getItem('sahelflow-theme-preset');if(sp==='atlas'||sp==='oasis'||sp==='dune')p=sp;}catch(e){}try{var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.dataset.themePreset=p;e.style.colorScheme=r;}catch(e){}})();`,
           }}
         />
       </head>
