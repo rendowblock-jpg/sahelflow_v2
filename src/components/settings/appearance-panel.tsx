@@ -48,6 +48,7 @@ export function AppearancePanel() {
                   type="button"
                   onClick={() => setTheme(id)}
                   aria-pressed={selected}
+                  data-theme-mode={id}
                   className={cn(
                     "flex min-h-12 items-center gap-3 rounded-xl border px-3.5 py-2.5 text-start text-sm font-medium",
                     "transition-[background-color,border-color,color,box-shadow] duration-150",
@@ -90,6 +91,7 @@ export function AppearancePanel() {
                   type="button"
                   onClick={() => setPreset(candidate)}
                   aria-pressed={selected}
+                  data-theme-preset-option={candidate}
                   className={cn(
                     "group flex min-h-12 items-center gap-3 rounded-xl border px-3.5 py-2.5 text-start text-sm font-medium",
                     "transition-[background-color,border-color,color,box-shadow] duration-150",
@@ -140,6 +142,7 @@ export function AppearancePanel() {
                     toast.success(densityLabel);
                   }}
                   aria-pressed={selected}
+                  data-density-option={candidate}
                   className={cn(
                     "flex min-h-12 items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-start text-sm font-medium",
                     "transition-[background-color,border-color,color,box-shadow] duration-150",
