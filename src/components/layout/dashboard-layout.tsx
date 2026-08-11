@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useI18n } from "@/hooks/use-i18n";
-import type { Locale } from "@/lib/i18n";
+import { useUIStore } from "@/stores/ui-store";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
@@ -23,30 +23,29 @@ const CheatsheetModal = dynamic(() =>
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  locale: Locale;
-  dir: "ltr" | "rtl";
 }
 
 /**
  * SahelFlow desktop application frame.
  *
- * The workspace is one edge-to-edge software frame with durable domain
- * navigation, one command/title bar and one scroll authority for the active work
- * surface. Client route transitions move focus to the new main surface after the
- * first render so keyboard and screen-reader users receive an explicit page-entry
- * point without stealing focus during initial startup.
+ * Locale and direction are consumed from the same reactive client authority as
+ * translated copy. Server rendering still seeds that authority through the root
+ * locale provider, but the shell never holds a stale server-only direction prop
+ * after an interactive language switch.
+ *
+ * The workspace is one edge-to-edge software frame with durable navigation, one
+ * command/title bar and one scroll authority for the active work surface. Client
+ * route transitions move focus to the new main surface after the first render so
+ * keyboard and screen-reader users receive an explicit page-entry point without
+ * stealing focus during initial startup.
  */
-export function DashboardLayout({
-  children,
-  locale,
-  dir: serverDir,
-}: DashboardLayoutProps) {
+export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [commandOpen, setCommandOpen] = useState(false);
   const { cheatsheetOpen, setCheatsheetOpen } = useKeyboardShortcuts();
-  const { t } = useI18n();
+  const { t, locale, dir } = useI18n();
+  const density = useUIStore((state) => state.density);
   const pathname = usePathname();
   const previousPath = useRef<string | null>(null);
-  const dir = serverDir;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -78,6 +77,7 @@ export function DashboardLayout({
       dir={dir}
       className="flex h-[100dvh] min-h-0 overflow-hidden bg-background text-foreground"
       data-sahelflow-shell="desktop"
+      data-density={density}
     >
       <a
         href="#main-content"
