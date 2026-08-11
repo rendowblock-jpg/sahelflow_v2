@@ -84,18 +84,22 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
         {canManage ? (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">{t("phoneReputation.phoneLabel")}</Label>
+              <Label htmlFor="phone-reputation-phone" className="text-xs">
+                {t("phoneReputation.phoneLabel")}
+              </Label>
               <Input
+                id="phone-reputation-phone"
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
                 placeholder="0X XX XX XX XX"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">
+              <Label htmlFor="phone-reputation-reason" className="text-xs">
                 {t("phoneReputation.reasonLabel")}
               </Label>
               <Input
+                id="phone-reputation-reason"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
                 placeholder={t("phoneReputation.reasonPlaceholder")}
