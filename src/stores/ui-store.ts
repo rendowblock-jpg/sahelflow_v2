@@ -14,7 +14,11 @@
  * `sidebarCollapsed` and `density` remain UI-only persisted preferences.
  */
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import {
+  createJSONStorage,
+  persist,
+  type StateStorage,
+} from "zustand/middleware";
 import { getDirection, type Locale } from "@/lib/i18n";
 
 const VALID_LOCALES: readonly Locale[] = ["ar", "fr", "en"];
@@ -25,6 +29,37 @@ export const DEFAULT_UI_DENSITY: UiDensity = "comfortable";
 function isUiDensity(value: unknown): value is UiDensity {
   return value === "comfortable" || value === "compact";
 }
+
+/**
+ * Preference persistence is deliberately best-effort. Desktop/WebView storage
+ * can be readable but unwritable (quota-full, policy-restricted, read-only). A
+ * failed preference write must never abort locale/server-tree commit, startup,
+ * or an operational interaction; the in-memory UI authority remains valid for
+ * the current session and persistence can recover on a later write.
+ */
+const bestEffortUiStorage: StateStorage = {
+  getItem(name) {
+    try {
+      return globalThis.localStorage?.getItem(name) ?? null;
+    } catch {
+      return null;
+    }
+  },
+  setItem(name, value) {
+    try {
+      globalThis.localStorage?.setItem(name, value);
+    } catch {
+      // Preference durability is non-critical; keep the live in-memory state.
+    }
+  },
+  removeItem(name) {
+    try {
+      globalThis.localStorage?.removeItem(name);
+    } catch {
+      // A failed cleanup must not destabilize the application shell.
+    }
+  },
+};
 
 /**
  * Read the locale from the `sahelflow-locale` cookie.
@@ -86,9 +121,8 @@ export const useUIStore = create<UIState>()(
       activeShopId: null,
 
       setLocale: (locale) => {
-        // This is a commit operation: ServerLocaleProvider calls it only after
-        // the refreshed server tree already represents `locale`.
-        setLocaleCookie(locale);
+        // This is a commit operation: the request cookie already selected the
+        // Server Component tree. Do not create a second durable locale write here.
         applyDocumentLocale(locale);
         set((state) => (state.locale === locale ? state : { ...state, locale }));
       },
@@ -99,6 +133,7 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: "sahelflow-ui",
+      storage: createJSONStorage(() => bestEffortUiStorage),
       partialize: (state) => ({
         sidebarCollapsed: state.sidebarCollapsed,
         density: state.density,
