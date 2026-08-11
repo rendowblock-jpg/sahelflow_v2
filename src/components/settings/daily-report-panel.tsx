@@ -182,7 +182,11 @@ export function DailyReportPanel() {
 
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
-            <Label htmlFor="daily-report-enabled" className="cursor-pointer">
+            <Label
+              id="daily-report-enabled-label"
+              htmlFor="daily-report-enabled"
+              className="cursor-pointer"
+            >
               {t("reports.enableDaily")}
             </Label>
             <p className="text-xs text-muted-foreground">
@@ -191,6 +195,7 @@ export function DailyReportPanel() {
           </div>
           <Switch
             id="daily-report-enabled"
+            aria-labelledby="daily-report-enabled-label"
             checked={settings.daily_report_enabled === "true"}
             onCheckedChange={(value) =>
               setSettings((current) => ({
