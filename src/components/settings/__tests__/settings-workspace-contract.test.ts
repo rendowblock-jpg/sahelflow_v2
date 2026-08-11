@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -6,7 +6,7 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("Settings operational workspace contract", () => {
-  it("routes Settings through four task-shaped groups instead of the legacy tab router", () => {
+  it("routes Settings through four task-shaped groups and removes legacy aggregators", () => {
     const page = read("src/app/(dashboard)/settings/page.tsx");
     const workspace = read("src/components/settings/settings-workspace.tsx");
     expect(page).toContain("SettingsWorkspace");
@@ -19,6 +19,12 @@ describe("Settings operational workspace contract", () => {
     expect(workspace).toContain("AppearancePanel");
     expect(workspace).toContain("SecurityAuthorityPanel");
     expect(workspace).toContain("LicensePanel");
+    expect(
+      existsSync(resolve(root, "src/components/settings/settings-tabs.tsx")),
+    ).toBe(false);
+    expect(
+      existsSync(resolve(root, "src/components/settings/integrations-panel.tsx")),
+    ).toBe(false);
   });
 
   it("keeps commerce status separate from delivery, WhatsApp and Gemini authority", () => {
@@ -33,6 +39,9 @@ describe("Settings operational workspace contract", () => {
     expect(commerce).not.toContain("WhatsApp");
     expect(commerce).not.toContain("Gemini");
     expect(commerce).not.toContain("window.location.reload");
+    expect(commerce).toContain("canManage");
+    expect(commerce).toContain("canSync");
+    expect(commerce).toContain("REAUTHENTICATION_REQUIRED");
   });
 
   it("keeps manual daily-report execution authenticated and cron authority server-only", () => {
@@ -76,13 +85,31 @@ describe("Settings operational workspace contract", () => {
     );
   });
 
-  it("keeps read and mutation permissions distinct where the APIs do", () => {
+  it("projects exact read, manage, sync, backup and destructive capabilities", () => {
     const page = read("src/app/(dashboard)/settings/page.tsx");
-    const phone = read("src/components/settings/phone-reputation-panel.tsx");
+    const workspace = read("src/components/settings/settings-workspace.tsx");
+    expect(page).toContain('aiKey: can("integrations.manage")');
+    expect(page).toContain('aiConsent: can("settings.manage")');
     expect(page).toContain('delivery: can("delivery.credentials.manage")');
+    expect(page).toContain('commerceRead: can("integrations.read")');
+    expect(page).toContain('commerceManage: can("integrations.manage")');
+    expect(page).toContain("commerceSync: canAll([");
     expect(page).toContain('phone: can("risk.read")');
     expect(page).toContain('phoneManage: can("risk.manage")');
-    expect(phone).toContain("canManage");
+    expect(page).toContain('backupRead: can("backups.read")');
+    expect(page).toContain('backupCreate: can("backups.create")');
+    expect(page).toContain(
+      'backupRestore: can("backups.restore") && can("approvals.approve")',
+    );
+    expect(page).toContain("dataExport: canAll([");
+    expect(page).toContain(
+      'dangerReset: can("settings.manage") && can("approvals.approve")',
+    );
+    expect(workspace).toContain("canManageKey={access.aiKey}");
+    expect(workspace).toContain("canManageConsent={access.aiConsent}");
+    expect(workspace).toContain("canRead={access.backupRead}");
+    expect(workspace).toContain("canCreate={access.backupCreate}");
+    expect(workspace).toContain("canRestore={access.backupRestore}");
   });
 
   it("preserves the generic settings service as non-secret reserved-key authority", () => {
@@ -97,12 +124,39 @@ describe("Settings operational workspace contract", () => {
     expect(service).toContain("For secret values");
   });
 
-  it("keeps destructive reset on its dedicated reauth and lifecycle authority", () => {
+  it("keeps destructive reset on trusted approval, recent PIN and lifecycle erase authority", () => {
     const reset = read("src/app/api/settings/reset/route.ts");
-    expect(reset).toContain('requireAuth("settings.destructive")');
+    const panel = read("src/components/settings/danger-zone-panel.tsx");
+    expect(reset).toContain('requireTrustedAction("settings.manage")');
+    expect(reset).toContain(
+      'assertTrustedAction(actorContext, "approvals.approve")',
+    );
     expect(reset).toContain("requireRecentReauthentication");
-    expect(reset).toContain("createDestructiveApproval");
-    expect(reset).toContain("eraseCurrentShopLifecycle");
+    expect(reset).toContain('executeShopErase("business-reset")');
+    expect(panel).toContain("REAUTHENTICATION_REQUIRED");
+    expect(panel).toContain("/api/auth/reauthenticate");
+    expect(panel).toContain('copy("ordersExport")');
+    expect(panel).not.toContain('t("settings.dangerZone.exportAll")');
+  });
+
+  it("keeps backup list/create and destructive recovery permissions distinct", () => {
+    const list = read("src/app/api/backup/list/route.ts");
+    const create = read("src/app/api/backup/create/route.ts");
+    const restore = read("src/app/api/backup/restore/route.ts");
+    const kit = read("src/app/api/backup/recovery-kit/route.ts");
+    const removal = read("src/app/api/backup/[filename]/route.ts");
+    const panel = read("src/components/settings/backup-restore-panel.tsx");
+    expect(list).toContain('requireAuth("backups.read")');
+    expect(create).toContain('requireAuth("backups.create")');
+    for (const source of [restore, kit, removal]) {
+      expect(source).toContain('"backups.restore"');
+      expect(source).toContain('"approvals.approve"');
+      expect(source).toContain("requireRecentReauthentication");
+    }
+    expect(panel).toContain("canRead");
+    expect(panel).toContain("canCreate");
+    expect(panel).toContain("canRestore");
+    expect(panel).toContain("verifyPinAndResume");
   });
 
   it("centralizes new Settings workspace copy in AR, FR and EN", () => {
@@ -113,5 +167,8 @@ describe("Settings operational workspace contract", () => {
     expect(copy).toContain("Experience & operations");
     expect(copy).toContain("Expérience et opérations");
     expect(copy).toContain("التجربة والعمليات");
+    expect(copy).toContain("Export orders");
+    expect(copy).toContain("Exporter les commandes");
+    expect(copy).toContain("تصدير الطلبات");
   });
 });
