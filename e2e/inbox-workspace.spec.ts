@@ -1,4 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 
 const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
@@ -25,16 +30,30 @@ async function ensureOwnerSession(page: Page) {
 }
 
 test.describe.serial("Inbox operational workspace evidence", () => {
+  let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
+
+  test.beforeAll(async ({ browser, baseURL }) => {
+    const context = await browser.newContext({ baseURL, viewport: DESKTOP });
+    const page = await context.newPage();
+    try {
+      await context.addCookies([
+        {
+          name: "sahelflow-locale",
+          value: "fr",
+          url: baseURL ?? "http://localhost:3000",
+        },
+      ]);
+      await ensureOwnerSession(page);
+      ownerSessionCookies = await context.cookies();
+      expect(ownerSessionCookies.length).toBeGreaterThan(0);
+    } finally {
+      await context.close();
+    }
+  });
+
   test.beforeEach(async ({ context, page }) => {
     await page.setViewportSize(DESKTOP);
-    await context.addCookies([
-      {
-        name: "sahelflow-locale",
-        value: "fr",
-        url: "http://localhost:3000",
-      },
-    ]);
-    await ensureOwnerSession(page);
+    await context.addCookies(ownerSessionCookies);
     await page.goto("/inbox", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
   });
@@ -77,18 +96,34 @@ test.describe.serial("Inbox operational workspace evidence", () => {
   test("queue views drive attention without hiding durable conversations", async ({
     page,
   }) => {
-    const allRows = page.locator("[data-inbox-conversation]");
-    const allCount = await allRows.count();
-    expect(allCount).toBeGreaterThan(0);
+    const authority = await page.evaluate(async () => {
+      const response = await fetch("/api/whatsapp/chats?limit=100", {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`inbox projection returned ${response.status}`);
+      return (await response.json()) as {
+        chats: Array<{ unread: number }>;
+      };
+    });
+    expect(authority.chats.length).toBeGreaterThan(0);
+    const expectedUnread = authority.chats.filter((chat) => chat.unread > 0).length;
+    expect(expectedUnread).toBeGreaterThan(0);
 
-    await page.locator('[data-inbox-filter="unread"]').click();
-    const unreadRows = page.locator('[data-inbox-conversation][data-inbox-unread="true"]');
-    const unreadCount = await unreadRows.count();
-    expect(unreadCount).toBeGreaterThan(0);
-    await expect(page.locator('[data-inbox-conversation][data-inbox-unread="false"]')).toHaveCount(0);
+    const allRows = page.locator("[data-inbox-conversation]");
+    await expect(allRows).toHaveCount(authority.chats.length);
+
+    const unreadFilter = page.locator('[data-inbox-filter="unread"]');
+    await unreadFilter.click();
+    await expect(unreadFilter).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.locator('[data-inbox-conversation][data-inbox-unread="true"]'),
+    ).toHaveCount(expectedUnread);
+    await expect(
+      page.locator('[data-inbox-conversation][data-inbox-unread="false"]'),
+    ).toHaveCount(0);
 
     await page.locator('[data-inbox-filter="all"]').click();
-    await expect(allRows).toHaveCount(allCount);
+    await expect(allRows).toHaveCount(authority.chats.length);
   });
 
   test("desktop thread, workflow context and mobile drill-in remain coherent", async ({
