@@ -7,8 +7,8 @@ import { Moon, Sun } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 
 /**
- * Subscribe to next-themes' resolved theme without triggering a synchronous
- * setState inside an effect (which the eslint rule forbids).
+ * Subscribe to the mounted client snapshot without triggering a synchronous
+ * setState inside an effect.
  *
  * useSyncExternalStore gives us a server snapshot (false = "not mounted yet")
  * and a client snapshot (true = "mounted") — the standard SSR-safe pattern
@@ -33,7 +33,6 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      className="h-8 w-8"
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label={isDark ? t("theme.switchToLight") : t("theme.switchToDark")}
     >
