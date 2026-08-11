@@ -378,7 +378,7 @@ function ContextRail({ workspace }: { workspace: ReturnType<typeof useAiWorkspac
               <div className="flex items-center justify-between gap-3">
                 <dt className="flex items-center gap-1.5 text-muted-foreground">
                   <KeyRound className="size-3" aria-hidden="true" />
-                  API key
+                  {copy("gemini")}
                 </dt>
                 <dd className="font-medium">
                   {setup.keyConfigured ? copy("configured") : copy("notConfigured")}
