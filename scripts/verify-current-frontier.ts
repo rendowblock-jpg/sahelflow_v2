@@ -35,50 +35,57 @@ function rejectMarkers(relativePath: string, markers: readonly string[]): void {
   }
 }
 
-const protectedMainBeforeDocsPackage =
-  "23fb2e0ee4956132fafe8dd6973be42d3cfc8032";
+const protectedMainAtHandoff =
+  "bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647";
 const protectedApplicationSha = "2d60e2e74109b6e03626a5ccdff727c029a34591";
 const validatedPhase67Head = "fa0ff6de649421c879f62364383a363b61c71bfc";
 const phase5Baseline = "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734";
 const signedReleaseRun = "31388777098";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
+const handoffPacket =
+  "documentation/archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md";
 
 requireMarkers("README.md", [
-  protectedMainBeforeDocsPackage,
-  "Latest application-changing protected merge: **PR #228",
+  protectedMainAtHandoff,
+  "Latest application-changing protected merge: **PR #234",
   protectedApplicationSha,
   "Published release: `1.0.0-internal.14`",
   signedReleaseRun,
   activePhase,
   "Founder-installed release: **Internal.14**",
   "Founder-accepted baseline remains **Internal.5**",
+  "Founder acceptance remains open",
   "mandatory pre-Phase-8 stabilization",
-  "CI exception mechanisms",
-  "successful-license-activation",
-  "#230",
+  "PR #232",
+  "PR #233",
+  "PR #234",
+  "Issues **#201 and #214 are closed**",
+  "#230 remains a P1 external-certification blocker",
   "#226",
   phase5Baseline,
+  handoffPacket,
 ]);
 
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   "Verified product frontier",
-  protectedMainBeforeDocsPackage,
-  "Latest application-changing protected merge: PR #228",
+  protectedMainAtHandoff,
+  "Latest application-changing protected merge: PR #234",
   protectedApplicationSha,
-  validatedPhase67Head,
-  "Published release: `1.0.0-internal.14`",
+  "Published release remains `1.0.0-internal.14`",
   activePhase,
   "Mandatory pre-Phase-8 Founder gate",
-  "Exact next outcome and implementation order",
+  "Exact next outcome",
   "issue #221",
-  "#230",
+  "Issue #230 remains **open P1**",
+  "Issues **#201 and #214 are closed**",
   phase5Baseline,
+  handoffPacket,
 ]);
 
 requireMarkers("documentation/README.md", [
-  protectedMainBeforeDocsPackage,
-  "**Latest application-changing protected merge:** PR #228",
+  protectedMainAtHandoff,
+  "**Latest application-changing protected merge:** PR #234",
   protectedApplicationSha,
   "**Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
@@ -86,28 +93,38 @@ requireMarkers("documentation/README.md", [
   "Mandatory gate before Phase 8",
   "Published Internal.14 checkpoint",
   "issue #221",
-  "#226",
-  "#230",
+  "**#201 — closed:**",
+  "**#214 — closed:**",
+  "**#230 — open P1:**",
+  phase5Baseline,
+  "archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md",
 ]);
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
-  protectedMainBeforeDocsPackage,
-  "Latest application-changing protected merge:** PR #228",
+  protectedMainAtHandoff,
+  "Latest application-changing protected merge:** PR #234",
   protectedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
   activePhase,
   "Mandatory gate before Phase 8",
-  "Founder-installed frontend assessment",
-  "Mandatory pre-Phase-8 execution order",
+  "Founder-installed frontend problem register",
+  "Active Phase 6 frontier",
+  "Mandatory order from here",
   "FD-031 exception boundary",
-  "issue #214",
-  "issue #226",
-  "issue #230",
+  "issue #214 — CLOSED",
+  "#226 — OPEN",
+  "Issue #230 — open P1 external-certification boundary",
+  phase5Baseline,
+  handoffPacket,
 ]);
 
+// ROADMAP remains the binding Phase 0–9 program. Its header records the exact
+// historical source frontier at the time PR #231 froze this cross-phase gate;
+// current protected evidence/status is intentionally owned by CURRENT_STATE and
+// WORKING_MEMORY instead of rewriting history in the roadmap header.
 requireMarkers("documentation/system/ROADMAP.md", [
-  protectedMainBeforeDocsPackage,
+  "23fb2e0ee4956132fafe8dd6973be42d3cfc8032",
   "Latest application-changing protected merge:** PR #228",
   protectedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
@@ -122,20 +139,32 @@ requireMarkers("documentation/system/ROADMAP.md", [
 ]);
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
-  protectedMainBeforeDocsPackage,
-  "Latest application-changing protected merge:** PR #228",
+  protectedMainAtHandoff,
+  "Latest application-changing protected merge:** PR #234",
   protectedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
   activePhase,
   "Phase 5 closure snapshot",
-  "Known engineering defects/debt to close in the same program",
   "Phase 6 next action",
   "Outcome A — CI authority hardening",
-  "Outcome F — installed Phase 6/7 + Founder acceptance",
-  "issue #221",
-  "#226",
-  "#230",
+  "issue #221 OPEN",
+  "#226 OPEN",
+  "#230 OPEN P1",
+  phase5Baseline,
+  handoffPacket,
+]);
+
+requireMarkers(handoffPacket, [
+  "Why this stabilization program exists",
+  "Founder-installed frontend problem context",
+  "Seven technical findings from the deep audit",
+  "Work merged during this stabilization session",
+  "Exact next implementation dependency",
+  "Next-session resume checklist",
+  protectedMainAtHandoff,
+  phase5Baseline,
+  "#230 remains **open P1**",
 ]);
 
 const stalePr229Markers = [
@@ -191,11 +220,15 @@ rejectMarkers("documentation/system/CURRENT_STATE.md", [
   "Active release PR:** #227",
   "PR #227 is not merged",
   "Internal.14 is not published",
+  "historical PR #200/#207 CI exception mechanisms remain active",
+  "successful permanent activation became blank until close/reopen",
 ]);
 rejectMarkers("documentation/operations/WORKING_MEMORY.md", [
   "Active PR:** #227",
   "PR #227 is unmerged",
   "Internal.14 is unpublished",
+  "scripts/classify-pr-risk.ts still contains the historical PR #200",
+  "Successful permanent/trial activation can produce a blank dashboard until restart",
 ]);
 
 if (findings.length > 0) {
@@ -204,6 +237,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: Internal.14 is published but not Founder-accepted; the mandatory pre-Phase-8 stabilization gate owns engineering hardening, frontend root-cause repair, installed Phase 6/7 evidence and explicit Founder acceptance before Phase 8 implementation.",
+    "Current execution frontier verified: PRs #232/#233/#234 are protected; #201/#214 are closed from stronger exact installed evidence; #221/#226/#230 remain open; the next implementation outcome is shared-root frontend foundation authority before installed Phase 6/7 and Founder acceptance, and Phase 8 implementation remains frozen.",
   );
 }
