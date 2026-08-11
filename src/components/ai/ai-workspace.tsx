@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -41,8 +41,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useMobile } from "@/hooks/use-mobile";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
+import { useMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 function errorMessage(
@@ -111,7 +111,9 @@ function SessionsPane({
       <div className="flex min-h-14 items-center justify-between gap-2 border-b px-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold">{copy("sessions")}</p>
-          <p className="text-[10px] text-muted-foreground">{copy("durableHistory")}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {copy("durableHistory")}
+          </p>
         </div>
         <Button
           type="button"
@@ -141,7 +143,10 @@ function SessionsPane({
             </div>
           ) : sessions.length === 0 ? (
             <div className="px-3 py-8 text-center">
-              <MessageSquare className="mx-auto size-5 text-muted-foreground" aria-hidden="true" />
+              <MessageSquare
+                className="mx-auto size-5 text-muted-foreground"
+                aria-hidden="true"
+              />
               <p className="mt-2 text-xs font-medium">{copy("noSessions")}</p>
               <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
                 {copy("noSessionsDescription")}
@@ -176,13 +181,17 @@ function SessionsPane({
                   }}
                   className={cn(
                     "group flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2.5 text-start transition-colors",
-                    active ? "bg-primary/8 text-foreground" : "hover:bg-muted/60",
+                    active
+                      ? "bg-primary/8 text-foreground"
+                      : "hover:bg-muted/60",
                   )}
                 >
                   <span
                     className={cn(
                       "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border",
-                      active ? "border-primary/20 bg-primary/10 text-primary" : "bg-background text-muted-foreground",
+                      active
+                        ? "border-primary/20 bg-primary/10 text-primary"
+                        : "bg-background text-muted-foreground",
                     )}
                   >
                     <Bot className="size-3.5" aria-hidden="true" />
@@ -192,7 +201,10 @@ function SessionsPane({
                       {session.title || copy("newSessionTitle")}
                     </span>
                     {preview ? (
-                      <span dir="auto" className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                      <span
+                        dir="auto"
+                        className="mt-0.5 block truncate text-[10px] text-muted-foreground"
+                      >
                         {preview}
                       </span>
                     ) : null}
@@ -214,15 +226,66 @@ function SessionsPane({
   );
 }
 
-function SetupNotice({ workspace }: { workspace: ReturnType<typeof useAiWorkspace> }) {
-  const { setup, copy } = workspace;
-  if (setup.ready) return null;
+function SetupNotice({
+  workspace,
+}: {
+  workspace: ReturnType<typeof useAiWorkspace>;
+}) {
+  const { setup, setupError, copy, refreshSetup } = workspace;
+  if (setup?.ready === true) return null;
+
+  if (!setup) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warning/20 bg-warning/5 px-3 py-2 text-xs">
+        <div className="flex min-w-0 items-start gap-2">
+          {setupError ? (
+            <AlertTriangle
+              className="mt-0.5 size-4 shrink-0 text-warning"
+              aria-hidden="true"
+            />
+          ) : (
+            <Loader2
+              className="mt-0.5 size-4 shrink-0 animate-spin text-muted-foreground"
+              aria-hidden="true"
+            />
+          )}
+          <div>
+            <p className="font-medium text-foreground">
+              {setupError ? copy("setupUnavailable") : copy("setupChecking")}
+            </p>
+            {setupError ? (
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {copy("setupUnavailableDescription")}
+              </p>
+            ) : null}
+          </div>
+        </div>
+        {setupError ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void refreshSetup()}
+          >
+            <RefreshCw className="size-3.5" aria-hidden="true" />
+            {copy("retry")}
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warning/20 bg-warning/5 px-3 py-2 text-xs">
       <div className="flex min-w-0 items-start gap-2">
-        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+        <AlertTriangle
+          className="mt-0.5 size-4 shrink-0 text-warning"
+          aria-hidden="true"
+        />
         <div>
-          <p className="font-medium text-foreground">{copy("setupNeedsAttention")}</p>
+          <p className="font-medium text-foreground">
+            {copy("setupNeedsAttention")}
+          </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             {!setup.consentAccepted ? copy("consentMissing") : copy("keyMissing")}
           </p>
@@ -250,14 +313,22 @@ function MessageBubble({
   return (
     <article
       data-ai-message={message.role}
-      className={cn("flex gap-2.5", assistant ? "justify-start" : "justify-end")}
+      className={cn(
+        "flex gap-2.5",
+        assistant ? "justify-start" : "justify-end",
+      )}
     >
       {assistant ? (
         <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg border bg-primary/5 text-primary">
           <Bot className="size-3.5" aria-hidden="true" />
         </span>
       ) : null}
-      <div className={cn("min-w-0 max-w-[min(44rem,88%)]", assistant ? "flex-1" : "") }>
+      <div
+        className={cn(
+          "min-w-0 max-w-[min(44rem,88%)]",
+          assistant ? "flex-1" : "",
+        )}
+      >
         <div
           className={cn(
             "rounded-xl px-3.5 py-2.5 text-sm leading-6",
@@ -289,7 +360,10 @@ function MessageBubble({
         {message.persistenceWarning ? (
           <div className="mt-2 rounded-lg border border-warning/25 bg-warning/5 px-3 py-2 text-xs">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warning" aria-hidden="true" />
+              <AlertTriangle
+                className="mt-0.5 size-3.5 shrink-0 text-warning"
+                aria-hidden="true"
+              />
               <div>
                 <p className="font-medium">{copy("responseNotPersisted")}</p>
                 <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
@@ -304,7 +378,11 @@ function MessageBubble({
   );
 }
 
-function ErrorNotice({ workspace }: { workspace: ReturnType<typeof useAiWorkspace> }) {
+function ErrorNotice({
+  workspace,
+}: {
+  workspace: ReturnType<typeof useAiWorkspace>;
+}) {
   const { error, copy, retry } = workspace;
   if (!error) return null;
   const persistence = error.code === "AI_RESPONSE_NOT_PERSISTED";
@@ -312,21 +390,37 @@ function ErrorNotice({ workspace }: { workspace: ReturnType<typeof useAiWorkspac
     <div className="mx-3 mt-3 flex items-start justify-between gap-3 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs">
       <div className="flex min-w-0 items-start gap-2">
         {error.code === "AI_PROVIDER_UNAVAILABLE" ? (
-          <WifiOff className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
+          <WifiOff
+            className="mt-0.5 size-4 shrink-0 text-destructive"
+            aria-hidden="true"
+          />
         ) : (
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
+          <AlertTriangle
+            className="mt-0.5 size-4 shrink-0 text-destructive"
+            aria-hidden="true"
+          />
         )}
         <div className="min-w-0">
-          <p className="font-medium text-foreground">{errorMessage(error, copy)}</p>
+          <p className="font-medium text-foreground">
+            {errorMessage(error, copy)}
+          </p>
           {error.detail ? (
-            <p dir="auto" className="mt-0.5 truncate text-[11px] text-muted-foreground">
+            <p
+              dir="auto"
+              className="mt-0.5 truncate text-[11px] text-muted-foreground"
+            >
               {error.detail}
             </p>
           ) : null}
         </div>
       </div>
       {!persistence ? (
-        <Button type="button" size="sm" variant="ghost" onClick={() => void retry()}>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => void retry()}
+        >
           <RefreshCw className="size-3.5" aria-hidden="true" />
           {copy("retry")}
         </Button>
@@ -335,15 +429,35 @@ function ErrorNotice({ workspace }: { workspace: ReturnType<typeof useAiWorkspac
   );
 }
 
-function ContextRail({ workspace }: { workspace: ReturnType<typeof useAiWorkspace> }) {
-  const { setup, proposals, copy, approveProposal, approvingProposalId } = workspace;
+function ContextRail({
+  workspace,
+}: {
+  workspace: ReturnType<typeof useAiWorkspace>;
+}) {
+  const {
+    setup,
+    setupError,
+    proposals,
+    actionHistoryError,
+    copy,
+    approveProposal,
+    approvingProposalId,
+    retry,
+  } = workspace;
+  const setupReady = setup?.ready === true;
+
   return (
-    <aside data-ai-context="true" className="flex h-full min-h-0 flex-col bg-muted/8">
+    <aside
+      data-ai-context="true"
+      className="flex h-full min-h-0 flex-col bg-muted/8"
+    >
       <div className="border-b px-3.5 py-3">
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-xs font-semibold">{copy("context")}</p>
-            <p className="text-[10px] text-muted-foreground">{copy("capabilities")}</p>
+            <p className="text-[10px] text-muted-foreground">
+              {copy("capabilities")}
+            </p>
           </div>
           {proposals.length > 0 ? (
             <Badge variant="secondary" className="text-[10px]">
@@ -358,10 +472,16 @@ function ContextRail({ workspace }: { workspace: ReturnType<typeof useAiWorkspac
           <section className="rounded-xl border bg-card p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <BrainCircuit className="size-4 text-primary" aria-hidden="true" />
+                <BrainCircuit
+                  className="size-4 text-primary"
+                  aria-hidden="true"
+                />
                 <span className="text-xs font-semibold">{copy("provider")}</span>
               </div>
-              <Badge variant={setup.ready ? "secondary" : "outline"} className="text-[10px]">
+              <Badge
+                variant={setupReady ? "secondary" : "outline"}
+                className="text-[10px]"
+              >
                 {copy("gemini")}
               </Badge>
             </div>
@@ -372,7 +492,11 @@ function ContextRail({ workspace }: { workspace: ReturnType<typeof useAiWorkspac
                   {copy("consent")}
                 </dt>
                 <dd className="font-medium">
-                  {setup.consentAccepted ? copy("accepted") : copy("missing")}
+                  {setup
+                    ? setup.consentAccepted
+                      ? copy("accepted")
+                      : copy("missing")
+                    : copy("unknown")}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -381,29 +505,50 @@ function ContextRail({ workspace }: { workspace: ReturnType<typeof useAiWorkspac
                   {copy("gemini")}
                 </dt>
                 <dd className="font-medium">
-                  {setup.keyConfigured ? copy("configured") : copy("notConfigured")}
+                  {setup
+                    ? setup.keyConfigured
+                      ? copy("configured")
+                      : copy("notConfigured")
+                    : copy("unknown")}
                 </dd>
               </div>
             </dl>
+            {setupError ? (
+              <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
+                {copy("setupUnavailable")}
+              </p>
+            ) : null}
           </section>
 
           <section className="rounded-xl border bg-card p-3">
             <p className="text-xs font-semibold">{copy("capabilities")}</p>
             <ul className="mt-2 space-y-2 text-[11px] text-muted-foreground">
               <li className="flex items-start gap-2">
-                <Database className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                <Database
+                  className="mt-0.5 size-3.5 shrink-0 text-primary"
+                  aria-hidden="true"
+                />
                 {copy("readTools")}
               </li>
               <li className="flex items-start gap-2">
-                <Clock3 className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                <Clock3
+                  className="mt-0.5 size-3.5 shrink-0 text-primary"
+                  aria-hidden="true"
+                />
                 {copy("externalTools")}
               </li>
               <li className="flex items-start gap-2">
-                <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                <ShieldCheck
+                  className="mt-0.5 size-3.5 shrink-0 text-primary"
+                  aria-hidden="true"
+                />
                 {copy("sensitiveTools")}
               </li>
               <li className="flex items-start gap-2">
-                <Wrench className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                <Wrench
+                  className="mt-0.5 size-3.5 shrink-0"
+                  aria-hidden="true"
+                />
                 {copy("blockedTools")}
               </li>
             </ul>
@@ -413,12 +558,47 @@ function ContextRail({ workspace }: { workspace: ReturnType<typeof useAiWorkspac
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-xs font-semibold">{copy("actions")}</p>
               {proposals.length > 0 ? (
-                <Badge variant="outline" className="text-[10px]">{proposals.length}</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  {proposals.length}
+                </Badge>
               ) : null}
             </div>
-            {proposals.length === 0 ? (
+
+            {actionHistoryError ? (
+              <div className="mb-3 rounded-xl border border-warning/25 bg-warning/5 px-3 py-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle
+                    className="mt-0.5 size-4 shrink-0 text-warning"
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium">
+                      {copy("actionHistoryUnavailable")}
+                    </p>
+                    <p className="mt-1 text-[10px] leading-4 text-muted-foreground">
+                      {copy("actionHistoryUnavailableDescription")}
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mt-2"
+                      onClick={() => void retry()}
+                    >
+                      <RefreshCw className="size-3.5" aria-hidden="true" />
+                      {copy("retry")}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {proposals.length === 0 && !actionHistoryError ? (
               <div className="rounded-xl border border-dashed px-3 py-5 text-center">
-                <CheckCircle2 className="mx-auto size-4 text-muted-foreground" aria-hidden="true" />
+                <CheckCircle2
+                  className="mx-auto size-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
                 <p className="mt-2 text-xs font-medium">{copy("noActions")}</p>
                 <p className="mt-1 text-[10px] leading-4 text-muted-foreground">
                   {copy("noActionsDescription")}
@@ -463,16 +643,54 @@ function ThreadPane({
   } = workspace;
   const [draft, setDraft] = useState("");
   const [contextOpen, setContextOpen] = useState(false);
+  const scrollRootRef = useRef<HTMLDivElement | null>(null);
+  const tailRef = useRef<HTMLDivElement | null>(null);
+  const followTailRef = useRef(true);
+  const setupReady = setup?.ready === true;
+
+  useEffect(() => {
+    const viewport = scrollRootRef.current?.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    if (!viewport) return;
+    const updateFollowState = () => {
+      const remaining =
+        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      followTailRef.current = remaining < 96;
+    };
+    updateFollowState();
+    viewport.addEventListener("scroll", updateFollowState, { passive: true });
+    return () => viewport.removeEventListener("scroll", updateFollowState);
+  }, [activeSession?.id]);
+
+  useEffect(() => {
+    followTailRef.current = true;
+    tailRef.current?.scrollIntoView({ block: "end" });
+  }, [activeSession?.id]);
+
+  useEffect(() => {
+    if (!sending) return;
+    followTailRef.current = true;
+    tailRef.current?.scrollIntoView({ block: "end" });
+  }, [sending]);
+
+  useEffect(() => {
+    if (!followTailRef.current) return;
+    tailRef.current?.scrollIntoView({ block: "end" });
+  }, [messages]);
 
   const submit = () => {
     const value = draft.trim();
-    if (!value || sending || !activeSession || !setup.ready) return;
+    if (!value || sending || !activeSession || !setupReady) return;
     setDraft("");
     void send(value);
   };
 
   return (
-    <main data-ai-thread="true" className="flex h-full min-h-0 flex-col bg-background">
+    <main
+      data-ai-thread="true"
+      className="flex h-full min-h-0 flex-col bg-background"
+    >
       <header className="flex min-h-14 items-center justify-between gap-3 border-b px-3 md:px-4">
         <div className="flex min-w-0 items-center gap-2">
           <Button
@@ -483,7 +701,10 @@ function ThreadPane({
             aria-label={copy("backToSessions")}
             onClick={onBack}
           >
-            <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
+            <ArrowLeft
+              className="size-4 rtl:rotate-180"
+              aria-hidden="true"
+            />
           </Button>
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-primary/5 text-primary">
             <Bot className="size-4" aria-hidden="true" />
@@ -492,12 +713,19 @@ function ThreadPane({
             <h2 className="truncate text-sm font-semibold">
               {activeSession?.title || copy("newSessionTitle")}
             </h2>
-            <p className="text-[10px] text-muted-foreground">{copy("assistant")}</p>
+            <p className="text-[10px] text-muted-foreground">
+              {copy("assistant")}
+            </p>
           </div>
         </div>
         <Sheet open={contextOpen} onOpenChange={setContextOpen}>
           <SheetTrigger asChild>
-            <Button type="button" size="sm" variant="outline" className="xl:hidden">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="xl:hidden"
+            >
               <ShieldCheck className="size-3.5" aria-hidden="true" />
               {copy("reviewActions")}
               {proposals.length > 0 ? (
@@ -507,7 +735,10 @@ function ThreadPane({
               ) : null}
             </Button>
           </SheetTrigger>
-          <SheetContent side={workspace.locale === "ar" ? "left" : "right"} className="w-[min(420px,96vw)] p-0 sm:max-w-none">
+          <SheetContent
+            side={workspace.locale === "ar" ? "left" : "right"}
+            className="w-[min(420px,96vw)] p-0 sm:max-w-none"
+          >
             <SheetHeader className="sr-only">
               <SheetTitle>{copy("context")}</SheetTitle>
               <SheetDescription>{copy("actions")}</SheetDescription>
@@ -520,36 +751,56 @@ function ThreadPane({
       <SetupNotice workspace={workspace} />
       <ErrorNotice workspace={workspace} />
 
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="mx-auto w-full max-w-4xl px-3 py-4 md:px-6 md:py-6">
-          {loadingConversation ? (
-            <div className="flex min-h-64 items-center justify-center text-muted-foreground">
-              <Loader2 className="size-5 animate-spin" aria-hidden="true" />
-            </div>
-          ) : !activeSession ? (
-            <div className="flex min-h-64 flex-col items-center justify-center text-center">
-              <Bot className="size-7 text-muted-foreground" aria-hidden="true" />
-              <p className="mt-3 text-sm font-semibold">{copy("noSessions")}</p>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="mx-auto flex min-h-64 max-w-lg flex-col items-center justify-center text-center">
-              <span className="flex size-11 items-center justify-center rounded-2xl border bg-primary/5 text-primary">
-                <BrainCircuit className="size-5" aria-hidden="true" />
-              </span>
-              <h3 className="mt-4 text-sm font-semibold">{copy("emptyThreadTitle")}</h3>
-              <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-                {copy("emptyThreadDescription")}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <MessageBubble key={message.id} message={message} workspace={workspace} />
-              ))}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+      <div ref={scrollRootRef} className="min-h-0 flex-1">
+        <ScrollArea className="h-full">
+          <div
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+            aria-label={copy("messageLog")}
+            className="mx-auto w-full max-w-4xl px-3 py-4 md:px-6 md:py-6"
+          >
+            {loadingConversation ? (
+              <div className="flex min-h-64 items-center justify-center text-muted-foreground">
+                <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+              </div>
+            ) : !activeSession ? (
+              <div className="flex min-h-64 flex-col items-center justify-center text-center">
+                <Bot
+                  className="size-7 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <p className="mt-3 text-sm font-semibold">
+                  {copy("noSessions")}
+                </p>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="mx-auto flex min-h-64 max-w-lg flex-col items-center justify-center text-center">
+                <span className="flex size-11 items-center justify-center rounded-2xl border bg-primary/5 text-primary">
+                  <BrainCircuit className="size-5" aria-hidden="true" />
+                </span>
+                <h3 className="mt-4 text-sm font-semibold">
+                  {copy("emptyThreadTitle")}
+                </h3>
+                <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                  {copy("emptyThreadDescription")}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((message) => (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    workspace={workspace}
+                  />
+                ))}
+              </div>
+            )}
+            <div ref={tailRef} className="h-px" aria-hidden="true" />
+          </div>
+        </ScrollArea>
+      </div>
 
       <div className="border-t bg-background/95 p-3 backdrop-blur md:px-5 md:py-4">
         <div className="mx-auto flex w-full max-w-4xl items-end gap-2 rounded-xl border bg-card p-2 shadow-sm focus-within:ring-2 focus-within:ring-ring/30">
@@ -566,11 +817,17 @@ function ThreadPane({
             aria-label={copy("composerPlaceholder")}
             rows={1}
             dir="auto"
-            disabled={!activeSession || !setup.ready || sending}
+            disabled={!activeSession || !setupReady || sending}
             className="max-h-32 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
           />
           {sending ? (
-            <Button type="button" size="icon" variant="outline" aria-label={copy("stop")} onClick={stop}>
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              aria-label={copy("stop")}
+              onClick={stop}
+            >
               <Square className="size-4" aria-hidden="true" />
             </Button>
           ) : (
@@ -578,7 +835,7 @@ function ThreadPane({
               type="button"
               size="icon"
               aria-label={copy("send")}
-              disabled={!activeSession || !setup.ready || !draft.trim()}
+              disabled={!activeSession || !setupReady || !draft.trim()}
               onClick={submit}
             >
               <Send className="size-4 rtl:-scale-x-100" aria-hidden="true" />
@@ -593,15 +850,26 @@ function ThreadPane({
 export function AiWorkspace() {
   const workspace = useAiWorkspace();
   const mobile = useMobile();
-  const [mobilePane, setMobilePane] = useState<"sessions" | "thread">("sessions");
+  const [mobilePane, setMobilePane] = useState<"sessions" | "thread">(
+    "sessions",
+  );
 
   if (mobile) {
     return (
-      <div data-ai-workspace="v2" className="h-full min-h-0 overflow-hidden rounded-xl border bg-card">
+      <div
+        data-ai-workspace="v2"
+        className="h-full min-h-0 overflow-hidden rounded-xl border bg-card"
+      >
         {mobilePane === "sessions" ? (
-          <SessionsPane workspace={workspace} onOpen={() => setMobilePane("thread")} />
+          <SessionsPane
+            workspace={workspace}
+            onOpen={() => setMobilePane("thread")}
+          />
         ) : (
-          <ThreadPane workspace={workspace} onBack={() => setMobilePane("sessions")} />
+          <ThreadPane
+            workspace={workspace}
+            onBack={() => setMobilePane("sessions")}
+          />
         )}
       </div>
     );
