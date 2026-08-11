@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 
-import { SettingsTabs, type SettingsTabAccess } from "@/components/settings/settings-tabs";
+import {
+  SettingsWorkspace,
+  type SettingsWorkspaceAccess,
+} from "@/components/settings/settings-workspace";
 import { PageHeader } from "@/components/shared/page-header";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
@@ -23,7 +26,7 @@ export default async function SettingsPage() {
   const can = (action: Parameters<typeof trustedActionAllowed>[1]) =>
     trustedActionAllowed(actorContext, action, resource);
 
-  const access: SettingsTabAccess = {
+  const access: SettingsWorkspaceAccess = {
     profile: true,
     security: can("sessions.read") || can("devices.read"),
     team: can("members.read"),
@@ -31,7 +34,8 @@ export default async function SettingsPage() {
     license: can("license.read"),
     demo: can("settings.manage"),
     ai: can("integrations.manage") || can("settings.manage"),
-    delivery: can("delivery.credentials.manage") || can("integrations.read"),
+    delivery:
+      can("delivery.credentials.manage") || can("integrations.read"),
     reports: can("settings.manage"),
     integrations: can("integrations.read"),
     phone: can("risk.read"),
@@ -48,7 +52,7 @@ export default async function SettingsPage() {
   return (
     <div className="app-content page-sections">
       <PageHeader title={t("nav.settings")} description={t("settings.subtitle")} />
-      <SettingsTabs
+      <SettingsWorkspace
         access={access}
         integrations={integrations.map((integration) => ({
           platform: integration.platform,
