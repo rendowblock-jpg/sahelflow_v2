@@ -18,16 +18,15 @@ keys or retained evidence merely to simplify development.
    [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
 5. Read [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md).
 6. Read [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
-7. Read the full 2026-08-11 stabilization handoff:
-   `documentation/archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md`.
-8. Inspect live protected `main`, open PRs, issues #164/#221/#226/#230 and current Actions.
-9. Read the governing sections of PRODUCT, EXPERIENCE, ARCHITECTURE and RESEARCH.
-10. For frontend stabilization work, read
-    `documentation/archive/research/PRE_PHASE8_FRONTEND_STABILIZATION_RESEARCH-2026-08-10.md`.
-11. Inspect exact production source and tests before trusting implementation claims.
+7. Inspect live protected `main`, open PRs, issues #164/#221/#226/#230 and current Actions.
+8. Read the governing sections of PRODUCT, EXPERIENCE, ARCHITECTURE and RESEARCH.
+9. For frontend stabilization work, read
+   `documentation/archive/research/PRE_PHASE8_FRONTEND_STABILIZATION_RESEARCH-2026-08-10.md`.
+10. Inspect exact production source and tests before trusting implementation claims.
 
 Chat history and archived reports are context/evidence only. They never replace
-live GitHub or active documentation authority.
+live GitHub or active documentation authority. `WORKING_MEMORY.md` is the single
+compact session-resume owner; update it rather than creating another handoff system.
 
 ## Authority precedence
 
