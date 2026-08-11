@@ -94,13 +94,16 @@ describe("Phase 5 experience foundation source contract", () => {
     const sheet = read("src/components/ui/sheet.tsx");
     const foundation = read("src/app/phase5.css");
 
-    expect(button).toContain('data-sahelflow-button=""');
+    expect(button).toContain("sf-button-size-xs h-7");
+    expect(button).toContain("sf-button-size-sm h-9");
+    expect(button).toContain("sf-button-size-icon-xs size-7");
+    expect(button).toContain("sf-button-size-icon-sm size-9");
     expect(dropdown.match(/min-h-\(--control-height\)/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
     expect(select.match(/min-h-\(--control-height\)/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
     expect(dialog).toContain("min-h-(--control-height) min-w-(--control-height)");
     expect(sheet).toContain("min-h-(--control-height) min-w-(--control-height)");
-    expect(foundation).toContain('[data-sahelflow-button]:is(');
-    expect(foundation).toContain('[data-size="icon-sm"]');
+    expect(foundation).toContain(".sf-button-size-xs,");
+    expect(foundation).toContain(".sf-button-size-icon-sm");
     expect(foundation).toContain("min-height: var(--control-height)");
     expect(foundation).toContain("min-width: var(--control-height)");
   });
