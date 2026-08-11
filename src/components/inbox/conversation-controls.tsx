@@ -194,9 +194,11 @@ const PRIORITY_CONFIG: Record<
 export function PriorityControl({
   conversationId,
   initialPriority,
+  onUpdated,
 }: {
   conversationId: string;
   initialPriority: ConversationPriority | null;
+  onUpdated?: (priority: ConversationPriority | null) => void;
 }) {
   const { t } = useI18n();
   const [priority, setPriority] = useState<ConversationPriority | null>(
@@ -209,6 +211,7 @@ export function PriorityControl({
         priority: next,
       });
       setPriority(next);
+      onUpdated?.(next);
     } catch {
       toast.error(t("common.error"));
     }
@@ -351,10 +354,12 @@ export function AssigneeControl({
   conversationId,
   initialAssignee,
   initialVersion,
+  onUpdated,
 }: {
   conversationId: string;
   initialAssignee: string | null;
   initialVersion: number;
+  onUpdated?: (assigneeId: string | null, version: number) => void;
 }) {
   const { locale } = useI18n();
   const copy = ASSIGNMENT_COPY[locale];
@@ -482,10 +487,12 @@ export function AssigneeControl({
         throw new Error(body.error ?? copy.saveError);
       }
       if (!body.assignment) throw new Error(copy.saveError);
-      setAssigneeId(body.assignment.assignee?.memberId ?? null);
+      const nextAssigneeId = body.assignment.assignee?.memberId ?? null;
+      setAssigneeId(nextAssigneeId);
       setVersion(body.assignment.version);
       requestRef.current = null;
       setOpen(false);
+      onUpdated?.(nextAssigneeId, body.assignment.version);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : copy.saveError;
       setError(message);
@@ -624,9 +631,11 @@ export function AssigneeControl({
 export function LabelsControl({
   conversationId,
   initialLabels,
+  onUpdated,
 }: {
   conversationId: string;
   initialLabels: string[] | null;
+  onUpdated?: (labels: string[]) => void;
 }) {
   const { t } = useI18n();
   const [labels, setLabels] = useState<string[]>(initialLabels ?? []);
@@ -646,6 +655,7 @@ export function LabelsControl({
       if (!response.ok) throw new Error(`PUT labels failed: ${response.status}`);
       setLabels(next);
       setDraft("");
+      onUpdated?.(next);
     } catch {
       toast.error(t("common.error"));
     }
@@ -811,38 +821,45 @@ export function ConversationControls({
   conversationId,
   initial,
   canUpdate,
+  onUpdated,
 }: {
   conversationId: string;
   initial: Partial<ConversationWorkflowState>;
   canUpdate: boolean;
+  onUpdated?: () => void;
 }) {
+  const labelsKey = (initial.labels ?? []).join("\u001f");
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {canUpdate ? (
         <>
           <StatusControl
-            key={`status:${conversationId}`}
+            key={`status:${conversationId}:${initial.status ?? "open"}`}
             conversationId={conversationId}
             initialStatus={initial.status ?? "open"}
+            onUpdated={onUpdated}
           />
           <PriorityControl
-            key={`priority:${conversationId}`}
+            key={`priority:${conversationId}:${initial.priority ?? "none"}`}
             conversationId={conversationId}
             initialPriority={initial.priority ?? null}
+            onUpdated={onUpdated}
           />
         </>
       ) : null}
       <AssigneeControl
-        key={`assignee:${conversationId}`}
+        key={`assignee:${conversationId}:${initial.assignmentVersion ?? 0}:${initial.assigneeId ?? "none"}`}
         conversationId={conversationId}
         initialAssignee={initial.assigneeId ?? null}
         initialVersion={initial.assignmentVersion ?? 0}
+        onUpdated={onUpdated}
       />
       {canUpdate ? (
         <LabelsControl
-          key={`labels:${conversationId}`}
+          key={`labels:${conversationId}:${labelsKey}`}
           conversationId={conversationId}
           initialLabels={initial.labels ?? null}
+          onUpdated={onUpdated}
         />
       ) : null}
     </div>
