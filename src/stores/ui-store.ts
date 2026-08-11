@@ -22,6 +22,10 @@ const VALID_LOCALES: readonly Locale[] = ["ar", "fr", "en"];
 export type UiDensity = "comfortable" | "compact";
 export const DEFAULT_UI_DENSITY: UiDensity = "comfortable";
 
+function isUiDensity(value: unknown): value is UiDensity {
+  return value === "comfortable" || value === "compact";
+}
+
 /**
  * Read the locale from the `sahelflow-locale` cookie.
  * Returns null on the server (no document) or if the cookie is missing/invalid.
@@ -99,14 +103,25 @@ export const useUIStore = create<UIState>()(
         sidebarCollapsed: state.sidebarCollapsed,
         density: state.density,
       }),
-      // Locale never comes from persisted localStorage. The cookie/server tree
-      // owns it; this store only mirrors the currently committed server locale.
+      // Persisted UI data is untrusted/stale input. Admit only the two known
+      // preferences and normalize everything else to safe current defaults.
+      // Locale and active shop never come from this storage boundary.
       merge: (persistedState, currentState) => {
-        const persisted = persistedState as Partial<UIState> | null;
+        const persisted = persistedState as {
+          sidebarCollapsed?: unknown;
+          density?: unknown;
+        } | null;
         return {
           ...currentState,
-          ...persisted,
+          sidebarCollapsed:
+            typeof persisted?.sidebarCollapsed === "boolean"
+              ? persisted.sidebarCollapsed
+              : currentState.sidebarCollapsed,
+          density: isUiDensity(persisted?.density)
+            ? persisted.density
+            : DEFAULT_UI_DENSITY,
           locale: currentState.locale,
+          activeShopId: currentState.activeShopId,
         };
       },
     },
