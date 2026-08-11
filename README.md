@@ -8,9 +8,10 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 ## Current repository truth
 
-- Protected `main` after the Inbox merge: `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400` — PR #237.
-- Latest application-changing protected merge: **PR #237 — Inbox operational workspace redesign**.
+- Protected `main` after the AI Agents merge: `598e2a0dc0352227431614cf1527672aa78ec015` — PR #240.
+- Latest application-changing protected merge: **PR #240 — AI Agents operational workspace redesign**.
 - Shared frontend foundation remains protected by **PR #236**.
+- Inbox route adoption remains protected by **PR #237**.
 - Published executable remains **Internal.14**, application source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed publication run `31388777098`.
 - Published release remains **`1.0.0-internal.14`** / MSI `1.0.0.14`.
 - Founder-installed release remains **Internal.14**; Founder-accepted baseline remains **Internal.5**.
@@ -24,11 +25,12 @@ published executable or the latest application-changing protected merge.
 
 ## Historical Phase 5 closure continuity
 
-The earlier **Phase 5 closure** source/browser checkpoint remains **PR #220** and
-continues to be valid for exactly what its frozen head proved. The documentation
-audit lineage tracks **issues #201, #214, #221, #226 and #230**; #201 and #214 are
-now closed by stronger later evidence, while #221/#226/#230 remain retained.
-**Published release: `1.0.0-internal.14`**. **Founder acceptance remains open**.
+The earlier **Phase 5 closure** source/browser checkpoint remains **PR #220** at
+`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` and continues to be valid for exactly
+what its frozen head proved. The documentation audit lineage tracks **issues #201,
+#214, #221, #226 and #230**; #201 and #214 are now closed by stronger later evidence,
+while #221/#226/#230 remain retained. **Published release: `1.0.0-internal.14`**.
+**Founder acceptance remains open**.
 
 ## Protected frontend adoption
 
@@ -42,35 +44,40 @@ PR #236 protects the shared source/browser frontend roots:
   focus/accessibility primitives;
 - resilient preference storage and coarse-pointer target authority.
 
-PR #237 now protects the first product-workspace adoption package on top of those
-roots. Inbox is database-authoritative even when WhatsApp transport is degraded,
-uses task-shaped All/Unread/Open/Pending/Resolved queues, a durable thread/composer
-and workflow/team context, keeps recovery visible, reconciles workflow mutations,
-batches assignment-version projection and preserves provider ingress/outbox,
-collaboration, permission and message-extraction authority.
+PR #237 protects the database-authoritative Inbox operational workspace on top of
+those roots. Local conversation/history/workflow authority remains usable when
+WhatsApp transport is degraded, while task queues, durable thread/composer,
+workflow/team context, recovery, workflow reconciliation, batched assignment
+projection and coalesced live refreshes preserve protected provider/outbox,
+collaboration and permission authority.
 
-The final pre-merge #237 head `8e9d5aa365f0c5873909c1c8517f88519d743b9d`
-was updated onto the then-current protected `main`, all review threads were
-resolved, and CI, Phase 5 Experience and Phase 6–7 Completion passed before the
-protected squash merge to `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`.
-This is source/browser evidence, not installed Founder acceptance.
+PR #240 now protects the second task-shaped product workspace: **AI Agents**.
+Final pre-merge head `6355cc4c797a597af52c90decfe7727e405749be`
+passed CI `31535669292`, Phase 5 Experience `31535668960` and Phase 6–7 Completion
+`31535668966`, including the required aggregate checks, after all four material
+review threads were resolved. The protected squash merge is
+`598e2a0dc0352227431614cf1527672aa78ec015`.
 
-## Next implementation frontier — AI Agents
+The AI workspace now separates durable sessions, assistant thread/composer and
+context/action review; renders typed product-shaped tool results; treats consent,
+key, provider, persistence and action-history degradation as explicit states;
+keeps the seller user turn exact while locale guidance stays presentation-only;
+and preserves exact proposal-digest approval plus server-owned permission/shop/
+license/target revalidation. This is source/browser evidence, not installed
+Founder acceptance.
 
-The next product workspace is **AI Agents**, followed by **Settings**, then the
-remaining production route inventory.
+## Next implementation frontier — Settings
 
-The AI package must consume rather than rewrite protected AI authority. Sensitive
-model-suggested actions remain persisted proposals bound to exact tool/arguments,
-permissions, shop/identity, target state and proposal digest; execution remains a
-server-authorized approval ceremony. The frontend work should make sessions,
-typed tool results, pending/failed/completed proposals, degraded AI/consent/key
-states and recovery understandable without exposing raw JSON or inventing model
-autonomy.
+The next product workspace is **Settings**, followed by the remaining production
+route inventory.
 
-Current reconnaissance starts from `src/app/(dashboard)/agents/page.tsx`, the
-existing monolithic `src/components/ai/ai-chat.tsx`, session/message streaming APIs
-and `src/lib/ai/actions/*`. AR/FR/EN and RTL must consume the shared #236 authority.
+The Settings package must consume rather than rewrite protected configuration,
+identity, license, provider, backup/recovery and destructive-action authority. It
+should turn the current configuration surface into a task-shaped operational
+workspace with clear capability/health/degraded state, safe secret handling,
+explicit destructive ceremonies, AR/FR/EN parity and coherent RTL/mobile behavior.
+
+Do not start Phase 8 or claim installed acceptance from source/browser evidence.
 
 ## Retained acceptance boundaries
 
