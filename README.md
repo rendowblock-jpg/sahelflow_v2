@@ -8,7 +8,7 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 ## Current repository truth
 
-- Protected `main` at the 2026-08-11 handoff: `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — PR #234.
+- Protected `main` at the 2026-08-11 reconciliation: `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — PR #234.
 - Latest application-changing protected merge: **PR #234 — resilient production trial transport source architecture**.
 - Published executable remains **Internal.14**, application source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed publication run `31388777098`.
 - **Published release: `1.0.0-internal.14`** / MSI `1.0.0.14`.
@@ -44,8 +44,8 @@ small UI defect manually.
 ## Stabilization work already protected
 
 1. **PR #231** records the binding pre-Phase-8 Founder stabilization program.
-2. **PR #232** retires historical PR #200/#207 CI exception bypasses and adds anti-bypass regression authority.
-3. **PR #233** fixes the successful license-activation blank-workspace/restart defect.
+2. **PR #232** retires historical PR #200/#207 CI exception mechanisms as live bypasses and adds anti-bypass regression authority.
+3. **PR #233** fixes the successful-license-activation blank-workspace/restart defect.
 4. **PR #234** protects bounded primary/recovery customer-trial ingress, cryptographic response authority, owned-host release constraints, Worker readiness/diagnostics and blocking Worker coverage.
 
 PR #234 exact installed evidence also closed two retained historical gaps: hydrated
@@ -88,17 +88,17 @@ implementation begin.
 ## Documentation and session resume
 
 Start with [`AGENTS.md`](AGENTS.md), then read the active authority chain in
-[`documentation/README.md`](documentation/README.md).
+[`documentation/README.md`](documentation/README.md). The complete resumable
+session context—including the Founder-installed problem register, the seven deep
+audit findings and their dispositions, exact #231–#234 evidence, and the already
+identified frontend locale/theme/CSS roots—is owned by
+[`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md)
+and reconciled against [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md)
+and [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
 
-The full 2026-08-11 handoff—including the original Founder-installed problem
-context, the seven deep-audit findings and their dispositions, merged PR/evidence
-history and the exact frontend reconnaissance already completed—is retained at:
-
-`documentation/archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md`
-
-Supporting research for the frontend program remains under
-`documentation/archive/research/`. Archived material is evidence/context, not a
-replacement authority.
+Supporting primary-source frontend research remains under
+`documentation/archive/research/`. Archived research is evidence/context, not a
+replacement authority or a second handoff system.
 
 No Beta or Stable claim exists. Do not rerun the old PR #228/Internal.14
 publication workflow.
