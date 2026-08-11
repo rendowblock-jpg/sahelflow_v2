@@ -4,7 +4,6 @@ import { z } from "zod";
 import { createAiActionProposal } from "@/lib/ai/actions/service";
 import { runWithAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
 import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
-import { withAiChatLocaleContext } from "@/lib/ai/chat/locale-context";
 import { loadRecentAiChatMessages } from "@/lib/ai/chat/session-history";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -144,12 +143,13 @@ export const POST = withErrorHandler(
       () =>
         runAgent(
           history,
-          withAiChatLocaleContext(input.message, input.locale),
+          input.message,
           {
             db,
             shop: shopContext,
             sourceIdentity: `ai-session:${id}`,
           },
+          input.locale,
         ),
     );
 
