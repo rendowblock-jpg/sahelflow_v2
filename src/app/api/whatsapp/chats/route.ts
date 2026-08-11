@@ -1,15 +1,16 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { db, shopContext } from "@/lib/db";
+import { db } from "@/lib/db";
 import {
   assertTrustedAction,
   requireTrustedAction,
 } from "@/lib/identity/authorization";
 import { projectTrustedActorActions } from "@/lib/identity/conversation-projection";
-import { getConversationAssignmentVersions } from "@/lib/inbox/conversation-assignment";
 import {
   sidecar,
+  SidecarRequestError,
   SidecarUnavailableError,
 } from "@/lib/whatsapp/sidecar-client";
 
@@ -29,6 +30,28 @@ function parseLabels(value: string | null): string[] {
 
 function isOutboundDirection(direction: string): boolean {
   return direction === "outbound" || direction === "outgoing";
+}
+
+async function getAssignmentVersions(
+  conversationIds: readonly string[],
+): Promise<ReadonlyMap<string, number>> {
+  const unique = [...new Set(conversationIds)];
+  if (unique.length === 0) return new Map();
+
+  const rows = await db.$queryRaw<
+    Array<{ aggregateId: string; version: number | bigint }>
+  >(
+    Prisma.sql`
+      SELECT "aggregateId", "version"
+      FROM "BusinessAggregateVersion"
+      WHERE "aggregateType" = 'conversation-assignment'
+        AND "aggregateId" IN (${Prisma.join(unique)})
+    `,
+  );
+
+  return new Map(
+    rows.map((row) => [row.aggregateId, Number(row.version)] as const),
+  );
 }
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
@@ -75,8 +98,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       },
     },
   });
-  const assignmentVersions = await getConversationAssignmentVersions(
-    { prisma: db, shop: shopContext },
+  const assignmentVersions = await getAssignmentVersions(
     conversations.map((conversation) => conversation.id),
   );
 
@@ -111,14 +133,19 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     ];
   });
 
-  // Transport health is projection metadata only. Historical inbox truth above
-  // remains usable even when the sidecar cannot currently be reached.
+  // Transport health is projection metadata only. Any provider/network failure
+  // must not invalidate already-committed local inbox truth.
   let sidecarReachable = true;
   let sidecarStatus: string | null = null;
   try {
     sidecarStatus = (await sidecar.status()).status;
   } catch (error) {
-    if (!(error instanceof SidecarUnavailableError)) throw error;
+    if (
+      !(error instanceof SidecarUnavailableError) &&
+      !(error instanceof SidecarRequestError)
+    ) {
+      throw error;
+    }
     sidecarReachable = false;
   }
 
