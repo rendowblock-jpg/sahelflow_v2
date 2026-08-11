@@ -55,15 +55,15 @@ function SidebarLink({
       aria-current={current ? "page" : undefined}
       data-selected={selected ? "true" : undefined}
       className={cn(
-        "group relative flex items-center rounded-lg text-sm outline-none transition-[background-color,color] duration-150",
+        "group relative flex min-h-(--control-height) items-center rounded-lg text-sm outline-none transition-[background-color,color] duration-150",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar",
         collapsed
           ? nested
-            ? "min-h-9 justify-center px-0 py-2"
-            : "min-h-10 justify-center px-0 py-2"
+            ? "justify-center px-0 py-2"
+            : "justify-center px-0 py-2"
           : nested
-            ? "min-h-9 gap-2.5 px-3 py-2"
-            : "min-h-10 gap-3 px-3 py-2.5",
+            ? "gap-2.5 px-3 py-2"
+            : "gap-3 px-3 py-2.5",
         selected
           ? nested
             ? "bg-sidebar-accent/75 font-medium text-sidebar-accent-foreground"
@@ -221,7 +221,7 @@ export function Sidebar({
             size="sm"
             onClick={toggleSidebar}
             className={cn(
-              "h-10 w-full text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              "min-h-(--control-height) w-full text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               collapsed ? "justify-center px-0" : "justify-start px-3",
             )}
             aria-label={t("nav.collapse")}
