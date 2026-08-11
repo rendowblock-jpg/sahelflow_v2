@@ -173,9 +173,13 @@ if (existsSync(resolve(repoRoot, duplicateHandoffPath))) {
   );
 }
 
+// Every marker here is explicitly tied to the retired Inbox/#237 execution
+// frontier. Generic WIP phrases such as "red and unmerged" are intentionally not
+// rejected because the next legitimate package (AI Agents) may temporarily be in
+// exactly that state while Working Memory remains truthful.
 const staleInboxFrontierMarkers = [
-  "not green and must not be merged yet",
-  "red and unmerged",
+  "PR #237 is not green and must not be merged yet",
+  "PR #237 is red and unmerged",
   "Do not merge #237",
   "do not merge #237",
   "Active unmerged frontier — PR #237 Inbox",
