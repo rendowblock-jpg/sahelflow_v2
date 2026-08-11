@@ -40,7 +40,7 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(i18n).toContain("getTranslations(locale: Locale)");
   });
 
-  it("keeps theme mode and coordinated presets under the custom appearance authority", () => {
+  it("keeps theme mode and coordinated presets coherent even when persistence fails", () => {
     const appearance = read("src/components/settings/appearance-panel.tsx");
     const provider = read("src/components/theme-provider.tsx");
     const rootLayout = read("src/app/layout.tsx");
@@ -49,6 +49,15 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(appearance).not.toContain('from "next-themes"');
     expect(provider).toContain('type ThemePreset = "sahel" | "atlas" | "oasis" | "dune"');
     expect(provider).toContain("sahelflow-theme-preset");
+    expect(provider).toContain("let runtimeThemeOverride: ThemeMode | null = null");
+    expect(provider).toContain("let runtimePresetOverride: ThemePreset | null = null");
+    expect(provider).toContain("if (runtimeThemeOverride !== null) return runtimeThemeOverride");
+    expect(provider).toContain("if (runtimePresetOverride !== null) return runtimePresetOverride");
+    expect(provider).toContain("runtimeThemeOverride = theme");
+    expect(provider).toContain("runtimePresetOverride = preset");
+    expect(provider).toContain("persistTheme(normalized)");
+    expect(provider).toContain("persistPreset(normalized)");
+    expect(provider).toContain("notifyAppearanceChanged();");
     expect(rootLayout).toContain("e.dataset.themePreset=p");
   });
 
