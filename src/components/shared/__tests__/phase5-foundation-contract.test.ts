@@ -52,7 +52,7 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(rootLayout).toContain("e.dataset.themePreset=p");
   });
 
-  it("hydrates one persisted density authority through a server-safe snapshot", () => {
+  it("hydrates and validates one persisted density authority through a server-safe snapshot", () => {
     const store = read("src/stores/ui-store.ts");
     const densityHook = read("src/hooks/use-ui-density.ts");
     const table = read("src/components/data-table/data-table.tsx");
@@ -60,7 +60,9 @@ describe("Phase 5 experience foundation source contract", () => {
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
 
     expect(store).toContain('export const DEFAULT_UI_DENSITY: UiDensity = "comfortable"');
-    expect(store).toContain("density: DEFAULT_UI_DENSITY");
+    expect(store).toContain("function isUiDensity(value: unknown): value is UiDensity");
+    expect(store).toContain("density: isUiDensity(persisted?.density)");
+    expect(store).not.toContain("...persisted,");
     expect(densityHook).toContain("useSyncExternalStore(");
     expect(densityHook).toContain("useUIStore.subscribe");
     expect(densityHook).toContain("() => DEFAULT_UI_DENSITY");
@@ -69,10 +71,10 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(appearance).toContain("const { density, setDensity } = useUiDensity()");
     expect(dashboardLayout).toContain("const { density } = useUiDensity()");
     expect(dashboardLayout).toContain("root.dataset.density = density");
-    expect(dashboardLayout).toContain('"--control-height"');
-    expect(dashboardLayout).toContain(
-      'density === "compact" ? "2.25rem" : "2.5rem"',
-    );
+    expect(dashboardLayout).toContain('window.matchMedia("(pointer: coarse)")');
+    expect(dashboardLayout).toContain('coarsePointer.matches\n          ? "2.75rem"');
+    expect(dashboardLayout).toContain('density === "compact"\n            ? "2.25rem"');
+    expect(dashboardLayout).toContain('coarsePointer.addEventListener("change", applyControlHeight)');
   });
 
   it("keeps user-authored search direction automatic and command chrome flow-relative", () => {
