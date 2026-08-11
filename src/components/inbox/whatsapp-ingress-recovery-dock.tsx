@@ -169,7 +169,10 @@ export function WhatsAppIngressRecoveryDock({
         </SheetTrigger>
       </div>
 
-      <SheetContent side="end" className="w-[min(440px,96vw)] p-0 sm:max-w-none">
+      <SheetContent
+        side={locale === "ar" ? "left" : "right"}
+        className="w-[min(440px,96vw)] p-0 sm:max-w-none"
+      >
         <SheetHeader className="border-b px-5 py-4 text-start">
           <div className="flex items-start justify-between gap-3 pe-8">
             <div>
