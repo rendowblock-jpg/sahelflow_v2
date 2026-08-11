@@ -39,6 +39,7 @@ describe("licensed server-tree transition", () => {
 
     expect(layout).toContain("if (!licenseValid)");
     expect(layout).toContain("<LicenseBoundary>{null}</LicenseBoundary>");
-    expect(layout).toContain("<DashboardLayout locale={locale} dir={dir}>");
+    expect(layout).toContain("<DashboardLayout>");
+    expect(layout).not.toContain("<DashboardLayout locale=");
   });
 });
