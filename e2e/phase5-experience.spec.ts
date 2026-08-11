@@ -196,19 +196,25 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await expect(pageHeading).toHaveText("Comptabilité");
     await assertDesktopSidebarEdge(page, "ltr");
 
-    // Hold the first RSC refresh long enough to observe the pending interval. The
-    // old French tree must remain fully committed until the Arabic server tree is
-    // ready; changing only client navigation/dir during this window would recreate
-    // the Founder-observed mixed-language/wrong-side failure.
+    // Hold only the refresh triggered by this locale interaction. Visible copy and
+    // geometry must remain on the committed French tree while the Arabic RSC tree
+    // is delayed, then move together when that server tree arrives.
+    let localeSwitchStarted = false;
     let delayedRefreshObserved = false;
     await page.route("**/accounting**", async (route) => {
-      if (route.request().resourceType() === "fetch") {
+      const requestUrl = new URL(route.request().url());
+      if (
+        localeSwitchStarted &&
+        requestUrl.pathname === "/accounting" &&
+        route.request().resourceType() === "fetch"
+      ) {
         delayedRefreshObserved = true;
         await new Promise((resolve) => setTimeout(resolve, 1_000));
       }
       await route.continue();
     });
 
+    localeSwitchStarted = true;
     await selectLocale(page, "Français", "العربية");
     await expect.poll(() => delayedRefreshObserved).toBe(true);
     await expect(html).toHaveAttribute("lang", "fr");
