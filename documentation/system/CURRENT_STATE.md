@@ -45,6 +45,32 @@ comfortable scale, atomic AR/FR/EN + LTR/RTL switching, warmer coherent themes,
 restrained motion, directional geometry, shallow navigation, warning hierarchy,
 useful charts and workflow-level redesign of Inbox, AI Agents and Settings.
 
+## Historical evidence continuity
+
+### Phase 5 merged result and evidence
+
+The earlier Phase 5 source/browser checkpoint remains PR #220 at
+`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. It is historical exact-head proof,
+not the current application frontier, and later route adoption does not erase it.
+
+### Active Phase 6 frontier
+
+The active product phase remains Phase 6 — Arabic, RTL and accessibility parity.
+PR #236 protects the shared roots, PR #237 protects Inbox adoption, and AI Agents
+is the next route-level implementation package.
+
+### Internal.14 publication evidence
+
+Published application source remains `2d60e2e74109b6e03626a5ccdff727c029a34591`,
+with signed publication run `31388777098`. Later protected source does not silently
+rewrite that released artifact.
+
+### FD-031 exception boundary
+
+FD-031 remains the one-use Internal.14 publication exception for PR #228 only and
+does not weaken future gates. Historical **issue #214** is closed by stronger exact
+#234 replacement-install evidence; #221/#226/#230 remain open.
+
 ## Protected stabilization sequence after Internal.14
 
 - **PR #231:** records the binding pre-Phase-8 Founder stabilization program.
