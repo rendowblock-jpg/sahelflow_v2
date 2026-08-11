@@ -21,9 +21,21 @@ describe("Inbox operational workspace contract", () => {
     expect(route).toContain("assignmentVersion:");
     expect(route).toContain('source: "database"');
     expect(route).toContain("sidecarReachable");
+    expect(route).toContain("SidecarUnavailableError");
+    expect(route).toContain("SidecarRequestError");
     expect(route.indexOf("const conversations = await db.conversation.findMany")).toBeLessThan(
       route.indexOf("await sidecar.status()"),
     );
+  });
+
+  it("batches assignment versions and coalesces live list refreshes", () => {
+    const route = read("src/app/api/whatsapp/chats/route.ts");
+    const hook = read("src/hooks/use-inbox-workspace.ts");
+    expect(route).toContain("Prisma.join(unique)");
+    expect(route).toContain('FROM "BusinessAggregateVersion"');
+    expect(hook).toContain("CHAT_REFRESH_COALESCE_MS");
+    expect(hook).toContain("scheduleChatsRefresh");
+    expect(hook).toContain("if (chatRefreshTimerRef.current !== null) return");
   });
 
   it("separates Inbox transport/state logic from presentation", () => {
@@ -41,6 +53,15 @@ describe("Inbox operational workspace contract", () => {
     expect(view).toContain("MessageExtraction");
   });
 
+  it("reconciles committed workflow mutations back into canonical queue state", () => {
+    const view = read("src/components/inbox/inbox-workspace.tsx");
+    const controls = read("src/components/inbox/conversation-controls.tsx");
+    expect(view).toContain("onUpdated={() => void refreshChats()}");
+    expect(controls).toContain("onUpdated?.(newStatus)");
+    expect(controls).toContain("onUpdated?.(next)");
+    expect(controls).toContain("onUpdated?.(nextAssigneeId, body.assignment.version)");
+  });
+
   it("preserves persisted activity/message types through WhatsApp history", () => {
     const messages = read("src/app/api/whatsapp/chats/[jid]/messages/route.ts");
     expect(messages).toContain("messageType: true");
@@ -52,9 +73,22 @@ describe("Inbox operational workspace contract", () => {
       "src/components/inbox/whatsapp-ingress-recovery-dock.tsx",
     );
     expect(recovery).toContain('new Set(["retrying", "quarantined", "dead_letter"])');
+    expect(recovery).toContain("RECOVERY_POLL_MS");
+    expect(recovery).toContain("window.setInterval");
+    expect(recovery).toContain('document.visibilityState === "visible"');
     expect(recovery).toContain("recoveryEvents.length === 0");
     expect(recovery).toContain('fetch("/api/whatsapp/inbound/recovery"');
     expect(recovery).toContain("reason.trim().length < 3");
     expect(recovery).toContain("<Sheet");
+  });
+
+  it("keeps composer guidance inside the locale authority", () => {
+    const view = read("src/components/inbox/inbox-workspace.tsx");
+    const copy = read("src/lib/i18n/inbox-workspace.ts");
+    expect(view).toContain('copy("composerShortcut")');
+    expect(view).not.toContain("Enter · Shift+Enter");
+    expect(copy).toContain('composerShortcut: "Enter to send');
+    expect(copy).toContain('composerShortcut: "Entrée pour envoyer');
+    expect(copy).toContain('composerShortcut: "Enter للإرسال');
   });
 });
