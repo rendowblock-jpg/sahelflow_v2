@@ -92,7 +92,7 @@ export const GET = withErrorHandler(
       intents.map((intent) => [intent.effectKey, intent]),
     );
 
-    const messages: IncomingMessage[] = rows
+    const messages: Array<IncomingMessage & { messageType?: string }> = rows
       .map((message) => {
         const fromMe = message.direction === "outbound";
         const effect = fromMe ? effectByMessage.get(message.id) : undefined;
@@ -112,6 +112,7 @@ export const GET = withErrorHandler(
           },
           message: { conversation: message.body },
           messageTimestamp: Math.floor(message.timestamp.getTime() / 1_000),
+          messageType: message.messageType,
           deliveryStatus: fromMe
             ? ((message.deliveryStatus ?? "sending") as IncomingMessage["deliveryStatus"])
             : undefined,
