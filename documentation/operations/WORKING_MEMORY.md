@@ -4,6 +4,7 @@
 > **Last updated:** 2026-08-11
 > **Protected application-changing baseline at session handoff:** `04adb20fb5846499039eda61a9b765deb9c622e6` — PR #236
 > **Latest application-changing protected merge:** PR #236
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
 > **Founder-installed release:** Internal.14
@@ -72,11 +73,12 @@ These were deeply audited before the frontend program and are assets to preserve
 12. Avoid schema/migration/native changes in frontend packages unless a concrete
     defect requires them and consequence-selected evidence expands accordingly.
 
-## Earlier checkpoints
+## Phase 5 closure snapshot
 
-PR #220 remains the earlier Phase 5 source/browser checkpoint. PR #223 remains the
-earlier Phase 6 source/browser + Phase 7 measurement checkpoint. Their exact-head
-evidence remains valid for what they proved.
+PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` remains the earlier
+Phase 5 source/browser checkpoint. PR #223 remains the earlier Phase 6
+source/browser + Phase 7 measurement checkpoint. Their exact-head evidence remains
+valid for what they proved.
 
 The later Founder-installed rejection showed those checks were insufficient as
 whole-product visual/interaction acceptance. It does not erase them or generically
@@ -142,6 +144,14 @@ planned.
 
 #236 is source/browser foundation evidence only. It does **not** close #221/#226/#230
 or create installed Founder acceptance.
+
+## Phase 6 next action — finish the active Inbox adoption package
+
+The shared foundation root is already protected. The immediate Phase 6/Phase 5
+adoption dependency is to continue PR #237 from live GitHub, finish its red failure
+batch, prove the complete Inbox workspace on one exact head, and merge only after
+fresh review. After Inbox the adoption order is AI Agents, Settings, then remaining
+production routes.
 
 ## Active WIP — PR #237 Inbox operational workspace redesign
 
@@ -292,7 +302,7 @@ what live GitHub proves.
 
 - **#201 CLOSED:** exact #234 installed hydrated-WebView/startup evidence passed.
 - **#214 CLOSED:** exact #234 replacement-install recovery evidence passed.
-- **#221 OPEN:** coherent repaired installed visual/accessibility + Founder acceptance.
+- **issue #221 OPEN:** coherent repaired installed visual/accessibility + Founder acceptance.
 - **#226 OPEN:** installed Phase 7 performance/reliability certification.
 - **#230 OPEN P1:** live resilient customer-trial production/network certification.
 
