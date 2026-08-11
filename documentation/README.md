@@ -2,17 +2,18 @@
 
 > **Status:** Active documentation entry point
 > **Last reconciled:** 2026-08-11
-> **Protected application-changing baseline:** `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400` — PR #237
-> **Latest application-changing protected merge:** PR #237 — Inbox operational workspace redesign
+> **Protected application-changing baseline:** `598e2a0dc0352227431614cf1527672aa78ec015` — PR #240
+> **Latest application-changing protected merge:** PR #240 — AI Agents operational workspace redesign
 > **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
+> **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
 > **Phase 5 historical application-changing checkpoint:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14`, protected signed run `31388777098`
 > **Founder-installed release:** Internal.14
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Next product implementation frontier:** AI Agents workspace redesign
-> **After AI Agents:** Settings, then remaining route adoption
+> **Next product implementation frontier:** Settings workspace redesign
+> **After Settings:** remaining route adoption
 > **Mandatory gate before Phase 8:** whole-product frontend adoption + installed Phase 6/7 closure + live #230 + explicit Founder acceptance
 > **Open retained issues:** #221, #226, #230
 > **Execution epic:** #164
@@ -43,11 +44,11 @@ source-grounded truth into Current State/Roadmap.
 ## Historical continuity anchors
 
 The **Published Internal.14 checkpoint** remains distinct from later protected
-source. The earlier Phase 5 source/browser checkpoint remains **PR #220** at the
-historical application-changing baseline above. Retained **issue #221** owns the
+source. The earlier Phase 5 source/browser checkpoint remains **PR #220** at
+`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Retained **issue #221** owns the
 installed Founder acceptance obligation. The audit lineage intentionally names
-**issues #201, #214, #221, #226 and #230**; #201/#214 are now closed by stronger
-later evidence while #221/#226/#230 remain open.
+**issues #201, #214, #221, #226 and #230**; #201/#214 are closed by stronger later
+evidence while #221/#226/#230 remain open.
 
 ## Current product truth
 
@@ -57,40 +58,55 @@ heads proved. Internal.14 installed use nevertheless rejected the published
 frontend as the whole-product quality baseline, so the mandatory pre-Phase-8
 program continues under the existing Phase 5/6/7 authorities.
 
-PR #236 repaired the shared frontend roots. PR #237 is now the first protected
-route-level product workspace on top of that foundation.
+PR #236 repaired the shared frontend roots. PR #237 protects Inbox route adoption.
+PR #240 now protects AI Agents route adoption.
 
 ### PR #237 — Inbox protected
 
 Protected squash merge `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
 establishes the database-authoritative Inbox workspace while preserving the
-Phase 1–4/Phase 3 engine. The final pre-merge head
-`8e9d5aa365f0c5873909c1c8517f88519d743b9d` was current with protected `main`,
-all material review threads were resolved, and exact-head CI, Phase 5 Experience
-and Phase 6–7 Completion were green.
+Phase 1–4/Phase 3 engine. Final pre-merge head
+`8e9d5aa365f0c5873909c1c8517f88519d743b9d` passed exact-head CI, Phase 5 and
+Phase 6–7 evidence before expected-head squash merge.
 
-Protected outcomes include task-shaped queues, durable conversation history and
-composer, workflow/team context, bounded pairing/recovery, workflow reconciliation,
-batched assignment projection, provider-degraded local history, responsive/mobile
-navigation and AR/FR/EN/RTL parity. It does **not** close #221/#226/#230 and is not
-installed Founder acceptance.
+### PR #240 — AI Agents protected
 
-## Next product frontier — AI Agents
+Protected squash merge `598e2a0dc0352227431614cf1527672aa78ec015`
+establishes the task-shaped AI operational workspace while preserving the existing
+proposal/action authority. Final pre-merge head
+`6355cc4c797a597af52c90decfe7727e405749be` passed:
 
-AI Agents is the next implementation package. It must redesign the existing generic
-chat surface around the authority the product already has:
+- CI `31535669292` and Required PR gate;
+- Phase 5 Experience `31535668960` and required aggregate gate;
+- Phase 6–7 Completion `31535668966` and required aggregate gate;
+- fresh adversarial review with all four material threads resolved before merge.
 
-- durable sessions and message history;
-- typed read/external-read tool results;
-- exact persisted sensitive-action proposals;
-- permission, shop, license and target-state revalidation at approval;
-- explicit pending/approved/executing/succeeded/failed/conflict/expired recovery;
-- consent/key/model/quota/degraded states;
-- AR/FR/EN, RTL, keyboard, reduced-motion, reflow and accessibility parity.
+Protected outcomes include durable recent session history, separate session/thread/
+context zones, product-shaped tool results, explicit setup/provider/persistence/
+action-history degradation, live-region/tail-follow accessibility, mobile drill-in,
+AR/FR/EN/RTL parity and exact seller-message preservation. Sensitive execution
+remains server-owned and bound to exact persisted proposal digest, permission,
+shop, license and target-state revalidation.
 
-Do not turn model output into direct business authority. Do not expose raw JSON as
-the primary product representation. Sensitive execution remains server-owned and
-proposal-bound. Settings follows AI Agents; remaining routes follow Settings.
+PR #240 is source/browser evidence only. It does **not** close #221/#226/#230 and
+is not installed Founder acceptance.
+
+## Next product frontier — Settings
+
+Settings is the next implementation package. It must redesign the configuration
+surface around protected existing authority rather than invent a parallel settings
+engine:
+
+- clear grouped seller tasks instead of a flat control inventory;
+- explicit capability/health/configured/degraded/recovery states;
+- safe secret presence/edit ceremonies without exposing protected values;
+- provider, AI, account, license, backup/recovery and operational preferences
+  linked to their real authority owners;
+- safe destructive/reset flows with explicit scope, consequences and recovery;
+- AR/FR/EN, RTL, keyboard, reduced-motion, reflow and accessibility parity;
+- no direct bypass of dedicated reserved/lifecycle/identity/license authorities.
+
+Remaining production routes follow Settings. Phase 8 remains frozen.
 
 ## Retained issue truth
 
