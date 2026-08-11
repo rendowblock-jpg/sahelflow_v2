@@ -1,12 +1,196 @@
 /*
- * SahelFlow authenticated desktop experience layer.
+ * SahelFlow shared frontend-foundation normalization layer.
  *
- * This file is the shell-level normalization boundary while route families adopt
- * the shared frontend foundation. It must not become a second page-by-page design
- * system: only cross-workspace density, motion, elevation and workbench contracts
- * belong here.
+ * `globals.css` still contains historical utilities used across the product. This
+ * file is imported after it and owns the current cross-workspace appearance,
+ * density, motion and authenticated workbench contracts while route families are
+ * migrated. Do not add page-specific styling here.
  */
 
+/* ── Foundation color surfaces ────────────────────────────────────────────────
+ * Keep status colors semantic and independent. Theme presets change the product
+ * accent family; light/dark mode changes luminance and surface depth.
+ */
+:root {
+  --surface-0: oklch(0.992 0.004 85);
+  --surface-1: oklch(0.982 0.006 85);
+  --surface-2: oklch(0.958 0.008 85);
+  --surface-3: oklch(0.928 0.01 85);
+
+  --background: oklch(0.982 0.006 85);
+  --foreground: oklch(0.18 0.012 75);
+  --card: oklch(0.997 0.003 85);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.997 0.003 85);
+  --popover-foreground: var(--foreground);
+  --secondary: oklch(0.952 0.009 85);
+  --secondary-foreground: oklch(0.24 0.012 75);
+  --muted: oklch(0.952 0.009 85);
+  --muted-foreground: oklch(0.44 0.014 75);
+  --border: oklch(0.89 0.012 85);
+  --input: oklch(0.87 0.014 85);
+
+  --primary: oklch(0.55 0.17 153);
+  --primary-foreground: oklch(0.99 0.003 85);
+  --accent: oklch(0.948 0.025 153);
+  --accent-foreground: oklch(0.25 0.05 153);
+  --ring: oklch(0.55 0.17 153);
+
+  --sidebar: oklch(0.972 0.008 85);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.94 0.025 153);
+  --sidebar-accent-foreground: oklch(0.23 0.045 153);
+  --sidebar-border: oklch(0.89 0.012 85);
+  --sidebar-ring: var(--ring);
+}
+
+.dark {
+  --surface-0: oklch(0.145 0.009 70);
+  --surface-1: oklch(0.18 0.011 70);
+  --surface-2: oklch(0.215 0.014 70);
+  --surface-3: oklch(0.255 0.016 70);
+
+  --background: oklch(0.145 0.009 70);
+  --foreground: oklch(0.94 0.008 80);
+  --card: oklch(0.18 0.011 70);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.195 0.012 70);
+  --popover-foreground: var(--foreground);
+  --secondary: oklch(0.215 0.014 70);
+  --secondary-foreground: oklch(0.93 0.008 80);
+  --muted: oklch(0.215 0.014 70);
+  --muted-foreground: oklch(0.71 0.012 80);
+  --border: oklch(0.95 0.01 80 / 11%);
+  --input: oklch(0.95 0.01 80 / 16%);
+
+  --primary: oklch(0.7 0.17 153);
+  --primary-foreground: oklch(0.14 0.025 153);
+  --accent: oklch(0.255 0.035 153);
+  --accent-foreground: oklch(0.94 0.018 153);
+  --ring: oklch(0.7 0.17 153);
+
+  --sidebar: oklch(0.165 0.011 70);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.245 0.035 153);
+  --sidebar-accent-foreground: oklch(0.94 0.018 153);
+  --sidebar-border: oklch(0.95 0.01 80 / 9%);
+  --sidebar-ring: var(--ring);
+}
+
+/* Coordinated accent families. They intentionally do not override success,
+ * warning, destructive or order-status tokens, so color meaning does not drift. */
+:root[data-theme-preset="atlas"] {
+  --primary: oklch(0.54 0.2 286);
+  --primary-foreground: oklch(0.99 0.004 286);
+  --accent: oklch(0.95 0.03 286);
+  --accent-foreground: oklch(0.27 0.075 286);
+  --ring: oklch(0.54 0.2 286);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.94 0.035 286);
+  --sidebar-accent-foreground: oklch(0.26 0.075 286);
+  --sidebar-ring: var(--ring);
+}
+
+.dark[data-theme-preset="atlas"] {
+  --primary: oklch(0.72 0.16 286);
+  --primary-foreground: oklch(0.16 0.045 286);
+  --accent: oklch(0.27 0.045 286);
+  --accent-foreground: oklch(0.95 0.025 286);
+  --ring: oklch(0.72 0.16 286);
+  --sidebar-accent: oklch(0.255 0.045 286);
+  --sidebar-accent-foreground: oklch(0.95 0.025 286);
+}
+
+:root[data-theme-preset="oasis"] {
+  --primary: oklch(0.53 0.135 205);
+  --primary-foreground: oklch(0.99 0.004 205);
+  --accent: oklch(0.95 0.03 205);
+  --accent-foreground: oklch(0.25 0.065 205);
+  --ring: oklch(0.53 0.135 205);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.94 0.035 205);
+  --sidebar-accent-foreground: oklch(0.25 0.065 205);
+  --sidebar-ring: var(--ring);
+}
+
+.dark[data-theme-preset="oasis"] {
+  --primary: oklch(0.72 0.13 205);
+  --primary-foreground: oklch(0.14 0.035 205);
+  --accent: oklch(0.265 0.04 205);
+  --accent-foreground: oklch(0.95 0.025 205);
+  --ring: oklch(0.72 0.13 205);
+  --sidebar-accent: oklch(0.25 0.04 205);
+  --sidebar-accent-foreground: oklch(0.95 0.025 205);
+}
+
+:root[data-theme-preset="dune"] {
+  --primary: oklch(0.55 0.145 63);
+  --primary-foreground: oklch(0.99 0.004 63);
+  --accent: oklch(0.955 0.035 63);
+  --accent-foreground: oklch(0.28 0.075 63);
+  --ring: oklch(0.55 0.145 63);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.945 0.04 63);
+  --sidebar-accent-foreground: oklch(0.28 0.075 63);
+  --sidebar-ring: var(--ring);
+}
+
+.dark[data-theme-preset="dune"] {
+  --primary: oklch(0.74 0.145 63);
+  --primary-foreground: oklch(0.19 0.045 63);
+  --accent: oklch(0.275 0.04 63);
+  --accent-foreground: oklch(0.96 0.025 63);
+  --ring: oklch(0.74 0.145 63);
+  --sidebar-accent: oklch(0.26 0.04 63);
+  --sidebar-accent-foreground: oklch(0.96 0.025 63);
+}
+
+/* Typography authority. Tailwind text utilities continue to own explicit sizes,
+ * while unclassified operational copy no longer drops to a 15px desktop body. */
+body {
+  font-size: 1rem;
+}
+
+html[dir="rtl"] body {
+  font-family: var(--font-arabic), "Segoe UI", Tahoma, Arial, sans-serif;
+  line-height: 1.55;
+}
+
+html[dir="rtl"] :is(h1, h2, h3, h4) {
+  line-height: 1.35;
+}
+
+/* Theme and accent switches get a short, bounded color interpolation. The runtime
+ * adds this attribute for 220ms and skips it entirely for reduced-motion users. */
+html[data-theme-switching="true"] :is(
+  body,
+  [data-sahelflow-shell="desktop"],
+  aside,
+  header,
+  main,
+  [data-slot="card"],
+  [data-slot="dialog-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="popover-content"],
+  button,
+  a,
+  input,
+  textarea,
+  select
+) {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ── Authenticated workbench density and motion ────────────────────────────── */
 [data-sahelflow-shell="desktop"] {
   --sf-workbench-inline: clamp(0.875rem, 1.35vw, 1.5rem);
   --sf-workbench-block: 1rem;
@@ -60,11 +244,9 @@
   gap: 0.875rem;
 }
 
-/*
- * Retire the old marketing-style stagger/lift language, but do not blanket-disable
- * framework/component continuity. Radix/Tailwind `animate-in` transitions are
- * allowed again so overlays and interactive state changes do not snap.
- */
+/* Retire the old marketing-style stagger/lift language, but do not blanket-disable
+ * framework/component continuity. Radix/Tailwind `animate-in` transitions remain
+ * available so overlays and interactive state changes do not snap. */
 [data-sahelflow-shell="desktop"] :is(
   .stagger-grid > *,
   .animate-fade-up,
@@ -147,6 +329,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html[data-theme-switching="true"] * {
+    transition-duration: 0.01ms !important;
+  }
+
   [data-sahelflow-shell="desktop"] * {
     scroll-behavior: auto !important;
   }
