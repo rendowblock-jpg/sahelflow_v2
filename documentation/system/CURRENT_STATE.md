@@ -4,6 +4,7 @@
 > **Last assessed:** 2026-08-11
 > **Protected `main` at this handoff:** `04adb20fb5846499039eda61a9b765deb9c622e6` — PR #236
 > **Latest application-changing protected merge:** PR #236
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`
 > **Protected signed publication run:** `31388777098`
@@ -31,7 +32,7 @@ recovery and desktop authority. The backend/engine remains the asset to preserve
 
 Internal.14 is published and installed on the Founder T470. A matching permanent
 offline entitlement activated and survived close/reopen. Internal.14 is **not**
-Founder-accepted and SahelFlow is **not** a commercially certified Stable release.
+Founder-accepted and SahelFlow is **not yet a commercially certified Stable release**.
 
 The Founder-installed use session rejected the published frontend as a
 whole-product quality baseline. The problem is systemic rather than a list of
@@ -120,15 +121,22 @@ Fifteen material Codex findings (one P1 and fourteen P2) were repaired during th
 package rather than waived. PR #236 is still source/browser evidence only; it does
 not close #221, #226 or #230 and is not installed Founder acceptance.
 
-## Earlier Phase 5/6/7 checkpoints
+## Phase 5 merged result and evidence
 
-PR #220 remains the earlier protected Phase 5 source/browser checkpoint and PR
-#223 the earlier Phase 6 source/browser + Phase 7 measurement checkpoint. Those
-proofs remain valid for the exact things their heads established.
+PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` remains the earlier
+Phase 5 source/browser checkpoint. PR #223 remains the earlier Phase 6
+source/browser + Phase 7 measurement checkpoint. Those proofs remain valid for the
+exact things their heads established.
 
 The later Founder-installed rejection shows those checks were insufficient as
 whole-product experience acceptance. It does not erase the checkpoints and does
 not generically reopen protected Phase 1–4 canonical authority.
+
+## Active Phase 6 frontier — route adoption after #236
+
+The shared foundation dependency is now protected. The active product work is
+route-level adoption beginning with PR #237 Inbox, then AI Agents, then Settings,
+then the remaining production route inventory.
 
 ## Active unmerged frontier — PR #237 Inbox
 
@@ -161,7 +169,7 @@ Exact #234 installed evidence passed application launch/reopen and authenticated
 hydrated WebView UI proof twice; PR #232 had already retired the historical PR #200
 waiver.
 
-### #214 — CLOSED
+### issue #214 — CLOSED
 
 Exact #234 installed evidence passed interruption, rollback and committed two-shop
 replacement restore, owner re-enrollment, protected-customer blind-index readback,
@@ -194,9 +202,12 @@ Internal.14 remains the published Internal from application source
 Protected application merges #231–#236 do not alter the already-published executable
 until a new release is explicitly built and published.
 
+## FD-031 exception boundary
+
 FD-031 remains one-use only for PR #228/Internal.14. The later #234 evidence closed
-historical #201/#214 obligations but does not retroactively turn Internal.14 into
-Founder acceptance, Beta or Stable and does not certify live #230 networking.
+historical #201 and issue #214 obligations but does not retroactively turn
+Internal.14 into Founder acceptance, Beta or Stable and does not certify live #230
+networking.
 
 ## Mandatory order from here
 
