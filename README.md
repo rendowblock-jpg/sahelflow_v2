@@ -8,8 +8,9 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 ## Current repository truth
 
-- Protected `main` at this 2026-08-11 handoff: `04adb20fb5846499039eda61a9b765deb9c622e6` — PR #236.
-- Latest application-changing protected merge: **PR #236 — shared frontend foundation authority**.
+- Protected `main` after the Inbox merge: `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400` — PR #237.
+- Latest application-changing protected merge: **PR #237 — Inbox operational workspace redesign**.
+- Shared frontend foundation remains protected by **PR #236**.
 - Published executable remains **Internal.14**, application source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed publication run `31388777098`.
 - Published release remains **`1.0.0-internal.14`** / MSI `1.0.0.14`.
 - Founder-installed release remains **Internal.14**; Founder-accepted baseline remains **Internal.5**.
@@ -21,79 +22,65 @@ settings, licensing, multi-shop and recovery under one protected authority model
 Documentation-only commits may advance protected `main` without changing the
 published executable or the latest application-changing protected merge.
 
-### Semantic continuity
+## Historical Phase 5 closure continuity
 
 The earlier **Phase 5 closure** source/browser checkpoint remains **PR #220** and
-continues to mean only what that exact head proved. The historical retained issue
-set was **issues #201, #214, #221, #226 and #230**; #201/#214 are now closed while
-#221/#226/#230 remain open. **Published release: `1.0.0-internal.14`**.
-**Founder acceptance remains open.**
+continues to be valid for exactly what its frozen head proved. The documentation
+audit lineage tracks **issues #201, #214, #221, #226 and #230**; #201 and #214 are
+now closed by stronger later evidence, while #221/#226/#230 remain retained.
+**Published release: `1.0.0-internal.14`**. **Founder acceptance remains open**.
 
-## Protected frontend foundation
+## Protected frontend adoption
 
-PR #236 protects the shared source/browser foundation required by the
-Founder-installed Internal.14 rejection:
+PR #236 protects the shared source/browser frontend roots:
 
 - application-oriented Noto Sans Arabic paired with Inter;
 - atomic server-tree locale + document-direction commits across AR/FR/EN;
-- one theme authority with coordinated Sahel/Atlas/Oasis/Dune accent families;
+- one theme authority with coordinated Sahel/Atlas/Oasis/Dune families;
 - one hydration-safe persisted density authority;
-- shallow primary navigation with only genuine subflows visually nested;
-- compact contextual notices instead of dominant routine warnings;
-- governed chart, motion, mixed-direction and focus/accessibility primitives;
-- resilient preference storage behavior;
-- independent coarse-pointer touch-target authority across ordinary, slotted,
-  portaled and command-palette controls.
+- shallow primary navigation, governed notices/charts/motion, mixed-direction and
+  focus/accessibility primitives;
+- resilient preference storage and coarse-pointer target authority.
 
-The exact frozen #236 head `7d0b01a9f1989ad7e2cae25c3b0d39d6e92a64d8`
-passed CI `31497523385`, Phase 5 Experience `31497523052`, Phase 6–7 Completion
-`31497523030`, then received a clean fresh Codex review with zero unresolved
-material review threads before squash merge to `04adb20fb5846499039eda61a9b765deb9c622e6`.
+PR #237 now protects the first product-workspace adoption package on top of those
+roots. Inbox is database-authoritative even when WhatsApp transport is degraded,
+uses task-shaped All/Unread/Open/Pending/Resolved queues, a durable thread/composer
+and workflow/team context, keeps recovery visible, reconciles workflow mutations,
+batches assignment-version projection and preserves provider ingress/outbox,
+collaboration, permission and message-extraction authority.
 
-This is **source/browser foundation evidence**, not installed Founder acceptance.
-Issues #221/#226/#230 therefore remain open.
+The final pre-merge #237 head `8e9d5aa365f0c5873909c1c8517f88519d743b9d`
+was updated onto the then-current protected `main`, all review threads were
+resolved, and CI, Phase 5 Experience and Phase 6–7 Completion passed before the
+protected squash merge to `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`.
+This is source/browser evidence, not installed Founder acceptance.
 
-## Active implementation frontier — Inbox
+## Next implementation frontier — AI Agents
 
-The only active implementation PR at this handoff is **PR #237 —
-`feat(inbox): rebuild operational workspace`**, branch
-`agent/inbox-product-workspace-redesign`, based on protected #236.
+The next product workspace is **AI Agents**, followed by **Settings**, then the
+remaining production route inventory.
 
-Exact handoff head: `cf84491cfd7613728a86dc9157da3fc4631e9105`.
-The PR is open and mergeable but **not green and must not be merged yet**.
+The AI package must consume rather than rewrite protected AI authority. Sensitive
+model-suggested actions remain persisted proposals bound to exact tool/arguments,
+permissions, shop/identity, target state and proposal digest; execution remains a
+server-authorized approval ceremony. The frontend work should make sessions,
+typed tool results, pending/failed/completed proposals, degraded AI/consent/key
+states and recovery understandable without exposing raw JSON or inventing model
+autonomy.
 
-The package changes Inbox from a provider/demo-mode screen into a task-shaped
-operational workspace where the shop database remains visible history/workflow
-authority and WhatsApp connection is a separate transport state. It introduces
-All/Unread/Open/Pending/Resolved queues, a durable thread/composer, contextual
-workflow/team rail, bounded pairing/recovery surfaces and explicit responsive/RTL
-behavior while preserving provider ingress, outbox, assignment, collaboration,
-permission and message-extraction authority.
+Current reconnaissance starts from `src/app/(dashboard)/agents/page.tsx`, the
+existing monolithic `src/components/ai/ai-chat.tsx`, session/message streaming APIs
+and `src/lib/ai/actions/*`. AR/FR/EN and RTL must consume the shared #236 authority.
 
-Current exact-head evidence has already isolated a small, concrete repair batch:
-three ESLint `react-hooks/set-state-in-effect` errors, one Phase 5 Inbox evidence
-sequencing error, one Phase 6 static hard-coded-copy failure, and a Phase 7
-controlled-browser route-p95 regression/tripwire failure. Exact details and run/job
-IDs are retained in
-[`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
+## Retained acceptance boundaries
 
-The next session resumes **PR #237**, fixes that batch, completes coherent Inbox
-audit/evidence, then performs one fresh exact-head adversarial review and merges
-only when all selected gates are green. **AI Agents follows Inbox; Settings follows
-AI Agents.**
+- **#221 — OPEN:** installed Founder Phase 5/6 visual/accessibility acceptance on a coherent repaired candidate.
+- **#226 — OPEN:** installed Phase 7 performance/reliability certification on T470/floor hardware.
+- **#230 — OPEN P1:** live resilient customer-trial production/network certification.
 
-## Stabilization work protected before #236
-
-- **PR #231** records the binding pre-Phase-8 Founder stabilization program.
-- **PR #232** retires historical PR #200/#207 CI exception mechanisms as live bypasses.
-- **PR #233** fixes successful-license-activation blank-workspace/restart behavior.
-- **PR #234** protects resilient primary/recovery customer-trial source architecture.
-- Exact #234 installed evidence satisfied and closed historical issues **#201** and **#214**.
-
-Issue **#230** remains an external/live P1 certification boundary: source/CI cannot
-prove the required SahelFlow-owned production DNS, independent recovery path,
-protected production bindings, representative Algerian fixed/mobile reachability
-or exact signed installed customer trial/recovery journey.
+Historical #201 and #214 are closed by stronger exact #234 installed evidence.
+Internal.14 remains Founder-installed but not Founder-accepted. No Beta or Stable
+claim exists.
 
 ## Documentation and session resume
 
@@ -107,7 +94,5 @@ and [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
 
 Supporting primary-source frontend research remains under
 `documentation/archive/research/`. Archived material is evidence/context, never a
-parallel authority or handoff system.
-
-No Beta or Stable claim exists. Do not rerun the historical PR #228/Internal.14
+parallel authority or handoff system. Do not rerun the historical PR #228/Internal.14
 publication workflow.
