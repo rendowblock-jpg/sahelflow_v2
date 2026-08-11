@@ -176,6 +176,48 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     expect(page.url()).toContain("/dashboard");
   });
 
+  test("persisted compact density hydrates through one server-safe snapshot", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const hydrationErrors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() !== "error") return;
+      const text = message.text();
+      if (/hydration|hydrated|server rendered html|did not match/i.test(text)) {
+        hydrationErrors.push(text);
+      }
+    });
+
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "sahelflow-ui",
+        JSON.stringify({
+          state: { sidebarCollapsed: false, density: "compact" },
+          version: 0,
+        }),
+      );
+    });
+
+    await ensureOwnerSession(page);
+    await page.goto("/orders", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+
+    const html = page.locator("html");
+    const shell = page.locator('[data-sahelflow-shell="desktop"]');
+    await expect(html).toHaveAttribute("data-density", "compact");
+    await expect(shell).toHaveAttribute("data-density", "compact");
+    await expect(page.locator('[data-table-density="compact"]').first()).toBeVisible();
+    await expect
+      .poll(() =>
+        html.evaluate((node) =>
+          getComputedStyle(node).getPropertyValue("--control-height").trim(),
+        ),
+      )
+      .toBe("2.25rem");
+    expect(hydrationErrors).toEqual([]);
+  });
+
   test("live locale switching commits server copy, document direction and shell edge atomically", async ({
     page,
   }) => {
