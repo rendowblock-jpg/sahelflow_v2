@@ -32,7 +32,9 @@ describe("proposal-bound AI production source contract", () => {
     const paths = [
       "src/lib/ai/chat/agent.ts",
       "src/lib/ai/chat/tools/registry.ts",
-      "src/components/ai/ai-chat.tsx",
+      "src/hooks/use-ai-workspace.ts",
+      "src/components/ai/ai-workspace.tsx",
+      "src/components/ai/ai-action-proposal-card.tsx",
       "src/app/api/ai/sessions/[id]/messages/route.ts",
       "src/app/api/ai/sessions/[id]/messages/stream/route.ts",
     ];
