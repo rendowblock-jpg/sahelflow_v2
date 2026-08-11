@@ -176,34 +176,62 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     expect(page.url()).toContain("/dashboard");
   });
 
-  test("live locale switching keeps copy, document direction and shell edge atomic", async ({
+  test("live locale switching commits server copy, document direction and shell edge atomically", async ({
     page,
   }) => {
     test.setTimeout(90_000);
     await ensureOwnerSession(page);
+    await page.goto("/accounting", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
 
     const html = page.locator("html");
     const shell = page.locator('[data-sahelflow-shell="desktop"]');
     const desktopSidebar = page.locator('aside[data-navigation-density]').first();
+    const pageHeading = page.getByRole("heading", { level: 1 });
 
     await expect(html).toHaveAttribute("lang", "fr");
     await expect(html).toHaveAttribute("dir", "ltr");
     await expect(shell).toHaveAttribute("dir", "ltr");
     await expect(desktopSidebar).toContainText("Tableau de bord");
+    await expect(pageHeading).toHaveText("Comptabilité");
     await assertDesktopSidebarEdge(page, "ltr");
 
+    // Hold the first RSC refresh long enough to observe the pending interval. The
+    // old French tree must remain fully committed until the Arabic server tree is
+    // ready; changing only client navigation/dir during this window would recreate
+    // the Founder-observed mixed-language/wrong-side failure.
+    let delayedRefreshObserved = false;
+    await page.route("**/accounting**", async (route) => {
+      if (route.request().resourceType() === "fetch") {
+        delayedRefreshObserved = true;
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+      }
+      await route.continue();
+    });
+
     await selectLocale(page, "Français", "العربية");
+    await expect.poll(() => delayedRefreshObserved).toBe(true);
+    await expect(html).toHaveAttribute("lang", "fr");
+    await expect(html).toHaveAttribute("dir", "ltr");
+    await expect(shell).toHaveAttribute("dir", "ltr");
+    await expect(desktopSidebar).toContainText("Tableau de bord");
+    await expect(pageHeading).toHaveText("Comptabilité");
+    await assertDesktopSidebarEdge(page, "ltr");
+
     await expect(html).toHaveAttribute("lang", "ar");
     await expect(html).toHaveAttribute("dir", "rtl");
     await expect(shell).toHaveAttribute("dir", "rtl");
     await expect(desktopSidebar).toContainText("لوحة التحكم");
+    await expect(pageHeading).toHaveText("المحاسبة");
     await assertDesktopSidebarEdge(page, "rtl");
+    await page.unroute("**/accounting**");
 
     await selectLocale(page, "العربية", "English");
     await expect(html).toHaveAttribute("lang", "en");
     await expect(html).toHaveAttribute("dir", "ltr");
     await expect(shell).toHaveAttribute("dir", "ltr");
     await expect(desktopSidebar).toContainText("Dashboard");
+    await expect(pageHeading).toHaveText("Accounting");
     await assertDesktopSidebarEdge(page, "ltr");
 
     // Repeat the direction flip once more. The installed Internal.14 failure could
@@ -214,6 +242,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await expect(html).toHaveAttribute("dir", "rtl");
     await expect(shell).toHaveAttribute("dir", "rtl");
     await expect(desktopSidebar).toContainText("لوحة التحكم");
+    await expect(pageHeading).toHaveText("المحاسبة");
     await assertDesktopSidebarEdge(page, "rtl");
   });
 
@@ -229,6 +258,8 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
 
     const html = page.locator("html");
     const shell = page.locator('[data-sahelflow-shell="desktop"]');
+
+    await expect(html).toHaveAttribute("data-density", "comfortable");
 
     await page.locator('[data-theme-mode="light"]').click();
     await expect(html).toHaveClass(/\blight\b/);
@@ -246,6 +277,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
 
     await page.locator('[data-density-option="compact"]').click();
     await expect(shell).toHaveAttribute("data-density", "compact");
+    await expect(html).toHaveAttribute("data-density", "compact");
     await expect
       .poll(() =>
         page.evaluate(() => {
@@ -256,6 +288,21 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
         }),
       )
       .toBe("compact");
+
+    // The locale menu is Radix-portaled under <body>, outside the dashboard shell.
+    // It must inherit the same root density variable rather than falling back to
+    // the historical compact control height.
+    await page.getByRole("button", { name: "Français" }).click();
+    const portalMenu = page.getByRole("menu").last();
+    await expect(portalMenu).toBeVisible();
+    await expect
+      .poll(() =>
+        portalMenu.evaluate((node) =>
+          getComputedStyle(node).getPropertyValue("--control-height").trim(),
+        ),
+      )
+      .toBe("2.25rem");
+    await page.keyboard.press("Escape");
 
     // Motion preference is part of the same appearance contract: reduced-motion
     // users still get the exact mode/preset state change, but never the bounded
