@@ -98,10 +98,7 @@ export const POST = withErrorHandler(
       false,
     );
     if (!consent) {
-      return NextResponse.json(
-        { error: "AI_CONSENT_REQUIRED" },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: "consent_required" }, { status: 403 });
     }
 
     await requireLicense();
