@@ -1,14 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import type { ComponentType } from "react";
 import { useState } from "react";
 import { CheckCircle2, ExternalLink, Loader2, Plug } from "lucide-react";
 
 import {
+  GoogleSheetsIcon,
   ShopifyIcon,
   WooCommerceIcon,
   YouCanIcon,
-  GoogleSheetsIcon,
 } from "@/components/brand/brand-icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ interface CommerceDefinition {
   id: "youcan" | "shopify" | "woocommerce";
   name: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   iconClassName: string;
   iconContainerClassName: string;
   fields: Array<{
@@ -276,7 +277,7 @@ export function CommerceIntegrationsPanel({
                       : t("integrations.connect")}
                   </Button>
                   {definition.docsUrl ? (
-                    <Button asChild type="button" size="sm" variant="ghost">
+                    <Button asChild size="sm" variant="ghost">
                       <a
                         href={definition.docsUrl}
                         target="_blank"
@@ -350,7 +351,11 @@ export function CommerceIntegrationsPanel({
             >
               {t("common.cancel")}
             </Button>
-            <Button type="button" onClick={() => void handleSave()} disabled={saving}>
+            <Button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving}
+            >
               {saving ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : (
