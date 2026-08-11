@@ -48,6 +48,7 @@ export type SettingsWorkspaceAccess = {
   reports: boolean;
   integrations: boolean;
   phone: boolean;
+  phoneManage: boolean;
   backup: boolean;
   danger: boolean;
 };
@@ -103,7 +104,9 @@ export function SettingsWorkspace({
   );
   const [active, setActive] = useState<Group>(visibleGroups[0]?.id ?? "experience");
   const effectiveGroup =
-    visibleGroups.find((group) => group.id === active) ?? visibleGroups[0] ?? GROUPS[0];
+    visibleGroups.find((group) => group.id === active) ??
+    visibleGroups[0] ??
+    GROUPS[0];
   const effectiveActive = effectiveGroup.id;
 
   const renderExperience = () => (
@@ -130,7 +133,9 @@ export function SettingsWorkspace({
       ) : null}
       {access.appearance ? <AppearancePanel /> : null}
       {access.reports ? <DailyReportPanel /> : null}
-      {access.phone ? <PhoneReputationPanel /> : null}
+      {access.phone ? (
+        <PhoneReputationPanel canManage={access.phoneManage} />
+      ) : null}
     </div>
   );
 
