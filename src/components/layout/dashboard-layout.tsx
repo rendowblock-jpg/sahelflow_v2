@@ -53,35 +53,39 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const previousPath = useRef<string | null>(null);
 
   // Radix dialogs/popovers are portaled under <body>, outside the dashboard shell.
-  // Mirror the hydration-safe density to the document root before paint and use
-  // the same pointer:coarse contract as the shell CSS. Touch hardware receives a
-  // 48px root control target so the bounded 95% open-scale motion still stays
-  // above the 44px accessibility floor throughout the interaction.
+  // Mirror the hydration-safe density to the document root before paint. The
+  // ordinary control-height follows density, while a separate root touch-target
+  // floor remains immune to shell-local density overrides and therefore also
+  // protects compact controls (for example the mobile Sheet trigger) rendered
+  // inside the shell on coarse-pointer hardware.
   useLayoutEffect(() => {
     const root = document.documentElement;
     const coarsePointer = window.matchMedia("(pointer: coarse)");
     root.dataset.density = density;
 
-    const applyControlHeight = () => {
+    const applyControlMetrics = () => {
+      const isCoarse = coarsePointer.matches;
       root.style.setProperty(
         "--control-height",
-        coarsePointer.matches
+        isCoarse
           ? "3rem"
           : density === "compact"
             ? "2.25rem"
             : "2.5rem",
       );
+      root.style.setProperty("--sf-touch-target", isCoarse ? "3rem" : "0px");
     };
 
-    applyControlHeight();
-    coarsePointer.addEventListener("change", applyControlHeight);
+    applyControlMetrics();
+    coarsePointer.addEventListener("change", applyControlMetrics);
 
     return () => {
-      coarsePointer.removeEventListener("change", applyControlHeight);
+      coarsePointer.removeEventListener("change", applyControlMetrics);
       if (root.dataset.density === density) {
         delete root.dataset.density;
       }
       root.style.removeProperty("--control-height");
+      root.style.removeProperty("--sf-touch-target");
     };
   }, [density]);
 
