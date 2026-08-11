@@ -14,6 +14,6 @@ describe("Phase 5 icon-button touch floor", () => {
       "sf-button-size-icon size-[var(--control-height)] min-h-(--sf-touch-target) min-w-(--sf-touch-target)",
     );
     expect(toggle).toContain('size="icon"');
-    expect(toggle).toContain('className="h-8 w-8"');
+    expect(toggle).not.toContain('className="h-8 w-8"');
   });
 });
