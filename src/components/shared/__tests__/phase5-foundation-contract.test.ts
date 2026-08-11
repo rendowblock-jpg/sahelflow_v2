@@ -94,6 +94,7 @@ describe("Phase 5 experience foundation source contract", () => {
     const select = read("src/components/ui/select.tsx");
     const dialog = read("src/components/ui/dialog.tsx");
     const sheet = read("src/components/ui/sheet.tsx");
+    const foundation = read("src/app/phase5.css");
 
     expect(button).toContain("sf-button-size-xs h-7 min-h-(--sf-touch-target)");
     expect(button).toContain("sf-button-size-sm h-9 min-h-(--sf-touch-target)");
@@ -103,6 +104,8 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(select.match(/min-h-\(--control-height\)/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
     expect(dialog).toContain("min-h-(--control-height) min-w-(--control-height)");
     expect(sheet).toContain("min-h-(--control-height) min-w-(--control-height)");
+    expect(foundation).not.toContain(".sf-button-size-xs,");
+    expect(foundation).not.toContain(".sf-button-size-icon-sm");
   });
 
   it("keeps user-authored search direction automatic and command chrome flow-relative", () => {
