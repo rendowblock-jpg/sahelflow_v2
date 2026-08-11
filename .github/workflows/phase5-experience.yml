@@ -151,8 +151,8 @@ jobs:
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
 
-      - name: Run controlled desktop, Inbox, command-touch and RTL journeys
-        run: bunx playwright test e2e/phase5-experience.spec.ts e2e/inbox-workspace.spec.ts e2e/phase5-command-touch.spec.ts
+      - name: Run controlled desktop, Inbox, AI, command-touch and RTL journeys
+        run: bunx playwright test e2e/phase5-experience.spec.ts e2e/inbox-workspace.spec.ts e2e/ai-workspace.spec.ts e2e/phase5-command-touch.spec.ts
 
       - name: Upload rendered Phase 5 evidence
         if: always()
