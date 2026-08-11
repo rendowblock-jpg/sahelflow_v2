@@ -58,6 +58,15 @@ A lower layer cannot silently weaken a higher one.
 Always re-fetch live truth before a write. Never use copied SHAs for merge, release
 or destructive authority without verifying them.
 
+## Historical continuity anchors
+
+The Phase 5 application-changing protected baseline remains
+`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`; the earlier checkpoint remains PR
+#220 and is historical evidence, not the current frontier. Retained **issue #221**
+owns installed Founder visual/accessibility acceptance. Use the **selected Level
+1/2/3 gates** defined by the workflow according to consequence; later route
+adoption does not erase earlier exact-head proof.
+
 ## Governing completion program
 
 FD-028 defines the Phase 0–9 program:
