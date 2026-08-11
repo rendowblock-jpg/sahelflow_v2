@@ -22,6 +22,14 @@ settings, licensing, multi-shop and recovery under one protected authority model
 Documentation-only commits may advance protected `main` without changing the
 published executable or the latest application-changing protected merge.
 
+## Historical Phase 5 closure continuity
+
+The earlier **Phase 5 closure** source/browser checkpoint remains **PR #220** and
+continues to be valid for exactly what its frozen head proved. The documentation
+audit lineage tracks **issues #201, #214, #221, #226 and #230**; #201 and #214 are
+now closed by stronger later evidence, while #221/#226/#230 remain retained.
+**Published release: `1.0.0-internal.14`**. **Founder acceptance remains open**.
+
 ## Protected frontend adoption
 
 PR #236 protects the shared source/browser frontend roots:
