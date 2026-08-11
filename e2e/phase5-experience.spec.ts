@@ -111,6 +111,40 @@ async function ensureOwnerSession(page: Page) {
   expect(page.url()).toContain("/dashboard");
 }
 
+async function assertDesktopSidebarEdge(page: Page, direction: "ltr" | "rtl") {
+  const sidebar = page.locator('aside[data-navigation-density]').first();
+  await expect(sidebar).toBeVisible();
+  const box = await sidebar.boundingBox();
+  expect(box, "desktop sidebar should have measurable geometry").not.toBeNull();
+  if (!box) return;
+
+  if (direction === "ltr") {
+    expect(
+      Math.abs(box.x),
+      "LTR sidebar should remain attached to the left application edge",
+    ).toBeLessThanOrEqual(2);
+  } else {
+    expect(
+      Math.abs(box.x + box.width - DESKTOP.width),
+      "RTL sidebar should remain attached to the right application edge",
+    ).toBeLessThanOrEqual(2);
+  }
+}
+
+async function selectLocale(
+  page: Page,
+  currentLocaleLabel: string,
+  nextLocaleText: string,
+) {
+  await page.getByRole("button", { name: currentLocaleLabel }).click();
+  const option = page
+    .getByRole("menuitem")
+    .filter({ hasText: nextLocaleText })
+    .first();
+  await expect(option).toBeVisible();
+  await option.click();
+}
+
 test.describe.serial("Phase 5 desktop experience evidence", () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(DESKTOP);
@@ -140,6 +174,47 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
     expect(page.url()).toContain("/dashboard");
+  });
+
+  test("live locale switching keeps copy, document direction and shell edge atomic", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await ensureOwnerSession(page);
+
+    const html = page.locator("html");
+    const shell = page.locator('[data-sahelflow-shell="desktop"]');
+    const desktopSidebar = page.locator('aside[data-navigation-density]').first();
+
+    await expect(html).toHaveAttribute("lang", "fr");
+    await expect(html).toHaveAttribute("dir", "ltr");
+    await expect(shell).toHaveAttribute("dir", "ltr");
+    await expect(desktopSidebar).toContainText("Tableau de bord");
+    await assertDesktopSidebarEdge(page, "ltr");
+
+    await selectLocale(page, "Français", "العربية");
+    await expect(html).toHaveAttribute("lang", "ar");
+    await expect(html).toHaveAttribute("dir", "rtl");
+    await expect(shell).toHaveAttribute("dir", "rtl");
+    await expect(desktopSidebar).toContainText("لوحة التحكم");
+    await assertDesktopSidebarEdge(page, "rtl");
+
+    await selectLocale(page, "العربية", "English");
+    await expect(html).toHaveAttribute("lang", "en");
+    await expect(html).toHaveAttribute("dir", "ltr");
+    await expect(shell).toHaveAttribute("dir", "ltr");
+    await expect(desktopSidebar).toContainText("Dashboard");
+    await assertDesktopSidebarEdge(page, "ltr");
+
+    // Repeat the direction flip once more. The installed Internal.14 failure could
+    // leave the sidebar stuck on the previous edge only after switching back and
+    // forth, so a single cold Arabic boot would not protect this regression.
+    await selectLocale(page, "English", "العربية");
+    await expect(html).toHaveAttribute("lang", "ar");
+    await expect(html).toHaveAttribute("dir", "rtl");
+    await expect(shell).toHaveAttribute("dir", "rtl");
+    await expect(desktopSidebar).toContainText("لوحة التحكم");
+    await assertDesktopSidebarEdge(page, "rtl");
   });
 
   test("Arabic RTL operational routes preserve logical geometry", async ({
