@@ -217,6 +217,58 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await assertDesktopSidebarEdge(page, "rtl");
   });
 
+  test("appearance mode, accent family and density share one live authority", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await ensureOwnerSession(page);
+    await page.goto("/settings", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+
+    await page.locator("#settings-tab-appearance").click();
+
+    const html = page.locator("html");
+    const shell = page.locator('[data-sahelflow-shell="desktop"]');
+
+    await page.locator('[data-theme-mode="light"]').click();
+    await expect(html).toHaveClass(/\blight\b/);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem("theme")))
+      .toBe("light");
+
+    await page.locator('[data-theme-preset-option="atlas"]').click();
+    await expect(html).toHaveAttribute("data-theme-preset", "atlas");
+    await expect
+      .poll(() =>
+        page.evaluate(() => localStorage.getItem("sahelflow-theme-preset")),
+      )
+      .toBe("atlas");
+
+    await page.locator('[data-density-option="compact"]').click();
+    await expect(shell).toHaveAttribute("data-density", "compact");
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const stored = localStorage.getItem("sahelflow-ui");
+          if (!stored) return null;
+          const parsed = JSON.parse(stored) as { state?: { density?: string } };
+          return parsed.state?.density ?? null;
+        }),
+      )
+      .toBe("compact");
+
+    // Motion preference is part of the same appearance contract: reduced-motion
+    // users still get the exact mode/preset state change, but never the bounded
+    // interpolation marker used for the ordinary animated transition.
+    await expect(html).not.toHaveAttribute("data-theme-switching", "true", {
+      timeout: 2_000,
+    });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.locator('[data-theme-mode="dark"]').click();
+    await expect(html).toHaveClass(/\bdark\b/);
+    await expect(html).not.toHaveAttribute("data-theme-switching", "true");
+  });
+
   test("Arabic RTL operational routes preserve logical geometry", async ({
     page,
     context,
