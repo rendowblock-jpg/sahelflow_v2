@@ -451,8 +451,18 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
       const sheetTrigger = page.locator('[data-slot="sheet-trigger"]').first();
       await expect(sheetTrigger).toBeVisible();
       await sheetTrigger.click();
+
+      const navigationSheet = page.locator('[data-slot="sheet-content"]').first();
+      await expect(navigationSheet).toBeVisible();
       await assertTargetFloor(
-        page.locator('[data-slot="sheet-close"]').first(),
+        navigationSheet.getByRole("link", {
+          name: "Tableau de bord",
+          exact: true,
+        }),
+        "portaled navigation primary link",
+      );
+      await assertTargetFloor(
+        navigationSheet.locator('[data-slot="sheet-close"]').first(),
         "portaled navigation sheet close control",
       );
     } finally {
