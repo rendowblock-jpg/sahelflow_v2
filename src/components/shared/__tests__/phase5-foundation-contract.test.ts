@@ -39,7 +39,7 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(appearance).not.toContain('from "next-themes"');
     expect(provider).toContain('type ThemePreset = "sahel" | "atlas" | "oasis" | "dune"');
     expect(provider).toContain("sahelflow-theme-preset");
-    expect(rootLayout).toContain("data-theme-preset");
+    expect(rootLayout).toContain("e.dataset.themePreset=p");
   });
 
   it("keeps global table density on the same persisted UI authority as Settings", () => {
