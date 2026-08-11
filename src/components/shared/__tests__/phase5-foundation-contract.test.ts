@@ -20,13 +20,17 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(source).not.toContain('id: "action-new-order"');
   });
 
-  it("keeps active child destinations reachable when navigation is collapsed", () => {
-    const source = read("src/components/layout/sidebar.tsx");
-    expect(source).toContain("data-navigation-children={domain.id}");
-    expect(source).toContain("domainSelected && domain.children?.length");
-    expect(source).not.toContain(
-      "!collapsed && domainSelected && domain.children?.length",
-    );
+  it("keeps seller destinations directly reachable and nests only explicit subflows", () => {
+    const sidebar = read("src/components/layout/sidebar.tsx");
+    const navigation = read("src/components/layout/navigation.ts");
+
+    expect(sidebar).toContain("domain.children?.map((child) => (");
+    expect(sidebar).toContain("nested={child.sidebarNested}");
+    expect(sidebar).not.toContain("domainSelected && domain.children?.length");
+    expect(sidebar).not.toContain("data-navigation-children={domain.id}");
+    expect(navigation).toContain("sidebarNested?: boolean");
+    expect(navigation).toContain('"confirmation-queue"');
+    expect(navigation).toContain('"cod-reconciliation"');
   });
 
   it("uses one shared persistent state surface for empty and page-error states", () => {
