@@ -108,7 +108,9 @@ export function WhatsAppIngressRecoveryDock({
 
   useEffect(() => {
     const controller = new AbortController();
-    void load(controller.signal);
+    const initialId = window.setTimeout(() => {
+      void load(controller.signal);
+    }, 0);
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === "visible") {
         void load(controller.signal);
@@ -116,6 +118,7 @@ export function WhatsAppIngressRecoveryDock({
     }, RECOVERY_POLL_MS);
     return () => {
       controller.abort();
+      window.clearTimeout(initialId);
       window.clearInterval(intervalId);
     };
   }, [load]);
