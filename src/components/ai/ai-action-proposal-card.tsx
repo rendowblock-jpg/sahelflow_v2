@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import {
   getAiWorkspaceCopy,
   type AiWorkspaceCopyKey,
@@ -44,19 +45,16 @@ const SUMMARY_LABELS: Record<string, AiWorkspaceCopyKey> = {
 
 const MONEY_FIELDS = new Set(["fromPrice", "toPrice", "price"]);
 
-function toolLabel(name: string): string {
-  return name
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
 function statusKey(status: string): AiWorkspaceCopyKey {
   switch (status) {
     case "pending":
       return "awaitingApproval";
     case "approved":
+    case "queued":
       return "approved";
     case "executing":
+    case "running":
+    case "processing":
       return "executing";
     case "succeeded":
       return "succeeded";
@@ -77,7 +75,7 @@ function statusIcon(status: string) {
   if (status === "succeeded") {
     return <CheckCircle2 className="size-4 text-success" aria-hidden="true" />;
   }
-  if (status === "executing" || status === "approved") {
+  if (["executing", "approved", "queued", "running", "processing"].includes(status)) {
     return <Loader2 className="size-4 animate-spin text-primary" aria-hidden="true" />;
   }
   if (status === "failed" || status === "conflict") {
@@ -126,8 +124,18 @@ export function AiActionProposalCard({
   const effectiveStatus = proposal.executionState ?? proposal.status;
   const retrying = proposal.status === "failed" || effectiveStatus === "failed";
   const approvable = ["pending", "approved", "failed"].includes(proposal.status) &&
-    !["succeeded", "executing", "conflict", "expired", "rejected"].includes(effectiveStatus);
+    ![
+      "succeeded",
+      "executing",
+      "queued",
+      "running",
+      "processing",
+      "conflict",
+      "expired",
+      "rejected",
+    ].includes(effectiveStatus);
   const summary = Object.entries(proposal.summary).flatMap(([key, value]) => {
+    if (!SUMMARY_LABELS[key]) return [];
     const formatted = summaryValue(key, value, locale);
     return formatted === null ? [] : [{ key, value: formatted }];
   });
@@ -142,7 +150,7 @@ export function AiActionProposalCard({
               {copy("sensitiveProposal")}
             </p>
             <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-              {toolLabel(proposal.toolName)}
+              {getAiToolLabel(locale, proposal.toolName)}
             </p>
           </div>
         </div>
@@ -166,9 +174,7 @@ export function AiActionProposalCard({
             {summary.slice(0, 8).map((field) => (
               <div key={field.key} className="min-w-0">
                 <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  {SUMMARY_LABELS[field.key]
-                    ? copy(SUMMARY_LABELS[field.key]!)
-                    : field.key}
+                  {copy(SUMMARY_LABELS[field.key]!)}
                 </dt>
                 <dd dir="auto" className="mt-0.5 truncate text-xs font-medium">
                   {field.value}
