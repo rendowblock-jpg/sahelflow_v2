@@ -26,37 +26,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
+import { useUIStore, type UiDensity } from "@/stores/ui-store";
 
-type Density = "compact" | "comfortable";
-const DENSITY_STORAGE_KEY = "sf-density";
-const DENSITY_CLASSES: Record<Density, { cell: string; head: string }> = {
+const DENSITY_CLASSES: Record<UiDensity, { cell: string; head: string }> = {
   compact: { cell: "px-3 py-1.5", head: "px-3 py-2" },
   comfortable: { cell: "px-4 py-3", head: "px-4 py-3" },
 };
-
-function useDensity(): [Density, (density: Density) => void] {
-  const [density, setDensityState] = React.useState<Density>(() => {
-    if (typeof window === "undefined") return "comfortable";
-    try {
-      const stored = localStorage.getItem(DENSITY_STORAGE_KEY) as Density | null;
-      if (stored === "compact" || stored === "comfortable") return stored;
-    } catch {
-      // Storage can be unavailable in restricted browser contexts.
-    }
-    return "comfortable";
-  });
-
-  const setDensity = React.useCallback((next: Density) => {
-    setDensityState(next);
-    try {
-      localStorage.setItem(DENSITY_STORAGE_KEY, next);
-    } catch {
-      // Density remains a session preference when persistence is unavailable.
-    }
-  }, []);
-
-  return [density, setDensity];
-}
 
 const sortParser = {
   parse: (value: string | null) => value ?? "",
@@ -139,7 +114,8 @@ export function DataTable<TData>({
   className,
 }: DataTableProps<TData>) {
   const { t } = useI18n();
-  const [density, setDensity] = useDensity();
+  const density = useUIStore((state) => state.density);
+  const setDensity = useUIStore((state) => state.setDensity);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [sortUrl, setSortUrl] = useQueryStates(
     { sort: sortParser, page: pageParser },
@@ -435,7 +411,7 @@ export function DataTable<TData>({
             role="group"
             aria-label={t("dataTable.density")}
           >
-            {(["comfortable", "compact"] as Density[]).map((option) => (
+            {(["comfortable", "compact"] as UiDensity[]).map((option) => (
               <button
                 key={option}
                 type="button"
