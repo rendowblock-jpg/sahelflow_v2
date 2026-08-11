@@ -53,7 +53,8 @@ A lower layer cannot silently weaken a higher one.
   `31388777098`.
 - Founder-installed Internal.14 is permanently licensed but **not** Founder-accepted.
 - Founder-accepted baseline remains Internal.5.
-- Phase 5 protected source/browser checkpoint remains PR #220.
+- Phase 5 protected source/browser baseline remains PR #220 /
+  `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 - Phase 6 source/browser + Phase 7 measurement checkpoint remains PR #223.
 - Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**.
 - Phase 8 implementation remains frozen behind the mandatory cross-phase
@@ -154,7 +155,7 @@ CI-only closure.
 Do not reopen those issues generically. Reopen only from a new concrete defect or
 contradictory evidence.
 
-## Exact NEXT outcome — frontend foundation authority
+## Exact next outcome — frontend foundation authority
 
 Start from then-current protected `main` only after confirming there is no other
 active implementation PR/agent.
@@ -222,7 +223,7 @@ On one coherent repaired signed candidate:
 
 - verify representative AR/FR/EN, Arabic joining/reading, LTR/RTL,
   theme/locale switching, 1366×768/zoom, keyboard/focus/semantics and reduced
-  motion under #221;
+  motion under issue #221;
 - measure/certify startup, navigation, indexed search, ordinary mutation and
   sustained resources under #226;
 - complete live #230 production/network trial evidence;
