@@ -21,6 +21,14 @@ settings, licensing, multi-shop and recovery under one protected authority model
 Documentation-only commits may advance protected `main` without changing the
 published executable or the latest application-changing protected merge.
 
+### Semantic continuity
+
+The earlier **Phase 5 closure** source/browser checkpoint remains **PR #220** and
+continues to mean only what that exact head proved. The historical retained issue
+set was **issues #201, #214, #221, #226 and #230**; #201/#214 are now closed while
+#221/#226/#230 remain open. **Published release: `1.0.0-internal.14`**.
+**Founder acceptance remains open.**
+
 ## Protected frontend foundation
 
 PR #236 protects the shared source/browser foundation required by the
