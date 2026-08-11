@@ -81,7 +81,7 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(dashboardLayout).toContain("const { density } = useUiDensity()");
     expect(dashboardLayout).toContain("root.dataset.density = density");
     expect(dashboardLayout).toContain('window.matchMedia("(pointer: coarse)")');
-    expect(dashboardLayout).toContain('coarsePointer.matches\n          ? "2.75rem"');
+    expect(dashboardLayout).toContain('coarsePointer.matches\n          ? "3rem"');
     expect(dashboardLayout).toContain('density === "compact"\n            ? "2.25rem"');
     expect(dashboardLayout).toContain('coarsePointer.addEventListener("change", applyControlHeight)');
   });
