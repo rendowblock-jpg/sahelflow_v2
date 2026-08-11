@@ -42,8 +42,6 @@ const validatedPhase67Head = "fa0ff6de649421c879f62364383a363b61c71bfc";
 const phase5Baseline = "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734";
 const signedReleaseRun = "31388777098";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
-const handoffPacket =
-  "documentation/archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md";
 
 requireMarkers("README.md", [
   protectedMainAtHandoff,
@@ -63,7 +61,7 @@ requireMarkers("README.md", [
   "#230 remains a P1 external-certification blocker",
   "#226",
   phase5Baseline,
-  handoffPacket,
+  "documentation/operations/WORKING_MEMORY.md",
 ]);
 
 requireMarkers("AGENTS.md", [
@@ -80,7 +78,7 @@ requireMarkers("AGENTS.md", [
   "Issue #230 remains **open P1**",
   "Issues **#201 and #214 are closed**",
   phase5Baseline,
-  handoffPacket,
+  "WORKING_MEMORY.md` is the single",
 ]);
 
 requireMarkers("documentation/README.md", [
@@ -97,7 +95,7 @@ requireMarkers("documentation/README.md", [
   "**#214 — closed:**",
   "**#230 — open P1:**",
   phase5Baseline,
-  "archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md",
+  "single session-resume owner",
 ]);
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
@@ -116,21 +114,26 @@ requireMarkers("documentation/system/CURRENT_STATE.md", [
   "#226 — OPEN",
   "Issue #230 — open P1 external-certification boundary",
   phase5Baseline,
-  handoffPacket,
+  "Working Memory owns the compact resumable context",
 ]);
 
-// ROADMAP remains the binding Phase 0–9 program. Its header records the exact
-// historical source frontier at the time PR #231 froze this cross-phase gate;
-// current protected evidence/status is intentionally owned by CURRENT_STATE and
-// WORKING_MEMORY instead of rewriting history in the roadmap header.
 requireMarkers("documentation/system/ROADMAP.md", [
-  "23fb2e0ee4956132fafe8dd6973be42d3cfc8032",
-  "Latest application-changing protected merge:** PR #228",
+  protectedMainAtHandoff,
+  "Historical PR #231 program-freeze baseline",
+  "Latest application-changing protected merge:** PR #234",
   protectedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   validatedPhase67Head,
+  phase5Baseline,
   activePhase,
   "Mandatory pre-Phase-8 stabilization and Founder-acceptance gate",
+  "retained issue #201 satisfied/closed",
+  "retained issue #214 satisfied/closed",
+  "Open retained issues:** #221 Founder visual/accessibility acceptance; #226 performance/reliability; #230 live resilient customer-trial certification",
+  "Satisfied — PR #232",
+  "Satisfied — PR #233",
+  "Open — issue #230",
+  "Satisfied historical prerequisite — issue #214",
   "Phase 5 — whole-product AAA desktop experience",
   "Phase 6 — Arabic, RTL and accessibility parity",
   "Phase 7 — performance and reliability budgets",
@@ -146,25 +149,24 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   signedReleaseRun,
   activePhase,
   "Phase 5 closure snapshot",
+  "Known engineering defects/debt to close in the same program",
   "Phase 6 next action",
   "Outcome A — CI authority hardening",
+  "Outcome F — installed Phase 6/7 + Founder acceptance",
+  "seven technical findings from the deep",
   "issue #221 OPEN",
   "#226 OPEN",
   "#230 OPEN P1",
   phase5Baseline,
-  handoffPacket,
 ]);
 
-requireMarkers(handoffPacket, [
-  "Why this stabilization program exists",
-  "Founder-installed frontend problem context",
-  "Seven technical findings from the deep audit",
-  "Work merged during this stabilization session",
-  "Exact next implementation dependency",
-  "Next-session resume checklist",
-  protectedMainAtHandoff,
-  "#230 remains **open P1**",
-]);
+const duplicateHandoffPath =
+  "documentation/archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md";
+if (existsSync(resolve(repoRoot, duplicateHandoffPath))) {
+  findings.push(
+    `${duplicateHandoffPath}: duplicate permanent handoff exists; fold resumable context into WORKING_MEMORY.md instead`,
+  );
+}
 
 const stalePr229Markers = [
   "Open pull requests:** PR #229 documentation reconciliation",
@@ -236,6 +238,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: PRs #232/#233/#234 are protected; #201/#214 are closed from stronger exact installed evidence; #221/#226/#230 remain open; the next implementation outcome is shared-root frontend foundation authority before installed Phase 6/7 and Founder acceptance, and Phase 8 implementation remains frozen.",
+    "Current execution frontier verified: PRs #232/#233/#234 are protected; #201/#214 are closed from stronger exact installed evidence; #221/#226/#230 remain open; Working Memory owns the complete resumable context; the next implementation outcome is shared-root frontend foundation authority before installed Phase 6/7 and Founder acceptance, and Phase 8 implementation remains frozen.",
   );
 }
