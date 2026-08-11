@@ -17,11 +17,17 @@ describe("Phase 5 experience foundation source contract", () => {
     const routeLayout = read("src/app/(dashboard)/layout.tsx");
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
     const store = read("src/stores/ui-store.ts");
+    const hook = read("src/hooks/use-i18n.ts");
+    const i18n = read("src/lib/i18n/index.ts");
 
     expect(routeLayout).not.toContain("serverDir");
     expect(dashboardLayout).toContain("const { t, locale, dir } = useI18n()");
     expect(dashboardLayout).toContain("serverDir={dir}");
     expect(store).toContain("applyDocumentLocale(locale)");
+    expect(hook).toContain("const translations = getTranslations(locale)");
+    expect(hook).not.toContain("use(getTranslationPromise(locale))");
+    expect(i18n).toContain("const STATIC_TRANSLATIONS");
+    expect(i18n).toContain("getTranslations(locale: Locale)");
   });
 
   it("keeps theme mode and coordinated presets under the custom appearance authority", () => {
@@ -34,6 +40,17 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(provider).toContain('type ThemePreset = "sahel" | "atlas" | "oasis" | "dune"');
     expect(provider).toContain("sahelflow-theme-preset");
     expect(rootLayout).toContain("data-theme-preset");
+  });
+
+  it("keeps global table density on the same persisted UI authority as Settings", () => {
+    const table = read("src/components/data-table/data-table.tsx");
+    const appearance = read("src/components/settings/appearance-panel.tsx");
+
+    expect(table).toContain("useUIStore((state) => state.density)");
+    expect(table).toContain("useUIStore((state) => state.setDensity)");
+    expect(table).not.toContain("sf-density");
+    expect(appearance).toContain("useUIStore((state) => state.density)");
+    expect(appearance).toContain("useUIStore((state) => state.setDensity)");
   });
 
   it("keeps user-authored search direction automatic and command chrome flow-relative", () => {
