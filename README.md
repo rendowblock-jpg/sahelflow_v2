@@ -8,73 +8,97 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 ## Current repository truth
 
-- Protected `main` before documentation PR #231: `23fb2e0ee4956132fafe8dd6973be42d3cfc8032`.
-- Latest application-changing protected merge: **PR #228 — Internal.14 updater and installed-release authority**, application SHA `2d60e2e74109b6e03626a5ccdff727c029a34591`.
-- Phase 5 protected source/browser baseline: PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
-- Phase 6 source/browser + Phase 7 measurement checkpoint is protected through PR #223.
+- Protected `main` at the 2026-08-11 reconciliation: `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — PR #234.
+- Latest application-changing protected merge: **PR #234 — resilient production trial transport source architecture**.
+- Published executable remains **Internal.14**, application source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed publication run `31388777098`.
+- **Published release: `1.0.0-internal.14`** / MSI `1.0.0.14`.
+- Phase 5 protected source/browser checkpoint remains PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`; Phase 6 source/browser + Phase 7 measurement checkpoint remains PR #223.
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
-- Published release: `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`.
-- Founder-installed release: **Internal.14**, permanently licensed and reopen-observed.
-- Founder-accepted baseline remains **Internal.5**; Founder acceptance remains open.
-- Documentation reconciliation package: **PR #231**; read live GitHub for its merge state.
-- Retained evidence: issues #201, #214, #221, #226 and #230.
+- Founder-installed release: **Internal.14**, permanently licensed.
+- Founder-accepted baseline remains **Internal.5**; **Founder acceptance remains open**.
+- Phase 8 implementation remains frozen behind the mandatory pre-Phase-8 stabilization + Founder-acceptance gate.
 
 Always re-read live protected `main`, open PRs/issues and current Actions before
-implementation. Documentation/authority-only commits may advance `main` without
-changing the published executable source.
+implementation. Documentation-only commits may advance `main` without changing the
+published executable source.
 
 ## Phase 5 closure and Founder-installed reconciliation
 
-The exact Phase 5/6 source/browser checkpoints remain valid evidence for what they
-proved, but Internal.14 installed use is **not Founder-accepted**. The Founder
-explicitly values the backend/engine and rejects the current frontend as the
-whole-product quality baseline.
+The Phase 5 closure checkpoint remains the protected source/browser evidence from
+PR #220. Phase 6/7 source/browser evidence remains protected through PR #223.
+Those checkpoints remain valid for what their exact heads proved, but the later
+Founder-installed Internal.14 use is not whole-product acceptance.
 
-The observed frontend problems are systemic rather than isolated page polish:
-Arabic typography, small text/controls, non-atomic locale/RTL switching, cold and
-glitchy themes, missing motion language, incorrect RTL placement, over-nested
-navigation, oversized warning banners, weak charts, and unacceptable Inbox, AI
-Agents and Settings workspaces. The remaining route inventory must be audited by
-the implementation team instead of requiring the Founder to enumerate every
-small defect.
+The Founder installed and used Internal.14 on the T470 and explicitly values the
+backend/engine while rejecting the current frontend as the whole-product quality
+baseline.
 
-The binding roadmap therefore has a **mandatory pre-Phase-8 stabilization and
-Founder-acceptance gate**. This is not a new numbered phase and does not reopen
-proven Phase 1–4 canonical authority without a concrete defect.
+The installed problems are systemic rather than isolated page polish: Arabic
+typography, overly small text/controls, non-atomic locale/RTL switching, stale or
+wrong-side navigation, glitchy/cold themes, weak motion language, inconsistent RTL
+geometry, over-nested navigation, oversized warnings, low-information charts and
+unacceptable Inbox, AI Agents and Settings workspaces. The implementation team owns
+the broader route/component audit instead of requiring the Founder to report every
+small UI defect manually.
 
-## Exact pre-Phase-8 order
+## Stabilization work already protected
 
-1. retire historical PR #200/PR #207 CI exception mechanisms as live evidence
-   bypasses and prove anti-bypass behavior;
-2. repair the successful-license-activation blank workspace/restart defect;
-3. resolve resilient customer trial activation under issue #230;
-4. audit, research and freeze shared frontend typography/density, design tokens,
-   themes, motion, locale/RTL, shell/navigation and component/state contracts;
-5. adopt those roots across the real product, including product-level redesign of
-   Inbox, AI Agents and Settings plus the whole route inventory;
-6. complete installed Phase 6 Arabic/RTL/accessibility evidence and Phase 7
-   T470/floor performance/reliability certification under issue #226;
-7. run a coherent signed Founder whole-product acceptance pass;
-8. only then begin Phase 8 implementation.
+1. **PR #231** records the binding pre-Phase-8 Founder stabilization program.
+2. **PR #232** retires historical PR #200/#207 CI exception mechanisms as live bypasses and adds anti-bypass regression authority.
+3. **PR #233** fixes the successful-license-activation blank-workspace/restart defect.
+4. **PR #234** protects bounded primary/recovery customer-trial ingress, cryptographic response authority, owned-host release constraints, Worker readiness/diagnostics and blocking Worker coverage.
 
-Issue #214 remains an explicit replacement-install evidence non-claim until its
-Stable-level obligation is closed or superseded by stronger exact-source proof.
+PR #234 exact installed evidence also closed two retained historical gaps: hydrated
+WebView UI proof (#201) and replacement-install recovery certification (#214).
 
-## Internal.14 release truth
+The historical continuity set was **issues #201, #214, #221, #226 and #230**.
+Current live state is different: #201 and #214 are closed; #221, #226 and #230
+remain open.
 
-Internal.14 remains the current public Internal updater release. FD-031 is a
-one-time exception for PR #228/Internal.14 only. Installed CI proved exact MSI
-lifecycle, authenticated UI and a committed two-shop restore; post-restore
-page-level owner re-enrollment/protected-data readback remained unproven and is
-retained in issue #214.
+## What remains open
 
-No Beta or Stable claim exists. Do not rerun PR #228 or dispatch another
-Internal.14 workflow.
+**#230 remains a P1 external-certification blocker.** PR #234 is the source half;
+customer trial is not production-certified until real SahelFlow-owned DNS, a
+sufficiently independent recovery path, protected production bindings,
+representative Algerian fixed/mobile reachability and an exact signed installed
+trial/recovery journey are proven. GitHub auto-closed #230 at PR #234 merge time;
+it was intentionally reopened because its acceptance rule forbids CI-only closure.
 
-## Documentation
+**#221** retains the repaired installed Founder Phase 5/6 visual/accessibility
+acceptance checkpoint. **#226** retains installed Phase 7 performance/reliability
+certification; startup must be measured before optimization.
+
+## Exact next implementation dependency
+
+The next package is **frontend foundation authority**, not random screen-by-screen
+restyling.
+
+First audit and freeze one shared system for Arabic/Latin typography and density,
+semantic design tokens, coordinated themes, reduced-motion-safe motion, atomic
+locale/direction switching, logical RTL/mixed-direction geometry, application
+shell/navigation and shared operational components/states. Then adopt those roots
+across real production routes, prioritizing Inbox, AI Agents and Settings and then
+the complete route inventory.
+
+After the frontend is coherent, rerun installed Phase 6 evidence, measure/fix Phase
+7 under #226, complete live #230 trial certification, build one signed candidate
+and obtain explicit Founder whole-product acceptance. Only then may Phase 8
+implementation begin.
+
+## Documentation and session resume
 
 Start with [`AGENTS.md`](AGENTS.md), then read the active authority chain in
-[`documentation/README.md`](documentation/README.md). Supporting research for the
-pre-Phase-8 frontend program is archived under
-`documentation/archive/research/`; archived material is evidence/context, not a
-replacement authority.
+[`documentation/README.md`](documentation/README.md). The complete resumable
+session context—including the Founder-installed problem register, the seven deep
+audit findings and their dispositions, exact #231–#234 evidence, and the already
+identified frontend locale/theme/CSS roots—is owned by
+[`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md)
+and reconciled against [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md)
+and [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
+
+Supporting primary-source frontend research remains under
+`documentation/archive/research/`. Archived research is evidence/context, not a
+replacement authority or a second handoff system.
+
+No Beta or Stable claim exists. Do not rerun the old PR #228/Internal.14
+publication workflow.

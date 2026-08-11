@@ -2,8 +2,10 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary; FD-031 — one-time Internal.14 installed-evidence exception
-> **Protected `main` before documentation PR #231:** `23fb2e0ee4956132fafe8dd6973be42d3cfc8032`
-> **Latest application-changing protected merge:** PR #228 at `2d60e2e74109b6e03626a5ccdff727c029a34591`
+> **Protected `main` at 2026-08-11 reconciliation:** `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — PR #234
+> **Historical PR #231 program-freeze baseline:** `23fb2e0ee4956132fafe8dd6973be42d3cfc8032`
+> **Latest application-changing protected merge:** PR #234 at `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647`
+> **Published Internal.14 executable source:** PR #228 / `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Validated Phase 6/7 source head:** `fa0ff6de649421c879f62364383a363b61c71bfc`
 > **Phase 5 protected source/browser baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
@@ -11,20 +13,23 @@
 > **Founder-accepted baseline:** Internal.5
 > **Phase 0:** Complete
 > **Phase 1:** Protected-source closed through PR #195
-> **Phase 2:** Protected-source closed through PR #200; issue #201 retained
+> **Phase 2:** Protected-source closed through PR #200; retained issue #201 satisfied/closed by stronger exact PR #234 installed evidence
 > **Phase 3:** Protected-source closed through PR #203 under FD-030
-> **Phase 4:** Protected-source closed through PR #207; issue #214 retained
+> **Phase 4:** Protected-source closed through PR #207; retained issue #214 satisfied/closed by stronger exact PR #234 installed evidence
 > **Phase 5:** Protected-source + controlled-browser checkpoint through PR #220 / issue #208; installed Founder experience rejected on Internal.14 and must be repaired before Phase 8
 > **Phase 6:** Protected-source + controlled-browser checkpoint through PR #223; installed/human evidence and root-cause frontend repair remain
 > **Phase 7:** Query/measurement infrastructure protected through PR #223; installed low-end/reliability certification remains
+> **Completed pre-Phase-8 engineering outcomes:** PR #232 CI authority hardening; PR #233 activation continuity; PR #234 resilient trial source architecture
+> **Open retained issues:** #221 Founder visual/accessibility acceptance; #226 performance/reliability; #230 live resilient customer-trial certification
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Mandatory pre-Phase-8 gate:** engineering stabilization + frontend experience reset + Phase 6/7 installed evidence + explicit Founder acceptance
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-08-10
+> **Last consolidated:** 2026-08-11
 
-Live protected `main` is authority. The application SHA above is the latest
-application-changing product baseline; documentation-only merges may advance
-`main` without changing application behavior.
+Live protected `main` is authority. The published executable SHA above remains the
+Internal.14 artifact source; later protected application/documentation merges do
+not change the already-published executable until a new release is explicitly
+built and published.
 
 ## Program rule
 
@@ -51,7 +56,9 @@ complete reconnaissance
 
 Retained evidence issues are allowed only when a Founder-directed closure
 explicitly separates protected-source truth from installed/external proof. A
-retained issue is not a passing result.
+retained issue is not a passing result. When stronger exact-source evidence later
+satisfies a retained obligation, the issue must be closed and the roadmap/current
+state reconciled so the obligation is not accidentally repeated.
 
 A protected source/browser checkpoint remains valid evidence for the exact thing
 it proved. Later installed evidence may still reveal a real product defect or an
@@ -81,12 +88,19 @@ presentation and evidence but must not bypass these canonical transitions.
 
 ## Phase 2 — durable identity, licensing and native multi-shop
 
-**Status:** Closed through PR #200; issue #201 retained.
+**Status:** Protected-source closed through PR #200. The retained installed
+hydrated-WebView/startup obligation in issue #201 is now satisfied and closed by
+stronger exact PR #234 installed evidence.
 
 Established durable actor/session/permission authority, signed licensing,
 installation/shop identity and native multi-shop switching/recovery contracts.
 Concrete later defects may receive bounded repair without reopening the whole
 phase.
+
+Exact PR #234 installed evidence passed application launch/reopen and authenticated
+hydrated WebView UI proof twice on the exact MSI, while PR #232 had already retired
+the historical PR #200 waiver. This closes #201 without creating Founder, Beta or
+Stable acceptance.
 
 ---
 
@@ -107,15 +121,25 @@ unsupported backend success.
 
 ## Phase 4 — data, recovery, migration and survivability
 
-**Status:** Closed through PR #207; replacement-install proof retained in #214.
+**Status:** Protected-source closed through PR #207. The retained replacement-install
+certification in issue #214 is now satisfied and closed by stronger exact PR #234
+installed evidence.
 
 Established backup/restore, migration, destructive lifecycle, identity/license
 survivability and native recovery authority. Do not reopen Phase 4 except for a
 specific later-phase defect with real consequence.
 
-Issue #214 retains post-restore page-level owner re-enrollment, protected customer
-blind-index readback and protected secret readback evidence before Stable unless a
-stronger exact-source certification supersedes it.
+Exact PR #234 installed evidence passed backup → governed interruption → rollback
+→ committed two-shop restore, durable-data parity, protected-key rewrap,
+replacement installation/session non-cloning, owner re-enrollment in the installed
+WebView, protected-customer blind-index readback, protected-secret readback and a
+committed restore receipt bound to the proven backup/workspace/replacement
+installation/shop set. PR #232 had already retired the PR #207 closure override.
+
+This satisfies #214's historical retained evidence obligation. Future release
+candidates still require the Phase 9 replacement-install certification applicable
+to that candidate; closing #214 is not a permanent exemption from release recovery
+proof.
 
 ---
 
@@ -273,7 +297,8 @@ Phase 6 closes only when:
 Internal.14 is only the published Founder-installed rejected checkpoint. Issue
 #221 retains installed Founder visual/accessibility acceptance. Issue #230 retains
 resilient live trial activation. Issue #226 owns measured performance/reliability.
-FD-031 retains the PR #228 post-restore evidence gap in #214.
+The historical FD-031 replacement-install evidence gap in #214 is now satisfied by
+stronger exact PR #234 installed evidence and #214 is closed.
 
 ---
 
@@ -338,13 +363,16 @@ research/read-only planning may continue when useful.
 
 ### A. Engineering safety and demonstrated defects
 
-1. Historical PR #200 and PR #207 CI exception mechanisms are retired as live
-   evidence-lane bypasses and anti-bypass tests prove they cannot suppress lanes
-   selected by current consequential changes.
-2. Successful permanent and trial activation transition directly to a usable
-   authenticated workspace without blank-window/restart behavior.
-3. Issue #230 has a production-resilient trial-service path and representative
-   Algerian-network evidence sufficient for the customer trial claim.
+1. **Satisfied — PR #232.** Historical PR #200 and PR #207 CI exception mechanisms
+   are retired as live evidence-lane bypasses and anti-bypass tests prove they
+   cannot suppress lanes selected by current consequential changes.
+2. **Satisfied — PR #233.** Successful permanent and trial activation transition
+   directly to a usable authenticated workspace without blank-window/restart
+   behavior.
+3. **Open — issue #230.** Production-resilient trial-service routing is protected
+   in source through PR #234, but representative live Algerian-network, owned-DNS,
+   independent recovery-path and exact signed installed customer evidence are
+   still required before the customer trial claim.
 4. Any additional P0/P1 discovered during frontend adoption is fixed at its root,
    not hidden by presentation.
 
@@ -370,9 +398,10 @@ research/read-only planning may continue when useful.
 2. Keyboard/focus/semantics/reduced motion remain valid after visual changes.
 3. Startup, navigation, search, mutation and resource budgets pass the Phase 7
    exact installed checkpoint.
-4. Retained issue #214 remains an explicit non-claim until its Stable-level
-   replacement-install evidence is closed or superseded; it does not get silently
-   converted into a pass.
+4. **Satisfied historical prerequisite — issue #214.** Stronger exact PR #234
+   installed evidence closed the retained replacement-install non-claim. Future
+   signed candidates still require their applicable Phase 9 recovery evidence;
+   #214 is not a waiver for future releases.
 
 ### D. Founder acceptance
 
@@ -443,10 +472,12 @@ provider, recovery, security/privacy/Law 18-07, performance, Arabic/RTL,
 accessibility and representative-beta gates pass; a signed Windows artifact and
 immutable manifest pass; and the Founder explicitly promotes Stable.
 
-Issue #214 must be closed before Stable if its replacement-install certification
-obligation has not already been superseded by stronger exact-source evidence.
-Issue #221 must be reconciled before any claim that depends on Founder-installed
-Phase 5/6 visual acceptance.
+The historical #214 replacement-install obligation is already satisfied by stronger
+exact PR #234 installed evidence. Every future Stable candidate still must pass the
+replacement-install/recovery certification required by this Phase 9 gate. Issue
+#221 must be reconciled before any claim that depends on Founder-installed Phase
+5/6 visual acceptance, and issue #230 must be reconciled before any customer trial
+availability claim that depends on live production networking.
 
 A source-complete phase is never itself a release claim.
 
