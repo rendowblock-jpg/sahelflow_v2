@@ -12,7 +12,7 @@ describe("Settings operational workspace contract", () => {
     expect(page).toContain("SettingsWorkspace");
     expect(page).not.toContain("SettingsTabs");
     expect(workspace).toContain('data-settings-workspace="v2"');
-    expect(workspace).toContain('{ id: "experience"');
+    expect(workspace).toContain('id: "experience"');
     expect(workspace).toContain('id: "connections"');
     expect(workspace).toContain('id: "team"');
     expect(workspace).toContain('id: "data"');
@@ -52,6 +52,7 @@ describe("Settings operational workspace contract", () => {
     expect(route).toContain("verifyCronSecret");
     expect(route).toContain("env.cronSecret");
     expect(panel).toContain("/api/reports/daily?trigger=manual");
+    expect(panel).toContain("data.skipped");
     expect(panel).not.toContain("publicCronSecret");
     expect(panel).not.toContain("NEXT_PUBLIC_CRON_SECRET");
   });
