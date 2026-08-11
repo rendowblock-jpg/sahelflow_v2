@@ -67,7 +67,8 @@ test.describe.serial("Inbox operational workspace evidence", () => {
 
     if (!authority.sidecarReachable) {
       await expect(workspace).toContainText("Service WhatsApp indisponible");
-      await expect(workspace).toContainText(
+      await rows.first().click();
+      await expect(page.locator('[data-inbox-thread="active"]')).toContainText(
         "Les réponses sont disponibles lorsque WhatsApp est connecté",
       );
     }
