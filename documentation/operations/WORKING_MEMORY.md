@@ -4,6 +4,7 @@
 > **Last updated:** 2026-08-11
 > **Protected `main` at session handoff:** `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — PR #234
 > **Latest application-changing protected merge:** PR #234
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
 > **Founder-installed release:** Internal.14
@@ -41,6 +42,18 @@ The installed problem context that must remain visible during implementation:
   is not used as manual pixel-by-pixel QA.
 
 Do not reduce this program to whichever first UI defect is easiest to patch.
+
+## Phase 5 closure snapshot
+
+PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` remains the protected
+Phase 5 source/browser checkpoint and PR #223 remains the Phase 6 source/browser +
+Phase 7 measurement checkpoint. Their exact-head evidence is retained for what it
+proved.
+
+The later Founder-installed Internal.14 rejection shows those checkpoints were not
+sufficient as whole-product visual/interaction acceptance. It does not erase their
+evidence and it does not generically reopen Phase 1–4 canonical business,
+identity, licensing, provider or recovery authority.
 
 ## Session-completed engineering work
 
@@ -80,8 +93,8 @@ forbids closure from CI/unit evidence alone.
   backup → interruption → rollback → committed restore, owner re-enrollment,
   protected-customer blind-index readback, protected-secret readback, key rewrap,
   identity/session non-cloning and committed receipt verification.
-- **#221 OPEN:** Founder-installed Phase 5/6 visual/accessibility acceptance. Do
-  not close until the repaired coherent signed candidate is actually reviewed.
+- **issue #221 OPEN:** Founder-installed Phase 5/6 visual/accessibility acceptance.
+  Do not close until the repaired coherent signed candidate is actually reviewed.
 - **#226 OPEN:** installed Phase 7 performance/reliability certification. Startup
   must be measured before optimization; certify T470/floor/eight-hour budgets.
 - **#230 OPEN P1:** live resilient customer-trial certification as described above.
@@ -111,8 +124,9 @@ after the restore itself committed. A retry on that same older product head pass
 the previously failing step before becoming stale, and the final exact head passed
 the full installed run. Treat it as evidence-harness flake, not a restore regression.
 
-## NEXT implementation outcome — frontend foundation authority
+## Phase 6 next action
 
+The exact next implementation outcome is **frontend foundation authority**.
 Do **not** begin broad screen redesign yet. Start from then-current protected `main`
 after confirming no other active implementation PR.
 
@@ -162,13 +176,14 @@ priority redesign workspaces, followed by the complete route inventory.
 ## After the foundation/adoption work
 
 1. Re-run installed Phase 6 AR/FR/EN, Arabic joining/reading, RTL geometry,
-   1366×768/zoom, keyboard/focus/semantics and reduced-motion evidence.
+   1366×768/zoom, keyboard/focus/semantics and reduced-motion evidence under issue
+   #221.
 2. Measure and fix Phase 7 startup/navigation/search/mutation/resource budgets
    under #226.
 3. Complete live #230 production/network trial evidence.
 4. Build one coherent signed Founder candidate.
 5. Run whole-product Founder acceptance on the T470.
-6. Begin Phase 8 implementation only after the mandatory gate passes.
+6. Begin Phase 8 implementation only after this mandatory gate passes.
 
 ## Lower-priority debt retained
 
