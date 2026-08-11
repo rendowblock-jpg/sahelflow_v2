@@ -77,7 +77,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     },
   });
   const assignmentVersions = await getConversationAssignmentVersions(
-    shopContext,
+    { prisma: db, shop: shopContext },
     conversations.map((conversation) => conversation.id),
   );
 
