@@ -33,6 +33,7 @@ describe("Inbox operational workspace contract", () => {
     const assignment = read("src/lib/inbox/conversation-assignment.ts");
     const hook = read("src/hooks/use-inbox-workspace.ts");
     expect(route).toContain("getConversationAssignmentVersions");
+    expect(route).toContain("{ prisma: db, shop: shopContext }");
     expect(route).not.toContain("$queryRaw");
     expect(assignment).toContain("Prisma.join(unique)");
     expect(assignment).toContain('FROM "BusinessAggregateVersion"');
