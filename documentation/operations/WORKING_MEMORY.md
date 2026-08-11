@@ -2,16 +2,17 @@
 
 > **Purpose:** Compact resumable execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-08-11
-> **Protected application-changing baseline:** `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400` — PR #237
-> **Latest application-changing protected merge:** PR #237 — Inbox operational workspace redesign
+> **Protected application-changing baseline:** `598e2a0dc0352227431614cf1527672aa78ec015` — PR #240
+> **Latest application-changing protected merge:** PR #240 — AI Agents operational workspace redesign
 > **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
+> **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
 > **Founder-installed release:** Internal.14
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Next product implementation:** AI Agents workspace redesign
-> **After AI Agents:** Settings, then remaining route adoption
+> **Next product implementation:** Settings workspace redesign
+> **After Settings:** remaining route adoption
 > **Mandatory gate before Phase 8:** whole-product frontend adoption + installed Phase 6/7 closure + live #230 + explicit Founder acceptance
 > **Open retained issues:** #221, #226, #230
 > **Closed historical retained issues:** #201, #214
@@ -27,9 +28,9 @@ The Founder values the backend/engine and rejects the published Internal.14
 frontend as the product-quality baseline. The systemic problem register remains
 Arabic typography, comfortable density, atomic locale/direction switching, warmer
 coherent themes, restrained motion, RTL geometry, shallow navigation, warning
-hierarchy, useful charts and workflow-level redesign of Inbox, AI Agents and
-Settings. Implementation owns the route/component audit; do not use the Founder as
-manual pixel-by-pixel QA.
+hierarchy, useful charts and route-wide workflow quality. Inbox and AI Agents now
+have protected source/browser redesigns; Settings and the remaining route inventory
+still need adoption before one coherent installed candidate can be judged.
 
 ## Protected backend/business boundaries
 
@@ -59,10 +60,10 @@ the installed Founder visual/accessibility acceptance obligation.
 
 ## Phase 6 next action
 
-Phase 6 remains active. With #236 shared roots and #237 Inbox source/browser
-adoption protected, the next route-level implementation is **AI Agents**. Settings
-follows AI Agents; remaining route adoption follows Settings. Installed Phase 6/7
-and Founder acceptance remain retained rather than implied by source work.
+Phase 6 remains active. With #236 shared roots, #237 Inbox adoption and #240 AI
+Agents adoption protected, the next route-level implementation is **Settings**.
+Remaining production route adoption follows Settings. Installed Phase 6/7 and
+Founder acceptance remain retained rather than implied by source work.
 
 ## PR #236 shared frontend foundation — protected
 
@@ -79,38 +80,63 @@ Phase 5 `31497523052`, Phase 6–7 `31497523030` and fresh review.
 
 - PR: **#237 — `feat(inbox): rebuild operational workspace`**.
 - Branch: `agent/inbox-product-workspace-redesign`.
-- Original audited WIP head: `cf84491cfd7613728a86dc9157da3fc4631e9105`.
-- First fully green stabilized head before base update: `1746ce4b187caa52d44b9cabb78c2bcaa7b65b65`.
-- Current-main update commit on branch: `8e9d5aa365f0c5873909c1c8517f88519d743b9d`.
+- Final pre-merge head: `8e9d5aa365f0c5873909c1c8517f88519d743b9d`.
 - Protected squash merge: **`4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`**.
 - Final exact-head CI: `31524083664` — PASS.
 - Final exact-head Phase 5 Experience: `31524083552` — PASS.
 - Final exact-head Phase 6–7 Completion: `31524083460` — PASS.
-- Required PR gate and Required Phase 5 / Phase 6–7 aggregate checks: PASS.
-- Four original review threads resolved before merge.
+- Required aggregate checks passed; four original review threads resolved.
 
-### Repairs completed during stabilization
+Protected outcomes: database-authoritative queue/thread/workflow history independent
+of WhatsApp transport, recovery visibility, reconciled workflow mutations, batched
+assignment versions, coalesced WebSocket refresh and provider-degraded local reads
+without rewriting durable WhatsApp/provider/collaboration authority.
 
-- recovery events remain observable after an initially empty queue;
-- status/priority/labels/assignment mutations reconcile canonical queue state;
-- assignment versions use one bounded batch read behind the reviewed raw-query authority;
-- WebSocket message bursts coalesce canonical projection refreshes;
-- list and thread history remain readable when sidecar network or HTTP status calls fail;
-- React lifecycle lint failures were fixed without suppressing the rule;
-- composer shortcut guidance moved under AR/FR/EN locale authority;
-- mobile queue/thread drill-in remains single-pane and usable;
-- E2E Inbox evidence uses one authenticated session and canonical API-derived counts;
-- an intermediate bad service-context call that caused `/api/whatsapp/chats` 500 was found by rendered evidence and fixed;
-- an intermediate raw-query placement in the API route was rejected by policy and moved back behind authority.
+## PR #240 AI Agents operational workspace — CLOSED
 
-The old `/orders` 8.3s/9.514s controlled-browser spike did not reproduce on final
-heads, so no unrelated Orders work was mixed into #237.
+### Final integration identity
 
-## Post-Inbox documentation reconciliation
+- PR: **#240 — `feat(ai): rebuild operational Agents workspace`**.
+- Branch: `agent/ai-agents-product-workspace-redesign`.
+- Final pre-merge head: **`6355cc4c797a597af52c90decfe7727e405749be`**.
+- Protected squash merge: **`598e2a0dc0352227431614cf1527672aa78ec015`**.
+- Final exact-head CI: `31535669292` — PASS, including Required PR gate.
+- Final exact-head Phase 5 Experience: `31535668960` — PASS.
+- Final exact-head Phase 6–7 Completion: `31535668966` — PASS.
+- Required Phase 5 / Phase 6–7 aggregate checks: PASS.
+- Four material review threads resolved before expected-head squash merge.
 
-Current active docs from #238 were intentionally pinned to “#237 active/unmerged.”
-This docs-only branch updates those seven frontier surfaces after the successful
-Inbox merge before any new implementation branch is opened:
+### Repairs and product outcomes protected
+
+- removed the legacy monolithic `src/components/ai/ai-chat.tsx` surface;
+- one typed workspace hook owns sessions, selection, SSE transport, tool correlation,
+  setup/degraded state and proposal review while components own presentation;
+- desktop sessions/thread/context zones and mobile single-pane drill-in are explicit;
+- latest 20 durable messages are returned chronologically and session previews use
+  the latest durable message;
+- tool results are localized product-shaped cards rather than raw JSON authority;
+- setup fetch failure stays **unknown**, not false “missing consent/key” truth;
+- action-history failure stays a recoverable failure, not “no actions”;
+- provider/error stream output is not persisted as fake assistant history;
+- delivered-but-undurable output emits `AI_RESPONSE_NOT_PERSISTED`;
+- the thread is a polite live log and follows new output without dragging a seller
+  away from intentionally-read older history;
+- legacy `consent_required` API compatibility is retained and normalized by the UI;
+- locale guidance lives in the model system instruction, while the exact seller
+  user turn remains untouched for persistence and model/tool interpretation;
+- exact proposal digest approval and server-side permission/shop/license/target
+  revalidation remain protected;
+- no schema/migration/native/licensing/Golden-COD/provider/automation authority was
+  rewritten.
+
+PR #240 is source/browser evidence only. It does not close #221/#226/#230 and does
+not constitute installed Founder acceptance, Phase 8, Beta or Stable.
+
+## Post-AI documentation reconciliation
+
+PR #240 is now protected, but the active authority files still name AI Agents as
+the next package. This docs-only reconciliation updates exactly seven frontier
+surfaces before any Settings implementation branch opens:
 
 - `AGENTS.md`
 - `README.md`
@@ -120,53 +146,50 @@ Inbox merge before any new implementation branch is opened:
 - `documentation/system/ROADMAP.md`
 - `scripts/verify-current-frontier.ts`
 
-After this reconciliation merges, AI Agents may branch from the reconciled
-protected `main`.
+The new truth is **AI protected → Settings next → remaining route adoption** while
+#221/#226/#230, Internal.14 publication truth and the Phase 8 freeze remain intact.
 
-## Next product package — AI Agents
+## Next product package — Settings
 
-### Reconnaissance already completed
+### Reconnaissance required before implementation
 
-Current protected source shows:
+Do not treat the present Settings UI as one generic form. First audit:
 
-- `/agents` is a feature-gated page around a single large `src/components/ai/ai-chat.tsx` client;
-- that client mixes sessions, active-session loading, message history, SSE stream parsing,
-  tool calls/results, sensitive-action proposals, approval/recovery, mobile navigation,
-  composer and most rendering state;
-- several lifecycle effects rely on `react-hooks/set-state-in-effect` suppressions;
-- session creation and message persistence still use hard-coded French defaults such as
-  `Nouvelle conversation` and `(erreur)`;
-- proposal copy is maintained in a component-local AR/FR/EN object instead of one
-  governed locale authority;
-- tool results are rendered as truncated `JSON.stringify(...)` output rather than
-  product-shaped result cards;
-- session/action load and creation failures can be swallowed or reduced to generic errors;
-- consent/key/model/quota/degraded AI states are not a first-class workspace model;
-- persisted proposal projection already exposes sanitized `toolName`, `status`,
-  digest prefix, `summary`, expiry, execution state and last error code;
-- approval already requires `approvals.approve`, trusted actor authority and the exact
-  persisted proposal digest, then revalidates permission/shop/license/target state before execution;
-- AI tool policy already distinguishes read, external-read, sensitive and blocked tools.
+- `src/app/(dashboard)/settings/**` and every routed Settings sub-surface;
+- settings components, hooks and server/API handlers;
+- `src/lib/settings/**`, `src/lib/secrets/**`, auth/identity/license configuration
+  paths, provider configuration and backup/recovery integration points;
+- reserved setting/lifecycle/identity/license keys and dedicated write paths;
+- current AR/FR/EN copy, RTL geometry, loading/error/permission states, destructive
+  controls and mobile/reflow behavior;
+- current tests/evidence and any source/UI mismatch.
+
+Produce one consolidated Settings Problem Register before implementation. Prefer
+existing protected service authority; add a narrow projection only when the UI
+cannot truthfully represent an existing state.
 
 ### Product direction
 
-Build a task-shaped AI operational workspace rather than another generic chatbot:
+Build a task-shaped configuration workspace rather than a flat control catalogue:
 
-- split data/stream/session/action state into a typed workspace hook/view model;
-- sessions/work list on one side, assistant thread/composer centrally, contextual
-  tool/proposal/action rail on desktop with mobile drill-in;
-- typed tool-result cards, affected-record/source navigation where supported, no raw JSON authority;
-- explicit pending/approved/executing/succeeded/failed/conflict/expired proposal states and recovery;
-- clear consent/key/model/quota/offline/degraded guidance while preserving local session history;
-- one AR/FR/EN copy authority and flow-relative RTL geometry;
-- keyboard/focus/reflow/reduced-motion/touch evidence under the #236 foundation;
-- preserve server-owned proposal execution, protected data and business command authority.
+- group seller settings by operational responsibility and consequence;
+- distinguish configured/healthy/degraded/unavailable/recovery states;
+- show secret **presence/status** without exposing protected credential values;
+- route account, AI, provider, license, backup/recovery and preference controls to
+  their real authority owners;
+- keep dedicated reserved/lifecycle/identity/license writes out of the generic
+  Settings API;
+- make destructive/reset actions explicit about scope, consequence and recovery;
+- consume #236 AR/FR/EN, RTL, density/theme, keyboard/focus, touch, reflow and
+  reduced-motion roots;
+- preserve all Phase 1–4/Phase 3 authority unless a concrete Settings integration
+  defect proves a narrow repair necessary.
 
-### Likely implementation branch after docs merge
+Likely implementation branch after docs merge:
+`agent/settings-product-workspace-redesign`.
 
-`agent/ai-agents-product-workspace-redesign`
-
-Do not start Settings concurrently. Settings follows the AI package.
+Do not start another implementation package concurrently. Remaining route adoption
+follows Settings.
 
 ## Retained issue truth
 
@@ -190,11 +213,13 @@ Do not start Settings concurrently. Settings follows the AI package.
 
 ## Exact next-session order
 
-1. finish and merge this post-Inbox documentation-truth reconciliation;
+1. finish and merge this post-AI documentation-truth reconciliation;
 2. verify protected `main` and confirm no competing implementation PR exists;
-3. branch `agent/ai-agents-product-workspace-redesign` from that exact protected SHA;
-4. finish AI source/API/component reconnaissance and freeze the typed workspace contract;
-5. implement the coherent AI Agents workspace without rewriting action authority;
-6. add targeted source/browser evidence and then run consequence-selected CI/Phase 5/Phase 6–7 gates;
+3. branch `agent/settings-product-workspace-redesign` from that exact protected SHA;
+4. complete Settings route/component/API/service/security reconnaissance and freeze
+   one consolidated Problem Register + typed workspace contract;
+5. implement the coherent Settings workspace without rewriting dedicated authority;
+6. add targeted source/browser evidence and run consequence-selected CI/Phase 5/
+   Phase 6–7 gates;
 7. perform one fresh adversarial exact-head review and merge only when green;
-8. reconcile docs, then move to Settings.
+8. reconcile docs, then continue remaining production route adoption.
