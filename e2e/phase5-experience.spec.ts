@@ -449,7 +449,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
 
       await page.setViewportSize({ width: 640, height: 768 });
       const sheetTrigger = page.locator('[data-slot="sheet-trigger"]').first();
-      await expect(sheetTrigger).toBeVisible();
+      await assertTargetFloor(sheetTrigger, "mobile navigation sheet trigger");
       await sheetTrigger.click();
 
       const navigationSheet = page.locator('[data-slot="sheet-content"]').first();
