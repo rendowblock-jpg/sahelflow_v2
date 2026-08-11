@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { executeBusinessCommand } from "@/lib/business-truth/command-kernel";
@@ -149,16 +150,21 @@ export async function getConversationAssignmentVersions(
   conversationIds: readonly string[],
 ): Promise<ReadonlyMap<string, number>> {
   const unique = [...new Set(conversationIds)];
-  const entries = await Promise.all(
-    unique.map(
-      async (conversationId) =>
-        [
-          conversationId,
-          await getConversationAssignmentVersion(context, conversationId),
-        ] as const,
-    ),
+  if (unique.length === 0) return new Map();
+
+  const rows = await context.prisma.$queryRaw<
+    Array<{ aggregateId: string; version: number | bigint }>
+  >(
+    Prisma.sql`
+      SELECT "aggregateId", "version"
+      FROM "BusinessAggregateVersion"
+      WHERE "aggregateType" = 'conversation-assignment'
+        AND "aggregateId" IN (${Prisma.join(unique)})
+    `,
   );
-  return new Map(entries);
+  return new Map(
+    rows.map((row) => [row.aggregateId, Number(row.version)] as const),
+  );
 }
 
 /**

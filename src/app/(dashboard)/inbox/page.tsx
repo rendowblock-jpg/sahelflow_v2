@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 
-import { InboxLive } from "@/components/inbox/inbox-live";
-import { WhatsAppIngressRecoveryPanel } from "@/components/inbox/whatsapp-ingress-recovery-panel";
-import { PageHeader } from "@/components/shared/page-header";
+import { InboxWorkspace } from "@/components/inbox/inbox-workspace";
+import { WhatsAppIngressRecoveryDock } from "@/components/inbox/whatsapp-ingress-recovery-dock";
 import { getI18n } from "@/lib/i18n-server";
 import {
   requireTrustedAction,
@@ -15,10 +14,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const dynamic = "force-dynamic";
 
-/** Database-authoritative inbox with durable provider recovery. */
+/** Database-authoritative operational inbox with bounded provider recovery. */
 export default async function InboxPage() {
   const actorContext = await requireTrustedAction("conversations.read");
-  const { t } = await getI18n();
   const resource = { shopId: actorContext.shop.shopId };
   const canViewIngress = trustedActionAllowed(
     actorContext,
@@ -30,12 +28,13 @@ export default async function InboxPage() {
     trustedActionAllowed(actorContext, "conversations.update", resource);
 
   return (
-    <div className="app-content page-sections">
-      <PageHeader title={t("nav.inbox")} description={t("inbox.subtitle")} />
+    <div className="app-content flex h-full min-h-0 flex-col gap-3 overflow-hidden">
       {canViewIngress ? (
-        <WhatsAppIngressRecoveryPanel canRetry={canRetryIngress} />
+        <WhatsAppIngressRecoveryDock canRetry={canRetryIngress} />
       ) : null}
-      <InboxLive />
+      <div className="min-h-0 flex-1">
+        <InboxWorkspace />
+      </div>
     </div>
   );
 }

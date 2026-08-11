@@ -8,12 +8,17 @@ import {
 } from "@/lib/identity/authorization";
 import {
   sidecar,
+  SidecarRequestError,
   SidecarUnavailableError,
 } from "@/lib/whatsapp/sidecar-client";
 import type { IncomingMessage } from "@/lib/whatsapp/types";
 
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ jid: string }> };
+
+function isOutboundDirection(direction: string): boolean {
+  return direction === "outbound" || direction === "outgoing";
+}
 
 export const GET = withErrorHandler(
   async (request: NextRequest, { params }: RouteContext) => {
@@ -52,7 +57,7 @@ export const GET = withErrorHandler(
     const rows = conversation?.messages ?? [];
     const messageIds = rows.map((message) => message.id);
     const outboundIds = rows
-      .filter((message) => message.direction === "outbound")
+      .filter((message) => isOutboundDirection(message.direction))
       .map((message) => message.id);
     const [effects, inboundEvents] = await Promise.all([
       outboundIds.length
@@ -92,9 +97,9 @@ export const GET = withErrorHandler(
       intents.map((intent) => [intent.effectKey, intent]),
     );
 
-    const messages: IncomingMessage[] = rows
+    const messages: Array<IncomingMessage & { messageType?: string }> = rows
       .map((message) => {
-        const fromMe = message.direction === "outbound";
+        const fromMe = isOutboundDirection(message.direction);
         const effect = fromMe ? effectByMessage.get(message.id) : undefined;
         const intent = effect ? intentByKey.get(effect.effectKey) : undefined;
         const effectState = intent
@@ -112,6 +117,7 @@ export const GET = withErrorHandler(
           },
           message: { conversation: message.body },
           messageTimestamp: Math.floor(message.timestamp.getTime() / 1_000),
+          messageType: message.messageType,
           deliveryStatus: fromMe
             ? ((message.deliveryStatus ?? "sending") as IncomingMessage["deliveryStatus"])
             : undefined,
@@ -125,7 +131,12 @@ export const GET = withErrorHandler(
     try {
       await sidecar.status();
     } catch (error) {
-      if (!(error instanceof SidecarUnavailableError)) throw error;
+      if (
+        !(error instanceof SidecarUnavailableError) &&
+        !(error instanceof SidecarRequestError)
+      ) {
+        throw error;
+      }
       sidecarReachable = false;
     }
 
