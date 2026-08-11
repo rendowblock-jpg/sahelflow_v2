@@ -28,11 +28,14 @@ describe("Inbox operational workspace contract", () => {
     );
   });
 
-  it("batches assignment versions and coalesces live list refreshes", () => {
+  it("batches assignment versions at the reviewed authority boundary and coalesces live list refreshes", () => {
     const route = read("src/app/api/whatsapp/chats/route.ts");
+    const assignment = read("src/lib/inbox/conversation-assignment.ts");
     const hook = read("src/hooks/use-inbox-workspace.ts");
-    expect(route).toContain("Prisma.join(unique)");
-    expect(route).toContain('FROM "BusinessAggregateVersion"');
+    expect(route).toContain("getConversationAssignmentVersions");
+    expect(route).not.toContain("$queryRaw");
+    expect(assignment).toContain("Prisma.join(unique)");
+    expect(assignment).toContain('FROM "BusinessAggregateVersion"');
     expect(hook).toContain("CHAT_REFRESH_COALESCE_MS");
     expect(hook).toContain("scheduleChatsRefresh");
     expect(hook).toContain("if (chatRefreshTimerRef.current !== null) return");
