@@ -93,6 +93,7 @@ export default async function RootLayout({
                 <ServiceWorkerRegister />
                 <UpdateChecker />
                 <Toaster
+                  initialDirection={dir}
                   richColors
                   closeButton
                   toastOptions={{ className: "shadow-popover" }}
