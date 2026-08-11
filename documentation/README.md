@@ -5,6 +5,7 @@
 > **Protected application-changing baseline:** `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400` — PR #237
 > **Latest application-changing protected merge:** PR #237 — Inbox operational workspace redesign
 > **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
+> **Phase 5 historical application-changing checkpoint:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14`, protected signed run `31388777098`
 > **Founder-installed release:** Internal.14
@@ -38,6 +39,15 @@ Repository `AGENTS.md` is the coding-agent entry point. Issue #164 is the execut
 dashboard; it cannot silently weaken a higher authority. Do not create a parallel
 permanent handoff/plan surface; fold resumable context into Working Memory and
 source-grounded truth into Current State/Roadmap.
+
+## Historical continuity anchors
+
+The **Published Internal.14 checkpoint** remains distinct from later protected
+source. The earlier Phase 5 source/browser checkpoint remains **PR #220** at the
+historical application-changing baseline above. Retained **issue #221** owns the
+installed Founder acceptance obligation. The audit lineage intentionally names
+**issues #201, #214, #221, #226 and #230**; #201/#214 are now closed by stronger
+later evidence while #221/#226/#230 remain open.
 
 ## Current product truth
 
