@@ -34,16 +34,23 @@ describe("AI operational workspace contract", () => {
     expect(status).not.toContain("getSecret");
   });
 
-  it("uses locale only as presentation context and not action authority", () => {
+  it("keeps locale guidance in system context and the seller user turn exact", () => {
     const context = read("src/lib/ai/chat/locale-context.ts");
+    const agent = read("src/lib/ai/chat/agent.ts");
     const route = read("src/app/api/ai/sessions/[id]/messages/route.ts");
     const stream = read(
       "src/app/api/ai/sessions/[id]/messages/stream/route.ts",
     );
     expect(context).toContain("not action authority");
-    expect(context).toContain("Preserve the seller’s requested facts and exact tool/action arguments");
-    expect(route).toContain("withAiChatLocaleContext(input.message, input.locale)");
-    expect(stream).toContain("withAiChatLocaleContext(input.message, input.locale)");
+    expect(context).toContain("exact tool/action arguments");
+    expect(agent).toContain("aiChatLocaleSystemContext(locale)");
+    expect(agent).toContain('{ role: "user", parts: [{ text: userMessage }] }');
+    expect(route).toContain("input.message,");
+    expect(route).toContain("input.locale,");
+    expect(stream).toContain("input.message,");
+    expect(stream).toContain("input.locale,");
+    expect(route).not.toContain("withAiChatLocaleContext");
+    expect(stream).not.toContain("withAiChatLocaleContext");
   });
 
   it("does not persist streamed provider errors as assistant history", () => {
@@ -56,6 +63,17 @@ describe("AI operational workspace contract", () => {
     expect(stream).not.toContain('content: "(erreur)"');
   });
 
+  it("keeps degraded setup and action-history truth distinct from empty states", () => {
+    const hook = read("src/hooks/use-ai-workspace.ts");
+    const view = read("src/components/ai/ai-workspace.tsx");
+    expect(hook).toContain("AiSetupState | null");
+    expect(hook).toContain("setupError");
+    expect(hook).toContain("actionHistoryError");
+    expect(view).toContain('copy("setupUnavailable")');
+    expect(view).toContain('copy("actionHistoryUnavailable")');
+    expect(view).toContain("proposals.length === 0 && !actionHistoryError");
+  });
+
   it("separates client state authority from presentation and raw result rendering", () => {
     const hook = read("src/hooks/use-ai-workspace.ts");
     const view = read("src/components/ai/ai-workspace.tsx");
@@ -65,6 +83,8 @@ describe("AI operational workspace contract", () => {
     expect(hook).toContain('eventType === "persistence_warning"');
     expect(hook).toContain('tool.state !== "running"');
     expect(view).toContain('data-ai-workspace="v2"');
+    expect(view).toContain('role="log"');
+    expect(view).toContain("followTailRef");
     expect(view).toContain("SessionsPane");
     expect(view).toContain("ContextRail");
     expect(resultCard).not.toContain("JSON.stringify");
