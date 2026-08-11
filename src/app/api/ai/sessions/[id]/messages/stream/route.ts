@@ -103,7 +103,7 @@ export const POST = withErrorHandler(
       false,
     );
     if (!consent) {
-      return jsonError(403, "AI_CONSENT_REQUIRED");
+      return jsonError(403, "consent_required");
     }
 
     try {
@@ -232,8 +232,6 @@ export const POST = withErrorHandler(
               },
             });
           } catch {
-            // Delivery and persistence are distinct facts. The client must warn
-            // rather than silently presenting an undurable reply as committed history.
             send({
               type: "persistence_warning",
               code: "AI_RESPONSE_NOT_PERSISTED",
