@@ -8,6 +8,7 @@ import {
 } from "@/lib/identity/authorization";
 import {
   sidecar,
+  SidecarRequestError,
   SidecarUnavailableError,
 } from "@/lib/whatsapp/sidecar-client";
 import type { IncomingMessage } from "@/lib/whatsapp/types";
@@ -130,7 +131,12 @@ export const GET = withErrorHandler(
     try {
       await sidecar.status();
     } catch (error) {
-      if (!(error instanceof SidecarUnavailableError)) throw error;
+      if (
+        !(error instanceof SidecarUnavailableError) &&
+        !(error instanceof SidecarRequestError)
+      ) {
+        throw error;
+      }
       sidecarReachable = false;
     }
 
