@@ -30,6 +30,7 @@ interface SidebarProps {
 
 interface SidebarLinkProps {
   item: NavigationItem;
+  label: string;
   selected: boolean;
   current: boolean;
   collapsed: boolean;
@@ -39,13 +40,13 @@ interface SidebarLinkProps {
 
 function SidebarLink({
   item,
+  label,
   selected,
   current,
   collapsed,
   isRtl,
   nested = false,
 }: SidebarLinkProps) {
-  const { t } = useI18n();
   const Icon = item.icon;
 
   const link = (
@@ -87,7 +88,7 @@ function SidebarLink({
         aria-hidden="true"
       />
       {!collapsed && (
-        <span className="min-w-0 flex-1 truncate">{t(item.labelKey)}</span>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
       )}
     </Link>
   );
@@ -98,7 +99,7 @@ function SidebarLink({
     <Tooltip delayDuration={0}>
       <TooltipTrigger asChild>{link}</TooltipTrigger>
       <TooltipContent side={isRtl ? "left" : "right"} sideOffset={8}>
-        {t(item.labelKey)}
+        {label}
       </TooltipContent>
     </Tooltip>
   );
@@ -164,6 +165,7 @@ export function Sidebar({
               <div key={domain.id} className="space-y-1">
                 <SidebarLink
                   item={domain}
+                  label={t(domain.labelKey)}
                   selected={pathMatchesNavigation(pathname, domain.href)}
                   current={pathname === domain.href}
                   collapsed={collapsed}
@@ -181,6 +183,7 @@ export function Sidebar({
                   >
                     <SidebarLink
                       item={child}
+                      label={t(child.labelKey)}
                       selected={pathMatchesNavigation(pathname, child.href)}
                       current={pathname === child.href}
                       collapsed={collapsed}
@@ -202,6 +205,7 @@ export function Sidebar({
               <SidebarLink
                 key={item.href}
                 item={item}
+                label={t(item.labelKey)}
                 selected={pathMatchesNavigation(pathname, item.href)}
                 current={pathname === item.href}
                 collapsed={collapsed}
