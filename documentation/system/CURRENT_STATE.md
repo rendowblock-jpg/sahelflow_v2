@@ -1,11 +1,13 @@
 # SahelFlow — Current state
 
 > **Authority:** merged protected source and named evidence only
-> **Last assessed:** 2026-08-11
-> **Protected application-changing baseline:** `598e2a0dc0352227431614cf1527672aa78ec015` — PR #240
-> **Latest application-changing protected merge:** PR #240 — AI Agents operational workspace redesign
+> **Last assessed:** 2026-08-12
+> **Protected application-changing baseline:** `6e4477198f33344cd48c9230b32ff726079cd64d` — PR #242
+> **Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign
 > **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
 > **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
+> **AI Agents route adoption:** PR #240 / `598e2a0dc0352227431614cf1527672aa78ec015`
+> **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
 > **Phase 5 historical application-changing checkpoint:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`
@@ -13,7 +15,7 @@
 > **Founder-installed release:** Internal.14
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Next product implementation frontier:** Settings workspace redesign
+> **Next product implementation frontier:** remaining route inventory
 > **Mandatory gate before Phase 8:** whole-product frontend adoption + installed Phase 6/7 evidence + live #230 + explicit Founder acceptance
 > **Open retained issues:** #221, #226, #230
 > **Closed retained historical evidence:** #201, #214
@@ -45,9 +47,9 @@ The installed frontend problem register remains systemic rather than page-local:
 Arabic typography quality, comfortable scale, atomic AR/FR/EN + LTR/RTL switching,
 warmer coherent themes, restrained motion, directional geometry, shallow
 navigation, warning hierarchy, useful charts and workflow-level route adoption.
-Inbox and AI Agents now have protected source/browser redesigns; Settings and the
-remaining route inventory still require adoption before installed whole-product
-acceptance can be claimed.
+Inbox, AI Agents and Settings now have protected source/browser redesigns; the
+remaining production route inventory still requires adoption before installed
+whole-product acceptance can be claimed.
 
 ## Historical evidence continuity
 
@@ -61,10 +63,10 @@ Retained issue #221 owns coherent installed Founder visual/accessibility accepta
 ### Active Phase 6 frontier
 
 The active product phase remains Phase 6 — Arabic, RTL and accessibility parity.
-PR #236 protects shared roots, PR #237 protects Inbox adoption and PR #240 protects
-AI Agents adoption. **Settings is the next route-level implementation package**;
-remaining production route adoption follows Settings. Installed Phase 6/7 and
-Founder acceptance remain open rather than implied by source work.
+PR #236 protects shared roots, PR #237 protects Inbox adoption, PR #240 protects AI
+Agents adoption and PR #242 protects Settings adoption. **The next product
+implementation frontier is the remaining route inventory**; installed Phase 6/7
+and Founder acceptance remain open rather than implied by source work.
 
 ### Internal.14 publication evidence
 
@@ -87,6 +89,7 @@ does not weaken future gates. Historical **issue #214** is closed by stronger ex
 - **PR #236:** protected the shared frontend foundation.
 - **PR #237:** protected Inbox operational workspace adoption.
 - **PR #240:** protected AI Agents operational workspace adoption.
+- **PR #242:** protected Settings operational workspace adoption.
 
 Historical #201 and #214 were satisfied by stronger exact #234 installed evidence
 and are closed. #221/#226/#230 remain open because their installed/live obligations
@@ -154,31 +157,71 @@ Protected AI outcomes:
 PR #240 is source/browser evidence, **not** installed Founder acceptance and not a
 Phase 8/Beta/Stable claim.
 
-## Next route-level frontier — Settings
+## PR #242 — Settings operational workspace protected
 
-Settings is now the next product-workspace redesign. It must consume protected
-configuration and lifecycle authorities rather than creating a parallel settings
-engine.
+Protected squash merge: `6e4477198f33344cd48c9230b32ff726079cd64d`.
+Final pre-merge head: `e749b0af05741ee45b16c349750d44092bd3beb9`.
 
-Current package direction:
+The final exact head passed:
 
-- group configuration around seller tasks and operational responsibility rather
-  than a flat list of unrelated controls;
-- expose configured/healthy/degraded/unavailable/recovery states where the real
-  backend authority can support them;
-- preserve encrypted secret handling and reveal presence/status rather than raw
-  provider credentials;
-- keep AI/provider/account/license/backup/recovery/preferences linked to their
-  dedicated authority owners;
-- preserve reserved setting/lifecycle/identity/license keys and dedicated write paths;
-- make destructive/reset/recovery ceremonies explicit about scope, consequences,
-  authority and recovery;
-- consume #236 AR/FR/EN, RTL, density/theme, keyboard/focus, touch, reflow and
-  reduced-motion roots;
-- avoid schema/native/business-authority changes unless a concrete Settings defect
-  proves a narrow integration repair necessary.
+- CI `31546488691` and Required PR gate;
+- Phase 5 Experience `31546488465` and required aggregate gate;
+- Phase 6–7 Completion `31546488422` and required aggregate gate, including the
+  full AR/FR/EN accessibility, 200%-equivalent reflow and performance browser
+  evidence;
+- final review state with no unresolved material review thread before merge.
 
-Remaining production route adoption follows Settings.
+Protected Settings outcomes:
+
+- the flat 13-tab catalogue is replaced by four task-shaped groups: Experience &
+  operations, Connections, Team & security, and Data & recovery;
+- commerce configuration is the only owner of commerce integration status; the
+  duplicate hard-coded delivery/WhatsApp/Gemini integration surface is removed;
+- Gemini key presence, consent, delivery credentials/certification, backup history,
+  reporting, phone reputation and commerce recovery distinguish loading,
+  authoritative state and unavailable or recent-PIN verification state;
+- route-level capability projection separates commerce read/manage/sync, phone
+  read/manage, backup read/create/restore, authorized orders export and approved
+  reset authority instead of showing controls that can only 403;
+- backup restore/recovery-kit/delete and business reset preserve approval plus
+  recent reauthentication ceremonies and native lifecycle authority;
+- the in-app daily-report manual trigger uses authenticated `settings.manage` over
+  the existing durable WhatsApp effect while scheduled cron authority remains
+  server-secret-only;
+- AR/FR/EN, RTL, responsive/reflow and accessible-name browser evidence passed
+  without weakening the cross-product gate;
+- no schema/migration/native/licensing/Golden-COD/provider-ingress/automation
+  authority was rewritten for the workspace package.
+
+PR #242 is source/browser evidence, **not** installed Founder acceptance and not a
+Phase 8/Beta/Stable claim.
+
+## Next route-level frontier — remaining route inventory
+
+The next implementation decision is selected from the remaining production route
+inventory only after a read-only audit. Binding roadmap order is:
+
+1. dashboard;
+2. orders and confirmation queue;
+3. customers and risk;
+4. products and inventory;
+5. delivery and returns;
+6. COD and accounting;
+7. analytics;
+8. automations;
+9. setup, login and license;
+10. remaining administration.
+
+The inventory must compare task architecture, authority boundaries, degraded-state
+truth, AR/FR/EN/RTL/accessibility/reflow quality, current source/browser evidence
+and overlap between route families. Then select one coherent next package from the
+exact reconciled protected main. Do not run multiple frontend implementation
+packages concurrently and do not treat roadmap order as permission to skip the
+inventory.
+
+Every selected package consumes #236 shared roots and protected Phase 1–4 business
+authority. Avoid schema/native/business-authority changes unless a concrete bounded
+integration defect proves them necessary.
 
 ## Retained issue reconciliation
 
@@ -213,7 +256,7 @@ and signed installed customer trial/recovery evidence remain required.
 
 Internal.14 remains the published Internal from application source
 `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed run `31388777098`.
-Protected source merges through #240 do not alter that already-published executable
+Protected source merges through #242 do not alter that already-published executable
 until a new release is explicitly built and published.
 
 FD-031 remains one-use only for PR #228/Internal.14. Internal.14 is not
@@ -222,14 +265,15 @@ release exists. **Phase 8 implementation has not begun.**
 
 ## Mandatory order from here
 
-1. reconcile post-AI documentation truth on protected `main`;
-2. branch and redesign **Settings** from that reconciled protected baseline;
-3. adopt the same #236 foundation across the remaining production route inventory;
-4. rerun installed Phase 6 AR/FR/EN, Arabic joining/reading, RTL, zoom,
+1. protect the post-Settings documentation reconciliation on `main`;
+2. complete the **remaining production route inventory** and freeze one consolidated Problem Register;
+3. select and implement one coherent next route package from the binding roadmap order;
+4. continue one-package-at-a-time adoption across the remaining route inventory;
+5. rerun installed Phase 6 AR/FR/EN, Arabic joining/reading, RTL, zoom,
    keyboard/focus/semantics and reduced-motion evidence under #221;
-5. measure/fix/certify Phase 7 under #226;
-6. complete live #230 production/network trial evidence;
-7. build/install one coherent signed candidate and obtain explicit Founder acceptance;
-8. only then begin Phase 8 implementation.
+6. measure/fix/certify Phase 7 under #226;
+7. complete live #230 production/network trial evidence;
+8. build/install one coherent signed candidate and obtain explicit Founder acceptance;
+9. only then begin Phase 8 implementation.
 
 Phase 8 research/read-only planning may continue when useful.
