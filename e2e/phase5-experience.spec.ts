@@ -131,6 +131,18 @@ async function assertDesktopSidebarEdge(page: Page, direction: "ltr" | "rtl") {
   }
 }
 
+async function assertTargetFloor(
+  locator: ReturnType<Page["locator"]>,
+  label: string,
+) {
+  await expect(locator).toBeVisible();
+  const box = await locator.boundingBox();
+  expect(box, `${label} should have measurable target geometry`).not.toBeNull();
+  if (!box) return;
+  expect(box.height, `${label} height should meet the 44px touch floor`).toBeGreaterThanOrEqual(44);
+  expect(box.width, `${label} width should meet the 44px touch floor`).toBeGreaterThanOrEqual(44);
+}
+
 async function selectLocale(
   page: Page,
   currentLocaleLabel: string,
@@ -362,6 +374,80 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await page.locator('[data-theme-mode="dark"]').click();
     await expect(html).toHaveClass(/\bdark\b/);
     await expect(html).not.toHaveAttribute("data-theme-switching", "true");
+  });
+
+  test("coarse-pointer portaled controls preserve 44px interaction targets", async ({
+    browser,
+    baseURL,
+  }) => {
+    test.setTimeout(120_000);
+    const context = await browser.newContext({
+      baseURL,
+      viewport: DESKTOP,
+      hasTouch: true,
+    });
+    const page = await context.newPage();
+
+    try {
+      await ensureOwnerSession(page);
+      expect(
+        await page.evaluate(() => window.matchMedia("(pointer: coarse)").matches),
+        "touch-enabled evidence context should expose a coarse primary pointer",
+      ).toBe(true);
+
+      await page.goto("/settings", { waitUntil: "domcontentloaded" });
+      await waitForHydration(page);
+      await page.locator("#settings-tab-appearance").click();
+      await page.locator('[data-density-option="compact"]').click();
+
+      const html = page.locator("html");
+      await expect(html).toHaveAttribute("data-density", "compact");
+      await expect
+        .poll(() =>
+          html.evaluate((node) =>
+            getComputedStyle(node).getPropertyValue("--control-height").trim(),
+          ),
+        )
+        .toBe("2.75rem");
+
+      await page.getByRole("button", { name: "Français" }).click();
+      await assertTargetFloor(
+        page.getByRole("menuitem").filter({ hasText: "العربية" }).first(),
+        "portaled locale menu item",
+      );
+      await page.keyboard.press("Escape");
+
+      await page.goto("/accounting", { waitUntil: "domcontentloaded" });
+      await waitForHydration(page);
+      const dialogTrigger = page.locator('[data-slot="dialog-trigger"]').first();
+      await expect(dialogTrigger).toBeVisible();
+      await dialogTrigger.click();
+      await assertTargetFloor(
+        page.locator('[data-slot="dialog-close"]').first(),
+        "portaled dialog close control",
+      );
+
+      const selectTrigger = page.locator('[data-slot="select-trigger"]').first();
+      await expect(selectTrigger).toBeVisible();
+      await selectTrigger.click();
+      await assertTargetFloor(
+        page.locator('[data-slot="select-item"]').first(),
+        "portaled select option",
+      );
+      await page.keyboard.press("Escape");
+      await page.locator('[data-slot="dialog-close"]').first().click();
+
+      await page.setViewportSize({ width: 640, height: 768 });
+      const sheetTrigger = page.locator('[data-slot="sheet-trigger"]').first();
+      await expect(sheetTrigger).toBeVisible();
+      await sheetTrigger.click();
+      await assertTargetFloor(
+        page.locator('[data-slot="sheet-close"]').first(),
+        "portaled navigation sheet close control",
+      );
+    } finally {
+      await context.close();
+    }
   });
 
   test("Arabic RTL operational routes preserve logical geometry", async ({
