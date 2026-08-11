@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   AlertCircle,
   Bell,
@@ -95,9 +95,8 @@ export function Topbar({
   serverLocale,
   serverDir,
 }: TopbarProps) {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale, setLocale, isLocalePending } = useI18n();
   const pathname = usePathname();
-  const router = useRouter();
   const currentNavigation = navigationItemForPathname(pathname);
 
   const shops = useShopStore((state) => state.shops);
@@ -304,6 +303,8 @@ export function Topbar({
               size="sm"
               className="h-8 w-8 gap-1.5 px-0 sm:w-auto sm:px-2"
               aria-label={activeLocaleLabel}
+              aria-busy={isLocalePending}
+              disabled={isLocalePending}
             >
               <Globe className="size-4" aria-hidden="true" />
               <span className="hidden text-[11px] font-semibold uppercase sm:inline">
@@ -315,10 +316,8 @@ export function Topbar({
             {LOCALE_OPTIONS.map((option) => (
               <DropdownMenuItem
                 key={option.value}
-                onClick={() => {
-                  setLocale(option.value);
-                  router.refresh();
-                }}
+                onClick={() => setLocale(option.value)}
+                disabled={isLocalePending}
                 className="gap-2"
               >
                 <span className="text-base" aria-hidden="true">
