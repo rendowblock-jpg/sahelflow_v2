@@ -14,7 +14,6 @@
 > **Open retained issues at handoff:** #221, #226, #230
 > **Closed during this handoff:** #201, #214
 > **Execution epic:** #164
-> **Full session context:** `documentation/archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md`
 
 Live GitHub is authority. Re-fetch protected `main`, open PRs, issues and Actions
 before any write. One active implementation agent/PR at a time.
@@ -83,6 +82,41 @@ production bindings, representative Algerian fixed/mobile reachability and an
 exact signed installed trial/recovery journey are proven. GitHub auto-closed #230
 when #234 merged; it was intentionally reopened because the issue explicitly
 forbids closure from CI/unit evidence alone.
+
+## Known engineering defects/debt to close in the same program
+
+This is the complete disposition of the seven technical findings from the deep
+pre-Phase-8 audit. Preserve this context across sessions; do not recreate already
+closed work or silently drop remaining debt.
+
+1. **Historical CI exception bypasses — CLOSED.** PR #232 retired the PR #200
+   installed-UI waiver and PR #207 closure override as live lane-suppression
+   mechanisms and added anti-bypass regression authority.
+2. **Successful activation blank workspace — CLOSED.** PR #233 refreshes the
+   server-authorized dashboard tree after valid permanent/trial entitlement
+   transition, removing the close/reopen requirement.
+3. **Single-route customer trial resilience — SOURCE PROTECTED / LIVE P1 OPEN.**
+   PR #234 protects bounded primary/recovery ingress and authoritative response
+   selection; issue #230 still requires owned production DNS, independent recovery
+   routing, protected bindings, Algerian fixed/mobile evidence and a signed
+   installed customer trial/recovery journey.
+4. **Startup/performance — OPEN under #226.** Internal.14 ordinary startup was
+   observed as taking many minutes. Measure exact cold-start stages before
+   optimization, then certify T470/floor navigation/search/mutation/resource and
+   eight-hour budgets.
+5. **Replacement-install recovery evidence — CLOSED.** Exact PR #234 installed
+   evidence passed backup/interruption/rollback/committed two-shop restore, owner
+   re-enrollment, protected customer blind-index readback, protected-secret
+   readback, protected-key rewrap, identity/session non-cloning and committed
+   receipt verification; #214 is closed.
+6. **Documentation/source-authority drift — ACTIVE MAINTENANCE DEBT.** This
+   reconciliation updates the active authority chain and current-frontier verifier.
+   Bounded stale historical source comments may be cleaned later without mixing
+   them into consequential schema/native changes merely for aesthetics.
+7. **Legacy compatibility seams — OPEN LOWER-PRIORITY DEBT.** Canonical order and
+   business fences are strong, but historical compatibility paths remain. Do not
+   mix compatibility retirement into the frontend-foundation package without a
+   concrete defect plus canonical parity, migration and recovery proof.
 
 ## Retained issue reconciliation
 
@@ -173,7 +207,9 @@ do not append another disconnected design layer.
 Then adopt those roots in real production routes. Inbox, AI Agents and Settings are
 priority redesign workspaces, followed by the complete route inventory.
 
-## After the foundation/adoption work
+## Outcome F — installed Phase 6/7 + Founder acceptance
+
+After frontend foundation/adoption:
 
 1. Re-run installed Phase 6 AR/FR/EN, Arabic joining/reading, RTL geometry,
    1366×768/zoom, keyboard/focus/semantics and reduced-motion evidence under issue
@@ -184,14 +220,6 @@ priority redesign workspaces, followed by the complete route inventory.
 4. Build one coherent signed Founder candidate.
 5. Run whole-product Founder acceptance on the T470.
 6. Begin Phase 8 implementation only after this mandatory gate passes.
-
-## Lower-priority debt retained
-
-- stale/historical source comments may be cleaned in a bounded low-risk package;
-  do not trigger consequential schema/native work merely for comment aesthetics;
-- legacy order/compatibility seams remain, but canonical fences are strong. Do not
-  mix compatibility retirement into the frontend-foundation PR without a specific
-  defect and canonical parity/recovery proof.
 
 ## Hard rules
 
@@ -210,7 +238,7 @@ priority redesign workspaces, followed by the complete route inventory.
 ## Resume checklist
 
 1. Read `AGENTS.md`, `documentation/README.md`, `CURRENT_STATE.md`, `ROADMAP.md`,
-   `WORKFLOW.md`, this file and the 2026-08-11 handoff packet.
+   `WORKFLOW.md` and this file.
 2. Re-fetch protected `main`, open PRs and issues #164/#221/#226/#230.
 3. Confirm no other implementation agent/PR is active.
 4. Start the frontend-foundation package from current protected `main`.
