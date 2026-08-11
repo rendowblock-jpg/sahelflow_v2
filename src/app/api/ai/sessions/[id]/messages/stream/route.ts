@@ -9,6 +9,7 @@ import {
   type AgentResult,
   type AgentStreamEvent,
 } from "@/lib/ai/chat/agent";
+import { loadRecentAiChatMessages } from "@/lib/ai/chat/session-history";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getCurrentUserKey, requireAuth } from "@/lib/auth/server";
@@ -21,8 +22,23 @@ import { getBool, SETTING_KEYS } from "@/lib/settings";
 export const dynamic = "force-dynamic";
 
 const sendSchema = z.object({
-  message: z.string().min(1).max(4000),
+  message: z.string().trim().min(1).max(4000),
+  locale: z.enum(["en", "fr", "ar"]).optional().default("fr"),
 });
+
+type WorkspaceStreamEvent =
+  | AgentStreamEvent
+  | {
+      type: "persistence_warning";
+      code: "AI_RESPONSE_NOT_PERSISTED";
+    };
+
+function jsonError(status: number, error: string, extra?: Record<string, unknown>) {
+  return new NextResponse(JSON.stringify({ error, ...extra }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
 
 function historyFrom(
   messages: Array<{
@@ -35,7 +51,7 @@ function historyFrom(
     let toolCalls: AgentMessage["toolCalls"];
     if (message.role === "assistant" && message.toolCalls) {
       try {
-        const parsed = JSON.parse(message.toolCalls);
+        const parsed = JSON.parse(message.toolCalls) as unknown;
         if (Array.isArray(parsed)) {
           toolCalls = parsed as AgentMessage["toolCalls"];
         }
@@ -48,6 +64,25 @@ function historyFrom(
       content: message.content,
       ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
     };
+  });
+}
+
+async function touchSessionAfterUserMessage(
+  session: { title: string | null },
+  sessionId: string,
+  message: string,
+  hadHistory: boolean,
+) {
+  if (!hadHistory && (!session.title || session.title === "Nouvelle conversation")) {
+    await db.aiChatSession.update({
+      where: { id: sessionId },
+      data: { title: message.slice(0, 50) },
+    });
+    return;
+  }
+  await db.aiChatSession.update({
+    where: { id: sessionId },
+    data: { updatedAt: new Date() },
   });
 }
 
@@ -67,32 +102,21 @@ export const POST = withErrorHandler(
       false,
     );
     if (!consent) {
-      return new NextResponse(
-        JSON.stringify({
-          error: "consent_required",
-          message:
-            "AI assistant consent not given. Visit Settings → AI to enable.",
-        }),
-        { status: 403, headers: { "Content-Type": "application/json" } },
-      );
+      return jsonError(403, "consent_required");
     }
 
     try {
       await requireLicense();
     } catch {
-      return new NextResponse(JSON.stringify({ error: "License required" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonError(403, "AI_LICENSE_REQUIRED");
     }
 
     const userKey = await getCurrentUserKey();
     const rateLimit = checkRateLimit(id, userKey);
     if (!rateLimit.allowed) {
-      return new NextResponse(
-        JSON.stringify({ error: rateLimit.reason ?? "Rate limited" }),
-        { status: 429, headers: { "Content-Type": "application/json" } },
-      );
+      return jsonError(429, "AI_RATE_LIMITED", {
+        reason: rateLimit.reason ?? null,
+      });
     }
 
     let input: z.infer<typeof sendSchema>;
@@ -100,47 +124,27 @@ export const POST = withErrorHandler(
       input = sendSchema.parse(await request.json());
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return new NextResponse(
-          JSON.stringify({ error: "Validation failed", details: error.issues }),
-          { status: 400, headers: { "Content-Type": "application/json" } },
-        );
+        return jsonError(400, "AI_INVALID_MESSAGE", { details: error.issues });
       }
-      return new NextResponse(JSON.stringify({ error: "Invalid request" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonError(400, "AI_INVALID_REQUEST");
     }
 
-    const session = await db.aiChatSession.findUnique({
-      where: { id },
-      include: { messages: { orderBy: { createdAt: "asc" }, take: 20 } },
-    });
+    const session = await db.aiChatSession.findUnique({ where: { id } });
     if (!session) {
-      return new NextResponse(JSON.stringify({ error: "Session not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonError(404, "AI_SESSION_NOT_FOUND");
     }
+    const recentMessages = await loadRecentAiChatMessages(db, id);
 
     const userMessage = await context.prisma.aiChatMessage.create({
       data: { sessionId: id, role: "user", content: input.message },
     });
-    const history = historyFrom(session.messages);
-
-    if (
-      session.messages.length === 0 &&
-      session.title === "Nouvelle conversation"
-    ) {
-      await context.prisma.aiChatSession.update({
-        where: { id },
-        data: { title: input.message.slice(0, 50) },
-      });
-    } else {
-      await context.prisma.aiChatSession.update({
-        where: { id },
-        data: { updatedAt: new Date() },
-      });
-    }
+    const history = historyFrom(recentMessages);
+    await touchSessionAfterUserMessage(
+      session,
+      id,
+      input.message,
+      recentMessages.length > 0,
+    );
 
     const encoder = new TextEncoder();
     let agentAbort = new AbortController();
@@ -159,8 +163,9 @@ export const POST = withErrorHandler(
         request.signal.addEventListener("abort", onAbort);
         let assistantResponse = "";
         let assistantToolCalls: AgentResult["toolCalls"] = [];
+        let shouldPersistAssistant = false;
 
-        function send(event: AgentStreamEvent): void {
+        function send(event: WorkspaceStreamEvent): void {
           controller.enqueue(
             encoder.encode(
               `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`,
@@ -191,6 +196,7 @@ export const POST = withErrorHandler(
                   shop: shopContext,
                   sourceIdentity: `ai-session:${id}`,
                 },
+                input.locale,
               )) {
                 send(event);
                 if (event.type === "text_delta") {
@@ -198,37 +204,47 @@ export const POST = withErrorHandler(
                 } else if (event.type === "done") {
                   assistantResponse = event.response;
                   assistantToolCalls = event.toolCalls;
+                  shouldPersistAssistant = Boolean(event.response);
                 } else if (event.type === "error") {
-                  assistantResponse = event.message;
+                  shouldPersistAssistant = false;
                 }
               }
             },
           );
         } catch (error) {
           const message =
-            error instanceof Error ? error.message : "Internal error";
+            error instanceof Error ? error.message : "AI_INTERNAL_ERROR";
           send({ type: "error", message });
-          assistantResponse = message;
+          shouldPersistAssistant = false;
+        }
+
+        if (shouldPersistAssistant) {
+          try {
+            await context.prisma.aiChatMessage.create({
+              data: {
+                sessionId: id,
+                role: "assistant",
+                content: assistantResponse,
+                toolCalls:
+                  assistantToolCalls.length > 0
+                    ? JSON.stringify(redactPii(assistantToolCalls))
+                    : null,
+              },
+            });
+          } catch {
+            send({
+              type: "persistence_warning",
+              code: "AI_RESPONSE_NOT_PERSISTED",
+            });
+          }
         }
 
         try {
-          await context.prisma.aiChatMessage.create({
-            data: {
-              sessionId: id,
-              role: "assistant",
-              content: assistantResponse || "(erreur)",
-              toolCalls:
-                assistantToolCalls.length > 0
-                  ? JSON.stringify(redactPii(assistantToolCalls))
-                  : null,
-            },
-          });
+          controller.enqueue(encoder.encode("event: close\ndata: {}\n\n"));
+          controller.close();
         } catch {
-          // The response was already delivered; reload surfaces persistence loss.
+          // The request may have been aborted and closed already.
         }
-
-        controller.enqueue(encoder.encode("event: close\ndata: {}\n\n"));
-        controller.close();
         if (onAbort) request.signal.removeEventListener("abort", onAbort);
       },
       cancel() {

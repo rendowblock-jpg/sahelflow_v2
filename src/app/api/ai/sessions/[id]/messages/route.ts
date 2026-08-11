@@ -3,10 +3,11 @@ import { z } from "zod";
 
 import { createAiActionProposal } from "@/lib/ai/actions/service";
 import { runWithAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
+import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
+import { loadRecentAiChatMessages } from "@/lib/ai/chat/session-history";
+import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getCurrentUserKey, requireAuth } from "@/lib/auth/server";
-import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
-import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { db, shopContext } from "@/lib/db";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 import { requireLicense } from "@/lib/license/license-server";
@@ -21,20 +22,22 @@ export const GET = withErrorHandler(
   async (_request: NextRequest, { params }: RouteContext) => {
     await requireAuth("ai.use");
     const { id } = await params;
-    const session = await db.aiChatSession.findUnique({
-      where: { id },
-      include: { messages: { orderBy: { createdAt: "asc" }, take: 20 } },
-    });
+    const session = await db.aiChatSession.findUnique({ where: { id } });
     if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "AI_SESSION_NOT_FOUND" },
+        { status: 404 },
+      );
     }
-    return NextResponse.json({ session });
+    const messages = await loadRecentAiChatMessages(db, id);
+    return NextResponse.json({ session: { ...session, messages } });
   },
   "GET /api/ai/sessions/[id]/messages",
 );
 
 const sendSchema = z.object({
-  message: z.string().min(1).max(4000),
+  message: z.string().trim().min(1).max(4000),
+  locale: z.enum(["en", "fr", "ar"]).optional().default("fr"),
 });
 
 function historyFrom(
@@ -48,7 +51,7 @@ function historyFrom(
     let toolCalls: AgentMessage["toolCalls"];
     if (message.role === "assistant" && message.toolCalls) {
       try {
-        const parsed = JSON.parse(message.toolCalls);
+        const parsed = JSON.parse(message.toolCalls) as unknown;
         if (Array.isArray(parsed)) {
           toolCalls = parsed as AgentMessage["toolCalls"];
         }
@@ -64,6 +67,25 @@ function historyFrom(
   });
 }
 
+async function touchSessionAfterUserMessage(
+  session: { title: string | null },
+  sessionId: string,
+  message: string,
+  hadHistory: boolean,
+) {
+  if (!hadHistory && (!session.title || session.title === "Nouvelle conversation")) {
+    await db.aiChatSession.update({
+      where: { id: sessionId },
+      data: { title: message.slice(0, 50) },
+    });
+    return;
+  }
+  await db.aiChatSession.update({
+    where: { id: sessionId },
+    data: { updatedAt: new Date() },
+  });
+}
+
 export const POST = withErrorHandler(
   async (request: NextRequest, { params }: RouteContext) => {
     await requireAuth("ai.use");
@@ -75,14 +97,7 @@ export const POST = withErrorHandler(
       false,
     );
     if (!consent) {
-      return NextResponse.json(
-        {
-          error: "consent_required",
-          message:
-            "AI assistant consent not given. Visit Settings → AI to enable.",
-        },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: "consent_required" }, { status: 403 });
     }
 
     await requireLicense();
@@ -91,24 +106,28 @@ export const POST = withErrorHandler(
     const rateLimit = checkRateLimit(id, userKey);
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: rateLimit.reason ?? "Rate limited" },
+        {
+          error: "AI_RATE_LIMITED",
+          reason: rateLimit.reason ?? null,
+        },
         { status: 429 },
       );
     }
     const input = sendSchema.parse(await request.json());
 
-    const session = await db.aiChatSession.findUnique({
-      where: { id },
-      include: { messages: { orderBy: { createdAt: "asc" }, take: 20 } },
-    });
+    const session = await db.aiChatSession.findUnique({ where: { id } });
     if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "AI_SESSION_NOT_FOUND" },
+        { status: 404 },
+      );
     }
+    const recentMessages = await loadRecentAiChatMessages(db, id);
 
     const userMessage = await context.prisma.aiChatMessage.create({
       data: { sessionId: id, role: "user", content: input.message },
     });
-    const history = historyFrom(session.messages);
+    const history = historyFrom(recentMessages);
     const result = await runWithAiActionProposalRuntime(
       {
         createProposal: (toolName, args) =>
@@ -122,45 +141,44 @@ export const POST = withErrorHandler(
           }),
       },
       () =>
-        runAgent(history, input.message, {
-          db,
-          shop: shopContext,
-          sourceIdentity: `ai-session:${id}`,
-        }),
+        runAgent(
+          history,
+          input.message,
+          {
+            db,
+            shop: shopContext,
+            sourceIdentity: `ai-session:${id}`,
+          },
+          input.locale,
+        ),
     );
 
-    await context.prisma.aiChatMessage.create({
-      data: {
-        sessionId: id,
-        role: "assistant",
-        content: result.response || "(erreur)",
-        toolCalls:
-          result.toolCalls.length > 0
-            ? JSON.stringify(redactPii(result.toolCalls))
-            : null,
-      },
-    });
-
-    if (
-      session.messages.length === 0 &&
-      session.title === "Nouvelle conversation"
-    ) {
-      await context.prisma.aiChatSession.update({
-        where: { id },
-        data: { title: input.message.slice(0, 50) },
-      });
-    } else {
-      await context.prisma.aiChatSession.update({
-        where: { id },
-        data: { updatedAt: new Date() },
+    if (result.response) {
+      await context.prisma.aiChatMessage.create({
+        data: {
+          sessionId: id,
+          role: "assistant",
+          content: result.response,
+          toolCalls:
+            result.toolCalls.length > 0
+              ? JSON.stringify(redactPii(result.toolCalls))
+              : null,
+        },
       });
     }
+    await touchSessionAfterUserMessage(
+      session,
+      id,
+      input.message,
+      recentMessages.length > 0,
+    );
 
     return NextResponse.json({
       response: result.response,
       toolCalls: result.toolCalls,
-      error: result.error,
+      error: result.error ?? null,
       actionProposal: result.actionProposal,
+      persisted: Boolean(result.response),
     });
   },
   "POST /api/ai/sessions/[id]/messages",

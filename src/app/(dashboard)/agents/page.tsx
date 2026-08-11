@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AiChat } from "@/components/ai/ai-chat";
+import { AiWorkspace } from "@/components/ai/ai-workspace";
 import { FeatureGate } from "@/components/license/feature-gate";
 import { PageHeader } from "@/components/shared/page-header";
 import { getI18n } from "@/lib/i18n-server";
@@ -18,10 +18,12 @@ export default async function AgentsPage() {
   const { t } = await getI18n();
 
   return (
-    <div className="app-content page-sections">
+    <div className="app-content flex h-full min-h-0 flex-col gap-3 overflow-hidden">
       <PageHeader title={t("metadata.title.agents")} />
       <FeatureGate feature="ai_chat">
-        <AiChat />
+        <div className="min-h-0 flex-1">
+          <AiWorkspace />
+        </div>
       </FeatureGate>
     </div>
   );
