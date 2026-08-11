@@ -92,11 +92,13 @@ describe("Phase 5 experience foundation source contract", () => {
     );
   });
 
-  it("keeps inline operational notices compact and contextual", () => {
+  it("keeps inline operational notices compact, bounded and contextual", () => {
     const source = read("src/components/shared/state-surface.tsx");
-    expect(source).toContain('inline: "min-h-0 px-3 py-2.5"');
+    expect(source).toContain('inline: "min-h-0 px-2.5 py-2"');
+    expect(source).toContain("w-fit max-w-[min(100%,48rem)] self-start");
+    expect(source).toContain('inline ? "size-7 rounded-md"');
+    expect(source).toContain('inline ? "text-[13px] leading-5"');
     expect(source).toContain('data-state-size={size}');
-    expect(source).toContain('inline ? "items-start justify-start"');
   });
 
   it("scopes desktop density and motion overrides to the authenticated shell", () => {
