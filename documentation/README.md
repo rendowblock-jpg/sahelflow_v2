@@ -2,15 +2,16 @@
 
 > **Status:** Active documentation entry point
 > **Last reconciled:** 2026-08-11
-> **Protected `main` at handoff:** `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — PR #234
-> **Latest application-changing protected merge:** PR #234
-> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
+> **Protected `main` at handoff:** `04adb20fb5846499039eda61a9b765deb9c622e6` — PR #236
+> **Latest application-changing protected merge:** PR #236
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14`, protected signed run `31388777098`
 > **Founder-installed release:** Internal.14
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Mandatory gate before Phase 8:** shared-root frontend stabilization + installed Phase 6/7 closure + explicit Founder acceptance
+> **Active implementation PR:** #237 — Inbox operational workspace redesign
+> **PR #237 exact handoff head:** `cf84491cfd7613728a86dc9157da3fc4631e9105`
+> **Mandatory gate before Phase 8:** whole-product frontend adoption + installed Phase 6/7 closure + live #230 + explicit Founder acceptance
 > **Open retained issues:** #221, #226, #230
 > **Execution epic:** #164
 
@@ -39,103 +40,106 @@ source-grounded truth into Current State/Roadmap.
 
 ## Current product truth
 
-Phases 0–4 remain protected under their documented source boundaries. PR #220 /
-`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` remains the Phase 5 protected
-source/browser checkpoint and PR #223 remains the Phase 6 source/browser + Phase 7
-measurement checkpoint. Those checkpoints are valid evidence for what their exact
-heads proved.
+Phases 0–4 remain protected under their documented canonical boundaries. PR #220
+remains the earlier Phase 5 controlled-browser checkpoint and PR #223 the earlier
+Phase 6 source/browser + Phase 7 measurement checkpoint. Those exact-head proofs
+remain valid for what they established.
 
 Internal.14 installed use changed the acceptance picture: the Founder values the
-backend/engine but rejects the current frontend as the whole-product quality
-baseline. The installed rejection covers systemic typography/density,
+backend/engine but rejects the published frontend as the whole-product quality
+baseline. The installed rejection is systemic across typography/density,
 locale/RTL transitions, themes, motion, navigation, warnings, charts, Inbox, AI
-Agents, Settings and the broader route-wide experience.
+Agents, Settings and route-wide coherence. The implementation team owns the
+root-cause route/component audit rather than using the Founder as manual pixel QA.
 
-The implementation team owns the root-cause route/component audit. The Founder is
-not expected to enumerate every remaining small UI defect.
+## Shared frontend foundation now protected
+
+**PR #236** / `04adb20fb5846499039eda61a9b765deb9c622e6` protects the
+shared source/browser foundation before route-level redesign:
+
+- Noto Sans Arabic application typography paired with Inter;
+- atomic AR/FR/EN server-tree locale and document-direction transitions;
+- one custom theme authority with coordinated accent families;
+- one hydration-safe persisted density authority;
+- shallow navigation and shared semantic notices/charts/motion;
+- logical mixed-direction/RTL primitives;
+- resilient preference storage;
+- independent coarse-pointer target sizing through ordinary, slotted, portaled and
+  command-palette controls.
+
+Frozen head `7d0b01a9f1989ad7e2cae25c3b0d39d6e92a64d8` passed CI
+`31497523385`, Phase 5 `31497523052` and Phase 6–7 `31497523030`, then a fresh
+Codex review reported no major issue and all material threads were resolved before
+merge.
+
+This is not installed Founder acceptance. #221/#226/#230 remain open.
+
+## Active implementation frontier — PR #237 Inbox
+
+PR #237 is the only active implementation package at this handoff. It is open,
+mergeable and **red**, therefore unmerged.
+
+The Inbox package is intentionally a product-workspace redesign, not a backend
+rewrite. It makes the shop database the visible inbox/history/workflow authority,
+keeps WhatsApp connection as separate transport health, introduces task-shaped
+queues plus durable thread/composer and context/team rail, compacts pairing and
+ingress recovery, preserves message extraction/outbox/assignment/collaboration
+boundaries, and carries the #236 AR/FR/EN/RTL foundation into a real operational
+route.
+
+Exact handoff head: `cf84491cfd7613728a86dc9157da3fc4631e9105`.
+The current red evidence is fully classified in Working Memory. The repair batch
+for the next session is bounded:
+
+- three new ESLint `react-hooks/set-state-in-effect` errors;
+- one Phase 5 Inbox browser assertion sequenced before selecting a conversation;
+- one Phase 6 static localization failure from hard-coded `: Enter · Shift+Enter`;
+- one Phase 7 controlled-browser p95 route tripwire failure at 8.3s / 9.514s
+  versus the 8s clean-CI threshold.
+
+Do not merge #237 until the exact current head passes selected CI/Phase 5/Phase
+6–7 evidence and one fresh adversarial review with no unresolved material finding.
+After Inbox, the adoption order is **AI Agents → Settings → remaining production
+route inventory**.
 
 ## Stabilization progress protected after Internal.14
 
-- **PR #231** / `bac258e4e8c44e730fe96a72e8adbac5f45a43ab` — records the mandatory pre-Phase-8 stabilization and Founder-acceptance program.
-- **PR #232** / `876b0acdd2528df52ec106c22f231edf0b590739` — retires historical PR #200/#207 CI evidence bypass mechanisms.
-- **PR #233** / `b91fd2a9008f529a5df3000d99bf426094f9daa9` — fixes successful license activation → blank workspace/restart behavior.
-- **PR #234** / `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — protects resilient customer-trial source architecture and Worker readiness/diagnostic boundaries.
+- **PR #231** records the mandatory pre-Phase-8 stabilization program.
+- **PR #232** retires historical PR #200/#207 CI evidence bypass mechanisms.
+- **PR #233** fixes successful license activation → blank workspace/restart behavior.
+- **PR #234** protects resilient customer-trial source architecture and Worker readiness.
+- **PR #236** protects the shared frontend foundation used by the active Inbox redesign.
 
-The exact PR #234 head passed Required PR, Quality, Tauri, Windows standalone,
-Windows Rust, exact MSI build, installed launch/reopen, authenticated hydrated
-WebView UI twice, replacement-install recovery, Native, Phase 5 and Phase 6–7
-gates before merge.
+Exact #234 installed evidence satisfied and closed historical issues **#201** and
+**#214**. Current retained issue truth is:
 
-## Retained issue truth
-
-The historical semantic continuity set was **issues #201, #214, #221, #226 and #230**.
-Current live state is:
-
-- **#201 — closed:** exact installed hydrated-WebView/startup proof now passes and
-  the historical waiver is retired.
-- **#214 — closed:** exact installed replacement-install recovery now passes,
-  including owner re-enrollment, protected customer blind-index readback,
-  protected secret readback, rollback and committed receipt verification.
-- **issue #221 — open:** Founder-installed Phase 5/6 visual/accessibility acceptance
-  on the repaired coherent candidate.
+- **#221 — open:** repaired coherent installed visual/accessibility + Founder acceptance.
 - **#226 — open:** installed Phase 7 performance/reliability certification.
-- **#230 — open P1:** live production resilient trial activation on representative
-  Algerian networks. PR #234 is source architecture only; live owned-domain,
-  independent recovery-path and signed installed/network evidence remain.
+- **#230 — open P1:** live resilient customer-trial activation on representative Algerian networks.
 
-GitHub auto-closed #230 when PR #234 merged despite the issue's explicit rule that
-CI/unit evidence cannot close it. It was intentionally reopened on 2026-08-11.
-
-## Exact next implementation dependency
-
-The next implementation package is **frontend foundation authority**. Do not begin
-with random page styling.
-
-First audit/freeze shared contracts for:
-
-- Arabic/Latin typography and readable density;
-- semantic tokens and coordinated theme architecture;
-- restrained reduced-motion-safe motion;
-- atomic AR/FR/EN + LTR/RTL switching;
-- logical RTL/mixed-direction primitives;
-- application shell + shallow task-shaped navigation;
-- shared notices/warnings, tables/lists, forms, KPI/status, charts, overlays and
-  loading/empty/degraded/recovery states.
-
-Then adopt those roots across production, prioritizing Inbox, AI Agents and
-Settings, followed by the complete route inventory. After adoption, complete
-installed Phase 6 evidence, Phase 7 performance/reliability under #226, live #230
-certification and a coherent signed Founder acceptance pass. Phase 8 implementation
-remains frozen until that gate passes.
+Issue #230 cannot close from source/CI alone; owned production DNS, sufficiently
+independent recovery routing, protected production bindings and signed installed
+network evidence remain required.
 
 ## Published Internal.14 checkpoint
 
-Internal.14 remains the current published Internal release from application source
+Internal.14 remains the published Internal release from application source
 `2d60e2e74109b6e03626a5ccdff727c029a34591`, protected signed run
-`31388777098`. FD-031 remains a one-time PR #228/Internal.14 exception and does not
-weaken later gates.
+`31388777098`. Later protected source/documentation merges do not change that
+published executable until a new release is explicitly built and published.
 
-The later exact PR #234 installed evidence closed the historical #201 hydrated UI
-and #214 replacement-install proof gaps. That does not retroactively turn
-Internal.14 into Founder acceptance, Beta or Stable, and it does not certify live
-customer-trial networking under #230.
+FD-031 remains a one-time PR #228/Internal.14 exception and does not weaken later
+gates. Internal.14 remains Founder-installed but not Founder-accepted; no Beta or
+Stable claim exists.
 
 ## Resume context
 
-`operations/WORKING_MEMORY.md` owns the complete compact resume context: the
-Founder-installed whole-product problem register, all seven deep-audit findings and
-their current dispositions, exact #231–#234 evidence, open/closed retained issues,
-and the already-identified locale/theme/CSS roots for the next frontend foundation
-package. `system/CURRENT_STATE.md` owns merged evidence truth and `system/ROADMAP.md`
-owns dependency/exit order.
+`operations/WORKING_MEMORY.md` is the single detailed session-resume owner. It
+contains the exact #236 closure, PR #237 WIP head, current failed run/job evidence,
+the connector-SHA anomaly warning, protected backend boundaries and exact
+next-session order. `system/CURRENT_STATE.md` owns merged evidence truth and
+`system/ROADMAP.md` owns dependency/exit order.
 
 Supporting primary-source frontend research remains at
 [`archive/research/PRE_PHASE8_FRONTEND_STABILIZATION_RESEARCH-2026-08-10.md`](archive/research/PRE_PHASE8_FRONTEND_STABILIZATION_RESEARCH-2026-08-10.md).
-Archived research is evidence/context, not an additional product/roadmap/handoff
-authority.
-
-## Non-claims
-
-Internal.14 is Founder-installed and permanently licensed but not Founder-accepted.
-Founder-accepted truth remains Internal.5. No Beta or Stable claim exists. Do not
-rerun the old PR #228/Internal.14 publication workflow.
+Archived research is supporting evidence only, not another handoff authority.
