@@ -9,7 +9,6 @@ const TECHNICAL_INPUT_TYPES = new Set([
   "month",
   "number",
   "password",
-  "search",
   "tel",
   "time",
   "url",
@@ -25,6 +24,8 @@ function Input({
   "aria-label": ariaLabel,
   ...props
 }: React.ComponentProps<"input">) {
+  // User-authored text, including search queries, follows its first strong
+  // character via dir="auto". Only structurally technical fields stay LTR.
   const resolvedDir = dir ?? (type && TECHNICAL_INPUT_TYPES.has(type) ? "ltr" : "auto")
   // Disabled explanatory fields cannot be reached to expose their placeholder.
   // Use that already-localized placeholder as a bounded accessible-name fallback
