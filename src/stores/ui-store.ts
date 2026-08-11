@@ -1,16 +1,17 @@
 /**
- * UI store — client-side UI state (locale, sidebar, density).
+ * UI store — client-side UI state (committed locale mirror, sidebar, density).
  * Persisted to localStorage via Zustand persist middleware.
- * Also syncs locale to a cookie for server components.
  *
- * HYDRATION-SAFE DESIGN:
- * Locale is NEVER persisted to localStorage. The cookie is the single durable
- * source of truth for locale — set by `setLocale()`, read by both the server
- * (layout.tsx) and the client (`getCookieLocale()`). The client store mirrors it
- * so language + direction can react immediately without waiting for an RSC refresh.
+ * LOCALE COMMIT MODEL:
+ * The `sahelflow-locale` cookie is the durable request/server authority. An
+ * interactive locale choice writes that cookie first, but does not immediately
+ * mutate document direction or hydrated copy. The refreshed Server Component
+ * tree returns with the requested locale and `ServerLocaleProvider` commits that
+ * server-confirmed locale to this mirror plus `<html lang/dir>` before paint.
  *
- * `sidebarCollapsed` and `density` are UI-only preferences and are safe to persist
- * to localStorage because server rendering does not depend on them.
+ * This prevents the previous split state where client navigation/RTL flipped
+ * while server-translated route content still belonged to the old request.
+ * `sidebarCollapsed` and `density` remain UI-only persisted preferences.
  */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -39,6 +40,7 @@ interface UIState {
   density: UiDensity;
   activeShopId: string | null;
 
+  /** Commit a locale that the current Server Component tree already represents. */
   setLocale: (locale: Locale) => void;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -53,10 +55,15 @@ function setLocaleCookie(locale: Locale): void {
 }
 
 /**
- * Apply the language boundary synchronously before React subscribers re-render.
- * This keeps document language, document direction and the client locale store on
- * the same transition instead of letting direction lag in an effect.
+ * Request a locale for the next Server Component tree without changing the
+ * currently committed client geometry/copy. Call `router.refresh()` immediately
+ * after this from the interaction boundary.
  */
+export function requestLocale(locale: Locale): void {
+  setLocaleCookie(locale);
+}
+
+/** Apply one already-committed server locale to the browser document boundary. */
 function applyDocumentLocale(locale: Locale): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
@@ -67,16 +74,18 @@ function applyDocumentLocale(locale: Locale): void {
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      // Read from cookie to match SSR. This is the only durable locale authority.
+      // Initial client mirror matches the same cookie read by server layouts.
       locale: getCookieLocale() ?? "fr",
       sidebarCollapsed: false,
       density: "comfortable",
       activeShopId: null,
 
       setLocale: (locale) => {
+        // This is a commit operation: ServerLocaleProvider calls it only after
+        // the refreshed server tree already represents `locale`.
         setLocaleCookie(locale);
         applyDocumentLocale(locale);
-        set({ locale });
+        set((state) => (state.locale === locale ? state : { ...state, locale }));
       },
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
@@ -89,8 +98,8 @@ export const useUIStore = create<UIState>()(
         sidebarCollapsed: state.sidebarCollapsed,
         density: state.density,
       }),
-      // Always keep the cookie-derived locale from currentState. Persisted UI
-      // preferences may merge around it, but localStorage can never override it.
+      // Locale never comes from persisted localStorage. The cookie/server tree
+      // owns it; this store only mirrors the currently committed server locale.
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<UIState> | null;
         return {
