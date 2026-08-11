@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useI18n } from "@/hooks/use-i18n";
@@ -46,6 +46,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const density = useUIStore((state) => state.density);
   const pathname = usePathname();
   const previousPath = useRef<string | null>(null);
+
+  // Radix dialogs/popovers are portaled under <body>, outside the dashboard shell.
+  // Mirror the committed density onto the document root before paint so shared
+  // control sizing reaches both the workbench and every portaled overlay.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.dataset.density = density;
+    root.style.setProperty(
+      "--control-height",
+      density === "compact" ? "2.25rem" : "2.5rem",
+    );
+
+    return () => {
+      if (root.dataset.density === density) {
+        delete root.dataset.density;
+      }
+      root.style.removeProperty("--control-height");
+    };
+  }, [density]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
