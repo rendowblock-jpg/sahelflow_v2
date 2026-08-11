@@ -7,22 +7,17 @@ const LOCALE_INSTRUCTIONS: Record<AiChatLocale, string> = {
 };
 
 /**
- * Add presentation-only locale context for model generation.
+ * Return presentation-only locale guidance for the model system instruction.
  *
- * The persisted seller message remains unchanged. This hint is not approval,
- * permission, target state, tool input or business authority and must never be
- * used to alter sensitive-action arguments.
+ * This context is not action authority, never changes the seller's user turn,
+ * and must not be interpreted as tool input, approval, permission or target
+ * state. Sensitive-action arguments continue to come from the exact seller
+ * request and remain subject to proposal binding plus server-side validation.
  */
-export function withAiChatLocaleContext(
-  message: string,
-  locale: AiChatLocale,
-): string {
+export function aiChatLocaleSystemContext(locale: AiChatLocale): string {
   return [
-    "[SahelFlow presentation context — not action authority]",
+    "## Interface response language — presentation only",
     LOCALE_INSTRUCTIONS[locale],
-    "Use this context only for response language. Preserve the seller’s requested facts and exact tool/action arguments.",
-    "[/SahelFlow presentation context]",
-    "",
-    message,
+    "Preserve the seller’s requested facts and exact tool/action arguments. This locale guidance is not action authority.",
   ].join("\n");
 }
