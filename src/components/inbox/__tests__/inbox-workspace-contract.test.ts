@@ -65,10 +65,15 @@ describe("Inbox operational workspace contract", () => {
     expect(controls).toContain("onUpdated?.(nextAssigneeId, body.assignment.version)");
   });
 
-  it("preserves persisted activity/message types through WhatsApp history", () => {
+  it("preserves persisted thread history through provider degradation", () => {
     const messages = read("src/app/api/whatsapp/chats/[jid]/messages/route.ts");
     expect(messages).toContain("messageType: true");
     expect(messages).toContain("messageType: message.messageType");
+    expect(messages).toContain("SidecarUnavailableError");
+    expect(messages).toContain("SidecarRequestError");
+    expect(messages.indexOf("const conversation = await db.conversation.findUnique")).toBeLessThan(
+      messages.indexOf("await sidecar.status()"),
+    );
   });
 
   it("keeps inbound recovery visible but bounded away from normal Inbox work", () => {
