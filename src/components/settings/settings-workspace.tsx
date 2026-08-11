@@ -31,6 +31,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/hooks/use-i18n";
 import {
   getSettingsWorkspaceCopy,
+  type SettingsWorkspaceCopyKey,
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
 import { cn } from "@/lib/utils";
@@ -53,11 +54,23 @@ export type SettingsWorkspaceAccess = {
 
 type Group = "experience" | "connections" | "team" | "data";
 
-const GROUPS: Array<{ id: Group; icon: typeof Palette }> = [
-  { id: "experience", icon: Palette },
-  { id: "connections", icon: PlugZap },
-  { id: "team", icon: ShieldCheck },
-  { id: "data", icon: DatabaseBackup },
+const GROUPS: Array<{
+  id: Group;
+  icon: typeof Palette;
+  descriptionKey: SettingsWorkspaceCopyKey;
+}> = [
+  {
+    id: "experience",
+    icon: Palette,
+    descriptionKey: "experienceDescription",
+  },
+  {
+    id: "connections",
+    icon: PlugZap,
+    descriptionKey: "connectionsDescription",
+  },
+  { id: "team", icon: ShieldCheck, descriptionKey: "teamDescription" },
+  { id: "data", icon: DatabaseBackup, descriptionKey: "dataDescription" },
 ];
 
 function groupVisible(group: Group, access: SettingsWorkspaceAccess): boolean {
@@ -82,20 +95,16 @@ export function SettingsWorkspace({
 }) {
   const { locale: rawLocale } = useI18n();
   const locale = rawLocale as SettingsWorkspaceLocale;
-  const copy = (key: Parameters<typeof getSettingsWorkspaceCopy>[1]) =>
+  const copy = (key: SettingsWorkspaceCopyKey) =>
     getSettingsWorkspaceCopy(locale, key);
   const visibleGroups = useMemo(
     () => GROUPS.filter((group) => groupVisible(group.id, access)),
     [access],
   );
   const [active, setActive] = useState<Group>(visibleGroups[0]?.id ?? "experience");
-  const effectiveActive = visibleGroups.some((group) => group.id === active)
-    ? active
-    : (visibleGroups[0]?.id ?? "experience");
-
-  const groupLabel = (group: Group) => copy(group);
-  const groupDescription = (group: Group) =>
-    copy(`${group}Description` as Parameters<typeof getSettingsWorkspaceCopy>[1]);
+  const effectiveGroup =
+    visibleGroups.find((group) => group.id === active) ?? visibleGroups[0] ?? GROUPS[0];
+  const effectiveActive = effectiveGroup.id;
 
   const renderExperience = () => (
     <div className="space-y-6">
@@ -169,6 +178,8 @@ export function SettingsWorkspace({
           ? renderTeam()
           : renderData();
 
+  const EffectiveIcon = effectiveGroup.icon;
+
   return (
     <div
       data-settings-workspace="v2"
@@ -177,9 +188,12 @@ export function SettingsWorkspace({
       <aside className="min-w-0">
         <div className="rounded-xl border bg-card p-2 lg:sticky lg:top-4">
           <div className="mb-2 px-2.5 py-2">
-            <div className="flex items-center gap-2 text-xs font-semibold">
-              <BriefcaseBusiness className="size-4 text-primary" aria-hidden="true" />
-              <span>{copy("workspaceHint")}</span>
+            <div className="flex items-start gap-2 text-xs font-semibold">
+              <BriefcaseBusiness
+                className="mt-0.5 size-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+              <span className="leading-5">{copy("workspaceHint")}</span>
             </div>
           </div>
           <nav
@@ -205,10 +219,10 @@ export function SettingsWorkspace({
                 >
                   <span className="flex items-center gap-2 text-xs font-semibold">
                     <Icon className="size-4 shrink-0" aria-hidden="true" />
-                    {groupLabel(group.id)}
+                    {copy(group.id)}
                   </span>
                   <span className="mt-1 hidden text-[10px] leading-4 text-muted-foreground lg:block">
-                    {groupDescription(group.id)}
+                    {copy(group.descriptionKey)}
                   </span>
                 </button>
               );
@@ -224,22 +238,18 @@ export function SettingsWorkspace({
       >
         <header className="mb-4 rounded-xl border bg-card px-4 py-3">
           <div className="flex items-center gap-3">
-            {(() => {
-              const Icon =
-                visibleGroups.find((group) => group.id === effectiveActive)?.icon ??
-                Palette;
-              return (
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/8 text-primary">
-                  <Icon className="size-4.5" aria-hidden="true" />
-                </span>
-              );
-            })()}
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/8 text-primary">
+              <EffectiveIcon className="size-[18px]" aria-hidden="true" />
+            </span>
             <div>
-              <h2 id={`settings-workspace-${effectiveActive}`} className="text-sm font-semibold">
-                {groupLabel(effectiveActive)}
+              <h2
+                id={`settings-workspace-${effectiveActive}`}
+                className="text-sm font-semibold"
+              >
+                {copy(effectiveActive)}
               </h2>
               <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-                {groupDescription(effectiveActive)}
+                {copy(effectiveGroup.descriptionKey)}
               </p>
             </div>
           </div>
