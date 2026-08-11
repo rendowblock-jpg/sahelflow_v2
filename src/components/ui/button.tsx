@@ -26,16 +26,17 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        // Stable size marker classes survive Radix `asChild` composition and let
-        // the coarse-pointer foundation raise interaction targets without making
-        // compact visual variants larger on precision-pointer desktops.
+        // Compact visual variants keep their precision-pointer dimensions, while
+        // the root coarse-pointer authority supplies a non-zero touch minimum.
+        // These classes survive Radix `asChild` composition because they travel
+        // with the rendered trigger itself rather than depending on wrapper attrs.
         default: "sf-button-size-default h-[var(--control-height)] px-4 py-2 has-[>svg]:px-3",
-        xs: "sf-button-size-xs h-7 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "sf-button-size-sm h-9 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
+        xs: "sf-button-size-xs h-7 min-h-(--sf-touch-target) gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "sf-button-size-sm h-9 min-h-(--sf-touch-target) gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
         lg: "sf-button-size-lg h-11 rounded-md px-6 has-[>svg]:px-4",
         icon: "sf-button-size-icon size-[var(--control-height)]",
-        "icon-xs": "sf-button-size-icon-xs size-7 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "sf-button-size-icon-sm size-9",
+        "icon-xs": "sf-button-size-icon-xs size-7 min-h-(--sf-touch-target) min-w-(--sf-touch-target) rounded-md [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm": "sf-button-size-icon-sm size-9 min-h-(--sf-touch-target) min-w-(--sf-touch-target)",
         "icon-lg": "sf-button-size-icon-lg size-11",
       },
     },
