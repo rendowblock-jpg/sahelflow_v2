@@ -4,6 +4,7 @@
 > **Last reconciled:** 2026-08-11
 > **Protected `main` at handoff:** `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — PR #234
 > **Latest application-changing protected merge:** PR #234
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14`, protected signed run `31388777098`
 > **Founder-installed release:** Internal.14
@@ -36,10 +37,11 @@ dashboard; it cannot silently weaken a higher authority.
 
 ## Current product truth
 
-Phases 0–4 remain protected under their documented source boundaries. PR #220
-remains the Phase 5 protected source/browser checkpoint and PR #223 remains the
-Phase 6 source/browser + Phase 7 measurement checkpoint. Those checkpoints are
-valid evidence for what their exact heads proved.
+Phases 0–4 remain protected under their documented source boundaries. PR #220 /
+`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` remains the Phase 5 protected
+source/browser checkpoint and PR #223 remains the Phase 6 source/browser + Phase 7
+measurement checkpoint. Those checkpoints are valid evidence for what their exact
+heads proved.
 
 Internal.14 installed use changed the acceptance picture: the Founder values the
 backend/engine but rejects the current frontend as the whole-product quality
@@ -64,13 +66,16 @@ gates before merge.
 
 ## Retained issue truth
 
+The historical semantic continuity set was **issues #201, #214, #221, #226 and #230**.
+Current live state is:
+
 - **#201 — closed:** exact installed hydrated-WebView/startup proof now passes and
   the historical waiver is retired.
 - **#214 — closed:** exact installed replacement-install recovery now passes,
   including owner re-enrollment, protected customer blind-index readback,
   protected secret readback, rollback and committed receipt verification.
-- **#221 — open:** Founder-installed Phase 5/6 visual/accessibility acceptance on
-  the repaired coherent candidate.
+- **issue #221 — open:** Founder-installed Phase 5/6 visual/accessibility acceptance
+  on the repaired coherent candidate.
 - **#226 — open:** installed Phase 7 performance/reliability certification.
 - **#230 — open P1:** live production resilient trial activation on representative
   Algerian networks. PR #234 is source architecture only; live owned-domain,
@@ -100,6 +105,18 @@ Settings, followed by the complete route inventory. After adoption, complete
 installed Phase 6 evidence, Phase 7 performance/reliability under #226, live #230
 certification and a coherent signed Founder acceptance pass. Phase 8 implementation
 remains frozen until that gate passes.
+
+## Published Internal.14 checkpoint
+
+Internal.14 remains the current published Internal release from application source
+`2d60e2e74109b6e03626a5ccdff727c029a34591`, protected signed run
+`31388777098`. FD-031 remains a one-time PR #228/Internal.14 exception and does not
+weaken later gates.
+
+The later exact PR #234 installed evidence closed the historical #201 hydrated UI
+and #214 replacement-install proof gaps. That does not retroactively turn
+Internal.14 into Founder acceptance, Beta or Stable, and it does not certify live
+customer-trial networking under #230.
 
 ## Resume context
 
