@@ -5,7 +5,7 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "sf-button inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -26,16 +26,17 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        // Default controls follow the shared density authority: 40px comfortable
-        // inside the workbench, 36px compact/outside it.
-        default: "h-[var(--control-height)] px-4 py-2 has-[>svg]:px-3",
-        xs: "h-7 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-9 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
-        lg: "h-11 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-[var(--control-height)]",
-        "icon-xs": "size-7 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-9",
-        "icon-lg": "size-11",
+        // Stable size marker classes survive Radix `asChild` composition and let
+        // the coarse-pointer foundation raise interaction targets without making
+        // compact visual variants larger on precision-pointer desktops.
+        default: "sf-button-size-default h-[var(--control-height)] px-4 py-2 has-[>svg]:px-3",
+        xs: "sf-button-size-xs h-7 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "sf-button-size-sm h-9 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
+        lg: "sf-button-size-lg h-11 rounded-md px-6 has-[>svg]:px-4",
+        icon: "sf-button-size-icon size-[var(--control-height)]",
+        "icon-xs": "sf-button-size-icon-xs size-7 rounded-md [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm": "sf-button-size-icon-sm size-9",
+        "icon-lg": "sf-button-size-icon-lg size-11",
       },
     },
     defaultVariants: {
