@@ -50,6 +50,20 @@ Preserve these unless a concrete defect proves a narrow change is necessary:
 Avoid schema/migration/native changes in frontend packages unless consequence
 selection expands accordingly.
 
+## Phase 5 closure snapshot
+
+The historical Phase 5 source/browser checkpoint remains PR #220 at
+`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. It remains valid for exactly what it
+proved and is not the current application frontier. Retained **issue #221** owns
+the installed Founder visual/accessibility acceptance obligation.
+
+## Phase 6 next action
+
+Phase 6 remains active. With #236 shared roots and #237 Inbox source/browser
+adoption protected, the next route-level implementation is **AI Agents**. Settings
+follows AI Agents; remaining route adoption follows Settings. Installed Phase 6/7
+and Founder acceptance remain retained rather than implied by source work.
+
 ## PR #236 shared frontend foundation — protected
 
 Protected merge `04adb20fb5846499039eda61a9b765deb9c622e6` established Noto Sans
