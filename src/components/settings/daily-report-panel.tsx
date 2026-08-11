@@ -1,16 +1,20 @@
 "use client";
 
-import { env } from "@/lib/env";
-import { useState, useEffect, useTransition } from "react";
-import { useI18n } from "@/hooks/use-i18n";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCallback, useEffect, useState, useTransition } from "react";
+import { AlertTriangle, Bell, Loader2, RefreshCw, Save, Send } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { useI18n } from "@/hooks/use-i18n";
+import {
+  getSettingsWorkspaceCopy,
+  type SettingsWorkspaceLocale,
+} from "@/lib/i18n/settings-workspace";
 import { toast } from "@/lib/toast";
-import { Bell, Loader2, Save, Send } from "lucide-react";
 
 interface DailyReportSettings {
   daily_report_enabled: string;
@@ -18,77 +22,97 @@ interface DailyReportSettings {
   daily_report_time: string;
 }
 
+type LoadState = "loading" | "ready" | "error";
+
+const EMPTY_SETTINGS: DailyReportSettings = {
+  daily_report_enabled: "false",
+  daily_report_phone: "",
+  daily_report_time: "09:00",
+};
+
 export function DailyReportPanel() {
-  const { t } = useI18n();
-  const [settings, setSettings] = useState<DailyReportSettings>({
-    daily_report_enabled: "false",
-    daily_report_phone: "",
-    daily_report_time: "09:00",
-  });
-  const [loading, setLoading] = useState(true);
+  const { t, locale: rawLocale } = useI18n();
+  const locale = rawLocale as SettingsWorkspaceLocale;
+  const copy = (key: Parameters<typeof getSettingsWorkspaceCopy>[1]) =>
+    getSettingsWorkspaceCopy(locale, key);
+  const [settings, setSettings] = useState<DailyReportSettings>(EMPTY_SETTINGS);
+  const [loadState, setLoadState] = useState<LoadState>("loading");
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/settings");
-        if (res.ok) {
-          const data = (await res.json()) as { settings: Record<string, string> };
-          setSettings({
-            daily_report_enabled: data.settings.daily_report_enabled ?? "false",
-            daily_report_phone: data.settings.daily_report_phone ?? "",
-            daily_report_time: data.settings.daily_report_time ?? "09:00",
-          });
-        }
-      } catch {
-        /* ignore */
-      } finally {
-        setLoading(false);
-      }
+  const loadSettings = useCallback(async () => {
+    setLoadState("loading");
+    try {
+      const response = await fetch("/api/settings", { cache: "no-store" });
+      if (!response.ok) throw new Error(`settings:${response.status}`);
+      const data = (await response.json()) as {
+        settings: Record<string, string>;
+      };
+      setSettings({
+        daily_report_enabled: data.settings.daily_report_enabled ?? "false",
+        daily_report_phone: data.settings.daily_report_phone ?? "",
+        daily_report_time: data.settings.daily_report_time ?? "09:00",
+      });
+      setLoadState("ready");
+    } catch {
+      // Unavailable settings authority is not equivalent to disabled/default
+      // configuration. Keep the last visible state but stop treating it as truth.
+      setLoadState("error");
     }
-    load();
   }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadSettings();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [loadSettings]);
 
   function handleSave() {
     startTransition(async () => {
       try {
-        const res = await fetch("/api/settings", {
+        const response = await fetch("/api/settings", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ settings }),
         });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
           throw new Error(data.error || t("reports.saveFailed"));
         }
         toast.success(t("reports.settingsSaved"));
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : t("reports.errorShort"));
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : t("reports.errorShort"),
+        );
       }
     });
   }
 
-  async function handleTestReport() {
+  function handleTestReport() {
     startTransition(async () => {
       try {
-        const res = await fetch("/api/reports/daily", {
+        const response = await fetch("/api/reports/daily?trigger=manual", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            // SV-L6: send the configured public secret. If unset (""),
-            // the route rejects the request — the seller must configure
-            // NEXT_PUBLIC_CRON_SECRET to use the in-app Test button.
-            // The "dev" fallback is only for type safety (optional() returns
-            // string | undefined); an empty/undefined secret is rejected by
-            // the route, so behavior is unchanged.
-            "x-cron-secret": env.publicCronSecret ?? "dev",
-          },
         });
-        const data = await res.json();
-        if (data.ok) {
+        const data = (await response.json().catch(() => ({}))) as {
+          ok?: boolean;
+          accepted?: boolean;
+          reason?: string;
+          state?: string;
+          error?: string;
+        };
+        if (response.ok && data.ok) {
           toast.success(t("reports.reportSent"));
+        } else if (data.accepted) {
+          toast.info(
+            t("reports.reportInfo", {
+              reason: String(data.state ?? "queued"),
+            }),
+          );
         } else if (data.reason) {
-          toast.info(t("reports.reportInfo", { reason: String(data.reason) }));
+          toast.info(
+            t("reports.reportInfo", { reason: String(data.reason) }),
+          );
         } else {
           toast.error(data.error || t("reports.failedShort"));
         }
@@ -98,11 +122,41 @@ export function DailyReportPanel() {
     });
   }
 
-  if (loading) {
+  if (loadState === "loading") {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (loadState === "error") {
+    return (
+      <Card>
+        <CardContent className="flex flex-wrap items-start justify-between gap-4 p-5">
+          <div className="flex min-w-0 items-start gap-3">
+            <AlertTriangle
+              className="mt-0.5 size-5 shrink-0 text-warning"
+              aria-hidden="true"
+            />
+            <div>
+              <p className="text-sm font-semibold">{copy("unavailable")}</p>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+                {copy("unavailableDescription")}
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void loadSettings()}
+          >
+            <RefreshCw className="size-3.5" aria-hidden="true" />
+            {copy("retry")}
+          </Button>
         </CardContent>
       </Card>
     );
@@ -112,7 +166,7 @@ export function DailyReportPanel() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Bell className="h-5 w-5" />
+          <Bell className="size-5" aria-hidden="true" />
           {t("reports.dailyTitle")}
         </CardTitle>
       </CardHeader>
@@ -130,8 +184,11 @@ export function DailyReportPanel() {
           </div>
           <Switch
             checked={settings.daily_report_enabled === "true"}
-            onCheckedChange={(v) =>
-              setSettings({ ...settings, daily_report_enabled: v ? "true" : "false" })
+            onCheckedChange={(value) =>
+              setSettings((current) => ({
+                ...current,
+                daily_report_enabled: value ? "true" : "false",
+              }))
             }
           />
         </div>
@@ -142,8 +199,11 @@ export function DailyReportPanel() {
             <Input
               id="report-phone"
               value={settings.daily_report_phone}
-              onChange={(e) =>
-                setSettings({ ...settings, daily_report_phone: e.target.value })
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  daily_report_phone: event.target.value,
+                }))
               }
               placeholder="213555123456"
               className="font-mono"
@@ -158,8 +218,11 @@ export function DailyReportPanel() {
               id="report-time"
               type="time"
               value={settings.daily_report_time}
-              onChange={(e) =>
-                setSettings({ ...settings, daily_report_time: e.target.value })
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  daily_report_time: event.target.value,
+                }))
               }
             />
             <p className="text-xs text-muted-foreground">
@@ -170,24 +233,32 @@ export function DailyReportPanel() {
 
         <Separator />
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button onClick={handleSave} disabled={pending}>
-            {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : <Save className="h-4 w-4 me-2" />}
+            {pending ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Save className="size-4" aria-hidden="true" />
+            )}
             {t("common.save")}
           </Button>
-          <Button onClick={handleTestReport} variant="outline" disabled={pending}>
-            <Send className="h-4 w-4 icon-rtl-flip me-2" />
+          <Button
+            onClick={handleTestReport}
+            variant="outline"
+            disabled={pending}
+          >
+            <Send className="size-4 icon-rtl-flip" aria-hidden="true" />
             {t("reports.testNow")}
           </Button>
         </div>
 
         <details className="rounded-md border border-border/50 text-xs text-muted-foreground">
-          <summary className="cursor-pointer px-3 py-2 font-medium hover:bg-muted/30 transition-colors select-none">
+          <summary className="cursor-pointer select-none px-3 py-2 font-medium transition-colors hover:bg-muted/30">
             {t("reports.advancedConfig")}
           </summary>
-          <div className="px-3 pb-3 space-y-2">
+          <div className="space-y-2 px-3 pb-3">
             <p>{t("reports.cronHelp")}</p>
-            <pre className="font-mono bg-muted/50 p-2 rounded overflow-x-auto">
+            <pre className="overflow-x-auto rounded bg-muted/50 p-2 font-mono">
               0 9 * * * curl -X POST -H &quot;x-cron-secret: $SECRET&quot; http://localhost:3000/api/reports/daily
             </pre>
           </div>
