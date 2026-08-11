@@ -13,7 +13,7 @@ describe("authority-driven team access UI", () => {
       "utf8",
     );
     const settings = readFileSync(
-      resolve(process.cwd(), "src/components/settings/settings-tabs.tsx"),
+      resolve(process.cwd(), "src/components/settings/settings-workspace.tsx"),
       "utf8",
     );
 
