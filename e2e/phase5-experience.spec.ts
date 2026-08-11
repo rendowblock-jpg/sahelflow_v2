@@ -251,6 +251,37 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     expect(hydrationErrors).toEqual([]);
   });
 
+  test("server locale commit survives unwritable UI preference storage", async ({
+    browser,
+    baseURL,
+  }) => {
+    test.setTimeout(90_000);
+    const context = await browser.newContext({ baseURL, viewport: DESKTOP });
+    await context.addCookies(ownerSessionCookies);
+    await context.addInitScript(() => {
+      const nativeSetItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function setItem(key: string, value: string) {
+        if (key === "sahelflow-ui") {
+          throw new DOMException("UI preference storage is read-only", "QuotaExceededError");
+        }
+        return nativeSetItem.call(this, key, value);
+      };
+    });
+    const page = await context.newPage();
+
+    try {
+      const response = await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+      expect(response?.status()).toBeLessThan(400);
+      await waitForHydration(page);
+      await expect(page.locator("html")).toHaveAttribute("lang", "fr");
+      await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
+      await expect(page.locator('aside[data-navigation-density]').first()).toBeVisible();
+      await expect(page.locator("body")).not.toContainText("Application error");
+    } finally {
+      await context.close();
+    }
+  });
+
   test("live locale switching commits server copy, document direction and shell edge atomically", async ({
     page,
   }) => {
@@ -434,7 +465,11 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
         )
         .toBe("3rem");
 
-      await page.getByRole("button", { name: "Français" }).click();
+      const localeTrigger = page.getByRole("button", { name: "Français" });
+      const shopTrigger = page.locator('button[aria-live="polite"]').first();
+      await assertTargetFloor(localeTrigger, "locale switch trigger");
+      await assertTargetFloor(shopTrigger, "shop switch trigger");
+      await localeTrigger.click();
       await assertTargetFloor(
         page.getByRole("menuitem").filter({ hasText: "العربية" }).first(),
         "portaled locale menu item",
