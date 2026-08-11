@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useI18n } from "@/hooks/use-i18n";
-import { useUIStore } from "@/stores/ui-store";
+import { useUiDensity } from "@/hooks/use-ui-density";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
@@ -33,6 +33,11 @@ interface DashboardLayoutProps {
  * locale provider, but the shell never holds a stale server-only direction prop
  * after an interactive language switch.
  *
+ * Density uses a server-safe hydration snapshot before converging to the one
+ * persisted UI-store preference. Returning compact users therefore never hydrate
+ * compact markup over the server's comfortable shell and split shell/portal/table
+ * sizing.
+ *
  * The workspace is one edge-to-edge software frame with durable navigation, one
  * command/title bar and one scroll authority for the active work surface. Client
  * route transitions move focus to the new main surface after the first render so
@@ -43,13 +48,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [commandOpen, setCommandOpen] = useState(false);
   const { cheatsheetOpen, setCheatsheetOpen } = useKeyboardShortcuts();
   const { t, locale, dir } = useI18n();
-  const density = useUIStore((state) => state.density);
+  const { density } = useUiDensity();
   const pathname = usePathname();
   const previousPath = useRef<string | null>(null);
 
   // Radix dialogs/popovers are portaled under <body>, outside the dashboard shell.
-  // Mirror the committed density onto the document root before paint so shared
-  // control sizing reaches both the workbench and every portaled overlay.
+  // Mirror the hydration-safe committed density onto the document root before
+  // paint so workbench and portaled controls converge in the same commit.
   useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset.density = density;
