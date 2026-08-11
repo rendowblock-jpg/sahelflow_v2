@@ -13,6 +13,29 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(source).not.toContain("lg:p-2");
   });
 
+  it("keeps locale, document direction and shell geometry on one reactive authority", () => {
+    const routeLayout = read("src/app/(dashboard)/layout.tsx");
+    const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
+    const store = read("src/stores/ui-store.ts");
+
+    expect(routeLayout).not.toContain("serverDir");
+    expect(dashboardLayout).toContain("const { t, locale, dir } = useI18n()");
+    expect(dashboardLayout).toContain("serverDir={dir}");
+    expect(store).toContain("applyDocumentLocale(locale)");
+  });
+
+  it("keeps theme mode and coordinated presets under the custom appearance authority", () => {
+    const appearance = read("src/components/settings/appearance-panel.tsx");
+    const provider = read("src/components/theme-provider.tsx");
+    const rootLayout = read("src/app/layout.tsx");
+
+    expect(appearance).toContain('from "@/components/theme-provider"');
+    expect(appearance).not.toContain('from "next-themes"');
+    expect(provider).toContain('type ThemePreset = "sahel" | "atlas" | "oasis" | "dune"');
+    expect(provider).toContain("sahelflow-theme-preset");
+    expect(rootLayout).toContain("data-theme-preset");
+  });
+
   it("derives command navigation from the canonical navigation registry", () => {
     const source = read("src/components/command-palette.tsx");
     expect(source).toContain("flattenNavigationItems");
@@ -40,6 +63,13 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(read("src/components/shared/page-error.tsx")).toContain(
       "StateSurface",
     );
+  });
+
+  it("keeps inline operational notices compact and contextual", () => {
+    const source = read("src/components/shared/state-surface.tsx");
+    expect(source).toContain('inline: "min-h-0 px-3 py-2.5"');
+    expect(source).toContain('data-state-size={size}');
+    expect(source).toContain('inline ? "items-start justify-start"');
   });
 
   it("scopes desktop density and motion overrides to the authenticated shell", () => {
