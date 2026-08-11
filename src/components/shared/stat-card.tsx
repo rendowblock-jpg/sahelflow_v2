@@ -64,28 +64,28 @@ export function StatCard({
   return (
     <section
       className={cn(
-        "min-w-0 rounded-md border border-border/80 bg-background px-3 py-3",
+        "min-w-0 rounded-lg border border-border/80 bg-card px-4 py-3.5",
         className,
       )}
       style={style}
       data-slot="operational-metric"
     >
-      <div className="flex min-w-0 items-start justify-between gap-3">
+      <div className="flex min-w-0 items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <div className="flex min-w-0 items-center gap-1.5 text-sm font-medium leading-5 text-muted-foreground">
             <span className="min-w-0 truncate">{label}</span>
             {tooltip ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={tooltip}
                   >
                     <Info className="size-3.5" aria-hidden="true" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs text-xs">
+                <TooltipContent side="top" className="max-w-xs text-sm">
                   {tooltip}
                 </TooltipContent>
               </Tooltip>
@@ -93,12 +93,12 @@ export function StatCard({
             {hint ? <InfoHint content={hint} size="sm" /> : null}
           </div>
 
-          <div className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums text-foreground rtl:tracking-normal">
+          <div className="mt-1.5 text-[1.75rem] font-semibold leading-9 tracking-tight tabular-nums text-foreground rtl:tracking-normal">
             {value}
           </div>
 
           {subtitle || trendLabel || hasTrend ? (
-            <div className="mt-1.5 flex min-h-4 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+            <div className="mt-1.5 flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-muted-foreground">
               {hasTrend ? (
                 <span
                   className={cn(
@@ -108,9 +108,9 @@ export function StatCard({
                   )}
                 >
                   {positive ? (
-                    <ArrowUpRight className="size-3" aria-hidden="true" />
+                    <ArrowUpRight className="size-3.5" aria-hidden="true" />
                   ) : (
-                    <ArrowDownRight className="size-3" aria-hidden="true" />
+                    <ArrowDownRight className="size-3.5" aria-hidden="true" />
                   )}
                   {!directionOnly ? (
                     <>
@@ -126,14 +126,14 @@ export function StatCard({
           ) : null}
         </div>
 
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/35 text-muted-foreground [&_svg]:size-4">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/45 text-muted-foreground [&_svg]:size-[18px]">
           {icon}
         </div>
       </div>
 
       {spark && spark.length > 1 ? (
-        <div className="mt-2 h-5 overflow-hidden opacity-75" aria-hidden="true">
-          <Sparkline data={spark} color={sparkColor} height={20} />
+        <div className="mt-2.5 h-6 overflow-hidden opacity-80" aria-hidden="true">
+          <Sparkline data={spark} color={sparkColor} height={24} />
         </div>
       ) : null}
     </section>
