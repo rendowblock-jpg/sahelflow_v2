@@ -19,13 +19,6 @@ import {
   type AiWorkspaceLocale,
 } from "@/lib/i18n/ai-workspace";
 
-const EMPTY_SETUP: AiSetupState = {
-  provider: "gemini",
-  consentAccepted: false,
-  keyConfigured: false,
-  ready: false,
-};
-
 function parseToolCalls(messageId: string, raw: string | null): AiToolCallView[] {
   if (!raw) return [];
   try {
@@ -77,9 +70,10 @@ function errorCode(value: unknown, fallback: AiWorkspaceErrorCode): AiWorkspaceE
     "AI_INTERNAL_ERROR",
   ];
   return {
-    code: rawCode && allowed.includes(rawCode as AiWorkspaceErrorCode)
-      ? (rawCode as AiWorkspaceErrorCode)
-      : fallback,
+    code:
+      rawCode && allowed.includes(rawCode as AiWorkspaceErrorCode)
+        ? (rawCode as AiWorkspaceErrorCode)
+        : fallback,
     detail:
       typeof record.reason === "string"
         ? record.reason
@@ -130,7 +124,9 @@ export function useAiWorkspace() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<AiMessageView[]>([]);
   const [proposals, setProposals] = useState<AiActionProposalHandle[]>([]);
-  const [setup, setSetup] = useState<AiSetupState>(EMPTY_SETUP);
+  const [setup, setSetup] = useState<AiSetupState | null>(null);
+  const [setupError, setSetupError] = useState(false);
+  const [actionHistoryError, setActionHistoryError] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingConversation, setLoadingConversation] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
@@ -154,11 +150,15 @@ export function useAiWorkspace() {
         cache: "no-store",
         signal,
       });
-      if (!response.ok) return;
+      if (!response.ok) throw new Error(`status:${response.status}`);
       const data = (await response.json()) as AiSetupState;
       setSetup(data);
+      setSetupError(false);
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
+      // Preserve the last known setup projection if one exists, but never turn
+      // an unknown read failure into a false "consent/key missing" claim.
+      setSetupError(true);
     }
   }, []);
 
@@ -188,21 +188,19 @@ export function useAiWorkspace() {
     [],
   );
 
-  const loadInitial = useCallback(async () => {
-    const controller = new AbortController();
-    await Promise.all([
-      loadSetup(controller.signal),
-      loadSessions({ signal: controller.signal }),
-    ]);
-    return () => controller.abort();
-  }, [loadSessions, loadSetup]);
-
   useEffect(() => {
+    const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
-      void loadInitial();
+      void Promise.all([
+        loadSetup(controller.signal),
+        loadSessions({ signal: controller.signal }),
+      ]);
     }, 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [loadInitial]);
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [loadSessions, loadSetup]);
 
   const loadConversation = useCallback(async (sessionId: string) => {
     conversationAbortRef.current?.abort();
@@ -210,6 +208,8 @@ export function useAiWorkspace() {
     conversationAbortRef.current = controller;
     const generation = ++conversationGenerationRef.current;
     setLoadingConversation(true);
+    setProposals([]);
+    setActionHistoryError(false);
     try {
       const [messagesResponse, actionsResponse] = await Promise.all([
         fetch(`/api/ai/sessions/${encodeURIComponent(sessionId)}/messages`, {
@@ -237,16 +237,17 @@ export function useAiWorkspace() {
           }>;
         };
       };
-      const nextMessages = (messageData.session?.messages ?? []).map(
-        (message): AiMessageView => ({
-          id: message.id,
-          role: message.role === "assistant" ? "assistant" : "user",
-          content: message.content,
-          createdAt: message.createdAt,
-          toolCalls: parseToolCalls(message.id, message.toolCalls),
-        }),
+      setMessages(
+        (messageData.session?.messages ?? []).map(
+          (message): AiMessageView => ({
+            id: message.id,
+            role: message.role === "assistant" ? "assistant" : "user",
+            content: message.content,
+            createdAt: message.createdAt,
+            toolCalls: parseToolCalls(message.id, message.toolCalls),
+          }),
+        ),
       );
-      setMessages(nextMessages);
 
       if (actionsResponse.ok) {
         const actionData = (await actionsResponse.json()) as {
@@ -255,17 +256,17 @@ export function useAiWorkspace() {
         setProposals(
           Array.isArray(actionData.proposals) ? actionData.proposals : [],
         );
+        setActionHistoryError(false);
       } else {
+        // An unavailable action projection is not equivalent to an empty action
+        // history. Keep that distinction visible in the review rail.
         setProposals([]);
+        setActionHistoryError(true);
       }
       setError(null);
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
-      if (
-        caught &&
-        typeof caught === "object" &&
-        "code" in caught
-      ) {
+      if (caught && typeof caught === "object" && "code" in caught) {
         setError(caught as AiWorkspaceError);
       } else {
         setError({ code: "AI_SESSION_LOAD_FAILED" });
@@ -278,7 +279,12 @@ export function useAiWorkspace() {
   }, []);
 
   useEffect(() => {
-    if (!activeSessionId) return;
+    if (!activeSessionId) {
+      setMessages([]);
+      setProposals([]);
+      setActionHistoryError(false);
+      return;
+    }
     const timeoutId = window.setTimeout(() => {
       void loadConversation(activeSessionId);
     }, 0);
@@ -314,6 +320,7 @@ export function useAiWorkspace() {
       setActiveSessionId(data.session.id);
       setMessages([]);
       setProposals([]);
+      setActionHistoryError(false);
       setError(null);
       return data.session.id;
     } catch {
@@ -341,7 +348,14 @@ export function useAiWorkspace() {
     async (rawMessage: string) => {
       const userMessage = rawMessage.trim();
       const sessionId = activeSessionId;
-      if (!userMessage || !sessionId || sending || !setup.ready) return false;
+      if (
+        !userMessage ||
+        !sessionId ||
+        sending ||
+        setup?.ready !== true
+      ) {
+        return false;
+      }
 
       const now = Date.now();
       const userId = `local-user:${now}`;
@@ -413,7 +427,10 @@ export function useAiWorkspace() {
                 payload = null;
               }
               if (payload) {
-                if (eventType === "text_delta" && typeof payload.text === "string") {
+                if (
+                  eventType === "text_delta" &&
+                  typeof payload.text === "string"
+                ) {
                   delivered = true;
                   setMessages((current) =>
                     current.map((message) =>
@@ -439,7 +456,10 @@ export function useAiWorkspace() {
                   setMessages((current) =>
                     current.map((message) =>
                       message.id === assistantId
-                        ? { ...message, toolCalls: [...message.toolCalls, nextTool] }
+                        ? {
+                            ...message,
+                            toolCalls: [...message.toolCalls, nextTool],
+                          }
                         : message,
                     ),
                   );
@@ -481,6 +501,7 @@ export function useAiWorkspace() {
                   const handle = proposalEvent(payload.proposal);
                   if (handle) {
                     setProposals((current) => mergeProposal(current, handle));
+                    setActionHistoryError(false);
                   }
                 } else if (
                   eventType === "done" &&
@@ -559,7 +580,7 @@ export function useAiWorkspace() {
         setSending(false);
       }
     },
-    [activeSessionId, loadSessions, locale, sending, setup.ready],
+    [activeSessionId, loadSessions, locale, sending, setup?.ready],
   );
 
   const approveProposal = useCallback(
@@ -585,11 +606,14 @@ export function useAiWorkspace() {
           code?: string;
         };
         if (!response.ok || !data.proposal) {
-          throw new Error(data.message ?? data.error ?? data.code ?? "approval failed");
+          throw new Error(
+            data.message ?? data.error ?? data.code ?? "approval failed",
+          );
         }
         setProposals((current) =>
           mergeProposal(current, { ...handle, proposal: data.proposal! }),
         );
+        setActionHistoryError(false);
         return true;
       } catch (caught) {
         const response = await fetch(
@@ -627,6 +651,8 @@ export function useAiWorkspace() {
     messages,
     proposals,
     setup,
+    setupError,
+    actionHistoryError,
     loadingSessions,
     loadingConversation,
     creatingSession,
