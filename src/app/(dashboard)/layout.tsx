@@ -1,25 +1,18 @@
-import { cookies } from "next/headers";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { LicenseBoundary } from "@/components/license/license-boundary";
 import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
 import { SpeculationRules } from "@/components/shared/speculation-rules";
-import { getDirection, type Locale } from "@/lib/i18n";
 import { isAuthenticated, isAuthSetup } from "@/lib/auth/server";
 import { getLicenseAuthorityProjection } from "@/lib/license/license-authority";
 import { redirect } from "next/navigation";
 
-const VALID_LOCALES: readonly string[] = ["ar", "fr", "en"];
-
 /**
- * Server Component — reads the sahellflow-locale cookie and passes
- * locale + dir as props to the client DashboardLayout.
+ * Server Component — resolves protected setup/auth/license authority only.
  *
- * This eliminates the hydration mismatch that occurred when the client-side
- * useI18n() hook returned a different dir than the server render. Now both
- * server + client start with the same cookie-derived values.
- *
- * force-dynamic ensures the cookie is always re-read on every request
- * (no caching), so locale switching via router.refresh() works instantly.
+ * Locale is seeded once by the root ServerLocaleProvider and the hydrated shell
+ * consumes the same reactive client locale authority as translated copy. Keeping
+ * a second server-derived `dir` prop here caused the shell to retain stale geometry
+ * while an interactive locale switch had already updated the client locale.
  */
 export const dynamic = "force-dynamic";
 
@@ -42,17 +35,9 @@ export default async function DashboardRouteLayout({
     );
   }
 
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("sahelflow-locale")?.value;
-  const locale: Locale =
-    localeCookie && VALID_LOCALES.includes(localeCookie)
-      ? (localeCookie as Locale)
-      : "fr";
-  const dir = getDirection(locale);
-
   return (
     <LicenseBoundary>
-      <DashboardLayout locale={locale} dir={dir}>
+      <DashboardLayout>
         {/*
           Authentication, setup and entitlement authority have resolved above.
           Signal the hydrated workspace shell before slower page aggregates
