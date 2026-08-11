@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  AlertTriangle,
   DatabaseBackup,
   KeyRound,
   Loader2,
   Plus,
+  RefreshCw,
   RotateCcw,
   ShieldCheck,
   Trash2,
@@ -31,6 +33,10 @@ import {
 } from "@/components/ui/table";
 import { useI18n } from "@/hooks/use-i18n";
 import { isTauriEnv } from "@/lib/env";
+import {
+  getSettingsWorkspaceCopy,
+  type SettingsWorkspaceLocale,
+} from "@/lib/i18n/settings-workspace";
 import { toast } from "@/lib/toast";
 import {
   COPY,
@@ -82,9 +88,12 @@ export function BackupRestorePanel() {
   const { locale } = useI18n();
   const resolvedLocale = localeKey(locale);
   const copy: BackupCopy = COPY[resolvedLocale];
+  const workspaceCopy = (key: Parameters<typeof getSettingsWorkspaceCopy>[1]) =>
+    getSettingsWorkspaceCopy(resolvedLocale as SettingsWorkspaceLocale, key);
   const desktop = isTauriEnv();
   const [backups, setBackups] = useState<BackupEntry[]>([]);
   const [loading, setLoading] = useState(desktop);
+  const [loadError, setLoadError] = useState(false);
   const [creating, setCreating] = useState(false);
   const [creatingKit, setCreatingKit] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -100,6 +109,8 @@ export function BackupRestorePanel() {
     if (!desktop) return;
     let cancelled = false;
     async function load() {
+      setLoading(true);
+      setLoadError(false);
       try {
         const response = await fetch("/api/backup/list", { cache: "no-store" });
         const payload = (await response.json()) as {
@@ -108,8 +119,8 @@ export function BackupRestorePanel() {
         };
         if (!response.ok) throw new Error(payload.error ?? copy.loadFailed);
         if (!cancelled) setBackups(payload.backups ?? []);
-      } catch (error) {
-        if (!cancelled) toast.error(errorMessage(error, copy.loadFailed));
+      } catch {
+        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -212,8 +223,8 @@ export function BackupRestorePanel() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-              <DatabaseBackup className="h-5 w-5 text-primary" />
+            <span className="flex size-8 items-center justify-center rounded-md bg-primary/10">
+              <DatabaseBackup className="size-5 text-primary" aria-hidden="true" />
             </span>
             {copy.title}
           </CardTitle>
@@ -227,23 +238,28 @@ export function BackupRestorePanel() {
           ) : (
             <>
               <div className="flex flex-wrap gap-2">
-                <Button onClick={createBackup} disabled={creating || creatingKit}>
+                <Button
+                  type="button"
+                  onClick={() => void createBackup()}
+                  disabled={creating || creatingKit || loadError}
+                >
                   {creating ? (
-                    <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                   ) : (
-                    <Plus className="me-1.5 h-4 w-4" />
+                    <Plus className="size-4" aria-hidden="true" />
                   )}
                   {creating ? copy.creating : copy.create}
                 </Button>
                 <Button
+                  type="button"
                   variant="outline"
-                  onClick={createRecoveryKit}
-                  disabled={creating || creatingKit}
+                  onClick={() => void createRecoveryKit()}
+                  disabled={creating || creatingKit || loadError}
                 >
                   {creatingKit ? (
-                    <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                   ) : (
-                    <KeyRound className="me-1.5 h-4 w-4" />
+                    <KeyRound className="size-4" aria-hidden="true" />
                   )}
                   {creatingKit ? copy.creatingKit : copy.createKit}
                 </Button>
@@ -251,12 +267,41 @@ export function BackupRestorePanel() {
 
               {loading ? (
                 <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                  {copy.creating}
+                  <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
+                  {workspaceCopy("loading")}
+                </div>
+              ) : loadError ? (
+                <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-warning/25 bg-warning/5 p-4">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <AlertTriangle
+                      className="mt-0.5 size-5 shrink-0 text-warning"
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {workspaceCopy("unavailable")}
+                      </p>
+                      <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+                        {workspaceCopy("unavailableDescription")}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={reload}
+                  >
+                    <RefreshCw className="size-3.5" aria-hidden="true" />
+                    {workspaceCopy("retry")}
+                  </Button>
                 </div>
               ) : backups.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-6 text-center">
-                  <ShieldCheck className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                  <ShieldCheck
+                    className="mx-auto mb-2 size-8 text-muted-foreground"
+                    aria-hidden="true"
+                  />
                   <p className="text-sm font-medium">{copy.empty}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {copy.emptyDescription}
@@ -303,6 +348,7 @@ export function BackupRestorePanel() {
                             <TableCell className="text-end">
                               <div className="inline-flex gap-1">
                                 <Button
+                                  type="button"
                                   size="sm"
                                   variant="outline"
                                   disabled={busy || entry.status === "corrupt"}
@@ -312,13 +358,14 @@ export function BackupRestorePanel() {
                                   }}
                                 >
                                   {busy ? (
-                                    <Loader2 className="me-1 h-3.5 w-3.5 animate-spin" />
+                                    <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                                   ) : (
-                                    <RotateCcw className="me-1 h-3.5 w-3.5" />
+                                    <RotateCcw className="size-3.5" aria-hidden="true" />
                                   )}
                                   {copy.restore}
                                 </Button>
                                 <Button
+                                  type="button"
                                   size="icon"
                                   variant="outline"
                                   disabled={busy}
@@ -326,7 +373,7 @@ export function BackupRestorePanel() {
                                   onClick={() => setDeleteTarget(entry)}
                                   aria-label={copy.delete}
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <Trash2 className="size-3.5" aria-hidden="true" />
                                 </Button>
                               </div>
                             </TableCell>
@@ -378,6 +425,7 @@ export function BackupRestorePanel() {
             ) : null}
             <div className="flex justify-end gap-2">
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => {
                   setRestoreTarget(null);
@@ -388,15 +436,16 @@ export function BackupRestorePanel() {
                 {copy.cancel}
               </Button>
               <Button
+                type="button"
                 variant="destructive"
-                onClick={prepareRestore}
+                onClick={() => void prepareRestore()}
                 disabled={
                   busyId !== null ||
                   (restoreTarget.requiresRecoveryKit && !recoveryCode.trim())
                 }
               >
                 {busyId ? (
-                  <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 ) : null}
                 {busyId ? copy.preparingRestore : copy.confirmRestore}
               </Button>
@@ -438,7 +487,9 @@ export function BackupRestorePanel() {
               </p>
             </div>
             <div className="flex justify-end">
-              <Button onClick={() => setKitResult(null)}>{copy.saved}</Button>
+              <Button type="button" onClick={() => setKitResult(null)}>
+                {copy.saved}
+              </Button>
             </div>
           </div>
         </div>
