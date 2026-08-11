@@ -28,12 +28,14 @@ SahelFlow uses ten active Markdown authorities:
 5. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) — merged truth and named evidence only.
 6. [`system/ROADMAP.md`](system/ROADMAP.md) — binding Phase 0–9 order and exit criteria.
 7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — development, research, review, CI and merge process.
-8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact resumable execution frontier.
+8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact resumable execution frontier and the single session-resume owner.
 9. [`research/RESEARCH.md`](research/RESEARCH.md) — adopted primary-source research and implications.
 10. This file — navigation and authority order.
 
 Repository `AGENTS.md` is the coding-agent entry point. Issue #164 is the execution
-dashboard; it cannot silently weaken a higher authority.
+dashboard; it cannot silently weaken a higher authority. Do not create a parallel
+permanent handoff/plan surface; fold resumable context into Working Memory and
+source-grounded truth into Current State/Roadmap.
 
 ## Current product truth
 
@@ -120,15 +122,17 @@ customer-trial networking under #230.
 
 ## Resume context
 
-The full 2026-08-11 session handoff is archived at
-[`archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md`](archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md).
-It preserves the seven deep-audit findings, their current dispositions, the
-Founder-installed problem context, exact merged PR/evidence history and source
-reconnaissance already completed for the next frontend foundation package.
+`operations/WORKING_MEMORY.md` owns the complete compact resume context: the
+Founder-installed whole-product problem register, all seven deep-audit findings and
+their current dispositions, exact #231–#234 evidence, open/closed retained issues,
+and the already-identified locale/theme/CSS roots for the next frontend foundation
+package. `system/CURRENT_STATE.md` owns merged evidence truth and `system/ROADMAP.md`
+owns dependency/exit order.
 
 Supporting primary-source frontend research remains at
 [`archive/research/PRE_PHASE8_FRONTEND_STABILIZATION_RESEARCH-2026-08-10.md`](archive/research/PRE_PHASE8_FRONTEND_STABILIZATION_RESEARCH-2026-08-10.md).
-Archived material is evidence/context, not an additional product/roadmap authority.
+Archived research is evidence/context, not an additional product/roadmap/handoff
+authority.
 
 ## Non-claims
 
