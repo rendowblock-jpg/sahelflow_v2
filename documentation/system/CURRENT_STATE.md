@@ -15,11 +15,11 @@
 > **Open retained issues:** #221, #226, #230
 > **Closed retained evidence in this handoff:** #201, #214
 > **Execution epic:** #164
-> **Full handoff context:** `documentation/archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md`
 
 Live protected `main`, release state, open pull requests, issues and current Actions
 are authority. Documentation-only commits may advance `main` without changing the
-published executable source.
+published executable source. Working Memory owns the compact resumable context;
+this file owns merged evidence truth.
 
 ## Executive truth
 
