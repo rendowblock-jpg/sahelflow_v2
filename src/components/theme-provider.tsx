@@ -1,70 +1,91 @@
 "use client";
 
 /**
- * ThemeProvider — minimal, hydration-safe theme provider.
+ * ThemeProvider — hydration-safe SahelFlow theme authority.
  *
- * Replaces next-themes (which renders a <script> inside a React component,
- * triggering a React 19 / Next.js 16 Turbopack error:
- *   "Encountered a script tag while rendering React component.")
- *
- * The FOUC-prevention script is in src/app/layout.tsx (rendered as a raw
- * <script> in the server HTML head — the App Router pattern).
- *
- * This provider:
- *   1. Reads the theme from localStorage via useSyncExternalStore (no
- *      setState-in-effect lint error, SSR-safe)
- *   2. Provides useTheme() with the same API as next-themes:
- *      { theme, resolvedTheme, setTheme, themes }
- *   3. Persists to localStorage('theme') + toggles the 'dark' class on <html>
- *   4. Listens to system color-scheme changes when theme === 'system'
- *
- * Default theme: dark (matches the app's dark-first design).
+ * The pre-hydration script lives in src/app/layout.tsx. This provider owns every
+ * interactive theme read/write after hydration; product surfaces must import
+ * `useTheme` from this module rather than creating a second next-themes context.
  */
 
-import { createContext, useContext, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 
 export interface ThemeProviderProps {
   children: React.ReactNode;
-  attribute?: string; // accepted for compat (always "class")
-  defaultTheme?: string; // "dark" | "light" | "system"
+  attribute?: string; // accepted for compatibility; SahelFlow uses class authority
+  defaultTheme?: string;
   enableSystem?: boolean;
   disableTransitionOnChange?: boolean;
 }
 
+type ThemeMode = "light" | "dark" | "system";
+type ResolvedTheme = "light" | "dark";
+
 interface ThemeContextValue {
-  theme: string;
-  resolvedTheme: string;
+  theme: ThemeMode;
+  resolvedTheme: ResolvedTheme;
   setTheme: (theme: string) => void;
-  themes: string[];
+  themes: ThemeMode[];
 }
 
+const STORAGE_KEY = "theme";
+const THEME_CHANGE_EVENT = "sahelflow:theme-change";
+const DEFAULT_THEME: ThemeMode = "dark";
+
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "dark",
-  resolvedTheme: "dark",
+  theme: DEFAULT_THEME,
+  resolvedTheme: DEFAULT_THEME,
   setTheme: () => {},
   themes: ["light", "dark", "system"],
 });
 
-const STORAGE_KEY = "theme";
-const DEFAULT_THEME = "dark";
+function normalizeTheme(value: string | null | undefined): ThemeMode {
+  return value === "light" || value === "dark" || value === "system"
+    ? value
+    : DEFAULT_THEME;
+}
 
-// ── localStorage external store (for useSyncExternalStore) ───────────────────
+function resolveTheme(theme: ThemeMode, systemDark: boolean): ResolvedTheme {
+  return theme === "system" ? (systemDark ? "dark" : "light") : theme;
+}
+
+function applyResolvedTheme(resolvedTheme: ResolvedTheme): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.classList.remove("light", "dark");
+  root.classList.add(resolvedTheme);
+  root.style.colorScheme = resolvedTheme;
+}
+
+// ── localStorage external store ──────────────────────────────────────────────
 
 function subscribe(callback: () => void): () => void {
   if (typeof window === "undefined") return () => {};
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
+  const notify = () => callback();
+  window.addEventListener("storage", notify);
+  window.addEventListener(THEME_CHANGE_EVENT, notify);
+  return () => {
+    window.removeEventListener("storage", notify);
+    window.removeEventListener(THEME_CHANGE_EVENT, notify);
+  };
 }
 
-function getSnapshot(): string {
+function getSnapshot(): ThemeMode {
   try {
-    return localStorage.getItem(STORAGE_KEY) || DEFAULT_THEME;
+    return normalizeTheme(localStorage.getItem(STORAGE_KEY));
   } catch {
     return DEFAULT_THEME;
   }
 }
 
-function getServerSnapshot(): string {
+function getServerSnapshot(): ThemeMode {
   return DEFAULT_THEME;
 }
 
@@ -72,9 +93,9 @@ function getServerSnapshot(): string {
 
 function subscribeSystem(callback: () => void): () => void {
   if (typeof window === "undefined") return () => {};
-  const mql = window.matchMedia("(prefers-color-scheme: dark)");
-  mql.addEventListener("change", callback);
-  return () => mql.removeEventListener("change", callback);
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
 }
 
 function getSystemSnapshot(): boolean {
@@ -83,7 +104,7 @@ function getSystemSnapshot(): boolean {
 }
 
 function getSystemServerSnapshot(): boolean {
-  return true; // default dark
+  return true;
 }
 
 export function ThemeProvider({
@@ -91,32 +112,39 @@ export function ThemeProvider({
   defaultTheme = DEFAULT_THEME,
   enableSystem = true,
 }: ThemeProviderProps) {
-  // Read theme from localStorage via useSyncExternalStore (SSR-safe, no
-  // setState-in-effect lint error). Server snapshot = defaultTheme (matches
-  // the FOUC script's default, so no hydration mismatch).
-  const storedTheme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const systemDark = useSyncExternalStore(subscribeSystem, getSystemSnapshot, getSystemServerSnapshot);
+  const storedTheme = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
+  const systemDark = useSyncExternalStore(
+    subscribeSystem,
+    getSystemSnapshot,
+    getSystemServerSnapshot,
+  );
 
-  const theme = storedTheme || defaultTheme;
-  const resolvedTheme = theme === "system" ? (systemDark ? "dark" : "light") : theme;
+  const theme = storedTheme || normalizeTheme(defaultTheme);
+  const resolvedTheme = resolveTheme(theme, systemDark);
 
-  // Apply theme to <html> whenever it changes
+  // Reconcile initial hydration and operating-system scheme changes.
   useEffect(() => {
-    if (typeof document === "undefined") return;
-    const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(resolvedTheme);
-    root.style.colorScheme = resolvedTheme;
+    applyResolvedTheme(resolvedTheme);
   }, [resolvedTheme]);
 
   const setTheme = useCallback((newTheme: string) => {
+    const normalized = normalizeTheme(newTheme);
     try {
-      localStorage.setItem(STORAGE_KEY, newTheme);
-      // Dispatch a storage event so useSyncExternalStore picks it up
-      // (the 'storage' event only fires in OTHER windows, not the current one)
-      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: newTheme }));
+      // Apply the visual state before notifying React subscribers. This prevents
+      // a render frame where controls report the new mode while <html> still uses
+      // the previous palette.
+      const systemPrefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+      applyResolvedTheme(resolveTheme(normalized, systemPrefersDark));
+      localStorage.setItem(STORAGE_KEY, normalized);
+      window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
     } catch {
-      // ignore
+      // Theme persistence is a preference; failure must never block the workspace.
     }
   }, []);
 
@@ -125,7 +153,9 @@ export function ThemeProvider({
       theme,
       resolvedTheme,
       setTheme,
-      themes: enableSystem ? ["light", "dark", "system"] : ["light", "dark"],
+      themes: enableSystem
+        ? ["light", "dark", "system"]
+        : ["light", "dark"],
     }),
     [theme, resolvedTheme, setTheme, enableSystem],
   );
@@ -133,7 +163,6 @@ export function ThemeProvider({
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
-/** useTheme — same API as next-themes (theme, resolvedTheme, setTheme, themes). */
 export function useTheme() {
   return useContext(ThemeContext);
 }
