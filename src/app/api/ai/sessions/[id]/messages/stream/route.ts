@@ -9,6 +9,7 @@ import {
   type AgentResult,
   type AgentStreamEvent,
 } from "@/lib/ai/chat/agent";
+import { withAiChatLocaleContext } from "@/lib/ai/chat/locale-context";
 import { loadRecentAiChatMessages } from "@/lib/ai/chat/session-history";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -23,6 +24,7 @@ export const dynamic = "force-dynamic";
 
 const sendSchema = z.object({
   message: z.string().trim().min(1).max(4000),
+  locale: z.enum(["en", "fr", "ar"]).optional().default("fr"),
 });
 
 type WorkspaceStreamEvent =
@@ -188,7 +190,7 @@ export const POST = withErrorHandler(
             async () => {
               for await (const event of runAgentStream(
                 history,
-                input.message,
+                withAiChatLocaleContext(input.message, input.locale),
                 agentAbort.signal,
                 {
                   db,
