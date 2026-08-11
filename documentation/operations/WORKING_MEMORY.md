@@ -1,18 +1,19 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact resumable execution frontier; never product, architecture or roadmap authority
-> **Last updated:** 2026-08-11
-> **Protected application-changing baseline:** `598e2a0dc0352227431614cf1527672aa78ec015` — PR #240
-> **Latest application-changing protected merge:** PR #240 — AI Agents operational workspace redesign
+> **Last updated:** 2026-08-12
+> **Protected application-changing baseline:** `6e4477198f33344cd48c9230b32ff726079cd64d` — PR #242
+> **Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign
 > **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
 > **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
+> **AI Agents route adoption:** PR #240 / `598e2a0dc0352227431614cf1527672aa78ec015`
+> **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
 > **Founder-installed release:** Internal.14
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Next product implementation:** Settings workspace redesign
-> **After Settings:** remaining route adoption
+> **Next product implementation:** remaining route inventory
 > **Mandatory gate before Phase 8:** whole-product frontend adoption + installed Phase 6/7 closure + live #230 + explicit Founder acceptance
 > **Open retained issues:** #221, #226, #230
 > **Closed historical retained issues:** #201, #214
@@ -28,9 +29,9 @@ The Founder values the backend/engine and rejects the published Internal.14
 frontend as the product-quality baseline. The systemic problem register remains
 Arabic typography, comfortable density, atomic locale/direction switching, warmer
 coherent themes, restrained motion, RTL geometry, shallow navigation, warning
-hierarchy, useful charts and route-wide workflow quality. Inbox and AI Agents now
-have protected source/browser redesigns; Settings and the remaining route inventory
-still need adoption before one coherent installed candidate can be judged.
+hierarchy, useful charts and route-wide workflow quality. Inbox, AI Agents and
+Settings now have protected source/browser redesigns; the remaining route inventory
+still needs adoption before one coherent installed candidate can be judged.
 
 ## Protected backend/business boundaries
 
@@ -60,10 +61,10 @@ the installed Founder visual/accessibility acceptance obligation.
 
 ## Phase 6 next action
 
-Phase 6 remains active. With #236 shared roots, #237 Inbox adoption and #240 AI
-Agents adoption protected, the next route-level implementation is **Settings**.
-Remaining production route adoption follows Settings. Installed Phase 6/7 and
-Founder acceptance remain retained rather than implied by source work.
+Phase 6 remains active. With #236 shared roots, #237 Inbox adoption, #240 AI Agents
+adoption and #242 Settings adoption protected, the next product implementation
+frontier is **remaining route inventory**. Installed Phase 6/7 and Founder
+acceptance remain retained rather than implied by source work.
 
 ## PR #236 shared frontend foundation — protected
 
@@ -132,11 +133,54 @@ without rewriting durable WhatsApp/provider/collaboration authority.
 PR #240 is source/browser evidence only. It does not close #221/#226/#230 and does
 not constitute installed Founder acceptance, Phase 8, Beta or Stable.
 
-## Post-AI documentation reconciliation
+## PR #242 Settings operational workspace — CLOSED
 
-PR #240 is now protected, but the active authority files still name AI Agents as
-the next package. This docs-only reconciliation updates exactly seven frontier
-surfaces before any Settings implementation branch opens:
+### Final integration identity
+
+- PR: **#242 — `feat(settings): rebuild operational workspace`**.
+- Branch: `agent/settings-product-workspace-redesign`.
+- Final pre-merge head: **`e749b0af05741ee45b16c349750d44092bd3beb9`**.
+- Protected squash merge: **`6e4477198f33344cd48c9230b32ff726079cd64d`**.
+- Final exact-head CI: `31546488691` — PASS, including Required PR gate.
+- Final exact-head Phase 5 Experience: `31546488465` — PASS.
+- Final exact-head Phase 6–7 Completion: `31546488422` — PASS.
+- Required Phase 5 / Phase 6–7 aggregate checks: PASS.
+- Final Phase 6–7 browser evidence passed EN/FR/AR desktop + 200%-equivalent
+  reflow, accessibility semantics, query-plan checks and controlled performance.
+- The only Codex P1 thread was resolved before merge; no unresolved material review
+  thread remained.
+
+### Repairs and product outcomes protected
+
+- replaced the flat 13-tab Settings catalogue with four task-shaped groups:
+  Experience & operations, Connections, Team & security, Data & recovery;
+- removed the competing legacy `settings-tabs.tsx` and hard-coded
+  `integrations-panel.tsx` authority surfaces;
+- commerce status now comes only from commerce integration authority; delivery,
+  Gemini and WhatsApp no longer appear as duplicate hard-coded disconnected cards;
+- AI key/consent, delivery credentials/certification, backup history, daily reports,
+  phone reputation and commerce recovery use explicit loading/authoritative/
+  unavailable or recent-PIN verification semantics rather than false default/empty truth;
+- route-level permissions separate commerce read/manage/sync, phone read/manage,
+  backup read/create/restore, authorized orders export and approved reset;
+- backup restore/recovery-kit/delete and business reset retain recent PIN and
+  approval/native lifecycle authority;
+- the in-app daily-report manual trigger is authenticated with `settings.manage`
+  over the durable WhatsApp effect; cron secret authority remains server-only;
+- replayed/already-sent daily report results are informational rather than falsely
+  claiming a new send;
+- AR/FR/EN, RTL, responsive/reflow and accessible-name evidence passed without
+  weakening existing tests or performance thresholds;
+- no schema/migration/native/licensing/Golden-COD/provider-ingress/automation
+  authority was rewritten.
+
+PR #242 is source/browser evidence only. It does not close #221/#226/#230 and does
+not constitute installed Founder acceptance, Phase 8, Beta or Stable.
+
+## Post-Settings documentation reconciliation
+
+PR #242 is now protected, but active authority files still name Settings as the
+next package. This docs-only reconciliation updates exactly seven frontier surfaces:
 
 - `AGENTS.md`
 - `README.md`
@@ -146,50 +190,55 @@ surfaces before any Settings implementation branch opens:
 - `documentation/system/ROADMAP.md`
 - `scripts/verify-current-frontier.ts`
 
-The new truth is **AI protected → Settings next → remaining route adoption** while
+The new truth is **Settings protected → remaining route inventory active** while
 #221/#226/#230, Internal.14 publication truth and the Phase 8 freeze remain intact.
 
-## Next product package — Settings
+## Next product package selection — remaining route inventory
 
-### Reconnaissance required before implementation
+Do **not** create the next implementation branch until the inventory is complete.
+Binding roadmap order:
 
-Do not treat the present Settings UI as one generic form. First audit:
+1. dashboard;
+2. orders and confirmation queue;
+3. customers and risk;
+4. products and inventory;
+5. delivery and returns;
+6. COD and accounting;
+7. analytics;
+8. automations;
+9. setup, login and license;
+10. remaining administration.
 
-- `src/app/(dashboard)/settings/**` and every routed Settings sub-surface;
-- settings components, hooks and server/API handlers;
-- `src/lib/settings/**`, `src/lib/secrets/**`, auth/identity/license configuration
-  paths, provider configuration and backup/recovery integration points;
-- reserved setting/lifecycle/identity/license keys and dedicated write paths;
-- current AR/FR/EN copy, RTL geometry, loading/error/permission states, destructive
-  controls and mobile/reflow behavior;
-- current tests/evidence and any source/UI mismatch.
+### Read-only inventory required before implementation
 
-Produce one consolidated Settings Problem Register before implementation. Prefer
-existing protected service authority; add a narrow projection only when the UI
-cannot truthfully represent an existing state.
+For each candidate route family, inspect:
 
-### Product direction
+- route/layout/server entry points and main task components;
+- backing APIs/services, permission boundaries and protected projections;
+- canonical business/effect/lifecycle authority touched by the UI;
+- task architecture versus implementation/category architecture;
+- loading/empty/permission/offline/pending/stale/conflict/retry/recovery semantics;
+- AR/FR/EN copy, Arabic typography, RTL/mixed-direction geometry, keyboard/focus,
+  reduced motion, target sizing, 1366×768 containment and 200% reflow;
+- existing source/browser tests and stale selector/contract risk;
+- overlap with adjacent families so the next branch is coherent.
 
-Build a task-shaped configuration workspace rather than a flat control catalogue:
+Freeze one consolidated remaining-route Problem Register, rank systemic/product
+consequence, then choose one package. Prefer shared/root fixes when the same defect
+spans route families.
 
-- group seller settings by operational responsibility and consequence;
-- distinguish configured/healthy/degraded/unavailable/recovery states;
-- show secret **presence/status** without exposing protected credential values;
-- route account, AI, provider, license, backup/recovery and preference controls to
-  their real authority owners;
-- keep dedicated reserved/lifecycle/identity/license writes out of the generic
-  Settings API;
-- make destructive/reset actions explicit about scope, consequence and recovery;
-- consume #236 AR/FR/EN, RTL, density/theme, keyboard/focus, touch, reflow and
-  reduced-motion roots;
-- preserve all Phase 1–4/Phase 3 authority unless a concrete Settings integration
-  defect proves a narrow repair necessary.
+### Product direction for every selected route package
 
-Likely implementation branch after docs merge:
-`agent/settings-product-workspace-redesign`.
-
-Do not start another implementation package concurrently. Remaining route adoption
-follows Settings.
+- preserve one authority per business fact and permission-before-protected-read;
+- consume protected Phase 1–4/Phase 3 authority rather than duplicating it;
+- organize around seller tasks/outcomes rather than internal implementation categories;
+- distinguish authoritative empty/off from unavailable, stale, conflict and recovery;
+- consume #236 AR/FR/EN, RTL, typography, theme/density, keyboard/focus, touch,
+  reflow and reduced-motion roots;
+- keep financial/destructive/provider/external effects on canonical server authority;
+- avoid schema/migration/native changes unless a concrete bounded integration defect proves them necessary;
+- add focused evidence without weakening cross-product Phase 5/6/7 gates;
+- keep one implementation PR active at a time.
 
 ## Retained issue truth
 
@@ -213,13 +262,14 @@ follows Settings.
 
 ## Exact next-session order
 
-1. finish and merge this post-AI documentation-truth reconciliation;
+1. finish and merge this post-Settings documentation-truth reconciliation;
 2. verify protected `main` and confirm no competing implementation PR exists;
-3. branch `agent/settings-product-workspace-redesign` from that exact protected SHA;
-4. complete Settings route/component/API/service/security reconnaissance and freeze
-   one consolidated Problem Register + typed workspace contract;
-5. implement the coherent Settings workspace without rewriting dedicated authority;
-6. add targeted source/browser evidence and run consequence-selected CI/Phase 5/
+3. complete the **remaining route inventory** read-only across the binding roadmap order;
+4. freeze one consolidated Problem Register and select one coherent next route family;
+5. create one implementation branch from the exact reconciled protected SHA;
+6. implement the selected task-shaped route package without rewriting dedicated authority;
+7. add targeted source/browser evidence and run consequence-selected CI/Phase 5/
    Phase 6–7 gates;
-7. perform one fresh adversarial exact-head review and merge only when green;
-8. reconcile docs, then continue remaining production route adoption.
+8. perform one fresh adversarial exact-head review and merge only when green;
+9. reconcile docs, then continue the next remaining route package;
+10. after whole-product adoption, return to installed #221/#226/#230 and Founder acceptance before Phase 8.
