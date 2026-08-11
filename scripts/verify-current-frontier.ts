@@ -39,10 +39,12 @@ function rejectMarkers(relativePath: string, markers: readonly string[]): void {
 // merge SHAs and transient Actions conclusions may advance without changing this
 // application baseline. Exact WIP diagnostics belong in Working Memory.
 const protectedApplicationBaseline =
-  "598e2a0dc0352227431614cf1527672aa78ec015";
+  "6e4477198f33344cd48c9230b32ff726079cd64d";
 const inboxProtectedMerge = "4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400";
 const inboxFinalHead = "8e9d5aa365f0c5873909c1c8517f88519d743b9d";
+const aiProtectedMerge = "598e2a0dc0352227431614cf1527672aa78ec015";
 const aiFinalHead = "6355cc4c797a597af52c90decfe7727e405749be";
+const settingsFinalHead = "e749b0af05741ee45b16c349750d44092bd3beb9";
 const publishedApplicationSha =
   "2d60e2e74109b6e03626a5ccdff727c029a34591";
 const signedReleaseRun = "31388777098";
@@ -59,7 +61,7 @@ const authorityPaths = [
 
 requireMarkers("README.md", [
   protectedApplicationBaseline,
-  "Latest application-changing protected merge: **PR #240 — AI Agents operational workspace redesign**",
+  "Latest application-changing protected merge: **PR #242 — Settings operational workspace redesign**",
   publishedApplicationSha,
   "`1.0.0-internal.14`",
   signedReleaseRun,
@@ -68,12 +70,17 @@ requireMarkers("README.md", [
   "Founder-accepted baseline remains **Internal.5**",
   "PR #237 protects",
   inboxFinalHead,
-  "PR #240 now protects",
+  "PR #240 protects",
   aiFinalHead,
   "31535669292",
   "31535668960",
   "31535668966",
-  "Next implementation frontier — Settings",
+  "PR #242 now protects",
+  settingsFinalHead,
+  "31546488691",
+  "31546488465",
+  "31546488422",
+  "Next implementation frontier — remaining route inventory",
   "#221 — OPEN",
   "#226 — OPEN",
   "#230 — OPEN P1",
@@ -84,7 +91,7 @@ requireMarkers("README.md", [
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   protectedApplicationBaseline,
-  "Latest application-changing protected merge: **PR #240 — AI Agents operational workspace redesign**",
+  "Latest application-changing protected merge: **PR #242 — Settings operational workspace redesign**",
   publishedApplicationSha,
   "Published release remains `1.0.0-internal.14`",
   activePhase,
@@ -92,8 +99,13 @@ requireMarkers("AGENTS.md", [
   inboxFinalHead,
   "PR #240 — AI Agents operational workspace",
   aiFinalHead,
-  "Exact next outcome — Settings workspace redesign",
-  "Likely branch: `agent/settings-product-workspace-redesign`",
+  "PR #242 — Settings operational workspace",
+  settingsFinalHead,
+  "31546488691",
+  "31546488465",
+  "31546488422",
+  "Exact next outcome — remaining route inventory",
+  "Binding roadmap order",
   "#221, #226, #230",
   "Phase 8 implementation remains frozen",
   "WORKING_MEMORY.md` is",
@@ -101,27 +113,30 @@ requireMarkers("AGENTS.md", [
 
 requireMarkers("documentation/README.md", [
   protectedApplicationBaseline,
-  "**Latest application-changing protected merge:** PR #240 — AI Agents operational workspace redesign",
+  "**Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign",
   publishedApplicationSha,
   "**Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
   activePhase,
-  "**Next product implementation frontier:** Settings workspace redesign",
+  "**Next product implementation frontier:** remaining route inventory",
   "PR #237 — Inbox protected",
   inboxProtectedMerge,
   "PR #240 — AI Agents protected",
+  aiProtectedMerge,
   aiFinalHead,
-  "31535669292",
-  "31535668960",
-  "31535668966",
-  "Next product frontier — Settings",
+  "PR #242 — Settings protected",
+  settingsFinalHead,
+  "31546488691",
+  "31546488465",
+  "31546488422",
+  "Next product frontier — remaining route inventory",
   "#221, #226, #230",
   "Phase 8",
 ]);
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
   protectedApplicationBaseline,
-  "**Latest application-changing protected merge:** PR #240 — AI Agents operational workspace redesign",
+  "**Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign",
   publishedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
@@ -130,10 +145,12 @@ requireMarkers("documentation/system/CURRENT_STATE.md", [
   inboxFinalHead,
   "PR #240 — AI Agents operational workspace protected",
   aiFinalHead,
-  "31535669292",
-  "31535668960",
-  "31535668966",
-  "Next route-level frontier — Settings",
+  "PR #242 — Settings operational workspace protected",
+  settingsFinalHead,
+  "31546488691",
+  "31546488465",
+  "31546488422",
+  "Next route-level frontier — remaining route inventory",
   "#221 — OPEN",
   "#226 — OPEN",
   "#230 — OPEN P1",
@@ -142,7 +159,7 @@ requireMarkers("documentation/system/CURRENT_STATE.md", [
 
 requireMarkers("documentation/system/ROADMAP.md", [
   protectedApplicationBaseline,
-  "Latest application-changing protected merge:** PR #240",
+  "Latest application-changing protected merge:** PR #242",
   publishedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   activePhase,
@@ -150,16 +167,18 @@ requireMarkers("documentation/system/ROADMAP.md", [
   inboxFinalHead,
   "AI Agents — SATISFIED IN SOURCE/BROWSER BY PR #240",
   aiFinalHead,
-  "Settings — NEXT",
+  "Settings — SATISFIED IN SOURCE/BROWSER BY PR #242",
+  settingsFinalHead,
+  "Remaining route inventory — ACTIVE",
   "Mandatory pre-Phase-8 stabilization and Founder-acceptance gate",
-  "AI Agents satisfied in source/browser — PR #240",
-  "Next — Settings",
+  "Settings satisfied in source/browser — PR #242",
+  "Next — remaining route inventory",
   "Implementation frozen behind the mandatory pre-Phase-8 gate",
 ]);
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   protectedApplicationBaseline,
-  "Latest application-changing protected merge:** PR #240 — AI Agents operational workspace redesign",
+  "Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign",
   publishedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
@@ -168,12 +187,13 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   inboxFinalHead,
   "PR #240 AI Agents operational workspace — CLOSED",
   aiFinalHead,
-  "31535669292",
-  "31535668960",
-  "31535668966",
-  "Post-AI documentation reconciliation",
-  "Next product package — Settings",
-  "agent/settings-product-workspace-redesign",
+  "PR #242 Settings operational workspace — CLOSED",
+  settingsFinalHead,
+  "31546488691",
+  "31546488465",
+  "31546488422",
+  "Post-Settings documentation reconciliation",
+  "Next product package selection — remaining route inventory",
   "#221 OPEN",
   "#226 OPEN",
   "#230 OPEN P1",
@@ -188,8 +208,6 @@ if (existsSync(resolve(repoRoot, duplicateHandoffPath))) {
   );
 }
 
-// Explicitly retire the Inbox and AI route-package execution frontiers while
-// allowing generic WIP language for the legitimate next package (Settings).
 const staleInboxFrontierMarkers = [
   "PR #237 is not green and must not be merged yet",
   "PR #237 is red and unmerged",
@@ -226,6 +244,22 @@ const staleAiFrontierMarkers = [
   "Likely branch: `agent/ai-agents-product-workspace-redesign`",
 ];
 
+const staleSettingsFrontierMarkers = [
+  "The next product implementation package is **Settings**",
+  "The next product workspace is **Settings**",
+  "Next implementation frontier — Settings",
+  "Next product frontier — Settings",
+  "Next route-level frontier — Settings",
+  "Exact next outcome — Settings workspace redesign",
+  "Next product package — Settings",
+  "**Next product implementation frontier:** Settings workspace redesign",
+  "**Next product implementation:** Settings workspace redesign",
+  "Settings — NEXT",
+  "Active route implementation moves to Settings",
+  "After this post-AI documentation reconciliation is protected, branch Settings",
+  "Likely branch: `agent/settings-product-workspace-redesign`",
+];
+
 const staleFoundationNextMarkers = [
   "The next package is **frontend foundation authority**",
   "The next implementation package is **frontend foundation authority**",
@@ -247,6 +281,7 @@ const staleReleaseMarkers = [
 for (const path of authorityPaths) {
   rejectMarkers(path, staleInboxFrontierMarkers);
   rejectMarkers(path, staleAiFrontierMarkers);
+  rejectMarkers(path, staleSettingsFrontierMarkers);
   rejectMarkers(path, staleFoundationNextMarkers);
   rejectMarkers(path, staleReleaseMarkers);
 }
@@ -257,6 +292,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: PR #240 protects the AI Agents workspace on the protected application baseline; Settings is next, #221/#226/#230 remain open, Internal.14 remains Founder-rejected, and Phase 8 implementation remains frozen.",
+    "Current execution frontier verified: PR #242 protects the Settings workspace on the protected application baseline; remaining route inventory is active, #221/#226/#230 remain open, Internal.14 remains Founder-rejected, and Phase 8 implementation remains frozen.",
   );
 }
