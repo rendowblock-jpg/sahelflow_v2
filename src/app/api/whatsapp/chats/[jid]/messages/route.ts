@@ -15,6 +15,10 @@ import type { IncomingMessage } from "@/lib/whatsapp/types";
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ jid: string }> };
 
+function isOutboundDirection(direction: string): boolean {
+  return direction === "outbound" || direction === "outgoing";
+}
+
 export const GET = withErrorHandler(
   async (request: NextRequest, { params }: RouteContext) => {
     const actorContext = await requireTrustedAction("conversations.read");
@@ -52,7 +56,7 @@ export const GET = withErrorHandler(
     const rows = conversation?.messages ?? [];
     const messageIds = rows.map((message) => message.id);
     const outboundIds = rows
-      .filter((message) => message.direction === "outbound")
+      .filter((message) => isOutboundDirection(message.direction))
       .map((message) => message.id);
     const [effects, inboundEvents] = await Promise.all([
       outboundIds.length
@@ -94,7 +98,7 @@ export const GET = withErrorHandler(
 
     const messages: Array<IncomingMessage & { messageType?: string }> = rows
       .map((message) => {
-        const fromMe = message.direction === "outbound";
+        const fromMe = isOutboundDirection(message.direction);
         const effect = fromMe ? effectByMessage.get(message.id) : undefined;
         const intent = effect ? intentByKey.get(effect.effectKey) : undefined;
         const effectState = intent
