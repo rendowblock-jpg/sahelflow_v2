@@ -8,12 +8,15 @@ function source(path: string): string {
 
 describe("commerce sync settings source contract", () => {
   it("queues durable runs and renders sanitized recovery history", () => {
-    const panel = source("src/components/settings/integrations-panel.tsx");
+    const workspace = source("src/components/settings/settings-workspace.tsx");
+    const panel = source(
+      "src/components/settings/commerce-integrations-panel.tsx",
+    );
     const recovery = source(
       "src/components/settings/commerce-sync-recovery-panel.tsx",
     );
 
-    expect(panel).toContain("CommerceSyncRecoveryPanel");
+    expect(workspace).toContain("<CommerceSyncRecoveryPanel />");
     expect(panel).toContain("data?.runs");
     expect(panel).not.toContain("data.results");
     expect(panel).toContain('commerce.runtime.queueSuccess');
