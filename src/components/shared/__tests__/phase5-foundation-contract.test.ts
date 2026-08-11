@@ -86,6 +86,18 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(dashboardLayout).toContain('coarsePointer.addEventListener("change", applyControlHeight)');
   });
 
+  it("sizes portaled interaction primitives from the shared control-height authority", () => {
+    const dropdown = read("src/components/ui/dropdown-menu.tsx");
+    const select = read("src/components/ui/select.tsx");
+    const dialog = read("src/components/ui/dialog.tsx");
+    const sheet = read("src/components/ui/sheet.tsx");
+
+    expect(dropdown.match(/min-h-\(--control-height\)/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+    expect(select.match(/min-h-\(--control-height\)/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+    expect(dialog).toContain("min-h-(--control-height) min-w-(--control-height)");
+    expect(sheet).toContain("min-h-(--control-height) min-w-(--control-height)");
+  });
+
   it("keeps user-authored search direction automatic and command chrome flow-relative", () => {
     const input = read("src/components/ui/input.tsx");
     const command = read("src/components/ui/command.tsx");
