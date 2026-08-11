@@ -50,6 +50,7 @@ interface IngressEvent {
 }
 
 const RECOVERY_STATES = new Set(["retrying", "quarantined", "dead_letter"]);
+const RECOVERY_POLL_MS = 15_000;
 
 function contactFromJid(sourceId: string): string {
   return sourceId.split("@")[0]?.split(":")[0] ?? sourceId;
@@ -79,7 +80,6 @@ export function WhatsAppIngressRecoveryDock({
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const load = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
     try {
       const response = await fetch("/api/whatsapp/inbound?limit=50", {
         cache: "no-store",
@@ -101,10 +101,23 @@ export function WhatsAppIngressRecoveryDock({
     }
   }, []);
 
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    await load();
+  }, [load]);
+
   useEffect(() => {
     const controller = new AbortController();
     void load(controller.signal);
-    return () => controller.abort();
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void load(controller.signal);
+      }
+    }, RECOVERY_POLL_MS);
+    return () => {
+      controller.abort();
+      window.clearInterval(intervalId);
+    };
   }, [load]);
 
   const recoveryEvents = useMemo(
@@ -133,7 +146,7 @@ export function WhatsAppIngressRecoveryDock({
           : tr("retryQueued"),
       );
       setReasons((current) => ({ ...current, [event.id]: "" }));
-      await load();
+      await refresh();
     } catch {
       toast.error(tr("retryFailed"));
     } finally {
@@ -185,7 +198,7 @@ export function WhatsAppIngressRecoveryDock({
               type="button"
               variant="ghost"
               size="icon-sm"
-              onClick={() => void load()}
+              onClick={() => void refresh()}
               disabled={loading}
               aria-label={tr("refresh")}
             >
