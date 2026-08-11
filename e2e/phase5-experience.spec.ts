@@ -1,4 +1,10 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Page,
+  type TestInfo,
+} from "@playwright/test";
 
 const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
@@ -38,6 +44,8 @@ const RTL_ROUTES = [
   "/inbox",
   "/settings",
 ] as const;
+
+let ownerSessionCookies: Parameters<BrowserContext["addCookies"]>[0] = [];
 
 function screenshotName(prefix: string, route: string): string {
   const slug = route === "/" ? "root" : route.slice(1).replaceAll("/", "-");
@@ -162,7 +170,24 @@ async function selectLocale(
 }
 
 test.describe.serial("Phase 5 desktop experience evidence", () => {
-  test.beforeEach(async ({ page }) => {
+  // Representative experience evidence is not an authentication stress test. Log
+  // in once against the rich seeded database and reuse the authenticated cookies
+  // in each isolated browser context. The dedicated phase5-auth-entry job remains
+  // the clean fresh-install proof of the actual owner-login ceremony.
+  test.beforeAll(async ({ browser, baseURL }) => {
+    const context = await browser.newContext({ baseURL, viewport: DESKTOP });
+    const page = await context.newPage();
+    try {
+      await ensureOwnerSession(page);
+      ownerSessionCookies = await context.cookies();
+      expect(ownerSessionCookies.length).toBeGreaterThan(0);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test.beforeEach(async ({ context, page }) => {
+    await context.addCookies(ownerSessionCookies);
     await page.setViewportSize(DESKTOP);
   });
 
@@ -183,10 +208,6 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
   });
-
-  // Fresh-install authentication is proved independently by phase5-auth-entry.spec.ts
-  // in the dedicated Phase 5 auth job. Repeating that ceremony inside this seeded
-  // serial suite can trip the server attempt limiter during Playwright group retries.
 
   test("persisted compact density hydrates through one server-safe snapshot", async ({
     page,
@@ -386,10 +407,13 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
       viewport: DESKTOP,
       hasTouch: true,
     });
+    await context.addCookies(ownerSessionCookies);
     const page = await context.newPage();
 
     try {
-      await ensureOwnerSession(page);
+      await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+      await waitForHydration(page);
+      expect(page.url()).toContain("/dashboard");
       expect(
         await page.evaluate(() => window.matchMedia("(pointer: coarse)").matches),
         "touch-enabled evidence context should expose a coarse primary pointer",
