@@ -9,7 +9,6 @@ import {
   type AgentResult,
   type AgentStreamEvent,
 } from "@/lib/ai/chat/agent";
-import { withAiChatLocaleContext } from "@/lib/ai/chat/locale-context";
 import { loadRecentAiChatMessages } from "@/lib/ai/chat/session-history";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -190,13 +189,14 @@ export const POST = withErrorHandler(
             async () => {
               for await (const event of runAgentStream(
                 history,
-                withAiChatLocaleContext(input.message, input.locale),
+                input.message,
                 agentAbort.signal,
                 {
                   db,
                   shop: shopContext,
                   sourceIdentity: `ai-session:${id}`,
                 },
+                input.locale,
               )) {
                 send(event);
                 if (event.type === "text_delta") {
