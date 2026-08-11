@@ -18,12 +18,13 @@ keys or retained evidence merely to simplify development.
    [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
 5. Read [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md).
 6. Read [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
-7. Inspect live protected `main`, open PRs, issues #164/#201/#214/#221/#226/#230
-   and current Actions.
-8. Read the governing sections of PRODUCT, EXPERIENCE, ARCHITECTURE and RESEARCH.
-9. For frontend stabilization work, read the supporting archived research packet
-   `documentation/archive/research/PRE_PHASE8_FRONTEND_STABILIZATION_RESEARCH-2026-08-10.md`.
-10. Inspect exact production source and tests before trusting implementation claims.
+7. Read the full 2026-08-11 stabilization handoff:
+   `documentation/archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md`.
+8. Inspect live protected `main`, open PRs, issues #164/#221/#226/#230 and current Actions.
+9. Read the governing sections of PRODUCT, EXPERIENCE, ARCHITECTURE and RESEARCH.
+10. For frontend stabilization work, read
+    `documentation/archive/research/PRE_PHASE8_FRONTEND_STABILIZATION_RESEARCH-2026-08-10.md`.
+11. Inspect exact production source and tests before trusting implementation claims.
 
 Chat history and archived reports are context/evidence only. They never replace
 live GitHub or active documentation authority.
@@ -42,26 +43,24 @@ live GitHub or active documentation authority.
 
 A lower layer cannot silently weaken a higher one.
 
-## Verified product frontier
+## Verified product frontier at the 2026-08-11 handoff
 
-- Protected `main` before documentation PR #231:
-  `23fb2e0ee4956132fafe8dd6973be42d3cfc8032`.
-- Latest application-changing protected merge: PR #228 at
+- Protected `main`: `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — PR #234.
+- Latest application-changing protected merge: PR #234.
+- Published executable source remains
   `2d60e2e74109b6e03626a5ccdff727c029a34591`.
-- Validated Phase 6/7 source head:
-  `fa0ff6de649421c879f62364383a363b61c71bfc`.
-- Phase 5 protected source/browser baseline:
-  `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
-- Phase 5/6 protected browser/source checkpoints remain valid exact-source
-  evidence, but they are not Founder-installed AAA acceptance.
-- Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
-- Published release: `1.0.0-internal.14` / MSI `1.0.0.14`, signed run
+- Published release remains `1.0.0-internal.14` / MSI `1.0.0.14`, signed run
   `31388777098`.
-- Founder-installed Internal.14 is permanently licensed and reopen-observed;
-  Founder-accepted baseline remains Internal.5.
-- Documentation reconciliation package: PR #231; read live GitHub for merge state.
-- Retained evidence: issues #201, #214, #221, #226 and #230.
-- issue #221 remains the installed Founder visual/accessibility acceptance record.
+- Founder-installed Internal.14 is permanently licensed but **not** Founder-accepted.
+- Founder-accepted baseline remains Internal.5.
+- Phase 5 protected source/browser checkpoint remains PR #220.
+- Phase 6 source/browser + Phase 7 measurement checkpoint remains PR #223.
+- Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**.
+- Phase 8 implementation remains frozen behind the mandatory cross-phase
+  stabilization + installed Phase 6/7 + Founder-acceptance gate.
+- Open retained issues: **#221, #226, #230**.
+- Issues **#201 and #214 are closed** from stronger exact installed evidence on
+  the exact PR #234 source.
 
 Always re-fetch live truth before a write. Never use a copied SHA for destructive,
 merge or release authority without verifying it.
@@ -94,78 +93,119 @@ baseline. Do not ask the Founder to enumerate every remaining pixel-level defect
 The implementation agent owns the route/component audit, shared-root diagnosis and
 coherent repair.
 
-The screenshots and installed observations establish systemic frontend failures:
+The installed observations establish systemic frontend failures:
 
 - Arabic typography and text hierarchy are not acceptable;
 - many text/control sizes are too small for comfortable operational reading;
-- locale/direction switching is delayed/non-atomic and can leave the sidebar on
-  the stale side until restart;
+- locale/direction switching is delayed/non-atomic and can leave navigation on
+  stale server-direction state;
 - light/dark switching is glitchy and the current themes are visually cold;
-- the target is a semantic curated multi-theme architecture, not random per-page
+- the target is a semantic coordinated theme architecture, not random per-page
   color overrides;
-- motion/micro-interaction language is largely absent while reduced-motion and
-  low-resource behavior still must be preserved;
-- RTL geometry is inconsistent across the shell and content;
+- motion/micro-interaction language is weak while reduced-motion and low-resource
+  behavior still must be preserved;
+- RTL geometry is inconsistent across shell/content;
 - primary navigation is over-nested;
 - routine warnings are oversized;
 - charts are sparse/low-information;
 - Inbox, AI Agents and Settings require product-level UX redesign;
-- the same shared system must be adopted across the entire product route inventory.
+- the same shared system must be adopted across the whole product route inventory.
 
 Phase 8 implementation is frozen until the cross-phase gate in `ROADMAP.md`
 passes. Phase 8 research/read-only planning may continue when useful.
 
-## Exact next outcome and implementation order after documentation PR #231
+## Stabilization outcomes already protected
 
-### 1. CI authority hardening
+### Outcome A — CI authority hardening: CLOSED
 
-Retire the historical PR #200 installed-UI waiver and PR #207 Phase 4 closure
-override as live classifier behavior. Add tests proving a historical exception
-path cannot suppress Windows/native/installed lanes selected by consequential
-current source. Keep this package bounded; do not mix unrelated
-`prisma/schema.prisma` comment cleanup into it.
+PR #232 / `876b0acdd2528df52ec106c22f231edf0b590739` retired the historical
+PR #200 installed-UI waiver and PR #207 Phase 4 closure override as live evidence
+bypasses and added anti-bypass regression authority.
 
-### 2. License activation continuity
+### Outcome B — license activation continuity: CLOSED
 
-Repair the demonstrated valid-entitlement transition so successful permanent or
-trial activation re-renders the authenticated server tree immediately without
-close/reopen. Preserve client projection refresh and server license authority;
-cover both paths with regression evidence.
+PR #233 / `b91fd2a9008f529a5df3000d99bf426094f9daa9` repairs successful
+permanent/trial activation so the server-authorized dashboard tree refreshes
+without requiring close/reopen.
 
-### 3. Resilient customer trial
+### Outcome C — resilient customer trial source: PROTECTED; live certification OPEN
 
-Issue #230 remains launch-blocking for customer trial onboarding. Require a
-SahelFlow-owned production route, independent recovery/failover strategy, bounded
-network diagnostics/timeouts and representative Algerian-network evidence.
-Permanent Founder offline activation is not trial-service certification.
+PR #234 / `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` protects bounded
+primary/recovery trial ingress, cryptographically authoritative response selection,
+privacy-safe diagnostics, owned-host release constraints, Worker readiness and
+blocking tests without weakening local license authority.
 
-### 4. Frontend foundation reconnaissance/research
+Issue #230 remains **open P1**. Source/CI does not prove the required real
+SahelFlow-owned production DNS, independent recovery failure path, protected
+production bindings, representative Algerian fixed/mobile reachability or exact
+signed installed customer trial/recovery journey. GitHub auto-closed #230 at the
+#234 merge timestamp and it was intentionally reopened because the issue forbids
+CI-only closure.
 
-Before broad styling, inspect the exact CSS/Tailwind/tokens/fonts/component shell,
-locale/theme stores and hydration boundaries; inventory physical left/right
-assumptions, typography/density, charts and the data/actions behind Inbox, AI and
-Settings. Compare current primary guidance and a small best-in-class operational
-benchmark set, then freeze SahelFlow-specific acceptance criteria.
+### Historical retained evidence now closed
 
-### 5. Shared frontend foundation + production adoption
+- #201: exact #234 installed MSI passed launch/reopen and authenticated hydrated
+  WebView UI proof twice; PR #232 had already retired the PR #200 waiver.
+- #214: exact #234 installed MSI passed replacement-install backup → interruption
+  → rollback → committed restore, owner re-enrollment, protected-customer blind
+  index, protected-secret readback, key rewrap, identity/session non-cloning and
+  committed receipt checks; PR #232 had already retired the PR #207 override.
 
-Build and adopt one coherent system for:
+Do not reopen those issues generically. Reopen only from a new concrete defect or
+contradictory evidence.
 
-- Arabic/Latin typography and readable density;
-- semantic tokens, excellent light/dark foundations and coordinated theme/accent
-  families;
+## Exact NEXT outcome — frontend foundation authority
+
+Start from then-current protected `main` only after confirming there is no other
+active implementation PR/agent.
+
+Do **not** start by restyling screens. Finish shared-root reconnaissance and freeze
+one coherent foundation first.
+
+### Exact locale/direction root already identified
+
+- `src/stores/ui-store.ts` treats `sahelflow-locale` cookie as locale authority and
+  updates the client store immediately;
+- `src/hooks/use-i18n.ts` uses the client store after mount and mutates `<html
+  lang>` / `<html dir>` in an effect;
+- `src/app/(dashboard)/layout.tsx` derives locale/direction on the server and
+  passes `serverDir` into the client shell;
+- `src/components/layout/sidebar.tsx` derives `isRtl` from the server prop.
+
+A client locale switch can therefore update text/document direction while the
+sidebar still holds stale server-direction state until the server tree refreshes.
+This matches the installed wrong-side/stale-direction symptom. Repair locale,
+document direction and server-derived shell direction as one coherent transition;
+do not layer more route-local RTL workarounds.
+
+### Theme/CSS reconnaissance already identified
+
+`src/app/layout.tsx` contains the pre-hydration theme script and
+`src/components/theme-provider.tsx` contains the custom theme provider, both using
+`localStorage('theme')`. Inventory all other theme mutators/selectors before
+freezing one authority.
+
+`src/app/globals.css` contains accumulated older animation/status/hover rules plus
+a later “Foundation v2” spacing/type layer. Treat this as accumulated history to
+normalize, not permission to append another disconnected design system.
+
+### Foundation contract to freeze before broad adoption
+
+- deliberate Arabic/Latin typography and readable density;
+- semantic design tokens for surfaces, spacing, borders, radius/elevation,
+  semantic status, focus, charts and motion;
+- excellent light/dark foundations plus coordinated theme/accent families;
 - restrained interruptible reduced-motion-safe motion;
 - atomic AR/FR/EN + LTR/RTL transitions;
 - logical flow-relative RTL/mixed-direction primitives;
-- shell, top bar, shop/workspace context and shallow task-shaped sidebar;
+- shell, top bar, shop/workspace context and shallow task-shaped navigation;
 - notices/warnings, tables/lists, forms, KPI/status, charts, overlays, loading,
   empty, degraded, conflict and recovery patterns.
 
-A new foundation is not complete as a component showcase. It must be adopted by
-real product verticals immediately or in the directly following dependency
-package.
+A foundation is not complete as a component showcase. It must be adopted in real
+production routes immediately or in the directly following dependency package.
 
-### 6. Major workspace + route redesign
+## Production adoption order after foundation
 
 Redesign Inbox, AI Agents and Settings around actual seller jobs, real
 server-authorized data/actions, permission boundaries and recovery. Then audit and
@@ -176,32 +216,20 @@ setup/login/license and remaining administration.
 Do not invent unsupported backend capability. Do not expose raw implementation
 traces as product UX. Do not patch screenshots one margin at a time.
 
-### 7. Installed Phase 6/7 evidence + Founder acceptance
+## Installed Phase 6/7 + Founder acceptance after frontend adoption
 
-On one coherent repaired signed candidate, verify representative AR/FR/EN,
-Arabic joining/reading, LTR/RTL, theme/locale switching, 1366×768/zoom,
-keyboard/focus/semantics and reduced motion. Then measure/certify startup,
-navigation, indexed search, ordinary mutation and sustained resources under issue
-#226.
+On one coherent repaired signed candidate:
 
-No applicable P0/P1 may remain. Record explicit Founder accept/reject. Only after
-that may Phase 8 implementation begin.
+- verify representative AR/FR/EN, Arabic joining/reading, LTR/RTL,
+  theme/locale switching, 1366×768/zoom, keyboard/focus/semantics and reduced
+  motion under #221;
+- measure/certify startup, navigation, indexed search, ordinary mutation and
+  sustained resources under #226;
+- complete live #230 production/network trial evidence;
+- record explicit Founder accept/reject.
 
-Issue #214 remains an explicit Stable-level replacement-install evidence non-claim
-until closed or superseded by stronger exact-source proof.
-
-## Internal.14 truth and exception
-
-PR #228 is merged and Internal.14 is public. Signed run `31388777098` passed exact
-source, signing, staged runtime, MSI installation, close/reopen, authenticated UI,
-updater metadata, tag binding and publication.
-
-The PR #228 installed matrix also proved committed exact two-shop restore. The
-CI-only post-restore page-level client did not prove owner re-enrollment or
-protected-data readback. FD-031 records the one-time Founder bypass; issue #214
-retains the missing evidence. Never describe it as passed.
-
-Do not reopen PR #228, rerun its jobs or dispatch another Internal.14 release.
+No applicable P0/P1 may remain. Only after the Founder accepts the coherent
+whole-product candidate may Phase 8 implementation begin.
 
 ## Research-first gate
 
@@ -334,3 +362,6 @@ Public Stable additionally requires representative seller beta, live provider
 certification, independent security/privacy and Law 18-07 review, restore and
 incident drills, compatibility evidence, rollout readiness and explicit Founder
 promotion.
+
+Internal.14 is not Founder-accepted. Founder-accepted baseline remains Internal.5.
+No Beta or Stable claim exists.
