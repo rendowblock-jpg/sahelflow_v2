@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  use,
   useCallback,
   useEffect,
   useMemo,
@@ -10,25 +9,12 @@ import {
 
 import {
   getDirection,
-  loadTranslations,
-  LOCALES,
+  getTranslations,
   type Locale,
 } from "@/lib/i18n";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 import { useServerLocale } from "@/lib/i18n/server-locale-context";
 import { useUIStore } from "@/stores/ui-store";
-
-type Translations = Record<string, string>;
-const translationPromiseCache = new Map<Locale, Promise<Translations>>();
-
-function getTranslationPromise(locale: Locale): Promise<Translations> {
-  let promise = translationPromiseCache.get(locale);
-  if (!promise) {
-    promise = loadTranslations(locale);
-    translationPromiseCache.set(locale, promise);
-  }
-  return promise;
-}
 
 function useIsMounted(): boolean {
   return useSyncExternalStore(
@@ -44,19 +30,11 @@ export function useI18n() {
   const setLocaleStore = useUIStore((state) => state.setLocale);
   const mounted = useIsMounted();
   const locale = mounted ? storeLocale : serverLocale;
-  const translations = use(getTranslationPromise(locale));
 
-  // SahelFlow ships only three compact locale bundles. Warm inactive bundles as
-  // an optimization, but never rely on warming for correctness: setLocale below
-  // explicitly awaits the requested bundle before language/direction can commit.
-  useEffect(() => {
-    for (const candidate of LOCALES) {
-      if (candidate === locale) continue;
-      void getTranslationPromise(candidate).catch(() => {
-        translationPromiseCache.delete(candidate);
-      });
-    }
-  }, [locale]);
+  // All three compact product bundles are synchronously available. A language
+  // switch therefore cannot suspend between committing direction and rendering
+  // the matching copy, even if the user switches immediately after hydration.
+  const translations = getTranslations(locale);
 
   // The store applies lang/dir synchronously during an interactive switch. This
   // effect is an idempotent reconciliation boundary for initial hydration and any
@@ -93,18 +71,8 @@ export function useI18n() {
   );
 
   const setLocale = useCallback(
-    async (newLocale: Locale): Promise<void> => {
+    (newLocale: Locale) => {
       if (newLocale === locale) return;
-      try {
-        await getTranslationPromise(newLocale);
-      } catch (error) {
-        // Do not poison a future retry with a rejected cached import.
-        translationPromiseCache.delete(newLocale);
-        throw error;
-      }
-      // Only now commit cookie, <html lang/dir> and the reactive client locale.
-      // React can render the target bundle immediately, so old copy is never
-      // displayed under the new directional geometry because a bundle suspended.
       setLocaleStore(newLocale);
     },
     [locale, setLocaleStore],
