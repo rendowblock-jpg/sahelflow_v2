@@ -322,9 +322,10 @@ html[data-theme-switching="true"] :is(
   }
 
   /* Compact visual variants may stay compact on precision pointers, but every
-   * coarse-pointer button must retain the shared interaction-target floor. This
-   * also covers triggers rendered outside the shell through Radix Slot/Portal. */
-  [data-slot="button"]:is(
+   * coarse-pointer Button must retain the shared interaction-target floor. The
+   * stable marker survives Radix `asChild` slot composition even when a trigger
+   * replaces the ordinary `data-slot="button"` value. */
+  [data-sahelflow-button]:is(
     [data-size="xs"],
     [data-size="sm"],
     [data-size="icon-xs"],
@@ -333,7 +334,7 @@ html[data-theme-switching="true"] :is(
     min-height: var(--control-height);
   }
 
-  [data-slot="button"]:is([data-size="icon-xs"], [data-size="icon-sm"]) {
+  [data-sahelflow-button]:is([data-size="icon-xs"], [data-size="icon-sm"]) {
     min-width: var(--control-height);
   }
 }
