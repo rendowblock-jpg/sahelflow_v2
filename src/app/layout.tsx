@@ -4,10 +4,10 @@ import { Inter, Noto_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 import "./phase5.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { UpdateChecker } from "@/components/updater/update-checker";
+import { AppToaster } from "@/components/shared/app-toaster";
 import { getDirection, type Locale } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n-server";
 import { ServerLocaleProvider } from "@/lib/i18n/server-locale-context";
@@ -78,7 +78,7 @@ export default async function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'&&t!=='system')t='dark';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.style.colorScheme=r;}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'&&t!=='system')t='dark';var p=localStorage.getItem('sahelflow-theme-preset');if(p!=='atlas'&&p!=='oasis'&&p!=='dune')p='sahel';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.dataset.themePreset=p;e.style.colorScheme=r;}catch(e){}})();`,
           }}
         />
       </head>
@@ -92,12 +92,7 @@ export default async function RootLayout({
                 {children}
                 <ServiceWorkerRegister />
                 <UpdateChecker />
-                <Toaster
-                  position={dir === "rtl" ? "bottom-left" : "bottom-right"}
-                  richColors
-                  closeButton
-                  toastOptions={{ className: "shadow-popover" }}
-                />
+                <AppToaster />
               </TooltipProvider>
             </ThemeProvider>
           </ServerLocaleProvider>
