@@ -8,97 +8,98 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 ## Current repository truth
 
-- Protected `main` at the 2026-08-11 reconciliation: `bbfdc92e7b1845cd7cc4e2fd04c7ae5a2c7ab647` — PR #234.
-- Latest application-changing protected merge: **PR #234 — resilient production trial transport source architecture**.
+- Protected `main` at this 2026-08-11 handoff: `04adb20fb5846499039eda61a9b765deb9c622e6` — PR #236.
+- Latest application-changing protected merge: **PR #236 — shared frontend foundation authority**.
 - Published executable remains **Internal.14**, application source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed publication run `31388777098`.
-- **Published release: `1.0.0-internal.14`** / MSI `1.0.0.14`.
-- Phase 5 protected source/browser checkpoint remains PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`; Phase 6 source/browser + Phase 7 measurement checkpoint remains PR #223.
-- Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
-- Founder-installed release: **Internal.14**, permanently licensed.
-- Founder-accepted baseline remains **Internal.5**; **Founder acceptance remains open**.
-- Phase 8 implementation remains frozen behind the mandatory pre-Phase-8 stabilization + Founder-acceptance gate.
+- Published release remains **`1.0.0-internal.14`** / MSI `1.0.0.14`.
+- Founder-installed release remains **Internal.14**; Founder-accepted baseline remains **Internal.5**.
+- Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**.
+- Open retained issues remain **#221, #226 and #230**.
+- Phase 8 implementation remains frozen behind whole-product frontend adoption,
+  installed Phase 6/7 closure, live #230 certification and explicit Founder acceptance.
 
-Always re-read live protected `main`, open PRs/issues and current Actions before
-implementation. Documentation-only commits may advance `main` without changing the
-published executable source.
+Documentation-only commits may advance protected `main` without changing the
+published executable or the latest application-changing protected merge.
 
-## Phase 5 closure and Founder-installed reconciliation
+## Protected frontend foundation
 
-The Phase 5 closure checkpoint remains the protected source/browser evidence from
-PR #220. Phase 6/7 source/browser evidence remains protected through PR #223.
-Those checkpoints remain valid for what their exact heads proved, but the later
-Founder-installed Internal.14 use is not whole-product acceptance.
+PR #236 protects the shared source/browser foundation required by the
+Founder-installed Internal.14 rejection:
 
-The Founder installed and used Internal.14 on the T470 and explicitly values the
-backend/engine while rejecting the current frontend as the whole-product quality
-baseline.
+- application-oriented Noto Sans Arabic paired with Inter;
+- atomic server-tree locale + document-direction commits across AR/FR/EN;
+- one theme authority with coordinated Sahel/Atlas/Oasis/Dune accent families;
+- one hydration-safe persisted density authority;
+- shallow primary navigation with only genuine subflows visually nested;
+- compact contextual notices instead of dominant routine warnings;
+- governed chart, motion, mixed-direction and focus/accessibility primitives;
+- resilient preference storage behavior;
+- independent coarse-pointer touch-target authority across ordinary, slotted,
+  portaled and command-palette controls.
 
-The installed problems are systemic rather than isolated page polish: Arabic
-typography, overly small text/controls, non-atomic locale/RTL switching, stale or
-wrong-side navigation, glitchy/cold themes, weak motion language, inconsistent RTL
-geometry, over-nested navigation, oversized warnings, low-information charts and
-unacceptable Inbox, AI Agents and Settings workspaces. The implementation team owns
-the broader route/component audit instead of requiring the Founder to report every
-small UI defect manually.
+The exact frozen #236 head `7d0b01a9f1989ad7e2cae25c3b0d39d6e92a64d8`
+passed CI `31497523385`, Phase 5 Experience `31497523052`, Phase 6–7 Completion
+`31497523030`, then received a clean fresh Codex review with zero unresolved
+material review threads before squash merge to `04adb20fb5846499039eda61a9b765deb9c622e6`.
 
-## Stabilization work already protected
+This is **source/browser foundation evidence**, not installed Founder acceptance.
+Issues #221/#226/#230 therefore remain open.
 
-1. **PR #231** records the binding pre-Phase-8 Founder stabilization program.
-2. **PR #232** retires historical PR #200/#207 CI exception mechanisms as live bypasses and adds anti-bypass regression authority.
-3. **PR #233** fixes the successful-license-activation blank-workspace/restart defect.
-4. **PR #234** protects bounded primary/recovery customer-trial ingress, cryptographic response authority, owned-host release constraints, Worker readiness/diagnostics and blocking Worker coverage.
+## Active implementation frontier — Inbox
 
-PR #234 exact installed evidence also closed two retained historical gaps: hydrated
-WebView UI proof (#201) and replacement-install recovery certification (#214).
+The only active implementation PR at this handoff is **PR #237 —
+`feat(inbox): rebuild operational workspace`**, branch
+`agent/inbox-product-workspace-redesign`, based on protected #236.
 
-The historical continuity set was **issues #201, #214, #221, #226 and #230**.
-Current live state is different: #201 and #214 are closed; #221, #226 and #230
-remain open.
+Exact handoff head: `cf84491cfd7613728a86dc9157da3fc4631e9105`.
+The PR is open and mergeable but **not green and must not be merged yet**.
 
-## What remains open
+The package changes Inbox from a provider/demo-mode screen into a task-shaped
+operational workspace where the shop database remains visible history/workflow
+authority and WhatsApp connection is a separate transport state. It introduces
+All/Unread/Open/Pending/Resolved queues, a durable thread/composer, contextual
+workflow/team rail, bounded pairing/recovery surfaces and explicit responsive/RTL
+behavior while preserving provider ingress, outbox, assignment, collaboration,
+permission and message-extraction authority.
 
-**#230 remains a P1 external-certification blocker.** PR #234 is the source half;
-customer trial is not production-certified until real SahelFlow-owned DNS, a
-sufficiently independent recovery path, protected production bindings,
-representative Algerian fixed/mobile reachability and an exact signed installed
-trial/recovery journey are proven. GitHub auto-closed #230 at PR #234 merge time;
-it was intentionally reopened because its acceptance rule forbids CI-only closure.
+Current exact-head evidence has already isolated a small, concrete repair batch:
+three ESLint `react-hooks/set-state-in-effect` errors, one Phase 5 Inbox evidence
+sequencing error, one Phase 6 static hard-coded-copy failure, and a Phase 7
+controlled-browser route-p95 regression/tripwire failure. Exact details and run/job
+IDs are retained in
+[`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
 
-**#221** retains the repaired installed Founder Phase 5/6 visual/accessibility
-acceptance checkpoint. **#226** retains installed Phase 7 performance/reliability
-certification; startup must be measured before optimization.
+The next session resumes **PR #237**, fixes that batch, completes coherent Inbox
+audit/evidence, then performs one fresh exact-head adversarial review and merges
+only when all selected gates are green. **AI Agents follows Inbox; Settings follows
+AI Agents.**
 
-## Exact next implementation dependency
+## Stabilization work protected before #236
 
-The next package is **frontend foundation authority**, not random screen-by-screen
-restyling.
+- **PR #231** records the binding pre-Phase-8 Founder stabilization program.
+- **PR #232** retires historical PR #200/#207 CI exception mechanisms as live bypasses.
+- **PR #233** fixes successful-license-activation blank-workspace/restart behavior.
+- **PR #234** protects resilient primary/recovery customer-trial source architecture.
+- Exact #234 installed evidence satisfied and closed historical issues **#201** and **#214**.
 
-First audit and freeze one shared system for Arabic/Latin typography and density,
-semantic design tokens, coordinated themes, reduced-motion-safe motion, atomic
-locale/direction switching, logical RTL/mixed-direction geometry, application
-shell/navigation and shared operational components/states. Then adopt those roots
-across real production routes, prioritizing Inbox, AI Agents and Settings and then
-the complete route inventory.
-
-After the frontend is coherent, rerun installed Phase 6 evidence, measure/fix Phase
-7 under #226, complete live #230 trial certification, build one signed candidate
-and obtain explicit Founder whole-product acceptance. Only then may Phase 8
-implementation begin.
+Issue **#230** remains an external/live P1 certification boundary: source/CI cannot
+prove the required SahelFlow-owned production DNS, independent recovery path,
+protected production bindings, representative Algerian fixed/mobile reachability
+or exact signed installed customer trial/recovery journey.
 
 ## Documentation and session resume
 
-Start with [`AGENTS.md`](AGENTS.md), then read the active authority chain in
-[`documentation/README.md`](documentation/README.md). The complete resumable
-session context—including the Founder-installed problem register, the seven deep
-audit findings and their dispositions, exact #231–#234 evidence, and the already
-identified frontend locale/theme/CSS roots—is owned by
-[`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md)
-and reconciled against [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md)
+Start with [`AGENTS.md`](AGENTS.md), then
+[`documentation/README.md`](documentation/README.md). The single durable session
+resume owner is
+[`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md),
+reconciled against
+[`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md)
 and [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
 
 Supporting primary-source frontend research remains under
-`documentation/archive/research/`. Archived research is evidence/context, not a
-replacement authority or a second handoff system.
+`documentation/archive/research/`. Archived material is evidence/context, never a
+parallel authority or handoff system.
 
-No Beta or Stable claim exists. Do not rerun the old PR #228/Internal.14
+No Beta or Stable claim exists. Do not rerun the historical PR #228/Internal.14
 publication workflow.
