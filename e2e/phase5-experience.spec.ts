@@ -95,9 +95,11 @@ async function loginOwner(page: Page) {
   await expect(submit).toBeEnabled();
   await submit.click();
   await page.waitForURL((url) => !url.pathname.includes("/login"), {
-    // Dev-mode route compilation can be slow on shared Actions runners; this is
-    // transport/evidence slack, not a product startup-performance allowance.
-    timeout: 60_000,
+    // Dev-mode route compilation can be slow on shared Actions runners; waiting
+    // only for navigation commit proves auth transition without treating asset
+    // load latency as a product login failure.
+    waitUntil: "commit",
+    timeout: 90_000,
   });
 }
 
@@ -421,9 +423,12 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
 
       await page.goto("/accounting", { waitUntil: "domcontentloaded" });
       await waitForHydration(page);
-      const dialogTrigger = page.locator('[data-slot="dialog-trigger"]').first();
-      await expect(dialogTrigger).toBeVisible();
-      await dialogTrigger.click();
+      const expenseDialogTrigger = page.getByRole("button", {
+        name: "Ajouter une dépense",
+        exact: true,
+      });
+      await expect(expenseDialogTrigger).toBeVisible();
+      await expenseDialogTrigger.click();
       await assertTargetFloor(
         page.locator('[data-slot="dialog-close"]').first(),
         "portaled dialog close control",
