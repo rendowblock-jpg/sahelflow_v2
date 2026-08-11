@@ -35,6 +35,12 @@ export interface NavigationItem {
   href: string;
   icon: LucideIcon;
   keywords: readonly string[];
+  /**
+   * Keep an item visually subordinate only when it is genuinely part of the
+   * parent workflow. Other historical `children` are promoted to visible
+   * sidebar destinations while remaining in the same canonical registry.
+   */
+  sidebarNested?: boolean;
 }
 
 export interface NavigationDomain extends NavigationItem {
@@ -48,17 +54,17 @@ function item(
   href: string,
   icon: LucideIcon,
   keywords: readonly string[] = [],
+  sidebarNested = false,
 ): NavigationItem {
-  return { id, labelKey, href, icon, keywords };
+  return { id, labelKey, href, icon, keywords, sidebarNested };
 }
 
 /**
- * Phase 5 application information architecture.
+ * Canonical application information architecture.
  *
- * Top-level navigation represents durable business domains/jobs. Secondary
- * routes appear contextually inside the active domain instead of forming one
- * long CRUD/module list. This registry is also consumed by the command palette,
- * so navigation destinations have one source of truth.
+ * Business-domain relationships remain available to command/search and route
+ * context, but the desktop sidebar is intentionally shallow: seller destinations
+ * are directly visible unless a route is genuinely subordinate to a parent job.
  */
 export const navigationDomains: readonly NavigationDomain[] = [
   {
@@ -81,6 +87,7 @@ export const navigationDomains: readonly NavigationDomain[] = [
         "/orders/confirmation-queue",
         Clock,
         ["confirm", "queue", "sla"],
+        true,
       ),
       item("products", "nav.products", "/products", Package, [
         "catalog",
@@ -136,6 +143,7 @@ export const navigationDomains: readonly NavigationDomain[] = [
         "/accounting/cod-reconciliation",
         DollarSign,
         ["cod", "cash", "remittance", "reconcile"],
+        true,
       ),
     ],
   },
@@ -236,9 +244,9 @@ export function flattenNavigationItems(): NavigationItem[] {
 }
 
 /**
- * Compatibility exports for any remaining callers from the pre-Phase-5 shell.
- * They are derived from the canonical registry and therefore cannot drift into a
- * second navigation authority.
+ * Compatibility exports for remaining callers from the pre-Phase-5 shell. They
+ * are derived from the canonical registry and therefore cannot become a second
+ * navigation authority.
  */
 export interface NavItem extends NavigationItem {
   group: "operations" | "insights" | "administration";

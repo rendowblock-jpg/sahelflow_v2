@@ -1,80 +1,194 @@
 "use client";
 
 /**
- * ThemeProvider — minimal, hydration-safe theme provider.
+ * ThemeProvider — hydration-safe SahelFlow appearance authority.
  *
- * Replaces next-themes (which renders a <script> inside a React component,
- * triggering a React 19 / Next.js 16 Turbopack error:
- *   "Encountered a script tag while rendering React component.")
- *
- * The FOUC-prevention script is in src/app/layout.tsx (rendered as a raw
- * <script> in the server HTML head — the App Router pattern).
- *
- * This provider:
- *   1. Reads the theme from localStorage via useSyncExternalStore (no
- *      setState-in-effect lint error, SSR-safe)
- *   2. Provides useTheme() with the same API as next-themes:
- *      { theme, resolvedTheme, setTheme, themes }
- *   3. Persists to localStorage('theme') + toggles the 'dark' class on <html>
- *   4. Listens to system color-scheme changes when theme === 'system'
- *
- * Default theme: dark (matches the app's dark-first design).
+ * The pre-hydration script lives in src/app/layout.tsx. This provider owns every
+ * interactive color-mode and coordinated theme-preset read/write after hydration;
+ * product surfaces must import `useTheme` from this module rather than creating a
+ * second next-themes context or writing appearance preferences directly.
  */
 
-import { createContext, useContext, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 
 export interface ThemeProviderProps {
   children: React.ReactNode;
-  attribute?: string; // accepted for compat (always "class")
-  defaultTheme?: string; // "dark" | "light" | "system"
+  attribute?: string; // accepted for compatibility; SahelFlow uses class authority
+  defaultTheme?: string;
   enableSystem?: boolean;
   disableTransitionOnChange?: boolean;
 }
 
+export type ThemeMode = "light" | "dark" | "system";
+export type ThemePreset = "sahel" | "atlas" | "oasis" | "dune";
+type ResolvedTheme = "light" | "dark";
+
 interface ThemeContextValue {
-  theme: string;
-  resolvedTheme: string;
+  theme: ThemeMode;
+  resolvedTheme: ResolvedTheme;
+  preset: ThemePreset;
   setTheme: (theme: string) => void;
-  themes: string[];
+  setPreset: (preset: ThemePreset) => void;
+  themes: ThemeMode[];
+  presets: ThemePreset[];
 }
 
+const STORAGE_KEY = "theme";
+const PRESET_STORAGE_KEY = "sahelflow-theme-preset";
+const THEME_CHANGE_EVENT = "sahelflow:theme-change";
+const DEFAULT_THEME: ThemeMode = "dark";
+const DEFAULT_PRESET: ThemePreset = "sahel";
+const PRESETS: ThemePreset[] = ["sahel", "atlas", "oasis", "dune"];
+let transitionTimer: number | undefined;
+
+// A WebView can deny/quota-fail localStorage while the application is otherwise
+// healthy. These bounded in-memory overrides keep context state and the DOM under
+// one authority for the current session when persistence is unavailable. A later
+// successful write or an external storage event releases the relevant override.
+let runtimeThemeOverride: ThemeMode | null = null;
+let runtimePresetOverride: ThemePreset | null = null;
+
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "dark",
-  resolvedTheme: "dark",
+  theme: DEFAULT_THEME,
+  resolvedTheme: DEFAULT_THEME,
+  preset: DEFAULT_PRESET,
   setTheme: () => {},
+  setPreset: () => {},
   themes: ["light", "dark", "system"],
+  presets: PRESETS,
 });
 
-const STORAGE_KEY = "theme";
-const DEFAULT_THEME = "dark";
+function normalizeTheme(value: string | null | undefined): ThemeMode {
+  return value === "light" || value === "dark" || value === "system"
+    ? value
+    : DEFAULT_THEME;
+}
 
-// ── localStorage external store (for useSyncExternalStore) ───────────────────
+function normalizePreset(value: string | null | undefined): ThemePreset {
+  return value === "atlas" || value === "oasis" || value === "dune"
+    ? value
+    : DEFAULT_PRESET;
+}
+
+function resolveTheme(theme: ThemeMode, systemDark: boolean): ResolvedTheme {
+  return theme === "system" ? (systemDark ? "dark" : "light") : theme;
+}
+
+function beginAppearanceTransition(): void {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const root = document.documentElement;
+  root.dataset.themeSwitching = "true";
+  if (transitionTimer !== undefined) window.clearTimeout(transitionTimer);
+  transitionTimer = window.setTimeout(() => {
+    delete root.dataset.themeSwitching;
+    transitionTimer = undefined;
+  }, 220);
+}
+
+function applyAppearance(
+  resolvedTheme: ResolvedTheme,
+  preset: ThemePreset,
+): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.classList.remove("light", "dark");
+  root.classList.add(resolvedTheme);
+  root.dataset.themePreset = preset;
+  root.style.colorScheme = resolvedTheme;
+}
+
+// ── persisted + in-memory appearance external stores ────────────────────────
 
 function subscribe(callback: () => void): () => void {
   if (typeof window === "undefined") return () => {};
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
+
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY || event.key === null) {
+      runtimeThemeOverride = null;
+    }
+    if (event.key === PRESET_STORAGE_KEY || event.key === null) {
+      runtimePresetOverride = null;
+    }
+    callback();
+  };
+  const onLocalChange = () => callback();
+
+  window.addEventListener("storage", onStorage);
+  window.addEventListener(THEME_CHANGE_EVENT, onLocalChange);
+  return () => {
+    window.removeEventListener("storage", onStorage);
+    window.removeEventListener(THEME_CHANGE_EVENT, onLocalChange);
+  };
 }
 
-function getSnapshot(): string {
+function getThemeSnapshot(): ThemeMode {
+  if (runtimeThemeOverride !== null) return runtimeThemeOverride;
   try {
-    return localStorage.getItem(STORAGE_KEY) || DEFAULT_THEME;
+    return normalizeTheme(localStorage.getItem(STORAGE_KEY));
   } catch {
     return DEFAULT_THEME;
   }
 }
 
-function getServerSnapshot(): string {
+function getThemeServerSnapshot(): ThemeMode {
   return DEFAULT_THEME;
+}
+
+function getPresetSnapshot(): ThemePreset {
+  if (runtimePresetOverride !== null) return runtimePresetOverride;
+  try {
+    return normalizePreset(localStorage.getItem(PRESET_STORAGE_KEY));
+  } catch {
+    return DEFAULT_PRESET;
+  }
+}
+
+function getPresetServerSnapshot(): ThemePreset {
+  return DEFAULT_PRESET;
+}
+
+function persistTheme(theme: ThemeMode): void {
+  runtimeThemeOverride = theme;
+  try {
+    localStorage.setItem(STORAGE_KEY, theme);
+    runtimeThemeOverride = null;
+  } catch {
+    // Keep the in-memory override. Persistence is optional; coherent live state is not.
+  }
+}
+
+function persistPreset(preset: ThemePreset): void {
+  runtimePresetOverride = preset;
+  try {
+    localStorage.setItem(PRESET_STORAGE_KEY, preset);
+    runtimePresetOverride = null;
+  } catch {
+    // Keep the in-memory override. Persistence is optional; coherent live state is not.
+  }
+}
+
+function notifyAppearanceChanged(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
+  }
 }
 
 // ── System theme external store ──────────────────────────────────────────────
 
 function subscribeSystem(callback: () => void): () => void {
   if (typeof window === "undefined") return () => {};
-  const mql = window.matchMedia("(prefers-color-scheme: dark)");
-  mql.addEventListener("change", callback);
-  return () => mql.removeEventListener("change", callback);
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
 }
 
 function getSystemSnapshot(): boolean {
@@ -83,7 +197,7 @@ function getSystemSnapshot(): boolean {
 }
 
 function getSystemServerSnapshot(): boolean {
-  return true; // default dark
+  return true;
 }
 
 export function ThemeProvider({
@@ -91,49 +205,80 @@ export function ThemeProvider({
   defaultTheme = DEFAULT_THEME,
   enableSystem = true,
 }: ThemeProviderProps) {
-  // Read theme from localStorage via useSyncExternalStore (SSR-safe, no
-  // setState-in-effect lint error). Server snapshot = defaultTheme (matches
-  // the FOUC script's default, so no hydration mismatch).
-  const storedTheme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const systemDark = useSyncExternalStore(subscribeSystem, getSystemSnapshot, getSystemServerSnapshot);
+  const storedTheme = useSyncExternalStore(
+    subscribe,
+    getThemeSnapshot,
+    getThemeServerSnapshot,
+  );
+  const preset = useSyncExternalStore(
+    subscribe,
+    getPresetSnapshot,
+    getPresetServerSnapshot,
+  );
+  const systemDark = useSyncExternalStore(
+    subscribeSystem,
+    getSystemSnapshot,
+    getSystemServerSnapshot,
+  );
 
-  const theme = storedTheme || defaultTheme;
-  const resolvedTheme = theme === "system" ? (systemDark ? "dark" : "light") : theme;
+  const theme = storedTheme || normalizeTheme(defaultTheme);
+  const resolvedTheme = resolveTheme(theme, systemDark);
 
-  // Apply theme to <html> whenever it changes
+  // Reconcile initial hydration, preset storage events and OS scheme changes.
   useEffect(() => {
-    if (typeof document === "undefined") return;
-    const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(resolvedTheme);
-    root.style.colorScheme = resolvedTheme;
-  }, [resolvedTheme]);
+    applyAppearance(resolvedTheme, preset);
+  }, [resolvedTheme, preset]);
 
   const setTheme = useCallback((newTheme: string) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, newTheme);
-      // Dispatch a storage event so useSyncExternalStore picks it up
-      // (the 'storage' event only fires in OTHER windows, not the current one)
-      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: newTheme }));
-    } catch {
-      // ignore
-    }
+    const normalized = normalizeTheme(newTheme);
+    const systemPrefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
+
+    beginAppearanceTransition();
+    persistTheme(normalized);
+    applyAppearance(
+      resolveTheme(normalized, systemPrefersDark),
+      getPresetSnapshot(),
+    );
+    // Always notify the external store, even when localStorage persistence failed.
+    notifyAppearanceChanged();
+  }, []);
+
+  const setPreset = useCallback((newPreset: ThemePreset) => {
+    const normalized = normalizePreset(newPreset);
+    const systemPrefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
+
+    beginAppearanceTransition();
+    persistPreset(normalized);
+    applyAppearance(
+      resolveTheme(getThemeSnapshot(), systemPrefersDark),
+      normalized,
+    );
+    // Always notify the external store, even when localStorage persistence failed.
+    notifyAppearanceChanged();
   }, []);
 
   const value = useMemo<ThemeContextValue>(
     () => ({
       theme,
       resolvedTheme,
+      preset,
       setTheme,
-      themes: enableSystem ? ["light", "dark", "system"] : ["light", "dark"],
+      setPreset,
+      themes: enableSystem
+        ? ["light", "dark", "system"]
+        : ["light", "dark"],
+      presets: PRESETS,
     }),
-    [theme, resolvedTheme, setTheme, enableSystem],
+    [theme, resolvedTheme, preset, setTheme, setPreset, enableSystem],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
-/** useTheme — same API as next-themes (theme, resolvedTheme, setTheme, themes). */
 export function useTheme() {
   return useContext(ThemeContext);
 }

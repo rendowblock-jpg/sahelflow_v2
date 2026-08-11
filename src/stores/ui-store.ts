@@ -1,23 +1,65 @@
 /**
- * UI store — client-side UI state (locale, sidebar, theme).
+ * UI store — client-side UI state (committed locale mirror, sidebar, density).
  * Persisted to localStorage via Zustand persist middleware.
- * Also syncs locale to a cookie for server components.
  *
- * HYDRATION-SAFE DESIGN (the definitive fix):
- * The locale is NEVER persisted to localStorage. The cookie is the SINGLE
- * source of truth for locale — set by `setLocale()`, read by both the server
- * (layout.tsx) and the client (`getCookieLocale()`). This eliminates the
- * hydration mismatch that occurred when localStorage had a stale locale
- * (e.g. "fr" from a previous session) that differed from the cookie ("ar").
+ * LOCALE COMMIT MODEL:
+ * The `sahelflow-locale` cookie is the durable request/server authority. An
+ * interactive locale choice writes that cookie first, but does not immediately
+ * mutate document direction or hydrated copy. The refreshed Server Component
+ * tree returns with the requested locale and `ServerLocaleProvider` commits that
+ * server-confirmed locale to this mirror plus `<html lang/dir>` before paint.
  *
- * Only `sidebarCollapsed` is persisted to localStorage (it's UI-only, no
- * server rendering depends on it, so no hydration risk).
+ * This prevents the previous split state where client navigation/RTL flipped
+ * while server-translated route content still belonged to the old request.
+ * `sidebarCollapsed` and `density` remain UI-only persisted preferences.
  */
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { Locale } from "@/lib/i18n";
+import {
+  createJSONStorage,
+  persist,
+  type StateStorage,
+} from "zustand/middleware";
+import { getDirection, type Locale } from "@/lib/i18n";
 
 const VALID_LOCALES: readonly Locale[] = ["ar", "fr", "en"];
+
+export type UiDensity = "comfortable" | "compact";
+export const DEFAULT_UI_DENSITY: UiDensity = "comfortable";
+
+function isUiDensity(value: unknown): value is UiDensity {
+  return value === "comfortable" || value === "compact";
+}
+
+/**
+ * Preference persistence is deliberately best-effort. Desktop/WebView storage
+ * can be readable but unwritable (quota-full, policy-restricted, read-only). A
+ * failed preference write must never abort locale/server-tree commit, startup,
+ * or an operational interaction; the in-memory UI authority remains valid for
+ * the current session and persistence can recover on a later write.
+ */
+const bestEffortUiStorage: StateStorage = {
+  getItem(name) {
+    try {
+      return globalThis.localStorage?.getItem(name) ?? null;
+    } catch {
+      return null;
+    }
+  },
+  setItem(name, value) {
+    try {
+      globalThis.localStorage?.setItem(name, value);
+    } catch {
+      // Preference durability is non-critical; keep the live in-memory state.
+    }
+  },
+  removeItem(name) {
+    try {
+      globalThis.localStorage?.removeItem(name);
+    } catch {
+      // A failed cleanup must not destabilize the application shell.
+    }
+  },
+};
 
 /**
  * Read the locale from the `sahelflow-locale` cookie.
@@ -35,11 +77,14 @@ function getCookieLocale(): Locale | null {
 interface UIState {
   locale: Locale;
   sidebarCollapsed: boolean;
+  density: UiDensity;
   activeShopId: string | null;
 
+  /** Commit a locale that the current Server Component tree already represents. */
   setLocale: (locale: Locale) => void;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  setDensity: (density: UiDensity) => void;
   setActiveShopId: (shopId: string | null) => void;
 }
 
@@ -49,44 +94,69 @@ function setLocaleCookie(locale: Locale): void {
   }
 }
 
+/**
+ * Request a locale for the next Server Component tree without changing the
+ * currently committed client geometry/copy. Call `router.refresh()` immediately
+ * after this from the interaction boundary.
+ */
+export function requestLocale(locale: Locale): void {
+  setLocaleCookie(locale);
+}
+
+/** Apply one already-committed server locale to the browser document boundary. */
+function applyDocumentLocale(locale: Locale): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.lang = locale;
+  root.dir = getDirection(locale);
+}
+
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      // Read from cookie to match SSR (the server reads the same cookie).
-      // This is the ONLY source of truth for locale — localStorage is NOT
-      // used for locale (see partialize below).
+      // Initial client mirror matches the same cookie read by server layouts.
       locale: getCookieLocale() ?? "fr",
       sidebarCollapsed: false,
+      density: DEFAULT_UI_DENSITY,
       activeShopId: null,
 
       setLocale: (locale) => {
-        setLocaleCookie(locale);
-        set({ locale });
+        // This is a commit operation: the request cookie already selected the
+        // Server Component tree. Do not create a second durable locale write here.
+        applyDocumentLocale(locale);
+        set((state) => (state.locale === locale ? state : { ...state, locale }));
       },
-      toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+      setDensity: (density) => set({ density }),
       setActiveShopId: (shopId) => set({ activeShopId: shopId }),
     }),
     {
       name: "sahelflow-ui",
-      // ONLY persist sidebarCollapsed to localStorage. Locale is NOT persisted —
-      // the cookie is the source of truth (set by setLocale, read by server +
-      // client). Persisting locale to localStorage caused hydration mismatches
-      // when the localStorage value differed from the cookie value.
+      storage: createJSONStorage(() => bestEffortUiStorage),
       partialize: (state) => ({
         sidebarCollapsed: state.sidebarCollapsed,
+        density: state.density,
       }),
-      // merge: always keep the cookie-based locale (currentState), never override
-      // it with anything from localStorage. This is the critical fix.
+      // Persisted UI data is untrusted/stale input. Admit only the two known
+      // preferences and normalize everything else to safe current defaults.
+      // Locale and active shop never come from this storage boundary.
       merge: (persistedState, currentState) => {
-        const persisted = persistedState as Partial<UIState> | null;
+        const persisted = persistedState as {
+          sidebarCollapsed?: unknown;
+          density?: unknown;
+        } | null;
         return {
           ...currentState,
-          ...persisted,
-          // ALWAYS keep the cookie-based locale — never use the persisted one.
-          // This prevents the hydration mismatch where localStorage "fr" overrode
-          // the cookie "ar" on the first client render.
+          sidebarCollapsed:
+            typeof persisted?.sidebarCollapsed === "boolean"
+              ? persisted.sidebarCollapsed
+              : currentState.sidebarCollapsed,
+          density: isUiDensity(persisted?.density)
+            ? persisted.density
+            : DEFAULT_UI_DENSITY,
           locale: currentState.locale,
+          activeShopId: currentState.activeShopId,
         };
       },
     },

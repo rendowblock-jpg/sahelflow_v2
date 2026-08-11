@@ -18,9 +18,19 @@ function SheetTrigger({
 }
 
 function SheetClose({
+  className,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Close>) {
-  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
+  return (
+    <SheetPrimitive.Close
+      data-slot="sheet-close"
+      className={cn(
+        "min-h-(--control-height) min-w-(--control-height)",
+        className,
+      )}
+      {...props}
+    />
+  )
 }
 
 function SheetPortal({
@@ -78,7 +88,10 @@ function SheetContent({
       >
         {children}
         {showCloseButton && (
-          <SheetPrimitive.Close className="absolute top-4 end-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-secondary">
+          <SheetPrimitive.Close
+            data-slot="sheet-close"
+            className="absolute top-4 end-4 flex min-h-(--control-height) min-w-(--control-height) items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-secondary"
+          >
             <XIcon className="size-4" aria-hidden="true" />
             <span className="sr-only">{t("common.close")}</span>
           </SheetPrimitive.Close>

@@ -1,24 +1,23 @@
 "use client";
 
 /**
- * ServerLocaleContext — passes the server-determined locale to client components.
+ * ServerLocaleContext — carries the locale of the currently committed Server
+ * Component tree into hydrated client components.
  *
- * WHY: The Zustand ui-store calls getCookieLocale() which returns null on the
- * server (no document). So the store defaults to "fr" on the server, but reads
- * the actual cookie ("ar") on the client → useI18n() returns different values
- * on server vs client → HYDRATION MISMATCH.
- *
- * FIX: The Server Component layout reads the cookie via next/headers and passes
- * the locale to this Provider. useI18n() reads from this context for the INITIAL
- * render (matching the server), then switches to the store locale after mount.
+ * Interactive locale changes are requested through the cookie first, but client
+ * copy and direction remain on the old committed tree while `router.refresh()`
+ * is pending. When the refreshed server tree arrives, this provider receives the
+ * exact locale that rendered that tree and commits it to the client mirror in a
+ * layout effect before the browser paints. Server-rendered route copy, client
+ * translations and shell geometry therefore move together.
  */
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useLayoutEffect } from "react";
 import type { Locale } from "./index";
+import { useUIStore } from "@/stores/ui-store";
 
 const ServerLocaleContext = createContext<Locale>("fr");
 
-/** The default export Provider — wrap the app in this from a Server Component layout. */
 export function ServerLocaleProvider({
   locale,
   children,
@@ -26,6 +25,12 @@ export function ServerLocaleProvider({
   locale: Locale;
   children: React.ReactNode;
 }) {
+  const commitLocale = useUIStore((state) => state.setLocale);
+
+  useLayoutEffect(() => {
+    commitLocale(locale);
+  }, [commitLocale, locale]);
+
   return (
     <ServerLocaleContext.Provider value={locale}>
       {children}
@@ -33,7 +38,7 @@ export function ServerLocaleProvider({
   );
 }
 
-/** Read the server-determined locale (for hydration-safe initial render). */
+/** Read the locale used to render the current Server Component tree. */
 export function useServerLocale(): Locale {
   return useContext(ServerLocaleContext);
 }

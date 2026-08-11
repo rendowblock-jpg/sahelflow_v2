@@ -90,7 +90,7 @@ export function buildChartConfig(
 interface ChartCardProps {
   title: React.ReactNode;
   description?: React.ReactNode;
-  /** Prefer a concise data/insight summary; description/title is the fallback. */
+  /** Concise decision context or key comparison shown above the plot. */
   summary?: React.ReactNode;
   icon?: React.ReactNode;
   accent?: string;
@@ -102,16 +102,23 @@ interface ChartCardProps {
   children: React.ComponentProps<typeof ChartContainer>["children"];
 }
 
-/** Governed SahelFlow analytical frame with mandatory non-visual context. */
+/**
+ * Governed SahelFlow analytical frame.
+ *
+ * A chart is not a decorative rectangle: it carries a readable title, optional
+ * business context, visible summary, plot, and optional footer/action. The same
+ * summary remains wired to the chart group for non-visual users.
+ */
 export function ChartCard({
   title,
   description,
   summary,
+  icon,
   action,
   footer,
   className,
   config,
-  height = 280,
+  height = 300,
   children,
 }: ChartCardProps) {
   const titleId = React.useId();
@@ -120,21 +127,38 @@ export function ChartCard({
   const accessibleSummary = summary ?? description ?? title;
 
   return (
-    <Card className={cn("border shadow-none", className)}>
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
-        <div className="min-w-0 space-y-0.5">
-          <CardTitle id={titleId} className="text-sm font-semibold">
-            {title}
-          </CardTitle>
-          {description ? (
-            <CardDescription id={descriptionId} className="text-xs">
-              {description}
-            </CardDescription>
+    <Card
+      className={cn("overflow-hidden border shadow-none", className)}
+      data-chart-card="true"
+    >
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 px-5 pb-3 pt-4">
+        <div className="min-w-0 space-y-2">
+          <div className="flex min-w-0 items-center gap-2.5">
+            {icon ? (
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/45 text-muted-foreground">
+                {icon}
+              </span>
+            ) : null}
+            <div className="min-w-0">
+              <CardTitle id={titleId} className="text-base font-semibold leading-6">
+                {title}
+              </CardTitle>
+              {description ? (
+                <CardDescription id={descriptionId} className="mt-0.5 text-sm leading-5">
+                  {description}
+                </CardDescription>
+              ) : null}
+            </div>
+          </div>
+          {summary ? (
+            <div className="text-sm leading-5 text-muted-foreground" aria-hidden="true">
+              {summary}
+            </div>
           ) : null}
         </div>
-        {action}
+        {action ? <div className="shrink-0">{action}</div> : null}
       </CardHeader>
-      <CardContent className="pt-1">
+      <CardContent className="px-4 pb-4 pt-0">
         <div
           role="group"
           aria-labelledby={titleId}
@@ -152,7 +176,7 @@ export function ChartCard({
           </ChartContainer>
         </div>
         {footer ? (
-          <div className="mt-2 border-t border-border/70 pt-2 text-xs text-muted-foreground">
+          <div className="mt-3 border-t border-border/70 pt-3 text-sm leading-5 text-muted-foreground">
             {footer}
           </div>
         ) : null}
