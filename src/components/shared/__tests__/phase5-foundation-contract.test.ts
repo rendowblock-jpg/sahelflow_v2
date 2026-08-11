@@ -36,6 +36,16 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(rootLayout).toContain("data-theme-preset");
   });
 
+  it("keeps user-authored search direction automatic and command chrome flow-relative", () => {
+    const input = read("src/components/ui/input.tsx");
+    const command = read("src/components/ui/command.tsx");
+
+    expect(input).not.toContain('  "search",');
+    expect(input).toContain('? "ltr" : "auto"');
+    expect(command).toContain("ms-auto text-xs tracking-widest");
+    expect(command).not.toContain("ml-auto text-xs tracking-widest");
+  });
+
   it("derives command navigation from the canonical navigation registry", () => {
     const source = read("src/components/command-palette.tsx");
     expect(source).toContain("flattenNavigationItems");
