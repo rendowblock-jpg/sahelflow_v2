@@ -272,7 +272,7 @@ export function Topbar({
       <button
         type="button"
         onClick={onCommandPaletteOpen}
-        className="mx-auto hidden h-8 min-w-0 max-w-xl flex-1 items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex"
+        className="mx-auto hidden h-8 min-h-(--sf-touch-target) min-w-0 max-w-xl flex-1 items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex"
         aria-label={t("topbar.searchPlaceholder")}
       >
         <Search className="size-3.5 shrink-0" aria-hidden="true" />
