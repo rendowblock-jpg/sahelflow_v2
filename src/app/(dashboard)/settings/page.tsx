@@ -34,11 +34,11 @@ export default async function SettingsPage() {
     license: can("license.read"),
     demo: can("settings.manage"),
     ai: can("integrations.manage") || can("settings.manage"),
-    delivery:
-      can("delivery.credentials.manage") || can("integrations.read"),
+    delivery: can("delivery.credentials.manage"),
     reports: can("settings.manage"),
     integrations: can("integrations.read"),
     phone: can("risk.read"),
+    phoneManage: can("risk.manage"),
     backup: can("backups.read") || can("backups.create"),
     danger: can("settings.manage"),
   };
