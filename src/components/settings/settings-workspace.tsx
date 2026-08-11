@@ -60,17 +60,20 @@ export type SettingsWorkspaceAccess = {
 };
 
 type Group = "experience" | "connections" | "team" | "data";
-
-const GROUPS: Array<{
+type GroupDefinition = {
   id: Group;
   icon: typeof Palette;
   descriptionKey: SettingsWorkspaceCopyKey;
-}> = [
-  {
-    id: "experience",
-    icon: Palette,
-    descriptionKey: "experienceDescription",
-  },
+};
+
+const DEFAULT_GROUP: GroupDefinition = {
+  id: "experience",
+  icon: Palette,
+  descriptionKey: "experienceDescription",
+};
+
+const GROUPS: GroupDefinition[] = [
+  DEFAULT_GROUP,
   {
     id: "connections",
     icon: PlugZap,
@@ -125,7 +128,7 @@ export function SettingsWorkspace({
   const effectiveGroup =
     visibleGroups.find((group) => group.id === active) ??
     visibleGroups[0] ??
-    GROUPS[0];
+    DEFAULT_GROUP;
   const effectiveActive = effectiveGroup.id;
 
   const renderExperience = () => (
@@ -150,7 +153,11 @@ export function SettingsWorkspace({
           </CardContent>
         </Card>
       ) : null}
-      {access.appearance ? <AppearancePanel /> : null}
+      {access.appearance ? (
+        <div id="settings-tab-appearance">
+          <AppearancePanel />
+        </div>
+      ) : null}
       {access.reports ? <DailyReportPanel /> : null}
       {access.phone ? (
         <PhoneReputationPanel canManage={access.phoneManage} />
