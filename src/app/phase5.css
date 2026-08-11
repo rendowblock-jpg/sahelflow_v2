@@ -313,28 +313,15 @@ html[data-theme-switching="true"] :is(
   font-variant-numeric: tabular-nums;
 }
 
-/* Touch remains intentionally roomy even when compact density is selected. */
+/* Touch remains intentionally roomy even when compact density is selected. The
+ * document-root `--sf-touch-target` is consumed by compact Button variants, so
+ * this shell override only governs ordinary control height/rhythm and must not
+ * overwrite that independent touch floor. */
 @media (pointer: coarse) {
   [data-sahelflow-shell="desktop"] {
     --sf-workbench-block: 1rem;
     --sf-section-gap: 1rem;
     --control-height: 2.75rem;
-  }
-
-  /* Radix `asChild` can replace trigger data attributes, but the Button's class
-   * list is merged and preserved. Stable size marker classes therefore carry the
-   * coarse-pointer target contract through every slotted trigger. */
-  :is(
-    .sf-button-size-xs,
-    .sf-button-size-sm,
-    .sf-button-size-icon-xs,
-    .sf-button-size-icon-sm
-  ) {
-    min-height: var(--control-height);
-  }
-
-  :is(.sf-button-size-icon-xs, .sf-button-size-icon-sm) {
-    min-width: var(--control-height);
   }
 }
 
