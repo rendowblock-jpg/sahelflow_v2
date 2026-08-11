@@ -20,6 +20,8 @@ import {
 } from "@/lib/whatsapp/types";
 import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
 
+const CHAT_REFRESH_COALESCE_MS = 500;
+
 interface CanonicalChatResponse {
   chats: Array<{
     jid: string;
@@ -138,6 +140,7 @@ export function useInboxWorkspace() {
   const messagesInnerRef = useRef<HTMLDivElement | null>(null);
   const isNearBottomRef = useRef(true);
   const activeTransportIdRef = useRef<string | null>(null);
+  const chatRefreshTimerRef = useRef<number | null>(null);
 
   const canUpdateConversation = allowedActions.includes("conversations.update");
   const canReply = allowedActions.includes("conversations.reply");
@@ -177,7 +180,6 @@ export function useInboxWorkspace() {
   }, [copy]);
 
   const loadChats = useCallback(async () => {
-    setLoadingChats(true);
     try {
       const response = await fetch("/api/whatsapp/chats?limit=100", {
         cache: "no-store",
@@ -241,6 +243,14 @@ export function useInboxWorkspace() {
       setLoadingChats(false);
     }
   }, [loadFallbackProjection]);
+
+  const scheduleChatsRefresh = useCallback(() => {
+    if (chatRefreshTimerRef.current !== null) return;
+    chatRefreshTimerRef.current = window.setTimeout(() => {
+      chatRefreshTimerRef.current = null;
+      void loadChats();
+    }, CHAT_REFRESH_COALESCE_MS);
+  }, [loadChats]);
 
   const markRead = useCallback(
     async (chat: InboxChat) => {
@@ -359,9 +369,9 @@ export function useInboxWorkspace() {
           ];
         });
       }
-      void loadChats();
+      scheduleChatsRefresh();
     },
-    [loadChats],
+    [scheduleChatsRefresh],
   );
 
   const handleMessageUpdate = useCallback(
@@ -405,6 +415,12 @@ export function useInboxWorkspace() {
 
   useEffect(() => {
     void loadChats();
+    return () => {
+      if (chatRefreshTimerRef.current !== null) {
+        window.clearTimeout(chatRefreshTimerRef.current);
+        chatRefreshTimerRef.current = null;
+      }
+    };
   }, [loadChats]);
 
   const selectChat = useCallback(
