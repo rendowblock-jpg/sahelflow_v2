@@ -32,188 +32,58 @@ import type { OrderStatus } from "@/types/domain";
 
 type FulfillmentAction = "pack" | "ship" | "deliver";
 
-const COPY = {
-  en: {
-    authority: "Canonical fulfillment authority",
-    heading: "Fulfillment and delivery",
-    fulfillment: "Fulfillment",
-    delivery: "Delivery",
-    inventory: "Inventory",
-    cod: "COD",
-    legacy: "Awaiting governed adoption",
-    pack: "Mark packed",
-    ship: "Dispatch shipment",
-    deliver: "Mark delivered",
-    packTitle: "Mark this order as packed?",
-    packBody:
-      "The reserved items remain held and the order becomes ready for dispatch.",
-    shipTitle: "Dispatch this order manually?",
-    shipBody:
-      "This consumes the exact reservations into outbound inventory without calling a courier provider. Use the governed courier workspace for provider booking.",
-    deliverTitle: "Mark this order as delivered?",
-    deliverBody:
-      "This closes fulfillment and creates the carrier COD receivable. Collection and remittance remain separate.",
-    commit: "Commit transition",
-    committed: "Transition committed.",
-    replayed: "The previously committed transition was recovered safely.",
-    noAction: "No governed fulfillment action is available from the current state.",
-    failed: "The transition was not committed. Refresh and retry safely.",
-    conflict:
-      "This order changed or its inventory authority is incomplete. Refresh before retrying.",
-    invalid: "This transition is not valid from the current order state.",
-    notFound: "This order is no longer available.",
+const ACTION_KEYS: Record<
+  FulfillmentAction,
+  { label: string; title: string; body: string }
+> = {
+  pack: {
+    label: "orders.workspace.fulfillment.action.pack",
+    title: "orders.workspace.fulfillment.confirm.pack.title",
+    body: "orders.workspace.fulfillment.confirm.pack.body",
   },
-  fr: {
-    authority: "Autorité canonique d'exécution",
-    heading: "Préparation et livraison",
-    fulfillment: "Préparation",
-    delivery: "Livraison",
-    inventory: "Stock",
-    cod: "COD",
-    legacy: "En attente d'adoption gouvernée",
-    pack: "Marquer comme emballée",
-    ship: "Expédier manuellement",
-    deliver: "Marquer comme livrée",
-    packTitle: "Marquer cette commande comme emballée ?",
-    packBody:
-      "Les articles réservés restent bloqués et la commande devient prête à expédier.",
-    shipTitle: "Expédier cette commande manuellement ?",
-    shipBody:
-      "Les réservations exactes passent en stock sortant sans appeler un transporteur. Utilisez l'espace transporteur gouverné pour une réservation fournisseur.",
-    deliverTitle: "Marquer cette commande comme livrée ?",
-    deliverBody:
-      "La préparation est clôturée et la créance COD transporteur est créée. Encaissement et versement restent séparés.",
-    commit: "Valider la transition",
-    committed: "Transition validée.",
-    replayed: "La transition déjà validée a été récupérée en toute sécurité.",
-    noAction: "Aucune action gouvernée n'est disponible depuis l'état actuel.",
-    failed:
-      "La transition n'a pas été validée. Actualisez puis réessayez sans risque.",
-    conflict:
-      "La commande a changé ou son autorité de stock est incomplète. Actualisez avant de réessayer.",
-    invalid: "Cette transition n'est pas valide depuis l'état actuel.",
-    notFound: "Cette commande n'est plus disponible.",
+  ship: {
+    label: "orders.workspace.fulfillment.action.ship",
+    title: "orders.workspace.fulfillment.confirm.ship.title",
+    body: "orders.workspace.fulfillment.confirm.ship.body",
   },
-  ar: {
-    authority: "صلاحية تنفيذ موثوقة",
-    heading: "التجهيز والتوصيل",
-    fulfillment: "التجهيز",
-    delivery: "التوصيل",
-    inventory: "المخزون",
-    cod: "الدفع عند الاستلام",
-    legacy: "بانتظار الاعتماد الموثوق",
-    pack: "تعليمها كمجهّزة",
-    ship: "إرسالها يدويًا",
-    deliver: "تعليمها كمسلّمة",
-    packTitle: "هل تم تجهيز هذه الطلبية؟",
-    packBody: "يبقى المخزون الدقيق محجوزًا وتصبح الطلبية جاهزة للإرسال.",
-    shipTitle: "هل تريد إرسال هذه الطلبية يدويًا؟",
-    shipBody:
-      "تُنقل الحجوزات الدقيقة إلى مخزون قيد الشحن دون الاتصال بشركة توصيل. استخدم مساحة شركة التوصيل الموثوقة لإنشاء شحنة لدى المزوّد.",
-    deliverTitle: "هل تم تسليم هذه الطلبية؟",
-    deliverBody:
-      "يُغلق التجهيز وتُنشأ مستحقات الدفع عند الاستلام. يبقى التحصيل والتحويل منفصلين.",
-    commit: "اعتماد الانتقال",
-    committed: "تم اعتماد الانتقال.",
-    replayed: "تمت استعادة الانتقال المعتمد سابقًا بأمان.",
-    noAction: "لا يوجد إجراء تنفيذ موثوق متاح من الحالة الحالية.",
-    failed: "لم يتم اعتماد الانتقال. حدّث الصفحة ثم أعد المحاولة بأمان.",
-    conflict:
-      "تغيّرت الطلبية أو أن صلاحية مخزونها غير مكتملة. حدّث الصفحة قبل إعادة المحاولة.",
-    invalid: "هذا الانتقال غير صالح من حالة الطلبية الحالية.",
-    notFound: "لم تعد هذه الطلبية متاحة.",
+  deliver: {
+    label: "orders.workspace.fulfillment.action.deliver",
+    title: "orders.workspace.fulfillment.confirm.deliver.title",
+    body: "orders.workspace.fulfillment.confirm.deliver.body",
   },
-} as const;
+};
 
-const STATE_LABELS = {
-  en: {
-    unfulfilled: "Not prepared",
-    ready: "Packed and ready",
-    shipped: "Shipped",
-    closed: "Closed",
-    not_created: "Not created",
-    pending: "Provider booking pending",
-    picked_up: "Picked up",
-    in_transit: "In transit",
-    out_for_delivery: "Out for delivery",
-    delivered: "Delivered",
-    failed: "Failed",
-    refused: "Refused",
-    return_in_transit: "Return in transit",
-    returned: "Returned",
-    unreserved: "Not reserved",
-    reserved: "Reserved",
-    outbound: "Outbound",
-    return_pending_receipt: "Awaiting physical return",
-    return_pending_inspection: "Awaiting inspection",
-    settled: "Settled",
-    not_expected: "Not expected",
-    receivable: "Awaiting collection",
-    collected: "Collected by courier",
-    partially_remitted: "Partially remitted",
-    remitted: "Remitted",
-    disputed: "Disputed",
-    corrected: "Corrected",
-  },
-  fr: {
-    unfulfilled: "Non préparée",
-    ready: "Emballée et prête",
-    shipped: "Expédiée",
-    closed: "Clôturée",
-    not_created: "Non créée",
-    pending: "Réservation transporteur en attente",
-    picked_up: "Collectée",
-    in_transit: "En transit",
-    out_for_delivery: "En cours de livraison",
-    delivered: "Livrée",
-    failed: "Échec",
-    refused: "Refusée",
-    return_in_transit: "Retour en transit",
-    returned: "Retournée",
-    unreserved: "Non réservé",
-    reserved: "Réservé",
-    outbound: "Sortant",
-    return_pending_receipt: "Retour physique attendu",
-    return_pending_inspection: "Inspection attendue",
-    settled: "Soldé",
-    not_expected: "Non attendu",
-    receivable: "En attente d'encaissement",
-    collected: "Encaissé par le transporteur",
-    partially_remitted: "Partiellement versé",
-    remitted: "Versé",
-    disputed: "En litige",
-    corrected: "Corrigé",
-  },
-  ar: {
-    unfulfilled: "غير مجهّزة",
-    ready: "مجهّزة وجاهزة",
-    shipped: "مشحونة",
-    closed: "مغلقة",
-    not_created: "غير منشأة",
-    pending: "حجز شركة التوصيل قيد الانتظار",
-    picked_up: "تم الاستلام من البائع",
-    in_transit: "قيد النقل",
-    out_for_delivery: "خرجت للتسليم",
-    delivered: "مسلّمة",
-    failed: "فشل التوصيل",
-    refused: "مرفوضة",
-    return_in_transit: "الإرجاع قيد النقل",
-    returned: "مرتجعة",
-    unreserved: "غير محجوز",
-    reserved: "محجوز",
-    outbound: "قيد الشحن",
-    return_pending_receipt: "بانتظار الإرجاع الفعلي",
-    return_pending_inspection: "بانتظار الفحص",
-    settled: "مسوّى",
-    not_expected: "غير مستحق",
-    receivable: "بانتظار التحصيل",
-    collected: "محصّل لدى شركة التوصيل",
-    partially_remitted: "محول جزئيًا",
-    remitted: "محول",
-    disputed: "متنازع عليه",
-    corrected: "مصحّح",
-  },
-} as const;
+const STATE_LABEL_KEYS: Readonly<Record<string, string>> = {
+  unfulfilled: "orders.workspace.fulfillment.state.unfulfilled",
+  ready: "orders.workspace.fulfillment.state.ready",
+  shipped: "orders.workspace.fulfillment.state.shipped",
+  closed: "orders.workspace.fulfillment.state.closed",
+  not_created: "orders.workspace.fulfillment.state.not_created",
+  pending: "orders.workspace.fulfillment.state.pending",
+  picked_up: "orders.workspace.fulfillment.state.picked_up",
+  in_transit: "orders.workspace.fulfillment.state.in_transit",
+  out_for_delivery: "orders.workspace.fulfillment.state.out_for_delivery",
+  delivered: "orders.workspace.fulfillment.state.delivered",
+  failed: "orders.workspace.fulfillment.state.failed",
+  refused: "orders.workspace.fulfillment.state.refused",
+  return_in_transit: "orders.workspace.fulfillment.state.return_in_transit",
+  returned: "orders.workspace.fulfillment.state.returned",
+  unreserved: "orders.workspace.fulfillment.state.unreserved",
+  reserved: "orders.workspace.fulfillment.state.reserved",
+  outbound: "orders.workspace.fulfillment.state.outbound",
+  return_pending_receipt:
+    "orders.workspace.fulfillment.state.return_pending_receipt",
+  return_pending_inspection:
+    "orders.workspace.fulfillment.state.return_pending_inspection",
+  settled: "orders.workspace.fulfillment.state.settled",
+  not_expected: "orders.workspace.fulfillment.state.not_expected",
+  receivable: "orders.workspace.fulfillment.state.receivable",
+  collected: "orders.workspace.fulfillment.state.collected",
+  partially_remitted: "orders.workspace.fulfillment.state.partially_remitted",
+  remitted: "orders.workspace.fulfillment.state.remitted",
+  disputed: "orders.workspace.fulfillment.state.disputed",
+  corrected: "orders.workspace.fulfillment.state.corrected",
+};
 
 interface CanonicalFulfillmentActionsProps {
   orderId: string;
@@ -263,14 +133,12 @@ export function CanonicalFulfillmentActions({
   codState,
 }: CanonicalFulfillmentActionsProps) {
   const router = useRouter();
-  const { t, locale } = useI18n();
-  const copy = COPY[locale];
+  const { t } = useI18n();
   const action = availableAction(
     currentStatus,
     fulfillmentState,
     deliveryState,
   );
-  const stateLabels = STATE_LABELS[locale] as Readonly<Record<string, string>>;
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -287,6 +155,12 @@ export function CanonicalFulfillmentActions({
     const created = crypto.randomUUID();
     window.localStorage.setItem(key, created);
     return created;
+  }
+
+  function stateLabel(value: string | null): string {
+    if (!value) return t("orders.workspace.fulfillment.legacy");
+    const key = STATE_LABEL_KEYS[value];
+    return key ? t(key) : value;
   }
 
   async function commit(): Promise<void> {
@@ -308,25 +182,33 @@ export function CanonicalFulfillmentActions({
       });
       const responseBody = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const message =
+        const messageKey =
           responseBody.code === "CONFLICT"
-            ? copy.conflict
+            ? "orders.workspace.fulfillment.error.conflict"
             : responseBody.code === "VALIDATION_ERROR"
-              ? copy.invalid
+              ? "orders.workspace.fulfillment.error.invalid"
               : responseBody.code === "NOT_FOUND"
-                ? copy.notFound
-                : copy.failed;
-        throw new Error(message);
+                ? "orders.workspace.fulfillment.error.notFound"
+                : "orders.workspace.fulfillment.error.failed";
+        throw new Error(t(messageKey));
       }
       window.localStorage.removeItem(storageKey(action));
       setNotice(
-        responseBody.command?.replayed ? copy.replayed : copy.committed,
+        t(
+          responseBody.command?.replayed
+            ? "orders.workspace.fulfillment.replayed"
+            : "orders.workspace.fulfillment.committed",
+        ),
       );
       setConfirming(false);
       await mutatePrefix("/api/orders");
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.failed);
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : t("orders.workspace.fulfillment.error.failed"),
+      );
     } finally {
       setLoading(false);
     }
@@ -338,8 +220,9 @@ export function CanonicalFulfillmentActions({
       : action === "deliver"
         ? CheckCircle2
         : PackageCheck;
-  const title = action ? copy[`${action}Title`] : "";
-  const description = action ? copy[`${action}Body`] : "";
+  const actionKeys = action ? ACTION_KEYS[action] : null;
+  const title = actionKeys ? t(actionKeys.title) : "";
+  const description = actionKeys ? t(actionKeys.body) : "";
   const showCodAuthority =
     currentStatus === "delivered" &&
     deliveryState === "delivered" &&
@@ -351,41 +234,48 @@ export function CanonicalFulfillmentActions({
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-medium">{copy.heading}</p>
+            <p className="text-sm font-medium">
+              {t("orders.workspace.fulfillment.heading")}
+            </p>
             <Badge variant="outline" className="mt-1">
-              {copy.authority}
+              {t("orders.workspace.fulfillment.authority")}
             </Badge>
           </div>
-          {action ? (
+          {action && actionKeys ? (
             <Button
               size="sm"
               onClick={() => setConfirming(true)}
               disabled={loading}
             >
               <Icon className="me-1.5 h-4 w-4" />
-              {copy[action]}
+              {t(actionKeys.label)}
             </Button>
           ) : null}
         </div>
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
           {[
-            [copy.fulfillment, fulfillmentState],
-            [copy.delivery, deliveryState],
-            [copy.inventory, inventoryState],
-            [copy.cod, codState],
+            [
+              t("orders.workspace.fulfillment.axis.fulfillment"),
+              fulfillmentState,
+            ],
+            [t("orders.workspace.fulfillment.axis.delivery"), deliveryState],
+            [t("orders.workspace.fulfillment.axis.inventory"), inventoryState],
+            [t("orders.workspace.fulfillment.axis.cod"), codState],
           ].map(([label, value]) => (
             <div key={label} className="min-w-0">
               <dt className="text-xs text-muted-foreground">{label}</dt>
               <dd className="truncate font-medium" dir="auto">
-                {value ? stateLabels[value] ?? value : copy.legacy}
+                {stateLabel(value)}
               </dd>
             </div>
           ))}
         </dl>
 
         {!action && !showCodAuthority ? (
-          <p className="text-sm text-muted-foreground">{copy.noAction}</p>
+          <p className="text-sm text-muted-foreground">
+            {t("orders.workspace.fulfillment.noAction")}
+          </p>
         ) : null}
         {notice ? (
           <p className="text-sm text-success" role="status">
@@ -433,7 +323,7 @@ export function CanonicalFulfillmentActions({
               {loading ? (
                 <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
               ) : null}
-              {copy.commit}
+              {t("orders.workspace.fulfillment.commit")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
