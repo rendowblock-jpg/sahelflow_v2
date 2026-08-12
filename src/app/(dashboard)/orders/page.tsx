@@ -15,6 +15,7 @@ import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
@@ -207,8 +208,19 @@ export default async function OrdersPage({
         title={t("nav.orders")}
         description={t("orders.subtitle")}
         actions={
-          canExport || canImport || canCreateOrder ? (
+          pendingCount > 0 || canExport || canImport || canCreateOrder ? (
             <div className="flex flex-wrap items-center gap-2">
+              {pendingCount > 0 ? (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/orders/confirmation-queue">
+                    <CheckCircle2 className="me-1.5 size-4" aria-hidden="true" />
+                    {t("confirmationQueue.title")}
+                    <Badge variant="secondary" className="ms-1 px-1.5 py-0 text-xs">
+                      {pendingCount}
+                    </Badge>
+                  </Link>
+                </Button>
+              ) : null}
               {canExport || canImport ? (
                 <ImportExportButtons
                   exportRoute={canExport ? "/api/export/orders" : undefined}
@@ -224,9 +236,21 @@ export default async function OrdersPage({
       />
 
       <div className="card-grid-4">
-        <StatCard label={t("orders.activeOrders")} value={activeOrders} icon={<ShoppingBag />} />
-        <StatCard label={t("orders.pendingLabel")} value={pendingCount} icon={<Clock />} />
-        <StatCard label={t("orders.deliveredToday")} value={deliveredTodayCount} icon={<CheckCircle2 />} />
+        <StatCard
+          label={t("orders.activeOrders")}
+          value={activeOrders}
+          icon={<ShoppingBag />}
+        />
+        <StatCard
+          label={t("orders.pendingLabel")}
+          value={pendingCount}
+          icon={<Clock />}
+        />
+        <StatCard
+          label={t("orders.deliveredToday")}
+          value={deliveredTodayCount}
+          icon={<CheckCircle2 />}
+        />
         <StatCard
           label={t("orders.todayRevenue")}
           value={todayRevenue === null ? "—" : formatDZD(todayRevenue, locale)}
@@ -240,7 +264,11 @@ export default async function OrdersPage({
             {STATUS_FILTERS.map((filter) => (
               <TabsTrigger key={filter.value} value={filter.value} asChild>
                 <Link
-                  href={filter.value === "all" ? "/orders" : `/orders?status=${filter.value}`}
+                  href={
+                    filter.value === "all"
+                      ? "/orders"
+                      : `/orders?status=${filter.value}`
+                  }
                   className="flex max-w-full !flex-none items-center gap-1.5"
                 >
                   {t(filter.labelKey)}

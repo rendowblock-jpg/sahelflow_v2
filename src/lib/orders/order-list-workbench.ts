@@ -12,7 +12,7 @@ import {
   isImportPendingOrderAuthority,
   isTrustedManualOrderAuthority,
 } from "@/lib/orders/manual-order-authority";
-import { batchAssessOrders } from "@/lib/risk-engine/service";
+import { batchAssessOrdersForWorkbench } from "@/lib/orders/order-risk-workbench";
 import type { OrderStatus } from "@/types/domain";
 import type {
   MutationAuthority,
@@ -200,7 +200,7 @@ export async function getOrdersWorkbenchPage(
 
   let riskData: OrdersWorkbenchResponse["riskData"];
   if (access.risk && rows.length > 0) {
-    const assessments = await batchAssessOrders(
+    const assessments = await batchAssessOrdersForWorkbench(
       { prisma: db, shop: shopContext },
       rows.map((row) => row.id),
     );

@@ -40,78 +40,43 @@ const ACTION_CONFIG: Record<
     variant: "default" | "destructive" | "outline";
   }
 > = {
-  confirmed: { labelKey: "orders.confirmOrder", icon: CheckCircle2, variant: "default" },
+  confirmed: {
+    labelKey: "orders.confirmOrder",
+    icon: CheckCircle2,
+    variant: "default",
+  },
   shipped: { labelKey: "orders.shipOrder", icon: Truck, variant: "default" },
-  delivered: { labelKey: "orders.statusActions.markDelivered", icon: PackageCheck, variant: "default" },
-  returned: { labelKey: "orders.statusActions.returnButton", icon: RotateCcw, variant: "destructive" },
-  refused: { labelKey: "orders.status.refused", icon: XCircle, variant: "destructive" },
-  cancelled: { labelKey: "common.cancel", icon: Ban, variant: "destructive" },
-  draft: { labelKey: "orders.status.draft", icon: CheckCircle2, variant: "outline" },
-  pending: { labelKey: "orders.statusActions.markPending", icon: Clock, variant: "default" },
+  delivered: {
+    labelKey: "orders.statusActions.markDelivered",
+    icon: PackageCheck,
+    variant: "default",
+  },
+  returned: {
+    labelKey: "orders.statusActions.returnButton",
+    icon: RotateCcw,
+    variant: "destructive",
+  },
+  refused: {
+    labelKey: "orders.status.refused",
+    icon: XCircle,
+    variant: "destructive",
+  },
+  cancelled: {
+    labelKey: "common.cancel",
+    icon: Ban,
+    variant: "destructive",
+  },
+  draft: {
+    labelKey: "orders.status.draft",
+    icon: CheckCircle2,
+    variant: "outline",
+  },
+  pending: {
+    labelKey: "orders.statusActions.markPending",
+    icon: Clock,
+    variant: "default",
+  },
 };
-
-const DECISION_COPY = {
-  en: {
-    authority: "Canonical order authority",
-    importAuthority: "Imported order pending catalog mapping",
-    confirm: "Confirm order",
-    reject: "Reject order",
-    submitDraft: "Submit draft for confirmation",
-    submitDraftCommitted: "The AI draft is now in the confirmation queue.",
-    submitDraftReplayed: "The previous draft submission was recovered safely.",
-    confirmTitle: "Confirm this order?",
-    confirmBody: "This atomically reserves exact available stock and records the inventory movement.",
-    rejectTitle: "Reject this order?",
-    rejectBody: "Enter the seller-approved rejection reason.",
-    reasonLabel: "Rejection reason",
-    reasonPlaceholder: "Reason for rejecting this order",
-    proceed: "Commit decision",
-    committed: "Decision committed.",
-    replayed: "The previously committed decision was recovered safely.",
-    versionMissing: "Refresh the order before committing a decision.",
-    importBlocked: "Map this imported order to exact catalog products and variants before confirmation.",
-  },
-  fr: {
-    authority: "Autorité canonique de commande",
-    importAuthority: "Commande importée en attente de correspondance catalogue",
-    confirm: "Confirmer la commande",
-    reject: "Refuser la commande",
-    submitDraft: "Soumettre le brouillon à confirmation",
-    submitDraftCommitted: "Le brouillon IA est maintenant dans la file de confirmation.",
-    submitDraftReplayed: "La soumission précédente du brouillon a été récupérée en toute sécurité.",
-    confirmTitle: "Confirmer cette commande ?",
-    confirmBody: "Cette action réserve atomiquement le stock exact disponible et enregistre le mouvement.",
-    rejectTitle: "Refuser cette commande ?",
-    rejectBody: "Saisissez le motif de refus approuvé par le vendeur.",
-    reasonLabel: "Motif du refus",
-    reasonPlaceholder: "Motif du refus de cette commande",
-    proceed: "Valider la décision",
-    committed: "Décision validée.",
-    replayed: "La décision déjà validée a été récupérée en toute sécurité.",
-    versionMissing: "Actualisez la commande avant de valider une décision.",
-    importBlocked: "Associez cette commande importée aux produits et variantes exacts avant confirmation.",
-  },
-  ar: {
-    authority: "صلاحية الطلبية الموثوقة",
-    importAuthority: "طلبية مستوردة بانتظار ربط الكتالوج",
-    confirm: "تأكيد الطلبية",
-    reject: "رفض الطلبية",
-    submitDraft: "إرسال المسودة إلى قائمة التأكيد",
-    submitDraftCommitted: "أصبحت مسودة الذكاء الاصطناعي ضمن قائمة التأكيد.",
-    submitDraftReplayed: "تمت استعادة إرسال المسودة السابق بأمان.",
-    confirmTitle: "تأكيد هذه الطلبية؟",
-    confirmBody: "سيتم حجز المخزون المتاح بدقة وتسجيل حركة المخزون ضمن عملية ذرية واحدة.",
-    rejectTitle: "رفض هذه الطلبية؟",
-    rejectBody: "أدخل سبب الرفض المعتمد من البائع.",
-    reasonLabel: "سبب الرفض",
-    reasonPlaceholder: "سبب رفض هذه الطلبية",
-    proceed: "اعتماد القرار",
-    committed: "تم اعتماد القرار.",
-    replayed: "تمت استعادة القرار المعتمد سابقًا بأمان.",
-    versionMissing: "حدّث الطلبية قبل اعتماد القرار.",
-    importBlocked: "اربط الطلبية المستوردة بالمنتجات والمتغيرات الدقيقة قبل تأكيدها.",
-  },
-} as const;
 
 interface OrderStatusActionsProps {
   orderId: string;
@@ -133,8 +98,9 @@ export function OrderStatusActions({
 }: OrderStatusActionsProps) {
   const router = useRouter();
   const { t, locale } = useI18n();
-  const copy = DECISION_COPY[locale];
-  const [loading, setLoading] = useState<OrderStatus | Decision | "submit" | null>(null);
+  const [loading, setLoading] = useState<
+    OrderStatus | Decision | "submit" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [decision, setDecision] = useState<Decision | null>(null);
@@ -168,7 +134,7 @@ export function OrderStatusActions({
 
   async function submitDraft() {
     if (currentVersion === undefined) {
-      setError(copy.versionMissing);
+      setError(t("orders.workspace.decision.versionMissing"));
       return;
     }
     setLoading("submit");
@@ -196,9 +162,11 @@ export function OrderStatusActions({
       }
       window.localStorage.removeItem(draftSubmissionKey());
       setNotice(
-        body.command?.replayed
-          ? copy.submitDraftReplayed
-          : copy.submitDraftCommitted,
+        t(
+          body.command?.replayed
+            ? "orders.workspace.decision.submitDraftReplayed"
+            : "orders.workspace.decision.submitDraftCommitted",
+        ),
       );
       await mutatePrefix("/api/orders");
       router.refresh();
@@ -214,7 +182,7 @@ export function OrderStatusActions({
   async function commitDecision() {
     if (!decision) return;
     if (currentVersion === undefined) {
-      setError(copy.versionMissing);
+      setError(t("orders.workspace.decision.versionMissing"));
       return;
     }
     if (decision === "reject" && !reason.trim()) return;
@@ -251,7 +219,13 @@ export function OrderStatusActions({
       }
 
       window.localStorage.removeItem(decisionKey(decision));
-      setNotice(body.command?.replayed ? copy.replayed : copy.committed);
+      setNotice(
+        t(
+          body.command?.replayed
+            ? "orders.workspace.decision.replayed"
+            : "orders.workspace.decision.committed",
+        ),
+      );
       setDecision(null);
       setReason("");
       await mutatePrefix("/api/orders");
@@ -296,7 +270,9 @@ export function OrderStatusActions({
   if (mutationAuthority === "canonical_v1") {
     return (
       <div className="space-y-3">
-        <Badge variant="outline">{copy.authority}</Badge>
+        <Badge variant="outline">
+          {t("orders.workspace.decision.authority")}
+        </Badge>
         {currentStatus === "draft" ? (
           <Button
             size="sm"
@@ -308,7 +284,7 @@ export function OrderStatusActions({
             ) : (
               <FileCheck2 className="me-1.5 h-4 w-4" />
             )}
-            {copy.submitDraft}
+            {t("orders.workspace.decision.submitDraft")}
           </Button>
         ) : currentStatus === "pending" ? (
           <div className="flex flex-wrap gap-2">
@@ -318,7 +294,7 @@ export function OrderStatusActions({
               disabled={loading !== null}
             >
               <CheckCircle2 className="me-1.5 h-4 w-4" />
-              {copy.confirm}
+              {t("orders.workspace.decision.confirm")}
             </Button>
             <Button
               size="sm"
@@ -327,7 +303,7 @@ export function OrderStatusActions({
               disabled={loading !== null}
             >
               <XCircle className="me-1.5 h-4 w-4" />
-              {copy.reject}
+              {t("orders.workspace.decision.reject")}
             </Button>
           </div>
         ) : (
@@ -336,8 +312,16 @@ export function OrderStatusActions({
           </p>
         )}
 
-        {notice && <p className="text-sm text-success" role="status">{notice}</p>}
-        {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+        {notice && (
+          <p className="text-sm text-success" role="status">
+            {notice}
+          </p>
+        )}
+        {error && (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        )}
 
         <AlertDialog
           open={decision !== null}
@@ -351,19 +335,29 @@ export function OrderStatusActions({
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {decision === "reject" ? copy.rejectTitle : copy.confirmTitle}
+                {t(
+                  decision === "reject"
+                    ? "orders.workspace.decision.rejectTitle"
+                    : "orders.workspace.decision.confirmTitle",
+                )}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {decision === "reject" ? copy.rejectBody : copy.confirmBody}
+                {t(
+                  decision === "reject"
+                    ? "orders.workspace.decision.rejectBody"
+                    : "orders.workspace.decision.confirmBody",
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             {decision === "reject" && (
               <label className="space-y-2 text-sm font-medium">
-                <span>{copy.reasonLabel}</span>
+                <span>{t("orders.workspace.decision.reasonLabel")}</span>
                 <Textarea
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
-                  placeholder={copy.reasonPlaceholder}
+                  placeholder={t(
+                    "orders.workspace.decision.reasonPlaceholder",
+                  )}
                   maxLength={500}
                   required
                   autoFocus
@@ -384,8 +378,10 @@ export function OrderStatusActions({
                   void commitDecision();
                 }}
               >
-                {loading ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}
-                {copy.proceed}
+                {loading ? (
+                  <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
+                ) : null}
+                {t("orders.workspace.decision.commit")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -397,9 +393,11 @@ export function OrderStatusActions({
   if (mutationAuthority === "confirmation_blocked") {
     return (
       <div className="space-y-2">
-        <Badge variant="outline">{copy.importAuthority}</Badge>
+        <Badge variant="outline">
+          {t("orders.workspace.decision.importAuthority")}
+        </Badge>
         <p className="text-sm text-muted-foreground" role="status">
-          {copy.importBlocked}
+          {t("orders.workspace.decision.importBlocked")}
         </p>
       </div>
     );
@@ -442,7 +440,11 @@ export function OrderStatusActions({
           );
         })}
       </div>
-      {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+      {error && (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

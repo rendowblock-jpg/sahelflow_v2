@@ -80,7 +80,9 @@ async function ensureOwnerSession(page: Page) {
   if (page.url().includes("/login")) {
     await loginOwner(page);
   } else if (page.url().includes("/setup")) {
-    throw new Error("Phase 6/7 representative evidence requires the rich seeded owner authority");
+    throw new Error(
+      "Phase 6/7 representative evidence requires the rich seeded owner authority",
+    );
   }
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
   await waitForHydration(page);
@@ -107,7 +109,9 @@ async function assertNoLeakedTranslationKeys(page: Page, route: string) {
     const pattern = new RegExp(patternSource, "g");
     return [...new Set(body.innerText.match(pattern) ?? [])].slice(0, 20);
   }, TRANSLATION_KEY_PATTERN.source);
-  expect(leaks, `${route} must not expose dotted translation identifiers`).toEqual([]);
+  expect(leaks, `${route} must not expose dotted translation identifiers`).toEqual(
+    [],
+  );
 }
 
 async function assertSemanticBasics(page: Page, route: string) {
@@ -180,7 +184,9 @@ async function assertSemanticBasics(page: Page, route: string) {
 
     const unnamed: string[] = [];
     for (const element of elements) {
-      if (!visible(element) || element.getAttribute("aria-hidden") === "true") continue;
+      if (!visible(element) || element.getAttribute("aria-hidden") === "true") {
+        continue;
+      }
       if (!hasLabel(element)) {
         unnamed.push(
           `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ""}${element.getAttribute("role") ? `[role=${element.getAttribute("role")}]` : ""}`,
@@ -194,7 +200,8 @@ async function assertSemanticBasics(page: Page, route: string) {
       .slice(0, 20);
 
     const main = document.querySelector("main");
-    const levelOneHeadings = main?.querySelectorAll("h1, [role='heading'][aria-level='1']").length ?? 0;
+    const levelOneHeadings =
+      main?.querySelectorAll("h1, [role='heading'][aria-level='1']").length ?? 0;
 
     return {
       unnamed: unnamed.slice(0, 30),
@@ -203,9 +210,18 @@ async function assertSemanticBasics(page: Page, route: string) {
     };
   });
 
-  expect(findings.unnamed, `${route} visible interactive controls need accessible names`).toEqual([]);
-  expect(findings.imagesMissingAlt, `${route} visible images need explicit alt semantics`).toEqual([]);
-  expect(findings.levelOneHeadings, `${route} needs one work-surface level-one heading`).toBeGreaterThanOrEqual(1);
+  expect(
+    findings.unnamed,
+    `${route} visible interactive controls need accessible names`,
+  ).toEqual([]);
+  expect(
+    findings.imagesMissingAlt,
+    `${route} visible images need explicit alt semantics`,
+  ).toEqual([]);
+  expect(
+    findings.levelOneHeadings,
+    `${route} needs one work-surface level-one heading`,
+  ).toBeGreaterThanOrEqual(1);
 }
 
 async function assertRenderedRoute(
@@ -216,7 +232,10 @@ async function assertRenderedRoute(
 ) {
   const response = await page.goto(route, { waitUntil: "domcontentloaded" });
   expect(response, `${route} should return a document response`).not.toBeNull();
-  expect(response!.status(), `${route} should not return an HTTP error`).toBeLessThan(400);
+  expect(
+    response!.status(),
+    `${route} should not return an HTTP error`,
+  ).toBeLessThan(400);
   await waitForHydration(page);
   await expect(page.locator("html")).toHaveAttribute("lang", locale);
   await expect(page.locator("html")).toHaveAttribute("dir", dir);
@@ -273,7 +292,10 @@ async function assertTargetFloor(page: Page) {
     }
     return failed;
   });
-  expect(failures, "compact standalone controls must keep a 24px target floor").toEqual([]);
+  expect(
+    failures,
+    "compact standalone controls must keep a 24px target floor",
+  ).toEqual([]);
 }
 
 function percentile95(values: number[]): number {
@@ -305,9 +327,75 @@ function maxCssDurationMs(value: string): number {
   );
 }
 
+async function createGovernedManualOrder(page: Page) {
+  return page.evaluate(async () => {
+    const productsResponse = await fetch(
+      "/api/products?activeOnly=true&limit=100",
+      { cache: "no-store" },
+    );
+    if (!productsResponse.ok) {
+      throw new Error(`products returned ${productsResponse.status}`);
+    }
+    const productsBody = (await productsResponse.json()) as {
+      products?: Array<{ id: string; name: string }>;
+    };
+    const product = productsBody.products?.find(
+      (candidate) => candidate.name === "Chargeur Rapide USB-C 65W",
+    );
+    if (!product) throw new Error("deterministic non-variant product is missing");
+
+    const suffix = String(Date.now() % 1_000_000).padStart(6, "0");
+    const phone = `0555${suffix}`;
+    const idempotencyKey = crypto.randomUUID();
+    const response = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        idempotencyKey,
+        correlationId: `phase67-orders-journey:${idempotencyKey}`,
+        newCustomer: {
+          name: "Phase 67 Governed Buyer",
+          phone,
+          wilaya: "Alger",
+          commune: "Bab Ezzouar",
+          address: "Cité AADL, Lot 23",
+        },
+        items: [{ productId: product.id, quantity: 1 }],
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "Cité AADL, Lot 23",
+        phone,
+        deliveryCost: 500,
+        notes: "Phase 6/7 governed Orders journey evidence",
+        source: "manual",
+      }),
+    });
+    const body = (await response.json().catch(() => ({}))) as {
+      order?: { id: string; orderNumber: string; status: string };
+      authority?: string;
+      error?: unknown;
+    };
+    if (!response.ok || !body.order) {
+      throw new Error(
+        `manual order creation failed (${response.status}): ${JSON.stringify(body.error ?? body)}`,
+      );
+    }
+    if (body.authority !== "trusted-manual-v1") {
+      throw new Error(`unexpected order authority: ${body.authority ?? "missing"}`);
+    }
+    if (body.order.status !== "pending") {
+      throw new Error(`unexpected initial order status: ${body.order.status}`);
+    }
+    return body.order;
+  });
+}
+
 test.describe("Phase 6 and 7 integrated completion evidence", () => {
   for (const { locale, dir } of LOCALES) {
-    test(`${locale} complete desktop route sweep`, async ({ page, context }, testInfo) => {
+    test(`${locale} complete desktop route sweep`, async ({
+      page,
+      context,
+    }, testInfo) => {
       test.setTimeout(ROUTE_TIMEOUT_MS);
       await page.setViewportSize(DESKTOP);
       await setLocale(context, locale);
@@ -323,7 +411,10 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
       });
     });
 
-    test(`${locale} 200-percent-equivalent reflow route sweep`, async ({ page, context }) => {
+    test(`${locale} 200-percent-equivalent reflow route sweep`, async ({
+      page,
+      context,
+    }) => {
       test.setTimeout(ROUTE_TIMEOUT_MS);
       await page.setViewportSize(REFLOW_200_EQUIVALENT);
       await setLocale(context, locale);
@@ -402,7 +493,10 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
     }
   });
 
-  test("Phase 7 throttled browser performance trend stays bounded", async ({ page, context }, testInfo) => {
+  test("Phase 7 throttled browser performance trend stays bounded", async ({
+    page,
+    context,
+  }, testInfo) => {
     test.setTimeout(210_000);
     await page.setViewportSize(DESKTOP);
     await setLocale(context, "fr");
@@ -431,7 +525,9 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
     await page.evaluate(async () => {
-      const response = await fetch("/api/orders/search?q=DZ&limit=5", { cache: "no-store" });
+      const response = await fetch("/api/orders/search?q=DZ&limit=5", {
+        cache: "no-store",
+      });
       if (!response.ok) throw new Error(`search warmup returned ${response.status}`);
       await response.json();
     });
@@ -462,7 +558,8 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
     const routeP95 = percentile95(Object.values(routeDurations));
     const searchP95 = percentile95(searchDurations);
     const evidence = {
-      environment: "controlled Chromium CI trend with 4x renderer CPU throttling — not T470 certification",
+      environment:
+        "controlled Chromium CI trend with 4x renderer CPU throttling — not T470 certification",
       routeDurationsMs: routeDurations,
       routeP95Ms: routeP95,
       searchDurationsMs: searchDurations,
@@ -479,5 +576,132 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
     // named installed-hardware budgets.
     expect(routeP95).toBeLessThan(8_000);
     expect(searchP95).toBeLessThan(2_000);
+  });
+});
+
+const GOVERNED_REVIEW_EXPECTATIONS = {
+  en: {
+    dir: "ltr",
+    title: "Confirmation review",
+    authority: "Canonical order authority",
+  },
+  fr: {
+    dir: "ltr",
+    title: "Vérification de confirmation",
+    authority: "Autorité canonique de commande",
+  },
+  ar: {
+    dir: "rtl",
+    title: "مراجعة التأكيد",
+    authority: "صلاحية الطلبية الموثوقة",
+  },
+} as const;
+
+test.describe.serial("Orders governed seller journey", () => {
+  let orderId = "";
+  let orderNumber = "";
+
+  test("creates a governed manual order and enters review from the queue", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize(DESKTOP);
+    await setLocale(context, "en");
+    await ensureOwnerSession(page);
+
+    const order = await createGovernedManualOrder(page);
+    orderId = order.id;
+    orderNumber = order.orderNumber;
+
+    await page.goto("/orders", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+    const queueLink = page.locator('a[href="/orders/confirmation-queue"]').first();
+    await expect(queueLink).toBeVisible();
+    await queueLink.click();
+    await page.waitForURL((url) => url.pathname === "/orders/confirmation-queue");
+    await waitForHydration(page);
+
+    const row = page.getByRole("row").filter({ hasText: orderNumber });
+    await expect(row).toBeVisible();
+    const reviewLink = row.locator('a[href^="/orders/"]').last();
+    await expect(reviewLink).toBeVisible();
+    await reviewLink.click();
+    await page.waitForURL((url) => url.pathname === `/orders/${orderId}`);
+    await waitForHydration(page);
+
+    await expect(page.getByText(GOVERNED_REVIEW_EXPECTATIONS.en.title)).toBeVisible();
+    await expect(
+      page.getByText(GOVERNED_REVIEW_EXPECTATIONS.en.authority),
+    ).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("rule-1");
+    await assertContained(page, `/orders/${orderId}`);
+    await assertNoLeakedTranslationKeys(page, `/orders/${orderId}`);
+    await assertSemanticBasics(page, `/orders/${orderId}`);
+  });
+
+  for (const locale of ["fr", "ar"] as const) {
+    test(`${locale} review detail keeps governed copy localized and contained`, async ({
+      page,
+      context,
+    }) => {
+      test.setTimeout(90_000);
+      await page.setViewportSize(
+        locale === "ar" ? REFLOW_200_EQUIVALENT : DESKTOP,
+      );
+      await setLocale(context, locale);
+      await ensureOwnerSession(page);
+      await page.goto("/orders/confirmation-queue", {
+        waitUntil: "domcontentloaded",
+      });
+      await waitForHydration(page);
+
+      const row = page.getByRole("row").filter({ hasText: orderNumber });
+      await expect(row).toBeVisible();
+      const reviewLink = row.locator('a[href^="/orders/"]').last();
+      await reviewLink.click();
+      await page.waitForURL((url) => url.pathname === `/orders/${orderId}`);
+      await waitForHydration(page);
+
+      const expectation = GOVERNED_REVIEW_EXPECTATIONS[locale];
+      await expect(page.locator("html")).toHaveAttribute("lang", locale);
+      await expect(page.locator("html")).toHaveAttribute("dir", expectation.dir);
+      await expect(page.getByText(expectation.title)).toBeVisible();
+      await expect(page.getByText(expectation.authority)).toBeVisible();
+      await expect(page.locator("body")).not.toContainText(
+        "Canonical order authority",
+      );
+      await expect(page.locator("body")).not.toContainText("rule-1");
+      await assertContained(page, `/orders/${orderId}`);
+      await assertNoLeakedTranslationKeys(page, `/orders/${orderId}`);
+      await assertSemanticBasics(page, `/orders/${orderId}`);
+    });
+  }
+
+  test("commits the governed decision and exposes canonical fulfillment", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize(DESKTOP);
+    await setLocale(context, "en");
+    await ensureOwnerSession(page);
+    await page.goto(`/orders/${orderId}`, { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+
+    await page.getByRole("button", { name: "Confirm order" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("Confirm this order?");
+    await dialog.getByRole("button", { name: "Commit decision" }).click();
+
+    await expect(page.getByText("Fulfillment and delivery")).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText("Canonical fulfillment authority")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Mark packed" })).toBeVisible();
+    await expect(page.locator("body")).toContainText(orderNumber);
+    await assertContained(page, `/orders/${orderId}`);
+    await assertNoLeakedTranslationKeys(page, `/orders/${orderId}`);
   });
 });

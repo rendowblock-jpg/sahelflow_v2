@@ -1,6 +1,7 @@
 import type { Locale } from "@/lib/i18n";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
+import { getOrdersWorkspaceTranslation } from "@/lib/i18n/orders-workspace";
 import { getPhase5RuntimeTranslation } from "@/lib/i18n/phase5-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
 
@@ -104,6 +105,7 @@ export function getRuntimeTranslation(
     (SHARED_RUNTIME_COPY[locale] as Readonly<Record<string, string>>)[key] ??
     getAutomationRuntimeTranslation(locale, key) ??
     getCommerceRuntimeTranslation(locale, key) ??
+    getOrdersWorkspaceTranslation(locale, key) ??
     getPhase5RuntimeTranslation(locale, key) ??
     getWhatsAppRecoveryTranslation(locale, key)
   );

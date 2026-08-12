@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Phone } from "lucide-react";
 
 import { DataTable } from "@/components/data-table/data-table";
-import { OrderStatusActions } from "@/components/orders/order-status-actions";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { StateSurface } from "@/components/shared/state-surface";
 import { Button } from "@/components/ui/button";
@@ -140,11 +139,7 @@ export function ConfirmationQueueTable({
           orderId={row.original.id}
           status="pending"
           size="sm"
-          disabled={
-            !canOpenDetail ||
-            !row.original.canUpdate ||
-            row.original.mutationAuthority !== "legacy_compatibility"
-          }
+          disabled
         />
       ),
       enableSorting: false,
@@ -155,17 +150,12 @@ export function ConfirmationQueueTable({
       cell: ({ row }) => {
         const order = row.original;
         if (!canOpenDetail || !order.canUpdate) return null;
-        return order.mutationAuthority === "legacy_compatibility" ? (
+        return (
           <Button size="sm" variant="outline" asChild>
-            <Link href={`/orders/${order.id}`}>{t("confirmationQueue.confirm")}</Link>
+            <Link href={`/orders/${order.id}`} data-no-row-click>
+              {t("orders.workspace.confirmation.review")}
+            </Link>
           </Button>
-        ) : (
-          <OrderStatusActions
-            orderId={order.id}
-            currentStatus="pending"
-            currentVersion={order.version}
-            mutationAuthority={order.mutationAuthority}
-          />
         );
       },
       meta: { align: "end", width: "w-20" },

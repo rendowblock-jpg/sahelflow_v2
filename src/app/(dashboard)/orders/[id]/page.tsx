@@ -24,7 +24,10 @@ import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { OrderEditPanel } from "@/components/orders/order-edit-panel";
 import { OrderDeleteButton } from "@/components/orders/order-delete-button";
 import { CreateShipment } from "@/components/orders/create-shipment";
-import { RiskLevelBadgeServer, RiskActionBadgeServer } from "@/components/risk/risk-badges";
+import {
+  RiskActionBadgeServer,
+  RiskLevelBadgeServer,
+} from "@/components/risk/risk-badges";
 import { getI18n } from "@/lib/i18n-server";
 import {
   ArrowRight,
@@ -40,7 +43,10 @@ import {
   DollarSign,
 } from "lucide-react";
 import { getOrderTimeline } from "@/lib/data/order-change-service";
-import { getRefundsForOrder, getTotalRefunded } from "@/lib/data/refund-service";
+import {
+  getRefundsForOrder,
+  getTotalRefunded,
+} from "@/lib/data/refund-service";
 import { OrderTimeline } from "@/components/orders/order-timeline";
 import { RefundDialog } from "@/components/orders/refund-dialog";
 import { CanonicalFulfillmentActions } from "@/components/orders/canonical-fulfillment-actions";
@@ -48,6 +54,10 @@ import {
   isImportPendingOrderAuthority,
   isTrustedManualOrderAuthority,
 } from "@/lib/orders/manual-order-authority";
+import {
+  getOrderRiskFactorPresentation,
+  getOrderRiskRuleLabelKey,
+} from "@/lib/orders/order-risk-presentation";
 
 export const dynamic = "force-dynamic";
 
@@ -83,9 +93,22 @@ export default async function OrderDetailPage({
     order.source,
     order.sourceMetadata,
   );
+  const mutationAuthority = canonicalManual
+    ? "canonical_v1"
+    : importConfirmationBlocked
+      ? "confirmation_blocked"
+      : "legacy_compatibility";
+  const isConfirmationReview = order.status === "pending";
 
   // Fetch customer + delivery + risk assessment + timeline + refunds.
-  const [customer, delivery, riskAssessment, timelineEntries, refunds, totalRefunded] = await Promise.all([
+  const [
+    customer,
+    delivery,
+    riskAssessment,
+    timelineEntries,
+    refunds,
+    totalRefunded,
+  ] = await Promise.all([
     db.customer.findUnique({ where: { id: order.customerId } }),
     deliveryService.getByOrderId({ prisma: db, shop: shopContext }, order.id),
     assessOrderRisk({ prisma: db, shop: shopContext }, order.id).catch(() => null),
@@ -96,6 +119,10 @@ export default async function OrderDetailPage({
 
   const itemsTotal = order.items.reduce((sum, item) => sum + item.total, 0);
   const deliveryCost = order.deliveryCost ?? 0;
+  const triggeredRuleLabelKeys =
+    riskAssessment?.triggeredRules
+      .map(getOrderRiskRuleLabelKey)
+      .filter((key): key is string => Boolean(key)) ?? [];
 
   const SOURCE_LABELS: Record<string, string> = {
     whatsapp: "WhatsApp",
@@ -108,18 +135,32 @@ export default async function OrderDetailPage({
     youcan: "YouCan",
   };
 
-  // Status timeline
   const timeline: Array<{ label: string; date: Date | null; done: boolean }> = [
     { label: t("orders.created"), date: order.createdAt, done: true },
-    { label: t("orders.status.confirmed"), date: order.confirmedAt, done: !!order.confirmedAt },
-    { label: t("orders.statusActions.packed"), date: order.packedAt, done: !!order.packedAt },
-    { label: t("orders.status.shipped"), date: order.shippedAt, done: !!order.shippedAt },
-    { label: t("orders.status.delivered"), date: order.deliveredAt, done: !!order.deliveredAt },
+    {
+      label: t("orders.status.confirmed"),
+      date: order.confirmedAt,
+      done: !!order.confirmedAt,
+    },
+    {
+      label: t("orders.statusActions.packed"),
+      date: order.packedAt,
+      done: !!order.packedAt,
+    },
+    {
+      label: t("orders.status.shipped"),
+      date: order.shippedAt,
+      done: !!order.shippedAt,
+    },
+    {
+      label: t("orders.status.delivered"),
+      date: order.deliveredAt,
+      done: !!order.deliveredAt,
+    },
   ];
 
   return (
     <div className="app-content page-sections">
-      {/* Breadcrumb + header */}
       <div className="space-y-4">
         <Button variant="ghost" size="sm" asChild className="-ms-2">
           <Link href="/orders">
@@ -153,42 +194,56 @@ export default async function OrderDetailPage({
           )}
         </div>
 
-        {/* Status actions (client component) */}
-        <Card>
-          <CardContent className="pt-6">
+        <Card className={isConfirmationReview ? "border-primary/30" : undefined}>
+          {isConfirmationReview ? (
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <CardTitle className="text-base">
+                    {t("orders.workspace.confirmation.title")}
+                  </CardTitle>
+                  <p className="max-w-2xl text-sm text-muted-foreground">
+                    {t("orders.workspace.confirmation.description")}
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/orders/confirmation-queue">
+                    <ArrowLeft className="me-1.5 size-4 rtl:rotate-180" />
+                    {t("orders.workspace.confirmation.backToQueue")}
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+          ) : null}
+          <CardContent className={isConfirmationReview ? undefined : "pt-6"}>
             <OrderStatusActions
               orderId={order.id}
               currentStatus={order.status}
               currentVersion={order.version}
-              mutationAuthority={
-                canonicalManual
-                  ? "canonical_v1"
-                  : importConfirmationBlocked
-                    ? "confirmation_blocked"
-                    : "legacy_compatibility"
-              }
+              mutationAuthority={mutationAuthority}
             />
           </CardContent>
         </Card>
-        {canonicalManual && order.status !== "pending" && order.status !== "cancelled" && (
-          <Card>
-            <CardContent className="pt-6">
-              <CanonicalFulfillmentActions
-                orderId={order.id}
-                currentStatus={order.status}
-                currentVersion={order.version}
-                fulfillmentState={order.fulfillmentState}
-                deliveryState={order.deliveryState}
-                inventoryState={order.inventoryState}
-                codState={order.codState}
-              />
-            </CardContent>
-          </Card>
-        )}
+        {canonicalManual &&
+          order.status !== "pending" &&
+          order.status !== "cancelled" && (
+            <Card>
+              <CardContent className="pt-6">
+                <CanonicalFulfillmentActions
+                  orderId={order.id}
+                  currentStatus={order.status}
+                  currentVersion={order.version}
+                  fulfillmentState={order.fulfillmentState}
+                  deliveryState={order.deliveryState}
+                  inventoryState={order.inventoryState}
+                  codState={order.codState}
+                />
+              </CardContent>
+            </Card>
+          )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left column: items + totals */}
         <div className="lg:col-span-2 space-y-6">
           <OrderEditPanel
             orderId={order.id}
@@ -209,7 +264,6 @@ export default async function OrderDetailPage({
             initialPhone={order.phone}
             initialNotes={order.notes}
           >
-            {/* Items */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -237,22 +291,29 @@ export default async function OrderDetailPage({
                           </p>
                         )}
                       </div>
-                      <p className="text-sm font-medium">{formatDZD(item.total)}</p>
+                      <p className="text-sm font-medium">
+                        {formatDZD(item.total)}
+                      </p>
                     </div>
                   ))}
                 </div>
 
                 <Separator className="my-4" />
 
-                {/* Totals */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("orders.detail.subtotal")}</span>
+                    <span className="text-muted-foreground">
+                      {t("orders.detail.subtotal")}
+                    </span>
                     <span>{formatDZD(itemsTotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("orders.detail.shipping")}</span>
-                    <span>{deliveryCost > 0 ? formatDZD(deliveryCost) : "—"}</span>
+                    <span className="text-muted-foreground">
+                      {t("orders.detail.shipping")}
+                    </span>
+                    <span>
+                      {deliveryCost > 0 ? formatDZD(deliveryCost) : "—"}
+                    </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-base font-bold">
@@ -263,23 +324,25 @@ export default async function OrderDetailPage({
               </CardContent>
             </Card>
 
-            {/* Delivery / shipment */}
             {!canonicalManual && (
               <CreateShipment
                 orderId={order.id}
                 orderStatus={order.status}
-                delivery={delivery ? {
-                  id: delivery.id,
-                  provider: delivery.provider,
-                  trackingNumber: delivery.trackingNumber,
-                  labelUrl: delivery.labelUrl,
-                  cost: delivery.cost,
-                  status: delivery.status,
-                } : null}
+                delivery={
+                  delivery
+                    ? {
+                        id: delivery.id,
+                        provider: delivery.provider,
+                        trackingNumber: delivery.trackingNumber,
+                        labelUrl: delivery.labelUrl,
+                        cost: delivery.cost,
+                        status: delivery.status,
+                      }
+                    : null
+                }
               />
             )}
 
-            {/* Notes */}
             {order.notes && (
               <Card>
                 <CardHeader>
@@ -295,9 +358,7 @@ export default async function OrderDetailPage({
           </OrderEditPanel>
         </div>
 
-        {/* Right column: risk + customer + timeline */}
         <div className="space-y-6">
-          {/* Risk assessment card */}
           {riskAssessment && (
             <Card>
               <CardHeader>
@@ -307,58 +368,84 @@ export default async function OrderDetailPage({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Score + level + action */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold tabular-nums">{riskAssessment.score}</span>
+                      <span className="text-3xl font-bold tabular-nums">
+                        {riskAssessment.score}
+                      </span>
                       <span className="text-sm text-muted-foreground">/ 100</span>
                     </div>
-                    <RiskLevelBadgeServer level={riskAssessment.level} label={t(`risk.level.${riskAssessment.level}`)} />
+                    <RiskLevelBadgeServer
+                      level={riskAssessment.level}
+                      label={t(`risk.level.${riskAssessment.level}`)}
+                    />
                   </div>
                   <div className="text-end space-y-1">
-                    <p className="text-xs text-muted-foreground">{t("risk.assessment.action")}</p>
-                    <RiskActionBadgeServer action={riskAssessment.action} label={t(`risk.action.${riskAssessment.action}`)} />
+                    <p className="text-xs text-muted-foreground">
+                      {t("risk.assessment.action")}
+                    </p>
+                    <RiskActionBadgeServer
+                      action={riskAssessment.action}
+                      label={t(`risk.action.${riskAssessment.action}`)}
+                    />
                   </div>
                 </div>
 
                 <Separator />
 
-                {/* Factors breakdown */}
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {t("risk.assessment.factors")}
                   </p>
                   {riskAssessment.factors.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t("risk.assessment.noFactors")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("risk.assessment.noFactors")}
+                    </p>
                   ) : (
-                    riskAssessment.factors.map((factor) => (
-                      <div key={factor.id} className="flex items-start justify-between gap-2 text-sm">
-                        <div className="flex-1 min-w-0">
-                          <span className="font-medium">{t(factor.labelKey)}</span>
-                          <p className="text-xs text-muted-foreground">{factor.explanation}</p>
-                        </div>
-                        <span
-                          className={`tabular-nums font-medium ${factor.points > 0 ? "text-destructive" : "text-success"}`}
+                    riskAssessment.factors.map((factor) => {
+                      const presentation = getOrderRiskFactorPresentation(factor);
+                      return (
+                        <div
+                          key={factor.id}
+                          className="flex items-start justify-between gap-2 text-sm"
                         >
-                          {factor.points > 0 ? "+" : ""}{factor.points}
-                        </span>
-                      </div>
-                    ))
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium">
+                              {t(factor.labelKey)}
+                            </span>
+                            <p className="text-xs text-muted-foreground">
+                              {t(presentation.key, presentation.params)}
+                            </p>
+                          </div>
+                          <span
+                            className={`tabular-nums font-medium ${factor.points > 0 ? "text-destructive" : "text-success"}`}
+                          >
+                            {factor.points > 0 ? "+" : ""}
+                            {factor.points}
+                          </span>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
 
-                {/* Rule override notice */}
                 {riskAssessment.ruleOverride && (
                   <>
                     <Separator />
-                    <p className="text-xs text-muted-foreground">
-                      {t("risk.assessment.ruleOverride")}: {riskAssessment.triggeredRules.join(", ")}
-                    </p>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        {t("risk.assessment.ruleOverride")}
+                      </p>
+                      {triggeredRuleLabelKeys.length > 0 ? (
+                        <p className="text-xs font-medium">
+                          {triggeredRuleLabelKeys.map((key) => t(key)).join(" · ")}
+                        </p>
+                      ) : null}
+                    </div>
                   </>
                 )}
 
-                {/* Link to risk dashboard */}
                 <Link
                   href="/risk"
                   className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
@@ -370,7 +457,6 @@ export default async function OrderDetailPage({
             </Card>
           )}
 
-          {/* Customer */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -386,8 +472,12 @@ export default async function OrderDetailPage({
                     {customer.orderCount > 0 && (
                       <p className="text-xs text-muted-foreground">
                         {customer.orderCount > 1
-                          ? t("orders.detail.ordersCountPlural", { n: customer.orderCount })
-                          : t("orders.detail.ordersCountSingular", { n: customer.orderCount })}
+                          ? t("orders.detail.ordersCountPlural", {
+                              n: customer.orderCount,
+                            })
+                          : t("orders.detail.ordersCountSingular", {
+                              n: customer.orderCount,
+                            })}
                         {" · "}
                         {formatDZD(customer.totalSpent)}
                       </p>
@@ -397,7 +487,10 @@ export default async function OrderDetailPage({
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
                       <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                      <a href={`tel:${customer.phone}`} className="hover:underline">
+                      <a
+                        href={`tel:${customer.phone}`}
+                        className="hover:underline"
+                      >
                         {customer.phone}
                       </a>
                     </div>
@@ -410,7 +503,12 @@ export default async function OrderDetailPage({
                       </div>
                     )}
                   </div>
-                  <Button variant="outline" size="sm" className="w-full" asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    asChild
+                  >
                     <Link href={`/customers/${customer.id}`}>
                       {t("orders.detail.viewCustomer")}
                       <ArrowRight className="h-3.5 w-3.5 ms-1 rtl:rotate-180" />
@@ -418,12 +516,13 @@ export default async function OrderDetailPage({
                   </Button>
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">{t("orders.detail.customerNotFound")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("orders.detail.customerNotFound")}
+                </p>
               )}
             </CardContent>
           </Card>
 
-          {/* Delivery address */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -440,10 +539,11 @@ export default async function OrderDetailPage({
             </CardContent>
           </Card>
 
-          {/* Status timeline */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("orders.detail.tracking")}</CardTitle>
+              <CardTitle className="text-base">
+                {t("orders.detail.tracking")}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -464,7 +564,9 @@ export default async function OrderDetailPage({
                       )}
                     </div>
                     <div className="pt-0">
-                      <p className={`text-sm font-medium ${step.done ? "" : "text-muted-foreground"}`}>
+                      <p
+                        className={`text-sm font-medium ${step.done ? "" : "text-muted-foreground"}`}
+                      >
                         {step.label}
                       </p>
                       {step.date && (
@@ -479,7 +581,6 @@ export default async function OrderDetailPage({
             </CardContent>
           </Card>
 
-          {/* Order change ledger timeline (Phase 4 — Medusa pattern) */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -488,56 +589,75 @@ export default async function OrderDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <OrderTimeline entries={timelineEntries.map((e) => ({
-                id: e.id,
-                actionType: e.actionType,
-                actor: e.actor ?? "system",
-                payload: e.payload,
-                status: e.status,
-                createdAt: e.createdAt.toISOString(),
-              }))} />
+              <OrderTimeline
+                entries={timelineEntries.map((e) => ({
+                  id: e.id,
+                  actionType: e.actionType,
+                  actor: e.actor ?? "system",
+                  payload: e.payload,
+                  status: e.status,
+                  createdAt: e.createdAt.toISOString(),
+                }))}
+              />
             </CardContent>
           </Card>
 
-          {/* Refund section (Phase 4) */}
-          {!canonicalManual && ["delivered", "returned", "refused"].includes(order.status) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <DollarSign className="h-4 w-4" />
-                  {t("orders.refund.title")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {refunds.length > 0 && (
-                  <div className="space-y-1.5">
-                    {refunds.map((r) => (
-                      <div key={r.id} className="flex items-center justify-between rounded-lg border p-2.5 text-sm">
-                        <div>
-                          <span className="font-medium">{formatDZD(r.amount)}</span>
-                          <span className="text-muted-foreground ms-2">· {r.method}</span>
-                          {r.reason && <span className="text-muted-foreground ms-2">· {r.reason}</span>}
+          {!canonicalManual &&
+            ["delivered", "returned", "refused"].includes(order.status) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <DollarSign className="h-4 w-4" />
+                    {t("orders.refund.title")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {refunds.length > 0 && (
+                    <div className="space-y-1.5">
+                      {refunds.map((r) => (
+                        <div
+                          key={r.id}
+                          className="flex items-center justify-between rounded-lg border p-2.5 text-sm"
+                        >
+                          <div>
+                            <span className="font-medium">
+                              {formatDZD(r.amount)}
+                            </span>
+                            <span className="text-muted-foreground ms-2">
+                              · {r.method}
+                            </span>
+                            {r.reason && (
+                              <span className="text-muted-foreground ms-2">
+                                · {r.reason}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(r.createdAt, locale)}
+                          </span>
                         </div>
-                        <span className="text-xs text-muted-foreground">{formatDate(r.createdAt, locale)}</span>
+                      ))}
+                      <div className="flex justify-between border-t pt-2 text-sm">
+                        <span className="font-medium">
+                          {t("orders.refund.total")}
+                        </span>
+                        <span className="font-bold text-destructive">
+                          {formatDZD(totalRefunded)}
+                        </span>
                       </div>
-                    ))}
-                    <div className="flex justify-between border-t pt-2 text-sm">
-                      <span className="font-medium">{t("orders.refund.total")}</span>
-                      <span className="font-bold text-destructive">{formatDZD(totalRefunded)}</span>
                     </div>
-                  </div>
-                )}
-                {totalRefunded < order.totalPrice && (
-                  <RefundDialog
-                    orderId={order.id}
-                    orderNumber={order.orderNumber}
-                    maxAmount={order.totalPrice}
-                    alreadyRefunded={totalRefunded}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  )}
+                  {totalRefunded < order.totalPrice && (
+                    <RefundDialog
+                      orderId={order.id}
+                      orderNumber={order.orderNumber}
+                      maxAmount={order.totalPrice}
+                      alreadyRefunded={totalRefunded}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            )}
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { useQueryState } from "nuqs";
 
 import { fetcher } from "@/lib/swr/fetcher";
@@ -44,6 +44,7 @@ export function useOrders(opts: UseOrdersOptions = {}) {
     defaultValue: "createdAt.desc",
     shallow: true,
   });
+  const { cache } = useSWRConfig();
   const currentPage = Number.parseInt(page, 10) || 1;
   const pageSize = opts.pageSize ?? 25;
   const normalizedSort = normalizeClientSort(
@@ -61,9 +62,15 @@ export function useOrders(opts: UseOrdersOptions = {}) {
     opts.fallback.sort === normalizedSort
       ? opts.fallback
       : undefined;
+  const hasCachedData = cache.get(key)?.data !== undefined;
 
   const { data, error, isLoading, mutate } = useSWR<OrdersResponse>(key, fetcher, {
     fallbackData,
+    // The exact server fallback can skip the duplicate first-hydration request
+    // only when this SWR key has no older cached data. On a later revisit SWR
+    // prefers cached data over fallbackData, so revalidate that mount instead of
+    // letting an older list remain authoritative after a fresh server render.
+    revalidateOnMount: fallbackData ? hasCachedData : undefined,
     revalidateOnFocus: false,
     dedupingInterval: 5000,
   });
