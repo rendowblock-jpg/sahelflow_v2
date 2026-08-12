@@ -28,6 +28,21 @@ comfortable density, atomic locale/direction switching, warmer coherent themes,
 restrained motion, RTL geometry, shallow navigation, warning hierarchy, useful
 charts and route-wide workflow quality.
 
+## Phase 5 closure snapshot
+
+The Phase 5 application-changing protected product baseline remains
+`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` from PR #220. It remains valid for the
+source/browser whole-product evidence it proved. Retained **issue #221** still owns
+the coherent repaired installed visual/accessibility result plus explicit Founder
+acceptance; source/browser route adoption does not close it.
+
+## Phase 6 next action
+
+Phase 6 — Arabic, RTL and accessibility parity remains active. The current action is
+to finish one coherent Orders + confirmation queue package in PR #244, then continue
+the remaining route inventory one package at a time before installed Phase 6/7 and
+Founder acceptance can be judged. Phase 8 stays frozen behind that gate.
+
 ## Durable protected route-adoption baseline
 
 ### PR #237 Inbox operational workspace — CLOSED
@@ -219,6 +234,16 @@ Keep the next work inside the same Orders package:
 - **#230 OPEN P1:** live resilient customer-trial production/network certification.
 - Internal.14 remains Founder-installed but Founder-rejected.
 - Internal.5 remains the Founder-accepted baseline.
+- Phase 8 implementation remains frozen.
+
+## Hard rules
+
+- one active implementation agent/PR at a time;
+- preserve protected Phase 1–4/Phase 3 business authorities;
+- never weaken tests, permission boundaries or performance thresholds to make WIP green;
+- source/browser evidence is not installed Founder acceptance;
+- no #230 production claim from mocks or source CI;
+- Internal.14 remains Founder-rejected; Internal.5 remains Founder-accepted;
 - Phase 8 implementation remains frozen.
 
 ## Exact next-session order
