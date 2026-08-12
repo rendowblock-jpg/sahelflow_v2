@@ -3,11 +3,13 @@
 > **Purpose:** Compact resumable execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-08-12
 > **Protected main:** `52ea0c79b3dddfcc569dbf2ab690747381f85d6a` — PR #243 docs reconciliation
-> **Latest protected application merge:** `6e4477198f33344cd48c9230b32ff726079cd64d` — PR #242 Settings workspace
+> **Protected application-changing baseline:** `6e4477198f33344cd48c9230b32ff726079cd64d`
+> **Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign
 > **Active implementation PR:** #244 — `feat(orders): rebuild operational order workspace`
 > **Active branch:** `agent/orders-product-workspace-redesign`
 > **Latest application-changing checkpoint:** `0c36128a9fb161ae21f9e3a1f5750f2bada02745`
-> **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`
+> **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
+> **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
 > **Founder-installed release:** Internal.14
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
@@ -26,16 +28,40 @@ comfortable density, atomic locale/direction switching, warmer coherent themes,
 restrained motion, RTL geometry, shallow navigation, warning hierarchy, useful
 charts and route-wide workflow quality.
 
-The protected route-adoption baseline is:
+## Durable protected route-adoption baseline
 
-- PR #236 shared frontend foundation;
-- PR #237 Inbox operational workspace;
-- PR #240 AI Agents operational workspace;
-- PR #242 Settings operational workspace;
-- PR #244 Orders + confirmation queue is the active package.
+### PR #237 Inbox operational workspace — CLOSED
 
-None of those source/browser packages closes installed #221/#226, live #230 or the
-Founder acceptance gate.
+- Final head: `8e9d5aa365f0c5873909c1c8517f88519d743b9d`.
+- Protected source/browser adoption remains valid; it is not installed Founder acceptance.
+
+### PR #240 AI Agents operational workspace — CLOSED
+
+- Final head: `6355cc4c797a597af52c90decfe7727e405749be`.
+- Protected source/browser adoption remains valid; it is not installed Founder acceptance.
+
+### PR #242 Settings operational workspace — CLOSED
+
+- Final head: `e749b0af05741ee45b16c349750d44092bd3beb9`.
+- Final CI `31546488691`: PASS.
+- Final Phase 5 `31546488465`: PASS.
+- Final Phase 6–7 `31546488422`: PASS.
+- Protected source/browser adoption remains valid; it is not installed Founder acceptance.
+
+## Post-Settings documentation reconciliation
+
+PR #243 protected the documentation reconciliation on `main` at
+`52ea0c79b3dddfcc569dbf2ab690747381f85d6a`. It did not change application code,
+installed truth, retained issues or the Phase 8 freeze.
+
+## Next product package selection — remaining route inventory
+
+The post-Settings read-only inventory selected **Orders + confirmation queue** as the
+next coherent route-adoption package because it combined the strongest task-shape
+gap with the measured `/orders` performance outlier. PR #244 is that active package.
+
+None of the protected route-adoption packages closes installed #221/#226, live #230
+or the Founder acceptance gate.
 
 ## Protected backend/business boundaries
 
