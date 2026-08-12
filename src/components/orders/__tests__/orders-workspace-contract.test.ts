@@ -130,4 +130,17 @@ describe("Orders operational workspace contract", () => {
     expect(page).toContain('t("confirmationQueue.title")');
     expect(page).toContain("pendingCount > 0");
   });
+
+  it("keeps detail risk explanations presentation-only and hides machine rule ids", () => {
+    const detailPath = "src/app/(dashboard)/orders/[id]/page.tsx";
+    const detailText = read(detailPath);
+    const detailSource = parse(detailPath);
+
+    expect(importsBinding(detailSource, "getOrderRiskFactorPresentation")).toBe(true);
+    expect(importsBinding(detailSource, "getOrderRiskRuleLabelKey")).toBe(true);
+    expect(detailText).not.toContain("factor.explanation");
+    expect(detailText).not.toContain("triggeredRules.join");
+    expect(detailText).toContain('t("orders.workspace.confirmation.title")');
+    expect(detailText).toContain('href="/orders/confirmation-queue"');
+  });
 });
