@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   findMany: vi.fn(),
   count: vi.fn(),
-  batchAssessOrders: vi.fn(),
+  batchAssessOrdersForWorkbench: vi.fn(),
   isTrustedManualOrderAuthority: vi.fn(
     (source: unknown) => source === "canonical",
   ),
@@ -31,8 +31,8 @@ vi.mock("@/lib/db", () => ({
   shopContext: mocks.shop,
 }));
 
-vi.mock("@/lib/risk-engine/service", () => ({
-  batchAssessOrders: mocks.batchAssessOrders,
+vi.mock("@/lib/orders/order-risk-workbench", () => ({
+  batchAssessOrdersForWorkbench: mocks.batchAssessOrdersForWorkbench,
 }));
 
 vi.mock("@/lib/orders/manual-order-authority", () => ({
@@ -100,7 +100,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.count.mockResolvedValue(0);
   mocks.findMany.mockResolvedValue([]);
-  mocks.batchAssessOrders.mockResolvedValue(new Map());
+  mocks.batchAssessOrdersForWorkbench.mockResolvedValue(new Map());
 });
 
 describe("Orders workbench", () => {
@@ -112,7 +112,7 @@ describe("Orders workbench", () => {
     ];
     mocks.findMany.mockResolvedValue(rows);
     mocks.count.mockResolvedValue(7);
-    mocks.batchAssessOrders.mockResolvedValue(
+    mocks.batchAssessOrdersForWorkbench.mockResolvedValue(
       new Map([
         ["a", { level: "low", score: 12 }],
         ["b", { level: "high", score: 70 }],
@@ -138,7 +138,7 @@ describe("Orders workbench", () => {
         skip: 3,
       }),
     );
-    expect(mocks.batchAssessOrders).toHaveBeenCalledWith(
+    expect(mocks.batchAssessOrdersForWorkbench).toHaveBeenCalledWith(
       expect.anything(),
       ["a", "b", "c"],
     );
@@ -193,7 +193,7 @@ describe("Orders workbench", () => {
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       }),
     );
-    expect(mocks.batchAssessOrders).not.toHaveBeenCalled();
+    expect(mocks.batchAssessOrdersForWorkbench).not.toHaveBeenCalled();
     expect(result.fieldAccess).toMatchObject({
       contact: false,
       financials: false,
