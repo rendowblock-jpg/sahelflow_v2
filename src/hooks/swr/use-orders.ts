@@ -64,6 +64,12 @@ export function useOrders(opts: UseOrdersOptions = {}) {
 
   const { data, error, isLoading, mutate } = useSWR<OrdersResponse>(key, fetcher, {
     fallbackData,
+    // The server fallback is generated from the same canonical workbench query
+    // and exact page/sort/status tuple as this key. Revalidating it immediately
+    // on hydration duplicates the expensive risk/list projection before the
+    // seller has changed anything. Query changes and explicit mutations still
+    // receive a new key or call mutate(), so they continue to fetch normally.
+    revalidateOnMount: fallbackData ? false : undefined,
     revalidateOnFocus: false,
     dedupingInterval: 5000,
   });
