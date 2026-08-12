@@ -2,23 +2,144 @@
 
 > **Purpose:** Compact resumable execution frontier; never product, architecture or roadmap authority
 > **Last updated:** 2026-08-12
-> **Protected main:** `52ea0c79b3dddfcc569dbf2ab690747381f85d6a` — PR #243 docs reconciliation
+> **Protected main:** `856f58126327797b467938390586a04f185e70f6` — PR #244 Orders protected merge
 > **Protected application-changing baseline:** `6e4477198f33344cd48c9230b32ff726079cd64d`
 > **Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign
-> **Active implementation PR:** #244 — `feat(orders): rebuild operational order workspace`
-> **Active branch:** `agent/orders-product-workspace-redesign`
-> **Latest application-changing checkpoint:** `7b2daae82e8d423674735b3189d5e120236b4312`
+> **Latest protected product merge beyond the frozen verifier baseline:** PR #244 — Orders + confirmation operational workspace, merge `856f58126327797b467938390586a04f185e70f6`
+> **Active implementation/release PR:** #245 — `chore(release): prepare Internal.15 Founder checkpoint`
+> **Active branch:** `agent/internal-15-founder-checkpoint`
+> **Current draft branch head:** `1d99320490e488026dc394f4c5d2207023dff261`
+> **Last reviewed release-prep checkpoint before the runtime-retry delta:** `327d83feecffc9c7231e326a549730fbc60df4de`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
 > **Founder-installed release:** Internal.14
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Retained open issues:** #221, #226, #230
+> **Retained open evidence obligations:** #221, #226, #230
 > **Phase 8:** frozen
 
-Live GitHub is authority. Re-fetch protected `main`, PR #244 head, review threads and
-Actions before any write or merge. Keep one active implementation PR at a time.
-Source/browser evidence is not installed Founder acceptance.
+Live GitHub is authority. Re-fetch protected `main`, PR #245 head, changed files,
+review threads and Actions before any write, certification or merge. Keep one active
+implementation/release PR at a time. Source/browser/CI evidence is not installed
+Founder acceptance.
+
+## Session handoff — 2026-08-12
+
+This session completed the Orders package and moved the product to the next actual
+installer checkpoint. The safe stopping state is **PR #245 draft**. Do not mark it
+ready or merge it until the current branch delta is reviewed and the licensing ingress
+boundary is resolved.
+
+### Orders closure — PR #244 merged
+
+PR #244 `feat(orders): rebuild operational order workspace` is complete and protected.
+
+- Final certified application head before merge: `2094f1cb...`.
+- Protected merge on `main`: `856f58126327797b467938390586a04f185e70f6`.
+- Final exact-head Orders closure had CI, Phase 5 and Phase 6–7 green.
+- All five material/outdated review threads were resolved only after exact-head proof.
+- The last P2 repair ensured detected bad contact data remains visibly risky even when
+  contact-quality weighting contributes zero score; scoring semantics were not changed.
+- Orders source/server rendering, exact hydration, review-first confirmation queue,
+  localized risk presentation, centralized decision/fulfillment copy and governed
+  seller journey are now protected.
+- No schema/migration/native/licensing/provider/Golden-COD authority was rewritten by
+  the Orders closure.
+
+Do not reopen Orders unless installed Internal.15 evidence proves a concrete defect.
+
+## Internal.15 Founder checkpoint — PR #245 draft
+
+PR #245 is the single active release-preparation PR. It stages
+`1.0.0-internal.15` / MSI `1.0.0.15` from protected `main` after the frontend
+stabilization program and Orders merge.
+
+### Release-prep checkpoint `327d83fe...`
+
+`327d83feecffc9c7231e326a549730fbc60df4de` was the last intentionally assembled
+release-prep checkpoint before a later runtime-download retry commit advanced the
+branch. It synchronized:
+
+- `sahelflow.version.json` → `1.0.0-internal.15` / `1.0.0.15`;
+- `package.json`;
+- `src-tauri/Cargo.toml`;
+- `src-tauri/Cargo.lock`;
+- `src-tauri/tauri.conf.json`;
+- `.github/release-requests/internal-15.json`;
+- `scripts/install-founder-windows.ps1` defaults to MSI `1.0.0.15` and app
+  `1.0.0-internal.15`.
+
+The Founder installer mismatch was a real P1 found during fresh review and was fixed
+before this checkpoint. Windows PowerShell 5.1 self-test passed on the corrected
+script.
+
+### Certification evidence on `327d83fe...`
+
+Do **not** claim full release certification from this head because the aggregate run
+was interrupted/advanced before complete closure. Durable evidence that did finish:
+
+- Native source contract #414: PASS.
+- Phase 5 Experience #480: PASS, including fresh install + owner login and the
+  representative LTR/Arabic RTL workbench journey.
+- CI source quality, version/document authority, Tauri Rust smoke and substantial
+  Windows checks progressed successfully.
+- The exact evidence MSI lane failed during `scripts/prepare-runtime.ts` because the
+  pinned Bun 1.3.14 GitHub release asset returned HTTP 503. Earlier attempts also saw
+  HTTP 503 / `ECONNRESET`. This was external download transport, not an application
+  test failure.
+
+When the branch advanced and #245 was returned to draft, superseded ready-state runs
+were cancelled. Do not combine partial/superseded runs into a fake green claim.
+
+### Current branch head `1d993204...` — REVIEW FIRST
+
+Current PR #245 head is `1d99320490e488026dc394f4c5d2207023dff261`, one commit
+ahead of `327d83fe...`.
+
+Commit message: `fix(release): retry transient pinned runtime downloads`.
+
+It modifies only `scripts/prepare-runtime.ts`, but the diff is **larger than a retry-only
+change**: it adds retry/backoff for transient HTTP/network failures and also changes
+runtime-manifest/provenance output shape. Treat this head as unreviewed WIP, not an
+accepted repair.
+
+Exact next session must first compare `327d83fe...` → `1d993204...` and decide whether
+to:
+
+1. retain only the bounded retry/backoff logic while preserving the established runtime
+   manifest/provenance contract; or
+2. prove the manifest changes are intentional, compatible and fully covered before
+   keeping them.
+
+Do **not** blindly certify or merge `1d993204...` just because it retries 503s.
+
+The PR is intentionally draft. Ready-state CI/Phase 5/Phase 6–7/Native runs triggered
+on the current head were cancelled when draft state was restored; they are not release
+evidence.
+
+## Licensing / Cloudflare release boundary
+
+Production release packaging is intentionally fail-closed while
+`sahelflow.version.json` has `licensing.ownedHostSuffix: null`.
+
+The reviewed boundary requires:
+
+1. a verified SahelFlow-controlled public DNS suffix;
+2. two distinct SahelFlow-owned HTTPS licensing origins: primary + recovery;
+3. protected release binding
+   `SF_LICENSE_SERVICE_URL=https://<primary>|https://<recovery>`;
+4. live and installed resilient-trial evidence owned by #230.
+
+Do not weaken `src-tauri/build.rs`, do not package `workers.dev` as production
+authority, and do not substitute the CI loopback/evidence MSI for a Founder release.
+
+Cloudflare skills are installed, and the user expects full Cloudflare access. During
+this session the callable Cloudflare account-action namespace did not surface even
+after connection attempts. A disposable GitHub probe also found no standard protected
+Cloudflare API token/account secret available to Actions. Next session must **re-check
+the Cloudflare plugin/account connector first** rather than assuming it is unavailable.
+If account actions surface, inspect the actual controlled zones and provision the
+primary/recovery ingress directly. Do not invent domain ownership.
 
 ## Binding product truth
 
@@ -28,22 +149,29 @@ comfortable density, atomic locale/direction switching, warmer coherent themes,
 restrained motion, RTL geometry, shallow navigation, warning hierarchy, useful
 charts and route-wide workflow quality.
 
+The shared foundation plus Inbox, AI Agents, Settings and Orders protected work is the
+coherent frontend package intended for the next installed checkpoint. The next goal is
+an actual installable Internal.15 candidate, not another route-by-route redesign loop.
+
 ## Phase 5 closure snapshot
 
-The Phase 5 application-changing protected product baseline remains
+The historical Phase 5 application-changing protected product baseline remains
 `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` from PR #220. It remains valid for the
-source/browser whole-product evidence it proved. Retained **issue #221** still owns
-the coherent repaired installed visual/accessibility result plus explicit Founder
+source/browser whole-product evidence it proved. Retained **issue #221** owns the
+coherent repaired installed visual/accessibility result plus explicit Founder
 acceptance; source/browser route adoption does not close it.
+
+A live GitHub issue-state divergence for #221 was observed during release prep. Do not
+infer Founder acceptance from an issue being closed in the UI; re-fetch the issue and
+its acceptance record and reconcile the state explicitly.
 
 ## Phase 6 next action
 
-Phase 6 — Arabic, RTL and accessibility parity remains active. The Orders +
-confirmation queue implementation batch is complete on PR #244. The next action is
-one exact-head certification cycle, one fresh adversarial review, and—if clean—the
-protected merge. After that, reassess the remaining frontend globally and batch the
-highest-impact work toward the next installer rather than returning to micro-route
-loops. Phase 8 remains frozen behind the mandatory installed/live/Founder gate.
+Phase 6 — Arabic, RTL and accessibility parity remains active. Source/browser route
+adoption now includes Orders. The next action is release convergence: review the
+current runtime-retry delta, finish licensing ingress, certify one exact Internal.15
+head, publish through the protected release workflow, then perform installed Founder
+inspection. Phase 8 remains frozen behind the mandatory installed/live/Founder gate.
 
 ## Durable protected route-adoption baseline
 
@@ -55,6 +183,8 @@ loops. Phase 8 remains frozen behind the mandatory installed/live/Founder gate.
 ### PR #240 AI Agents operational workspace — CLOSED
 
 - Final head: `6355cc4c797a597af52c90decfe7727e405749be`.
+- Final source/browser evidence includes CI `31535669292`, Phase 5 `31535668960`,
+  and Phase 6–7 `31535668966`.
 - Protected source/browser adoption remains valid; it is not installed Founder acceptance.
 
 ### PR #242 Settings operational workspace — CLOSED
@@ -65,24 +195,35 @@ loops. Phase 8 remains frozen behind the mandatory installed/live/Founder gate.
 - Final Phase 6–7 `31546488422`: PASS.
 - Protected source/browser adoption remains valid; it is not installed Founder acceptance.
 
+### PR #244 Orders + confirmation operational workspace — CLOSED
+
+- Protected merge: `856f58126327797b467938390586a04f185e70f6`.
+- Final application head: `2094f1cb...`.
+- Final exact-head CI + Phase 5 + Phase 6–7: PASS before merge.
+- Protected source/browser adoption remains valid; it is not installed Founder acceptance.
+
 ## Post-Settings documentation reconciliation
 
-PR #243 protected the documentation reconciliation on `main` at
+PR #243 protected the prior documentation reconciliation on `main` at
 `52ea0c79b3dddfcc569dbf2ab690747381f85d6a`. It did not change application code,
-installed truth, retained issues or the Phase 8 freeze.
+installed truth, retained evidence obligations or the Phase 8 freeze. Later PR #244
+advanced protected product source; historical verifier markers remain retained until
+the verifier itself is deliberately reconciled in a bounded documentation/governance
+change.
 
 ## Next product package selection — remaining route inventory
 
-The post-Settings read-only inventory selected **Orders + confirmation queue** as the
-next coherent route-adoption package because it combined the strongest task-shape
-gap with the measured `/orders` performance outlier. PR #244 is that package.
+The previous read-only inventory selected Orders + confirmation queue and that package
+is now protected by PR #244. The current execution frontier is no longer another route
+selection: it is the coherent Internal.15 installer checkpoint and its external
+licensing/installed evidence boundary.
 
 None of the protected route-adoption packages closes installed #221/#226, live #230
 or the Founder acceptance gate.
 
 ## Protected backend/business boundaries
 
-Do not rewrite these for frontend convenience:
+Do not rewrite these for release convenience:
 
 1. Golden COD command-kernel transaction/idempotency/version/audit/event/outbox authority.
 2. Canonical source/manual order pricing, decision, expected-version and idempotency authority.
@@ -95,114 +236,11 @@ Do not rewrite these for frontend convenience:
 9. AI proposal-bound execution and automation durable recovery semantics.
 10. WhatsApp ingress/account/idempotency/encrypted-event authority.
 11. Native runtime supervisor/backup/recovery/installation identity.
-12. Consequence-selected CI/evidence gates; never weaken them to land UI work.
-
-Avoid schema, migration, licensing, provider or native changes inside #244 unless a
-concrete bounded defect proves them necessary and consequence selection expands.
-
-## PR #244 Orders + confirmation queue — implementation batch complete / draft
-
-PR #244 is open on `agent/orders-product-workspace-redesign`, based on protected
-`main` `52ea0c79...`. It is intentionally draft while the completed batch is prepared
-for one final ready-state certification cycle. Draft status is not a product claim.
-
-### Checkpoint 1 — review blockers repaired
-
-`9f6e96eca1f673edf2bbcc0e63b18c95877b2ffd` repaired both brittle source-contract
-checks and the SWR same-key stale-cache path while preserving batched Orders risk
-projection and permission-before-protected-read authority. Exact-head CI, Phase 5
-and Phase 6–7 passed.
-
-The original review threads `PRRT_kwDOShPGIM6Yaxhl`,
-`PRRT_kwDOShPGIM6Yaxhp` and `PRRT_kwDOShPGIM6Yaxhu` are outdated because their
-underlying code findings were repaired. Thread state remains separate from fix state.
-
-### Checkpoint 2 — review-first confirmation queue
-
-`05d4dc92bb51f3c55693f0edb64f9b4147050595` made the confirmation queue review-first,
-exposed it from the main Orders workspace, centralized initial Orders operational
-copy and preserved the existing canonical decision component as the mutation
-authority.
-
-Exact-head evidence:
-
-- CI `31554348981`: PASS.
-- Phase 5 `31554348863`: PASS.
-- Phase 6–7 `31554348885`: PASS, including rendered job `93984302397`.
-
-### Checkpoint 3 — task-shaped review and localized risk presentation
-
-`0c36128a9fb161ae21f9e3a1f5750f2bada02745` added the explicit confirmation-review
-consequence zone and presentation-only localized risk-factor/rule explanations. It
-did not change risk scoring/config/rules, decision semantics or protected business
-truth.
-
-Exact-head evidence:
-
-- CI `31554885587`: PASS.
-- Phase 5 `31554885427`: PASS.
-- Phase 6–7 `31554885422`: PASS.
-- Source diagnostics `93985149185`: PASS.
-- Rendered AR/FR/EN + RTL/reflow/performance job `93985801155`: PASS.
-
-That rendered run also kept the unchanged Phase 7 `<8000ms` controlled route p95
-tripwire green after the batching/SWR repair. Therefore the previously proposed lazy
-create-context endpoint is **not justified** by current evidence and was not added.
-
-### Checkpoint 4 — governed Orders package completion
-
-`7b2daae82e8d423674735b3189d5e120236b4312` —
-`feat(orders): complete governed workspace adoption`
-
-This is the final material application batch before certification:
-
-- moved the remaining `OrderStatusActions` decision copy into the single Orders
-  runtime AR/FR/EN presentation authority;
-- moved canonical fulfillment action/state/error copy into that same presentation
-  authority;
-- preserved decision and fulfillment command URLs, payloads, expected versions,
-  local idempotency keys, correlation IDs and business-state transition logic;
-- expanded runtime-copy tests across decision and fulfillment presentation;
-- added a dedicated serial browser journey that creates a real trusted-manual order
-  through `POST /api/orders`, enters it from `/orders` → confirmation queue → detail,
-  proves EN/FR/AR + RTL/200%-equivalent reflow and accessibility semantics, commits
-  the canonical confirmation decision, and verifies canonical fulfillment becomes
-  available;
-- kept raw machine risk rule IDs out of operator presentation;
-- added no schema, migration, native, licensing, provider or new API endpoint.
-
-The application diff from `67d298f...` to `7b2daae8...` is one commit touching five
-presentation/evidence files only.
-
-## Review status
-
-All four previously visible PR #244 review threads are outdated on the completed
-implementation branch: the two original P1 source-contract findings, the P2 SWR
-freshness finding, and the later P2 Working Memory finding have all been superseded
-by repaired code/documentation. Do not resolve them merely because they are outdated;
-resolve only after the final exact-head proof and fresh review confirm no material
-replacement finding.
-
-## Remaining #244 frontier
-
-There is no planned new feature work inside Orders before certification. Remaining
-work is deliberately one closure sequence:
-
-1. mark #244 ready once;
-2. run one exact-head CI + Phase 5 + Phase 6–7 certification cycle;
-3. inspect the dedicated Orders journey and unchanged performance tripwire results;
-4. perform one fresh exact-head self/adversarial review;
-5. if a material finding exists, repair findings as one batch and run one final
-   exact-head cycle; otherwise resolve obsolete threads and merge with expected head;
-6. reconcile protected docs after merge and move immediately to global
-   installer-readiness assessment.
-
-Do not add the lazy create-context endpoint unless new exact measurement actually
-fails or materially approaches the unchanged performance tripwire.
+12. Consequence-selected CI/evidence gates; never weaken them to land a release.
 
 ## Retained issue truth
 
-- **#221 OPEN:** coherent repaired installed visual/accessibility + explicit Founder acceptance.
+- **#221 OPEN:** coherent repaired installed visual/accessibility + explicit Founder acceptance obligation remains unsatisfied unless the acceptance record proves otherwise.
 - **#226 OPEN:** installed Phase 7 performance/reliability certification.
 - **#230 OPEN P1:** live resilient customer-trial production/network certification.
 - Internal.14 remains Founder-installed but Founder-rejected.
@@ -211,26 +249,45 @@ fails or materially approaches the unchanged performance tripwire.
 
 ## Hard rules
 
-- one active implementation agent/PR at a time;
+- one active implementation/release agent/PR at a time;
 - preserve protected Phase 1–4/Phase 3 business authorities;
-- never weaken tests, permission boundaries or performance thresholds to make WIP green;
+- never weaken tests, permission boundaries, runtime provenance or performance thresholds to make WIP green;
 - source/browser evidence is not installed Founder acceptance;
-- no #230 production claim from mocks or source CI;
+- no #230 production claim from mocks, loopback or source CI;
 - Internal.14 remains Founder-rejected; Internal.5 remains Founder-accepted;
-- Phase 8 implementation remains frozen.
+- Phase 8 implementation remains frozen;
+- do not merge #245 while `licensing.ownedHostSuffix` is null;
+- do not treat transient-download retries as permission to alter runtime provenance contracts without review;
+- prefer one coherent repair/certification batch over repeated micro-CI loops.
 
 ## Exact next-session order
 
-1. Re-fetch protected `main`, PR #244 exact head, Actions and review threads.
-2. Verify the head still descends from application checkpoint
-   `7b2daae82e8d423674735b3189d5e120236b4312` and contains no unexpected delta.
-3. Mark #244 ready once and run the real exact-head CI + Phase 5 + Phase 6–7 cycle.
-4. Inspect Orders seller-journey, AR/FR/EN/RTL/reflow/accessibility and unchanged
-   performance evidence; do not add speculative backend surface.
-5. Perform one fresh exact-head adversarial review.
-6. Batch any material repair once; otherwise resolve obsolete threads and merge only
-   with expected head SHA.
-7. Reconcile protected `main`, then assess remaining frontend work globally for the
-   next installer instead of reopening route-by-route micro loops.
-8. Keep #221/#226/#230 and the Phase 8 freeze intact until their installed/live/
-   Founder gates are actually satisfied.
+1. Re-fetch protected `main`, PR #245 exact head, changed files, review threads, Actions,
+   release environment state and retained issues.
+2. Confirm #245 is still **draft** and current head is expected; if another agent moved it,
+   inspect that delta before any write.
+3. Compare `327d83feecffc9c7231e326a549730fbc60df4de` →
+   `1d99320490e488026dc394f4c5d2207023dff261` in `scripts/prepare-runtime.ts`.
+   Keep the retry/backoff fix only if runtime manifest/provenance compatibility is
+   preserved or explicitly proven.
+4. Re-check the Cloudflare account connector. If callable, inspect controlled zones,
+   provision two SahelFlow-owned HTTPS licensing origins, verify health/recovery, bind
+   the protected release environment, and set `licensing.ownedHostSuffix` to the
+   actually controlled suffix. Do not guess a domain.
+5. Reconcile PR #245 into one intentional release package/head, including any bounded
+   runtime-download repair and documentation handoff; keep the Founder installer
+   Internal.15 defaults.
+6. Mark ready **once** and run one exact-head release certification: Required PR gate,
+   CI including Windows standalone + installed MSI, Native, Phase 5 and Phase 6–7.
+   Classify transient network failures from logs; do not change product source for an
+   external 503 unless resilience itself is the bounded fix.
+7. Perform one fresh exact-head adversarial review. Resolve the prior Founder-installer
+   P1 thread only after the exact repaired head proves it.
+8. If all exact-head gates are green and licensing ingress is real, merge #245 with an
+   expected-head guard and let protected-main dispatch the signed Internal.15 updater
+   workflow. Do not manually bypass the release guard.
+9. Install/update Internal.15 over Founder-installed Internal.14, preserve Roaming/Local
+   AppData, verify launch/license-valid workspace without restart, close/reopen, and
+   inspect the coherent frontend on the Founder T470.
+10. Record installed #221/#226 and live #230 evidence truth. Only after explicit Founder
+    acceptance may the Phase 8 freeze be reconsidered.

@@ -31,6 +31,9 @@ const BUN_COMPILER_CHECKSUM_URL = `https://github.com/oven-sh/bun/releases/downl
 const BUN_COMPILER_ARCHIVE_SHA256 = "538f9c846355d9e847b2671bc00c47da4229a0befb24df3282b739770f3b475f";
 const BUN_COMPILER_EXECUTABLE_SHA256 = "9005d0d585d80425e9b715690de3e614651124c94458ef3d3a302ca1a6d3d813";
 
+const DOWNLOAD_RETRY_DELAYS_MS = [0, 1_500, 4_000, 8_000] as const;
+const RETRYABLE_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+
 const root = resolve(fileURLToPath(import.meta.url), "..", "..");
 const runtimeDir = resolve(root, "src-tauri", "resources", "runtime");
 const nodeTarget = resolve(runtimeDir, "node.exe");
@@ -53,6 +56,64 @@ function sha256(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function sleep(milliseconds: number): Promise<void> {
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds));
+}
+
+async function downloadPinnedAsset(url: string, label: string): Promise<Buffer> {
+  let lastFailure = `${label} download failed`;
+
+  for (let attempt = 0; attempt < DOWNLOAD_RETRY_DELAYS_MS.length; attempt += 1) {
+    const delay = DOWNLOAD_RETRY_DELAYS_MS[attempt] ?? 0;
+    if (delay > 0) {
+      await sleep(delay);
+    }
+
+    try {
+      const response = await fetch(url, { redirect: "follow" });
+      if (response.ok) {
+        return Buffer.from(await response.arrayBuffer());
+      }
+
+      lastFailure = `${label} download failed with HTTP ${response.status}`;
+      const retryable = RETRYABLE_HTTP_STATUSES.has(response.status);
+      if (!retryable || attempt === DOWNLOAD_RETRY_DELAYS_MS.length - 1) {
+        throw new Error(lastFailure);
+      }
+
+      await response.body?.cancel().catch(() => undefined);
+      console.warn(
+        `${lastFailure}; retrying pinned asset (${attempt + 2}/${DOWNLOAD_RETRY_DELAYS_MS.length})`,
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === lastFailure &&
+        /^.+ download failed with HTTP \d+$/.test(error.message)
+      ) {
+        throw error;
+      }
+
+      lastFailure = `${label} download failed: ${errorMessage(error)}`;
+      if (attempt === DOWNLOAD_RETRY_DELAYS_MS.length - 1) {
+        throw new Error(
+          `${label} download failed after ${DOWNLOAD_RETRY_DELAYS_MS.length} attempts: ${errorMessage(error)}`,
+          { cause: error },
+        );
+      }
+      console.warn(
+        `${lastFailure}; retrying pinned asset (${attempt + 2}/${DOWNLOAD_RETRY_DELAYS_MS.length})`,
+      );
+    }
+  }
+
+  throw new Error(lastFailure);
+}
+
 if (process.platform !== "win32" || process.arch !== "x64") {
   throw new Error("SahelFlow 1.0 runtime preparation supports Windows x64 only");
 }
@@ -66,11 +127,10 @@ const tempDir = mkdtempSync(resolve(tmpdir(), "sahelflow-runtime-"));
 try {
   const archivePath = resolve(tempDir, NODE_ASSET);
   const extractDir = resolve(tempDir, "extracted");
-  const response = await fetch(NODE_URL, { redirect: "follow" });
-  if (!response.ok) {
-    throw new Error(`Node.js download failed with HTTP ${response.status}`);
-  }
-  writeFileSync(archivePath, Buffer.from(await response.arrayBuffer()));
+  writeFileSync(
+    archivePath,
+    await downloadPinnedAsset(NODE_URL, "Node.js"),
+  );
   const archiveSha256 = sha256(archivePath);
   if (archiveSha256 !== NODE_ARCHIVE_SHA256) {
     throw new Error(
@@ -117,15 +177,9 @@ try {
 
   const bunArchivePath = resolve(tempDir, BUN_COMPILER_ASSET);
   const bunExtractDir = resolve(tempDir, "bun-compiler");
-  const bunResponse = await fetch(BUN_COMPILER_URL, { redirect: "follow" });
-  if (!bunResponse.ok) {
-    throw new Error(
-      `Bun compiler download failed with HTTP ${bunResponse.status}`,
-    );
-  }
   writeFileSync(
     bunArchivePath,
-    Buffer.from(await bunResponse.arrayBuffer()),
+    await downloadPinnedAsset(BUN_COMPILER_URL, "Bun compiler"),
   );
   const bunArchiveSha256 = sha256(bunArchivePath);
   if (bunArchiveSha256 !== BUN_COMPILER_ARCHIVE_SHA256) {
