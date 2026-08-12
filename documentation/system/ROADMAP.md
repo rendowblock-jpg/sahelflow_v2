@@ -2,11 +2,13 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary; FD-031 — one-time Internal.14 installed-evidence exception
-> **Protected application-changing baseline:** `598e2a0dc0352227431614cf1527672aa78ec015` — PR #240
+> **Protected application-changing baseline:** `6e4477198f33344cd48c9230b32ff726079cd64d` — PR #242
 > **Historical PR #231 program-freeze baseline:** `23fb2e0ee4956132fafe8dd6973be42d3cfc8032`
-> **Latest application-changing protected merge:** PR #240 at `598e2a0dc0352227431614cf1527672aa78ec015`
+> **Latest application-changing protected merge:** PR #242 at `6e4477198f33344cd48c9230b32ff726079cd64d`
 > **Shared frontend foundation:** PR #236 at `04adb20fb5846499039eda61a9b765deb9c622e6`
 > **Inbox route adoption:** PR #237 at `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
+> **AI Agents route adoption:** PR #240 at `598e2a0dc0352227431614cf1527672aa78ec015`
+> **Settings route adoption:** PR #242 at `6e4477198f33344cd48c9230b32ff726079cd64d`
 > **Phase 5 historical application-changing checkpoint:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published Internal.14 executable source:** PR #228 / `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14`, run `31388777098`
@@ -16,17 +18,16 @@
 > **Phase 2:** Protected-source closed through PR #200; historical issue #201 satisfied/closed by stronger exact #234 installed evidence
 > **Phase 3:** Protected-source closed through PR #203 under FD-030
 > **Phase 4:** Protected-source closed through PR #207; historical issue #214 satisfied/closed by stronger exact #234 installed evidence
-> **Phase 5:** Earlier checkpoint through PR #220; shared roots through PR #236; Inbox through PR #237; AI Agents through PR #240; whole-product adoption and Founder acceptance remain
-> **Phase 6:** Earlier checkpoint through PR #223; #236 protects shared Arabic/RTL/accessibility roots; Inbox #237 and AI Agents #240 adopt those roots; installed/human closure remains
-> **Phase 7:** Query/measurement infrastructure protected through PR #223; final #240 controlled-browser evidence is green; installed low-end/reliability certification remains
-> **Completed pre-Phase-8 engineering outcomes:** #232 CI authority; #233 activation continuity; #234 resilient trial source; #236 shared frontend foundation; #237 Inbox operational workspace; #240 AI Agents operational workspace
-> **Next product implementation frontier:** Settings workspace redesign
-> **After Settings:** remaining route inventory
+> **Phase 5:** Earlier checkpoint through PR #220; shared roots through PR #236; Inbox through PR #237; AI Agents through PR #240; Settings through PR #242; remaining whole-product adoption and Founder acceptance remain
+> **Phase 6:** Earlier checkpoint through PR #223; #236 protects shared Arabic/RTL/accessibility roots; Inbox #237, AI Agents #240 and Settings #242 adopt those roots; remaining route and installed/human closure remain
+> **Phase 7:** Query/measurement infrastructure protected through PR #223; final #242 controlled-browser evidence is green; installed low-end/reliability certification remains
+> **Completed pre-Phase-8 engineering outcomes:** #232 CI authority; #233 activation continuity; #234 resilient trial source; #236 shared frontend foundation; #237 Inbox operational workspace; #240 AI Agents operational workspace; #242 Settings operational workspace
+> **Next product implementation frontier:** remaining route inventory
 > **Open retained issues:** #221 Founder visual/accessibility acceptance; #226 performance/reliability; #230 live resilient customer-trial certification
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Mandatory pre-Phase-8 gate:** whole-product frontend adoption + installed Phase 6/7 + live #230 + explicit Founder acceptance
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-08-11
+> **Last consolidated:** 2026-08-12
 
 Live protected `main` is authority. The published executable SHA above remains the
 Internal.14 artifact source; later protected application/documentation merges do
@@ -103,10 +104,10 @@ Established durable provider effects, WhatsApp ingress/outbox recovery, AI actio
 proposal/recovery semantics and automation run/effect authority. External/provider
 certification remains separate where explicitly retained.
 
-Inbox/AI/Settings workspace redesigns must preserve these boundaries. They may
-improve product structure and expose already-supported capability clearly; they
-may not invent provider success, bypass exact-shop/action authority or expose raw
-implementation traces as user authority.
+Inbox/AI/Settings and remaining workspace redesigns must preserve these boundaries.
+They may improve product structure and expose already-supported capability clearly;
+they may not invent provider success, bypass exact-shop/action authority or expose
+raw implementation traces as user authority.
 
 ---
 
@@ -126,7 +127,8 @@ the applicable Phase 9 replacement-install proof; closing #214 is not a waiver.
 **Status:** Earlier source/browser checkpoint through PR #220 remains valid.
 Shared frontend foundation is protected through PR #236. Inbox route adoption is
 protected through PR #237. AI Agents route adoption is protected through PR #240.
-Whole-product route adoption and installed Founder acceptance remain open.
+Settings route adoption is protected through PR #242. Remaining whole-product route
+adoption and installed Founder acceptance remain open.
 
 ### Founder-installed reconciliation
 
@@ -183,33 +185,62 @@ and execution remain unchanged.
 
 This remains source/browser evidence only.
 
+### Settings — SATISFIED IN SOURCE/BROWSER BY PR #242
+
+Final pre-merge head `e749b0af05741ee45b16c349750d44092bd3beb9`
+passed CI `31546488691`, Phase 5 `31546488465`, Phase 6–7 `31546488422`, required
+aggregate checks and final review closure before expected-head squash merge to
+`6e4477198f33344cd48c9230b32ff726079cd64d`.
+
+Settings replaces the flat 13-tab catalogue with four task-shaped groups and keeps
+configuration truth bound to existing authorities. It separates commerce
+read/manage/sync, AI key/consent, delivery credential/certification, phone
+read/manage, backup read/create/restore and authorized export/reset capabilities;
+uses explicit loading/authoritative/unavailable/recent-PIN states; removes duplicate
+hard-coded integration status; preserves approval + reauthentication/native
+lifecycle ceremonies; and routes manual daily-report execution through authenticated
+`settings.manage` while cron authority remains server-secret-only.
+
+The final Phase 6–7 browser run passed AR/FR/EN desktop and 200%-equivalent reflow,
+semantic accessibility, hot-query planner and controlled performance evidence.
+This remains source/browser evidence only.
+
 ### Whole-product adoption order
 
 1. **Inbox — SATISFIED IN SOURCE/BROWSER BY PR #237.** Installed Founder acceptance remains part of #221.
 2. **AI Agents — SATISFIED IN SOURCE/BROWSER BY PR #240.** Final head `6355cc4c797a597af52c90decfe7727e405749be`; installed Founder acceptance remains open.
-3. **Settings — NEXT.** Replace flat/static treatment with task-shaped configuration, capability/health/recovery and safe destructive ceremonies.
-4. Apply the same #236 foundation coherently across dashboard, orders/confirmation,
-   customers/risk, products/inventory, delivery/returns, COD/accounting, analytics,
-   automations, setup/login/license and remaining administration.
+3. **Settings — SATISFIED IN SOURCE/BROWSER BY PR #242.** Final head `e749b0af05741ee45b16c349750d44092bd3beb9`; installed Founder acceptance remains open.
+4. **Remaining route inventory — ACTIVE.** Apply the #236 foundation coherently across:
+   - dashboard;
+   - orders and confirmation queue;
+   - customers and risk;
+   - products and inventory;
+   - delivery and returns;
+   - COD and accounting;
+   - analytics;
+   - automations;
+   - setup, login and license;
+   - remaining administration.
 
-### Settings package acceptance
+Complete the read-only inventory and freeze one consolidated Problem Register before
+selecting the next implementation branch. One implementation package at a time.
 
-The Settings workspace must:
+### Settings package acceptance — SATISFIED IN SOURCE/BROWSER BY PR #242
 
-- group configuration by seller task and consequence rather than flat controls;
-- expose configured/healthy/degraded/unavailable/recovery state only where real
+The Settings workspace now:
+
+- groups configuration by seller task and consequence rather than flat controls;
+- exposes configured/degraded/unavailable/recent-PIN state only where real
   authority can support the claim;
-- show secret presence/status without exposing protected credentials;
-- preserve dedicated auth/identity/license/lifecycle/provider/backup authorities
+- shows secret presence/status without exposing protected credentials;
+- preserves dedicated auth/identity/license/lifecycle/provider/backup authorities
   and reserved-key protection rather than routing them through generic settings;
-- make destructive/reset/recovery ceremonies explicit about scope, consequence,
+- makes destructive/reset/recovery ceremonies explicit about scope, consequence,
   permission and recovery;
-- link AI/provider/account/license/backup/recovery/preferences to their canonical
-  service owners;
-- carry AR/FR/EN, RTL, keyboard, focus, reflow, reduced-motion and touch parity
-  from #236;
-- avoid schema/native/business-authority rewrites unless a concrete integration
-  defect proves them necessary.
+- links AI/provider/account/license/backup/recovery/preferences to canonical service owners;
+- carries AR/FR/EN, RTL, keyboard, focus, reflow, reduced-motion and touch parity from #236;
+- avoids schema/native/business-authority rewrites outside one narrow authenticated
+  daily-report integration correction.
 
 ### Phase 5 remaining exit evidence
 
@@ -225,9 +256,10 @@ The Settings workspace must:
 ## Phase 6 — Arabic, RTL and accessibility parity
 
 **Status:** Earlier checkpoint through PR #223, shared-root source/browser
-foundation through PR #236, Inbox source/browser adoption through PR #237 and AI
-Agents source/browser adoption through PR #240. Active route implementation moves
-to Settings. Installed/human closure remains.
+foundation through PR #236, Inbox source/browser adoption through PR #237, AI
+Agents source/browser adoption through PR #240 and Settings source/browser adoption
+through PR #242. Active route implementation moves to the remaining route inventory.
+Installed/human closure remains.
 
 **Objective:** Arabic and accessibility are equivalent product behavior, not a
 partial translation layer or cosmetic mirror.
@@ -241,7 +273,8 @@ partial translation layer or cosmetic mirror.
 - root density/theme/touch authority with hydration/storage-failure protection;
 - representative controlled LTR/RTL/locale/coarse-pointer evidence;
 - Inbox route-level AR/FR/EN/RTL adoption through PR #237;
-- AI Agents route-level AR/FR/EN/RTL/accessibility adoption through PR #240.
+- AI Agents route-level AR/FR/EN/RTL/accessibility adoption through PR #240;
+- Settings route-level AR/FR/EN/RTL/accessibility/reflow adoption through PR #242.
 
 ### Active route-adoption audit
 
@@ -280,8 +313,8 @@ live trial certification. #226 owns performance/reliability.
 ## Phase 7 — performance and reliability budgets
 
 **Status:** Query/index and controlled-browser measurement infrastructure protected
-through PR #223. Final #240 controlled-browser accessibility/reflow/performance
-evidence passed on exact head `6355cc4c797a597af52c90decfe7727e405749be`.
+through PR #223. Final #242 controlled-browser accessibility/reflow/performance
+evidence passed on exact head `e749b0af05741ee45b16c349750d44092bd3beb9`.
 Installed low-end/reliability certification remains open and is part of the
 mandatory pre-Phase-8 gate.
 
@@ -348,9 +381,10 @@ and read-only planning may continue when useful.
    themes, motion, locale/RTL, shell/navigation and touch roots are protected.
 2. **Inbox satisfied in source/browser — PR #237.** Database-authoritative task workspace is protected.
 3. **AI Agents satisfied in source/browser — PR #240.** Task-shaped durable AI workspace is protected without weakening proposal/action authority.
-4. **Next — Settings.** Remaining route inventory follows Settings.
-5. **Pending:** remaining route inventory adopts the same foundation; no parallel demo-only design system.
-6. Warnings, charts, loading/empty/degraded states and navigation no longer depend on one-off page styling.
+4. **Settings satisfied in source/browser — PR #242.** Task-shaped configuration workspace is protected without weakening dedicated configuration/lifecycle authority.
+5. **Next — remaining route inventory.** Complete the read-only inventory, then adopt one coherent route family at a time from dashboard through remaining administration.
+6. **Pending:** remaining route inventory adopts the same foundation; no parallel demo-only design system.
+7. Warnings, charts, loading/empty/degraded states and navigation no longer depend on one-off page styling.
 
 ### C. Installed Phase 6/7 evidence
 

@@ -39,19 +39,20 @@ handoff system.
 
 A lower layer cannot silently weaken a higher one.
 
-## Verified product frontier after PR #240
+## Verified product frontier after PR #242
 
-- Protected application-changing `main`: `598e2a0dc0352227431614cf1527672aa78ec015` — PR #240.
-- Latest application-changing protected merge: **PR #240 — AI Agents operational workspace redesign**.
+- Protected application-changing `main`: `6e4477198f33344cd48c9230b32ff726079cd64d` — PR #242.
+- Latest application-changing protected merge: **PR #242 — Settings operational workspace redesign**.
 - Shared frontend foundation remains **PR #236** / `04adb20fb5846499039eda61a9b765deb9c622e6`.
 - Inbox workspace remains protected through **PR #237** / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`.
+- AI Agents workspace remains protected through **PR #240** / `598e2a0dc0352227431614cf1527672aa78ec015`.
 - Published executable source remains `2d60e2e74109b6e03626a5ccdff727c029a34591`.
 - Published release remains `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`.
 - Founder-installed Internal.14 is permanently licensed but **not** Founder-accepted.
 - Founder-accepted baseline remains Internal.5.
 - Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**.
-- Inbox is source/browser protected through PR #237; AI Agents is source/browser protected through PR #240.
-- The next product implementation package is **Settings**, followed by the remaining route inventory.
+- Inbox is source/browser protected through PR #237; AI Agents through PR #240; Settings through PR #242.
+- The next product implementation frontier is **remaining route inventory**. Do not name a single next route until that read-only inventory is complete.
 - Open retained issues remain **#221, #226, #230**. Historical #201/#214 are closed.
 - Phase 8 implementation remains frozen behind route-wide frontend adoption,
   installed Phase 6/7, live #230 and explicit Founder acceptance.
@@ -98,9 +99,9 @@ coherent repair; do not ask the Founder to enumerate every remaining pixel defec
 The installed observations established systemic failures across Arabic typography,
 text/control scale, locale/direction coherence, themes, motion, RTL geometry,
 navigation nesting, warning hierarchy, chart usefulness and route-level product
-workspaces. PR #236 repairs shared roots; PR #237 and PR #240 protect the first two
-route-level task workspaces. Settings and remaining production routes still need
-coherent adoption.
+workspaces. PR #236 repairs shared roots; PR #237, PR #240 and PR #242 protect the
+Inbox, AI Agents and Settings task-shaped workspaces. Remaining production routes
+still need coherent adoption.
 
 Phase 8 implementation is frozen until the cross-phase gate in `ROADMAP.md` passes.
 Phase 8 research/read-only planning may continue when useful.
@@ -168,52 +169,82 @@ Locale guidance is model-system presentation context; the exact seller user turn
 remains unchanged. Exact proposal digest, trusted actor, permission/shop/license/
 target revalidation and server-owned execution remain protected.
 
-This is source/browser evidence only and does not close #221/#226/#230.
+### PR #242 — Settings operational workspace
 
-## Exact next outcome — Settings workspace redesign
+Protected squash merge `6e4477198f33344cd48c9230b32ff726079cd64d` protects the third task-shaped
+workspace on top of #236. Final pre-merge head
+`e749b0af05741ee45b16c349750d44092bd3beb9` passed:
 
-Do not open another implementation package concurrently. After this post-AI
-documentation reconciliation is protected, branch Settings from the exact
-reconciled `main`.
+- CI `31546488691` and Required PR gate;
+- Phase 5 Experience `31546488465` and required aggregate gate;
+- Phase 6–7 Completion `31546488422` and required aggregate gate, including the
+  full AR/FR/EN accessibility, 200%-equivalent reflow and performance browser
+  evidence;
+- final review state with no unresolved material review thread before merge.
 
-Likely branch: `agent/settings-product-workspace-redesign`.
+Settings replaces the flat 13-tab catalogue with four seller-task groups while
+preserving dedicated configuration authorities. It separates commerce read/manage/
+sync, AI key/consent, phone read/manage, backup read/create/restore and authorized
+export/reset capabilities; makes unavailable and recent-PIN verification states
+explicit; removes competing hard-coded integration status; keeps credential values
+server-side; and routes manual daily-report execution through authenticated
+`settings.manage` while scheduled cron authority remains server-secret-only.
 
-### Required reconnaissance before implementation
+PR #240 and PR #242 are source/browser evidence only and do not close #221/#226/#230.
 
-Audit the complete Settings vertical before changing it:
+## Exact next outcome — remaining route inventory
 
-- `src/app/(dashboard)/settings/**` routes and layouts;
-- settings components, hooks, dialogs and navigation;
-- Settings APIs plus `src/lib/settings/**` and `src/lib/secrets/**`;
-- auth/identity/license configuration paths and dedicated authority endpoints;
-- provider configuration and AI consent/key surfaces;
-- backup/recovery, import/export/reset and destructive flows reachable from Settings;
-- all reserved setting/lifecycle/identity/license keys and current callers;
-- AR/FR/EN copy, RTL geometry, keyboard/focus, mobile/reflow, loading/permission/
-  degraded/recovery behavior and current source/browser tests.
+Do not open another implementation package concurrently. First complete a read-only
+inventory of the remaining production routes against the #236 foundation and
+protected Phase 1–4 authority. The inventory selects the next coherent package; it
+is not permission to start every route at once.
 
-Freeze one consolidated Settings Problem Register and typed workspace contract
-before implementation. Do not assume every control belongs to the generic Settings
-service merely because it appears on the Settings route.
+Binding roadmap order:
 
-### Settings product contract for the package
+1. dashboard;
+2. orders and confirmation queue;
+3. customers and risk;
+4. products and inventory;
+5. delivery and returns;
+6. COD and accounting;
+7. analytics;
+8. automations;
+9. setup, login and license;
+10. remaining administration.
 
-Build a task-shaped configuration workspace rather than a flat control inventory:
+### Required inventory before implementation
 
-1. group settings by seller task, consequence and authority owner;
-2. distinguish configured/healthy/degraded/unavailable/recovery state;
-3. expose secret presence/status rather than protected credential values;
-4. preserve dedicated identity/license/lifecycle/provider/backup write paths and
-   reserved-key protection;
-5. make destructive/reset ceremonies explicit about scope, consequence and recovery;
-6. link AI/provider/account/license/backup/recovery/preferences to their real
-   backend authorities instead of duplicating them in client state;
-7. consume #236 AR/FR/EN, RTL, density/theme, keyboard/focus, touch, reflow and
-   reduced-motion roots;
-8. avoid schema/migration/native/business-authority rewrites unless a concrete
-   Settings integration defect proves a narrow repair necessary.
+For every candidate route family, inspect:
 
-After Settings: **remaining production route inventory**.
+- route/layout/server entry points and primary task components;
+- canonical APIs/services, permissions and protected data projections;
+- current loading/empty/permission/offline/pending/stale/conflict/retry/recovery states;
+- AR/FR/EN copy, Arabic typography, RTL/mixed-direction geometry, keyboard/focus,
+  reduced motion, coarse-pointer targets, 1366×768 containment and 200% reflow;
+- mobile/desktop information architecture and whether the route is task-shaped or
+  still implementation-shaped;
+- existing source/browser contracts and stale tests/selectors;
+- overlap with other candidate families so the selected branch is coherent rather
+  than a screenshot-by-screenshot patch set.
+
+Produce one consolidated Problem Register for the inventory, rank systemic/product
+consequence, then select **one** next package. Branch it only from the exact
+reconciled protected `main` after the post-Settings documentation package merges.
+
+### Remaining-route adoption contract
+
+Every selected route package must:
+
+1. consume rather than duplicate protected business/permission/provider/lifecycle authority;
+2. preserve one authority per business fact and permission-before-protected-read;
+3. become task-shaped around seller outcomes rather than implementation categories;
+4. distinguish authoritative empty/off state from unavailable, stale, conflict and recovery state;
+5. consume #236 typography/theme/density/locale/RTL/motion/focus/touch roots;
+6. preserve AR/FR/EN semantic parity and 100–200% reflow/1366×768 containment;
+7. keep destructive/external/financial effects on their canonical server authority;
+8. avoid schema/migration/native rewrites unless a concrete bounded integration defect proves them necessary;
+9. add focused source/browser evidence without weakening whole-product Phase 5/6/7 gates;
+10. remain source/browser evidence until installed Founder acceptance is explicitly recorded.
 
 ## Protected backend/business boundaries
 
