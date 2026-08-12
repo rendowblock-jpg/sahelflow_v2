@@ -11,7 +11,7 @@
 > **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
 > **Active implementation PR:** #244 — `feat(orders): rebuild operational order workspace`
 > **Active implementation branch:** `agent/orders-product-workspace-redesign`
-> **Last implementation checkpoint before this docs-only handoff:** `c106d63725c86d2c652c822288f99166a8330e9b`
+> **Last implementation checkpoint before docs-only handoff:** `c106d63725c86d2c652c822288f99166a8330e9b`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
 > **Founder-installed release:** Internal.14
@@ -78,71 +78,42 @@ Protected merge `04adb20fb5846499039eda61a9b765deb9c622e6` established Noto Sans
 Arabic + Inter, atomic AR/FR/EN server-tree direction commits, theme/density roots,
 shallow navigation, governed notices/charts/motion, logical mixed-direction
 primitives, resilient preference storage and coarse-pointer target authority.
-Frozen head `7d0b01a9f1989ad7e2cae25c3b0d39d6e92a64d8` passed CI `31497523385`,
-Phase 5 `31497523052`, Phase 6–7 `31497523030` and fresh review.
+Frozen #236 head `7d0b01a9f1989ad7e2cae25c3b0d39d6e92a64d8` passed CI
+`31497523385`, Phase 5 `31497523052`, Phase 6–7 `31497523030` and fresh review.
 
 ## PR #237 Inbox operational workspace — CLOSED
-
-### Final integration identity
 
 - PR: **#237 — `feat(inbox): rebuild operational workspace`**.
 - Final pre-merge head: `8e9d5aa365f0c5873909c1c8517f88519d743b9d`.
 - Protected squash merge: **`4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`**.
-- Final exact-head CI: `31524083664` — PASS.
-- Final exact-head Phase 5 Experience: `31524083552` — PASS.
-- Final exact-head Phase 6–7 Completion: `31524083460` — PASS.
+- Final CI `31524083664`, Phase 5 `31524083552`, Phase 6–7 `31524083460`: PASS.
 - Required aggregate checks passed; four original review threads resolved.
 
-Protected outcomes: database-authoritative queue/thread/workflow history independent
-of WhatsApp transport, recovery visibility, reconciled workflow mutations, batched
-assignment versions, coalesced WebSocket refresh and provider-degraded local reads
-without rewriting durable WhatsApp/provider/collaboration authority.
+Inbox remains source/browser evidence only, not installed Founder acceptance.
 
 ## PR #240 AI Agents operational workspace — CLOSED
-
-### Final integration identity
 
 - PR: **#240 — `feat(ai): rebuild operational Agents workspace`**.
 - Final pre-merge head: **`6355cc4c797a597af52c90decfe7727e405749be`**.
 - Protected squash merge: **`598e2a0dc0352227431614cf1527672aa78ec015`**.
-- Final exact-head CI: `31535669292` — PASS, including Required PR gate.
-- Final exact-head Phase 5 Experience: `31535668960` — PASS.
-- Final exact-head Phase 6–7 Completion: `31535668966` — PASS.
-- Required Phase 5 / Phase 6–7 aggregate checks: PASS.
+- Final CI `31535669292`, Phase 5 `31535668960`, Phase 6–7 `31535668966`: PASS.
 - Four material review threads resolved before expected-head squash merge.
 
-Protected outcomes include durable recent session history, separate session/thread/
-context zones, product-shaped tool results, explicit setup/provider/persistence/
-action-history degradation, proposal-bound sensitive action review, live-log and
-tail-follow accessibility, mobile drill-in and AR/FR/EN/RTL parity without rewriting
-proposal/action authority.
-
-PR #240 is source/browser evidence only. It does not close #221/#226/#230 and does
-not constitute installed Founder acceptance, Phase 8, Beta or Stable.
+AI Agents remains source/browser evidence only. It does not close #221/#226/#230
+and does not constitute installed Founder acceptance, Phase 8, Beta or Stable.
 
 ## PR #242 Settings operational workspace — CLOSED
-
-### Final integration identity
 
 - PR: **#242 — `feat(settings): rebuild operational workspace`**.
 - Final pre-merge head: **`e749b0af05741ee45b16c349750d44092bd3beb9`**.
 - Protected squash merge: **`6e4477198f33344cd48c9230b32ff726079cd64d`**.
-- Final exact-head CI: `31546488691` — PASS, including Required PR gate.
-- Final exact-head Phase 5 Experience: `31546488465` — PASS.
-- Final exact-head Phase 6–7 Completion: `31546488422` — PASS.
-- Required Phase 5 / Phase 6–7 aggregate checks: PASS.
-- Final Phase 6–7 browser evidence passed EN/FR/AR desktop + 200%-equivalent
-  reflow, accessibility semantics, query-plan checks and controlled performance.
-- The only Codex P1 thread was resolved before merge; no unresolved material review
-  thread remained.
+- Final CI `31546488691`, Phase 5 `31546488465`, Phase 6–7 `31546488422`: PASS.
+- Final browser evidence passed EN/FR/AR desktop + 200%-equivalent reflow,
+  accessibility semantics, query-plan checks and controlled performance.
+- The only Codex P1 thread was resolved before merge.
 
-Protected outcomes include four task-shaped Settings groups, one commerce-status
-authority, explicit unavailable/recent-PIN projections, distinct commerce/phone/
-backup/export/reset permissions, authenticated manual daily-report execution and
-preserved destructive/native lifecycle ceremonies.
-
-PR #242 is source/browser evidence only. It does not close #221/#226/#230 and does
-not constitute installed Founder acceptance, Phase 8, Beta or Stable.
+Settings remains source/browser evidence only. It does not close #221/#226/#230 and
+does not constitute installed Founder acceptance, Phase 8, Beta or Stable.
 
 ## Post-Settings documentation reconciliation
 
@@ -187,15 +158,10 @@ with the strongest measured performance risk.
 
 ### Families intentionally not selected first
 
-- Dashboard is already comparatively task-shaped and permission-projected.
-- Customers/Risk and Products/Inventory have clearer permission-aware projections
-  and less route-level architecture/performance debt.
-- Delivery/Returns and COD/Accounting already expose mature governed workbenches;
-  Accounting correctly withholds incomplete profitability and canonical COD is
-  isolated behind dedicated command/projection authority.
-- Analytics is already governed/chart-oriented; Automations has later presentation
-  cleanup but did not outrank Orders; setup/login/license/admin are bounded and
-  already tied to their hardened authorities.
+Dashboard, Customers/Risk, Products/Inventory, Delivery/Returns, COD/Accounting,
+Analytics, Automations and setup/login/license/remaining administration were all
+reviewed. They are not declared complete, but none combined a stronger immediate
+route-architecture and measured-performance reason than Orders.
 
 ## PR #244 Orders + confirmation queue — ACTIVE WIP / DRAFT
 
@@ -204,10 +170,12 @@ with the strongest measured performance risk.
 - PR: **#244 — `feat(orders): rebuild operational order workspace`**.
 - Branch: **`agent/orders-product-workspace-redesign`**.
 - Base protected main: **`52ea0c79b3dddfcc569dbf2ab690747381f85d6a`**.
-- Last implementation checkpoint before this docs-only handoff:
+- Last implementation checkpoint before docs-only handoff:
   **`c106d63725c86d2c652c822288f99166a8330e9b`**.
-- PR converted back to **draft** before session handoff; do not merge it.
-- Review threads at stop: **none**.
+- PR is **draft**; do not merge it.
+- Final handoff verification found **three unresolved Codex review threads** on the
+  implementation checkpoint: two P1 source-contract issues and one P2 SWR
+  cache/fresh-server-fallback correctness issue. See the review section below.
 
 ### Implemented on `c106d637...`
 
@@ -223,18 +191,16 @@ with the strongest measured performance risk.
      `buildAssessmentInputFromOrder()` path.
 2. `getOrdersWorkbenchPage()` now calls `batchAssessOrdersForWorkbench()` only
    after the existing exact `access.risk` gate.
-3. Added focused batch-risk unit/contract coverage:
-   - bounded query shapes;
-   - same history/spent/blacklist/wilaya input semantics;
-   - duplicate order IDs removed;
-   - empty page does not touch risk/protected data;
-   - viewer path still never calls risk projection.
-4. `useOrders()` now sets
-   `revalidateOnMount: fallbackData ? false : undefined` only when the fallback
-   exactly matches current page/pageSize/sort, eliminating the immediate duplicate
-   workbench fetch while preserving query-change and explicit-mutation fetches.
-5. Added `src/components/orders/__tests__/orders-workspace-contract.test.ts` to
-   lock the permission-gated batch projector and exact-fallback behavior.
+3. Added focused batch-risk unit/contract coverage for bounded batch shapes,
+   semantic parity, duplicate IDs, empty pages and viewer/no-risk suppression.
+4. `useOrders()` currently sets
+   `revalidateOnMount: fallbackData ? false : undefined` when fallback matches the
+   current page/pageSize/sort. This removed the immediate hydration refetch, but a
+   final P2 review finding shows this optimization is not yet correct on later
+   revisits because an older SWR cache entry can shadow a newly generated server
+   fallback. Treat this as WIP, not a protected optimization.
+5. Added `src/components/orders/__tests__/orders-workspace-contract.test.ts`; final
+   review shows the source-text checks need to be made semantic/formatting-robust.
 
 ### Important semantic checks already performed
 
@@ -252,65 +218,81 @@ with the strongest measured performance risk.
   queries) and remains in the package for workflow coherence, not because it
   caused the route p95 spike.
 
-### Exact evidence status at session stop for implementation checkpoint `c106d637...`
+### Exact evidence for implementation checkpoint `c106d637...`
 
-A ready-for-review cycle was started only to obtain real full-source feedback, then
-PR #244 was converted back to draft for session handoff. Treat these as evidence
-for **`c106d637...`**, not for the later docs-only handoff head.
+A ready-for-review cycle was used to obtain real source/review feedback, then #244
+was returned to draft for the session handoff. These results belong to
+**`c106d637...`**, not to later docs-only handoff commits.
 
 - **Phase 5 run `31550320363`: PASS.**
   - Static route completion matrix: PASS.
   - Fresh install + owner login: PASS.
   - Representative LTR + Arabic RTL workbenches: PASS.
   - Required Phase 5 Experience gate: PASS.
-- **CI run `31550320462`: FAIL — one new source-contract test file only.**
-  - risk classification: PASS;
-  - fast authority/docs: PASS;
+- **CI run `31550320462`: FAIL in the new Orders source-contract coverage.**
+  - risk classification and fast authority/docs: PASS;
   - TypeScript: PASS;
   - ESLint: PASS;
-  - `src/components/orders/__tests__/orders-workspace-contract.test.ts` failed two
-    whitespace-sensitive source-string assertions: one expected
-    `if (access.risk && rows.length > 0)` on one physical line and one expected
-    `where: { id: { in: uniqueOrderIds }, deletedAt: null }` on one physical line;
-  - the implementation contains both semantics, but formatter line breaks make
-    those exact strings absent;
-  - CI log summary: **1 failed test file / 163 passed test files; 2 failed tests /
+  - the new `orders-workspace-contract.test.ts` is not robust to source formatting/
+    comments, so the full quality lane is not green;
+  - CI log summary recorded **1 failed / 163 passed test files** and **2 failed /
     1238 passed tests**;
-  - Required PR gate therefore failed. This is test brittleness, not evidence of a
-    runtime/business-authority defect. Do not weaken product/performance gates;
-    make this source contract formatting-robust.
-- **Phase 6–7 run `31550320361`: source aggregate blocked by the same contract-test issue; browser PASS.**
-  - static localization/RTL/accessibility contract: PASS;
+  - Required PR gate therefore failed. Do not alter runtime/business behavior just
+    to satisfy source text matching.
+- **Phase 6–7 run `31550320361`: browser PASS; source aggregate NOT GREEN.**
+  - static localization/RTL/accessibility: PASS;
   - TypeScript: PASS;
   - ESLint: PASS;
-  - source-quality aggregate: FAIL because the new Orders source contract is not
-    formatting-robust; the job's final `Require complete source-quality set` failed;
+  - source-quality aggregate: FAIL because the source-contract coverage is not
+    green;
   - AR/FR/EN accessibility, reflow and performance browser job `93972240942`: PASS,
     including the unchanged controlled performance tripwire;
   - Required Phase 6–7 completion gate: FAIL because source-quality was not green;
-  - the workflow run itself later ended `cancelled` after the PR was returned to
-    draft, but the completed browser job remains a PASS and the source blocker is
-    the same two contract assertions above.
-- Earlier duplicate runs `31550254841`, `31550254712`, `31550254840` were green on
-  the same implementation head while the PR was draft; their CI Quality Gate was
-  skipped and therefore they are context only, not a substitute for the real
-  ready-state source result above.
+  - the workflow run later ended `cancelled` after the PR returned to draft, but
+    the completed browser result remains PASS and does not erase the source block.
+- Earlier duplicate draft-mode runs are context only; do not substitute a skipped
+  heavy CI lane for the real ready-state source result above.
 
-### Exact first repair for the next session
+### Final unresolved review threads at handoff
 
-Before any new Orders product/UI implementation, fix only the two brittle assertions
-in `src/components/orders/__tests__/orders-workspace-contract.test.ts` so they are
-formatting-robust (for example normalize whitespace or use a bounded regex/semantic
-marker). Do not change the runtime implementation merely to satisfy source text
-formatting and do not weaken any performance, authority, permission or browser gate.
-Then rerun the real ready-state CI + Phase 6–7 source evidence for the exact
-implementation head lineage before layering more work.
+1. **P1 — `PRRT_kwDOShPGIM6Yaxhl` — source helper-ban assertion matches a comment.**
+   `orders-workspace-contract.test.ts` checks the entire
+   `order-risk-workbench.ts` file for `buildAssessmentInputFromOrder`; the helper is
+   not called/imported, but the documentation comment names it, so the assertion is
+   invalid. Fix the test to target an import/call expression or another semantic
+   contract rather than deleting useful documentation just to satisfy the test.
+2. **P1 — `PRRT_kwDOShPGIM6Yaxhp` — fallback guard assertion is formatting-sensitive.**
+   The contract expects contiguous `fallbackData &&`, but the formatted hook places
+   the tokens on separate lines. Normalize whitespace or use a bounded semantic
+   regex/marker.
+3. **P2 — `PRRT_kwDOShPGIM6Yaxhu` — old SWR cache can shadow a fresh RSC fallback.**
+   On a later revisit to the same Orders URL, SWR may already hold older data for
+   the key and gives that cache precedence over the newly generated server
+   fallback. With `revalidateOnMount` suppressed and focus revalidation disabled,
+   the page can stay stale until another explicit mutation/reconnect/full reload.
+   Repair the hydration optimization so it skips only the truly duplicate first
+   fetch without allowing older client cache to override fresh server truth.
+
+Do **not** resolve these threads before their fixes exist and exact-head evidence is
+green.
+
+### Exact first repairs for the next session
+
+Before new Orders UI work:
+
+1. make the source-contract assertions semantic/formatting-robust, including the
+   comment-vs-import/call case and multiline fallback guard;
+2. repair the P2 SWR cache-shadow semantics without restoring unnecessary duplicate
+   hydration work;
+3. run the focused tests, then a real ready-state CI + Phase 6–7 source cycle;
+4. only after these blockers are green continue the task-shaped Orders product work.
+
+Do not weaken authority, permission, browser or performance gates.
 
 ### Remaining Orders Problem Register
 
 **Performance / data loading**
-- Re-measure `/orders` after batched risk + no mount revalidation before deciding
-  whether to rewrite the create form.
+- Re-measure `/orders` after batched risk and the corrected hydration/cache behavior.
 - Initial page still eagerly loads all customer + active product/variant creation
   catalog data. If the unchanged performance gate remains near threshold, add a
   narrow authenticated lazy create-context endpoint using the exact existing
@@ -365,8 +347,8 @@ permission-before-read behavior remain identical.
 - `src/lib/orders/order-list-workbench.ts` — uses batched projector;
 - `src/lib/orders/__tests__/order-risk-workbench.test.ts` — added;
 - `src/lib/orders/__tests__/order-list-workbench.test.ts` — updated mock/contract;
-- `src/hooks/swr/use-orders.ts` — no redundant exact-fallback mount revalidation;
-- `src/components/orders/__tests__/orders-workspace-contract.test.ts` — added.
+- `src/hooks/swr/use-orders.ts` — WIP hydration revalidation optimization; P2 review finding remains;
+- `src/components/orders/__tests__/orders-workspace-contract.test.ts` — added; P1 review findings remain.
 
 No schema, migration, native, licensing, provider, Golden COD command or risk-scoring
 source was changed in that implementation checkpoint.
@@ -411,26 +393,25 @@ source was changed in that implementation checkpoint.
 2. Re-fetch PR #244 and compare its current handoff head to implementation checkpoint
    `c106d63725c86d2c652c822288f99166a8330e9b`; later branch changes should be
    documentation-only unless another agent/user changed it.
-3. First repair the **two brittle formatting-sensitive assertions** in
-   `src/components/orders/__tests__/orders-workspace-contract.test.ts`; do not
-   modify runtime code just to make the source-text test green.
-4. Rerun/re-read real ready-state CI and Phase 6–7 source evidence. Preserve the
-   unchanged performance threshold; Phase 5 and the Phase 6–7 browser job already
-   passed on `c106d637...`.
-5. Re-list #244 review threads/comments. At this handoff there were no review
-   threads; any new thread is new evidence and must be audited.
-6. Continue one Orders package only. Finish governed Orders operational copy,
-   first-class confirmation-review hierarchy and localized risk-factor presentation.
-7. Re-measure `/orders` after the existing batch-risk/no-mount-refetch repairs.
-   Only if still materially near/failing the unchanged route tripwire, implement the
-   narrow lazy create-context endpoint; preserve exact create/field/product authority.
-8. Recompose order detail around seller consequences while reusing canonical
-   decision/fulfillment/courier/COD/return/refund/recovery components.
+3. Re-list the three unresolved review threads above; treat any additional thread as
+   new evidence.
+4. Repair both P1 source-contract issues without changing runtime behavior merely to
+   satisfy text matching.
+5. Repair the P2 SWR cache-shadow issue while preserving the goal of avoiding a
+   redundant first-hydration workbench fetch.
+6. Run focused tests, then real ready-state CI and Phase 6–7 source evidence. The
+   previous Phase 5 and Phase 6–7 browser jobs passed on `c106d637...`, but fresh
+   exact-head evidence is required after repairs.
+7. Continue one Orders package only: governed Orders copy, first-class confirmation
+   review, localized risk-factor presentation and task-shaped detail hierarchy.
+8. Re-measure `/orders`; only if still materially near/failing the unchanged route
+   tripwire, implement the narrow lazy create-context endpoint with exact existing
+   permissions.
 9. Add focused Orders browser evidence for task flow + AR/FR/EN/RTL/reflow/accessibility.
-10. Self-review the complete diff, then mark #244 ready only when the package is
-    coherent. Run fresh exact-head CI + Phase 5 + Phase 6–7, repair in one batch,
-    and perform a fresh adversarial review before any merge.
-11. Merge only with `expected_head_sha` after exact-head proof and no unresolved
+10. Self-review the complete diff, then mark #244 ready only when coherent; run fresh
+    exact-head CI + Phase 5 + Phase 6–7 and perform a fresh adversarial review.
+11. Resolve review threads only after their fixes and exact-head evidence exist.
+12. Merge only with `expected_head_sha` after exact-head proof and no unresolved
     material thread; verify protected `main`, reconcile docs, then select the next
     remaining route package. #221/#226/#230 and Phase 8 remain untouched until their
     retained installed/live/Founder gates are actually satisfied.
