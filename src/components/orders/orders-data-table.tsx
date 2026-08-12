@@ -35,10 +35,12 @@ export function OrdersDataTable({
   const deleteOrder = useUndoableDelete({
     deleteUrl: (id) => `/api/orders/${id}`,
     restoreUrl: (id) => `/api/orders/${id}/restore`,
-    entityLabel: "Order",
+    entityLabel: t("orders.workspace.entity"),
     contextualLabel: (record) => {
       const order = record as { orderNumber?: string };
-      return order.orderNumber ? `Order ${order.orderNumber}` : "Order";
+      return order.orderNumber
+        ? t("orders.workspace.entityNumber", { number: order.orderNumber })
+        : t("orders.workspace.entity");
     },
     onAfter: () => mutatePrefix("/api/orders"),
   });
@@ -90,13 +92,7 @@ export function OrdersDataTable({
             order.mutationAuthority === "confirmation_blocked"),
       );
       if (governedSelected) {
-        toast.error(
-          locale === "ar"
-            ? "تتطلب هذه الطلبيات معالجة فردية محكومة قبل تغيير حالتها."
-            : locale === "fr"
-              ? "Ces commandes exigent un traitement individuel gouverné avant tout changement d’état."
-              : "These orders require an individual governed flow before status changes.",
-        );
+        toast.error(t("orders.workspace.bulkGovernedBlocked"));
         return;
       }
 
@@ -107,7 +103,7 @@ export function OrdersDataTable({
         })
         .catch(() => undefined);
     },
-    [bulkMutation, data, locale],
+    [bulkMutation, data, t],
   );
 
   const bulkActions: BulkAction[] = [

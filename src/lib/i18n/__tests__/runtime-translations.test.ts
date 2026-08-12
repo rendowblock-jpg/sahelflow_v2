@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { getAutomationRuntimeTranslation } from "../automation-runtime";
 import { getCommerceRuntimeTranslation } from "../commerce-runtime";
+import { getOrdersWorkspaceTranslation } from "../orders-workspace";
 
 const locales = ["en", "fr", "ar"] as const;
 
@@ -41,12 +42,30 @@ describe("runtime translation catalogs", () => {
     ).toBeUndefined();
   });
 
+  it.each(locales)("exposes Orders workspace copy for %s", (locale) => {
+    expect(
+      getOrdersWorkspaceTranslation(locale, "orders.workspace.confirmation.title"),
+    ).toBeTruthy();
+    expect(
+      getOrdersWorkspaceTranslation(
+        locale,
+        "orders.workspace.risk.factor.customerReturnRate",
+      ),
+    ).toBeTruthy();
+    expect(
+      getOrdersWorkspaceTranslation(locale, "orders.workspace.missing"),
+    ).toBeUndefined();
+  });
+
   it("keeps Arabic runtime copy localized", () => {
     expect(
       getAutomationRuntimeTranslation("ar", "automations.runtime.history"),
     ).toMatch(/[\u0600-\u06ff]/);
     expect(
       getCommerceRuntimeTranslation("ar", "commerce.runtime.history"),
+    ).toMatch(/[\u0600-\u06ff]/);
+    expect(
+      getOrdersWorkspaceTranslation("ar", "orders.workspace.confirmation.title"),
     ).toMatch(/[\u0600-\u06ff]/);
   });
 });

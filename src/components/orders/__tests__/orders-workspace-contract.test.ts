@@ -112,4 +112,22 @@ describe("Orders operational workspace contract", () => {
       /opts\.fallback\.sort\s*===\s*normalizedSort/,
     );
   });
+
+  it("keeps the confirmation queue review-first instead of mutating orders inline", () => {
+    const queuePath = "src/components/orders/confirmation-queue-table.tsx";
+    const queueText = read(queuePath);
+    const queueSource = parse(queuePath);
+
+    expect(importsBinding(queueSource, "OrderStatusActions")).toBe(false);
+    expect(queueText).toContain('t("orders.workspace.confirmation.review")');
+    expect(queueText).toContain('href={`/orders/${order.id}`}');
+    expect(queueText).toMatch(/<OrderStatusBadge[\s\S]*?\sdisabled\s*\/>/);
+  });
+
+  it("surfaces the pending confirmation queue from the main Orders workspace", () => {
+    const page = read("src/app/(dashboard)/orders/page.tsx");
+    expect(page).toContain('href="/orders/confirmation-queue"');
+    expect(page).toContain('t("confirmationQueue.title")');
+    expect(page).toContain("pendingCount > 0");
+  });
 });
