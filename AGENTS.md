@@ -11,7 +11,7 @@ keys or retained evidence merely to simplify development.
 ## Start here
 
 1. Read [`documentation/README.md`](documentation/README.md).
-2. Read FD-028 through FD-031 in [`documentation/product/DECISIONS.md`](documentation/product/DECISIONS.md).
+2. Read FD-028 through FD-032 in [`documentation/product/DECISIONS.md`](documentation/product/DECISIONS.md).
 3. Read [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md).
 4. Read the active phase and mandatory pre-Phase-8 gate in [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
 5. Read [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md).
@@ -39,10 +39,10 @@ handoff system.
 
 A lower layer cannot silently weaken a higher one.
 
-## Verified product frontier after PR #242
+## Verified product frontier after PR #244
 
-- Protected application-changing `main`: `6e4477198f33344cd48c9230b32ff726079cd64d` — PR #242.
-- Latest application-changing protected merge: **PR #242 — Settings operational workspace redesign**.
+- Protected application-changing `main`: `856f58126327797b467938390586a04f185e70f6` — PR #244.
+- Latest application-changing protected merge: **PR #244 — Orders + confirmation operational workspace**.
 - Shared frontend foundation remains **PR #236** / `04adb20fb5846499039eda61a9b765deb9c622e6`.
 - Inbox workspace remains protected through **PR #237** / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`.
 - AI Agents workspace remains protected through **PR #240** / `598e2a0dc0352227431614cf1527672aa78ec015`.
@@ -51,8 +51,10 @@ A lower layer cannot silently weaken a higher one.
 - Founder-installed Internal.14 is permanently licensed but **not** Founder-accepted.
 - Founder-accepted baseline remains Internal.5.
 - Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**.
-- Inbox is source/browser protected through PR #237; AI Agents through PR #240; Settings through PR #242.
-- The next product implementation frontier is **remaining route inventory**. Do not name a single next route until that read-only inventory is complete.
+- Inbox is source/browser protected through PR #237; AI Agents through PR #240;
+  Settings through PR #242; Orders + confirmation through PR #244.
+- The active implementation/release frontier is **PR #245 — Internal.15 Founder
+  checkpoint**, governed by FD-032.
 - Open retained issues remain **#221, #226, #230**. Historical #201/#214 are closed.
 - Phase 8 implementation remains frozen behind route-wide frontend adoption,
   installed Phase 6/7, live #230 and explicit Founder acceptance.
@@ -86,8 +88,10 @@ FD-028 defines the Phase 0–9 program:
 
 FD-029 keeps the uncompromised AAA target and disciplined delivery. FD-030 moves
 live provider-account certification to representative beta while retaining
-conformance requirements. FD-031 is a one-time Internal.14 merge/release exception
-and does not weaken future gates.
+conformance requirements. FD-031 is a one-time Internal.14 merge/release exception.
+FD-032 separately authorizes only exact Internal.15 as a Founder/internal-lab offline
+checkpoint; it keeps issue #230 and owned-domain trial certification mandatory before
+any user release.
 
 ## Mandatory pre-Phase-8 Founder gate
 
@@ -99,9 +103,9 @@ coherent repair; do not ask the Founder to enumerate every remaining pixel defec
 The installed observations established systemic failures across Arabic typography,
 text/control scale, locale/direction coherence, themes, motion, RTL geometry,
 navigation nesting, warning hierarchy, chart usefulness and route-level product
-workspaces. PR #236 repairs shared roots; PR #237, PR #240 and PR #242 protect the
-Inbox, AI Agents and Settings task-shaped workspaces. Remaining production routes
-still need coherent adoption.
+workspaces. PR #236 repairs shared roots; PR #237, PR #240, PR #242 and PR #244
+protect the Inbox, AI Agents, Settings and Orders task-shaped workspaces. Remaining
+production routes still need coherent adoption after the installed checkpoint.
 
 Phase 8 implementation is frozen until the cross-phase gate in `ROADMAP.md` passes.
 Phase 8 research/read-only planning may continue when useful.
@@ -190,61 +194,32 @@ explicit; removes competing hard-coded integration status; keeps credential valu
 server-side; and routes manual daily-report execution through authenticated
 `settings.manage` while scheduled cron authority remains server-secret-only.
 
-PR #240 and PR #242 are source/browser evidence only and do not close #221/#226/#230.
+PR #240, PR #242 and PR #244 are source/browser evidence only and do not close
+#221/#226/#230.
 
-## Exact next outcome — remaining route inventory
+## Exact next outcome — FD-032 Internal.15 Founder checkpoint
 
-Do not open another implementation package concurrently. First complete a read-only
-inventory of the remaining production routes against the #236 foundation and
-protected Phase 1–4 authority. The inventory selects the next coherent package; it
-is not permission to start every route at once.
+Finish PR #245 as one exact Founder-only offline checkpoint:
 
-Binding roadmap order:
+1. keep `sahelflow.version.json` locked to Internal.15, `founder-offline-only`,
+   `FD-032`, and no owned host suffix;
+2. package no `SF_LICENSE_SERVICE_URL`, hide the trial action and keep direct trial
+   calls fail-closed;
+3. retain mandatory signed trial/permanent public keyrings and the permanent offline
+   entitlement path;
+4. pass one exact-head review and the selected release gates, then publish only from
+   the protected-main merge through the guarded signed workflow;
+5. update Founder-installed Internal.14 in place while preserving Roaming/Local
+   AppData and `scripts/Founder-install-result.json`;
+6. verify launch, permanent-license-valid workspace entry, close/reopen, representative
+   AR/FR/EN and RTL/accessibility flows, and T470 performance;
+7. record explicit Founder accept/reject evidence in #221/#164 and performance truth
+   in #226.
 
-1. dashboard;
-2. orders and confirmation queue;
-3. customers and risk;
-4. products and inventory;
-5. delivery and returns;
-6. COD and accounting;
-7. analytics;
-8. automations;
-9. setup, login and license;
-10. remaining administration.
-
-### Required inventory before implementation
-
-For every candidate route family, inspect:
-
-- route/layout/server entry points and primary task components;
-- canonical APIs/services, permissions and protected data projections;
-- current loading/empty/permission/offline/pending/stale/conflict/retry/recovery states;
-- AR/FR/EN copy, Arabic typography, RTL/mixed-direction geometry, keyboard/focus,
-  reduced motion, coarse-pointer targets, 1366×768 containment and 200% reflow;
-- mobile/desktop information architecture and whether the route is task-shaped or
-  still implementation-shaped;
-- existing source/browser contracts and stale tests/selectors;
-- overlap with other candidate families so the selected branch is coherent rather
-  than a screenshot-by-screenshot patch set.
-
-Produce one consolidated Problem Register for the inventory, rank systemic/product
-consequence, then select **one** next package. Branch it only from the exact
-reconciled protected `main` after the post-Settings documentation package merges.
-
-### Remaining-route adoption contract
-
-Every selected route package must:
-
-1. consume rather than duplicate protected business/permission/provider/lifecycle authority;
-2. preserve one authority per business fact and permission-before-protected-read;
-3. become task-shaped around seller outcomes rather than implementation categories;
-4. distinguish authoritative empty/off state from unavailable, stale, conflict and recovery state;
-5. consume #236 typography/theme/density/locale/RTL/motion/focus/touch roots;
-6. preserve AR/FR/EN semantic parity and 100–200% reflow/1366×768 containment;
-7. keep destructive/external/financial effects on their canonical server authority;
-8. avoid schema/migration/native rewrites unless a concrete bounded integration defect proves them necessary;
-9. add focused source/browser evidence without weakening whole-product Phase 5/6/7 gates;
-10. remain source/browser evidence until installed Founder acceptance is explicitly recorded.
+Issue #230 remains open P1 and is not part of this checkpoint's claims. Before any
+user release, provision the verified SahelFlow-owned domain and distinct primary/
+recovery trial ingress, then complete Algerian-network and installed customer-trial
+certification. Do not carry `founder-offline-only` into a later version.
 
 ## Protected backend/business boundaries
 

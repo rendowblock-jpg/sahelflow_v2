@@ -4,17 +4,17 @@
   "version": "1.0.0-internal.15",
   "windowsMsiVersion": "1.0.0.15",
   "candidateBaseCommit": "856f58126327797b467938390586a04f185e70f6",
-  "requestRevision": 1,
-  "requestReason": "publish one coherent Founder checkpoint containing the post-Internal.14 frontend stabilization system, Inbox, AI Agents, Settings, Orders, no-restart license activation repair, and resilient trial transport source contract",
-  "signedSourcePolicy": "protected-main merge commit containing this request after exact-head release certification and production licensing ingress provisioning",
-  "publication": "blocked-until-owned-licensing-ingress",
+  "requestRevision": 2,
+  "requestReason": "publish one exact FD-032 Founder-only offline checkpoint containing the post-Internal.14 frontend stabilization system, Inbox, AI Agents, Settings, Orders, and no-restart permanent-license activation repair",
+  "signedSourcePolicy": "protected-main merge commit containing the exact 1.0.0-internal.15 founder-offline-only authority authorized by FD-032",
+  "publication": "founder-only-offline-internal",
   "installation": "upgrade-over-internal.14-preserve-appdata",
   "requiredEvidence": [
     "exact protected-main merge source with reviewed PR tree identity",
     "Required PR gate plus exact-head CI, Phase 5 and Phase 6-7 success",
-    "production licensing.ownedHostSuffix set to a verified SahelFlow-controlled public DNS suffix",
-    "protected SF_LICENSE_SERVICE_URL bound to two distinct SahelFlow-owned HTTPS origins",
-    "primary and recovery health plus forced-recovery evidence without workers.dev as packaged authority",
+    "FD-032 exact version-bound founder-offline-only authority with licensing.ownedHostSuffix null",
+    "release artifact packages no SF_LICENSE_SERVICE_URL and exposes no online-trial action",
+    "trial and permanent public verification keyrings remain required at build time",
     "signed MSI and updater signature exact-source binding",
     "in-place update over Founder-installed Internal.14 with Roaming and Local AppData preservation",
     "normal launch, license-valid workspace entry without restart, close, child teardown and reopen",
@@ -29,6 +29,7 @@
   "nonClaims": [
     "not Beta or Stable",
     "source/browser evidence is not Founder-installed acceptance",
+    "not a customer release and does not certify or offer the online trial",
     "#230 remains open until live Algerian-network and installed trial evidence exists"
   ],
   "nextUpdaterDrill": "1.0.0-internal.15-to-next-approved-internal"

@@ -1245,6 +1245,7 @@
   "license.startOrRecoverTrial": "Démarrer ou récupérer l’essai de 7 jours",
   "license.title": "Licence",
   "license.trialFailed": "L’essai en ligne n’a pas pu être émis ou récupéré. Vérifiez la connexion et réessayez.",
+  "license.founderOfflineCheckpoint": "Point de contrôle réservé au fondateur : l’essai en ligne est volontairement désactivé. Utilisez le droit permanent signé ; la certification de l’essai client reste ouverte.",
   "license.typeExtension": "Extension",
   "license.typeLabel": "Type",
   "license.typePermanent": "Permanente",

@@ -18,6 +18,8 @@
     "installMode": "passive"
   },
   "licensing": {
+    "releaseMode": "founder-offline-only",
+    "authorityDecision": "FD-032",
     "ownedHostSuffix": null
   },
   "runtimeProtocolVersion": 1,

@@ -323,6 +323,7 @@ requireMarkers("documentation/product/DECISIONS.md", [
   "## FD-029",
   "## FD-030",
   "## FD-031",
+  "## FD-032",
   "Whole-product AAA rule",
   "The Founder decides whether the Web Agent or Desktop Agent is active",
 ]);
@@ -339,6 +340,7 @@ requireMarkers("documentation/system/CURRENT_STATE.md", [
   "Active Phase 6 frontier",
   "Internal.14 publication evidence",
   "FD-031 exception boundary",
+  "FD-032 Founder-only offline checkpoint boundary",
   "issue #214",
   "not yet a commercially certified Stable release",
 ]);

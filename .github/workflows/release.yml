@@ -56,11 +56,10 @@ jobs:
             throw 'origin/main is not protected; internal updater build is blocked'
           }
 
-      - name: Verify protected licensing build configuration
+      - name: Verify protected licensing verification keyrings
         shell: pwsh
         run: |
           foreach ($name in @(
-            'SF_LICENSE_SERVICE_URL',
             'SF_LICENSE_TRIAL_PUBLIC_KEYS',
             'SF_LICENSE_PERMANENT_PUBLIC_KEYS'
           )) {
@@ -68,9 +67,6 @@ jobs:
             if ([string]::IsNullOrWhiteSpace($value)) {
               throw "$name is missing from the protected internal-updater environment"
             }
-          }
-          if ($env:SF_LICENSE_SERVICE_URL -cnotmatch '^https://\S+$') {
-            throw 'SF_LICENSE_SERVICE_URL must be an absolute HTTPS URL without whitespace'
           }
           foreach ($name in @('SF_LICENSE_TRIAL_PUBLIC_KEYS', 'SF_LICENSE_PERMANENT_PUBLIC_KEYS')) {
             try {
@@ -311,6 +307,34 @@ jobs:
           if ($authority.updater.approvalScope -cne 'internal-lab') {
             throw 'updater approval scope must be internal-lab'
           }
+          switch ($authority.licensing.releaseMode) {
+            'founder-offline-only' {
+              if (
+                $authority.version -cne '1.0.0-internal.15' -or
+                $authority.channel -cne 'internal' -or
+                $authority.licensing.authorityDecision -cne 'FD-032' -or
+                $null -ne $authority.licensing.ownedHostSuffix
+              ) {
+                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15'
+              }
+              # The protected environment may retain an older service secret. The exact
+              # FD-032 artifact must compile and launch without exposing it to the app.
+              'SF_LICENSE_SERVICE_URL=' >> $env:GITHUB_ENV
+              'SF_RELEASE_SCOPE=founder-offline-only (FD-032; online trial disabled)' >> $env:GITHUB_ENV
+            }
+            'customer-online' {
+              if ([string]::IsNullOrWhiteSpace($authority.licensing.ownedHostSuffix)) {
+                throw 'customer-online releases require licensing.ownedHostSuffix'
+              }
+              if ([string]::IsNullOrWhiteSpace($env:SF_LICENSE_SERVICE_URL)) {
+                throw 'customer-online releases require SF_LICENSE_SERVICE_URL'
+              }
+              'SF_RELEASE_SCOPE=customer-online' >> $env:GITHUB_ENV
+            }
+            default {
+              throw "unsupported licensing.releaseMode $($authority.licensing.releaseMode)"
+            }
+          }
           $tag = "sahelflow-v$($authority.version)-$env:SF_SOURCE_COMMIT"
           "SF_RELEASE_TAG=$tag" >> $env:GITHUB_ENV
           "SF_RELEASE_VERSION=$($authority.version)" >> $env:GITHUB_ENV
@@ -335,7 +359,7 @@ jobs:
           tagName: sahelflow-v__VERSION__-${{ inputs.source_ref }}
           releaseName: SahelFlow Internal __VERSION__
           releaseBody: |
-            Internal updater laboratory candidate. This is not SahelFlow Stable.
+            Internal updater laboratory candidate. Its exact licensing scope is recorded in source authority and the release request. This is not SahelFlow Stable or proof of customer-trial certification.
 
             ${{ inputs.release_notes }}
           releaseDraft: true
@@ -663,11 +687,13 @@ jobs:
           - Tag: $env:SF_RELEASE_TAG
           - Source: ${{ inputs.source_ref }}
           - Reviewed PR/head: #$env:SF_REVIEWED_PR / $env:SF_REVIEWED_HEAD
+          - Licensing scope: $env:SF_RELEASE_SCOPE
           - Protected-main and reviewed PR Git trees matched; the risk-aware required PR gate was successful.
           - Release: ${{ steps.tauri.outputs.releaseHtmlUrl }}
           - The draft MSI, updater signature and latest.json matched the locally verified candidate byte-for-byte immediately before publication.
           - The exact signed MSI passed installed runtime launch, authenticated hydrated visible UI, normal close, teardown, and reopen twice.
           - The retained artifact includes the PowerShell 5.1-safe Founder installer and UI acceptance evidence.
           - The live updater endpoint now resolves this exact Internal release.
+          - Issue #230 remains open for owned-domain, primary/recovery, Algerian-network, and installed customer-trial certification before any user release.
           - Beta and Stable promotion remain manual Founder decisions.
           "@ >> $env:GITHUB_STEP_SUMMARY

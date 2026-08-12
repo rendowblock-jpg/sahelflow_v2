@@ -1,20 +1,21 @@
 # SahelFlow documentation
 
 > **Status:** Active documentation entry point
-> **Last reconciled:** 2026-08-12
-> **Protected application-changing baseline:** `6e4477198f33344cd48c9230b32ff726079cd64d` — PR #242
-> **Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign
+> **Last reconciled:** 2026-08-13
+> **Protected application-changing baseline:** `856f58126327797b467938390586a04f185e70f6` — PR #244
+> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
 > **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
 > **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
 > **AI Agents route adoption:** PR #240 / `598e2a0dc0352227431614cf1527672aa78ec015`
 > **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
+> **Orders + confirmation route adoption:** PR #244 / `856f58126327797b467938390586a04f185e70f6`
 > **Phase 5 historical application-changing checkpoint:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14`, protected signed run `31388777098`
 > **Founder-installed release:** Internal.14
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Next product implementation frontier:** remaining route inventory
+> **Active implementation/release frontier:** PR #245 — FD-032 Internal.15 Founder-only offline checkpoint
 > **Mandatory gate before Phase 8:** whole-product frontend adoption + installed Phase 6/7 closure + live #230 + explicit Founder acceptance
 > **Open retained issues:** #221, #226, #230
 > **Execution epic:** #164
@@ -114,32 +115,21 @@ server-side; preserves approval + recent-PIN destructive ceremonies; and routes
 manual daily-report execution through authenticated `settings.manage` rather than
 browser-visible cron authority.
 
-PR #240 and PR #242 are source/browser evidence only. They do **not** close
+PR #240, PR #242 and PR #244 are source/browser evidence only. They do **not** close
 #221/#226/#230 and are not installed Founder acceptance.
 
-## Next product frontier — remaining route inventory
+## Current release frontier — FD-032 Internal.15
 
-The active implementation frontier is now the **remaining production route
-inventory**. Complete the inventory before choosing the next branch; do not infer a
-single next route from chat history.
+FD-032 authorizes `1.0.0-internal.15` only as a Founder/internal-lab offline
+checkpoint. Its artifact must package no trial-service URL, expose no online-trial
+action, and retain the signed permanent offline entitlement path. The mode is bound
+to the exact version and decision so a later release fails closed instead of
+inheriting the exception.
 
-Binding adoption order from the roadmap:
-
-1. dashboard;
-2. orders and confirmation queue;
-3. customers and risk;
-4. products and inventory;
-5. delivery and returns;
-6. COD and accounting;
-7. analytics;
-8. automations;
-9. setup, login and license;
-10. remaining administration.
-
-Each selected package must consume protected Phase 1–4 authority and the #236
-frontend foundation, carry honest loading/empty/permission/offline/pending/stale/
-conflict/retry/recovery semantics, and prove AR/FR/EN, RTL, keyboard,
-reduced-motion, reflow and accessibility parity. Phase 8 remains frozen.
+This is not a customer release or online-trial certification. Issue #230 remains
+open P1; a verified SahelFlow-owned domain, distinct primary/recovery ingress,
+representative Algerian-network reachability and signed installed trial evidence
+remain mandatory before distribution to users. Phase 8 remains frozen.
 
 ## Retained issue truth
 

@@ -12,6 +12,7 @@ function isProjection(value: unknown): value is LicenseClientProjection {
   return (
     typeof candidate.status === "string" &&
     typeof candidate.message === "string" &&
+    typeof candidate.onlineTrialAvailable === "boolean" &&
     Array.isArray(candidate.features) &&
     (candidate.minimumPermanentRecoveryEpoch === null ||
       (typeof candidate.minimumPermanentRecoveryEpoch === "number" &&

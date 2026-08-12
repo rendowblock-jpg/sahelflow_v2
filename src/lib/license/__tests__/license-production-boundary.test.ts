@@ -37,11 +37,15 @@ describe("production licensing authority inventory", () => {
     expect(worker).not.toContain("PERMANENT_PRIVATE");
   });
 
-  it("fails customer release builds closed until two owned public trial routes are provisioned", () => {
+  it("version-binds the Founder offline checkpoint while customer releases still fail closed", () => {
     const build = read("src-tauri/build.rs");
     const tauri = read("src-tauri/src/lib.rs");
     const release = read(".github/workflows/release.yml");
     const versionAuthority = read("sahelflow.version.json");
+    const versionAudit = read("scripts/sf-version.ts");
+    const statusRoute = read("src/app/api/license/status/route.ts");
+    const trialRoute = read("src/app/api/license/trial/route.ts");
+    const licensePanel = read("src/components/settings/license-panel.tsx");
     for (const name of [
       "SF_LICENSE_SERVICE_URL",
       "SF_LICENSE_TRIAL_PUBLIC_KEYS",
@@ -61,7 +65,18 @@ describe("production licensing authority inventory", () => {
     expect(build).toContain("std::net::IpAddr");
     expect(build).toContain("public DNS hostnames, not IP/reserved/private-style destinations");
     expect(build).toContain("provisioned SahelFlow-owned host suffix");
+    expect(versionAuthority).toContain('"releaseMode": "founder-offline-only"');
+    expect(versionAuthority).toContain('"authorityDecision": "FD-032"');
     expect(versionAuthority).toContain('"ownedHostSuffix": null');
+    expect(versionAudit).toContain(
+      "founder-offline-only licensing is authorized only for 1.0.0-internal.15 by FD-032",
+    );
+    expect(build).toContain(
+      "founder-offline-only licensing is authorized only for exact 1.0.0-internal.15 by FD-032",
+    );
+    expect(build).toContain("FD-032 Founder-only Internal.15 must not package SF_LICENSE_SERVICE_URL");
+    expect(build).toContain("cargo:rustc-env=SF_LICENSE_SERVICE_URL=");
+    expect(build).toContain("customer-online releases require SF_LICENSE_SERVICE_URL");
     expect(build).toContain('std::env::var("GITHUB_WORKFLOW")');
     expect(build).toContain('"CI" | "Native source contract" | "Windows Rust release parity"');
     expect(build).toContain('routes == ["https://license.invalid"]');
@@ -70,6 +85,12 @@ describe("production licensing authority inventory", () => {
     expect(release).toContain(
       "SF_LICENSE_SERVICE_URL: ${{ secrets.SF_LICENSE_SERVICE_URL || vars.SF_LICENSE_SERVICE_URL }}",
     );
+    expect(release).toContain("'SF_LICENSE_SERVICE_URL=' >> $env:GITHUB_ENV");
+    expect(release).toContain("exact FD-032/Internal.15");
+    expect(statusRoute).toContain("onlineTrialAvailable:");
+    expect(trialRoute).toContain("LICENSE_TRIAL_DISABLED_FOR_FOUNDER_CHECKPOINT");
+    expect(licensePanel).toContain("projection?.onlineTrialAvailable === true");
+    expect(licensePanel).toContain('t("license.founderOfflineCheckpoint")');
     expect(build).not.toContain('"Build Signed Internal Windows Update" |');
   });
 

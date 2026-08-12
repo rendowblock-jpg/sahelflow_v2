@@ -17,6 +17,7 @@ export type LicenseClientStatus =
 export type LicenseClientProjection = Readonly<{
   status: LicenseClientStatus;
   message: string;
+  onlineTrialAvailable: boolean;
   licenseId: string | null;
   type: "trial" | "extension" | "permanent" | null;
   expiresAt: string | null;

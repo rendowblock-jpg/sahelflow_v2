@@ -1,14 +1,14 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact resumable execution frontier; never product, architecture or roadmap authority
-> **Last updated:** 2026-08-12
+> **Last updated:** 2026-08-13
 > **Protected main:** `856f58126327797b467938390586a04f185e70f6` — PR #244 Orders protected merge
-> **Protected application-changing baseline:** `6e4477198f33344cd48c9230b32ff726079cd64d`
-> **Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign
-> **Latest protected product merge beyond the frozen verifier baseline:** PR #244 — Orders + confirmation operational workspace, merge `856f58126327797b467938390586a04f185e70f6`
+> **Protected application-changing baseline:** `856f58126327797b467938390586a04f185e70f6`
+> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
+> **Latest protected product merge:** PR #244 — Orders + confirmation operational workspace, merge `856f58126327797b467938390586a04f185e70f6`
 > **Active implementation/release PR:** #245 — `chore(release): prepare Internal.15 Founder checkpoint`
 > **Active branch:** `agent/internal-15-founder-checkpoint`
-> **Frozen code-bearing Internal.15 release-prep checkpoint:** `3a9539bb4f67f99aee1b9d636ead9edb45a00017`
+> **Pre-FD-032 Internal.15 release-prep checkpoint:** `3a9539bb4f67f99aee1b9d636ead9edb45a00017`
 > **Historical pre-retry certification checkpoint:** `327d83feecffc9c7231e326a549730fbc60df4de`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
@@ -23,16 +23,16 @@ review threads and Actions before any write, certification or merge. Keep one ac
 implementation/release PR at a time. Source/browser/CI evidence is not installed
 Founder acceptance.
 
-The PR head may advance beyond `3a9539bb...` through documentation-only handoff
-commits. Treat `3a9539bb...` as the frozen code-bearing release package unless a
-fresh live diff proves a later application/runtime change.
+The PR head deliberately advances beyond `3a9539bb...` for the exact FD-032 licensing
+mode, trial-UI/API fail-closed behavior, release workflow and authority documentation.
+Re-fetch the live PR head and certify only that reconciled exact tree.
 
-## Session handoff — 2026-08-12
+## Session handoff — 2026-08-13
 
-This session completed the Orders package and moved the product to the next actual
-installer checkpoint. The safe stopping state is **PR #245 draft**. Do not mark it
-ready or merge it until the owned licensing ingress is real and the final exact-head
-release certification is ready to run once.
+The Founder explicitly selected the free temporary route: finish Internal.15 as a
+strict Founder-only offline checkpoint and obtain the domain before releasing to
+users. FD-032 records that choice. PR #245 may proceed without owned ingress only
+under its exact version-bound offline scope and after final exact-head certification.
 
 ### Orders closure — PR #244 merged
 
@@ -58,11 +58,11 @@ PR #245 is the single active release-preparation PR. It stages
 `1.0.0-internal.15` / MSI `1.0.0.15` from protected `main` after the frontend
 stabilization program and Orders merge.
 
-### Frozen code-bearing release package — `3a9539bb...`
+### Pre-FD-032 code-bearing release package — `3a9539bb...`
 
-`3a9539bb4f67f99aee1b9d636ead9edb45a00017` is the current intentionally
-consolidated code-bearing Internal.15 release package. It is one release commit directly
-on protected `main` `856f5812...` and includes:
+`3a9539bb4f67f99aee1b9d636ead9edb45a00017` is the reconciled pre-FD-032
+Internal.15 package directly on protected `main` `856f5812...`. The active exact head
+adds the bounded FD-032 offline release authority and includes:
 
 - `sahelflow.version.json` → `1.0.0-internal.15` / MSI `1.0.0.15`;
 - synchronized `package.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, and
@@ -132,30 +132,24 @@ Three review findings are known:
 Re-fetch threads next session because thread state can move independently of code state.
 Resolve only after final exact-head certification + fresh review.
 
-## Licensing / Cloudflare release boundary
+## FD-032 licensing / Cloudflare release boundary
 
-Production release packaging is intentionally fail-closed while
-`sahelflow.version.json` has `licensing.ownedHostSuffix: null`.
+The exact Internal.15 authority is:
 
-The reviewed boundary requires:
+1. `licensing.releaseMode: founder-offline-only`;
+2. `licensing.authorityDecision: FD-032`;
+3. `licensing.ownedHostSuffix: null`;
+4. no packaged `SF_LICENSE_SERVICE_URL` and no online-trial UI action;
+5. signed trial/permanent public keyrings and permanent offline activation retained.
 
-1. a verified SahelFlow-controlled public DNS suffix;
-2. two distinct SahelFlow-owned HTTPS licensing origins: primary + recovery;
-3. protected release binding
-   `SF_LICENSE_SERVICE_URL=https://<primary>|https://<recovery>`;
-4. live and installed resilient-trial evidence owned by #230.
+This exception is valid only for `1.0.0-internal.15` on the internal channel. The
+version audit, native release build and release workflow must all reject a mismatch.
+Do not package `workers.dev` or any provider hostname as a substitute.
 
-Do not weaken `src-tauri/build.rs`, do not package `workers.dev` as production
-authority, and do not substitute the CI loopback/evidence MSI for a Founder release.
-
-Cloudflare skills are installed, and the user expects full Cloudflare access. During
-this session the callable Cloudflare account-action namespace did not consistently
-surface even after connection attempts. A disposable GitHub probe also found no
-standard protected Cloudflare API token/account secret available to Actions. Next
-session must **re-check the Cloudflare plugin/account connector first** rather than
-assuming it is unavailable. If account actions surface, inspect the actual controlled
-zones and provision the primary/recovery ingress directly. Do not invent domain
-ownership.
+Issue #230 remains open P1 and moves to the user-release boundary, not to a fake pass.
+Before any distribution to users: obtain a verified SahelFlow-owned domain, provision
+distinct primary/recovery HTTPS ingress, bind the protected environment, and prove
+representative Algerian fixed/mobile and installed customer-trial recovery behavior.
 
 ## Binding product truth
 
@@ -184,10 +178,10 @@ its acceptance record and reconcile the state explicitly.
 ## Phase 6 next action
 
 Phase 6 — Arabic, RTL and accessibility parity remains active. Source/browser route
-adoption now includes Orders. The next action is release convergence: finish the owned
-licensing ingress, certify one exact Internal.15 head, publish through the protected
-release workflow, then perform installed Founder inspection. Phase 8 remains frozen
-behind the mandatory installed/live/Founder gate.
+adoption now includes Orders. The next action is release convergence: certify one exact
+FD-032 Internal.15 offline head, publish through the protected release workflow, then
+perform installed Founder inspection. Phase 8 remains frozen behind the mandatory
+installed/live/Founder gate, including #230 before user distribution.
 
 ## Durable protected route-adoption baseline
 
@@ -231,8 +225,8 @@ change.
 
 The previous read-only inventory selected Orders + confirmation queue and that package
 is now protected by PR #244. The current execution frontier is no longer another route
-selection: it is the coherent Internal.15 installer checkpoint and its external
-licensing/installed evidence boundary.
+selection: it is the coherent Internal.15 installer checkpoint and its exact
+FD-032 licensing/installed evidence boundary.
 
 None of the protected route-adoption packages closes installed #221/#226, live #230
 or the Founder acceptance gate.
@@ -272,7 +266,9 @@ Do not rewrite these for release convenience:
 - no #230 production claim from mocks, loopback or source CI;
 - Internal.14 remains Founder-rejected; Internal.5 remains Founder-accepted;
 - Phase 8 implementation remains frozen;
-- do not merge #245 while `licensing.ownedHostSuffix` is null;
+- merge #245 with a null owned suffix only when the exact Internal.15/FD-032
+  `founder-offline-only` checks pass and the artifact contains no trial-service URL;
+- never carry FD-032 offline scope into a later version or describe it as a customer release;
 - preserve established runtime and compiler provenance contracts while making transient downloads resilient;
 - prefer one coherent repair/certification batch over repeated micro-CI loops.
 
@@ -283,12 +279,12 @@ Do not rewrite these for release convenience:
 2. Confirm #245 is still **draft**. Verify any commits after code-bearing checkpoint
    `3a9539bb4f67f99aee1b9d636ead9edb45a00017` are documentation-only; inspect any
    unexpected source delta before doing anything else.
-3. Re-check the Cloudflare account connector first. If callable, inspect actual
-   controlled zones, provision two SahelFlow-owned HTTPS licensing origins, verify
-   primary/recovery health, bind the protected release environment, and set
-   `licensing.ownedHostSuffix` to the actually controlled suffix. Do not guess a domain.
-4. Reconcile #245 into one intentional final release head after the real licensing
-   binding. Keep the Founder installer Internal.15 defaults, bounded runtime-download
+3. Verify the exact FD-032 authority is synchronized across version audit, native
+   build, workflow, API/UI, release request, tests and documentation. Confirm the
+   artifact build environment clears `SF_LICENSE_SERVICE_URL` while retaining both
+   public verification keyrings.
+4. Reconcile #245 into one intentional final Founder-offline release head. Keep the
+   Founder installer Internal.15 defaults, bounded runtime-download
    retry, established nested runtime manifest, Bun compiler provenance manifest and
    pinned checksum authority intact.
 5. Mark ready **once** and run one exact-head release certification: Required PR gate,
@@ -298,11 +294,12 @@ Do not rewrite these for release convenience:
 6. Perform one fresh exact-head adversarial review. Resolve all three known PR #245
    review threads only after the exact repaired head proves them and no replacement
    material finding exists.
-7. If all exact-head gates are green and licensing ingress is real, merge #245 with an
+7. If all exact-head gates are green and the FD-032 boundary is exact, merge #245 with an
    expected-head guard and let protected-main dispatch the signed Internal.15 updater
    workflow. Do not manually bypass the release guard.
 8. Install/update Internal.15 over Founder-installed Internal.14, preserve Roaming/Local
    AppData, verify launch/license-valid workspace without restart, close/reopen, and
    inspect the coherent frontend on the Founder T470.
-9. Record installed #221/#226 and live #230 evidence truth. Only after explicit Founder
-   acceptance may the Phase 8 freeze be reconsidered.
+9. Record installed #221/#226 and explicit Founder acceptance truth. Keep #230 open;
+   obtain the domain and complete its live customer-trial evidence before releasing
+   to users. Only after all governing gates pass may the Phase 8 freeze be reconsidered.

@@ -95,7 +95,7 @@ fn public_dns_hostname(value: &str) -> bool {
     )
 }
 
-fn configured_owned_host_suffix() -> String {
+fn configured_version_authority() -> serde_json::Value {
     let manifest_dir = PathBuf::from(
         std::env::var("CARGO_MANIFEST_DIR")
             .expect("CARGO_MANIFEST_DIR is unavailable to the Tauri build script"),
@@ -108,9 +108,44 @@ fn configured_owned_host_suffix() -> String {
             authority_path.display()
         )
     });
-    let parsed: serde_json::Value = serde_json::from_str(&document)
-        .unwrap_or_else(|_| panic!("sahelflow.version.json is not valid JSON"));
-    let suffix = parsed
+    serde_json::from_str(&document)
+        .unwrap_or_else(|_| panic!("sahelflow.version.json is not valid JSON"))
+}
+
+fn founder_offline_checkpoint(authority: &serde_json::Value) -> bool {
+    let licensing = authority
+        .get("licensing")
+        .unwrap_or_else(|| panic!("sahelflow.version.json licensing authority is missing"));
+    let release_mode = licensing
+        .get("releaseMode")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_else(|| panic!("sahelflow.version.json licensing.releaseMode is missing"));
+    match release_mode {
+        "founder-offline-only" => {
+            let exact_checkpoint = authority.get("version").and_then(serde_json::Value::as_str)
+                == Some("1.0.0-internal.15")
+                && authority.get("channel").and_then(serde_json::Value::as_str) == Some("internal")
+                && licensing
+                    .get("authorityDecision")
+                    .and_then(serde_json::Value::as_str)
+                    == Some("FD-032")
+                && licensing
+                    .get("ownedHostSuffix")
+                    .is_some_and(serde_json::Value::is_null);
+            if !exact_checkpoint {
+                panic!(
+                    "founder-offline-only licensing is authorized only for exact 1.0.0-internal.15 by FD-032 with no owned host suffix"
+                );
+            }
+            true
+        }
+        "customer-online" => false,
+        _ => panic!("unsupported sahelflow.version.json licensing.releaseMode"),
+    }
+}
+
+fn configured_owned_host_suffix(authority: &serde_json::Value) -> String {
+    let suffix = authority
         .get("licensing")
         .and_then(|value| value.get("ownedHostSuffix"))
         .and_then(serde_json::Value::as_str)
@@ -174,28 +209,54 @@ fn non_release_ci_placeholder(routes: &[&str]) -> bool {
 
 fn main() {
     if std::env::var("PROFILE").as_deref() == Ok("release") {
-        let service_authority = required_release_value("SF_LICENSE_SERVICE_URL");
+        println!("cargo:rerun-if-env-changed=SF_LICENSE_SERVICE_URL");
+        let service_authority = std::env::var("SF_LICENSE_SERVICE_URL").unwrap_or_default();
+        if service_authority.trim() != service_authority {
+            panic!("SF_LICENSE_SERVICE_URL must contain no surrounding whitespace");
+        }
         println!("cargo:rerun-if-env-changed=SF_PHASE4_RESTORE_EVIDENCE_BUILD");
         let restore_evidence_build =
             std::env::var("SF_PHASE4_RESTORE_EVIDENCE_BUILD").as_deref() == Ok("1");
-        let routes = configured_service_urls(&service_authority);
         if restore_evidence_build {
+            if service_authority.is_empty() {
+                panic!("the explicit Phase 4 restore-evidence build requires its disposable trial issuer");
+            }
+            let routes = configured_service_urls(&service_authority);
             if routes.len() != 1 || !exact_restore_evidence_loopback_url(routes[0]) {
                 panic!(
                     "the explicit Phase 4 restore-evidence build must use one exact http://127.0.0.1:<port> disposable trial issuer"
                 );
             }
-        } else if !non_release_ci_placeholder(&routes) {
-            if routes.len() != 2 {
-                panic!(
-                    "production SF_LICENSE_SERVICE_URL must contain distinct primary and recovery HTTPS origins separated by '|'"
-                );
-            }
-            let owned_host_suffix = configured_owned_host_suffix();
-            let primary_origin = production_https_origin(routes[0], &owned_host_suffix);
-            let recovery_origin = production_https_origin(routes[1], &owned_host_suffix);
-            if primary_origin == recovery_origin {
-                panic!("production trial primary and recovery origins must be distinct");
+        } else {
+            let routes = (!service_authority.is_empty())
+                .then(|| configured_service_urls(&service_authority));
+            if routes.as_deref().is_some_and(non_release_ci_placeholder) {
+                // Source and Rust parity checks use an explicit non-release placeholder.
+            } else {
+                let authority = configured_version_authority();
+                if founder_offline_checkpoint(&authority) {
+                    if !service_authority.is_empty() {
+                        panic!(
+                            "FD-032 Founder-only Internal.15 must not package SF_LICENSE_SERVICE_URL"
+                        );
+                    }
+                    println!("cargo:rustc-env=SF_LICENSE_SERVICE_URL=");
+                } else {
+                    let routes = routes.unwrap_or_else(|| {
+                        panic!("customer-online releases require SF_LICENSE_SERVICE_URL")
+                    });
+                    if routes.len() != 2 {
+                        panic!(
+                            "production SF_LICENSE_SERVICE_URL must contain distinct primary and recovery HTTPS origins separated by '|'"
+                        );
+                    }
+                    let owned_host_suffix = configured_owned_host_suffix(&authority);
+                    let primary_origin = production_https_origin(routes[0], &owned_host_suffix);
+                    let recovery_origin = production_https_origin(routes[1], &owned_host_suffix);
+                    if primary_origin == recovery_origin {
+                        panic!("production trial primary and recovery origins must be distinct");
+                    }
+                }
             }
         }
         for name in [

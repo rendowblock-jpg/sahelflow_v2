@@ -604,6 +604,31 @@ Internal.14 only.
   recovery, release, review or Stable gates and is not precedent for greenwashing
   an unknown product failure.
 
+## FD-032 — Internal.15 Founder-only offline checkpoint; customer release still requires live trial certification
+
+This decision records the Founder's explicit 2026-08-13 direction for
+`1.0.0-internal.15` / MSI `1.0.0.15` only.
+
+- Internal.15 may be signed and published solely as a Founder/internal-lab checkpoint
+  for the Founder T470 using the existing signed permanent offline entitlement.
+- The Internal.15 release artifact must package no `SF_LICENSE_SERVICE_URL`, must not
+  expose an online-trial action, and must fail that endpoint closed if called directly.
+- The authority is exact and version-bound: `sahelflow.version.json` must declare
+  `founder-offline-only`, `FD-032`, Internal.15, the internal channel and a null owned
+  host suffix. Any later version or mismatched authority fails the version/build gate.
+- Trial and permanent public verification keyrings remain mandatory. Permanent signed
+  activation, recovery, installation identity, AppData preservation and installed
+  runtime evidence are not weakened.
+- Issue #230 remains open P1. Before any release to users, SahelFlow still requires a
+  verified SahelFlow-owned domain, distinct primary/recovery HTTPS trial ingress,
+  protected bindings, representative Algerian fixed/mobile reachability, forced
+  recovery, and signed installed customer-trial evidence.
+- This checkpoint is not a customer release, online-trial certification, Founder
+  acceptance, Beta or Stable. It does not change FD-003's customer trial contract.
+- This supersedes only the earlier PR #245 instruction that owned-domain provisioning
+  blocks the Founder-only Internal.15 checkpoint. It does not supersede the owned-domain
+  requirement for user distribution and does not reuse or extend FD-031.
+
 ---
 
 ## Change control

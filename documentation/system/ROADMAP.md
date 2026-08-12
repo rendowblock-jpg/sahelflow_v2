@@ -1,14 +1,15 @@
 # SahelFlow — Final completion roadmap
 
 > **Status:** Binding dependency and completion order
-> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary; FD-031 — one-time Internal.14 installed-evidence exception
-> **Protected application-changing baseline:** `6e4477198f33344cd48c9230b32ff726079cd64d` — PR #242
+> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary; FD-031 — one-time Internal.14 installed-evidence exception; FD-032 — exact Internal.15 Founder-only offline checkpoint
+> **Protected application-changing baseline:** `856f58126327797b467938390586a04f185e70f6` — PR #244
 > **Historical PR #231 program-freeze baseline:** `23fb2e0ee4956132fafe8dd6973be42d3cfc8032`
-> **Latest application-changing protected merge:** PR #242 at `6e4477198f33344cd48c9230b32ff726079cd64d`
+> **Latest application-changing protected merge:** PR #244 at `856f58126327797b467938390586a04f185e70f6`
 > **Shared frontend foundation:** PR #236 at `04adb20fb5846499039eda61a9b765deb9c622e6`
 > **Inbox route adoption:** PR #237 at `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
 > **AI Agents route adoption:** PR #240 at `598e2a0dc0352227431614cf1527672aa78ec015`
 > **Settings route adoption:** PR #242 at `6e4477198f33344cd48c9230b32ff726079cd64d`
+> **Orders + confirmation route adoption:** PR #244 at `856f58126327797b467938390586a04f185e70f6`
 > **Phase 5 historical application-changing checkpoint:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published Internal.14 executable source:** PR #228 / `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14`, run `31388777098`
@@ -18,16 +19,16 @@
 > **Phase 2:** Protected-source closed through PR #200; historical issue #201 satisfied/closed by stronger exact #234 installed evidence
 > **Phase 3:** Protected-source closed through PR #203 under FD-030
 > **Phase 4:** Protected-source closed through PR #207; historical issue #214 satisfied/closed by stronger exact #234 installed evidence
-> **Phase 5:** Earlier checkpoint through PR #220; shared roots through PR #236; Inbox through PR #237; AI Agents through PR #240; Settings through PR #242; remaining whole-product adoption and Founder acceptance remain
-> **Phase 6:** Earlier checkpoint through PR #223; #236 protects shared Arabic/RTL/accessibility roots; Inbox #237, AI Agents #240 and Settings #242 adopt those roots; remaining route and installed/human closure remain
-> **Phase 7:** Query/measurement infrastructure protected through PR #223; final #242 controlled-browser evidence is green; installed low-end/reliability certification remains
-> **Completed pre-Phase-8 engineering outcomes:** #232 CI authority; #233 activation continuity; #234 resilient trial source; #236 shared frontend foundation; #237 Inbox operational workspace; #240 AI Agents operational workspace; #242 Settings operational workspace
-> **Next product implementation frontier:** remaining route inventory
+> **Phase 5:** Earlier checkpoint through PR #220; shared roots through PR #236; Inbox through PR #237; AI Agents through PR #240; Settings through PR #242; Orders through PR #244; remaining whole-product adoption and Founder acceptance remain
+> **Phase 6:** Earlier checkpoint through PR #223; #236 protects shared Arabic/RTL/accessibility roots; Inbox #237, AI Agents #240, Settings #242 and Orders #244 adopt those roots; remaining route and installed/human closure remain
+> **Phase 7:** Query/measurement infrastructure protected through PR #223; final #244 controlled-browser evidence is green; installed low-end/reliability certification remains
+> **Completed pre-Phase-8 engineering outcomes:** #232 CI authority; #233 activation continuity; #234 resilient trial source; #236 shared frontend foundation; #237 Inbox operational workspace; #240 AI Agents operational workspace; #242 Settings operational workspace; #244 Orders + confirmation operational workspace
+> **Active implementation/release frontier:** #245 FD-032 Internal.15 Founder-only offline checkpoint
 > **Open retained issues:** #221 Founder visual/accessibility acceptance; #226 performance/reliability; #230 live resilient customer-trial certification
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Mandatory pre-Phase-8 gate:** whole-product frontend adoption + installed Phase 6/7 + live #230 + explicit Founder acceptance
 > **Execution epic:** issue #164
-> **Last consolidated:** 2026-08-12
+> **Last consolidated:** 2026-08-13
 
 Live protected `main` is authority. The published executable SHA above remains the
 Internal.14 artifact source; later protected application/documentation merges do
@@ -56,6 +57,15 @@ complete reconnaissance
 → protected-main verification
 → documentation reconciliation
 ```
+
+### FD-032 release boundary
+
+Internal.15 may cross the signed-release boundary only as the exact
+Founder/internal-lab offline checkpoint authorized by FD-032. It packages no online
+trial service and does not close #230. No later version may inherit this exception.
+Before any user distribution, the customer-online release mode must restore the
+owned-domain, distinct primary/recovery ingress, Algerian-network and installed
+trial-certification requirements.
 
 Retained evidence issues are allowed only when a Founder-directed closure
 explicitly separates protected-source truth from installed/external proof. A
@@ -210,9 +220,10 @@ This remains source/browser evidence only.
 1. **Inbox — SATISFIED IN SOURCE/BROWSER BY PR #237.** Installed Founder acceptance remains part of #221.
 2. **AI Agents — SATISFIED IN SOURCE/BROWSER BY PR #240.** Final head `6355cc4c797a597af52c90decfe7727e405749be`; installed Founder acceptance remains open.
 3. **Settings — SATISFIED IN SOURCE/BROWSER BY PR #242.** Final head `e749b0af05741ee45b16c349750d44092bd3beb9`; installed Founder acceptance remains open.
-4. **Remaining route inventory — ACTIVE.** Apply the #236 foundation coherently across:
+4. **Orders + confirmation — SATISFIED IN SOURCE/BROWSER BY PR #244.** Installed Founder acceptance remains part of #221.
+5. **Internal.15 Founder checkpoint — ACTIVE UNDER FD-032.** Certify and install the coherent offline candidate before another route package.
+6. **Remaining route inventory — RESUMES AFTER THE CHECKPOINT.** Apply the #236 foundation coherently across:
    - dashboard;
-   - orders and confirmation queue;
    - customers and risk;
    - products and inventory;
    - delivery and returns;
@@ -257,8 +268,9 @@ The Settings workspace now:
 
 **Status:** Earlier checkpoint through PR #223, shared-root source/browser
 foundation through PR #236, Inbox source/browser adoption through PR #237, AI
-Agents source/browser adoption through PR #240 and Settings source/browser adoption
-through PR #242. Active route implementation moves to the remaining route inventory.
+Agents source/browser adoption through PR #240, Settings through PR #242 and Orders
+and confirmation through PR #244. The active package is the FD-032 Internal.15
+Founder checkpoint; remaining route implementation resumes afterward.
 Installed/human closure remains.
 
 **Objective:** Arabic and accessibility are equivalent product behavior, not a
@@ -382,9 +394,10 @@ and read-only planning may continue when useful.
 2. **Inbox satisfied in source/browser — PR #237.** Database-authoritative task workspace is protected.
 3. **AI Agents satisfied in source/browser — PR #240.** Task-shaped durable AI workspace is protected without weakening proposal/action authority.
 4. **Settings satisfied in source/browser — PR #242.** Task-shaped configuration workspace is protected without weakening dedicated configuration/lifecycle authority.
-5. **Next — remaining route inventory.** Complete the read-only inventory, then adopt one coherent route family at a time from dashboard through remaining administration.
-6. **Pending:** remaining route inventory adopts the same foundation; no parallel demo-only design system.
-7. Warnings, charts, loading/empty/degraded states and navigation no longer depend on one-off page styling.
+5. **Orders + confirmation satisfied in source/browser — PR #244.** Task-shaped operational order decisions are protected without weakening canonical order authority.
+6. **Next — FD-032 Internal.15 installed checkpoint.** Certify, publish and inspect the exact Founder-only offline candidate.
+7. **Pending after the checkpoint:** re-audit the remaining route inventory and adopt one coherent route family at a time; no parallel demo-only design system.
+8. Warnings, charts, loading/empty/degraded states and navigation no longer depend on one-off page styling.
 
 ### C. Installed Phase 6/7 evidence
 

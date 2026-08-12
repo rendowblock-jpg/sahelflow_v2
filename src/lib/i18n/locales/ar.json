@@ -1245,6 +1245,7 @@
   "license.startOrRecoverTrial": "بدء أو استرجاع التجربة لمدة 7 أيام",
   "license.title": "الترخيص",
   "license.trialFailed": "تعذّر إصدار التجربة أو استرجاعها عبر الإنترنت. تحقّق من الاتصال ثم أعد المحاولة.",
+  "license.founderOfflineCheckpoint": "نسخة تحقق خاصة بالمؤسس: التجربة عبر الإنترنت معطلة عمداً. استخدم الاستحقاق الدائم الموقّع؛ وما زال اعتماد تجربة العملاء مفتوحاً.",
   "license.typeExtension": "تمديد",
   "license.typeLabel": "النوع",
   "license.typePermanent": "دائم",

@@ -39,7 +39,7 @@ function rejectMarkers(relativePath: string, markers: readonly string[]): void {
 // merge SHAs and transient Actions conclusions may advance without changing this
 // application baseline. Exact WIP diagnostics belong in Working Memory.
 const protectedApplicationBaseline =
-  "6e4477198f33344cd48c9230b32ff726079cd64d";
+  "856f58126327797b467938390586a04f185e70f6";
 const inboxProtectedMerge = "4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400";
 const inboxFinalHead = "8e9d5aa365f0c5873909c1c8517f88519d743b9d";
 const aiProtectedMerge = "598e2a0dc0352227431614cf1527672aa78ec015";
@@ -61,7 +61,7 @@ const authorityPaths = [
 
 requireMarkers("README.md", [
   protectedApplicationBaseline,
-  "Latest application-changing protected merge: **PR #242 — Settings operational workspace redesign**",
+  "Latest application-changing protected merge: **PR #244 — Orders + confirmation operational workspace**",
   publishedApplicationSha,
   "`1.0.0-internal.14`",
   signedReleaseRun,
@@ -80,7 +80,8 @@ requireMarkers("README.md", [
   "31546488691",
   "31546488465",
   "31546488422",
-  "Next implementation frontier — remaining route inventory",
+  "PR #244 protects",
+  "Next implementation frontier — FD-032 Internal.15 Founder checkpoint",
   "#221 — OPEN",
   "#226 — OPEN",
   "#230 — OPEN P1",
@@ -91,7 +92,7 @@ requireMarkers("README.md", [
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   protectedApplicationBaseline,
-  "Latest application-changing protected merge: **PR #242 — Settings operational workspace redesign**",
+  "Latest application-changing protected merge: **PR #244 — Orders + confirmation operational workspace**",
   publishedApplicationSha,
   "Published release remains `1.0.0-internal.14`",
   activePhase,
@@ -104,8 +105,8 @@ requireMarkers("AGENTS.md", [
   "31546488691",
   "31546488465",
   "31546488422",
-  "Exact next outcome — remaining route inventory",
-  "Binding roadmap order",
+  "Exact next outcome — FD-032 Internal.15 Founder checkpoint",
+  "founder-offline-only",
   "#221, #226, #230",
   "Phase 8 implementation remains frozen",
   "WORKING_MEMORY.md` is",
@@ -113,12 +114,12 @@ requireMarkers("AGENTS.md", [
 
 requireMarkers("documentation/README.md", [
   protectedApplicationBaseline,
-  "**Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign",
+  "**Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace",
   publishedApplicationSha,
   "**Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
   activePhase,
-  "**Next product implementation frontier:** remaining route inventory",
+  "**Active implementation/release frontier:** PR #245 — FD-032 Internal.15 Founder-only offline checkpoint",
   "PR #237 — Inbox protected",
   inboxProtectedMerge,
   "PR #240 — AI Agents protected",
@@ -129,14 +130,14 @@ requireMarkers("documentation/README.md", [
   "31546488691",
   "31546488465",
   "31546488422",
-  "Next product frontier — remaining route inventory",
+  "Current release frontier — FD-032 Internal.15",
   "#221, #226, #230",
   "Phase 8",
 ]);
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
   protectedApplicationBaseline,
-  "**Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign",
+  "**Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace",
   publishedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
@@ -150,7 +151,8 @@ requireMarkers("documentation/system/CURRENT_STATE.md", [
   "31546488691",
   "31546488465",
   "31546488422",
-  "Next route-level frontier — remaining route inventory",
+  "FD-032 Founder-only offline checkpoint boundary",
+  "Post-Internal.15 route-level frontier",
   "#221 — OPEN",
   "#226 — OPEN",
   "#230 — OPEN P1",
@@ -159,7 +161,7 @@ requireMarkers("documentation/system/CURRENT_STATE.md", [
 
 requireMarkers("documentation/system/ROADMAP.md", [
   protectedApplicationBaseline,
-  "Latest application-changing protected merge:** PR #242",
+  "Latest application-changing protected merge:** PR #244",
   publishedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   activePhase,
@@ -169,16 +171,17 @@ requireMarkers("documentation/system/ROADMAP.md", [
   aiFinalHead,
   "Settings — SATISFIED IN SOURCE/BROWSER BY PR #242",
   settingsFinalHead,
-  "Remaining route inventory — ACTIVE",
+  "Orders + confirmation — SATISFIED IN SOURCE/BROWSER BY PR #244",
+  "Internal.15 Founder checkpoint — ACTIVE UNDER FD-032",
   "Mandatory pre-Phase-8 stabilization and Founder-acceptance gate",
   "Settings satisfied in source/browser — PR #242",
-  "Next — remaining route inventory",
+  "Next — FD-032 Internal.15 installed checkpoint",
   "Implementation frozen behind the mandatory pre-Phase-8 gate",
 ]);
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   protectedApplicationBaseline,
-  "Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign",
+  "Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace",
   publishedApplicationSha,
   "Published release:** `1.0.0-internal.14`",
   signedReleaseRun,
@@ -194,6 +197,7 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "31546488422",
   "Post-Settings documentation reconciliation",
   "Next product package selection — remaining route inventory",
+  "FD-032 licensing / Cloudflare release boundary",
   "#221 OPEN",
   "#226 OPEN",
   "#230 OPEN P1",
@@ -292,6 +296,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: PR #242 protects the Settings workspace on the protected application baseline; remaining route inventory is active, #221/#226/#230 remain open, Internal.14 remains Founder-rejected, and Phase 8 implementation remains frozen.",
+    "Current execution frontier verified: PR #244 protects Orders + confirmation; PR #245 is the FD-032 Internal.15 Founder-only offline checkpoint, #221/#226/#230 remain open, Internal.14 remains Founder-rejected, and Phase 8 implementation remains frozen.",
   );
 }

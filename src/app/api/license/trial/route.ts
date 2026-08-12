@@ -27,6 +27,13 @@ function isRestoreEvidenceIssuer(): boolean {
 }
 
 export const POST = withErrorHandler(async () => {
+  if (!process.env.SF_LICENSE_SERVICE_URL?.trim()) {
+    throw new SahelFlowError(
+      "Online trial is intentionally disabled for this Founder-only checkpoint",
+      "LICENSE_TRIAL_DISABLED_FOR_FOUNDER_CHECKPOINT",
+      503,
+    );
+  }
   const nativeAuthorityNeedsOnlineInitialization =
     process.env.NODE_ENV === "production" &&
     process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS === "missing";
