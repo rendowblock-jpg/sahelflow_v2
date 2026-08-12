@@ -39,6 +39,26 @@ describe("Orders risk presentation", () => {
     });
   });
 
+  it("keeps detected contact issues visible when contact weighting is disabled", () => {
+    expect(
+      getOrderRiskFactorPresentation(
+        factor({ id: "contact_quality", value: 25, points: 0 }),
+      ),
+    ).toEqual({
+      key: "orders.workspace.risk.factor.contactRisk",
+      params: { points: 0 },
+    });
+
+    expect(
+      getOrderRiskFactorPresentation(
+        factor({ id: "contact_quality", value: 0, points: 0 }),
+      ),
+    ).toEqual({
+      key: "orders.workspace.risk.factor.contactClear",
+      params: {},
+    });
+  });
+
   it("keeps protective fallback copy free of engine explanation text", () => {
     expect(
       getOrderRiskFactorPresentation(

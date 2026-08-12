@@ -35,7 +35,7 @@ export function getOrderRiskFactorPresentation(
             params: {},
           };
     case "contact_quality":
-      return factor.points > 0
+      return factor.value > 0
         ? {
             key: "orders.workspace.risk.factor.contactRisk",
             params: { points: factor.points },
