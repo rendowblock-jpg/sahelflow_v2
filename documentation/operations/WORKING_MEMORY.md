@@ -7,7 +7,7 @@
 > **Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign
 > **Active implementation PR:** #244 — `feat(orders): rebuild operational order workspace`
 > **Active branch:** `agent/orders-product-workspace-redesign`
-> **Latest application-changing checkpoint:** `0c36128a9fb161ae21f9e3a1f5750f2bada02745`
+> **Latest application-changing checkpoint:** `7b2daae82e8d423674735b3189d5e120236b4312`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
 > **Founder-installed release:** Internal.14
@@ -17,13 +17,13 @@
 > **Phase 8:** frozen
 
 Live GitHub is authority. Re-fetch protected `main`, PR #244 head, review threads and
-Actions before any write. Keep one active implementation PR at a time. Source/browser
-evidence is not installed Founder acceptance.
+Actions before any write or merge. Keep one active implementation PR at a time.
+Source/browser evidence is not installed Founder acceptance.
 
 ## Binding product truth
 
 The Founder values the backend/engine and rejects Internal.14 as the frontend product
-quality baseline. The systemic frontend problem register remains Arabic typography,
+quality baseline. The systemic frontend program remains Arabic typography,
 comfortable density, atomic locale/direction switching, warmer coherent themes,
 restrained motion, RTL geometry, shallow navigation, warning hierarchy, useful
 charts and route-wide workflow quality.
@@ -38,10 +38,12 @@ acceptance; source/browser route adoption does not close it.
 
 ## Phase 6 next action
 
-Phase 6 — Arabic, RTL and accessibility parity remains active. The current action is
-to finish one coherent Orders + confirmation queue package in PR #244, then continue
-the remaining route inventory one package at a time before installed Phase 6/7 and
-Founder acceptance can be judged. Phase 8 stays frozen behind that gate.
+Phase 6 — Arabic, RTL and accessibility parity remains active. The Orders +
+confirmation queue implementation batch is complete on PR #244. The next action is
+one exact-head certification cycle, one fresh adversarial review, and—if clean—the
+protected merge. After that, reassess the remaining frontend globally and batch the
+highest-impact work toward the next installer rather than returning to micro-route
+loops. Phase 8 remains frozen behind the mandatory installed/live/Founder gate.
 
 ## Durable protected route-adoption baseline
 
@@ -73,7 +75,7 @@ installed truth, retained issues or the Phase 8 freeze.
 
 The post-Settings read-only inventory selected **Orders + confirmation queue** as the
 next coherent route-adoption package because it combined the strongest task-shape
-gap with the measured `/orders` performance outlier. PR #244 is that active package.
+gap with the measured `/orders` performance outlier. PR #244 is that package.
 
 None of the protected route-adoption packages closes installed #221/#226, live #230
 or the Founder acceptance gate.
@@ -98,134 +100,105 @@ Do not rewrite these for frontend convenience:
 Avoid schema, migration, licensing, provider or native changes inside #244 unless a
 concrete bounded defect proves them necessary and consequence selection expands.
 
-## PR #244 Orders + confirmation queue — active implementation frontier
+## PR #244 Orders + confirmation queue — implementation batch complete / draft
 
 PR #244 is open on `agent/orders-product-workspace-redesign`, based on protected
-`main` `52ea0c79...`. It is currently ready-for-review so the real heavy gates run;
-that status does **not** mean the package is merge-ready.
+`main` `52ea0c79...`. It is intentionally draft while the completed batch is prepared
+for one final ready-state certification cycle. Draft status is not a product claim.
 
-### Application checkpoint 1 — repaired review blockers
+### Checkpoint 1 — review blockers repaired
 
-`9f6e96eca1f673edf2bbcc0e63b18c95877b2ffd` —
-`fix(orders): repair hydration freshness contracts`
+`9f6e96eca1f673edf2bbcc0e63b18c95877b2ffd` repaired both brittle source-contract
+checks and the SWR same-key stale-cache path while preserving batched Orders risk
+projection and permission-before-protected-read authority. Exact-head CI, Phase 5
+and Phase 6–7 passed.
 
-- Replaced brittle whole-file helper-name matching with semantic TypeScript AST
-  import/call checks.
-- Replaced formatter-sensitive fallback assertions with bounded semantic regexes.
-- Corrected `useOrders()` SWR freshness semantics: exact server fallback skips the
-  redundant first-hydration request only when that key has no older cached data;
-  revisits with cached data revalidate so stale client cache cannot shadow fresh RSC
-  truth.
-- Preserved the batched Orders risk projector and exact permission-before-risk-read
-  boundary.
+The original review threads `PRRT_kwDOShPGIM6Yaxhl`,
+`PRRT_kwDOShPGIM6Yaxhp` and `PRRT_kwDOShPGIM6Yaxhu` are outdated because their
+underlying code findings were repaired. Thread state remains separate from fix state.
 
-Exact-head evidence: CI, Phase 5 and Phase 6–7 all passed.
+### Checkpoint 2 — review-first confirmation queue
 
-The original three review threads (`PRRT_kwDOShPGIM6Yaxhl`,
-`PRRT_kwDOShPGIM6Yaxhp`, `PRRT_kwDOShPGIM6Yaxhu`) are now outdated because their
-code findings were repaired. They remain operationally unresolved only because no
-explicit thread-resolution action has been taken.
-
-### Application checkpoint 2 — review-first confirmation queue
-
-`05d4dc92bb51f3c55693f0edb64f9b4147050595` —
-`feat(orders): make confirmation queue review-first`
-
-- Added one Orders runtime AR/FR/EN presentation-copy authority at
-  `src/lib/i18n/orders-workspace.ts` and wired it through the shared server/client
-  runtime translation resolver.
-- Removed inline status mutation controls from the confirmation queue.
-- Pending rows now open the order review; canonical mutation remains in existing
-  `OrderStatusActions` on detail.
-- Main `/orders` now exposes the confirmation queue as a visible pending-work action.
-- Governed bulk-selection copy moved out of the table-local locale branch.
-- Added source/runtime contracts for the review-first flow and localized copy.
+`05d4dc92bb51f3c55693f0edb64f9b4147050595` made the confirmation queue review-first,
+exposed it from the main Orders workspace, centralized initial Orders operational
+copy and preserved the existing canonical decision component as the mutation
+authority.
 
 Exact-head evidence:
 
 - CI `31554348981`: PASS.
 - Phase 5 `31554348863`: PASS.
-- Phase 6–7 `31554348885`: PASS, including AR/FR/EN accessibility, RTL/reflow and
-  performance browser job `93984302397`.
+- Phase 6–7 `31554348885`: PASS, including rendered job `93984302397`.
 
-### Application checkpoint 3 — task-shaped governed review + localized risk presentation
+### Checkpoint 3 — task-shaped review and localized risk presentation
 
-`0c36128a9fb161ae21f9e3a1f5750f2bada02745` —
-`feat(orders): shape governed confirmation review`
+`0c36128a9fb161ae21f9e3a1f5750f2bada02745` added the explicit confirmation-review
+consequence zone and presentation-only localized risk-factor/rule explanations. It
+did not change risk scoring/config/rules, decision semantics or protected business
+truth.
 
-- Pending order detail now presents an explicit confirmation-review consequence
-  zone and a route back to the queue.
-- Existing `OrderStatusActions` receives the same order ID, current version and
-  mutation authority; canonical decision semantics were not duplicated or changed.
-- Added `src/lib/orders/order-risk-presentation.ts` as presentation-only mapping
-  from deterministic risk factor IDs/values to localized copy parameters.
-- Raw English `factor.explanation` is no longer rendered on order detail.
-- Raw machine rule IDs are no longer rendered; only known localized rule labels are
-  presented. Unknown rule IDs stay hidden from operator copy rather than leaking
-  implementation strings.
-- Risk config, rules, score calculation and audit/computational payloads are unchanged.
-- Added unit/source contracts for localized factor presentation and authority reuse.
-
-Exact-head evidence for `0c36128a...`:
+Exact-head evidence:
 
 - CI `31554885587`: PASS.
 - Phase 5 `31554885427`: PASS.
 - Phase 6–7 `31554885422`: PASS.
-- Phase 6–7 source diagnostics `93985149185`: PASS — migrations, TypeScript,
-  ESLint, full Vitest, dependency audit and migration status.
-- Phase 6–7 rendered browser job `93985801155`: PASS — representative Algerian COD
-  seed, hot-query/index checks, AR/FR/EN accessibility, RTL/reflow and controlled
-  performance evidence.
+- Source diagnostics `93985149185`: PASS.
+- Rendered AR/FR/EN + RTL/reflow/performance job `93985801155`: PASS.
 
-No schema, migration, native, licensing, provider, Golden COD command kernel or risk
-scoring source changed in these three checkpoints.
+That rendered run also kept the unchanged Phase 7 `<8000ms` controlled route p95
+tripwire green after the batching/SWR repair. Therefore the previously proposed lazy
+create-context endpoint is **not justified** by current evidence and was not added.
 
-## Review status after the repaired application checkpoint
+### Checkpoint 4 — governed Orders package completion
 
-A fresh review re-fetch after `0c36128a...` found one valid current documentation
-finding: the prior Working Memory still described the three already-repaired
-blockers as active and instructed a future agent to redo them. This reconciliation
-replaces that stale session-resume state with the proven frontier above.
+`7b2daae82e8d423674735b3189d5e120236b4312` —
+`feat(orders): complete governed workspace adoption`
 
-Do not infer thread resolution from this edit. Re-fetch review threads before any
-merge decision; thread state is separate from whether the underlying finding is
-fixed.
+This is the final material application batch before certification:
+
+- moved the remaining `OrderStatusActions` decision copy into the single Orders
+  runtime AR/FR/EN presentation authority;
+- moved canonical fulfillment action/state/error copy into that same presentation
+  authority;
+- preserved decision and fulfillment command URLs, payloads, expected versions,
+  local idempotency keys, correlation IDs and business-state transition logic;
+- expanded runtime-copy tests across decision and fulfillment presentation;
+- added a dedicated serial browser journey that creates a real trusted-manual order
+  through `POST /api/orders`, enters it from `/orders` → confirmation queue → detail,
+  proves EN/FR/AR + RTL/200%-equivalent reflow and accessibility semantics, commits
+  the canonical confirmation decision, and verifies canonical fulfillment becomes
+  available;
+- kept raw machine risk rule IDs out of operator presentation;
+- added no schema, migration, native, licensing, provider or new API endpoint.
+
+The application diff from `67d298f...` to `7b2daae8...` is one commit touching five
+presentation/evidence files only.
+
+## Review status
+
+All four previously visible PR #244 review threads are outdated on the completed
+implementation branch: the two original P1 source-contract findings, the P2 SWR
+freshness finding, and the later P2 Working Memory finding have all been superseded
+by repaired code/documentation. Do not resolve them merely because they are outdated;
+resolve only after the final exact-head proof and fresh review confirm no material
+replacement finding.
 
 ## Remaining #244 frontier
 
-Keep the next work inside the same Orders package:
+There is no planned new feature work inside Orders before certification. Remaining
+work is deliberately one closure sequence:
 
-1. **Governed operational copy**
-   - `OrderStatusActions` still contains a component-local AR/FR/EN `DECISION_COPY`.
-   - Consolidate that decision copy into the Orders runtime presentation catalog
-     without changing command URLs, payloads, versions, idempotency keys or error
-     authority.
-   - Inspect fulfillment copy before changing it; only consolidate if a real local
-     presentation split remains.
+1. mark #244 ready once;
+2. run one exact-head CI + Phase 5 + Phase 6–7 certification cycle;
+3. inspect the dedicated Orders journey and unchanged performance tripwire results;
+4. perform one fresh exact-head self/adversarial review;
+5. if a material finding exists, repair findings as one batch and run one final
+   exact-head cycle; otherwise resolve obsolete threads and merge with expected head;
+6. reconcile protected docs after merge and move immediately to global
+   installer-readiness assessment.
 
-2. **Focused Orders journey evidence**
-   - Add a dedicated browser journey for list → confirmation queue → order review →
-     governed decision/detail using deterministic seeded authority.
-   - Prove AR/FR/EN, RTL geometry, 1366×768 containment, 200%-equivalent reflow,
-     keyboard/focus behavior and accessible names for the task flow.
-   - Reuse canonical decision/fulfillment/courier/COD/return/refund/recovery paths.
-
-3. **Performance re-measurement**
-   - Re-measure `/orders` after batched risk and corrected SWR hydration/cache logic.
-   - Keep the existing Phase 7 `<8000ms` controlled CI route tripwire unchanged.
-   - The page still eagerly loads customer + active product/variant creation context
-     for actors allowed to create orders. Add a narrow lazy create-context endpoint
-     only if exact measurement still shows the route materially near/failing the
-     unchanged tripwire, and preserve the exact existing `orders.create`, customer
-     contact, order financial and `products.read` permissions.
-
-4. **Final package review**
-   - Self-review the complete #244 diff on the exact head.
-   - Re-fetch review threads and perform fresh adversarial review.
-   - Run fresh exact-head CI + Phase 5 + Phase 6–7 after the final material code
-     change.
-   - Do not resolve review threads, merge, or claim installed acceptance merely from
-     green source/browser gates.
+Do not add the lazy create-context endpoint unless new exact measurement actually
+fails or materially approaches the unchanged performance tripwire.
 
 ## Retained issue truth
 
@@ -248,14 +221,16 @@ Keep the next work inside the same Orders package:
 
 ## Exact next-session order
 
-1. Re-fetch protected `main`, #244 head, Actions and review threads; audit any delta.
-2. Continue on the same `agent/orders-product-workspace-redesign` branch only.
-3. Centralize remaining decision presentation copy without changing canonical order
-   authority.
-4. Add the dedicated Orders task-flow browser evidence.
-5. Re-measure `/orders`; add lazy create context only if the unchanged tripwire/data
-   proves it necessary.
-6. Run focused tests, then exact-head CI + Phase 5 + Phase 6–7.
-7. Fresh self-review/adversarial review before any merge discussion.
+1. Re-fetch protected `main`, PR #244 exact head, Actions and review threads.
+2. Verify the head still descends from application checkpoint
+   `7b2daae82e8d423674735b3189d5e120236b4312` and contains no unexpected delta.
+3. Mark #244 ready once and run the real exact-head CI + Phase 5 + Phase 6–7 cycle.
+4. Inspect Orders seller-journey, AR/FR/EN/RTL/reflow/accessibility and unchanged
+   performance evidence; do not add speculative backend surface.
+5. Perform one fresh exact-head adversarial review.
+6. Batch any material repair once; otherwise resolve obsolete threads and merge only
+   with expected head SHA.
+7. Reconcile protected `main`, then assess remaining frontend work globally for the
+   next installer instead of reopening route-by-route micro loops.
 8. Keep #221/#226/#230 and the Phase 8 freeze intact until their installed/live/
    Founder gates are actually satisfied.
