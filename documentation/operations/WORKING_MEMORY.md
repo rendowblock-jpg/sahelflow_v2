@@ -263,22 +263,48 @@ for **`c106d637...`**, not for the later docs-only handoff head.
   - Fresh install + owner login: PASS.
   - Representative LTR + Arabic RTL workbenches: PASS.
   - Required Phase 5 Experience gate: PASS.
-- **CI run `31550320462`: IN PROGRESS at stop.**
+- **CI run `31550320462`: FAIL — one new source-contract test file only.**
   - risk classification: PASS;
   - fast authority/docs: PASS;
-  - full Quality Gate was running `tsc + eslint + vitest + prisma` when handoff
-    documentation began. Do not call this run green until its final conclusion is
-    re-fetched.
-- **Phase 6–7 run `31550320361`: IN PROGRESS at stop.**
+  - TypeScript: PASS;
+  - ESLint: PASS;
+  - `src/components/orders/__tests__/orders-workspace-contract.test.ts` failed two
+    whitespace-sensitive source-string assertions: one expected
+    `if (access.risk && rows.length > 0)` on one physical line and one expected
+    `where: { id: { in: uniqueOrderIds }, deletedAt: null }` on one physical line;
+  - the implementation contains both semantics, but formatter line breaks make
+    those exact strings absent;
+  - CI log summary: **1 failed test file / 163 passed test files; 2 failed tests /
+    1238 passed tests**;
+  - Required PR gate therefore failed. This is test brittleness, not evidence of a
+    runtime/business-authority defect. Do not weaken product/performance gates;
+    make this source contract formatting-robust.
+- **Phase 6–7 run `31550320361`: source aggregate blocked by the same contract-test issue; browser PASS.**
   - static localization/RTL/accessibility contract: PASS;
   - TypeScript: PASS;
   - ESLint: PASS;
-  - full Vitest was still running at stop;
-  - browser/reflow/performance had not yet reached a final aggregate result.
+  - source-quality aggregate: FAIL because the new Orders source contract is not
+    formatting-robust; the job's final `Require complete source-quality set` failed;
+  - AR/FR/EN accessibility, reflow and performance browser job `93972240942`: PASS,
+    including the unchanged controlled performance tripwire;
+  - Required Phase 6–7 completion gate: FAIL because source-quality was not green;
+  - the workflow run itself later ended `cancelled` after the PR was returned to
+    draft, but the completed browser job remains a PASS and the source blocker is
+    the same two contract assertions above.
 - Earlier duplicate runs `31550254841`, `31550254712`, `31550254840` were green on
-  the same implementation head, but the CI Quality Gate was skipped because the PR
-  was draft at that moment. Do not substitute those draft-mode runs for the real
-  full quality result above.
+  the same implementation head while the PR was draft; their CI Quality Gate was
+  skipped and therefore they are context only, not a substitute for the real
+  ready-state source result above.
+
+### Exact first repair for the next session
+
+Before any new Orders product/UI implementation, fix only the two brittle assertions
+in `src/components/orders/__tests__/orders-workspace-contract.test.ts` so they are
+formatting-robust (for example normalize whitespace or use a bounded regex/semantic
+marker). Do not change the runtime implementation merely to satisfy source text
+formatting and do not weaken any performance, authority, permission or browser gate.
+Then rerun the real ready-state CI + Phase 6–7 source evidence for the exact
+implementation head lineage before layering more work.
 
 ### Remaining Orders Problem Register
 
@@ -385,23 +411,26 @@ source was changed in that implementation checkpoint.
 2. Re-fetch PR #244 and compare its current handoff head to implementation checkpoint
    `c106d63725c86d2c652c822288f99166a8330e9b`; later branch changes should be
    documentation-only unless another agent/user changed it.
-3. Re-fetch CI `31550320462` and Phase 6–7 `31550320361` for the exact
-   `c106d637...` checkpoint. If either failed, inspect the precise failed step/log
-   before any new implementation. Do not guess and do not weaken a gate.
-4. Re-list #244 review threads/comments. At this handoff there were no review
+3. First repair the **two brittle formatting-sensitive assertions** in
+   `src/components/orders/__tests__/orders-workspace-contract.test.ts`; do not
+   modify runtime code just to make the source-text test green.
+4. Rerun/re-read real ready-state CI and Phase 6–7 source evidence. Preserve the
+   unchanged performance threshold; Phase 5 and the Phase 6–7 browser job already
+   passed on `c106d637...`.
+5. Re-list #244 review threads/comments. At this handoff there were no review
    threads; any new thread is new evidence and must be audited.
-5. Continue one Orders package only. First finish governed Orders operational copy,
+6. Continue one Orders package only. Finish governed Orders operational copy,
    first-class confirmation-review hierarchy and localized risk-factor presentation.
-6. Re-measure `/orders` after the existing batch-risk/no-mount-refetch repairs.
+7. Re-measure `/orders` after the existing batch-risk/no-mount-refetch repairs.
    Only if still materially near/failing the unchanged route tripwire, implement the
    narrow lazy create-context endpoint; preserve exact create/field/product authority.
-7. Recompose order detail around seller consequences while reusing canonical
+8. Recompose order detail around seller consequences while reusing canonical
    decision/fulfillment/courier/COD/return/refund/recovery components.
-8. Add focused Orders browser evidence for task flow + AR/FR/EN/RTL/reflow/accessibility.
-9. Self-review the complete diff, then mark #244 ready only when the package is
-   coherent. Run fresh exact-head CI + Phase 5 + Phase 6–7, repair in one batch,
-   and perform a fresh adversarial review before any merge.
-10. Merge only with `expected_head_sha` after exact-head proof and no unresolved
+9. Add focused Orders browser evidence for task flow + AR/FR/EN/RTL/reflow/accessibility.
+10. Self-review the complete diff, then mark #244 ready only when the package is
+    coherent. Run fresh exact-head CI + Phase 5 + Phase 6–7, repair in one batch,
+    and perform a fresh adversarial review before any merge.
+11. Merge only with `expected_head_sha` after exact-head proof and no unresolved
     material thread; verify protected `main`, reconcile docs, then select the next
     remaining route package. #221/#226/#230 and Phase 8 remain untouched until their
     retained installed/live/Founder gates are actually satisfied.
