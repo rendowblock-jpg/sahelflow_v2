@@ -59,6 +59,7 @@ import {
 } from "@/app/api/__tests__/helpers";
 import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 import { RETURN_COPY } from "@/components/orders/canonical-customer-return-ui";
+import { getOrdersWorkspaceTranslation } from "@/lib/i18n/orders-workspace";
 
 const orderParams = (id: string) => ({ params: Promise.resolve({ id }) });
 const returnParams = (id: string, returnId: string) => ({
@@ -490,6 +491,13 @@ describe("Phase 1 representative Golden COD journey", () => {
 
   it("keeps the seller-visible Golden COD controls complete in English, French and Arabic", async () => {
     const locales = ["en", "fr", "ar"] as const;
+    const fulfillmentKeys = [
+      "orders.workspace.fulfillment.heading",
+      "orders.workspace.fulfillment.action.pack",
+      "orders.workspace.fulfillment.action.ship",
+      "orders.workspace.fulfillment.action.deliver",
+      "orders.workspace.fulfillment.commit",
+    ] as const;
     for (const locale of locales) {
       expect(RETURN_COPY[locale].heading).toBeTruthy();
       expect(RETURN_COPY[locale].request).toBeTruthy();
@@ -498,10 +506,29 @@ describe("Phase 1 representative Golden COD journey", () => {
       expect(RETURN_COPY[locale].reverse).toBeTruthy();
       expect(RETURN_COPY[locale].committed).toBeTruthy();
       expect(RETURN_COPY[locale].conflict).toBeTruthy();
+      for (const key of fulfillmentKeys) {
+        expect(getOrdersWorkspaceTranslation(locale, key)).toBeTruthy();
+      }
     }
     expect(RETURN_COPY.ar.heading).toMatch(/[\u0600-\u06ff]/);
     expect(
       new Set(locales.map((locale) => RETURN_COPY[locale].heading)).size,
+    ).toBe(3);
+    expect(
+      getOrdersWorkspaceTranslation(
+        "ar",
+        "orders.workspace.fulfillment.heading",
+      ),
+    ).toMatch(/[\u0600-\u06ff]/);
+    expect(
+      new Set(
+        locales.map((locale) =>
+          getOrdersWorkspaceTranslation(
+            locale,
+            "orders.workspace.fulfillment.heading",
+          ),
+        ),
+      ).size,
     ).toBe(3);
 
     const fulfillmentSource = await readFile(
@@ -522,11 +549,13 @@ describe("Phase 1 representative Golden COD journey", () => {
       ),
       "utf8",
     );
-    for (const source of [fulfillmentSource, codSource]) {
-      expect(source).toMatch(/en:\s*\{/);
-      expect(source).toMatch(/fr:\s*\{/);
-      expect(source).toMatch(/ar:\s*\{/);
-    }
+    expect(codSource).toMatch(/en:\s*\{/);
+    expect(codSource).toMatch(/fr:\s*\{/);
+    expect(codSource).toMatch(/ar:\s*\{/);
+    expect(fulfillmentSource).toContain("useI18n");
+    expect(fulfillmentSource).toContain(
+      '"orders.workspace.fulfillment.heading"',
+    );
     expect(fulfillmentSource).toContain("/fulfillment");
     expect(codSource).toContain("/cod/collection");
     expect(codSource).toContain("/accounting/cod-reconciliation");

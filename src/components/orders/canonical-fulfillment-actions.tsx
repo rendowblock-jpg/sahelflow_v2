@@ -266,7 +266,7 @@ export function CanonicalFulfillmentActions({
             <div key={label} className="min-w-0">
               <dt className="text-xs text-muted-foreground">{label}</dt>
               <dd className="truncate font-medium" dir="auto">
-                {stateLabel(value)}
+                {stateLabel(value ?? null)}
               </dd>
             </div>
           ))}
