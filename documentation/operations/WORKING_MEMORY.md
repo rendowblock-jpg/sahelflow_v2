@@ -8,8 +8,8 @@
 > **Latest protected product merge beyond the frozen verifier baseline:** PR #244 — Orders + confirmation operational workspace, merge `856f58126327797b467938390586a04f185e70f6`
 > **Active implementation/release PR:** #245 — `chore(release): prepare Internal.15 Founder checkpoint`
 > **Active branch:** `agent/internal-15-founder-checkpoint`
-> **Current draft branch head:** `1d99320490e488026dc394f4c5d2207023dff261`
-> **Last reviewed release-prep checkpoint before the runtime-retry delta:** `327d83feecffc9c7231e326a549730fbc60df4de`
+> **Frozen code-bearing Internal.15 release-prep checkpoint:** `3a9539bb4f67f99aee1b9d636ead9edb45a00017`
+> **Historical pre-retry certification checkpoint:** `327d83feecffc9c7231e326a549730fbc60df4de`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
 > **Founder-installed release:** Internal.14
@@ -23,12 +23,16 @@ review threads and Actions before any write, certification or merge. Keep one ac
 implementation/release PR at a time. Source/browser/CI evidence is not installed
 Founder acceptance.
 
+The PR head may advance beyond `3a9539bb...` through documentation-only handoff
+commits. Treat `3a9539bb...` as the frozen code-bearing release package unless a
+fresh live diff proves a later application/runtime change.
+
 ## Session handoff — 2026-08-12
 
 This session completed the Orders package and moved the product to the next actual
 installer checkpoint. The safe stopping state is **PR #245 draft**. Do not mark it
-ready or merge it until the current branch delta is reviewed and the licensing ingress
-boundary is resolved.
+ready or merge it until the owned licensing ingress is real and the final exact-head
+release certification is ready to run once.
 
 ### Orders closure — PR #244 merged
 
@@ -54,68 +58,79 @@ PR #245 is the single active release-preparation PR. It stages
 `1.0.0-internal.15` / MSI `1.0.0.15` from protected `main` after the frontend
 stabilization program and Orders merge.
 
-### Release-prep checkpoint `327d83fe...`
+### Frozen code-bearing release package — `3a9539bb...`
 
-`327d83feecffc9c7231e326a549730fbc60df4de` was the last intentionally assembled
-release-prep checkpoint before a later runtime-download retry commit advanced the
-branch. It synchronized:
+`3a9539bb4f67f99aee1b9d636ead9edb45a00017` is the current intentionally
+consolidated code-bearing Internal.15 release package. It is one release commit directly
+on protected `main` `856f5812...` and includes:
 
-- `sahelflow.version.json` → `1.0.0-internal.15` / `1.0.0.15`;
-- `package.json`;
-- `src-tauri/Cargo.toml`;
-- `src-tauri/Cargo.lock`;
-- `src-tauri/tauri.conf.json`;
-- `.github/release-requests/internal-15.json`;
-- `scripts/install-founder-windows.ps1` defaults to MSI `1.0.0.15` and app
-  `1.0.0-internal.15`.
+- `sahelflow.version.json` → `1.0.0-internal.15` / MSI `1.0.0.15`;
+- synchronized `package.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, and
+  `src-tauri/tauri.conf.json`;
+- `.github/release-requests/internal-15.json` with Founder-checkpoint evidence and
+  non-claims;
+- `scripts/install-founder-windows.ps1` defaults → MSI `1.0.0.15` and app
+  `1.0.0-internal.15`;
+- bounded retry/backoff for transient pinned Node/Bun HTTP/network failures;
+- unchanged pinned URLs and hard-coded SHA-256 integrity authority;
+- restoration of the established nested runtime manifest contract and the separate
+  build-only Bun compiler provenance manifest after review caught an unsafe first
+  retry implementation.
 
-The Founder installer mismatch was a real P1 found during fresh review and was fixed
-before this checkpoint. Windows PowerShell 5.1 self-test passed on the corrected
-script.
+The Founder installer mismatch was a real P1 found during fresh review and is repaired.
+Windows PowerShell 5.1 self-test passed on the corrected script.
 
-### Certification evidence on `327d83fe...`
+### Runtime-download repair review outcome
 
-Do **not** claim full release certification from this head because the aggregate run
-was interrupted/advanced before complete closure. Durable evidence that did finish:
+Repeated Windows/MSI certification attempts reached `scripts/prepare-runtime.ts` and
+failed while fetching the pinned Bun 1.3.14 GitHub release asset with `HTTP 503` and,
+on another attempt, `ECONNRESET`. These were external transport failures rather than
+application-test failures.
+
+The first retry implementation solved only transport resilience but accidentally:
+
+1. flattened `runtime-manifest.json`, removing the established nested `node` and
+   `prismaQueryEngine` fields required by packaged-runtime verification; and
+2. stopped writing `.sf-build/tools/bun-compiler-manifest.json`, which the signed
+   release evidence workflow still requires.
+
+Fresh P1 review caught both regressions. The frozen `3a9539bb...` release package is
+the reconciled version: it keeps bounded retry/backoff while preserving the existing
+runtime/bun-compiler manifest formats and checksum authority. The two runtime P1 review
+threads became outdated after that repair; do not resolve them until the final exact
+release head is certified and freshly reviewed.
+
+### Historical certification evidence — `327d83fe...`
+
+Do **not** claim full release certification from the historical pre-retry head because
+the aggregate run was interrupted/advanced before complete closure. Durable evidence
+that did finish:
 
 - Native source contract #414: PASS.
 - Phase 5 Experience #480: PASS, including fresh install + owner login and the
   representative LTR/Arabic RTL workbench journey.
 - CI source quality, version/document authority, Tauri Rust smoke and substantial
   Windows checks progressed successfully.
-- The exact evidence MSI lane failed during `scripts/prepare-runtime.ts` because the
-  pinned Bun 1.3.14 GitHub release asset returned HTTP 503. Earlier attempts also saw
-  HTTP 503 / `ECONNRESET`. This was external download transport, not an application
-  test failure.
+- The exact evidence MSI lane failed only during the pinned Bun download with external
+  HTTP 503.
 
-When the branch advanced and #245 was returned to draft, superseded ready-state runs
-were cancelled. Do not combine partial/superseded runs into a fake green claim.
+Superseded ready-state runs triggered while the branch was being reconciled were
+cancelled or made obsolete by later heads. Never combine partial/superseded runs into a
+fake green release claim.
 
-### Current branch head `1d993204...` — REVIEW FIRST
+### PR #245 review state at handoff
 
-Current PR #245 head is `1d99320490e488026dc394f4c5d2207023dff261`, one commit
-ahead of `327d83fe...`.
+Three review findings are known:
 
-Commit message: `fix(release): retry transient pinned runtime downloads`.
+- Founder installer P1: underlying code repaired to Internal.15 defaults; thread remains
+  unresolved until final exact-head proof.
+- Runtime manifest P1: first retry implementation regressed the manifest schema;
+  repaired in the consolidated release package; prior thread is outdated.
+- Bun compiler provenance P1: first retry implementation removed the required build-only
+  manifest; repaired in the consolidated release package; prior thread is outdated.
 
-It modifies only `scripts/prepare-runtime.ts`, but the diff is **larger than a retry-only
-change**: it adds retry/backoff for transient HTTP/network failures and also changes
-runtime-manifest/provenance output shape. Treat this head as unreviewed WIP, not an
-accepted repair.
-
-Exact next session must first compare `327d83fe...` → `1d993204...` and decide whether
-to:
-
-1. retain only the bounded retry/backoff logic while preserving the established runtime
-   manifest/provenance contract; or
-2. prove the manifest changes are intentional, compatible and fully covered before
-   keeping them.
-
-Do **not** blindly certify or merge `1d993204...` just because it retries 503s.
-
-The PR is intentionally draft. Ready-state CI/Phase 5/Phase 6–7/Native runs triggered
-on the current head were cancelled when draft state was restored; they are not release
-evidence.
+Re-fetch threads next session because thread state can move independently of code state.
+Resolve only after final exact-head certification + fresh review.
 
 ## Licensing / Cloudflare release boundary
 
@@ -134,12 +149,13 @@ Do not weaken `src-tauri/build.rs`, do not package `workers.dev` as production
 authority, and do not substitute the CI loopback/evidence MSI for a Founder release.
 
 Cloudflare skills are installed, and the user expects full Cloudflare access. During
-this session the callable Cloudflare account-action namespace did not surface even
-after connection attempts. A disposable GitHub probe also found no standard protected
-Cloudflare API token/account secret available to Actions. Next session must **re-check
-the Cloudflare plugin/account connector first** rather than assuming it is unavailable.
-If account actions surface, inspect the actual controlled zones and provision the
-primary/recovery ingress directly. Do not invent domain ownership.
+this session the callable Cloudflare account-action namespace did not consistently
+surface even after connection attempts. A disposable GitHub probe also found no
+standard protected Cloudflare API token/account secret available to Actions. Next
+session must **re-check the Cloudflare plugin/account connector first** rather than
+assuming it is unavailable. If account actions surface, inspect the actual controlled
+zones and provision the primary/recovery ingress directly. Do not invent domain
+ownership.
 
 ## Binding product truth
 
@@ -168,10 +184,10 @@ its acceptance record and reconcile the state explicitly.
 ## Phase 6 next action
 
 Phase 6 — Arabic, RTL and accessibility parity remains active. Source/browser route
-adoption now includes Orders. The next action is release convergence: review the
-current runtime-retry delta, finish licensing ingress, certify one exact Internal.15
-head, publish through the protected release workflow, then perform installed Founder
-inspection. Phase 8 remains frozen behind the mandatory installed/live/Founder gate.
+adoption now includes Orders. The next action is release convergence: finish the owned
+licensing ingress, certify one exact Internal.15 head, publish through the protected
+release workflow, then perform installed Founder inspection. Phase 8 remains frozen
+behind the mandatory installed/live/Founder gate.
 
 ## Durable protected route-adoption baseline
 
@@ -257,37 +273,36 @@ Do not rewrite these for release convenience:
 - Internal.14 remains Founder-rejected; Internal.5 remains Founder-accepted;
 - Phase 8 implementation remains frozen;
 - do not merge #245 while `licensing.ownedHostSuffix` is null;
-- do not treat transient-download retries as permission to alter runtime provenance contracts without review;
+- preserve established runtime and compiler provenance contracts while making transient downloads resilient;
 - prefer one coherent repair/certification batch over repeated micro-CI loops.
 
 ## Exact next-session order
 
-1. Re-fetch protected `main`, PR #245 exact head, changed files, review threads, Actions,
-   release environment state and retained issues.
-2. Confirm #245 is still **draft** and current head is expected; if another agent moved it,
-   inspect that delta before any write.
-3. Compare `327d83feecffc9c7231e326a549730fbc60df4de` →
-   `1d99320490e488026dc394f4c5d2207023dff261` in `scripts/prepare-runtime.ts`.
-   Keep the retry/backoff fix only if runtime manifest/provenance compatibility is
-   preserved or explicitly proven.
-4. Re-check the Cloudflare account connector. If callable, inspect controlled zones,
-   provision two SahelFlow-owned HTTPS licensing origins, verify health/recovery, bind
-   the protected release environment, and set `licensing.ownedHostSuffix` to the
-   actually controlled suffix. Do not guess a domain.
-5. Reconcile PR #245 into one intentional release package/head, including any bounded
-   runtime-download repair and documentation handoff; keep the Founder installer
-   Internal.15 defaults.
-6. Mark ready **once** and run one exact-head release certification: Required PR gate,
+1. Re-fetch protected `main`, PR #245 exact head/commit chain, changed files, review
+   threads, Actions, release environment state and retained issues.
+2. Confirm #245 is still **draft**. Verify any commits after code-bearing checkpoint
+   `3a9539bb4f67f99aee1b9d636ead9edb45a00017` are documentation-only; inspect any
+   unexpected source delta before doing anything else.
+3. Re-check the Cloudflare account connector first. If callable, inspect actual
+   controlled zones, provision two SahelFlow-owned HTTPS licensing origins, verify
+   primary/recovery health, bind the protected release environment, and set
+   `licensing.ownedHostSuffix` to the actually controlled suffix. Do not guess a domain.
+4. Reconcile #245 into one intentional final release head after the real licensing
+   binding. Keep the Founder installer Internal.15 defaults, bounded runtime-download
+   retry, established nested runtime manifest, Bun compiler provenance manifest and
+   pinned checksum authority intact.
+5. Mark ready **once** and run one exact-head release certification: Required PR gate,
    CI including Windows standalone + installed MSI, Native, Phase 5 and Phase 6–7.
-   Classify transient network failures from logs; do not change product source for an
-   external 503 unless resilience itself is the bounded fix.
-7. Perform one fresh exact-head adversarial review. Resolve the prior Founder-installer
-   P1 thread only after the exact repaired head proves it.
-8. If all exact-head gates are green and licensing ingress is real, merge #245 with an
+   Classify transient network failures from logs; do not reopen product source for an
+   external 503 unless resilience itself has a bounded defect.
+6. Perform one fresh exact-head adversarial review. Resolve all three known PR #245
+   review threads only after the exact repaired head proves them and no replacement
+   material finding exists.
+7. If all exact-head gates are green and licensing ingress is real, merge #245 with an
    expected-head guard and let protected-main dispatch the signed Internal.15 updater
    workflow. Do not manually bypass the release guard.
-9. Install/update Internal.15 over Founder-installed Internal.14, preserve Roaming/Local
+8. Install/update Internal.15 over Founder-installed Internal.14, preserve Roaming/Local
    AppData, verify launch/license-valid workspace without restart, close/reopen, and
    inspect the coherent frontend on the Founder T470.
-10. Record installed #221/#226 and live #230 evidence truth. Only after explicit Founder
-    acceptance may the Phase 8 freeze be reconsidered.
+9. Record installed #221/#226 and live #230 evidence truth. Only after explicit Founder
+   acceptance may the Phase 8 freeze be reconsidered.
