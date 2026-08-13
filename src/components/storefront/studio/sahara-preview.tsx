@@ -1,17 +1,12 @@
 "use client";
-import type { StorefrontPreviewProps } from "./studio-types";
+import {formatDZD} from "@/lib/utils";
+import type {StorefrontPreviewProps} from "./studio-types";
+import {studioImageUrl} from "./studio-types";
 
-export function SaharaPreview({ draft }: StorefrontPreviewProps) {
-  const theme = draft.theme;
-  return (
-    <div className="min-h-full p-7" style={{ background: theme.backgroundColor, color: theme.textColor }}>
-      <div className="text-xs font-semibold uppercase tracking-[0.18em]">{draft.name || "SahelFlow"}</div>
-      <div className="mt-14 max-w-xl">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme.primaryColor }}>{theme.hero.eyebrow}</div>
-        <h2 className="mt-3 text-4xl font-semibold leading-none tracking-[-0.04em]">{theme.hero.headline || draft.name}</h2>
-        <p className="mt-4 text-sm leading-6 opacity-60">{theme.hero.body || draft.description}</p>
-      </div>
-      <div className="mt-10 h-40 rounded-[2rem]" style={{ background: theme.accentColor }} />
-    </div>
-  );
+export function SaharaPreview({draft,products}:StorefrontPreviewProps){
+ const t=draft.theme; const shown=products.filter(p=>draft.selectedProductIds.includes(p.id)).slice(0,4);
+ const cards=<div className="grid grid-cols-2 gap-3">{shown.map(p=><article key={p.id} className={`overflow-hidden border ${t.radius==="sharp"?"rounded-none":"rounded-2xl"}`} style={{background:t.surfaceColor}}>{studioImageUrl(p.images)?<img src={studioImageUrl(p.images)!} alt="" className="aspect-square w-full object-cover"/>:<div className="aspect-square opacity-20" style={{background:t.accentColor}}/>}<div className="p-3"><div className="text-sm font-semibold">{p.name}</div>{t.showPrices?<div className="mt-1 text-xs" style={{color:t.primaryColor}}>{formatDZD(p.price)}</div>:null}{t.showStock?<div className="mt-1 text-[10px] opacity-60">Stock {p.stock}</div>:null}</div></article>)}</div>;
+ if(t.template==="atlas") return <div className="min-h-full p-6" style={{background:t.backgroundColor,color:t.textColor}}><header className="flex items-center justify-between border-b pb-4"><b>{draft.name||"Store"}</b><span className="text-xs opacity-50">Catalog · COD</span></header><section className="grid gap-8 py-10 md:grid-cols-2"><div><span className="text-[10px] font-bold uppercase tracking-widest" style={{color:t.primaryColor}}>{t.hero.eyebrow||"Algeria COD"}</span><h2 className="mt-3 text-4xl font-semibold tracking-tight">{t.hero.headline||draft.name}</h2><p className="mt-3 text-sm opacity-60">{t.hero.body||draft.description}</p><button className="mt-5 rounded-xl px-4 py-2 text-xs text-white" style={{background:t.primaryColor}}>{t.hero.ctaLabel||"Shop now"}</button></div>{cards}</section></div>;
+ if(t.template==="oasis") return <div className="min-h-full p-5" style={{background:t.backgroundColor,color:t.textColor}}><section className="rounded-[2rem] p-7 text-center" style={{background:t.primaryColor,color:"white"}}><span className="text-[10px] font-bold uppercase tracking-[.2em]">{t.hero.eyebrow||"Pay on delivery"}</span><h2 className="mx-auto mt-3 max-w-xl text-4xl font-black tracking-tight">{t.hero.headline||draft.name}</h2><p className="mx-auto mt-3 max-w-lg text-sm opacity-80">{t.hero.body||draft.description}</p><div className="mx-auto mt-5 inline-flex rounded-full bg-white px-5 py-2 text-xs font-bold" style={{color:t.primaryColor}}>{t.checkout.codPromiseText||"Order now · We confirm by phone"}</div></section><div className="py-6">{cards}</div></div>;
+ return <div className="min-h-full p-7" style={{background:t.backgroundColor,color:t.textColor}}><div className="text-xs font-semibold uppercase tracking-[.18em]">{draft.name||"SahelFlow"}</div><div className="mt-14 max-w-xl"><div className="text-[10px] font-semibold uppercase tracking-[.22em]" style={{color:t.primaryColor}}>{t.hero.eyebrow}</div><h2 className="mt-3 text-4xl font-semibold leading-none tracking-[-.04em]">{t.hero.headline||draft.name}</h2><p className="mt-4 text-sm leading-6 opacity-60">{t.hero.body||draft.description}</p></div><div className="mt-10">{cards}</div></div>;
 }
