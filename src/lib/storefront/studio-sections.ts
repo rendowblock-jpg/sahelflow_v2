@@ -23,3 +23,23 @@ export interface StorefrontPageComposition {
   page: "home" | "product" | "checkout" | "thank-you";
   sections: readonly StorefrontSection[];
 }
+
+function section(type: StorefrontSectionType): StorefrontSection {
+  return { id: `home-${type}`, type, enabled: true, settings: {}, blocks: [] };
+}
+
+export function createDefaultStorefrontComposition(): StorefrontPageComposition {
+  return {
+    page: "home",
+    sections: [
+      section("announcement"),
+      section("navbar"),
+      section("hero"),
+      section("trust"),
+      section("product-grid"),
+      section("cod-checkout"),
+      section("support"),
+      section("footer"),
+    ],
+  };
+}
