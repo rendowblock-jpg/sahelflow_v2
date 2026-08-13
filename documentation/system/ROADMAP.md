@@ -5,7 +5,7 @@
 > **Protected application-changing baseline:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
 > **Latest application-changing protected merge:** PR #245 — Internal.15 Founder-only offline checkpoint
 > **Next milestone:** `1.0.0-internal.16` / MSI `1.0.0.16` complete-product candidate
-> **Installed discovery:** Internal.15 Founder inspection active; Parts 1–3 recorded under FD-033
+> **Installed discovery:** CLOSED 2026-08-13; 17 Founder-installed P1 inputs frozen under FD-033
 > **Open retained issues:** #221, #226, #230
 > **Last consolidated:** 2026-08-13
 
@@ -14,8 +14,9 @@ Protected `main` is source truth. FD-033 changes only the Internal.16 execution 
 ## Internal.16 completion cycle
 
 ```text
-post-Internal.15 authority reconstruction
-→ Founder installed discovery + whole-product source reconnaissance
+exact documentation-merged post-Internal.15 authority
+→ one exact-source whole-product reconnaissance
+→ merge source findings with frozen 17 Founder-installed findings
 → one consolidated Problem Register
 → freeze shared contracts/non-goals/acceptance matrix
 → one large dependency-correct implementation wave
@@ -27,7 +28,7 @@ post-Internal.15 authority reconstruction
 → signed Internal.16 updater only if evidence passes
 ```
 
-No broad application implementation begins until Founder installed discovery is explicitly closed or frozen.
+Founder-installed discovery is closed. The next application session may proceed immediately to exact-source reconnaissance and Problem Register freeze; it must not restart screenshot discovery or micro-fix loops.
 
 ## Phases 0–4 — protected canonical foundation
 
@@ -50,7 +51,7 @@ Protected source/browser work remains valid: shared roots #236, Inbox #237, AI #
 - remaining administration/shared shell;
 - final installed convergence for Inbox and AI.
 
-### Installed Internal.15 Problem Register — Parts 1–3
+### Frozen Internal.15 Founder Problem Register — 17 P1 inputs
 
 - **SF16-UI-001 P1:** systemic Arabic/RTL geometry/bidi across shell/routes/charts/menus/panes/tables;
 - **SF16-UI-002 P1:** Risk KPI hierarchy overloaded/unbalanced;
@@ -70,7 +71,7 @@ Protected source/browser work remains valid: shared roots #236, Inbox #237, AI #
 - **SF16-I18N-016 P1:** atomic locale commit across current and subsequently navigated routes/cache/prefetch;
 - **SF16-NAV-017 P1:** smarter default sidebar order plus user reorder/edit preference layered over canonical navigation authority.
 
-The implementation agent owns exhaustive sibling discovery for established defect classes; the Founder is not required to screenshot every occurrence.
+The implementation agent owns exhaustive sibling discovery for established defect classes; the Founder is not required to screenshot every occurrence. Newly proven source-level root dependencies may extend the combined Problem Register before its source-reconnaissance freeze.
 
 ### Phase 5 Internal.16 exit
 
@@ -118,7 +119,7 @@ Internal.16 must prove equivalent AR/FR/EN behavior, professional Arabic typogra
 
 Under FD-033, old pre-Phase-8 sequencing is superseded only for implementation order. Before a user-ready Internal.16 claim:
 
-1. Founder findings + source reconnaissance are frozen into one complete Problem Register;
+1. frozen Founder findings + exact-source reconnaissance are frozen into one complete combined Problem Register;
 2. remaining desktop route/workspace convergence is complete;
 3. RTL/accessibility/localization, theme and responsive behavior are complete;
 4. chart/layout/navigation/search requirements pass their matrices;
