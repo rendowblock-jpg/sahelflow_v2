@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   Activity,
   AlertTriangle,
+  ArrowRight,
   Ban,
   MapPin,
   PiggyBank,
@@ -21,7 +22,11 @@ import { RiskLevelBadgeServer } from "@/components/risk/risk-badges";
 import { RiskRulesPanel } from "@/components/risk/risk-rules-panel";
 import { PageHeader } from "@/components/shared/page-header";
 import { StateSurface } from "@/components/shared/state-surface";
-import { StatCard } from "@/components/shared/stat-card";
+import {
+  StatCard,
+  type StatCardTone,
+} from "@/components/shared/stat-card";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ChartConfig } from "@/components/ui/chart";
 import {
@@ -121,6 +126,22 @@ export default async function RiskPage({
   const shortDate = (iso: string) =>
     new Date(iso).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
   const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
+  const avgRiskTone: StatCardTone =
+    kpis.avgRiskScore >= config.thresholds.high
+      ? "danger"
+      : kpis.avgRiskScore >= config.thresholds.medium
+        ? "warning"
+        : "success";
+  const highRiskTone: StatCardTone =
+    kpis.highRiskOrderCount > 0 ? "danger" : "success";
+  const confirmationTone: StatCardTone =
+    kpis.confirmationRate >= 0.7 ? "success" : "warning";
+  const returnTone: StatCardTone =
+    kpis.returnRate <= 0.2 ? "success" : "danger";
+  const blacklistTone: StatCardTone =
+    kpis.blacklistedCustomerCount > 0 ? "warning" : "neutral";
+  const savingsTone: StatCardTone =
+    kpis.potentialSavingsDzd > 0 ? "accent" : "neutral";
 
   const distributionData: DonutDatum[] = report.distribution.map((row) => ({
     key: row.level,
@@ -176,13 +197,83 @@ export default async function RiskPage({
         ))}
       </div>
 
-      <div className="card-grid-3">
-        <StatCard label={t("risk.kpi.avgScore")} value={kpis.avgRiskScore} icon={<ShieldAlert />} subtitle="/ 100" />
-        <StatCard label={t("risk.kpi.confirmationRate")} value={pct(kpis.confirmationRate)} icon={<TrendingUp />} trend={kpis.confirmationRate >= 0.7 ? 1 : -1} />
-        <StatCard label={t("risk.kpi.returnRate")} value={pct(kpis.returnRate)} icon={<TrendingDown />} trend={kpis.returnRate <= 0.2 ? 1 : -1} />
-        <StatCard label={t("risk.kpi.highRiskOrders")} value={kpis.highRiskOrderCount} icon={<AlertTriangle />} subtitle={report.totalOrders > 0 ? `${Math.round((kpis.highRiskOrderCount / report.totalOrders) * 100)}% ${t("risk.confirmationByLevel.total")}` : undefined} />
-        <StatCard label={t("risk.kpi.blacklistedCustomers")} value={kpis.blacklistedCustomerCount} icon={<Ban />} />
-        <StatCard label={t("risk.kpi.potentialSavings")} value={formatDZD(kpis.potentialSavingsDzd)} icon={<PiggyBank />} />
+      <div
+        data-risk-kpi-hierarchy="true"
+        className="grid items-start gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]"
+      >
+        <div data-risk-kpi-primary="true" className="grid gap-3">
+          <StatCard
+            label={t("risk.kpi.avgScore")}
+            value={kpis.avgRiskScore}
+            icon={<ShieldAlert />}
+            subtitle="/ 100"
+            emphasis="primary"
+            tone={avgRiskTone}
+          />
+          <StatCard
+            label={t("risk.kpi.highRiskOrders")}
+            value={kpis.highRiskOrderCount}
+            icon={<AlertTriangle />}
+            subtitle={
+              report.totalOrders > 0
+                ? `${Math.round((kpis.highRiskOrderCount / report.totalOrders) * 100)}% ${t("risk.confirmationByLevel.total")}`
+                : undefined
+            }
+            emphasis="primary"
+            tone={highRiskTone}
+          />
+        </div>
+
+        <div
+          data-risk-kpi-supporting="true"
+          className="grid gap-3 sm:grid-cols-2"
+        >
+          <StatCard
+            label={t("risk.kpi.confirmationRate")}
+            value={pct(kpis.confirmationRate)}
+            icon={<TrendingUp />}
+            trend={kpis.confirmationRate >= 0.7 ? 1 : -1}
+            emphasis="supporting"
+            tone={confirmationTone}
+          />
+          <StatCard
+            label={t("risk.kpi.returnRate")}
+            value={pct(kpis.returnRate)}
+            icon={<TrendingDown />}
+            trend={kpis.returnRate <= 0.2 ? 1 : -1}
+            emphasis="supporting"
+            tone={returnTone}
+          />
+          <StatCard
+            label={t("risk.kpi.blacklistedCustomers")}
+            value={kpis.blacklistedCustomerCount}
+            icon={<Ban />}
+            emphasis="supporting"
+            tone={blacklistTone}
+            selected={activeTab === "blacklist"}
+            action={
+              <Button asChild variant="ghost" size="icon-sm">
+                <Link
+                  href={`/risk?days=${days}&tab=blacklist`}
+                  aria-label={t("risk.blacklist")}
+                  aria-current={activeTab === "blacklist" ? "page" : undefined}
+                >
+                  <ArrowRight
+                    className="size-4 rtl:rotate-180"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </Button>
+            }
+          />
+          <StatCard
+            label={t("risk.kpi.potentialSavings")}
+            value={formatDZD(kpis.potentialSavingsDzd)}
+            icon={<PiggyBank />}
+            emphasis="supporting"
+            tone={savingsTone}
+          />
+        </div>
       </div>
 
       <Tabs defaultValue={activeTab} className="w-full">
