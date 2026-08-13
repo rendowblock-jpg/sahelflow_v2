@@ -258,14 +258,22 @@ export class ConnectedPlatformClient {
     storefrontId: string,
     input: {
       workspaceId: string;
+      sourceReleaseId: string;
       releaseId: string;
       expectedActiveReleaseId: string;
+      allocations: Array<{
+        itemKey: string;
+        unitPriceDzd: number;
+        quantity: number;
+      }>;
     },
   ) {
     return this.requestJson<{
       storefrontId: string;
       releaseId: string;
+      sourceReleaseId: string;
       previousReleaseId: string;
+      artifactDigest: string;
       status: "rolled_back";
     }>("storefront", `/v1/desktop/storefronts/${encodeURIComponent(storefrontId)}/rollback`, {
       method: "POST",

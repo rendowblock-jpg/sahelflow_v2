@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseCheckoutInput } from "../../../control-plane/storefront/checkout-input";
 import { parseReleaseInput } from "../../../control-plane/storefront/release-input";
@@ -61,6 +63,19 @@ describe("hosted storefront contract", () => {
     const input = releaseInput();
     input.allocations = [];
     expect(parseReleaseInput(input)).toBeNull();
+  });
+
+  it("rolls back by publishing a fresh immutable release and allocation", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "control-plane/storefront/rollback-release.ts"),
+      "utf8",
+    ).replace(/\r\n?/g, "\n");
+    expect(source).toContain("sourceReleaseId");
+    expect(source).toContain("INSERT INTO storefront_release");
+    expect(source).toContain("INSERT INTO storefront_allocation");
+    expect(source).toContain("parentReleaseId: expectedActiveReleaseId");
+    expect(source).toContain("artifactDigest !== source.artifact_digest");
+    expect(source).not.toMatch(/UPDATE\s+storefront\s+SET\s+active_release_id/);
   });
 
   it("maps hosted item keys back to canonical product and variant authority", () => {
