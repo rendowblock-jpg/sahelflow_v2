@@ -2,128 +2,86 @@
 
 SahelFlow is a **Windows-first, local-first operations system for Algerian COD sellers**.
 
-It combines governed COD order intake, customer/product operations, delivery and
-returns, COD collection/remittance, inbox/WhatsApp, automations, AI, analytics,
-settings, licensing, multi-shop and recovery under one protected authority model.
+It combines governed COD order intake, customers/products, delivery/returns, COD collection/remittance, Inbox/WhatsApp, automations, AI, analytics, settings, licensing, multi-shop and recovery under one protected authority model.
 
 ## Current repository truth
 
-- Protected `main` after the Orders merge: `856f58126327797b467938390586a04f185e70f6` — PR #244.
-- Latest application-changing protected merge: **PR #244 — Orders + confirmation operational workspace**.
-- Shared frontend foundation remains protected by **PR #236**.
-- Inbox route adoption remains protected by **PR #237**.
-- AI Agents route adoption remains protected by **PR #240**.
-- Settings route adoption remains protected by **PR #242**.
-- Orders + confirmation route adoption remains protected by **PR #244**.
-- Published executable remains **Internal.14**, application source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed publication run `31388777098`.
-- Published release remains **`1.0.0-internal.14`** / MSI `1.0.0.14`.
-- Founder-installed release remains **Internal.14**; Founder-accepted baseline remains **Internal.5**.
-- Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**.
-- Open retained issues remain **#221, #226 and #230**.
-- Phase 8 implementation remains frozen behind whole-product frontend adoption,
-  installed Phase 6/7 closure, live #230 certification and explicit Founder acceptance.
+- Protected `main`: `efb70f93ccfe8c0c222dec6ea2f5cd7f58cf96db` — PR #246 (`docs: freeze Internal.16 completion authority`).
+- Latest protected route-level application merge remains **PR #244 — Orders + confirmation operational workspace**.
+- Current source/release authority remains **`1.0.0-internal.15` / MSI `1.0.0.15`**, Founder/internal-lab offline-only under FD-032.
+- Published executable remains **`1.0.0-internal.14`**, source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed run `31388777098`.
+- Internal.16 implementation is active in **PR #247 — Wave 1 frontend convergence foundations**.
+- Wave 1 application evidence head: `1cd3acbcb1ca71bebaaed22645f74f853b3dc7a3`.
+- Wave 1 is **complete in source/browser evidence** and PR #247 remains **open/unmerged** at this handoff.
+- Next application boundary: **Wave 2 — visible product-surface convergence and hierarchy**.
+- Retained open evidence: **#221, #226, #230**.
 
-Documentation-only commits may advance protected `main` without changing the
-published executable or the latest application-changing protected merge.
+No Internal.16 release, installed Founder acceptance, Beta or Stable claim exists yet.
 
-## Historical Phase 5 closure continuity
+## Internal.16 Wave 1 — completed foundation
 
-The earlier **Phase 5 closure** source/browser checkpoint remains **PR #220** at
-`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` and continues to be valid for exactly
-what its frozen head proved. The documentation audit lineage tracks **issues #201,
-#214, #221, #226 and #230**; #201 and #214 are now closed by stronger later evidence,
-while #221/#226/#230 remain retained. **Published release: `1.0.0-internal.14`**.
-**Founder acceptance remains open**.
+Wave 1 repaired shared roots rather than styling screenshots one route at a time:
 
-## Protected frontend adoption
+- server-confirmed full-document locale/RTL switching;
+- atomic light/dark/preset transitions with coordinated Sahel/Atlas/Oasis/Dune surfaces;
+- improved desktop/Arabic typography and density/touch foundations;
+- responsive/balanced layout regression contracts;
+- fluid shared chart sizing;
+- persisted user navigation-domain ordering over canonical route/permission authority;
+- six-family operational command search across Orders, Customers, Products, Conversations, Deliveries and Returns;
+- command-search conversation deep-links into the canonical Inbox thread, including safe projected fallback for conversations outside the current live list.
 
-PR #236 protects the shared source/browser frontend roots:
+Wave 1 exact application head `1cd3acbcb1ca71bebaaed22645f74f853b3dc7a3` passed CI `Required PR gate`, the complete Phase 5 Experience gate, and the complete Phase 6–7 Completion gate including AR/FR/EN accessibility, reflow, query-plan and performance browser evidence.
 
-- application-oriented Noto Sans Arabic paired with Inter;
-- atomic server-tree locale + document-direction commits across AR/FR/EN;
-- one theme authority with coordinated Sahel/Atlas/Oasis/Dune families;
-- one hydration-safe persisted density authority;
-- shallow primary navigation, governed notices/charts/motion, mixed-direction and
-  focus/accessibility primitives;
-- resilient preference storage and coarse-pointer target authority.
+This is source/browser evidence only. Native/MSI/Tauri, installed Founder, T470/floor and customer-online evidence remain separate.
 
-PR #237 protects the database-authoritative Inbox operational workspace on top of
-those roots. Final pre-merge #237 head
-`8e9d5aa365f0c5873909c1c8517f88519d743b9d` remains its exact source/browser
-continuity anchor. Local conversation/history/workflow authority remains usable
-when WhatsApp transport is degraded, while task queues, durable thread/composer,
-workflow/team context, recovery, workflow reconciliation, batched assignment
-projection and coalesced live refreshes preserve protected provider/outbox,
-collaboration and permission authority.
+## Next implementation frontier — Wave 2
 
-PR #240 protects the second task-shaped product workspace: **AI Agents**.
-Final pre-merge head `6355cc4c797a597af52c90decfe7727e405749be`
-passed CI `31535669292`, Phase 5 Experience `31535668960` and Phase 6–7 Completion
-`31535668966`, including the required aggregate checks, after all four material
-review threads were resolved. The protected squash merge is
-`598e2a0dc0352227431614cf1527672aa78ec015`.
+After PR #247 is landed through the normal protected expected-head merge path, Wave 2 starts from the exact resulting protected `main`.
 
-The AI workspace separates durable sessions, assistant thread/composer and
-context/action review; renders typed product-shaped tool results; treats consent,
-key, provider, persistence and action-history degradation as explicit states;
-keeps the seller user turn exact while locale guidance stays presentation-only;
-and preserves exact proposal-digest approval plus server-owned permission/shop/
-license/target revalidation. This is source/browser evidence, not installed
-Founder acceptance.
+Primary Wave 2 surfaces:
 
-PR #242 now protects the **Settings operational workspace**. Final pre-merge head
-`e749b0af05741ee45b16c349750d44092bd3beb9` passed CI `31546488691`, Phase 5
-Experience `31546488465` and Phase 6–7 Completion `31546488422`, including the
-required aggregate checks and the full AR/FR/EN accessibility, reflow and
-performance browser evidence. The protected squash merge is
-`6e4477198f33344cd48c9230b32ff726079cd64d`.
+- **Products:** compact thumbnails from existing image projection and stronger row hierarchy;
+- **Risk:** primary/supporting KPI hierarchy and correct stat-card interaction semantics;
+- **Inbox:** adaptive pane proportions, hierarchy, large-history and degraded-state polish;
+- **AI:** thread-dominant workspace, adaptive rails and polished session/composer/tool/proposal hierarchy;
+- **Charts / Analytics / Dashboard:** richer decision-support hierarchy, responsive density and intentional panel sizing;
+- **route-level locale/RTL/copy polish:** formatting, unresolved/foreign system copy, remaining visible bidi/text-size/spacing siblings inside Wave 2 surfaces.
 
-Settings now groups configuration by seller task and consequence; keeps commerce,
-delivery, Gemini, security, licensing, backup/recovery and destructive lifecycle
-bound to their dedicated authorities; distinguishes loading/authoritative/
-unavailable or verification-required projections; removes competing integration
-status surfaces; and provides an authenticated manual daily-report trigger without
-exposing cron authority to the browser. This remains source/browser evidence, not
-installed Founder acceptance.
+Wave 2 does **not** pull forward EcoTrack, Gemini provider certification, Phase 8 remote/cloud authority, native startup rewrites or an Internal.16 version/release bump unless a proven blocker makes one unavoidable.
 
-PR #244 protects the **Orders + confirmation operational workspace** at protected
-merge `856f58126327797b467938390586a04f185e70f6`. This remains source/browser
-evidence, not installed Founder acceptance.
+Later waves are recorded in [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md):
 
-## Next implementation frontier — FD-032 Internal.15 Founder checkpoint
+- Wave 3 — provider / Gemini / AI product truth;
+- Wave 4 — connected Phase 8 platform;
+- Wave 5 — reliability, commercial, installed and release closure.
 
-PR #245 prepares exact `1.0.0-internal.15` as a Founder/internal-lab offline
-checkpoint. The artifact must contain no online-trial service URL, offer no online
-trial action, and retain the signed permanent entitlement path. FD-032 and the
-version/build/release gates bind this exception to Internal.15 only.
+## Protected foundation continuity
 
-Issue #230 remains open P1. Before any release to users, SahelFlow still requires a
-verified owned domain, distinct primary/recovery trial ingress, representative
-Algerian-network reachability and signed installed customer-trial evidence.
+The following remain protected and must not be weakened for frontend convenience:
 
-Do not start Phase 8 or claim installed acceptance from source/browser evidence.
+- Golden COD command/version/idempotency/audit/event/outbox authority;
+- exact inventory/financial/compensation truth;
+- trusted identity/shop/session/permission boundaries;
+- protected Prisma/PII and per-shop isolation;
+- durable provider effects and ambiguity/reconciliation;
+- licensing/install/secret authority;
+- native runtime containment, backup and recovery;
+- proposal-bound sensitive AI actions;
+- durable automation recovery.
 
 ## Retained acceptance boundaries
 
-- **#221 — OPEN:** installed Founder Phase 5/6 visual/accessibility acceptance on a coherent repaired candidate.
-- **#226 — OPEN:** installed Phase 7 performance/reliability certification on T470/floor hardware.
-- **#230 — OPEN P1:** live resilient customer-trial production/network certification.
+- **#221 — OPEN:** installed Founder visual/accessibility reconciliation on a coherent final candidate.
+- **#226 — OPEN:** T470/floor/eight-hour performance/reliability certification.
+- **#230 — OPEN P1:** live resilient customer-trial owned-domain/network certification.
 
-Historical #201 and #214 are closed by stronger exact #234 installed evidence.
-Internal.14 remains Founder-installed but not Founder-accepted. No Beta or Stable
-claim exists.
+FD-032 remains exact to Internal.15 Founder-offline-only. Provider hostnames do not satisfy #230. Published release remains Internal.14 until a newer signed release actually exists.
 
 ## Documentation and session resume
 
-Start with [`AGENTS.md`](AGENTS.md), then
-[`documentation/README.md`](documentation/README.md). The single durable session
-resume owner is
-[`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md),
-reconciled against
-[`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md)
-and [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
+Start with [`AGENTS.md`](AGENTS.md), then [`documentation/README.md`](documentation/README.md).
 
-Supporting primary-source frontend research remains under
-`documentation/archive/research/`. Archived material is evidence/context, never a
-parallel authority or handoff system. Do not rerun the historical PR #228/Internal.14
-publication workflow.
+The single durable session-resume owner is [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md), reconciled against [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md) and [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
+
+Archived research/evidence is context only and never a parallel masterplan.
