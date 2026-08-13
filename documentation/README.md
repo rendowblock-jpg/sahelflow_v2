@@ -15,7 +15,7 @@ Live protected GitHub state is always authority. Re-fetch `main`, PR #250, exact
 
 ## Active resume path
 
-For the current in-progress Wave 3 session frontier, read in this order:
+For the current in-progress Wave 3 frontier, read in this order:
 
 1. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — **active resumable frontier and exact next-session sequence**.
 2. [`operations/WAVE3_SESSION_HANDOFF_2026-08-13.md`](operations/WAVE3_SESSION_HANDOFF_2026-08-13.md) — compact Wave 3 implementation/evidence/blocker handoff.
@@ -61,6 +61,12 @@ On `df84f3d4e78a982695b5883c98a15ac145604b49`:
 - PR #250 remains unmerged.
 
 Re-fetch all of this in the next session because documentation-only commits after `df84f3d4...` move the branch head but do not constitute new application evidence.
+
+## Documentation reconciliation rule during active implementation
+
+`CURRENT_STATE.md` and `ROADMAP.md` still contain older execution-frontier prose because whole-file connector writes were safety-blocked during this session. That does **not** change product/architecture authority and does **not** reopen completed Waves 1–2.
+
+Until Wave 3 closes, use live GitHub + `WORKING_MEMORY.md` + the Wave 3 handoff for session continuation. Reconcile the long-form documents after #250 lands instead of rewriting them mid-wave.
 
 ## After Wave 3
 
