@@ -1,22 +1,23 @@
 "use client";
 
 import { ChevronDown, ChevronUp, Copy, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { useI18n } from "@/hooks/use-i18n";
 import type { StorefrontSection, StorefrontSectionType } from "@/lib/storefront/studio-sections";
 
-const LABELS: Record<StorefrontSectionType, string> = {
-  announcement: "Announcement",
-  navbar: "Navigation",
-  hero: "Hero",
-  trust: "Trust badges",
-  "featured-products": "Featured products",
-  "product-grid": "Product grid",
-  categories: "Categories",
-  media: "Media",
-  testimonials: "Testimonials",
-  faq: "FAQ",
-  "cod-checkout": "COD checkout",
-  support: "Support",
-  footer: "Footer",
+export const SECTION_LABEL_KEYS: Record<StorefrontSectionType, string> = {
+  announcement: "storefront.studio.section.announcement",
+  navbar: "storefront.studio.section.navbar",
+  hero: "storefront.studio.section.hero",
+  trust: "storefront.studio.section.trust",
+  "featured-products": "storefront.studio.section.featuredProducts",
+  "product-grid": "storefront.studio.section.productGrid",
+  categories: "storefront.studio.section.categories",
+  media: "storefront.studio.section.media",
+  testimonials: "storefront.studio.section.testimonials",
+  faq: "storefront.studio.section.faq",
+  "cod-checkout": "storefront.studio.section.codCheckout",
+  support: "storefront.studio.section.support",
+  footer: "storefront.studio.section.footer",
 };
 
 type Props = {
@@ -40,9 +41,10 @@ export function SectionTree({
   onDelete,
   onAdd,
 }: Props) {
+  const { t } = useI18n();
   return (
     <div className="space-y-2">
-      <div className="space-y-1" role="list" aria-label="Storefront sections">
+      <div className="space-y-1" role="list" aria-label={t("storefront.studio.sectionsLabel")}>
         {sections.map((section, index) => (
           <div
             key={section.id}
@@ -58,24 +60,24 @@ export function SectionTree({
                 className="min-w-0 flex-1 truncate rounded-lg px-2 py-1.5 text-start text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-current={selected === section.id ? "true" : undefined}
               >
-                {LABELS[section.type]}
+                {t(SECTION_LABEL_KEYS[section.type])}
               </button>
-              <TreeAction label="Move up" disabled={index === 0} onClick={() => onMove(section.id, -1)}>
+              <TreeAction label={t("storefront.studio.moveUp")} disabled={index === 0} onClick={() => onMove(section.id, -1)}>
                 <ChevronUp />
               </TreeAction>
-              <TreeAction label="Move down" disabled={index === sections.length - 1} onClick={() => onMove(section.id, 1)}>
+              <TreeAction label={t("storefront.studio.moveDown")} disabled={index === sections.length - 1} onClick={() => onMove(section.id, 1)}>
                 <ChevronDown />
               </TreeAction>
-              <TreeAction label={section.enabled ? "Hide section" : "Show section"} onClick={() => onToggle(section.id)}>
+              <TreeAction label={t(section.enabled ? "storefront.studio.hideSection" : "storefront.studio.showSection")} onClick={() => onToggle(section.id)}>
                 {section.enabled ? <Eye /> : <EyeOff />}
               </TreeAction>
             </div>
             {selected === section.id ? (
               <div className="flex gap-1 border-t px-1 pt-1.5">
-                <TreeAction label="Duplicate section" onClick={() => onDuplicate(section.id)}>
+                <TreeAction label={t("storefront.studio.duplicateSection")} onClick={() => onDuplicate(section.id)}>
                   <Copy />
                 </TreeAction>
-                <TreeAction label="Delete section" disabled={sections.length === 1} onClick={() => onDelete(section.id)}>
+                <TreeAction label={t("storefront.studio.deleteSection")} disabled={sections.length === 1} onClick={() => onDelete(section.id)}>
                   <Trash2 />
                 </TreeAction>
               </div>
@@ -88,7 +90,7 @@ export function SectionTree({
         onClick={onAdd}
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed px-3 py-2 text-xs font-medium text-muted-foreground hover:border-primary hover:text-foreground"
       >
-        <Plus className="h-3.5 w-3.5" /> Add section
+        <Plus className="h-3.5 w-3.5" /> {t("storefront.studio.addSection")}
       </button>
     </div>
   );

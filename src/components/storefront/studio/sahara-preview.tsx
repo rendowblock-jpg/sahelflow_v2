@@ -1,6 +1,7 @@
 "use client";
 
 import { BadgeCheck, Headphones, PackageCheck, PhoneCall } from "lucide-react";
+import { useI18n } from "@/hooks/use-i18n";
 import { formatDZD } from "@/lib/utils";
 import type { StorefrontSectionType } from "@/lib/storefront/studio-sections";
 import type { StorefrontPreviewProps } from "./studio-types";
@@ -13,6 +14,7 @@ type Props = StorefrontPreviewProps & {
 type InspectProps = React.HTMLAttributes<HTMLElement> & { "data-studio-section"?: string };
 
 export function SaharaPreview({ draft, products, selectedSectionId, onInspectSection }: Props) {
+  const { t } = useI18n();
   const theme = draft.theme;
   const sections = theme.builder.composition.sections;
   const section = (type: StorefrontSectionType) => sections.find((candidate) => candidate.type === type);
@@ -54,7 +56,7 @@ export function SaharaPreview({ draft, products, selectedSectionId, onInspectSec
               <div className="text-sm font-semibold">{product.name}</div>
               {theme.catalog.showSku && product.sku ? <div className="mt-1 text-[10px] opacity-50">{product.sku}</div> : null}
               {theme.showPrices ? <div className="mt-1 text-xs font-semibold" style={{ color: theme.primaryColor }}>{formatDZD(product.price)}</div> : null}
-              {theme.showStock ? <div className="mt-1 text-[10px] opacity-60">Stock {product.stock}</div> : null}
+              {theme.showStock ? <div className="mt-1 text-[10px] opacity-60">{t("storefront.builder.stock")} {product.stock}</div> : null}
             </div>
           </article>
         );
@@ -64,10 +66,10 @@ export function SaharaPreview({ draft, products, selectedSectionId, onInspectSec
 
   const trust = enabled("trust") ? (
     <section {...inspect("trust")} className={`grid grid-cols-2 gap-2 py-5 text-[10px] sm:grid-cols-4 ${inspect("trust").className ?? ""}`}>
-      {theme.trust.showCodBadge ? <Trust icon={<BadgeCheck />} label="Cash on delivery" /> : null}
-      {theme.trust.showPhoneConfirmationBadge ? <Trust icon={<PhoneCall />} label="Phone confirmation" /> : null}
-      {theme.trust.showDeliveryBadge ? <Trust icon={<PackageCheck />} label="Home & desk delivery" /> : null}
-      {theme.trust.showSupportBadge ? <Trust icon={<Headphones />} label="Seller support" /> : null}
+      {theme.trust.showCodBadge ? <Trust icon={<BadgeCheck />} label={t("storefront.studio.cashOnDelivery")} /> : null}
+      {theme.trust.showPhoneConfirmationBadge ? <Trust icon={<PhoneCall />} label={t("storefront.studio.phoneConfirmation")} /> : null}
+      {theme.trust.showDeliveryBadge ? <Trust icon={<PackageCheck />} label={t("storefront.studio.homeDeskDelivery")} /> : null}
+      {theme.trust.showSupportBadge ? <Trust icon={<Headphones />} label={t("storefront.studio.sellerSupport")} /> : null}
     </section>
   ) : null;
 
@@ -75,7 +77,7 @@ export function SaharaPreview({ draft, products, selectedSectionId, onInspectSec
     return (
       <div className="min-h-full p-6" style={{ background: theme.backgroundColor, color: theme.textColor }}>
         {enabled("announcement") && theme.announcement.enabled ? <Announcement {...inspect("announcement")} text={theme.announcement.text} color={theme.primaryColor} /> : null}
-        {enabled("navbar") ? <header {...inspect("navbar")} className={`flex items-center justify-between border-b pb-4 ${inspect("navbar").className ?? ""}`}><b>{draft.name || "Store"}</b><span className="text-xs opacity-50">Catalog · COD</span></header> : null}
+        {enabled("navbar") ? <header {...inspect("navbar")} className={`flex items-center justify-between border-b pb-4 ${inspect("navbar").className ?? ""}`}><b>{draft.name || t("storefront.studio.storeFallback")}</b><span className="text-xs opacity-50">{t("storefront.studio.catalogCod")}</span></header> : null}
         {enabled("hero") && theme.hero.enabled ? (
           <section {...inspect("hero")} className={`grid gap-8 py-10 md:grid-cols-2 ${inspect("hero").className ?? ""}`}>
             <HeroCopy draft={draft} />
@@ -94,10 +96,10 @@ export function SaharaPreview({ draft, products, selectedSectionId, onInspectSec
         {enabled("announcement") && theme.announcement.enabled ? <Announcement {...inspect("announcement")} text={theme.announcement.text} color={theme.accentColor} /> : null}
         {enabled("hero") && theme.hero.enabled ? (
           <section {...inspect("hero")} className={`${radius(theme.radius)} p-7 text-center text-white ${inspect("hero").className ?? ""}`} style={{ background: theme.primaryColor }}>
-            <span className="text-[10px] font-bold uppercase tracking-[.2em]">{theme.hero.eyebrow || "Pay on delivery"}</span>
+            <span className="text-[10px] font-bold uppercase tracking-[.2em]">{theme.hero.eyebrow || t("storefront.studio.payOnDelivery")}</span>
             <h2 className="mx-auto mt-3 max-w-xl text-4xl font-black tracking-tight">{theme.hero.headline || draft.name}</h2>
             <p className="mx-auto mt-3 max-w-lg text-sm opacity-80">{theme.hero.body || draft.description}</p>
-            <div className="mx-auto mt-5 inline-flex rounded-full bg-white px-5 py-2 text-xs font-bold" style={{ color: theme.primaryColor }}>{theme.hero.ctaLabel || "Order now"}</div>
+            <div className="mx-auto mt-5 inline-flex rounded-full bg-white px-5 py-2 text-xs font-bold" style={{ color: theme.primaryColor }}>{theme.hero.ctaLabel || t("storefront.studio.orderNow")}</div>
           </section>
         ) : null}
         {trust}
@@ -120,19 +122,21 @@ export function SaharaPreview({ draft, products, selectedSectionId, onInspectSec
 }
 
 function HeroCopy({ draft }: { draft: StorefrontPreviewProps["draft"] }) {
+  const { t } = useI18n();
   const theme = draft.theme;
   return (
     <div>
-      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.primaryColor }}>{theme.hero.eyebrow || "Algeria COD"}</span>
+      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.primaryColor }}>{theme.hero.eyebrow || t("storefront.studio.algeriaCod")}</span>
       <h2 className="mt-3 text-4xl font-semibold leading-none tracking-tight">{theme.hero.headline || draft.name}</h2>
       <p className="mt-4 text-sm leading-6 opacity-65">{theme.hero.body || draft.description}</p>
-      <button type="button" className={`${radius(theme.radius)} mt-5 px-4 py-2 text-xs font-semibold text-white`} style={{ background: theme.primaryColor }}>{theme.hero.ctaLabel || "Shop now"}</button>
+      <button type="button" className={`${radius(theme.radius)} mt-5 px-4 py-2 text-xs font-semibold text-white`} style={{ background: theme.primaryColor }}>{theme.hero.ctaLabel || t("storefront.studio.shopNow")}</button>
     </div>
   );
 }
 
 function Announcement({ text, color, className, ...props }: { text: string; color: string; className?: string; onClick?: (event: React.MouseEvent) => void }) {
-  return <div {...props} className={`mb-4 rounded-lg px-3 py-2 text-center text-[11px] font-medium text-white ${className ?? ""}`} style={{ background: color }}>{text || "Free phone confirmation on every COD order"}</div>;
+  const { t } = useI18n();
+  return <div {...props} className={`mb-4 rounded-lg px-3 py-2 text-center text-[11px] font-medium text-white ${className ?? ""}`} style={{ background: color }}>{text || t("storefront.studio.freePhoneConfirmation")}</div>;
 }
 
 function Trust({ icon, label }: { icon: React.ReactNode; label: string }) {
@@ -140,8 +144,9 @@ function Trust({ icon, label }: { icon: React.ReactNode; label: string }) {
 }
 
 function CodPromise({ draft, sectionProps }: { draft: StorefrontPreviewProps["draft"]; sectionProps: InspectProps }) {
+  const { t } = useI18n();
   const theme = draft.theme;
-  return theme.checkout.showCodPromise ? <section {...sectionProps} className={`${radius(theme.radius)} mt-5 border p-4 text-center text-xs font-semibold`}>{theme.checkout.codPromiseText || "Order now — we confirm every COD order by phone"}</section> : null;
+  return theme.checkout.showCodPromise ? <section {...sectionProps} className={`${radius(theme.radius)} mt-5 border p-4 text-center text-xs font-semibold`}>{theme.checkout.codPromiseText || t("storefront.studio.defaultCodPromise")}</section> : null;
 }
 
 function radius(value: StorefrontPreviewProps["draft"]["theme"]["radius"]): string {
