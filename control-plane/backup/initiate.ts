@@ -81,23 +81,6 @@ export async function initiateBackup(
   }
   if (totalBytes > workspace.backup_bytes) return json({ error: "backup_quota_exceeded" }, 403);
 
-  if (trialLike) {
-    const existingTrial = await environment.DB.prepare(
-      `SELECT backup_id FROM cloud_backup
-        WHERE workspace_id = ?1 AND state NOT IN ('failed','deleted') LIMIT 1`,
-    ).bind(workspaceId).first<{ backup_id: string }>();
-    if (existingTrial) return json({ error: "trial_backup_already_exists" }, 409);
-  }
-  const usage = await environment.DB.prepare(
-    `SELECT COALESCE(SUM(total_bytes), 0) AS used_bytes
-       FROM cloud_backup
-      WHERE workspace_id = ?1 AND state NOT IN ('failed','deleted')`,
-  ).bind(workspaceId).first<{ used_bytes: number }>();
-  const usedBytes = Number(usage?.used_bytes ?? 0);
-  if (!Number.isSafeInteger(usedBytes) || usedBytes < 0 || usedBytes + totalBytes > workspace.backup_bytes) {
-    return json({ error: "backup_quota_exceeded" }, 403);
-  }
-
   const statements: D1Statement[] = [
     environment.DB.prepare(
       `INSERT INTO cloud_backup
@@ -133,7 +116,17 @@ export async function initiateBackup(
   try {
     const outcomes = await environment.DB.batch(statements);
     if (outcomes.some((outcome) => !outcome.success)) return json({ error: "backup_plan_unavailable" }, 503);
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("backup_quota_exceeded")) {
+      return json({ error: "backup_quota_exceeded" }, 403);
+    }
+    if (message.includes("trial_backup_already_exists")) {
+      return json({ error: "trial_backup_already_exists" }, 409);
+    }
+    if (message.includes("backup_entitlement_expired")) {
+      return json({ error: "backup_not_entitled" }, 403);
+    }
     return json({ error: "backup_plan_conflict" }, 409);
   }
   return json({

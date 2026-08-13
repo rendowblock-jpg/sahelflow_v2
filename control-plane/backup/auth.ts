@@ -2,6 +2,18 @@ import { base64Bytes, randomToken, sha256Hex, verifyEntitlement } from "./crypto
 import type { BackupWorkerEnvironment, BackupWorkspaceRow } from "./types";
 
 const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
+const BACKUP_FEATURE = "sahelflow.backup";
+const COMPLETE_FEATURE = "sahelflow.complete";
+
+function hasBackupFeature(featuresJson: string): boolean {
+  try {
+    const features = JSON.parse(featuresJson) as unknown;
+    return Array.isArray(features) && features.every((feature) => typeof feature === "string") &&
+      (features.includes(COMPLETE_FEATURE) || features.includes(BACKUP_FEATURE));
+  } catch {
+    return false;
+  }
+}
 
 export function json(value: unknown, status = 200): Response {
   return Response.json(value, {
@@ -29,12 +41,15 @@ export async function authenticateBackupWorkspace(
   const token = bearerToken(request);
   if (!token) return null;
   const tokenHash = await sha256Hex(token);
-  return environment.DB.prepare(
+  const workspace = await environment.DB.prepare(
     `SELECT workspace_id, license_id, installation_id, license_type, backup_bytes,
-            entitlement_revocation_epoch, desktop_token_hash, desktop_signing_public_key, revoked_at
+            entitlement_expires_at, features_json, entitlement_revocation_epoch,
+            desktop_token_hash, desktop_signing_public_key, revoked_at
        FROM backup_workspace
-      WHERE workspace_id = ?1 AND desktop_token_hash = ?2 AND revoked_at IS NULL`,
+      WHERE workspace_id = ?1 AND desktop_token_hash = ?2 AND revoked_at IS NULL
+        AND (entitlement_expires_at IS NULL OR datetime(entitlement_expires_at) > CURRENT_TIMESTAMP)`,
   ).bind(workspaceId, tokenHash).first<BackupWorkspaceRow>();
+  return workspace && hasBackupFeature(workspace.features_json) ? workspace : null;
 }
 
 export async function bootstrapBackupWorkspace(
@@ -64,6 +79,9 @@ export async function bootstrapBackupWorkspace(
     return json({ error: "entitlement_rejected" }, 403);
   }
   const { claims } = entitlement;
+  if (!hasBackupFeature(JSON.stringify(claims.features))) {
+    return json({ error: "backup_not_entitled" }, 403);
+  }
   const existing = await environment.DB.prepare(
     "SELECT workspace_id FROM backup_workspace WHERE workspace_id = ?1",
   ).bind(claims.workspaceId).first<{ workspace_id: string }>();
@@ -73,15 +91,18 @@ export async function bootstrapBackupWorkspace(
   const tokenHash = await sha256Hex(desktopToken);
   const inserted = await environment.DB.prepare(
     `INSERT OR IGNORE INTO backup_workspace
-      (workspace_id, license_id, installation_id, license_type, backup_bytes,
-       entitlement_revocation_epoch, desktop_token_hash, desktop_signing_public_key)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
+      (workspace_id, license_id, installation_id, license_type, entitlement_expires_at,
+       backup_bytes, features_json, entitlement_revocation_epoch, desktop_token_hash,
+       desktop_signing_public_key)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
   ).bind(
     claims.workspaceId,
     claims.licenseId,
     claims.installationId,
     claims.type,
+    claims.expiresAt,
     claims.backupBytes,
+    JSON.stringify(claims.features),
     claims.revocationEpoch,
     tokenHash,
     input.desktopSigningPublicKey,

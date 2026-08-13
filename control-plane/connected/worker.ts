@@ -39,6 +39,11 @@ type WorkspaceRow = {
   installation_id: string;
   device_binding: string;
   product_major: number;
+  entitlement_expires_at: string | null;
+  shop_slots: number;
+  member_limit: number;
+  device_limit: number;
+  features_json: string;
   entitlement_revocation_epoch: number;
   desktop_token_hash: string;
   desktop_signing_public_key: string;
@@ -90,6 +95,9 @@ const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const MAX_JWK_CHARS = 4096;
 const PAIRING_TTL_MS = 10 * 60 * 1000;
 const MAX_POLL_LIMIT = 100;
+const COMPLETE_FEATURE = "sahelflow.complete";
+const CONNECTED_FEATURE = "sahelflow.connected";
+const STOREFRONT_FEATURE = "sahelflow.storefront";
 
 function json(value: unknown, status = 200): Response {
   return Response.json(value, {
@@ -104,6 +112,16 @@ function json(value: unknown, status = 200): Response {
 
 function validIdentity(value: unknown): value is string {
   return typeof value === "string" && (HEX_ID.test(value) || OPAQUE_ID.test(value));
+}
+
+function hasWorkspaceFeature(workspace: Pick<WorkspaceRow, "features_json">, feature: string): boolean {
+  try {
+    const features = JSON.parse(workspace.features_json) as unknown;
+    return Array.isArray(features) && features.every((entry) => typeof entry === "string") &&
+      (features.includes(COMPLETE_FEATURE) || features.includes(feature));
+  } catch {
+    return false;
+  }
 }
 
 function base64Bytes(value: string): Uint8Array {
@@ -199,7 +217,16 @@ async function verifyEntitlement(
     !BASE64.test(entitlement.signature) ||
     claims.transferState !== "active" ||
     !Number.isSafeInteger(claims.revocationEpoch) ||
-    claims.revocationEpoch < 0
+    claims.revocationEpoch < 0 ||
+    !Number.isSafeInteger(claims.shopSlots) ||
+    claims.shopSlots < 1 ||
+    !Number.isSafeInteger(claims.memberLimit) ||
+    claims.memberLimit < 1 ||
+    !Number.isSafeInteger(claims.deviceLimit) ||
+    claims.deviceLimit < 1 ||
+    !Array.isArray(claims.features) ||
+    claims.features.length < 1 ||
+    !claims.features.every((feature) => typeof feature === "string")
   ) {
     throw new Error("invalid entitlement claims");
   }
@@ -233,17 +260,21 @@ async function authenticateDesktop(
   request: Request,
   environment: ConnectedWorkerEnvironment,
   workspaceId: string,
+  requiredFeature = CONNECTED_FEATURE,
 ): Promise<WorkspaceRow | null> {
   const token = bearerToken(request);
   if (!token) return null;
   const tokenHash = await sha256Hex(token);
-  return environment.DB.prepare(
+  const workspace = await environment.DB.prepare(
     `SELECT workspace_id, license_id, installation_id, device_binding, product_major,
+            entitlement_expires_at, shop_slots, member_limit, device_limit, features_json,
             entitlement_revocation_epoch, desktop_token_hash, desktop_signing_public_key,
             desktop_encryption_public_key, revoked_at
        FROM connected_workspace
-      WHERE workspace_id = ?1 AND desktop_token_hash = ?2 AND revoked_at IS NULL`,
+      WHERE workspace_id = ?1 AND desktop_token_hash = ?2 AND revoked_at IS NULL
+        AND (entitlement_expires_at IS NULL OR datetime(entitlement_expires_at) > CURRENT_TIMESTAMP)`,
   ).bind(workspaceId, tokenHash).first<WorkspaceRow>();
+  return workspace && hasWorkspaceFeature(workspace, requiredFeature) ? workspace : null;
 }
 
 async function authenticateDevice(
@@ -256,11 +287,15 @@ async function authenticateDevice(
   if (!token) return null;
   const tokenHash = await sha256Hex(token);
   const device = await environment.DB.prepare(
-    `SELECT workspace_id, device_id, member_id, token_hash, signing_public_key,
-            encryption_public_key, revocation_epoch, revoked_at
-       FROM connected_device
-      WHERE workspace_id = ?1 AND device_id = ?2 AND token_hash = ?3 AND revoked_at IS NULL`,
-  ).bind(workspaceId, deviceId, tokenHash).first<DeviceRow>();
+    `SELECT d.workspace_id, d.device_id, d.member_id, d.token_hash, d.signing_public_key,
+            d.encryption_public_key, d.revocation_epoch, d.revoked_at, w.features_json
+       FROM connected_device d
+       JOIN connected_workspace w ON w.workspace_id = d.workspace_id
+      WHERE d.workspace_id = ?1 AND d.device_id = ?2 AND d.token_hash = ?3
+        AND d.revoked_at IS NULL AND w.revoked_at IS NULL
+        AND (w.entitlement_expires_at IS NULL OR datetime(w.entitlement_expires_at) > CURRENT_TIMESTAMP)`,
+  ).bind(workspaceId, deviceId, tokenHash).first<DeviceRow & { features_json: string }>();
+  if (device && !hasWorkspaceFeature(device, CONNECTED_FEATURE)) return null;
   if (device) {
     await environment.DB.prepare(
       "UPDATE connected_device SET last_seen_at = CURRENT_TIMESTAMP WHERE workspace_id = ?1 AND device_id = ?2",
@@ -301,6 +336,9 @@ async function bootstrap(request: Request, environment: ConnectedWorkerEnvironme
   try { entitlement = await verifyEntitlement(input.entitlement, environment); }
   catch { return json({ error: "entitlement_rejected" }, 403); }
   const { claims } = entitlement;
+  if (!claims.features.includes(COMPLETE_FEATURE) && !claims.features.includes(CONNECTED_FEATURE)) {
+    return json({ error: "connected_not_entitled" }, 403);
+  }
   const existing = await environment.DB.prepare(
     "SELECT workspace_id FROM connected_workspace WHERE workspace_id = ?1",
   ).bind(claims.workspaceId).first<{ workspace_id: string }>();
@@ -311,15 +349,21 @@ async function bootstrap(request: Request, environment: ConnectedWorkerEnvironme
   const inserted = await environment.DB.prepare(
     `INSERT OR IGNORE INTO connected_workspace
       (workspace_id, license_id, installation_id, device_binding, product_major,
+       entitlement_expires_at, shop_slots, member_limit, device_limit, features_json,
        entitlement_revocation_epoch, desktop_token_hash, desktop_signing_public_key,
        desktop_encryption_public_key)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`,
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`,
   ).bind(
     claims.workspaceId,
     claims.licenseId,
     claims.installationId,
     claims.deviceBinding,
     claims.productMajor,
+    claims.expiresAt,
+    claims.shopSlots,
+    claims.memberLimit,
+    claims.deviceLimit,
+    JSON.stringify(claims.features),
     claims.revocationEpoch,
     tokenHash,
     input.desktopSigningPublicKey,
@@ -349,9 +393,56 @@ async function createPairing(request: Request, environment: ConnectedWorkerEnvir
   const result = await environment.DB.prepare(
     `INSERT INTO connected_pairing
       (pairing_id, workspace_id, member_id, device_id, token_hash, expires_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
-  ).bind(pairingId, input.workspaceId, input.memberId, input.deviceId, tokenHash, expiresAt).run();
+     SELECT ?1, ?2, ?3, ?4, ?5, ?6
+      WHERE NOT EXISTS (
+        SELECT 1 FROM connected_device
+         WHERE workspace_id = ?2 AND device_id = ?4 AND revoked_at IS NULL
+      )
+        AND NOT EXISTS (
+          SELECT 1 FROM connected_pairing
+           WHERE workspace_id = ?2 AND device_id = ?4 AND consumed_at IS NULL
+             AND datetime(expires_at) > CURRENT_TIMESTAMP
+        )
+        AND (
+          (SELECT COUNT(*) FROM connected_device
+            WHERE workspace_id = ?2 AND revoked_at IS NULL) +
+          (SELECT COUNT(*) FROM connected_pairing
+            WHERE workspace_id = ?2 AND consumed_at IS NULL
+              AND datetime(expires_at) > CURRENT_TIMESTAMP)
+        ) < ?7
+        AND (
+          EXISTS (
+            SELECT 1 FROM connected_device
+             WHERE workspace_id = ?2 AND member_id = ?3 AND revoked_at IS NULL
+          )
+          OR EXISTS (
+            SELECT 1 FROM connected_pairing
+             WHERE workspace_id = ?2 AND member_id = ?3 AND consumed_at IS NULL
+               AND datetime(expires_at) > CURRENT_TIMESTAMP
+          )
+          OR (
+            SELECT COUNT(*) FROM (
+              SELECT member_id FROM connected_device
+               WHERE workspace_id = ?2 AND revoked_at IS NULL
+              UNION
+              SELECT member_id FROM connected_pairing
+               WHERE workspace_id = ?2 AND consumed_at IS NULL
+                 AND datetime(expires_at) > CURRENT_TIMESTAMP
+            )
+          ) < ?8
+        )`,
+  ).bind(
+    pairingId,
+    input.workspaceId,
+    input.memberId,
+    input.deviceId,
+    tokenHash,
+    expiresAt,
+    workspace.device_limit,
+    workspace.member_limit,
+  ).run();
   if (!result.success) return json({ error: "pairing_unavailable" }, 503);
+  if (result.meta?.changes !== 1) return json({ error: "entitlement_limit_reached" }, 403);
   return json({ pairingId, pairingToken, expiresAt }, 201);
 }
 
@@ -385,35 +476,65 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
   }
   const workspace = await environment.DB.prepare(
     `SELECT workspace_id, license_id, installation_id, device_binding, product_major,
+            entitlement_expires_at, shop_slots, member_limit, device_limit, features_json,
             entitlement_revocation_epoch, desktop_token_hash, desktop_signing_public_key,
             desktop_encryption_public_key, revoked_at
-       FROM connected_workspace WHERE workspace_id = ?1 AND revoked_at IS NULL`,
+       FROM connected_workspace
+      WHERE workspace_id = ?1 AND revoked_at IS NULL
+        AND (entitlement_expires_at IS NULL OR datetime(entitlement_expires_at) > CURRENT_TIMESTAMP)`,
   ).bind(pairing.workspace_id).first<WorkspaceRow>();
-  if (!workspace) return json({ error: "workspace_unavailable" }, 409);
+  if (!workspace || !hasWorkspaceFeature(workspace, CONNECTED_FEATURE)) {
+    return json({ error: "workspace_unavailable" }, 409);
+  }
 
   const deviceToken = randomToken();
   const deviceTokenHash = await sha256Hex(deviceToken);
   try {
-    await environment.DB.batch([
-      environment.DB.prepare(
-        `INSERT INTO connected_device
-          (workspace_id, device_id, member_id, token_hash, signing_public_key, encryption_public_key,
-           revocation_epoch)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
-      ).bind(
-        pairing.workspace_id,
-        pairing.device_id,
-        pairing.member_id,
-        deviceTokenHash,
-        input.signingPublicKey,
-        input.encryptionPublicKey,
-        workspace.entitlement_revocation_epoch,
-      ),
-      environment.DB.prepare(
-        `UPDATE connected_pairing SET consumed_at = CURRENT_TIMESTAMP
-          WHERE pairing_id = ?1 AND token_hash = ?2 AND consumed_at IS NULL`,
-      ).bind(pairing.pairing_id, tokenHash),
-    ]);
+    const inserted = await environment.DB.prepare(
+      `INSERT INTO connected_device
+        (workspace_id, device_id, member_id, token_hash, signing_public_key, encryption_public_key,
+         revocation_epoch)
+       SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7
+        WHERE (
+          SELECT COUNT(*) FROM connected_device
+           WHERE workspace_id = ?1 AND revoked_at IS NULL
+        ) < ?8
+          AND (
+            EXISTS (
+              SELECT 1 FROM connected_device
+               WHERE workspace_id = ?1 AND member_id = ?3 AND revoked_at IS NULL
+            )
+            OR (
+              SELECT COUNT(DISTINCT member_id) FROM connected_device
+               WHERE workspace_id = ?1 AND revoked_at IS NULL
+            ) < ?9
+          )`,
+    ).bind(
+      pairing.workspace_id,
+      pairing.device_id,
+      pairing.member_id,
+      deviceTokenHash,
+      input.signingPublicKey,
+      input.encryptionPublicKey,
+      workspace.entitlement_revocation_epoch,
+      workspace.device_limit,
+      workspace.member_limit,
+    ).run();
+    if (!inserted.success) return json({ error: "pairing_unavailable" }, 503);
+    if (inserted.meta?.changes !== 1) return json({ error: "entitlement_limit_reached" }, 403);
+
+    const consumed = await environment.DB.prepare(
+      `UPDATE connected_pairing SET consumed_at = CURRENT_TIMESTAMP
+        WHERE pairing_id = ?1 AND token_hash = ?2 AND consumed_at IS NULL
+          AND datetime(expires_at) > CURRENT_TIMESTAMP`,
+    ).bind(pairing.pairing_id, tokenHash).run();
+    if (!consumed.success || consumed.meta?.changes !== 1) {
+      await environment.DB.prepare(
+        `DELETE FROM connected_device
+          WHERE workspace_id = ?1 AND device_id = ?2 AND token_hash = ?3`,
+      ).bind(pairing.workspace_id, pairing.device_id, deviceTokenHash).run();
+      return json({ error: "pairing_conflict" }, 409);
+    }
   } catch {
     return json({ error: "pairing_conflict" }, 409);
   }
@@ -444,6 +565,28 @@ async function listDevices(request: Request, environment: ConnectedWorkerEnviron
     last_seen_at: string | null;
   }>();
   return json({ devices: result.results ?? [] });
+}
+
+async function workspaceAuthority(
+  request: Request,
+  environment: ConnectedWorkerEnvironment,
+  url: URL,
+): Promise<Response> {
+  const workspaceId = url.searchParams.get("workspaceId");
+  const feature = url.searchParams.get("feature");
+  if (!validIdentity(workspaceId) || (feature !== "connected" && feature !== "storefront")) {
+    return json({ error: "invalid_request" }, 400);
+  }
+  const requiredFeature = feature === "storefront" ? STOREFRONT_FEATURE : CONNECTED_FEATURE;
+  const workspace = await authenticateDesktop(request, environment, workspaceId, requiredFeature);
+  if (!workspace) return json({ error: "unauthorized" }, 401);
+  return json({
+    workspaceId: workspace.workspace_id,
+    shopSlots: workspace.shop_slots,
+    memberLimit: workspace.member_limit,
+    deviceLimit: workspace.device_limit,
+    entitlementExpiresAt: workspace.entitlement_expires_at,
+  });
 }
 
 async function putProjection(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
@@ -750,6 +893,7 @@ export async function handleConnectedRequest(
   if (request.method === "POST" && url.pathname === "/v1/bootstrap") return bootstrap(request, environment);
   if (request.method === "POST" && url.pathname === "/v1/desktop/pairings") return createPairing(request, environment);
   if (request.method === "POST" && url.pathname === "/v1/pairings/exchange") return exchangePairing(request, environment);
+  if (request.method === "GET" && url.pathname === "/v1/desktop/authority") return workspaceAuthority(request, environment, url);
   if (request.method === "GET" && url.pathname === "/v1/desktop/devices") return listDevices(request, environment, url);
   if (request.method === "PUT" && url.pathname === "/v1/desktop/projections") return putProjection(request, environment);
   if (request.method === "GET" && url.pathname === "/v1/projections") return getProjection(request, environment, url);

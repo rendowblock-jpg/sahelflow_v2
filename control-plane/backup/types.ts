@@ -53,7 +53,9 @@ export type BackupWorkspaceRow = {
   license_id: string;
   installation_id: string;
   license_type: "trial" | "extension" | "permanent";
+  entitlement_expires_at: string | null;
   backup_bytes: number;
+  features_json: string;
   entitlement_revocation_epoch: number;
   desktop_token_hash: string;
   desktop_signing_public_key: string;

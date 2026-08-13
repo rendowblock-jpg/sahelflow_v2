@@ -27,7 +27,7 @@ export default async function EditStorefrontPage({
   const { id } = await params;
   const { t } = await getI18n();
 
-  const config = await storefrontService.getById({ prisma: db, shop: shopContext }, id);
+  const config = await storefrontService.getStudioDraftById({ prisma: db, shop: shopContext }, id);
   if (!config) {
     notFound();
   }

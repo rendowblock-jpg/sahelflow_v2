@@ -108,8 +108,17 @@ export async function verifyEntitlement(
     claims.transferState !== "active" ||
     !Number.isSafeInteger(claims.revocationEpoch) ||
     claims.revocationEpoch < 0 ||
+    !Number.isSafeInteger(claims.shopSlots) ||
+    claims.shopSlots < 1 ||
+    !Number.isSafeInteger(claims.memberLimit) ||
+    claims.memberLimit < 1 ||
+    !Number.isSafeInteger(claims.deviceLimit) ||
+    claims.deviceLimit < 1 ||
     !Number.isSafeInteger(claims.backupBytes) ||
-    claims.backupBytes < 0
+    claims.backupBytes < 0 ||
+    !Array.isArray(claims.features) ||
+    claims.features.length < 1 ||
+    !claims.features.every((feature) => typeof feature === "string")
   ) throw new Error("invalid entitlement claims");
 
   const productMajor = Number(environment.PRODUCT_MAJOR);

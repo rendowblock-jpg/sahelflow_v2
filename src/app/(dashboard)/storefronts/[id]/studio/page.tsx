@@ -11,7 +11,7 @@ export default async function StorefrontStudioPage({ params }: { params: Promise
   assertTrustedAction(actor, "storefront.publish");
   assertTrustedAction(actor, "products.read");
   const { id } = await params;
-  const config = await storefrontService.getById({ prisma: db, shop: shopContext }, id);
+  const config = await storefrontService.getStudioDraftById({ prisma: db, shop: shopContext }, id);
   if (!config) notFound();
   const products = await db.product.findMany({
     where: { isActive: true, deletedAt: null },

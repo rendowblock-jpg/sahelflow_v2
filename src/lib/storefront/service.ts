@@ -15,7 +15,7 @@ import type { ServiceContext } from "@/lib/data/service-base";
 import type { StorefrontTheme } from "./presentation-types";
 import { DEFAULT_STOREFRONT_THEME } from "./theme-default";
 import { normalizeStorefrontTheme } from "./theme-normalize";
-import { storefrontStudioThemeSchema } from "./studio-schema";
+import { storefrontStudioDraftSchema, storefrontStudioThemeSchema } from "./studio-schema";
 
 export type { StorefrontTheme } from "./presentation-types";
 
@@ -39,7 +39,12 @@ export interface StorefrontConfig {
   updatedAt: Date;
 }
 
-function parseConfig(row: {
+export interface StorefrontStudioConfig extends StorefrontConfig {
+  draftUpdatedAt: Date | null;
+  liveUpdatedAt: Date;
+}
+
+type StorefrontRow = {
   id: string;
   slug: string;
   name: string;
@@ -48,9 +53,18 @@ function parseConfig(row: {
   productIds: string;
   contact: string | null;
   isActive: boolean;
+  draftName: string | null;
+  draftSlug: string | null;
+  draftDescription: string | null;
+  draftTheme: string | null;
+  draftProductIds: string | null;
+  draftIsActive: boolean | null;
+  draftUpdatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-}): StorefrontConfig {
+};
+
+function parseConfig(row: StorefrontRow): StorefrontConfig {
   let parsedTheme: unknown = null;
   let parsedProductIds: unknown = [];
   let parsedContact: unknown = null;
@@ -75,6 +89,31 @@ function parseConfig(row: {
   };
 }
 
+function parseStudioConfig(row: StorefrontRow): StorefrontStudioConfig {
+  const live = parseConfig(row);
+  if (!row.draftUpdatedAt) {
+    return { ...live, draftUpdatedAt: null, liveUpdatedAt: live.updatedAt };
+  }
+  let draftTheme: unknown = null;
+  let draftProductIds: unknown = [];
+  try { draftTheme = row.draftTheme ? JSON.parse(row.draftTheme) as unknown : null; } catch { /* fail closed */ }
+  try { draftProductIds = row.draftProductIds ? JSON.parse(row.draftProductIds) as unknown : []; } catch { /* fail closed */ }
+  return {
+    ...live,
+    name: row.draftName ?? live.name,
+    slug: row.draftSlug ?? live.slug,
+    description: row.draftDescription,
+    theme: normalizeStorefrontTheme(draftTheme),
+    productIds: Array.isArray(draftProductIds)
+      ? draftProductIds.filter((item): item is string => typeof item === "string")
+      : [],
+    isActive: row.draftIsActive ?? live.isActive,
+    updatedAt: row.draftUpdatedAt,
+    draftUpdatedAt: row.draftUpdatedAt,
+    liveUpdatedAt: live.updatedAt,
+  };
+}
+
 export const storefrontService = {
   async getBySlug(context: ServiceContext, slug: string): Promise<StorefrontConfig | null> {
     const row = await context.prisma.storefrontConfig.findUnique({ where: { slug } });
@@ -86,6 +125,11 @@ export const storefrontService = {
     const row = await context.prisma.storefrontConfig.findUnique({ where: { id } });
     if (!row) return null;
     return parseConfig(row);
+  },
+
+  async getStudioDraftById(context: ServiceContext, id: string): Promise<StorefrontStudioConfig | null> {
+    const row = await context.prisma.storefrontConfig.findUnique({ where: { id } });
+    return row ? parseStudioConfig(row) : null;
   },
 
   async list(context: ServiceContext): Promise<StorefrontConfig[]> {
@@ -150,6 +194,70 @@ export const storefrontService = {
     }
     const row = await context.prisma.storefrontConfig.findUniqueOrThrow({ where: { id } });
     return parseConfig(row);
+  },
+
+  async saveStudioDraft(context: ServiceContext, id: string, input: {
+    slug: string;
+    name: string;
+    description: string | null;
+    theme: StorefrontTheme;
+    productIds: string[];
+    isActive: boolean;
+  }, options: { expectedDraftUpdatedAt: string | null }): Promise<StorefrontStudioConfig> {
+    const draft = storefrontStudioDraftSchema.parse({
+      name: input.name,
+      slug: input.slug,
+      description: input.description ?? "",
+      theme: input.theme,
+      selectedProductIds: input.productIds,
+      isActive: input.isActive,
+    });
+    const expected = options.expectedDraftUpdatedAt
+      ? new Date(options.expectedDraftUpdatedAt)
+      : null;
+    const draftUpdatedAt = new Date();
+    const result = await context.prisma.storefrontConfig.updateMany({
+      where: { id, draftUpdatedAt: expected },
+      data: {
+        draftName: draft.name,
+        draftSlug: draft.slug,
+        draftDescription: draft.description || null,
+        draftTheme: JSON.stringify(draft.theme),
+        draftProductIds: JSON.stringify(draft.selectedProductIds),
+        draftIsActive: draft.isActive,
+        draftUpdatedAt,
+      },
+    });
+    if (result.count !== 1) throw new StorefrontVersionConflictError();
+    const row = await context.prisma.storefrontConfig.findUniqueOrThrow({ where: { id } });
+    return parseStudioConfig(row);
+  },
+
+  async publishStudioDraft(
+    context: ServiceContext,
+    id: string,
+    options: { expectedDraftUpdatedAt: string },
+  ): Promise<StorefrontConfig> {
+    const expected = new Date(options.expectedDraftUpdatedAt);
+    const row = await context.prisma.storefrontConfig.findUnique({ where: { id } });
+    if (!row || !row.draftUpdatedAt || row.draftUpdatedAt.getTime() !== expected.getTime()) {
+      throw new StorefrontVersionConflictError();
+    }
+    const draft = parseStudioConfig(row);
+    const result = await context.prisma.storefrontConfig.updateMany({
+      where: { id, draftUpdatedAt: expected },
+      data: {
+        slug: draft.slug,
+        name: draft.name,
+        description: draft.description,
+        theme: JSON.stringify(storefrontStudioThemeSchema.parse(draft.theme)),
+        productIds: JSON.stringify(draft.productIds),
+        isActive: draft.isActive,
+      },
+    });
+    if (result.count !== 1) throw new StorefrontVersionConflictError();
+    const published = await context.prisma.storefrontConfig.findUniqueOrThrow({ where: { id } });
+    return parseConfig(published);
   },
 
   async delete(context: ServiceContext, id: string): Promise<void> {

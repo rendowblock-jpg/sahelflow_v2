@@ -39,6 +39,20 @@ const updateConfigSchema = z.object({
   isActive: z.boolean().optional(),
 }).strict();
 
+const saveDraftSchema = z.object({
+  expectedDraftUpdatedAt: z.string().datetime().nullable(),
+  slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Slug must be lowercase, digits, or hyphens"),
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).nullable(),
+  theme: writableThemeSchema,
+  productIds: z.array(z.string().min(2).max(128)).min(1).max(500),
+  isActive: z.boolean(),
+}).strict();
+
+const publishDraftSchema = z.object({
+  expectedDraftUpdatedAt: z.string().datetime(),
+}).strict();
+
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
@@ -98,6 +112,69 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteCo
   });
   return NextResponse.json({ config });
 }, "PUT /api/storefront/config/[id]");
+
+/**
+ * PATCH /api/storefront/config/[id]
+ *   Seller-only: compare-and-set a private Studio draft. This never mutates
+ *   the public fields consumed by /storefront/[slug].
+ */
+export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
+  const actorContext = await requireTrustedAction("storefront.manage");
+  assertTrustedAction(actorContext, "storefront.publish");
+  const { id } = await params;
+  const input = saveDraftSchema.parse(await req.json());
+  const { expectedDraftUpdatedAt, ...draft } = input;
+  const context = { prisma: db, shop: shopContext };
+  const { storefrontService, StorefrontVersionConflictError } = await import("@/lib/storefront/service");
+  if (!(await storefrontService.getById(context, id))) {
+    return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
+  }
+  try {
+    const config = await storefrontService.saveStudioDraft(context, id, draft, {
+      expectedDraftUpdatedAt,
+    });
+    return NextResponse.json({ config });
+  } catch (error) {
+    if (error instanceof StorefrontVersionConflictError) {
+      const config = await storefrontService.getStudioDraftById(context, id);
+      return NextResponse.json({ error: "version_conflict", config }, { status: 409 });
+    }
+    throw error;
+  }
+}, "PATCH /api/storefront/config/[id]");
+
+/**
+ * POST /api/storefront/config/[id]
+ *   Seller-only: explicitly publish the exact saved Studio draft to the local
+ *   public storefront using a compare-and-set draft version.
+ */
+export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
+  const actorContext = await requireTrustedAction("storefront.publish");
+  const { id } = await params;
+  const input = publishDraftSchema.parse(await req.json());
+  const context = { prisma: db, shop: shopContext };
+  const { storefrontService, StorefrontVersionConflictError } = await import("@/lib/storefront/service");
+  const before = await storefrontService.getById(context, id);
+  if (!before) return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
+  try {
+    const config = await storefrontService.publishStudioDraft(context, id, input);
+    await logAudit(context, {
+      action: "storefront.published",
+      entity: "storefront",
+      entityId: id,
+      actor: trustedActorAuditIdentity(actorContext.actor),
+      before: before as unknown as Record<string, unknown>,
+      after: config as unknown as Record<string, unknown>,
+    });
+    return NextResponse.json({ config });
+  } catch (error) {
+    if (error instanceof StorefrontVersionConflictError) {
+      const config = await storefrontService.getStudioDraftById(context, id);
+      return NextResponse.json({ error: "version_conflict", config }, { status: 409 });
+    }
+    throw error;
+  }
+}, "POST /api/storefront/config/[id]");
 
 /**
  * DELETE /api/storefront/config/[id]

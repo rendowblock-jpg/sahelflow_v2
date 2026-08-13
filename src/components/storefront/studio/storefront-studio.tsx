@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -14,7 +13,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
-import type { StorefrontConfig } from "@/lib/storefront/service";
+import type { StorefrontStudioConfig } from "@/lib/storefront/service";
 import type { StorefrontSectionType } from "@/lib/storefront/studio-sections";
 import {
   addStorefrontSection,
@@ -41,9 +40,11 @@ import type { StorefrontStudioDevice, StorefrontStudioProduct } from "./studio-t
 
 type StudioPanel = "sections" | "theme" | "products" | "checkout" | "seo";
 type SaveState = "saved" | "pending" | "saving" | "error" | "conflict";
-type SerializedConfig = Omit<StorefrontConfig, "createdAt" | "updatedAt"> & {
+type SerializedConfig = Omit<StorefrontStudioConfig, "createdAt" | "updatedAt" | "draftUpdatedAt" | "liveUpdatedAt"> & {
   createdAt: string;
   updatedAt: string;
+  draftUpdatedAt: string | null;
+  liveUpdatedAt: string;
 };
 
 const PANELS: readonly { id: StudioPanel; labelKey: string }[] = [
@@ -58,7 +59,7 @@ export function StorefrontStudio({
   config,
   products,
 }: {
-  config: StorefrontConfig;
+  config: StorefrontStudioConfig;
   products: StorefrontStudioProduct[];
 }) {
   const { t, dir } = useI18n();
@@ -70,7 +71,9 @@ export function StorefrontStudio({
     initialDraft.theme.builder.composition.sections[0]?.id ?? null,
   );
   const [savedFingerprint, setSavedFingerprint] = useState(() => storefrontDraftFingerprint(initialDraft));
-  const [version, setVersion] = useState(() => dateIso(config.updatedAt));
+  const [version, setVersion] = useState<string | null>(() => config.draftUpdatedAt
+    ? dateIso(config.draftUpdatedAt)
+    : null);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -103,10 +106,10 @@ export function StorefrontStudio({
     setMessage(manual ? t("storefront.studio.savingDraft") : null);
     try {
       const response = await fetch(`/api/storefront/config/${encodeURIComponent(config.id)}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          expectedUpdatedAt: version,
+          expectedDraftUpdatedAt: version,
           name: parsed.data.name,
           slug: parsed.data.slug,
           description: parsed.data.description || null,
@@ -124,7 +127,7 @@ export function StorefrontStudio({
         return;
       }
       if (!response.ok || !body.config) throw new Error(body.error ?? t("storefront.studio.saveFailed"));
-      setVersion(body.config.updatedAt);
+      setVersion(body.config.draftUpdatedAt);
       setSavedFingerprint(storefrontDraftFingerprint(candidate));
       setSavedAt(new Date());
       setSaveState("saved");
@@ -135,6 +138,39 @@ export function StorefrontStudio({
       setMessage(t("storefront.studio.localDraftRetained"));
     }
   }, [config.id, t, version]);
+
+  const publish = useCallback(async () => {
+    if (!version || dirty || saveState === "saving" || saveState === "conflict") {
+      setMessage(t("storefront.studio.saveBeforePublishing"));
+      return;
+    }
+    const sequence = ++requestSequence.current;
+    setSaveState("saving");
+    setMessage(t("storefront.studio.publishing"));
+    try {
+      const response = await fetch(`/api/storefront/config/${encodeURIComponent(config.id)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedDraftUpdatedAt: version }),
+      });
+      const body = await response.json() as { error?: string; config?: SerializedConfig };
+      if (sequence !== requestSequence.current) return;
+      if (response.status === 409 && body.config) {
+        setConflict(body.config);
+        setVersion(body.config.draftUpdatedAt);
+        setSaveState("conflict");
+        setMessage(t("storefront.studio.newerDraft"));
+        return;
+      }
+      if (!response.ok) throw new Error(body.error ?? t("storefront.studio.publishFailed"));
+      setSaveState("saved");
+      setMessage(t("storefront.studio.published"));
+    } catch {
+      if (sequence !== requestSequence.current) return;
+      setSaveState("error");
+      setMessage(t("storefront.studio.publishFailed"));
+    }
+  }, [config.id, dirty, saveState, t, version]);
 
   useEffect(() => {
     if (!dirty || conflict || saveState === "saving" || saveState === "error") return;
@@ -150,7 +186,7 @@ export function StorefrontStudio({
       updatedAt: new Date(conflict.updatedAt),
     });
     setHistory(createStorefrontStudioHistory(next));
-    setVersion(conflict.updatedAt);
+    setVersion(conflict.draftUpdatedAt);
     setSavedFingerprint(storefrontDraftFingerprint(next));
     setConflict(null);
     setSaveState("saved");
@@ -159,7 +195,7 @@ export function StorefrontStudio({
 
   function keepLocalDraft() {
     if (!conflict) return;
-    setVersion(conflict.updatedAt);
+    setVersion(conflict.draftUpdatedAt);
     setConflict(null);
     setSaveState("error");
     setMessage(t("storefront.studio.confirmOverwrite"));
@@ -197,12 +233,12 @@ export function StorefrontStudio({
         <ToolbarButton label={t("storefront.studio.undo")} disabled={history.past.length === 0} onClick={() => setHistory(undoStorefrontStudioHistory)}><Undo2 /></ToolbarButton>
         <ToolbarButton label={t("storefront.studio.redo")} disabled={history.future.length === 0} onClick={() => setHistory(redoStorefrontStudioHistory)}><Redo2 /></ToolbarButton>
         <SaveStatus state={saveState} dirty={dirty} savedAt={savedAt} />
-        <Link className="rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted" href={`/storefront/${draft.slug}`} target="_blank">{t("storefront.studio.preview")}</Link>
         <button type="button" onClick={() => {
           const result = storefrontStudioDraftSchema.safeParse(draft);
           setMessage(result.success ? t("storefront.studio.validDraft") : result.error.issues[0]?.message ?? t("storefront.studio.validationFailed"));
         }} className="rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted">{t("storefront.studio.validate")}</button>
         <button type="button" disabled={!dirty || saveState === "saving" || saveState === "conflict"} onClick={() => void persist(draft, true)} className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"><Save className="h-3.5 w-3.5" />{t("storefront.builder.save")}</button>
+        <button type="button" disabled={dirty || !version || saveState === "saving" || saveState === "conflict"} onClick={() => void publish()} className="inline-flex items-center gap-2 rounded-lg border border-primary px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"><Cloud className="h-3.5 w-3.5" />{t("storefront.studio.publish")}</button>
       </header>
 
       {conflict ? (

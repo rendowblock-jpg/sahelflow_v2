@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createDefaultStorefrontTheme } from "./theme-default";
 import { normalizeStorefrontTheme, switchStorefrontTemplate } from "./theme-normalize";
 import { storefrontStudioDraftSchema, storefrontStudioThemeSchema } from "./studio-schema";
@@ -125,5 +127,20 @@ describe("Storefront Builder V2", () => {
       verificationValue: null,
       lastCheckedAt: null,
     });
+  });
+
+  it("keeps Studio autosaves private until an explicit compare-and-set publish", () => {
+    const root = process.cwd();
+    const studio = readFileSync(join(root, "src/components/storefront/studio/storefront-studio.tsx"), "utf8");
+    const service = readFileSync(join(root, "src/lib/storefront/service.ts"), "utf8");
+    const publicPage = readFileSync(join(root, "src/app/storefront/[slug]/page.tsx"), "utf8");
+    expect(studio).toContain('method: "PATCH"');
+    expect(studio).toContain('expectedDraftUpdatedAt: version');
+    expect(studio).toContain('method: "POST"');
+    expect(service).toContain("async saveStudioDraft");
+    expect(service).toContain("draftTheme: JSON.stringify(draft.theme)");
+    expect(service).toContain("async publishStudioDraft");
+    expect(publicPage).toContain("storefrontService.getBySlug");
+    expect(publicPage).not.toContain("getStudioDraftById");
   });
 });

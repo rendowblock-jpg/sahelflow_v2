@@ -31,14 +31,18 @@ export async function createStorefront(
   ) {
     return json({ error: "invalid_request" }, 400);
   }
-  if (!(await authorizeDesktop(request, environment, workspaceId))) {
+  const authority = await authorizeDesktop(request, environment, workspaceId);
+  if (!authority) {
     return json({ error: "unauthorized" }, 401);
   }
   try {
     const result = await environment.DB.prepare(
       `INSERT INTO storefront
         (storefront_id, workspace_id, shop_id, slug, receipt_encryption_public_key)
-       VALUES (?1, ?2, ?3, ?4, ?5)`,
+       SELECT ?1, ?2, ?3, ?4, ?5
+        WHERE (
+          SELECT COUNT(*) FROM storefront WHERE workspace_id = ?2
+        ) < ?6`,
     )
       .bind(
         storefrontId,
@@ -46,9 +50,11 @@ export async function createStorefront(
         shopId,
         slug,
         input.receiptEncryptionPublicKey,
+        authority.shopSlots,
       )
       .run();
     if (!result.success) return json({ error: "storefront_unavailable" }, 503);
+    if (result.meta?.changes !== 1) return json({ error: "storefront_limit_reached" }, 403);
   } catch {
     return json({ error: "storefront_conflict" }, 409);
   }

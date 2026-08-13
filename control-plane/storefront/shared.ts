@@ -26,23 +26,33 @@ function bearer(request: Request): string | null {
   return value?.startsWith("Bearer ") ? value : null;
 }
 
+export interface DesktopStorefrontAuthority {
+  workspaceId: string;
+  shopSlots: number;
+}
+
 export async function authorizeDesktop(
   request: Request,
   environment: StorefrontWorkerEnvironment,
   workspaceId: string,
-): Promise<boolean> {
+): Promise<DesktopStorefrontAuthority | null> {
   const authorization = bearer(request);
-  if (!authorization) return false;
+  if (!authorization) return null;
   try {
     const response = await environment.CONTROL.fetch(
       new Request(
-        `https://connected.internal/v1/desktop/devices?workspaceId=${encodeURIComponent(workspaceId)}`,
+        `https://connected.internal/v1/desktop/authority?workspaceId=${encodeURIComponent(workspaceId)}&feature=storefront`,
         { method: "GET", headers: { Authorization: authorization } },
       ),
     );
-    return response.status === 200;
+    if (response.status !== 200) return null;
+    const body = await response.json() as Record<string, unknown>;
+    return body.workspaceId === workspaceId && typeof body.shopSlots === "number" &&
+      Number.isSafeInteger(body.shopSlots) && body.shopSlots > 0
+      ? { workspaceId, shopSlots: body.shopSlots }
+      : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
