@@ -579,6 +579,17 @@ describe("canonical courier booking and tracking", () => {
       trackingId: "ECO-HISTORICAL-DELIVERED",
       cost: 550,
     }));
+    const booked = await getCanonicalCourierPosition(context, orderId);
+    await ingestCanonicalCourierTrackingEvent(context, {
+      deliveryId: booking.result.deliveryId,
+      provider: "ecotrack",
+      providerEventId: "eco-historical-picked-up",
+      status: "picked_up",
+      occurredAt: "2026-08-13T10:00:00.000Z",
+      reasonCode: "provider-ecotrack-picked-up",
+      expectedVersion: booked.orderVersion,
+      idempotencyKey: "courier-event:eco-historical-picked-up",
+    });
     const terminalEvent = {
       status: "delivered" as const,
       timestamp: "2026-08-13T11:00:00.000Z",
