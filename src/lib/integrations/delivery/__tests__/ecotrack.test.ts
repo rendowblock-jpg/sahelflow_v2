@@ -110,4 +110,22 @@ describe("EcoTrack courier adapter", () => {
     expect(result.deliveryCompany).toBe("Courier Test");
     expect(result.events.map((event) => event.status)).toEqual(["created", "delivered"]);
   });
+
+  it("never classifies non livré as delivered", async () => {
+    mockFetch.mockResolvedValueOnce(
+      response({
+        "TRACK-123": {
+          OrderInfo: { tracking: "TRACK-123" },
+          activity: [
+            { event_key: "non_livre", event: "Non livré", date: "2026-08-03" },
+          ],
+        },
+      }),
+    );
+    const result = await ecoTrackAdapter.syncTracking("TRACK-123", credentials);
+    expect(result.status).toBe("refused");
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0]?.status).toBe("refused");
+    expect(result.events.some((event) => event.status === "delivered")).toBe(false);
+  });
 });

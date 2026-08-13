@@ -146,9 +146,9 @@ function status(activity: EcoTrackActivity): DeliveryStatus {
   const text = `${activity.event_key ?? ""} ${activity.event ?? ""}`
     .trim()
     .toLowerCase();
+  if (/refus|non.?livr/.test(text)) return "refused";
   if (/livr(ed|e|é)|\blivre\b/.test(text)) return "delivered";
-  if (/refus/.test(text)) return "refused";
-  if (/not_received|non.?livr|echec|échoué|suspendu/.test(text)) return "failed";
+  if (/not_received|echec|échoué|suspendu/.test(text)) return "failed";
   if (/retour|return/.test(text)) return "returned";
   if (/fdr_activated|en livraison|redispatch|mise_a_jour/.test(text)) {
     return "out_for_delivery";
