@@ -63,13 +63,23 @@ async function waitForHydration(page: Page) {
     state: "attached",
     timeout: 30_000,
   });
-  // Global client hydration can complete before a streamed dashboard segment has
-  // replaced its loading shell. Semantic, reflow and accessibility evidence must
-  // inspect the actual route work surface rather than that transient fallback.
-  await page.locator('main[aria-busy="true"][aria-label]').waitFor({
-    state: "detached",
-    timeout: 30_000,
-  });
+}
+
+async function waitForWorkSurface(page: Page, route: string) {
+  await waitForHydration(page);
+  await page.waitForURL((url) => url.pathname === route, { timeout: 30_000 });
+  // Route-level loading boundaries such as Inbox and Agents can remain mounted
+  // after global client hydration. The completion gate must inspect the real
+  // work surface, so use the same level-one-heading contract as the readiness
+  // signal instead of depending on any particular spinner/skeleton markup.
+  await expect(
+    page
+      .locator(
+        '#main-content h1, #main-content [role="heading"][aria-level="1"]',
+      )
+      .first(),
+    `${route} should finish loading its work-surface heading`,
+  ).toBeAttached({ timeout: 30_000 });
 }
 
 async function setLocale(context: BrowserContext, locale: Locale) {
@@ -259,7 +269,7 @@ async function assertRenderedRoute(
     response!.status(),
     `${route} should not return an HTTP error`,
   ).toBeLessThan(400);
-  await waitForHydration(page);
+  await waitForWorkSurface(page, route);
   await expect(page.locator("html")).toHaveAttribute("lang", locale);
   await expect(page.locator("html")).toHaveAttribute("dir", dir);
   await expect(page.locator("body")).not.toContainText("Internal Server Error");
