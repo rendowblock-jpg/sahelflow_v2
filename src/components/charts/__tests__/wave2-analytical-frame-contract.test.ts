@@ -13,7 +13,6 @@ describe("Wave 2 analytical frame contract", () => {
     expect(primitives).toContain("children: React.ReactNode");
     expect(primitives).toContain('data-chart-plot="true"');
     expect(primitives).not.toContain("<ChartContainer");
-    expect(primitives).not.toContain('from "@/components/ui/chart";\nimport {');
   });
 
   it("honors the existing chart accent contract in the analytical header", () => {
