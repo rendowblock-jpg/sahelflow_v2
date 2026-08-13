@@ -5,9 +5,11 @@
  * LOCALE COMMIT MODEL:
  * The `sahelflow-locale` cookie is the durable request/server authority. An
  * interactive locale choice writes that cookie first, but does not immediately
- * mutate document direction or hydrated copy. The refreshed Server Component
- * tree returns with the requested locale and `ServerLocaleProvider` commits that
- * server-confirmed locale to this mirror plus `<html lang/dir>` before paint.
+ * mutate document direction or hydrated copy. The interaction then performs a
+ * full-document reload so no Next client router/prefetch entry from the previous
+ * locale survives. The returned Server Component tree carries the requested
+ * locale and `ServerLocaleProvider` commits that server-confirmed locale to this
+ * mirror plus `<html lang/dir>` before paint.
  *
  * This prevents the previous split state where client navigation/RTL flipped
  * while server-translated route content still belonged to the old request.
@@ -96,8 +98,9 @@ function setLocaleCookie(locale: Locale): void {
 
 /**
  * Request a locale for the next Server Component tree without changing the
- * currently committed client geometry/copy. Call `router.refresh()` immediately
- * after this from the interaction boundary.
+ * currently committed client geometry/copy. The interaction boundary must follow
+ * this with a full-document navigation/reload so stale client router prefetch
+ * entries cannot survive the locale authority transition.
  */
 export function requestLocale(locale: Locale): void {
   setLocaleCookie(locale);
