@@ -2,148 +2,101 @@
 
 > **Status:** Active documentation entry point
 > **Last reconciled:** 2026-08-13
-> **Protected application-changing baseline:** `856f58126327797b467938390586a04f185e70f6` — PR #244
-> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
-> **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
-> **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
-> **AI Agents route adoption:** PR #240 / `598e2a0dc0352227431614cf1527672aa78ec015`
-> **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
-> **Orders + confirmation route adoption:** PR #244 / `856f58126327797b467938390586a04f185e70f6`
-> **Phase 5 historical application-changing checkpoint:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
-> **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
-> **Published release:** `1.0.0-internal.14`, protected signed run `31388777098`
-> **Founder-installed release:** Internal.14
-> **Founder-accepted baseline:** Internal.5
-> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Active implementation/release frontier:** PR #245 — FD-032 Internal.15 Founder-only offline checkpoint
-> **Mandatory gate before Phase 8:** whole-product frontend adoption + installed Phase 6/7 closure + live #230 + explicit Founder acceptance
+> **Protected application-changing baseline:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245 Internal.15 merge
+> **Latest protected route work:** PR #236 shared frontend roots; #237 Inbox; #240 AI Agents; #242 Settings; #244 Orders + confirmation
+> **Current Founder decision:** FD-033 — Internal.16 completion convergence
+> **Next application milestone:** `1.0.0-internal.16` / MSI `1.0.0.16`
 > **Open retained issues:** #221, #226, #230
 > **Execution epic:** #164
 
-Live protected `main`, releases, open PRs/issues and current Actions must be read
-before implementation. Chat history and archived reports are context/evidence only.
+Live protected `main`, releases, open PRs/issues and current Actions must be re-fetched
+before implementation or release claims. Chat/archives are context only unless a newer
+explicit Founder decision has been recorded into active authority.
 
-## Active authority chain
+## Read this order
 
-SahelFlow uses ten active Markdown authorities:
+SahelFlow keeps ten standing Markdown authorities:
 
-1. [`product/PRODUCT.md`](product/PRODUCT.md) — seller, jobs, outcomes, tiers and acceptance.
+1. [`product/PRODUCT.md`](product/PRODUCT.md) — seller/jobs/outcomes/capability acceptance.
 2. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — interaction, visual, RTL and accessibility requirements.
-3. [`product/DECISIONS.md`](product/DECISIONS.md) — Founder/product decision log.
+3. [`product/DECISIONS.md`](product/DECISIONS.md) — consolidated Founder/product decision register through FD-032.
 4. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — technical invariants and canonical ownership.
-5. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) — merged truth and named evidence only.
-6. [`system/ROADMAP.md`](system/ROADMAP.md) — binding Phase 0–9 order and exit criteria.
-7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — development, research, review, CI and merge process.
-8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact resumable execution frontier and the single session-resume owner.
+5. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) — current source/evidence truth plus clearly labeled next frontier.
+6. [`system/ROADMAP.md`](system/ROADMAP.md) — binding Phase 0–9 program and Internal.16 convergence order.
+7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — research, implementation, review, CI and release process.
+8. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact resumable execution frontier.
 9. [`research/RESEARCH.md`](research/RESEARCH.md) — adopted primary-source research and implications.
 10. This file — navigation and authority order.
 
-Repository `AGENTS.md` is the coding-agent entry point. Issue #164 is the execution
-dashboard; it cannot silently weaken a higher authority. Do not create a parallel
-permanent handoff/plan surface; fold resumable context into Working Memory and
-source-grounded truth into Current State/Roadmap.
+### Active decision addendum
 
-## Historical continuity anchors
+Read [`product/FD-033-INTERNAL16-COMPLETION.md`](product/FD-033-INTERNAL16-COMPLETION.md)
+immediately after `DECISIONS.md`.
 
-The **Published Internal.14 checkpoint** remains distinct from later protected
-source. The earlier Phase 5 source/browser checkpoint remains **PR #220** at
-`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Retained **issue #221** owns the
-installed Founder acceptance obligation. The audit lineage intentionally names
-**issues #201, #214, #221, #226 and #230**; #201/#214 are closed by stronger later
-evidence while #221/#226/#230 remain open.
+FD-033 is the Founder's newer explicit decision for the exact post-Internal.15
+completion sprint. Until it is later consolidated into the historical decision
+register, it supersedes only conflicting lower execution-order/cadence instructions.
+It does **not** weaken Phase 1–4 authority, P0/P1 blocking, #230, preservation,
+provider truth, external review or Stable gates.
+
+Repository `AGENTS.md` remains the coding-agent entry point. Issue #164 is execution
+tracking, not a higher product/architecture authority. Do not create another permanent
+masterplan or handoff surface.
 
 ## Current product truth
 
-Phases 0–4 remain protected under their documented canonical boundaries. Earlier
-Phase 5/6/7 browser/source checkpoints remain valid for exactly what their frozen
-heads proved. Internal.14 installed use nevertheless rejected the published
-frontend as the whole-product quality baseline, so the mandatory pre-Phase-8
-program continues under the existing Phase 5/6/7 authorities.
+Phases 0–4 remain protected. Shared frontend roots and the first task-shaped route
+adoptions are protected through PRs #236/#237/#240/#242/#244. PR #245 is merged at
+`371aebc2...` and binds exact Internal.15 to FD-032 Founder-only offline authority.
 
-PR #236 repaired the shared frontend roots. PR #237 protects Inbox route adoption.
-PR #240 protects AI Agents route adoption. PR #242 now protects Settings route
-adoption.
+A PR merge is not proof that the signed release published or that the Founder installed
+and accepted it. Re-fetch release/installed evidence before claiming Internal.15
+publication/acceptance.
 
-### PR #237 — Inbox protected
+The Founder now directs Internal.16 to be built as the complete-product candidate:
+remaining Phase 5/6/7 closure plus full Phase 8, EcoTrack Pro replacing NOEST, and
+whole-product AI workspace/order-extraction/tool correctness/performance assurance.
+The detailed scope lives in FD-033 and `ROADMAP.md`.
 
-Protected squash merge `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
-establishes the database-authoritative Inbox workspace while preserving the
-Phase 1–4/Phase 3 engine. Final pre-merge head
-`8e9d5aa365f0c5873909c1c8517f88519d743b9d` passed exact-head CI, Phase 5 and
-Phase 6–7 evidence before expected-head squash merge.
+## Internal.16 operating constraint
 
-### PR #240 — AI Agents protected
+The current operating window is a 24-hour completion-and-first-revenue sprint with no
+paid marketing/infrastructure budget available before first revenue and a near-term
+objective of at least USD 100 equivalent collected revenue.
 
-Protected squash merge `598e2a0dc0352227431614cf1527672aa78ec015`
-establishes the task-shaped AI operational workspace while preserving the existing
-proposal/action authority. Final pre-merge head
-`6355cc4c797a597af52c90decfe7727e405749be` passed:
+This does not lower the engineering bar. Internal.16 uses one whole-product
+reconnaissance, one consolidated Problem Register, one large dependency-correct
+implementation wave, targeted cheap checks during coding, one frozen full-product
+certification, one consolidated repair batch and a final complete proof. Avoid
+repetitive tiny-change/full-MSI/eight-hour loops.
 
-- CI `31535669292` and Required PR gate;
-- Phase 5 Experience `31535668960` and required aggregate gate;
-- Phase 6–7 Completion `31535668966` and required aggregate gate;
-- fresh adversarial review with all four material threads resolved before merge.
+Cloudflare Free allowances may bootstrap the pre-revenue/first-buyer platform when
+measured capacity is sufficient. The first collected payment may fund the owned domain
+and paid capacity if needed. Provider hostnames are not substitutes for #230.
 
-Protected outcomes include durable recent session history, separate session/thread/
-context zones, product-shaped tool results, explicit setup/provider/persistence/
-action-history degradation, live-region/tail-follow accessibility, mobile drill-in,
-AR/FR/EN/RTL parity and exact seller-message preservation. Sensitive execution
-remains server-owned and bound to exact persisted proposal digest, permission,
-shop, license and target-state revalidation.
+## Internal.16 required completion themes
 
-### PR #242 — Settings protected
+- remaining route-wide AAA frontend adoption;
+- AR/FR/EN, Arabic/RTL, accessibility and theme/motion/density coherence;
+- T470/floor performance and required final eight-hour stability evidence;
+- full Phase 8 remote/control-plane/storefront/PWA/zero-knowledge-backup/Founder-Console implementation;
+- NOEST removal and first-class EcoTrack Pro integration using authoritative provider-issued API contracts;
+- AI workspace long-session/streaming/degraded-state quality;
+- held-out Algerian COD order-extraction accuracy/calibration/fallback/performance benchmark;
+- every AI tool/action authority/correctness/idempotency/error/privacy/performance matrix;
+- clean install and Internal.15 → Internal.16 updater/recovery/preservation proof;
+- zero known P0/P1 before a user-ready claim.
 
-Protected squash merge `6e4477198f33344cd48c9230b32ff726079cd64d`
-establishes the task-shaped Settings operational workspace while preserving the
-existing configuration, identity, provider, licensing, backup/recovery and
-lifecycle authorities. Final pre-merge head
-`e749b0af05741ee45b16c349750d44092bd3beb9` passed:
+See `CURRENT_STATE.md`, `ROADMAP.md`, `WORKFLOW.md` and `WORKING_MEMORY.md` for the
+current exact execution contract.
 
-- CI `31546488691` and Required PR gate;
-- Phase 5 Experience `31546488465` and required aggregate gate;
-- Phase 6–7 Completion `31546488422` and required aggregate gate, including the
-  full AR/FR/EN accessibility, 200%-equivalent reflow and performance browser
-  evidence;
-- final review state with no unresolved material review thread before merge.
+## Retained evidence truth
 
-Settings now groups configuration into seller-oriented Experience & operations,
-Connections, Team & security and Data & recovery workspaces. It distinguishes
-loading/authoritative/unavailable or recent-PIN verification truth; separates
-commerce read/manage/sync, phone read/manage and backup read/create/restore
-capabilities; removes competing hard-coded integration status; keeps secret values
-server-side; preserves approval + recent-PIN destructive ceremonies; and routes
-manual daily-report execution through authenticated `settings.manage` rather than
-browser-visible cron authority.
+- **#221:** installed whole-product visual/accessibility + Founder acceptance.
+- **#226:** installed Phase 7 performance/reliability.
+- **#230:** customer-online owned-domain, primary/recovery ingress, representative
+  Algerian network and installed trial certification.
 
-PR #240, PR #242 and PR #244 are source/browser evidence only. They do **not** close
-#221/#226/#230 and are not installed Founder acceptance.
-
-## Current release frontier — FD-032 Internal.15
-
-FD-032 authorizes `1.0.0-internal.15` only as a Founder/internal-lab offline
-checkpoint. Its artifact must package no trial-service URL, expose no online-trial
-action, and retain the signed permanent offline entitlement path. The mode is bound
-to the exact version and decision so a later release fails closed instead of
-inheriting the exception.
-
-This is not a customer release or online-trial certification. Issue #230 remains
-open P1; a verified SahelFlow-owned domain, distinct primary/recovery ingress,
-representative Algerian-network reachability and signed installed trial evidence
-remain mandatory before distribution to users. Phase 8 remains frozen.
-
-## Retained issue truth
-
-- **#221 — open:** coherent repaired installed visual/accessibility + Founder acceptance.
-- **#226 — open:** installed Phase 7 performance/reliability certification.
-- **#230 — open P1:** live resilient customer-trial activation on representative Algerian networks.
-
-Historical #201/#214 are closed by stronger exact #234 evidence. Internal.14
-remains the published installed Internal, not the Founder-accepted baseline. No
-Beta or Stable claim exists.
-
-## Resume context
-
-`operations/WORKING_MEMORY.md` is the single detailed session-resume owner.
-`system/CURRENT_STATE.md` owns merged evidence truth and `system/ROADMAP.md` owns
-dependency/exit order. Supporting primary-source frontend research remains under
-`archive/research/` and is supporting evidence only.
+These obligations are integrated into the Internal.16/user-release evidence plan but
+are not silently marked passed. Stable additionally retains its external security,
+privacy/legal, provider and representative-beta requirements.
