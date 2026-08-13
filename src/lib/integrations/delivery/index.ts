@@ -76,19 +76,17 @@ async function readCredentialKeys(
 
 export async function loadDeliveryCredentials(
   context: ServiceContext,
-  provider: string,
+  rawProvider: string,
 ): Promise<DeliveryCredentials> {
   await assertProviderEffectsAllowed(context);
-  const normalized = normalizeDeliveryProvider(provider);
-  if (!normalized) {
-    throw new Error(`Unknown delivery provider: "${provider}".`);
+  const provider = normalizeDeliveryProvider(rawProvider);
+  if (!provider) {
+    throw new Error(`Unknown delivery provider: "${rawProvider}".`);
   }
 
-  const current = await readCredentialKeys(
-    context,
-    deliverySecretKeys(normalized),
-  );
-  if (Object.values(current).some(Boolean) || provider !== "noest") {
+  const keys = deliverySecretKeys(provider);
+  const current = await readCredentialKeys(context, keys);
+  if (Object.values(current).some(Boolean) || rawProvider !== "noest") {
     return current;
   }
 
