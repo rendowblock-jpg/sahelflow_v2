@@ -2,9 +2,11 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028; FD-029; FD-030; FD-031; FD-032; FD-033 — Internal.16 completion convergence
-> **Protected application-changing baseline:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
-> **Latest application-changing protected merge:** PR #245 — Internal.15 Founder-only offline checkpoint
+> **Protected main release checkpoint:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
+> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
+> **Application-changing protected baseline:** `856f58126327797b467938390586a04f185e70f6`
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
+> **Published release:** `1.0.0-internal.14` — source `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Next milestone:** `1.0.0-internal.16` / MSI `1.0.0.16` complete-product candidate
 > **Installed discovery:** CLOSED 2026-08-13; 17 Founder-installed P1 inputs frozen under FD-033
@@ -44,6 +46,14 @@ Phase 3 remains protected through its existing provider, Inbox, AI and automatio
 ## Phase 5 — whole-product AAA desktop experience
 
 Protected source/browser work remains valid: shared roots #236, Inbox #237, AI #240, Settings #242, Orders #244. The Phase 5 application-changing protected baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Installed Internal.15 proves whole-product experience is still open.
+
+### Protected route evidence retained
+
+- **Inbox — SATISFIED IN SOURCE/BROWSER BY PR #237** at final exact head `8e9d5aa365f0c5873909c1c8517f88519d743b9d`.
+- **AI Agents — SATISFIED IN SOURCE/BROWSER BY PR #240** at final exact head `6355cc4c797a597af52c90decfe7727e405749be`.
+- **Settings — SATISFIED IN SOURCE/BROWSER BY PR #242** at final exact head `e749b0af05741ee45b16c349750d44092bd3beb9`.
+- **Orders + confirmation — SATISFIED IN SOURCE/BROWSER BY PR #244** at application-changing protected baseline `856f58126327797b467938390586a04f185e70f6`.
+- **Settings satisfied in source/browser — PR #242** remains a historical closure marker; it did not close installed whole-product acceptance.
 
 ### Remaining route/workspace convergence
 
@@ -124,6 +134,12 @@ The **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity r
 - search and AI latency separate local SahelFlow overhead from database/model/provider/network time;
 - final candidate completes the required eight-hour trend.
 
+## Mandatory pre-Phase-8 stabilization and Founder-acceptance gate
+
+Before FD-033, the roadmap stated **Implementation frozen behind the mandatory pre-Phase-8 gate** and **Next — FD-032 Internal.15 installed checkpoint**. The **Internal.15 Founder checkpoint — ACTIVE UNDER FD-032** wording describes that exact historical release frontier.
+
+FD-033 supersedes only that execution-order freeze for Internal.16: Phase 8 implementation may now be developed in the same convergence branch as remaining Phase 5/6/7 work, but every obligation from the mandatory gate remains an integrated Internal.16 acceptance requirement. The old freeze is not evidence that those gates passed.
+
 ## Internal.16 integrated acceptance gate
 
 Under FD-033, old pre-Phase-8 sequencing is superseded only for implementation order. Before a user-ready Internal.16 claim:
@@ -156,6 +172,8 @@ Issue #230 remains P1 for customer-online/public trial: verified SahelFlow-owned
 ## Historical continuity and merge discipline
 
 The earlier completion program used a **complete reconnaissance** before freezing each Phase Problem Register and relied on exact frozen heads plus **expected-head merge** discipline after selected gates passed. FD-033 changes the cadence for the exact Internal.16 completion wave, not those integrity principles.
+
+The last published executable remains source `2d60e2e74109b6e03626a5ccdff727c029a34591`, **Published release:** `1.0.0-internal.14`; PR #245 later merged the FD-032 Internal.15 Founder checkpoint authority. This historical publication marker is retained until a newer signed release is actually proven.
 
 ## Definition of done
 
