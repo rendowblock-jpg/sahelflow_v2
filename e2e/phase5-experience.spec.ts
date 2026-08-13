@@ -302,27 +302,31 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await expect(pageHeading).toHaveText("Comptabilité");
     await assertDesktopSidebarEdge(page, "ltr");
 
-    // Hold only the refresh triggered by this locale interaction. Visible copy and
-    // geometry must remain on the committed French tree while the Arabic RSC tree
-    // is delayed, then move together when that server tree arrives.
+    // Hold the document request triggered by this locale interaction. Visible
+    // copy and geometry must remain on the committed French document while the
+    // Arabic document is blocked, then move together when that document commits.
     let localeSwitchStarted = false;
-    let delayedRefreshObserved = false;
+    let delayedDocumentObserved = false;
+    let releaseDocument!: () => void;
+    const documentGate = new Promise<void>((resolve) => {
+      releaseDocument = resolve;
+    });
     await page.route("**/accounting**", async (route) => {
       const requestUrl = new URL(route.request().url());
       if (
         localeSwitchStarted &&
         requestUrl.pathname === "/accounting" &&
-        route.request().resourceType() === "fetch"
+        route.request().resourceType() === "document"
       ) {
-        delayedRefreshObserved = true;
-        await new Promise((resolve) => setTimeout(resolve, 1_000));
+        delayedDocumentObserved = true;
+        await documentGate;
       }
       await route.continue();
     });
 
     localeSwitchStarted = true;
-    await selectLocale(page, "Français", "العربية");
-    await expect.poll(() => delayedRefreshObserved).toBe(true);
+    const localeSwitch = selectLocale(page, "Français", "العربية");
+    await expect.poll(() => delayedDocumentObserved).toBe(true);
     await expect(html).toHaveAttribute("lang", "fr");
     await expect(html).toHaveAttribute("dir", "ltr");
     await expect(shell).toHaveAttribute("dir", "ltr");
@@ -330,6 +334,9 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await expect(pageHeading).toHaveText("Comptabilité");
     await assertDesktopSidebarEdge(page, "ltr");
 
+    releaseDocument();
+    await localeSwitch;
+    await waitForHydration(page);
     await expect(html).toHaveAttribute("lang", "ar");
     await expect(html).toHaveAttribute("dir", "rtl");
     await expect(shell).toHaveAttribute("dir", "rtl");
