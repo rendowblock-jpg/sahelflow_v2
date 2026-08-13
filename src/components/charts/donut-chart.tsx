@@ -7,6 +7,10 @@
 import { Pie, PieChart, Cell } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { useI18n } from "@/hooks/use-i18n";
+import {
+  DEFAULT_CHART_HEIGHT,
+  type ChartHeight,
+} from "./chart-primitives";
 
 export interface DonutDatum {
   key: string;
@@ -18,7 +22,7 @@ export interface DonutDatum {
 interface DonutChartProps {
   data: DonutDatum[];
   config: ChartConfig;
-  height?: number;
+  height?: ChartHeight;
   centerLabel?: string;
   centerValue?: string;
   innerRadius?: number;
@@ -29,7 +33,7 @@ interface DonutChartProps {
 export function DonutChart({
   data,
   config,
-  height = 300,
+  height = DEFAULT_CHART_HEIGHT,
   centerLabel,
   centerValue,
   emptyMessage,
