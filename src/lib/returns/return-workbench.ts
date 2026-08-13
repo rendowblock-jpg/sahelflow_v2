@@ -78,14 +78,28 @@ function clampPageSize(value: number | undefined) {
   return Math.min(value!, MAX_PAGE_SIZE);
 }
 
+function returnSearchWhere(q: string | undefined) {
+  const value = q?.trim();
+  if (!value) return {};
+  // Return reason/notes can contain customer context, so universal search stays
+  // on operational identifiers and lifecycle vocabulary here.
+  return {
+    OR: [
+      { status: { contains: value } },
+      { type: { contains: value } },
+      { order: { orderNumber: { contains: value } } },
+    ],
+  };
+}
+
 export async function getReturnWorkbenchPage(
   actorContext: TrustedActorContext,
-  query: { page?: number; pageSize?: number } = {},
+  query: { page?: number; pageSize?: number; q?: string } = {},
 ): Promise<ReturnWorkbenchResponse> {
   const access = resolveReturnWorkbenchAccess(actorContext);
   const page = clampPage(query.page);
   const pageSize = clampPageSize(query.pageSize);
-  const where = { deletedAt: null } as const;
+  const where = { deletedAt: null, ...returnSearchWhere(query.q) };
   const [sourceRows, total] = await Promise.all([
     db.return.findMany({
       where,

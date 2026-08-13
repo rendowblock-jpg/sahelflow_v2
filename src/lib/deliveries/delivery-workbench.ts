@@ -89,14 +89,32 @@ function statusWhere(status: string | undefined) {
   return {};
 }
 
+function deliverySearchWhere(q: string | undefined) {
+  const value = q?.trim();
+  if (!value) return {};
+  // Deliberately search only non-PII operational identifiers here. Customer PII
+  // remains behind its purpose-specific protected search authority.
+  return {
+    OR: [
+      { trackingNumber: { contains: value } },
+      { provider: { contains: value } },
+      { order: { orderNumber: { contains: value } } },
+    ],
+  };
+}
+
 export async function getDeliveryWorkbenchPage(
   actorContext: TrustedActorContext,
-  query: { page?: number; pageSize?: number; status?: string } = {},
+  query: { page?: number; pageSize?: number; status?: string; q?: string } = {},
 ): Promise<DeliveryWorkbenchResponse> {
   const access = resolveDeliveryWorkbenchAccess(actorContext);
   const page = clampPage(query.page);
   const pageSize = clampPageSize(query.pageSize);
-  const where = { deletedAt: null, ...statusWhere(query.status) };
+  const where = {
+    deletedAt: null,
+    ...statusWhere(query.status),
+    ...deliverySearchWhere(query.q),
+  };
   const [sourceRows, total] = await Promise.all([
     db.delivery.findMany({
       where,

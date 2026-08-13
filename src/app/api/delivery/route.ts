@@ -14,6 +14,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     page: Number.parseInt(searchParams.get("page") ?? "1", 10),
     pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
     status: searchParams.get("status") ?? undefined,
+    q: searchParams.get("q") ?? undefined,
   });
   return NextResponse.json(result);
 }, "GET /api/delivery");
