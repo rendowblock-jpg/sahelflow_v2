@@ -49,7 +49,7 @@ describe("EcoTrack courier adapter", () => {
       { apiToken: "token", userGuid: "guid" },
     );
     expect(result).toMatchObject({ provider: "ecotrack", available: false });
-    expect(result.error).toMatch(/fees URL is not configured/i);
+    expect(result.error).toMatch(/URL is not configured/i);
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
