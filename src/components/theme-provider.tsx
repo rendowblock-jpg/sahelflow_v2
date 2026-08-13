@@ -40,16 +40,6 @@ interface ThemeContextValue {
   presets: ThemePreset[];
 }
 
-interface AppearanceViewTransition {
-  finished: Promise<void>;
-}
-
-interface ViewTransitionDocument extends Document {
-  startViewTransition?: (
-    update: () => void | Promise<void>,
-  ) => AppearanceViewTransition;
-}
-
 const STORAGE_KEY = "theme";
 const PRESET_STORAGE_KEY = "sahelflow-theme-preset";
 const THEME_CHANGE_EVENT = "sahelflow:theme-change";
@@ -106,9 +96,13 @@ function commitAppearanceTransition(update: () => void): void {
     return;
   }
 
-  const startViewTransition = (
-    document as ViewTransitionDocument
-  ).startViewTransition?.bind(document);
+  // TypeScript's DOM authority now declares View Transitions natively. Runtime
+  // feature detection is still required because older installed WebView2 builds
+  // can expose a Document without the method despite the compile-time library.
+  const startViewTransition =
+    typeof document.startViewTransition === "function"
+      ? document.startViewTransition.bind(document)
+      : null;
   if (!startViewTransition) {
     update();
     return;
