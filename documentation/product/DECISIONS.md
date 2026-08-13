@@ -1,15 +1,14 @@
 # SahelFlow 1.0 — Consolidated Founder Decisions
 
-> **Status:** Authoritative Founder-approved register through FD-032
+> **Status:** Authoritative Founder-approved register through FD-033
 > **Consolidated:** 2026-07-29
-> **Newer exact addendum:** [`FD-033-INTERNAL16-COMPLETION.md`](FD-033-INTERNAL16-COMPLETION.md) governs Internal.16 completion convergence and supersedes only the execution-order/cadence clauses it names.
+> **Last amended:** 2026-08-13
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
-This register consolidates approved product and execution decisions through FD-032. Engineering
+This register consolidates approved product and execution decisions through FD-033. Engineering
 mechanisms remain subject to architecture, research, security review, provider
 certification and evidence gates, but engineering may not contradict these
-policies without a new numbered Founder decision. **FD-033 is a newer numbered
-decision and must be read after this file for Internal.16.**
+policies without a new numbered Founder decision.
 
 ---
 
@@ -532,6 +531,9 @@ This decision clarifies how FD-028 is executed. It does not replace the Phase
 
 ### Package, CI and session discipline
 
+- After the current Teams package, PR #195 stops accumulating new phases.
+  Licensing, native multi-shop and later outcomes use short outcome PRs from
+  current protected `main`.
 - Before implementation, every package inventories production consumers, direct
   tests and mocks, data/migration effects, protected fields, UI states, Arabic,
   accessibility, recovery, performance, legacy removal and required evidence.
@@ -628,11 +630,65 @@ This decision records the Founder's explicit 2026-08-13 direction for
   blocks the Founder-only Internal.15 checkpoint. It does not supersede the owned-domain
   requirement for user distribution and does not reuse or extend FD-031.
 
+## FD-033 — Internal.16 completion convergence, first-revenue bootstrap and whole-product assurance
+
+This decision records the Founder’s explicit 2026-08-13 completion directive after installing and inspecting Internal.15.
+
+### Completion target and cadence
+
+- Internal.16 (`1.0.0-internal.16` / MSI `1.0.0.16`) is built as the first complete-product candidate, not another partial route/subsystem checkpoint.
+- The 24-hour completion/first-revenue constraint and zero paid marketing/infrastructure budget before first revenue change sequencing and economics, never the integrity/evidence bar.
+- Remaining Phase 5 whole-product AAA work, Phase 6 Arabic/RTL/accessibility closure, Phase 7 performance/reliability work and full Phase 8 connected-platform implementation may converge in one dependency-correct implementation frontier.
+- Execution is: exact-source whole-product reconnaissance → combined Problem Register/contracts/acceptance freeze → one large implementation wave with targeted cheap checks → one frozen deep certification/adversarial review → one consolidated repair batch → affected plus final complete proof.
+- Do not run full MSI/replacement-install/eight-hour certification after every tiny edit; do not weaken or retry-away deterministic failures.
+
+### Frozen Founder-installed Internal.15 acceptance input
+
+The Founder explicitly closed installed discovery after Parts 1–3. These 17 P1 classes are frozen inputs to Internal.16; the implementation agent owns exhaustive sibling/root discovery during the exact-source reconnaissance:
+
+1. `SF16-UI-001` systemic Arabic/RTL geometry and bidi parity.
+2. `SF16-UI-002` Risk Engine KPI hierarchy.
+3. `SF16-UI-003` shared stat-card interaction semantics.
+4. `SF16-I18N-004` locale-safe money/date/number/chart formatting.
+5. `SF16-INBOX-005` final AAA Inbox convergence.
+6. `SF16-AI-006` final AAA AI workbench convergence.
+7. `SF16-I18N-007` zero unresolved translation keys/unintended foreign system copy.
+8. `SF16-PRODUCTS-008` compact product-row primary thumbnails from existing image projection.
+9. `SF16-SEARCH-009` universal permission/shop-aware operational search.
+10. `SF16-AI-010` end-to-end Gemini key/provider/readiness/inference lifecycle.
+11. `SF16-RESP-011` deterministic responsive composition with no orphan card layouts.
+12. `SF16-LAYOUT-012` eliminate accidental stretched panels/low-information dead space.
+13. `SF16-CHART-013` top-tier governed decision-support chart system.
+14. `SF16-PERF-014` measured startup/first-post-update performance closure.
+15. `SF16-THEME-015` atomic smooth light/dark/system/preset switching.
+16. `SF16-I18N-016` atomic locale commit across current and subsequently navigated route cache/prefetch.
+17. `SF16-NAV-017` smarter default sidebar order plus user reorder/edit preference layered over canonical navigation authority.
+
+Repeated manifestations of those classes do not reopen Founder screenshot discovery. Newly proven P0/P1 root dependencies may be added before the combined source+installed Problem Register is frozen.
+
+### Phase 8 and provider direction
+
+- Full Phase 8 remains required in Internal.16: authenticated encrypted remote projection/commands, desktop-commit success semantics, multi-tenant Cloudflare control plane, hosted storefront with durable checkout receipt and atomic publish/rollback, operational PWA/browser companion, zero-knowledge backup transport, private Founder Console and outage/replay/duplicate/rollback/abuse/rate/cost/tenant-isolation controls.
+- Cloudflare Free may bootstrap first-buyer capacity when measured sufficient. Desktop remains canonical and cloud outage must not corrupt/block valid permanent local work.
+- Provider hostnames do not satisfy customer-online authority. Issue #230 remains P1 for a verified SahelFlow-owned domain, distinct primary/recovery HTTPS trial ingress, protected bindings, representative Algerian fixed/mobile reachability, forced recovery and signed installed customer-trial evidence.
+- Internal.16 removes NOEST/Nord et Ouest as a supported runtime provider identity and adds first-class EcoTrack Pro only from current authoritative provider-issued contracts. Historical `noest` records remain readable and source/conformance/live-certified states remain distinct under FD-030.
+
+### AI and assurance
+
+- AI workspace, order extraction and every model-exposed tool must be completed and benchmarked across AR/FR/EN/Darija/mixed inputs, long sessions, streaming/stop/retry, provider/quota/degraded states, proposal-bound actions, privacy/redaction, idempotency/ambiguity and T470/floor performance.
+- Gemini key setup must prove recent reauthentication → official current provider/model verification → encrypted save → immediate readiness → real minimal inference/extraction with localized stable error taxonomy. Provider model comments are not trusted without current official revalidation.
+- “99.99% sure” means every defined Required matrix executed at the applicable layer, zero known P0/P1 and exact final-candidate evidence; it is not a mathematical warranty against unknown defects.
+- Phase 1–4 canonical business/data/security/recovery authority is protected. No guessed provider capability, fake tool/cloud/provider success, low-confidence extraction promoted as truth, gate weakening, AppData loss or Stable claim from internal confidence is authorized.
+- Stable remains Phase 9 plus applicable external/representative evidence and explicit Founder promotion.
+
+### Exact next-session boundary
+
+The installed inspection is closed. The next session reads live protected `main` plus this decision, Current State, Roadmap, Workflow and Working Memory; creates/uses the one Internal.16 application branch from exact documentation-merged main; performs one exact-source whole-product reconnaissance; freezes the combined Problem Register/contracts/acceptance matrix; then begins the large implementation wave. It must not spend another session reconstructing Parts 1–3 from chat.
+
 ---
 
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states
 exactly what it supersedes. Engineering documents, code comments, agents, tests,
-issues and external research cannot silently amend this register. For Internal.16,
-read FD-033 immediately after this consolidated register.
+issues and external research cannot silently amend this register.
