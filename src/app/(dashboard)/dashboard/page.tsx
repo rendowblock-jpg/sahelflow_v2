@@ -58,6 +58,15 @@ export default async function DashboardPage() {
     fieldAccess,
   );
 
+  const dateLocale =
+    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+  const integerFormatter = new Intl.NumberFormat(dateLocale, {
+    maximumFractionDigits: 0,
+  });
+  const percentFormatter = new Intl.NumberFormat(dateLocale, {
+    style: "percent",
+    maximumFractionDigits: 0,
+  });
   const revenueSpark = analytics.revenueSeries.flatMap((point) =>
     point.revenue === null ? [] : [{ value: point.revenue }],
   );
@@ -143,7 +152,11 @@ export default async function DashboardPage() {
       <div className="card-grid-4">
         <StatCard
           label={t("dashboard.todaysOrders")}
-          value={stats.ordersToday ?? "—"}
+          value={
+            stats.ordersToday === null
+              ? "—"
+              : integerFormatter.format(stats.ordersToday)
+          }
           icon={<ShoppingCart />}
           trend={stats.ordersTrend ?? undefined}
           trendDirectionOnly={false}
@@ -176,7 +189,11 @@ export default async function DashboardPage() {
         />
         <StatCard
           label={t("dashboard.newCustomersToday")}
-          value={stats.newCustomers ?? "—"}
+          value={
+            stats.newCustomers === null
+              ? "—"
+              : integerFormatter.format(stats.newCustomers)
+          }
           icon={<Users />}
           spark={customersSpark}
           sparkColor="var(--color-chart-3)"
@@ -184,7 +201,11 @@ export default async function DashboardPage() {
         />
         <StatCard
           label={t("dashboard.deliveryRate")}
-          value={delivery ? `${delivery.deliveryRate}%` : "—"}
+          value={
+            delivery
+              ? percentFormatter.format(delivery.deliveryRate / 100)
+              : "—"
+          }
           icon={<Truck />}
           subtitle={
             stats.pendingDeliveries === null
@@ -211,10 +232,15 @@ export default async function DashboardPage() {
         />
       )}
 
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+      <div
+        data-dashboard-operational-grid="true"
+        className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]"
+      >
         <section className="min-w-0 rounded-md border border-border/80 bg-background">
           <div className="flex items-center justify-between gap-3 border-b border-border/70 px-3 py-2.5">
-            <h2 className="text-sm font-semibold">{t("dashboard.recentOrders")}</h2>
+            <h2 className="text-sm font-semibold">
+              {t("dashboard.recentOrders")}
+            </h2>
             {fieldAccess.orders ? (
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/orders">
@@ -246,13 +272,13 @@ export default async function DashboardPage() {
           ) : (
             <div className="divide-y divide-border/70">
               {recentOrders.map((order) => {
-                const statusStyle = orderStatusStyles[order.status as OrderStatus];
+                const statusStyle =
+                  orderStatusStyles[order.status as OrderStatus];
+                const itemCount = integerFormatter.format(order.itemCount);
                 const itemLabel =
                   order.itemCount > 1
-                    ? t("dashboard.itemsPlural", {
-                        n: String(order.itemCount),
-                      })
-                    : t("dashboard.items", { n: String(order.itemCount) });
+                    ? t("dashboard.itemsPlural", { n: itemCount })
+                    : t("dashboard.items", { n: itemCount });
                 return (
                   <Link
                     key={order.id}
@@ -308,7 +334,7 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        <section className="rounded-md border border-border/80 bg-background">
+        <section className="self-start rounded-md border border-border/80 bg-background">
           <div className="flex items-center justify-between border-b border-border/70 px-3 py-2.5">
             <h2 className="text-sm font-semibold">{t("nav.delivery")}</h2>
             {fieldAccess.deliveries ? (
@@ -326,10 +352,22 @@ export default async function DashboardPage() {
           {delivery ? (
             <div className="grid grid-cols-2 gap-px bg-border/70">
               {[
-                [t("dashboard.deliveryRate"), `${delivery.deliveryRate}%`],
-                [t("dashboard.inTransit"), delivery.inTransit],
-                [t("dashboard.pending"), delivery.pending],
-                [t("analytics.returned"), delivery.returned],
+                [
+                  t("dashboard.deliveryRate"),
+                  percentFormatter.format(delivery.deliveryRate / 100),
+                ],
+                [
+                  t("dashboard.inTransit"),
+                  integerFormatter.format(delivery.inTransit),
+                ],
+                [
+                  t("dashboard.pending"),
+                  integerFormatter.format(delivery.pending),
+                ],
+                [
+                  t("analytics.returned"),
+                  integerFormatter.format(delivery.returned),
+                ],
               ].map(([label, value]) => (
                 <div key={String(label)} className="bg-background px-3 py-3">
                   <p className="text-xs text-muted-foreground">{label}</p>

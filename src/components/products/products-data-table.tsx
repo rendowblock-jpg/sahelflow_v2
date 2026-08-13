@@ -30,12 +30,21 @@ interface ProductsDataTableProps {
   categories: Category[];
 }
 
-export function ProductsDataTable({ fallback, categories }: ProductsDataTableProps) {
-  const { t } = useI18n();
+export function ProductsDataTable({
+  fallback,
+  categories,
+}: ProductsDataTableProps) {
+  const { t, locale } = useI18n();
   const router = useRouter();
   const { data, error, isLoading, pagination } = useProducts({ fallback });
   const fieldAccess = data?.fieldAccess ?? fallback.fieldAccess;
-  const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
+  const categoryNames = new Map(
+    categories.map((category) => [category.id, category.name]),
+  );
+  const integerFormatter = new Intl.NumberFormat(
+    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ",
+    { maximumFractionDigits: 0 },
+  );
 
   const columns: ColumnDef<ProductListItem, unknown>[] = [
     {
@@ -51,10 +60,7 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
             data-product-identity="true"
             className="flex min-w-[13rem] items-center gap-3 py-0.5"
           >
-            <ProductThumbnail
-              src={product.images?.[0]}
-              alt=""
-            />
+            <ProductThumbnail src={product.images?.[0]} alt="" />
             <div className="min-w-0 flex-1">
               <EntityLink
                 href={`/products/${product.id}`}
@@ -88,7 +94,7 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
       header: () => t("orders.price"),
       cell: ({ row }) => (
         <span className="font-medium tabular-nums">
-          {formatDZD(row.original.price)}
+          {formatDZD(row.original.price, locale)}
         </span>
       ),
       meta: { align: "end" },
@@ -97,11 +103,18 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
       accessorKey: "stock",
       header: () => t("products.stock"),
       cell: ({ row }) => {
-        const isLowStock = row.original.stock <= row.original.lowStockThreshold;
+        const isLowStock =
+          row.original.stock <= row.original.lowStockThreshold;
         return (
           <span className="flex items-center justify-end gap-1.5 tabular-nums">
-            <span className={isLowStock ? "font-semibold text-destructive" : "font-medium"}>
-              {row.original.stock}
+            <span
+              className={
+                isLowStock
+                  ? "font-semibold text-destructive"
+                  : "font-medium"
+              }
+            >
+              {integerFormatter.format(row.original.stock)}
             </span>
             {isLowStock ? (
               <Badge variant="destructive" className="gap-0.5 py-0">
@@ -144,7 +157,9 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={t("products.viewDetails", { name: product.name })}
+                  aria-label={t("products.viewDetails", {
+                    name: product.name,
+                  })}
                 >
                   <Eye className="size-4" aria-hidden="true" />
                 </Button>
@@ -153,7 +168,11 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
               <EntityPreview
                 title={product.name}
                 description={category}
-                metadata={product.sku ? `${t("products.sku")}: ${product.sku}` : undefined}
+                metadata={
+                  product.sku
+                    ? `${t("products.sku")}: ${product.sku}`
+                    : undefined
+                }
               >
                 <div className="mb-3 flex items-center gap-3 rounded-lg border border-border/70 bg-muted/20 p-2.5">
                   <ProductThumbnail
@@ -162,40 +181,62 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
                     className="size-12"
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{product.name}</p>
+                    <p className="truncate text-sm font-semibold">
+                      {product.name}
+                    </p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {[product.sku, category].filter(Boolean).join(" · ") || "—"}
+                      {[product.sku, category].filter(Boolean).join(" · ") ||
+                        "—"}
                     </p>
                   </div>
                 </div>
                 <dl className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <dt className="text-xs text-muted-foreground">{t("orders.price")}</dt>
-                    <dd className="mt-1 font-medium tabular-nums">{formatDZD(product.price)}</dd>
+                    <dt className="text-xs text-muted-foreground">
+                      {t("orders.price")}
+                    </dt>
+                    <dd className="mt-1 font-medium tabular-nums">
+                      {formatDZD(product.price, locale)}
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted-foreground">{t("products.stock")}</dt>
-                    <dd className="mt-1 font-medium tabular-nums">{product.stock}</dd>
+                    <dt className="text-xs text-muted-foreground">
+                      {t("products.stock")}
+                    </dt>
+                    <dd className="mt-1 font-medium tabular-nums">
+                      {integerFormatter.format(product.stock)}
+                    </dd>
                   </div>
                   {fieldAccess.cost ? (
                     <div>
-                      <dt className="text-xs text-muted-foreground">{t("products.cost")}</dt>
+                      <dt className="text-xs text-muted-foreground">
+                        {t("products.cost")}
+                      </dt>
                       <dd className="mt-1 font-medium tabular-nums">
-                        {product.cost === null ? "—" : formatDZD(product.cost)}
+                        {product.cost === null
+                          ? "—"
+                          : formatDZD(product.cost, locale)}
                       </dd>
                     </div>
                   ) : null}
                   <div>
-                    <dt className="text-xs text-muted-foreground">{t("common.status")}</dt>
+                    <dt className="text-xs text-muted-foreground">
+                      {t("common.status")}
+                    </dt>
                     <dd className="mt-1 font-medium">
-                      {product.isActive ? t("common.active") : t("common.inactive")}
+                      {product.isActive
+                        ? t("common.active")
+                        : t("common.inactive")}
                     </dd>
                   </div>
                 </dl>
               </EntityPreview>
             </EntityInspector>
             {fieldAccess.manage ? (
-              <ProductRowActions product={product} categories={categories} />
+              <ProductRowActions
+                product={product}
+                categories={categories}
+              />
             ) : null}
           </div>
         );

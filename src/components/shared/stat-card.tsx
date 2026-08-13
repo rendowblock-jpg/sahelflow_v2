@@ -10,6 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useI18n } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
 
 export type StatCardEmphasis = "standard" | "primary" | "supporting";
@@ -104,6 +105,7 @@ export function StatCard({
   action,
   selected = false,
 }: StatCardProps) {
+  const { locale } = useI18n();
   const hasTrend =
     typeof trend === "number" && Number.isFinite(trend) && trend !== 0;
   const positive = hasTrend && trend > 0;
@@ -112,6 +114,18 @@ export function StatCard({
     trendDirectionOnly ?? (hasTrend && Math.abs(trend) === 1);
   const actionable = action !== undefined && action !== null;
   const toneStyle = toneClasses[tone];
+  const trendText =
+    hasTrend && !directionOnly
+      ? new Intl.NumberFormat(
+          locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ",
+          {
+            style: "percent",
+            signDisplay: "exceptZero",
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          },
+        ).format(trend / 100)
+      : null;
 
   return (
     <section
@@ -121,7 +135,8 @@ export function StatCard({
         toneStyle.surface,
         actionable &&
           "transition-[background-color,border-color,box-shadow] duration-150 hover:border-primary/35 hover:bg-primary/[0.02] focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-ring/25 motion-reduce:transition-none",
-        selected && "border-primary/45 bg-primary/[0.045] ring-1 ring-primary/15",
+        selected &&
+          "border-primary/45 bg-primary/[0.045] ring-1 ring-primary/15",
         className,
       )}
       style={style}
@@ -182,12 +197,7 @@ export function StatCard({
                   ) : (
                     <ArrowDownRight className="size-3.5" aria-hidden="true" />
                   )}
-                  {!directionOnly ? (
-                    <>
-                      {trend > 0 ? "+" : ""}
-                      {trend.toFixed(1)}%
-                    </>
-                  ) : null}
+                  {trendText}
                 </span>
               ) : null}
               {trendLabel ? <span>{trendLabel}</span> : null}

@@ -1,30 +1,65 @@
-import { getAnalyticsReport } from "@/lib/data/analytics-data";
-import { getReturnRateByWilaya, getSkuPnl, getPeriodComparison, getLastNDays, getPreviousPeriod } from "@/lib/data/analytics-v2";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowUp, ArrowDown, Minus, RotateCcw, DollarSign, TrendingDown } from "lucide-react";
-import { formatDZD } from "@/lib/utils";
-import { getI18n } from "@/lib/i18n-server";
-import { STATUS_CHART_COLORS, statusI18nKey } from "@/lib/shared/status-colors";
-import type { OrderStatus } from "@/types/domain";
-import type { ChartConfig } from "@/components/ui/chart";
-import { PageHeader } from "@/components/shared/page-header";
-import { StatCard } from "@/components/shared/stat-card";
-import { ChartCard } from "@/components/charts/chart-primitives";
-import { AreaTrendChart } from "@/components/charts/area-trend-chart";
-import { LineTrendChart } from "@/components/charts/line-trend-chart";
-import { ComposedTrendChart } from "@/components/charts/composed-trend-chart";
-import { DonutChart, type DonutDatum } from "@/components/charts/donut-chart";
-import { HorizontalBarChart, type HBarDatum } from "@/components/charts/horizontal-bar-chart";
-import { RadialGauge } from "@/components/charts/radial-gauge";
-import { cn } from "@/lib/utils";
-import { TrendingUp, ShoppingCart, Package, Truck, Activity, PieChart, BarChart3, Users, MapPin, Clock, Gauge } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  Activity,
+  ArrowDown,
+  ArrowUp,
+  BarChart3,
+  Clock,
+  DollarSign,
+  Gauge,
+  MapPin,
+  Minus,
+  Package,
+  PieChart,
+  RotateCcw,
+  ShoppingCart,
+  TrendingDown,
+  TrendingUp,
+  Truck,
+  Users,
+} from "lucide-react";
+
+import { AreaTrendChart } from "@/components/charts/area-trend-chart";
+import {
+  ChartCard,
+  ChartEmpty,
+} from "@/components/charts/chart-primitives";
+import { ComposedTrendChart } from "@/components/charts/composed-trend-chart";
+import {
+  DonutChart,
+  type DonutDatum,
+} from "@/components/charts/donut-chart";
+import {
+  HorizontalBarChart,
+  type HBarDatum,
+} from "@/components/charts/horizontal-bar-chart";
+import { LineTrendChart } from "@/components/charts/line-trend-chart";
+import { RadialGauge } from "@/components/charts/radial-gauge";
+import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ChartConfig } from "@/components/ui/chart";
+import { getAnalyticsReport } from "@/lib/data/analytics-data";
+import {
+  getLastNDays,
+  getPeriodComparison,
+  getPreviousPeriod,
+  getReturnRateByWilaya,
+  getSkuPnl,
+} from "@/lib/data/analytics-v2";
+import { getI18n } from "@/lib/i18n-server";
 import {
   assertTrustedAction,
   requireTrustedAction,
 } from "@/lib/identity/authorization";
+import {
+  STATUS_CHART_COLORS,
+  statusI18nKey,
+} from "@/lib/shared/status-colors";
+import { cn, formatDZD } from "@/lib/utils";
+import type { OrderStatus } from "@/types/domain";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -52,7 +87,6 @@ export default async function AnalyticsPage({
   const validDays = [7, 14, 30, 90].includes(days) ? days : 30;
 
   const report = await getAnalyticsReport(validDays);
-
   const range = getLastNDays(validDays);
   const prevRange = getPreviousPeriod(range);
   const [returnRateByWilaya, skuPnl, comparison] = await Promise.all([
@@ -61,315 +95,450 @@ export default async function AnalyticsPage({
     getPeriodComparison(range, prevRange),
   ]);
 
-  const returnRateData: HBarDatum[] = returnRateByWilaya.slice(0, 10).map((w) => ({
-    key: w.wilaya,
-    label: w.wilaya.length > 15 ? w.wilaya.slice(0, 14) + "…" : w.wilaya,
-    value: Math.round(w.returnRate * 10) / 10,
-    color: w.returnRate > 30 ? "var(--color-chart-4)" : w.returnRate > 15 ? "var(--color-chart-3)" : "var(--color-chart-2)",
-  }));
-  const returnRateConfig: ChartConfig = {
-    value: { label: t("analytics.returnRateLabel"), color: "var(--color-chart-4)" },
-  };
-  const dateLocale = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR";
+  const dateLocale =
+    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+  const integerFormatter = new Intl.NumberFormat(dateLocale, {
+    maximumFractionDigits: 0,
+  });
+  const percentFormatter = new Intl.NumberFormat(dateLocale, {
+    style: "percent",
+    maximumFractionDigits: 1,
+  });
+  const signedPercentFormatter = new Intl.NumberFormat(dateLocale, {
+    style: "percent",
+    signDisplay: "exceptZero",
+    maximumFractionDigits: 1,
+  });
+  const hourFormatter = new Intl.NumberFormat(dateLocale, {
+    minimumIntegerDigits: 2,
+    useGrouping: false,
+  });
   const fmtShortDate = (iso: string) =>
-    new Date(iso).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
-  const fmtHour = (h: number) => `${String(h).padStart(2, "0")}h`;
+    new Date(iso).toLocaleDateString(dateLocale, {
+      month: "short",
+      day: "numeric",
+    });
+  const fmtHour = (hour: number) => `${hourFormatter.format(hour)}:00`;
+  const fmtPercent = (value: number) => percentFormatter.format(value / 100);
+  const fmtSignedPercent = (value: number) =>
+    signedPercentFormatter.format(value / 100);
 
-  const s = report.summary;
+  const returnRateData: HBarDatum[] = returnRateByWilaya
+    .slice(0, 10)
+    .map((wilaya) => ({
+      key: wilaya.wilaya,
+      label:
+        wilaya.wilaya.length > 15
+          ? `${wilaya.wilaya.slice(0, 14)}…`
+          : wilaya.wilaya,
+      value: Math.round(wilaya.returnRate * 10) / 10,
+      color:
+        wilaya.returnRate > 30
+          ? "var(--color-chart-4)"
+          : wilaya.returnRate > 15
+            ? "var(--color-chart-3)"
+            : "var(--color-chart-2)",
+    }));
+  const returnRateConfig: ChartConfig = {
+    value: {
+      label: t("analytics.returnRateLabel"),
+      color: "var(--color-chart-4)",
+    },
+  };
 
-  const revenueData = report.revenueTimeSeries.map((p) => ({
-    date: p.date,
-    label: fmtShortDate(p.date),
-    revenue: p.revenue,
+  const summary = report.summary;
+  const revenueData = report.revenueTimeSeries.map((point) => ({
+    date: point.date,
+    label: fmtShortDate(point.date),
+    revenue: point.revenue,
   }));
   const revenueConfig: ChartConfig = {
-    revenue: { label: t("analytics.revenueLabel"), color: "var(--color-chart-2)" },
+    revenue: {
+      label: t("analytics.revenueLabel"),
+      color: "var(--color-chart-2)",
+    },
   };
 
-  const aovData = report.aovTimeSeries.map((p) => ({
-    date: p.date,
-    label: fmtShortDate(p.date),
-    aov: p.aov,
+  const aovData = report.aovTimeSeries.map((point) => ({
+    date: point.date,
+    label: fmtShortDate(point.date),
+    aov: point.aov,
   }));
   const aovConfig: ChartConfig = {
-    aov: { label: t("analytics.avgOrderValue"), color: "var(--color-chart-4)" },
+    aov: {
+      label: t("analytics.avgOrderValue"),
+      color: "var(--color-chart-4)",
+    },
   };
 
-  const growthData = report.customerGrowth.map((p) => ({
-    date: p.date,
-    label: fmtShortDate(p.date),
-    cumulative: p.cumulative,
-    newCustomers: p.newCustomers,
+  const growthData = report.customerGrowth.map((point) => ({
+    date: point.date,
+    label: fmtShortDate(point.date),
+    cumulative: point.cumulative,
+    newCustomers: point.newCustomers,
   }));
   const growthConfig: ChartConfig = {
-    cumulative: { label: t("analytics.cumulative"), color: "var(--color-chart-1)" },
-    newCustomers: { label: t("analytics.newCustomers"), color: "var(--color-chart-3)" },
+    cumulative: {
+      label: t("analytics.cumulative"),
+      color: "var(--color-chart-1)",
+    },
+    newCustomers: {
+      label: t("analytics.newCustomers"),
+      color: "var(--color-chart-3)",
+    },
   };
 
-  const donutData: DonutDatum[] = report.statusDistribution.map((st) => ({
-    key: st.key,
-    label: t(statusI18nKey(st.key)),
-    value: st.value,
-    color: STATUS_CHART_COLORS[st.key as OrderStatus] ?? "var(--color-chart-1)",
+  const donutData: DonutDatum[] = report.statusDistribution.map((status) => ({
+    key: status.key,
+    label: t(statusI18nKey(status.key)),
+    value: status.value,
+    color:
+      STATUS_CHART_COLORS[status.key as OrderStatus] ??
+      "var(--color-chart-1)",
   }));
   const donutConfig: ChartConfig = {};
-  for (const d of donutData) donutConfig[d.key] = { label: d.label, color: d.color };
-  const totalOrders = donutData.reduce((sum, d) => sum + d.value, 0);
+  for (const datum of donutData) {
+    donutConfig[datum.key] = { label: datum.label, color: datum.color };
+  }
+  const totalOrders = donutData.reduce((sum, datum) => sum + datum.value, 0);
 
-  const topProductsData: HBarDatum[] = report.topProducts.map((p) => ({
-    key: p.key,
-    label: p.name.length > 20 ? p.name.slice(0, 19) + "…" : p.name,
-    value: p.revenue,
+  const topProductsData: HBarDatum[] = report.topProducts.map((product) => ({
+    key: product.key,
+    label:
+      product.name.length > 20
+        ? `${product.name.slice(0, 19)}…`
+        : product.name,
+    value: product.revenue,
   }));
   const topProductsConfig: ChartConfig = {
-    value: { label: t("analytics.revenueLabel"), color: "var(--color-chart-1)" },
+    value: {
+      label: t("analytics.revenueLabel"),
+      color: "var(--color-chart-1)",
+    },
   };
 
-  const topWilayasData: HBarDatum[] = report.topWilayas.map((w) => ({
-    key: w.key,
-    label: w.name,
-    value: w.orders,
+  const topWilayasData: HBarDatum[] = report.topWilayas.map((wilaya) => ({
+    key: wilaya.key,
+    label: wilaya.name,
+    value: wilaya.orders,
   }));
   const topWilayasConfig: ChartConfig = {
-    value: { label: t("analytics.ordersLabel"), color: "var(--color-chart-3)" },
+    value: {
+      label: t("analytics.ordersLabel"),
+      color: "var(--color-chart-3)",
+    },
   };
 
-  const hourData = report.salesByHour.map((b) => ({
-    hour: fmtHour(b.hour),
-    orders: b.orders,
-    revenue: b.revenue,
+  const hourData = report.salesByHour.map((bucket) => ({
+    hour: fmtHour(bucket.hour),
+    orders: bucket.orders,
+    revenue: bucket.revenue,
   }));
   const hourConfig: ChartConfig = {
-    orders: { label: t("analytics.ordersLabel"), color: "var(--color-chart-1)" },
-    revenue: { label: t("analytics.revenueLabel"), color: "var(--color-chart-2)" },
+    orders: {
+      label: t("analytics.ordersLabel"),
+      color: "var(--color-chart-1)",
+    },
+    revenue: {
+      label: t("analytics.revenueLabel"),
+      color: "var(--color-chart-2)",
+    },
   };
 
-  const dp = report.deliveryPerformance;
+  const delivery = report.deliveryPerformance;
   const gaugeConfig: ChartConfig = {
-    value: { label: t("dashboard.deliveryRate"), color: "var(--color-chart-2)" },
+    value: {
+      label: t("dashboard.deliveryRate"),
+      color: "var(--color-chart-2)",
+    },
   };
+
+  const comparisonStats = [
+    {
+      key: "orders",
+      label: t("nav.orders"),
+      change: comparison.changes.orders,
+      display: integerFormatter.format(comparison.current.orders),
+    },
+    {
+      key: "revenue",
+      label: t("analytics.revenueLabel"),
+      change: comparison.changes.revenue,
+      display: formatDZD(comparison.current.revenue, locale),
+    },
+    {
+      key: "delivered",
+      label: t("analytics.delivered"),
+      change: comparison.changes.delivered,
+      display: integerFormatter.format(comparison.current.delivered),
+    },
+    {
+      key: "returnRate",
+      label: t("analytics.returnRate"),
+      change: comparison.changes.returnRate,
+      display: fmtPercent(comparison.current.returnRate),
+    },
+  ] as const;
 
   return (
-    <div className="app-content page-sections">
+    <div className="app-content page-sections" data-analytics-workspace="v2">
       <PageHeader
         title={t("nav.analytics")}
         description={t("analytics.depth")}
         actions={
           <div className="flex items-center rounded-lg border bg-muted/40 p-0.5">
-            {RANGES.map((r) => (
+            {RANGES.map((option) => (
               <Link
-                key={r.days}
-                href={`/analytics?days=${r.days}`}
+                key={option.days}
+                href={`/analytics?days=${option.days}`}
                 className={cn(
                   "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                  validDays === r.days
+                  validDays === option.days
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {t(r.labelKey)}
+                {t(option.labelKey)}
               </Link>
             ))}
           </div>
         }
       />
 
-      <div className="card-grid-4 stagger-grid">
+      <div
+        className="card-grid-4 stagger-grid"
+        data-analytics-section="scorecard"
+      >
         <StatCard
           label={t("analytics.totalRevenue")}
-          value={formatDZD(s.totalRevenue)}
+          value={formatDZD(summary.totalRevenue, locale)}
           icon={<TrendingUp />}
-          accentBg="bg-emerald-500/10 dark:bg-emerald-500/15"
-          accentIcon="text-success"
-          trend={s.revenueDelta}
+          trend={summary.revenueDelta}
           trendDirectionOnly={false}
           trendLabel={t("analytics.vsPrevious")}
           style={{ animationDelay: "60ms" }}
         />
         <StatCard
           label={t("nav.orders")}
-          value={s.totalOrders}
+          value={integerFormatter.format(summary.totalOrders)}
           icon={<ShoppingCart />}
-          accentBg="bg-teal-500/10 dark:bg-teal-500/15"
-          accentIcon="text-teal-600 dark:text-teal-400"
-          trend={s.ordersDelta}
+          trend={summary.ordersDelta}
           trendDirectionOnly={false}
           trendLabel={t("analytics.vsPrevious")}
           style={{ animationDelay: "120ms" }}
         />
         <StatCard
           label={t("analytics.avgOrderValue")}
-          value={formatDZD(s.avgOrderValue)}
+          value={formatDZD(summary.avgOrderValue, locale)}
           icon={<Package />}
-          accentBg="bg-violet-500/10 dark:bg-violet-500/15"
-          accentIcon="text-violet-600 dark:text-violet-400"
-          trend={s.aovDelta}
+          trend={summary.aovDelta}
           trendDirectionOnly={false}
           trendLabel={t("analytics.vsPrevious")}
           style={{ animationDelay: "180ms" }}
         />
         <StatCard
           label={t("analytics.deliveryRate")}
-          value={`${s.deliveryRate}%`}
+          value={fmtPercent(summary.deliveryRate)}
           icon={<Truck />}
-          accentBg="bg-amber-500/10 dark:bg-amber-500/15"
-          accentIcon="text-warning"
           style={{ animationDelay: "240ms" }}
         />
       </div>
 
-      <ChartCard
-        title={t("analytics.revenueTrend")}
-        description={t("analytics.revenueTrendDesc")}
-        icon={<Activity />}
-        accent="bg-emerald-500/10 dark:bg-emerald-500/15"
-        config={revenueConfig}
-        height={320}
-      >
-        <AreaTrendChart
-          data={revenueData}
-          xKey="label"
-          series={[{ key: "revenue", label: t("analytics.revenueLabel"), format: "currency" }]}
+      <section data-analytics-section="headline" className="min-w-0">
+        <ChartCard
+          title={t("analytics.revenueTrend")}
+          description={t("analytics.revenueTrendDesc")}
+          summary={`${formatDZD(summary.totalRevenue, locale)} · ${fmtSignedPercent(summary.revenueDelta)} ${t("analytics.vsPrevious")}`}
+          icon={<Activity />}
+          accent="bg-emerald-500/10 dark:bg-emerald-500/15"
           config={revenueConfig}
-          height={320}
-          formatY="currencyShort"
-        />
-      </ChartCard>
+        >
+          <AreaTrendChart
+            data={revenueData}
+            xKey="label"
+            series={[
+              {
+                key: "revenue",
+                label: t("analytics.revenueLabel"),
+                format: "currency",
+              },
+            ]}
+            config={revenueConfig}
+            formatY="currencyShort"
+          />
+        </ChartCard>
+      </section>
 
-      <div className="card-grid-2">
+      <section
+        data-analytics-section="operations"
+        className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(19rem,0.85fr)]"
+      >
         <ChartCard
           title={t("analytics.ordersByStatus")}
+          summary={`${integerFormatter.format(totalOrders)} ${t("analytics.ordersLabel")}`}
           icon={<PieChart />}
           accent="bg-teal-500/10 dark:bg-teal-500/15"
           config={donutConfig}
-          height={300}
         >
           <DonutChart
             data={donutData}
             config={donutConfig}
-            height={300}
-            centerValue={String(totalOrders)}
+            centerValue={integerFormatter.format(totalOrders)}
             centerLabel={t("dashboard.totalOrders")}
           />
         </ChartCard>
 
         <ChartCard
           title={t("analytics.deliveryPerformance")}
+          summary={fmtPercent(delivery.deliveryRate)}
           icon={<Gauge />}
           accent="bg-emerald-500/10 dark:bg-emerald-500/15"
           config={gaugeConfig}
-          height={300}
         >
           <div className="flex flex-col items-center gap-4">
             <RadialGauge
-              value={dp.deliveryRate}
+              value={delivery.deliveryRate}
               config={gaugeConfig}
               height={220}
               centerLabel={t("dashboard.deliveryRate")}
             />
             <div className="grid w-full grid-cols-2 gap-2 text-center sm:grid-cols-4">
               <div className="rounded-lg border p-2">
-                <p className="text-xs text-muted-foreground">{t("analytics.delivered")}</p>
-                <p className="text-base font-bold tabular-nums text-success">{dp.delivered}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("analytics.delivered")}
+                </p>
+                <p className="text-base font-bold tabular-nums text-success">
+                  {integerFormatter.format(delivery.delivered)}
+                </p>
               </div>
               <div className="rounded-lg border p-2">
-                <p className="text-xs text-muted-foreground">{t("analytics.inTransit")}</p>
-                <p className="text-base font-bold tabular-nums">{dp.inTransit}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("analytics.inTransit")}
+                </p>
+                <p className="text-base font-bold tabular-nums">
+                  {integerFormatter.format(delivery.inTransit)}
+                </p>
               </div>
               <div className="rounded-lg border p-2">
-                <p className="text-xs text-muted-foreground">{t("dashboard.pending")}</p>
-                <p className="text-base font-bold tabular-nums">{dp.pending}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("dashboard.pending")}
+                </p>
+                <p className="text-base font-bold tabular-nums">
+                  {integerFormatter.format(delivery.pending)}
+                </p>
               </div>
               <div className="rounded-lg border p-2">
-                <p className="text-xs text-muted-foreground">{t("analytics.returned")}</p>
-                <p className="text-base font-bold tabular-nums text-destructive">{dp.returned}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("analytics.returned")}
+                </p>
+                <p className="text-base font-bold tabular-nums text-destructive">
+                  {integerFormatter.format(delivery.returned)}
+                </p>
               </div>
             </div>
           </div>
         </ChartCard>
-      </div>
+      </section>
 
-      <div className="card-grid-2">
+      <section data-analytics-section="rankings" className="card-grid-2">
         <ChartCard
           title={t("analytics.topProductsByRevenue")}
+          summary={
+            topProductsData[0]
+              ? `${topProductsData[0].label} · ${formatDZD(topProductsData[0].value, locale)}`
+              : undefined
+          }
           icon={<BarChart3 />}
           accent="bg-teal-500/10 dark:bg-teal-500/15"
           config={topProductsConfig}
-          height={300}
         >
           {topProductsData.length > 0 ? (
             <HorizontalBarChart
               data={topProductsData}
               config={topProductsConfig}
-              height={300}
               formatValue="currencyShort"
             />
           ) : (
-            <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-              {t("analytics.noProductData")}
-            </div>
+            <ChartEmpty message={t("analytics.noProductData")} />
           )}
         </ChartCard>
 
         <ChartCard
           title={t("analytics.topWilayas")}
+          summary={
+            topWilayasData[0]
+              ? `${topWilayasData[0].label} · ${integerFormatter.format(topWilayasData[0].value)}`
+              : undefined
+          }
           icon={<MapPin />}
           accent="bg-amber-500/10 dark:bg-amber-500/15"
           config={topWilayasConfig}
-          height={300}
         >
           {topWilayasData.length > 0 ? (
             <HorizontalBarChart
               data={topWilayasData}
               config={topWilayasConfig}
-              height={300}
               formatValue="number"
             />
           ) : (
-            <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-              {t("analytics.noWilayaData")}
-            </div>
+            <ChartEmpty message={t("analytics.noWilayaData")} />
           )}
         </ChartCard>
-      </div>
+      </section>
 
-      <ChartCard
-        title={t("analytics.salesByHour")}
-        description={t("analytics.salesByHourDesc")}
-        icon={<Clock />}
-        accent="bg-violet-500/10 dark:bg-violet-500/15"
-        config={hourConfig}
-        height={300}
-      >
-        <ComposedTrendChart
-          data={hourData}
-          xKey="hour"
-          series={[
-            { kind: "bar", key: "orders", label: t("analytics.ordersLabel"), yAxis: "left" },
-            { kind: "line", key: "revenue", label: t("analytics.revenueLabel"), format: "currency", yAxis: "right" },
-          ]}
+      <section data-analytics-section="timing" className="min-w-0">
+        <ChartCard
+          title={t("analytics.salesByHour")}
+          description={t("analytics.salesByHourDesc")}
+          icon={<Clock />}
+          accent="bg-violet-500/10 dark:bg-violet-500/15"
           config={hourConfig}
-          height={300}
-          formatLeftY="number"
-          formatRightY="currencyShort"
-        />
-      </ChartCard>
+        >
+          <ComposedTrendChart
+            data={hourData}
+            xKey="hour"
+            series={[
+              {
+                kind: "bar",
+                key: "orders",
+                label: t("analytics.ordersLabel"),
+                yAxis: "left",
+              },
+              {
+                kind: "line",
+                key: "revenue",
+                label: t("analytics.revenueLabel"),
+                format: "currency",
+                yAxis: "right",
+              },
+            ]}
+            config={hourConfig}
+            formatLeftY="number"
+            formatRightY="currencyShort"
+          />
+        </ChartCard>
+      </section>
 
-      <div className="card-grid-2">
+      <section data-analytics-section="trends" className="card-grid-2">
         <ChartCard
           title={t("analytics.aovTrend")}
           description={t("analytics.aovTrendDesc")}
+          summary={formatDZD(summary.avgOrderValue, locale)}
           icon={<TrendingUp />}
           accent="bg-violet-500/10 dark:bg-violet-500/15"
           config={aovConfig}
-          height={280}
         >
           <LineTrendChart
             data={aovData}
             xKey="label"
-            series={[{ key: "aov", label: t("analytics.avgOrderValue"), format: "currency" }]}
+            series={[
+              {
+                key: "aov",
+                label: t("analytics.avgOrderValue"),
+                format: "currency",
+              },
+            ]}
             config={aovConfig}
-            height={280}
             formatY="currencyShort"
           />
         </ChartCard>
@@ -377,74 +546,94 @@ export default async function AnalyticsPage({
         <ChartCard
           title={t("analytics.customerGrowth")}
           description={t("analytics.customerGrowthDesc")}
+          summary={
+            growthData.at(-1)
+              ? integerFormatter.format(growthData.at(-1)!.cumulative)
+              : undefined
+          }
           icon={<Users />}
           accent="bg-teal-500/10 dark:bg-teal-500/15"
           config={growthConfig}
-          height={280}
         >
           <AreaTrendChart
             data={growthData}
             xKey="label"
-            series={[{ key: "cumulative", label: t("analytics.cumulative"), format: "number" }]}
+            series={[
+              {
+                key: "cumulative",
+                label: t("analytics.cumulative"),
+                format: "number",
+              },
+            ]}
             config={growthConfig}
-            height={280}
             formatY="number"
           />
         </ChartCard>
-      </div>
+      </section>
 
-      <ChartCard
-        title={t("analytics.returnRateByWilaya")}
-        description={t("analytics.returnRateHint")}
-        icon={<RotateCcw />}
-        accent="bg-red-500/10 dark:bg-red-500/15"
-        config={returnRateConfig}
-        height={300}
-      >
-        {returnRateData.length > 0 ? (
-          <HorizontalBarChart
-            data={returnRateData}
-            config={returnRateConfig}
-            height={300}
-            formatValue="number"
-          />
-        ) : (
-          <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-            {t("analytics.noReturnData")}
-          </div>
-        )}
-      </ChartCard>
+      <section data-analytics-section="returns" className="min-w-0">
+        <ChartCard
+          title={t("analytics.returnRateByWilaya")}
+          description={t("analytics.returnRateHint")}
+          summary={
+            returnRateData[0]
+              ? `${returnRateData[0].label} · ${fmtPercent(returnRateData[0].value)}`
+              : undefined
+          }
+          icon={<RotateCcw />}
+          accent="bg-red-500/10 dark:bg-red-500/15"
+          config={returnRateConfig}
+        >
+          {returnRateData.length > 0 ? (
+            <HorizontalBarChart
+              data={returnRateData}
+              config={returnRateConfig}
+              formatValue="percent"
+            />
+          ) : (
+            <ChartEmpty message={t("analytics.noReturnData")} />
+          )}
+        </ChartCard>
+      </section>
 
-      <Card>
+      <Card data-analytics-section="comparison">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <TrendingDown className="h-4 w-4" />
-            {t("analytics.periodComparison", { days: String(validDays) })}
+            <TrendingDown className="size-4" aria-hidden="true" />
+            {t("analytics.periodComparison", {
+              days: integerFormatter.format(validDays),
+            })}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {[
-              { key: "orders", label: t("nav.orders"), current: comparison.current.orders, change: comparison.changes.orders, format: false as const },
-              { key: "revenue", label: t("analytics.revenueLabel"), current: comparison.current.revenue, change: comparison.changes.revenue, format: true as const },
-              { key: "delivered", label: t("analytics.delivered"), current: comparison.current.delivered, change: comparison.changes.delivered, format: false as const },
-              { key: "returnRate", label: t("analytics.returnRate"), current: comparison.current.returnRate, change: comparison.changes.returnRate, format: false as const, suffix: "%" },
-            ].map((stat) => {
-              const isPositive = stat.key === "returnRate" ? stat.change < 0 : stat.change > 0;
-              const Icon = stat.change > 0 ? ArrowUp : stat.change < 0 ? ArrowDown : Minus;
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {comparisonStats.map((stat) => {
+              const isPositive =
+                stat.key === "returnRate"
+                  ? stat.change < 0
+                  : stat.change > 0;
+              const Icon =
+                stat.change > 0
+                  ? ArrowUp
+                  : stat.change < 0
+                    ? ArrowDown
+                    : Minus;
               return (
                 <div key={stat.key} className="space-y-1">
                   <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  <p className="text-xl font-bold tabular-nums">
-                    {stat.format ? formatDZD(stat.current) : `${stat.current}${stat.suffix ?? ""}`}
-                  </p>
-                  <Badge variant="outline" className={cn(
-                    "gap-1",
-                    isPositive ? "border-emerald-500/20 text-success" : "border-red-500/20 text-destructive",
-                    stat.change === 0 && "text-muted-foreground",
-                  )}>
-                    <Icon className="h-3 w-3" />
-                    {Math.abs(stat.change).toFixed(1)}%
+                  <p className="text-xl font-bold tabular-nums">{stat.display}</p>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "gap-1",
+                      isPositive
+                        ? "border-emerald-500/20 text-success"
+                        : "border-red-500/20 text-destructive",
+                      stat.change === 0 && "text-muted-foreground",
+                    )}
+                  >
+                    <Icon className="size-3" aria-hidden="true" />
+                    {percentFormatter.format(Math.abs(stat.change) / 100)}
                   </Badge>
                 </div>
               );
@@ -453,10 +642,10 @@ export default async function AnalyticsPage({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-analytics-section="sku-pnl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <DollarSign className="h-4 w-4" />
+            <DollarSign className="size-4" aria-hidden="true" />
             {t("analytics.skuPnl")}
           </CardTitle>
         </CardHeader>
@@ -466,37 +655,68 @@ export default async function AnalyticsPage({
               <table className="w-full">
                 <thead className="sticky top-0 z-10 border-b bg-muted">
                   <tr className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    <th className="px-4 py-3 text-start">{t("analytics.skuColProduct")}</th>
-                    <th className="px-4 py-3 text-end">{t("analytics.revenueLabel")}</th>
-                    <th className="px-4 py-3 text-end">{t("analytics.skuColCost")}</th>
-                    <th className="px-4 py-3 text-end">{t("analytics.skuColMargin")}</th>
-                    <th className="px-4 py-3 text-end">{t("analytics.skuColMarginPct")}</th>
-                    <th className="px-4 py-3 text-end">{t("analytics.skuColQty")}</th>
+                    <th className="px-4 py-3 text-start">
+                      {t("analytics.skuColProduct")}
+                    </th>
+                    <th className="px-4 py-3 text-end">
+                      {t("analytics.revenueLabel")}
+                    </th>
+                    <th className="px-4 py-3 text-end">
+                      {t("analytics.skuColCost")}
+                    </th>
+                    <th className="px-4 py-3 text-end">
+                      {t("analytics.skuColMargin")}
+                    </th>
+                    <th className="px-4 py-3 text-end">
+                      {t("analytics.skuColMarginPct")}
+                    </th>
+                    <th className="px-4 py-3 text-end">
+                      {t("analytics.skuColQty")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {skuPnl.slice(0, 10).map((item) => (
                     <tr key={item.sku} className="hover:bg-muted/50">
-                      <td className="px-4 py-3 text-sm font-medium">{item.sku}</td>
-                      <td className="px-4 py-3 text-end text-sm tabular-nums">{formatDZD(item.revenue)}</td>
-                      <td className="px-4 py-3 text-end text-sm tabular-nums text-muted-foreground">{formatDZD(item.cost)}</td>
-                      <td className="px-4 py-3 text-end text-sm font-medium tabular-nums">{formatDZD(item.margin)}</td>
+                      <td className="px-4 py-3 text-sm font-medium">
+                        {item.sku}
+                      </td>
+                      <td className="px-4 py-3 text-end text-sm tabular-nums">
+                        {formatDZD(item.revenue, locale)}
+                      </td>
+                      <td className="px-4 py-3 text-end text-sm tabular-nums text-muted-foreground">
+                        {formatDZD(item.cost, locale)}
+                      </td>
+                      <td className="px-4 py-3 text-end text-sm font-medium tabular-nums">
+                        {formatDZD(item.margin, locale)}
+                      </td>
                       <td className="px-4 py-3 text-end">
-                        <Badge variant="outline" className={cn(
-                          item.marginPct > 40 ? "border-emerald-500/20 text-success" : "",
-                          item.marginPct < 20 ? "border-red-500/20 text-destructive" : "",
-                        )}>
-                          {item.marginPct.toFixed(1)}%
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            item.marginPct > 40
+                              ? "border-emerald-500/20 text-success"
+                              : "",
+                            item.marginPct < 20
+                              ? "border-red-500/20 text-destructive"
+                              : "",
+                          )}
+                        >
+                          {fmtPercent(item.marginPct)}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-end text-sm tabular-nums text-muted-foreground">{item.quantity}</td>
+                      <td className="px-4 py-3 text-end text-sm tabular-nums text-muted-foreground">
+                        {integerFormatter.format(item.quantity)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <p className="p-8 text-center text-sm text-muted-foreground">{t("analytics.noSkuData")}</p>
+            <p className="p-8 text-center text-sm text-muted-foreground">
+              {t("analytics.noSkuData")}
+            </p>
           )}
         </CardContent>
       </Card>
