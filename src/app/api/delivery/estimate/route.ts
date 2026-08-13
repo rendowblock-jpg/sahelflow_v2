@@ -9,40 +9,24 @@ import { assertProviderCapability } from "@/lib/integrations/delivery/provider-c
 export const dynamic = "force-dynamic";
 
 const estimateSchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "ecotrack"]),
   wilaya: z.string().min(1),
   commune: z.string().optional(),
-  weight: z.number().positive().max(50, "Weight must be ≤ 50kg"),
+  weight: z.number().positive().max(50, "Weight must be at most 50kg"),
   codAmount: z.number().min(0),
 });
 
-/** POST /api/delivery/estimate — estimate delivery cost for a shipment. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth([
-    "deliveries.manage",
-    "customers.contact.read",
-    "orders.financials.read",
-  ]);
-  const body = await req.json();
-  const input = estimateSchema.parse(body);
-
+  await requireAuth(["deliveries.manage", "customers.contact.read", "orders.financials.read"]);
+  const input = estimateSchema.parse(await req.json());
   const context = { prisma: db, shop: shopContext };
   await assertProviderCapability(context, input.provider, "fees");
   const adapter = getDeliveryAdapter(input.provider);
-  const creds = await loadDeliveryCredentials(
-    context,
-    input.provider,
-  );
-
-  const estimate = await adapter.estimateCost(
-    {
-      wilaya: input.wilaya,
-      commune: input.commune,
-      weight: input.weight,
-      codAmount: input.codAmount,
-    },
-    creds,
-  );
-
-  return NextResponse.json(estimate);
+  const credentials = await loadDeliveryCredentials(context, input.provider);
+  return NextResponse.json(await adapter.estimateCost({
+    wilaya: input.wilaya,
+    commune: input.commune,
+    weight: input.weight,
+    codAmount: input.codAmount,
+  }, credentials));
 }, "POST /api/delivery/estimate");
