@@ -87,8 +87,8 @@ const PROVIDERS: ProviderConfig[] = [
   },
   {
     id: "ecotrack",
-    // The protected credentials route retains `noest` only as an invisible
-    // migration token; deliverySecretKey rewrites these writes to EcoTrack.
+    // The protected credential endpoint retains this token only as a migration
+    // bridge. deliverySecretKey rewrites every write into delivery_ecotrack_*.
     credentialRouteId: "noest",
     name: "EcoTrack Pro",
     fields: [
@@ -143,7 +143,10 @@ export function DeliveryCredentialsPanelWave3() {
   }, []);
 
   useEffect(() => {
-    void load();
+    const timeoutId = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, [load]);
 
   async function reauthenticate() {
@@ -251,12 +254,12 @@ export function DeliveryCredentialsPanelWave3() {
           {state === "loading" ? <p className="text-sm text-muted-foreground">{copy("loading")}</p> : null}
           {state === "verification" ? (
             <Alert>
-              <ShieldCheck className="size-4" />
+              <ShieldCheck className="size-4" aria-hidden="true" />
               <AlertTitle>{copy("verificationRequired")}</AlertTitle>
               <AlertDescription className="mt-2 flex flex-col gap-2 sm:flex-row">
                 <Input type="password" value={pin} onChange={(event) => setPin(event.target.value)} autoComplete="current-password" />
                 <Button onClick={() => void reauthenticate()} disabled={!pin.trim() || busy === "reauth"}>
-                  {busy === "reauth" ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {busy === "reauth" ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
                   {copy("verify")}
                 </Button>
               </AlertDescription>
@@ -264,7 +267,7 @@ export function DeliveryCredentialsPanelWave3() {
           ) : null}
           {state === "unavailable" ? (
             <Alert>
-              <AlertTriangle className="size-4" />
+              <AlertTriangle className="size-4" aria-hidden="true" />
               <AlertTitle>{copy("unavailable")}</AlertTitle>
               <AlertDescription>
                 {copy("unavailableDescription")}
@@ -280,14 +283,9 @@ export function DeliveryCredentialsPanelWave3() {
             return (
               <section key={provider.id} className="space-y-3 rounded-xl border p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{provider.name}</p>
-                    {provider.id === "ecotrack" ? (
-                      <p className="mt-1 text-xs text-muted-foreground">One EcoTrack connection can represent the courier named in your merchant profile.</p>
-                    ) : null}
-                  </div>
+                  <p className="font-medium">{provider.name}</p>
                   <div className="flex gap-2">
-                    {certified ? <Badge><ShieldCheck className="me-1 size-3" />{t("delivery.certified")}</Badge> : null}
+                    {certified ? <Badge><ShieldCheck className="me-1 size-3" aria-hidden="true" />{t("delivery.certified")}</Badge> : null}
                     <Badge variant={configured ? "default" : "outline"}>
                       {configured ? t("delivery.configured") : t("delivery.notConfigured")}
                     </Badge>
@@ -311,7 +309,7 @@ export function DeliveryCredentialsPanelWave3() {
                     ))}
                     <div className="flex gap-2 md:col-span-2">
                       <Button size="sm" onClick={() => void save(provider)} disabled={busy !== null}>
-                        <Save className="size-4" />{t("common.save")}
+                        <Save className="size-4" aria-hidden="true" />{t("common.save")}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => setEditing(null)}>{t("common.cancel")}</Button>
                     </div>
@@ -323,12 +321,12 @@ export function DeliveryCredentialsPanelWave3() {
                     </Button>
                     {configured ? (
                       <Button size="sm" variant="outline" onClick={() => void certify(provider)} disabled={busy !== null}>
-                        <ShieldCheck className="size-4" />{t("integrations.testConnection")}
+                        <ShieldCheck className="size-4" aria-hidden="true" />{t("integrations.testConnection")}
                       </Button>
                     ) : null}
                     {configured ? (
                       <Button size="sm" variant="outline" className="text-destructive" onClick={() => setDeleteProvider(provider)}>
-                        <Trash2 className="size-4" />{t("common.delete")}
+                        <Trash2 className="size-4" aria-hidden="true" />{t("common.delete")}
                       </Button>
                     ) : null}
                   </div>
@@ -339,7 +337,7 @@ export function DeliveryCredentialsPanelWave3() {
 
           {result ? (
             <div role={result.ok ? "status" : "alert"} className={result.ok ? "flex items-center gap-2 rounded-md bg-success/10 p-3 text-sm text-success" : "rounded-md bg-destructive/10 p-3 text-sm text-destructive"}>
-              {result.ok ? <CheckCircle2 className="size-4" /> : null}{result.message}
+              {result.ok ? <CheckCircle2 className="size-4" aria-hidden="true" /> : null}{result.message}
             </div>
           ) : null}
         </CardContent>
