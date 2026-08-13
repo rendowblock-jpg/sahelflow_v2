@@ -8,20 +8,22 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 ## Current repository truth
 
-- Protected `main` after the Orders merge: `856f58126327797b467938390586a04f185e70f6` — PR #244.
-- Latest application-changing protected merge: **PR #244 — Orders + confirmation operational workspace**.
+- Protected `main`: `5a8d5e3c042abbcee001a68a7168d3c679f6e541` — PR #248 / Internal.16 Wave 2.
+- Latest application-changing protected merge: **PR #248 — Internal.16 Wave 2**.
 - Shared frontend foundation remains protected by **PR #236**.
 - Inbox route adoption remains protected by **PR #237**.
 - AI Agents route adoption remains protected by **PR #240**.
 - Settings route adoption remains protected by **PR #242**.
 - Orders + confirmation route adoption remains protected by **PR #244**.
-- Published executable remains **Internal.14**, application source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed publication run `31388777098`.
-- Published release remains **`1.0.0-internal.14`** / MSI `1.0.0.14`.
-- Founder-installed release remains **Internal.14**; Founder-accepted baseline remains **Internal.5**.
+- Internal.16 Wave 1 is protected by **PR #247** and Wave 2 by **PR #248**.
+- Active implementation is **PR #250 — Internal.16 Wave 3 / EcoTrack + Gemini provider truth**.
+- Published executable is **Internal.15**, application source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed publication run `31657621918`.
+- Published release is **`1.0.0-internal.15`** / MSI `1.0.0.15`.
+- Founder-installed release is **Internal.15**; Founder acceptance remains open.
 - Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**.
 - Open retained issues remain **#221, #226 and #230**.
-- Phase 8 implementation remains frozen behind whole-product frontend adoption,
-  installed Phase 6/7 closure, live #230 certification and explicit Founder acceptance.
+- FD-033 authorizes remaining Phase 5/6/7 and Phase 8 implementation to converge in
+  Internal.16 without claiming installed, customer-online, Beta or Stable evidence early.
 
 Documentation-only commits may advance protected `main` without changing the
 published executable or the latest application-changing protected merge.
@@ -32,7 +34,8 @@ The earlier **Phase 5 closure** source/browser checkpoint remains **PR #220** at
 `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` and continues to be valid for exactly
 what its frozen head proved. The documentation audit lineage tracks **issues #201,
 #214, #221, #226 and #230**; #201 and #214 are now closed by stronger later evidence,
-while #221/#226/#230 remain retained. **Published release: `1.0.0-internal.14`**.
+while #221/#226/#230 remain retained. The **historical Internal.14 publication
+checkpoint** was `1.0.0-internal.14`.
 **Founder acceptance remains open**.
 
 ## Protected frontend adoption
@@ -90,18 +93,20 @@ PR #244 protects the **Orders + confirmation operational workspace** at protecte
 merge `856f58126327797b467938390586a04f185e70f6`. This remains source/browser
 evidence, not installed Founder acceptance.
 
-## Next implementation frontier — FD-032 Internal.15 Founder checkpoint
+## Current implementation frontier — Internal.16 completion waves
 
-PR #245 prepares exact `1.0.0-internal.15` as a Founder/internal-lab offline
-checkpoint. The artifact must contain no online-trial service URL, offer no online
-trial action, and retain the signed permanent entitlement path. FD-032 and the
-version/build/release gates bind this exception to Internal.15 only.
+PR #245 completed and published exact `1.0.0-internal.15` as the FD-032
+Founder/internal-lab offline checkpoint. PRs #247 and #248 protect Internal.16
+Waves 1–2. PR #250 owns Wave 3 provider truth; Wave 4 owns the connected Phase 8
+platform; Wave 5 owns startup/reliability, final certification and signed update
+proof if earned.
 
 Issue #230 remains open P1. Before any release to users, SahelFlow still requires a
 verified owned domain, distinct primary/recovery trial ingress, representative
 Algerian-network reachability and signed installed customer-trial evidence.
 
-Do not start Phase 8 or claim installed acceptance from source/browser evidence.
+Do not claim installed acceptance, customer-online certification, Beta or Stable
+from source/browser evidence.
 
 ## Retained acceptance boundaries
 

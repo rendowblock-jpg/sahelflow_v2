@@ -300,7 +300,8 @@ requireMarkers("README.md", [
   "PR #220",
   "Phase 6 — Arabic, RTL and accessibility parity",
   "issues #201, #214, #221, #226 and #230",
-  "Published release: `1.0.0-internal.14`",
+  "`1.0.0-internal.15`",
+  "31657621918",
   "Founder acceptance remains open",
 ]);
 requireMarkers("AGENTS.md", [
@@ -312,10 +313,12 @@ requireMarkers("AGENTS.md", [
   "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734",
 ]);
 requireMarkers("documentation/README.md", [
-  "Published Internal.14 checkpoint",
+  "PR #250",
+  "agent/internal-16-wave-3",
+  "`1.0.0-internal.15`",
+  "31657621918",
   "Phase 6 — Arabic, RTL and accessibility parity",
   "PR #220",
-  "issue #221",
   "issues #201, #214, #221, #226 and #230",
 ]);
 requireMarkers("documentation/product/DECISIONS.md", [
@@ -324,6 +327,7 @@ requireMarkers("documentation/product/DECISIONS.md", [
   "## FD-030",
   "## FD-031",
   "## FD-032",
+  "## FD-033",
   "Whole-product AAA rule",
   "The Founder decides whether the Web Agent or Desktop Agent is active",
 ]);
@@ -355,10 +359,11 @@ requireMarkers("documentation/operations/WORKFLOW.md", [
   "Whole-product AAA frontend program",
 ]);
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
-  "Phase 5 closure snapshot",
-  "Phase 6 next action",
+  "Wave 3 — what is already implemented",
+  "Exact next-session order",
   "Hard rules",
-  "issue #221",
+  "#221, #226, #230",
+  "31657621918",
   "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734",
 ]);
 requireMarkers("documentation/research/RESEARCH.md", [

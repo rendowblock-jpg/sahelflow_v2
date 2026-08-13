@@ -52,11 +52,11 @@ describe("extractWithGemini", () => {
       method: "gemini",
       confidence: 0.9,
       isComplete: true,
-      raw: { model: "gemini-3.6-flash" },
+      raw: { model: "gemini-3.5-flash" },
     });
     expect(result.order?.phone).toBe("0661234567");
     const [url, init] = vi.mocked(fetch).mock.calls[0]!;
-    expect(String(url)).toContain("gemini-3.6-flash:generateContent");
+    expect(String(url)).toContain("gemini-3.5-flash:generateContent");
     const body = JSON.parse(String((init as RequestInit).body)) as {
       generationConfig: Record<string, unknown>;
     };
@@ -86,7 +86,7 @@ describe("extractWithGemini", () => {
       .mockResolvedValueOnce(error(404, "NOT_FOUND"))
       .mockResolvedValueOnce(ok(COMPLETE));
     const result = await extractWithGemini(INPUT, OPTIONS);
-    expect(result.raw).toEqual({ model: "gemini-3.5-flash" });
+    expect(result.raw).toEqual({ model: "gemini-3.6-flash" });
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
@@ -109,7 +109,7 @@ describe("verifyGeminiKey", () => {
   it("requires real model output and reports the selected stable model", async () => {
     vi.mocked(fetch).mockResolvedValue(ok("OK"));
     const result = await verifyGeminiKey("AIza-valid-key");
-    expect(result).toMatchObject({ ok: true, model: "gemini-3.6-flash" });
+    expect(result).toMatchObject({ ok: true, model: "gemini-3.5-flash" });
   });
 
   it("falls forward on model retirement", async () => {
@@ -117,7 +117,7 @@ describe("verifyGeminiKey", () => {
       .mockResolvedValueOnce(error(404, "NOT_FOUND"))
       .mockResolvedValueOnce(ok("OK"));
     const result = await verifyGeminiKey("AIza-valid-key");
-    expect(result).toMatchObject({ ok: true, model: "gemini-3.5-flash" });
+    expect(result).toMatchObject({ ok: true, model: "gemini-3.6-flash" });
   });
 
   it("never treats quota exhaustion as key verification", async () => {

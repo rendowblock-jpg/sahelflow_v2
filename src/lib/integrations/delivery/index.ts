@@ -74,6 +74,19 @@ async function readCredentialKeys(
   return credentials;
 }
 
+function completeEcoTrackCredentials(
+  credentials: DeliveryCredentials,
+): boolean {
+  return [
+    "apiToken",
+    "userGuid",
+    "createOrderUrl",
+    "validateOrderUrl",
+    "trackingsUrl",
+    "feesUrl",
+  ].every((field) => Boolean(credentials[field]?.trim()));
+}
+
 export async function loadDeliveryCredentials(
   context: ServiceContext,
   rawProvider: string,
@@ -86,9 +99,10 @@ export async function loadDeliveryCredentials(
 
   const keys = deliverySecretKeys(provider);
   const current = await readCredentialKeys(context, keys);
-  if (Object.values(current).some(Boolean) || rawProvider !== "noest") {
+  if (provider !== "ecotrack") {
     return current;
   }
+  if (completeEcoTrackCredentials(current)) return current;
 
   // Historical read bridge only. Old NOEST rows can still be reconciled through
   // EcoTrack without retaining NOEST as a selectable/runtime provider. New
@@ -97,7 +111,7 @@ export async function loadDeliveryCredentials(
   if (Object.values(legacy).some(Boolean)) {
     legacy.carrierName = "NOEST Express";
   }
-  return legacy;
+  return { ...legacy, ...current };
 }
 
 export async function hasDeliveryCredentials(

@@ -9,6 +9,7 @@
 > **Last application-changing Wave 3 head before session-handoff docs:** `df84f3d4e78a982695b5883c98a15ac145604b49`
 > **PR state at handoff:** open, non-draft, unmerged
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
+> **Published release:** `1.0.0-internal.15` — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
 > **Retained open evidence:** #221, #226, #230
 
 Live protected GitHub state is always authority. Re-fetch `main`, PR #250, exact checks and review threads before writing code.
@@ -18,13 +19,12 @@ Live protected GitHub state is always authority. Re-fetch `main`, PR #250, exact
 For the current in-progress Wave 3 frontier, read in this order:
 
 1. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — **active resumable frontier and exact next-session sequence**.
-2. [`operations/WAVE3_SESSION_HANDOFF_2026-08-13.md`](operations/WAVE3_SESSION_HANDOFF_2026-08-13.md) — compact Wave 3 implementation/evidence/blocker handoff.
-3. [`product/PRODUCT.md`](product/PRODUCT.md) — seller/jobs/outcomes/tier authority.
-4. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — interaction/visual/RTL/accessibility requirements.
-5. [`product/DECISIONS.md`](product/DECISIONS.md) — Founder decisions through FD-033.
-6. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — technical invariants/canonical ownership.
-7. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — implementation/review/certification process.
-8. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) and [`system/ROADMAP.md`](system/ROADMAP.md) — binding long-form state/phase authority, but some execution-frontier prose predates protected Waves 1–2 and active PR #250. **Do not use stale frontier sentences in those files to restart completed waves.** Live GitHub + Working Memory + the Wave 3 handoff own the active resume position until post-Wave-3 reconciliation.
+2. [`product/PRODUCT.md`](product/PRODUCT.md) — seller/jobs/outcomes/tier authority.
+3. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — interaction/visual/RTL/accessibility requirements.
+4. [`product/DECISIONS.md`](product/DECISIONS.md) — Founder decisions through FD-033.
+5. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — technical invariants/canonical ownership.
+6. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — implementation/review/certification process.
+7. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) and [`system/ROADMAP.md`](system/ROADMAP.md) — binding long-form state/phase authority. Live GitHub + Working Memory own the exact in-progress head and evidence state.
 
 Repository `AGENTS.md` remains the coding-agent entry point. Do not create a competing permanent masterplan.
 
@@ -36,7 +36,7 @@ Wave 3 is active in PR #250 and **must not be merged yet**. The latest applicati
 
 Wave 3 already contains the major EcoTrack provider replacement and Gemini provider/extraction/chat convergence work. The landed `df84f3d4...` repair also makes EcoTrack negative/non-delivery tracking fail safe, including a `non livré` regression.
 
-At handoff, the remaining application closure is narrowly defined in Working Memory and the Wave 3 handoff:
+The remaining application closure is narrowly defined in Working Memory:
 
 - historical `noest` delivery rows must normalize into canonical EcoTrack tracking authority before validation;
 - remaining shipment/AI caller vocabularies must submit `ecotrack`, not `noest`;
@@ -66,7 +66,7 @@ Re-fetch all of this in the next session because documentation-only commits afte
 
 `CURRENT_STATE.md` and `ROADMAP.md` still contain older execution-frontier prose because whole-file connector writes were safety-blocked during this session. That does **not** change product/architecture authority and does **not** reopen completed Waves 1–2.
 
-Until Wave 3 closes, use live GitHub + `WORKING_MEMORY.md` + the Wave 3 handoff for session continuation. Reconcile the long-form documents after #250 lands instead of rewriting them mid-wave.
+Until Wave 3 closes, use live GitHub + `WORKING_MEMORY.md` for session continuation.
 
 ## After Wave 3
 
@@ -76,3 +76,11 @@ Only after #250 is fully green and merged:
 - **Wave 5:** startup/performance/reliability, retained customer-online/installed evidence, security/privacy closure, and signed Internal.16 release proof if earned.
 
 No Internal.16/Beta/Stable claim exists until the applicable exact evidence passes.
+
+## Durable evidence continuity
+
+The historical Phase 5 source/browser closure remains PR #220 at
+`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. The retained evidence lineage is
+issues #201, #214, #221, #226 and #230; #201/#214 are closed by stronger later
+evidence, while #221/#226/#230 remain open. This history does not replace the live
+Wave 3 frontier above.

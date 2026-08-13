@@ -11,12 +11,14 @@
 > **PR state at handoff:** OPEN, non-draft, UNMERGED
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Current source/release authority:** `1.0.0-internal.15` / MSI `1.0.0.15`, FD-032 Founder-offline-only
-> **Published release:** `1.0.0-internal.14` — source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed run `31388777098`
+> **Published release:** `1.0.0-internal.15` — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
 > **Retained open evidence:** #221, #226, #230
 
-**Active resume companion:** [`WAVE3_SESSION_HANDOFF_2026-08-13.md`](WAVE3_SESSION_HANDOFF_2026-08-13.md).
-
 Live GitHub is authority. At the start of the next session, re-fetch protected `main`, PR #250, its current head/checks/review threads, and retained issues before any application write. Do **not** repeat the whole-repository audit or Founder screenshot discovery.
+
+Historical continuity: Phase 5 remains protected at PR #220 /
+`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`; the evidence lineage remains issues
+#201, #214, #221, #226 and #230, with #221/#226/#230 still open.
 
 ## Session closure — 2026-08-13
 

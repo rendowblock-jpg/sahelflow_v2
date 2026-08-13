@@ -44,14 +44,16 @@ A lower layer cannot silently weaken a higher one.
 The following block is retained as the protected route/release evidence chain that
 FD-033 builds on. It is not the current next-session instruction.
 
-- Protected application-changing `main`: `856f58126327797b467938390586a04f185e70f6` — PR #244.
-- Latest application-changing protected merge: **PR #244 — Orders + confirmation operational workspace**.
+- Historical pre-Internal.16 application baseline: `856f58126327797b467938390586a04f185e70f6` — PR #244.
+- Latest application-changing protected merge: **PR #248 — Internal.16 Wave 2** at
+  `5a8d5e3c042abbcee001a68a7168d3c679f6e541`.
 - Shared frontend foundation remains **PR #236** / `04adb20fb5846499039eda61a9b765deb9c622e6`.
 - Inbox workspace remains protected through **PR #237** / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`.
 - AI Agents workspace remains protected through **PR #240** / `598e2a0dc0352227431614cf1527672aa78ec015`.
-- Published executable source remains `2d60e2e74109b6e03626a5ccdff727c029a34591`.
-- Published release remains `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`.
-- Founder-installed Internal.14 is permanently licensed but **not** Founder-accepted.
+- Historical Internal.14 source is `2d60e2e74109b6e03626a5ccdff727c029a34591`.
+- Published release is `1.0.0-internal.15` / MSI `1.0.0.15`, source
+  `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`.
+- Founder-installed Internal.15 is permanently licensed but **not** Founder-accepted.
 - Founder-accepted baseline remains Internal.5.
 - Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**.
 - Inbox is source/browser protected through PR #237; AI Agents through PR #240;
@@ -70,6 +72,11 @@ or destructive authority without verifying them.
 
 ## Current Internal.16 handoff after Internal.15
 
+- Protected `main` is `5a8d5e3c042abbcee001a68a7168d3c679f6e541`
+  through PR #248 / Internal.16 Wave 2; PR #250 is the active Wave 3 branch.
+- Published Internal.15 source is
+  `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed publication run
+  `31657621918`; installed/published does not mean Founder-accepted.
 - PR #245 merged the exact FD-032 Internal.15 Founder/internal-lab offline checkpoint
   to protected `main` at `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`.
 - The Founder installed and inspected Internal.15 and explicitly closed discovery on

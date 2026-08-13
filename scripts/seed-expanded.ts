@@ -102,7 +102,7 @@ const ORDER_STATUSES = [
   "cancelled", "cancelled",
 ] as const;
 
-const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zr_express", "noest"] as const;
+const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zr_express", "ecotrack"] as const;
 
 const RETURN_STATUSES = ["requested", "requested", "approved", "approved", "completed", "completed", "rejected"] as const;
 const RETURN_TYPES = ["return", "return", "return", "exchange", "exchange"] as const;
@@ -121,7 +121,7 @@ const EXPENSE_DESCRIPTIONS = [
   "Achat étiquettes",
   "Frais ZR Express",
   "Carburant livreur",
-  "Frais NOEST Express",
+  "Frais EcoTrack Pro",
   "Matériel bureau",
   "Maintenance ordinateur",
 ];

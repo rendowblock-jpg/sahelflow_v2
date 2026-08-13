@@ -357,7 +357,7 @@ registerTool({
 
 const assignOrderToDeliverySchema = z.object({
   orderNumber: z.string(),
-  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "ecotrack"]),
   weight: z.number().min(0).optional().default(0.5),
 });
 
@@ -372,7 +372,7 @@ registerTool({
       type: "object",
       properties: {
         orderNumber: { type: "string", description: "The order number" },
-        provider: { type: "string", enum: ["yalidine", "maystro", "zrexpress", "noest"], description: "Delivery provider" },
+        provider: { type: "string", enum: ["yalidine", "maystro", "zrexpress", "ecotrack"], description: "Delivery provider" },
         weight: { type: "number", description: "Package weight in kg (default 0.5)" },
       },
       required: ["orderNumber", "provider"],
@@ -612,7 +612,7 @@ registerTool({
     try {
       const input = getDeliveryCostComparisonSchema.parse(params);
       const db = getDb(ctx);
-      const providers = ["yalidine", "maystro", "zrexpress", "noest"] as const;
+      const providers = ["yalidine", "maystro", "zrexpress", "ecotrack"] as const;
       const comparisons: Array<{
         provider: string;
         cost: number;

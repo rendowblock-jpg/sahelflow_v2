@@ -61,6 +61,9 @@ describe("delivery provider authority source contract", () => {
   it("invalidates credentials and certifies through one recent-reauthenticated route", () => {
     const credentials = source("src/app/api/delivery/credentials/route.ts");
     expect(credentials).toContain("invalidateProviderCertifications");
+    expect(credentials).toContain("normalizeDeliveryProvider(input.provider)");
+    expect(credentials).toContain("entityId: provider");
+    expect(credentials).toContain("entityId: canonicalProvider");
     expect(credentials).toContain('"credentials_updated"');
     expect(credentials).toContain('"credentials_deleted"');
 
@@ -80,7 +83,8 @@ describe("delivery provider authority source contract", () => {
       [`src/lib/delivery/${bookingAuthority}.ts`]: ['assertProviderCapability(context, provider, "booking")'],
       [`src/lib/delivery/${effectRuntime}.ts`]: [
         'assertProviderCapability(context, provider, "booking")',
-        'assertProviderCapability(context, provider, "tracking")',
+        'assertProviderCapability(context, storedProvider, "tracking")',
+        "normalizeDeliveryProvider(storedProvider)",
       ],
       "src/lib/ai/chat/tools/core-tools.ts": ['assertProviderCapability(context, input.provider, "fees")'],
     };

@@ -2,11 +2,11 @@
 
 > **Authority:** merged protected source and named evidence only; Founder observations are labeled installed findings, not merged implementation
 > **Last assessed:** 2026-08-13
-> **Protected main release checkpoint:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
-> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
-> **Application-changing protected baseline:** `856f58126327797b467938390586a04f185e70f6`
+> **Protected main:** `5a8d5e3c042abbcee001a68a7168d3c679f6e541` — PR #248 / Internal.16 Wave 2
+> **Latest application-changing protected merge:** PR #248 — Internal.16 Wave 2
+> **Active implementation:** PR #250 — Internal.16 Wave 3
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
-> **Published release:** `1.0.0-internal.14` — source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed run `31388777098`
+> **Published release:** `1.0.0-internal.15` — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Next application milestone:** Internal.16 complete-product candidate under FD-033
 > **Installed discovery:** CLOSED 2026-08-13; 17 Founder-installed P1 inputs frozen
@@ -20,7 +20,7 @@ SahelFlow retains a strong protected Windows/local-first engine across Golden CO
 
 The completed installed Internal.15 Founder inspection confirms that the product is still below the final class-AAA/user-ready target. The remaining problem is systemic rather than one page: Arabic/RTL geometry, responsive/layout composition, localization/cache consistency, theme transitions, chart/data-visualization quality, Inbox/AI workflow quality, universal search, Gemini setup, navigation information architecture, startup performance and remaining Phase 5/6/7/8 implementation/certification.
 
-The installed discovery phase is now closed. FD-033 makes Internal.16 the complete-product convergence candidate. The next application session starts with one exact-source whole-product reconnaissance to discover sibling manifestations/root dependencies of the frozen findings and the existing Phase 8/EcoTrack/AI/release scope, then freezes the combined Problem Register and begins the large implementation wave.
+The installed discovery phase is closed. FD-033 makes Internal.16 the complete-product convergence candidate. Waves 1–2 are protected through PRs #247–#248; PR #250 is the active Wave 3 EcoTrack/Gemini provider-truth package. Wave 4 and Wave 5 remain dependency-ordered behind it.
 
 ## Protected canonical boundaries
 
@@ -80,7 +80,7 @@ Final exact head `6355cc4c797a597af52c90decfe7727e405749be` protects the AI sour
 
 Final exact head `e749b0af05741ee45b16c349750d44092bd3beb9` passed CI/experience/completion runs `31546488691`, `31546488465`, `31546488422` before protected merge.
 
-PR #244 remains the latest route-level application-changing protected merge at `856f58126327797b467938390586a04f185e70f6`; PR #245 is the later FD-032 release/checkpoint merge. Internal.14 publication evidence remains source `2d60e2e74109b6e03626a5ccdff727c029a34591`, **Published release:** `1.0.0-internal.14`, signed run `31388777098`.
+PR #244 remains the latest route-level application-changing protected merge at `856f58126327797b467938390586a04f185e70f6`; PR #245 is the later FD-032 release/checkpoint merge. Historical Internal.14 publication evidence remains source `2d60e2e74109b6e03626a5ccdff727c029a34591`, release `1.0.0-internal.14`, signed run `31388777098`.
 
 ## Historical continuity anchors
 
@@ -106,7 +106,7 @@ FD-032 remains exact to Internal.15: Founder/internal-lab offline checkpoint, no
 
 ## Post-Internal.15 route-level frontier
 
-The installed Internal.15 inspection is closed, but no Internal.16 application implementation has been written yet. Therefore **Phase 8 implementation has not begun** as of this handoff; FD-033 authorizes it to begin in the next completion wave after source reconnaissance/Problem Register freeze.
+The installed Internal.15 inspection is closed. Internal.16 Waves 1–2 are protected and Wave 3 is active; **Phase 8 implementation remains Wave 4**, dependency-ordered after provider truth closes. FD-033 authorizes it without marking installed or external evidence complete.
 
 Retained exact issue status entering Internal.16:
 

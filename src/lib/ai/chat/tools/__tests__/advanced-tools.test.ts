@@ -398,12 +398,12 @@ describe("assign_order_to_delivery", () => {
 
 describe("get_delivery_cost_comparison", () => {
   it("compares costs across all four providers", async () => {
-    // Sequential calls to estimateCost for yalidine, maystro, zrexpress, noest
+    // Sequential calls to estimateCost for yalidine, maystro, zrexpress, ecotrack
     mockAdapter.estimateCost
       .mockResolvedValueOnce({ provider: "yalidine", cost: 600, available: true })
       .mockResolvedValueOnce({ provider: "maystro", cost: 500, available: true })
       .mockResolvedValueOnce({ provider: "zrexpress", cost: 700, available: true })
-      .mockResolvedValueOnce({ provider: "noest", cost: 550, available: true });
+      .mockResolvedValueOnce({ provider: "ecotrack", cost: 550, available: true });
 
     const tool = getTool("get_delivery_cost_comparison")!;
     const result = await tool.execute({ wilaya: "Alger", codAmount: 5000 }, ctx());
@@ -421,7 +421,7 @@ describe("get_delivery_cost_comparison", () => {
       .mockResolvedValueOnce({ provider: "yalidine", cost: 600, available: true })
       .mockResolvedValueOnce({ provider: "maystro", cost: 0, available: false, error: "Zone non couverte" })
       .mockResolvedValueOnce({ provider: "zrexpress", cost: 0, available: false, error: "Erreur" })
-      .mockResolvedValueOnce({ provider: "noest", cost: 0, available: false, error: "Non certifié" });
+      .mockResolvedValueOnce({ provider: "ecotrack", cost: 0, available: false, error: "Non certifié" });
 
     const tool = getTool("get_delivery_cost_comparison")!;
     const result = await tool.execute({ wilaya: "Tamanrasset", codAmount: 3000 }, ctx());

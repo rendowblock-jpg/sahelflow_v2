@@ -16,6 +16,7 @@ import type {
   ReturnLifecycleState,
 } from "@/lib/business-truth/contracts";
 import type { BusinessPrincipalContext } from "@/lib/business-truth/principal";
+import { normalizeDeliveryProvider } from "@/lib/integrations/delivery/types";
 import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
 import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
 
@@ -472,6 +473,7 @@ async function appendDeliveryEvent(
     providerEventId?: string;
   },
 ): Promise<void> {
+  const storedProvider = input.order.delivery?.provider;
   await tx.canonicalDeliveryEvent.create({
     data: {
       id: randomUUID(),
@@ -479,7 +481,9 @@ async function appendDeliveryEvent(
       orderId: input.order.id,
       deliveryId: input.order.delivery?.id,
       eventType: input.eventType,
-      provider: input.order.delivery?.provider ?? "manual",
+      provider: storedProvider
+        ? (normalizeDeliveryProvider(storedProvider) ?? storedProvider)
+        : "manual",
       providerEventId: input.providerEventId,
       reasonCode: input.reasonCode,
       occurredAt: input.occurredAt,

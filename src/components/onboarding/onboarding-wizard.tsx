@@ -241,7 +241,6 @@ export function OnboardingWizard() {
                       <SelectItem value="yalidine">Yalidine</SelectItem>
                       <SelectItem value="maystro">Maystro</SelectItem>
                       <SelectItem value="zrexpress">ZR Express</SelectItem>
-                      <SelectItem value="noest">NOEST Express</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

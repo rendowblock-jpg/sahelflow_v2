@@ -1,8 +1,8 @@
 import "server-only";
 
 export const GEMINI_MODELS = [
-  "gemini-3.6-flash",
   "gemini-3.5-flash",
+  "gemini-3.6-flash",
 ] as const;
 export type GeminiModel = (typeof GEMINI_MODELS)[number];
 

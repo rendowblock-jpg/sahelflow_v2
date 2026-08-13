@@ -27,9 +27,8 @@ const PROVIDER_DASHBOARD_URLS: Record<string, string> = {
   zrexpress: "https://zrexpress.com/ZREXPRESS_WEB/FR/",
 };
 
-function getTrackingUrl(provider: string, trackingNumber: string): string {
-  return PROVIDER_TRACKING_URLS[provider] ??
-    `https://www.google.com/search?q=${encodeURIComponent(`${provider} tracking ${trackingNumber}`)}`;
+function getTrackingUrl(provider: string): string | null {
+  return PROVIDER_TRACKING_URLS[provider] ?? null;
 }
 
 export function DeliveryRowActions({
@@ -80,7 +79,7 @@ export function DeliveryRowActions({
     });
   }
 
-  const trackUrl = trackingNumber ? getTrackingUrl(provider, trackingNumber) : null;
+  const trackUrl = trackingNumber ? getTrackingUrl(provider) : null;
   return (
     <div className="flex items-center justify-end gap-1">
       {canManage ? (

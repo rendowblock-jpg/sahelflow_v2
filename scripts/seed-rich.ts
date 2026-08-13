@@ -432,7 +432,7 @@ async function main() {
   console.log(`  ✅ ${ORDER_STATUSES.length} orders (full lifecycle, 30-day spread)`);
 
   // ─── Deliveries (40) ──────────────────────────────────────────────────────
-  const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zrexpress", "noest"] as const;
+  const DELIVERY_PROVIDERS = ["yalidine", "maystro", "zrexpress", "ecotrack"] as const;
   const deliveryOrders = await prisma.order.findMany({
     where: { status: { in: ["confirmed", "shipped", "delivered", "returned", "refused"] } },
     take: 40,
@@ -506,7 +506,7 @@ async function main() {
     { category: "delivery_fees", notes: "Frais Yalidine — lot semaine", amount: 4500, daysAgo: 1 },
     { category: "delivery_fees", notes: "Frais Maystro — lot jour", amount: 2800, daysAgo: 2 },
     { category: "delivery_fees", notes: "Frais ZR Express", amount: 3200, daysAgo: 3 },
-    { category: "delivery_fees", notes: "Frais NOEST Express", amount: 2200, daysAgo: 5 },
+    { category: "delivery_fees", notes: "Frais EcoTrack Pro", amount: 2200, daysAgo: 5 },
     { category: "ads", notes: "Publicité Facebook Ads", amount: 8000, daysAgo: 1 },
     { category: "ads", notes: "Instagram sponsorisé", amount: 5000, daysAgo: 4 },
     { category: "ads", notes: "TikTok Ads", amount: 6000, daysAgo: 7 },

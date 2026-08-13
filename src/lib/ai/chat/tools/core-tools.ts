@@ -450,7 +450,7 @@ registerTool({
 // ── Tool 6: estimate_delivery_cost ──────────────────────────────────────────
 
 const estimateDeliverySchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]).default("yalidine"),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "ecotrack"]).default("yalidine"),
   wilaya: z.string(),
   weight: z.number().positive().default(1),
   codAmount: z.number().min(0).default(0),
@@ -466,7 +466,7 @@ registerTool({
       properties: {
         provider: {
           type: "string",
-          description: "yalidine|maystro|zrexpress|noest (default: yalidine)",
+          description: "yalidine|maystro|zrexpress|ecotrack (default: yalidine)",
         },
         wilaya: { type: "string", description: "Wilaya name" },
         weight: { type: "number", description: "Weight in kg (default 1)" },

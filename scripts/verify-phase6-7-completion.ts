@@ -157,6 +157,7 @@ const SAFE_LITERAL_COPY = new Set([
   "ZR Express",
   "Maystro",
   "Maystro Delivery",
+  "EcoTrack Pro",
   "NOEST",
   "NOEST Express",
   "Cloudflare",

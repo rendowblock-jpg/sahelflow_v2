@@ -31,7 +31,6 @@ import {
 } from "@/lib/i18n/settings-workspace";
 
 type ProviderId = "yalidine" | "maystro" | "zrexpress" | "ecotrack";
-type CredentialRouteId = "yalidine" | "maystro" | "zrexpress" | "noest";
 type ProviderStatus = Record<string, boolean>;
 type Certification = {
   provider: string;
@@ -47,7 +46,7 @@ type Certification = {
 };
 type ProviderConfig = {
   id: ProviderId;
-  credentialRouteId: CredentialRouteId;
+  credentialRouteId: ProviderId;
   name: string;
   fields: Array<{ key: string; label: string; type?: "text" | "password" }>;
 };
@@ -87,9 +86,7 @@ const PROVIDERS: ProviderConfig[] = [
   },
   {
     id: "ecotrack",
-    // The protected credential endpoint retains this token only as a migration
-    // bridge. deliverySecretKey rewrites every write into delivery_ecotrack_*.
-    credentialRouteId: "noest",
+    credentialRouteId: "ecotrack",
     name: "EcoTrack Pro",
     fields: [
       { key: "carrierName", label: "Courier name", type: "text" },

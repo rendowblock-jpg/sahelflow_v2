@@ -104,7 +104,7 @@ describe("orderStatusStyles", () => {
 // ── deliveryProviderConfig ──────────────────────────────────────────────────
 
 describe("deliveryProviderConfig", () => {
-  const knownProviders = ["yalidine", "maystro", "zrexpress", "zr_express", "noest"];
+  const knownProviders = ["yalidine", "maystro", "zrexpress", "zr_express", "ecotrack", "noest"];
 
   it("has an entry for every known provider key", () => {
     for (const p of knownProviders) {
@@ -122,7 +122,8 @@ describe("deliveryProviderConfig", () => {
   it("brand labels are proper nouns (not translated)", () => {
     expect(deliveryProviderConfig.yalidine!.label).toBe("Yalidine");
     expect(deliveryProviderConfig.maystro!.label).toBe("Maystro");
-    expect(deliveryProviderConfig.noest!.label).toBe("NOEST Express");
+    expect(deliveryProviderConfig.ecotrack!.label).toBe("EcoTrack Pro");
+    expect(deliveryProviderConfig.noest!.label).toBe("EcoTrack Pro");
   });
 });
 
