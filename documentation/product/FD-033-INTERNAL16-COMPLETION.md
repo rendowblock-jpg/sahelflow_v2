@@ -326,3 +326,106 @@ The installed Arabic Risk screenshot displays `DA 2 400` for potential savings w
 **Acceptance evidence**
 
 Arabic renders `دج`, French renders `DA`, English renders `DZD`, with consistent numeral/bidi presentation across Dashboard, Orders, Risk, Accounting, Analytics and exported/printed seller-facing UI where the same formatter contract applies.
+
+## 14. Installed Internal.15 Founder findings — Part 2
+
+Part 2 expands the installed evidence across Inbox, AI Agents, Analytics, Products, Settings, command/search and windowed desktop behavior. The findings remain additive and are not the final frozen Problem Register.
+
+### SF16-UI-001 — Part 2 evidence expansion: route-wide RTL/bidi audit is mandatory — P1
+
+The Founder confirms that wrong-side Arabic geometry is widespread enough that manually enumerating every element is neither reliable nor necessary. Internal.16 must treat this as a source-driven whole-product audit. Explicit Part 2 surfaces include Inbox queue/thread/context panes, AI sessions/thread/context rails, Analytics chart axes/legends/tooltips/data labels, Products tables/action columns, Settings form/action groups and the command palette. Charts must not merely translate titles: axis orientation, legend order, tooltip alignment, labels, mixed Latin identifiers and numeric/currency content must remain semantically readable in RTL. The implementation agent owns discovery of every remaining physical-side or ordering defect; lack of an individual Founder screenshot is not permission to leave one behind.
+
+### SF16-INBOX-005 — Inbox requires final AAA operational convergence — P1
+
+Internal.15 is materially improved but the installed Inbox still reads as a functional shell rather than a finished class-AAA communications workspace. Internal.16 must preserve the protected database/provider authorities while redesigning the usable work surface around rapid triage and conversation completion.
+
+Required outcome:
+
+- adaptive/resizable queue, thread and optional context/collaboration regions so wide screens use space intelligently and ordinary windowed widths do not create a narrow list beside a huge low-information blank canvas;
+- a purposeful no-conversation state with useful next actions/context rather than a visually empty majority pane;
+- stronger scan hierarchy for selected conversation, unread, priority, workflow state, assignee/queue, last activity and transport health;
+- selected-thread header/context exposing the right customer, order/risk and workflow facts without crowding the composer;
+- complete text plus supported image/document/voice/media handling, receipts, canned replies/templates, contact association, message-to-order extraction with human review, internal notes, assignment/handover/collaboration and durable activity history where the existing capability contract requires them;
+- sticky, fast composer and safe send/retry/reconnect behavior with local history remaining usable when WhatsApp transport is degraded;
+- efficient large-conversation/message rendering, stable scroll/tail behavior and no unnecessary refresh/query churn;
+- explicit wide, windowed and narrow drill-in layouts rather than one desktop layout squeezed smaller;
+- full AR/FR/EN, RTL/mixed direction, keyboard/focus, screen-reader, zoom/reflow and reduced-motion parity.
+
+Acceptance must exercise real selected conversations, empty queues, heavy histories, extraction review, provider disconnect/reconnect, assignment changes and window resize—not only the initial empty thread screenshot.
+
+### SF16-AI-006 — AI workspace requires final AAA workbench convergence — P1
+
+The protected PR #240 foundation remains correct authority, but the installed workspace still feels too rigid and utility-like for the final product. The current desktop composition uses fixed `15rem / flexible / 20rem` columns at XL; Internal.16 must make the conversation/task surface dominant and allow session/context/action-review information to adapt to available width instead of competing permanently for space.
+
+Required outcome:
+
+- adaptive, collapsible or resizable session and context rails with intentional RTL order;
+- polished new-session/empty/setup/provider-degraded states;
+- session creation/switching, long history, stream/stop/retry, scroll-memory and composer behavior that remains immediate and stable;
+- clearly staged tool execution/progress/results, source/record context and sensitive proposal review without raw JSON or developer traces becoming user authority;
+- useful operational prompts/actions derived only from real registered capabilities, not decorative AI suggestions;
+- keyboard-first composer/session/tool navigation, accessible live streaming and reduced-motion-safe state transitions;
+- active locale guides new assistant responses and system-generated session presentation, while persisted seller/history content remains exact and mixed-language messages use bidi-safe rendering;
+- performance measurements for long sessions, large tool results, rapid session switching and concurrent provider latency, separating SahelFlow overhead from model/network time.
+
+### SF16-I18N-007 — Zero untranslated-key/foreign-copy leakage in localized UI — P1
+
+Installed Arabic Settings visibly renders the raw key `auth.pinPlaceholder`. The Gemini secret API and verifier also contain hard-coded French messages. Internal.16 must eliminate this entire class of failure rather than correcting one string.
+
+Requirements:
+
+- inventory UI, server/API errors, validation, notifications, demo fixtures and system-generated content for AR/FR/EN ownership;
+- translation lookup must fail visibly in development/tests and release checks if a key resolves to itself or a key-like token reaches rendered UI;
+- server/provider failure authority uses stable codes/structured metadata; the localized UI owns human wording instead of surfacing hard-coded French/English server strings;
+- SahelFlow-owned demo/sample entities/content should be seeded/presented in the active locale where appropriate;
+- seller-entered business data is not silently translated: the current topbar renders the persisted active-shop name, so `Ma Boutique` is a localization defect only when it came from SahelFlow-owned demo seed, not when the seller intentionally named the shop that way;
+- the same exact-data rule applies to seller-entered product/customer names, while UI labels/statuses/system guidance remain localized;
+- locale switching must not leave stale copy from the previous language.
+
+### SF16-PRODUCTS-008 — Product table rows require professional media identity — P1 experience requirement
+
+The product workbench record already carries `images`, but the installed table renders only text identity. Internal.16 must show a compact primary product thumbnail in every product row when available.
+
+Requirements:
+
+- first valid/declared primary image displayed beside the product name in a stable square thumbnail without inflating operational row height;
+- missing/broken image fallback that still looks intentional;
+- lazy/deferred loading and bounded decode/cache behavior for low-end hardware and large catalogs;
+- image semantics appropriate to context (decorative when the adjacent product name provides the accessible identity, descriptive where used independently);
+- row click, preview and action targets remain unambiguous;
+- normal/compact density, RTL/LTR, windowed layouts and pagination/virtualization remain stable.
+
+### SF16-SEARCH-009 — Topbar command/search becomes universal operational search — P1
+
+The current command palette searches canonical navigation plus limited orders/customers/products, waits for at least two characters for record lookup and caps results aggressively. Internal.16 must turn the topbar search into a first-class, permission-aware way to find work from words, numbers and identifiers.
+
+Required searchable authority includes, where the actor is permitted: routes/commands; order numbers and relevant order fields; customer name and normalized phone; product name/SKU/barcode; shipment/tracking references; returns; Inbox conversations; COD/accounting references; automations and other approved high-value records. Exact identifiers/numbers must not be rejected merely because a generic minimum query length was chosen.
+
+Search must normalize case, whitespace, Arabic diacritics where safe, French accents, phone formats and mixed-script input; exact IDs remain exact. Rank exact matches first, group result types, highlight matched context, support keyboard navigation/deep links/recent useful queries, cancel stale searches and keep latency within the Phase 7 interaction envelope. Permission/shop filtering is mandatory so universal search cannot become a cross-shop or protected-field oracle.
+
+### SF16-AI-010 — Gemini API key configuration is not release-ready end to end — P1 functional defect
+
+The Founder entered a Gemini API key in installed Internal.15 and the AI did not become usable. The exact external cause is not yet proven, so Internal.16 must diagnose and certify the full lifecycle rather than guessing at the key/provider.
+
+Required lifecycle:
+
+```text
+recent PIN reauthentication
+→ localized key entry
+→ current official Gemini endpoint/model-policy verification
+→ encrypted protected save
+→ persisted configured + verified state
+→ immediate AI workspace readiness refresh without restart
+→ one real minimal assistant/extraction request
+→ explicit ongoing quota/model/provider health
+```
+
+Invalid format/key, API disabled/restricted, unsupported model, quota/rate limit, network/timeout, provider response error, protected-secret storage failure, reauthentication expiry and consent/license blockers must have distinct stable error codes and localized actionable UI. A raw `auth.pinPlaceholder`, generic unavailable state or hard-coded French provider message is not acceptable. The implementation must revalidate current official Gemini API/model authority before coding; source comments/model lists are not trusted merely because they exist. The key may never be logged, returned, persisted in ordinary settings or exposed in evidence.
+
+### SF16-RESP-011 — Deterministic responsive composition; no orphan card grids — P1
+
+The installed windowed Dashboard demonstrates an ugly `3 + 1` KPI arrangement. This has a shared-root cause: the current four-card grid uses `auto-fit` with a 240px minimum, allowing CSS to choose three columns and orphan the fourth.
+
+Internal.16 must replace accidental auto-fit composition with item-count/container-aware layout rules. Four primary cards should normally transition `4 → 2x2 → 1` rather than `4 → 3+1`; six-card groups should use balanced `3x2`, `2x3` or an intentionally redesigned primary/supporting hierarchy. Chart pairs, KPI+chart combinations and repeated panels follow the same no-orphan principle.
+
+Responsive acceptance covers real application container width after sidebar, expanded/collapsed sidebar, representative full/windowed widths, 1366×768 floor, 100–200% zoom, normal/compact density and AR/FR/EN/RTL. Tables/charts must adapt their information density and labels rather than overflow or merely shrink text. The same logical hierarchy must remain coherent when window size changes live.
