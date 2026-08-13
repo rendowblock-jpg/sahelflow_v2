@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createDefaultStorefrontTheme } from "./theme-default";
 import { normalizeStorefrontTheme, switchStorefrontTemplate } from "./theme-normalize";
 import { storefrontStudioDraftSchema, storefrontStudioThemeSchema } from "./studio-schema";
+import { projectPublicStorefrontConfig } from "./public-projection";
 import {
   addStorefrontSection,
   deleteStorefrontSection,
@@ -94,5 +95,35 @@ describe("Storefront Builder V2", () => {
   it("requires a valid, publishable local draft", () => {
     expect(storefrontStudioDraftSchema.safeParse(draft()).success).toBe(true);
     expect(storefrontStudioDraftSchema.safeParse({ ...draft(), selectedProductIds: [] }).success).toBe(false);
+  });
+
+  it("removes domain-verification material from public storefront serialization", () => {
+    const value = draft();
+    value.theme.builder.domain = {
+      hostname: "shop.example.com",
+      status: "pending",
+      verificationName: "_sahelflow.shop.example.com",
+      verificationValue: "private-verification-token",
+      lastCheckedAt: "2026-08-13T12:00:00.000Z",
+    };
+    const projected = projectPublicStorefrontConfig({
+      id: "storefront_12345678",
+      slug: value.slug,
+      name: value.name,
+      description: value.description,
+      theme: value.theme,
+      productIds: value.selectedProductIds,
+      contact: null,
+      isActive: value.isActive,
+      createdAt: new Date("2026-08-13T12:00:00.000Z"),
+      updatedAt: new Date("2026-08-13T12:00:00.000Z"),
+    });
+    expect(projected.theme.builder.domain).toEqual({
+      hostname: "shop.example.com",
+      status: "pending",
+      verificationName: null,
+      verificationValue: null,
+      lastCheckedAt: null,
+    });
   });
 });

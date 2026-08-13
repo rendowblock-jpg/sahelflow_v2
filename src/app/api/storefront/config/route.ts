@@ -10,6 +10,7 @@ import {
 } from "@/lib/identity/authorization";
 import { storefrontStudioThemeSchema } from "@/lib/storefront/studio-schema";
 import { normalizeStorefrontTheme } from "@/lib/storefront/theme-normalize";
+import { projectPublicStorefrontConfig } from "@/lib/storefront/public-projection";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
         })
       : [];
 
-    return NextResponse.json({ config, products });
+    return NextResponse.json({ config: projectPublicStorefrontConfig(config), products });
   }
 
   // Seller path: list all storefronts (management view)

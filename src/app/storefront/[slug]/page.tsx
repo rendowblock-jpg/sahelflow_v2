@@ -5,6 +5,7 @@ import { StorefrontView } from "@/components/storefront/storefront-view";
 import { db, shopContext } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import { storefrontService } from "@/lib/storefront/service";
+import { projectPublicStorefrontConfig } from "@/lib/storefront/public-projection";
 
 export const dynamic = "force-dynamic";
 
@@ -70,5 +71,5 @@ export default async function StorefrontPage({
         })
       : [];
 
-  return <StorefrontView config={config} products={products} />;
+  return <StorefrontView config={projectPublicStorefrontConfig(config)} products={products} />;
 }
