@@ -7,11 +7,14 @@
 > **Active implementation PR:** #250 — `Internal.16 Wave 3 — EcoTrack + Gemini provider truth`
 > **Active branch:** `agent/internal-16-wave-3`
 > **Last application-changing Wave 3 head before this docs handoff:** `df84f3d4e78a982695b5883c98a15ac145604b49`
-> **PR state at handoff:** OPEN, non-draft, mergeable, UNMERGED
+> **Current branch head after documentation-only handoff commits:** re-fetch PR #250; docs-only heads are not application evidence
+> **PR state at handoff:** OPEN, non-draft, UNMERGED
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Current source/release authority:** `1.0.0-internal.15` / MSI `1.0.0.15`, FD-032 Founder-offline-only
 > **Published release:** `1.0.0-internal.14` — source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed run `31388777098`
 > **Retained open evidence:** #221, #226, #230
+
+**Active resume companion:** [`WAVE3_SESSION_HANDOFF_2026-08-13.md`](WAVE3_SESSION_HANDOFF_2026-08-13.md).
 
 Live GitHub is authority. At the start of the next session, re-fetch protected `main`, PR #250, its current head/checks/review threads, and retained issues before any application write. Do **not** repeat the whole-repository audit or Founder screenshot discovery.
 
@@ -200,25 +203,26 @@ Important consequences:
 
 1. Re-fetch protected `main`; expected current value at this handoff is `5a8d5e3c042abbcee001a68a7168d3c679f6e541`.
 2. Re-fetch PR #250 current head, status, changed files, review threads and exact-head workflow runs. Do not assume the docs-only handoff head equals application evidence head `df84f3d4...`.
-3. Read `AGENTS.md`, `documentation/README.md`, `documentation/system/CURRENT_STATE.md`, `documentation/system/ROADMAP.md`, `documentation/operations/WORKFLOW.md`, and this file.
-4. Confirm no other agent/user moved `agent/internal-16-wave-3` unexpectedly.
-5. Repair the stale Settings source-contract first because it is deterministic and non-runtime.
-6. Repair P1 A: historical `noest` delivery normalization/credential compatibility in canonical tracking, with focused regression.
-7. Repair P1 B: canonical courier picker + AI provider vocabularies from `noest` to `ecotrack`.
-8. Repair P1 C: restore Gemini 3.5-first authority and align provider/extraction/chat tests.
-9. Re-fetch review threads; resolve only findings actually proven fixed/current.
-10. Freeze the repaired application head.
-11. Run exact-head CI + Phase 5 + Phase 6–7. Do not merge on wrapper-green/skipped evidence.
-12. Require at minimum:
+3. Read `AGENTS.md`, `documentation/README.md`, `documentation/operations/WORKING_MEMORY.md`, `documentation/operations/WAVE3_SESSION_HANDOFF_2026-08-13.md`, `documentation/system/CURRENT_STATE.md`, `documentation/system/ROADMAP.md`, and `documentation/operations/WORKFLOW.md`.
+4. Treat stale pre-Wave-1/2 execution-frontier sentences in CURRENT_STATE/ROADMAP as historical until post-Wave-3 reconciliation; do not restart completed Waves 1–2.
+5. Confirm no other agent/user moved `agent/internal-16-wave-3` unexpectedly.
+6. Repair the stale Settings source-contract first because it is deterministic and non-runtime.
+7. Repair P1 A: historical `noest` delivery normalization/credential compatibility in canonical tracking, with focused regression.
+8. Repair P1 B: canonical courier picker + AI provider vocabularies from `noest` to `ecotrack`.
+9. Repair P1 C: restore Gemini 3.5-first authority and align provider/extraction/chat tests.
+10. Re-fetch review threads; resolve only findings actually proven fixed/current.
+11. Freeze the repaired application head.
+12. Run exact-head CI + Phase 5 + Phase 6–7. Do not merge on wrapper-green/skipped evidence.
+13. Require at minimum:
     - Required PR gate green;
     - complete source-quality green;
     - dependency audit and migrations green;
     - complete Phase 5 green;
     - Phase 6–7 static + source-quality + browser + required gate green;
     - no unresolved current P1 review finding.
-13. Update PR #250 body to final exact head/evidence and correct any stale wording such as “opened as a draft”.
-14. Merge #250 only through expected-head protected merge discipline after every required exact-head condition is green.
-15. Re-fetch resulting protected `main`, then perform a docs-only reconciliation if needed before starting Wave 4.
+14. Update PR #250 body to final exact head/evidence and correct any stale wording such as “opened as a draft”.
+15. Merge #250 only through expected-head protected merge discipline after every required exact-head condition is green.
+16. Re-fetch resulting protected `main`, then perform a docs-only reconciliation if needed before starting Wave 4.
 
 ## After Wave 3 merges
 
