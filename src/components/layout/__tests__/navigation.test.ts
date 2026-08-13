@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_NAVIGATION_DOMAIN_ORDER,
   flattenNavigationItems,
   navigationDomainForPathname,
   navigationDomains,
   navigationItemForPathname,
+  orderedNavigationDomains,
   utilityNavigationItems,
 } from "../navigation";
 
@@ -19,6 +21,9 @@ describe("Phase 5 navigation authority", () => {
       "inbox",
       "grow",
     ]);
+    expect(DEFAULT_NAVIGATION_DOMAIN_ORDER).toEqual(
+      navigationDomains.map((domain) => domain.id),
+    );
   });
 
   it("keeps every destination unique under one canonical registry", () => {
@@ -59,5 +64,55 @@ describe("Phase 5 navigation authority", () => {
     ]);
     expect(navigationDomainForPathname("/settings")).toBeNull();
     expect(navigationDomainForPathname("/profile")).toBeNull();
+  });
+
+  it("applies seller domain ordering without changing child ownership", () => {
+    const ordered = orderedNavigationDomains([
+      "inbox",
+      "sell",
+      "home",
+      "money",
+      "customers",
+      "fulfill",
+      "grow",
+    ]);
+    expect(ordered.map((domain) => domain.id)).toEqual([
+      "inbox",
+      "sell",
+      "home",
+      "money",
+      "customers",
+      "fulfill",
+      "grow",
+    ]);
+    expect(
+      ordered.find((domain) => domain.id === "sell")?.children?.map((child) =>
+        child.id,
+      ),
+    ).toContain("confirmation-queue");
+    expect(
+      ordered.find((domain) => domain.id === "money")?.children?.map((child) =>
+        child.id,
+      ),
+    ).toContain("cod-reconciliation");
+  });
+
+  it("fails open to the canonical registry when a stored preference is stale", () => {
+    const ordered = orderedNavigationDomains([
+      "inbox",
+      "removed-domain",
+      "inbox",
+      "sell",
+    ]);
+    expect(ordered.map((domain) => domain.id)).toEqual([
+      "inbox",
+      "sell",
+      "home",
+      "customers",
+      "fulfill",
+      "money",
+      "grow",
+    ]);
+    expect(new Set(ordered.map((domain) => domain.id)).size).toBe(7);
   });
 });

@@ -2,7 +2,7 @@
 
 /**
  * AreaTrendChart — premium gradient-filled area chart (shadcn v4 pattern).
- * 
+ *
  * - Gradient fill: 1.0 → 0.1 opacity
  * - No axis lines (tickLine={false} axisLine={false})
  * - minTickGap={32} to prevent crowded labels
@@ -18,7 +18,13 @@ import {
   YAxis,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { resolveFormatter, type ChartFormatter, useGradientId } from "./chart-primitives";
+import {
+  DEFAULT_CHART_HEIGHT,
+  resolveFormatter,
+  type ChartFormatter,
+  type ChartHeight,
+  useGradientId,
+} from "./chart-primitives";
 
 interface AreaSeries {
   key: string;
@@ -30,7 +36,7 @@ interface AreaTrendChartProps {
   xKey: string;
   series: AreaSeries[];
   config: ChartConfig;
-  height?: number;
+  height?: ChartHeight;
   formatY?: ChartFormatter;
   showGrid?: boolean;
   curve?: "monotone" | "linear" | "step" | "natural";
@@ -42,7 +48,7 @@ export function AreaTrendChart({
   xKey,
   series,
   config,
-  height = 300,
+  height = DEFAULT_CHART_HEIGHT,
   formatY,
   showGrid = true,
   curve = "natural",
@@ -81,8 +87,8 @@ export function AreaTrendChart({
           minTickGap={32}
           reversed={isRtl}
           className="text-xs fill-muted-foreground"
-        
-          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}/>
+          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+        />
         <YAxis
           width={56}
           tickLine={false}

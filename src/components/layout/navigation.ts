@@ -180,6 +180,40 @@ export const navigationDomains: readonly NavigationDomain[] = [
   },
 ] as const;
 
+/** Canonical order used whenever no valid seller preference exists. */
+export const DEFAULT_NAVIGATION_DOMAIN_ORDER: readonly NavigationDomainId[] =
+  navigationDomains.map((domain) => domain.id);
+
+/**
+ * Apply a seller-owned ordering preference without mutating information
+ * architecture. Unknown/duplicate historical IDs are discarded and newly added
+ * canonical domains are appended, so an older persisted preference cannot hide a
+ * destination after an upgrade.
+ */
+export function orderedNavigationDomains(
+  preference: readonly string[] = [],
+): NavigationDomain[] {
+  const byId = new Map(navigationDomains.map((domain) => [domain.id, domain]));
+  const seen = new Set<NavigationDomainId>();
+  const ordered: NavigationDomain[] = [];
+
+  for (const candidate of preference) {
+    if (!byId.has(candidate as NavigationDomainId)) continue;
+    const id = candidate as NavigationDomainId;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    ordered.push(byId.get(id)!);
+  }
+
+  for (const domain of navigationDomains) {
+    if (seen.has(domain.id)) continue;
+    seen.add(domain.id);
+    ordered.push(domain);
+  }
+
+  return ordered;
+}
+
 export const utilityNavigationItems: readonly NavigationItem[] = [
   item("profile", "nav.profile", "/profile", UserCircle, [
     "profile",

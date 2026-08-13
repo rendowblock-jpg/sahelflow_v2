@@ -23,6 +23,12 @@ export type ChartFormatter =
   | "percent"
   | "identity";
 
+export type ChartHeight = React.CSSProperties["height"];
+export const DEFAULT_CHART_HEIGHT: ChartHeight =
+  "var(--sf-chart-height, clamp(14rem, 25vw, 18rem))";
+export const DEFAULT_CHART_EMPTY_HEIGHT: ChartHeight =
+  "var(--sf-chart-empty-height, clamp(12rem, 22vw, 17.5rem))";
+
 export function resolveFormatter(
   formatter: ChartFormatter = "identity",
   locale: SupportedLocale = "fr",
@@ -98,7 +104,7 @@ interface ChartCardProps {
   footer?: React.ReactNode;
   className?: string;
   config: ChartConfig;
-  height?: number;
+  height?: ChartHeight;
   children: React.ComponentProps<typeof ChartContainer>["children"];
 }
 
@@ -107,7 +113,8 @@ interface ChartCardProps {
  *
  * A chart is not a decorative rectangle: it carries a readable title, optional
  * business context, visible summary, plot, and optional footer/action. The same
- * summary remains wired to the chart group for non-visual users.
+ * summary remains wired to the chart group for non-visual users. Default plot
+ * height is fluid so dense workbenches do not inherit a fixed 300px canvas.
  */
 export function ChartCard({
   title,
@@ -118,7 +125,7 @@ export function ChartCard({
   footer,
   className,
   config,
-  height = 300,
+  height = DEFAULT_CHART_HEIGHT,
   children,
 }: ChartCardProps) {
   const titleId = React.useId();
@@ -187,10 +194,10 @@ export function ChartCard({
 
 export function ChartEmpty({
   message,
-  height = 280,
+  height = DEFAULT_CHART_EMPTY_HEIGHT,
 }: {
   message: string;
-  height?: number;
+  height?: ChartHeight;
 }) {
   return (
     <div

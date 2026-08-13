@@ -42,6 +42,28 @@ describe("Inbox operational workspace contract", () => {
     expect(hook).toContain("if (chatRefreshTimerRef.current !== null) return");
   });
 
+  it("opens command-search conversation results by canonical persisted conversation id", () => {
+    const palette = read("src/components/command-palette.tsx");
+    const hook = read("src/hooks/use-inbox-workspace.ts");
+    const detailRoute = read("src/app/api/conversations/[id]/route.ts");
+
+    expect(palette).toContain(
+      'href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`',
+    );
+    expect(hook).toContain('import { useSearchParams } from "next/navigation"');
+    expect(hook).toContain('searchParams.get("conversation")');
+    expect(hook).toContain(
+      "(chat) => chat.conversationId === requestedConversationId",
+    );
+    expect(hook).toContain(
+      "`/api/conversations/${encodeURIComponent(requestedConversationId)}`",
+    );
+    expect(hook).toContain("pinnedDeepLinkChatRef");
+    expect(hook).toContain("mergePinnedDeepLink");
+    expect(detailRoute).toContain('requireTrustedAction("conversations.read")');
+    expect(detailRoute).toContain("projectConversationForTrustedActor");
+  });
+
   it("separates Inbox transport/state logic from presentation", () => {
     const hook = read("src/hooks/use-inbox-workspace.ts");
     const view = read("src/components/inbox/inbox-workspace.tsx");

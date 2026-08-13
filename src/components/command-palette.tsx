@@ -2,8 +2,16 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Hash, Package, Users } from "lucide-react";
+import {
+  Hash,
+  MessageSquare,
+  Package,
+  RotateCcw,
+  Truck,
+  Users,
+} from "lucide-react";
 
+import { flattenNavigationItems } from "@/components/layout/navigation";
 import {
   Command,
   CommandEmpty,
@@ -18,8 +26,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useI18n } from "@/hooks/use-i18n";
+import {
+  canOpenProtectedOperationalDetail,
+  mergeUniversalSearchFamilies,
+} from "@/lib/search/universal-search";
 import { fetcher } from "@/lib/swr/fetcher";
-import { flattenNavigationItems } from "@/components/layout/navigation";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -41,13 +52,16 @@ function normalized(value: string): string {
 }
 
 /**
- * Universal SahelFlow navigation and record search.
+ * Universal SahelFlow navigation and operational-record search.
  *
- * Navigation destinations are derived from the canonical Phase 5 information
- * architecture instead of maintaining a second route list. Quick actions are
- * intentionally omitted until they have a real executable/deep-link contract;
- * the command surface must never advertise a button that only navigates to a
- * page and hopes a caller opens the intended dialog.
+ * Navigation destinations are derived from the canonical information
+ * architecture instead of maintaining a second route list. Record search reuses
+ * each domain's permission-aware/protected API authority: Orders, Customers,
+ * Products, Conversations, Deliveries and Returns. One denied or degraded domain
+ * cannot suppress results from the others. Search families are interleaved before
+ * the global cap so one high-volume family cannot starve another matching family.
+ * Results that require protected detail authority are emitted only when the API's
+ * projected field-access contract proves that destination is executable.
  */
 export function CommandPalette({
   open,
@@ -88,67 +102,162 @@ export function CommandPalette({
     setSearching(true);
     const timer = setTimeout(async () => {
       try {
-        const [ordersRes, customersRes, productsRes] = await Promise.allSettled([
+        const [
+          ordersRes,
+          customersRes,
+          productsRes,
+          conversationsRes,
+          deliveriesRes,
+          returnsRes,
+        ] = await Promise.allSettled([
           fetcher<{
             orders: Array<{
               id: string;
               orderNumber: string;
               customer?: { name: string | null };
             }>;
-          }>(`/api/orders/search?q=${encodeURIComponent(q)}&limit=5`),
+          }>(`/api/orders/search?q=${encodeURIComponent(q)}&limit=4`),
           fetcher<{
             customers: Array<{
               id: string;
               name: string | null;
               phone: string | null;
             }>;
-          }>(`/api/customers/search?q=${encodeURIComponent(q)}&limit=5`),
+          }>(`/api/customers/search?q=${encodeURIComponent(q)}&limit=4`),
           fetcher<{
             products: Array<{
               id: string;
               name: string;
               sku?: string | null;
             }>;
-          }>(`/api/products/search?q=${encodeURIComponent(q)}&limit=5`),
+          }>(`/api/products/search?q=${encodeURIComponent(q)}&limit=4`),
+          fetcher<{
+            results: Array<{
+              id: string;
+              contactName: string | null;
+              contactPhone: string | null;
+              channel: string;
+            }>;
+          }>(`/api/conversations/search?q=${encodeURIComponent(q)}`),
+          fetcher<{
+            deliveries: Array<{
+              id: string;
+              provider: string;
+              trackingNumber: string | null;
+              order: { orderNumber: string } | null;
+            }>;
+            fieldAccess: {
+              contact: boolean;
+              financials: boolean;
+            };
+          }>(`/api/delivery?q=${encodeURIComponent(q)}&pageSize=4`),
+          fetcher<{
+            returns: Array<{
+              id: string;
+              status: string;
+              type: string;
+              order: { orderNumber: string };
+            }>;
+            fieldAccess: {
+              contact: boolean;
+              financials: boolean;
+            };
+          }>(`/api/returns?q=${encodeURIComponent(q)}&pageSize=4`),
         ]);
 
-        const next: RecordResult[] = [];
-        if (ordersRes.status === "fulfilled") {
-          for (const order of ordersRes.value.orders) {
-            next.push({
-              id: `order:${order.id}`,
-              label: order.orderNumber,
-              sublabel: order.customer?.name ?? undefined,
-              href: `/orders/${order.id}`,
-              icon: Hash,
-            });
-          }
-        }
-        if (customersRes.status === "fulfilled") {
-          for (const customer of customersRes.value.customers) {
-            next.push({
-              id: `customer:${customer.id}`,
-              label: customer.name ?? "—",
-              sublabel: customer.phone ?? undefined,
-              href: `/customers/${customer.id}`,
-              icon: Users,
-            });
-          }
-        }
-        if (productsRes.status === "fulfilled") {
-          for (const product of productsRes.value.products) {
-            next.push({
-              id: `product:${product.id}`,
-              label: product.name,
-              sublabel: product.sku ?? undefined,
-              href: `/products/${product.id}`,
-              icon: Package,
-            });
-          }
-        }
+        const orderResults: RecordResult[] =
+          ordersRes.status === "fulfilled"
+            ? ordersRes.value.orders.map((order) => ({
+                id: `order:${order.id}`,
+                label: order.orderNumber,
+                sublabel: order.customer?.name ?? undefined,
+                href: `/orders/${order.id}`,
+                icon: Hash,
+              }))
+            : [];
+
+        const customerResults: RecordResult[] =
+          customersRes.status === "fulfilled"
+            ? customersRes.value.customers.map((customer) => ({
+                id: `customer:${customer.id}`,
+                label: customer.name ?? "—",
+                sublabel: customer.phone ?? undefined,
+                href: `/customers/${customer.id}`,
+                icon: Users,
+              }))
+            : [];
+
+        const productResults: RecordResult[] =
+          productsRes.status === "fulfilled"
+            ? productsRes.value.products.map((product) => ({
+                id: `product:${product.id}`,
+                label: product.name,
+                sublabel: product.sku ?? undefined,
+                href: `/products/${product.id}`,
+                icon: Package,
+              }))
+            : [];
+
+        const conversationResults: RecordResult[] =
+          conversationsRes.status === "fulfilled"
+            ? conversationsRes.value.results.slice(0, 4).map((conversation) => ({
+                id: `conversation:${conversation.id}`,
+                label:
+                  conversation.contactName ??
+                  `${t("nav.inbox")} · ${conversation.id.slice(-6)}`,
+                sublabel:
+                  conversation.contactPhone ?? conversation.channel,
+                // The Inbox consumes this canonical persisted ID directly. If the
+                // row is outside the live WhatsApp window it resolves through the
+                // permission-projected exact conversation read before selection.
+                href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
+                icon: MessageSquare,
+              }))
+            : [];
+
+        const deliveryResults: RecordResult[] =
+          deliveriesRes.status === "fulfilled" &&
+          canOpenProtectedOperationalDetail(deliveriesRes.value.fieldAccess)
+            ? deliveriesRes.value.deliveries.map((delivery) => ({
+                id: `delivery:${delivery.id}`,
+                label:
+                  delivery.trackingNumber ??
+                  delivery.order?.orderNumber ??
+                  delivery.id.slice(-8),
+                sublabel: [delivery.provider, delivery.order?.orderNumber]
+                  .filter(Boolean)
+                  .join(" · "),
+                href: `/deliveries/${delivery.id}`,
+                icon: Truck,
+              }))
+            : [];
+
+        const returnResults: RecordResult[] =
+          returnsRes.status === "fulfilled" &&
+          canOpenProtectedOperationalDetail(returnsRes.value.fieldAccess)
+            ? returnsRes.value.returns.map((returnRecord) => ({
+                id: `return:${returnRecord.id}`,
+                label: returnRecord.order.orderNumber,
+                sublabel: `${returnRecord.type} · ${returnRecord.status}`,
+                href: `/returns/${returnRecord.id}`,
+                icon: RotateCcw,
+              }))
+            : [];
+
+        const next = mergeUniversalSearchFamilies(
+          [
+            orderResults,
+            customerResults,
+            productResults,
+            conversationResults,
+            deliveryResults,
+            returnResults,
+          ],
+          12,
+        );
 
         if (searchGeneration.current === generation) {
-          setRecords(next.slice(0, 8));
+          setRecords(next);
         }
       } catch {
         if (searchGeneration.current === generation) {
@@ -162,7 +271,7 @@ export function CommandPalette({
     }, 220);
 
     return () => clearTimeout(timer);
-  }, [query, open]);
+  }, [query, open, t]);
 
   const navigation = React.useMemo(
     () =>

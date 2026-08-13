@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     await getReturnWorkbenchPage(actorContext, {
       page: Number.parseInt(searchParams.get("page") ?? "1", 10),
       pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
+      q: searchParams.get("q") ?? undefined,
     }),
   );
 }

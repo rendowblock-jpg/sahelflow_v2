@@ -2,17 +2,21 @@
 
 /**
  * HorizontalBarChart — ranked horizontal bars (shadcn v4 pattern).
- * 
- * - Rounded bars: radius [0, 4, 4, 0]
+ *
  * - cursor with muted fill
  * - indicator="dot" tooltip
- * - Value labels on the right (LabelList)
+ * - value labels follow logical reading direction
  * - maxBarSize={22} for clean density
  */
 import { useI18n } from "@/hooks/use-i18n";
 import { Bar, BarChart, XAxis, YAxis, Cell, LabelList } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { resolveFormatter, type ChartFormatter } from "./chart-primitives";
+import {
+  DEFAULT_CHART_HEIGHT,
+  resolveFormatter,
+  type ChartFormatter,
+  type ChartHeight,
+} from "./chart-primitives";
 
 export interface HBarDatum {
   key: string;
@@ -24,7 +28,7 @@ export interface HBarDatum {
 interface HorizontalBarChartProps {
   data: HBarDatum[];
   config: ChartConfig;
-  height?: number;
+  height?: ChartHeight;
   formatValue?: ChartFormatter;
   emptyMessage?: string;
 }
@@ -32,7 +36,7 @@ interface HorizontalBarChartProps {
 export function HorizontalBarChart({
   data,
   config,
-  height = 300,
+  height = DEFAULT_CHART_HEIGHT,
   formatValue,
   emptyMessage,
 }: HorizontalBarChartProps) {

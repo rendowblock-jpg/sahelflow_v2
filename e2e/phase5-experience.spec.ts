@@ -169,6 +169,16 @@ async function selectLocale(
   await option.click();
 }
 
+function waitForAccountingDocument(page: Page) {
+  return page.waitForRequest((request) => {
+    const requestUrl = new URL(request.url());
+    return (
+      request.resourceType() === "document" &&
+      requestUrl.pathname === "/accounting"
+    );
+  });
+}
+
 test.describe.serial("Phase 5 desktop experience evidence", () => {
   // Representative experience evidence is not an authentication stress test. Log
   // in once against the rich seeded database and reuse the authenticated cookies
@@ -302,43 +312,27 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await expect(pageHeading).toHaveText("Comptabilité");
     await assertDesktopSidebarEdge(page, "ltr");
 
-    // Hold only the refresh triggered by this locale interaction. Visible copy and
-    // geometry must remain on the committed French tree while the Arabic RSC tree
-    // is delayed, then move together when that server tree arrives.
-    let localeSwitchStarted = false;
-    let delayedRefreshObserved = false;
-    await page.route("**/accounting**", async (route) => {
-      const requestUrl = new URL(route.request().url());
-      if (
-        localeSwitchStarted &&
-        requestUrl.pathname === "/accounting" &&
-        route.request().resourceType() === "fetch"
-      ) {
-        delayedRefreshObserved = true;
-        await new Promise((resolve) => setTimeout(resolve, 1_000));
-      }
-      await route.continue();
-    });
-
-    localeSwitchStarted = true;
+    // The source contract proves there is no optimistic client-side locale or
+    // direction mutation. Here the rendered evidence proves that the interaction
+    // performs a top-level document request and that the returned server-confirmed
+    // document commits language, direction, translated copy, and shell geometry
+    // together. Avoid pausing a live navigation: Playwright deliberately serializes
+    // DOM reads behind a pending document commit, which cannot observe an old frame.
+    const arabicDocumentRequest = waitForAccountingDocument(page);
     await selectLocale(page, "Français", "العربية");
-    await expect.poll(() => delayedRefreshObserved).toBe(true);
-    await expect(html).toHaveAttribute("lang", "fr");
-    await expect(html).toHaveAttribute("dir", "ltr");
-    await expect(shell).toHaveAttribute("dir", "ltr");
-    await expect(desktopSidebar).toContainText("Tableau de bord");
-    await expect(pageHeading).toHaveText("Comptabilité");
-    await assertDesktopSidebarEdge(page, "ltr");
-
+    await arabicDocumentRequest;
+    await waitForHydration(page);
     await expect(html).toHaveAttribute("lang", "ar");
     await expect(html).toHaveAttribute("dir", "rtl");
     await expect(shell).toHaveAttribute("dir", "rtl");
     await expect(desktopSidebar).toContainText("لوحة التحكم");
     await expect(pageHeading).toHaveText("المحاسبة");
     await assertDesktopSidebarEdge(page, "rtl");
-    await page.unroute("**/accounting**");
 
+    const englishDocumentRequest = waitForAccountingDocument(page);
     await selectLocale(page, "العربية", "English");
+    await englishDocumentRequest;
+    await waitForHydration(page);
     await expect(html).toHaveAttribute("lang", "en");
     await expect(html).toHaveAttribute("dir", "ltr");
     await expect(shell).toHaveAttribute("dir", "ltr");
@@ -349,7 +343,10 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     // Repeat the direction flip once more. The installed Internal.14 failure could
     // leave the sidebar stuck on the previous edge only after switching back and
     // forth, so a single cold Arabic boot would not protect this regression.
+    const secondArabicDocumentRequest = waitForAccountingDocument(page);
     await selectLocale(page, "English", "العربية");
+    await secondArabicDocumentRequest;
+    await waitForHydration(page);
     await expect(html).toHaveAttribute("lang", "ar");
     await expect(html).toHaveAttribute("dir", "rtl");
     await expect(shell).toHaveAttribute("dir", "rtl");

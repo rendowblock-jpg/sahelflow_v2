@@ -4,10 +4,9 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useState,
   useSyncExternalStore,
-  useTransition,
 } from "react";
-import { useRouter } from "next/navigation";
 
 import {
   getDirection,
@@ -27,20 +26,20 @@ function useIsMounted(): boolean {
 }
 
 export function useI18n() {
-  const router = useRouter();
   const serverLocale = useServerLocale();
   const storeLocale = useUIStore((state) => state.locale);
-  const [isLocalePending, startLocaleTransition] = useTransition();
+  const [pendingLocale, setPendingLocale] = useState<Locale | null>(null);
   const mounted = useIsMounted();
   const locale = mounted ? storeLocale : serverLocale;
+  const isLocalePending = pendingLocale !== null;
 
   // All three compact product bundles are synchronously available. The active
   // bundle is therefore ready in the same commit as the server-confirmed locale.
   const translations = getTranslations(locale);
 
   // ServerLocaleProvider commits document language/direction in a layout effect
-  // when a refreshed server tree arrives. Keep this as an idempotent safeguard for
-  // initial hydration and any future committed-locale update path.
+  // when a server tree arrives. Keep this as an idempotent safeguard for initial
+  // hydration and any future committed-locale update path.
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = getDirection(locale);
@@ -73,19 +72,20 @@ export function useI18n() {
   );
 
   /**
-   * Request, then refresh. Do not mutate hydrated locale/direction here: server
-   * translated route copy still belongs to the current request until the new RSC
-   * tree arrives. ServerLocaleProvider commits the requested locale before paint.
+   * Locale is a request/server authority, not an optimistic client preference.
+   * Write the canonical cookie, then reload the current document so the new
+   * request cannot inherit any RSC/prefetch entry created under the previous
+   * locale. ServerLocaleProvider commits the returned locale + direction before
+   * paint, so shell geometry and translated route content move as one unit.
    */
   const setLocale = useCallback(
     (newLocale: Locale) => {
       if (newLocale === locale || isLocalePending) return;
       requestLocale(newLocale);
-      startLocaleTransition(() => {
-        router.refresh();
-      });
+      setPendingLocale(newLocale);
+      window.location.reload();
     },
-    [isLocalePending, locale, router],
+    [isLocalePending, locale],
   );
 
   const dir = useMemo(() => getDirection(locale), [locale]);

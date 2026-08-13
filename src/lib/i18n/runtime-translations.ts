@@ -32,6 +32,11 @@ const SHARED_RUNTIME_COPY = {
     "settings.appearance.preset.atlas": "Atlas",
     "settings.appearance.preset.oasis": "Oasis",
     "settings.appearance.preset.dune": "Dune",
+    "settings.appearance.navigationTitle": "Navigation order",
+    "settings.appearance.navigationHint": "Arrange the main work areas to match how you run your day. Child workflows stay attached to their parent area.",
+    "settings.appearance.navigationReset": "Reset order",
+    "settings.appearance.navigationMoveUp": "Move {{name}} up",
+    "settings.appearance.navigationMoveDown": "Move {{name}} down",
   },
   fr: {
     "common.timeline": "Chronologie",
@@ -59,6 +64,11 @@ const SHARED_RUNTIME_COPY = {
     "settings.appearance.preset.atlas": "Atlas",
     "settings.appearance.preset.oasis": "Oasis",
     "settings.appearance.preset.dune": "Dune",
+    "settings.appearance.navigationTitle": "Ordre de navigation",
+    "settings.appearance.navigationHint": "Organisez les espaces de travail principaux selon votre journée. Les sous-flux restent attachés à leur espace parent.",
+    "settings.appearance.navigationReset": "Réinitialiser l’ordre",
+    "settings.appearance.navigationMoveUp": "Monter {{name}}",
+    "settings.appearance.navigationMoveDown": "Descendre {{name}}",
   },
   ar: {
     "common.timeline": "الخط الزمني",
@@ -86,6 +96,11 @@ const SHARED_RUNTIME_COPY = {
     "settings.appearance.preset.atlas": "الأطلس",
     "settings.appearance.preset.oasis": "الواحة",
     "settings.appearance.preset.dune": "الكثبان",
+    "settings.appearance.navigationTitle": "ترتيب التنقل",
+    "settings.appearance.navigationHint": "رتّب مساحات العمل الرئيسية بما يناسب يومك. تبقى المسارات الفرعية مرتبطة بمساحتها الرئيسية.",
+    "settings.appearance.navigationReset": "إعادة الترتيب الافتراضي",
+    "settings.appearance.navigationMoveUp": "نقل {{name}} للأعلى",
+    "settings.appearance.navigationMoveDown": "نقل {{name}} للأسفل",
   },
 } as const satisfies Record<Locale, Record<string, string>>;
 

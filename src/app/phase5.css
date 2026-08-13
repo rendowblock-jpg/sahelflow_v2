@@ -8,8 +8,9 @@
  */
 
 /* ── Foundation color surfaces ────────────────────────────────────────────────
- * Keep status colors semantic and independent. Theme presets change the product
- * accent family; light/dark mode changes luminance and surface depth.
+ * Keep status colors semantic and independent. Theme presets coordinate subtle
+ * surface temperature plus the product accent family; light/dark mode changes
+ * luminance and depth without changing business-state meaning.
  */
 :root {
   --surface-0: oklch(0.992 0.004 85);
@@ -81,73 +82,142 @@
   --sidebar-ring: var(--ring);
 }
 
-/* Coordinated accent families. They intentionally do not override success,
+/* Coordinated theme families. They intentionally do not override success,
  * warning, destructive or order-status tokens, so color meaning does not drift. */
 :root[data-theme-preset="atlas"] {
+  --surface-0: oklch(0.992 0.004 286);
+  --surface-1: oklch(0.982 0.007 286);
+  --surface-2: oklch(0.958 0.012 286);
+  --surface-3: oklch(0.928 0.017 286);
+  --background: oklch(0.982 0.007 286);
+  --card: oklch(0.997 0.004 286);
+  --popover: oklch(0.997 0.004 286);
+  --secondary: oklch(0.952 0.012 286);
+  --muted: oklch(0.952 0.012 286);
+  --border: oklch(0.89 0.018 286);
+  --input: oklch(0.87 0.02 286);
   --primary: oklch(0.54 0.2 286);
   --primary-foreground: oklch(0.99 0.004 286);
   --accent: oklch(0.95 0.03 286);
   --accent-foreground: oklch(0.27 0.075 286);
   --ring: oklch(0.54 0.2 286);
+  --sidebar: oklch(0.972 0.01 286);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
   --sidebar-accent: oklch(0.94 0.035 286);
   --sidebar-accent-foreground: oklch(0.26 0.075 286);
+  --sidebar-border: oklch(0.89 0.018 286);
   --sidebar-ring: var(--ring);
 }
 
 .dark[data-theme-preset="atlas"] {
+  --surface-0: oklch(0.145 0.012 286);
+  --surface-1: oklch(0.18 0.016 286);
+  --surface-2: oklch(0.215 0.022 286);
+  --surface-3: oklch(0.255 0.028 286);
+  --background: oklch(0.145 0.012 286);
+  --card: oklch(0.18 0.016 286);
+  --popover: oklch(0.195 0.019 286);
+  --secondary: oklch(0.215 0.022 286);
+  --muted: oklch(0.215 0.022 286);
   --primary: oklch(0.72 0.16 286);
   --primary-foreground: oklch(0.16 0.045 286);
   --accent: oklch(0.27 0.045 286);
   --accent-foreground: oklch(0.95 0.025 286);
   --ring: oklch(0.72 0.16 286);
+  --sidebar: oklch(0.165 0.014 286);
   --sidebar-accent: oklch(0.255 0.045 286);
   --sidebar-accent-foreground: oklch(0.95 0.025 286);
 }
 
 :root[data-theme-preset="oasis"] {
+  --surface-0: oklch(0.992 0.004 205);
+  --surface-1: oklch(0.982 0.007 205);
+  --surface-2: oklch(0.958 0.011 205);
+  --surface-3: oklch(0.928 0.016 205);
+  --background: oklch(0.982 0.007 205);
+  --card: oklch(0.997 0.004 205);
+  --popover: oklch(0.997 0.004 205);
+  --secondary: oklch(0.952 0.011 205);
+  --muted: oklch(0.952 0.011 205);
+  --border: oklch(0.89 0.017 205);
+  --input: oklch(0.87 0.019 205);
   --primary: oklch(0.53 0.135 205);
   --primary-foreground: oklch(0.99 0.004 205);
   --accent: oklch(0.95 0.03 205);
   --accent-foreground: oklch(0.25 0.065 205);
   --ring: oklch(0.53 0.135 205);
+  --sidebar: oklch(0.972 0.01 205);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
   --sidebar-accent: oklch(0.94 0.035 205);
   --sidebar-accent-foreground: oklch(0.25 0.065 205);
+  --sidebar-border: oklch(0.89 0.017 205);
   --sidebar-ring: var(--ring);
 }
 
 .dark[data-theme-preset="oasis"] {
+  --surface-0: oklch(0.145 0.011 205);
+  --surface-1: oklch(0.18 0.015 205);
+  --surface-2: oklch(0.215 0.02 205);
+  --surface-3: oklch(0.255 0.025 205);
+  --background: oklch(0.145 0.011 205);
+  --card: oklch(0.18 0.015 205);
+  --popover: oklch(0.195 0.018 205);
+  --secondary: oklch(0.215 0.02 205);
+  --muted: oklch(0.215 0.02 205);
   --primary: oklch(0.72 0.13 205);
   --primary-foreground: oklch(0.14 0.035 205);
   --accent: oklch(0.265 0.04 205);
   --accent-foreground: oklch(0.95 0.025 205);
   --ring: oklch(0.72 0.13 205);
+  --sidebar: oklch(0.165 0.013 205);
   --sidebar-accent: oklch(0.25 0.04 205);
   --sidebar-accent-foreground: oklch(0.95 0.025 205);
 }
 
 :root[data-theme-preset="dune"] {
+  --surface-0: oklch(0.992 0.006 63);
+  --surface-1: oklch(0.982 0.009 63);
+  --surface-2: oklch(0.958 0.014 63);
+  --surface-3: oklch(0.928 0.019 63);
+  --background: oklch(0.982 0.009 63);
+  --card: oklch(0.997 0.005 63);
+  --popover: oklch(0.997 0.005 63);
+  --secondary: oklch(0.952 0.014 63);
+  --muted: oklch(0.952 0.014 63);
+  --border: oklch(0.89 0.019 63);
+  --input: oklch(0.87 0.021 63);
   --primary: oklch(0.55 0.145 63);
   --primary-foreground: oklch(0.99 0.004 63);
   --accent: oklch(0.955 0.035 63);
   --accent-foreground: oklch(0.28 0.075 63);
   --ring: oklch(0.55 0.145 63);
+  --sidebar: oklch(0.972 0.012 63);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
   --sidebar-accent: oklch(0.945 0.04 63);
   --sidebar-accent-foreground: oklch(0.28 0.075 63);
+  --sidebar-border: oklch(0.89 0.019 63);
   --sidebar-ring: var(--ring);
 }
 
 .dark[data-theme-preset="dune"] {
+  --surface-0: oklch(0.145 0.012 63);
+  --surface-1: oklch(0.18 0.016 63);
+  --surface-2: oklch(0.215 0.022 63);
+  --surface-3: oklch(0.255 0.027 63);
+  --background: oklch(0.145 0.012 63);
+  --card: oklch(0.18 0.016 63);
+  --popover: oklch(0.195 0.019 63);
+  --secondary: oklch(0.215 0.022 63);
+  --muted: oklch(0.215 0.022 63);
   --primary: oklch(0.74 0.145 63);
   --primary-foreground: oklch(0.19 0.045 63);
   --accent: oklch(0.275 0.04 63);
   --accent-foreground: oklch(0.96 0.025 63);
   --ring: oklch(0.74 0.145 63);
+  --sidebar: oklch(0.165 0.014 63);
   --sidebar-accent: oklch(0.26 0.04 63);
   --sidebar-accent-foreground: oklch(0.96 0.025 63);
 }
@@ -167,27 +237,13 @@ html[dir="rtl"] :is(h1, h2, h3, h4) {
   line-height: 1.35;
 }
 
-/* Theme and accent switches get a short, bounded color interpolation. The runtime
- * adds this attribute for 220ms and skips it entirely for reduced-motion users. */
-html[data-theme-switching="true"] :is(
-  body,
-  [data-sahelflow-shell="desktop"],
-  aside,
-  header,
-  main,
-  [data-slot="card"],
-  [data-slot="dialog-content"],
-  [data-slot="dropdown-menu-content"],
-  [data-slot="popover-content"],
-  button,
-  a,
-  input,
-  textarea,
-  select
-) {
-  transition-property: background-color, border-color, color, box-shadow;
-  transition-duration: 180ms;
-  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+/* Mode/preset changes are one root snapshot transition, never dozens of
+ * independently interpolating descendants. Older WebViews fall back to the
+ * provider's immediate atomic commit. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* ── Authenticated workbench density and motion ────────────────────────────── */
@@ -332,8 +388,9 @@ html[data-theme-switching="true"] :is(
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-theme-switching="true"] * {
-    transition-duration: 0.01ms !important;
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.01ms !important;
   }
 
   [data-sahelflow-shell="desktop"] * {

@@ -2,7 +2,7 @@
 
 /**
  * LineTrendChart — multi-series line chart (shadcn v4 pattern).
- * 
+ *
  * - CartesianGrid: horizontal only, dashed, var(--border)
  * - No axis lines (tickLine={false} axisLine={false})
  * - minTickGap={32} to prevent crowded labels
@@ -19,7 +19,12 @@ import {
   YAxis,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { resolveFormatter, type ChartFormatter } from "./chart-primitives";
+import {
+  DEFAULT_CHART_HEIGHT,
+  resolveFormatter,
+  type ChartFormatter,
+  type ChartHeight,
+} from "./chart-primitives";
 
 interface LineSeries {
   key: string;
@@ -31,7 +36,7 @@ interface LineTrendChartProps {
   xKey: string;
   series: LineSeries[];
   config: ChartConfig;
-  height?: number;
+  height?: ChartHeight;
   formatY?: ChartFormatter;
   emptyMessage?: string;
 }
@@ -41,7 +46,7 @@ export function LineTrendChart({
   xKey,
   series,
   config,
-  height = 300,
+  height = DEFAULT_CHART_HEIGHT,
   formatY,
   emptyMessage,
 }: LineTrendChartProps) {
@@ -67,8 +72,8 @@ export function LineTrendChart({
           minTickGap={32}
           reversed={isRtl}
           className="text-xs fill-muted-foreground"
-        
-          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}/>
+          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+        />
         <YAxis
           width={56}
           tickLine={false}

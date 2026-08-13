@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Locale } from "@/lib/i18n";
 import {
-  navigationDomains,
+  orderedNavigationDomains,
   pathMatchesNavigation,
   utilityNavigationItems,
   type NavigationItem,
@@ -58,9 +58,7 @@ function SidebarLink({
         "group relative flex min-h-(--control-height) items-center rounded-lg text-sm outline-none transition-[background-color,color] duration-150",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar",
         collapsed
-          ? nested
-            ? "justify-center px-0 py-2"
-            : "justify-center px-0 py-2"
+          ? "justify-center px-0 py-2"
           : nested
             ? "gap-2.5 px-3 py-2"
             : "gap-3 px-3 py-2.5",
@@ -87,9 +85,7 @@ function SidebarLink({
         )}
         aria-hidden="true"
       />
-      {!collapsed && (
-        <span className="min-w-0 flex-1 truncate">{label}</span>
-      )}
+      {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
     </Link>
   );
 
@@ -108,9 +104,9 @@ function SidebarLink({
 /**
  * Desktop navigation exposes seller destinations directly. Historical domain
  * relationships still power command/search and route context, but the sidebar no
- * longer hides ordinary pages behind active-domain dropdowns. Only routes marked
- * `sidebarNested` remain visually subordinate because they are genuinely part of
- * their parent workflow.
+ * longer hides ordinary pages behind active-domain dropdowns. Seller preference
+ * changes only the seven domain blocks; genuine child routes remain attached to
+ * their canonical parent and Profile/Settings stay fixed utilities.
  */
 export function Sidebar({
   serverLocale: _serverLocale,
@@ -120,6 +116,10 @@ export function Sidebar({
   const { t } = useI18n();
   const collapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const navigationDomainOrder = useUIStore(
+    (state) => state.navigationDomainOrder,
+  );
+  const domains = orderedNavigationDomains(navigationDomainOrder);
   const isRtl = serverDir === "rtl";
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
 
@@ -161,7 +161,7 @@ export function Sidebar({
             className="flex flex-col gap-1 px-2.5 py-3"
             aria-label={t("nav.sidebarLabel")}
           >
-            {navigationDomains.map((domain) => (
+            {domains.map((domain) => (
               <div key={domain.id} className="space-y-1">
                 <SidebarLink
                   item={domain}
