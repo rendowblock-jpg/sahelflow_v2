@@ -95,7 +95,7 @@ type ToolExecutionResult = {
 };
 type Content = { role: string; parts: Array<Record<string, unknown>> };
 
-function historySafe(value: unknown): unknown {
+function historySafeToolResult(value: unknown): unknown {
   if (
     value &&
     typeof value === "object" &&
@@ -119,7 +119,7 @@ function renderHistory(history: AgentMessage[]): Content[] {
         parts.push({
           functionResponse: {
             name: call.name,
-            response: { result: historySafe(call.result) },
+            response: { result: historySafeToolResult(call.result) },
           },
         });
       }
@@ -143,7 +143,10 @@ async function execute(
     ? toolResult.data
     : { error: toolResult.error };
   if (isAiActionProposalToolResult(result)) {
-    return { result: historySafe(result), actionProposal: result };
+    return {
+      result: historySafeToolResult(result),
+      actionProposal: result,
+    };
   }
   return { result };
 }
@@ -241,7 +244,7 @@ export async function runAgent(
           {
             functionResponse: {
               name: functionCall.name,
-              response: { result: historySafe(executed.result) },
+              response: { result: historySafeToolResult(executed.result) },
             },
           },
         ],
@@ -413,7 +416,7 @@ export async function* runAgentStream(
           {
             functionResponse: {
               name: functionCall.name,
-              response: { result: historySafe(executed.result) },
+              response: { result: historySafeToolResult(executed.result) },
             },
           },
         ],
