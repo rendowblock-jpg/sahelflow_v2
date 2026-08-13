@@ -6,390 +6,97 @@
 > **Latest application-changing protected merge:** PR #245 — Internal.15 FD-032 Founder-only offline checkpoint
 > **Documentation branch:** `agent/internal-16-completion-authority`
 > **Next application milestone:** `1.0.0-internal.16` / MSI `1.0.0.16`
-> **Governing new directive:** FD-033 — Internal.16 completion convergence
+> **Governing directive:** FD-033 — Internal.16 completion convergence
+> **Installed inspection:** active; Parts 1–3 captured
 > **Retained open evidence:** #221, #226, #230
 
-Live GitHub is authority. Re-fetch protected `main`, releases, installed evidence,
-issues and Actions before application writes or release claims. PR #245 is merged; do
-not continue work on its old branch.
+Live GitHub is authority. Re-fetch protected `main`, releases, installed evidence, issues and Actions before application writes or release claims.
 
-## Founder directive — 2026-08-13
+## Founder directive
 
-The Founder has a 24-hour completion-and-first-revenue constraint, zero paid marketing/
-infrastructure budget before first revenue, and a near-term objective of at least USD
-100 equivalent collected revenue.
+Internal.16 is intended to be the complete application candidate, not another partial checkpoint. The Founder has a 24-hour completion/first-revenue constraint, zero paid marketing/infrastructure budget before first revenue, and a near-term objective of at least USD 100 equivalent collected revenue. Urgency does not lower the product/evidence bar.
 
-The engineering requirement is not a rushed partial release. Internal.16 is intended to
-be the complete application candidate:
+Internal.16 must complete remaining Phase 5/6/7 work, implement Phase 8, remove NOEST/Nord et Ouest and add first-class EcoTrack Pro, harden AI/extraction/tools, then freeze and certify the whole product with zero known P0/P1 before a user-ready claim.
 
-1. complete the remaining whole-product Phase 5/6/7 work;
-2. implement Phase 8 fully and professionally;
-3. remove NOEST/Nord et Ouest as a supported provider and add first-class EcoTrack Pro;
-4. enhance/test the AI workspace, order extraction and every AI tool for correctness,
-   UX, privacy and performance;
-5. freeze one complete candidate and certify the whole product aggressively before the
-   first production buyer receives it.
+## Installed Internal.15 discovery rule
 
-The assurance target is “99.99% sure” in the practical evidence sense: complete Required
-matrix coverage and zero known P0/P1, not a mathematical promise that unknown software
-bugs are impossible.
+Do **not** begin broad Internal.16 implementation until the Founder explicitly says the installed discovery is complete or freezes it. Screenshots are evidence samples, not a request for the Founder to enumerate every sibling defect. The implementation agent owns exhaustive source/route discovery for every established defect class.
 
-## Internal.15 current boundary
+## Stable installed findings — Parts 1–3
 
-PR #245 merged to protected main at `371aebc2...`. Its FD-032 scope remains exact:
-Internal.15 is a Founder-only offline checkpoint and cannot silently become the
-customer-online authority for a later version.
+### Cross-product UI/localization
 
-Before Internal.16 implementation, re-fetch:
+- **SF16-UI-001 P1:** systemic Arabic/RTL geometry and bidi wrong-side defects across shell/routes/panes/tables/charts/menus/dialogs/command palette. Fix semantically across the whole app; no route-local `dir` patch campaign.
+- **SF16-UI-002 P1:** Risk Engine KPI hierarchy overloaded/unbalanced; redesign primary vs supporting signals.
+- **SF16-UI-003 P1:** shared stat cards need deliberate passive/actionable/selected hover/focus/touch semantics with accented icon/surface/border feedback.
+- **SF16-I18N-004 P1:** locale-sensitive money/date/number/chart formatting can leak French defaults into Arabic; audit all callers.
+- **SF16-I18N-007 P1:** zero unresolved translation keys or unintended foreign system/server copy. `auth.pinPlaceholder` was visible installed; Gemini paths include French strings. Demo/system content localizes; seller-entered names remain exact.
+- **SF16-RESP-011 P1:** deterministic responsive composition; eliminate normal-window `4 → 3+1` and other orphan layouts.
+- **SF16-LAYOUT-012 P1:** remove low-information dead space/stretched panels. Dashboard Delivery currently stretches beside taller Recent Orders; chart canvases also waste space. Panel/chart height must follow information and hierarchy.
+- **SF16-THEME-015 P1:** light/dark/preset switch must be atomic and visually smooth with no mixed-token flicker frame.
+- **SF16-I18N-016 P1:** locale switching must be atomic across current **and subsequently navigated** routes; no stale old-locale RSC/cache/prefetch frame after commit.
 
-- whether the protected signed Internal.15 release workflow published successfully;
-- whether the Founder T470 updated in place from Internal.14;
-- actual #221/#226 installed evidence/acceptance state;
-- #230 live state.
+### Workspaces and data UX
 
-Do not infer publication or installation from the merge alone.
+- **SF16-INBOX-005 P1:** final AAA Inbox convergence—adaptive/resizable panes, complete communication/workflow/extraction/collaboration behavior, degraded-transport recovery and large-history performance.
+- **SF16-AI-006 P1:** final AAA AI workbench—dominant thread, adaptive rails, polished sessions/composer/tool/proposal flows, locale/RTL parity and long-session performance.
+- **SF16-PRODUCTS-008 P1:** render compact primary product thumbnail from existing `images` projection with intentional fallback and low-end-safe loading.
+- **SF16-SEARCH-009 P1:** universal, ranked, permission/shop-aware topbar search across approved words/numbers/identifiers/entities, not only navigation + orders/customers/products.
+- **SF16-CHART-013 P1:** rebuild charts into a top-tier decision-support system: correct chart type, rich but restrained visuals, comparison/context, selective annotations, professional tooltips/legends, drill-down where authoritative, accessible text/table alternative, responsive height/density, RTL/locale correctness and low-end performance.
+- **SF16-NAV-017 P1:** smarter default sidebar ordering plus small pencil/edit control for user reorder. Canonical navigation registry remains route/permission authority; custom order is a separate UI preference with drag + keyboard reorder, save/cancel/reset, safe migration and RTL parity.
 
-## FD-033 documentation work
+### AI/provider and performance
 
-This documentation branch records the new Founder decision and reconciles Current
-State, Roadmap, Workflow and Working Memory. It is governance/documentation work only;
-it does not modify application/runtime source.
+- **SF16-AI-010 P1:** Gemini key entered installed but AI did not become usable. Certify recent reauth → official provider/model verification → encrypted save → configured/verified state → immediate readiness refresh → real minimal inference/extraction, with localized stable error taxonomy.
+- **SF16-PERF-014 P1:** installed startup/first post-update launch still feels slow. Measure exact startup stages and close the bottleneck without weakening recovery/migration/licensing/runtime readiness. Preserve T470 cold launch ≤8s p95 and declared floor ≤15s SSD / ≤25s HDD usable shell.
 
-FD-033 changes Internal.16 sequencing but not evidence honesty:
+## Source clues retained for the implementation reconnaissance
 
-- remaining Phase 5/6/7 and Phase 8 may be implemented together in one application
-  completion branch;
-- formerly pre-Phase-8 gates become integrated Internal.16 acceptance gates;
-- Phase 1–4 canonical business/data/security authority remains protected;
-- customer-online #230 and external Phase 9 truth cannot be fabricated.
+- Dashboard Recent Orders + Delivery share one grid row; default stretch makes the shorter Delivery panel match the taller orders panel while its content remains at the top.
+- Shared `ChartCard` defaults to a fixed 300px plot; donut uses fixed radius inside that canvas; Analytics passes `accent` but the current `ChartCard` does not consume it.
+- Theme authority has a broad 220ms switching window; installed evidence still shows visual glitching.
+- Locale request writes the cookie then `router.refresh()` for the current server tree; installed evidence proves the next-route cache/navigation boundary can still surface stale prior-locale content.
+- `navigationDomains` is a static canonical order today and Sidebar renders it directly.
+- Current command palette searches navigation plus orders/customers/products only.
+- Product workbench records already carry `images`.
+- `.card-grid-4` currently uses `auto-fit/minmax(240px)`.
+- AI XL workspace uses fixed side rails; Inbox queue uses fixed desktop width.
+- Gemini key setup requires recent reauth; provider/verifier strings/model policy require current official revalidation.
 
-## Installed Internal.15 inspection — Part 1
-
-The Founder is now inspecting the real installed Internal.15 application before the
-Internal.16 Problem Register is frozen. Do not begin broad Internal.16 implementation
-until the Founder finishes supplying the installed findings or explicitly says the
-inspection is complete.
-
-Part 1 is captured in FD-033 under stable IDs:
-
-- **SF16-UI-001 — P1:** systemic Arabic/RTL geometry and placement remains wrong across
-  the shell and route UI. The sidebar is physically on the right, but installed Arabic
-  still shows wrong-edge selected/nested navigation treatment and broader wrong-side
-  UI/text/control placement. Internal.16 requires a route-wide semantic RTL geometry
-  contract, not another page-local `dir` patch.
-- **SF16-UI-002 — P1:** Risk Engine KPI composition is overloaded/unbalanced. Six
-  equal-weight metric cards create a heavy primary row plus orphaned secondary row and
-  do not express decision hierarchy. Keep useful information but redesign primary vs
-  supporting risk signals as one balanced operational composition.
-- **SF16-UI-003 — P1:** shared metric/stat cards feel inert under pointer interaction.
-  The shared card needs deliberate passive/actionable/selected semantics, theme-aware
-  border/surface/icon feedback, keyboard focus parity, touch parity and low-end-safe
-  motion rather than fake selection or decorative lift.
-- **SF16-I18N-004 — P1:** Arabic Risk potential-savings value leaks French `DA` because
-  a locale-sensitive DZD formatter is called without the active locale. Audit all
-  seller-facing money/date formatters for the same omission and prove AR/FR/EN output.
-
-The screenshots used for Part 1 cover Dashboard, Orders and Risk. Treat the Founder
-report that the same wrong-side RTL class exists elsewhere as a whole-product audit
-trigger, not as proof that only those three routes are affected.
-
-## Installed Internal.15 inspection — Part 2
-
-Part 2 expands the installed evidence across Inbox, AI Agents, Analytics, Products,
-Settings, command/search and windowed desktop behavior. These findings remain additive;
-the Founder inspection is not yet declared complete.
-
-- **SF16-UI-001 evidence expansion — P1:** the wrong-side Arabic/RTL class is confirmed
-  as a whole-product audit obligation, not a route list the Founder must enumerate.
-  Internal.16 must inspect and correct every shell/page/pane/table/chart/menu/dialog/
-  command-palette component for semantic inline-start/end, axis/legend/tooltip order,
-  icon direction and bidi isolation. Analytics charts, Inbox panes, AI panes, product
-  tables, Settings controls and command-palette geometry are explicitly in scope.
-
-- **SF16-INBOX-005 — P1:** Inbox is materially better than the rejected baseline but
-  still does not meet the Founder AAA standard as an operational communications
-  workspace. Internal.16 must converge the queue, thread, customer/order context,
-  workflow state, collaboration, extraction and transport controls into one deliberate
-  triage experience. Wide layouts should use balanced/adaptive or resizable panes;
-  windowed layouts should not waste most of the surface on an empty canvas; narrow
-  layouts should become explicit drill-in states rather than compressed desktop.
-  Selection, unread, priority, assignment, workflow status and recovery must be easy to
-  scan. The selected thread must expose message history, receipts, composer, templates,
-  supported media, internal notes, extraction/review, contact/order context and safe
-  retry/reconnect flows without hiding core work behind obscure controls. Large
-  conversation/message sets require bounded rendering/virtualization and no scroll
-  fights. AR/FR/EN, RTL/mixed content, keyboard/focus and transport-degraded behavior
-  remain blocking.
-
-- **SF16-AI-006 — P1:** the AI workspace is source-protected but the installed product
-  still does not feel like a top-tier operational AI workbench. Internal.16 must make
-  the thread the dominant task surface and make sessions/context/action-review panes
-  adaptive, collapsible or resizable instead of relying on fixed-column composition.
-  Session creation/switching, long history, streaming, stop/retry, scroll memory,
-  composer ergonomics, tool progress/results, source/record context, proposal review,
-  setup/provider/quota/degraded states and execution confirmation must feel coherent as
-  one workflow. New assistant responses should follow the active product language unless
-  the seller explicitly drives another language, while persisted historic seller/AI
-  content remains exact rather than being silently translated. Tool/result UI may never
-  expose raw implementation traces as seller authority. Performance and long-session
-  rendering remain part of the AI benchmark already required by FD-033.
-
-- **SF16-I18N-007 — P1:** zero raw translation keys or unintended foreign-language UI
-  may appear in a localized workspace. Installed Settings visibly renders
-  `auth.pinPlaceholder`; Gemini secret API/verifier paths also contain hard-coded French
-  result/error messages. Internal.16 must inventory all UI/API/system-generated copy,
-  add a missing-key detector/test that fails on unresolved key-like output, and map
-  server errors through stable error codes to AR/FR/EN client copy. Demo/sample content
-  should be locale-aware where SahelFlow owns that content. Real seller-entered entity
-  data such as an actual shop/product/customer name must remain exact and is not
-  auto-translated. The current topbar renders the active shop record name directly, so
-  `Ma Boutique` is only a localization defect if it is SahelFlow-owned demo/seed data,
-  not if the seller deliberately named the shop that way.
-
-- **SF16-PRODUCTS-008 — P1 experience requirement:** every product row must show a small
-  primary product thumbnail next to the product identity. The workbench response already
-  carries `images`; Internal.16 should render the first valid/primary image without
-  expanding row density excessively. Use a stable square aspect ratio, lazy/deferred
-  loading, broken/missing-image fallback, appropriate alt/decorative semantics, and
-  low-end-safe decoding/caching. The name remains the primary text target and row click/
-  preview/actions must not become ambiguous. Thumbnail behavior must work in RTL/LTR,
-  normal/compact density and windowed table layouts.
-
-- **SF16-SEARCH-009 — P1:** the topbar command/search must become a genuinely universal,
-  permission-aware operational search rather than the current navigation + limited
-  orders/customers/products lookup. Internal.16 must support ranked exact/fuzzy lookup
-  across all appropriate searchable authorities: routes/commands, order numbers and
-  relevant order fields, customer name/normalized phone, product name/SKU/barcode,
-  shipment/tracking references, returns, Inbox conversations, COD/accounting references,
-  automations and other approved records. Exact identifiers/numbers must not be blocked
-  by a generic two-character rule. Normalize case, whitespace, Arabic diacritics where
-  safe, French accents, phone formats and mixed-script identifiers; preserve exact IDs.
-  Results are grouped, ranked, highlighted, keyboard navigable, deep-linked and filtered
-  by the current actor/shop permissions so search never becomes a PII or cross-shop
-  oracle. Query cancellation/debounce/indexing must keep perceived response inside the
-  Phase 7 interaction envelope on representative data.
-
-- **SF16-AI-010 — P1 functional defect:** the Founder entered a Gemini API key in the
-  installed Internal.15 flow and the AI did not become usable. Internal.16 must certify
-  the complete key lifecycle end to end: recent PIN reauthentication → localized key
-  entry → provider-contract/model verification → encrypted save → persisted configured/
-  verified state → immediate AI workspace readiness refresh without restart → one real
-  minimal assistant/extraction request. Invalid key, API disabled/restricted, model
-  unavailable, quota/rate limit, network/timeout and server/storage failures need stable
-  machine codes plus localized actionable explanations; do not collapse them into
-  generic unavailable. Current Gemini model/endpoint policy must be revalidated against
-  current official Google authority during implementation; stale comments/model lists
-  must not become release truth. Never expose the key in logs, diagnostics, UI or test
-  artifacts.
-
-- **SF16-RESP-011 — P1 cross-product responsiveness defect:** shared KPI/card layout may
-  not create orphan compositions such as four metrics becoming `3 + 1` in a normal
-  windowed desktop width. The current `.card-grid-4` `auto-fit/minmax(240px)` primitive
-  permits exactly that shape. Internal.16 needs deterministic item-count/container-aware
-  layout rules: for example four primary cards should normally converge `4 → 2x2 → 1`
-  rather than `4 → 3+1`; six-card groups should use balanced `3x2`/`2x3` or a deliberate
-  primary/supporting composition. Apply the same principle to chart pairs, mixed KPI+
-  table sections and other repeated card systems. Validate real desktop window widths,
-  1366×768 floor, 100–200% zoom, sidebar expanded/collapsed and AR/FR/EN/RTL. Responsive
-  behavior must rearrange information hierarchy rather than merely allow CSS auto-fit to
-  choose visually accidental columns.
-
-Part 2 source notes retained for implementation reconnaissance:
-
-- current command palette searches only navigation plus orders/customers/products,
-  requires a two-character record query and caps combined records;
-- product workbench records already include `images`, while the current product table
-  omits them;
-- AI desktop workspace currently uses fixed `15rem / flexible / 20rem` columns at XL;
-- Inbox queue uses a fixed `21rem` desktop width;
-- Gemini key status/save is gated by recent reauthentication and current installed copy
-  can leak an unresolved translation key;
-- Gemini API/verifier response strings include hard-coded French and model-policy drift
-  must be revalidated rather than guessed.
+These are root-cause clues, not a list of files to patch blindly.
 
 ## Internal.16 execution style
 
-The Founder explicitly rejects long repetitive micro-change/full-run loops.
-
-Use:
-
 ```text
-one full reconnaissance
+one complete installed + source reconnaissance
 → one consolidated Problem Register
-→ freeze contracts/non-goals
+→ freeze contracts/non-goals/acceptance matrix
 → one large dependency-correct implementation wave
 → targeted cheap checks while coding
 → freeze complete Internal.16
-→ one deep whole-product certification
+→ one deep whole-product certification + adversarial review
 → one consolidated repair batch
-→ affected reruns + one final full certification
+→ affected reruns + one final complete certification
 → signed updater if evidence passes
 ```
 
-Do not run the full MSI/replacement-install/eight-hour certification after every tiny
-edit. Do not skip focused checks that prevent hours of broken work. Do not rerun an
-unchanged passing head.
+No full MSI/replacement-install/eight-hour run after every tiny change. No weakening gates. No ritual rerun of unchanged passing heads.
 
-## Internal.16 application scope
+## Completion scope
 
-### Remaining desktop/product adoption
+Remaining desktop routes; shared RTL/interaction/responsive/theme/locale/chart/navigation/search roots; Inbox/AI/product table; Gemini key lifecycle; EcoTrack; AI extraction/tools; full Phase 8 remote/storefront/PWA/control-plane/zero-knowledge backup/Founder Console; security/privacy; install/update/recovery; T470/floor/eight-hour evidence.
 
-- dashboard;
-- customers/risk;
-- products/inventory;
-- delivery/returns;
-- COD/accounting;
-- analytics/charts;
-- automations;
-- setup/login/license;
-- remaining administration/shared shell states.
+Cloudflare Free may bootstrap first-buyer capacity when measured sufficient, but provider hostnames do not satisfy #230. EcoTrack endpoints/capabilities may not be guessed. Phase 1–4 authorities remain protected.
 
-All routes must have coherent #236 typography, density, themes, motion,
-localization/direction, accessibility, loading/empty/offline/error/retry/recovery and
-responsive/1366×768 behavior.
+## Exact next order
 
-### Phase 8
-
-Implement as one connected platform around desktop canonical truth:
-
-- encrypted remote projection/command protocol;
-- desktop-commit success semantics;
-- multi-tenant Cloudflare control plane;
-- hosted storefront with durable checkout receipt and atomic publish/rollback;
-- PWA/browser companion;
-- zero-knowledge encrypted cloud backup transport;
-- Founder Console with bounded metadata/offline permanent signing;
-- tenant isolation, replay/duplicate/outage/abuse/rate/cost controls.
-
-### Cloudflare bootstrap
-
-Cloudflare Free allowances may be used before first revenue when measured capacity is
-sufficient. Desktop remains canonical. The first sale/reservation may fund the owned
-domain and paid capacity if needed. Provider hostnames do not satisfy #230.
-
-If a buyer pays before the domain exists, payment is not proof that customer-online
-production certification passed.
-
-### EcoTrack Pro
-
-Remove NOEST/Nord et Ouest from runtime selection/configuration/provider claims and add
-canonical EcoTrack Pro.
-
-Required areas: protected credentials/config, connection/capability validation,
-create/validate flow, tracking/history, tariffs/location/reference data, supported
-fulfillment/cancel/update/return/document operations, durable timeout/retry/ambiguous
-outcome reconciliation, compatibility for historical `noest` rows and truthful
-source/conformance/live certification state.
-
-No guessed endpoint/capability. Current official/provider-issued merchant API authority
-is required for production contract truth.
-
-## AI subsystem completion
-
-Protected AI foundation exists through PR #240, but Internal.16 must re-audit and
-harden the whole subsystem.
-
-### AI workspace
-
-Prove long sessions, session switching, streaming/cancel/retry, context/action review,
-typed localized tool cards, key/consent/quota/provider/persistence/degraded states,
-AR/FR/EN, Arabic/RTL, keyboard/focus/zoom/reduced motion, and low-end resource/render
-behavior.
-
-Sensitive actions remain proposal/digest/actor/shop/license/permission/target bound.
-
-### Order extraction
-
-The existing regex/Gemini router and extraction metrics become a release-quality
-benchmark target.
-
-Held-out corpus: Arabic, French, English, Algerian Darija and mixed messages; noisy
-WhatsApp formatting; complete, partial, contradictory, ambiguous and non-order inputs.
-
-Measure field exactness, required-field completeness, false-complete rate, confidence
-calibration, missing-field truth, routing choice, offline/no-key fallback, malformed
-model response, quota/rate behavior and latency distributions.
-
-Low-confidence/incomplete extraction requires review/repair and never bypasses canonical
-order validation/pricing/risk/inventory/idempotency.
-
-### AI tools
-
-Inventory every model-exposed tool and prove schema, actor/shop/permission/license,
-proposal approval, target/version revalidation, result correctness, idempotency,
-timeout/cancel/retry, ambiguous external effects, privacy/redaction, localized result
-states, local performance overhead and resource/concurrency behavior.
-
-Model/provider/network latency is reported separately from SahelFlow overhead.
-
-## Final Internal.16 certification matrix
-
-The frozen candidate must cover:
-
-- all Required routes/features/states;
-- Golden COD/stock/money/risk/fulfillment/reconciliation;
-- install/start/login/license/shop/team/permissions/revocation;
-- data migration/export/delete/backup/restore/replacement install;
-- providers/WhatsApp/ecommerce/AI/automations;
-- EcoTrack conformance and truthful live state;
-- AI extraction benchmark and every AI tool matrix;
-- AR/FR/EN, RTL/LTR/mixed content, accessibility, zoom/reflow, reduced motion;
-- themes/density/motion/navigation/charts/warnings;
-- Phase 8 remote/storefront/PWA/control plane/backup/Founder Console;
-- security/privacy/secret/tenant/shop isolation;
-- clean install + Internal.15 → Internal.16 in-place updater preservation;
-- T470/floor budgets and required eight-hour final-candidate trend;
-- outage/replay/duplicate/ambiguity/rollback/cross-tenant failure injection;
-- frozen adversarial review, consolidated repair and final proof.
-
-Zero known P0/P1 is required for a user-ready claim. A material post-freeze change
-invalidates affected evidence.
-
-## Commercial lane
-
-Commercial work runs in parallel with engineering without paid ads:
-
-- direct qualified merchant/agency/strategic outreach;
-- private product demo;
-- payment/reservation collection through a legitimate available channel;
-- existing FD-012 pricing remains authority unless changed separately.
-
-The commercial target is at least USD 100 equivalent collected revenue, but product
-truth is never changed to close a sale. Do not expose private source unnecessarily or
-claim live-certified providers/Stable without evidence.
-
-## Exact next application order
-
-1. Continue the Founder installed Internal.15 inspection and append every material
-   finding to the FD-033/Working Memory register until the Founder says discovery is
-   complete.
-2. Re-fetch post-#245 `main`, Internal.15 publication/install and #221/#226/#230 truth.
+1. Continue Founder installed Internal.15 inspection and append material findings until discovery is explicitly closed.
+2. Re-fetch protected main, Internal.15 publication/install evidence and #221/#226/#230.
 3. Merge/reconcile FD-033 governance documentation.
-4. Create one Internal.16 application branch from exact protected post-#245 main.
-5. Perform the whole-product reconnaissance, merge the installed findings with the
-   source audit, and freeze the complete Problem Register, contracts and acceptance
-   matrix before broad edits.
-6. Execute the large completion wave: shared RTL/interaction/responsive/search roots
-   and remaining desktop routes → Inbox/AI/product-table convergence → Gemini key
-   lifecycle → EcoTrack/provider convergence → AI extraction/tools hardening → Phase 8
-   → cross-cutting release fixes.
-7. Use targeted checks during implementation; avoid repeated full release cycles.
-8. Freeze one complete Internal.16 head.
-9. Run the full certification matrix and one complete adversarial review.
-10. Repair the consolidated finding set and run affected + final complete proof.
-11. Publish/deliver only to the evidence level actually achieved; close #230 before
-    customer-online trial/public release claims and preserve external Phase 9 Stable
-    truth.
-
-## Hard rules
-
-- one active application writer;
-- no direct protected-main application edits;
-- preserve Phase 1–4 authorities and existing data/evidence;
-- no fake provider/tool/cloud success;
-- no guessed EcoTrack API contract;
-- no low-confidence AI extraction promoted as order truth;
-- no weakening tests/thresholds to make the deadline green;
-- no full heavy rerun on unchanged passing heads;
-- no customer-online claim from Cloudflare provider hostnames or mocks;
-- no Stable claim from internal confidence alone.
+4. Create one Internal.16 application branch from exact protected main.
+5. Perform the whole-product source reconnaissance and merge it with installed Parts 1–N into the final frozen Problem Register.
+6. Execute the large completion wave dependency-correctly.
+7. Freeze one complete Internal.16 head.
+8. Run the full certification matrix and one complete adversarial review.
+9. Repair one consolidated finding set; rerun affected + final complete proof.
+10. Publish/deliver only to the evidence level actually achieved.
