@@ -302,6 +302,18 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await expect(pageHeading).toHaveText("Comptabilité");
     await assertDesktopSidebarEdge(page, "ltr");
 
+    // Capture handles from the currently committed document before starting the
+    // reload. Locator assertions participate in Playwright's navigation auto-wait,
+    // so they cannot prove what remains visibly committed while the next document
+    // request is intentionally blocked.
+    const committedHtml = await html.elementHandle();
+    const committedShell = await shell.elementHandle();
+    const committedSidebar = await desktopSidebar.elementHandle();
+    const committedHeading = await pageHeading.elementHandle();
+    if (!committedHtml || !committedShell || !committedSidebar || !committedHeading) {
+      throw new Error("Committed French document handles must exist before locale navigation");
+    }
+
     // Hold the document request triggered by this locale interaction. Visible
     // copy and geometry must remain on the committed French document while the
     // Arabic document is blocked, then move together when that document commits.
@@ -327,12 +339,25 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     localeSwitchStarted = true;
     const localeSwitch = selectLocale(page, "Français", "العربية");
     await expect.poll(() => delayedDocumentObserved).toBe(true);
-    await expect(html).toHaveAttribute("lang", "fr");
-    await expect(html).toHaveAttribute("dir", "ltr");
-    await expect(shell).toHaveAttribute("dir", "ltr");
-    await expect(desktopSidebar).toContainText("Tableau de bord");
-    await expect(pageHeading).toHaveText("Comptabilité");
-    await assertDesktopSidebarEdge(page, "ltr");
+
+    // Inspect the old document directly rather than asking a Locator to resolve
+    // while Playwright is waiting for the blocked reload to commit.
+    expect(await committedHtml.getAttribute("lang")).toBe("fr");
+    expect(await committedHtml.getAttribute("dir")).toBe("ltr");
+    expect(await committedShell.getAttribute("dir")).toBe("ltr");
+    expect(await committedSidebar.innerText()).toContain("Tableau de bord");
+    expect((await committedHeading.innerText()).trim()).toBe("Comptabilité");
+    const committedSidebarBox = await committedSidebar.boundingBox();
+    expect(
+      committedSidebarBox,
+      "committed French sidebar should retain measurable geometry during navigation",
+    ).not.toBeNull();
+    if (committedSidebarBox) {
+      expect(
+        Math.abs(committedSidebarBox.x),
+        "committed French sidebar should stay on the left edge until Arabic commits",
+      ).toBeLessThanOrEqual(2);
+    }
 
     releaseDocument();
     await localeSwitch;
