@@ -63,6 +63,36 @@ FD-033 changes Internal.16 sequencing but not evidence honesty:
 - Phase 1–4 canonical business/data/security authority remains protected;
 - customer-online #230 and external Phase 9 truth cannot be fabricated.
 
+## Installed Internal.15 inspection — Part 1
+
+The Founder is now inspecting the real installed Internal.15 application before the
+Internal.16 Problem Register is frozen. Do not begin broad Internal.16 implementation
+until the Founder finishes supplying the installed findings or explicitly says the
+inspection is complete.
+
+Part 1 is captured in FD-033 under stable IDs:
+
+- **SF16-UI-001 — P1:** systemic Arabic/RTL geometry and placement remains wrong across
+  the shell and route UI. The sidebar is physically on the right, but installed Arabic
+  still shows wrong-edge selected/nested navigation treatment and broader wrong-side
+  UI/text/control placement. Internal.16 requires a route-wide semantic RTL geometry
+  contract, not another page-local `dir` patch.
+- **SF16-UI-002 — P1:** Risk Engine KPI composition is overloaded/unbalanced. Six
+  equal-weight metric cards create a heavy primary row plus orphaned secondary row and
+  do not express decision hierarchy. Keep useful information but redesign primary vs
+  supporting risk signals as one balanced operational composition.
+- **SF16-UI-003 — P1:** shared metric/stat cards feel inert under pointer interaction.
+  The shared card needs deliberate passive/actionable/selected semantics, theme-aware
+  border/surface/icon feedback, keyboard focus parity, touch parity and low-end-safe
+  motion rather than fake selection or decorative lift.
+- **SF16-I18N-004 — P1:** Arabic Risk potential-savings value leaks French `DA` because
+  a locale-sensitive DZD formatter is called without the active locale. Audit all
+  seller-facing money/date formatters for the same omission and prove AR/FR/EN output.
+
+The screenshots used for Part 1 cover Dashboard, Orders and Risk. Treat the Founder
+report that the same wrong-side RTL class exists elsewhere as a whole-product audit
+trigger, not as proof that only those three routes are affected.
+
 ## Internal.16 execution style
 
 The Founder explicitly rejects long repetitive micro-change/full-run loops.
@@ -216,18 +246,23 @@ claim live-certified providers/Stable without evidence.
 
 ## Exact next application order
 
-1. Re-fetch post-#245 `main`, Internal.15 publication/install and #221/#226/#230 truth.
-2. Merge/reconcile FD-033 governance documentation.
-3. Create one Internal.16 application branch from exact protected post-#245 main.
-4. Perform the whole-product reconnaissance and freeze the complete Problem Register,
-   contracts and acceptance matrix before broad edits.
-5. Execute the large completion wave: remaining desktop routes → EcoTrack/provider
-   convergence → AI/extraction/tools hardening → Phase 8 → cross-cutting release fixes.
-6. Use targeted checks during implementation; avoid repeated full release cycles.
-7. Freeze one complete Internal.16 head.
-8. Run the full certification matrix and one complete adversarial review.
-9. Repair the consolidated finding set and run affected + final complete proof.
-10. Publish/deliver only to the evidence level actually achieved; close #230 before
+1. Continue the Founder installed Internal.15 inspection and append every material
+   finding to the FD-033/Working Memory register until the Founder says discovery is
+   complete.
+2. Re-fetch post-#245 `main`, Internal.15 publication/install and #221/#226/#230 truth.
+3. Merge/reconcile FD-033 governance documentation.
+4. Create one Internal.16 application branch from exact protected post-#245 main.
+5. Perform the whole-product reconnaissance, merge the installed findings with the
+   source audit, and freeze the complete Problem Register, contracts and acceptance
+   matrix before broad edits.
+6. Execute the large completion wave: shared RTL/interaction roots and remaining
+   desktop routes → EcoTrack/provider convergence → AI/extraction/tools hardening →
+   Phase 8 → cross-cutting release fixes.
+7. Use targeted checks during implementation; avoid repeated full release cycles.
+8. Freeze one complete Internal.16 head.
+9. Run the full certification matrix and one complete adversarial review.
+10. Repair the consolidated finding set and run affected + final complete proof.
+11. Publish/deliver only to the evidence level actually achieved; close #230 before
     customer-online trial/public release claims and preserve external Phase 9 Stable
     truth.
 
