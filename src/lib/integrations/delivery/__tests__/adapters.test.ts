@@ -1,38 +1,23 @@
 /**
- * Delivery adapter metadata tests — id, name, logo for all 4 adapters.
+ * Delivery adapter unit tests (T-INTEGRATIONS).
  *
- * Metadata remains covered here. Deterministic request/response behavior is
- * covered by provider-conformance.test.ts, retry.test.ts and noest.test.ts without
- * requiring real provider credentials or external network access.
+ * Tests adapter metadata + credential validation without real network calls.
+ * All fetch calls are either avoided (missing creds) or mocked in specific tests.
  */
 import { describe, it, expect } from "vitest";
 import { yalidineAdapter } from "../yalidine";
 import { maystroAdapter } from "../maystro";
 import { zrExpressAdapter } from "../zr-express";
-import { noestAdapter } from "../noest";
+import { ecoTrackAdapter } from "../ecotrack";
 
-describe("delivery adapter metadata", () => {
+// ── Adapter metadata ──────────────────────────────────────────────────────────
+
+describe("Delivery adapter metadata", () => {
   const adapters = [
-    {
-      adapter: yalidineAdapter,
-      expectedId: "yalidine",
-      expectedName: "Yalidine",
-    },
-    {
-      adapter: maystroAdapter,
-      expectedId: "maystro",
-      expectedName: "Maystro Delivery",
-    },
-    {
-      adapter: zrExpressAdapter,
-      expectedId: "zrexpress",
-      expectedName: "ZR Express",
-    },
-    {
-      adapter: noestAdapter,
-      expectedId: "noest",
-      expectedName: "NOEST Express",
-    },
+    { adapter: yalidineAdapter, expectedId: "yalidine", expectedName: "Yalidine" },
+    { adapter: maystroAdapter, expectedId: "maystro", expectedName: "Maystro Delivery" },
+    { adapter: zrExpressAdapter, expectedId: "zrexpress", expectedName: "ZR Express" },
+    { adapter: ecoTrackAdapter, expectedId: "ecotrack", expectedName: "EcoTrack Pro" },
   ];
 
   for (const { adapter, expectedId, expectedName } of adapters) {
@@ -45,14 +30,20 @@ describe("delivery adapter metadata", () => {
         expect(adapter.name).toBe(expectedName);
       });
 
-      it("has a logo (non-empty string)", () => {
+      it("has a logo", () => {
         expect(typeof adapter.logo).toBe("string");
         expect(adapter.logo.length).toBeGreaterThan(0);
       });
 
-      it("exposes estimateCost, createShipment, syncTracking functions", () => {
+      it("implements estimateCost", () => {
         expect(typeof adapter.estimateCost).toBe("function");
+      });
+
+      it("implements createShipment", () => {
         expect(typeof adapter.createShipment).toBe("function");
+      });
+
+      it("implements syncTracking", () => {
         expect(typeof adapter.syncTracking).toBe("function");
       });
     });
