@@ -2,9 +2,8 @@
  * Delivery integration types shared by every courier transport.
  *
  * EcoTrack-backed courier brands are profile data below the `ecotrack`
- * transport. Historical `noest` persistence is accepted only through the
- * explicit one-way compatibility normalizer below; new API/UI writes cannot
- * create `noest` as a provider identity.
+ * transport. Historical `noest` persistence is accepted only through explicit
+ * one-way compatibility helpers; new shipment/provider writes are `ecotrack`.
  */
 
 export type DeliveryStatus =
@@ -131,10 +130,6 @@ export const DELIVERY_PROVIDERS = [
 ] as const;
 export type DeliveryProvider = (typeof DELIVERY_PROVIDERS)[number];
 
-/**
- * Read-compatibility only. This keeps historical shipment rows recoverable
- * while making `ecotrack` the sole runtime/product identity for this contract.
- */
 export function normalizeDeliveryProvider(
   provider: string,
 ): DeliveryProvider | null {
@@ -144,8 +139,42 @@ export function normalizeDeliveryProvider(
     : null;
 }
 
+/**
+ * Old clients may still submit `provider: noest` to the pre-Wave-3 credential
+ * endpoint. Those writes are redirected into the canonical EcoTrack namespace
+ * instead of creating new NOEST secrets.
+ */
 export function deliverySecretKey(provider: string, field: string): string {
+  if (provider === "noest") {
+    if (field.startsWith("delivery_ecotrack_")) return field;
+    return `delivery_ecotrack_${field}`;
+  }
   return `delivery_${provider}_${field}`;
+}
+
+function canonicalEcoTrackSecretKeys(): string[] {
+  return [
+    "carrierName",
+    "apiToken",
+    "userGuid",
+    "createOrderUrl",
+    "validateOrderUrl",
+    "trackingsUrl",
+    "feesUrl",
+  ].map((field) => deliverySecretKey("ecotrack", field));
+}
+
+/** Raw pre-Wave-3 keys, read/deleted for migration only. */
+export function legacyNoestSecretKeys(): string[] {
+  return [
+    "carrierName",
+    "apiToken",
+    "userGuid",
+    "createOrderUrl",
+    "validateOrderUrl",
+    "trackingsUrl",
+    "feesUrl",
+  ].map((field) => `delivery_noest_${field}`);
 }
 
 export function deliverySecretKeys(provider: string): string[] {
@@ -163,28 +192,12 @@ export function deliverySecretKeys(provider: string): string[] {
         deliverySecretKey("zrexpress", "apiKey"),
       ];
     case "ecotrack":
-      return [
-        deliverySecretKey("ecotrack", "carrierName"),
-        deliverySecretKey("ecotrack", "apiToken"),
-        deliverySecretKey("ecotrack", "userGuid"),
-        deliverySecretKey("ecotrack", "createOrderUrl"),
-        deliverySecretKey("ecotrack", "validateOrderUrl"),
-        deliverySecretKey("ecotrack", "trackingsUrl"),
-        deliverySecretKey("ecotrack", "feesUrl"),
-      ];
+      return canonicalEcoTrackSecretKeys();
+    case "noest":
+      // Compatibility shape for the old credential API: short old field names
+      // remain accepted, while canonical full-key fields permit newer clients.
+      return [...canonicalEcoTrackSecretKeys(), ...legacyNoestSecretKeys()];
     default:
       return [];
   }
-}
-
-/** Internal migration input only; never expose these keys as a provider. */
-export function legacyNoestSecretKeys(): string[] {
-  return [
-    "apiToken",
-    "userGuid",
-    "createOrderUrl",
-    "validateOrderUrl",
-    "trackingsUrl",
-    "feesUrl",
-  ].map((field) => deliverySecretKey("noest", field));
 }
