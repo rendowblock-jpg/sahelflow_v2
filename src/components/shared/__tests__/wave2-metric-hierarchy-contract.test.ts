@@ -46,6 +46,8 @@ describe("Wave 2 metric hierarchy contract", () => {
 
     expect(risk).toContain('selected={activeTab === "blacklist"}');
     expect(risk).toContain('href={`/risk?days=${days}&tab=blacklist`}');
-    expect(risk).toContain('aria-current={activeTab === "blacklist" ? "page" : undefined}');
+    expect(risk).toMatch(
+      /aria-current=\{\s*activeTab === "blacklist"\s*\? "page"\s*:\s*undefined\s*\}/s,
+    );
   });
 });
