@@ -1,417 +1,127 @@
 # SahelFlow — Research, coding, review and delivery workflow
 
 > **Status:** Active operating contract
-> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery
-> **Execution mode:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Durable truth:** protected `main`, branches, PRs, Actions, releases, issue #164 and the ten active documentation authorities
-> **Governance reset base:** `d3747f18f6a6e9e976dfb076d2b274bc21c3eca8`
-> **Last consolidated:** 2026-08-02
-
-This workflow is the fastest professional path to a complete class-AAA SahelFlow
-candidate. Speed comes from complete reconnaissance, root-cause grouping, short
-observable outcomes, one active implementation owner, complete failure reporting,
-risk-selected evidence and prompt closure of proven work.
-
-Speed never comes from weakening business integrity, AppData preservation,
-security, privacy, Arabic/RTL, accessibility, low-end performance, recovery or
-evidence honesty.
-
-## 1. Authority and roles
-
-### Founder
-
-The Founder:
-
-- chooses the active coding agent;
-- sets product, commercial, entitlement and value judgments;
-- approves consequential money, ownership, privacy, provider and experience
-  choices;
-- installs and observes coherent Internal milestones;
-- controls sensitive signing and payment ceremonies;
-- explicitly promotes Beta and Stable.
-
-### Active implementation agent
-
-The selected Web Agent or Desktop Agent:
-
-- reconstructs live GitHub authority before work;
-- completes the research and impact-map gate;
-- owns one branch and one observable outcome;
-- implements every applicable layer of that outcome;
-- runs the required task gate;
-- stops editing when the exact head is frozen;
-- records evidence without claiming a higher layer than observed.
-
-### Inactive agent
-
-The inactive agent:
-
-- does not create a competing implementation branch;
-- does not edit shared contracts or future-phase work;
-- may become active only after Founder handoff and exact state reconstruction.
-
-### Desktop-specific evidence
-
-When Desktop is active, it additionally owns:
-
-- local Windows behavior;
-- MSI, updater, WebView and process lifecycle;
-- AppData and registry preservation;
-- real UI observation;
-- T470 and floor-hardware evidence.
-
-### GitHub and Actions
-
-- Protected `main` is integrated source truth.
-- Branches and PRs are proposed changes.
-- Issue #164 tracks execution but is not a product or architecture authority.
-- Actions proves clean-checkout source and artifact behavior.
-- Releases bind exact source, version, signature, artifacts and evidence.
-- CI remains read-only with respect to protected source.
-
-## 2. Core anti-drift rules
-
-1. Only one SahelFlow implementation agent is active at a time.
-2. One outcome has one owner, one branch and one PR.
-3. No direct protected-main edits.
-4. No material implementation begins before a complete impact map and Problem
-   Register exist.
-5. Shared schema, migration, identity, permission, command, event, provider and
-   design-system contracts are serialized before dependent implementation.
-6. No important decision remains only in chat or an unpushed checkout.
-7. `CURRENT_STATE.md` describes merged source and named evidence.
-8. `WORKING_MEMORY.md` describes only the current execution frontier.
-9. A page, route, model, adapter, screenshot, mock or passing unit test does not
-   complete a capability.
-10. Arabic/RTL, accessibility, recovery and performance are continuous blocking
-    requirements.
-11. A new abstraction is adopted by a production vertical immediately or in the
-    directly following dependency package.
-12. After parity and recovery proof, competing legacy mutation paths are removed
-    or made read-only.
-13. New ideas enter Candidate/post-1.0 unless a Founder decision changes Required
-    scope.
-14. Public provider, security, performance, AAA or Stable claims never exceed
-    evidence.
-15. Do not create another permanent masterplan, gap report, wave or handoff
-    document. Update the existing owner.
-
-## 3. Session declaration
-
-Before changing anything, declare exactly one session purpose:
-
-- **governance/planning** — authority, process, phase or dependency changes; no
-  product implementation;
-- **research/contract** — source inspection, current primary research, alternatives
-  and measurable adoption; no broad implementation;
-- **implementation** — one approved observable outcome;
-- **frozen review/closure** — exact-head adversarial review, consolidated findings,
-  repair verification and closure;
-- **installed evidence** — artifact, install, upgrade, reopen, recovery,
-  performance and Founder observation.
+> **Governing decisions:** FD-028, FD-029 and exact FD-033 Internal.16 completion convergence
+> **Execution mode:** one active application writer; audit-first; large implementation wave; targeted checks during coding; consequence-selected Level 1/2/3 gates; frozen whole-product certification
+> **Durable truth:** protected `main`, PRs/Actions/releases, active documentation authorities and named installed evidence
+> **Last consolidated:** 2026-08-13
 
-A session does not silently change purpose. Record an explicit handoff when the
-purpose changes.
+Speed comes from complete reconnaissance, root-cause grouping, one coherent implementation wave and consolidated certification—not from weakening integrity, security, privacy, Arabic/RTL, accessibility, recovery, performance or evidence honesty.
 
-## 4. Start and resume protocol
+## 1. Internal.16 session sequence
 
-Before production edits:
+Founder-installed discovery is closed and frozen at 17 P1 inputs.
 
-1. Verify live protected `main` and repository permissions.
-2. Resolve all open PRs, exact heads, review threads, checks and dependencies.
-3. Read `AGENTS.md`, documentation entry point, FD-028, FD-029, Current State,
-   Roadmap, this workflow and Working Memory.
-4. Read the governing Product, Experience, Architecture and Research sections.
-5. Declare the selected agent, environment, branch and session purpose.
-6. Preserve unrelated user work and local evidence.
-7. Inspect exact production source, tests, migrations and callers.
-8. Complete the phase/package audit and Problem Register.
-9. Freeze shared contracts and explicit non-goals.
-10. State the exact outcome and required evidence.
+```text
+exact documentation-merged post-Internal.15 authority
+→ one exact-source whole-product reconnaissance
+→ merge source findings with frozen installed register
+→ consolidated Problem Register
+→ frozen contracts/non-goals/acceptance matrix
+→ one large dependency-correct implementation wave
+→ targeted cheap checks + consequence-selected gates while coding
+→ exact-head freeze
+→ whole-product certification + adversarial review
+→ consolidated repair batch
+→ affected proof + final complete certification
+→ expected-head merge
+→ protected-main verification of exact source/version/docs
+→ documentation/evidence reconciliation
+→ guarded signed release workflow from protected main when release authority applies
+→ post-release artifact/installed proof required by the selected evidence level
+```
 
-Never infer an active agent from branch movement, screenshots or old chat.
+Do not restart broad screenshot discovery. Do not run full MSI/replacement-install/eight-hour/whole-repository evidence after every tiny change. Do not skip focused checks that prevent hours of broken work, and do not use the large-wave cadence to defer a consequence-triggered Level 2/3 gate that is required before it is safe to continue. Never rerun an unchanged passing exact head. Never retry a deterministic failure until it becomes green without explaining/fixing the cause.
 
-## 5. Research-to-implementation gate
+A branch-only build or artifact is never the durable release source. Publication follows a proven expected-head merge and protected-main verification.
 
-Every major phase, durable contract and material package begins with bounded
-current research.
+## 2. Authority and anti-drift
 
-### 5.1 Exact decision
+- Founder controls product/commercial judgments and explicit Beta/Stable promotion.
+- One active application writer owns the Internal.16 implementation branch.
+- Protected `main` is integrated source truth; branches/PRs are proposed changes.
+- No direct protected-main application edits.
+- Phase 1–4 business/data/security/recovery authority remains protected.
+- No important decision remains only in chat.
+- Current State describes merged truth plus clearly labeled installed observations.
+- Working Memory owns resumable current frontier.
+- FD-033 owns the exact Internal.16 completion directive and frozen installed finding IDs.
+- New P0/P1 source findings are added to the consolidated register before its freeze, not turned into random micro-PR loops.
 
-State one decision whose answer changes implementation, such as:
+## 3. Exact-source reconnaissance before implementation
 
-- how native shop switching quiesces and relaunches the contained runtime;
-- how an automation records partial multi-step failure truthfully;
-- which chart engine satisfies Arabic labels, accessibility and low-end rendering;
-- how an AI approval is bound to exact arguments, actor, shop, version and expiry.
+Inspect every applicable caller, route, component, service, model, migration, permission, provider effect, UI state, locale/RTL path, responsive composition, performance/resource path, diagnostics and tests. Group by root cause.
 
-### 5.2 Inspect SahelFlow first
+For the frozen installed defect classes, the implementation agent owns exhaustive sibling discovery. The Founder does not need to screenshot every repeated wrong-side RTL element, untranslated key, accidental card grid, dead-space panel or weak chart.
 
-Record:
+Reconnaissance also covers the already-approved Internal.16 scope beyond the installed findings: full Phase 8, EcoTrack replacement, AI extraction/tool benchmark, updater/release/recovery/licensing/cloud/privacy/security and retained #221/#226/#230 boundaries.
 
-- package base and current production path;
-- models, routes, services, UI and tests;
-- current behavior and data to preserve;
-- known discontinuities and failure cases;
-- compatibility, migration and recovery implications;
-- authorization, privacy and threat implications;
-- AR/FR/EN, RTL, accessibility and responsive implications;
-- performance and resource implications;
-- evidence already available and evidence still required.
-
-Do not rebuild correct behavior merely because another implementation is
-fashionable.
+At the end of reconnaissance, freeze one combined source+installed Problem Register, contracts/non-goals and acceptance matrix. Broad implementation begins only after that freeze.
 
-### 5.3 Source hierarchy
+## 4. Targeted implementation checks
 
-Prefer:
+During the large implementation wave, use the cheapest checks that can catch local breakage quickly:
 
-1. standards bodies, law and primary specifications;
-2. official OS, framework, platform and provider documentation;
-3. primary research and security advisories;
-4. production engineering reports with measurable evidence;
-5. mature open-source implementation code;
-6. direct teardown of relevant best-in-class operational products;
-7. representative Algerian COD seller evidence and Founder judgment;
-8. secondary opinion only as supporting context.
-
-Record date, version, jurisdiction, applicability and limitation. Revalidate
-unstable facts when implementation or certification begins.
+- TypeScript/typecheck and ESLint for changed TS/React boundaries;
+- targeted Vitest/domain/database tests;
+- targeted Playwright for changed seller journeys, AR/FR/EN, RTL, keyboard, resize and transitions;
+- provider contract tests for courier/AI/cloud changes;
+- Rust format/check/tests for native changes;
+- focused bundle/performance measurements when chart/image/search/AI/runtime work changes hot paths.
 
-### 5.4 Adopted decision
+These checks are fast feedback, not a replacement for the consequence-selected gate definitions below. Full release evidence normally waits for a coherent frozen candidate, but licensing/commercial authority, identity/cryptography, schema/migration, installer/updater/process supervisor, backup/restore/replacement install, destructive lifecycle and irreversible provider effects can require Level 3 proof at the affected boundary before dependent work continues.
 
-Before substantial implementation, record:
+## 5. Consequence-selected evidence gates
 
-- selected approach and rationale;
-- rejected alternatives;
-- behavior retained;
-- legacy behavior removed or made read-only;
-- measurable acceptance criteria;
-- automated, installed, external and Founder evidence;
-- revalidation trigger.
-
-Research is bounded. Once enough evidence exists for a safe decision,
-implementation begins.
-
-## 6. Complete phase/package audit
-
-Before the first production edit, inspect the whole affected surface. The audit
-must cover every applicable category:
-
-### Authority and behavior
-
-- every production caller, route, page, command and background consumer;
-- current mutation authorities and compatibility projections;
-- business state, stock, money, provider and audit invariants;
-- duplicate, concurrency, stale-version, restart and interruption behavior;
-- all direct and indirect legacy bypasses.
-
-### Data and recovery
-
-- models, migrations, indexes, constraints and existing databases;
-- forward migration, interruption, retry, rollback and repair;
-- backup, restore, replacement install and preservation implications;
-- secrets, keys, registry and AppData boundaries.
-
-### Security and permissions
-
-- trusted actor, person, member, device, session, installation and exact shop;
-- protected fields and inference/search oracles;
-- high-risk ceremonies and reauthentication;
-- provider credentials, callback authentication and effect authority.
-
-### Product experience
-
-- every affected route and reusable component;
-- happy, loading, empty, validation, permission, offline, pending, stale,
-  conflict, error, retry, recovery, history and bulk states;
-- AR/FR/EN and RTL/mixed-direction behavior;
-- keyboard, focus, semantics, announcements, contrast, zoom and reduced motion;
-- 1366×768 and responsive containment;
-- charts, tables, forms, dialogs and destructive actions.
-
-### Validation and operations
-
-- unit, integration, database, browser, Rust, Windows and installed tests;
-- mocks, fixtures, dynamic imports and collection failures;
-- diagnostics, support bundle and observability;
-- performance budgets and long-session behavior;
-- exact CI lanes and evidence artifacts.
-
-Mark each AAA layer `applicable` with acceptance/evidence or `not applicable` with
-a concrete reason. “Later” is not valid for a blocking layer.
-
-## 7. Phase Problem Register
-
-All reasonably discoverable current problems are collected before remediation.
-Each entry records:
-
-- stable identifier;
-- severity P0–P3;
-- affected journey/capability;
-- root cause;
-- affected callers/files/authorities;
-- dependencies;
-- required correction;
-- tests and evidence;
-- phase-blocking status;
-- owner and closure state.
-
-Group entries by root cause. Prefer one canonical-authority migration that removes
-seven symptoms over seven isolated route patches.
-
-### Remediation waves
-
-1. **Structural blockers** — competing authority, unsafe schema/migration,
-   authorization, build or data-integrity defects.
-2. **Functional completeness** — missing journeys, states, provider behavior,
-   recovery and business correctness.
-3. **Experience completeness** — design-system adoption, UI states, AR/FR/EN,
-   RTL, accessibility and performance.
-4. **Evidence and closure** — tests, installed proof, documentation, review and
-   checkpoints.
-
-A new P0/P1 may interrupt the active package. Other discoveries join the register
-and are handled dependency-correctly rather than creating random side work.
-
-## 8. Work-package contract
-
-A package is the smallest independently usable seller/Founder outcome that can be
-understood, implemented, reviewed and closed coherently.
-
-Before implementation, record:
-
-- named observable outcome;
-- roadmap phase and journeys;
-- governing Founder/product/experience/architecture clauses;
-- research and adopted decision;
-- exact base and active owner;
-- scope and non-goals;
-- complete impact map;
-- data/behavior preservation;
-- migration and forward repair;
-- threat, privacy and authorization implications;
-- AR/FR/EN, RTL, accessibility and responsive behavior;
-- performance/resource budget;
-- required evidence;
-- exact legacy path removed after adoption.
-
-Disallowed framing:
-
-- add models;
-- prepare foundation;
-- improve types;
-- polish pages;
-- refactor helpers;
-- fix the next issue.
-
-Valid framing:
-
-- native switch validates the target shop, atomically advances registry revision,
-  quiesces the old runtime and relaunches into authenticated readiness;
-- automation step failure is durable, never reported as overall success and can
-  be retried safely;
-- orders route family is complete in AR/FR/EN with every operational state and
-  governed chart/table primitives.
-
-Do not mix unrelated refactors, dependency upgrades, formatting or cleanup into a
-product outcome.
-
-## 9. Implementation and task gates
-
-Focused tests and local checks are encouraged during coding. A coherent task is
-not complete until its Level 1 gate passes.
+FD-033 changes **cadence**, not the evidence tiers. Select gates from the consequence of the change, not from convenience or file extension. A UI-looking change that changes authority, schema, migration, secrets, licensing, native runtime, recovery or irreversible external effects inherits the corresponding higher gate.
 
 ### Level 1 — Task Gate
 
-Run after each coherent completed task, not after every small edit:
+Run after each coherent completed task/batch, not after every small edit. The applicable set includes:
 
-1. repository cleanliness and diff check;
+1. repository cleanliness and full diff check;
 2. `bun run sf-version`;
 3. `bun run sf-audit`;
 4. Prisma generation/validation and migration status where applicable;
 5. TypeScript type checking;
 6. ESLint;
-7. complete Vitest suite;
-8. dependency audit where the package changes production dependencies;
+7. complete Vitest suite or the repository’s complete selected task suite when CI classification proves an equivalent frozen set;
+8. production dependency audit when dependencies change or at selected source checkpoints;
 9. targeted Playwright for changed seller journeys;
-10. targeted provider contract tests for provider changes;
+10. targeted provider contract/conformance tests for provider changes;
 11. Rust format/check/tests for `src-tauri/**` or native changes;
-12. Windows compile/package lane when risk requires immediate proof.
+12. Windows compile/package lane when consequence requires immediate platform proof.
 
-The ordinary source gate must return the complete actionable failure set. It must
-not intentionally hide all but the first assertion, import failure, collection
-failure or file-level hook failure.
+The ordinary source/task gate must return the complete actionable failure set. It may not intentionally hide all but the first assertion, import/collection failure or file-level hook failure. Never rerun an unchanged passing exact head; retry only evidence-supported infrastructure failures.
 
-Never rerun an unchanged passing exact head. Retry only evidence-supported
-infrastructure failures.
+For the Internal.16 large wave, related Level 1 checks may be grouped around coherent dependency-correct batches so they catch breakage without turning every small edit into a release cycle.
 
-## 10. Frozen review and batch repair
+### Level 2 — Phase Checkpoint
 
-Material work receives:
+Use a Level 2 checkpoint when a coherent phase/subsystem boundary is being declared source-complete, when several dependent packages have converged, or before a new layer depends on a broad authority that must be trusted as one integrated source head.
 
-1. author self-review;
-2. exact-head freeze;
-3. one complete separated adversarial pass over every affected layer;
-4. one consolidated findings batch;
-5. one dependency-correct repair batch;
-6. re-review of materially changed and previously unresolved areas;
-7. checkpoint recommendation.
-
-The reviewer does not publish the first finding and stop while the same frozen
-head remains uninspected. The review covers the complete impact map before the
-batch is delivered.
-
-With one coding agent this is not independent review. Required external
-independent security, privacy, legal, provider and accessibility review remains a
-later certification gate.
-
-### Severity
-
-- **P0 — stop immediately:** active data loss, secret exposure, cross-shop or
-  cross-tenant effect, corrupt update/restore, irreversible stock or money damage.
-- **P1 — blocks merge/checkpoint:** required journey failure, authority bypass,
-  negative/double stock, incorrect money, duplicate/lost provider effect, unsafe
-  migration, startup/install failure, broken recovery or major Arabic/UX/
-  accessibility failure.
-- **P2 — scheduled hardening:** material bounded issue with a safe workaround and
-  explicit owner/dependency position.
-- **P3 — polish:** low-impact cleanup or optional improvement.
-
-P2/P3 do not create an unbounded review loop. P0/P1 always reopen the affected
-gate when supported by concrete evidence.
-
-## 11. Level 2 — Phase Checkpoint
-
-A phase closes only on one frozen integrated source head after all planned
-packages and blocking Problem Register entries are resolved.
-
-Required checkpoint categories:
+Required checkpoint categories, as applicable:
 
 - clean frozen dependency install;
 - documentation and version authority;
 - complete TypeScript, ESLint, unit, domain, integration and database suites;
 - migration deploy/status and required compatibility matrix;
 - production frontend build;
-- all phase-affected Playwright journeys;
+- all checkpoint-affected Playwright journeys;
 - permission, revocation, stale-policy and exact-shop matrices;
 - duplicate, concurrency, restart, interruption and recovery tests;
 - AR/FR/EN, RTL and applicable visual-state evidence;
 - accessibility, zoom and reduced-motion checks;
-- phase performance/resource measurements;
+- phase/subsystem performance/resource measurements;
 - applicable Rust/native/Windows/package lanes;
 - complete unresolved-problem, stale-document and legacy-removal audit;
-- exact evidence bundle and phase-closure recommendation.
+- exact evidence bundle and checkpoint recommendation.
 
-A phase does not close merely because its PRs merged, source compiles or many tests
-exist.
+A phase/subsystem does not close merely because PRs merged, source compiles or many tests exist. Under FD-033, Phase 5/6/7 closure may converge with Phase 8 implementation on one Internal.16 branch, but a dependency may still require an earlier Level 2 checkpoint when consuming unproven integrated authority would create material rework or risk.
 
-## 12. Level 3 — Major Full Checkpoint
+### Level 3 — Major Full Checkpoint
 
-Run after every two completed phases by default. Three phases may share one only
-when explicit risk/dependency analysis shows no high-risk authority was deferred.
-
-Run immediately at the affected phase exit for:
+Level 3 is the installed/release-grade proof boundary. Run it at final Internal.16 certification and immediately at an affected boundary when necessary for:
 
 - licensing and commercial authority;
 - identity, authorization and cryptography;
@@ -419,16 +129,17 @@ Run immediately at the affected phase exit for:
 - schema/migration authority;
 - backup, restore and replacement install;
 - provider effects involving money, inventory or irreversible external action;
-- destructive shop/data lifecycle.
+- destructive shop/data lifecycle;
+- another change whose failure could invalidate durable installed authority or preservation assumptions before dependent work proceeds.
 
-The major checkpoint includes:
+The major checkpoint includes, as applicable:
 
-1. exact protected source and reviewed-tree binding;
+1. exact protected/frozen source and reviewed-tree binding;
 2. clean Windows release compilation;
 3. complete Rust release parity;
 4. signed MSI and updater contract;
 5. clean install;
-6. in-place upgrade from the previous checkpoint;
+6. in-place upgrade from the previous checkpoint/release;
 7. first launch, authenticated readiness, close and reopen;
 8. process containment and cleanup;
 9. preserved AppData, registry, databases and keys;
@@ -436,150 +147,94 @@ The major checkpoint includes:
 11. backup, corruption, restore and replacement-install recovery;
 12. complete browser/UI journey suite;
 13. visual regression and AR/RTL review;
-14. security, permission and shop-isolation matrices;
+14. security, permission, shop/tenant-isolation matrices;
 15. T470/floor performance and long-session stability where scheduled;
 16. deterministic evidence manifest.
 
-Phase 2 receives a Level 3 checkpoint because signed licensing and native
-multi-shop are high-risk native authority.
+The Internal.16 final candidate receives the complete applicable Level 3 proof regardless of which heavy lanes were intentionally deferred during safe implementation work.
 
-## 13. Whole-product AAA frontend program
+## 6. Internal.16 frontend/experience proof matrix
 
-The full frontend transformation is a first-class Stable 1.0 requirement.
-Functionality is not completed first and visually repaired at the end; each
-package carries applicable experience quality, and Phases 5–7 perform complete
-whole-product convergence and certification.
+Every material route/workspace must prove happy/loading/empty/filtered-empty/permission/offline/stale/pending/conflict/error/retry/recovery states plus AR/FR/EN, RTL/mixed bidi, keyboard/focus/screen reader, 100–200% zoom, reduced motion and 1366×768/windowed/fullscreen behavior.
 
-### Governed design system
+Frozen installed proof additions:
 
-SahelFlow owns one visible design layer containing:
+- **RTL:** source audit plus installed geometry comparison across shell, panes, tables, dialogs, command palette and charts; no physical-side residue.
+- **Responsive:** exercise actual **application container width after sidebar**, not browser viewport alone; live resize; no `4→3+1` orphan primary card groups.
+- **Dead space:** inspect paired panels and chart cards for accidental stretch/fixed-canvas blank regions; content density should remain intentional.
+- **Charts:** each chart has a stated decision/job, correct chart type, locale-safe units, useful tooltip/context/legend/annotation/drill-down where applicable, accessible text/table equivalent, RTL semantics, responsive height/label density and low-end budget.
+- **Theme:** repeated rapid light/dark/system/preset switching across shell, cards, charts and portaled overlays; no mixed old/new token frame; reduced motion immediate.
+- **Locale:** AR↔FR↔EN current page + prefetched route + non-prefetched route + back/forward; after commit, no old-locale route frame or stale direction.
+- **Navigation order:** default workflow order plus user reorder preference; drag and keyboard moves, save/cancel/reset, stale preference normalization, RTL and collapsed-sidebar access; no permission/route authority drift.
+- **Universal search:** words/numbers/IDs across permitted entities, exact-match ranking, permission/shop isolation, cancellation of stale requests and Phase 7 latency.
+- **Inbox/AI:** wide/windowed/narrow adaptive layouts, large histories, no scroll fights, degraded provider behavior, long-session performance.
+- **Products:** image-row loading/fallback/density performance.
 
-- typography and numerical formatting;
-- spacing, density, radii, borders and elevation;
-- semantic color and operational states;
-- focus and motion rules;
-- layout and navigation primitives;
-- buttons, inputs, forms and validation;
-- dialogs, sheets, menus, popovers and toasts;
-- tables, lists, filters and bulk actions;
-- loading, empty, permission, offline, stale, conflict, error and recovery
-  surfaces;
-- accessibility and RTL behavior.
+## 7. Startup/performance proof
 
-Primitive libraries may provide behavior underneath, but pages do not expose a
-mixture of library defaults.
+Do not optimize startup by deleting safety work. Instrument the installed sequence and retain stage durations for recovery/preflight, device/license authority, migration, runtime preparation/spawn, runtime readiness, first navigation, authenticated hydration and usable workspace.
 
-### Governed charts
+Measure separately:
 
-Choose one primary charting foundation after a technical benchmark of the current
-stack and credible alternatives. It must support:
+- ordinary cold start;
+- first launch after Internal.15→Internal.16 update/migration;
+- warm/reopen.
 
-- Arabic and RTL labels;
-- responsive low-end rendering;
-- accessible text/table summaries;
-- DZD, percentage, date and quantity formatting;
-- tooltips, legends, annotations and filtering;
-- empty/loading/degraded/error states;
-- export/printing where Required;
-- visual-regression stability.
+T470 targets remain cold launch ≤8s p95, navigation ≤700ms p95, indexed search ≤350ms p95 and ordinary local mutation ≤500ms p95. Declared floor remains usable shell ≤15s SSD / ≤25s HDD, input ack ≤100ms, navigation ≤1.5s p95, indexed search ≤750ms p95, local mutation ≤1s p95, no ordinary freeze >200ms, steady working set ≤750MB with WhatsApp and no sustained eight-hour memory growth.
 
-All pages use SahelFlow chart wrappers. Raw page-specific chart configuration is
-not accepted as whole-product AAA.
+## 8. Frozen review and consolidated repair
 
-### Route completion matrix
+After feature freeze:
 
-Every Required route records:
+1. author self-review;
+2. freeze exact head;
+3. one complete adversarial pass across every affected layer;
+4. deliver one consolidated P0–P3 finding set;
+5. repair dependency-correctly in one consolidated batch;
+6. re-review materially changed/unresolved areas;
+7. rerun affected evidence plus one final whole-product certification.
 
-- visual design;
-- interaction states;
-- Arabic, French and English;
-- RTL/mixed direction;
-- keyboard and focus;
-- semantics/screen reader;
-- 100–200% zoom;
-- 1366×768 and responsive behavior;
-- performance;
-- visual regression;
-- Founder acceptance.
+P0: active loss/exposure/cross-shop/cross-tenant/corrupt recovery/irreversible money-stock damage. P1: required journey, authority, startup, recovery, provider effect, major experience/RTL/accessibility/performance defect that blocks candidate. P2: bounded hardening. P3: polish. P0/P1 cannot be waived by the 24-hour target.
 
-No legacy-looking or state-incomplete page is hidden behind functional
-completion.
+## 9. Protected merge and release evidence
 
-## 14. Branch and PR practice
+The frozen Internal.16 candidate must cover exact source/version/docs, type/lint/unit/integration/database/browser suites, permission/shop isolation, Golden COD, provider effects, AI/extraction/tools, EcoTrack conformance state, Phase 8 remote/storefront/PWA/control-plane/zero-knowledge backup, clean install, Internal.15→16 upgrade, close/reopen, AppData/key/database preservation, migration interruption, backup/restore/replacement-install, AR/FR/EN/RTL/accessibility, T470/floor budgets, eight-hour stability and deterministic evidence manifest.
 
-- Branch from current verified protected `main`.
-- Name branches `agent/<observable-outcome>`.
-- Open a draft PR early for material work.
-- Push coherent batches rather than every tiny edit.
-- PR body records outcome, research, base, changes, preservation, risks,
-  migration, evidence, Problem Register and legacy removal.
-- Return a ready PR to draft during material repair.
-- Rebase or merge current `main` deliberately; never hide conflicts.
-- Freeze exact head before consolidated review.
-- Merge dependency-correct packages as soon as selected gates and review pass.
-- Ordinary feature PRs do not bump the application version.
-- Delete merged branches and close obsolete/superseded PRs promptly.
+After the frozen branch head passes the selected final gates and review:
 
-## 15. Release train and evidence
+1. re-fetch PR head, review-thread state and protected base;
+2. merge with expected-head protection so a moved head cannot be merged accidentally;
+3. fetch protected `main` and verify the resulting durable source, version, documentation and required post-merge authority;
+4. reconcile exact merge/evidence truth in the owning documentation/issue/PR without creating a new masterplan;
+5. only then invoke the guarded signed release workflow from protected `main` when an Internal.16 release is authorized;
+6. verify release artifact/signature/updater metadata and perform the required installed/update evidence against the released artifact before distribution claims.
 
-1. Merge independently complete source packages without ordinary version bumps.
-2. When merged outcomes form one coherent Founder test, assign one unique Internal
-   version.
-3. Build exact-source signed MSI, signature and updater metadata as a protected
-   draft.
-4. Verify source/review binding, signature, staged runtime, install/reopen,
-   authenticated hydrated UI, deterministic evidence and updater contract.
-5. Publish only after every protected gate succeeds.
-6. Failed candidates remain drafts and never reach the updater.
-7. Install in place without deleting AppData and record exact Founder observation.
-8. Beta and Stable require explicit Founder approval.
+Issue #230 remains the customer-online/public-trial boundary. Provider hostnames/mocks do not satisfy owned-domain/network proof. External provider/legal/security/privacy/representative-beta truth remains distinct from internal evidence. Stable requires applicable Phase 9 evidence and explicit Founder promotion.
 
-`latest.json` is updater metadata containing the signature for the signed MSI; do
-not claim that the JSON document itself is independently cryptographically signed
-unless manifest signing is implemented.
+## 10. Historical workflow continuity vocabulary
 
-### Evidence ladder
+The Internal.16 cadence supersedes repeated micro-release loops but preserves the durable workflow concepts that earlier phases and audit authority depend on:
 
-1. static/source;
-2. unit/domain;
-3. integration/API/database;
-4. development UI;
-5. clean Actions;
-6. signed artifact;
-7. installed Windows;
-8. T470/floor hardware;
-9. external provider/security/privacy/legal/accessibility;
-10. representative seller/Beta.
+- **one active implementation agent; audit-first; batch remediation; tiered CI** remains the anti-conflict operating model;
+- **Complete phase/package audit** is now the exact-source whole-product reconnaissance for this convergence cycle;
+- the **Phase Problem Register** maps to the combined frozen source+installed Internal.16 Problem Register;
+- **Level 1 — Task Gate** remains targeted coherent-task validation rather than a full release cycle after every small edit;
+- **Frozen review and batch repair** maps to the exact-head adversarial review plus one consolidated repair batch;
+- **Level 2 — Phase Checkpoint** remains integrated source/phase proof when consequence/dependency requires it;
+- **Level 3 — Major Full Checkpoint** remains installed/release-grade proof and cannot be removed by schedule pressure;
+- the **Whole-product AAA frontend program** remains the governing experience-quality objective even though FD-033 converges its remaining work with later platform implementation.
 
-Implemented, source-proven, artifact-proven, installed, Founder-accepted,
-phase-closed and Stable are distinct realities.
+FD-033 changes when expensive evidence runs, not the existence, selection rules or integrity of these gates.
 
-## 16. Documentation and cleanup
+## 11. Branch, PR and session handoff rule
 
-At package closure:
+- Branch from current verified protected `main` and use one `agent/<observable-outcome>` owner branch.
+- Open a draft PR early for material implementation; push coherent batches rather than every tiny edit.
+- Freeze exact head before consolidated review; return a ready PR to draft during material repair.
+- Merge dependency-correct work only after selected gates and review pass.
+- Ordinary implementation does not bump application version until the coherent Internal milestone is selected.
+- A release is built/published only from the verified protected-main authority after the expected-head merge, never from a branch-only source.
 
-- update the owning active authority only;
-- update Working Memory with the exact next outcome;
-- update Current State only with merged source and named evidence;
-- update issue #164 with PR, exact head, checks, findings and remaining frontier;
-- close superseded PRs;
-- delete merged branches;
-- remove or make read-only the superseded legacy path after parity/recovery proof;
-- ensure `sf-audit` rejects stale authority, not protects it.
+The next session starts from merged FD-033/Current State/Roadmap/Working Memory, creates or uses the one Internal.16 application branch, completes exact-source reconnaissance, freezes the combined Problem Register and then implements. It must not spend another session reconstructing Parts 1–3 from chat.
 
-No documentation-only follow-up loop should be required when the merge SHA is not
-needed for product truth. Record merge-specific evidence in issue #164 and the PR
-unless an owning document genuinely depends on it.
-
-## 17. Protected local boundaries
-
-- Preserve
-  `C:\Users\DMR\Desktop\sahelflow_v2\scripts\Founder-install-result.json`.
-- Preserve the unrelated local modification to
-  `src/lib/identity/__tests__/session-authority.test.ts`.
-- Preserve canonical AppData, registry, databases, migrations and keys.
-- Do not require permanent local dependency/build caches when Actions can provide
-  evidence.
-- PR #186 is obsolete/diverged and must not be merged wholesale.
-- PR #196 is stale and retains an unresolved file-level Vitest diagnostic gap;
-  repair its intent in a current-main package or close it as superseded.
+At closure, reconcile FD-033, Current State, Roadmap and Working Memory to exact merged source/evidence. Do not create another competing masterplan. Keep installed observations distinct from implemented/proven truth until evidence actually moves.

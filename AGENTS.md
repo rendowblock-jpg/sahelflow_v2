@@ -11,9 +11,9 @@ keys or retained evidence merely to simplify development.
 ## Start here
 
 1. Read [`documentation/README.md`](documentation/README.md).
-2. Read FD-028 through FD-032 in [`documentation/product/DECISIONS.md`](documentation/product/DECISIONS.md).
+2. Read FD-028 through FD-033 in [`documentation/product/DECISIONS.md`](documentation/product/DECISIONS.md).
 3. Read [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md).
-4. Read the active phase and mandatory pre-Phase-8 gate in [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
+4. Read the active phase and the FD-033 Internal.16 integrated acceptance gate in [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
 5. Read [`documentation/operations/WORKFLOW.md`](documentation/operations/WORKFLOW.md).
 6. Read [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
 7. Inspect live protected `main`, open PRs, issues #164/#221/#226/#230 and current Actions.
@@ -41,6 +41,9 @@ A lower layer cannot silently weaken a higher one.
 
 ## Verified product frontier after PR #244
 
+The following block is retained as the protected route/release evidence chain that
+FD-033 builds on. It is not the current next-session instruction.
+
 - Protected application-changing `main`: `856f58126327797b467938390586a04f185e70f6` — PR #244.
 - Latest application-changing protected merge: **PR #244 — Orders + confirmation operational workspace**.
 - Shared frontend foundation remains **PR #236** / `04adb20fb5846499039eda61a9b765deb9c622e6`.
@@ -53,14 +56,42 @@ A lower layer cannot silently weaken a higher one.
 - Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**.
 - Inbox is source/browser protected through PR #237; AI Agents through PR #240;
   Settings through PR #242; Orders + confirmation through PR #244.
-- The active implementation/release frontier is **PR #245 — Internal.15 Founder
-  checkpoint**, governed by FD-032.
+- The historical implementation/release frontier was **PR #245 — Internal.15 Founder
+  checkpoint**, governed by FD-032; PR #245 has since merged as the exact Internal.15
+  Founder-only offline checkpoint.
 - Open retained issues remain **#221, #226, #230**. Historical #201/#214 are closed.
-- Phase 8 implementation remains frozen behind route-wide frontend adoption,
-  installed Phase 6/7, live #230 and explicit Founder acceptance.
+- The pre-FD-033 rule was: Phase 8 implementation remains frozen behind route-wide
+  frontend adoption, installed Phase 6/7, live #230 and explicit Founder acceptance.
+  FD-033 supersedes only that execution-order freeze for exact Internal.16; all of
+  those quality/evidence obligations remain integrated acceptance gates.
 
 Always re-fetch live truth before a write. Never use copied SHAs for merge, release
 or destructive authority without verifying them.
+
+## Current Internal.16 handoff after Internal.15
+
+- PR #245 merged the exact FD-032 Internal.15 Founder/internal-lab offline checkpoint
+  to protected `main` at `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`.
+- The Founder installed and inspected Internal.15 and explicitly closed discovery on
+  2026-08-13 after Parts 1–3.
+- FD-033 in `DECISIONS.md` freezes 17 P1 installed acceptance classes for Internal.16:
+  `SF16-UI-001`, `SF16-UI-002`, `SF16-UI-003`, `SF16-I18N-004`,
+  `SF16-INBOX-005`, `SF16-AI-006`, `SF16-I18N-007`, `SF16-PRODUCTS-008`,
+  `SF16-SEARCH-009`, `SF16-AI-010`, `SF16-RESP-011`, `SF16-LAYOUT-012`,
+  `SF16-CHART-013`, `SF16-PERF-014`, `SF16-THEME-015`, `SF16-I18N-016`,
+  `SF16-NAV-017`.
+- The Founder does not need to enumerate every sibling manifestation. The active
+  implementation agent owns exhaustive source/route/root discovery for each class.
+- Internal.16 is the complete-product candidate: remaining Phase 5/6/7 closure,
+  full Phase 8, EcoTrack Pro replacing NOEST/Nord et Ouest, AI/extraction/tool
+  hardening and final release/update/recovery assurance.
+- The exact execution model is one source reconnaissance → combined Problem Register
+  freeze → one large dependency-correct implementation wave with targeted checks →
+  one frozen whole-product certification/adversarial review → one consolidated
+  repair batch → final proof.
+- #221/#226/#230 remain evidence obligations. #230 still blocks the public/customer
+  online-trial claim; provider hostnames or mocks do not satisfy owned-domain/network
+  proof.
 
 ## Historical continuity anchors
 
@@ -91,9 +122,11 @@ live provider-account certification to representative beta while retaining
 conformance requirements. FD-031 is a one-time Internal.14 merge/release exception.
 FD-032 separately authorizes only exact Internal.15 as a Founder/internal-lab offline
 checkpoint; it keeps issue #230 and owned-domain trial certification mandatory before
-any user release.
+any user release. FD-033 now governs exact Internal.16 completion convergence: it
+changes implementation sequencing/cadence only, not Phase 1–4 authority or any
+P0/P1, installed, external or Stable evidence requirement.
 
-## Mandatory pre-Phase-8 Founder gate
+## Mandatory pre-Phase-8 Founder gate — historical boundary and FD-033 supersession
 
 Internal.14 installed use changed the execution frontier. The Founder values the
 backend/engine and rejects the published frontend as the product-quality baseline.
@@ -107,8 +140,12 @@ workspaces. PR #236 repairs shared roots; PR #237, PR #240, PR #242 and PR #244
 protect the Inbox, AI Agents, Settings and Orders task-shaped workspaces. Remaining
 production routes still need coherent adoption after the installed checkpoint.
 
-Phase 8 implementation is frozen until the cross-phase gate in `ROADMAP.md` passes.
-Phase 8 research/read-only planning may continue when useful.
+Historically, Phase 8 implementation is frozen until the cross-phase gate in
+`ROADMAP.md` passes. FD-033 supersedes that execution-order freeze **only for exact
+Internal.16**: Phase 8 may now be implemented in the same convergence branch as the
+remaining Phase 5/6/7 work, while every former pre-Phase-8 obligation becomes an
+Internal.16 acceptance gate on the frozen final candidate. This is not evidence that
+the old gate already passed.
 
 ## Protected stabilization outcomes
 
@@ -199,7 +236,8 @@ PR #240, PR #242 and PR #244 are source/browser evidence only and do not close
 
 ## Exact next outcome — FD-032 Internal.15 Founder checkpoint
 
-Finish PR #245 as one exact Founder-only offline checkpoint:
+This heading and its contract are retained as the exact historical checkpoint that
+PR #245 closed; they are **not** the current next implementation instruction.
 
 1. keep `sahelflow.version.json` locked to Internal.15, `founder-offline-only`,
    `FD-032`, and no owned host suffix;
@@ -220,6 +258,23 @@ Issue #230 remains open P1 and is not part of this checkpoint's claims. Before a
 user release, provision the verified SahelFlow-owned domain and distinct primary/
 recovery trial ingress, then complete Algerian-network and installed customer-trial
 certification. Do not carry `founder-offline-only` into a later version.
+
+## Exact next outcome — FD-033 Internal.16 completion
+
+1. Merge/reconcile the FD-033 documentation authority to protected `main`.
+2. Create or use one `agent/internal-16-completion` branch from that exact protected
+   documentation-merged main.
+3. Perform one exact-source whole-product reconnaissance across every frozen installed
+   defect class plus Phase 8, EcoTrack, AI/extraction/tools and release/update/recovery
+   scope.
+4. Freeze the combined source+installed Internal.16 Problem Register, shared contracts,
+   non-goals and acceptance matrix.
+5. Execute one large dependency-correct implementation wave with consequence-selected
+   Level 1/2/3 checks; avoid repetitive full release runs after tiny changes.
+6. Freeze one complete candidate, run whole-product certification + adversarial review,
+   repair one consolidated finding set and rerun affected/final proof.
+7. Expected-head merge the proven candidate to protected `main`, verify the protected
+   merge/source/version/docs, and only then use the guarded signed release workflow.
 
 ## Protected backend/business boundaries
 
@@ -246,11 +301,13 @@ On one coherent repaired signed candidate:
 - verify representative AR/FR/EN, Arabic joining/reading, LTR/RTL,
   theme/locale switching, 1366×768/zoom, keyboard/focus/semantics and reduced motion under #221;
 - measure/certify startup, navigation, indexed search, ordinary mutation and sustained resources under #226;
-- complete live #230 production/network trial evidence;
+- complete live #230 production/network trial evidence for the customer-online/public-trial claim;
 - record explicit Founder accept/reject.
 
-Only after the Founder accepts the coherent whole-product candidate may Phase 8
-implementation begin.
+The historical sequencing said only after the Founder accepts the coherent whole-product
+candidate may Phase 8 implementation begin. FD-033 supersedes that sequencing for exact
+Internal.16 implementation, but the same installed Phase 6/7 and Founder acceptance
+obligations still block a user-ready completion claim.
 
 ## Research-first gate
 
@@ -316,11 +373,14 @@ live protected source
 → expected-head merge
 → protected-main verification
 → documentation reconciliation
+→ guarded release publication when release authority applies
 ```
 
 Documentation/authority-only packages use lightweight risk-aware gates. Full MSI,
-signed, installed and recovery lanes remain necessary only when consequence
-selection or release authority requires them.
+signed, installed and recovery lanes remain necessary when consequence selection or
+release authority requires them. A branch-only artifact is never the durable release
+source: release publication follows the proven expected-head merge and protected-main
+verification.
 
 ## Review severity
 

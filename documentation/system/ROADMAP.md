@@ -1,487 +1,180 @@
 # SahelFlow — Final completion roadmap
 
 > **Status:** Binding dependency and completion order
-> **Governing decisions:** FD-028 — Final Completion Program; FD-029 — Uncompromised AAA completion and disciplined delivery; FD-030 — Phase 3 provider-certification boundary; FD-031 — one-time Internal.14 installed-evidence exception; FD-032 — exact Internal.15 Founder-only offline checkpoint
-> **Protected application-changing baseline:** `856f58126327797b467938390586a04f185e70f6` — PR #244
-> **Historical PR #231 program-freeze baseline:** `23fb2e0ee4956132fafe8dd6973be42d3cfc8032`
-> **Latest application-changing protected merge:** PR #244 at `856f58126327797b467938390586a04f185e70f6`
-> **Shared frontend foundation:** PR #236 at `04adb20fb5846499039eda61a9b765deb9c622e6`
-> **Inbox route adoption:** PR #237 at `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
-> **AI Agents route adoption:** PR #240 at `598e2a0dc0352227431614cf1527672aa78ec015`
-> **Settings route adoption:** PR #242 at `6e4477198f33344cd48c9230b32ff726079cd64d`
-> **Orders + confirmation route adoption:** PR #244 at `856f58126327797b467938390586a04f185e70f6`
-> **Phase 5 historical application-changing checkpoint:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
-> **Published Internal.14 executable source:** PR #228 / `2d60e2e74109b6e03626a5ccdff727c029a34591`
-> **Published release:** `1.0.0-internal.14`, run `31388777098`
-> **Founder-accepted baseline:** Internal.5
-> **Phase 0:** Complete
-> **Phase 1:** Protected-source closed through PR #195
-> **Phase 2:** Protected-source closed through PR #200; historical issue #201 satisfied/closed by stronger exact #234 installed evidence
-> **Phase 3:** Protected-source closed through PR #203 under FD-030
-> **Phase 4:** Protected-source closed through PR #207; historical issue #214 satisfied/closed by stronger exact #234 installed evidence
-> **Phase 5:** Earlier checkpoint through PR #220; shared roots through PR #236; Inbox through PR #237; AI Agents through PR #240; Settings through PR #242; Orders through PR #244; remaining whole-product adoption and Founder acceptance remain
-> **Phase 6:** Earlier checkpoint through PR #223; #236 protects shared Arabic/RTL/accessibility roots; Inbox #237, AI Agents #240, Settings #242 and Orders #244 adopt those roots; remaining route and installed/human closure remain
-> **Phase 7:** Query/measurement infrastructure protected through PR #223; final #244 controlled-browser evidence is green; installed low-end/reliability certification remains
-> **Completed pre-Phase-8 engineering outcomes:** #232 CI authority; #233 activation continuity; #234 resilient trial source; #236 shared frontend foundation; #237 Inbox operational workspace; #240 AI Agents operational workspace; #242 Settings operational workspace; #244 Orders + confirmation operational workspace
-> **Active implementation/release frontier:** #245 FD-032 Internal.15 Founder-only offline checkpoint
-> **Open retained issues:** #221 Founder visual/accessibility acceptance; #226 performance/reliability; #230 live resilient customer-trial certification
+> **Governing decisions:** FD-028; FD-029; FD-030; FD-031; FD-032; FD-033 — Internal.16 completion convergence
+> **Protected main release checkpoint:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
+> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
+> **Application-changing protected baseline:** `856f58126327797b467938390586a04f185e70f6`
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
+> **Published release:** `1.0.0-internal.14` — source `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Mandatory pre-Phase-8 gate:** whole-product frontend adoption + installed Phase 6/7 + live #230 + explicit Founder acceptance
-> **Execution epic:** issue #164
+> **Next milestone:** `1.0.0-internal.16` / MSI `1.0.0.16` complete-product candidate
+> **Installed discovery:** CLOSED 2026-08-13; 17 Founder-installed P1 inputs frozen under FD-033
+> **Open retained issues:** #221, #226, #230
 > **Last consolidated:** 2026-08-13
 
-Live protected `main` is authority. The published executable SHA above remains the
-Internal.14 artifact source; later protected application/documentation merges do
-not change the published executable until a new release is explicitly built and
-published.
+Protected `main` is source truth. FD-033 changes only the Internal.16 execution sequence; it does not mark any previously open evidence as passed and does not weaken Phase 1–4 canonical authority.
 
-## Program rule
-
-The phases are dependency ordered. A later phase may inspect, research or pre-plan
-while an earlier phase validates, but it must not weaken, bypass or silently
-redefine an earlier authority.
-
-Each material package follows:
+## Internal.16 completion cycle
 
 ```text
-complete reconnaissance
-→ consolidated Problem Register
-→ current research + alternatives
-→ freeze shared contracts
-→ coherent root-cause implementation
-→ self-review
-→ exact-head selected gates
-→ consolidated repair batch
-→ fresh exact-head adversarial review
-→ expected-head merge
-→ protected-main verification
-→ documentation reconciliation
+exact documentation-merged post-Internal.15 authority
+→ complete reconnaissance of exact source and every affected sibling/root dependency
+→ merge source findings with frozen 17 Founder-installed findings
+→ one consolidated Problem Register
+→ freeze shared contracts/non-goals/acceptance matrix
+→ one large dependency-correct implementation wave
+→ targeted cheap checks during coding
+→ freeze complete Internal.16 candidate
+→ one deep whole-product certification + adversarial review
+→ one consolidated repair batch
+→ affected proof + final complete certification
+→ expected-head merge only after the selected exact-head gates pass
+→ signed Internal.16 updater only if evidence passes
 ```
 
-### FD-032 release boundary
+Founder-installed discovery is closed. The next application session may proceed immediately to exact-source reconnaissance and Problem Register freeze; it must not restart screenshot discovery or micro-fix loops.
 
-Internal.15 may cross the signed-release boundary only as the exact
-Founder/internal-lab offline checkpoint authorized by FD-032. It packages no online
-trial service and does not close #230. No later version may inherit this exception.
-Before any user distribution, the customer-online release mode must restore the
-owned-domain, distinct primary/recovery ingress, Algerian-network and installed
-trial-certification requirements.
+## Phases 0–4 — protected canonical foundation
 
-Retained evidence issues are allowed only when a Founder-directed closure
-explicitly separates protected-source truth from installed/external proof. A
-retained issue is not a passing result. A protected source/browser checkpoint
-remains valid for exactly what it proved; later installed evidence may still expose
-a bounded product defect without erasing prior canonical authority.
-
----
-
-## Phase 0 — baseline contract and repository control
-
-**Status:** Complete.
-
-Established completion governance, documentation authority, release truth,
-repository hygiene and the final-program contract.
-
----
-
-## Phase 1 — Golden COD business authority
-
-**Status:** Closed through PR #195.
-
-Established canonical order/confirmation/stock/money/compensation/provider
-business boundaries and durable audit authority. Later work may improve
-presentation and evidence but must not bypass these transitions.
-
----
-
-## Phase 2 — durable identity, licensing and native multi-shop
-
-**Status:** Protected-source closed through PR #200. Historical installed
-hydrated-WebView/startup issue #201 is satisfied and closed by stronger exact #234
-installed evidence.
-
-Established durable actor/session/permission authority, signed licensing,
-installation/shop identity and native multi-shop switching/recovery contracts.
-Concrete later defects may receive bounded repair without reopening the phase.
-
----
+Phase 0 governance, Phase 1 Golden COD, Phase 2 identity/licensing/multi-shop and Phase 4 protection/recovery/migration remain protected under their established authorities. Internal.16 may repair proven bounded defects but may not rewrite those contracts for visual or deadline convenience.
 
 ## Phase 3 — providers, inbox, AI and automations
 
-**Status:** Closed through PR #203 under FD-030.
-
-Established durable provider effects, WhatsApp ingress/outbox recovery, AI action
-proposal/recovery semantics and automation run/effect authority. External/provider
-certification remains separate where explicitly retained.
-
-Inbox/AI/Settings and remaining workspace redesigns must preserve these boundaries.
-They may improve product structure and expose already-supported capability clearly;
-they may not invent provider success, bypass exact-shop/action authority or expose
-raw implementation traces as user authority.
-
----
-
-## Phase 4 — data, recovery, migration and survivability
-
-**Status:** Protected-source closed through PR #207. Historical replacement-install
-issue #214 is satisfied and closed by stronger exact #234 installed evidence.
-
-Established backup/restore, migration, destructive lifecycle, identity/license
-survivability and native recovery authority. Future release candidates still need
-the applicable Phase 9 replacement-install proof; closing #214 is not a waiver.
-
----
+Phase 3 remains protected through its existing provider, Inbox, AI and automation authority. FD-030 continues to distinguish deterministic source/conformance proof from live real-account provider certification. Internal.16 may enhance the installed Inbox/AI experience and replace the NOEST product surface with EcoTrack Pro, but it must preserve durable provider effects, ambiguity/reconciliation, proposal-bound AI actions and automation recovery.
 
 ## Phase 5 — whole-product AAA desktop experience
 
-**Status:** Earlier source/browser checkpoint through PR #220 remains valid.
-Shared frontend foundation is protected through PR #236. Inbox route adoption is
-protected through PR #237. AI Agents route adoption is protected through PR #240.
-Settings route adoption is protected through PR #242. Remaining whole-product route
-adoption and installed Founder acceptance remain open.
+Protected source/browser work remains valid: shared roots #236, Inbox #237, AI #240, Settings #242, Orders #244. The Phase 5 application-changing protected baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Installed Internal.15 proves whole-product experience is still open.
 
-### Founder-installed reconciliation
+### Protected route evidence retained
 
-Internal.14 installed use showed the earlier controlled-browser contract was not
-sufficient as a whole-product quality gate. The Founder values the backend/engine
-and rejects the published frontend baseline. The systemic problem set includes
-Arabic typography, text/control scale, locale/RTL transition coherence, themes,
-motion, navigation, warnings, charts and route-wide workflow quality.
+- **Inbox — SATISFIED IN SOURCE/BROWSER BY PR #237** at final exact head `8e9d5aa365f0c5873909c1c8517f88519d743b9d`.
+- **AI Agents — SATISFIED IN SOURCE/BROWSER BY PR #240** at final exact head `6355cc4c797a597af52c90decfe7727e405749be`.
+- **Settings — SATISFIED IN SOURCE/BROWSER BY PR #242** at final exact head `e749b0af05741ee45b16c349750d44092bd3beb9`.
+- **Orders + confirmation — SATISFIED IN SOURCE/BROWSER BY PR #244** at application-changing protected baseline `856f58126327797b467938390586a04f185e70f6`.
+- **Settings satisfied in source/browser — PR #242** remains a historical closure marker; it did not close installed whole-product acceptance.
 
-This activates root-cause frontend redesign under the existing Phase 5/6/7
-program. It does not authorize rewriting Phase 1–4 canonical authority for visual
-convenience and is not a screenshot-by-screenshot polish campaign.
+### Remaining route/workspace convergence
 
-### Shared foundation — SATISFIED IN SOURCE/BROWSER BY PR #236
+- Dashboard;
+- customers/risk;
+- products/inventory;
+- delivery/returns;
+- COD/accounting;
+- analytics/charts;
+- automations;
+- setup/login/license;
+- remaining administration/shared shell;
+- final installed convergence for Inbox and AI.
 
-PR #236 protects deliberate Arabic/Latin typography, semantic theme families,
-hydration-safe density, atomic AR/FR/EN server-tree + document-direction
-transitions, logical RTL/mixed-direction primitives, shallow navigation, compact
-severity notices, governed charts/motion, resilient preference storage and
-coarse-pointer target authority.
+### Frozen Internal.15 Founder Problem Register — 17 P1 inputs
 
-Frozen #236 head `7d0b01a9f1989ad7e2cae25c3b0d39d6e92a64d8` passed CI
-`31497523385`, Phase 5 `31497523052`, Phase 6–7 `31497523030` and a final fresh
-review before squash merge to `04adb20fb5846499039eda61a9b765deb9c622e6`.
-This satisfies the foundation dependency, not installed Founder acceptance.
+- **SF16-UI-001 P1:** systemic Arabic/RTL geometry/bidi across shell/routes/charts/menus/panes/tables;
+- **SF16-UI-002 P1:** Risk KPI hierarchy overloaded/unbalanced;
+- **SF16-UI-003 P1:** shared stat-card hover/focus/actionable/selected semantics incomplete;
+- **SF16-I18N-004 P1:** locale-sensitive formatting can leak French defaults into Arabic;
+- **SF16-INBOX-005 P1:** Inbox final AAA operational convergence, adaptive panes, complete workflows and large-history performance;
+- **SF16-AI-006 P1:** AI final AAA workbench convergence, adaptive rails and long-session performance;
+- **SF16-I18N-007 P1:** zero unresolved translation keys/unintended foreign system copy;
+- **SF16-PRODUCTS-008 P1:** compact product-row primary thumbnails from existing image projection;
+- **SF16-SEARCH-009 P1:** universal permission/shop-aware operational search;
+- **SF16-AI-010 P1:** end-to-end Gemini key/provider/readiness/inference lifecycle;
+- **SF16-RESP-011 P1:** deterministic responsive composition; no ordinary-window `3+1` orphan cards;
+- **SF16-LAYOUT-012 P1:** remove accidental stretched panels and low-information dead space;
+- **SF16-CHART-013 P1:** rebuild governed charts into a top-tier decision-support system;
+- **SF16-PERF-014 P1:** measure and improve startup/first-post-update launch;
+- **SF16-THEME-015 P1:** atomic smooth light/dark/preset switching with no mixed-token frame;
+- **SF16-I18N-016 P1:** atomic locale commit across current and subsequently navigated routes/cache/prefetch;
+- **SF16-NAV-017 P1:** smarter default sidebar order plus user reorder/edit preference layered over canonical navigation authority.
 
-### Inbox — SATISFIED IN SOURCE/BROWSER BY PR #237
+The implementation agent owns exhaustive sibling discovery for established defect classes; the Founder is not required to screenshot every occurrence. Newly proven source-level root dependencies may extend the combined Problem Register before its source-reconnaissance freeze.
 
-PR #237 protects the first task-shaped production workspace adoption. Final
-pre-merge head `8e9d5aa365f0c5873909c1c8517f88519d743b9d` passed CI
-`31524083664`, Phase 5 `31524083552`, Phase 6–7 `31524083460`, required aggregate
-checks and review-thread closure before squash merge to
-`4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`.
+### Phase 5 Internal.16 exit
 
-Inbox keeps local DB history/workflow authority independently of WhatsApp
-transport, exposes task queues plus durable thread/composer and context, reconciles
-workflow mutations, observes recovery, batches assignment projection, coalesces
-live refreshes and preserves protected provider/outbox/collaboration authority.
-
-### AI Agents — SATISFIED IN SOURCE/BROWSER BY PR #240
-
-Final pre-merge head `6355cc4c797a597af52c90decfe7727e405749be`
-passed CI `31535669292`, Phase 5 `31535668960`, Phase 6–7 `31535668966`, required
-aggregate checks and fresh adversarial review before squash merge to
-`598e2a0dc0352227431614cf1527672aa78ec015`.
-
-AI Agents now provides durable recent session history, separate session/thread/
-context zones, typed localized tool-result cards, explicit setup/provider/
-persistence/action-history degradation, proposal-bound sensitive action review,
-mobile drill-in, live-log/tail-follow accessibility and AR/FR/EN/RTL parity. Locale
-response guidance stays in model system context while the seller user turn remains
-exact. Server-owned proposal digest, permission/shop/license/target revalidation
-and execution remain unchanged.
-
-This remains source/browser evidence only.
-
-### Settings — SATISFIED IN SOURCE/BROWSER BY PR #242
-
-Final pre-merge head `e749b0af05741ee45b16c349750d44092bd3beb9`
-passed CI `31546488691`, Phase 5 `31546488465`, Phase 6–7 `31546488422`, required
-aggregate checks and final review closure before expected-head squash merge to
-`6e4477198f33344cd48c9230b32ff726079cd64d`.
-
-Settings replaces the flat 13-tab catalogue with four task-shaped groups and keeps
-configuration truth bound to existing authorities. It separates commerce
-read/manage/sync, AI key/consent, delivery credential/certification, phone
-read/manage, backup read/create/restore and authorized export/reset capabilities;
-uses explicit loading/authoritative/unavailable/recent-PIN states; removes duplicate
-hard-coded integration status; preserves approval + reauthentication/native
-lifecycle ceremonies; and routes manual daily-report execution through authenticated
-`settings.manage` while cron authority remains server-secret-only.
-
-The final Phase 6–7 browser run passed AR/FR/EN desktop and 200%-equivalent reflow,
-semantic accessibility, hot-query planner and controlled performance evidence.
-This remains source/browser evidence only.
-
-### Whole-product adoption order
-
-1. **Inbox — SATISFIED IN SOURCE/BROWSER BY PR #237.** Installed Founder acceptance remains part of #221.
-2. **AI Agents — SATISFIED IN SOURCE/BROWSER BY PR #240.** Final head `6355cc4c797a597af52c90decfe7727e405749be`; installed Founder acceptance remains open.
-3. **Settings — SATISFIED IN SOURCE/BROWSER BY PR #242.** Final head `e749b0af05741ee45b16c349750d44092bd3beb9`; installed Founder acceptance remains open.
-4. **Orders + confirmation — SATISFIED IN SOURCE/BROWSER BY PR #244.** Installed Founder acceptance remains part of #221.
-5. **Internal.15 Founder checkpoint — ACTIVE UNDER FD-032.** Certify and install the coherent offline candidate before another route package.
-6. **Remaining route inventory — RESUMES AFTER THE CHECKPOINT.** Apply the #236 foundation coherently across:
-   - dashboard;
-   - customers and risk;
-   - products and inventory;
-   - delivery and returns;
-   - COD and accounting;
-   - analytics;
-   - automations;
-   - setup, login and license;
-   - remaining administration.
-
-Complete the read-only inventory and freeze one consolidated Problem Register before
-selecting the next implementation branch. One implementation package at a time.
-
-### Settings package acceptance — SATISFIED IN SOURCE/BROWSER BY PR #242
-
-The Settings workspace now:
-
-- groups configuration by seller task and consequence rather than flat controls;
-- exposes configured/degraded/unavailable/recent-PIN state only where real
-  authority can support the claim;
-- shows secret presence/status without exposing protected credentials;
-- preserves dedicated auth/identity/license/lifecycle/provider/backup authorities
-  and reserved-key protection rather than routing them through generic settings;
-- makes destructive/reset/recovery ceremonies explicit about scope, consequence,
-  permission and recovery;
-- links AI/provider/account/license/backup/recovery/preferences to canonical service owners;
-- carries AR/FR/EN, RTL, keyboard, focus, reflow, reduced-motion and touch parity from #236;
-- avoids schema/native/business-authority rewrites outside one narrow authenticated
-  daily-report integration correction.
-
-### Phase 5 remaining exit evidence
-
-- route-wide shared-root adoption with complete loading/empty/permission/offline/
-  pending/stale/conflict/retry/recovery states;
-- no material P0/P1 experience/accessibility defect on the exact candidate;
-- coherent installed Windows/Tauri Founder observation rather than screenshot-only approval.
-
----
-
-# Active frontier
+Every Required desktop route/workspace uses one coherent product system; no known P0/P1 visual/workflow/responsive/theme/localization/chart/navigation/accessibility defect; no raw translation key/prototype/fake action/dead navigation/accidental layout; installed Founder observation accepts the coherent signed candidate to the evidence level claimed.
 
 ## Phase 6 — Arabic, RTL and accessibility parity
 
-**Status:** Earlier checkpoint through PR #223, shared-root source/browser
-foundation through PR #236, Inbox source/browser adoption through PR #237, AI
-Agents source/browser adoption through PR #240, Settings through PR #242 and Orders
-and confirmation through PR #244. The active package is the FD-032 Internal.15
-Founder checkpoint; remaining route implementation resumes afterward.
-Installed/human closure remains.
+Internal.16 must prove equivalent AR/FR/EN behavior, professional Arabic typography, logical geometry, directional icon semantics, bidi isolation, chart/table/command-palette RTL, atomic locale switching, keyboard/focus/semantics, WCAG 2.2 AA where applicable, 100–200% zoom/reflow, 1366×768 and reduced motion.
 
-**Objective:** Arabic and accessibility are equivalent product behavior, not a
-partial translation layer or cosmetic mirror.
+`SF16-I18N-016` adds a specific cache/navigation requirement: once a locale is committed, prefetched/cached/future route navigation cannot expose the previous locale even transiently. Direction and geometry commit with the same locale epoch.
 
-### Source/browser roots already protected
+The **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity remains the formal phase label while FD-033 permits the exact Internal.16 implementation wave to converge remaining Phase 5/6/7 work with Phase 8 implementation.
 
-- Noto Sans Arabic application typography with deliberate mixed-script pairing;
-- synchronous AR/FR/EN product bundles and server-confirmed atomic locale commits;
-- shell/navigation direction moves with the rendered server tree;
-- logical mixed-direction primitives and flow-relative chrome;
-- root density/theme/touch authority with hydration/storage-failure protection;
-- representative controlled LTR/RTL/locale/coarse-pointer evidence;
-- Inbox route-level AR/FR/EN/RTL adoption through PR #237;
-- AI Agents route-level AR/FR/EN/RTL/accessibility adoption through PR #240;
-- Settings route-level AR/FR/EN/RTL/accessibility/reflow adoption through PR #242.
-
-### Active route-adoption audit
-
-Every redesigned workspace and remaining route must still prove:
-
-- semantic AR/FR/EN parity and no hard-coded user copy;
-- Arabic joining, weight, size, line-height and terminology quality;
-- logical start/end geometry and directional icon semantics;
-- keyboard-only completion, focus entry/return/trapping and visible focus;
-- correct dialog/sheet/menu/table/list semantics and accessible names;
-- WCAG 2.2 AA contrast targets where applicable;
-- reduced motion;
-- 100–200% zoom/reflow and 1366×768 containment;
-- equivalent permission/loading/offline/pending/stale/conflict/error/retry/recovery states across locales.
-
-Prefer shared-root fixes over route-local patches.
-
-### Exit gate
-
-Phase 6 closes only when:
-
-1. all applicable Founder-installed and Phase 6 items are resolved or explicitly retained;
-2. no actionable exact-head P0/P1 accessibility/RTL/localization finding remains;
-3. selected source/authority gates are green;
-4. AR/FR/EN browser evidence is green at required viewports/zoom;
-5. keyboard/focus/semantics/reduced-motion evidence is retained;
-6. installed Arabic/RTL/locale-switching evidence is recorded on Windows;
-7. the Founder explicitly accepts the resulting coherent experience;
-8. no Phase 1–5 canonical authority has been weakened.
-
-Issue #221 retains installed Founder visual/accessibility acceptance. #230 retains
-live trial certification. #226 owns performance/reliability.
-
----
-
-## Phase 7 — performance and reliability budgets
-
-**Status:** Query/index and controlled-browser measurement infrastructure protected
-through PR #223. Final #242 controlled-browser accessibility/reflow/performance
-evidence passed on exact head `e749b0af05741ee45b16c349750d44092bd3beb9`.
-Installed low-end/reliability certification remains open and is part of the
-mandatory pre-Phase-8 gate.
-
-**Objective:** certify representative low-end Windows performance and sustained
-operational reliability after the repaired frontend surface is stable enough to measure.
+## Phase 7 — performance, responsiveness and reliability
 
 ### T470 targets
 
-- cold launch no slower than 8 seconds p95;
-- ordinary navigation no slower than 700 ms p95;
-- indexed search no slower than 350 ms p95;
-- ordinary local mutation no slower than 500 ms p95.
+- cold launch ≤ 8 seconds p95;
+- ordinary navigation ≤ 700 ms p95;
+- indexed search ≤ 350 ms p95;
+- ordinary local mutation ≤ 500 ms p95.
 
 ### Declared floor targets
 
-- usable shell within 15 seconds p95 on entry SSD and 25 seconds p95 on HDD;
-- input acknowledgement within 100 ms;
-- navigation within 1.5 seconds p95;
-- indexed search within 750 ms p95;
-- local mutation within 1 second p95;
-- no ordinary freeze over 200 ms;
-- steady working set no greater than 750 MB with WhatsApp connected;
-- no sustained memory growth across eight hours.
+- usable shell ≤ 15 seconds p95 SSD / 25 seconds HDD;
+- input acknowledgement ≤ 100 ms;
+- navigation ≤ 1.5 seconds p95;
+- indexed search ≤ 750 ms p95;
+- local mutation ≤ 1 second p95;
+- no ordinary freeze > 200 ms;
+- steady working set ≤ 750 MB with WhatsApp connected;
+- no sustained memory growth over eight hours.
 
-### Required outcomes
+### Internal.16 additions
 
-- cold/warm startup stage measurement;
-- query/index and rendering budgets;
-- virtualized large tables and bounded charts where representative scale requires them;
-- low-resource scheduling and sidecar limits;
-- clean close/reopen and crash-loop recovery;
-- eight-hour stability/resource-trend evidence;
-- representative database scale;
-- locale/theme/motion/workspace redesign proven not to introduce unacceptable low-end interaction or memory cost.
+- instrument startup stages separately: recovery/preflight, device/license authority, migrations, runtime prepare/spawn, runtime readiness, navigation, authenticated hydration and usable workspace;
+- record ordinary cold, first post-Internal.15→16 update/migration and warm/reopen distributions separately;
+- responsive composition measured by **application container width** after sidebar, including live resize and zoom;
+- no `4 → 3+1` or other visually orphaned primary composition;
+- chart height/labels/animation/tooltips remain bounded on low-end hardware;
+- Inbox large histories, AI long sessions/results, universal search and image rows receive scale tests;
+- theme and locale switch visual-settle behavior measured under repeated/rapid transitions;
+- search and AI latency separate local SahelFlow overhead from database/model/provider/network time;
+- final candidate completes the required eight-hour trend.
 
-### Exit gate
+## Mandatory pre-Phase-8 stabilization and Founder-acceptance gate
 
-All T470 and declared-floor targets pass on representative data with no authority,
-feature, accessibility or durability reduction; eight-hour resource trends show no
-sustained memory growth or ordinary UI freeze beyond stated budgets; no actionable
-exact-head P0/P1 reliability finding remains.
+Before FD-033, the roadmap stated **Implementation frozen behind the mandatory pre-Phase-8 gate** and **Next — FD-032 Internal.15 installed checkpoint**. The **Internal.15 Founder checkpoint — ACTIVE UNDER FD-032** wording describes that exact historical release frontier.
 
----
+FD-033 supersedes only that execution-order freeze for Internal.16: Phase 8 implementation may now be developed in the same convergence branch as remaining Phase 5/6/7 work, but every obligation from the mandatory gate remains an integrated Internal.16 acceptance requirement. The old freeze is not evidence that those gates passed.
 
-# Mandatory pre-Phase-8 stabilization and Founder-acceptance gate
+## Internal.16 integrated acceptance gate
 
-This is a **cross-phase gate, not a new phase**. It reconciles Phase 5 experience,
-Phase 6 Arabic/accessibility and Phase 7 performance obligations with concrete
-Internal.14 installed findings. Phase 8 remains Phase 8.
+Under FD-033, old pre-Phase-8 sequencing is superseded only for implementation order. Before a user-ready Internal.16 claim:
 
-Phase 8 implementation may not begin until all of the following are true. Research
-and read-only planning may continue when useful.
-
-### A. Engineering safety and demonstrated defects
-
-1. **Satisfied — PR #232:** historical evidence-lane exception mechanisms retired.
-2. **Satisfied — PR #233:** successful license activation transitions to usable workspace without restart.
-3. **Source satisfied / live open — PR #234 + issue #230:** resilient trial source is protected; owned production/network/signed installed proof remains.
-4. Any additional P0/P1 discovered during frontend adoption is fixed at root rather than hidden by presentation.
-
-### B. Frontend foundation and whole-product adoption
-
-1. **Shared foundation satisfied in source/browser — PR #236.** Typography, density,
-   themes, motion, locale/RTL, shell/navigation and touch roots are protected.
-2. **Inbox satisfied in source/browser — PR #237.** Database-authoritative task workspace is protected.
-3. **AI Agents satisfied in source/browser — PR #240.** Task-shaped durable AI workspace is protected without weakening proposal/action authority.
-4. **Settings satisfied in source/browser — PR #242.** Task-shaped configuration workspace is protected without weakening dedicated configuration/lifecycle authority.
-5. **Orders + confirmation satisfied in source/browser — PR #244.** Task-shaped operational order decisions are protected without weakening canonical order authority.
-6. **Next — FD-032 Internal.15 installed checkpoint.** Certify, publish and inspect the exact Founder-only offline candidate.
-7. **Pending after the checkpoint:** re-audit the remaining route inventory and adopt one coherent route family at a time; no parallel demo-only design system.
-8. Warnings, charts, loading/empty/degraded states and navigation no longer depend on one-off page styling.
-
-### C. Installed Phase 6/7 evidence
-
-1. Representative AR/FR/EN and mixed-direction content passes installed 1366×768/zoom review without stale direction/restart requirements.
-2. Keyboard/focus/semantics/reduced motion remain valid after visual changes.
-3. Startup, navigation, search, mutation and resource budgets pass exact installed Phase 7 checkpoint.
-4. Historical #214 replacement-install prerequisite is satisfied by stronger exact #234 evidence; future signed candidates still require applicable Phase 9 recovery evidence.
-
-### D. Founder acceptance
-
-A coherent signed candidate is installed on the Founder T470 and evaluated as the
-real product. No applicable P0/P1 remains. The Founder explicitly accepts the
-whole-product experience before Phase 8 implementation begins.
-
----
+1. frozen Founder findings + exact-source reconnaissance are frozen into one complete combined Problem Register;
+2. remaining desktop route/workspace convergence is complete;
+3. RTL/accessibility/localization, theme and responsive behavior are complete;
+4. chart/layout/navigation/search requirements pass their matrices;
+5. performance/reliability/startup targets pass exact final candidate;
+6. AI workspace/extraction/tools/Gemini lifecycle pass;
+7. Inbox passes functionality/responsive/performance/recovery matrices;
+8. full Phase 8 and isolation/outage/replay proof pass;
+9. zero known P0/P1 remains;
+10. Founder accepts the coherent signed installed experience.
 
 ## Phase 8 — connected platform and growth completeness
 
-**Status:** Implementation frozen behind the mandatory pre-Phase-8 gate. Research
-and dependency planning may continue.
+Internal.16 implements authenticated encrypted remote projection/commands, desktop-commit success semantics, multi-tenant Cloudflare control plane, hosted storefront with durable checkout receipt/publish rollback, operational PWA/browser companion, zero-knowledge backup transport, private Founder Console and outage/replay/duplicate/rollback/abuse/rate/cost/tenant-isolation controls.
 
-**Objective:** complete remote work, hosted storefront, licensing/control and
-zero-knowledge recovery without weakening desktop canonical authority.
+Cloud outage cannot corrupt/block valid permanent local work; remote success never precedes desktop commit; storefront success has durable receipt; duplicate irreversible effects and cross-tenant leakage are zero in certification; SahelFlow/Cloudflare alone cannot decrypt seller backups.
 
-### Required outcomes
-
-- authenticated encrypted projection/command protocol;
-- desktop-commit truth for remote success;
-- shared multi-tenant Cloudflare control plane;
-- hosted storefront with durable checkout receipt and atomic publish/rollback;
-- PWA operational companion within desktop-owned authority;
-- zero-knowledge encrypted backup transport and explicit quotas;
-- Founder Console with bounded metadata and offline permanent signing;
-- outage, cost, abuse and cross-tenant controls.
-
-### Exit gate
-
-Cloud outage cannot corrupt or block permanent local work. Remote success appears
-only after desktop commit. Storefront success has a durable receipt. Cross-tenant
-leakage and duplicate external effects are zero in certification. SahelFlow alone
-cannot decrypt seller backups. Required outage/replay/rollback/tenant-isolation
-journeys pass with zero actionable exact-head P0/P1.
-
----
+Cloudflare Free may bootstrap first revenue when measured sufficient; provider hostnames do not satisfy #230. Internal.16 removes NOEST/Nord et Ouest and adds canonical EcoTrack Pro only from authoritative provider-issued contracts, preserving truthful source/conformance/live-certified states.
 
 ## Phase 9 — release certification and launch readiness
 
-**Objective:** convert the completed protected product into a fully evidenced
-release candidate and, only after all gates are met, an appropriate Beta/Stable claim.
+Stable remains separate. It retains signed clean install/update, migration/backup/restore/replacement-install, identity/licensing/shop lifecycle, Golden COD/provider reconciliation, storefront/remote commands, complete AAA UI/AR/FR/EN/RTL/accessibility, T470/floor/eight-hour stability, independent external reviews where applicable, representative Algerian seller beta, rollout/support readiness and explicit Founder promotion.
 
-### Required certification
+Issue #230 remains P1 for customer-online/public trial: verified SahelFlow-owned domain, primary/recovery HTTPS ingress, protected bindings, representative Algerian fixed/mobile reachability, forced recovery and signed installed customer-trial evidence.
 
-- clean install, upgrade, reopen and in-app update;
-- migration, backup, restore and replacement installation;
-- identity, permissions, revocation and shop lifecycle;
-- trial expiry, permanent activation, transfer and recovery;
-- Golden COD and provider reconciliation;
-- storefront checkout and remote command;
-- complete AAA UI, Arabic/RTL and accessibility;
-- T470/floor performance and eight-hour stability;
-- independent security, privacy, legal and provider review;
-- incident response, support and rollout readiness;
-- representative Algerian seller beta;
-- retained evidence obligations reconciled or superseded by stronger exact-source proof.
+## Historical continuity and merge discipline
 
-### Stable gate
+The earlier completion program used a **complete reconnaissance** before freezing each Phase Problem Register and relied on exact frozen heads plus **expected-head merge** discipline after selected gates passed. FD-033 changes the cadence for the exact Internal.16 completion wave, not those integrity principles.
 
-Every Required capability is proven at its required layer; zero P0/P1 remains;
-provider, recovery, security/privacy/Law 18-07, performance, Arabic/RTL,
-accessibility and representative-beta gates pass; a signed Windows artifact and
-immutable manifest pass; and the Founder explicitly promotes Stable.
-
-A source-complete phase is never itself a release claim.
-
----
+The last published executable remains source `2d60e2e74109b6e03626a5ccdff727c029a34591`, **Published release:** `1.0.0-internal.14`; PR #245 later merged the FD-032 Internal.15 Founder checkpoint authority. This historical publication marker is retained until a newer signed release is actually proven.
 
 ## Definition of done
 
-A phase is complete only when its exit gate has objective evidence, its selected
-checkpoint passes and every known P0/P1 is closed, unless the Founder records an
-explicit scoped exception that names the unproven evidence, preserves it in a
-follow-up issue and forbids claims that the retained evidence passed.
-
-“100% sure” means every defined gate passes, representative evidence exists at the
-required layer and no contradiction remains between product promise, source,
-artifact, installed behavior and public claim. A scoped phase-closure exception is
-not “100% sure” certification and must never be described that way.
+“99.99% sure” means every defined Required matrix executes at the applicable layer, zero known P0/P1 remains, product/source/artifact/installed claims agree, and material post-freeze changes receive proportionate reruns. It is not a mathematical warranty and cannot fabricate external Phase 9 proof.
