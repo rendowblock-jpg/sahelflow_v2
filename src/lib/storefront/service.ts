@@ -12,13 +12,12 @@
 import "server-only";
 
 import type { ServiceContext } from "@/lib/data/service-base";
+import type { StorefrontTheme } from "./presentation-types";
+import { DEFAULT_STOREFRONT_THEME } from "./theme-default";
+import { normalizeStorefrontTheme } from "./theme-normalize";
+import { storefrontStudioThemeSchema } from "./studio-schema";
 
-export interface StorefrontTheme {
-  template: "minimal" | "modern" | "classic";
-  primaryColor: string;
-  showPrices: boolean;
-  showStock: boolean;
-}
+export type { StorefrontTheme } from "./presentation-types";
 
 export interface StorefrontContact {
   phone?: string;
@@ -52,14 +51,24 @@ function parseConfig(row: {
   createdAt: Date;
   updatedAt: Date;
 }): StorefrontConfig {
+  let parsedTheme: unknown = null;
+  let parsedProductIds: unknown = [];
+  let parsedContact: unknown = null;
+  try { parsedTheme = JSON.parse(row.theme) as unknown; } catch { /* normalize fail-closed */ }
+  try { parsedProductIds = JSON.parse(row.productIds) as unknown; } catch { /* empty projection */ }
+  try { parsedContact = row.contact ? JSON.parse(row.contact) as unknown : null; } catch { /* empty projection */ }
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
     description: row.description,
-    theme: JSON.parse(row.theme) as StorefrontTheme,
-    productIds: JSON.parse(row.productIds) as string[],
-    contact: row.contact ? (JSON.parse(row.contact) as StorefrontContact) : null,
+    theme: normalizeStorefrontTheme(parsedTheme),
+    productIds: Array.isArray(parsedProductIds)
+      ? parsedProductIds.filter((item): item is string => typeof item === "string")
+      : [],
+    contact: parsedContact && typeof parsedContact === "object" && !Array.isArray(parsedContact)
+      ? parsedContact as StorefrontContact
+      : null,
     isActive: row.isActive,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -95,12 +104,13 @@ export const storefrontService = {
     contact?: StorefrontContact;
     isActive?: boolean;
   }): Promise<StorefrontConfig> {
+    const theme = storefrontStudioThemeSchema.parse(input.theme);
     const row = await context.prisma.storefrontConfig.create({
       data: {
         slug: input.slug,
         name: input.name,
         description: input.description ?? null,
-        theme: JSON.stringify(input.theme),
+        theme: JSON.stringify(theme),
         productIds: JSON.stringify(input.productIds),
         contact: input.contact ? JSON.stringify(input.contact) : null,
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
@@ -117,16 +127,28 @@ export const storefrontService = {
     productIds: string[];
     contact: StorefrontContact | null;
     isActive: boolean;
-  }>): Promise<StorefrontConfig> {
+  }>, options: { expectedUpdatedAt?: string } = {}): Promise<StorefrontConfig> {
     const data: Record<string, unknown> = {};
     if (input.slug !== undefined) data.slug = input.slug;
     if (input.name !== undefined) data.name = input.name;
     if (input.description !== undefined) data.description = input.description;
-    if (input.theme !== undefined) data.theme = JSON.stringify(input.theme);
+    if (input.theme !== undefined) {
+      data.theme = JSON.stringify(storefrontStudioThemeSchema.parse(input.theme));
+    }
     if (input.productIds !== undefined) data.productIds = JSON.stringify(input.productIds);
     if (input.contact !== undefined) data.contact = input.contact ? JSON.stringify(input.contact) : null;
     if (input.isActive !== undefined) data.isActive = input.isActive;
-    const row = await context.prisma.storefrontConfig.update({ where: { id }, data });
+    if (options.expectedUpdatedAt) {
+      const expectedUpdatedAt = new Date(options.expectedUpdatedAt);
+      const result = await context.prisma.storefrontConfig.updateMany({
+        where: { id, updatedAt: expectedUpdatedAt },
+        data,
+      });
+      if (result.count !== 1) throw new StorefrontVersionConflictError();
+    } else {
+      await context.prisma.storefrontConfig.update({ where: { id }, data });
+    }
+    const row = await context.prisma.storefrontConfig.findUniqueOrThrow({ where: { id } });
     return parseConfig(row);
   },
 
@@ -136,9 +158,11 @@ export const storefrontService = {
 };
 
 /** Default theme for new storefronts. */
-export const DEFAULT_THEME: StorefrontTheme = {
-  template: "modern",
-  primaryColor: "#0f766e",
-  showPrices: true,
-  showStock: false,
-};
+export const DEFAULT_THEME: StorefrontTheme = DEFAULT_STOREFRONT_THEME;
+
+export class StorefrontVersionConflictError extends Error {
+  constructor() {
+    super("Storefront draft changed since it was loaded");
+    this.name = "StorefrontVersionConflictError";
+  }
+}

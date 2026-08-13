@@ -8,6 +8,8 @@ import {
   requireTrustedAction,
   trustedActorAuditIdentity,
 } from "@/lib/identity/authorization";
+import { storefrontStudioThemeSchema } from "@/lib/storefront/studio-schema";
+import { normalizeStorefrontTheme } from "@/lib/storefront/theme-normalize";
 
 export const dynamic = "force-dynamic";
 
@@ -51,25 +53,29 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   return NextResponse.json({ configs });
 }, "GET /api/storefront/config");
 
+const legacyThemeSchema = z.object({
+  template: z.enum(["minimal", "modern", "classic"]),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  showPrices: z.boolean().default(true),
+  showStock: z.boolean().default(false),
+}).strict();
+const writableThemeSchema = z.union([storefrontStudioThemeSchema, legacyThemeSchema])
+  .transform((value) => normalizeStorefrontTheme(value));
+
 const createConfigSchema = z.object({
   slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Slug must be lowercase, digits, or hyphens"),
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
-  theme: z.object({
-    template: z.enum(["minimal", "modern", "classic"]),
-    primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color"),
-    showPrices: z.boolean().default(true),
-    showStock: z.boolean().default(false),
-  }),
-  productIds: z.array(z.string()).default([]),
+  theme: writableThemeSchema,
+  productIds: z.array(z.string().min(2).max(128)).max(500).default([]),
   contact: z.object({
     phone: z.string().optional(),
     whatsapp: z.string().optional(),
     email: z.string().optional(),
     address: z.string().optional(),
-  }).optional(),
+  }).strict().optional(),
   isActive: z.boolean().optional(),
-});
+}).strict();
 
 /** POST /api/storefront/config — create a new storefront config (seller-only). */
 export const POST = withErrorHandler(async (req: NextRequest) => {

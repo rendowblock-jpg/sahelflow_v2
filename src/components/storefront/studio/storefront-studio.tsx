@@ -1,18 +1,378 @@
 "use client";
-import { useState } from "react";
-import { Monitor, Smartphone, Tablet } from "lucide-react";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Cloud,
+  Monitor,
+  Redo2,
+  Save,
+  Smartphone,
+  Tablet,
+  Undo2,
+} from "lucide-react";
 import type { StorefrontConfig } from "@/lib/storefront/service";
-import { normalizeStorefrontTheme } from "@/lib/storefront/theme-normalize";
+import {
+  addStorefrontSection,
+  createStorefrontStudioDraft,
+  deleteStorefrontSection,
+  duplicateStorefrontSection,
+  moveStorefrontSection,
+  storefrontDraftFingerprint,
+  toggleStorefrontSection,
+  type StorefrontStudioDraft,
+} from "@/lib/storefront/studio-draft";
+import {
+  commitStorefrontStudioHistory,
+  createStorefrontStudioHistory,
+  redoStorefrontStudioHistory,
+  undoStorefrontStudioHistory,
+} from "@/lib/storefront/studio-history";
+import { storefrontStudioDraftSchema } from "@/lib/storefront/studio-schema";
+import { switchStorefrontTemplate } from "@/lib/storefront/theme-normalize";
 import { SaharaPreview } from "./sahara-preview";
+import { SectionTree } from "./section-tree";
+import { TemplateGallery } from "./template-gallery";
 import type { StorefrontStudioDevice, StorefrontStudioProduct } from "./studio-types";
 
-export function StorefrontStudio({ config, products }: { config: StorefrontConfig; products: StorefrontStudioProduct[] }) {
+type StudioPanel = "sections" | "theme" | "products" | "checkout" | "seo";
+type SaveState = "saved" | "pending" | "saving" | "error" | "conflict";
+type SerializedConfig = Omit<StorefrontConfig, "createdAt" | "updatedAt"> & {
+  createdAt: string;
+  updatedAt: string;
+};
+
+const PANELS: readonly { id: StudioPanel; label: string }[] = [
+  { id: "sections", label: "Sections" },
+  { id: "theme", label: "Theme" },
+  { id: "products", label: "Products" },
+  { id: "checkout", label: "COD & delivery" },
+  { id: "seo", label: "SEO & domain" },
+];
+
+export function StorefrontStudio({
+  config,
+  products,
+}: {
+  config: StorefrontConfig;
+  products: StorefrontStudioProduct[];
+}) {
+  const initialDraft = useMemo(() => createStorefrontStudioDraft(config), [config]);
+  const [history, setHistory] = useState(() => createStorefrontStudioHistory(initialDraft));
   const [device, setDevice] = useState<StorefrontStudioDevice>("desktop");
-  const theme = normalizeStorefrontTheme(config.theme);
-  const draft = { name: config.name, slug: config.slug, description: config.description ?? "", theme, selectedProductIds: config.productIds, isActive: config.isActive };
+  const [panel, setPanel] = useState<StudioPanel>("sections");
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
+    initialDraft.theme.builder.composition.sections[0]?.id ?? null,
+  );
+  const [savedFingerprint, setSavedFingerprint] = useState(() => storefrontDraftFingerprint(initialDraft));
+  const [version, setVersion] = useState(() => dateIso(config.updatedAt));
+  const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<SerializedConfig | null>(null);
+  const requestSequence = useRef(0);
+
+  const draft = history.present;
+  const fingerprint = storefrontDraftFingerprint(draft);
+  const dirty = fingerprint !== savedFingerprint;
+  const sections = draft.theme.builder.composition.sections;
+  const selectedSection = sections.find((section) => section.id === selectedSectionId) ?? null;
+
+  const commitDraft = useCallback((next: StorefrontStudioDraft) => {
+    setHistory((current) => storefrontDraftFingerprint(current.present) === storefrontDraftFingerprint(next)
+      ? current
+      : commitStorefrontStudioHistory(current, next));
+    setMessage(null);
+    setSaveState((current) => current === "error" ? "pending" : current);
+  }, []);
+
+  const persist = useCallback(async (candidate: StorefrontStudioDraft, manual = false) => {
+    const parsed = storefrontStudioDraftSchema.safeParse(candidate);
+    if (!parsed.success) {
+      setSaveState("error");
+      setMessage(parsed.error.issues[0]?.message ?? "Draft validation failed");
+      return;
+    }
+    const sequence = ++requestSequence.current;
+    setSaveState("saving");
+    setMessage(manual ? "Saving draft…" : null);
+    try {
+      const response = await fetch(`/api/storefront/config/${encodeURIComponent(config.id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expectedUpdatedAt: version,
+          name: parsed.data.name,
+          slug: parsed.data.slug,
+          description: parsed.data.description || null,
+          theme: parsed.data.theme,
+          productIds: parsed.data.selectedProductIds,
+          isActive: parsed.data.isActive,
+        }),
+      });
+      const body = await response.json() as { error?: string; config?: SerializedConfig };
+      if (sequence !== requestSequence.current) return;
+      if (response.status === 409 && body.config) {
+        setConflict(body.config);
+        setSaveState("conflict");
+        setMessage("A newer storefront draft exists. Choose which version to keep.");
+        return;
+      }
+      if (!response.ok || !body.config) throw new Error(body.error ?? "Draft save failed");
+      setVersion(body.config.updatedAt);
+      setSavedFingerprint(storefrontDraftFingerprint(candidate));
+      setSavedAt(new Date());
+      setSaveState("saved");
+      setMessage(manual ? "Draft saved" : null);
+    } catch {
+      if (sequence !== requestSequence.current) return;
+      setSaveState("error");
+      setMessage("Draft is still local. Check the connection and save again.");
+    }
+  }, [config.id, version]);
+
+  useEffect(() => {
+    if (!dirty || conflict || saveState === "saving" || saveState === "error") return;
+    setSaveState("pending");
+    const timer = window.setTimeout(() => void persist(draft), 900);
+    return () => window.clearTimeout(timer);
+  }, [conflict, dirty, draft, fingerprint, persist, saveState]);
+
+  function acceptServerDraft() {
+    if (!conflict) return;
+    const next = createStorefrontStudioDraft({
+      ...conflict,
+      createdAt: new Date(conflict.createdAt),
+      updatedAt: new Date(conflict.updatedAt),
+    });
+    setHistory(createStorefrontStudioHistory(next));
+    setVersion(conflict.updatedAt);
+    setSavedFingerprint(storefrontDraftFingerprint(next));
+    setConflict(null);
+    setSaveState("saved");
+    setMessage("Loaded the newer saved draft");
+  }
+
+  function keepLocalDraft() {
+    if (!conflict) return;
+    setVersion(conflict.updatedAt);
+    setConflict(null);
+    setSaveState("error");
+    setMessage("Local changes retained. Save again to confirm the overwrite.");
+  }
+
+  function updateTheme(mutator: (theme: StorefrontStudioDraft["theme"]) => StorefrontStudioDraft["theme"]) {
+    commitDraft({ ...draft, theme: mutator(draft.theme) });
+  }
+
+  function updateSelectedProducts(id: string, selected: boolean) {
+    const ids = selected
+      ? [...new Set([...draft.selectedProductIds, id])]
+      : draft.selectedProductIds.filter((candidate) => candidate !== id);
+    commitDraft({ ...draft, selectedProductIds: ids });
+  }
+
+  function generatedSectionId(type = "section") {
+    return `${type}-${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  }
+
   const width = device === "mobile" ? "max-w-[390px]" : device === "tablet" ? "max-w-[760px]" : "max-w-[1180px]";
-  return <div className="flex min-h-[720px] flex-col overflow-hidden rounded-2xl border bg-muted/30">
-    <div className="flex items-center justify-between border-b bg-background px-4 py-3"><strong>{config.name}</strong><div className="flex gap-1">{[["desktop",Monitor],["tablet",Tablet],["mobile",Smartphone]].map(([id,Icon]) => <button key={String(id)} onClick={() => setDevice(id as StorefrontStudioDevice)} className="rounded-lg p-2 hover:bg-muted"><Icon className="h-4 w-4" /></button>)}</div></div>
-    <div className="flex flex-1"><aside className="w-64 border-e bg-background p-4 text-sm">Pages<br/><br/>Sections<br/><br/>Theme<br/><br/>COD checkout<br/><br/>Publish</aside><main className="flex flex-1 justify-center overflow-auto p-6"><div className={`w-full ${width} overflow-hidden rounded-2xl border bg-background shadow-xl`}><SaharaPreview draft={draft} products={products} /></div></main><aside className="hidden w-72 border-s bg-background p-4 text-sm xl:block">Inspector</aside></div>
-  </div>;
+
+  return (
+    <div className="flex min-h-[760px] flex-col overflow-hidden rounded-2xl border bg-muted/30" dir="ltr">
+      <header className="flex flex-wrap items-center gap-3 border-b bg-background px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-semibold">{draft.name}</div>
+          <div className="text-[11px] text-muted-foreground">Home page · {draft.theme.template}</div>
+        </div>
+        <div className="flex rounded-lg border p-0.5" aria-label="Preview device">
+          <DeviceButton id="desktop" active={device === "desktop"} onClick={setDevice} icon={<Monitor />} />
+          <DeviceButton id="tablet" active={device === "tablet"} onClick={setDevice} icon={<Tablet />} />
+          <DeviceButton id="mobile" active={device === "mobile"} onClick={setDevice} icon={<Smartphone />} />
+        </div>
+        <ToolbarButton label="Undo" disabled={history.past.length === 0} onClick={() => setHistory(undoStorefrontStudioHistory)}><Undo2 /></ToolbarButton>
+        <ToolbarButton label="Redo" disabled={history.future.length === 0} onClick={() => setHistory(redoStorefrontStudioHistory)}><Redo2 /></ToolbarButton>
+        <SaveStatus state={saveState} dirty={dirty} savedAt={savedAt} />
+        <Link className="rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted" href={`/storefront/${draft.slug}`} target="_blank">Preview</Link>
+        <button type="button" onClick={() => {
+          const result = storefrontStudioDraftSchema.safeParse(draft);
+          setMessage(result.success ? "Draft is valid and ready for private preview" : result.error.issues[0]?.message ?? "Validation failed");
+        }} className="rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted">Validate</button>
+        <button type="button" disabled={!dirty || saveState === "saving" || saveState === "conflict"} onClick={() => void persist(draft, true)} className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"><Save className="h-3.5 w-3.5" />Save</button>
+      </header>
+
+      {conflict ? (
+        <div className="flex flex-wrap items-center gap-3 border-b border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-950">
+          <AlertTriangle className="h-4 w-4" />
+          <span className="flex-1">This draft changed after you opened it. Nothing was overwritten.</span>
+          <button type="button" onClick={acceptServerDraft} className="rounded-md border border-amber-400 px-2 py-1 font-medium">Use saved version</button>
+          <button type="button" onClick={keepLocalDraft} className="rounded-md bg-amber-900 px-2 py-1 font-medium text-white">Keep my changes</button>
+        </div>
+      ) : null}
+      {message ? <div className="border-b bg-background px-4 py-2 text-xs text-muted-foreground" role="status">{message}</div> : null}
+
+      <div className="grid min-h-0 flex-1 grid-cols-[232px_minmax(0,1fr)_288px] max-xl:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="min-h-0 overflow-y-auto border-e bg-background">
+          <nav className="grid grid-cols-2 gap-1 border-b p-2" aria-label="Studio panels">
+            {PANELS.map((item) => (
+              <button key={item.id} type="button" onClick={() => setPanel(item.id)} className={`rounded-lg px-2 py-2 text-start text-[11px] font-medium ${panel === item.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>{item.label}</button>
+            ))}
+          </nav>
+          <div className="p-3">
+            {panel === "sections" ? (
+              <SectionTree
+                sections={sections}
+                selected={selectedSectionId}
+                onSelect={setSelectedSectionId}
+                onMove={(id, direction) => commitDraft(moveStorefrontSection(draft, id, direction))}
+                onToggle={(id) => commitDraft(toggleStorefrontSection(draft, id))}
+                onDuplicate={(id) => {
+                  const nextId = generatedSectionId("section");
+                  commitDraft(duplicateStorefrontSection(draft, id, nextId));
+                  setSelectedSectionId(nextId);
+                }}
+                onDelete={(id) => {
+                  const next = deleteStorefrontSection(draft, id);
+                  commitDraft(next);
+                  if (selectedSectionId === id) setSelectedSectionId(next.theme.builder.composition.sections[0]?.id ?? null);
+                }}
+                onAdd={() => {
+                  const id = generatedSectionId("section");
+                  commitDraft(addStorefrontSection(draft, id));
+                  setSelectedSectionId(id);
+                }}
+              />
+            ) : null}
+            {panel === "theme" ? <TemplateGallery value={draft.theme.template} onChange={(template) => updateTheme((theme) => switchStorefrontTemplate(theme, template))} /> : null}
+            {panel === "products" ? <ProductPicker products={products} selected={draft.selectedProductIds} onChange={updateSelectedProducts} /> : null}
+            {panel === "checkout" ? <p className="text-xs leading-5 text-muted-foreground">Configure the COD promise and layout in the inspector. Shipping fees remain server-authoritative at publish.</p> : null}
+            {panel === "seo" ? <SeoPanel draft={draft} commit={commitDraft} /> : null}
+          </div>
+        </aside>
+
+        <main className="flex min-h-0 justify-center overflow-auto p-6 max-md:p-3">
+          <div className={`w-full ${width} self-start overflow-hidden rounded-2xl border bg-background shadow-xl transition-[max-width]`}>
+            <SaharaPreview
+              draft={draft}
+              products={products}
+              selectedSectionId={selectedSectionId}
+              onInspectSection={(id) => {
+                setSelectedSectionId(id);
+                setPanel("sections");
+              }}
+            />
+          </div>
+        </main>
+
+        <aside className="min-h-0 overflow-y-auto border-s bg-background p-4 max-xl:hidden">
+          <Inspector draft={draft} selectedType={selectedSection?.type ?? null} commit={commitDraft} />
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function Inspector({ draft, selectedType, commit }: { draft: StorefrontStudioDraft; selectedType: string | null; commit: (draft: StorefrontStudioDraft) => void }) {
+  const theme = draft.theme;
+  const setTheme = (next: StorefrontStudioDraft["theme"]) => commit({ ...draft, theme: next });
+  const patchTheme = (patch: Partial<StorefrontStudioDraft["theme"]>) => setTheme({ ...theme, ...patch });
+  return (
+    <div className="space-y-5">
+      <div><h2 className="text-sm font-semibold">Inspector</h2><p className="text-[11px] text-muted-foreground">{selectedType ?? "Store settings"}</p></div>
+      <Field label="Store name"><input value={draft.name} maxLength={100} onChange={(event) => commit({ ...draft, name: event.target.value })} /></Field>
+      <Field label="Description"><textarea value={draft.description} maxLength={500} rows={3} onChange={(event) => commit({ ...draft, description: event.target.value })} /></Field>
+      <div className="grid grid-cols-2 gap-2">
+        <ColorField label="Primary" value={theme.primaryColor} onChange={(primaryColor) => patchTheme({ primaryColor })} />
+        <ColorField label="Accent" value={theme.accentColor} onChange={(accentColor) => patchTheme({ accentColor })} />
+        <ColorField label="Background" value={theme.backgroundColor} onChange={(backgroundColor) => patchTheme({ backgroundColor })} />
+        <ColorField label="Surface" value={theme.surfaceColor} onChange={(surfaceColor) => patchTheme({ surfaceColor })} />
+        <ColorField label="Text" value={theme.textColor} onChange={(textColor) => patchTheme({ textColor })} />
+      </div>
+
+      {selectedType === "hero" || selectedType === null ? (
+        <InspectorGroup title="Hero">
+          <Field label="Eyebrow"><input value={theme.hero.eyebrow} maxLength={80} onChange={(event) => patchTheme({ hero: { ...theme.hero, eyebrow: event.target.value } })} /></Field>
+          <Field label="Headline"><input value={theme.hero.headline} maxLength={140} onChange={(event) => patchTheme({ hero: { ...theme.hero, headline: event.target.value } })} /></Field>
+          <Field label="Body"><textarea value={theme.hero.body} maxLength={320} rows={3} onChange={(event) => patchTheme({ hero: { ...theme.hero, body: event.target.value } })} /></Field>
+          <Field label="CTA label"><input value={theme.hero.ctaLabel} maxLength={60} onChange={(event) => patchTheme({ hero: { ...theme.hero, ctaLabel: event.target.value } })} /></Field>
+          <SelectField label="Hero layout" value={theme.hero.style} values={["editorial", "split", "centered"]} onChange={(style) => patchTheme({ hero: { ...theme.hero, style: style as typeof theme.hero.style } })} />
+        </InspectorGroup>
+      ) : null}
+
+      {selectedType === "product-grid" || selectedType === "featured-products" || selectedType === null ? (
+        <InspectorGroup title="Catalog">
+          <Toggle label="Show prices" checked={theme.showPrices} onChange={(showPrices) => patchTheme({ showPrices })} />
+          <Toggle label="Show stock" checked={theme.showStock} onChange={(showStock) => patchTheme({ showStock })} />
+          <SelectField label="Card style" value={theme.catalog.cardStyle} values={["minimal", "elevated", "outlined"]} onChange={(cardStyle) => patchTheme({ catalog: { ...theme.catalog, cardStyle: cardStyle as typeof theme.catalog.cardStyle } })} />
+          <SelectField label="Image ratio" value={theme.catalog.imageRatio} values={["square", "portrait", "landscape"]} onChange={(imageRatio) => patchTheme({ catalog: { ...theme.catalog, imageRatio: imageRatio as typeof theme.catalog.imageRatio } })} />
+        </InspectorGroup>
+      ) : null}
+
+      {selectedType === "cod-checkout" || selectedType === null ? (
+        <InspectorGroup title="COD checkout">
+          <SelectField label="Checkout layout" value={theme.checkout.layout} values={["drawer", "sticky", "inline"]} onChange={(layout) => patchTheme({ checkout: { ...theme.checkout, layout: layout as typeof theme.checkout.layout } })} />
+          <Toggle label="Show COD promise" checked={theme.checkout.showCodPromise} onChange={(showCodPromise) => patchTheme({ checkout: { ...theme.checkout, showCodPromise } })} />
+          <Field label="COD promise"><textarea value={theme.checkout.codPromiseText} maxLength={180} rows={3} onChange={(event) => patchTheme({ checkout: { ...theme.checkout, codPromiseText: event.target.value } })} /></Field>
+        </InspectorGroup>
+      ) : null}
+
+      {selectedType === "trust" || selectedType === null ? (
+        <InspectorGroup title="Trust badges">
+          <Toggle label="Cash on delivery" checked={theme.trust.showCodBadge} onChange={(showCodBadge) => patchTheme({ trust: { ...theme.trust, showCodBadge } })} />
+          <Toggle label="Phone confirmation" checked={theme.trust.showPhoneConfirmationBadge} onChange={(showPhoneConfirmationBadge) => patchTheme({ trust: { ...theme.trust, showPhoneConfirmationBadge } })} />
+          <Toggle label="Delivery" checked={theme.trust.showDeliveryBadge} onChange={(showDeliveryBadge) => patchTheme({ trust: { ...theme.trust, showDeliveryBadge } })} />
+          <Toggle label="Support" checked={theme.trust.showSupportBadge} onChange={(showSupportBadge) => patchTheme({ trust: { ...theme.trust, showSupportBadge } })} />
+        </InspectorGroup>
+      ) : null}
+    </div>
+  );
+}
+
+function SeoPanel({ draft, commit }: { draft: StorefrontStudioDraft; commit: (draft: StorefrontStudioDraft) => void }) {
+  const seo = draft.theme.builder.seo;
+  const setSeo = (patch: Partial<typeof seo>) => commit({ ...draft, theme: { ...draft.theme, builder: { ...draft.theme.builder, seo: { ...seo, ...patch } } } });
+  return <div className="space-y-3"><Field label="SEO title"><input value={seo.title} maxLength={120} onChange={(event) => setSeo({ title: event.target.value })} /></Field><Field label="SEO description"><textarea value={seo.description} maxLength={320} rows={4} onChange={(event) => setSeo({ description: event.target.value })} /></Field><Toggle label="Hide from search engines" checked={seo.noIndex} onChange={(noIndex) => setSeo({ noIndex })} /><div className="rounded-lg border p-2 text-[11px] text-muted-foreground"><Cloud className="mb-1 h-4 w-4" />Custom-domain state is projected from the hosted control plane and cannot be forged by this editor.</div></div>;
+}
+
+function ProductPicker({ products, selected, onChange }: { products: StorefrontStudioProduct[]; selected: readonly string[]; onChange: (id: string, selected: boolean) => void }) {
+  return <div className="space-y-1">{products.map((product) => <label key={product.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted"><input type="checkbox" checked={selected.includes(product.id)} onChange={(event) => onChange(product.id, event.target.checked)} /><span className="min-w-0 flex-1 truncate">{product.name}</span><span className="text-[10px] text-muted-foreground">{product.stock}</span></label>)}</div>;
+}
+
+function SaveStatus({ state, dirty, savedAt }: { state: SaveState; dirty: boolean; savedAt: Date | null }) {
+  const label = state === "saving" ? "Saving…" : state === "conflict" ? "Conflict" : state === "error" ? "Save failed" : dirty ? "Unsaved" : savedAt ? `Saved ${savedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Saved";
+  return <div className={`inline-flex items-center gap-1 text-[11px] ${state === "error" || state === "conflict" ? "text-destructive" : "text-muted-foreground"}`}>{state === "saved" && !dirty ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Cloud className="h-3.5 w-3.5" />}{label}</div>;
+}
+
+function DeviceButton({ id, active, onClick, icon }: { id: StorefrontStudioDevice; active: boolean; onClick: (id: StorefrontStudioDevice) => void; icon: React.ReactNode }) {
+  return <button type="button" title={`${id} preview`} aria-label={`${id} preview`} aria-pressed={active} onClick={() => onClick(id)} className={`rounded-md p-2 [&_svg]:h-3.5 [&_svg]:w-3.5 ${active ? "bg-muted text-foreground" : "text-muted-foreground"}`}>{icon}</button>;
+}
+
+function ToolbarButton({ label, disabled, onClick, children }: { label: string; disabled?: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" title={label} aria-label={label} disabled={disabled} onClick={onClick} className="rounded-lg border p-2 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 [&_svg]:h-3.5 [&_svg]:w-3.5">{children}</button>;
+}
+
+function InspectorGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return <fieldset className="space-y-3 border-t pt-4"><legend className="mb-2 text-xs font-semibold">{title}</legend>{children}</fieldset>;
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="block space-y-1 text-[11px] font-medium text-muted-foreground"><span>{label}</span><div className="[&_input]:w-full [&_input]:rounded-lg [&_input]:border [&_input]:bg-background [&_input]:px-2.5 [&_input]:py-2 [&_input]:text-xs [&_input]:text-foreground [&_textarea]:w-full [&_textarea]:resize-none [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:bg-background [&_textarea]:px-2.5 [&_textarea]:py-2 [&_textarea]:text-xs [&_textarea]:text-foreground">{children}</div></label>;
+}
+
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="space-y-1 text-[10px] font-medium text-muted-foreground"><span>{label}</span><span className="flex items-center gap-1 rounded-lg border p-1"><input type="color" aria-label={label} value={value} onChange={(event) => onChange(event.target.value.toUpperCase())} className="h-7 w-7 cursor-pointer border-0 bg-transparent" /><span className="truncate text-[9px] text-foreground">{value}</span></span></label>;
+}
+
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
+  return <label className="flex cursor-pointer items-center justify-between gap-3 text-xs"><span>{label}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /></label>;
+}
+
+function SelectField({ label, value, values, onChange }: { label: string; value: string; values: readonly string[]; onChange: (value: string) => void }) {
+  return <label className="block space-y-1 text-[11px] font-medium text-muted-foreground"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-lg border bg-background px-2.5 py-2 text-xs capitalize text-foreground">{values.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}</select></label>;
+}
+
+function dateIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }

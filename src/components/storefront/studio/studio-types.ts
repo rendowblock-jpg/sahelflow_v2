@@ -1,4 +1,5 @@
-import type { StorefrontTheme } from "@/lib/storefront/presentation-types";
+import type { StorefrontStudioDraft } from "@/lib/storefront/studio-draft";
+export type { StorefrontStudioDraft } from "@/lib/storefront/studio-draft";
 
 export type StorefrontStudioDevice = "desktop" | "tablet" | "mobile";
 
@@ -9,15 +10,6 @@ export interface StorefrontStudioProduct {
   sku: string | null;
   stock: number;
   images: string | null;
-}
-
-export interface StorefrontStudioDraft {
-  name: string;
-  slug: string;
-  description: string;
-  theme: StorefrontTheme;
-  selectedProductIds: readonly string[];
-  isActive: boolean;
 }
 
 export interface StorefrontPreviewProps {

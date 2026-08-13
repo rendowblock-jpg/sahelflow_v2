@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { getI18n } from "@/lib/i18n-server";
 import { storefrontService } from "@/lib/storefront/service";
-import { StorefrontBuilder } from "@/components/storefront/storefront-builder";
+import { StorefrontStudio } from "@/components/storefront/studio/storefront-studio";
 import { db, shopContext } from "@/lib/db";
 import type { Metadata } from "next";
 import {
@@ -54,7 +54,7 @@ export default async function EditStorefrontPage({
           {t("storefronts.editDesc")}
         </p>
       </div>
-      <StorefrontBuilder config={config} products={products} mode="edit" />
+      <StorefrontStudio config={config} products={products} />
     </div>
   );
 }

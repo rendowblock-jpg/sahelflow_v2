@@ -1,3 +1,5 @@
+import type { StorefrontPageComposition } from "./studio-sections";
+
 export const STOREFRONT_THEME_SCHEMA_VERSION = 2 as const;
 export const STOREFRONT_BUILDER_SCHEMA_VERSION = 1 as const;
 export const STOREFRONT_TEMPLATE_IDS = ["sahara", "atlas", "oasis"] as const;
@@ -61,6 +63,7 @@ export interface StorefrontShippingRule {
  */
 export interface StorefrontBuilderState {
   schemaVersion: typeof STOREFRONT_BUILDER_SCHEMA_VERSION;
+  composition: StorefrontPageComposition;
   productMedia: Record<string, StorefrontMediaSet>;
   collections: StorefrontCollection[];
   seo: StorefrontSeo;

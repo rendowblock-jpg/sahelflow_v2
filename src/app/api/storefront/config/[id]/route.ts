@@ -9,28 +9,35 @@ import {
   requireTrustedAction,
   trustedActorAuditIdentity,
 } from "@/lib/identity/authorization";
+import { storefrontStudioThemeSchema } from "@/lib/storefront/studio-schema";
+import { normalizeStorefrontTheme } from "@/lib/storefront/theme-normalize";
 
 export const dynamic = "force-dynamic";
 
+const legacyThemeSchema = z.object({
+  template: z.enum(["minimal", "modern", "classic"]),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  showPrices: z.boolean(),
+  showStock: z.boolean(),
+}).strict();
+const writableThemeSchema = z.union([storefrontStudioThemeSchema, legacyThemeSchema])
+  .transform((value) => normalizeStorefrontTheme(value));
+
 const updateConfigSchema = z.object({
+  expectedUpdatedAt: z.string().datetime().optional(),
   slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Slug must be lowercase, digits, or hyphens").optional(),
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).nullable().optional(),
-  theme: z.object({
-    template: z.enum(["minimal", "modern", "classic"]),
-    primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color"),
-    showPrices: z.boolean().default(true),
-    showStock: z.boolean().default(false),
-  }).optional(),
-  productIds: z.array(z.string()).optional(),
+  theme: writableThemeSchema.optional(),
+  productIds: z.array(z.string().min(2).max(128)).max(500).optional(),
   contact: z.object({
     phone: z.string().optional(),
     whatsapp: z.string().optional(),
     email: z.string().optional(),
     address: z.string().optional(),
-  }).nullable().optional(),
+  }).strict().nullable().optional(),
   isActive: z.boolean().optional(),
-});
+}).strict();
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -60,8 +67,9 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteCo
   const { id } = await params;
   const body = await req.json();
   const input = updateConfigSchema.parse(body);
+  const { expectedUpdatedAt, ...updates } = input;
 
-  const { storefrontService } = await import("@/lib/storefront/service");
+  const { storefrontService, StorefrontVersionConflictError } = await import("@/lib/storefront/service");
 
   // Verify the storefront exists before updating (gives a clean 404)
   const context = { prisma: db, shop: shopContext };
@@ -70,7 +78,16 @@ export const PUT = withErrorHandler(async (req: NextRequest, { params }: RouteCo
     return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
   }
 
-  const config = await storefrontService.update(context, id, input);
+  let config;
+  try {
+    config = await storefrontService.update(context, id, updates, { expectedUpdatedAt });
+  } catch (error) {
+    if (error instanceof StorefrontVersionConflictError) {
+      const current = await storefrontService.getById(context, id);
+      return NextResponse.json({ error: "version_conflict", config: current }, { status: 409 });
+    }
+    throw error;
+  }
   await logAudit(context, {
     action: "storefront.updated",
     entity: "storefront",

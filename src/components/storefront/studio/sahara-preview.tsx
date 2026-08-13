@@ -1,12 +1,149 @@
 "use client";
-import {formatDZD} from "@/lib/utils";
-import type {StorefrontPreviewProps} from "./studio-types";
-import {studioImageUrl} from "./studio-types";
 
-export function SaharaPreview({draft,products}:StorefrontPreviewProps){
- const t=draft.theme; const shown=products.filter(p=>draft.selectedProductIds.includes(p.id)).slice(0,4);
- const cards=<div className="grid grid-cols-2 gap-3">{shown.map(p=><article key={p.id} className={`overflow-hidden border ${t.radius==="sharp"?"rounded-none":"rounded-2xl"}`} style={{background:t.surfaceColor}}>{studioImageUrl(p.images)?<img src={studioImageUrl(p.images)!} alt="" className="aspect-square w-full object-cover"/>:<div className="aspect-square opacity-20" style={{background:t.accentColor}}/>}<div className="p-3"><div className="text-sm font-semibold">{p.name}</div>{t.showPrices?<div className="mt-1 text-xs" style={{color:t.primaryColor}}>{formatDZD(p.price)}</div>:null}{t.showStock?<div className="mt-1 text-[10px] opacity-60">Stock {p.stock}</div>:null}</div></article>)}</div>;
- if(t.template==="atlas") return <div className="min-h-full p-6" style={{background:t.backgroundColor,color:t.textColor}}><header className="flex items-center justify-between border-b pb-4"><b>{draft.name||"Store"}</b><span className="text-xs opacity-50">Catalog · COD</span></header><section className="grid gap-8 py-10 md:grid-cols-2"><div><span className="text-[10px] font-bold uppercase tracking-widest" style={{color:t.primaryColor}}>{t.hero.eyebrow||"Algeria COD"}</span><h2 className="mt-3 text-4xl font-semibold tracking-tight">{t.hero.headline||draft.name}</h2><p className="mt-3 text-sm opacity-60">{t.hero.body||draft.description}</p><button className="mt-5 rounded-xl px-4 py-2 text-xs text-white" style={{background:t.primaryColor}}>{t.hero.ctaLabel||"Shop now"}</button></div>{cards}</section></div>;
- if(t.template==="oasis") return <div className="min-h-full p-5" style={{background:t.backgroundColor,color:t.textColor}}><section className="rounded-[2rem] p-7 text-center" style={{background:t.primaryColor,color:"white"}}><span className="text-[10px] font-bold uppercase tracking-[.2em]">{t.hero.eyebrow||"Pay on delivery"}</span><h2 className="mx-auto mt-3 max-w-xl text-4xl font-black tracking-tight">{t.hero.headline||draft.name}</h2><p className="mx-auto mt-3 max-w-lg text-sm opacity-80">{t.hero.body||draft.description}</p><div className="mx-auto mt-5 inline-flex rounded-full bg-white px-5 py-2 text-xs font-bold" style={{color:t.primaryColor}}>{t.checkout.codPromiseText||"Order now · We confirm by phone"}</div></section><div className="py-6">{cards}</div></div>;
- return <div className="min-h-full p-7" style={{background:t.backgroundColor,color:t.textColor}}><div className="text-xs font-semibold uppercase tracking-[.18em]">{draft.name||"SahelFlow"}</div><div className="mt-14 max-w-xl"><div className="text-[10px] font-semibold uppercase tracking-[.22em]" style={{color:t.primaryColor}}>{t.hero.eyebrow}</div><h2 className="mt-3 text-4xl font-semibold leading-none tracking-[-.04em]">{t.hero.headline||draft.name}</h2><p className="mt-4 text-sm leading-6 opacity-60">{t.hero.body||draft.description}</p></div><div className="mt-10">{cards}</div></div>;
+import { BadgeCheck, Headphones, PackageCheck, PhoneCall } from "lucide-react";
+import { formatDZD } from "@/lib/utils";
+import type { StorefrontSectionType } from "@/lib/storefront/studio-sections";
+import type { StorefrontPreviewProps } from "./studio-types";
+import { studioImageUrl } from "./studio-types";
+
+type Props = StorefrontPreviewProps & {
+  selectedSectionId?: string | null;
+  onInspectSection?: (id: string) => void;
+};
+type InspectProps = React.HTMLAttributes<HTMLElement> & { "data-studio-section"?: string };
+
+export function SaharaPreview({ draft, products, selectedSectionId, onInspectSection }: Props) {
+  const theme = draft.theme;
+  const sections = theme.builder.composition.sections;
+  const section = (type: StorefrontSectionType) => sections.find((candidate) => candidate.type === type);
+  const enabled = (type: StorefrontSectionType) => section(type)?.enabled ?? false;
+  const shown = products.filter((product) => draft.selectedProductIds.includes(product.id)).slice(0, 8);
+  const inspect = (type: StorefrontSectionType): InspectProps => {
+    const candidate = section(type);
+    return candidate ? {
+      "data-studio-section": candidate.id,
+      onClick: (event: React.MouseEvent) => {
+        event.stopPropagation();
+        onInspectSection?.(candidate.id);
+      },
+      className: selectedSectionId === candidate.id ? "ring-2 ring-primary ring-offset-2" : undefined,
+    } : {};
+  };
+
+  const cards = (
+    <div className={`grid grid-cols-2 ${theme.density === "compact" ? "gap-2" : "gap-4"}`}>
+      {shown.map((product) => {
+        const image = studioImageUrl(product.images);
+        const ratio = theme.catalog.imageRatio === "portrait"
+          ? "aspect-[4/5]"
+          : theme.catalog.imageRatio === "landscape" ? "aspect-[4/3]" : "aspect-square";
+        return (
+          <article
+            key={product.id}
+            className={`overflow-hidden border ${radius(theme.radius)} ${
+              theme.catalog.cardStyle === "elevated" ? "shadow-sm" : ""
+            }`}
+            style={{ background: theme.surfaceColor }}
+          >
+            {image ? (
+              <img src={image} alt={product.name} className={`${ratio} w-full object-cover`} />
+            ) : (
+              <div className={`${ratio} opacity-20`} style={{ background: theme.accentColor }} />
+            )}
+            <div className="p-3">
+              <div className="text-sm font-semibold">{product.name}</div>
+              {theme.catalog.showSku && product.sku ? <div className="mt-1 text-[10px] opacity-50">{product.sku}</div> : null}
+              {theme.showPrices ? <div className="mt-1 text-xs font-semibold" style={{ color: theme.primaryColor }}>{formatDZD(product.price)}</div> : null}
+              {theme.showStock ? <div className="mt-1 text-[10px] opacity-60">Stock {product.stock}</div> : null}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+
+  const trust = enabled("trust") ? (
+    <section {...inspect("trust")} className={`grid grid-cols-2 gap-2 py-5 text-[10px] sm:grid-cols-4 ${inspect("trust").className ?? ""}`}>
+      {theme.trust.showCodBadge ? <Trust icon={<BadgeCheck />} label="Cash on delivery" /> : null}
+      {theme.trust.showPhoneConfirmationBadge ? <Trust icon={<PhoneCall />} label="Phone confirmation" /> : null}
+      {theme.trust.showDeliveryBadge ? <Trust icon={<PackageCheck />} label="Home & desk delivery" /> : null}
+      {theme.trust.showSupportBadge ? <Trust icon={<Headphones />} label="Seller support" /> : null}
+    </section>
+  ) : null;
+
+  if (theme.template === "atlas") {
+    return (
+      <div className="min-h-full p-6" style={{ background: theme.backgroundColor, color: theme.textColor }}>
+        {enabled("announcement") && theme.announcement.enabled ? <Announcement {...inspect("announcement")} text={theme.announcement.text} color={theme.primaryColor} /> : null}
+        {enabled("navbar") ? <header {...inspect("navbar")} className={`flex items-center justify-between border-b pb-4 ${inspect("navbar").className ?? ""}`}><b>{draft.name || "Store"}</b><span className="text-xs opacity-50">Catalog · COD</span></header> : null}
+        {enabled("hero") && theme.hero.enabled ? (
+          <section {...inspect("hero")} className={`grid gap-8 py-10 md:grid-cols-2 ${inspect("hero").className ?? ""}`}>
+            <HeroCopy draft={draft} />
+            <div>{cards}</div>
+          </section>
+        ) : enabled("product-grid") ? <section {...inspect("product-grid")} className={`py-8 ${inspect("product-grid").className ?? ""}`}>{cards}</section> : null}
+        {trust}
+        {enabled("cod-checkout") ? <CodPromise draft={draft} sectionProps={inspect("cod-checkout")} /> : null}
+      </div>
+    );
+  }
+
+  if (theme.template === "oasis") {
+    return (
+      <div className="min-h-full p-5" style={{ background: theme.backgroundColor, color: theme.textColor }}>
+        {enabled("announcement") && theme.announcement.enabled ? <Announcement {...inspect("announcement")} text={theme.announcement.text} color={theme.accentColor} /> : null}
+        {enabled("hero") && theme.hero.enabled ? (
+          <section {...inspect("hero")} className={`${radius(theme.radius)} p-7 text-center text-white ${inspect("hero").className ?? ""}`} style={{ background: theme.primaryColor }}>
+            <span className="text-[10px] font-bold uppercase tracking-[.2em]">{theme.hero.eyebrow || "Pay on delivery"}</span>
+            <h2 className="mx-auto mt-3 max-w-xl text-4xl font-black tracking-tight">{theme.hero.headline || draft.name}</h2>
+            <p className="mx-auto mt-3 max-w-lg text-sm opacity-80">{theme.hero.body || draft.description}</p>
+            <div className="mx-auto mt-5 inline-flex rounded-full bg-white px-5 py-2 text-xs font-bold" style={{ color: theme.primaryColor }}>{theme.hero.ctaLabel || "Order now"}</div>
+          </section>
+        ) : null}
+        {trust}
+        {enabled("product-grid") ? <section {...inspect("product-grid")} className={`py-6 ${inspect("product-grid").className ?? ""}`}>{cards}</section> : null}
+        {enabled("cod-checkout") ? <CodPromise draft={draft} sectionProps={inspect("cod-checkout")} /> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-full p-7" style={{ background: theme.backgroundColor, color: theme.textColor }}>
+      {enabled("announcement") && theme.announcement.enabled ? <Announcement {...inspect("announcement")} text={theme.announcement.text} color={theme.primaryColor} /> : null}
+      {enabled("navbar") ? <div {...inspect("navbar")} className={`text-xs font-semibold uppercase tracking-[.18em] ${inspect("navbar").className ?? ""}`}>{draft.name || "SahelFlow"}</div> : null}
+      {enabled("hero") && theme.hero.enabled ? <section {...inspect("hero")} className={`mt-14 max-w-xl ${inspect("hero").className ?? ""}`}><HeroCopy draft={draft} /></section> : null}
+      {enabled("product-grid") ? <section {...inspect("product-grid")} className={`mt-10 ${inspect("product-grid").className ?? ""}`}>{cards}</section> : null}
+      {trust}
+      {enabled("cod-checkout") ? <CodPromise draft={draft} sectionProps={inspect("cod-checkout")} /> : null}
+    </div>
+  );
+}
+
+function HeroCopy({ draft }: { draft: StorefrontPreviewProps["draft"] }) {
+  const theme = draft.theme;
+  return (
+    <div>
+      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.primaryColor }}>{theme.hero.eyebrow || "Algeria COD"}</span>
+      <h2 className="mt-3 text-4xl font-semibold leading-none tracking-tight">{theme.hero.headline || draft.name}</h2>
+      <p className="mt-4 text-sm leading-6 opacity-65">{theme.hero.body || draft.description}</p>
+      <button type="button" className={`${radius(theme.radius)} mt-5 px-4 py-2 text-xs font-semibold text-white`} style={{ background: theme.primaryColor }}>{theme.hero.ctaLabel || "Shop now"}</button>
+    </div>
+  );
+}
+
+function Announcement({ text, color, className, ...props }: { text: string; color: string; className?: string; onClick?: (event: React.MouseEvent) => void }) {
+  return <div {...props} className={`mb-4 rounded-lg px-3 py-2 text-center text-[11px] font-medium text-white ${className ?? ""}`} style={{ background: color }}>{text || "Free phone confirmation on every COD order"}</div>;
+}
+
+function Trust({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return <div className="flex items-center gap-1.5 rounded-lg border bg-white/40 px-2 py-2 [&_svg]:h-3.5 [&_svg]:w-3.5"><span aria-hidden="true">{icon}</span><span>{label}</span></div>;
+}
+
+function CodPromise({ draft, sectionProps }: { draft: StorefrontPreviewProps["draft"]; sectionProps: InspectProps }) {
+  const theme = draft.theme;
+  return theme.checkout.showCodPromise ? <section {...sectionProps} className={`${radius(theme.radius)} mt-5 border p-4 text-center text-xs font-semibold`}>{theme.checkout.codPromiseText || "Order now — we confirm every COD order by phone"}</section> : null;
+}
+
+function radius(value: StorefrontPreviewProps["draft"]["theme"]["radius"]): string {
+  return value === "sharp" ? "rounded-none" : value === "rounded" ? "rounded-2xl" : "rounded-xl";
 }
