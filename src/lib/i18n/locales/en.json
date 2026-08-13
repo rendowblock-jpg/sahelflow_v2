@@ -1245,6 +1245,7 @@
   "license.startOrRecoverTrial": "Start or recover the 7-day trial",
   "license.title": "License",
   "license.trialFailed": "The online trial could not be issued or recovered. Check the connection and try again.",
+  "license.founderOfflineCheckpoint": "Founder-only checkpoint: online trial is intentionally disabled. Use the signed permanent entitlement; customer trial certification remains open.",
   "license.typeExtension": "Extension",
   "license.typeLabel": "Type",
   "license.typePermanent": "Permanent",

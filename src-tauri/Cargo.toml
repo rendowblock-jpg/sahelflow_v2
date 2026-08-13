@@ -1,6 +1,6 @@
 [package]
 name = "sahelflow"
-version = "1.0.0-internal.14"
+version = "1.0.0-internal.15"
 description = "AI-powered back-office for Algerian COD sellers"
 authors = ["SahelFlow"]
 edition = "2021"

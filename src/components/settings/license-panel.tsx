@@ -110,7 +110,11 @@ export function LicensePanel() {
   const status: LicenseClientStatus = projection?.status ?? "unavailable";
   const valid = status === "valid";
   const permanent = projection?.type === "permanent";
-  const trialRequestAvailable = !valid && !permanent && status !== "expired";
+  const trialRequestAvailable =
+    projection?.onlineTrialAvailable === true &&
+    !valid &&
+    !permanent &&
+    status !== "expired";
   const permanentActivationAvailable = !valid || !permanent;
 
   return (
@@ -187,6 +191,12 @@ export function LicensePanel() {
             )}
             {t("license.startOrRecoverTrial")}
           </Button>
+        )}
+
+        {projection?.onlineTrialAvailable === false && !permanent && (
+          <p className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-muted-foreground">
+            {t("license.founderOfflineCheckpoint")}
+          </p>
         )}
 
         {permanentActivationAvailable && (

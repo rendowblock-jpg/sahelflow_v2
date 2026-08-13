@@ -1,13 +1,14 @@
 # SahelFlow — Current state
 
 > **Authority:** merged protected source and named evidence only
-> **Last assessed:** 2026-08-12
-> **Protected application-changing baseline:** `6e4477198f33344cd48c9230b32ff726079cd64d` — PR #242
-> **Latest application-changing protected merge:** PR #242 — Settings operational workspace redesign
+> **Last assessed:** 2026-08-13
+> **Protected application-changing baseline:** `856f58126327797b467938390586a04f185e70f6` — PR #244
+> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
 > **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
 > **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
 > **AI Agents route adoption:** PR #240 / `598e2a0dc0352227431614cf1527672aa78ec015`
 > **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
+> **Orders + confirmation route adoption:** PR #244 / `856f58126327797b467938390586a04f185e70f6`
 > **Phase 5 historical application-changing checkpoint:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
 > **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`
@@ -15,7 +16,7 @@
 > **Founder-installed release:** Internal.14
 > **Founder-accepted baseline:** Internal.5
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Next product implementation frontier:** remaining route inventory
+> **Active implementation/release frontier:** PR #245 — FD-032 Internal.15 Founder-only offline checkpoint
 > **Mandatory gate before Phase 8:** whole-product frontend adoption + installed Phase 6/7 evidence + live #230 + explicit Founder acceptance
 > **Open retained issues:** #221, #226, #230
 > **Closed retained historical evidence:** #201, #214
@@ -64,9 +65,10 @@ Retained issue #221 owns coherent installed Founder visual/accessibility accepta
 
 The active product phase remains Phase 6 — Arabic, RTL and accessibility parity.
 PR #236 protects shared roots, PR #237 protects Inbox adoption, PR #240 protects AI
-Agents adoption and PR #242 protects Settings adoption. **The next product
-implementation frontier is the remaining route inventory**; installed Phase 6/7
-and Founder acceptance remain open rather than implied by source work.
+Agents adoption, PR #242 protects Settings adoption and PR #244 protects Orders +
+confirmation adoption. The current implementation/release frontier is PR #245's
+FD-032 Internal.15 Founder checkpoint; installed Phase 6/7 and Founder acceptance
+remain open rather than implied by source work.
 
 ### Internal.14 publication evidence
 
@@ -80,6 +82,15 @@ FD-031 remains the one-use Internal.14 publication exception for PR #228 only an
 does not weaken future gates. Historical **issue #214** is closed by stronger exact
 #234 replacement-install evidence; #221/#226/#230 remain open.
 
+### FD-032 Founder-only offline checkpoint boundary
+
+FD-032 authorizes only exact `1.0.0-internal.15` as a Founder/internal-lab offline
+checkpoint using the signed permanent entitlement. The artifact packages no
+`SF_LICENSE_SERVICE_URL` and offers no online trial. The authority is version-bound
+and fails closed for later versions. Issue #230 remains open P1: owned-domain,
+primary/recovery, Algerian-network and installed customer-trial proof is still
+mandatory before any release to users. This is not Founder acceptance, Beta or Stable.
+
 ## Protected stabilization sequence after Internal.14
 
 - **PR #231:** binding pre-Phase-8 Founder stabilization program.
@@ -90,6 +101,8 @@ does not weaken future gates. Historical **issue #214** is closed by stronger ex
 - **PR #237:** protected Inbox operational workspace adoption.
 - **PR #240:** protected AI Agents operational workspace adoption.
 - **PR #242:** protected Settings operational workspace adoption.
+- **PR #244:** protected Orders + confirmation operational workspace adoption.
+- **PR #245:** active FD-032 Internal.15 Founder-only offline release package.
 
 Historical #201 and #214 were satisfied by stronger exact #234 installed evidence
 and are closed. #221/#226/#230 remain open because their installed/live obligations
@@ -193,35 +206,22 @@ Protected Settings outcomes:
 - no schema/migration/native/licensing/Golden-COD/provider-ingress/automation
   authority was rewritten for the workspace package.
 
-PR #242 is source/browser evidence, **not** installed Founder acceptance and not a
+PR #242 and PR #244 are source/browser evidence, **not** installed Founder acceptance and not a
 Phase 8/Beta/Stable claim.
 
-## Next route-level frontier — remaining route inventory
+## Post-Internal.15 route-level frontier
 
-The next implementation decision is selected from the remaining production route
-inventory only after a read-only audit. Binding roadmap order is:
+PR #244 protects Orders + confirmation in source/browser. The active package is now
+the coherent Internal.15 installed Founder checkpoint, not another concurrent route
+rewrite. After that checkpoint records #221/#226 and explicit Founder truth, re-audit
+the remaining production route inventory from exact protected main and select one
+coherent package. Dashboard, customers/risk, products/inventory, delivery/returns,
+COD/accounting, analytics, automations, setup/license and remaining administration
+must still be revalidated rather than assumed complete.
 
-1. dashboard;
-2. orders and confirmation queue;
-3. customers and risk;
-4. products and inventory;
-5. delivery and returns;
-6. COD and accounting;
-7. analytics;
-8. automations;
-9. setup, login and license;
-10. remaining administration.
-
-The inventory must compare task architecture, authority boundaries, degraded-state
-truth, AR/FR/EN/RTL/accessibility/reflow quality, current source/browser evidence
-and overlap between route families. Then select one coherent next package from the
-exact reconciled protected main. Do not run multiple frontend implementation
-packages concurrently and do not treat roadmap order as permission to skip the
-inventory.
-
-Every selected package consumes #236 shared roots and protected Phase 1–4 business
-authority. Avoid schema/native/business-authority changes unless a concrete bounded
-integration defect proves them necessary.
+Every later selected package consumes #236 shared roots and protected Phase 1–4
+business authority. Avoid schema/native/business-authority changes unless a concrete
+bounded integration defect proves them necessary.
 
 ## Retained issue reconciliation
 
@@ -256,7 +256,7 @@ and signed installed customer trial/recovery evidence remain required.
 
 Internal.14 remains the published Internal from application source
 `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed run `31388777098`.
-Protected source merges through #242 do not alter that already-published executable
+Protected source merges through #244 do not alter that already-published executable
 until a new release is explicitly built and published.
 
 FD-031 remains one-use only for PR #228/Internal.14. Internal.14 is not
@@ -265,15 +265,16 @@ release exists. **Phase 8 implementation has not begun.**
 
 ## Mandatory order from here
 
-1. protect the post-Settings documentation reconciliation on `main`;
-2. complete the **remaining production route inventory** and freeze one consolidated Problem Register;
-3. select and implement one coherent next route package from the binding roadmap order;
-4. continue one-package-at-a-time adoption across the remaining route inventory;
-5. rerun installed Phase 6 AR/FR/EN, Arabic joining/reading, RTL, zoom,
+1. finish one exact-head review and selected certification run for PR #245;
+2. merge only with the expected-head guard and publish Internal.15 only through the
+   protected signed workflow under the exact FD-032 offline scope;
+3. update Founder-installed Internal.14 in place while preserving AppData and retained evidence;
+4. rerun installed Phase 6 AR/FR/EN, Arabic joining/reading, RTL, zoom,
    keyboard/focus/semantics and reduced-motion evidence under #221;
-6. measure/fix/certify Phase 7 under #226;
-7. complete live #230 production/network trial evidence;
-8. build/install one coherent signed candidate and obtain explicit Founder acceptance;
-9. only then begin Phase 8 implementation.
+5. measure/fix/certify Phase 7 under #226;
+6. record explicit Founder accept/reject evidence;
+7. before any user release, provision the owned domain and complete live #230
+   production/network/installed customer-trial evidence;
+8. only then reconsider the Phase 8 freeze under the governing gates.
 
 Phase 8 research/read-only planning may continue when useful.

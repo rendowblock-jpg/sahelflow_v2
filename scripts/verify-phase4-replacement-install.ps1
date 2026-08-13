@@ -290,14 +290,21 @@ function Invoke-WebViewExpressionForTarget {
         [Parameter(Mandatory = $true)][string]$Expression
     )
     $socket = [System.Net.WebSockets.ClientWebSocket]::new()
-    $timeout = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds(15))
+    $connectTimeout = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds(5))
+    # Owner setup performs the production 600k-iteration PIN derivation before
+    # the evidence journey activates a signed trial and reads protected data.
+    # Keep connection discovery short, but give the single dispatched browser
+    # journey enough time on a constrained Windows runner to complete once.
+    $responseTimeout = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds(45))
+    $commandDispatched = $false
+    $commandCompleted = $false
     try {
         $socket.Options.SetRequestHeader(
             "Origin",
             "http://127.0.0.1:$runtimeDebuggingPort"
         )
         $socket.Options.Proxy = $null
-        $socket.ConnectAsync([Uri]$WebSocketUrl, $timeout.Token).GetAwaiter().GetResult()
+        $socket.ConnectAsync([Uri]$WebSocketUrl, $connectTimeout.Token).GetAwaiter().GetResult()
         $command = @{
             id = 2
             method = "Runtime.evaluate"
@@ -308,16 +315,21 @@ function Invoke-WebViewExpressionForTarget {
             }
         } | ConvertTo-Json -Depth 6 -Compress
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($command)
+        # From this point onward, retrying the expression could repeat owner
+        # setup after an ambiguous transport failure. Mark it dispatched before
+        # SendAsync and fail closed instead of issuing the mutation twice.
+        $commandDispatched = $true
         $socket.SendAsync(
             [System.ArraySegment[byte]]::new($bytes),
             [System.Net.WebSockets.WebSocketMessageType]::Text,
             $true,
-            $timeout.Token
+            $responseTimeout.Token
         ).GetAwaiter().GetResult()
 
         do {
-            $message = Read-CdpMessage -Socket $socket -CancellationToken $timeout.Token
+            $message = Read-CdpMessage -Socket $socket -CancellationToken $responseTimeout.Token
         } while ([int]$message.id -ne 2)
+        $commandCompleted = $true
 
         if ($null -ne $message.error) {
             throw "The WebView2 CDP command was rejected."
@@ -329,8 +341,17 @@ function Invoke-WebViewExpressionForTarget {
             throw "The WebView2 acceptance expression returned no bounded result."
         }
         return $message.result.result.value
+    } catch {
+        $failure = [System.InvalidOperationException]::new(
+            "The WebView2 CDP acceptance command failed.",
+            $_.Exception
+        )
+        $failure.Data["SahelFlowCommandDispatched"] = $commandDispatched
+        $failure.Data["SahelFlowCommandCompleted"] = $commandCompleted
+        throw $failure
     } finally {
-        $timeout.Dispose()
+        $connectTimeout.Dispose()
+        $responseTimeout.Dispose()
         $socket.Dispose()
     }
 }
@@ -400,9 +421,10 @@ function Invoke-CommittedWebViewAcceptance {
 })()
 '@
     $expression = $expressionTemplate.Replace("__INPUT_BASE64__", $inputBase64)
-    $deadline = (Get-Date).AddSeconds(30)
+    $deadline = (Get-Date).AddSeconds(60)
     $debugEndpoint = "http://127.0.0.1:$runtimeDebuggingPort/json/list"
     $lastTransportFailure = "none"
+    $candidates = @()
     do {
         try {
             $targets = @(Invoke-RestMethod -Uri $debugEndpoint -TimeoutSec 2)
@@ -422,8 +444,16 @@ function Invoke-CommittedWebViewAcceptance {
                     -Expression $expression
             } catch {
                 # A page target can rotate during startup. Try the remaining
-                # exact-origin targets without ever widening to another app.
+                # exact-origin targets only when no mutating command was sent.
+                # Once dispatched, an absent CDP reply is an ambiguous outcome
+                # and must fail closed instead of repeating owner setup.
                 $lastTransportFailure = $_.Exception.GetType().Name
+                if ($_.Exception.Data["SahelFlowCommandDispatched"] -eq $true) {
+                    if ($_.Exception.Data["SahelFlowCommandCompleted"] -eq $true) {
+                        throw
+                    }
+                    throw "The installed WebView lost CDP transport after the committed-restore acceptance command was dispatched; the mutating journey was not retried."
+                }
             }
         }
         Start-Sleep -Milliseconds 250

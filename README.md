@@ -8,11 +8,13 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 ## Current repository truth
 
-- Protected `main` after the Settings merge: `6e4477198f33344cd48c9230b32ff726079cd64d` — PR #242.
-- Latest application-changing protected merge: **PR #242 — Settings operational workspace redesign**.
+- Protected `main` after the Orders merge: `856f58126327797b467938390586a04f185e70f6` — PR #244.
+- Latest application-changing protected merge: **PR #244 — Orders + confirmation operational workspace**.
 - Shared frontend foundation remains protected by **PR #236**.
 - Inbox route adoption remains protected by **PR #237**.
 - AI Agents route adoption remains protected by **PR #240**.
+- Settings route adoption remains protected by **PR #242**.
+- Orders + confirmation route adoption remains protected by **PR #244**.
 - Published executable remains **Internal.14**, application source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed publication run `31388777098`.
 - Published release remains **`1.0.0-internal.14`** / MSI `1.0.0.14`.
 - Founder-installed release remains **Internal.14**; Founder-accepted baseline remains **Internal.5**.
@@ -84,27 +86,20 @@ status surfaces; and provides an authenticated manual daily-report trigger witho
 exposing cron authority to the browser. This remains source/browser evidence, not
 installed Founder acceptance.
 
-## Next implementation frontier — remaining route inventory
+PR #244 protects the **Orders + confirmation operational workspace** at protected
+merge `856f58126327797b467938390586a04f185e70f6`. This remains source/browser
+evidence, not installed Founder acceptance.
 
-Inbox, AI Agents and Settings are now protected in source/browser. The active
-product implementation frontier is the **remaining production route inventory**.
-Do not guess a single route from memory: complete a read-only route inventory first,
-then select the next coherent package from the binding roadmap order:
+## Next implementation frontier — FD-032 Internal.15 Founder checkpoint
 
-1. dashboard;
-2. orders and confirmation queue;
-3. customers and risk;
-4. products and inventory;
-5. delivery and returns;
-6. COD and accounting;
-7. analytics;
-8. automations;
-9. setup, login and license;
-10. remaining administration.
+PR #245 prepares exact `1.0.0-internal.15` as a Founder/internal-lab offline
+checkpoint. The artifact must contain no online-trial service URL, offer no online
+trial action, and retain the signed permanent entitlement path. FD-032 and the
+version/build/release gates bind this exception to Internal.15 only.
 
-Each package must consume rather than rewrite protected Phase 1–4 authority and
-carry the #236 AR/FR/EN, RTL, accessibility, theme, density, motion and responsive
-foundation coherently into the task-shaped workflow.
+Issue #230 remains open P1. Before any release to users, SahelFlow still requires a
+verified owned domain, distinct primary/recovery trial ingress, representative
+Algerian-network reachability and signed installed customer-trial evidence.
 
 Do not start Phase 8 or claim installed acceptance from source/browser evidence.
 

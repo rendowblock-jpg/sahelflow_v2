@@ -1110,7 +1110,7 @@ $rotationArgumentObserved = (
 $rotationProcess.WaitForExit()
 Start-Sleep -Milliseconds 250
 $rotationStderr = if (Test-Path -LiteralPath $rotationStderrPath -PathType Leaf) {
-    Get-Content -LiteralPath $rotationStderrPath -Raw
+    [string](Get-Content -LiteralPath $rotationStderrPath -Raw)
 } else {
     ""
 }

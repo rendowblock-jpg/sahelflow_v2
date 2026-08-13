@@ -6,6 +6,12 @@ import { resolve } from "node:path";
 type VersionAuthority = {
   version: string;
   windowsMsiVersion: string;
+  channel: string;
+  licensing: {
+    releaseMode: string;
+    authorityDecision: string | null;
+    ownedHostSuffix: string | null;
+  };
   runtimeProtocolVersion: number;
   shopRegistryFormatVersion: number;
 };
@@ -109,6 +115,34 @@ if (
 ) {
   console.error(
     `shop registry native authority: expected ${authority.shopRegistryFormatVersion}, found ${nativeShopRegistryFormatVersion ?? "missing"}`,
+  );
+  failed = true;
+}
+
+const founderOfflineCheckpoint =
+  authority.version === "1.0.0-internal.15" &&
+  authority.channel === "internal" &&
+  authority.licensing?.releaseMode === "founder-offline-only" &&
+  authority.licensing?.authorityDecision === "FD-032" &&
+  authority.licensing?.ownedHostSuffix === null;
+if (authority.licensing?.releaseMode === "founder-offline-only") {
+  if (!founderOfflineCheckpoint) {
+    console.error(
+      "founder-offline-only licensing is authorized only for 1.0.0-internal.15 by FD-032 with no owned host suffix",
+    );
+    failed = true;
+  }
+} else if (authority.licensing?.releaseMode === "customer-online") {
+  if (
+    typeof authority.licensing.ownedHostSuffix !== "string" ||
+    authority.licensing.ownedHostSuffix.trim() === ""
+  ) {
+    console.error("customer-online licensing requires a provisioned ownedHostSuffix");
+    failed = true;
+  }
+} else {
+  console.error(
+    `unsupported licensing.releaseMode ${authority.licensing?.releaseMode ?? "missing"}`,
   );
   failed = true;
 }
