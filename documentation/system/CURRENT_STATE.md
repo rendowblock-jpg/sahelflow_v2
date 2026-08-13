@@ -10,7 +10,7 @@
 > **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
 > **Orders + confirmation route adoption:** PR #244 / `856f58126327797b467938390586a04f185e70f6`
 > **Next application milestone:** Internal.16 complete-product candidate under FD-033
-> **Installed discovery:** Internal.15 Founder inspection active; Parts 1–3 recorded
+> **Installed discovery:** CLOSED 2026-08-13; 17 Founder-installed P1 inputs frozen
 > **Retained evidence:** #221, #226, #230
 
 Protected `main` remains source authority. This documentation branch records Founder decisions and installed observations without pretending those observations have already been repaired.
@@ -19,15 +19,15 @@ Protected `main` remains source authority. This documentation branch records Fou
 
 SahelFlow retains a strong protected Windows/local-first engine across Golden COD, identity, licensing, providers, AI/automations, protected data and native recovery. PRs #236/#237/#240/#242/#244 materially improved frontend roots and selected workspaces; PR #245 merged the exact Internal.15 Founder-only offline checkpoint.
 
-The real installed Internal.15 inspection confirms that the product is still below the final Founder class-AAA/user-ready target. The remaining problem is systemic rather than one page: Arabic/RTL geometry, responsive/layout composition, localization/cache consistency, theme transitions, chart/data-visualization quality, Inbox/AI workflow quality, universal search, Gemini setup, navigation information architecture, startup performance and remaining Phase 5/6/7/8 implementation/certification.
+The completed installed Internal.15 Founder inspection confirms that the product is still below the final class-AAA/user-ready target. The remaining problem is systemic rather than one page: Arabic/RTL geometry, responsive/layout composition, localization/cache consistency, theme transitions, chart/data-visualization quality, Inbox/AI workflow quality, universal search, Gemini setup, navigation information architecture, startup performance and remaining Phase 5/6/7/8 implementation/certification.
 
-FD-033 therefore makes Internal.16 the complete-product convergence candidate.
+The installed discovery phase is now closed. FD-033 makes Internal.16 the complete-product convergence candidate. The next application session starts with one exact-source whole-product reconnaissance to discover sibling manifestations/root dependencies of the frozen findings and the existing Phase 8/EcoTrack/AI/release scope, then freezes the combined Problem Register and begins the large implementation wave.
 
 ## Protected canonical boundaries
 
 Internal.16 must preserve Golden COD command/idempotency/version/audit/event/outbox authority; trusted actor/shop/session/permission authority; protected fields and per-shop isolation; append-only inventory/financial/compensation truth; durable provider effects/reconciliation; signed licensing/installation/secret authority; native runtime containment/backup/recovery; AI proposal-bound execution; and automation recovery. Installed UX defects do not authorize weakening these contracts.
 
-## Internal.15 installed Founder findings — Parts 1–3
+## Frozen Internal.15 installed Founder findings — Parts 1–3
 
 - **SF16-UI-001 P1:** systemic Arabic/RTL geometry and bidi wrong-side defects across the application; exhaustive source/route audit required.
 - **SF16-UI-002 P1:** Risk Engine KPI hierarchy overloaded/unbalanced.
@@ -47,9 +47,9 @@ Internal.16 must preserve Golden COD command/idempotency/version/audit/event/out
 - **SF16-I18N-016 P1:** after language commit, subsequent route navigation can briefly show previous-language content; locale must be atomic across current tree and route cache/prefetch/navigation.
 - **SF16-NAV-017 P1:** sidebar requires a smarter workflow-based default order plus user reorder/edit preference, without changing canonical route/permission authority.
 
-The Founder inspection remains active. These are installed observations/requirements, not claims that source has already been repaired.
+These 17 installed observations are frozen Founder acceptance inputs. The implementation agent owns exhaustive sibling discovery for each established class; additional screenshots are not required to prove repeated manifestations.
 
-## Source evidence supporting Parts 1–3
+## Source evidence supporting the frozen findings
 
 - shell/sidebar source already attempts RTL and logical utilities, so remaining RTL is a semantic whole-product geometry problem;
 - Risk renders six equal-weight stat cards; shared StatCard lacks card-level interaction contract;
@@ -67,8 +67,16 @@ The Founder inspection remains active. These are installed observations/requirem
 
 These are reconnaissance clues, not a patch-only file list.
 
-## Internal.16 frontier
+## Internal.16 frontier — ready for next session
 
-After Founder discovery closes: combine installed findings with exact post-#245 source reconnaissance; freeze one complete Problem Register/contracts/acceptance matrix; execute one large dependency-correct completion wave; finish Phase 5/6/7 + Phase 8, EcoTrack, AI/extraction/tools, chart/theme/locale/navigation/search/startup roots; freeze one complete head; run complete source/Windows/installed/performance/Phase 8 certification + adversarial review; repair one consolidated finding set; then run affected + final complete proof.
+1. Merge/reconcile FD-033 documentation authority to protected `main`.
+2. Create/use one Internal.16 application branch from that exact protected main.
+3. Perform one exact-source whole-product reconnaissance and combine newly proven source/root dependencies with the frozen 17 installed findings and defined Phase 8/EcoTrack/AI/release scope.
+4. Freeze one complete Problem Register, shared contracts/non-goals and acceptance matrix.
+5. Execute the large dependency-correct completion wave under one application writer with targeted cheap checks.
+6. Finish remaining Phase 5/6/7 + full Phase 8, EcoTrack, AI/extraction/tools, chart/theme/locale/navigation/search/startup roots and release/update/recovery work.
+7. Freeze one complete Internal.16 head.
+8. Run complete source/Windows/installed/performance/Phase 8 certification + adversarial review.
+9. Repair one consolidated finding set, then run affected + final complete proof.
 
 FD-032 remains exact to Internal.15 and does not carry into Internal.16. Issue #230 remains P1 for the customer-online/public-trial boundary. #221/#226 remain part of final installed experience/performance reconciliation. External provider/security/privacy/legal/representative-beta evidence remains distinct. No Stable claim exists without applicable Phase 9 proof and explicit Founder promotion.
