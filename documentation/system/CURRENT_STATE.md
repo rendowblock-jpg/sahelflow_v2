@@ -1,219 +1,143 @@
 # SahelFlow — Current state
 
-> **Authority:** merged protected source and named evidence; Founder-directed next-frontier decisions are labeled separately until merged
+> **Authority:** merged protected source and named evidence only; exact Founder observations are labeled as installed findings, not merged implementation
 > **Last assessed:** 2026-08-13
-> **Protected application-changing baseline:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245 Internal.15 Founder checkpoint merge
+> **Protected application-changing baseline:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
 > **Latest application-changing protected merge:** PR #245 — Internal.15 FD-032 Founder-only offline checkpoint
 > **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
 > **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
 > **AI Agents route adoption:** PR #240 / `598e2a0dc0352227431614cf1527672aa78ec015`
 > **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
 > **Orders + confirmation route adoption:** PR #244 / `856f58126327797b467938390586a04f185e70f6`
-> **Internal.15 merge:** PR #245 / `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`
-> **Published executable status:** re-fetch releases/Actions before claiming Internal.15 publication or Founder installation; Internal.14 remains the last previously confirmed published/installed artifact in this document
-> **Previously confirmed published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
-> **Founder-accepted baseline:** Internal.5 until explicit newer installed acceptance is recorded
-> **Open retained issues:** #221 Founder visual/accessibility acceptance; #226 installed performance/reliability; #230 customer-online production/network trial certification
-> **Next application frontier:** exact post-Internal.15 Internal.16 completion convergence governed by FD-033
+> **Next application milestone:** Internal.16 complete-product candidate under FD-033
+> **Installed discovery:** Internal.15 Founder inspection active; Parts 1–2 recorded
+> **Retained evidence:** #221, #226, #230
 
-Live protected `main`, releases, open issues and current Actions remain authority for
-facts that can change after this document was written. Documentation-only commits do
-not manufacture a release or installed acceptance.
+Protected `main` remains the source authority. The current documentation branch records
+new Founder decisions and installed observations without pretending those observations
+have already been implemented.
 
 ## Executive truth
 
-SahelFlow is a Windows-first, local-first Algerian COD operations product with a
-substantial protected backend/engine: canonical Golden COD business authority,
-identity/permissions, signed licensing, per-shop protected SQLite, provider-effect
-recovery, AI action authority, automations, native runtime supervision,
-backup/restore/replacement-install recovery and a governed release/evidence system.
+SahelFlow retains a strong Windows/local-first protected engine across Golden COD,
+identity, licensing, providers, AI/automations, protected data and native recovery.
+PRs #236/#237/#240/#242/#244 materially improved the frontend foundation and selected
+workspaces, and PR #245 merged the exact Internal.15 Founder-only offline checkpoint.
 
-PR #245 is merged. It binds exact Internal.15 to FD-032's Founder-only offline scope;
-that merge does not by itself prove publication, Founder installation, Founder
-acceptance, customer-online certification, Beta or Stable. Re-fetch the release and
-installed evidence before making any of those claims.
+The real installed Internal.15 inspection confirms that the application is still not at
+the final Founder class-AAA/user-ready target. The remaining problem is not one page or
+one CSS patch. It combines systemic Arabic/RTL geometry, responsive composition,
+localization integrity, route-wide UX hierarchy, Inbox/AI workflow quality, search,
+Gemini setup and remaining Phase 5/6/7/8 implementation/certification.
 
-The Founder has now directed a different next milestone: Internal.16 is intended to
-be the complete-product candidate, not another partial route checkpoint. The binding
-new direction is recorded in `documentation/product/FD-033-INTERNAL16-COMPLETION.md`.
+FD-033 therefore makes Internal.16 the next complete-product convergence candidate.
 
-## Founder situation and completion objective — 2026-08-13
+## Protected canonical boundaries
 
-The operating constraint is a 24-hour completion-and-first-revenue sprint with no
-paid marketing/infrastructure budget available before first revenue. The near-term
-commercial objective is at least USD 100 equivalent collected revenue. FD-012 pricing
-remains unchanged unless separately amended.
+Phases 0–4 remain protected. Internal.16 must preserve:
 
-The engineering objective is stronger than “ship something sellable”:
+- Golden COD command/idempotency/version/audit/event/outbox authority;
+- trusted actor/shop/permission/session authority;
+- protected customer/order fields and per-shop database isolation;
+- append-only inventory/financial/compensation truth;
+- durable provider effects and ambiguity/reconciliation semantics;
+- signed licensing, installation identity and protected-secret authority;
+- native runtime containment, backup/recovery and replacement-install guarantees;
+- AI proposal-bound sensitive execution and automation durable recovery.
 
-- finish the current whole-product frontend/Arabic/accessibility/performance work;
-- implement Phase 8 completely and professionally;
-- remove NOEST/Nord et Ouest as a supported runtime provider and add a first-class
-  EcoTrack Pro integration;
-- enhance and certify the AI workspace, order extraction and AI tools for correctness,
-  UX and performance;
-- make Internal.16 the one large complete-app updater candidate;
-- achieve evidence-backed confidence with zero known P0/P1 across the complete
-  Required feature/journey matrix before the first production buyer receives it.
+No current installed UX finding authorizes weakening those contracts.
 
-“99.99% sure” is treated as an assurance objective, not a mathematical warranty. The
-release bar is complete objective coverage, aggressive failure testing, zero known
-P0/P1 and no contradiction between source, artifact, installed behavior and claim.
+## Internal.15 installed Founder findings — current register
 
-## Internal.15 boundary
+### Part 1
 
-PR #245 merged at `371aebc2...`. It preserves:
+- **SF16-UI-001 P1:** systemic Arabic/RTL geometry/placement remains incorrect across
+  the shell and route UI.
+- **SF16-UI-002 P1:** Risk Engine KPI composition is overloaded/unbalanced.
+- **SF16-UI-003 P1:** shared stat cards lack deliberate hover/focus/actionable/selected
+  behavior and premium icon feedback.
+- **SF16-I18N-004 P1:** Arabic monetary formatting can leak French `DA` when callers
+  omit the active locale.
 
-- exact `1.0.0-internal.15` / MSI `1.0.0.15` FD-032 Founder-only offline authority;
-- no packaged online-trial service URL for that exact checkpoint;
-- permanent signed offline entitlement and verification keyrings;
-- no reuse of the exception by later versions;
-- customer-online issue #230 as a separate P1 release boundary.
+### Part 2
 
-Before building Internal.16, re-fetch whether the signed Internal.15 publication and
-Founder T470 in-place update completed and record the actual result. Internal.16 must
-start from exact protected post-#245 `main`, not from the old PR branch or a pre-merge
-head.
+- **SF16-UI-001 expanded:** wrong-side RTL/bidi class is route-wide and explicitly
+  includes Inbox/AI panes, Analytics charts, product tables, Settings and command
+  palette. The implementation agent owns exhaustive discovery; the Founder is not
+  required to screenshot every occurrence.
+- **SF16-INBOX-005 P1:** Inbox is improved but still requires final AAA operational
+  convergence, adaptive panes, complete communication/workflow functionality and
+  large-history performance.
+- **SF16-AI-006 P1:** AI workspace requires final AAA convergence, adaptive rails,
+  polished session/composer/tool/action workflow and long-session performance.
+- **SF16-I18N-007 P1:** raw translation keys and hard-coded foreign UI/server copy remain
+  possible. Installed Settings visibly showed `auth.pinPlaceholder`; Gemini paths
+  contain hard-coded French responses. SahelFlow-owned demo content must be locale-aware
+  while seller-entered entity data remains exact.
+- **SF16-PRODUCTS-008 P1:** product rows require compact primary thumbnails. Product
+  workbench records already expose `images`; current table presentation omits them.
+- **SF16-SEARCH-009 P1:** current command palette is not universal; it is limited to
+  navigation plus bounded order/customer/product lookups. Internal.16 requires
+  permission-aware ranked cross-entity operational search for relevant words, numbers
+  and identifiers.
+- **SF16-AI-010 P1:** Founder Gemini API-key setup did not result in usable AI. Exact
+  cause remains unproven; end-to-end reauth/provider verification/encrypted save/
+  immediate readiness/real inference must be certified with localized diagnostics.
+- **SF16-RESP-011 P1:** shared card auto-fit can produce an orphan `3 + 1` layout in
+  ordinary windowed mode. Responsive composition must become deterministic and balanced
+  across routes, charts, tables and live resize.
 
-## Internal.16 completion convergence
+The installed inspection remains active. These are observations/requirements, **not**
+a claim that source has already been repaired.
 
-FD-033 authorizes one controlled convergence of remaining Phase 5/6/7 implementation
-and full Phase 8 implementation. This changes implementation sequencing only; it does
-not waive any acceptance gate.
+## Source evidence supporting the current installed findings
 
-The completion scope includes all remaining production routes:
+- dashboard shell/sidebar source already attempts reactive RTL and logical utilities,
+  proving the remaining defect requires installed/source-wide semantic geometry audit,
+  not another single `dir="rtl"` patch;
+- Risk page renders six equal-weight `StatCard`s, explaining the weak metric hierarchy;
+- shared `StatCard` has no card-level interactive hover/focus contract;
+- canonical DZD formatter supports Arabic but defaults to French when locale is omitted;
+- command palette record search currently queries only orders, customers and products,
+  with minimum query length and bounded result counts;
+- product workbench records include `images` but product table identity renders only
+  the name;
+- shared `.card-grid-4` uses `auto-fit/minmax(240px)`, directly permitting `3 + 1`;
+- AI XL workspace uses fixed 15rem / flexible / 20rem column composition;
+- Inbox desktop queue uses a fixed 21rem width;
+- Gemini key UI uses recent reauthentication; current installed copy can render a raw
+  missing translation key and Gemini route/verifier human messages include French.
 
-- dashboard;
-- customers and risk;
-- products and inventory;
-- delivery and returns;
-- COD and accounting;
-- analytics and governed charts;
-- automations;
-- setup, login and licensing;
-- remaining administration;
-- any shared shell/state surfaces still inconsistent with the #236 foundation.
+These implementation facts are reconnaissance clues, not permission to patch only the
+named files; all consumers/siblings must be audited before root fixes are frozen.
 
-Every route must consume the shared typography/theme/density/motion/localization/RTL/
-accessibility primitives and preserve canonical Phase 1–4 business authority.
+## Internal.16 implementation frontier
 
-## Phase 8 complete-product scope
+After Founder discovery closes:
 
-Internal.16 must implement the connected platform as one system around desktop
-canonical truth:
+1. combine installed findings with exact post-#245 source reconnaissance;
+2. freeze one complete Problem Register, shared contracts and acceptance matrix;
+3. execute the large completion wave under one application writer;
+4. complete remaining Phase 5/6/7 plus Phase 8 in the FD-033 integrated sequence;
+5. remove NOEST/Nord et Ouest and add first-class EcoTrack Pro from authoritative
+   provider-issued contracts;
+6. harden AI workspace/extraction/tools and Gemini key lifecycle;
+7. freeze one complete Internal.16 head;
+8. run the complete source/Windows/installed/performance/Phase 8 certification and one
+   adversarial review;
+9. repair the consolidated finding set;
+10. run affected proof + final complete certification before any user-ready claim.
 
-1. authenticated encrypted remote projection/command protocol;
-2. remote success only after desktop commit;
-3. shared multi-tenant Cloudflare control plane;
-4. hosted storefront with durable checkout receipt and atomic publish/rollback;
-5. PWA/browser operational companion within desktop-owned authority;
-6. zero-knowledge encrypted backup transport with quota/retention truth;
-7. private Founder Console with bounded metadata and offline permanent-signing
-   separation;
-8. outage, replay, duplicate-effect, cross-tenant, abuse, rate and cost controls.
+## Retained release/external truth
 
-Cloud outage may not corrupt or block valid permanent local work. Cross-tenant
-leakage or duplicate irreversible effects are P0/P1 blockers.
+FD-032 remains exact to Internal.15 and does not carry into Internal.16.
 
-## Cloudflare and zero-budget bootstrap
+Issue #230 remains P1 for the customer-online/public trial boundary: verified
+SahelFlow-owned domain, distinct primary/recovery HTTPS ingress, protected production
+bindings, representative Algerian fixed/mobile reachability, forced recovery and signed
+installed customer-trial evidence.
 
-FD-033 permits using current Cloudflare Free allowances for pre-revenue/first-buyer
-bootstrap when measured capacity is sufficient. Desktop canonical authority,
-application-layer encryption, quotas and abuse controls remain unchanged.
-
-The first sale/reservation may fund the SahelFlow-owned domain and paid capacity if
-measured usage requires it. Provider hostnames such as `workers.dev`/`pages.dev` do
-not satisfy #230. If payment is collected before the domain exists, that is a
-commercial reservation/payment event, not evidence that customer-online production
-certification passed.
-
-## Delivery-provider change
-
-Current protected source still contains the historical delivery-provider architecture
-including NOEST. Internal.16 changes that product contract:
-
-- remove NOEST/Nord et Ouest from the supported runtime provider surface;
-- add canonical EcoTrack Pro support rather than merely renaming the NOEST adapter;
-- preserve historical `noest` records safely and do not silently reinterpret
-  credentials/history;
-- require current official/provider-issued EcoTrack merchant API authority;
-- implement configuration, connection test, shipment/validation, tracking/history,
-  tariffs/reference data, supported fulfillment/cancel/update/return/document
-  operations, durable ambiguity/reconciliation and provider-state truth;
-- retain FD-030 separation between source/conformance-proven and live-certified.
-
-No endpoint or provider capability may be guessed to meet the deadline.
-
-## AI workspace, extraction and tool completion
-
-The AI subsystem is already a real protected product surface, including chat,
-actions/proposals, extraction, regex/Gemini routing and extraction metrics. Internal.16
-must harden it as a complete operational subsystem.
-
-Required completion includes:
-
-- AI workspace long-session/session-switch/stream/cancel/retry/degraded-state quality;
-- AR/FR/EN, Arabic/RTL, keyboard/focus/reflow/reduced-motion and low-end performance;
-- product-shaped tool results and exact action-review authority;
-- held-out order-extraction benchmark covering Arabic/French/English/Darija/mixed
-  COD messages, complete/partial/ambiguous/non-order inputs and noisy phone/address
-  formats;
-- field-level accuracy, completeness, false-complete, confidence calibration,
-  fallback/routing, quota/error and latency metrics;
-- no low-confidence extraction promoted to canonical order truth without required
-  review/validation;
-- inventory of every AI tool with schema, actor/shop/permission/license/proposal
-  authority, target/version revalidation, idempotency, timeout/cancel/retry,
-  ambiguous-effect handling, privacy and latency/resource evidence;
-- model/provider/network latency measured separately from SahelFlow's own overhead.
-
-## Internal.16 assurance matrix
-
-The final frozen candidate is not accepted by “CI green” alone. The matrix spans:
-
-- every Required feature/function and its complete state model;
-- Golden COD business flow and money/stock invariants;
-- data migration, restart, export, destructive lifecycle, backup/restore and
-  replacement installation;
-- auth, permissions, revocation, shop/tenant isolation, secrets and privacy;
-- all delivery/ecommerce/WhatsApp/AI/automation integrations at their truthful
-  evidence level;
-- AI extraction accuracy/calibration/performance and AI tool correctness/performance;
-- storefront/PWA/remote/control-plane/cloud-backup/Founder-Console Phase 8 journeys;
-- AR/FR/EN, RTL/LTR/mixed content, themes, density, motion, keyboard/focus,
-  zoom/reflow and reduced motion;
-- T470/floor startup/navigation/search/mutation/resource budgets;
-- required eight-hour final-candidate stability trend;
-- clean install and Internal.15 → Internal.16 updater with AppData/database/key
-  preservation;
-- provider/network outage, duplicate, retry, ambiguity, replay, rollback and
-  cross-tenant failure injection.
-
-Zero known P0/P1 is required before a user-ready Internal.16 claim. External legal,
-provider/live-network and representative-beta evidence remains distinct; Stable may
-not be claimed until its actual Phase 9 gates pass.
-
-## Execution order from here
-
-1. Re-fetch the exact post-#245 protected `main`, Internal.15 release state and
-   Founder-installed result.
-2. Merge/reconcile FD-033 documentation authority without modifying the completed
-   Internal.15 product tree.
-3. Perform one whole-product reconnaissance from exact post-Internal.15 source and
-   freeze one consolidated Internal.16 Problem Register and dependency map.
-4. Freeze shared contracts/non-goals, including the EcoTrack contract boundary,
-   Cloudflare Phase 8 authority and AI/extraction/tool acceptance metrics.
-5. Open one Internal.16 application implementation branch with one active writer.
-6. Implement the large dependency-correct completion wave. Use targeted cheap checks
-   during coding; do not perform a full MSI/eight-hour/release cycle per tiny edit.
-7. Freeze the complete Internal.16 head and run one deep full-product certification.
-8. Repair all supported findings in one consolidated dependency-correct batch.
-9. Run affected proof plus the final full certification, including installed updater
-   and eight-hour evidence.
-10. Publish/deliver Internal.16 only to the evidence level actually proven. Complete
-    #230 before customer-online trial/public release claims and keep external Stable
-    gates truthful.
-
-Commercial outreach/direct sales may run in parallel because it does not require a
-competing application writer or paid ads. Product authority is never changed merely
-to close a sale.
+#221/#226 remain part of final installed experience/performance reconciliation. External
+provider/security/privacy/legal/representative-beta evidence remains distinct from
+internal confidence. No Stable claim exists without the applicable Phase 9 proof and
+explicit Founder promotion.
