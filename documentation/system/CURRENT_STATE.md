@@ -4,6 +4,8 @@
 > **Last assessed:** 2026-08-13
 > **Protected application-changing baseline:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
 > **Latest application-changing protected merge:** PR #245 — Internal.15 FD-032 Founder-only offline checkpoint
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
 > **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
 > **AI Agents route adoption:** PR #240 / `598e2a0dc0352227431614cf1527672aa78ec015`
@@ -66,6 +68,30 @@ These 17 installed observations are frozen Founder acceptance inputs. The implem
 - packaged release startup performs protected recovery/preflight, license/device checks, all-shop migration/authority preparation, runtime spawn/readiness and workspace navigation before visible readiness, so startup must be stage-measured rather than optimized blindly.
 
 These are reconnaissance clues, not a patch-only file list.
+
+## Historical continuity anchors
+
+### Phase 5 merged result and evidence
+
+The earlier Phase 5 source/browser checkpoint remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Later protected route/foundation work improved the source, but the installed Founder acceptance obligation remained open and is now carried into the exact Internal.16 acceptance matrix.
+
+### Active Phase 6 frontier
+
+The formal **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity remains current. FD-033 changes the exact Internal.16 execution sequence so remaining Phase 5/6/7 closure and Phase 8 implementation can converge without marking those gates passed early.
+
+### Internal.14 publication evidence
+
+The published Internal.14 source was `2d60e2e74109b6e03626a5ccdff727c029a34591`, produced through signed run `31388777098`. That evidence remains historical continuity and is not replaced by documentation wording.
+
+### FD-031 exception boundary
+
+FD-031 remains a one-time Internal.14 installed-evidence exception. It does not authorize future greenwashing or weakening of Internal.16 recovery/installed/release gates. Historical issue #214 is retained in the evidence lineage even though stronger later replacement-install evidence closed its original obligation.
+
+### FD-032 Founder-only offline checkpoint boundary
+
+FD-032 remains exact to Internal.15: Founder/internal-lab offline checkpoint, no customer-online trial authority, and no carry-forward exception into Internal.16. Issue #230 remains the customer-online/public-trial gate.
+
+SahelFlow is **not yet a commercially certified Stable release**. Stable still requires the applicable Phase 9 external/representative evidence and explicit Founder promotion.
 
 ## Internal.16 frontier — ready for next session
 
