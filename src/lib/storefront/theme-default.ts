@@ -1,6 +1,7 @@
 import type { StorefrontTemplateId, StorefrontTheme } from "./presentation-types";
 import { STOREFRONT_THEME_SCHEMA_VERSION } from "./presentation-types";
 import { STOREFRONT_TEMPLATE_PRESETS } from "./template-presets";
+import { createDefaultStorefrontBuilderState } from "./builder-default";
 
 export function createDefaultStorefrontTheme(template: StorefrontTemplateId = "atlas"): StorefrontTheme {
   const palette = STOREFRONT_TEMPLATE_PRESETS[template];
@@ -39,6 +40,7 @@ export function createDefaultStorefrontTheme(template: StorefrontTemplateId = "a
       showDeliveryBadge: true,
       showSupportBadge: true,
     },
+    builder: createDefaultStorefrontBuilderState(),
   };
 }
 
