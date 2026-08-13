@@ -26,6 +26,27 @@ describe("universal command search contract", () => {
     expect(palette).toContain("return:");
   });
 
+  it("balances matching record families before applying the global result budget", () => {
+    const palette = source("../../command-palette.tsx");
+
+    expect(palette).toContain("mergeUniversalSearchFamilies");
+    expect(palette).toContain("orderResults");
+    expect(palette).toContain("conversationResults");
+    expect(palette).toContain("deliveryResults");
+    expect(palette).toContain("returnResults");
+    expect(palette).not.toContain("next.slice(0, 12)");
+  });
+
+  it("uses projected field access before emitting delivery or return detail links", () => {
+    const palette = source("../../command-palette.tsx");
+
+    expect(palette).toContain("canOpenProtectedOperationalDetail");
+    expect(palette).toContain("deliveriesRes.value.fieldAccess");
+    expect(palette).toContain("returnsRes.value.fieldAccess");
+    expect(palette).toContain("contact: boolean");
+    expect(palette).toContain("financials: boolean");
+  });
+
   it("keeps delivery and return universal-search predicates on non-PII fields", () => {
     const delivery = source("../../../lib/deliveries/delivery-workbench.ts");
     const returns = source("../../../lib/returns/return-workbench.ts");
