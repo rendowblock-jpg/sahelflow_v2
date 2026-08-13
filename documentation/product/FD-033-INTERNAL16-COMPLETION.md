@@ -26,8 +26,9 @@ This changes the implementation sequence for exact Internal.16. It does **not** 
 ## 2. One large implementation wave; no repetitive micro-release loop
 
 ```text
-reconstruct exact post-Internal.15 authority
-→ complete Founder installed discovery + whole-product source reconnaissance
+reconstruct exact documentation-merged post-Internal.15 authority
+→ complete one exact-source whole-product reconnaissance
+→ merge source findings with the frozen Founder-installed register
 → freeze one consolidated Problem Register
 → freeze shared contracts, non-goals and acceptance matrix
 → implement one large dependency-correct completion wave
@@ -96,9 +97,11 @@ Before the first production buyer receives Internal.16, the frozen candidate mus
 
 External provider/legal/security/privacy/representative-beta gates remain distinct. Stable still requires the applicable Phase 9 evidence and explicit Founder promotion.
 
-## 9. Installed Internal.15 Founder Problem Register — Parts 1–3
+## 9. Frozen installed Internal.15 Founder Problem Register — 17 P1 inputs
 
-The following installed observations are binding inputs to the final Internal.16 Problem Register. Discovery remains open until the Founder explicitly closes it.
+The Founder explicitly closed the real installed Internal.15 inspection on 2026-08-13 after Parts 1–3. The following 17 observations are now frozen as the Founder-installed acceptance input for Internal.16.
+
+The next session must **not** restart screenshot discovery. The implementation agent owns exhaustive sibling discovery during one exact-source whole-product reconnaissance. Newly proven P0/P1 root dependencies may be added to the combined Problem Register before its source-reconnaissance freeze; repeated manifestations of an existing class do not reopen this installed discovery phase.
 
 ### SF16-UI-001 — Systemic Arabic/RTL geometry and bidi parity — P1
 
@@ -219,6 +222,15 @@ Persist the preference best-effort as UI preference scoped appropriately to the 
 
 Commercial activity may run in parallel through direct qualified outreach, demos and legitimate payment/reservation collection. It may not expose private source unnecessarily, promise live-certified providers that are only source/conformance proven, describe Internal.15 as a customer release or describe Internal.16 as Stable before actual Phase 9 evidence/Founder promotion.
 
-## 11. Immediate execution boundary
+## 11. Next-session execution boundary
 
-Continue the installed Internal.15 inspection and append material findings until the Founder explicitly closes discovery. Then reconstruct exact protected main, reconcile this documentation, freeze one combined source+installed Problem Register, create one Internal.16 application branch, execute the large completion wave, freeze the candidate, certify once deeply, repair once in a consolidated batch and run final proof.
+Founder-installed discovery is closed. The next session must:
+
+1. read exact merged FD-033, Current State, Roadmap, Workflow and Working Memory plus live protected `main`/issues/Actions/releases;
+2. create or use the one `agent/internal-16-completion` application branch from the exact documentation-merged protected main;
+3. perform one exact-source whole-product reconnaissance for sibling manifestations/root dependencies of the frozen 17 findings plus full Phase 8/EcoTrack/AI/release scope;
+4. freeze the combined source+installed Problem Register, contracts/non-goals and acceptance matrix;
+5. execute the single large dependency-correct implementation wave with targeted cheap checks;
+6. freeze one complete Internal.16 candidate, certify deeply, repair one consolidated finding set and run final proof.
+
+Do not spend another session reconstructing this plan from chat. Do not create another competing masterplan. This document and the active authority chain are the handoff.
