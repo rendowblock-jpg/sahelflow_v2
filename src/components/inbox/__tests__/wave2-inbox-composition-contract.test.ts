@@ -22,8 +22,12 @@ describe("Wave 2 Inbox composition contract", () => {
     const css = read("src/app/(dashboard)/inbox/inbox-wave2.module.css");
 
     expect(css).toContain('> div:has(> [data-inbox-queue="true"])');
-    expect(css).toContain("grid-template-columns: clamp(17.5rem, 22vw, 20rem) minmax(0, 1fr)");
-    expect(css).toContain('> div:has(> aside > [data-inbox-context="true"])');
+    expect(css).toContain(
+      "grid-template-columns: clamp(17.5rem, 22vw, 20rem) minmax(0, 1fr)",
+    );
+    expect(css).toContain(
+      '> div:has(> aside > [data-inbox-context="true"])',
+    );
     expect(css).toContain("minmax(26rem, 1fr)");
     expect(css).toContain('aside:has(> [data-inbox-context="true"])');
   });
@@ -39,5 +43,14 @@ describe("Wave 2 Inbox composition contract", () => {
     expect(css).toContain("overscroll-behavior: contain");
     expect(hook).toContain("messages?limit=200");
     expect(hook).toContain("isNearBottomRef");
+  });
+
+  it("keeps a localized semantic work-surface heading without consuming layout space", () => {
+    const page = read("src/app/(dashboard)/inbox/page.tsx");
+
+    expect(page).toContain("const { t } = await getI18n();");
+    expect(page).toContain(
+      '<h1 className="sr-only">{t("metadata.title.inbox")}</h1>',
+    );
   });
 });

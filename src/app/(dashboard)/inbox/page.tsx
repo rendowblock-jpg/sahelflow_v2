@@ -18,6 +18,7 @@ export const dynamic = "force-dynamic";
 /** Database-authoritative operational inbox with bounded provider recovery. */
 export default async function InboxPage() {
   const actorContext = await requireTrustedAction("conversations.read");
+  const { t } = await getI18n();
   const resource = { shopId: actorContext.shop.shopId };
   const canViewIngress = trustedActionAllowed(
     actorContext,
@@ -32,6 +33,7 @@ export default async function InboxPage() {
     <div
       className={`app-content flex h-full min-h-0 flex-col gap-3 overflow-hidden ${styles.page}`}
     >
+      <h1 className="sr-only">{t("metadata.title.inbox")}</h1>
       {canViewIngress ? (
         <WhatsAppIngressRecoveryDock canRetry={canRetryIngress} />
       ) : null}

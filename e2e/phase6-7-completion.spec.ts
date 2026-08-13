@@ -50,6 +50,13 @@ async function waitForHydration(page: Page) {
     state: "attached",
     timeout: 30_000,
   });
+  // Global client hydration can complete before a streamed dashboard segment has
+  // replaced its loading shell. Semantic, reflow and accessibility evidence must
+  // inspect the actual route work surface rather than that transient fallback.
+  await page.locator('main[aria-busy="true"][aria-label]').waitFor({
+    state: "detached",
+    timeout: 30_000,
+  });
 }
 
 async function setLocale(context: BrowserContext, locale: Locale) {
