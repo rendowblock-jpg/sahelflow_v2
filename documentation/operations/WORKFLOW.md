@@ -1,345 +1,111 @@
 # SahelFlow — Research, coding, review and delivery workflow
 
 > **Status:** Active operating contract
-> **Governing decisions:** FD-028, FD-029 and exact Internal.16 override FD-033
-> **Execution mode:** one active application writer; whole-product reconnaissance; large implementation wave; targeted checks; frozen deep certification
-> **Durable truth:** protected `main`, branches/PRs, Actions/releases/issues and active documentation authorities
+> **Governing decisions:** FD-028, FD-029 and exact FD-033 Internal.16 completion convergence
+> **Execution mode:** one active application writer; audit-first; large implementation wave; targeted checks during coding; frozen whole-product certification
+> **Durable truth:** protected `main`, PRs/Actions/releases, active documentation authorities and named installed evidence
 > **Last consolidated:** 2026-08-13
 
-Speed comes from complete discovery, root-cause grouping, serialized shared contracts,
-coherent implementation batches and one serious frozen-candidate certification. Speed
-does not come from skipping P0/P1, data/recovery/security authority, Arabic/RTL,
-accessibility, low-end performance or evidence honesty.
+Speed comes from complete reconnaissance, root-cause grouping, one coherent implementation wave and consolidated certification—not from weakening integrity, security, privacy, Arabic/RTL, accessibility, recovery, performance or evidence honesty.
 
-## 1. Authority and roles
-
-### Founder
-
-The Founder owns product/commercial/value judgments, installed observation, sensitive
-signing/payment ceremonies and Beta/Stable promotion. During the Internal.15 installed
-inspection the Founder may provide screenshots and plain-language observations; the
-Founder is **not** required to enumerate every occurrence of a systemic defect once a
-class of defect is established.
-
-### Active application implementation agent
-
-One selected agent owns the Internal.16 application branch and broad writes. It must:
-
-- reconstruct live post-Internal.15 authority;
-- consume the complete Founder installed finding register;
-- inspect source to discover every sibling occurrence of each systemic finding;
-- complete the consolidated Problem Register before broad edits;
-- freeze shared contracts/non-goals;
-- implement the large dependency-correct completion wave;
-- run targeted cheap checks while coding;
-- freeze one complete candidate;
-- stop feature expansion at freeze;
-- own consolidated repair after deep certification.
-
-Review/research/installed testing may run concurrently only without competing writes to
-shared application authority.
-
-## 2. Internal.16 discovery protocol
-
-The Internal.16 Problem Register is built from **both** installed Founder observation
-and source reconnaissance.
-
-For every Founder finding:
-
-1. preserve the exact installed symptom and screenshot/context;
-2. assign one stable `SF16-*` identifier and severity;
-3. identify whether it is an isolated defect or a systemic class;
-4. inspect all shared primitives, production consumers and sibling routes for the same
-   root cause;
-5. record final desired behavior, not merely the screenshot repair;
-6. identify AR/FR/EN, RTL, responsive, keyboard/accessibility, performance, data,
-   permission, recovery and test implications;
-7. define objective acceptance evidence;
-8. add all source-discovered siblings to the same root item rather than asking the
-   Founder to screenshot each one.
-
-A screenshot is evidence of a symptom. It is not the implementation boundary.
-
-The current installed register is held in FD-033 and Working Memory while discovery is
-open. Parts 1–2 already include systemic RTL/bidi, Risk KPI hierarchy, stat-card
-interaction, localization leaks, Inbox AAA convergence, AI AAA convergence, product
-thumbnails, universal search, Gemini-key lifecycle and responsive orphan-grid defects.
-Further parts are additive until the Founder closes discovery.
-
-## 3. Research/impact gate
-
-Before broad implementation, inspect exact current source, tests, migrations and
-callers for every affected layer and revalidate unstable external contracts against
-primary/official sources. Required examples for Internal.16 include current Gemini API/
-model policy, current EcoTrack Pro provider-issued contract and current Cloudflare
-limits/pricing before capacity claims.
-
-The impact map covers:
-
-- canonical data/business authority and legacy bypasses;
-- models/migrations/indexes/recovery;
-- identity/permission/shop/secret boundaries;
-- every affected route/component/state;
-- AR/FR/EN and RTL/mixed direction;
-- responsive/windowed/zoom behavior;
-- keyboard/focus/screen-reader/reduced motion;
-- low-end performance/resource budgets;
-- unit/integration/browser/Rust/Windows/installed evidence;
-- diagnostics/privacy/logging;
-- external provider failure/retry/ambiguity.
-
-Research is bounded. Once the safe contract is known, implementation begins.
-
-## 4. Internal.16 consolidated Problem Register
-
-Every entry records:
-
-- stable ID;
-- P0–P3 severity;
-- installed/source evidence;
-- affected journey/capability;
-- root cause and every discovered sibling consumer;
-- dependencies/authority constraints;
-- required final behavior;
-- legacy behavior removed or made read-only;
-- tests/evidence;
-- owner/closure state.
-
-Group by root cause. Examples:
-
-- one RTL geometry root item covers sidebar, tables, charts, panes, command palette and
-  route siblings rather than many margin tickets;
-- one responsive-composition root item replaces shared auto-fit behavior rather than
-  hand-adjusting each screenshot width;
-- one localization-integrity root item covers unresolved i18n keys, hard-coded API
-  strings, wrong formatter locale and SahelFlow-owned demo copy;
-- one universal-search contract covers indexing/ranking/permissions across entities;
-- one Gemini lifecycle item covers reauth → verify → encrypted save → readiness → real
-  request rather than separate UI/API symptom fixes.
-
-P0 interrupts immediately. P1 blocks candidate freeze/release. P2/P3 never create an
-unbounded micro-loop.
-
-## 5. Large implementation wave
-
-Internal.16 intentionally avoids repeated tiny-change/full-release loops.
-
-Use coherent dependency order:
+## 1. Internal.16 session sequence
 
 ```text
-shared RTL/localization/responsive/interaction/search roots
-→ remaining desktop route adoption
-→ Inbox + AI + product-table installed convergence
-→ Gemini-key lifecycle + AI extraction/tools
-→ EcoTrack/provider convergence
-→ full Phase 8 connected platform
-→ cross-cutting installer/licensing/recovery/security/performance fixes
+Founder installed discovery
+→ exact post-Internal.15 source reconnaissance
+→ consolidated Problem Register
+→ frozen contracts/non-goals/acceptance matrix
+→ one large dependency-correct implementation wave
+→ targeted cheap checks while coding
+→ exact-head freeze
+→ whole-product certification + adversarial review
+→ consolidated repair batch
+→ affected proof + final complete certification
+→ signed updater if evidence supports it
 ```
 
-The exact order may move when dependency reconnaissance proves a better sequence, but
-shared contracts are serialized before dependent route work.
+Do not run full MSI/replacement-install/eight-hour/whole-repository evidence after every tiny change. Do not skip focused checks that prevent hours of broken work. Never rerun an unchanged passing exact head. Never retry a deterministic failure until it becomes green without explaining/fixing the cause.
 
-During coding:
+## 2. Authority and anti-drift
 
-- run type/lint/unit/contract/browser/database/Rust checks at coherent task boundaries;
-- do not run MSI/replacement-install/eight-hour whole-product proof after every small
-  edit;
-- never rerun an unchanged passing exact head;
-- do not retry deterministic failures until they become green without explanation;
-- push coherent batches rather than every edit;
-- do not weaken a threshold or test to save time.
+- Founder controls product/commercial judgments and explicit Beta/Stable promotion.
+- One active application writer owns the Internal.16 implementation branch.
+- Protected `main` is integrated source truth; branches/PRs are proposed changes.
+- No direct protected-main application edits.
+- Phase 1–4 business/data/security/recovery authority remains protected.
+- No important decision remains only in chat.
+- Current State describes merged truth plus clearly labeled installed observations.
+- Working Memory owns resumable current frontier.
+- FD-033 owns the exact Internal.16 completion directive and installed finding IDs.
+- New P0/P1 findings are added to the consolidated register, not turned into random micro-PR loops.
 
-## 6. Cross-product UI/UX implementation rules
+## 3. Reconnaissance before implementation
 
-### RTL and localization
+Inspect every applicable caller, route, component, service, model, migration, permission, provider effect, UI state, locale/RTL path, responsive composition, performance/resource path, diagnostics and tests. Group by root cause.
 
-- use semantic logical geometry, not blanket mirroring;
-- inspect physical left/right, transform/order, absolute edges, chart axes/legends/
-  tooltips, table actions and directional icons;
-- bidi-isolate phones, IDs, SKUs, tracking numbers, currency and mixed names;
-- no unresolved translation key may render in user UI;
-- server/provider errors expose stable codes/structured metadata; localized UI owns
-  human copy;
-- SahelFlow-owned demo/system content is locale-aware; seller-entered entity data stays
-  exact;
-- runtime language switch changes copy, direction and geometry atomically.
+For the installed Parts 1–N defect classes, the implementation agent owns exhaustive sibling discovery. The Founder does not need to screenshot every repeated wrong-side RTL element, untranslated key, accidental card grid or low-information chart.
 
-### Responsive composition
+## 4. Targeted implementation checks
 
-- design for application container width after sidebar, not only browser viewport;
-- fixed-count KPI groups use deterministic balanced transitions; `4 → 3+1` is not an
-  accepted generic layout;
-- charts/tables/panes adapt hierarchy/density rather than merely shrink;
-- validate full/windowed widths, expanded/collapsed sidebar, 1366×768 and 100–200% zoom;
-- Inbox/AI use explicit wide/windowed/narrow layouts with adaptive/resizable/collapsible
-  panes where useful.
+During the large implementation wave, use the cheapest checks that can catch local breakage quickly:
 
-### Interaction
+- TypeScript/typecheck and ESLint for changed TS/React boundaries;
+- targeted Vitest/domain/database tests;
+- targeted Playwright for changed seller journeys, AR/FR/EN, RTL, keyboard, resize and transitions;
+- provider contract tests for courier/AI/cloud changes;
+- Rust format/check/tests for native changes;
+- focused bundle/performance measurements when chart/image/search/AI/runtime work changes hot paths.
 
-- shared stat/metric cards distinguish passive, actionable and selected semantics;
-- pointer/focus/touch states are visible without fake click affordance;
-- theme accents never erase semantic warning/success/risk meaning;
-- reduced motion and low-resource paths remain first-class.
+Full release evidence waits for a coherent frozen candidate unless a P0/high-risk native change demands earlier proof.
 
-## 7. Universal search implementation gate
+## 5. Internal.16 frontend/experience proof matrix
 
-The topbar command/search is a product subsystem, not a route picker.
+Every material route/workspace must prove happy/loading/empty/filtered-empty/permission/offline/stale/pending/conflict/error/retry/recovery states plus AR/FR/EN, RTL/mixed bidi, keyboard/focus/screen reader, 100–200% zoom, reduced motion and 1366×768/windowed/fullscreen behavior.
 
-Before implementation freeze:
+Specific Parts 1–3 proof additions:
 
-- inventory every entity/identifier that should be globally searchable;
-- define exact shop/permission/protected-field projection per result type;
-- add/verify indexes and normalized search keys needed for representative scale;
-- support exact IDs/numbers, phone normalization, SKU/barcode/tracking/order refs and
-  language-safe text normalization;
-- rank exact matches before fuzzy/partial matches;
-- group and deep-link results;
-- cancel stale queries and bound debounce/parallel requests;
-- prove search cannot leak cross-shop or permission-denied records;
-- measure query + rendering latency separately.
+- **RTL:** source audit plus installed geometry comparison across shell, panes, tables, dialogs, command palette and charts; no physical-side residue.
+- **Responsive:** exercise actual **application container width after sidebar**, not browser viewport alone; live resize; no `4→3+1` orphan primary card groups.
+- **Dead space:** inspect paired panels and chart cards for accidental stretch/fixed-canvas blank regions; content density should remain intentional.
+- **Charts:** each chart has a stated decision/job, correct chart type, locale-safe units, useful tooltip/context/legend/annotation/drill-down where applicable, accessible text/table equivalent, RTL semantics, responsive height/label density and low-end budget.
+- **Theme:** repeated rapid light/dark/system/preset switching across shell, cards, charts and portaled overlays; no mixed old/new token frame; reduced motion immediate.
+- **Locale:** AR↔FR↔EN current page + prefetched route + non-prefetched route + back/forward; after commit, no old-locale route frame or stale direction.
+- **Navigation order:** default workflow order plus user reorder preference; drag and keyboard moves, save/cancel/reset, stale preference normalization, RTL and collapsed-sidebar access; no permission/route authority drift.
+- **Universal search:** words/numbers/IDs across permitted entities, exact-match ranking, permission/shop isolation, cancellation of stale requests and Phase 7 latency.
+- **Inbox/AI:** wide/windowed/narrow adaptive layouts, large histories, no scroll fights, degraded provider behavior, long-session performance.
+- **Products:** image-row loading/fallback/density performance.
 
-## 8. Inbox gate
+## 6. Startup/performance proof
 
-Audit the full Experience capability set and current production code. The final Inbox
-must prove:
+Do not optimize startup by deleting safety work. Instrument the installed sequence and retain stage durations for recovery/preflight, device/license authority, migration, runtime preparation/spawn, runtime readiness, first navigation, authenticated hydration and usable workspace.
 
-- queue/search/filter/priority/assignment/workflow triage;
-- selected thread/customer/order/risk context;
-- text and every supported media/document/voice path;
-- send state/receipts/retry/reconnect;
-- canned replies/templates;
-- extraction + human review before order creation;
-- internal notes/collaboration/history;
-- provider-degraded local readability;
-- large-history rendering and stable scroll;
-- wide/windowed/narrow responsive behavior;
-- AR/FR/EN/RTL/accessibility.
+Measure separately:
 
-Do not preserve a feature merely because a component exists; prove it is reachable,
-coherent and functional in the installed workflow.
+- ordinary cold start;
+- first launch after Internal.15→Internal.16 update/migration;
+- warm/reopen.
 
-## 9. AI + Gemini gate
+T470 targets remain cold launch ≤8s p95, navigation ≤700ms p95, indexed search ≤350ms p95 and ordinary local mutation ≤500ms p95. Declared floor remains usable shell ≤15s SSD / ≤25s HDD, input ack ≤100ms, navigation ≤1.5s p95, indexed search ≤750ms p95, local mutation ≤1s p95, no ordinary freeze >200ms, steady working set ≤750MB with WhatsApp and no sustained eight-hour memory growth.
 
-### Gemini key lifecycle
+## 7. Frozen review and consolidated repair
 
-Prove one end-to-end installed ceremony:
+After feature freeze:
 
-```text
-recent PIN reauth
-→ localized key entry
-→ official-current provider/model validation
-→ protected encrypted save
-→ configured/verified projection
-→ immediate AI readiness refresh
-→ real minimal inference/extraction
-```
+1. author self-review;
+2. freeze exact head;
+3. one complete adversarial pass across every affected layer;
+4. deliver one consolidated P0–P3 finding set;
+5. repair dependency-correctly in one consolidated batch;
+6. rerun affected evidence plus one final whole-product certification.
 
-Error taxonomy distinguishes invalid/restricted key, API/model unavailable, quota/rate
-limit, network/timeout, consent/license, reauth expiry and storage/server failure. No
-raw key or hard-coded provider-language error enters UI/logs/evidence.
+P0: active loss/exposure/cross-shop/corrupt recovery/irreversible money-stock damage. P1: required journey, authority, startup, recovery, provider effect, major experience/RTL/accessibility/performance defect that blocks candidate. P2: bounded hardening. P3: polish. P0/P1 cannot be waived by the 24-hour target.
 
-### AI workspace/tools/extraction
+## 8. Release evidence
 
-Retain the FD-033 benchmark requirements: long sessions, stream/stop/retry, adaptive
-rails, tool/result/action review, held-out Algerian COD extraction corpus, every model-
-exposed tool authority/idempotency/privacy matrix and separated local-vs-provider
-latency.
+The frozen Internal.16 candidate must cover exact source/version/docs, type/lint/unit/integration/database/browser suites, permission/shop isolation, Golden COD, provider effects, AI/extraction/tools, EcoTrack conformance state, Phase 8 remote/storefront/PWA/control-plane/zero-knowledge backup, clean install, Internal.15→16 upgrade, close/reopen, AppData/key/database preservation, migration interruption, backup/restore/replacement-install, AR/FR/EN/RTL/accessibility, T470/floor budgets, eight-hour stability and deterministic evidence manifest.
 
-## 10. Product-table media gate
+Issue #230 remains the customer-online/public-trial boundary. Provider hostnames/mocks do not satisfy owned-domain/network proof. External provider/legal/security/privacy/representative-beta truth remains distinct from internal evidence. Stable requires applicable Phase 9 evidence and explicit Founder promotion.
 
-Use the existing product image projection to add compact row thumbnails without
-creating a second image authority. Prove missing/broken fallback, lazy/deferred loading,
-normal/compact density, pagination/large-catalog cost, RTL/LTR and row/action semantics.
+## 9. Documentation closure
 
-## 11. Targeted task checks
-
-Focused checks are expected during the large wave. A coherent task gate may include as
-applicable:
-
-- diff/cleanliness;
-- version/audit authority scripts;
-- Prisma generate/validate/migration status;
-- TypeScript + ESLint;
-- complete or affected Vitest suites;
-- targeted Playwright journeys;
-- provider contract/conformance tests;
-- Rust format/check/tests;
-- targeted Windows compile/runtime proof when native/high-risk behavior changes.
-
-The gate must surface the complete actionable failure set; do not intentionally hide
-all but the first issue.
-
-## 12. Frozen Internal.16 certification
-
-When implementation is complete, freeze one exact head. Feature work stops.
-
-Run one deep whole-product checkpoint covering:
-
-- exact source/version/docs authority;
-- full TypeScript/lint/unit/integration/database/browser suites;
-- migrations/recovery/backup/restore/replacement install;
-- Windows/Tauri release and signed MSI/updater;
-- clean install + Internal.15 → Internal.16 upgrade with AppData/key/database preservation;
-- all Required route/journey/state matrices;
-- Golden COD, money, stock, risk, fulfillment and provider reconciliation;
-- Inbox and universal-search matrices;
-- AI workspace, Gemini lifecycle, extraction benchmark and every AI tool matrix;
-- EcoTrack conformance and truthful live-certification state;
-- AR/FR/EN, RTL/LTR/mixed content, keyboard/focus/screen-reader, 100–200% zoom and
-  reduced motion;
-- responsive full/windowed layouts and no orphan composition;
-- T470/floor startup/navigation/search/mutation/resource budgets;
-- required final-candidate eight-hour trend;
-- Phase 8 remote/storefront/PWA/cloud/zero-knowledge-backup/Founder Console;
-- outage/replay/duplicate/ambiguity/rollback/cross-tenant failure injection;
-- privacy/security/diagnostic redaction;
-- stale-document/legacy-path/unresolved-problem audit.
-
-Then perform one complete adversarial review of the frozen impact map before returning
-findings.
-
-## 13. Consolidated repair and final proof
-
-- collect the full P0/P1 finding set before repair where safe;
-- repair in dependency/root-cause order;
-- rerun the affected proof immediately enough to catch local regressions;
-- run one final complete certification on the repaired frozen candidate;
-- a material post-freeze change invalidates affected evidence;
-- unchanged passing evidence is not rerun for ritual.
-
-## 14. Evidence ladder and claims
-
-Keep these distinct:
-
-1. implemented;
-2. source-proven;
-3. clean Actions;
-4. signed artifact;
-5. installed Windows;
-6. T470/floor hardware;
-7. Founder-accepted;
-8. external provider/security/privacy/legal/accessibility;
-9. representative seller/Beta;
-10. Stable after explicit Founder promotion.
-
-Internal.16 may be the complete product/RC or paid Beta only to the level its evidence
-supports. #230 and applicable Phase 9 external gates cannot be greenwashed.
-
-## 15. Branch/PR discipline
-
-- application work branches from current verified protected post-#245 main;
-- one active application writer/branch;
-- draft PR during material work;
-- coherent pushes, not every tiny edit;
-- PR body records scope, Problem Register, preservation, risks and evidence;
-- exact-head freeze before review/certification;
-- expected-head merge only after selected gates support it;
-- ordinary documentation discovery may continue on its separate documentation branch
-  until the Founder freezes the plan.
-
-## 16. Protected boundaries
-
-Preserve canonical AppData, registry, databases, migrations, keys and retained evidence.
-Never rewrite Phase 1–4 business/security authority merely to simplify a UI fix. Never
-expose real provider/AI secrets in chat/source/issues/test artifacts. No guessed
-EcoTrack contract. No low-confidence AI extraction promoted as canonical order truth.
+At closure, reconcile FD-033, Current State, Roadmap and Working Memory to exact merged source/evidence. Do not create another competing masterplan. Keep installed observations distinct from implemented/proven truth until the evidence actually moves.
