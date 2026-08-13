@@ -13,6 +13,7 @@ import {
   randomBytes,
   sign,
   verify,
+  type JsonWebKey as NodeJsonWebKey,
 } from "node:crypto";
 
 const PAYLOAD_FORMAT = 1 as const;
@@ -84,9 +85,9 @@ export function encryptConnectedPayload(
   if (plaintext.byteLength > MAX_PLAINTEXT_BYTES) {
     throw new RangeError("Connected payload exceeds the encrypted payload limit");
   }
-  let parsedJwk: JsonWebKey;
+  let parsedJwk: NodeJsonWebKey;
   try {
-    parsedJwk = JSON.parse(recipientPublicKeyJwk) as JsonWebKey;
+    parsedJwk = JSON.parse(recipientPublicKeyJwk) as NodeJsonWebKey;
   } catch {
     throw new TypeError("Recipient encryption key is not valid JSON");
   }

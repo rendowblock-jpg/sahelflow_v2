@@ -88,7 +88,7 @@ export function StorefrontStudio({
       ? current
       : commitStorefrontStudioHistory(current, next));
     setMessage(null);
-    setSaveState((current) => current === "error" ? "pending" : current);
+    setSaveState((current) => current === "conflict" || current === "saving" ? current : "pending");
   }, []);
 
   const persist = useCallback(async (candidate: StorefrontStudioDraft, manual = false) => {
@@ -138,7 +138,6 @@ export function StorefrontStudio({
 
   useEffect(() => {
     if (!dirty || conflict || saveState === "saving" || saveState === "error") return;
-    setSaveState("pending");
     const timer = window.setTimeout(() => void persist(draft), 900);
     return () => window.clearTimeout(timer);
   }, [conflict, dirty, draft, fingerprint, persist, saveState]);

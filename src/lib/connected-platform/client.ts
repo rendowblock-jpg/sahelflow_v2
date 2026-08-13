@@ -285,9 +285,13 @@ export class ConnectedPlatformClient {
     receiptId: string,
     input: {
       workspaceId: string;
-      state: "imported" | "rejected" | "reconciled";
-      canonicalOrderRef?: string;
-      resultDigest?: string;
+      state: "rejected";
+      resultDigest: string;
+    } | {
+      workspaceId: string;
+      state: "imported" | "reconciled";
+      canonicalOrderRef: string;
+      resultDigest: string;
     },
   ) {
     return this.requestJson<{ receiptId: string; status: string }>(

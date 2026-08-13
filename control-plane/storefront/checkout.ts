@@ -64,7 +64,7 @@ export async function checkout(
   );
   const existing = await environment.DB.prepare(
     `SELECT relay_sequence, receipt_id, storefront_id, release_id, idempotency_key,
-            request_digest, state, canonical_order_ref, total_dzd, completed_at
+            request_digest, state, canonical_order_ref, result_digest, total_dzd, completed_at
        FROM storefront_receipt
       WHERE storefront_id = ?1 AND idempotency_key = ?2`,
   )
@@ -148,7 +148,7 @@ export async function checkout(
     }
     const raced = await environment.DB.prepare(
       `SELECT relay_sequence, receipt_id, storefront_id, release_id, idempotency_key,
-              request_digest, state, canonical_order_ref, total_dzd, completed_at
+              request_digest, state, canonical_order_ref, result_digest, total_dzd, completed_at
          FROM storefront_receipt
         WHERE storefront_id = ?1 AND idempotency_key = ?2`,
     )

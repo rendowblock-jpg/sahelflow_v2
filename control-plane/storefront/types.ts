@@ -65,6 +65,7 @@ export type ReceiptRow = {
   request_digest: string;
   state: ReceiptState;
   canonical_order_ref: string | null;
+  result_digest: string | null;
   total_dzd: number;
   completed_at: string | null;
 };

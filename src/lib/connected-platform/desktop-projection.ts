@@ -1,9 +1,14 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { db, shopContext } from "@/lib/db";
-import { getDashboardProjection } from "@/lib/identity/dashboard-projection";
-import { getIdentityAuthoritySnapshot } from "@/lib/identity/control-authority";
+import { getDashboardAnalytics } from "@/lib/data/analytics-data";
+import { getDashboardStats, getRecentOrders } from "@/lib/data/dashboard";
+import { db } from "@/lib/db";
+import {
+  projectDashboardForTrustedActor,
+  resolveDashboardFieldAccess,
+} from "@/lib/identity/dashboard-projection";
+import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 import { ConnectedPlatformClient } from "./client";
 import { createConnectedEnvelope } from "./envelope";
 import type { ConnectedKeyPair } from "./payload-crypto";
@@ -63,20 +68,34 @@ async function nextProjectionSequence(deviceId: string): Promise<number> {
 export async function publishRemoteDashboardProjection(input: Readonly<{
   client: ConnectedPlatformClient;
   desktopKeys: ConnectedKeyPair;
+  actorContext: TrustedActorContext;
   deviceId: string;
   now?: Date;
 }>): Promise<Readonly<{ sequence: number }>> {
-  const identity = getIdentityAuthoritySnapshot();
-  if (!identity) throw new Error("Connected platform requires installation identity authority");
   if (!DEVICE_ID.test(input.deviceId)) throw new TypeError("Remote device id is invalid");
+  if (input.actorContext.actor.kind !== "person") {
+    throw new Error("Connected platform requires durable person authority");
+  }
 
-  const devices = await input.client.listDevices(identity.workspaceId);
+  const devices = await input.client.listDevices(input.actorContext.shop.workspaceId);
   const device = devices.devices
     .map(parseRemoteDevice)
     .find((candidate): candidate is RemoteDevice => candidate?.deviceId === input.deviceId);
   if (!device) throw new Error("Remote device is not enrolled or has been revoked");
+  if (device.memberId !== input.actorContext.actor.workspaceMemberId) {
+    throw new Error("Remote device belongs to another member authority");
+  }
 
-  const projection = await getDashboardProjection({ memberId: device.memberId });
+  const fieldAccess = resolveDashboardFieldAccess(input.actorContext);
+  const [stats, recentOrders, analytics] = await Promise.all([
+    getDashboardStats(fieldAccess),
+    fieldAccess.orders ? getRecentOrders(8, fieldAccess) : Promise.resolve([]),
+    getDashboardAnalytics(fieldAccess),
+  ]);
+  const projection = projectDashboardForTrustedActor(
+    { stats, recentOrders, analytics },
+    fieldAccess,
+  );
   const sequence = await nextProjectionSequence(device.deviceId);
   const issuedAt = input.now ?? new Date();
   const expiresAt = new Date(issuedAt.getTime() + PROJECTION_TTL_MS);
@@ -86,13 +105,13 @@ export async function publishRemoteDashboardProjection(input: Readonly<{
       protocolVersion: CONNECTED_PROTOCOL_VERSION,
       envelopeId,
       idempotencyKey: envelopeId,
-      workspaceId: identity.workspaceId,
-      shopId: shopContext.shopId,
+      workspaceId: input.actorContext.shop.workspaceId,
+      shopId: input.actorContext.shop.shopId,
       memberId: device.memberId,
       deviceId: device.deviceId,
-      installationId: identity.installationId,
+      installationId: input.actorContext.shop.installationId,
       senderKind: "desktop",
-      senderId: identity.installationId,
+      senderId: input.actorContext.shop.installationId,
       recipientKind: "device",
       recipientId: device.deviceId,
       messageType: `projection.${PROJECTION_TYPE}`,

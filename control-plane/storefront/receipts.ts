@@ -33,7 +33,7 @@ export async function receiptStatus(
 ): Promise<Response> {
   const receipt = await environment.DB.prepare(
     `SELECT relay_sequence, receipt_id, storefront_id, release_id, idempotency_key,
-            request_digest, state, canonical_order_ref, total_dzd, completed_at
+            request_digest, state, canonical_order_ref, result_digest, total_dzd, completed_at
        FROM storefront_receipt WHERE receipt_id = ?1`,
   )
     .bind(receiptId)
@@ -167,12 +167,17 @@ export async function completeReceipt(
     resultDigest?: unknown;
   };
   const workspaceId = String(input.workspaceId ?? "");
+  const canonicalOrderRef =
+    input.canonicalOrderRef === undefined ? null : String(input.canonicalOrderRef);
+  const resultDigest = input.resultDigest === undefined ? null : String(input.resultDigest);
   if (
     !ID.test(workspaceId) ||
     !isReceiptResultState(input.state) ||
-    (input.canonicalOrderRef !== undefined && !ID.test(String(input.canonicalOrderRef))) ||
-    (input.resultDigest !== undefined &&
-      !/^[0-9a-f]{64}$/.test(String(input.resultDigest)))
+    (canonicalOrderRef !== null && !ID.test(canonicalOrderRef)) ||
+    (resultDigest === null || !/^[0-9a-f]{64}$/.test(resultDigest)) ||
+    ((input.state === "imported" || input.state === "reconciled") &&
+      canonicalOrderRef === null) ||
+    (input.state === "rejected" && canonicalOrderRef !== null)
   ) return json({ error: "invalid_request" }, 400);
   if (!(await authorizeDesktop(request, environment, workspaceId))) {
     return json({ error: "unauthorized" }, 401);
@@ -181,7 +186,7 @@ export async function completeReceipt(
   const receipt = await environment.DB.prepare(
     `SELECT r.relay_sequence, r.receipt_id, r.storefront_id, r.release_id,
             r.idempotency_key, r.request_digest, r.state, r.canonical_order_ref,
-            r.total_dzd, r.completed_at
+            r.result_digest, r.total_dzd, r.completed_at
        FROM storefront_receipt r
        JOIN storefront s ON s.storefront_id = r.storefront_id
       WHERE r.receipt_id = ?1 AND s.workspace_id = ?2`,
@@ -190,16 +195,25 @@ export async function completeReceipt(
     .first<ReceiptRow>();
   if (!receipt) return json({ error: "receipt_not_found" }, 404);
 
-  const canonicalOrderRef =
-    input.canonicalOrderRef === undefined ? null : String(input.canonicalOrderRef);
   if (receipt.state !== "received") {
     if (
       receipt.state === input.state &&
-      receipt.canonical_order_ref === canonicalOrderRef
+      receipt.canonical_order_ref === canonicalOrderRef &&
+      receipt.result_digest === resultDigest
     ) return json({ receiptId, status: receipt.state });
     if (!(receipt.state === "imported" && input.state === "reconciled")) {
       return json({ error: "terminal_conflict", status: receipt.state }, 409);
     }
+  }
+  if (receipt.state === "received" && input.state === "reconciled") {
+    return json({ error: "invalid_receipt_transition", status: receipt.state }, 409);
+  }
+  if (
+    receipt.state === "imported" &&
+    input.state === "reconciled" &&
+    receipt.canonical_order_ref !== canonicalOrderRef
+  ) {
+    return json({ error: "canonical_order_conflict", status: receipt.state }, 409);
   }
 
   const result = await environment.DB.prepare(
@@ -208,13 +222,14 @@ export async function completeReceipt(
             canonical_order_ref = COALESCE(?2, canonical_order_ref),
             result_digest = ?3,
             completed_at = CURRENT_TIMESTAMP
-      WHERE receipt_id = ?4`,
+      WHERE receipt_id = ?4 AND state = ?5`,
   )
     .bind(
       input.state,
       canonicalOrderRef,
-      input.resultDigest ?? null,
+      resultDigest,
       receiptId,
+      receipt.state,
     )
     .run();
   if (!result.success || result.meta?.changes === 0) {
