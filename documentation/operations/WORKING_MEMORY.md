@@ -6,6 +6,8 @@
 > **Active implementation PR:** draft PR #251 — `Internal.16 Wave 4 — Storefront Builder V2 + connected platform`
 > **Active branch:** `agent/internal-16-wave-4`
 > **Last application-changing Wave 4 head:** `18a9a840f2c4b6ce3bb6d0bf75f55091f5283ad8`
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
 > **Published release:** `1.0.0-internal.15` — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
 > **Retained open evidence:** #221, #226, #230
 

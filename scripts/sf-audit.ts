@@ -314,12 +314,13 @@ requireMarkers("AGENTS.md", [
 ]);
 requireMarkers("documentation/README.md", [
   "PR #250",
-  "agent/internal-16-wave-3",
+  "PR #251",
+  "agent/internal-16-wave-4",
   "`1.0.0-internal.15`",
   "31657621918",
   "Phase 6 — Arabic, RTL and accessibility parity",
   "PR #220",
-  "issues #201, #214, #221, #226 and #230",
+  "Issues #221, #226 and #230 remain open",
 ]);
 requireMarkers("documentation/product/DECISIONS.md", [
   "## FD-028",
