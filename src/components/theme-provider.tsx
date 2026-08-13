@@ -40,13 +40,22 @@ interface ThemeContextValue {
   presets: ThemePreset[];
 }
 
+interface AppearanceViewTransition {
+  finished: Promise<void>;
+}
+
+interface ViewTransitionDocument extends Document {
+  startViewTransition?: (
+    update: () => void | Promise<void>,
+  ) => AppearanceViewTransition;
+}
+
 const STORAGE_KEY = "theme";
 const PRESET_STORAGE_KEY = "sahelflow-theme-preset";
 const THEME_CHANGE_EVENT = "sahelflow:theme-change";
 const DEFAULT_THEME: ThemeMode = "dark";
 const DEFAULT_PRESET: ThemePreset = "sahel";
 const PRESETS: ThemePreset[] = ["sahel", "atlas", "oasis", "dune"];
-let transitionTimer: number | undefined;
 
 // A WebView can deny/quota-fail localStorage while the application is otherwise
 // healthy. These bounded in-memory overrides keep context state and the DOM under
@@ -81,17 +90,45 @@ function resolveTheme(theme: ThemeMode, systemDark: boolean): ResolvedTheme {
   return theme === "system" ? (systemDark ? "dark" : "light") : theme;
 }
 
-function beginAppearanceTransition(): void {
-  if (typeof window === "undefined" || typeof document === "undefined") return;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+/**
+ * Commit one complete appearance snapshot. Modern WebView2/Chromium receives a
+ * root snapshot cross-fade; reduced-motion and older engines commit immediately.
+ * We never interpolate every descendant independently because that exposes mixed
+ * token frames while mode/preset variables are changing.
+ */
+function commitAppearanceTransition(update: () => void): void {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    update();
+    return;
+  }
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    update();
+    return;
+  }
 
-  const root = document.documentElement;
-  root.dataset.themeSwitching = "true";
-  if (transitionTimer !== undefined) window.clearTimeout(transitionTimer);
-  transitionTimer = window.setTimeout(() => {
-    delete root.dataset.themeSwitching;
-    transitionTimer = undefined;
-  }, 220);
+  const startViewTransition = (
+    document as ViewTransitionDocument
+  ).startViewTransition?.bind(document);
+  if (!startViewTransition) {
+    update();
+    return;
+  }
+
+  let committed = false;
+  const commitOnce = () => {
+    if (committed) return;
+    committed = true;
+    update();
+  };
+
+  try {
+    const transition = startViewTransition(commitOnce);
+    void transition.finished.catch(() => {
+      // The appearance commit already happened. Transition rendering is optional.
+    });
+  } catch {
+    commitOnce();
+  }
 }
 
 function applyAppearance(
@@ -234,15 +271,14 @@ export function ThemeProvider({
     const systemPrefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)",
     ).matches;
+    const currentPreset = getPresetSnapshot();
 
-    beginAppearanceTransition();
-    persistTheme(normalized);
-    applyAppearance(
-      resolveTheme(normalized, systemPrefersDark),
-      getPresetSnapshot(),
-    );
-    // Always notify the external store, even when localStorage persistence failed.
-    notifyAppearanceChanged();
+    commitAppearanceTransition(() => {
+      persistTheme(normalized);
+      applyAppearance(resolveTheme(normalized, systemPrefersDark), currentPreset);
+      // Always notify the external store, even when localStorage persistence failed.
+      notifyAppearanceChanged();
+    });
   }, []);
 
   const setPreset = useCallback((newPreset: ThemePreset) => {
@@ -250,15 +286,14 @@ export function ThemeProvider({
     const systemPrefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)",
     ).matches;
+    const currentTheme = getThemeSnapshot();
 
-    beginAppearanceTransition();
-    persistPreset(normalized);
-    applyAppearance(
-      resolveTheme(getThemeSnapshot(), systemPrefersDark),
-      normalized,
-    );
-    // Always notify the external store, even when localStorage persistence failed.
-    notifyAppearanceChanged();
+    commitAppearanceTransition(() => {
+      persistPreset(normalized);
+      applyAppearance(resolveTheme(currentTheme, systemPrefersDark), normalized);
+      // Always notify the external store, even when localStorage persistence failed.
+      notifyAppearanceChanged();
+    });
   }, []);
 
   const value = useMemo<ThemeContextValue>(
