@@ -7,7 +7,7 @@
 > **Documentation branch:** `agent/internal-16-completion-authority`
 > **Next application milestone:** `1.0.0-internal.16` / MSI `1.0.0.16`
 > **Governing directive:** FD-033 — Internal.16 completion convergence
-> **Installed inspection:** active; Parts 1–3 captured
+> **Installed inspection:** CLOSED 2026-08-13; Parts 1–3 frozen at 17 P1 findings
 > **Retained open evidence:** #221, #226, #230
 
 Live GitHub is authority. Re-fetch protected `main`, releases, installed evidence, issues and Actions before application writes or release claims.
@@ -18,11 +18,15 @@ Internal.16 is intended to be the complete application candidate, not another pa
 
 Internal.16 must complete remaining Phase 5/6/7 work, implement Phase 8, remove NOEST/Nord et Ouest and add first-class EcoTrack Pro, harden AI/extraction/tools, then freeze and certify the whole product with zero known P0/P1 before a user-ready claim.
 
-## Installed Internal.15 discovery rule
+## Installed Internal.15 discovery closure
 
-Do **not** begin broad Internal.16 implementation until the Founder explicitly says the installed discovery is complete or freezes it. Screenshots are evidence samples, not a request for the Founder to enumerate every sibling defect. The implementation agent owns exhaustive source/route discovery for every established defect class.
+The Founder explicitly closed the installed Internal.15 inspection on 2026-08-13 after Parts 1–3. The 17 findings below are now the **frozen Founder-installed acceptance input** for Internal.16.
 
-## Stable installed findings — Parts 1–3
+Do not spend the next session repeating screenshot discovery. Screenshots remain evidence samples, not an exhaustive route list. The implementation agent owns one exact-source whole-product reconnaissance for every established defect class plus hidden dependencies, then freezes the combined source+installed Problem Register before broad implementation.
+
+New material P0/P1 facts discovered during source reconnaissance may be added because they are newly proven product truth; do not reopen Founder discovery merely to enumerate another sibling manifestation of an already-frozen class.
+
+## Frozen installed findings — Parts 1–3
 
 ### Cross-product UI/localization
 
@@ -68,8 +72,10 @@ These are root-cause clues, not a list of files to patch blindly.
 ## Internal.16 execution style
 
 ```text
-one complete installed + source reconnaissance
-→ one consolidated Problem Register
+exact documentation-merged authority
+→ one exact-source whole-product reconnaissance
+→ merge source findings with frozen 17 installed findings
+→ freeze one consolidated Problem Register
 → freeze contracts/non-goals/acceptance matrix
 → one large dependency-correct implementation wave
 → targeted cheap checks while coding
@@ -88,15 +94,28 @@ Remaining desktop routes; shared RTL/interaction/responsive/theme/locale/chart/n
 
 Cloudflare Free may bootstrap first-buyer capacity when measured sufficient, but provider hostnames do not satisfy #230. EcoTrack endpoints/capabilities may not be guessed. Phase 1–4 authorities remain protected.
 
-## Exact next order
+## Exact next-session order
 
-1. Continue Founder installed Internal.15 inspection and append material findings until discovery is explicitly closed.
-2. Re-fetch protected main, Internal.15 publication/install evidence and #221/#226/#230.
-3. Merge/reconcile FD-033 governance documentation.
-4. Create one Internal.16 application branch from exact protected main.
-5. Perform the whole-product source reconnaissance and merge it with installed Parts 1–N into the final frozen Problem Register.
-6. Execute the large completion wave dependency-correctly.
+1. Re-fetch protected `main`, releases, Actions and retained #221/#226/#230 truth; read FD-033/Current State/Roadmap/Workflow/Working Memory.
+2. Ensure this documentation authority is merged to protected `main`.
+3. Create/use the single `agent/internal-16-completion` application branch from that exact protected main.
+4. Perform one exact-source whole-product reconnaissance for sibling manifestations and root dependencies of the frozen 17 findings plus the defined Phase 8/EcoTrack/AI/release scope.
+5. Freeze the combined source+installed Problem Register, contracts/non-goals and acceptance matrix. Do not return to broad design/discovery after this freeze unless new P0/P1 evidence appears.
+6. Execute the large dependency-correct implementation wave with targeted local checks only.
 7. Freeze one complete Internal.16 head.
 8. Run the full certification matrix and one complete adversarial review.
 9. Repair one consolidated finding set; rerun affected + final complete proof.
 10. Publish/deliver only to the evidence level actually achieved.
+
+## Hard stop conditions
+
+- one active application writer;
+- no direct protected-main application edits;
+- no Phase 1–4 authority weakening;
+- no guessed EcoTrack/provider capability;
+- no fake tool/cloud/provider success;
+- no low-confidence AI extraction promoted as canonical order truth;
+- no gate/threshold weakening for schedule;
+- no repeated heavy certification on unchanged passing heads;
+- no customer-online claim from provider hostnames/mocks;
+- no Stable claim from internal confidence alone.
