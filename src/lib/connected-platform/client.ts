@@ -27,6 +27,30 @@ export type ConnectedPlatformClientOptions = Readonly<{
   timeoutMs?: number;
 }>;
 
+export type StorefrontReceipt = Readonly<{
+  relaySequence: number;
+  receiptId: string;
+  storefrontId: string;
+  storefrontSlug: string;
+  shopId: string;
+  releaseId: string;
+  idempotencyKey: string;
+  requestDigest: string;
+  encryptedCustomer: string;
+  wrappedCustomerKey: string;
+  wilayaCode: string;
+  deliveryMode: "home" | "desk";
+  subtotalDzd: number;
+  shippingDzd: number;
+  totalDzd: number;
+  createdAt: string;
+  lines: ReadonlyArray<{
+    itemKey: string;
+    quantity: number;
+    unitPriceDzd: number;
+  }>;
+}>;
+
 function normalizedBaseUrl(value: string, label: string): URL {
   let url: URL;
   try {
@@ -250,7 +274,7 @@ export class ConnectedPlatformClient {
   }
 
   pollStorefrontReceipts(workspaceId: string, after: number, limit = 50) {
-    return this.requestJson<{ receipts: unknown[]; nextCursor: number }>(
+    return this.requestJson<{ receipts: StorefrontReceipt[]; nextCursor: number }>(
       "storefront",
       "/v1/desktop/storefront/receipts",
       { query: { workspaceId, after, limit } },

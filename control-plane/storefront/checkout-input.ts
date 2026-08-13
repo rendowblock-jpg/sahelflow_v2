@@ -6,6 +6,7 @@ import {
   MAX_CIPHERTEXT_CHARS,
   WILAYA,
 } from "./shared";
+import { parseStorefrontCustomerCiphertext } from "./receipt-protocol";
 
 export type CheckoutLineInput = { itemKey: string; quantity: number };
 
@@ -13,6 +14,7 @@ export type ParsedCheckoutInput = {
   idempotencyKey: string;
   encryptedCustomer: string;
   wrappedCustomerKey: string;
+  customerAadDigest: string;
   wilayaCode: string;
   deliveryMode: "home" | "desk";
   items: CheckoutLineInput[];
@@ -26,11 +28,12 @@ export function parseCheckoutInput(value: unknown): ParsedCheckoutInput | null {
   const wrappedCustomerKey = String(input.wrappedCustomerKey ?? "");
   const wilayaCode = String(input.wilayaCode ?? "");
   const deliveryMode = input.deliveryMode;
+  const customerCiphertext = parseStorefrontCustomerCiphertext(encryptedCustomer);
   if (
     !ID.test(idempotencyKey) ||
     !BASE64.test(encryptedCustomer) ||
-    encryptedCustomer.length < 16 ||
     encryptedCustomer.length > MAX_CIPHERTEXT_CHARS ||
+    !customerCiphertext ||
     !BASE64.test(wrappedCustomerKey) ||
     wrappedCustomerKey.length < 16 ||
     wrappedCustomerKey.length > 4096 ||
@@ -63,6 +66,7 @@ export function parseCheckoutInput(value: unknown): ParsedCheckoutInput | null {
     idempotencyKey,
     encryptedCustomer,
     wrappedCustomerKey,
+    customerAadDigest: customerCiphertext.aadDigest,
     wilayaCode,
     deliveryMode,
     items,

@@ -1,4 +1,5 @@
 import { parseCheckoutInput } from "./checkout-input";
+import { storefrontReceiptAadValue } from "./receipt-protocol";
 import { resolveCheckoutPricing } from "./checkout-pricing";
 import { canonicalJson, json, sha256Hex } from "./shared";
 import type {
@@ -37,6 +38,16 @@ export async function checkout(
     .first<StorefrontRow>();
   if (!storefront || storefront.state !== "active" || !storefront.active_release_id) {
     return json({ error: "storefront_not_found" }, 404);
+  }
+  const expectedAadDigest = await sha256Hex(storefrontReceiptAadValue({
+    storefrontId: storefront.storefront_id,
+    releaseId: storefront.active_release_id,
+    idempotencyKey: input.idempotencyKey,
+    wilayaCode: input.wilayaCode,
+    deliveryMode: input.deliveryMode,
+  }));
+  if (input.customerAadDigest !== expectedAadDigest) {
+    return json({ error: "customer_binding_mismatch" }, 400);
   }
 
   const requestDigest = await sha256Hex(

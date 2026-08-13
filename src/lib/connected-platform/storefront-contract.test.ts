@@ -35,6 +35,15 @@ function releaseInput() {
   });
 }
 
+function encryptedCustomer(): string {
+  return Buffer.from(JSON.stringify({
+    v: 1,
+    iv: "AAAAAAAAAAAAAAAA",
+    ciphertext: "AAAAAAAAAAAAAAAAAAAAAAAA",
+    aadDigest: "a".repeat(64),
+  }), "utf8").toString("base64");
+}
+
 describe("hosted storefront contract", () => {
   it("accepts a V2 release only when catalog and delegated allocation match", () => {
     const parsed = parseReleaseInput(releaseInput());
@@ -69,7 +78,7 @@ describe("hosted storefront contract", () => {
   it("strips customer-supplied pricing from checkout input", () => {
     const parsed = parseCheckoutInput({
       idempotencyKey: "checkout_12345678",
-      encryptedCustomer: "A".repeat(32),
+      encryptedCustomer: encryptedCustomer(),
       wrappedCustomerKey: "B".repeat(32),
       wilayaCode: "16",
       deliveryMode: "home",
@@ -91,7 +100,7 @@ describe("hosted storefront contract", () => {
     })).toBeNull();
     expect(parseCheckoutInput({
       idempotencyKey: "checkout_12345678",
-      encryptedCustomer: "A".repeat(32),
+      encryptedCustomer: encryptedCustomer(),
       wrappedCustomerKey: "B".repeat(32),
       wilayaCode: "16",
       deliveryMode: "home",

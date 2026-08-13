@@ -5,6 +5,28 @@ import type {
   StorefrontWorkerEnvironment,
 } from "./types";
 
+type ReceiptPollRow = {
+  relay_sequence: number;
+  receipt_id: string;
+  storefront_id: string;
+  release_id: string;
+  idempotency_key: string;
+  request_digest: string;
+  encrypted_customer: string;
+  wrapped_customer_key: string;
+  wilaya_code: string;
+  delivery_mode: "home" | "desk";
+  subtotal_dzd: number;
+  shipping_dzd: number;
+  total_dzd: number;
+  created_at: string;
+  shop_id: string;
+  storefront_slug: string;
+  item_key: string | null;
+  quantity: number | null;
+  unit_price_dzd: number | null;
+};
+
 export async function receiptStatus(
   environment: StorefrontWorkerEnvironment,
   receiptId: string,
@@ -44,21 +66,82 @@ export async function pollReceipts(
     return json({ error: "unauthorized" }, 401);
   }
   const rows = await environment.DB.prepare(
-    `SELECT r.relay_sequence, r.receipt_id, r.storefront_id, r.release_id,
-            r.encrypted_customer, r.wrapped_customer_key, r.wilaya_code,
-            r.delivery_mode, r.subtotal_dzd, r.shipping_dzd, r.total_dzd, r.created_at
-       FROM storefront_receipt r
-       JOIN storefront s ON s.storefront_id = r.storefront_id
-      WHERE s.workspace_id = ?1 AND r.relay_sequence > ?2 AND r.state = 'received'
-      ORDER BY r.relay_sequence ASC LIMIT ?3`,
+    `WITH selected AS (
+       SELECT r.relay_sequence, r.receipt_id, r.storefront_id, r.release_id,
+              r.idempotency_key, r.request_digest, r.encrypted_customer,
+              r.wrapped_customer_key, r.wilaya_code, r.delivery_mode,
+              r.subtotal_dzd, r.shipping_dzd, r.total_dzd,
+              strftime('%Y-%m-%dT%H:%M:%fZ', r.created_at) AS created_at,
+              s.shop_id, s.slug AS storefront_slug
+         FROM storefront_receipt r
+         JOIN storefront s ON s.storefront_id = r.storefront_id
+        WHERE s.workspace_id = ?1 AND r.relay_sequence > ?2 AND r.state = 'received'
+        ORDER BY r.relay_sequence ASC
+        LIMIT ?3
+     )
+     SELECT selected.*, line.item_key, line.quantity, line.unit_price_dzd
+       FROM selected
+       LEFT JOIN storefront_receipt_line line ON line.receipt_id = selected.receipt_id
+      ORDER BY selected.relay_sequence ASC, line.item_key ASC`,
   )
     .bind(workspaceId, after, limit)
-    .all<Record<string, unknown>>();
-  const receipts = rows.results ?? [];
-  const last = receipts.at(-1);
+    .all<ReceiptPollRow>();
+  const receipts = new Map<number, {
+    relaySequence: number;
+    receiptId: string;
+    storefrontId: string;
+    storefrontSlug: string;
+    shopId: string;
+    releaseId: string;
+    idempotencyKey: string;
+    requestDigest: string;
+    encryptedCustomer: string;
+    wrappedCustomerKey: string;
+    wilayaCode: string;
+    deliveryMode: "home" | "desk";
+    subtotalDzd: number;
+    shippingDzd: number;
+    totalDzd: number;
+    createdAt: string;
+    lines: Array<{ itemKey: string; quantity: number; unitPriceDzd: number }>;
+  }>();
+  for (const row of rows.results ?? []) {
+    let receipt = receipts.get(row.relay_sequence);
+    if (!receipt) {
+      receipt = {
+        relaySequence: row.relay_sequence,
+        receiptId: row.receipt_id,
+        storefrontId: row.storefront_id,
+        storefrontSlug: row.storefront_slug,
+        shopId: row.shop_id,
+        releaseId: row.release_id,
+        idempotencyKey: row.idempotency_key,
+        requestDigest: row.request_digest,
+        encryptedCustomer: row.encrypted_customer,
+        wrappedCustomerKey: row.wrapped_customer_key,
+        wilayaCode: row.wilaya_code,
+        deliveryMode: row.delivery_mode,
+        subtotalDzd: row.subtotal_dzd,
+        shippingDzd: row.shipping_dzd,
+        totalDzd: row.total_dzd,
+        createdAt: row.created_at,
+        lines: [],
+      };
+      receipts.set(row.relay_sequence, receipt);
+    }
+    if (row.item_key !== null && row.quantity !== null && row.unit_price_dzd !== null) {
+      receipt.lines.push({
+        itemKey: row.item_key,
+        quantity: row.quantity,
+        unitPriceDzd: row.unit_price_dzd,
+      });
+    }
+  }
+  const receiptList = [...receipts.values()];
+  const last = receiptList.at(-1);
   return json({
-    receipts,
-    nextCursor: last ? Number(last.relay_sequence) : after,
+    receipts: receiptList,
+    nextCursor: last?.relaySequence ?? after,
   });
 }
 
