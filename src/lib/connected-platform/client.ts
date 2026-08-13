@@ -213,6 +213,42 @@ export class ConnectedPlatformClient {
     );
   }
 
+  listStorefrontReleases(storefrontId: string, workspaceId: string, limit = 50) {
+    return this.requestJson<{
+      storefrontId: string;
+      releases: Array<{
+        releaseId: string;
+        parentReleaseId: string | null;
+        templateId: "sahara" | "atlas" | "oasis";
+        locale: "ar" | "fr" | "en";
+        artifactDigest: string;
+        createdAt: string;
+        isActive: boolean;
+      }>;
+    }>("storefront", `/v1/desktop/storefronts/${encodeURIComponent(storefrontId)}/releases`, {
+      query: { workspaceId, limit },
+    });
+  }
+
+  rollbackStorefrontRelease(
+    storefrontId: string,
+    input: {
+      workspaceId: string;
+      releaseId: string;
+      expectedActiveReleaseId: string;
+    },
+  ) {
+    return this.requestJson<{
+      storefrontId: string;
+      releaseId: string;
+      previousReleaseId: string;
+      status: "rolled_back";
+    }>("storefront", `/v1/desktop/storefronts/${encodeURIComponent(storefrontId)}/rollback`, {
+      method: "POST",
+      body: input,
+    });
+  }
+
   pollStorefrontReceipts(workspaceId: string, after: number, limit = 50) {
     return this.requestJson<{ receipts: unknown[]; nextCursor: number }>(
       "storefront",

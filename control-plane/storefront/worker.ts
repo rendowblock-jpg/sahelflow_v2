@@ -1,5 +1,6 @@
 import { checkout } from "./checkout";
 import { createStorefront } from "./create-storefront";
+import { listReleases } from "./list-releases";
 import { publicStorefront } from "./public-storefront";
 import { publishRelease } from "./publish-release";
 import { completeReceipt, pollReceipts, receiptStatus } from "./receipts";
@@ -40,6 +41,9 @@ export async function handleStorefrontRequest(
     );
   if (request.method === "POST" && releaseMatch?.[1]) {
     return publishRelease(request, environment, releaseMatch[1]);
+  }
+  if (request.method === "GET" && releaseMatch?.[1]) {
+    return listReleases(request, environment, releaseMatch[1], url);
   }
   const rollbackMatch =
     /^\/v1\/desktop\/storefronts\/([A-Za-z0-9][A-Za-z0-9_-]{7,127})\/rollback$/.exec(
