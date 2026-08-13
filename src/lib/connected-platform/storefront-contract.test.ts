@@ -72,7 +72,7 @@ describe("hosted storefront contract", () => {
     ).replace(/\r\n?/g, "\n");
     expect(source).toContain("sourceReleaseId");
     expect(source).toContain("INSERT INTO storefront_release");
-    expect(source).toContain("INSERT INTO storefront_allocation");
+    expect(source).toContain("appendConservedAllocationStatements");
     expect(source).toContain("parentReleaseId: expectedActiveReleaseId");
     expect(source).toContain("artifactDigest !== source.artifact_digest");
     expect(source).not.toMatch(/UPDATE\s+storefront\s+SET\s+active_release_id/);

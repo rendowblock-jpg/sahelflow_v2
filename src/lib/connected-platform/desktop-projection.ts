@@ -9,7 +9,9 @@ import {
   resolveDashboardFieldAccess,
 } from "@/lib/identity/dashboard-projection";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
+import { getPhase2PresetPermissions } from "@/lib/identity/permissions";
 import { ConnectedPlatformClient } from "./client";
+import { remoteCommandTypesForPermissions } from "./command-policy";
 import { createConnectedEnvelope } from "./envelope";
 import type { ConnectedKeyPair } from "./payload-crypto";
 import {
@@ -99,6 +101,22 @@ export async function publishRemoteDashboardProjection(input: Readonly<{
   const sequence = await nextProjectionSequence(device.deviceId);
   const issuedAt = input.now ?? new Date();
   const expiresAt = new Date(issuedAt.getTime() + PROJECTION_TTL_MS);
+  const actorPermissions = input.actorContext.actor.permissions ??
+    getPhase2PresetPermissions(input.actorContext.actor.role);
+  const policy = await input.client.putCommandPolicy({
+    workspaceId: input.actorContext.shop.workspaceId,
+    shopId: input.actorContext.shop.shopId,
+    memberId: device.memberId,
+    deviceId: device.deviceId,
+    policyVersion: input.actorContext.actor.policyVersion,
+    memberRevocationEpoch: input.actorContext.actor.revocationEpoch,
+    deviceRevocationEpoch: device.revocationEpoch,
+    allowedCommands: [...remoteCommandTypesForPermissions(actorPermissions)],
+    expiresAt: expiresAt.toISOString(),
+  });
+  if (policy.status !== "stored" || policy.policyVersion !== input.actorContext.actor.policyVersion) {
+    throw new Error("Connected command authorization was not acknowledged");
+  }
   const envelopeId = `projection_${randomUUID().replace(/-/g, "")}`;
   const envelope = createConnectedEnvelope(
     {

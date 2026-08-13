@@ -237,6 +237,55 @@ export class ConnectedPlatformClient {
     );
   }
 
+  bootstrapConnected(
+    entitlement: unknown,
+    desktopSigningPublicKey: string,
+    desktopEncryptionPublicKey: string,
+  ) {
+    return this.requestJson<{
+      workspaceId: string;
+      desktopToken: string;
+      protocolVersion: number;
+      status?: "refreshed";
+    }>("control", "/v1/bootstrap", {
+      method: "POST",
+      token: "none",
+      body: { entitlement, desktopSigningPublicKey, desktopEncryptionPublicKey },
+    });
+  }
+
+  bootstrapBackup(entitlement: unknown, desktopSigningPublicKey: string) {
+    return this.requestJson<{
+      workspaceId: string;
+      backupToken: string;
+      backupBytes: number;
+      licenseType: "trial" | "extension" | "permanent";
+      status?: "refreshed";
+    }>("backup", "/v1/bootstrap", {
+      method: "POST",
+      token: "none",
+      body: { entitlement, desktopSigningPublicKey },
+    });
+  }
+
+  putCommandPolicy(input: {
+    workspaceId: string;
+    shopId: string;
+    memberId: string;
+    deviceId: string;
+    policyVersion: number;
+    memberRevocationEpoch: number;
+    deviceRevocationEpoch: number;
+    allowedCommands: string[];
+    expiresAt: string;
+  }) {
+    return this.requestJson<{ status: "stored"; policyVersion: number }>(
+      "control",
+      "/v1/desktop/command-policies",
+      { method: "PUT", body: input },
+    );
+  }
+
   listStorefrontReleases(storefrontId: string, workspaceId: string, limit = 50) {
     return this.requestJson<{
       storefrontId: string;

@@ -32,4 +32,38 @@ describe("connected entitlement and quota boundaries", () => {
     expect(backupSchema).toContain("RAISE(ABORT, 'trial_backup_already_exists')");
     expect(backupInitiate).not.toContain("SELECT COALESCE(SUM(total_bytes)");
   });
+
+  it("refreshes signed entitlement authority without allowing identity or expiry rollback", () => {
+    const connected = source("control-plane/connected/worker.ts");
+    const backup = source("control-plane/backup/auth.ts");
+    for (const worker of [connected, backup]) {
+      expect(worker).toContain("entitlement_refresh_rejected");
+      expect(worker).toContain("claims.revocationEpoch < existing.entitlement_revocation_epoch");
+      expect(worker).toContain("currentExpiry === null && nextExpiry !== null");
+      expect(worker).toContain("desktop_signing_public_key");
+    }
+  });
+
+  it("requires an unexpired desktop-issued shop and action policy before enqueue", () => {
+    const schema = source("control-plane/connected/schema.sql");
+    const worker = source("control-plane/connected/worker.ts");
+    const projection = source("src/lib/connected-platform/desktop-projection.ts");
+    expect(schema).toContain("CREATE TABLE IF NOT EXISTS connected_command_policy");
+    expect(worker).toContain("command_not_authorized");
+    expect(worker).toContain("commands.includes(envelope.messageType)");
+    expect(projection).toContain("remoteCommandTypesForPermissions");
+    expect(projection).toContain("putCommandPolicy");
+  });
+
+  it("renews connected and backup tokens after local signed activation", () => {
+    const runtime = source("src/lib/connected-platform/runtime.ts");
+    const syncRoute = source("src/app/api/license/sync/route.ts");
+    const trialRoute = source("src/app/api/license/trial/route.ts");
+    expect(runtime).toContain("bootstrapConnected");
+    expect(runtime).toContain("bootstrapBackup");
+    expect(runtime).toContain("setSecret(context, CONNECTED_CONTROL_TOKEN_SECRET");
+    expect(runtime).toContain("setSecret(context, CONNECTED_BACKUP_TOKEN_SECRET");
+    expect(syncRoute).toContain("refreshConnectedEnrollmentIfConfigured");
+    expect(trialRoute).toContain("refreshConnectedEnrollmentIfConfigured");
+  });
 });

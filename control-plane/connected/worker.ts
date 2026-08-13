@@ -4,6 +4,7 @@ import {
   canonicalEntitlementBytes,
 } from "../../src/lib/license/entitlement-canonical";
 import type { SignedEntitlement } from "../../src/lib/license/entitlement";
+import { isRemoteCommandType } from "../../src/lib/connected-platform/command-policy";
 import {
   canonicalConnectedEnvelopeBytes,
   isConnectedEnvelope,
@@ -39,6 +40,7 @@ type WorkspaceRow = {
   installation_id: string;
   device_binding: string;
   product_major: number;
+  license_type: "trial" | "extension" | "permanent" | null;
   entitlement_expires_at: string | null;
   shop_slots: number;
   member_limit: number;
@@ -98,6 +100,7 @@ const MAX_POLL_LIMIT = 100;
 const COMPLETE_FEATURE = "sahelflow.complete";
 const CONNECTED_FEATURE = "sahelflow.connected";
 const STOREFRONT_FEATURE = "sahelflow.storefront";
+const COMMAND_POLICY_MAX_TTL_MS = 20 * 60 * 1000;
 
 function json(value: unknown, status = 200): Response {
   return Response.json(value, {
@@ -266,7 +269,7 @@ async function authenticateDesktop(
   if (!token) return null;
   const tokenHash = await sha256Hex(token);
   const workspace = await environment.DB.prepare(
-    `SELECT workspace_id, license_id, installation_id, device_binding, product_major,
+    `SELECT workspace_id, license_id, installation_id, device_binding, product_major, license_type,
             entitlement_expires_at, shop_slots, member_limit, device_limit, features_json,
             entitlement_revocation_epoch, desktop_token_hash, desktop_signing_public_key,
             desktop_encryption_public_key, revoked_at
@@ -336,29 +339,98 @@ async function bootstrap(request: Request, environment: ConnectedWorkerEnvironme
   try { entitlement = await verifyEntitlement(input.entitlement, environment); }
   catch { return json({ error: "entitlement_rejected" }, 403); }
   const { claims } = entitlement;
-  if (!claims.features.includes(COMPLETE_FEATURE) && !claims.features.includes(CONNECTED_FEATURE)) {
+  if (
+    !claims.features.includes(COMPLETE_FEATURE) &&
+    !claims.features.includes(CONNECTED_FEATURE) &&
+    !claims.features.includes(STOREFRONT_FEATURE)
+  ) {
     return json({ error: "connected_not_entitled" }, 403);
   }
-  const existing = await environment.DB.prepare(
-    "SELECT workspace_id FROM connected_workspace WHERE workspace_id = ?1",
-  ).bind(claims.workspaceId).first<{ workspace_id: string }>();
-  if (existing) return json({ error: "already_bootstrapped" }, 409);
-
   const token = randomToken();
   const tokenHash = await sha256Hex(token);
+  const existing = await environment.DB.prepare(
+    `SELECT workspace_id, license_id, installation_id, device_binding, product_major, license_type,
+            entitlement_expires_at, shop_slots, member_limit, device_limit, features_json,
+            entitlement_revocation_epoch, desktop_token_hash, desktop_signing_public_key,
+            desktop_encryption_public_key, revoked_at
+       FROM connected_workspace WHERE workspace_id = ?1`,
+  ).bind(claims.workspaceId).first<WorkspaceRow>();
+  if (existing) {
+    const currentExpiry = existing.entitlement_expires_at
+      ? Date.parse(existing.entitlement_expires_at)
+      : null;
+    const nextExpiry = claims.expiresAt ? Date.parse(claims.expiresAt) : null;
+    const rank = { trial: 0, extension: 1, permanent: 2 } as const;
+    const existingType = existing.license_type ??
+      (currentExpiry === null ? "permanent" : "trial");
+    if (
+      existing.revoked_at !== null ||
+      (rank[claims.type] === rank[existingType] && existing.license_id !== claims.licenseId) ||
+      rank[claims.type] < rank[existingType] ||
+      existing.installation_id !== claims.installationId ||
+      existing.device_binding !== claims.deviceBinding ||
+      existing.product_major !== claims.productMajor ||
+      existing.desktop_signing_public_key !== input.desktopSigningPublicKey ||
+      existing.desktop_encryption_public_key !== input.desktopEncryptionPublicKey ||
+      claims.revocationEpoch < existing.entitlement_revocation_epoch ||
+      (currentExpiry === null && nextExpiry !== null) ||
+      (currentExpiry !== null && nextExpiry !== null && nextExpiry < currentExpiry)
+    ) {
+      return json({ error: "entitlement_refresh_rejected" }, 409);
+    }
+    const refreshed = await environment.DB.prepare(
+      `UPDATE connected_workspace
+          SET license_id = ?9, license_type = ?15,
+              entitlement_expires_at = ?2, shop_slots = ?3, member_limit = ?4,
+              device_limit = ?5, features_json = ?6,
+              entitlement_revocation_epoch = ?7, desktop_token_hash = ?8,
+              updated_at = CURRENT_TIMESTAMP
+        WHERE workspace_id = ?1 AND installation_id = ?10
+          AND device_binding = ?11 AND product_major = ?12
+          AND desktop_signing_public_key = ?13 AND desktop_encryption_public_key = ?14
+          AND revoked_at IS NULL AND entitlement_revocation_epoch <= ?7`,
+    ).bind(
+      claims.workspaceId,
+      claims.expiresAt,
+      claims.shopSlots,
+      claims.memberLimit,
+      claims.deviceLimit,
+      JSON.stringify(claims.features),
+      claims.revocationEpoch,
+      tokenHash,
+      claims.licenseId,
+      claims.installationId,
+      claims.deviceBinding,
+      claims.productMajor,
+      input.desktopSigningPublicKey,
+      input.desktopEncryptionPublicKey,
+      claims.type,
+    ).run();
+    if (!refreshed.success || refreshed.meta?.changes !== 1) {
+      return json({ error: "entitlement_refresh_conflict" }, 409);
+    }
+    return json({
+      workspaceId: claims.workspaceId,
+      desktopToken: token,
+      protocolVersion: 1,
+      status: "refreshed",
+    });
+  }
+
   const inserted = await environment.DB.prepare(
     `INSERT OR IGNORE INTO connected_workspace
-      (workspace_id, license_id, installation_id, device_binding, product_major,
+      (workspace_id, license_id, installation_id, device_binding, product_major, license_type,
        entitlement_expires_at, shop_slots, member_limit, device_limit, features_json,
        entitlement_revocation_epoch, desktop_token_hash, desktop_signing_public_key,
        desktop_encryption_public_key)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`,
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)`,
   ).bind(
     claims.workspaceId,
     claims.licenseId,
     claims.installationId,
     claims.deviceBinding,
     claims.productMajor,
+    claims.type,
     claims.expiresAt,
     claims.shopSlots,
     claims.memberLimit,
@@ -375,6 +447,81 @@ async function bootstrap(request: Request, environment: ConnectedWorkerEnvironme
     desktopToken: token,
     protocolVersion: 1,
   }, 201);
+}
+
+async function putCommandPolicy(
+  request: Request,
+  environment: ConnectedWorkerEnvironment,
+): Promise<Response> {
+  let body: unknown;
+  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return json({ error: "invalid_request" }, 400);
+  }
+  const input = body as Record<string, unknown>;
+  const workspaceId = input.workspaceId;
+  const shopId = input.shopId;
+  const memberId = input.memberId;
+  const deviceId = input.deviceId;
+  const policyVersion = Number(input.policyVersion);
+  const memberRevocationEpoch = Number(input.memberRevocationEpoch);
+  const deviceRevocationEpoch = Number(input.deviceRevocationEpoch);
+  const expiresAt = String(input.expiresAt ?? "");
+  const expiry = Date.parse(expiresAt);
+  const allowedCommands = input.allowedCommands;
+  if (
+    !validIdentity(workspaceId) || !validIdentity(shopId) ||
+    !validIdentity(memberId) || !validIdentity(deviceId) ||
+    !Number.isSafeInteger(policyVersion) || policyVersion < 0 ||
+    !Number.isSafeInteger(memberRevocationEpoch) || memberRevocationEpoch < 0 ||
+    !Number.isSafeInteger(deviceRevocationEpoch) || deviceRevocationEpoch < 0 ||
+    !Number.isFinite(expiry) || expiry <= Date.now() ||
+    expiry > Date.now() + COMMAND_POLICY_MAX_TTL_MS ||
+    !Array.isArray(allowedCommands) || allowedCommands.length > 32 ||
+    new Set(allowedCommands).size !== allowedCommands.length ||
+    !allowedCommands.every(isRemoteCommandType)
+  ) return json({ error: "invalid_command_policy" }, 400);
+  const workspace = await authenticateDesktop(request, environment, workspaceId);
+  if (!workspace) return json({ error: "unauthorized" }, 401);
+  const device = await environment.DB.prepare(
+    `SELECT workspace_id, device_id, member_id, token_hash, signing_public_key,
+            encryption_public_key, revocation_epoch, revoked_at
+       FROM connected_device
+      WHERE workspace_id = ?1 AND device_id = ?2 AND member_id = ?3
+        AND revocation_epoch = ?4 AND revoked_at IS NULL`,
+  ).bind(workspaceId, deviceId, memberId, deviceRevocationEpoch).first<DeviceRow>();
+  if (!device) return json({ error: "device_authority_rejected" }, 409);
+
+  const result = await environment.DB.prepare(
+    `INSERT INTO connected_command_policy
+      (workspace_id, shop_id, member_id, device_id, policy_version,
+       member_revocation_epoch, device_revocation_epoch, allowed_commands_json, expires_at)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+     ON CONFLICT(workspace_id, shop_id, member_id, device_id) DO UPDATE SET
+       policy_version = excluded.policy_version,
+       member_revocation_epoch = excluded.member_revocation_epoch,
+       device_revocation_epoch = excluded.device_revocation_epoch,
+       allowed_commands_json = excluded.allowed_commands_json,
+       expires_at = excluded.expires_at,
+       updated_at = CURRENT_TIMESTAMP
+     WHERE excluded.policy_version >= connected_command_policy.policy_version
+       AND excluded.member_revocation_epoch >= connected_command_policy.member_revocation_epoch
+       AND excluded.device_revocation_epoch >= connected_command_policy.device_revocation_epoch`,
+  ).bind(
+    workspaceId,
+    shopId,
+    memberId,
+    deviceId,
+    policyVersion,
+    memberRevocationEpoch,
+    deviceRevocationEpoch,
+    JSON.stringify(allowedCommands),
+    expiresAt,
+  ).run();
+  if (!result.success || result.meta?.changes !== 1) {
+    return json({ error: "command_policy_conflict" }, 409);
+  }
+  return json({ status: "stored", policyVersion });
 }
 
 async function createPairing(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
@@ -475,7 +622,7 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
     return json({ error: "pairing_rejected" }, 403);
   }
   const workspace = await environment.DB.prepare(
-    `SELECT workspace_id, license_id, installation_id, device_binding, product_major,
+    `SELECT workspace_id, license_id, installation_id, device_binding, product_major, license_type,
             entitlement_expires_at, shop_slots, member_limit, device_limit, features_json,
             entitlement_revocation_epoch, desktop_token_hash, desktop_signing_public_key,
             desktop_encryption_public_key, revoked_at
@@ -693,6 +840,35 @@ async function submitCommand(request: Request, environment: ConnectedWorkerEnvir
   if (!(await verifyEnvelopeSignature(envelope, device.signing_public_key))) {
     return json({ error: "invalid_signature" }, 403);
   }
+  const policy = await environment.DB.prepare(
+    `SELECT allowed_commands_json, expires_at, device_revocation_epoch
+       FROM connected_command_policy
+      WHERE workspace_id = ?1 AND shop_id = ?2 AND member_id = ?3 AND device_id = ?4`,
+  ).bind(
+    envelope.workspaceId,
+    envelope.shopId,
+    envelope.memberId,
+    envelope.deviceId,
+  ).first<{
+    allowed_commands_json: string;
+    expires_at: string;
+    device_revocation_epoch: number;
+  }>();
+  let allowed = false;
+  if (
+    policy &&
+    Date.parse(policy.expires_at) > Date.now() &&
+    policy.device_revocation_epoch === device.revocation_epoch
+  ) {
+    try {
+      const commands = JSON.parse(policy.allowed_commands_json) as unknown;
+      allowed = Array.isArray(commands) && commands.every(isRemoteCommandType) &&
+        commands.includes(envelope.messageType);
+    } catch {
+      allowed = false;
+    }
+  }
+  if (!allowed) return json({ error: "command_not_authorized" }, 403);
   const digest = await sha256Hex(canonicalConnectedEnvelopeBytes(envelope));
   const existing = await environment.DB.prepare(
     `SELECT relay_sequence, workspace_id, command_id, idempotency_key, envelope_digest, shop_id,
@@ -896,6 +1072,7 @@ export async function handleConnectedRequest(
   if (request.method === "GET" && url.pathname === "/v1/desktop/authority") return workspaceAuthority(request, environment, url);
   if (request.method === "GET" && url.pathname === "/v1/desktop/devices") return listDevices(request, environment, url);
   if (request.method === "PUT" && url.pathname === "/v1/desktop/projections") return putProjection(request, environment);
+  if (request.method === "PUT" && url.pathname === "/v1/desktop/command-policies") return putCommandPolicy(request, environment);
   if (request.method === "GET" && url.pathname === "/v1/projections") return getProjection(request, environment, url);
   if (request.method === "POST" && url.pathname === "/v1/commands") return submitCommand(request, environment);
   if (request.method === "GET" && url.pathname === "/v1/desktop/commands") return pollCommands(request, environment, url);

@@ -52,6 +52,8 @@ export type BackupWorkspaceRow = {
   workspace_id: string;
   license_id: string;
   installation_id: string;
+  device_binding: string | null;
+  product_major: number | null;
   license_type: "trial" | "extension" | "permanent";
   entitlement_expires_at: string | null;
   backup_bytes: number;

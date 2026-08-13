@@ -42,7 +42,8 @@ export async function authenticateBackupWorkspace(
   if (!token) return null;
   const tokenHash = await sha256Hex(token);
   const workspace = await environment.DB.prepare(
-    `SELECT workspace_id, license_id, installation_id, license_type, backup_bytes,
+    `SELECT workspace_id, license_id, installation_id, device_binding, product_major,
+            license_type, backup_bytes,
             entitlement_expires_at, features_json, entitlement_revocation_epoch,
             desktop_token_hash, desktop_signing_public_key, revoked_at
        FROM backup_workspace
@@ -82,23 +83,84 @@ export async function bootstrapBackupWorkspace(
   if (!hasBackupFeature(JSON.stringify(claims.features))) {
     return json({ error: "backup_not_entitled" }, 403);
   }
-  const existing = await environment.DB.prepare(
-    "SELECT workspace_id FROM backup_workspace WHERE workspace_id = ?1",
-  ).bind(claims.workspaceId).first<{ workspace_id: string }>();
-  if (existing) return json({ error: "already_bootstrapped" }, 409);
-
   const desktopToken = randomToken();
   const tokenHash = await sha256Hex(desktopToken);
+  const existing = await environment.DB.prepare(
+    `SELECT workspace_id, license_id, installation_id, device_binding, product_major,
+            license_type, backup_bytes, entitlement_expires_at, features_json,
+            entitlement_revocation_epoch, desktop_token_hash, desktop_signing_public_key,
+            revoked_at
+       FROM backup_workspace WHERE workspace_id = ?1`,
+  ).bind(claims.workspaceId).first<BackupWorkspaceRow>();
+  if (existing) {
+    const currentExpiry = existing.entitlement_expires_at
+      ? Date.parse(existing.entitlement_expires_at)
+      : null;
+    const nextExpiry = claims.expiresAt ? Date.parse(claims.expiresAt) : null;
+    const rank = { trial: 0, extension: 1, permanent: 2 } as const;
+    if (
+      existing.revoked_at !== null ||
+      (rank[claims.type] === rank[existing.license_type] &&
+        existing.license_id !== claims.licenseId) ||
+      existing.installation_id !== claims.installationId ||
+      (existing.device_binding !== null && existing.device_binding !== claims.deviceBinding) ||
+      (existing.product_major !== null && existing.product_major !== claims.productMajor) ||
+      existing.desktop_signing_public_key !== input.desktopSigningPublicKey ||
+      rank[claims.type] < rank[existing.license_type] ||
+      claims.revocationEpoch < existing.entitlement_revocation_epoch ||
+      (currentExpiry === null && nextExpiry !== null) ||
+      (currentExpiry !== null && nextExpiry !== null && nextExpiry < currentExpiry)
+    ) return json({ error: "entitlement_refresh_rejected" }, 409);
+    const refreshed = await environment.DB.prepare(
+      `UPDATE backup_workspace
+          SET license_id = ?8, device_binding = ?10, product_major = ?11,
+              license_type = ?2, entitlement_expires_at = ?3, backup_bytes = ?4,
+              features_json = ?5, entitlement_revocation_epoch = ?6,
+              desktop_token_hash = ?7, updated_at = CURRENT_TIMESTAMP
+        WHERE workspace_id = ?1 AND installation_id = ?9
+          AND (device_binding IS NULL OR device_binding = ?10)
+          AND (product_major IS NULL OR product_major = ?11)
+          AND desktop_signing_public_key = ?12 AND revoked_at IS NULL
+          AND entitlement_revocation_epoch <= ?6`,
+    ).bind(
+      claims.workspaceId,
+      claims.type,
+      claims.expiresAt,
+      claims.backupBytes,
+      JSON.stringify(claims.features),
+      claims.revocationEpoch,
+      tokenHash,
+      claims.licenseId,
+      claims.installationId,
+      claims.deviceBinding,
+      claims.productMajor,
+      input.desktopSigningPublicKey,
+    ).run();
+    if (!refreshed.success || refreshed.meta?.changes !== 1) {
+      return json({ error: "entitlement_refresh_conflict" }, 409);
+    }
+    return json({
+      workspaceId: claims.workspaceId,
+      backupToken: desktopToken,
+      backupBytes: claims.backupBytes,
+      licenseType: claims.type,
+      status: "refreshed",
+    });
+  }
+
   const inserted = await environment.DB.prepare(
     `INSERT OR IGNORE INTO backup_workspace
-      (workspace_id, license_id, installation_id, license_type, entitlement_expires_at,
+      (workspace_id, license_id, installation_id, device_binding, product_major,
+       license_type, entitlement_expires_at,
        backup_bytes, features_json, entitlement_revocation_epoch, desktop_token_hash,
        desktop_signing_public_key)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`,
   ).bind(
     claims.workspaceId,
     claims.licenseId,
     claims.installationId,
+    claims.deviceBinding,
+    claims.productMajor,
     claims.type,
     claims.expiresAt,
     claims.backupBytes,

@@ -2,6 +2,8 @@ CREATE TABLE IF NOT EXISTS backup_workspace (
   workspace_id TEXT PRIMARY KEY NOT NULL,
   license_id TEXT UNIQUE NOT NULL,
   installation_id TEXT NOT NULL,
+  device_binding TEXT NOT NULL,
+  product_major INTEGER NOT NULL,
   license_type TEXT NOT NULL CHECK(license_type IN ('trial','extension','permanent')),
   entitlement_expires_at TEXT,
   backup_bytes INTEGER NOT NULL CHECK(backup_bytes >= 0),
