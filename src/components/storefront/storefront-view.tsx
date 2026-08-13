@@ -1,18 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertCircle,
   Check,
   CheckCircle2,
   Loader2,
+  Mail,
+  MapPin,
+  MessageCircle,
   Minus,
+  Phone,
   Plus,
   ShoppingCart,
   Trash2,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { StorefrontRenderer } from "@/components/storefront/storefront-renderer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
 import { useI18n } from "@/hooks/use-i18n";
 import type { StorefrontConfig } from "@/lib/storefront/service";
+import { createStorefrontStudioDraft } from "@/lib/storefront/studio-draft";
 import { formatDZD } from "@/lib/utils";
 
 interface StorefrontVariant {
@@ -58,17 +63,6 @@ interface SubmitResult {
   orderNumber?: string;
 }
 
-function imageUrl(images: string | null): string | null {
-  if (!images) return null;
-  try {
-    const parsed = JSON.parse(images) as unknown;
-    if (Array.isArray(parsed) && typeof parsed[0] === "string") return parsed[0];
-  } catch {
-    // Legacy comma-separated image values remain supported.
-  }
-  return images.split(",")[0]?.trim() || null;
-}
-
 function cartKey(productId: string, variantId: string | null): string {
   return `${productId}:${variantId ?? "base"}`;
 }
@@ -79,9 +73,7 @@ function itemPrice(item: Pick<CartItem, "product" | "variant">): number {
 
 export function StorefrontView({ config, products }: StorefrontViewProps) {
   const { t } = useI18n();
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>(
-    {},
-  );
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [addedKey, setAddedKey] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -95,6 +87,25 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     notes: "",
     website: "",
   });
+
+  const draft = useMemo(() => createStorefrontStudioDraft(config), [config]);
+  const productById = useMemo(
+    () => new Map(products.map((product) => [product.id, product])),
+    [products],
+  );
+  const renderedProducts = useMemo(
+    () => products.map((product) => {
+      const variant = product.productVariants.find(
+        (candidate) => candidate.isActive && candidate.id === selectedVariants[product.id],
+      );
+      return {
+        ...product,
+        price: variant?.price ?? product.price,
+        stock: variant?.stock ?? product.stock,
+      };
+    }),
+    [products, selectedVariants],
+  );
 
   const submissionStorageKey = `sf-storefront-submission:${config.slug}`;
 
@@ -118,10 +129,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     }
   }
 
-  function changeForm<K extends keyof typeof form>(
-    key: K,
-    value: (typeof form)[K],
-  ): void {
+  function changeForm<K extends keyof typeof form>(key: K, value: (typeof form)[K]): void {
     invalidateSubmission();
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -137,9 +145,9 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     setCart((current) => {
       const existing = current.find((item) => item.key === key);
       return existing
-        ? current.map((item) =>
-            item.key === key ? { ...item, quantity: item.quantity + 1 } : item,
-          )
+        ? current.map((item) => item.key === key
+          ? { ...item, quantity: item.quantity + 1 }
+          : item)
         : [...current, { key, product, variant, quantity: 1 }];
     });
     setAddedKey(key);
@@ -148,15 +156,11 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
 
   function updateQuantity(key: string, delta: number): void {
     invalidateSubmission();
-    setCart((current) =>
-      current
-        .map((item) =>
-          item.key === key
-            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-            : item,
-        )
-        .filter((item) => item.quantity > 0),
-    );
+    setCart((current) => current
+      .map((item) => item.key === key
+        ? { ...item, quantity: Math.max(0, item.quantity + delta) }
+        : item)
+      .filter((item) => item.quantity > 0));
   }
 
   function removeFromCart(key: string): void {
@@ -233,9 +237,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
       invalidateSubmission();
       setResult({
         ok: true,
-        message:
-          data.message ??
-          "Order placed successfully! The seller will contact you soon.",
+        message: data.message ?? t("storefront.view.orderSuccessMessage"),
         orderNumber: data.orderNumber,
       });
       setCart([]);
@@ -249,8 +251,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
         website: "",
       });
     } catch {
-      // Keep the submission ID: retrying the unchanged checkout safely replays
-      // the exact committed result after a response-loss or network failure.
+      // Keep the stable ID so response-loss retries replay the committed result.
       setResult({
         ok: false,
         message: t("storefront.view.error.connectionFailed"),
@@ -266,15 +267,11 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
         <Card className="w-full max-w-md">
           <CardContent className="space-y-4 pt-6 text-center">
             <CheckCircle2 className="mx-auto h-16 w-16 text-success" />
-            <h1 className="text-2xl font-bold">
-              {t("storefront.view.orderConfirmed")}
-            </h1>
+            <h1 className="text-2xl font-bold">{t("storefront.view.orderConfirmed")}</h1>
             <p className="text-muted-foreground">{result.message}</p>
             {result.orderNumber ? (
               <div className="rounded-lg bg-muted p-3">
-                <p className="text-xs text-muted-foreground">
-                  {t("storefront.view.orderNumber")}
-                </p>
+                <p className="text-xs text-muted-foreground">{t("storefront.view.orderNumber")}</p>
                 <p className="font-mono text-lg font-bold">{result.orderNumber}</p>
               </div>
             ) : null}
@@ -287,339 +284,168 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     );
   }
 
-  return (
-    <div className="min-h-full">
-      <header
-        className="border-b"
-        style={{
-          backgroundColor: config.theme.primaryColor,
-          borderColor: config.theme.primaryColor,
-        }}
-      >
-        <div className="mx-auto max-w-5xl px-4 py-6">
-          <h1 className="text-2xl font-bold text-white">{config.name}</h1>
-          {config.description ? (
-            <p className="mt-1 text-sm text-white/80">{config.description}</p>
-          ) : null}
-        </div>
-      </header>
-
-      <div className="mx-auto grid max-w-5xl gap-6 px-4 py-8 md:grid-cols-3">
-        <div className="space-y-4 md:col-span-2">
-          <h2 className="text-lg font-semibold">
-            {t("storefront.view.ourProducts")}
-          </h2>
-          {products.length === 0 ? (
-            <p className="text-muted-foreground">
-              {t("storefront.view.noProducts")}
+  const checkout = (
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ShoppingCart className="h-4 w-4" />
+            {t("storefront.view.cart", { count: cart.length })}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {cart.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              {t("storefront.view.emptyCart")}
             </p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {products.map((product) => {
-                const variants = product.productVariants.filter(
-                  (variant) => variant.isActive,
-                );
-                const selectedVariant = variants.find(
-                  (variant) => variant.id === selectedVariants[product.id],
-                );
-                const visiblePrice = selectedVariant?.price ?? product.price;
-                const visibleStock = selectedVariant?.stock ?? product.stock;
-                const key = cartKey(product.id, selectedVariant?.id ?? null);
-                const image = imageUrl(product.images);
-                return (
-                  <Card key={product.id}>
-                    <CardContent className="space-y-3 pt-4">
-                      {image ? (
-                        <div className="aspect-square overflow-hidden rounded-lg bg-muted">
-                          <img
-                            src={image}
-                            alt={product.name}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                            onError={(event) => {
-                              event.currentTarget.style.display = "none";
-                            }}
-                          />
-                        </div>
-                      ) : null}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="truncate font-medium">{product.name}</h3>
-                          {product.sku ? (
-                            <p className="font-mono text-xs text-muted-foreground">
-                              {product.sku}
-                            </p>
-                          ) : null}
-                        </div>
-                        {config.theme.showStock ? (
-                          <Badge variant={visibleStock > 0 ? "default" : "destructive"}>
-                            {visibleStock > 0
-                              ? t("storefront.view.inStock", { count: visibleStock })
-                              : t("storefront.view.outOfStock")}
-                          </Badge>
-                        ) : null}
-                      </div>
-
-                      {variants.length > 0 ? (
-                        <div className="space-y-1">
-                          <Label htmlFor={`storefront-variant-${product.id}`}>
-                            {t("products.variant")}
-                          </Label>
-                          <select
-                            id={`storefront-variant-${product.id}`}
-                            value={selectedVariants[product.id] ?? ""}
-                            onChange={(event) => {
-                              invalidateSubmission();
-                              setSelectedVariants((current) => ({
-                                ...current,
-                                [product.id]: event.target.value,
-                              }));
-                            }}
-                            className="h-11 w-full rounded-md border bg-background px-3 text-sm"
-                          >
-                            <option value="">—</option>
-                            {variants.map((variant) => (
-                              <option key={variant.id} value={variant.id}>
-                                {variant.name} · {formatDZD(variant.price ?? product.price)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      ) : null}
-
-                      {config.theme.showPrices ? (
-                        <p
-                          className="text-lg font-bold"
-                          style={{ color: config.theme.primaryColor }}
-                        >
-                          {formatDZD(visiblePrice)}
-                        </p>
-                      ) : null}
-                      <Button
-                        onClick={() => addToCart(product)}
-                        disabled={
-                          (variants.length > 0 && !selectedVariant) ||
-                          (config.theme.showStock && visibleStock === 0)
-                        }
-                        size="sm"
-                        className="w-full"
-                        style={{ backgroundColor: config.theme.primaryColor }}
-                      >
-                        {addedKey === key ? (
-                          <Check className="me-1 h-4 w-4" />
-                        ) : (
-                          <Plus className="me-1 h-4 w-4" />
-                        )}
-                        {addedKey === key
-                          ? t("storefront.view.added")
-                          : t("storefront.view.addToCart")}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+            <>
+              {cart.map((item) => (
+                <div key={item.key} className="flex items-center justify-between gap-2 text-sm">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{item.product.name}</p>
+                    {item.variant ? <p className="truncate text-xs text-muted-foreground">{item.variant.name}</p> : null}
+                    <p className="text-xs text-muted-foreground">{formatDZD(itemPrice(item))}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button size="icon" variant="outline" className="h-11 w-11" onClick={() => updateQuantity(item.key, -1)} aria-label={t("storefront.view.decreaseQty")}>
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="w-6 text-center text-xs">{item.quantity}</span>
+                    <Button size="icon" variant="outline" className="h-11 w-11" onClick={() => updateQuantity(item.key, 1)} aria-label={t("storefront.view.increaseQty")}>
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.key)} aria-label={t("storefront.view.removeItem")}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-between border-t pt-2 font-bold">
+                <span>{t("storefront.view.total")}</span>
+                <span>{formatDZD(cartTotal)}</span>
+              </div>
+            </>
           )}
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ShoppingCart className="h-4 w-4" />
-                {t("storefront.view.cart", { count: cart.length })}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {cart.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  {t("storefront.view.emptyCart")}
-                </p>
-              ) : (
-                <>
-                  {cart.map((item) => (
-                    <div
-                      key={item.key}
-                      className="flex items-center justify-between gap-2 text-sm"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{item.product.name}</p>
-                        {item.variant ? (
-                          <p className="truncate text-xs text-muted-foreground">
-                            {item.variant.name}
-                          </p>
-                        ) : null}
-                        <p className="text-xs text-muted-foreground">
-                          {formatDZD(itemPrice(item))}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-11 w-11"
-                          onClick={() => updateQuantity(item.key, -1)}
-                          aria-label={t("storefront.view.decreaseQty")}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-6 text-center text-xs">
-                          {item.quantity}
-                        </span>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-11 w-11"
-                          onClick={() => updateQuantity(item.key, 1)}
-                          aria-label={t("storefront.view.increaseQty")}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => removeFromCart(item.key)}
-                          aria-label={t("storefront.view.removeItem")}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="flex justify-between border-t pt-2 font-bold">
-                    <span>{t("storefront.view.total")}</span>
-                    <span>{formatDZD(cartTotal)}</span>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {cart.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {t("storefront.view.checkout")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-3">
-                  <div
-                    aria-hidden="true"
-                    style={{
-                      position: "absolute",
-                      left: "-9999px",
-                      width: 1,
-                      height: 1,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <Label htmlFor="website">Website (leave empty)</Label>
-                    <Input
-                      id="website"
-                      name="website"
-                      tabIndex={-1}
-                      autoComplete="off"
-                      value={form.website}
-                      onChange={(event) => changeForm("website", event.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="name">
-                      {t("storefront.view.fullName")} *
-                    </Label>
-                    <Input
-                      id="name"
-                      required
-                      value={form.name}
-                      onChange={(event) => changeForm("name", event.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="phone">{t("storefront.view.phone")} *</Label>
-                    <Input
-                      id="phone"
-                      required
-                      type="tel"
-                      value={form.phone}
-                      onChange={(event) => changeForm("phone", event.target.value)}
-                      placeholder="0XXXXXXXXX"
-                    />
-                  </div>
-                  <WilayaCommuneSelect
-                    wilaya={form.wilaya}
-                    commune={form.commune}
-                    onWilayaChange={(value) => changeForm("wilaya", value)}
-                    onCommuneChange={(value) => changeForm("commune", value)}
-                    wilayaLabel={`${t("storefront.view.wilaya")} *`}
-                    communeLabel={`${t("storefront.view.commune")} *`}
-                  />
-                  <div className="space-y-1">
-                    <Label htmlFor="address">
-                      {t("storefront.view.address")} *
-                    </Label>
-                    <Input
-                      id="address"
-                      required
-                      value={form.address}
-                      onChange={(event) => changeForm("address", event.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="notes">{t("storefront.view.notes")}</Label>
-                    <Input
-                      id="notes"
-                      value={form.notes}
-                      onChange={(event) => changeForm("notes", event.target.value)}
-                    />
-                  </div>
-                  {result && !result.ok ? (
-                    <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-2 text-xs text-destructive">
-                      <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
-                      <span>{result.message}</span>
-                    </div>
-                  ) : null}
-                  <Button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full"
-                    style={{ backgroundColor: config.theme.primaryColor }}
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
-                        {t("storefront.view.sending")}
-                      </>
-                    ) : (
-                      t("storefront.view.confirmOrder")
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {config.contact ? (
-            <Card>
-              <CardContent className="space-y-1 pt-4 text-sm">
-                <p className="font-medium">{t("storefront.view.contact")}</p>
-                {config.contact.phone ? (
-                  <p className="text-muted-foreground">📞 {config.contact.phone}</p>
-                ) : null}
-                {config.contact.whatsapp ? (
-                  <p className="text-muted-foreground">
-                    💬 {config.contact.whatsapp}
-                  </p>
-                ) : null}
-                {config.contact.email ? (
-                  <p className="text-muted-foreground">✉️ {config.contact.email}</p>
-                ) : null}
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
-      </div>
+      {cart.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("storefront.view.checkout")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div aria-hidden="true" className="absolute -start-[9999px] h-px w-px overflow-hidden">
+                <Label htmlFor="website">{t("storefront.view.honeypot")}</Label>
+                <Input id="website" name="website" tabIndex={-1} autoComplete="off" value={form.website} onChange={(event) => changeForm("website", event.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="name">{t("storefront.view.fullName")} *</Label>
+                <Input id="name" required value={form.name} onChange={(event) => changeForm("name", event.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="phone">{t("storefront.view.phone")} *</Label>
+                <Input id="phone" required type="tel" value={form.phone} onChange={(event) => changeForm("phone", event.target.value)} placeholder="0XXXXXXXXX" />
+              </div>
+              <WilayaCommuneSelect
+                wilaya={form.wilaya}
+                commune={form.commune}
+                onWilayaChange={(value) => changeForm("wilaya", value)}
+                onCommuneChange={(value) => changeForm("commune", value)}
+                wilayaLabel={`${t("storefront.view.wilaya")} *`}
+                communeLabel={`${t("storefront.view.commune")} *`}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="address">{t("storefront.view.address")} *</Label>
+                <Input id="address" required value={form.address} onChange={(event) => changeForm("address", event.target.value)} />
+              </div>
+              {config.theme.checkout.showOrderNotes ? (
+                <div className="space-y-1">
+                  <Label htmlFor="notes">{t("storefront.view.notes")}</Label>
+                  <Input id="notes" value={form.notes} onChange={(event) => changeForm("notes", event.target.value)} />
+                </div>
+              ) : null}
+              {result && !result.ok ? (
+                <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-2 text-xs text-destructive">
+                  <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                  <span>{result.message}</span>
+                </div>
+              ) : null}
+              <Button type="submit" disabled={submitting} className="w-full" style={{ backgroundColor: config.theme.primaryColor }}>
+                {submitting ? (
+                  <><Loader2 className="me-1.5 h-4 w-4 animate-spin" />{t("storefront.view.sending")}</>
+                ) : t("storefront.view.confirmOrder")}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
+  );
+
+  const support = config.contact ? (
+    <Card>
+      <CardContent className="grid gap-2 pt-4 text-sm sm:grid-cols-2">
+        <p className="font-medium sm:col-span-2">{t("storefront.view.contact")}</p>
+        {config.contact.phone ? <p className="flex items-center gap-2 text-muted-foreground"><Phone className="h-4 w-4" />{config.contact.phone}</p> : null}
+        {config.contact.whatsapp ? <p className="flex items-center gap-2 text-muted-foreground"><MessageCircle className="h-4 w-4" />{config.contact.whatsapp}</p> : null}
+        {config.contact.email ? <p className="flex items-center gap-2 text-muted-foreground"><Mail className="h-4 w-4" />{config.contact.email}</p> : null}
+        {config.contact.address ? <p className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" />{config.contact.address}</p> : null}
+      </CardContent>
+    </Card>
+  ) : null;
+
+  return (
+    <StorefrontRenderer
+      draft={draft}
+      products={renderedProducts}
+      emptyCatalog={<p className="text-muted-foreground">{t("storefront.view.noProducts")}</p>}
+      renderProductFooter={(renderedProduct) => {
+        const product = productById.get(renderedProduct.id);
+        if (!product) return null;
+        const variants = product.productVariants.filter((variant) => variant.isActive);
+        const selectedVariant = variants.find((variant) => variant.id === selectedVariants[product.id]);
+        const key = cartKey(product.id, selectedVariant?.id ?? null);
+        return (
+          <div className="space-y-2">
+            {variants.length > 0 ? (
+              <div className="space-y-1">
+                <Label htmlFor={`storefront-variant-${product.id}`}>{t("products.variant")}</Label>
+                <select
+                  id={`storefront-variant-${product.id}`}
+                  value={selectedVariants[product.id] ?? ""}
+                  onChange={(event) => {
+                    invalidateSubmission();
+                    setSelectedVariants((current) => ({ ...current, [product.id]: event.target.value }));
+                  }}
+                  className="h-11 w-full rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="">—</option>
+                  {variants.map((variant) => (
+                    <option key={variant.id} value={variant.id}>
+                      {variant.name} · {formatDZD(variant.price ?? product.price)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+            <Button
+              onClick={() => addToCart(product)}
+              disabled={(variants.length > 0 && !selectedVariant) || (config.theme.showStock && renderedProduct.stock === 0)}
+              size="sm"
+              className="w-full"
+              style={{ backgroundColor: config.theme.primaryColor }}
+            >
+              {addedKey === key ? <Check className="me-1 h-4 w-4" /> : <Plus className="me-1 h-4 w-4" />}
+              {addedKey === key ? t("storefront.view.added") : t("storefront.view.addToCart")}
+            </Button>
+          </div>
+        );
+      }}
+      renderCheckout={checkout}
+      renderSupport={support}
+    />
   );
 }

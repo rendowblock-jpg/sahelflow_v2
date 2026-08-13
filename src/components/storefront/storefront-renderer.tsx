@@ -120,7 +120,8 @@ export function StorefrontRenderer({
             <p className="mt-4 text-sm leading-6 opacity-70">
               {theme.hero.body || draft.description}
             </p>
-            <span
+            <a
+              href="#storefront-catalog"
               className={`${radius(theme.radius)} mt-5 inline-flex px-4 py-2 text-xs font-semibold ${theme.template === "oasis" ? "bg-white" : "text-white"}`}
               style={theme.template === "oasis"
                 ? { color: theme.primaryColor }
@@ -129,7 +130,7 @@ export function StorefrontRenderer({
               {theme.hero.ctaLabel || (theme.template === "oasis"
                 ? t("storefront.studio.orderNow")
                 : t("storefront.studio.shopNow"))}
-            </span>
+            </a>
           </section>
         );
       case "trust":
@@ -154,6 +155,7 @@ export function StorefrontRenderer({
           <section
             key={section.id}
             {...props}
+            id={section.type === "product-grid" ? "storefront-catalog" : undefined}
             className={sectionClass(section, theme.template === "sahara" ? "mt-10" : "py-6")}
           >
             {catalogProducts.length === 0
@@ -195,7 +197,7 @@ export function StorefrontRenderer({
       case "footer":
         return (
           <footer key={section.id} {...props} className={sectionClass(section, "mt-6 border-t pt-5 text-center text-[11px] opacity-60")}>
-            {draft.name} · SahelFlow
+            {t("storefront.studio.footerBrand", { name: draft.name })}
           </footer>
         );
       case "media":
@@ -207,11 +209,13 @@ export function StorefrontRenderer({
 
   return (
     <div
-      className={`min-h-full ${theme.template === "sahara" ? "p-7" : theme.template === "oasis" ? "p-5" : "p-6"}`}
+      className="min-h-full"
       data-storefront-template={theme.template}
       style={{ background: theme.backgroundColor, color: theme.textColor }}
     >
-      {theme.builder.composition.sections.map(renderSection)}
+      <div className={`mx-auto max-w-6xl ${theme.template === "sahara" ? "p-7" : theme.template === "oasis" ? "p-5" : "p-6"}`}>
+        {theme.builder.composition.sections.map(renderSection)}
+      </div>
     </div>
   );
 }
