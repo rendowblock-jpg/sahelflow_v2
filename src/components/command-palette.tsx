@@ -193,8 +193,9 @@ export function CommandPalette({
                 `${t("nav.inbox")} · ${conversation.id.slice(-6)}`,
               sublabel:
                 conversation.contactPhone ?? conversation.channel,
-              // Inbox adoption will bind direct selection to this stable query ID;
-              // the route already remains a valid operational destination today.
+              // The Inbox consumes this canonical persisted ID directly. If the
+              // row is outside the live WhatsApp window it resolves through the
+              // permission-projected exact conversation read before selection.
               href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
               icon: MessageSquare,
             });
