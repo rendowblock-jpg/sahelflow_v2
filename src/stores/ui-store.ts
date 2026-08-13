@@ -1,5 +1,5 @@
 /**
- * UI store — client-side UI state (committed locale mirror, sidebar, density).
+ * UI store — client-side UI state (committed locale mirror + seller UI preferences).
  * Persisted to localStorage via Zustand persist middleware.
  *
  * LOCALE COMMIT MODEL:
@@ -11,9 +11,8 @@
  * locale and `ServerLocaleProvider` commits that server-confirmed locale to this
  * mirror plus `<html lang/dir>` before paint.
  *
- * This prevents the previous split state where client navigation/RTL flipped
- * while server-translated route content still belonged to the old request.
- * `sidebarCollapsed` and `density` remain UI-only persisted preferences.
+ * Locale and active shop never persist in this store. Sidebar collapse, density,
+ * and navigation domain order are presentation-only preferences.
  */
 import { create } from "zustand";
 import {
@@ -30,6 +29,17 @@ export const DEFAULT_UI_DENSITY: UiDensity = "comfortable";
 
 function isUiDensity(value: unknown): value is UiDensity {
   return value === "comfortable" || value === "compact";
+}
+
+function isNavigationOrder(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= 32 &&
+    value.every(
+      (entry) =>
+        typeof entry === "string" && entry.length > 0 && entry.length <= 64,
+    )
+  );
 }
 
 /**
@@ -80,6 +90,7 @@ interface UIState {
   locale: Locale;
   sidebarCollapsed: boolean;
   density: UiDensity;
+  navigationDomainOrder: string[];
   activeShopId: string | null;
 
   /** Commit a locale that the current Server Component tree already represents. */
@@ -87,6 +98,8 @@ interface UIState {
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setDensity: (density: UiDensity) => void;
+  setNavigationDomainOrder: (order: string[]) => void;
+  resetNavigationDomainOrder: () => void;
   setActiveShopId: (shopId: string | null) => void;
 }
 
@@ -121,6 +134,7 @@ export const useUIStore = create<UIState>()(
       locale: getCookieLocale() ?? "fr",
       sidebarCollapsed: false,
       density: DEFAULT_UI_DENSITY,
+      navigationDomainOrder: [],
       activeShopId: null,
 
       setLocale: (locale) => {
@@ -129,9 +143,13 @@ export const useUIStore = create<UIState>()(
         applyDocumentLocale(locale);
         set((state) => (state.locale === locale ? state : { ...state, locale }));
       },
-      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+      toggleSidebar: () =>
+        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
       setDensity: (density) => set({ density }),
+      setNavigationDomainOrder: (order) =>
+        set({ navigationDomainOrder: [...order] }),
+      resetNavigationDomainOrder: () => set({ navigationDomainOrder: [] }),
       setActiveShopId: (shopId) => set({ activeShopId: shopId }),
     }),
     {
@@ -140,14 +158,17 @@ export const useUIStore = create<UIState>()(
       partialize: (state) => ({
         sidebarCollapsed: state.sidebarCollapsed,
         density: state.density,
+        navigationDomainOrder: state.navigationDomainOrder,
       }),
-      // Persisted UI data is untrusted/stale input. Admit only the two known
-      // preferences and normalize everything else to safe current defaults.
+      // Persisted UI data is untrusted/stale input. Admit only bounded known
+      // preference shapes. Canonical navigation reconciliation happens against
+      // the live registry, so an older preference cannot hide new destinations.
       // Locale and active shop never come from this storage boundary.
       merge: (persistedState, currentState) => {
         const persisted = persistedState as {
           sidebarCollapsed?: unknown;
           density?: unknown;
+          navigationDomainOrder?: unknown;
         } | null;
         return {
           ...currentState,
@@ -158,6 +179,11 @@ export const useUIStore = create<UIState>()(
           density: isUiDensity(persisted?.density)
             ? persisted.density
             : DEFAULT_UI_DENSITY,
+          navigationDomainOrder: isNavigationOrder(
+            persisted?.navigationDomainOrder,
+          )
+            ? persisted.navigationDomainOrder
+            : [],
           locale: currentState.locale,
           activeShopId: currentState.activeShopId,
         };
