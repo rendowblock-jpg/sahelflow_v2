@@ -3,8 +3,10 @@
 > **Purpose:** Compact resumable execution frontier; never product/architecture/roadmap authority
 > **Last updated:** 2026-08-13
 > **Protected main:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245 merged
-> **Latest application-changing protected merge:** PR #245 — Internal.15 FD-032 Founder-only offline checkpoint
+> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
+> **Application-changing protected baseline:** `856f58126327797b467938390586a04f185e70f6`
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
+> **Published release:** `1.0.0-internal.14` — source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed run `31388777098`
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Documentation branch:** `agent/internal-16-completion-authority`
 > **Next application milestone:** `1.0.0-internal.16` / MSI `1.0.0.16`
@@ -95,6 +97,28 @@ No full MSI/replacement-install/eight-hour run after every tiny change. No weake
 Remaining desktop routes; shared RTL/interaction/responsive/theme/locale/chart/navigation/search roots; Inbox/AI/product table; Gemini key lifecycle; EcoTrack; AI extraction/tools; full Phase 8 remote/storefront/PWA/control-plane/zero-knowledge backup/Founder Console; security/privacy; install/update/recovery; T470/floor/eight-hour evidence.
 
 Cloudflare Free may bootstrap first-buyer capacity when measured sufficient, but provider hostnames do not satisfy #230. EcoTrack endpoints/capabilities may not be guessed. Phase 1–4 authorities remain protected.
+
+## Protected route/release continuity snapshot
+
+- PR #244 remains the latest route-level application-changing protected merge at `856f58126327797b467938390586a04f185e70f6`; PR #245 is the later FD-032 release/checkpoint merge.
+- **PR #237 Inbox operational workspace — CLOSED** at final exact head `8e9d5aa365f0c5873909c1c8517f88519d743b9d`.
+- **PR #240 AI Agents operational workspace — CLOSED** at final exact head `6355cc4c797a597af52c90decfe7727e405749be`.
+- **PR #242 Settings operational workspace — CLOSED** at final exact head `e749b0af05741ee45b16c349750d44092bd3beb9`; exact evidence runs `31546488691`, `31546488465`, `31546488422`.
+- The previous publication remains source `2d60e2e74109b6e03626a5ccdff727c029a34591`, **Published release:** `1.0.0-internal.14`, signed run `31388777098` until a newer signed release is actually proven.
+
+### Post-Settings documentation reconciliation
+
+The protected Settings evidence above remains part of the durable chain; later route and release work did not erase it.
+
+### Next product package selection — remaining route inventory
+
+This historical selection step is now superseded operationally by FD-033’s frozen 17 installed findings plus one exact-source whole-product reconnaissance. It remains named so the prior route-adoption lineage is not lost.
+
+### FD-032 licensing / Cloudflare release boundary
+
+FD-032 remains exact to Internal.15. Cloudflare/provider-host bootstrap does not satisfy #230’s owned-domain/public customer-trial boundary, and FD-033 does not retroactively convert Internal.15 into a customer release.
+
+Retained issue status entering Internal.16: **#221 OPEN**, **#226 OPEN**, **#230 OPEN P1**.
 
 ## Phase 5 closure snapshot
 
