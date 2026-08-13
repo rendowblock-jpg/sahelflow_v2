@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+import type { ChartConfig } from "@/components/ui/chart";
 import {
   cn,
   formatDZD,
@@ -25,9 +25,23 @@ export type ChartFormatter =
 
 export type ChartHeight = React.CSSProperties["height"];
 export const DEFAULT_CHART_HEIGHT: ChartHeight =
-  "var(--sf-chart-height, clamp(14rem, 25vw, 18rem))";
+  "var(--sf-chart-card-height, var(--sf-chart-height, clamp(14rem, 25vw, 18rem)))";
 export const DEFAULT_CHART_EMPTY_HEIGHT: ChartHeight =
   "var(--sf-chart-empty-height, clamp(12rem, 22vw, 17.5rem))";
+
+/**
+ * Wave 2 compatibility bridge for legacy analytical callers that still pass
+ * 300/320px numeric canvases. Large numeric heights converge to the governed
+ * fluid desktop range; deliberately compact visuals (for example 220px gauges)
+ * and explicit CSS lengths remain exact.
+ */
+export function normalizeChartHeight(
+  height: ChartHeight = DEFAULT_CHART_HEIGHT,
+): ChartHeight {
+  return typeof height === "number" && height >= 260
+    ? DEFAULT_CHART_HEIGHT
+    : height;
+}
 
 export function resolveFormatter(
   formatter: ChartFormatter = "identity",
@@ -103,24 +117,28 @@ interface ChartCardProps {
   action?: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
+  /** Retained as the analytical-series contract; the child owns ChartContainer. */
   config: ChartConfig;
   height?: ChartHeight;
-  children: React.ComponentProps<typeof ChartContainer>["children"];
+  children: React.ReactNode;
 }
 
 /**
  * Governed SahelFlow analytical frame.
  *
  * A chart is not a decorative rectangle: it carries a readable title, optional
- * business context, visible summary, plot, and optional footer/action. The same
- * summary remains wired to the chart group for non-visual users. Default plot
- * height is fluid so dense workbenches do not inherit a fixed 300px canvas.
+ * business context, visible summary, plot, and optional footer/action. ChartCard
+ * intentionally does not create a ChartContainer/ResponsiveContainer: every
+ * chart primitive owns exactly one responsive plot authority. This avoids nested
+ * measurement canvases and keeps tooltips, legends and accessibility bound to the
+ * chart that actually renders them.
  */
 export function ChartCard({
   title,
   description,
   summary,
   icon,
+  accent,
   action,
   footer,
   className,
@@ -132,17 +150,33 @@ export function ChartCard({
   const descriptionId = React.useId();
   const summaryId = React.useId();
   const accessibleSummary = summary ?? description ?? title;
+  const normalizedHeight = normalizeChartHeight(height);
+  const plotStyle =
+    normalizedHeight === DEFAULT_CHART_HEIGHT
+      ? undefined
+      : ({
+          "--sf-chart-card-height":
+            typeof normalizedHeight === "number"
+              ? `${normalizedHeight}px`
+              : normalizedHeight,
+        } as React.CSSProperties);
 
   return (
     <Card
       className={cn("overflow-hidden border shadow-none", className)}
       data-chart-card="true"
+      data-chart-series-count={Object.keys(config).length}
     >
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 px-5 pb-3 pt-4">
         <div className="min-w-0 space-y-2">
           <div className="flex min-w-0 items-center gap-2.5">
             {icon ? (
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/45 text-muted-foreground">
+              <span
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/45 text-muted-foreground",
+                  accent,
+                )}
+              >
                 {icon}
               </span>
             ) : null}
@@ -158,7 +192,10 @@ export function ChartCard({
             </div>
           </div>
           {summary ? (
-            <div className="text-sm leading-5 text-muted-foreground" aria-hidden="true">
+            <div
+              className="text-sm leading-5 text-muted-foreground"
+              aria-hidden="true"
+            >
               {summary}
             </div>
           ) : null}
@@ -170,17 +207,14 @@ export function ChartCard({
           role="group"
           aria-labelledby={titleId}
           aria-describedby={summaryId}
+          data-chart-plot="true"
+          className="min-w-0"
+          style={plotStyle}
         >
           <div id={summaryId} className="sr-only">
             {accessibleSummary}
           </div>
-          <ChartContainer
-            config={config}
-            className="aspect-auto w-full"
-            style={{ height }}
-          >
-            {children}
-          </ChartContainer>
+          {children}
         </div>
         {footer ? (
           <div className="mt-3 border-t border-border/70 pt-3 text-sm leading-5 text-muted-foreground">
@@ -202,7 +236,7 @@ export function ChartEmpty({
   return (
     <div
       className="flex w-full items-center justify-center rounded-md border border-dashed border-border/70 bg-muted/20 px-4 text-center text-sm text-muted-foreground"
-      style={{ height }}
+      style={{ height: normalizeChartHeight(height) }}
       role="status"
     >
       {message}
