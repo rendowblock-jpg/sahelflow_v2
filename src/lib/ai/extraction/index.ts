@@ -1,11 +1,5 @@
-/**
- * AI extraction module — smart routing between regex and Gemini.
- *
- * Usage:
- *   import { extractOrder } from "@/lib/ai/extraction";
- *   const result = await extractOrder({ body: message }, { geminiApiKey });
- */
 export { extractWithRegex } from "./regex-extractor";
-export { extractWithGemini, verifyGeminiKey } from "./gemini-extractor";
+export { extractWithGemini } from "./gemini-extractor";
+export { verifyGeminiKey } from "../gemini/provider";
 export { extractOrder, recordExtractionMetric } from "./smart-router";
 export type { ExtractionInput, ExtractionResult, ExtractedOrder, ExtractedItem } from "./types";

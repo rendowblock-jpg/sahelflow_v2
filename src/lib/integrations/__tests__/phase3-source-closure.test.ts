@@ -92,9 +92,12 @@ describe("Phase 3 cross-package source closure", () => {
       "src/lib/integrations/delivery/provider-capability.ts",
     );
     expect(registry).not.toContain("dhdAdapter");
+    expect(registry).not.toContain("noestAdapter");
+    expect(registry).toContain("ecoTrackAdapter");
     expect(certification).toContain("SOURCE_REVIEWED_CAPABILITIES");
-    expect(certification).toContain("noest: []");
-    expect(certification).toContain('provider === "noest"');
+    expect(certification).toContain(
+      'ecotrack: ["fees", "booking", "tracking"]',
+    );
     expect(certification).toContain("credentialFingerprint");
     expect(certification).toContain("endpointFingerprint");
   });

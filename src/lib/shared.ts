@@ -152,7 +152,7 @@ export const orderStatusStyles: Record<OrderStatus, StatusStyle> = {
 
 // ── Delivery Provider Config ─────────────────────────────────────────────────
 //
-// Brand names ("Yalidine", "ZR Express", "NOEST", "Maystro") are proper nouns
+// Brand names ("Yalidine", "ZR Express", "EcoTrack Pro", "Maystro") are proper nouns
 // and are intentionally NOT translated — they appear the same in all locales.
 
 export const deliveryProviderConfig: Record<string, { color: string; label: string }> = {
@@ -160,7 +160,8 @@ export const deliveryProviderConfig: Record<string, { color: string; label: stri
   maystro: { color: 'bg-teal-500', label: 'Maystro' },
   zrexpress: { color: 'bg-teal-500', label: 'ZR Express' },
   zr_express: { color: 'bg-teal-500', label: 'ZR Express' },
-  noest: { color: 'bg-sky-500', label: 'NOEST Express' },
+  ecotrack: { color: 'bg-sky-500', label: 'EcoTrack Pro' },
+  noest: { color: 'bg-sky-500', label: 'EcoTrack Pro' },
 }
 
 // ── Customer Status Config ───────────────────────────────────────────────────

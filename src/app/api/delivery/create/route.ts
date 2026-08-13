@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 const createSchema = z.object({
   orderId: z.string().min(1),
-  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
+  provider: z.enum(["yalidine", "maystro", "zrexpress", "ecotrack"]),
 });
 
 class ExistingShipmentError extends ConflictError {
@@ -35,13 +35,6 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
-/**
- * POST /api/delivery/create — create a shipment with the delivery provider.
- *
- * A local Delivery reservation commits before the provider call. Concurrent
- * requests and ambiguous retries therefore fail closed. Provider receipts
- * that cannot complete the order transition remain marked for reconciliation.
- */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireRouteAuth(req, {
     actions: [

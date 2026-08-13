@@ -161,6 +161,8 @@ export type DeliveryProvider =
   | "yalidine"
   | "maystro"
   | "zrexpress"
+  | "ecotrack"
+  // Read-only compatibility for historical persisted deliveries.
   | "noest";
 
 export interface Delivery {

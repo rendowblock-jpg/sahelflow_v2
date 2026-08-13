@@ -1,10 +1,4 @@
-/**
- * Delivery adapter registry + credentials loader.
- *
- * The registry maps provider IDs to their adapter instances. The credentials
- * loader reads encrypted secrets from the Secret table (per ADR-003/004) and
- * returns them as a DeliveryCredentials object.
- */
+/** Delivery adapter registry + encrypted credentials loader. */
 import "server-only";
 
 import type {
@@ -12,11 +6,15 @@ import type {
   DeliveryCredentials,
   DeliveryProvider,
 } from "./types";
-import { deliverySecretKeys } from "./types";
+import {
+  deliverySecretKeys,
+  legacyNoestSecretKeys,
+  normalizeDeliveryProvider,
+} from "./types";
 import { yalidineAdapter } from "./yalidine";
 import { maystroAdapter } from "./maystro";
 import { zrExpressAdapter } from "./zr-express";
-import { noestAdapter } from "./noest";
+import { ecoTrackAdapter } from "./ecotrack";
 import { getSecret } from "@/lib/secrets";
 import type { ServiceContext } from "@/lib/data/service-base";
 import {
@@ -25,38 +23,30 @@ import {
 } from "@/lib/demo/algerian-demo-policy";
 import { SahelFlowError } from "@/types/errors";
 
-const REGISTRY: Record<string, DeliveryAdapter> = {
+const REGISTRY: Record<DeliveryProvider, DeliveryAdapter> = {
   yalidine: yalidineAdapter,
   maystro: maystroAdapter,
   zrexpress: zrExpressAdapter,
-  noest: noestAdapter,
+  ecotrack: ecoTrackAdapter,
 };
 
-/** Get the adapter for a provider. Throws if unknown. */
 export function getDeliveryAdapter(provider: string): DeliveryAdapter {
-  const adapter = REGISTRY[provider];
-  if (!adapter) {
-    throw new Error(`Unknown delivery provider: "${provider}". Known: ${Object.keys(REGISTRY).join(", ")}`);
+  const normalized = normalizeDeliveryProvider(provider);
+  if (!normalized) {
+    throw new Error(
+      `Unknown delivery provider: "${provider}". Known: ${Object.keys(REGISTRY).join(", ")}`,
+    );
   }
-  return adapter;
+  return REGISTRY[normalized];
 }
 
-/** List all registered adapters (for UI display). */
 export function listDeliveryAdapters(): DeliveryAdapter[] {
   return Object.values(REGISTRY);
 }
 
-/**
- * Load credentials for a provider from the Secret store.
- * Returns an empty object if none are configured (adapters handle this).
- */
-export async function loadDeliveryCredentials(
+async function assertProviderEffectsAllowed(
   context: ServiceContext,
-  provider: string,
-): Promise<DeliveryCredentials> {
-  // The demo workspace contains realistic fictional recipients. Fail before
-  // loading credentials or calling create/sync/cancel/test provider endpoints,
-  // even when credentials were configured after the demo was loaded.
+): Promise<void> {
   const demoMarker = await context.prisma.setting.findUnique({
     where: { key: ALGERIAN_DEMO_MARKER_KEY },
     select: { value: true },
@@ -68,30 +58,73 @@ export async function loadDeliveryCredentials(
       409,
     );
   }
-
-  const keys = deliverySecretKeys(provider);
-  const creds: DeliveryCredentials = {};
-  for (const key of keys) {
-    const value = await getSecret(context, key);
-    if (value) {
-      // Extract the field name from the key: delivery_yalidine_api_id → api_id
-      const fieldMatch = key.match(/^delivery_\w+_(.+)$/);
-      if (fieldMatch) {
-        creds[fieldMatch[1]!] = value;
-      }
-    }
-  }
-  return creds;
 }
 
-/** Check whether a provider has credentials configured. */
+async function readCredentialKeys(
+  context: ServiceContext,
+  keys: string[],
+): Promise<DeliveryCredentials> {
+  const credentials: DeliveryCredentials = {};
+  for (const key of keys) {
+    const value = await getSecret(context, key);
+    if (!value) continue;
+    const fieldMatch = key.match(/^delivery_[^_]+_(.+)$/);
+    if (fieldMatch?.[1]) credentials[fieldMatch[1]] = value;
+  }
+  return credentials;
+}
+
+function completeEcoTrackCredentials(
+  credentials: DeliveryCredentials,
+): boolean {
+  return [
+    "apiToken",
+    "userGuid",
+    "createOrderUrl",
+    "validateOrderUrl",
+    "trackingsUrl",
+    "feesUrl",
+  ].every((field) => Boolean(credentials[field]?.trim()));
+}
+
+export async function loadDeliveryCredentials(
+  context: ServiceContext,
+  rawProvider: string,
+): Promise<DeliveryCredentials> {
+  await assertProviderEffectsAllowed(context);
+  const provider = normalizeDeliveryProvider(rawProvider);
+  if (!provider) {
+    throw new Error(`Unknown delivery provider: "${rawProvider}".`);
+  }
+
+  const keys = deliverySecretKeys(provider);
+  const current = await readCredentialKeys(context, keys);
+  if (provider !== "ecotrack") {
+    return current;
+  }
+  if (completeEcoTrackCredentials(current)) return current;
+
+  // Historical read bridge only. Old NOEST rows can still be reconciled through
+  // EcoTrack without retaining NOEST as a selectable/runtime provider. New
+  // credentials are always written under `delivery_ecotrack_*`.
+  const legacy = await readCredentialKeys(context, legacyNoestSecretKeys());
+  if (Object.values(legacy).some(Boolean)) {
+    legacy.carrierName = "NOEST Express";
+  }
+  return { ...legacy, ...current };
+}
+
 export async function hasDeliveryCredentials(
   context: ServiceContext,
   provider: string,
 ): Promise<boolean> {
-  const creds = await loadDeliveryCredentials(context, provider);
-  return Object.values(creds).some((v) => v && v.length > 0);
+  const credentials = await loadDeliveryCredentials(context, provider);
+  return Object.values(credentials).some((value) => Boolean(value?.length));
 }
 
-/** Type-safe provider list for UI. */
-export const PROVIDERS: DeliveryProvider[] = ["yalidine", "maystro", "zrexpress", "noest"];
+export const PROVIDERS: DeliveryProvider[] = [
+  "yalidine",
+  "maystro",
+  "zrexpress",
+  "ecotrack",
+];

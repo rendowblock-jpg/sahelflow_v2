@@ -60,7 +60,7 @@ describe("Settings operational workspace contract", () => {
   it("does not turn unavailable authority into missing credentials or empty history", () => {
     const ai = read("src/components/settings/ai-key-panel.tsx");
     const delivery = read(
-      "src/components/settings/delivery-credentials-panel.tsx",
+      "src/components/settings/delivery-credentials-panel-wave3.tsx",
     );
     const backup = read("src/components/settings/backup-restore-panel.tsx");
     const commerceRecovery = read(
@@ -71,7 +71,7 @@ describe("Settings operational workspace contract", () => {
     expect(ai).toContain('"verification-required"');
     expect(ai).toContain('"unavailable"');
     expect(ai).toContain("REAUTHENTICATION_REQUIRED");
-    expect(delivery).toContain('"verification-required"');
+    expect(delivery).toContain('"verification"');
     expect(delivery).toContain('"unavailable"');
     expect(delivery).toContain("REAUTHENTICATION_REQUIRED");
     expect(backup).toContain("loadError");

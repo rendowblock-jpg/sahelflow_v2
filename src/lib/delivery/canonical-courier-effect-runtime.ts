@@ -27,6 +27,8 @@ import {
 } from "@/lib/integrations/delivery";
 import {
   DELIVERY_PROVIDERS,
+  normalizeDeliveryProvider,
+  type DeliveryCredentials,
   type DeliveryProvider,
   type DeliveryStatus,
   type ShipmentRequest,
@@ -58,10 +60,14 @@ const LEASE_MS = 120_000;
 const RETRY_DELAYS_MS = [15_000, 60_000, 300_000, 1_800_000] as const;
 
 const providerSchema = z.enum(DELIVERY_PROVIDERS);
+const storedBookingProviderSchema = z.union([
+  providerSchema,
+  z.literal("noest"),
+]);
 const bookingPayloadSchema = z.object({
   deliveryId: z.string().trim().min(1),
   orderId: z.string().trim().min(1),
-  provider: providerSchema,
+  provider: storedBookingProviderSchema,
   request: z.object({
     orderId: z.string(),
     orderNumber: z.string(),
@@ -85,6 +91,16 @@ const bookingPayloadSchema = z.object({
     isExchange: z.boolean().optional(),
   }),
 });
+
+type BookingPayload = Omit<
+  z.infer<typeof bookingPayloadSchema>,
+  "provider"
+> & {
+  /** Canonical adapter/capability identity used for every new provider effect. */
+  provider: DeliveryProvider;
+  /** Immutable identity that was persisted with the delivery/outbox request. */
+  storedProvider: string;
+};
 
 const trackingEventSchema = z.object({
   deliveryId: z.string().trim().min(1),
@@ -351,9 +367,9 @@ async function latestBookingOutbox(
 async function openBookingPayload(
   context: ServiceContext,
   row: BookingOutboxRow,
-): Promise<z.infer<typeof bookingPayloadSchema>> {
+): Promise<BookingPayload> {
   const envelopeKey = await getBusinessEnvelopeKey(context);
-  return bookingPayloadSchema.parse(
+  const payload = bookingPayloadSchema.parse(
     openBusinessPayloadWithKey(
       row.payloadJson,
       {
@@ -365,6 +381,18 @@ async function openBookingPayload(
       envelopeKey,
     ),
   );
+  const provider = normalizeDeliveryProvider(payload.provider);
+  if (!provider) {
+    throw new ValidationError(
+      "Queued courier provider is no longer supported",
+      "provider",
+    );
+  }
+  return {
+    ...payload,
+    provider,
+    storedProvider: payload.provider,
+  };
 }
 
 async function recoverExpiredBookingLeases(
@@ -496,7 +524,7 @@ async function claimBookingEffect(
 async function knownBookingFailure(
   context: ServiceContext,
   row: BookingOutboxRow,
-  payload: z.infer<typeof bookingPayloadSchema>,
+  payload: BookingPayload,
   errorCode: string,
 ): Promise<void> {
   const exhausted = row.attemptCount >= MAX_BOOKING_ATTEMPTS;
@@ -538,7 +566,7 @@ async function knownBookingFailure(
 async function ambiguousBookingFailure(
   context: ServiceContext,
   row: BookingOutboxRow,
-  payload: z.infer<typeof bookingPayloadSchema>,
+  payload: BookingPayload,
   errorCode: string,
 ): Promise<void> {
   await context.prisma.$transaction(async (tx) => {
@@ -568,7 +596,7 @@ async function ambiguousBookingFailure(
 async function commitBookingReceipt(
   context: ServiceContext,
   row: BookingOutboxRow,
-  payload: z.infer<typeof bookingPayloadSchema>,
+  payload: BookingPayload,
   receipt: ShipmentResult,
 ): Promise<void> {
   const trackingNumber = receipt.trackingId.trim();
@@ -625,7 +653,7 @@ async function commitBookingReceipt(
       const deliveryUpdated = await tx.delivery.updateMany({
         where: {
           id: delivery.id,
-          provider: payload.provider,
+          provider: payload.storedProvider,
           trackingNumber: delivery.trackingNumber,
           deletedAt: null,
         },
@@ -877,11 +905,19 @@ export async function getCanonicalCourierPosition(
   };
 }
 
-export async function ingestCanonicalCourierTrackingEvent(
+async function ingestCanonicalCourierTrackingEventForStoredProvider(
   context: BusinessPrincipalContext,
   input: unknown,
+  storedProvider?: string,
 ): Promise<BusinessCommandResult<Record<string, unknown>>> {
   const data = trackingEventSchema.parse(input);
+  const deliveryProvider = storedProvider ?? data.provider;
+  if (normalizeDeliveryProvider(deliveryProvider) !== data.provider) {
+    throw new ValidationError(
+      "Stored delivery provider does not match canonical tracking authority",
+      "delivery.provider",
+    );
+  }
   const correlationId = data.correlationId ?? randomUUID();
 
   return executeBusinessCommand(
@@ -902,7 +938,7 @@ export async function ingestCanonicalCourierTrackingEvent(
       const delivery = await tx.delivery.findFirst({
         where: {
           id: data.deliveryId,
-          provider: data.provider,
+          provider: deliveryProvider,
           deletedAt: null,
         },
         include: { order: { include: { items: true } } },
@@ -1026,7 +1062,7 @@ export async function ingestCanonicalCourierTrackingEvent(
         const deliveryUpdated = await tx.delivery.updateMany({
           where: {
             id: delivery.id,
-            provider: data.provider,
+            provider: deliveryProvider,
             status: delivery.status,
             deletedAt: null,
           },
@@ -1134,9 +1170,17 @@ export async function ingestCanonicalCourierTrackingEvent(
   );
 }
 
+export async function ingestCanonicalCourierTrackingEvent(
+  context: BusinessPrincipalContext,
+  input: unknown,
+): Promise<BusinessCommandResult<Record<string, unknown>>> {
+  return ingestCanonicalCourierTrackingEventForStoredProvider(context, input);
+}
+
 export async function synchronizeCanonicalCourierTracking(
   context: ServiceContext,
   orderId: string,
+  fetcher?: CourierTrackingFetcher,
 ): Promise<{
   position: CourierPosition;
   events: Array<Record<string, unknown>>;
@@ -1149,20 +1193,22 @@ export async function synchronizeCanonicalCourierTracking(
       "delivery.trackingNumber",
     );
   }
-  if (!providerSchema.safeParse(delivery.provider).success) {
+  const storedProvider = delivery.provider;
+  const provider = normalizeDeliveryProvider(storedProvider);
+  if (!provider) {
     throw new ValidationError(
       "Delivery provider is not supported",
       "delivery.provider",
     );
   }
-  const provider = delivery.provider as DeliveryProvider;
-  await assertProviderCapability(context, provider, "tracking");
-  const adapter = getDeliveryAdapter(provider);
-  const credentials = await loadDeliveryCredentials(context, provider);
-  const tracking = await adapter.syncTracking(
-    delivery.trackingNumber,
-    credentials,
-  );
+  await assertProviderCapability(context, storedProvider, "tracking");
+  const credentials = await loadDeliveryCredentials(context, storedProvider);
+  const tracking = fetcher
+    ? await fetcher(provider, delivery.trackingNumber, credentials)
+    : await getDeliveryAdapter(provider).syncTracking(
+        delivery.trackingNumber,
+        credentials,
+      );
   const events =
     tracking.events.length > 0
       ? [...tracking.events].sort(
@@ -1170,17 +1216,46 @@ export async function synchronizeCanonicalCourierTracking(
             new Date(left.timestamp).getTime() -
             new Date(right.timestamp).getTime(),
         )
-      : [
+      : tracking.status !== delivery.status
+        ? [
           {
             status: tracking.status,
             timestamp: new Date().toISOString(),
             details: `Provider snapshot: ${tracking.status}`,
           } satisfies TrackingEvent,
-        ];
+        ]
+        : [];
 
   let expectedVersion = position.orderVersion;
   const outcomes: Array<Record<string, unknown>> = [];
   for (const event of events) {
+    const eventId = stableEventId(provider, delivery.trackingNumber, event);
+    const legacyEventId =
+      storedProvider === provider
+        ? null
+        : stableEventId(storedProvider, delivery.trackingNumber, event);
+    const existingEvent = await context.prisma.canonicalDeliveryEvent.findFirst({
+      where: {
+        OR: [
+          { provider, providerEventId: eventId },
+          ...(legacyEventId
+            ? [{ provider: storedProvider, providerEventId: legacyEventId }]
+            : []),
+        ],
+      },
+      select: { orderId: true, deliveryId: true },
+    });
+    if (existingEvent) {
+      if (
+        existingEvent.orderId !== orderId ||
+        existingEvent.deliveryId !== delivery.id
+      ) {
+        throw new ConflictError(
+          "Courier provider event identity belongs to a different delivery",
+        );
+      }
+      continue;
+    }
     if (event.status === "failed" || event.status === "refused") {
       const recovery = await executeCanonicalOrderRecovery(
         {
@@ -1193,13 +1268,9 @@ export async function synchronizeCanonicalCourierTracking(
             event.status === "failed" ? "delivery_failed" : "delivery_refused",
           expectedVersion,
           reasonCode: `provider-${provider}-${event.status}`,
-          providerEventId: stableEventId(
-            provider,
-            delivery.trackingNumber,
-            event,
-          ),
+          providerEventId: eventId,
           occurredAt: event.timestamp,
-          idempotencyKey: `courier-recovery:${provider}:${stableEventId(provider, delivery.trackingNumber, event)}`,
+          idempotencyKey: `courier-recovery:${provider}:${eventId}`,
           correlationId: `courier:${provider}:${delivery.id}`,
         },
       );
@@ -1218,13 +1289,9 @@ export async function synchronizeCanonicalCourierTracking(
           action: "return_in_transit",
           expectedVersion,
           reasonCode: `provider-${provider}-return`,
-          providerEventId: stableEventId(
-            provider,
-            delivery.trackingNumber,
-            event,
-          ),
+          providerEventId: eventId,
           occurredAt: event.timestamp,
-          idempotencyKey: `courier-return:${provider}:${stableEventId(provider, delivery.trackingNumber, event)}`,
+          idempotencyKey: `courier-return:${provider}:${eventId}`,
           correlationId: `courier:${provider}:${delivery.id}`,
         },
       );
@@ -1232,8 +1299,7 @@ export async function synchronizeCanonicalCourierTracking(
       outcomes.push(recovery.result as unknown as Record<string, unknown>);
       continue;
     }
-    const eventId = stableEventId(provider, delivery.trackingNumber, event);
-    const ingested = await ingestCanonicalCourierTrackingEvent(
+    const ingested = await ingestCanonicalCourierTrackingEventForStoredProvider(
       {
         ...context,
         businessPrincipal: providerBusinessPrincipal(provider),
@@ -1249,6 +1315,7 @@ export async function synchronizeCanonicalCourierTracking(
         idempotencyKey: `courier-event:${provider}:${eventId}`,
         correlationId: `courier:${provider}:${delivery.id}`,
       },
+      storedProvider,
     );
     expectedVersion = Number(ingested.result.orderVersion);
     outcomes.push(ingested.result);
@@ -1263,4 +1330,5 @@ export async function synchronizeCanonicalCourierTracking(
 export type CourierTrackingFetcher = (
   provider: DeliveryProvider,
   trackingNumber: string,
+  credentials: DeliveryCredentials,
 ) => Promise<TrackingInfo>;

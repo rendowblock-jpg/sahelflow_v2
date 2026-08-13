@@ -117,6 +117,7 @@ export const BRAND_ICONS = {
   maystro: MaystroIcon,
   zr_express: ZRExpressIcon,
   "zr-express": ZRExpressIcon,
+  ecotrack: NoestIcon,
   noest: NoestIcon,
   google_sheets: GoogleSheetsIcon,
   "google-sheets": GoogleSheetsIcon,

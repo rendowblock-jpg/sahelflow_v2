@@ -9,6 +9,8 @@ import {
   deliverySecretKey,
   deliverySecretKeys,
   DELIVERY_PROVIDERS,
+  legacyNoestSecretKeys,
+  normalizeDeliveryProvider,
 } from "@/lib/integrations/delivery/types";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
@@ -44,7 +46,12 @@ export const GET = withErrorHandler(async () => {
       // names or the loader finds nothing (bug B3 / dive-5).
       const fieldMatch = key.match(/^delivery_(\w+)_(.+)$/);
       const field = fieldMatch ? fieldMatch[2]! : key;
-      fieldStatus[field] = await hasSecret(context, key);
+      const legacyKey = provider === "ecotrack"
+        ? `delivery_noest_${field}`
+        : null;
+      fieldStatus[field] =
+        (await hasSecret(context, key)) ||
+        Boolean(legacyKey && (await hasSecret(context, legacyKey)));
     }
     status[provider] = fieldStatus;
   }
@@ -52,8 +59,10 @@ export const GET = withErrorHandler(async () => {
   return NextResponse.json({ providers: status, certifications });
 }, "GET /api/delivery/credentials");
 
+const CREDENTIAL_PROVIDER_IDS = [...DELIVERY_PROVIDERS, "noest"] as const;
+
 const saveSchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
+  provider: z.enum(CREDENTIAL_PROVIDER_IDS),
   credentials: z.record(z.string(), z.string().min(1)),
 });
 
@@ -75,16 +84,17 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const context = { prisma: db, shop: shopContext };
   const body = await req.json();
   const input = saveSchema.parse(body);
+  const provider = normalizeDeliveryProvider(input.provider)!;
   const allowedFields = new Set(
-    deliverySecretKeys(input.provider).map((key) =>
-      key.replace(`delivery_${input.provider}_`, ""),
+    deliverySecretKeys(provider).map((key) =>
+      key.replace(`delivery_${provider}_`, ""),
     ),
   );
   const submittedFields = Object.keys(input.credentials);
   const unknownFields = submittedFields.filter((field) => !allowedFields.has(field));
   if (unknownFields.length > 0) {
     throw new SahelFlowError(
-      `Unsupported ${input.provider} credential fields: ${unknownFields.join(", ")}`,
+      `Unsupported ${provider} credential fields: ${unknownFields.join(", ")}`,
       "DELIVERY_CREDENTIAL_FIELDS_INVALID",
       400,
     );
@@ -92,30 +102,30 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   // Save each credential field to the Secret store.
   for (const [field, value] of Object.entries(input.credentials)) {
-    const key = deliverySecretKey(input.provider, field);
+    const key = deliverySecretKey(provider, field);
     await setSecret(context, key, value);
   }
   await invalidateProviderCertifications(
     context,
-    input.provider,
+    provider,
     "credentials_updated",
   );
   await logAudit(context, {
     action: "delivery.credentials.updated",
     entity: "delivery_credentials",
-    entityId: input.provider,
+    entityId: provider,
     actor: trustedActorAuditIdentity(actorContext.actor),
-    metadata: { provider: input.provider, fields: Object.keys(input.credentials) },
+    metadata: { provider, fields: Object.keys(input.credentials) },
   });
 
   return NextResponse.json({
     ok: true,
-    message: `Identifiants ${input.provider} enregistrés (chiffrés).`,
+    message: `Identifiants ${provider} enregistrés (chiffrés).`,
   });
 }, "POST /api/delivery/credentials");
 
 const deleteSchema = z.object({
-  provider: z.enum(["yalidine", "maystro", "zrexpress", "noest"]),
+  provider: z.enum(CREDENTIAL_PROVIDER_IDS),
 });
 
 /**
@@ -128,8 +138,11 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
   const context = { prisma: db, shop: shopContext };
   const provider = req.nextUrl.searchParams.get("provider");
   const input = deleteSchema.parse({ provider });
+  const canonicalProvider = normalizeDeliveryProvider(input.provider)!;
 
-  const keys = deliverySecretKeys(input.provider);
+  const keys = canonicalProvider === "ecotrack"
+    ? [...deliverySecretKeys(canonicalProvider), ...legacyNoestSecretKeys()]
+    : deliverySecretKeys(canonicalProvider);
   // Capture before-state (which keys were actually present?) for audit.
   const before: Record<string, boolean> = {};
   for (const key of keys) {
@@ -139,7 +152,7 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
 
   await invalidateProviderCertifications(
     context,
-    input.provider,
+    canonicalProvider,
     "credentials_deleted",
   );
 
@@ -147,14 +160,14 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
   await logAudit({ prisma: db, shop: shopContext }, {
     action: "delivery.credentials.deleted",
     entity: "delivery_credentials",
-    entityId: input.provider,
+    entityId: canonicalProvider,
     actor: trustedActorAuditIdentity(actorContext.actor),
     before: before as unknown as Record<string, unknown>,
-    metadata: { provider: input.provider, keys },
+    metadata: { provider: canonicalProvider, keys },
   });
 
   return NextResponse.json({
     ok: true,
-    message: `Identifiants ${input.provider} supprimés.`,
+    message: `Identifiants ${canonicalProvider} supprimés.`,
   });
 }, "DELETE /api/delivery/credentials");

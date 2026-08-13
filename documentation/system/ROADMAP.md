@@ -2,11 +2,11 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028; FD-029; FD-030; FD-031; FD-032; FD-033 — Internal.16 completion convergence
-> **Protected main release checkpoint:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
-> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
-> **Application-changing protected baseline:** `856f58126327797b467938390586a04f185e70f6`
+> **Protected main:** `5a8d5e3c042abbcee001a68a7168d3c679f6e541` — PR #248 / Internal.16 Wave 2
+> **Latest application-changing protected merge:** PR #248 — Internal.16 Wave 2
+> **Active implementation:** PR #250 — Internal.16 Wave 3
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
-> **Published release:** `1.0.0-internal.14` — source `2d60e2e74109b6e03626a5ccdff727c029a34591`
+> **Published release:** `1.0.0-internal.15` — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Next milestone:** `1.0.0-internal.16` / MSI `1.0.0.16` complete-product candidate
 > **Installed discovery:** CLOSED 2026-08-13; 17 Founder-installed P1 inputs frozen under FD-033
@@ -173,7 +173,7 @@ Issue #230 remains P1 for customer-online/public trial: verified SahelFlow-owned
 
 The earlier completion program used a **complete reconnaissance** before freezing each Phase Problem Register and relied on exact frozen heads plus **expected-head merge** discipline after selected gates passed. FD-033 changes the cadence for the exact Internal.16 completion wave, not those integrity principles.
 
-The last published executable remains source `2d60e2e74109b6e03626a5ccdff727c029a34591`, **Published release:** `1.0.0-internal.14`; PR #245 later merged the FD-032 Internal.15 Founder checkpoint authority. This historical publication marker is retained until a newer signed release is actually proven.
+The current published executable is source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, **Published release:** `1.0.0-internal.15`, signed run `31657621918`. It is Founder/internal-lab evidence, not customer-online, Beta, Stable or Founder-acceptance proof.
 
 ## Definition of done
 

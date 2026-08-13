@@ -75,7 +75,7 @@ export function aiBusinessPrincipal(sessionId: string): TrustedBusinessPrincipal
 }
 
 export function providerBusinessPrincipal(
-  provider: "whatsapp" | "yalidine" | "maystro" | "zrexpress" | "noest",
+  provider: "whatsapp" | "yalidine" | "maystro" | "zrexpress" | "ecotrack",
 ): TrustedBusinessPrincipal {
   return createPrincipal("provider", provider);
 }
@@ -192,9 +192,6 @@ export function hasDefaultBusinessReplayAuthority(
       );
     }
 
-    // Pre-durable-identity owner/test principals retain session-rotation replay
-    // only among other legacy owner principals. They can never read a durable
-    // person's committed result.
     return (
       storedAuditActor.startsWith("authenticated-owner:") &&
       !storedAuditActor.startsWith(personPrefix)
@@ -203,15 +200,6 @@ export function hasDefaultBusinessReplayAuthority(
   return storedAuditActor === principal.auditActor;
 }
 
-/**
- * Resolve command authorship from trusted execution authority.
- *
- * Request handlers normally omit `businessPrincipal`; the resolver verifies the
- * authenticated cookie and binds the command to the current Session.id for
- * audit attribution. Trusted background and source boundaries must attach a
- * principal produced by one of the fixed factories above. Tests receive a
- * sealed test principal without importing the Next.js cookie runtime.
- */
 export async function resolveTrustedBusinessPrincipal(
   context: BusinessPrincipalContext,
 ): Promise<TrustedBusinessPrincipal> {

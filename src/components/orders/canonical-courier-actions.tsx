@@ -23,9 +23,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useI18n } from "@/hooks/use-i18n";
+import { deliveryProviderConfig } from "@/lib/shared";
 import { mutatePrefix } from "@/lib/swr/mutate";
 
-const PROVIDERS = ["yalidine", "maystro", "zrexpress", "noest"] as const;
+const PROVIDERS = ["yalidine", "maystro", "zrexpress", "ecotrack"] as const;
+const PROVIDER_LABELS: Record<(typeof PROVIDERS)[number], string> = {
+  yalidine: "Yalidine",
+  maystro: "Maystro Delivery",
+  zrexpress: "ZR Express",
+  ecotrack: "EcoTrack Pro",
+};
 type Provider = (typeof PROVIDERS)[number];
 type Action = "book" | "sync" | "reconcile_created" | "reconcile_not_created";
 
@@ -316,7 +323,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
               <SelectContent>
                 {PROVIDERS.map((entry) => (
                   <SelectItem key={entry} value={entry}>
-                    {entry === "zrexpress" ? "ZR Express" : entry[0]?.toUpperCase() + entry.slice(1)}
+                    {PROVIDER_LABELS[entry]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -337,7 +344,9 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
         <dl className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3 text-sm sm:grid-cols-4">
           <div>
             <dt className="text-xs text-muted-foreground">{copy.provider}</dt>
-            <dd className="font-medium" dir="auto">{delivery.provider}</dd>
+            <dd className="font-medium" dir="auto">
+              {deliveryProviderConfig[delivery.provider]?.label ?? delivery.provider}
+            </dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">{copy.delivery}</dt>

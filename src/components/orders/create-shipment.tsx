@@ -29,6 +29,7 @@ import {
 import { useRouter } from "next/navigation";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { useI18n } from "@/hooks/use-i18n";
+import { deliveryProviderConfig } from "@/lib/shared";
 
 interface CreateShipmentProps {
   orderId: string;
@@ -136,7 +137,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
                       <SelectItem value="yalidine">Yalidine</SelectItem>
                       <SelectItem value="maystro">Maystro Delivery</SelectItem>
                       <SelectItem value="zrexpress">ZR Express</SelectItem>
-                      <SelectItem value="noest">NOEST Express</SelectItem>
+                      <SelectItem value="ecotrack">EcoTrack Pro</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -175,7 +176,9 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
             <div className="rounded-lg border p-3 space-y-1.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("orders.shipment.carrier")}</span>
-                <span className="font-medium">{delivery.provider}</span>
+                <span className="font-medium">
+                  {deliveryProviderConfig[delivery.provider]?.label ?? delivery.provider}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("orders.shipment.tracking")}</span>

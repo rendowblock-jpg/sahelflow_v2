@@ -77,7 +77,11 @@ const bookingSchema = z.object({
 const bookingPayloadSchema = z.object({
   deliveryId: z.string().trim().min(1),
   orderId: z.string().trim().min(1),
-  provider: providerSchema,
+  // Wire compatibility only: public booking input remains canonical, while an
+  // encrypted effect queued before Wave 3 may still carry the NOEST alias.
+  // The effect runtime normalizes that alias to EcoTrack before any provider
+  // capability or adapter call and preserves the delivery's stored identity.
+  provider: z.union([providerSchema, z.literal("noest")]),
   request: z.object({
     orderId: z.string(),
     orderNumber: z.string(),
