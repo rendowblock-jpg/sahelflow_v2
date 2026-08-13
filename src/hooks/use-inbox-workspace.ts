@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
@@ -21,6 +22,7 @@ import {
 import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
 
 const CHAT_REFRESH_COALESCE_MS = 500;
+const MAX_DEEP_LINK_ID_LENGTH = 160;
 
 interface CanonicalChatResponse {
   chats: Array<{
@@ -91,6 +93,38 @@ function parseLabels(value: string | null): string[] {
   }
 }
 
+function normalizeDeepLinkConversationId(value: string | null): string | null {
+  const normalized = value?.trim() ?? "";
+  if (!normalized || normalized.length > MAX_DEEP_LINK_ID_LENGTH) return null;
+  return normalized;
+}
+
+function mapConversationProjection(
+  conversation: ConversationProjection,
+  restrictedContact: string,
+): InboxChat {
+  return {
+    id: conversation.id,
+    conversationId: conversation.id,
+    name: conversation.contactName ?? restrictedContact,
+    phone: conversation.contactPhone ?? undefined,
+    channel: "conversation",
+    lastMessageAt: conversation.lastMessageAt
+      ? new Date(conversation.lastMessageAt).getTime()
+      : undefined,
+    unread: conversation.unreadCount,
+    workflow: {
+      status: conversation.status as ConversationWorkflowState["status"],
+      assigneeId: conversation.assigneeId,
+      priority: conversation.priority as ConversationWorkflowState["priority"],
+      labels: parseLabels(conversation.labels),
+      snoozedUntil: conversation.snoozedUntil,
+      waitingSince: conversation.waitingSince,
+      firstReplyAt: conversation.firstReplyAt,
+    },
+  };
+}
+
 function mapDeliveryStatus(
   update: Record<string, unknown>,
 ): InboxMessage["deliveryStatus"] | null {
@@ -112,6 +146,10 @@ function mapDeliveryStatus(
 }
 
 export function useInboxWorkspace() {
+  const searchParams = useSearchParams();
+  const requestedConversationId = normalizeDeepLinkConversationId(
+    searchParams.get("conversation"),
+  );
   const { t, locale } = useI18n();
   const copy = useCallback(
     (key: Parameters<typeof getInboxWorkspaceCopy>[1], params?: Record<string, string | number>) =>
@@ -141,10 +179,26 @@ export function useInboxWorkspace() {
   const isNearBottomRef = useRef(true);
   const activeTransportIdRef = useRef<string | null>(null);
   const chatRefreshTimerRef = useRef<number | null>(null);
+  const deepLinkAttemptRef = useRef<string | null>(null);
+  const pinnedDeepLinkChatRef = useRef<InboxChat | null>(null);
 
   const canUpdateConversation = allowedActions.includes("conversations.update");
   const canReply = allowedActions.includes("conversations.reply");
   const canManageWhatsApp = allowedActions.includes("whatsapp.connection.manage");
+
+  const mergePinnedDeepLink = useCallback((nextChats: InboxChat[]) => {
+    const pinned = pinnedDeepLinkChatRef.current;
+    if (!pinned) return nextChats;
+    if (
+      nextChats.some(
+        (chat) => chat.conversationId === pinned.conversationId,
+      )
+    ) {
+      pinnedDeepLinkChatRef.current = null;
+      return nextChats;
+    }
+    return [pinned, ...nextChats];
+  }, []);
 
   const loadFallbackProjection = useCallback(async () => {
     const response = await fetch("/api/conversations", { cache: "no-store" });
@@ -154,30 +208,15 @@ export function useInboxWorkspace() {
       authority?: { allowedActions: string[] };
     };
     setAllowedActions(data.authority?.allowedActions ?? []);
+    const restrictedContact = copy("restrictedContact");
     setChats(
-      data.conversations.map((conversation) => ({
-        id: conversation.id,
-        conversationId: conversation.id,
-        name: conversation.contactName ?? copy("restrictedContact"),
-        phone: conversation.contactPhone ?? undefined,
-        channel: "conversation" as const,
-        lastMessageAt: conversation.lastMessageAt
-          ? new Date(conversation.lastMessageAt).getTime()
-          : undefined,
-        unread: conversation.unreadCount,
-        workflow: {
-          status: conversation.status as ConversationWorkflowState["status"],
-          assigneeId: conversation.assigneeId,
-          priority:
-            conversation.priority as ConversationWorkflowState["priority"],
-          labels: parseLabels(conversation.labels),
-          snoozedUntil: conversation.snoozedUntil,
-          waitingSince: conversation.waitingSince,
-          firstReplyAt: conversation.firstReplyAt,
-        },
-      })),
+      mergePinnedDeepLink(
+        data.conversations.map((conversation) =>
+          mapConversationProjection(conversation, restrictedContact),
+        ),
+      ),
     );
-  }, [copy]);
+  }, [copy, mergePinnedDeepLink]);
 
   const loadChats = useCallback(async () => {
     try {
@@ -193,30 +232,32 @@ export function useInboxWorkspace() {
         );
         setDataDegraded(false);
         setChats(
-          data.chats.map((chat) => ({
-            id: chat.jid,
-            conversationId: chat.conversationId,
-            transportId: chat.jid,
-            name: chat.name,
-            phone: chat.phone ?? undefined,
-            channel: "whatsapp" as const,
-            lastMessageText: chat.lastMessage?.text,
-            lastMessageAt: chat.lastMessage
-              ? chat.lastMessage.timestamp * 1000
-              : undefined,
-            unread: chat.unread,
-            workflow: {
-              status: chat.workflow.status as ConversationWorkflowState["status"],
-              assigneeId: chat.workflow.assigneeId,
-              assignmentVersion: chat.workflow.assignmentVersion,
-              priority:
-                chat.workflow.priority as ConversationWorkflowState["priority"],
-              labels: chat.workflow.labels,
-              snoozedUntil: chat.workflow.snoozedUntil,
-              waitingSince: chat.workflow.waitingSince,
-              firstReplyAt: chat.workflow.firstReplyAt,
-            },
-          })),
+          mergePinnedDeepLink(
+            data.chats.map((chat) => ({
+              id: chat.jid,
+              conversationId: chat.conversationId,
+              transportId: chat.jid,
+              name: chat.name,
+              phone: chat.phone ?? undefined,
+              channel: "whatsapp" as const,
+              lastMessageText: chat.lastMessage?.text,
+              lastMessageAt: chat.lastMessage
+                ? chat.lastMessage.timestamp * 1000
+                : undefined,
+              unread: chat.unread,
+              workflow: {
+                status: chat.workflow.status as ConversationWorkflowState["status"],
+                assigneeId: chat.workflow.assigneeId,
+                assignmentVersion: chat.workflow.assignmentVersion,
+                priority:
+                  chat.workflow.priority as ConversationWorkflowState["priority"],
+                labels: chat.workflow.labels,
+                snoozedUntil: chat.workflow.snoozedUntil,
+                waitingSince: chat.workflow.waitingSince,
+                firstReplyAt: chat.workflow.firstReplyAt,
+              },
+            })),
+          ),
         );
         return;
       }
@@ -242,7 +283,7 @@ export function useInboxWorkspace() {
     } finally {
       setLoadingChats(false);
     }
-  }, [loadFallbackProjection]);
+  }, [loadFallbackProjection, mergePinnedDeepLink]);
 
   const scheduleChatsRefresh = useCallback(() => {
     if (chatRefreshTimerRef.current !== null) return;
@@ -443,6 +484,87 @@ export function useInboxWorkspace() {
     setMessages([]);
     setReplyText("");
   }, []);
+
+  useEffect(() => {
+    if (!requestedConversationId) {
+      deepLinkAttemptRef.current = null;
+      pinnedDeepLinkChatRef.current = null;
+      return;
+    }
+    if (loadingChats) return;
+
+    if (
+      pinnedDeepLinkChatRef.current &&
+      pinnedDeepLinkChatRef.current.conversationId !== requestedConversationId
+    ) {
+      pinnedDeepLinkChatRef.current = null;
+    }
+
+    const existingChat = chats.find(
+      (chat) => chat.conversationId === requestedConversationId,
+    );
+    const activeChatStillExists = chats.some(
+      (chat) => chat.id === activeChatId,
+    );
+    if (existingChat) {
+      if (
+        deepLinkAttemptRef.current !== requestedConversationId ||
+        !activeChatStillExists
+      ) {
+        deepLinkAttemptRef.current = requestedConversationId;
+        selectChat(existingChat);
+      }
+      return;
+    }
+    if (deepLinkAttemptRef.current === requestedConversationId) return;
+
+    deepLinkAttemptRef.current = requestedConversationId;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/conversations/${encodeURIComponent(requestedConversationId)}`,
+          { cache: "no-store" },
+        );
+        if (!response.ok) {
+          if (response.status >= 500 && !cancelled) {
+            deepLinkAttemptRef.current = null;
+          }
+          return;
+        }
+        const data = (await response.json()) as {
+          conversation: ConversationProjection & { messages: SeededMessage[] };
+        };
+        if (cancelled) return;
+        const chat = mapConversationProjection(
+          data.conversation,
+          copy("restrictedContact"),
+        );
+        pinnedDeepLinkChatRef.current = chat;
+        setChats((current) =>
+          current.some(
+            (entry) => entry.conversationId === chat.conversationId,
+          )
+            ? current
+            : [chat, ...current],
+        );
+        selectChat(chat);
+      } catch {
+        if (!cancelled) deepLinkAttemptRef.current = null;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeChatId,
+    chats,
+    copy,
+    loadingChats,
+    requestedConversationId,
+    selectChat,
+  ]);
 
   useEffect(() => {
     isNearBottomRef.current = true;
