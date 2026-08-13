@@ -10,9 +10,12 @@ Speed comes from complete reconnaissance, root-cause grouping, one coherent impl
 
 ## 1. Internal.16 session sequence
 
+Founder-installed discovery is closed and frozen at 17 P1 inputs.
+
 ```text
-Founder installed discovery
-→ exact post-Internal.15 source reconnaissance
+exact documentation-merged post-Internal.15 authority
+→ one exact-source whole-product reconnaissance
+→ merge source findings with frozen installed register
 → consolidated Problem Register
 → frozen contracts/non-goals/acceptance matrix
 → one large dependency-correct implementation wave
@@ -24,7 +27,7 @@ Founder installed discovery
 → signed updater if evidence supports it
 ```
 
-Do not run full MSI/replacement-install/eight-hour/whole-repository evidence after every tiny change. Do not skip focused checks that prevent hours of broken work. Never rerun an unchanged passing exact head. Never retry a deterministic failure until it becomes green without explaining/fixing the cause.
+Do not restart broad screenshot discovery. Do not run full MSI/replacement-install/eight-hour/whole-repository evidence after every tiny change. Do not skip focused checks that prevent hours of broken work. Never rerun an unchanged passing exact head. Never retry a deterministic failure until it becomes green without explaining/fixing the cause.
 
 ## 2. Authority and anti-drift
 
@@ -36,14 +39,18 @@ Do not run full MSI/replacement-install/eight-hour/whole-repository evidence aft
 - No important decision remains only in chat.
 - Current State describes merged truth plus clearly labeled installed observations.
 - Working Memory owns resumable current frontier.
-- FD-033 owns the exact Internal.16 completion directive and installed finding IDs.
-- New P0/P1 findings are added to the consolidated register, not turned into random micro-PR loops.
+- FD-033 owns the exact Internal.16 completion directive and frozen installed finding IDs.
+- New P0/P1 source findings are added to the consolidated register before its freeze, not turned into random micro-PR loops.
 
-## 3. Reconnaissance before implementation
+## 3. Exact-source reconnaissance before implementation
 
 Inspect every applicable caller, route, component, service, model, migration, permission, provider effect, UI state, locale/RTL path, responsive composition, performance/resource path, diagnostics and tests. Group by root cause.
 
-For the installed Parts 1–N defect classes, the implementation agent owns exhaustive sibling discovery. The Founder does not need to screenshot every repeated wrong-side RTL element, untranslated key, accidental card grid or low-information chart.
+For the frozen installed defect classes, the implementation agent owns exhaustive sibling discovery. The Founder does not need to screenshot every repeated wrong-side RTL element, untranslated key, accidental card grid, dead-space panel or weak chart.
+
+Reconnaissance also covers the already-approved Internal.16 scope beyond the installed findings: full Phase 8, EcoTrack replacement, AI extraction/tool benchmark, updater/release/recovery/licensing/cloud/privacy/security and retained #221/#226/#230 boundaries.
+
+At the end of reconnaissance, freeze one combined source+installed Problem Register, contracts/non-goals and acceptance matrix. Broad implementation begins only after that freeze.
 
 ## 4. Targeted implementation checks
 
@@ -62,7 +69,7 @@ Full release evidence waits for a coherent frozen candidate unless a P0/high-ris
 
 Every material route/workspace must prove happy/loading/empty/filtered-empty/permission/offline/stale/pending/conflict/error/retry/recovery states plus AR/FR/EN, RTL/mixed bidi, keyboard/focus/screen reader, 100–200% zoom, reduced motion and 1366×768/windowed/fullscreen behavior.
 
-Specific Parts 1–3 proof additions:
+Frozen installed proof additions:
 
 - **RTL:** source audit plus installed geometry comparison across shell, panes, tables, dialogs, command palette and charts; no physical-side residue.
 - **Responsive:** exercise actual **application container width after sidebar**, not browser viewport alone; live resize; no `4→3+1` orphan primary card groups.
@@ -106,6 +113,8 @@ The frozen Internal.16 candidate must cover exact source/version/docs, type/lint
 
 Issue #230 remains the customer-online/public-trial boundary. Provider hostnames/mocks do not satisfy owned-domain/network proof. External provider/legal/security/privacy/representative-beta truth remains distinct from internal evidence. Stable requires applicable Phase 9 evidence and explicit Founder promotion.
 
-## 9. Documentation closure
+## 9. Session handoff rule
 
-At closure, reconcile FD-033, Current State, Roadmap and Working Memory to exact merged source/evidence. Do not create another competing masterplan. Keep installed observations distinct from implemented/proven truth until the evidence actually moves.
+The next session starts from merged FD-033/Current State/Roadmap/Working Memory, creates or uses the one Internal.16 application branch, completes exact-source reconnaissance, freezes the combined Problem Register and then implements. It must not spend another session reconstructing Parts 1–3 from chat.
+
+At closure, reconcile FD-033, Current State, Roadmap and Working Memory to exact merged source/evidence. Do not create another competing masterplan. Keep installed observations distinct from implemented/proven truth until evidence actually moves.
