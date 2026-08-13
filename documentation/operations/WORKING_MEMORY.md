@@ -45,7 +45,6 @@ The branch already contains the major EcoTrack replacement package:
 - canonical `ecotrack` delivery provider identity;
 - EcoTrack Pro adapter and configured merchant/courier identity projection;
 - explicit HTTPS endpoint contract rather than guessed endpoints;
-- API token + user GUID credential contract;
 - fees, create + validate, tracking and connection verification behavior;
 - `noest` retained only as a historical compatibility/migration alias in provider/credential support code;
 - durable canonical booking/reconciliation/provider-capability boundaries preserved;
@@ -124,9 +123,7 @@ Required repair intent:
 
 - restore `gemini-3.5-flash` as first model;
 - retain `gemini-3.6-flash` only as fallback unless governing authority is explicitly changed and revalidated;
-- update extraction/key-verification tests accordingly:
-  - success/default model => `3.5`;
-  - 3.5 unavailable => fallback `3.6`;
+- update extraction/key-verification tests accordingly;
 - reconcile any chat/provider tests that assume the opposite order.
 
 Do not silently change model authority in documentation just to match implementation.
@@ -140,111 +137,62 @@ Resolve outdated threads only after re-fetching and confirming the current diff 
 
 ## Current exact-head certification on `df84f3d4...`
 
-### Passing evidence
+Passing evidence:
 
-- **Phase 5 Experience Gate:** full workflow success, run `31711261468`.
-- **Phase 6–7 static localization/RTL/accessibility contract:** success.
-- **Phase 6–7 AR/FR/EN accessibility, reflow and performance browser evidence:** success.
-- TypeScript: success.
-- ESLint: success (warnings only; no errors).
-- production dependency audit: success / no vulnerabilities.
-- migration status: success / schema up to date.
-- EcoTrack adapter suite including `non livré` regression: success.
-- Gemini extraction suite on the current head: success.
-- chat agent suite on the current head: success.
+- Phase 5 Experience Gate — run `31711261468`;
+- Phase 6–7 static localization/RTL/accessibility contract;
+- Phase 6–7 AR/FR/EN accessibility, reflow and performance browser evidence;
+- TypeScript;
+- ESLint;
+- production dependency audit;
+- migration status;
+- EcoTrack adapter suite including `non livré` regression;
+- Gemini extraction suite;
+- chat agent suite.
 
-### Blocking source-quality failure
+Blocking source-quality failure:
 
-Both CI Required PR gate and Phase 6–7 required aggregator are red because the complete Vitest run has **one stale Settings source-contract failure**:
-
-`src/components/settings/__tests__/settings-workspace-contract.test.ts`
-
-Failing assertion still reads:
-
-`src/components/settings/delivery-credentials-panel.tsx`
-
-That file is now only a compatibility re-export of:
-
-`src/components/settings/delivery-credentials-panel-wave3.tsx`
-
-So the source-contract incorrectly searches the wrapper for `"verification-required"` / authority-state copy.
-
-Observed complete test result at `df84f3d4...`:
-
-- **305 test files passed, 1 failed**;
-- **2396 tests passed, 1 failed**.
-
-Required repair intent:
-
-- point the source-contract at the active Wave 3 panel and assert the current state vocabulary actually used there;
-- do not change Settings runtime behavior just to satisfy the old test;
-- rerun full source-quality after repair.
+- `src/components/settings/__tests__/settings-workspace-contract.test.ts` still reads `src/components/settings/delivery-credentials-panel.tsx`, now a compatibility re-export, instead of the active `delivery-credentials-panel-wave3.tsx` source.
+- observed complete result: **305 test files passed, 1 failed; 2396 tests passed, 1 failed**.
 
 Relevant exact-head workflow runs:
 
-- CI: `31711261720` — failure only through the source-quality/Test gate and required aggregator;
-- Phase 5: `31711261468` — success;
-- Phase 6–7: `31711261477` — browser/static success, final required aggregator red because source-quality is red;
-- Integration source checkpoint: `31711261543` — skipped as expected.
-
-## Connector/tooling limitation encountered in this session
-
-The GitHub connector safety layer blocked writes/ref moves involving several guard-sensitive files, including provider-secret verification, courier booking surfaces, and a Settings test file containing unrelated destructive-reset assertions.
-
-Important consequences:
-
-- **do not assume the staged/unattached Git objects created during failed attempts are on the branch**;
-- live PR/branch refs are the only authority;
-- the only additional repair actually moved onto the branch after the earlier `10cc4a48...` state is the EcoTrack negative-status fix at `df84f3d4...`;
-- next session should re-attempt the remaining fixes through an available normal repository editing workflow/checkout if the connector still blocks those paths;
-- never bypass safety controls or force-move the branch.
+- CI `31711261720` — red only through the source-quality/Test gate and required aggregator;
+- Phase 5 `31711261468` — success;
+- Phase 6–7 `31711261477` — browser/static success, final required aggregator red because source-quality is red;
+- Integration source checkpoint `31711261543` — skipped as expected.
 
 ## Exact next-session order
 
-1. Re-fetch protected `main`; expected current value at this handoff is `5a8d5e3c042abbcee001a68a7168d3c679f6e541`.
-2. Re-fetch PR #250 current head, status, changed files, review threads and exact-head workflow runs. Do not assume the docs-only handoff head equals application evidence head `df84f3d4...`.
-3. Read `AGENTS.md`, `documentation/README.md`, `documentation/operations/WORKING_MEMORY.md`, `documentation/operations/WAVE3_SESSION_HANDOFF_2026-08-13.md`, `documentation/system/CURRENT_STATE.md`, `documentation/system/ROADMAP.md`, and `documentation/operations/WORKFLOW.md`.
-4. Treat stale pre-Wave-1/2 execution-frontier sentences in CURRENT_STATE/ROADMAP as historical until post-Wave-3 reconciliation; do not restart completed Waves 1–2.
-5. Confirm no other agent/user moved `agent/internal-16-wave-3` unexpectedly.
-6. Repair the stale Settings source-contract first because it is deterministic and non-runtime.
-7. Repair P1 A: historical `noest` delivery normalization/credential compatibility in canonical tracking, with focused regression.
-8. Repair P1 B: canonical courier picker + AI provider vocabularies from `noest` to `ecotrack`.
-9. Repair P1 C: restore Gemini 3.5-first authority and align provider/extraction/chat tests.
-10. Re-fetch review threads; resolve only findings actually proven fixed/current.
-11. Freeze the repaired application head.
-12. Run exact-head CI + Phase 5 + Phase 6–7. Do not merge on wrapper-green/skipped evidence.
-13. Require at minimum:
-    - Required PR gate green;
-    - complete source-quality green;
-    - dependency audit and migrations green;
-    - complete Phase 5 green;
-    - Phase 6–7 static + source-quality + browser + required gate green;
-    - no unresolved current P1 review finding.
-14. Update PR #250 body to final exact head/evidence and correct any stale wording such as “opened as a draft”.
-15. Merge #250 only through expected-head protected merge discipline after every required exact-head condition is green.
-16. Re-fetch resulting protected `main`, then perform a docs-only reconciliation if needed before starting Wave 4.
+1. Re-fetch protected `main` and PR #250 current head/status/checks/review threads.
+2. Read `AGENTS.md`, `documentation/README.md`, this file, `WAVE3_SESSION_HANDOFF_2026-08-13.md`, product/architecture authority and workflow.
+3. Do not restart Waves 1–2; they are already protected.
+4. Repair the stale Settings source-contract first.
+5. Repair P1 A historical `noest` tracking normalization/compatibility.
+6. Repair P1 B remaining shipment/AI provider vocabulary to `ecotrack`.
+7. Repair P1 C Gemini 3.5-first authority and tests.
+8. Re-fetch review threads; resolve only findings actually proven fixed/current.
+9. Freeze the repaired application head.
+10. Run exact-head CI + Phase 5 + Phase 6–7.
+11. Require Required PR gate, complete source-quality, dependency audit/migrations, Phase 5, complete Phase 6–7 and zero unresolved current P1 review finding.
+12. Update PR #250 body to final exact head/evidence.
+13. Merge #250 only through expected-head protected merge discipline.
+14. Reconcile long-form docs after Wave 3 lands, then start Wave 4.
 
-## After Wave 3 merges
+## Documentation note
 
-The next application boundary remains:
+`CURRENT_STATE.md` and `ROADMAP.md` still contain older execution-frontier prose because whole-file connector rewrites were safety-blocked during this session. Treat those old frontier sentences as historical only; product/architecture authority remains binding. Until Wave 3 closes, live GitHub + `documentation/README.md` + this file + the Wave 3 handoff own the active resume position.
 
-- **Wave 4:** connected Phase 8 platform / Cloudflare control plane / authenticated encrypted remote projection + commands / hosted storefront / PWA/browser companion / zero-knowledge backup transport / Founder Console / outage-replay-isolation proof.
-- **Wave 5:** startup/performance/reliability, issue #230 customer-online/public-trial proof, security/privacy closure, installed #221/#226 reconciliation, zero known P0/P1, and signed Internal.16 release proof if earned.
-
-Do not pull Wave 4/5 implementation into PR #250 unless a proven blocker requires a minimal boundary repair.
-
-## Protected boundaries / hard rules
+## Hard rules
 
 - one active application writer;
 - no direct protected-main application edits;
 - no force pushes/ref rewrites;
-- no Phase 1–4 Golden COD/identity/PII/accounting/provider/native authority weakening;
+- no Phase 1–4 authority weakening;
 - no guessed provider endpoints/capabilities;
 - no fake AI/provider/cloud success;
 - no NOEST runtime resurrection: historical compatibility only;
 - no Gemini model-policy drift without governing authority + revalidation;
-- no gate/threshold weakening for schedule;
-- no heavy certification loop after every tiny edit;
-- no customer-online claim from provider hostnames/mocks;
-- no Internal.16/Beta/Stable claim until the applicable exact evidence exists;
+- no gate/threshold weakening;
+- no Internal.16/Beta/Stable claim until applicable exact evidence exists;
 - #221, #226 and #230 remain open until stronger evidence explicitly closes them.
