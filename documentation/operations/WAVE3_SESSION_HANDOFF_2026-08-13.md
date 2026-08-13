@@ -1,78 +1,92 @@
-# Internal.16 Wave 3 — session handoff
+# Wave 3 session handoff — 2026-08-13
 
-> **Date:** 2026-08-13
-> **PR:** #250 — `Internal.16 Wave 3 — EcoTrack + Gemini provider truth`
-> **Branch:** `agent/internal-16-wave-3`
-> **Protected main at handoff:** `5a8d5e3c042abbcee001a68a7168d3c679f6e541`
-> **Last application-changing Wave 3 head:** `df84f3d4e78a982695b5883c98a15ac145604b49`
-> **Status:** PR open, non-draft, unmerged
+> **Active PR:** #250 — `Internal.16 Wave 3 — EcoTrack + Gemini provider truth`
+> **Active branch:** `agent/internal-16-wave-3`
+> **Protected base:** `5a8d5e3c042abbcee001a68a7168d3c679f6e541` — Internal.16 Wave 2
+> **Last application-changing Wave 3 head before documentation-only handoff:** `df84f3d4e78a982695b5883c98a15ac145604b49`
+> **State:** OPEN / non-draft / UNMERGED
 
-This file is a compact session transfer. `documentation/operations/WORKING_MEMORY.md` remains the primary resume owner and contains the detailed repair intent, evidence and hard rules.
+This file is a compact session-resume companion to `WORKING_MEMORY.md`. Re-fetch live GitHub before writing because documentation-only handoff commits move the branch head without adding new application evidence.
 
-## What is already protected
+## What is already done in Wave 3
 
-- Wave 1 / PR #247 merged at `9d69958d3dd9658ace192ccc70c9a43d5d815ee1`.
-- Wave 2 / PR #248 merged at current protected main `5a8d5e3c042abbcee001a68a7168d3c679f6e541`.
-- Do not restart Wave 1, Wave 2, whole-repository audit or Founder screenshot discovery.
+- EcoTrack Pro is the canonical EcoTrack-backed delivery transport in the active implementation.
+- NOEST is no longer intended as a first-class/selectable runtime provider; `noest` remains only in explicit historical compatibility seams.
+- EcoTrack configuration, fee lookup, create/validate shipment handling, tracking, certification and Settings integration are present.
+- Durable canonical courier booking/reconciliation/provider-capability boundaries remain protected.
+- Shared Gemini provider handling, structured extraction, stable error taxonomy, real-output key verification and chat runtime convergence are present.
+- Quota exhaustion does not count as successful Gemini key verification.
+- Proposal-bound AI action safety and streaming behavior remain covered.
+- `df84f3d4...` fixed the dangerous EcoTrack status precedence bug so `non livré` cannot become `delivered`; the regression passes.
 
-## Wave 3 state
+## Remaining application blockers
 
-Substantial EcoTrack + Gemini/provider + extraction/chat work is already on PR #250.
+Re-fetch PR #250 review threads first. At session close the active P1s were:
 
-The last application change in this session, `df84f3d4...`, corrected EcoTrack status precedence so a non-delivery event such as `non livré` cannot be interpreted as delivered. Its focused regression passes.
+1. **Historical `noest` delivery tracking compatibility** — normalize stored `noest` to canonical `ecotrack` before canonical provider validation, while preserving the persisted historical row value until a dedicated migration owns rewriting it.
+2. **Stale shipment/AI provider vocabularies** — canonical courier picker and remaining AI delivery schemas/lists must submit/select `ecotrack`, not `noest`, and seller display should say `EcoTrack Pro`.
+3. **Gemini model authority** — repository authority still approves `gemini-3.5-flash` as launch default, so provider order must be 3.5 first and 3.6 fallback unless governing authority is explicitly changed and revalidated.
 
-Three current P1 review findings remain:
+Two unresolved threads were already outdated at handoff:
 
-1. historical persisted `noest` delivery rows need normalization to canonical `ecotrack` before canonical tracking validation while preserving the historical compatibility seam;
-2. remaining seller/AI shipment clients still use stale `noest` provider vocabulary and must submit canonical `ecotrack`;
-3. Gemini provider order must keep the currently approved 3.5 Flash model first, with 3.6 only as fallback unless governing authority changes.
+- EcoTrack `non livré` classification — fixed at `df84f3d4...`;
+- Wave 3 chat runtime not wired — fixed by later commits in #250.
 
-Two older review threads are outdated but still unresolved: the EcoTrack negative-status defect and the earlier chat-runtime-not-wired finding. Re-fetch before resolving them.
+Resolve them only after re-fetching and confirming the current diff.
 
-## Current evidence snapshot
+## Exact source-quality state at `df84f3d4...`
 
-At application head `df84f3d4...`:
+Passing:
 
-- Phase 5 Experience: green;
-- Phase 6–7 static localization/RTL/accessibility: green;
-- Phase 6–7 AR/FR/EN browser accessibility/reflow/performance: green;
-- TypeScript: green;
-- ESLint: green with warnings only;
-- production dependency audit: green;
-- migrations: green;
-- EcoTrack adapter/regression tests: green;
-- Gemini extraction tests: green;
-- chat agent tests: green.
+- Phase 5 Experience Gate;
+- Phase 6–7 static localization/RTL/accessibility contract;
+- Phase 6–7 AR/FR/EN accessibility/reflow/performance browser evidence;
+- TypeScript;
+- ESLint;
+- production dependency audit;
+- migration status;
+- EcoTrack adapter tests including `non livré`;
+- Gemini extraction tests;
+- AI chat agent tests.
 
-CI and the final Phase 6–7 required aggregator remain red because one stale Settings source-contract fails. The complete Vitest result observed was 305 test files passed / 1 failed and 2396 tests passed / 1 failed.
+Only known source-quality test failure:
 
-The stale contract is `src/components/settings/__tests__/settings-workspace-contract.test.ts`; it reads the compatibility wrapper `delivery-credentials-panel.tsx` instead of the active Wave 3 panel implementation. Repair the test, not Settings runtime behavior.
+- `src/components/settings/__tests__/settings-workspace-contract.test.ts` still reads the delivery-credentials re-export wrapper instead of the active Wave 3 panel. Update the test to follow `delivery-credentials-panel-wave3.tsx`; do not change Settings runtime behavior merely to satisfy the stale source-contract.
 
-## First actions next session
+Observed full Vitest result:
 
-1. Re-fetch protected `main`, PR #250 current head, checks and review threads.
-2. Read `WORKING_MEMORY.md` before writing code.
-3. Repair the stale Settings source-contract.
-4. Repair the three current Wave 3 P1s with focused regressions.
-5. Reconcile review threads against the live diff.
-6. Freeze one repaired application head.
-7. Run exact-head CI + Phase 5 + Phase 6–7 until every selected required gate is green.
-8. Update PR #250 body with final head/evidence and remove stale draft wording.
-9. Merge only through expected-head protected discipline.
-10. Re-fetch protected main before Wave 4.
+- 305 test files passed / 1 failed;
+- 2396 tests passed / 1 failed.
 
-## Do not do next session
+Relevant runs on `df84f3d4...`:
 
-- do not merge #250 while a current P1 or required gate is red;
-- do not weaken tests/gates to make the branch green;
-- do not resurrect NOEST as a selectable provider;
-- do not change the approved Gemini default silently;
-- do not start Wave 4/5 inside #250 unless a proven blocker requires a minimal boundary repair;
-- do not treat documentation-only commits after `df84f3d4...` as new application evidence.
+- CI `31711261720` — red because complete test gate has the single stale Settings source-contract failure;
+- Phase 5 `31711261468` — green;
+- Phase 6–7 `31711261477` — static/browser green; final required aggregator red because source-quality is red;
+- Integration source checkpoint `31711261543` — skipped as expected.
 
-## Later boundary
+## Known stale callers to repair
 
-After Wave 3 merges:
+- `src/components/orders/canonical-courier-actions.tsx`;
+- `src/lib/ai/chat/tools/core-tools.ts`;
+- `src/lib/ai/chat/tools/advanced-tools-legacy.ts` assignment provider vocabulary;
+- same advanced tool file cost-comparison provider list.
 
-- Wave 4 = connected Phase 8 platform package;
-- Wave 5 = startup/performance/reliability, retained issue evidence, final installed reconciliation and signed Internal.16 proof if earned.
+## Next-session sequence
+
+1. Re-fetch protected `main`, PR #250 head/status/checks/review threads.
+2. Read `AGENTS.md`, `documentation/README.md`, `documentation/operations/WORKING_MEMORY.md`, this file, product/architecture decisions and workflow.
+3. Do not restart Waves 1–2; they are already protected on main.
+4. Repair the stale Settings source-contract.
+5. Repair historical `noest` delivery normalization before canonical tracking validation.
+6. Migrate all remaining shipment/AI callers to `ecotrack` vocabulary without resurrecting NOEST runtime authority.
+7. Restore Gemini 3.5-first model authority and align extraction/chat/provider tests.
+8. Re-fetch and resolve only review threads that are actually fixed.
+9. Freeze one repaired application head.
+10. Run exact-head CI + Phase 5 + Phase 6–7.
+11. Merge #250 only when Required PR gate, complete source-quality, Phase 5, complete Phase 6–7 and current P1 review state are all green.
+12. Reconcile long-form documentation after Wave 3 lands, then begin Wave 4.
+
+## Tooling note
+
+During this session the GitHub connector safety layer rejected some whole-file writes touching guard-sensitive provider/courier/Settings-test surfaces. Do not assume any unattached Git object from a rejected attempt is part of the branch. Live PR refs are authority. Use only a normal supported repository edit path; do not bypass safety or force refs.
