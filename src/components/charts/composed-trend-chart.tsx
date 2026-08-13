@@ -1,26 +1,27 @@
 "use client";
 
-/**
- * ComposedTrendChart — bars + line on dual axes (shadcn v4 pattern).
- * 
- * - CartesianGrid: horizontal only, dashed, var(--border)
- * - No axis lines
- * - cursor={false} on tooltip
- * - indicator="dot"
- * - type="natural" for line
- * - Rounded bar tops: radius [4, 4, 0, 0]
- */
 import { useI18n } from "@/hooks/use-i18n";
 import {
-  ComposedChart,
   Bar,
-  Line,
   CartesianGrid,
+  ComposedChart,
+  Line,
   XAxis,
   YAxis,
 } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { resolveFormatter, type ChartFormatter } from "./chart-primitives";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import {
+  DEFAULT_CHART_HEIGHT,
+  normalizeChartHeight,
+  resolveFormatter,
+  type ChartFormatter,
+  type ChartHeight,
+} from "./chart-primitives";
 
 interface BarSeries {
   kind: "bar";
@@ -43,7 +44,7 @@ interface ComposedTrendChartProps {
   xKey: string;
   series: ComposedSeries[];
   config: ChartConfig;
-  height?: number;
+  height?: ChartHeight;
   formatLeftY?: ChartFormatter;
   formatRightY?: ChartFormatter;
   emptyMessage?: string;
@@ -54,27 +55,56 @@ export function ComposedTrendChart({
   xKey,
   series,
   config,
-  height = 300,
+  height = DEFAULT_CHART_HEIGHT,
   formatLeftY,
   formatRightY,
   emptyMessage,
 }: ComposedTrendChartProps) {
-  const { dir, t } = useI18n();
+  const { dir, t, locale } = useI18n();
   const isRtl = dir === "rtl";
-  const fmtLeft = resolveFormatter(formatLeftY);
-  const fmtRight = resolveFormatter(formatRightY);
+  const chartHeight = normalizeChartHeight(height);
+  const fmtLeft = resolveFormatter(formatLeftY, locale);
+  const fmtRight = resolveFormatter(formatRightY, locale);
+
   if (!data.length) {
     return (
-      <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height }}>
+      <div
+        className="flex w-full items-center justify-center text-sm text-muted-foreground"
+        style={{ height: chartHeight }}
+      >
         {emptyMessage ?? "—"}
       </div>
     );
   }
-  const hasRight = series.some((s) => s.yAxis === "right");
+
+  const hasRight = series.some(
+    (entry) =>
+      entry.yAxis === "right" ||
+      (entry.kind === "line" && entry.yAxis === undefined),
+  );
+
   return (
-    <ChartContainer role="img" aria-label={t("charts.composedTrend")} config={config} style={{ height }} className="aspect-auto w-full">
-      <ComposedChart data={data} margin={{ left: isRtl ? 12 : 4, right: isRtl ? 4 : 12, top: 8, bottom: 0 }}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
+    <ChartContainer
+      role="img"
+      aria-label={t("charts.composedTrend")}
+      config={config}
+      style={{ height: chartHeight }}
+      className="aspect-auto w-full"
+    >
+      <ComposedChart
+        data={data}
+        margin={{
+          left: isRtl ? 12 : 4,
+          right: isRtl ? 4 : 12,
+          top: 8,
+          bottom: 0,
+        }}
+      >
+        <CartesianGrid
+          vertical={false}
+          strokeDasharray="3 3"
+          stroke="var(--border)"
+        />
         <XAxis
           dataKey={xKey}
           tickLine={false}
@@ -83,19 +113,19 @@ export function ComposedTrendChart({
           minTickGap={24}
           reversed={isRtl}
           className="text-xs fill-muted-foreground"
-        
-          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}/>
+          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+        />
         <YAxis
           yAxisId="left"
           width={48}
           tickLine={false}
           axisLine={false}
           tickMargin={4}
-          tickFormatter={(v: number) => fmtLeft(v)}
+          tickFormatter={(value: number) => fmtLeft(value)}
           className="text-xs fill-muted-foreground"
           orientation={isRtl ? "right" : "left"}
         />
-        {hasRight && (
+        {hasRight ? (
           <YAxis
             yAxisId="right"
             orientation={isRtl ? "left" : "right"}
@@ -103,31 +133,38 @@ export function ComposedTrendChart({
             tickLine={false}
             axisLine={false}
             tickMargin={4}
-            tickFormatter={(v: number) => fmtRight(v)}
+            tickFormatter={(value: number) => fmtRight(value)}
             className="text-xs fill-muted-foreground"
           />
-        )}
+        ) : null}
         <ChartTooltip
           cursor={false}
           content={
             <ChartTooltipContent
               indicator="dot"
               formatter={(value, name) => {
-                const s = series.find((x) => x.key === name);
-                const num = Number(value);
-                const fmt = s?.format ? resolveFormatter(s.format) : fmtLeft;
-                return [fmt(num), s?.label ?? name];
+                const current = series.find((entry) => entry.key === name);
+                const numeric = Number(value);
+                const currentAxis =
+                  current?.yAxis ??
+                  (current?.kind === "line" ? "right" : "left");
+                const format = current?.format
+                  ? resolveFormatter(current.format, locale)
+                  : currentAxis === "right"
+                    ? fmtRight
+                    : fmtLeft;
+                return [format(numeric), current?.label ?? name];
               }}
             />
           }
         />
-        {series.map((s) =>
-          s.kind === "bar" ? (
+        {series.map((current) =>
+          current.kind === "bar" ? (
             <Bar
-              key={s.key}
-              dataKey={s.key}
-              yAxisId={s.yAxis ?? "left"}
-              fill={`var(--color-${s.key})`}
+              key={current.key}
+              dataKey={current.key}
+              yAxisId={current.yAxis ?? "left"}
+              fill={`var(--color-${current.key})`}
               radius={[4, 4, 0, 0]}
               maxBarSize={28}
               isAnimationActive
@@ -135,14 +172,18 @@ export function ComposedTrendChart({
             />
           ) : (
             <Line
-              key={s.key}
-              dataKey={s.key}
-              yAxisId={s.yAxis ?? "right"}
+              key={current.key}
+              dataKey={current.key}
+              yAxisId={current.yAxis ?? "right"}
               type="natural"
-              stroke={`var(--color-${s.key})`}
+              stroke={`var(--color-${current.key})`}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--background)" }}
+              activeDot={{
+                r: 4,
+                strokeWidth: 2,
+                stroke: "var(--background)",
+              }}
               isAnimationActive
               animationDuration={600}
             />

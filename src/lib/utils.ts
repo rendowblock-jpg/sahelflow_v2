@@ -43,23 +43,17 @@ export function formatDZDBare(amount: number, locale: string = "fr"): string {
   }).format(amount);
 }
 
-/** Compact DZD display that preserves the caller's locale and currency suffix. */
+/** Compact DZD display that preserves localized digits, compact units and suffix. */
 export function formatDZDShort(
   amount: number,
   locale: string = "fr",
 ): string {
   const resolved = supportedLocale(locale);
-  const absolute = Math.abs(amount);
-  const sign = amount < 0 ? "-" : "";
-  const compact =
-    absolute >= 1_000_000
-      ? `${(absolute / 1_000_000).toFixed(1)}M`
-      : absolute >= 1_000
-        ? `${(absolute / 1_000).toFixed(1)}K`
-        : new Intl.NumberFormat(LOCALE_MAP[resolved], {
-            maximumFractionDigits: 0,
-          }).format(absolute);
-  return `${sign}${compact}${DZD_SUFFIX[resolved]}`;
+  const compact = new Intl.NumberFormat(LOCALE_MAP[resolved], {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(amount);
+  return `${compact}${DZD_SUFFIX[resolved]}`;
 }
 
 export function formatDate(

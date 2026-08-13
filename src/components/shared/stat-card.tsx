@@ -10,7 +10,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useI18n } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
+
+export type StatCardEmphasis = "standard" | "primary" | "supporting";
+export type StatCardTone =
+  | "neutral"
+  | "accent"
+  | "success"
+  | "warning"
+  | "danger";
 
 interface StatCardProps {
   label: React.ReactNode;
@@ -35,7 +44,45 @@ interface StatCardProps {
   style?: React.CSSProperties;
   tooltip?: string;
   hint?: React.ReactNode;
+  /** Metric hierarchy only; it never changes the underlying value authority. */
+  emphasis?: StatCardEmphasis;
+  /** Semantic presentation tone. Neutral remains the default. */
+  tone?: StatCardTone;
+  /**
+   * Explicit executable control for an actionable metric. The card itself stays
+   * a non-interactive section so tooltip/hint buttons never become nested inside
+   * a link or button.
+   */
+  action?: React.ReactNode;
+  /** Visual selected state for an action/filter that is selected by its caller. */
+  selected?: boolean;
 }
+
+const toneClasses: Record<
+  StatCardTone,
+  { surface: string; icon: string }
+> = {
+  neutral: {
+    surface: "",
+    icon: "border-border/70 bg-muted/45 text-muted-foreground",
+  },
+  accent: {
+    surface: "border-primary/20 bg-primary/[0.025]",
+    icon: "border-primary/20 bg-primary/10 text-primary",
+  },
+  success: {
+    surface: "border-success/20 bg-success/[0.025]",
+    icon: "border-success/20 bg-success/10 text-success",
+  },
+  warning: {
+    surface: "border-warning/25 bg-warning/[0.035]",
+    icon: "border-warning/25 bg-warning/10 text-warning",
+  },
+  danger: {
+    surface: "border-destructive/20 bg-destructive/[0.025]",
+    icon: "border-destructive/20 bg-destructive/10 text-destructive",
+  },
+};
 
 export function StatCard({
   label,
@@ -53,22 +100,51 @@ export function StatCard({
   style,
   tooltip,
   hint,
+  emphasis = "standard",
+  tone = "neutral",
+  action,
+  selected = false,
 }: StatCardProps) {
+  const { locale } = useI18n();
   const hasTrend =
     typeof trend === "number" && Number.isFinite(trend) && trend !== 0;
   const positive = hasTrend && trend > 0;
   const negative = hasTrend && trend < 0;
   const directionOnly =
     trendDirectionOnly ?? (hasTrend && Math.abs(trend) === 1);
+  const actionable = action !== undefined && action !== null;
+  const toneStyle = toneClasses[tone];
+  const trendText =
+    hasTrend && !directionOnly
+      ? new Intl.NumberFormat(
+          locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ",
+          {
+            style: "percent",
+            signDisplay: "exceptZero",
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          },
+        ).format(trend / 100)
+      : null;
 
   return (
     <section
       className={cn(
-        "min-w-0 rounded-lg border border-border/80 bg-card px-4 py-3.5",
+        "min-w-0 rounded-lg border border-border/80 bg-card",
+        emphasis === "primary" ? "px-5 py-4" : "px-4 py-3.5",
+        toneStyle.surface,
+        actionable &&
+          "transition-[background-color,border-color,box-shadow] duration-150 hover:border-primary/35 hover:bg-primary/[0.02] focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-ring/25 motion-reduce:transition-none",
+        selected &&
+          "border-primary/45 bg-primary/[0.045] ring-1 ring-primary/15",
         className,
       )}
       style={style}
       data-slot="operational-metric"
+      data-stat-emphasis={emphasis}
+      data-stat-tone={tone}
+      data-stat-interaction={actionable ? "actionable" : "passive"}
+      data-selected={selected ? "true" : undefined}
     >
       <div className="flex min-w-0 items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -93,7 +169,16 @@ export function StatCard({
             {hint ? <InfoHint content={hint} size="sm" /> : null}
           </div>
 
-          <div className="mt-1.5 text-[1.75rem] font-semibold leading-9 tracking-tight tabular-nums text-foreground rtl:tracking-normal">
+          <div
+            className={cn(
+              "mt-1.5 font-semibold tracking-tight tabular-nums text-foreground rtl:tracking-normal",
+              emphasis === "primary"
+                ? "text-[2rem] leading-10"
+                : emphasis === "supporting"
+                  ? "text-2xl leading-8"
+                  : "text-[1.75rem] leading-9",
+            )}
+          >
             {value}
           </div>
 
@@ -112,12 +197,7 @@ export function StatCard({
                   ) : (
                     <ArrowDownRight className="size-3.5" aria-hidden="true" />
                   )}
-                  {!directionOnly ? (
-                    <>
-                      {trend > 0 ? "+" : ""}
-                      {trend.toFixed(1)}%
-                    </>
-                  ) : null}
+                  {trendText}
                 </span>
               ) : null}
               {trendLabel ? <span>{trendLabel}</span> : null}
@@ -126,8 +206,17 @@ export function StatCard({
           ) : null}
         </div>
 
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/45 text-muted-foreground [&_svg]:size-[18px]">
-          {icon}
+        <div className="flex shrink-0 items-start gap-2">
+          {actionable ? <div data-stat-action="true">{action}</div> : null}
+          <div
+            className={cn(
+              "flex shrink-0 items-center justify-center rounded-lg border [&_svg]:size-[18px]",
+              emphasis === "primary" ? "size-10" : "size-9",
+              toneStyle.icon,
+            )}
+          >
+            {icon}
+          </div>
         </div>
       </div>
 

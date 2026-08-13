@@ -45,11 +45,41 @@ const LOCALES: ReadonlyArray<{ locale: Locale; dir: "ltr" | "rtl" }> = [
 
 const TRANSLATION_KEY_PATTERN = /\b(?:common|nav|topbar|dashboard|orders?|customers?|products?|deliveries?|returns?|accounting|analytics|risk|imports?|inbox|automations?|agents?|storefronts?|settings|profile|command|dataTable|error|updater|phase5)\.[A-Za-z0-9_.-]+\b/g;
 
+function phase67ClientIp(): string {
+  const info = test.info();
+  let hash = 0x811c9dc5;
+  for (const char of info.testId) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  // 198.18.0.0/15 is reserved for benchmark/testing networks. Two hashed
+  // octets isolate each Playwright test without weakening the production
+  // per-client login limiter or introducing a test-only auth bypass.
+  return `198.18.${(hash >>> 8) & 0xff}.${hash & 0xff}`;
+}
+
 async function waitForHydration(page: Page) {
   await page.locator('html[data-sf-hydrated="true"]').waitFor({
     state: "attached",
     timeout: 30_000,
   });
+}
+
+async function waitForWorkSurface(page: Page, route: string) {
+  await waitForHydration(page);
+  await page.waitForURL((url) => url.pathname === route, { timeout: 30_000 });
+  // Route-level loading boundaries such as Inbox and Agents can remain mounted
+  // after global client hydration. The completion gate must inspect the real
+  // work surface, so use the same level-one-heading contract as the readiness
+  // signal instead of depending on any particular spinner/skeleton markup.
+  await expect(
+    page
+      .locator(
+        '#main-content h1, #main-content [role="heading"][aria-level="1"]',
+      )
+      .first(),
+    `${route} should finish loading its work-surface heading`,
+  ).toBeAttached({ timeout: 30_000 });
 }
 
 async function setLocale(context: BrowserContext, locale: Locale) {
@@ -64,6 +94,9 @@ async function setLocale(context: BrowserContext, locale: Locale) {
 
 async function loginOwner(page: Page) {
   await waitForHydration(page);
+  await page.setExtraHTTPHeaders({
+    "x-forwarded-for": phase67ClientIp(),
+  });
   const pin = page.locator("#pin");
   await pin.fill(OWNER_PIN);
   await expect(pin).toHaveValue(OWNER_PIN);
@@ -236,7 +269,7 @@ async function assertRenderedRoute(
     response!.status(),
     `${route} should not return an HTTP error`,
   ).toBeLessThan(400);
-  await waitForHydration(page);
+  await waitForWorkSurface(page, route);
   await expect(page.locator("html")).toHaveAttribute("lang", locale);
   await expect(page.locator("html")).toHaveAttribute("dir", dir);
   await expect(page.locator("body")).not.toContainText("Internal Server Error");

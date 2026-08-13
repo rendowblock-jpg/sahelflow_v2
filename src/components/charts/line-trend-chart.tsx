@@ -1,26 +1,22 @@
 "use client";
 
-/**
- * LineTrendChart — multi-series line chart (shadcn v4 pattern).
- *
- * - CartesianGrid: horizontal only, dashed, var(--border)
- * - No axis lines (tickLine={false} axisLine={false})
- * - minTickGap={32} to prevent crowded labels
- * - type="natural" curve
- * - cursor={false} on tooltip
- * - indicator="dot"
- */
 import { useI18n } from "@/hooks/use-i18n";
 import {
+  CartesianGrid,
   Line,
   LineChart,
-  CartesianGrid,
   XAxis,
   YAxis,
 } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import {
   DEFAULT_CHART_HEIGHT,
+  normalizeChartHeight,
   resolveFormatter,
   type ChartFormatter,
   type ChartHeight,
@@ -50,20 +46,44 @@ export function LineTrendChart({
   formatY,
   emptyMessage,
 }: LineTrendChartProps) {
-  const { dir, t } = useI18n();
+  const { dir, t, locale } = useI18n();
   const isRtl = dir === "rtl";
-  const fmtY = resolveFormatter(formatY);
+  const chartHeight = normalizeChartHeight(height);
+  const fmtY = resolveFormatter(formatY, locale);
+
   if (!data.length) {
     return (
-      <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height }}>
+      <div
+        className="flex w-full items-center justify-center text-sm text-muted-foreground"
+        style={{ height: chartHeight }}
+      >
         {emptyMessage ?? "—"}
       </div>
     );
   }
+
   return (
-    <ChartContainer role="img" aria-label={t("charts.lineTrend")} config={config} style={{ height }} className="aspect-auto w-full">
-      <LineChart data={data} margin={{ left: isRtl ? 12 : 4, right: isRtl ? 4 : 12, top: 8, bottom: 0 }}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
+    <ChartContainer
+      role="img"
+      aria-label={t("charts.lineTrend")}
+      config={config}
+      style={{ height: chartHeight }}
+      className="aspect-auto w-full"
+    >
+      <LineChart
+        data={data}
+        margin={{
+          left: isRtl ? 12 : 4,
+          right: isRtl ? 4 : 12,
+          top: 8,
+          bottom: 0,
+        }}
+      >
+        <CartesianGrid
+          vertical={false}
+          strokeDasharray="3 3"
+          stroke="var(--border)"
+        />
         <XAxis
           dataKey={xKey}
           tickLine={false}
@@ -79,7 +99,7 @@ export function LineTrendChart({
           tickLine={false}
           axisLine={false}
           tickMargin={4}
-          tickFormatter={(v: number) => fmtY(v)}
+          tickFormatter={(value: number) => fmtY(value)}
           className="text-xs fill-muted-foreground"
           orientation={isRtl ? "right" : "left"}
         />
@@ -89,22 +109,31 @@ export function LineTrendChart({
             <ChartTooltipContent
               indicator="dot"
               formatter={(value, name) => {
-                const s = series.find((x) => x.key === name);
-                const num = Number(value);
-                return [s?.format ? resolveFormatter(s.format)(num) : fmtY(num), s?.label ?? name];
+                const current = series.find((entry) => entry.key === name);
+                const numeric = Number(value);
+                return [
+                  current?.format
+                    ? resolveFormatter(current.format, locale)(numeric)
+                    : fmtY(numeric),
+                  current?.label ?? name,
+                ];
               }}
             />
           }
         />
-        {series.map((s) => (
+        {series.map((current) => (
           <Line
-            key={s.key}
-            dataKey={s.key}
+            key={current.key}
+            dataKey={current.key}
             type="natural"
-            stroke={`var(--color-${s.key})`}
+            stroke={`var(--color-${current.key})`}
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--background)" }}
+            activeDot={{
+              r: 4,
+              strokeWidth: 2,
+              stroke: "var(--background)",
+            }}
             isAnimationActive
             animationDuration={600}
           />
