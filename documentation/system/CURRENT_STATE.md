@@ -1,6 +1,6 @@
 # SahelFlow — Current state
 
-> **Authority:** merged protected source and named evidence only; exact Founder observations are labeled as installed findings, not merged implementation
+> **Authority:** merged protected source and named evidence only; Founder observations are labeled installed findings, not merged implementation
 > **Last assessed:** 2026-08-13
 > **Protected application-changing baseline:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
 > **Latest application-changing protected merge:** PR #245 — Internal.15 FD-032 Founder-only offline checkpoint
@@ -10,134 +10,65 @@
 > **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
 > **Orders + confirmation route adoption:** PR #244 / `856f58126327797b467938390586a04f185e70f6`
 > **Next application milestone:** Internal.16 complete-product candidate under FD-033
-> **Installed discovery:** Internal.15 Founder inspection active; Parts 1–2 recorded
+> **Installed discovery:** Internal.15 Founder inspection active; Parts 1–3 recorded
 > **Retained evidence:** #221, #226, #230
 
-Protected `main` remains the source authority. The current documentation branch records
-new Founder decisions and installed observations without pretending those observations
-have already been implemented.
+Protected `main` remains source authority. This documentation branch records Founder decisions and installed observations without pretending those observations have already been repaired.
 
 ## Executive truth
 
-SahelFlow retains a strong Windows/local-first protected engine across Golden COD,
-identity, licensing, providers, AI/automations, protected data and native recovery.
-PRs #236/#237/#240/#242/#244 materially improved the frontend foundation and selected
-workspaces, and PR #245 merged the exact Internal.15 Founder-only offline checkpoint.
+SahelFlow retains a strong protected Windows/local-first engine across Golden COD, identity, licensing, providers, AI/automations, protected data and native recovery. PRs #236/#237/#240/#242/#244 materially improved frontend roots and selected workspaces; PR #245 merged the exact Internal.15 Founder-only offline checkpoint.
 
-The real installed Internal.15 inspection confirms that the application is still not at
-the final Founder class-AAA/user-ready target. The remaining problem is not one page or
-one CSS patch. It combines systemic Arabic/RTL geometry, responsive composition,
-localization integrity, route-wide UX hierarchy, Inbox/AI workflow quality, search,
-Gemini setup and remaining Phase 5/6/7/8 implementation/certification.
+The real installed Internal.15 inspection confirms that the product is still below the final Founder class-AAA/user-ready target. The remaining problem is systemic rather than one page: Arabic/RTL geometry, responsive/layout composition, localization/cache consistency, theme transitions, chart/data-visualization quality, Inbox/AI workflow quality, universal search, Gemini setup, navigation information architecture, startup performance and remaining Phase 5/6/7/8 implementation/certification.
 
-FD-033 therefore makes Internal.16 the next complete-product convergence candidate.
+FD-033 therefore makes Internal.16 the complete-product convergence candidate.
 
 ## Protected canonical boundaries
 
-Phases 0–4 remain protected. Internal.16 must preserve:
+Internal.16 must preserve Golden COD command/idempotency/version/audit/event/outbox authority; trusted actor/shop/session/permission authority; protected fields and per-shop isolation; append-only inventory/financial/compensation truth; durable provider effects/reconciliation; signed licensing/installation/secret authority; native runtime containment/backup/recovery; AI proposal-bound execution; and automation recovery. Installed UX defects do not authorize weakening these contracts.
 
-- Golden COD command/idempotency/version/audit/event/outbox authority;
-- trusted actor/shop/permission/session authority;
-- protected customer/order fields and per-shop database isolation;
-- append-only inventory/financial/compensation truth;
-- durable provider effects and ambiguity/reconciliation semantics;
-- signed licensing, installation identity and protected-secret authority;
-- native runtime containment, backup/recovery and replacement-install guarantees;
-- AI proposal-bound sensitive execution and automation durable recovery.
+## Internal.15 installed Founder findings — Parts 1–3
 
-No current installed UX finding authorizes weakening those contracts.
+- **SF16-UI-001 P1:** systemic Arabic/RTL geometry and bidi wrong-side defects across the application; exhaustive source/route audit required.
+- **SF16-UI-002 P1:** Risk Engine KPI hierarchy overloaded/unbalanced.
+- **SF16-UI-003 P1:** shared stat-card pointer/focus/actionable/selected interaction semantics incomplete.
+- **SF16-I18N-004 P1:** locale-sensitive money/date/number/chart formatting can leak French defaults into Arabic.
+- **SF16-INBOX-005 P1:** Inbox requires final AAA operational convergence, adaptive panes, complete workflow/media/extraction/collaboration behavior and large-history performance.
+- **SF16-AI-006 P1:** AI workspace requires final AAA convergence, adaptive rails, polished session/composer/tool/proposal flow and long-session performance.
+- **SF16-I18N-007 P1:** raw translation keys/unintended foreign system copy remain possible; demo/system content localizes while seller data remains exact.
+- **SF16-PRODUCTS-008 P1:** product rows require compact primary thumbnails from the already-available `images` projection.
+- **SF16-SEARCH-009 P1:** topbar search is not universal; Internal.16 requires permission/shop-aware ranked cross-entity operational search.
+- **SF16-AI-010 P1:** Founder Gemini key setup did not make AI usable; end-to-end reauth/provider verification/encrypted save/readiness/real inference must be certified.
+- **SF16-RESP-011 P1:** current shared card auto-fit can create ugly `3+1` windowed composition; layouts must be deterministic and balanced.
+- **SF16-LAYOUT-012 P1:** accidental panel stretching/fixed chart canvases create low-information dead space; sizing must follow content and hierarchy.
+- **SF16-CHART-013 P1:** charts/analytics look generic and under-engineered; rebuild the governed chart layer into a richer decision-support system without decorative complexity.
+- **SF16-PERF-014 P1:** first/cold launch still feels slow; instrument startup stages and close the bottleneck while preserving recovery/migration/licensing/readiness guarantees.
+- **SF16-THEME-015 P1:** light/dark/preset switching still visibly glitches; appearance commit must be atomic and smooth.
+- **SF16-I18N-016 P1:** after language commit, subsequent route navigation can briefly show previous-language content; locale must be atomic across current tree and route cache/prefetch/navigation.
+- **SF16-NAV-017 P1:** sidebar requires a smarter workflow-based default order plus user reorder/edit preference, without changing canonical route/permission authority.
 
-## Internal.15 installed Founder findings — current register
+The Founder inspection remains active. These are installed observations/requirements, not claims that source has already been repaired.
 
-### Part 1
+## Source evidence supporting Parts 1–3
 
-- **SF16-UI-001 P1:** systemic Arabic/RTL geometry/placement remains incorrect across
-  the shell and route UI.
-- **SF16-UI-002 P1:** Risk Engine KPI composition is overloaded/unbalanced.
-- **SF16-UI-003 P1:** shared stat cards lack deliberate hover/focus/actionable/selected
-  behavior and premium icon feedback.
-- **SF16-I18N-004 P1:** Arabic monetary formatting can leak French `DA` when callers
-  omit the active locale.
+- shell/sidebar source already attempts RTL and logical utilities, so remaining RTL is a semantic whole-product geometry problem;
+- Risk renders six equal-weight stat cards; shared StatCard lacks card-level interaction contract;
+- command palette searches navigation plus orders/customers/products only;
+- product workbench carries `images`, current product table does not render them;
+- `.card-grid-4` uses `auto-fit/minmax(240px)`, directly permitting `3+1`;
+- AI XL workspace and Inbox queue use fixed rail widths;
+- Gemini key flow uses recent reauthentication and provider/verifier human copy includes hard-coded French;
+- Dashboard Recent Orders and Delivery share one grid row; default stretch makes shorter Delivery match the taller orders panel and leaves unused space;
+- governed `ChartCard` defaults to fixed 300px plot height; donut geometry is fixed within the canvas; Analytics passes an `accent` prop the current `ChartCard` does not consume;
+- theme authority applies a broad 220ms switching window, yet installed evidence still shows a visible mixed/glitch frame;
+- locale change writes the cookie and refreshes the current Server Component tree, while installed evidence proves a subsequent-route stale-language boundary remains;
+- `navigationDomains` is a static canonical order rendered directly by Sidebar;
+- packaged release startup performs protected recovery/preflight, license/device checks, all-shop migration/authority preparation, runtime spawn/readiness and workspace navigation before visible readiness, so startup must be stage-measured rather than optimized blindly.
 
-### Part 2
+These are reconnaissance clues, not a patch-only file list.
 
-- **SF16-UI-001 expanded:** wrong-side RTL/bidi class is route-wide and explicitly
-  includes Inbox/AI panes, Analytics charts, product tables, Settings and command
-  palette. The implementation agent owns exhaustive discovery; the Founder is not
-  required to screenshot every occurrence.
-- **SF16-INBOX-005 P1:** Inbox is improved but still requires final AAA operational
-  convergence, adaptive panes, complete communication/workflow functionality and
-  large-history performance.
-- **SF16-AI-006 P1:** AI workspace requires final AAA convergence, adaptive rails,
-  polished session/composer/tool/action workflow and long-session performance.
-- **SF16-I18N-007 P1:** raw translation keys and hard-coded foreign UI/server copy remain
-  possible. Installed Settings visibly showed `auth.pinPlaceholder`; Gemini paths
-  contain hard-coded French responses. SahelFlow-owned demo content must be locale-aware
-  while seller-entered entity data remains exact.
-- **SF16-PRODUCTS-008 P1:** product rows require compact primary thumbnails. Product
-  workbench records already expose `images`; current table presentation omits them.
-- **SF16-SEARCH-009 P1:** current command palette is not universal; it is limited to
-  navigation plus bounded order/customer/product lookups. Internal.16 requires
-  permission-aware ranked cross-entity operational search for relevant words, numbers
-  and identifiers.
-- **SF16-AI-010 P1:** Founder Gemini API-key setup did not result in usable AI. Exact
-  cause remains unproven; end-to-end reauth/provider verification/encrypted save/
-  immediate readiness/real inference must be certified with localized diagnostics.
-- **SF16-RESP-011 P1:** shared card auto-fit can produce an orphan `3 + 1` layout in
-  ordinary windowed mode. Responsive composition must become deterministic and balanced
-  across routes, charts, tables and live resize.
+## Internal.16 frontier
 
-The installed inspection remains active. These are observations/requirements, **not**
-a claim that source has already been repaired.
+After Founder discovery closes: combine installed findings with exact post-#245 source reconnaissance; freeze one complete Problem Register/contracts/acceptance matrix; execute one large dependency-correct completion wave; finish Phase 5/6/7 + Phase 8, EcoTrack, AI/extraction/tools, chart/theme/locale/navigation/search/startup roots; freeze one complete head; run complete source/Windows/installed/performance/Phase 8 certification + adversarial review; repair one consolidated finding set; then run affected + final complete proof.
 
-## Source evidence supporting the current installed findings
-
-- dashboard shell/sidebar source already attempts reactive RTL and logical utilities,
-  proving the remaining defect requires installed/source-wide semantic geometry audit,
-  not another single `dir="rtl"` patch;
-- Risk page renders six equal-weight `StatCard`s, explaining the weak metric hierarchy;
-- shared `StatCard` has no card-level interactive hover/focus contract;
-- canonical DZD formatter supports Arabic but defaults to French when locale is omitted;
-- command palette record search currently queries only orders, customers and products,
-  with minimum query length and bounded result counts;
-- product workbench records include `images` but product table identity renders only
-  the name;
-- shared `.card-grid-4` uses `auto-fit/minmax(240px)`, directly permitting `3 + 1`;
-- AI XL workspace uses fixed 15rem / flexible / 20rem column composition;
-- Inbox desktop queue uses a fixed 21rem width;
-- Gemini key UI uses recent reauthentication; current installed copy can render a raw
-  missing translation key and Gemini route/verifier human messages include French.
-
-These implementation facts are reconnaissance clues, not permission to patch only the
-named files; all consumers/siblings must be audited before root fixes are frozen.
-
-## Internal.16 implementation frontier
-
-After Founder discovery closes:
-
-1. combine installed findings with exact post-#245 source reconnaissance;
-2. freeze one complete Problem Register, shared contracts and acceptance matrix;
-3. execute the large completion wave under one application writer;
-4. complete remaining Phase 5/6/7 plus Phase 8 in the FD-033 integrated sequence;
-5. remove NOEST/Nord et Ouest and add first-class EcoTrack Pro from authoritative
-   provider-issued contracts;
-6. harden AI workspace/extraction/tools and Gemini key lifecycle;
-7. freeze one complete Internal.16 head;
-8. run the complete source/Windows/installed/performance/Phase 8 certification and one
-   adversarial review;
-9. repair the consolidated finding set;
-10. run affected proof + final complete certification before any user-ready claim.
-
-## Retained release/external truth
-
-FD-032 remains exact to Internal.15 and does not carry into Internal.16.
-
-Issue #230 remains P1 for the customer-online/public trial boundary: verified
-SahelFlow-owned domain, distinct primary/recovery HTTPS ingress, protected production
-bindings, representative Algerian fixed/mobile reachability, forced recovery and signed
-installed customer-trial evidence.
-
-#221/#226 remain part of final installed experience/performance reconciliation. External
-provider/security/privacy/legal/representative-beta evidence remains distinct from
-internal confidence. No Stable claim exists without the applicable Phase 9 proof and
-explicit Founder promotion.
+FD-032 remains exact to Internal.15 and does not carry into Internal.16. Issue #230 remains P1 for the customer-online/public-trial boundary. #221/#226 remain part of final installed experience/performance reconciliation. External provider/security/privacy/legal/representative-beta evidence remains distinct. No Stable claim exists without applicable Phase 9 proof and explicit Founder promotion.
