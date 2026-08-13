@@ -2,9 +2,9 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028; FD-029; FD-030; FD-031; FD-032; FD-033 — Internal.16 completion convergence
-> **Protected main:** `5a8d5e3c042abbcee001a68a7168d3c679f6e541` — PR #248 / Internal.16 Wave 2
-> **Latest application-changing protected merge:** PR #248 — Internal.16 Wave 2
-> **Active implementation:** PR #250 — Internal.16 Wave 3
+> **Protected main:** `b78e3eb945d5a66a34198db8ef00df95cc9b37aa` — PR #250 / Internal.16 Wave 3
+> **Latest application-changing protected merge:** PR #250 — Internal.16 Wave 3
+> **Active implementation:** draft PR #251 — Internal.16 Wave 4 Storefront Builder V2 / connected platform
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
 > **Published release:** `1.0.0-internal.15` — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity

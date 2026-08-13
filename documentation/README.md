@@ -2,85 +2,39 @@
 
 > **Status:** Active documentation entry point
 > **Last reconciled:** 2026-08-13
-> **Protected `main`:** `5a8d5e3c042abbcee001a68a7168d3c679f6e541` — PR #248 / Internal.16 Wave 2
-> **Protected Wave 1:** `9d69958d3dd9658ace192ccc70c9a43d5d815ee1` — PR #247
-> **Active implementation:** PR #250 — `Internal.16 Wave 3 — EcoTrack + Gemini provider truth`
-> **Active branch:** `agent/internal-16-wave-3`
-> **Last application-changing Wave 3 head before session-handoff docs:** `df84f3d4e78a982695b5883c98a15ac145604b49`
-> **PR state at handoff:** open, non-draft, unmerged
+> **Protected `main`:** `b78e3eb945d5a66a34198db8ef00df95cc9b37aa` — PR #250 / Internal.16 Wave 3
+> **Active implementation:** draft PR #251 — `Internal.16 Wave 4 — Storefront Builder V2 + connected platform`
+> **Active branch:** `agent/internal-16-wave-4`
+> **Last application-changing Wave 4 head:** `18a9a840f2c4b6ce3bb6d0bf75f55091f5283ad8`
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Published release:** `1.0.0-internal.15` — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
 > **Retained open evidence:** #221, #226, #230
 
-Live protected GitHub state is always authority. Re-fetch `main`, PR #250, exact checks and review threads before writing code.
+Live protected GitHub state is always authority. Re-fetch `main`, PR #251, its exact head/checks/review threads, and retained issues before writing code.
 
 ## Active resume path
 
-For the current in-progress Wave 3 frontier, read in this order:
+Read in this order:
 
-1. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — **active resumable frontier and exact next-session sequence**.
+1. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — active resumable frontier and exact next-session sequence.
 2. [`product/PRODUCT.md`](product/PRODUCT.md) — seller/jobs/outcomes/tier authority.
 3. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — interaction/visual/RTL/accessibility requirements.
 4. [`product/DECISIONS.md`](product/DECISIONS.md) — Founder decisions through FD-033.
-5. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — technical invariants/canonical ownership.
+5. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — technical invariants and canonical ownership.
 6. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — implementation/review/certification process.
-7. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) and [`system/ROADMAP.md`](system/ROADMAP.md) — binding long-form state/phase authority. Live GitHub + Working Memory own the exact in-progress head and evidence state.
+7. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) and [`system/ROADMAP.md`](system/ROADMAP.md) — merged state and dependency order.
+8. [`research/RESEARCH.md`](research/RESEARCH.md) — evidence and revalidation triggers.
 
-Repository `AGENTS.md` remains the coding-agent entry point. Do not create a competing permanent masterplan.
+Repository `AGENTS.md` remains the coding-agent entry point. Do not create a competing permanent masterplan or use archive material as current authority.
 
 ## Current execution truth
 
-Internal.16 **Wave 1 and Wave 2 are already merged**. Do not repeat their implementation or whole-repository discovery.
+Internal.16 Waves 1–3 are protected on `main`. Draft PR #251 is the one active implementation seat for Wave 4.
 
-Wave 3 is active in PR #250 and **must not be merged yet**. The latest application head before documentation-only handoff commits is `df84f3d4e78a982695b5883c98a15ac145604b49`.
+The Storefront Builder V2 source package now includes strict private Studio drafts, conflict-safe autosave, explicit compare-and-set publication, three localized template identities, ordered sections, shared preview/public rendering, V2-only hosted release artifacts, immutable release history, conflict-safe rollback, server-authoritative allocation/shipping, encrypted durable checkout receipts, idempotent canonical desktop import, persistent cart and public-projection privacy. Connected entitlements now retain and enforce expiry, features and seller limits; backup quota/trial-point races are guarded inside D1.
 
-Wave 3 already contains the major EcoTrack provider replacement and Gemini provider/extraction/chat convergence work. The landed `df84f3d4...` repair also makes EcoTrack negative/non-delivery tracking fail safe, including a `non livré` regression.
-
-The remaining application closure is narrowly defined in Working Memory:
-
-- historical `noest` delivery rows must normalize into canonical EcoTrack tracking authority before validation;
-- remaining shipment/AI caller vocabularies must submit `ecotrack`, not `noest`;
-- Gemini must keep the repository-approved `gemini-3.5-flash` model first until governing authority changes;
-- one stale Settings source-contract test must follow the active Wave 3 delivery-credentials panel;
-- exact-head CI + Phase 5 + Phase 6–7 and current PR review threads must be reconciled before protected merge.
-
-Do not resurrect NOEST as a runtime provider, weaken provider/canonical order authority, change Gemini model authority silently, weaken tests/gates, or pull Wave 4/5 scope into #250 without a proven blocker.
-
-## Certification snapshot at last application head
-
-On `df84f3d4e78a982695b5883c98a15ac145604b49`:
-
-- Phase 5 Experience: green;
-- Phase 6–7 static and AR/FR/EN browser evidence: green;
-- TypeScript: green;
-- ESLint: green;
-- production dependency audit: green;
-- migrations: green;
-- complete Vitest: 305 files passed / 1 stale Settings source-contract file failed; 2396 tests passed / 1 failed;
-- CI Required PR gate and Phase 6–7 required aggregator therefore remain red;
-- PR #250 remains unmerged.
-
-Re-fetch all of this in the next session because documentation-only commits after `df84f3d4...` move the branch head but do not constitute new application evidence.
-
-## Documentation reconciliation rule during active implementation
-
-`CURRENT_STATE.md` and `ROADMAP.md` still contain older execution-frontier prose because whole-file connector writes were safety-blocked during this session. That does **not** change product/architecture authority and does **not** reopen completed Waves 1–2.
-
-Until Wave 3 closes, use live GitHub + `WORKING_MEMORY.md` for session continuation.
-
-## After Wave 3
-
-Only after #250 is fully green and merged:
-
-- **Wave 4:** connected Phase 8 platform / Cloudflare and remote-product work;
-- **Wave 5:** startup/performance/reliability, retained customer-online/installed evidence, security/privacy closure, and signed Internal.16 release proof if earned.
-
-No Internal.16/Beta/Stable claim exists until the applicable exact evidence passes.
+This is a branch source candidate, not a merged, hosted, signed, installed, Founder-accepted, Beta or Stable claim. Full exact-head quality validation still requires the normal non-draft PR gate; the draft-safe workflows do not execute the complete TypeScript/ESLint/Vitest/Prisma lane.
 
 ## Durable evidence continuity
 
-The historical Phase 5 source/browser closure remains PR #220 at
-`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. The retained evidence lineage is
-issues #201, #214, #221, #226 and #230; #201/#214 are closed by stronger later
-evidence, while #221/#226/#230 remain open. This history does not replace the live
-Wave 3 frontier above.
+The historical Phase 5 source/browser closure remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Issues #221, #226 and #230 remain open. Internal.15 remains the only published executable; no Internal.16 update exists until expected-head merge and the separate signed release/installed evidence ladder are completed.

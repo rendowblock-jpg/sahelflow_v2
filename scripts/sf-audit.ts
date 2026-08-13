@@ -359,7 +359,7 @@ requireMarkers("documentation/operations/WORKFLOW.md", [
   "Whole-product AAA frontend program",
 ]);
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
-  "Wave 3 — what is already implemented",
+  "Wave 4 — what is implemented",
   "Exact next-session order",
   "Hard rules",
   "#221, #226, #230",
