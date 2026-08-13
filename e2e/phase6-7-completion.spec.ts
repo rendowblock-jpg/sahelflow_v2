@@ -45,6 +45,19 @@ const LOCALES: ReadonlyArray<{ locale: Locale; dir: "ltr" | "rtl" }> = [
 
 const TRANSLATION_KEY_PATTERN = /\b(?:common|nav|topbar|dashboard|orders?|customers?|products?|deliveries?|returns?|accounting|analytics|risk|imports?|inbox|automations?|agents?|storefronts?|settings|profile|command|dataTable|error|updater|phase5)\.[A-Za-z0-9_.-]+\b/g;
 
+function phase67ClientIp(): string {
+  const info = test.info();
+  let hash = 0x811c9dc5;
+  for (const char of info.testId) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  // 198.18.0.0/15 is reserved for benchmark/testing networks. Two hashed
+  // octets isolate each Playwright test without weakening the production
+  // per-client login limiter or introducing a test-only auth bypass.
+  return `198.18.${(hash >>> 8) & 0xff}.${hash & 0xff}`;
+}
+
 async function waitForHydration(page: Page) {
   await page.locator('html[data-sf-hydrated="true"]').waitFor({
     state: "attached",
@@ -71,6 +84,9 @@ async function setLocale(context: BrowserContext, locale: Locale) {
 
 async function loginOwner(page: Page) {
   await waitForHydration(page);
+  await page.setExtraHTTPHeaders({
+    "x-forwarded-for": phase67ClientIp(),
+  });
   const pin = page.locator("#pin");
   await pin.fill(OWNER_PIN);
   await expect(pin).toHaveValue(OWNER_PIN);
