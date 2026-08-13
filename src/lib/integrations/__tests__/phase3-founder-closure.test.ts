@@ -7,7 +7,7 @@ function source(path: string): string {
 }
 
 describe("FD-030 Phase 3 closure authority", () => {
-  it("defers real-account provider certification without weakening fail-closed runtime", () => {
+  it("preserves deferred live evidence while Wave 3 converges EcoTrack source truth", () => {
     const decisions = source("documentation/product/DECISIONS.md");
     const checkpoint = JSON.parse(
       source(".github/phase-checkpoints/phase3-durable-effects.json"),
@@ -64,7 +64,13 @@ describe("FD-030 Phase 3 closure authority", () => {
     }
     expect(retry).toContain("does not retry resource-creating POST responses");
     expect(retry).toContain("honors Retry-After");
-    expect(providerAuthority).toContain("noest: []");
+    expect(providerAuthority).toContain(
+      'ecotrack: ["fees", "booking", "tracking"]',
+    );
+    expect(providerAuthority).toContain("credentialFingerprint");
+    expect(providerAuthority).toContain("endpointFingerprint");
     expect(registry).not.toContain("dhdAdapter");
+    expect(registry).not.toContain("noestAdapter");
+    expect(registry).toContain("ecoTrackAdapter");
   });
 });
