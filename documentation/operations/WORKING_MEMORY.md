@@ -1,305 +1,245 @@
 # SahelFlow working memory
 
-> **Purpose:** Compact resumable execution frontier; never product, architecture or roadmap authority
+> **Purpose:** Compact resumable execution frontier; never product/architecture/roadmap authority
 > **Last updated:** 2026-08-13
-> **Protected main:** `856f58126327797b467938390586a04f185e70f6` — PR #244 Orders protected merge
-> **Protected application-changing baseline:** `856f58126327797b467938390586a04f185e70f6`
-> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
-> **Latest protected product merge:** PR #244 — Orders + confirmation operational workspace, merge `856f58126327797b467938390586a04f185e70f6`
-> **Active implementation/release PR:** #245 — `chore(release): prepare Internal.15 Founder checkpoint`
-> **Active branch:** `agent/internal-15-founder-checkpoint`
-> **Pre-FD-032 Internal.15 release-prep checkpoint:** `3a9539bb4f67f99aee1b9d636ead9edb45a00017`
-> **Historical pre-retry certification checkpoint:** `327d83feecffc9c7231e326a549730fbc60df4de`
-> **Published executable source:** `2d60e2e74109b6e03626a5ccdff727c029a34591`
-> **Published release:** `1.0.0-internal.14` / MSI `1.0.0.14`, signed run `31388777098`
-> **Founder-installed release:** Internal.14
-> **Founder-accepted baseline:** Internal.5
-> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Retained open evidence obligations:** #221, #226, #230
-> **Phase 8:** frozen
+> **Protected main:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245 merged
+> **Latest application-changing protected merge:** PR #245 — Internal.15 FD-032 Founder-only offline checkpoint
+> **Documentation branch:** `agent/internal-16-completion-authority`
+> **Next application milestone:** `1.0.0-internal.16` / MSI `1.0.0.16`
+> **Governing new directive:** FD-033 — Internal.16 completion convergence
+> **Retained open evidence:** #221, #226, #230
 
-Live GitHub is authority. Re-fetch protected `main`, PR #245 head, changed files,
-review threads and Actions before any write, certification or merge. Keep one active
-implementation/release PR at a time. Source/browser/CI evidence is not installed
-Founder acceptance.
+Live GitHub is authority. Re-fetch protected `main`, releases, installed evidence,
+issues and Actions before application writes or release claims. PR #245 is merged; do
+not continue work on its old branch.
 
-The PR head deliberately advances beyond `3a9539bb...` for the exact FD-032 licensing
-mode, trial-UI/API fail-closed behavior, release workflow and authority documentation.
-Re-fetch the live PR head and certify only that reconciled exact tree.
+## Founder directive — 2026-08-13
 
-## Session handoff — 2026-08-13
+The Founder has a 24-hour completion-and-first-revenue constraint, zero paid marketing/
+infrastructure budget before first revenue, and a near-term objective of at least USD
+100 equivalent collected revenue.
 
-The Founder explicitly selected the free temporary route: finish Internal.15 as a
-strict Founder-only offline checkpoint and obtain the domain before releasing to
-users. FD-032 records that choice. PR #245 may proceed without owned ingress only
-under its exact version-bound offline scope and after final exact-head certification.
+The engineering requirement is not a rushed partial release. Internal.16 is intended to
+be the complete application candidate:
 
-### Orders closure — PR #244 merged
+1. complete the remaining whole-product Phase 5/6/7 work;
+2. implement Phase 8 fully and professionally;
+3. remove NOEST/Nord et Ouest as a supported provider and add first-class EcoTrack Pro;
+4. enhance/test the AI workspace, order extraction and every AI tool for correctness,
+   UX, privacy and performance;
+5. freeze one complete candidate and certify the whole product aggressively before the
+   first production buyer receives it.
 
-PR #244 `feat(orders): rebuild operational order workspace` is complete and protected.
+The assurance target is “99.99% sure” in the practical evidence sense: complete Required
+matrix coverage and zero known P0/P1, not a mathematical promise that unknown software
+bugs are impossible.
 
-- Final certified application head before merge: `2094f1cb...`.
-- Protected merge on `main`: `856f58126327797b467938390586a04f185e70f6`.
-- Final exact-head Orders closure had CI, Phase 5 and Phase 6–7 green.
-- All five material/outdated review threads were resolved only after exact-head proof.
-- The last P2 repair ensured detected bad contact data remains visibly risky even when
-  contact-quality weighting contributes zero score; scoring semantics were not changed.
-- Orders source/server rendering, exact hydration, review-first confirmation queue,
-  localized risk presentation, centralized decision/fulfillment copy and governed
-  seller journey are now protected.
-- No schema/migration/native/licensing/provider/Golden-COD authority was rewritten by
-  the Orders closure.
+## Internal.15 current boundary
 
-Do not reopen Orders unless installed Internal.15 evidence proves a concrete defect.
+PR #245 merged to protected main at `371aebc2...`. Its FD-032 scope remains exact:
+Internal.15 is a Founder-only offline checkpoint and cannot silently become the
+customer-online authority for a later version.
 
-## Internal.15 Founder checkpoint — PR #245 draft
+Before Internal.16 implementation, re-fetch:
 
-PR #245 is the single active release-preparation PR. It stages
-`1.0.0-internal.15` / MSI `1.0.0.15` from protected `main` after the frontend
-stabilization program and Orders merge.
+- whether the protected signed Internal.15 release workflow published successfully;
+- whether the Founder T470 updated in place from Internal.14;
+- actual #221/#226 installed evidence/acceptance state;
+- #230 live state.
 
-### Pre-FD-032 code-bearing release package — `3a9539bb...`
+Do not infer publication or installation from the merge alone.
 
-`3a9539bb4f67f99aee1b9d636ead9edb45a00017` is the reconciled pre-FD-032
-Internal.15 package directly on protected `main` `856f5812...`. The active exact head
-adds the bounded FD-032 offline release authority and includes:
+## FD-033 documentation work
 
-- `sahelflow.version.json` → `1.0.0-internal.15` / MSI `1.0.0.15`;
-- synchronized `package.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, and
-  `src-tauri/tauri.conf.json`;
-- `.github/release-requests/internal-15.json` with Founder-checkpoint evidence and
-  non-claims;
-- `scripts/install-founder-windows.ps1` defaults → MSI `1.0.0.15` and app
-  `1.0.0-internal.15`;
-- bounded retry/backoff for transient pinned Node/Bun HTTP/network failures;
-- unchanged pinned URLs and hard-coded SHA-256 integrity authority;
-- restoration of the established nested runtime manifest contract and the separate
-  build-only Bun compiler provenance manifest after review caught an unsafe first
-  retry implementation.
+This documentation branch records the new Founder decision and reconciles Current
+State, Roadmap, Workflow and Working Memory. It is governance/documentation work only;
+it does not modify application/runtime source.
 
-The Founder installer mismatch was a real P1 found during fresh review and is repaired.
-Windows PowerShell 5.1 self-test passed on the corrected script.
+FD-033 changes Internal.16 sequencing but not evidence honesty:
 
-### Runtime-download repair review outcome
+- remaining Phase 5/6/7 and Phase 8 may be implemented together in one application
+  completion branch;
+- formerly pre-Phase-8 gates become integrated Internal.16 acceptance gates;
+- Phase 1–4 canonical business/data/security authority remains protected;
+- customer-online #230 and external Phase 9 truth cannot be fabricated.
 
-Repeated Windows/MSI certification attempts reached `scripts/prepare-runtime.ts` and
-failed while fetching the pinned Bun 1.3.14 GitHub release asset with `HTTP 503` and,
-on another attempt, `ECONNRESET`. These were external transport failures rather than
-application-test failures.
+## Internal.16 execution style
 
-The first retry implementation solved only transport resilience but accidentally:
+The Founder explicitly rejects long repetitive micro-change/full-run loops.
 
-1. flattened `runtime-manifest.json`, removing the established nested `node` and
-   `prismaQueryEngine` fields required by packaged-runtime verification; and
-2. stopped writing `.sf-build/tools/bun-compiler-manifest.json`, which the signed
-   release evidence workflow still requires.
+Use:
 
-Fresh P1 review caught both regressions. The frozen `3a9539bb...` release package is
-the reconciled version: it keeps bounded retry/backoff while preserving the existing
-runtime/bun-compiler manifest formats and checksum authority. The two runtime P1 review
-threads became outdated after that repair; do not resolve them until the final exact
-release head is certified and freshly reviewed.
+```text
+one full reconnaissance
+→ one consolidated Problem Register
+→ freeze contracts/non-goals
+→ one large dependency-correct implementation wave
+→ targeted cheap checks while coding
+→ freeze complete Internal.16
+→ one deep whole-product certification
+→ one consolidated repair batch
+→ affected reruns + one final full certification
+→ signed updater if evidence passes
+```
 
-### Historical certification evidence — `327d83fe...`
+Do not run the full MSI/replacement-install/eight-hour certification after every tiny
+edit. Do not skip focused checks that prevent hours of broken work. Do not rerun an
+unchanged passing head.
 
-Do **not** claim full release certification from the historical pre-retry head because
-the aggregate run was interrupted/advanced before complete closure. Durable evidence
-that did finish:
+## Internal.16 application scope
 
-- Native source contract #414: PASS.
-- Phase 5 Experience #480: PASS, including fresh install + owner login and the
-  representative LTR/Arabic RTL workbench journey.
-- CI source quality, version/document authority, Tauri Rust smoke and substantial
-  Windows checks progressed successfully.
-- The exact evidence MSI lane failed only during the pinned Bun download with external
-  HTTP 503.
+### Remaining desktop/product adoption
 
-Superseded ready-state runs triggered while the branch was being reconciled were
-cancelled or made obsolete by later heads. Never combine partial/superseded runs into a
-fake green release claim.
+- dashboard;
+- customers/risk;
+- products/inventory;
+- delivery/returns;
+- COD/accounting;
+- analytics/charts;
+- automations;
+- setup/login/license;
+- remaining administration/shared shell states.
 
-### PR #245 review state at handoff
+All routes must have coherent #236 typography, density, themes, motion,
+localization/direction, accessibility, loading/empty/offline/error/retry/recovery and
+responsive/1366×768 behavior.
 
-Three review findings are known:
+### Phase 8
 
-- Founder installer P1: underlying code repaired to Internal.15 defaults; thread remains
-  unresolved until final exact-head proof.
-- Runtime manifest P1: first retry implementation regressed the manifest schema;
-  repaired in the consolidated release package; prior thread is outdated.
-- Bun compiler provenance P1: first retry implementation removed the required build-only
-  manifest; repaired in the consolidated release package; prior thread is outdated.
+Implement as one connected platform around desktop canonical truth:
 
-Re-fetch threads next session because thread state can move independently of code state.
-Resolve only after final exact-head certification + fresh review.
+- encrypted remote projection/command protocol;
+- desktop-commit success semantics;
+- multi-tenant Cloudflare control plane;
+- hosted storefront with durable checkout receipt and atomic publish/rollback;
+- PWA/browser companion;
+- zero-knowledge encrypted cloud backup transport;
+- Founder Console with bounded metadata/offline permanent signing;
+- tenant isolation, replay/duplicate/outage/abuse/rate/cost controls.
 
-## FD-032 licensing / Cloudflare release boundary
+### Cloudflare bootstrap
 
-The exact Internal.15 authority is:
+Cloudflare Free allowances may be used before first revenue when measured capacity is
+sufficient. Desktop remains canonical. The first sale/reservation may fund the owned
+domain and paid capacity if needed. Provider hostnames do not satisfy #230.
 
-1. `licensing.releaseMode: founder-offline-only`;
-2. `licensing.authorityDecision: FD-032`;
-3. `licensing.ownedHostSuffix: null`;
-4. no packaged `SF_LICENSE_SERVICE_URL` and no online-trial UI action;
-5. signed trial/permanent public keyrings and permanent offline activation retained.
+If a buyer pays before the domain exists, payment is not proof that customer-online
+production certification passed.
 
-This exception is valid only for `1.0.0-internal.15` on the internal channel. The
-version audit, native release build and release workflow must all reject a mismatch.
-Do not package `workers.dev` or any provider hostname as a substitute.
+### EcoTrack Pro
 
-Issue #230 remains open P1 and moves to the user-release boundary, not to a fake pass.
-Before any distribution to users: obtain a verified SahelFlow-owned domain, provision
-distinct primary/recovery HTTPS ingress, bind the protected environment, and prove
-representative Algerian fixed/mobile and installed customer-trial recovery behavior.
+Remove NOEST/Nord et Ouest from runtime selection/configuration/provider claims and add
+canonical EcoTrack Pro.
 
-## Binding product truth
+Required areas: protected credentials/config, connection/capability validation,
+create/validate flow, tracking/history, tariffs/location/reference data, supported
+fulfillment/cancel/update/return/document operations, durable timeout/retry/ambiguous
+outcome reconciliation, compatibility for historical `noest` rows and truthful
+source/conformance/live certification state.
 
-The Founder values the backend/engine and rejects Internal.14 as the frontend product
-quality baseline. The systemic frontend program remains Arabic typography,
-comfortable density, atomic locale/direction switching, warmer coherent themes,
-restrained motion, RTL geometry, shallow navigation, warning hierarchy, useful
-charts and route-wide workflow quality.
+No guessed endpoint/capability. Current official/provider-issued merchant API authority
+is required for production contract truth.
 
-The shared foundation plus Inbox, AI Agents, Settings and Orders protected work is the
-coherent frontend package intended for the next installed checkpoint. The next goal is
-an actual installable Internal.15 candidate, not another route-by-route redesign loop.
+## AI subsystem completion
 
-## Phase 5 closure snapshot
+Protected AI foundation exists through PR #240, but Internal.16 must re-audit and
+harden the whole subsystem.
 
-The historical Phase 5 application-changing protected product baseline remains
-`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` from PR #220. It remains valid for the
-source/browser whole-product evidence it proved. Retained **issue #221** owns the
-coherent repaired installed visual/accessibility result plus explicit Founder
-acceptance; source/browser route adoption does not close it.
+### AI workspace
 
-A live GitHub issue-state divergence for #221 was observed during release prep. Do not
-infer Founder acceptance from an issue being closed in the UI; re-fetch the issue and
-its acceptance record and reconcile the state explicitly.
+Prove long sessions, session switching, streaming/cancel/retry, context/action review,
+typed localized tool cards, key/consent/quota/provider/persistence/degraded states,
+AR/FR/EN, Arabic/RTL, keyboard/focus/zoom/reduced motion, and low-end resource/render
+behavior.
 
-## Phase 6 next action
+Sensitive actions remain proposal/digest/actor/shop/license/permission/target bound.
 
-Phase 6 — Arabic, RTL and accessibility parity remains active. Source/browser route
-adoption now includes Orders. The next action is release convergence: certify one exact
-FD-032 Internal.15 offline head, publish through the protected release workflow, then
-perform installed Founder inspection. Phase 8 remains frozen behind the mandatory
-installed/live/Founder gate, including #230 before user distribution.
+### Order extraction
 
-## Durable protected route-adoption baseline
+The existing regex/Gemini router and extraction metrics become a release-quality
+benchmark target.
 
-### PR #237 Inbox operational workspace — CLOSED
+Held-out corpus: Arabic, French, English, Algerian Darija and mixed messages; noisy
+WhatsApp formatting; complete, partial, contradictory, ambiguous and non-order inputs.
 
-- Final head: `8e9d5aa365f0c5873909c1c8517f88519d743b9d`.
-- Protected source/browser adoption remains valid; it is not installed Founder acceptance.
+Measure field exactness, required-field completeness, false-complete rate, confidence
+calibration, missing-field truth, routing choice, offline/no-key fallback, malformed
+model response, quota/rate behavior and latency distributions.
 
-### PR #240 AI Agents operational workspace — CLOSED
+Low-confidence/incomplete extraction requires review/repair and never bypasses canonical
+order validation/pricing/risk/inventory/idempotency.
 
-- Final head: `6355cc4c797a597af52c90decfe7727e405749be`.
-- Final source/browser evidence includes CI `31535669292`, Phase 5 `31535668960`,
-  and Phase 6–7 `31535668966`.
-- Protected source/browser adoption remains valid; it is not installed Founder acceptance.
+### AI tools
 
-### PR #242 Settings operational workspace — CLOSED
+Inventory every model-exposed tool and prove schema, actor/shop/permission/license,
+proposal approval, target/version revalidation, result correctness, idempotency,
+timeout/cancel/retry, ambiguous external effects, privacy/redaction, localized result
+states, local performance overhead and resource/concurrency behavior.
 
-- Final head: `e749b0af05741ee45b16c349750d44092bd3beb9`.
-- Final CI `31546488691`: PASS.
-- Final Phase 5 `31546488465`: PASS.
-- Final Phase 6–7 `31546488422`: PASS.
-- Protected source/browser adoption remains valid; it is not installed Founder acceptance.
+Model/provider/network latency is reported separately from SahelFlow overhead.
 
-### PR #244 Orders + confirmation operational workspace — CLOSED
+## Final Internal.16 certification matrix
 
-- Protected merge: `856f58126327797b467938390586a04f185e70f6`.
-- Final application head: `2094f1cb...`.
-- Final exact-head CI + Phase 5 + Phase 6–7: PASS before merge.
-- Protected source/browser adoption remains valid; it is not installed Founder acceptance.
+The frozen candidate must cover:
 
-## Post-Settings documentation reconciliation
+- all Required routes/features/states;
+- Golden COD/stock/money/risk/fulfillment/reconciliation;
+- install/start/login/license/shop/team/permissions/revocation;
+- data migration/export/delete/backup/restore/replacement install;
+- providers/WhatsApp/ecommerce/AI/automations;
+- EcoTrack conformance and truthful live state;
+- AI extraction benchmark and every AI tool matrix;
+- AR/FR/EN, RTL/LTR/mixed content, accessibility, zoom/reflow, reduced motion;
+- themes/density/motion/navigation/charts/warnings;
+- Phase 8 remote/storefront/PWA/control plane/backup/Founder Console;
+- security/privacy/secret/tenant/shop isolation;
+- clean install + Internal.15 → Internal.16 in-place updater preservation;
+- T470/floor budgets and required eight-hour final-candidate trend;
+- outage/replay/duplicate/ambiguity/rollback/cross-tenant failure injection;
+- frozen adversarial review, consolidated repair and final proof.
 
-PR #243 protected the prior documentation reconciliation on `main` at
-`52ea0c79b3dddfcc569dbf2ab690747381f85d6a`. It did not change application code,
-installed truth, retained evidence obligations or the Phase 8 freeze. Later PR #244
-advanced protected product source; historical verifier markers remain retained until
-the verifier itself is deliberately reconciled in a bounded documentation/governance
-change.
+Zero known P0/P1 is required for a user-ready claim. A material post-freeze change
+invalidates affected evidence.
 
-## Next product package selection — remaining route inventory
+## Commercial lane
 
-The previous read-only inventory selected Orders + confirmation queue and that package
-is now protected by PR #244. The current execution frontier is no longer another route
-selection: it is the coherent Internal.15 installer checkpoint and its exact
-FD-032 licensing/installed evidence boundary.
+Commercial work runs in parallel with engineering without paid ads:
 
-None of the protected route-adoption packages closes installed #221/#226, live #230
-or the Founder acceptance gate.
+- direct qualified merchant/agency/strategic outreach;
+- private product demo;
+- payment/reservation collection through a legitimate available channel;
+- existing FD-012 pricing remains authority unless changed separately.
 
-## Protected backend/business boundaries
+The commercial target is at least USD 100 equivalent collected revenue, but product
+truth is never changed to close a sale. Do not expose private source unnecessarily or
+claim live-certified providers/Stable without evidence.
 
-Do not rewrite these for release convenience:
+## Exact next application order
 
-1. Golden COD command-kernel transaction/idempotency/version/audit/event/outbox authority.
-2. Canonical source/manual order pricing, decision, expected-version and idempotency authority.
-3. Canonical fulfillment/inventory/COD transitions and recovery semantics.
-4. Trusted identity, exact-shop and action-permission boundaries.
-5. Protected customer/order field projection and encrypted DB authority.
-6. Provider courier capability/effect authority and durable effects.
-7. Risk config/rules/scoring semantics and computational/audit payloads.
-8. Licensing/trial authority; #230 live external certification remains open.
-9. AI proposal-bound execution and automation durable recovery semantics.
-10. WhatsApp ingress/account/idempotency/encrypted-event authority.
-11. Native runtime supervisor/backup/recovery/installation identity.
-12. Consequence-selected CI/evidence gates; never weaken them to land a release.
-
-## Retained issue truth
-
-- **#221 OPEN:** coherent repaired installed visual/accessibility + explicit Founder acceptance obligation remains unsatisfied unless the acceptance record proves otherwise.
-- **#226 OPEN:** installed Phase 7 performance/reliability certification.
-- **#230 OPEN P1:** live resilient customer-trial production/network certification.
-- Internal.14 remains Founder-installed but Founder-rejected.
-- Internal.5 remains the Founder-accepted baseline.
-- Phase 8 implementation remains frozen.
+1. Re-fetch post-#245 `main`, Internal.15 publication/install and #221/#226/#230 truth.
+2. Merge/reconcile FD-033 governance documentation.
+3. Create one Internal.16 application branch from exact protected post-#245 main.
+4. Perform the whole-product reconnaissance and freeze the complete Problem Register,
+   contracts and acceptance matrix before broad edits.
+5. Execute the large completion wave: remaining desktop routes → EcoTrack/provider
+   convergence → AI/extraction/tools hardening → Phase 8 → cross-cutting release fixes.
+6. Use targeted checks during implementation; avoid repeated full release cycles.
+7. Freeze one complete Internal.16 head.
+8. Run the full certification matrix and one complete adversarial review.
+9. Repair the consolidated finding set and run affected + final complete proof.
+10. Publish/deliver only to the evidence level actually achieved; close #230 before
+    customer-online trial/public release claims and preserve external Phase 9 Stable
+    truth.
 
 ## Hard rules
 
-- one active implementation/release agent/PR at a time;
-- preserve protected Phase 1–4/Phase 3 business authorities;
-- never weaken tests, permission boundaries, runtime provenance or performance thresholds to make WIP green;
-- source/browser evidence is not installed Founder acceptance;
-- no #230 production claim from mocks, loopback or source CI;
-- Internal.14 remains Founder-rejected; Internal.5 remains Founder-accepted;
-- Phase 8 implementation remains frozen;
-- merge #245 with a null owned suffix only when the exact Internal.15/FD-032
-  `founder-offline-only` checks pass and the artifact contains no trial-service URL;
-- never carry FD-032 offline scope into a later version or describe it as a customer release;
-- preserve established runtime and compiler provenance contracts while making transient downloads resilient;
-- prefer one coherent repair/certification batch over repeated micro-CI loops.
-
-## Exact next-session order
-
-1. Re-fetch protected `main`, PR #245 exact head/commit chain, changed files, review
-   threads, Actions, release environment state and retained issues.
-2. Confirm #245 is still **draft**. Verify any commits after code-bearing checkpoint
-   `3a9539bb4f67f99aee1b9d636ead9edb45a00017` are documentation-only; inspect any
-   unexpected source delta before doing anything else.
-3. Verify the exact FD-032 authority is synchronized across version audit, native
-   build, workflow, API/UI, release request, tests and documentation. Confirm the
-   artifact build environment clears `SF_LICENSE_SERVICE_URL` while retaining both
-   public verification keyrings.
-4. Reconcile #245 into one intentional final Founder-offline release head. Keep the
-   Founder installer Internal.15 defaults, bounded runtime-download
-   retry, established nested runtime manifest, Bun compiler provenance manifest and
-   pinned checksum authority intact.
-5. Mark ready **once** and run one exact-head release certification: Required PR gate,
-   CI including Windows standalone + installed MSI, Native, Phase 5 and Phase 6–7.
-   Classify transient network failures from logs; do not reopen product source for an
-   external 503 unless resilience itself has a bounded defect.
-6. Perform one fresh exact-head adversarial review. Resolve all three known PR #245
-   review threads only after the exact repaired head proves them and no replacement
-   material finding exists.
-7. If all exact-head gates are green and the FD-032 boundary is exact, merge #245 with an
-   expected-head guard and let protected-main dispatch the signed Internal.15 updater
-   workflow. Do not manually bypass the release guard.
-8. Install/update Internal.15 over Founder-installed Internal.14, preserve Roaming/Local
-   AppData, verify launch/license-valid workspace without restart, close/reopen, and
-   inspect the coherent frontend on the Founder T470.
-9. Record installed #221/#226 and explicit Founder acceptance truth. Keep #230 open;
-   obtain the domain and complete its live customer-trial evidence before releasing
-   to users. Only after all governing gates pass may the Phase 8 freeze be reconsidered.
+- one active application writer;
+- no direct protected-main application edits;
+- preserve Phase 1–4 authorities and existing data/evidence;
+- no fake provider/tool/cloud success;
+- no guessed EcoTrack API contract;
+- no low-confidence AI extraction promoted as order truth;
+- no weakening tests/thresholds to make the deadline green;
+- no full heavy rerun on unchanged passing heads;
+- no customer-online claim from Cloudflare provider hostnames or mocks;
+- no Stable claim from internal confidence alone.
