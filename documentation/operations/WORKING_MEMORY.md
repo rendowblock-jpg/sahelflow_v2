@@ -4,6 +4,8 @@
 > **Last updated:** 2026-08-13
 > **Protected main:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245 merged
 > **Latest application-changing protected merge:** PR #245 — Internal.15 FD-032 Founder-only offline checkpoint
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Documentation branch:** `agent/internal-16-completion-authority`
 > **Next application milestone:** `1.0.0-internal.16` / MSI `1.0.0.16`
 > **Governing directive:** FD-033 — Internal.16 completion convergence
@@ -94,6 +96,14 @@ Remaining desktop routes; shared RTL/interaction/responsive/theme/locale/chart/n
 
 Cloudflare Free may bootstrap first-buyer capacity when measured sufficient, but provider hostnames do not satisfy #230. EcoTrack endpoints/capabilities may not be guessed. Phase 1–4 authorities remain protected.
 
+## Phase 5 closure snapshot
+
+The historical Phase 5 source/browser checkpoint remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`; later frontend merges improved selected surfaces, but installed Founder acceptance remained open. The frozen Internal.15 findings are now the exact installed input that Internal.16 must close rather than evidence that Phase 5 was already complete.
+
+## Phase 6 next action
+
+The formal **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity remains current. The next action under FD-033 is not another isolated RTL patch: perform the one exact-source whole-product reconnaissance, freeze the combined Internal.16 Problem Register, then close Phase 6 requirements inside the large completion wave alongside the other approved Internal.16 work. Retained **issue #221** remains part of installed visual/accessibility reconciliation until superseded by stronger exact Internal.16 evidence.
+
 ## Exact next-session order
 
 1. Re-fetch protected `main`, releases, Actions and retained #221/#226/#230 truth; read FD-033/Current State/Roadmap/Workflow/Working Memory.
@@ -107,7 +117,7 @@ Cloudflare Free may bootstrap first-buyer capacity when measured sufficient, but
 9. Repair one consolidated finding set; rerun affected + final complete proof.
 10. Publish/deliver only to the evidence level actually achieved.
 
-## Hard stop conditions
+## Hard rules
 
 - one active application writer;
 - no direct protected-main application edits;
