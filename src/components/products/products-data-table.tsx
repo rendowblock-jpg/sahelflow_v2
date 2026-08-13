@@ -11,6 +11,7 @@ import {
   EntityPreview,
 } from "@/components/entities/entity-context";
 import { ProductRowActions } from "@/components/products/product-row-actions";
+import { ProductThumbnail } from "@/components/products/product-thumbnail";
 import { ProductsEmptyState } from "@/components/shared/empty-states";
 import { StateSurface } from "@/components/shared/state-surface";
 import { Badge } from "@/components/ui/badge";
@@ -40,37 +41,55 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
     {
       accessorKey: "name",
       header: () => t("products.productName"),
-      cell: ({ row }) => (
-        <EntityLink href={`/products/${row.original.id}`} label={row.original.name} />
-      ),
-    },
-    {
-      accessorKey: "sku",
-      header: () => t("products.sku"),
-      cell: ({ row }) => (
-        <span className="font-mono text-sm text-muted-foreground">
-          {row.original.sku ?? "—"}
-        </span>
-      ),
-      meta: { hideOn: "md" },
-    },
-    {
-      accessorKey: "categoryId",
-      header: () => t("products.category"),
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.categoryId
-            ? (categoryNames.get(row.original.categoryId) ?? "—")
-            : "—"}
-        </span>
-      ),
-      meta: { hideOn: "lg" },
+      cell: ({ row }) => {
+        const product = row.original;
+        const category = product.categoryId
+          ? categoryNames.get(product.categoryId)
+          : undefined;
+        return (
+          <div
+            data-product-identity="true"
+            className="flex min-w-[13rem] items-center gap-3 py-0.5"
+          >
+            <ProductThumbnail
+              src={product.images?.[0]}
+              alt=""
+            />
+            <div className="min-w-0 flex-1">
+              <EntityLink
+                href={`/products/${product.id}`}
+                label={product.name}
+                className="block truncate font-semibold"
+              />
+              <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                {product.sku ? (
+                  <span className="max-w-40 truncate font-mono" dir="auto">
+                    {product.sku}
+                  </span>
+                ) : null}
+                {product.sku && category ? (
+                  <span aria-hidden="true">·</span>
+                ) : null}
+                {category ? (
+                  <span className="max-w-44 truncate" dir="auto">
+                    {category}
+                  </span>
+                ) : product.sku ? null : (
+                  <span aria-hidden="true">—</span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      },
     },
     {
       accessorKey: "price",
       header: () => t("orders.price"),
       cell: ({ row }) => (
-        <span className="tabular-nums">{formatDZD(row.original.price)}</span>
+        <span className="font-medium tabular-nums">
+          {formatDZD(row.original.price)}
+        </span>
       ),
       meta: { align: "end" },
     },
@@ -81,7 +100,7 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
         const isLowStock = row.original.stock <= row.original.lowStockThreshold;
         return (
           <span className="flex items-center justify-end gap-1.5 tabular-nums">
-            <span className={isLowStock ? "font-medium text-destructive" : ""}>
+            <span className={isLowStock ? "font-semibold text-destructive" : "font-medium"}>
               {row.original.stock}
             </span>
             {isLowStock ? (
@@ -136,6 +155,19 @@ export function ProductsDataTable({ fallback, categories }: ProductsDataTablePro
                 description={category}
                 metadata={product.sku ? `${t("products.sku")}: ${product.sku}` : undefined}
               >
+                <div className="mb-3 flex items-center gap-3 rounded-lg border border-border/70 bg-muted/20 p-2.5">
+                  <ProductThumbnail
+                    src={product.images?.[0]}
+                    alt=""
+                    className="size-12"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{product.name}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {[product.sku, category].filter(Boolean).join(" · ") || "—"}
+                    </p>
+                  </div>
+                </div>
                 <dl className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <dt className="text-xs text-muted-foreground">{t("orders.price")}</dt>
