@@ -4,113 +4,50 @@
 > **Last reconciled:** 2026-08-13
 > **Protected application-changing baseline:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245 Internal.15 merge
 > **Latest application-changing protected merge:** PR #245 — Internal.15 FD-032 Founder-only offline checkpoint
-> **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
-> **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
-> **AI Agents route adoption:** PR #240 / `598e2a0dc0352227431614cf1527672aa78ec015`
-> **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
-> **Orders + confirmation route adoption:** PR #244 / `856f58126327797b467938390586a04f185e70f6`
 > **Next application milestone:** Internal.16 complete-product candidate under FD-033
-> **Installed Internal.15 inspection:** active; findings are accumulating in FD-033 + Working Memory before the final Problem Register freeze
+> **Installed Internal.15 inspection:** active; Parts 1–3 recorded before final Problem Register freeze
 > **Open retained issues:** #221, #226, #230
-> **Execution epic:** #164
 
-Live protected `main`, releases, open PRs/issues and current Actions must be read
-before implementation. Chat history and archived reports are context/evidence only.
+Live protected `main`, releases, PRs/issues and current Actions must be read before implementation. Chat and archive are context/evidence only.
 
 ## Active authority chain
 
-SahelFlow uses the following active Markdown authorities:
+1. [`product/PRODUCT.md`](product/PRODUCT.md) — seller/jobs/outcomes/tier acceptance.
+2. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — interaction/visual/RTL/accessibility requirements.
+3. [`product/DECISIONS.md`](product/DECISIONS.md) — consolidated Founder decisions through FD-032.
+4. [`product/FD-033-INTERNAL16-COMPLETION.md`](product/FD-033-INTERNAL16-COMPLETION.md) — newer exact Internal.16 completion authority and installed Founder Problem Register.
+5. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — technical invariants/canonical ownership.
+6. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) — merged truth plus explicitly labeled installed observations.
+7. [`system/ROADMAP.md`](system/ROADMAP.md) — binding Phase 0–9 order as modified only by FD-033 Internal.16 convergence.
+8. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — research/implementation/review/certification process.
+9. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact resumable frontier and installed-inspection accumulator.
+10. [`research/RESEARCH.md`](research/RESEARCH.md) — adopted primary research.
+11. This file — navigation/authority order.
 
-1. [`product/PRODUCT.md`](product/PRODUCT.md) — seller, jobs, outcomes, tiers and acceptance.
-2. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — interaction, visual, RTL and accessibility requirements.
-3. [`product/DECISIONS.md`](product/DECISIONS.md) — consolidated Founder/product decision log through FD-032.
-4. [`product/FD-033-INTERNAL16-COMPLETION.md`](product/FD-033-INTERNAL16-COMPLETION.md) — newer exact Internal.16 completion-convergence authority and installed Internal.15 Founder findings.
-5. [`system/ARCHITECTURE.md`](system/ARCHITECTURE.md) — technical invariants and canonical ownership.
-6. [`system/CURRENT_STATE.md`](system/CURRENT_STATE.md) — merged truth and named evidence only.
-7. [`system/ROADMAP.md`](system/ROADMAP.md) — binding Phase 0–9 order and exit criteria as modified only by the exact FD-033 Internal.16 execution sequence.
-8. [`operations/WORKFLOW.md`](operations/WORKFLOW.md) — development, research, review, CI and merge process.
-9. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — compact resumable execution frontier and the current installed-inspection accumulator.
-10. [`research/RESEARCH.md`](research/RESEARCH.md) — adopted primary-source research and implications.
-11. This file — navigation and authority order.
+Repository `AGENTS.md` remains the coding-agent entry point. Issue #164 is an execution dashboard, not product authority. Do not create a competing permanent masterplan.
 
-Repository `AGENTS.md` is the coding-agent entry point. Issue #164 is the execution
-dashboard; it cannot silently weaken a higher authority. Do not create a parallel
-permanent handoff/plan surface; fold resumable context into Working Memory and
-source-grounded truth into Current State/Roadmap/FD-033 as appropriate.
+## Current truth
 
-## Current product truth
+Phases 0–4 remain protected under their canonical business/data/security/recovery boundaries. PRs #236/#237/#240/#242/#244 improved shared frontend roots and selected workspaces. PR #245 merged the exact Internal.15 Founder-only offline checkpoint to protected main.
 
-Phases 0–4 remain protected under their documented canonical boundaries. Earlier
-Phase 5/6/7 browser/source checkpoints remain valid for exactly what their frozen
-heads proved. Internal.14 installed use rejected the published frontend as the
-whole-product quality baseline. PRs #236/#237/#240/#242/#244 repaired the shared
-frontend foundation plus Inbox, AI Agents, Settings and Orders in source/browser.
-PR #245 then merged the exact FD-032 Internal.15 Founder-only offline checkpoint to
-protected `main` at `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`.
+The Founder is now using installed Internal.15 as the real product and recording remaining completion defects before Internal.16 implementation starts. FD-033 makes Internal.16 the complete-product convergence candidate: remaining Phase 5/6/7 closure + full Phase 8 + EcoTrack + AI/extraction/tools + release assurance, implemented as one large dependency-correct wave rather than repeated micro-release loops.
 
-Internal.15 is now being inspected as the real installed application. The Founder
-has explicitly found additional material whole-product defects and enhancement needs.
-Those observations are not being fixed one-by-one during discovery. They are being
-recorded under stable Internal.16 IDs in FD-033 and Working Memory, then will be
-merged with the source reconnaissance into one frozen Problem Register before the
-large Internal.16 implementation wave.
+## Installed Internal.15 Parts 1–3 — current stable finding IDs
 
-## Internal.16 authority — FD-033
+`SF16-UI-001` RTL geometry/bidi; `SF16-UI-002` Risk KPI hierarchy; `SF16-UI-003` stat-card interaction; `SF16-I18N-004` locale-safe formatting; `SF16-INBOX-005` Inbox AAA; `SF16-AI-006` AI workbench AAA; `SF16-I18N-007` unresolved/foreign copy; `SF16-PRODUCTS-008` product thumbnails; `SF16-SEARCH-009` universal search; `SF16-AI-010` Gemini lifecycle; `SF16-RESP-011` deterministic responsive layout; `SF16-LAYOUT-012` dead-space/panel sizing; `SF16-CHART-013` top-tier chart system; `SF16-PERF-014` startup performance; `SF16-THEME-015` smooth atomic theme switching; `SF16-I18N-016` atomic locale across future routes/cache; `SF16-NAV-017` smarter default sidebar + user reorder.
 
-FD-033 makes `1.0.0-internal.16` / MSI `1.0.0.16` the complete-product candidate.
-It permits remaining Phase 5/6/7 closure and full Phase 8 implementation to converge
-inside one dependency-correct implementation frontier, while preserving every
-existing P0/P1, security, data, recovery, installed, provider and Stable evidence
-bar.
+The Founder does not need to screenshot every sibling manifestation of an established defect class; the implementation agent owns exhaustive discovery during the source reconnaissance.
 
-The execution style is one whole-product reconnaissance + consolidated Problem
-Register, one large implementation wave with targeted cheap checks, one frozen deep
-certification, one consolidated repair batch and one final proof. Repetitive tiny
-change/full-release loops are explicitly rejected.
+## Part 3 emphasis
 
-### Installed Internal.15 finding register
+Part 3 adds specific release blockers for low-information blank space around stretched panels/charts; generic/under-engineered analytics; slow perceived first/cold launch; glitchy light/dark/preset transition; stale previous-language content on later navigation after locale switch; and a better workflow-based sidebar order with a small accessible edit/pencil control for user reordering.
 
-The register currently includes Part 1 and Part 2 findings. Read the exact clauses in
-[`product/FD-033-INTERNAL16-COMPLETION.md`](product/FD-033-INTERNAL16-COMPLETION.md)
-and the compact resume state in Working Memory. Current categories include:
+The chart requirement is not “add more decoration.” Charts must become richer **decision-support** surfaces with deliberate chart type, period/comparison context, selective annotations, useful tooltips/legends, drill-down where authoritative, accessible text/table equivalents, adaptive height/density, correct RTL/locale units and bounded T470/floor performance.
 
-- systemic Arabic/RTL geometry, bidi and chart/table/pane direction;
-- Risk KPI hierarchy and shared stat-card interaction states;
-- locale-aware money formatting and zero unresolved/hard-coded foreign UI copy;
-- final AAA Inbox operational convergence;
-- final AAA AI workspace convergence;
-- product-table thumbnails using the already-available product image projection;
-- genuinely universal permission-aware topbar search;
-- end-to-end Gemini key reauthentication/verification/save/readiness lifecycle;
-- deterministic responsive card/panel composition with no `3 + 1` orphan layouts.
+The sidebar customization is presentation-only. `navigationDomains`/canonical route/permission authority remains unchanged; a separate preference controls visible ordering with drag + keyboard reorder, save/cancel/reset and safe migration.
 
-The Founder inspection is still open. Absence from the current list does not imply a
-remaining route has passed. Do not begin broad Internal.16 product implementation
-until the Founder says discovery is complete or explicitly authorizes the freeze.
+## Internal.16 execution
 
-## FD-032 retained boundary
+Continue installed discovery → exact source reconnaissance → freeze one Problem Register/contracts/acceptance matrix → one large implementation wave with targeted cheap checks → freeze candidate → one deep whole-product certification + adversarial review → one consolidated repair → affected proof + final complete certification → signed updater only if evidence supports it.
 
-Internal.15 remains exactly the Founder/internal-lab offline checkpoint authorized
-by FD-032. Its merge or installation does not make it a customer-online release.
-Issue #230 remains open P1 for the verified SahelFlow-owned domain, distinct primary/
-recovery ingress, representative Algerian-network reachability and signed installed
-customer-trial evidence.
-
-FD-033 does not fabricate those external results. It changes Internal.16 sequencing
-and scope convergence, not evidence honesty.
-
-## Retained issue truth
-
-- **#221:** coherent installed whole-product visual/accessibility + explicit Founder acceptance truth must be reconciled against the final candidate.
-- **#226:** installed Phase 7 performance/reliability certification.
-- **#230 — P1:** live resilient customer-trial activation on representative Algerian networks with owned production ingress.
-
-Historical #201/#214 are closed by stronger exact #234 evidence. Stable remains a
-separate Phase 9/external-evidence + explicit Founder-promotion claim.
-
-## Resume context
-
-`operations/WORKING_MEMORY.md` is the detailed session-resume owner.
-`system/CURRENT_STATE.md` owns merged evidence truth, `system/ROADMAP.md` owns the
-program, and FD-033 owns the exact Internal.16 convergence decision plus the installed
-Founder findings until they are frozen into the final implementation register.
+FD-032 remains exact to Internal.15. Issue #230 remains P1 for customer-online/public-trial owned-domain/network evidence. Stable remains Phase 9 + applicable external proof + explicit Founder promotion.
