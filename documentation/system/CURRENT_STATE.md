@@ -3,9 +3,12 @@
 > **Authority:** protected source + exact named evidence; installed Founder observations remain separate acceptance evidence
 > **Last reconciled:** 2026-08-13
 > **Protected `main`:** `efb70f93ccfe8c0c222dec6ea2f5cd7f58cf96db` — PR #246 (`docs: freeze Internal.16 completion authority`)
-> **Latest protected route-level application merge:** PR #244 — Orders + confirmation operational workspace
+> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
+> **Application-changing protected baseline:** `856f58126327797b467938390586a04f185e70f6`
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
 > **Current source/release authority:** `1.0.0-internal.15` / MSI `1.0.0.15`, channel `internal`, FD-032 Founder-offline-only
 > **Published release:** `1.0.0-internal.14` — source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed run `31388777098`
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Internal.16 implementation PR:** #247 — `Internal.16 Wave 1 — frontend convergence foundations`
 > **Wave 1 code/evidence head:** `1cd3acbcb1ca71bebaaed22645f74f853b3dc7a3`
 > **Wave 1 status:** IMPLEMENTED + exact-head source/browser evidence GREEN; PR remains OPEN/UNMERGED
@@ -24,14 +27,14 @@ The remaining Internal.16 work is now concentrated in visible product-surface co
 
 PR #247 implements shared/systemic roots:
 
-- **Locale / RTL authority:** locale choice writes the canonical request cookie and performs a top-level document reload so stale RSC/prefetch/router state from the prior locale cannot survive. The returned server-confirmed tree commits translated copy, `<html lang>`, `dir` and shell geometry together.
-- **Appearance authority:** one theme/preset authority with native View Transition support where available, coherent Sahel/Atlas/Oasis/Dune surface families and reduced-motion fallback.
-- **Typography / density:** readable desktop baseline, Arabic application typography and shared density/touch-target authority.
-- **Responsive foundation:** regression contracts around balanced card composition, one scroll authority, edge-to-edge shell behavior and touch targets.
-- **Charts foundation:** shared analytical canvas sizing is fluid instead of globally fixed, while explicit RTL chart geometry remains governed.
-- **Navigation preference:** seller-facing navigation-domain ordering is persisted separately from canonical route/permission authority and reconciles stale preferences safely.
-- **Operational command search:** widened from navigation + three record families to Orders, Customers, Products, Conversations, Deliveries and Returns through existing protected authorities.
-- **Conversation deep-linking:** command-search conversation results open the canonical Inbox thread by stable conversation ID, with a permission-projected persisted-thread fallback when the conversation is outside the current live list.
+- server-confirmed full-document locale/RTL switching;
+- one coherent theme/preset authority with native View Transition support and reduced-motion fallback;
+- readable desktop baseline, Arabic application typography and shared density/touch-target authority;
+- regression contracts around balanced card composition, scroll authority and responsive shell behavior;
+- fluid shared analytical chart sizing;
+- persisted seller navigation-domain ordering layered over canonical route/permission authority;
+- six-family operational command search across Orders, Customers, Products, Conversations, Deliveries and Returns;
+- canonical Inbox conversation deep-linking with a permission-projected persisted-thread fallback.
 
 Protected Golden COD, Prisma/PII authority, auth/identity, licensing, provider execution, native runtime/recovery and Phase 8 cloud authority were intentionally unchanged.
 
@@ -46,20 +49,12 @@ All evidence below is for exact application head `1cd3acbcb1ca71bebaaed22645f74f
 - coverage check — **PASS**;
 - blocking production dependency audit — **PASS**;
 - migration status — **PASS**;
-- Phase 5 static route matrix — **PASS**;
-- Phase 5 fresh-install owner login at 1366×768 — **PASS**;
-- Phase 5 representative desktop / Inbox / AI / Settings / command-touch / Arabic RTL workbenches — **PASS**;
-- `Required Phase 5 Experience gate` — **PASS**;
-- Phase 6–7 static localization / RTL / accessibility contract — **PASS**;
-- Phase 6–7 independent source-quality diagnostics — **PASS**;
-- Phase 6–7 AR/FR/EN accessibility / reflow / hot-query planner / performance browser evidence — **PASS**;
-- `Required Phase 6-7 completion gate` — **PASS**.
+- complete Phase 5 Experience gate — **PASS**;
+- complete Phase 6–7 Completion gate, including AR/FR/EN accessibility, reflow, hot-query planner and performance browser evidence — **PASS**.
 
 Native/Tauri/installed-MSI lanes were correctly not selected because Wave 1 did not modify those authorities. Their absence is not installed or release evidence.
 
 ## Frozen Internal.15 Founder findings — status after Wave 1
-
-The original 17 Founder-installed P1 inputs remain the acceptance lineage. Wave 1 changes their implementation status, not the historical finding IDs.
 
 ### Systemic roots substantially closed in source/browser by Wave 1
 
@@ -68,14 +63,14 @@ The original 17 Founder-installed P1 inputs remain the acceptance lineage. Wave 
 - **SF16-NAV-017** — persisted user navigation-domain ordering implemented over canonical navigation authority.
 - **SF16-SEARCH-009** — operational command search widened to six record families and conversations now deep-link into Inbox.
 
-### Foundations improved, but visible route-level convergence remains
+### Foundations improved, visible route-level convergence remains
 
-- **SF16-UI-001** — shared RTL/locale geometry authority is materially stronger and exact browser evidence is green, but final route-level visual/installed reconciliation remains part of Wave 2 + #221.
-- **SF16-RESP-011** — shared balanced/responsive contracts improved; route-level composition still needs Wave 2 visual convergence.
-- **SF16-LAYOUT-012** — fluid/shared sizing roots improved; visible dead-space and hierarchy cleanup remains in Wave 2.
-- **SF16-CHART-013** — shared chart sizing/governance improved, but the richer decision-support visual system is Wave 2 work.
+- **SF16-UI-001** — shared RTL/locale geometry authority materially stronger; final route-level visual/installed reconciliation remains Wave 2 + #221.
+- **SF16-RESP-011** — shared balanced/responsive contracts improved; route-level composition remains Wave 2.
+- **SF16-LAYOUT-012** — fluid/shared sizing roots improved; visible dead-space/hierarchy cleanup remains Wave 2.
+- **SF16-CHART-013** — shared chart sizing/governance improved; richer decision-support visuals remain Wave 2.
 
-### Still primary Wave 2 surface work
+### Primary Wave 2 surface work
 
 - **SF16-UI-002** — Risk KPI hierarchy;
 - **SF16-UI-003** — stat-card passive/actionable/selected semantics;
@@ -85,39 +80,62 @@ The original 17 Founder-installed P1 inputs remain the acceptance lineage. Wave 
 - **SF16-I18N-007** — remaining unresolved/foreign system copy;
 - **SF16-PRODUCTS-008** — compact primary product thumbnails in operational rows.
 
-### Later Internal.16 waves
-
-- **SF16-AI-010** — Gemini key/provider/readiness/real inference certification belongs with provider/AI truth work after Wave 2 surface convergence.
-- **SF16-PERF-014** — startup stage instrumentation and T470/floor certification belongs in the final reliability closure, preserving all native recovery/migration/licensing guarantees.
-
 ## Wave 2 — exact next product boundary
 
-Wave 2 is **visible product-surface convergence and hierarchy**. It should be implemented as a bounded application package on top of the landed Wave 1 foundations, not as another global architecture rewrite.
+Wave 2 is **visible product-surface convergence and hierarchy**. Primary targets are Products, Risk/stat cards, Inbox, AI, charts/analytics/dashboard and remaining route-level locale/RTL/copy polish inside those surfaces. Do not rewrite Golden COD, native runtime, provider effects, licensing, Prisma protection or Phase 8 protocols during Wave 2 merely for visual convenience.
 
-Primary targets:
+## Historical continuity anchors
 
-1. **Products** — render compact primary thumbnails from the existing `images` projection with intentional fallback/loading behavior; improve row hierarchy without changing product truth.
-2. **Risk** — establish primary vs supporting KPI hierarchy; give shared stat cards deliberate passive/actionable/selected semantics without making neutral cards falsely clickable.
-3. **Inbox** — refine desktop/adaptive pane proportions, queue/thread/context hierarchy, large-history behavior and degraded-state polish while preserving existing durable workflow/provider/outbox authority.
-4. **AI** — refine thread dominance, rails, session/composer/tool/proposal hierarchy and long-session composition while preserving proposal-bound sensitive actions.
-5. **Charts / analytics / dashboard** — move from generic/fixed visual treatment to stronger decision-support hierarchy, responsive density, restrained annotations/tooltips/legends and intentional panel heights.
-6. **Route-level SaaS polish** — close remaining visible typography, spacing, RTL/bidi, responsive orphan/dead-space and localized system-copy siblings discovered inside these surfaces.
+### Phase 5 merged result and evidence
 
-Do **not** rewrite Golden COD, native runtime, provider effects, licensing, Prisma protection or Phase 8 protocols during Wave 2 merely for visual convenience.
+The historical Phase 5 source/browser checkpoint remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`; later route/foundation work improved selected surfaces but did not itself create installed Founder acceptance.
 
-## Internal.16 waves after Wave 2
+### Active Phase 6 frontier
 
-- **Wave 3 — provider/product truth:** EcoTrack canonical provider replacement, Gemini/provider lifecycle, AI extraction/tools truth and related product authority.
-- **Wave 4 — connected platform:** encrypted remote projections/commands, desktop-commit semantics, Cloudflare relay/control plane, hosted storefront publish/rollback/intake, connected PWA, zero-knowledge backup transport and Founder Console.
-- **Wave 5 — commercial/reliability closure:** startup/performance/reliability, #230 owned-domain/network evidence, exact-head security/privacy closure, installed #221/#226 reconciliation, zero known P0/P1, version authority and signed Internal.16 release proof if earned.
+The formal phase label remains **Phase 6 — Arabic, RTL and accessibility parity**. FD-033 permits the broader Internal.16 convergence waves while preserving that phase/evidence lineage.
 
-This staged execution remains one Internal.16 convergence cycle. Reviewable waves do not weaken the final integrated certification requirement.
+### Internal.14 publication evidence
 
-## Retained boundaries
+The published Internal.14 application source remains `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed run `31388777098`. Published release: `1.0.0-internal.14`.
 
-- **#221 — OPEN:** installed Founder visual/accessibility acceptance on the coherent final candidate.
-- **#226 — OPEN:** T470/floor/eight-hour performance/reliability certification.
-- **#230 — OPEN P1:** live resilient customer-trial owned-domain/network certification.
-- Internal.15 FD-032 remains Founder/internal-lab offline-only and does not carry customer-trial authority into Internal.16.
-- Published release remains Internal.14 until a newer signed release is actually proven.
-- Stable remains Phase 9 + applicable external/representative evidence + explicit Founder promotion.
+### FD-031 exception boundary
+
+FD-031 remains a historical one-time Internal.14 installed-evidence exception. Historical issue #214 remains in the evidence lineage and later received stronger closure evidence; that exception does not weaken Internal.16 gates.
+
+### FD-032 Founder-only offline checkpoint boundary
+
+FD-032 remains exact to Internal.15 Founder/internal-lab offline authority. It does not grant customer-online authority to Internal.16 and does not satisfy #230.
+
+### Protected route/workspace evidence continuity
+
+#### PR #237 — Inbox operational workspace protected
+
+Final exact head `8e9d5aa365f0c5873909c1c8517f88519d743b9d` remains retained source/browser evidence.
+
+#### PR #240 — AI Agents operational workspace protected
+
+Final exact head `6355cc4c797a597af52c90decfe7727e405749be` remains retained source/browser evidence.
+
+#### PR #242 — Settings operational workspace protected
+
+Final exact head `e749b0af05741ee45b16c349750d44092bd3beb9` remains retained source/browser evidence; exact runs `31546488691`, `31546488465`, `31546488422`.
+
+PR #244 remains the latest route-level protected application merge at `856f58126327797b467938390586a04f185e70f6`.
+
+## Post-Internal.15 route-level frontier
+
+Internal.16 implementation **has begun** through Wave 1. Phase 8 implementation has not begun in runtime/product code as of this handoff; it is scheduled for a later Internal.16 wave under FD-033.
+
+Retained exact issue status:
+
+- **#221 — OPEN** — installed Founder visual/accessibility reconciliation;
+- **#226 — OPEN** — T470/floor/eight-hour performance/reliability certification;
+- **#230 — OPEN P1** — customer-online/public-trial owned-domain/network certification.
+
+SahelFlow is **not yet a commercially certified Stable release**.
+
+## Later Internal.16 waves
+
+- **Wave 3:** EcoTrack + Gemini/provider + AI extraction/tools truth.
+- **Wave 4:** connected Phase 8 platform.
+- **Wave 5:** startup/performance/reliability, #230, exact security/privacy closure, installed #221/#226, zero known P0/P1 and signed Internal.16 release proof if earned.
