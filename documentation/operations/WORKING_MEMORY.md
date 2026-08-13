@@ -93,6 +93,120 @@ The screenshots used for Part 1 cover Dashboard, Orders and Risk. Treat the Foun
 report that the same wrong-side RTL class exists elsewhere as a whole-product audit
 trigger, not as proof that only those three routes are affected.
 
+## Installed Internal.15 inspection — Part 2
+
+Part 2 expands the installed evidence across Inbox, AI Agents, Analytics, Products,
+Settings, command/search and windowed desktop behavior. These findings remain additive;
+the Founder inspection is not yet declared complete.
+
+- **SF16-UI-001 evidence expansion — P1:** the wrong-side Arabic/RTL class is confirmed
+  as a whole-product audit obligation, not a route list the Founder must enumerate.
+  Internal.16 must inspect and correct every shell/page/pane/table/chart/menu/dialog/
+  command-palette component for semantic inline-start/end, axis/legend/tooltip order,
+  icon direction and bidi isolation. Analytics charts, Inbox panes, AI panes, product
+  tables, Settings controls and command-palette geometry are explicitly in scope.
+
+- **SF16-INBOX-005 — P1:** Inbox is materially better than the rejected baseline but
+  still does not meet the Founder AAA standard as an operational communications
+  workspace. Internal.16 must converge the queue, thread, customer/order context,
+  workflow state, collaboration, extraction and transport controls into one deliberate
+  triage experience. Wide layouts should use balanced/adaptive or resizable panes;
+  windowed layouts should not waste most of the surface on an empty canvas; narrow
+  layouts should become explicit drill-in states rather than compressed desktop.
+  Selection, unread, priority, assignment, workflow status and recovery must be easy to
+  scan. The selected thread must expose message history, receipts, composer, templates,
+  supported media, internal notes, extraction/review, contact/order context and safe
+  retry/reconnect flows without hiding core work behind obscure controls. Large
+  conversation/message sets require bounded rendering/virtualization and no scroll
+  fights. AR/FR/EN, RTL/mixed content, keyboard/focus and transport-degraded behavior
+  remain blocking.
+
+- **SF16-AI-006 — P1:** the AI workspace is source-protected but the installed product
+  still does not feel like a top-tier operational AI workbench. Internal.16 must make
+  the thread the dominant task surface and make sessions/context/action-review panes
+  adaptive, collapsible or resizable instead of relying on fixed-column composition.
+  Session creation/switching, long history, streaming, stop/retry, scroll memory,
+  composer ergonomics, tool progress/results, source/record context, proposal review,
+  setup/provider/quota/degraded states and execution confirmation must feel coherent as
+  one workflow. New assistant responses should follow the active product language unless
+  the seller explicitly drives another language, while persisted historic seller/AI
+  content remains exact rather than being silently translated. Tool/result UI may never
+  expose raw implementation traces as seller authority. Performance and long-session
+  rendering remain part of the AI benchmark already required by FD-033.
+
+- **SF16-I18N-007 — P1:** zero raw translation keys or unintended foreign-language UI
+  may appear in a localized workspace. Installed Settings visibly renders
+  `auth.pinPlaceholder`; Gemini secret API/verifier paths also contain hard-coded French
+  result/error messages. Internal.16 must inventory all UI/API/system-generated copy,
+  add a missing-key detector/test that fails on unresolved key-like output, and map
+  server errors through stable error codes to AR/FR/EN client copy. Demo/sample content
+  should be locale-aware where SahelFlow owns that content. Real seller-entered entity
+  data such as an actual shop/product/customer name must remain exact and is not
+  auto-translated. The current topbar renders the active shop record name directly, so
+  `Ma Boutique` is only a localization defect if it is SahelFlow-owned demo/seed data,
+  not if the seller deliberately named the shop that way.
+
+- **SF16-PRODUCTS-008 — P1 experience requirement:** every product row must show a small
+  primary product thumbnail next to the product identity. The workbench response already
+  carries `images`; Internal.16 should render the first valid/primary image without
+  expanding row density excessively. Use a stable square aspect ratio, lazy/deferred
+  loading, broken/missing-image fallback, appropriate alt/decorative semantics, and
+  low-end-safe decoding/caching. The name remains the primary text target and row click/
+  preview/actions must not become ambiguous. Thumbnail behavior must work in RTL/LTR,
+  normal/compact density and windowed table layouts.
+
+- **SF16-SEARCH-009 — P1:** the topbar command/search must become a genuinely universal,
+  permission-aware operational search rather than the current navigation + limited
+  orders/customers/products lookup. Internal.16 must support ranked exact/fuzzy lookup
+  across all appropriate searchable authorities: routes/commands, order numbers and
+  relevant order fields, customer name/normalized phone, product name/SKU/barcode,
+  shipment/tracking references, returns, Inbox conversations, COD/accounting references,
+  automations and other approved records. Exact identifiers/numbers must not be blocked
+  by a generic two-character rule. Normalize case, whitespace, Arabic diacritics where
+  safe, French accents, phone formats and mixed-script identifiers; preserve exact IDs.
+  Results are grouped, ranked, highlighted, keyboard navigable, deep-linked and filtered
+  by the current actor/shop permissions so search never becomes a PII or cross-shop
+  oracle. Query cancellation/debounce/indexing must keep perceived response inside the
+  Phase 7 interaction envelope on representative data.
+
+- **SF16-AI-010 — P1 functional defect:** the Founder entered a Gemini API key in the
+  installed Internal.15 flow and the AI did not become usable. Internal.16 must certify
+  the complete key lifecycle end to end: recent PIN reauthentication → localized key
+  entry → provider-contract/model verification → encrypted save → persisted configured/
+  verified state → immediate AI workspace readiness refresh without restart → one real
+  minimal assistant/extraction request. Invalid key, API disabled/restricted, model
+  unavailable, quota/rate limit, network/timeout and server/storage failures need stable
+  machine codes plus localized actionable explanations; do not collapse them into
+  generic unavailable. Current Gemini model/endpoint policy must be revalidated against
+  current official Google authority during implementation; stale comments/model lists
+  must not become release truth. Never expose the key in logs, diagnostics, UI or test
+  artifacts.
+
+- **SF16-RESP-011 — P1 cross-product responsiveness defect:** shared KPI/card layout may
+  not create orphan compositions such as four metrics becoming `3 + 1` in a normal
+  windowed desktop width. The current `.card-grid-4` `auto-fit/minmax(240px)` primitive
+  permits exactly that shape. Internal.16 needs deterministic item-count/container-aware
+  layout rules: for example four primary cards should normally converge `4 → 2x2 → 1`
+  rather than `4 → 3+1`; six-card groups should use balanced `3x2`/`2x3` or a deliberate
+  primary/supporting composition. Apply the same principle to chart pairs, mixed KPI+
+  table sections and other repeated card systems. Validate real desktop window widths,
+  1366×768 floor, 100–200% zoom, sidebar expanded/collapsed and AR/FR/EN/RTL. Responsive
+  behavior must rearrange information hierarchy rather than merely allow CSS auto-fit to
+  choose visually accidental columns.
+
+Part 2 source notes retained for implementation reconnaissance:
+
+- current command palette searches only navigation plus orders/customers/products,
+  requires a two-character record query and caps combined records;
+- product workbench records already include `images`, while the current product table
+  omits them;
+- AI desktop workspace currently uses fixed `15rem / flexible / 20rem` columns at XL;
+- Inbox queue uses a fixed `21rem` desktop width;
+- Gemini key status/save is gated by recent reauthentication and current installed copy
+  can leak an unresolved translation key;
+- Gemini API/verifier response strings include hard-coded French and model-policy drift
+  must be revalidated rather than guessed.
+
 ## Internal.16 execution style
 
 The Founder explicitly rejects long repetitive micro-change/full-run loops.
@@ -255,9 +369,10 @@ claim live-certified providers/Stable without evidence.
 5. Perform the whole-product reconnaissance, merge the installed findings with the
    source audit, and freeze the complete Problem Register, contracts and acceptance
    matrix before broad edits.
-6. Execute the large completion wave: shared RTL/interaction roots and remaining
-   desktop routes → EcoTrack/provider convergence → AI/extraction/tools hardening →
-   Phase 8 → cross-cutting release fixes.
+6. Execute the large completion wave: shared RTL/interaction/responsive/search roots
+   and remaining desktop routes → Inbox/AI/product-table convergence → Gemini key
+   lifecycle → EcoTrack/provider convergence → AI extraction/tools hardening → Phase 8
+   → cross-cutting release fixes.
 7. Use targeted checks during implementation; avoid repeated full release cycles.
 8. Freeze one complete Internal.16 head.
 9. Run the full certification matrix and one complete adversarial review.
