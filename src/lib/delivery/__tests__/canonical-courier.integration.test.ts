@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import type { PrismaClient } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -7,6 +7,11 @@ import {
   testAuthenticatedOwnerBusinessPrincipal,
   type BusinessPrincipalContext,
 } from "@/lib/business-truth/principal";
+import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
+import {
+  openBusinessPayloadWithKey,
+  sealBusinessPayloadWithKey,
+} from "@/lib/business-truth/payload-codec";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -376,6 +381,63 @@ describe("canonical courier booking and tracking", () => {
     ).toBe(1);
   });
 
+  it("drains a pre-Wave-3 queued NOEST booking through canonical EcoTrack", async () => {
+    const { orderId, booking } = await queuedBooking("ecotrack");
+    const outbox = await db.outboxIntent.findUniqueOrThrow({
+      where: { effectKey: booking.result.effectKey },
+    });
+    const binding = {
+      kind: "outbox-intent" as const,
+      recordKey: outbox.effectKey,
+      recordType: outbox.effectType,
+      commandId: outbox.commandId,
+    };
+    const envelopeKey = await getBusinessEnvelopeKey(context);
+    const payload = openBusinessPayloadWithKey<Record<string, unknown>>(
+      outbox.payloadJson,
+      binding,
+      envelopeKey,
+    );
+    await db.outboxIntent.update({
+      where: { id: outbox.id },
+      data: {
+        payloadJson: sealBusinessPayloadWithKey(
+          { ...payload, provider: "noest" },
+          binding,
+          envelopeKey,
+        ),
+      },
+    });
+    await db.delivery.update({
+      where: { id: booking.result.deliveryId },
+      data: { provider: "noest" },
+    });
+
+    await expect(
+      drainDueCourierBookings(context, 1, async (provider) => {
+        expect(provider).toBe("ecotrack");
+        return { success: true, trackingId: "ECO-LEGACY-QUEUED", cost: 550 };
+      }),
+    ).resolves.toBe(1);
+
+    expect(await getCanonicalCourierPosition(context, orderId)).toMatchObject({
+      delivery: {
+        provider: "noest",
+        trackingNumber: "ECO-LEGACY-QUEUED",
+        status: "created",
+      },
+      effect: { state: "succeeded" },
+    });
+    expect(
+      await db.canonicalDeliveryEvent.findFirst({
+        where: {
+          deliveryId: booking.result.deliveryId,
+          eventType: "courier_booking_created",
+        },
+      }),
+    ).toMatchObject({ provider: "ecotrack" });
+  });
+
   it("synchronizes a historical noest row through canonical EcoTrack authority", async () => {
     const { orderId, booking } = await queuedBooking("ecotrack");
     await drainDueCourierBookings(context, 1, async () => ({
@@ -508,5 +570,68 @@ describe("canonical courier booking and tracking", () => {
         },
       }),
     ).toMatchObject({ provider: "ecotrack" });
+  });
+
+  it("deduplicates terminal tracking already processed under the NOEST identity", async () => {
+    const { orderId, booking } = await queuedBooking("ecotrack");
+    await drainDueCourierBookings(context, 1, async () => ({
+      success: true,
+      trackingId: "ECO-HISTORICAL-DELIVERED",
+      cost: 550,
+    }));
+    const terminalEvent = {
+      status: "delivered" as const,
+      timestamp: "2026-08-13T11:00:00.000Z",
+      details: "EcoTrack delivered",
+    };
+    const fetchTracking: CourierTrackingFetcher = async (_provider, trackingNumber) => ({
+      trackingId: trackingNumber,
+      status: "delivered",
+      events: [terminalEvent],
+      deliveryCompany: "EcoTrack Pro",
+    });
+    await synchronizeCanonicalCourierTracking(context, orderId, fetchTracking);
+
+    const stableId = (provider: string) =>
+      createHash("sha256")
+        .update(
+          JSON.stringify({
+            provider,
+            trackingNumber: "ECO-HISTORICAL-DELIVERED",
+            status: terminalEvent.status,
+            timestamp: terminalEvent.timestamp,
+            location: null,
+            details: terminalEvent.details,
+          }),
+        )
+        .digest("hex");
+    const migrated = await db.canonicalDeliveryEvent.updateMany({
+      where: {
+        deliveryId: booking.result.deliveryId,
+        provider: "ecotrack",
+        providerEventId: stableId("ecotrack"),
+      },
+      data: {
+        provider: "noest",
+        providerEventId: stableId("noest"),
+      },
+    });
+    expect(migrated.count).toBe(1);
+    await db.delivery.update({
+      where: { id: booking.result.deliveryId },
+      data: { provider: "noest" },
+    });
+
+    await expect(
+      synchronizeCanonicalCourierTracking(context, orderId, fetchTracking),
+    ).resolves.toMatchObject({
+      position: { delivery: { provider: "noest", status: "delivered" } },
+      events: [],
+    });
+    expect(
+      await db.financialMovement.count({
+        where: { orderId, movementType: "cod_receivable_created" },
+      }),
+    ).toBe(1);
   });
 });

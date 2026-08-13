@@ -60,10 +60,14 @@ const LEASE_MS = 120_000;
 const RETRY_DELAYS_MS = [15_000, 60_000, 300_000, 1_800_000] as const;
 
 const providerSchema = z.enum(DELIVERY_PROVIDERS);
+const storedBookingProviderSchema = z.union([
+  providerSchema,
+  z.literal("noest"),
+]);
 const bookingPayloadSchema = z.object({
   deliveryId: z.string().trim().min(1),
   orderId: z.string().trim().min(1),
-  provider: providerSchema,
+  provider: storedBookingProviderSchema,
   request: z.object({
     orderId: z.string(),
     orderNumber: z.string(),
@@ -87,6 +91,16 @@ const bookingPayloadSchema = z.object({
     isExchange: z.boolean().optional(),
   }),
 });
+
+type BookingPayload = Omit<
+  z.infer<typeof bookingPayloadSchema>,
+  "provider"
+> & {
+  /** Canonical adapter/capability identity used for every new provider effect. */
+  provider: DeliveryProvider;
+  /** Immutable identity that was persisted with the delivery/outbox request. */
+  storedProvider: string;
+};
 
 const trackingEventSchema = z.object({
   deliveryId: z.string().trim().min(1),
@@ -353,9 +367,9 @@ async function latestBookingOutbox(
 async function openBookingPayload(
   context: ServiceContext,
   row: BookingOutboxRow,
-): Promise<z.infer<typeof bookingPayloadSchema>> {
+): Promise<BookingPayload> {
   const envelopeKey = await getBusinessEnvelopeKey(context);
-  return bookingPayloadSchema.parse(
+  const payload = bookingPayloadSchema.parse(
     openBusinessPayloadWithKey(
       row.payloadJson,
       {
@@ -367,6 +381,18 @@ async function openBookingPayload(
       envelopeKey,
     ),
   );
+  const provider = normalizeDeliveryProvider(payload.provider);
+  if (!provider) {
+    throw new ValidationError(
+      "Queued courier provider is no longer supported",
+      "provider",
+    );
+  }
+  return {
+    ...payload,
+    provider,
+    storedProvider: payload.provider,
+  };
 }
 
 async function recoverExpiredBookingLeases(
@@ -498,7 +524,7 @@ async function claimBookingEffect(
 async function knownBookingFailure(
   context: ServiceContext,
   row: BookingOutboxRow,
-  payload: z.infer<typeof bookingPayloadSchema>,
+  payload: BookingPayload,
   errorCode: string,
 ): Promise<void> {
   const exhausted = row.attemptCount >= MAX_BOOKING_ATTEMPTS;
@@ -540,7 +566,7 @@ async function knownBookingFailure(
 async function ambiguousBookingFailure(
   context: ServiceContext,
   row: BookingOutboxRow,
-  payload: z.infer<typeof bookingPayloadSchema>,
+  payload: BookingPayload,
   errorCode: string,
 ): Promise<void> {
   await context.prisma.$transaction(async (tx) => {
@@ -570,7 +596,7 @@ async function ambiguousBookingFailure(
 async function commitBookingReceipt(
   context: ServiceContext,
   row: BookingOutboxRow,
-  payload: z.infer<typeof bookingPayloadSchema>,
+  payload: BookingPayload,
   receipt: ShipmentResult,
 ): Promise<void> {
   const trackingNumber = receipt.trackingId.trim();
@@ -627,7 +653,7 @@ async function commitBookingReceipt(
       const deliveryUpdated = await tx.delivery.updateMany({
         where: {
           id: delivery.id,
-          provider: payload.provider,
+          provider: payload.storedProvider,
           trackingNumber: delivery.trackingNumber,
           deletedAt: null,
         },
@@ -1204,12 +1230,18 @@ export async function synchronizeCanonicalCourierTracking(
   const outcomes: Array<Record<string, unknown>> = [];
   for (const event of events) {
     const eventId = stableEventId(provider, delivery.trackingNumber, event);
-    const existingEvent = await context.prisma.canonicalDeliveryEvent.findUnique({
+    const legacyEventId =
+      storedProvider === provider
+        ? null
+        : stableEventId(storedProvider, delivery.trackingNumber, event);
+    const existingEvent = await context.prisma.canonicalDeliveryEvent.findFirst({
       where: {
-        provider_providerEventId: {
-          provider,
-          providerEventId: eventId,
-        },
+        OR: [
+          { provider, providerEventId: eventId },
+          ...(legacyEventId
+            ? [{ provider: storedProvider, providerEventId: legacyEventId }]
+            : []),
+        ],
       },
       select: { orderId: true, deliveryId: true },
     });
