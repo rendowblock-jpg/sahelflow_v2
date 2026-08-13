@@ -2,15 +2,12 @@
 
 > **Authority:** merged protected source and named evidence only; Founder observations are labeled installed findings, not merged implementation
 > **Last assessed:** 2026-08-13
-> **Protected application-changing baseline:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
-> **Latest application-changing protected merge:** PR #245 — Internal.15 FD-032 Founder-only offline checkpoint
+> **Protected main release checkpoint:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
+> **Latest application-changing protected merge:** PR #244 — Orders + confirmation operational workspace
+> **Application-changing protected baseline:** `856f58126327797b467938390586a04f185e70f6`
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
+> **Published release:** `1.0.0-internal.14` — source `2d60e2e74109b6e03626a5ccdff727c029a34591`, signed run `31388777098`
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Shared frontend foundation:** PR #236 / `04adb20fb5846499039eda61a9b765deb9c622e6`
-> **Inbox route adoption:** PR #237 / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`
-> **AI Agents route adoption:** PR #240 / `598e2a0dc0352227431614cf1527672aa78ec015`
-> **Settings route adoption:** PR #242 / `6e4477198f33344cd48c9230b32ff726079cd64d`
-> **Orders + confirmation route adoption:** PR #244 / `856f58126327797b467938390586a04f185e70f6`
 > **Next application milestone:** Internal.16 complete-product candidate under FD-033
 > **Installed discovery:** CLOSED 2026-08-13; 17 Founder-installed P1 inputs frozen
 > **Retained evidence:** #221, #226, #230
@@ -19,7 +16,7 @@ Protected `main` remains source authority. This documentation branch records Fou
 
 ## Executive truth
 
-SahelFlow retains a strong protected Windows/local-first engine across Golden COD, identity, licensing, providers, AI/automations, protected data and native recovery. PRs #236/#237/#240/#242/#244 materially improved frontend roots and selected workspaces; PR #245 merged the exact Internal.15 Founder-only offline checkpoint.
+SahelFlow retains a strong protected Windows/local-first engine across Golden COD, identity, licensing, providers, AI/automations, protected data and native recovery. PRs #236/#237/#240/#242/#244 materially improved frontend roots and selected workspaces; PR #245 merged the exact Internal.15 Founder-only offline release checkpoint.
 
 The completed installed Internal.15 Founder inspection confirms that the product is still below the final class-AAA/user-ready target. The remaining problem is systemic rather than one page: Arabic/RTL geometry, responsive/layout composition, localization/cache consistency, theme transitions, chart/data-visualization quality, Inbox/AI workflow quality, universal search, Gemini setup, navigation information architecture, startup performance and remaining Phase 5/6/7/8 implementation/certification.
 
@@ -69,6 +66,22 @@ These 17 installed observations are frozen Founder acceptance inputs. The implem
 
 These are reconnaissance clues, not a patch-only file list.
 
+## Protected route/workspace evidence continuity
+
+### PR #237 — Inbox operational workspace protected
+
+Final exact head `8e9d5aa365f0c5873909c1c8517f88519d743b9d` protects the source/browser Inbox outcome before merge.
+
+### PR #240 — AI Agents operational workspace protected
+
+Final exact head `6355cc4c797a597af52c90decfe7727e405749be` protects the AI source/browser outcome.
+
+### PR #242 — Settings operational workspace protected
+
+Final exact head `e749b0af05741ee45b16c349750d44092bd3beb9` passed CI/experience/completion runs `31546488691`, `31546488465`, `31546488422` before protected merge.
+
+PR #244 remains the latest route-level application-changing protected merge at `856f58126327797b467938390586a04f185e70f6`; PR #245 is the later FD-032 release/checkpoint merge. Internal.14 publication evidence remains source `2d60e2e74109b6e03626a5ccdff727c029a34591`, **Published release:** `1.0.0-internal.14`, signed run `31388777098`.
+
 ## Historical continuity anchors
 
 ### Phase 5 merged result and evidence
@@ -90,6 +103,16 @@ FD-031 remains a one-time Internal.14 installed-evidence exception. It does not 
 ### FD-032 Founder-only offline checkpoint boundary
 
 FD-032 remains exact to Internal.15: Founder/internal-lab offline checkpoint, no customer-online trial authority, and no carry-forward exception into Internal.16. Issue #230 remains the customer-online/public-trial gate.
+
+## Post-Internal.15 route-level frontier
+
+The installed Internal.15 inspection is closed, but no Internal.16 application implementation has been written yet. Therefore **Phase 8 implementation has not begun** as of this handoff; FD-033 authorizes it to begin in the next completion wave after source reconnaissance/Problem Register freeze.
+
+Retained exact issue status entering Internal.16:
+
+- **#221 — OPEN** — installed Founder visual/accessibility reconciliation;
+- **#226 — OPEN** — installed T470/floor/eight-hour performance/reliability evidence;
+- **#230 — OPEN P1** — customer-online/public-trial owned-domain/network certification.
 
 SahelFlow is **not yet a commercially certified Stable release**. Stable still requires the applicable Phase 9 external/representative evidence and explicit Founder promotion.
 
