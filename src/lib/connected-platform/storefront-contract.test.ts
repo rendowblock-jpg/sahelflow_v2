@@ -1,39 +1,69 @@
 import { describe, expect, it } from "vitest";
 import { parseCheckoutInput } from "../../../control-plane/storefront/checkout-input";
 import { parseReleaseInput } from "../../../control-plane/storefront/release-input";
+import { createDefaultStorefrontTheme } from "../storefront/theme-default";
+import {
+  createStorefrontReleaseInput,
+  parseStorefrontReleaseItemKey,
+} from "../storefront/release-artifact";
+
+function releaseInput() {
+  const theme = createDefaultStorefrontTheme("sahara");
+  theme.builder.shippingRules = [{ wilayaCode: "16", deliveryMode: "home", feeDzd: 500 }];
+  return createStorefrontReleaseInput({
+    workspaceId: "0123456789abcdef0123456789abcdef",
+    releaseId: "release_12345678",
+    parentReleaseId: null,
+    locale: "ar",
+    draft: {
+      name: "Sahel store",
+      slug: "sahel-store",
+      description: "",
+      theme,
+      selectedProductIds: ["product_12345678"],
+      isActive: true,
+    },
+    products: [{
+      id: "product_12345678",
+      name: "Product",
+      sku: "SKU-1",
+      images: null,
+      price: 2_500,
+      stock: 10,
+      productVariants: [],
+    }],
+  });
+}
 
 describe("hosted storefront contract", () => {
-  it("accepts a release only when catalog and delegated allocation match", () => {
-    const parsed = parseReleaseInput({
-      workspaceId: "0123456789abcdef0123456789abcdef",
-      releaseId: "release_12345678",
-      parentReleaseId: null,
-      templateId: "sahara",
-      locale: "ar",
-      publicArtifact: {
-        storeName: "متجر الساحل",
-        products: [{ itemKey: "sku:blue", name: "منتج" }],
-      },
-      allocations: [{ itemKey: "sku:blue", unitPriceDzd: 2500, quantity: 10 }],
-      shippingRules: [{ wilayaCode: "16", deliveryMode: "home", feeDzd: 500 }],
+  it("accepts a V2 release only when catalog and delegated allocation match", () => {
+    const parsed = parseReleaseInput(releaseInput());
+    expect(parsed?.allocations[0]).toEqual({
+      itemKey: "product_12345678:base",
+      unitPriceDzd: 2_500,
+      quantity: 10,
     });
-    expect(parsed?.allocations[0]).toEqual({ itemKey: "sku:blue", unitPriceDzd: 2500, quantity: 10 });
+    expect(parsed?.publicArtifact.schemaVersion).toBe(2);
+    expect(parsed?.publicArtifact.theme.builder).not.toHaveProperty("domain");
+    expect(parsed?.publicArtifact.theme.builder).not.toHaveProperty("shippingRules");
   });
 
   it("rejects release artifacts whose visible catalog exceeds delegated allocation", () => {
-    expect(parseReleaseInput({
-      workspaceId: "0123456789abcdef0123456789abcdef",
-      releaseId: "release_12345678",
-      parentReleaseId: null,
-      templateId: "atlas",
-      locale: "fr",
-      publicArtifact: {
-        storeName: "Sahel",
-        products: [{ itemKey: "sku:a", name: "A" }, { itemKey: "sku:b", name: "B" }],
-      },
-      allocations: [{ itemKey: "sku:a", unitPriceDzd: 1000, quantity: 2 }],
-      shippingRules: [{ wilayaCode: "16", deliveryMode: "desk", feeDzd: 300 }],
-    })).toBeNull();
+    const input = releaseInput();
+    input.allocations = [];
+    expect(parseReleaseInput(input)).toBeNull();
+  });
+
+  it("maps hosted item keys back to canonical product and variant authority", () => {
+    expect(parseStorefrontReleaseItemKey("product_12345678:base")).toEqual({
+      productId: "product_12345678",
+      variantId: null,
+    });
+    expect(parseStorefrontReleaseItemKey("product_12345678:variant_12345678")).toEqual({
+      productId: "product_12345678",
+      variantId: "variant_12345678",
+    });
+    expect(parseStorefrontReleaseItemKey("invalid")).toBeNull();
   });
 
   it("strips customer-supplied pricing from checkout input", () => {

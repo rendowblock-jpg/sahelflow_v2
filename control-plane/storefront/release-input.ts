@@ -40,6 +40,7 @@ export function parseReleaseInput(value: unknown): ParsedReleaseInput | null {
     (templateId !== "sahara" && templateId !== "atlas" && templateId !== "oasis") ||
     (locale !== "ar" && locale !== "fr" && locale !== "en") ||
     !validPublicArtifact(input.publicArtifact) ||
+    input.publicArtifact.theme.template !== templateId ||
     !Array.isArray(input.allocations) ||
     !Array.isArray(input.shippingRules)
   ) return null;
