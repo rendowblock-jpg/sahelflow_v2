@@ -1,13 +1,15 @@
 # SahelFlow 1.0 — Consolidated Founder Decisions
 
-> **Status:** Authoritative Founder-approved register
+> **Status:** Authoritative Founder-approved register through FD-032
 > **Consolidated:** 2026-07-29
+> **Newer exact addendum:** [`FD-033-INTERNAL16-COMPLETION.md`](FD-033-INTERNAL16-COMPLETION.md) governs Internal.16 completion convergence and supersedes only the execution-order/cadence clauses it names.
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
-This register consolidates approved product and execution decisions. Engineering
+This register consolidates approved product and execution decisions through FD-032. Engineering
 mechanisms remain subject to architecture, research, security review, provider
 certification and evidence gates, but engineering may not contradict these
-policies without a new numbered Founder decision.
+policies without a new numbered Founder decision. **FD-033 is a newer numbered
+decision and must be read after this file for Internal.16.**
 
 ---
 
@@ -530,9 +532,6 @@ This decision clarifies how FD-028 is executed. It does not replace the Phase
 
 ### Package, CI and session discipline
 
-- After the current Teams package, PR #195 stops accumulating new phases.
-  Licensing, native multi-shop and later outcomes use short outcome PRs from
-  current protected `main`.
 - Before implementation, every package inventories production consumers, direct
   tests and mocks, data/migration effects, protected fields, UI states, Arabic,
   accessibility, recovery, performance, legacy removal and required evidence.
@@ -635,4 +634,5 @@ This decision records the Founder's explicit 2026-08-13 direction for
 
 A Founder decision can be changed only by a new numbered decision that states
 exactly what it supersedes. Engineering documents, code comments, agents, tests,
-issues and external research cannot silently amend this register.
+issues and external research cannot silently amend this register. For Internal.16,
+read FD-033 immediately after this consolidated register.
