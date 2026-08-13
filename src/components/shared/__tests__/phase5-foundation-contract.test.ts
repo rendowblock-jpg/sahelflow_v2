@@ -13,7 +13,7 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(source).not.toContain("lg:p-2");
   });
 
-  it("commits locale, server copy, document direction and shell geometry as one refreshed tree", () => {
+  it("commits locale, server copy, document direction and shell geometry as one server-confirmed document", () => {
     const routeLayout = read("src/app/(dashboard)/layout.tsx");
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
     const topbar = read("src/components/layout/topbar.tsx");
@@ -26,10 +26,13 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(dashboardLayout).toContain("const { t, locale, dir } = useI18n()");
     expect(dashboardLayout).toContain("serverDir={dir}");
     expect(store).toContain("requestLocale(locale: Locale)");
+    expect(store).toContain("setLocaleCookie(locale)");
     expect(store).toContain("applyDocumentLocale(locale)");
     expect(hook).toContain("requestLocale(newLocale)");
-    expect(hook).toContain("startLocaleTransition(() => {");
-    expect(hook).toContain("router.refresh();");
+    expect(hook).toContain("setPendingLocale(newLocale)");
+    expect(hook).toContain("window.location.reload();");
+    expect(hook).not.toContain("router.refresh();");
+    expect(hook).not.toContain("startLocaleTransition");
     expect(topbar).not.toContain("router.refresh()");
     expect(topbar).toContain("isLocalePending");
     expect(serverLocale).toContain("useLayoutEffect");
