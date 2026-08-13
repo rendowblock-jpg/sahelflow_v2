@@ -235,3 +235,94 @@ The engineering finish line remains a demonstrably complete, buyable, installabl
 PR #245/Internal.15 is allowed to close independently. The Internal.16 application branch begins only from the exact protected post-#245 `main` so that the completion wave does not collide with or invalidate the Internal.15 release checkpoint.
 
 Documentation/governance work may be prepared separately. Once Internal.16 implementation starts, one active application implementation owner remains the default. Review, research, CI, installed testing and commercial work may run concurrently only where they do not create competing writes to shared application authority.
+
+## 13. Installed Internal.15 Founder findings — Part 1
+
+The Founder has begun a real installed Internal.15 inspection before the Internal.16 Problem Register is frozen. These findings are binding inputs to the Internal.16 completion wave. They are additive; Part 1 is not the complete installed finding set.
+
+### SF16-UI-001 — Systemic Arabic/RTL geometry and placement remains incorrect — P1
+
+**Observed installed behavior**
+
+Across the Arabic Dashboard, Orders and Risk workspaces, the shell is physically placed on the right but multiple internal direction semantics still read as LTR. The installed screenshots visibly show wrong-edge navigation treatment, including the selected-route rail/nested hierarchy and icon/text ordering, and the Founder reports the same class of wrong-side placement across additional text, controls and UI elements throughout the application.
+
+This is a systemic Arabic-product parity defect, not a request to add `dir="rtl"` again. Source already attempts `dir="rtl"` and logical `start`/`ms`/`ps` utilities in the shell/sidebar; installed evidence proves that those intentions do not yet produce the required geometry everywhere.
+
+**Internal.16 requirement**
+
+- define one explicit RTL geometry contract for shell, sidebar, topbar, page headers, action groups, filters, tabs, cards, tables, drawers, dialogs, menus, tooltips, charts and mixed-direction content;
+- audit every physical `left`/`right`, absolute edge, flex ordering, transform, icon, chevron/arrow and nested-rail assumption in production UI;
+- leading semantic icons, selection indicators, nesting rails, actions and metadata must occupy the correct inline-start/inline-end side for the product meaning rather than being mechanically mirrored;
+- sidebar expanded/collapsed states, utility footer, selected state and nested workflows must be equivalent in RTL and LTR;
+- page title/action zones and table/action columns must follow the same semantic direction rules;
+- Latin identifiers, customer names, phone numbers, order/tracking IDs, currency and mixed Arabic/Latin content use appropriate bidi isolation so mirroring does not scramble values;
+- AR ↔ FR/EN runtime switching must atomically update copy, document direction and component geometry with no stale side, restart or delayed shell repair;
+- solve shared roots first; route-local overrides are accepted only for genuine semantic exceptions.
+
+**Acceptance evidence**
+
+- representative Dashboard, Orders, Risk, Customers, Products, Delivery, Accounting, Analytics, Inbox, AI and Settings journeys at 1366×768;
+- Arabic plus LTR comparison at 100%, 150% and 200% zoom/reflow;
+- expanded/collapsed sidebar and keyboard traversal;
+- directional icon/selected-rail/nested-rail assertions and installed screenshots;
+- locale switching in both directions without stale placement;
+- zero actionable P0/P1 RTL geometry residue on the frozen Internal.16 candidate.
+
+### SF16-UI-002 — Risk Engine KPI composition is overloaded and visually unbalanced — P1 experience blocker
+
+**Observed installed behavior**
+
+The Risk Engine overview presents six KPI/stat cards with equal visual weight. At the installed desktop width this produces a heavy first row and an orphaned second row with unused space. Average risk, confirmation rate, return rate, high-risk orders, blacklist count and potential savings therefore compete for the same hierarchy even though they do not have the same decision importance.
+
+The information itself remains useful; the requirement is not to delete metrics arbitrarily. Internal.16 must redesign the decision hierarchy so the seller can identify the current risk posture and the next action at a glance.
+
+**Internal.16 requirement**
+
+- distinguish primary decision KPIs from secondary supporting indicators instead of rendering every value as the same card;
+- keep the highest-value risk posture/workload metrics in one balanced primary composition and move secondary evidence into a compact supporting strip, contextual panel or other deliberate hierarchy;
+- eliminate orphan card rows, unexplained whitespace and viewport-dependent imbalance at the declared desktop floor;
+- high-risk workload and blacklist information should drill into the relevant operational view when product authority supports it;
+- trends must state whether movement is good/bad and over which period rather than relying on decorative arrows;
+- metric definitions and underlying risk authority remain unchanged unless a separate correctness defect is proven;
+- RTL ordering must be intentionally designed, not obtained by reversing an LTR card list blindly.
+
+**Acceptance evidence**
+
+At 1366×768, 100–200% zoom and AR/FR/EN, a seller can identify current average risk, adverse trend, high-risk workload and the most relevant supporting indicators without scanning six equal-weight boxes. No primary/secondary layout leaves a visually orphaned partial row.
+
+### SF16-UI-003 — Shared KPI/stat cards lack deliberate pointer/focus feedback — P1 cross-product experience blocker
+
+**Observed installed behavior**
+
+Across Dashboard, Orders, Risk and other metric surfaces, pointing at a stat card produces little or no visual response. The shared `StatCard` currently renders a static bordered `section`; it has no card-level hover/focus state, and the icon remains in the same muted treatment. This makes the product feel inert and prevents actionable metric cards from communicating affordance.
+
+The Founder's desired behavior is a premium, obvious hover emphasis with a colored/accented icon. That must be implemented without falsely claiming that every KPI card is selectable or clickable.
+
+**Internal.16 requirement**
+
+- introduce one shared metric-card interaction contract with explicit `passive`, `actionable/drill-down` and true `selected` semantics rather than one ambiguous hover style;
+- passive cards may receive restrained hover emphasis for depth/coherence but keep the default cursor and must not expose fake selection or click affordance;
+- actionable cards must be real links/buttons with pointer cursor, keyboard activation, visible focus, accessible name and equivalent touch behavior;
+- on hover/focus, use theme-aware border/surface/accent/icon-color changes so the card clearly responds; preserve semantic warning/success/risk colors instead of replacing meaning with the current theme accent;
+- do not restore expensive decorative lift/scale animations on hot paths; favor color, border and bounded shadow/surface transitions that remain low-end-safe and reduced-motion-safe;
+- selected state must be reserved for actual persisted/current UI selection and represented semantically, not simulated by hover;
+- apply the same shared behavior to metric surfaces across Dashboard, Orders, Risk, Delivery, Accounting, Analytics and other route families rather than adding page-specific hover CSS.
+
+**Acceptance evidence**
+
+Pointer, keyboard focus, touch and reduced-motion checks prove consistent feedback across all metric-card consumers. Actionable and passive cards are distinguishable without relying on color alone, and icon feedback is visible in all approved light/dark/theme presets.
+
+### SF16-I18N-004 — Arabic DZD formatting leaks French `DA` on Risk savings metric — P1 localization defect
+
+The installed Arabic Risk screenshot displays `DA 2 400` for potential savings while other Arabic monetary values use `دج`. The current canonical formatter supports Arabic correctly, but `formatDZD()` defaults to French when locale is omitted and the Risk page calls it without the active locale.
+
+**Internal.16 requirement**
+
+- no seller-facing money formatter may silently default to another language on a localized route;
+- pass the active locale through the Risk projection and audit all `formatDZD`, `formatDZDShort`, date/relative-date and other locale-sensitive calls for equivalent omissions;
+- mixed numeric/currency content must retain readable bidi ordering in Arabic;
+- central formatting tests cover AR/FR/EN suffixes and representative negative/large values.
+
+**Acceptance evidence**
+
+Arabic renders `دج`, French renders `DA`, English renders `DZD`, with consistent numeral/bidi presentation across Dashboard, Orders, Risk, Accounting, Analytics and exported/printed seller-facing UI where the same formatter contract applies.
