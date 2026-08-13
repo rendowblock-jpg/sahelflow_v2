@@ -90,6 +90,30 @@ function providerError(
   );
 }
 
+/** Convert an error delivered inside a successful Gemini SSE response. */
+export function geminiProviderErrorFromStream(
+  error: NonNullable<GeminiErrorBody["error"]>,
+): GeminiProviderError {
+  const statusByName: Record<string, number> = {
+    INVALID_ARGUMENT: 400,
+    UNAUTHENTICATED: 401,
+    PERMISSION_DENIED: 403,
+    NOT_FOUND: 404,
+    RESOURCE_EXHAUSTED: 429,
+    INTERNAL: 500,
+    UNAVAILABLE: 503,
+    DEADLINE_EXCEEDED: 504,
+  };
+  const numericCode = error.code;
+  const status =
+    typeof numericCode === "number" &&
+    Number.isSafeInteger(numericCode) &&
+    numericCode >= 400
+      ? numericCode
+      : statusByName[error.status ?? ""] ?? 500;
+  return providerError(status, { error });
+}
+
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }

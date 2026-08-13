@@ -60,7 +60,14 @@ describe("extractWithGemini", () => {
     const body = JSON.parse(String((init as RequestInit).body)) as {
       generationConfig: Record<string, unknown>;
     };
-    expect(body.generationConfig).toHaveProperty("responseFormat");
+    expect(body.generationConfig).toMatchObject({
+      responseMimeType: "application/json",
+      responseJsonSchema: expect.objectContaining({
+        type: "object",
+        required: ["items"],
+      }),
+    });
+    expect(body.generationConfig).not.toHaveProperty("responseFormat");
     expect(body.generationConfig).not.toHaveProperty("temperature");
   });
 

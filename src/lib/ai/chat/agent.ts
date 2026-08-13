@@ -6,6 +6,8 @@ import {
 } from "@/lib/ai/actions/proposal-runtime";
 import {
   geminiErrorMessage,
+  geminiProviderErrorFromStream,
+  type GeminiProviderError,
   requestGemini,
 } from "@/lib/ai/gemini/provider";
 import { redactToolResult } from "@/lib/ai/redact";
@@ -54,7 +56,7 @@ interface GeminiResponse {
       }>;
     };
   }>;
-  error?: { message?: string };
+  error?: { code?: number; message?: string; status?: string };
 }
 
 export interface AgentMessage {
@@ -284,6 +286,7 @@ interface ParsedStream {
   fullText: string;
   functionCall: GeminiFunctionCall | null;
   cancelled: boolean;
+  providerError: GeminiProviderError | null;
 }
 
 async function* parseStream(
@@ -299,7 +302,12 @@ async function* parseStream(
     while (true) {
       if (signal?.aborted) {
         await reader.cancel();
-        return { fullText, functionCall: null, cancelled: true };
+        return {
+          fullText,
+          functionCall: null,
+          cancelled: true,
+          providerError: null,
+        };
       }
       const { done, value } = await reader.read();
       if (done) break;
@@ -318,6 +326,14 @@ async function* parseStream(
           } catch {
             continue;
           }
+          if (chunk.error) {
+            return {
+              fullText,
+              functionCall: null,
+              cancelled: false,
+              providerError: geminiProviderErrorFromStream(chunk.error),
+            };
+          }
           const parts = chunk.candidates?.[0]?.content?.parts ?? [];
           for (const part of parts) {
             if (part.text) {
@@ -332,7 +348,12 @@ async function* parseStream(
   } finally {
     reader.releaseLock();
   }
-  return { fullText, functionCall, cancelled: false };
+  return {
+    fullText,
+    functionCall,
+    cancelled: false,
+    providerError: null,
+  };
 }
 
 export async function* runAgentStream(
@@ -384,8 +405,15 @@ export async function* runAgentStream(
       if (parsed.done) break;
       yield parsed.value;
     }
-    const { fullText, functionCall, cancelled } = parsed.value;
+    const { fullText, functionCall, cancelled, providerError } = parsed.value;
     if (cancelled) return;
+    if (providerError) {
+      yield {
+        type: "error",
+        message: geminiErrorMessage(providerError, locale ?? "fr"),
+      };
+      return;
+    }
 
     if (functionCall) {
       yield { type: "tool_call", name: functionCall.name, args: functionCall.args };

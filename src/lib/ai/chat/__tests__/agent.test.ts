@@ -336,6 +336,28 @@ describe("runAgentStream — tool calls", () => {
 });
 
 describe("runAgentStream — error events", () => {
+  it("does not complete a partial response when Gemini emits an SSE error", async () => {
+    vi.mocked(getSecret).mockResolvedValue("test-key");
+    vi.mocked(fetch).mockResolvedValue(
+      sseResponse([
+        { candidates: [{ content: { parts: [{ text: "Partial" }] } }] },
+        {
+          error: {
+            code: 429,
+            status: "RESOURCE_EXHAUSTED",
+            message: "provider prose must not reach the seller",
+          },
+        },
+      ]),
+    );
+
+    const events = await collectStream([], "Salut");
+
+    expect(events.map((event) => event.type)).toEqual(["text_delta", "error"]);
+    expect(expectEvent(events, "error").message).toMatch(/quota Gemini/i);
+    expect(events).not.toContainEqual(expect.objectContaining({ type: "done" }));
+  });
+
   it("yields a stable network error when the supported models cannot connect", async () => {
     vi.mocked(getSecret).mockResolvedValue("test-key");
     vi.useFakeTimers();

@@ -67,7 +67,8 @@ export async function extractWithGemini(
         contents: [{ role: "user", parts: [{ text: EXTRACTION_USER_PROMPT(input.body) }] }],
         generationConfig: {
           maxOutputTokens: 1024,
-          responseFormat: { text: { mimeType: "application/json", schema: responseSchema } },
+          responseMimeType: "application/json",
+          responseJsonSchema: responseSchema,
         },
       },
     });
