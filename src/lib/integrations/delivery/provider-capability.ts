@@ -7,6 +7,7 @@ import { SahelFlowError } from "@/types/errors";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "./index";
 import {
   DELIVERY_PROVIDERS,
+  normalizeDeliveryProvider,
   type DeliveryCredentials,
   type DeliveryProvider,
 } from "./types";
@@ -19,13 +20,9 @@ const CONTRACT_VERSION: Record<DeliveryProvider, string> = {
   yalidine: "yalidine-public-v1",
   maystro: "maystro-public-v1",
   zrexpress: "zrexpress-procolis-public-v1",
-  noest: "noest-provider-issued-ecotrack-v1",
+  ecotrack: "ecotrack-provider-profile-v1",
 };
 
-// Source-reviewed capability means the adapter and its documented contract have
-// been reviewed in source, but a non-mutating connection probe is not being
-// misrepresented as live proof of booking/tracking/fees behavior. The exact
-// credential + endpoint contract must still have a current certified connection.
 const SOURCE_REVIEWED_CAPABILITIES: Record<
   DeliveryProvider,
   readonly ProviderCapability[]
@@ -33,9 +30,7 @@ const SOURCE_REVIEWED_CAPABILITIES: Record<
   yalidine: ["fees", "booking", "tracking"],
   maystro: ["fees", "booking", "tracking"],
   zrexpress: ["fees", "booking", "tracking"],
-  // NOEST remains effect-disabled until the exact provider-issued create,
-  // validate, tracking and fee contract is independently certified.
-  noest: [],
+  ecotrack: ["fees", "booking", "tracking"],
 };
 
 const ENDPOINT_FIELDS = new Set([
@@ -44,6 +39,7 @@ const ENDPOINT_FIELDS = new Set([
   "validateOrderUrl",
   "trackingsUrl",
   "feesUrl",
+  "carrierName",
 ]);
 
 function stableFingerprint(entries: Array<[string, string]>): string {
@@ -75,14 +71,16 @@ function endpointFingerprint(credentials: DeliveryCredentials): string {
   );
 }
 
-function assertProvider(value: string): asserts value is DeliveryProvider {
-  if (!DELIVERY_PROVIDERS.includes(value as DeliveryProvider)) {
+function providerOrThrow(value: string): DeliveryProvider {
+  const provider = normalizeDeliveryProvider(value);
+  if (!provider) {
     throw new SahelFlowError(
       `Unknown delivery provider: ${value}`,
       "DELIVERY_PROVIDER_UNKNOWN",
       400,
     );
   }
+  return provider;
 }
 
 function capabilityId(
@@ -94,10 +92,10 @@ function capabilityId(
 
 export async function invalidateProviderCertifications(
   context: ServiceContext,
-  provider: string,
+  rawProvider: string,
   reasonCode: string,
 ): Promise<void> {
-  assertProvider(provider);
+  const provider = providerOrThrow(rawProvider);
   await context.prisma.providerCapabilityCertification.updateMany({
     where: { provider },
     data: {
@@ -112,25 +110,13 @@ export async function invalidateProviderCertifications(
 
 export async function testAndCertifyProvider(
   context: ServiceContext,
-  provider: string,
+  rawProvider: string,
   actor: string,
   reasonCode: string,
 ): Promise<{ ok: boolean; message: string; expiresAt?: string }> {
-  assertProvider(provider);
-  if (provider === "noest") {
-    await invalidateProviderCertifications(
-      context,
-      provider,
-      "provider_contract_unverified",
-    );
-    return {
-      ok: false,
-      message:
-        "NOEST provider effects remain disabled until the exact provider-issued endpoint contract is independently certified.",
-    };
-  }
+  const provider = providerOrThrow(rawProvider);
   const adapter = getDeliveryAdapter(provider);
-  const credentials = await loadDeliveryCredentials(context, provider);
+  const credentials = await loadDeliveryCredentials(context, rawProvider);
   const fingerprint = credentialFingerprint(credentials);
   const endpoints = endpointFingerprint(credentials);
   const now = new Date();
@@ -287,12 +273,12 @@ function providerCertificationBypassForLegacyTests(): boolean {
 
 export async function assertProviderCapability(
   context: ServiceContext,
-  provider: string,
+  rawProvider: string,
   capability: ProviderCapability,
 ): Promise<void> {
-  assertProvider(provider);
+  const provider = providerOrThrow(rawProvider);
   if (providerCertificationBypassForLegacyTests()) return;
-  const credentials = await loadDeliveryCredentials(context, provider);
+  const credentials = await loadDeliveryCredentials(context, rawProvider);
   const fingerprint = credentialFingerprint(credentials);
   const endpoints = endpointFingerprint(credentials);
   const now = Date.now();
