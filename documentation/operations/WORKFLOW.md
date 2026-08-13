@@ -113,7 +113,22 @@ The frozen Internal.16 candidate must cover exact source/version/docs, type/lint
 
 Issue #230 remains the customer-online/public-trial boundary. Provider hostnames/mocks do not satisfy owned-domain/network proof. External provider/legal/security/privacy/representative-beta truth remains distinct from internal evidence. Stable requires applicable Phase 9 evidence and explicit Founder promotion.
 
-## 9. Session handoff rule
+## 9. Historical workflow continuity vocabulary
+
+The Internal.16 cadence supersedes repeated micro-release loops but preserves the durable workflow concepts that earlier phases and audit authority depend on:
+
+- **one active implementation agent; audit-first; batch remediation; tiered CI** remains the anti-conflict operating model;
+- **Complete phase/package audit** is now the exact-source whole-product reconnaissance for this convergence cycle;
+- the **Phase Problem Register** maps to the combined frozen source+installed Internal.16 Problem Register;
+- **Level 1 — Task Gate** remains the targeted cheap validation used while implementation is moving;
+- **Frozen review and batch repair** maps to the exact-head adversarial review plus one consolidated repair batch;
+- **Level 2 — Phase Checkpoint** remains applicable when a coherent phase-level proof is required;
+- **Level 3 — Major Full Checkpoint** remains the installed/release-grade proof boundary;
+- the **Whole-product AAA frontend program** remains the governing experience-quality objective even though FD-033 converges its remaining work with later platform implementation.
+
+These names are retained for semantic continuity; FD-033 changes when heavy evidence runs, not the integrity of those gates.
+
+## 10. Session handoff rule
 
 The next session starts from merged FD-033/Current State/Roadmap/Working Memory, creates or uses the one Internal.16 application branch, completes exact-source reconnaissance, freezes the combined Problem Register and then implements. It must not spend another session reconstructing Parts 1–3 from chat.
 
