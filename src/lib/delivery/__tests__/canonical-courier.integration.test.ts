@@ -616,18 +616,27 @@ describe("canonical courier booking and tracking", () => {
           }),
         )
         .digest("hex");
-    const migrated = await db.canonicalDeliveryEvent.updateMany({
+    const canonicalTerminal = await db.canonicalDeliveryEvent.findFirstOrThrow({
       where: {
         deliveryId: booking.result.deliveryId,
         provider: "ecotrack",
         providerEventId: stableId("ecotrack"),
       },
-      data: {
-        provider: "noest",
-        providerEventId: stableId("noest"),
-      },
     });
-    expect(migrated.count).toBe(1);
+    // Reconstruct the immutable fact as it exists in an upgraded pre-EcoTrack
+    // shop. Production code must never update append-only delivery events.
+    await db.$transaction(async (tx) => {
+      await tx.canonicalDeliveryEvent.delete({
+        where: { id: canonicalTerminal.id },
+      });
+      await tx.canonicalDeliveryEvent.create({
+        data: {
+          ...canonicalTerminal,
+          provider: "noest",
+          providerEventId: stableId("noest"),
+        },
+      });
+    });
     await db.delivery.update({
       where: { id: booking.result.deliveryId },
       data: { provider: "noest" },
