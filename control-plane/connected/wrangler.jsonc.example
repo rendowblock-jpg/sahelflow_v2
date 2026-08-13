@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sahelflow-connected",
+  "main": "worker.ts",
+  "compatibility_date": "2026-08-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sahelflow-connected",
+      "database_id": "replace-with-production-d1-id"
+    }
+  ],
+  "vars": {
+    "PRODUCT_MAJOR": "1",
+    "SF_LICENSE_TRIAL_PUBLIC_KEYS": "{\"trial-2026-01\":\"replace-with-base64-raw-ed25519-public-key\"}",
+    "SF_LICENSE_PERMANENT_PUBLIC_KEYS": "{\"permanent-2026-01\":\"replace-with-base64-raw-ed25519-public-key\"}"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+
+  // Production must attach a verified SahelFlow-owned custom domain. Do not
+  // treat workers.dev/provider hostnames as issue #230 customer-online evidence.
+  // No seller operational plaintext or private encryption/signing key belongs
+  // in Wrangler vars, secrets, D1 or logs.
+}
