@@ -69,6 +69,9 @@ const VALIDATORS: Record<string, z.ZodType> = {
   MAYSTRO_API_BASE: z.string().url(),
   ZREXPRESS_API_BASE: z.string().url(),
   NEXT_PUBLIC_CRON_SECRET: z.string().min(1),
+  SF_CONNECTED_CONTROL_ORIGIN: z.string().url(),
+  SF_CONNECTED_STOREFRONT_ORIGIN: z.string().url(),
+  SF_CONNECTED_BACKUP_ORIGIN: z.string().url(),
 };
 
 function validateEnv(): void {
@@ -137,6 +140,12 @@ export const env = {
   // the in-app "Test Now" button; production cron jobs use the
   // server-only CRON_SECRET instead.
   publicCronSecret: optional("NEXT_PUBLIC_CRON_SECRET", ""),
+
+  // ── Connected platform ───────────────────────────────────────────────────
+  /** Public service origins; bearer authorities remain encrypted per shop. */
+  connectedControlOrigin: optional("SF_CONNECTED_CONTROL_ORIGIN"),
+  connectedStorefrontOrigin: optional("SF_CONNECTED_STOREFRONT_ORIGIN"),
+  connectedBackupOrigin: optional("SF_CONNECTED_BACKUP_ORIGIN"),
 
   // ── WhatsApp sidecar ──────────────────────────────────────────────────
   /** WhatsApp sidecar base URL (Baileys, default :3001) */

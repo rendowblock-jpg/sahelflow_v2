@@ -40,9 +40,19 @@ export async function createStorefront(
       `INSERT INTO storefront
         (storefront_id, workspace_id, shop_id, slug, receipt_encryption_public_key)
        SELECT ?1, ?2, ?3, ?4, ?5
-        WHERE (
+        WHERE EXISTS (
+          SELECT 1 FROM storefront
+           WHERE storefront_id = ?1 AND workspace_id = ?2 AND shop_id = ?3
+             AND receipt_encryption_public_key = ?5
+        ) OR (
           SELECT COUNT(*) FROM storefront WHERE workspace_id = ?2
-        ) < ?6`,
+        ) < ?6
+       ON CONFLICT(storefront_id) DO UPDATE SET
+         slug = excluded.slug,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE storefront.workspace_id = excluded.workspace_id
+         AND storefront.shop_id = excluded.shop_id
+         AND storefront.receipt_encryption_public_key = excluded.receipt_encryption_public_key`,
     )
       .bind(
         storefrontId,
@@ -58,5 +68,5 @@ export async function createStorefront(
   } catch {
     return json({ error: "storefront_conflict" }, 409);
   }
-  return json({ storefrontId, status: "created" }, 201);
+  return json({ storefrontId, status: "ready" }, 201);
 }

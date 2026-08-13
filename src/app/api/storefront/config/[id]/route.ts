@@ -51,6 +51,7 @@ const saveDraftSchema = z.object({
 
 const publishDraftSchema = z.object({
   expectedDraftUpdatedAt: z.string().datetime(),
+  locale: z.enum(["ar", "fr", "en"]).default("ar"),
 }).strict();
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -157,7 +158,11 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
   const before = await storefrontService.getById(context, id);
   if (!before) return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
   try {
-    const config = await storefrontService.publishStudioDraft(context, id, input);
+    const { loadStorefrontRuntime } = await import("@/lib/connected-platform/runtime");
+    const runtime = await loadStorefrontRuntime(context, { createReceiptKeys: true });
+    const config = await storefrontService.publishStudioDraft(context, id, {
+      expectedDraftUpdatedAt: input.expectedDraftUpdatedAt,
+    });
     await logAudit(context, {
       action: "storefront.published",
       entity: "storefront",
@@ -166,7 +171,14 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
       before: before as unknown as Record<string, unknown>,
       after: config as unknown as Record<string, unknown>,
     });
-    return NextResponse.json({ config });
+    const { publishHostedStorefront } = await import("@/lib/connected-platform/storefront-publisher");
+    const hostedRelease = await publishHostedStorefront({
+      ...runtime,
+      context,
+      config,
+      locale: input.locale,
+    });
+    return NextResponse.json({ config, hostedRelease });
   } catch (error) {
     if (error instanceof StorefrontVersionConflictError) {
       const config = await storefrontService.getStudioDraftById(context, id);

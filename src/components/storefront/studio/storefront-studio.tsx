@@ -62,7 +62,7 @@ export function StorefrontStudio({
   config: StorefrontStudioConfig;
   products: StorefrontStudioProduct[];
 }) {
-  const { t, dir } = useI18n();
+  const { t, dir, locale } = useI18n();
   const initialDraft = useMemo(() => createStorefrontStudioDraft(config), [config]);
   const [history, setHistory] = useState(() => createStorefrontStudioHistory(initialDraft));
   const [device, setDevice] = useState<StorefrontStudioDevice>("desktop");
@@ -151,7 +151,10 @@ export function StorefrontStudio({
       const response = await fetch(`/api/storefront/config/${encodeURIComponent(config.id)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expectedDraftUpdatedAt: version }),
+        body: JSON.stringify({
+          expectedDraftUpdatedAt: version,
+          locale: locale.startsWith("fr") ? "fr" : locale.startsWith("en") ? "en" : "ar",
+        }),
       });
       const body = await response.json() as { error?: string; config?: SerializedConfig };
       if (sequence !== requestSequence.current) return;
@@ -170,7 +173,7 @@ export function StorefrontStudio({
       setSaveState("error");
       setMessage(t("storefront.studio.publishFailed"));
     }
-  }, [config.id, dirty, saveState, t, version]);
+  }, [config.id, dirty, locale, saveState, t, version]);
 
   useEffect(() => {
     if (!dirty || conflict || saveState === "saving" || saveState === "error") return;

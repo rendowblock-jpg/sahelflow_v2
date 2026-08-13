@@ -78,6 +78,41 @@ describe("hosted storefront contract", () => {
     expect(source).not.toMatch(/UPDATE\s+storefront\s+SET\s+active_release_id/);
   });
 
+  it("atomically conserves allocation while replacing an active release", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "control-plane/storefront/release-allocation.ts"),
+      "utf8",
+    ).replace(/\r\n?/g, "\n");
+    expect(source).toContain("MIN(?5, COALESCE");
+    expect(source).toContain("SET remaining_quantity = 0");
+    expect(source).toContain("WHERE release_id = ?1 AND remaining_quantity > 0");
+
+    for (const path of ["publish-release.ts", "rollback-release.ts"]) {
+      const publisher = readFileSync(
+        resolve(process.cwd(), "control-plane/storefront", path),
+        "utf8",
+      );
+      expect(publisher).toContain("appendConservedAllocationStatements");
+    }
+  });
+
+  it("publishes Studio releases through the hosted runtime and durably imports receipts", () => {
+    const route = readFileSync(
+      resolve(process.cwd(), "src/app/api/storefront/config/[id]/route.ts"),
+      "utf8",
+    );
+    const worker = readFileSync(
+      resolve(process.cwd(), "src/lib/connected-platform/storefront-receipt-worker.ts"),
+      "utf8",
+    );
+    const instrumentation = readFileSync(resolve(process.cwd(), "src/instrumentation.ts"), "utf8");
+    expect(route).toContain("publishHostedStorefront");
+    expect(route).toContain("loadStorefrontRuntime");
+    expect(worker).toContain("importHostedStorefrontReceipts");
+    expect(worker).toContain("db.setting.upsert");
+    expect(instrumentation).toContain("startStorefrontReceiptWorker");
+  });
+
   it("maps hosted item keys back to canonical product and variant authority", () => {
     expect(parseStorefrontReleaseItemKey("product_12345678:base")).toEqual({
       productId: "product_12345678",

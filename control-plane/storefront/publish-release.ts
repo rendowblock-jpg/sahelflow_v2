@@ -1,4 +1,5 @@
 import { parseReleaseInput } from "./release-input";
+import { appendConservedAllocationStatements } from "./release-allocation";
 import { authorizeDesktop, canonicalJson, json, sha256Hex } from "./shared";
 import type {
   D1Statement,
@@ -50,20 +51,13 @@ export async function publishRelease(
       artifactDigest,
     ),
   ];
-  for (const allocation of input.allocations) {
-    statements.push(
-      environment.DB.prepare(
-        `INSERT INTO storefront_allocation
-          (release_id, item_key, unit_price_dzd, delegated_quantity, remaining_quantity)
-         VALUES (?1, ?2, ?3, ?4, ?4)`,
-      ).bind(
-        input.releaseId,
-        allocation.itemKey,
-        allocation.unitPriceDzd,
-        allocation.quantity,
-      ),
-    );
-  }
+  appendConservedAllocationStatements(
+    environment.DB,
+    statements,
+    input.releaseId,
+    input.parentReleaseId,
+    input.allocations,
+  );
   for (const rule of input.shippingRules) {
     statements.push(
       environment.DB.prepare(

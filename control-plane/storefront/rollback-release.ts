@@ -1,4 +1,5 @@
 import { parseReleaseInput } from "./release-input";
+import { appendConservedAllocationStatements } from "./release-allocation";
 import {
   ID,
   authorizeDesktop,
@@ -129,20 +130,13 @@ export async function rollbackRelease(
       artifactDigest,
     ),
   ];
-  for (const allocation of parsed.allocations) {
-    statements.push(
-      environment.DB.prepare(
-        `INSERT INTO storefront_allocation
-          (release_id, item_key, unit_price_dzd, delegated_quantity, remaining_quantity)
-         VALUES (?1, ?2, ?3, ?4, ?4)`,
-      ).bind(
-        parsed.releaseId,
-        allocation.itemKey,
-        allocation.unitPriceDzd,
-        allocation.quantity,
-      ),
-    );
-  }
+  appendConservedAllocationStatements(
+    environment.DB,
+    statements,
+    parsed.releaseId,
+    parsed.parentReleaseId,
+    parsed.allocations,
+  );
   for (const rule of parsed.shippingRules) {
     statements.push(
       environment.DB.prepare(
