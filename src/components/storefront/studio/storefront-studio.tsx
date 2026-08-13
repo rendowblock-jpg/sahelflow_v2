@@ -250,7 +250,7 @@ export function StorefrontStudio({
             ) : null}
             {panel === "theme" ? <TemplateGallery value={draft.theme.template} onChange={(template) => updateTheme((theme) => switchStorefrontTemplate(theme, template))} /> : null}
             {panel === "products" ? <ProductPicker products={products} selected={draft.selectedProductIds} onChange={updateSelectedProducts} /> : null}
-            {panel === "checkout" ? <p className="text-xs leading-5 text-muted-foreground">{t("storefront.studio.checkoutGuidance")}</p> : null}
+            {panel === "checkout" ? <ShippingRulesPanel draft={draft} commit={commitDraft} /> : null}
             {panel === "seo" ? <SeoPanel draft={draft} commit={commitDraft} /> : null}
           </div>
         </aside>
@@ -273,6 +273,51 @@ export function StorefrontStudio({
           <Inspector draft={draft} selectedType={selectedSection?.type ?? null} commit={commitDraft} />
         </aside>
       </div>
+    </div>
+  );
+}
+
+function ShippingRulesPanel({ draft, commit }: { draft: StorefrontStudioDraft; commit: (draft: StorefrontStudioDraft) => void }) {
+  const { t } = useI18n();
+  const rules = draft.theme.builder.shippingRules;
+  const setRules = (shippingRules: typeof rules) => commit({
+    ...draft,
+    theme: { ...draft.theme, builder: { ...draft.theme.builder, shippingRules } },
+  });
+  function addRule() {
+    for (let code = 1; code <= 69; code += 1) {
+      const wilayaCode = String(code).padStart(2, "0");
+      for (const deliveryMode of ["home", "desk"] as const) {
+        if (!rules.some((rule) => rule.wilayaCode === wilayaCode && rule.deliveryMode === deliveryMode)) {
+          setRules([...rules, { wilayaCode, deliveryMode, feeDzd: 0 }]);
+          return;
+        }
+      }
+    }
+  }
+  return (
+    <div className="space-y-3">
+      <div>
+        <h2 className="text-xs font-semibold">{t("storefront.studio.shippingRules")}</h2>
+        <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{t("storefront.studio.checkoutGuidance")}</p>
+      </div>
+      {rules.length === 0 ? <p className="rounded-lg border border-dashed p-3 text-[11px] text-muted-foreground">{t("storefront.studio.shippingEmpty")}</p> : null}
+      {rules.map((rule, index) => (
+        <div key={`${rule.wilayaCode}:${rule.deliveryMode}:${index}`} className="space-y-2 rounded-lg border p-2">
+          <Field label={t("storefront.studio.wilayaCode")}>
+            <input value={rule.wilayaCode} inputMode="numeric" maxLength={2} onChange={(event) => {
+              const wilayaCode = event.target.value.replace(/\D/g, "").slice(0, 2);
+              setRules(rules.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, wilayaCode } : candidate));
+            }} />
+          </Field>
+          <SelectField label={t("storefront.studio.deliveryMode")} value={rule.deliveryMode} values={["home", "desk"]} onChange={(deliveryMode) => setRules(rules.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, deliveryMode: deliveryMode as "home" | "desk" } : candidate))} />
+          <Field label={t("storefront.studio.deliveryFee")}>
+            <input type="number" min={0} max={100000} step={50} value={rule.feeDzd} onChange={(event) => setRules(rules.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, feeDzd: Math.max(0, Math.min(100000, Number(event.target.value) || 0)) } : candidate))} />
+          </Field>
+          <button type="button" onClick={() => setRules(rules.filter((_, candidateIndex) => candidateIndex !== index))} className="text-[11px] font-medium text-destructive">{t("storefront.studio.removeDeliveryRule")}</button>
+        </div>
+      ))}
+      <button type="button" disabled={rules.length >= 138} onClick={addRule} className="w-full rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-40">{t("storefront.studio.addDeliveryRule")}</button>
     </div>
   );
 }

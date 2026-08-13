@@ -60,6 +60,9 @@ export function createStorefrontReleaseInput(input: Readonly<{
   products: readonly StorefrontReleaseProduct[];
 }>): Record<string, unknown> {
   const draft = storefrontStudioDraftSchema.parse(input.draft);
+  if (draft.theme.builder.shippingRules.length < 1) {
+    throw new Error("Published storefront requires at least one delivery rule");
+  }
   const selected = new Set(draft.selectedProductIds);
   const products = input.products.filter((product) => selected.has(product.id));
   if (products.length !== selected.size) {

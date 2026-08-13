@@ -10,6 +10,7 @@ import { db, shopContext } from "@/lib/db";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
 import { storefrontService } from "@/lib/storefront/service";
 import { dzPhone } from "@/lib/validation";
+import wilayasData from "../../../../../data/wilayas.json";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +93,7 @@ const submitSchema = z.object({
     .min(1)
     .max(100),
   notes: z.string().trim().max(500).optional(),
+  deliveryMode: z.enum(["home", "desk"]).default("home"),
   website: z.string().max(1000).optional(),
   "cf-turnstile-response": z.string().max(2048).optional(),
 });
@@ -170,6 +172,15 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   const sourceOrderId = input.submissionId ?? randomUUID();
+  const wilayaCode = (wilayasData as Array<{ code: number; name: string }>).find(
+    (wilaya) => wilaya.name === input.customer.wilaya,
+  )?.code.toString().padStart(2, "0");
+  const shippingRules = config.theme.builder.shippingRules;
+  const shippingRule = shippingRules.find((rule) =>
+    rule.wilayaCode === wilayaCode && rule.deliveryMode === input.deliveryMode);
+  if (shippingRules.length > 0 && !shippingRule) {
+    return NextResponse.json({ error: "delivery_unavailable" }, { status: 409 });
+  }
   const command = await createCanonicalSourceOrder(
     {
       prisma: db,
@@ -188,7 +199,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       commune: input.customer.commune,
       address: input.customer.address,
       phone: input.customer.phone,
-      deliveryCost: 0,
+      deliveryCost: shippingRule?.feeDzd ?? 0,
+      sourceDetails: { deliveryMode: input.deliveryMode },
       notes: input.notes,
     },
   );

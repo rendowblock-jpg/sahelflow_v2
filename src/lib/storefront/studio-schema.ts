@@ -81,7 +81,12 @@ const storefrontBuilderSchema = z.object({
     deliveryMode: z.enum(["home", "desk"]),
     feeDzd: z.number().int().min(0).max(100_000),
   }).strict()).max(138),
-}).strict();
+}).strict().superRefine((builder, context) => {
+  const keys = builder.shippingRules.map((rule) => `${rule.wilayaCode}:${rule.deliveryMode}`);
+  if (new Set(keys).size !== keys.length) {
+    context.addIssue({ code: "custom", path: ["shippingRules"], message: "Duplicate shipping rule" });
+  }
+});
 
 export const storefrontStudioThemeSchema = z.object({
   schemaVersion: z.literal(2),

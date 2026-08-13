@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Check,
@@ -26,6 +26,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import type { StorefrontConfig } from "@/lib/storefront/service";
 import { createStorefrontStudioDraft } from "@/lib/storefront/studio-draft";
 import { formatDZD } from "@/lib/utils";
+import wilayasData from "../../../data/wilayas.json";
 
 interface StorefrontVariant {
   id: string;
@@ -76,6 +77,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [addedKey, setAddedKey] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartReady, setCartReady] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<SubmitResult | null>(null);
   const [form, setForm] = useState({
@@ -86,6 +88,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     address: "",
     notes: "",
     website: "",
+    deliveryMode: "home" as "home" | "desk",
   });
 
   const draft = useMemo(() => createStorefrontStudioDraft(config), [config]);
@@ -108,6 +111,57 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
   );
 
   const submissionStorageKey = `sf-storefront-submission:${config.slug}`;
+  const cartStorageKey = `sf-storefront-cart:${config.slug}`;
+  const wilayaCode = useMemo(() => (wilayasData as Array<{ code: number; name: string }>).find(
+    (wilaya) => wilaya.name === form.wilaya,
+  )?.code.toString().padStart(2, "0"), [form.wilaya]);
+  const shippingRule = config.theme.builder.shippingRules.find((rule) =>
+    rule.wilayaCode === wilayaCode && rule.deliveryMode === form.deliveryMode);
+  const shippingDzd = shippingRule?.feeDzd ?? 0;
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(cartStorageKey);
+      const saved = raw ? JSON.parse(raw) as unknown : [];
+      if (Array.isArray(saved)) {
+        const restored: CartItem[] = [];
+        for (const entry of saved.slice(0, 50)) {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+          const row = entry as Record<string, unknown>;
+          const product = productById.get(String(row.productId ?? ""));
+          if (!product) continue;
+          const variantId = row.variantId === null ? null : String(row.variantId ?? "");
+          const variant = variantId
+            ? product.productVariants.find((candidate) => candidate.isActive && candidate.id === variantId) ?? null
+            : null;
+          if (variantId && !variant) continue;
+          const stock = variant?.stock ?? product.stock;
+          const quantity = Math.min(Number(row.quantity), stock, 100);
+          if (!Number.isSafeInteger(quantity) || quantity < 1) continue;
+          restored.push({ key: cartKey(product.id, variant?.id ?? null), product, variant, quantity });
+        }
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the cart after hydration
+        setCart(restored);
+      }
+    } catch {
+      // Ignore malformed or unavailable local storage; checkout remains usable.
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mark hydration complete after restore
+    setCartReady(true);
+  }, [cartStorageKey, productById]);
+
+  useEffect(() => {
+    if (!cartReady) return;
+    try {
+      window.localStorage.setItem(cartStorageKey, JSON.stringify(cart.map((item) => ({
+        productId: item.product.id,
+        variantId: item.variant?.id ?? null,
+        quantity: item.quantity,
+      }))));
+    } catch {
+      // Hardened browsers may deny storage; in-memory checkout remains usable.
+    }
+  }, [cart, cartReady, cartStorageKey]);
 
   function invalidateSubmission(): void {
     try {
@@ -146,7 +200,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
       const existing = current.find((item) => item.key === key);
       return existing
         ? current.map((item) => item.key === key
-          ? { ...item, quantity: item.quantity + 1 }
+          ? { ...item, quantity: Math.min(item.quantity + 1, variant?.stock ?? product.stock, 100) }
           : item)
         : [...current, { key, product, variant, quantity: 1 }];
     });
@@ -158,7 +212,11 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     invalidateSubmission();
     setCart((current) => current
       .map((item) => item.key === key
-        ? { ...item, quantity: Math.max(0, item.quantity + delta) }
+        ? { ...item, quantity: Math.min(
+            Math.max(0, item.quantity + delta),
+            item.variant?.stock ?? item.product.stock,
+            100,
+          ) }
         : item)
       .filter((item) => item.quantity > 0));
   }
@@ -168,10 +226,11 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     setCart((current) => current.filter((item) => item.key !== key));
   }
 
-  const cartTotal = cart.reduce(
+  const cartSubtotal = cart.reduce(
     (sum, item) => sum + itemPrice(item) * item.quantity,
     0,
   );
+  const cartTotal = cartSubtotal + shippingDzd;
 
   async function handleSubmit(event: React.FormEvent): Promise<void> {
     event.preventDefault();
@@ -188,6 +247,10 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     }
     if (!form.wilaya || !form.commune || !form.address.trim()) {
       setResult({ ok: false, message: t("storefront.view.error.addressRequired") });
+      return;
+    }
+    if (config.theme.builder.shippingRules.length > 0 && !shippingRule) {
+      setResult({ ok: false, message: t("storefront.view.error.deliveryUnavailable") });
       return;
     }
 
@@ -214,6 +277,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
             quantity: item.quantity,
           })),
           notes: form.notes.trim() || undefined,
+          deliveryMode: form.deliveryMode,
           website: form.website,
           "cf-turnstile-response": (
             window as unknown as { __TURNSTILE_TOKEN__?: string }
@@ -229,7 +293,9 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
       if (!response.ok || !data.ok) {
         setResult({
           ok: false,
-          message: data.error ?? t("storefront.view.error.orderFailed"),
+          message: data.error === "delivery_unavailable"
+            ? t("storefront.view.error.deliveryUnavailable")
+            : data.error ?? t("storefront.view.error.orderFailed"),
         });
         return;
       }
@@ -249,6 +315,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
         address: "",
         notes: "",
         website: "",
+        deliveryMode: "home",
       });
     } catch {
       // Keep the stable ID so response-loss retries replay the committed result.
@@ -321,10 +388,8 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                   </div>
                 </div>
               ))}
-              <div className="flex justify-between border-t pt-2 font-bold">
-                <span>{t("storefront.view.total")}</span>
-                <span>{formatDZD(cartTotal)}</span>
-              </div>
+              {shippingDzd > 0 ? <div className="flex justify-between border-t pt-2 text-sm"><span>{t("storefront.view.shipping")}</span><span>{formatDZD(shippingDzd)}</span></div> : null}
+              <div className="flex justify-between font-bold"><span>{t("storefront.view.total")}</span><span>{formatDZD(cartTotal)}</span></div>
             </>
           )}
         </CardContent>
@@ -357,6 +422,13 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                 wilayaLabel={`${t("storefront.view.wilaya")} *`}
                 communeLabel={`${t("storefront.view.commune")} *`}
               />
+              <div className="space-y-1">
+                <Label htmlFor="delivery-mode">{t("storefront.view.deliveryMode")}</Label>
+                <select id="delivery-mode" value={form.deliveryMode} onChange={(event) => changeForm("deliveryMode", event.target.value as "home" | "desk")} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
+                  <option value="home">{t("storefront.view.deliveryHome")}</option>
+                  <option value="desk">{t("storefront.view.deliveryDesk")}</option>
+                </select>
+              </div>
               <div className="space-y-1">
                 <Label htmlFor="address">{t("storefront.view.address")} *</Label>
                 <Input id="address" required value={form.address} onChange={(event) => changeForm("address", event.target.value)} />
@@ -433,7 +505,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
             ) : null}
             <Button
               onClick={() => addToCart(product)}
-              disabled={(variants.length > 0 && !selectedVariant) || (config.theme.showStock && renderedProduct.stock === 0)}
+              disabled={(variants.length > 0 && !selectedVariant) || renderedProduct.stock <= 0}
               size="sm"
               className="w-full"
               style={{ backgroundColor: config.theme.primaryColor }}

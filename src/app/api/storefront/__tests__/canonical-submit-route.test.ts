@@ -14,6 +14,7 @@ import {
   seedStorefront,
 } from "@/app/api/__tests__/helpers";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { createDefaultStorefrontTheme } from "@/lib/storefront/theme-default";
 
 beforeEach(cleanDb);
 afterAll(async () => {
@@ -105,5 +106,33 @@ describe("canonical storefront submit route", () => {
     expect(response.status).toBe(400);
     expect(await rawDb.order.count()).toBe(0);
     expect(await rawDb.businessCommand.count()).toBe(0);
+  });
+
+  it("commits the server-authoritative wilaya and delivery-mode fee", async () => {
+    const product = await seedProduct({ price: 2_500 });
+    const theme = createDefaultStorefrontTheme();
+    theme.builder.shippingRules = [{ wilayaCode: "16", deliveryMode: "desk", feeDzd: 350 }];
+    const storefront = await seedStorefront({ productIds: [product.id], theme });
+    const body = payload(storefront.slug, product.id, "77777777-7777-4777-8777-777777777777");
+    body.deliveryMode = "desk";
+
+    const response = await POST(mockPost("http://localhost/api/storefront/submit", body));
+    expect(response.status).toBe(201);
+    const result = await getJson(response);
+    expect(result.total).toBe(5_350);
+  });
+
+  it("rejects delivery outside the published server rules", async () => {
+    const product = await seedProduct();
+    const theme = createDefaultStorefrontTheme();
+    theme.builder.shippingRules = [{ wilayaCode: "16", deliveryMode: "desk", feeDzd: 350 }];
+    const storefront = await seedStorefront({ productIds: [product.id], theme });
+    const body = payload(storefront.slug, product.id, "66666666-6666-4666-8666-666666666666");
+    body.deliveryMode = "home";
+
+    const response = await POST(mockPost("http://localhost/api/storefront/submit", body));
+    expect(response.status).toBe(409);
+    expect(await getJson(response)).toMatchObject({ error: "delivery_unavailable" });
+    expect(await rawDb.order.count()).toBe(0);
   });
 });
