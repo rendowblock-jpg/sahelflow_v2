@@ -4,6 +4,8 @@
 > **Governing decisions:** FD-028; FD-029; FD-030; FD-031; FD-032; FD-033 — Internal.16 completion convergence
 > **Protected application-changing baseline:** `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9` — PR #245
 > **Latest application-changing protected merge:** PR #245 — Internal.15 Founder-only offline checkpoint
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Next milestone:** `1.0.0-internal.16` / MSI `1.0.0.16` complete-product candidate
 > **Installed discovery:** CLOSED 2026-08-13; 17 Founder-installed P1 inputs frozen under FD-033
 > **Open retained issues:** #221, #226, #230
@@ -15,7 +17,7 @@ Protected `main` is source truth. FD-033 changes only the Internal.16 execution 
 
 ```text
 exact documentation-merged post-Internal.15 authority
-→ one exact-source whole-product reconnaissance
+→ complete reconnaissance of exact source and every affected sibling/root dependency
 → merge source findings with frozen 17 Founder-installed findings
 → one consolidated Problem Register
 → freeze shared contracts/non-goals/acceptance matrix
@@ -25,6 +27,7 @@ exact documentation-merged post-Internal.15 authority
 → one deep whole-product certification + adversarial review
 → one consolidated repair batch
 → affected proof + final complete certification
+→ expected-head merge only after the selected exact-head gates pass
 → signed Internal.16 updater only if evidence passes
 ```
 
@@ -32,11 +35,15 @@ Founder-installed discovery is closed. The next application session may proceed 
 
 ## Phases 0–4 — protected canonical foundation
 
-Phase 0 governance, Phase 1 Golden COD, Phase 2 identity/licensing/multi-shop, Phase 3 providers/Inbox/AI/automations and Phase 4 protection/recovery/migration remain protected under their established authorities. Internal.16 may repair proven bounded defects but may not rewrite those contracts for visual or deadline convenience.
+Phase 0 governance, Phase 1 Golden COD, Phase 2 identity/licensing/multi-shop and Phase 4 protection/recovery/migration remain protected under their established authorities. Internal.16 may repair proven bounded defects but may not rewrite those contracts for visual or deadline convenience.
+
+## Phase 3 — providers, inbox, AI and automations
+
+Phase 3 remains protected through its existing provider, Inbox, AI and automation authority. FD-030 continues to distinguish deterministic source/conformance proof from live real-account provider certification. Internal.16 may enhance the installed Inbox/AI experience and replace the NOEST product surface with EcoTrack Pro, but it must preserve durable provider effects, ambiguity/reconciliation, proposal-bound AI actions and automation recovery.
 
 ## Phase 5 — whole-product AAA desktop experience
 
-Protected source/browser work remains valid: shared roots #236, Inbox #237, AI #240, Settings #242, Orders #244. Installed Internal.15 proves whole-product experience is still open.
+Protected source/browser work remains valid: shared roots #236, Inbox #237, AI #240, Settings #242, Orders #244. The Phase 5 application-changing protected baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Installed Internal.15 proves whole-product experience is still open.
 
 ### Remaining route/workspace convergence
 
@@ -82,6 +89,8 @@ Every Required desktop route/workspace uses one coherent product system; no know
 Internal.16 must prove equivalent AR/FR/EN behavior, professional Arabic typography, logical geometry, directional icon semantics, bidi isolation, chart/table/command-palette RTL, atomic locale switching, keyboard/focus/semantics, WCAG 2.2 AA where applicable, 100–200% zoom/reflow, 1366×768 and reduced motion.
 
 `SF16-I18N-016` adds a specific cache/navigation requirement: once a locale is committed, prefetched/cached/future route navigation cannot expose the previous locale even transiently. Direction and geometry commit with the same locale epoch.
+
+The **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity remains the formal phase label while FD-033 permits the exact Internal.16 implementation wave to converge remaining Phase 5/6/7 work with Phase 8 implementation.
 
 ## Phase 7 — performance, responsiveness and reliability
 
@@ -143,6 +152,10 @@ Cloudflare Free may bootstrap first revenue when measured sufficient; provider h
 Stable remains separate. It retains signed clean install/update, migration/backup/restore/replacement-install, identity/licensing/shop lifecycle, Golden COD/provider reconciliation, storefront/remote commands, complete AAA UI/AR/FR/EN/RTL/accessibility, T470/floor/eight-hour stability, independent external reviews where applicable, representative Algerian seller beta, rollout/support readiness and explicit Founder promotion.
 
 Issue #230 remains P1 for customer-online/public trial: verified SahelFlow-owned domain, primary/recovery HTTPS ingress, protected bindings, representative Algerian fixed/mobile reachability, forced recovery and signed installed customer-trial evidence.
+
+## Historical continuity and merge discipline
+
+The earlier completion program used a **complete reconnaissance** before freezing each Phase Problem Register and relied on exact frozen heads plus **expected-head merge** discipline after selected gates passed. FD-033 changes the cadence for the exact Internal.16 completion wave, not those integrity principles.
 
 ## Definition of done
 
