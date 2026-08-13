@@ -145,7 +145,11 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
   after: number;
   limit?: number;
 }>): Promise<Readonly<{ imported: number; replayed: number; nextCursor: number }>> {
-  if (input.workspaceId !== input.context.shop.workspaceId) {
+  const shop = input.context.shop;
+  if (!shop) {
+    throw new Error("Storefront receipt import requires an active shop authority");
+  }
+  if (input.workspaceId !== shop.workspaceId) {
     throw new Error("Storefront receipt workspace authority does not match the active shop");
   }
   const page = await input.client.pollStorefrontReceipts(
@@ -160,7 +164,7 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
   let replayed = 0;
   for (const rawReceipt of page.receipts) {
     const receipt = receiptSchema.parse(rawReceipt);
-    if (receipt.shopId !== input.context.shop.shopId) {
+    if (receipt.shopId !== shop.shopId) {
       throw new Error("Storefront receipt targets another shop authority");
     }
     validateReceiptTotals(receipt);
