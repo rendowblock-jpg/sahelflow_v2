@@ -1,0 +1,34 @@
+{
+  "formatVersion": 1,
+  "product": "SahelFlow",
+  "version": "1.0.0-internal.17",
+  "windowsMsiVersion": "1.0.0.17",
+  "candidateBaseCommit": "c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9",
+  "requestRevision": 1,
+  "requestReason": "re-dispatch the exact protected-main Internal.17 Founder-only offline candidate after PR #258 repaired only the deterministic signed-build Tauri icon source-hygiene guard",
+  "signedSourcePolicy": "protected-main merge commit containing the exact 1.0.0-internal.17 founder-offline-only authority authorized by FD-036 plus the reviewed deterministic release-source guard repair",
+  "publication": "founder-only-offline-internal",
+  "installation": "upgrade-over-internal.16-preserve-appdata",
+  "requiredEvidence": [
+    "exact protected-main merge source with reviewed PR tree identity",
+    "Required PR gate plus exact-head Phase 5 and Phase 6-7 success",
+    "FD-036 exact version-bound founder-offline-only authority with licensing.ownedHostSuffix null",
+    "release artifact packages no SF_LICENSE_SERVICE_URL and exposes no online-trial action",
+    "signed MSI and updater signature exact-source binding",
+    "deterministic post-build source guard accepts only Cargo.toml non-semantic packaging drift and the six canonical Tauri icon outputs regenerated from public/icons/sahelflow-mark.png",
+    "signed MSI install, normal launch, authenticated hydrated WebView proof, close and reopen",
+    "representative AR/FR/EN, RTL, reflow and operational workspace inspection"
+  ],
+  "retainedOpenEvidence": [
+    "Founder installed visual acceptance for RTL/direction, themes, motion, charts, Inbox and AI Agents",
+    "#226 installed T470 performance/reliability",
+    "#230 live resilient trial production/network certification"
+  ],
+  "nonClaims": [
+    "not Beta or Stable",
+    "source/browser evidence is not Founder-installed acceptance",
+    "not a customer release and does not certify or offer the online trial",
+    "#226 and #230 remain separate broader-claim obligations"
+  ],
+  "nextUpdaterDrill": "1.0.0-internal.17-to-next-approved-internal"
+}

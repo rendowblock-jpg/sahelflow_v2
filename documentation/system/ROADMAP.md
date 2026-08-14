@@ -2,18 +2,21 @@
 
 > **Status:** Binding dependency and completion order
 > **Governing decisions:** FD-028; FD-029; FD-030; FD-031; FD-032; FD-033; FD-034; FD-035; FD-036
-> **Protected `main`:** `c33f234ecf43842cfcc801592cc601d595ed05c5` — PR #254 / exact green Internal.17 correction tree
+> **Release-hygiene protected base before active request:** `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9` — PR #258
+> **Protected Internal.17 correction:** `c33f234ecf43842cfcc801592cc601d595ed05c5` — PR #254
 > **Reviewed correction head:** `c965a062cf2719078601374bd0ace771ca011d53`
+> **Protected Internal.17 release authority:** `2a820b801786590a20dc6105f39f732b8a987c5f` — PR #257 / FD-036
+> **First Internal.17 signed attempt:** run `31840181436` — signed build/install evidence passed; publication stopped by deterministic icon source guard
 > **Published release:** `1.0.0-internal.16` / MSI `1.0.0.16`
 > **Signed Internal.16 run:** `31770292329`
 > **Founder installed result:** Internal.16 installed; frontend acceptance **REJECTED** on 2026-08-14
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Active release frontier:** exact Internal.17 / FD-036 Founder-offline promotion
+> **Active release frontier:** PR #259 / `agent/internal-17-signed-publication-request` — Internal.17 / FD-036 signed publication retry
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Open retained issues:** #221, #226, #230
 > **Last consolidated:** 2026-08-14
 
-Protected `main` is source truth. The broad Internal.17 correction program is complete and protected; the current task is release promotion and installed acceptance, not another source-level redesign.
+Protected GitHub source is truth. The broad Internal.17 correction program and FD-036 release-authority synchronization are complete and protected. The current task is the exact PR #259 release request, signed publication from its resulting protected-main merge SHA, and then Founder-installed acceptance — not another source-level redesign.
 
 ## Current completion topology
 
@@ -26,11 +29,16 @@ protected Phase 0–4 canonical engine
 → frontend acceptance REJECTED
 → complete Internal.17 root correction
 → exact source/browser/native/Windows/MSI-installed proof green
-→ protect correction tree on main (PR #254 / c33f234...)
-→ FD-036 exact Internal.17 Founder-offline release authority
-→ Required PR gate on one coherent release-authority tree
-→ merge exact green reviewed tree to protected main
+→ protect correction tree (PR #254 / c33f234...)
+→ protect FD-036 Internal.17 release authority (PR #257 / 2a820b...)
+→ signed run 31840181436 builds/installs candidate
+→ deterministic icon source guard correctly blocks publication
+→ protect narrow guard correction (PR #258 / c1d0cb...)
+→ exact PR #259 release-request certification
+→ merge exact green reviewed PR #259 head
+→ resulting protected-main merge SHA becomes signed source
 → protected signed Internal.17 workflow
+→ deterministic source guard passes
 → exact signed MSI/updater publication
 → Founder installs exact signed Internal.17
 → explicit accept/reject: RTL, themes, motion, charts, Inbox, AI Agents
@@ -95,29 +103,15 @@ Acceptance still means professional Arabic typography and reading flow, logical 
 
 ## Internal.17 release program — FD-036
 
-FD-035 was the temporary source-correction authority. That correction is protected. FD-036 now authorizes exactly one `1.0.0-internal.17` / MSI `1.0.0.17` Founder/internal-lab checkpoint.
+FD-035 was the temporary source-correction authority. That correction is protected. FD-036 authorizes exactly one `1.0.0-internal.17` / MSI `1.0.0.17` Founder/internal-lab checkpoint. Its licensing mode remains `founder-offline-only`.
 
-### 1. Release-authority synchronization
+PR #257 protected that release authority. The first signed attempt on source `2a820b801786590a20dc6105f39f732b8a987c5f` reached signed build/install/UI evidence in run `31840181436`, then correctly failed closed before publication because deterministic regeneration of six tracked Tauri icon outputs was not yet allowed by the post-build source guard. PR #258 repaired only that exact guard contract and protected release-hygiene base `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9`.
 
-One coherent release tree must agree on:
+### 1. Exact PR #259 certification
 
-- `sahelflow.version.json`;
-- package/Cargo/Tauri/MSI identities;
-- updater key identity and signing authority;
-- native and TypeScript version/licensing guards;
-- signed release workflow;
-- license production-boundary contract tests;
-- current-frontier verifier;
-- live documentation authority;
-- Founder install handoff defaults.
+The current release request is `agent/internal-17-signed-publication-request` / PR #259, carrying `.github/release-requests/internal-17-publication-retry.json`.
 
-FD-036 licensing remains `founder-offline-only`, with `ownedHostSuffix: null`. The permanent Founder entitlement remains valid offline. The signed Founder checkpoint must not package `SF_LICENSE_SERVICE_URL`; online trial remains disabled.
-
-FD-036 grants no customer-online, Beta, Stable or later-version authority.
-
-### 2. Exact PR certification
-
-The release-authority PR must pass the normal exact-head risk-selected evidence with no waiver or force merge:
+Its exact current head must pass the normal risk-selected evidence with no waiver or force merge:
 
 - version/current-frontier and documentation authority;
 - TypeScript, ESLint, complete relevant Vitest, dependency audit and migration status;
@@ -133,15 +127,17 @@ The release-authority PR must pass the normal exact-head risk-selected evidence 
 
 Merge only the exact reviewed head that carries those results, using expected-head merge discipline so a moved branch cannot silently substitute a different tree.
 
-### 3. Protected signed publication
+### 2. Protected signed publication
 
-After the release authority is protected on `main`, the version-authority dispatcher may invoke the existing signed Internal Windows updater workflow for that exact protected-main SHA.
+After PR #259 merges, its release-request path must cause the protected-main version-authority dispatcher to invoke the existing signed Internal Windows updater workflow for the **resulting protected-main merge SHA**.
 
-The signed workflow must verify protected-main source/tree identity, use the approved updater signing secret, build/publish exact signed MSI/updater artifacts, record hashes/manifest/source identity and prove the installed signed lifecycle required by the release contract.
+The signed workflow must verify protected-main source/tree identity, FD-036 exact scope, the approved updater signing secret, the canonical public-key binding, absence of packaged `SF_LICENSE_SERVICE_URL`, and deterministic post-build source hygiene. The guard may accept only the already-approved non-semantic `Cargo.toml` packaging rewrite and the six exact canonical Tauri icon outputs regenerated from `public/icons/sahelflow-mark.png`; any other tracked source drift remains fatal.
+
+It must then publish exact signed MSI/updater artifacts, record hashes/manifest/source identity and prove the installed signed lifecycle required by the release contract.
 
 No manually substituted artifact and no cross-SHA evidence mix is allowed.
 
-### 4. Founder-installed acceptance
+### 3. Founder-installed acceptance
 
 Install the exact signed Internal.17 checkpoint with the retained Founder handoff. Then record explicit Founder accept/reject for RTL, themes, motion, charts, Inbox and AI Agents.
 
