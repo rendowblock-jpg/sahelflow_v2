@@ -347,11 +347,13 @@ function SummaryCard({
   label,
   value,
   icon: Icon,
+  locale,
   count = false,
 }: {
   label: string;
   value: number;
   icon: ComponentType<{ className?: string }>;
+  locale: string;
   count?: boolean;
 }) {
   return (
@@ -360,7 +362,7 @@ function SummaryCard({
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">{label}</p>
           <p className="mt-1 truncate text-lg font-semibold tabular-nums">
-            {count ? value : formatDZD(value)}
+            {count ? value : formatDZD(value, locale)}
           </p>
         </div>
         <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
@@ -602,14 +604,14 @@ export function CanonicalCodDashboard({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label={text.expected} value={summary.totals.expectedReceivable} icon={CircleDollarSign} />
-        <SummaryCard label={text.collected} value={summary.totals.effectiveCollected} icon={CheckCircle2} />
-        <SummaryCard label={text.remitted} value={summary.totals.grossRemitted} icon={ReceiptText} />
-        <SummaryCard label={text.net} value={summary.totals.netReceived} icon={Scale} />
-        <SummaryCard label={text.fees} value={summary.totals.fees} icon={ReceiptText} />
-        <SummaryCard label={text.collectPending} value={summary.totals.outstandingCollection} icon={Clock3} />
-        <SummaryCard label={text.remitPending} value={summary.totals.outstandingRemittance} icon={Clock3} />
-        <SummaryCard label={text.reviewCount} value={summary.reviewLines.length + summary.disputed.length} icon={AlertTriangle} count />
+        <SummaryCard label={text.expected} value={summary.totals.expectedReceivable} icon={CircleDollarSign} locale={locale} />
+        <SummaryCard label={text.collected} value={summary.totals.effectiveCollected} icon={CheckCircle2} locale={locale} />
+        <SummaryCard label={text.remitted} value={summary.totals.grossRemitted} icon={ReceiptText} locale={locale} />
+        <SummaryCard label={text.net} value={summary.totals.netReceived} icon={Scale} locale={locale} />
+        <SummaryCard label={text.fees} value={summary.totals.fees} icon={ReceiptText} locale={locale} />
+        <SummaryCard label={text.collectPending} value={summary.totals.outstandingCollection} icon={Clock3} locale={locale} />
+        <SummaryCard label={text.remitPending} value={summary.totals.outstandingRemittance} icon={Clock3} locale={locale} />
+        <SummaryCard label={text.reviewCount} value={summary.reviewLines.length + summary.disputed.length} icon={AlertTriangle} locale={locale} count />
       </div>
 
       {notice ? (
@@ -643,7 +645,7 @@ export function CanonicalCodDashboard({
                         <p className="font-mono text-sm font-semibold">{item.orderNumber}</p>
                         <p className="text-sm text-muted-foreground">{item.customerName}</p>
                       </div>
-                      <p className="text-sm">{text.expectedAmount}: <strong>{formatDZD(item.expectedReceivable)}</strong></p>
+                      <p className="text-sm">{text.expectedAmount}: <strong>{formatDZD(item.expectedReceivable, locale)}</strong></p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       <div className="space-y-1.5"><Label htmlFor={amountId}>{text.amount}</Label><Input id={amountId} inputMode="numeric" value={draft.amount} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, amount: event.target.value } }))} /></div>
@@ -696,7 +698,7 @@ export function CanonicalCodDashboard({
                         <td className="p-3"><Checkbox checked={draft.selected} onCheckedChange={(value) => toggleOrder(item, value === true)} aria-label={`${text.select} ${item.orderNumber}`} /></td>
                         <td className="p-3"><p className="font-mono font-medium">{item.orderNumber}</p><p className="text-xs text-muted-foreground">{item.customerName}</p></td>
                         <td className="p-3" dir="auto">{item.provider}</td>
-                        <td className="p-3 text-end tabular-nums">{formatDZD(item.outstandingRemittance)}</td>
+                        <td className="p-3 text-end tabular-nums">{formatDZD(item.outstandingRemittance, locale)}</td>
                         <td className="p-3"><Input className="min-w-28 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${text.gross} ${item.orderNumber}`} value={draft.gross} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, gross: event.target.value } }))} /></td>
                         <td className="p-3"><Input className="min-w-24 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${text.fees} ${item.orderNumber}`} value={draft.fee} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, fee: event.target.value } }))} /></td>
                         <td className="p-3"><Input className="min-w-24 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${text.adjustment} ${item.orderNumber}`} value={draft.adjustment} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, adjustment: event.target.value } }))} /></td>
@@ -729,7 +731,7 @@ export function CanonicalCodDashboard({
             ) : null}
 
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">{text.selectedGross}: <strong className="text-foreground">{formatDZD(selectedGross + (batch.includeUnmatched ? integer(batch.unmatchedGross) : 0))}</strong></p>
+              <p className="text-sm text-muted-foreground">{text.selectedGross}: <strong className="text-foreground">{formatDZD(selectedGross + (batch.includeUnmatched ? integer(batch.unmatchedGross) : 0), locale)}</strong></p>
               <Button disabled={Boolean(busy) || !activeProvider || !batch.reference.trim() || (selected.length === 0 && integer(batch.unmatchedGross) <= 0)} onClick={() => void postBatch()}>
                 {busy.startsWith("settlement:") ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}
                 {text.postBatch}
@@ -760,13 +762,13 @@ export function CanonicalCodDashboard({
                 return (
                   <div key={line.lineId} className="rounded-lg border p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div><Badge variant={line.unresolvedUnmatched ? "secondary" : "destructive"}>{line.unresolvedUnmatched ? text.unmatched : text.disputed}</Badge><p className="mt-2 font-mono text-sm">{line.externalReference}</p><p className="text-xs text-muted-foreground">{line.provider} · {formatDate(line.receivedAt)}</p></div>
-                      <div className="text-end text-sm tabular-nums"><p>{text.gross}: {formatDZD(line.effectiveGross)}</p><p>{text.fees}: {formatDZD(line.effectiveFee)}</p><p className={line.effectiveDiscrepancy === 0 ? "" : "text-destructive"}>{text.reviewCount}: {formatDZD(line.effectiveDiscrepancy)}</p></div>
+                      <div><Badge variant={line.unresolvedUnmatched ? "secondary" : "destructive"}>{line.unresolvedUnmatched ? text.unmatched : text.disputed}</Badge><p className="mt-2 font-mono text-sm">{line.externalReference}</p><p className="text-xs text-muted-foreground">{line.provider} · {formatDate(line.receivedAt, locale)}</p></div>
+                      <div className="text-end text-sm tabular-nums"><p>{text.gross}: {formatDZD(line.effectiveGross, locale)}</p><p>{text.fees}: {formatDZD(line.effectiveFee, locale)}</p><p className={line.effectiveDiscrepancy === 0 ? "" : "text-destructive"}>{text.reviewCount}: {formatDZD(line.effectiveDiscrepancy, locale)}</p></div>
                     </div>
 
                     {line.unresolvedUnmatched ? (
                       <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-                        <div className="space-y-1.5"><Label htmlFor={orderSelectId}>{text.matchOrder}</Label><select id={orderSelectId} className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={draft.orderId} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, orderId: event.target.value } }))}><option value="">—</option>{matchCandidates.filter((item) => item.provider === line.provider).map((item) => <option key={item.orderId} value={item.orderId}>{item.orderNumber} · {item.customerName} · {formatDZD(item.outstandingRemittance)}</option>)}</select></div>
+                        <div className="space-y-1.5"><Label htmlFor={orderSelectId}>{text.matchOrder}</Label><select id={orderSelectId} className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={draft.orderId} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, orderId: event.target.value } }))}><option value="">—</option>{matchCandidates.filter((item) => item.provider === line.provider).map((item) => <option key={item.orderId} value={item.orderId}>{item.orderNumber} · {item.customerName} · {formatDZD(item.outstandingRemittance, locale)}</option>)}</select></div>
                         <div className="space-y-1.5"><Label htmlFor={reasonId}>{text.reason}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
                         <Button disabled={Boolean(busy) || !matchingOrder || !draft.reason.trim()} onClick={() => matchingOrder && void commit(operationKey, `/api/accounting/cod-settlements/lines/${line.lineId}/match`, { orderId: matchingOrder.orderId, expectedVersion: matchingOrder.orderVersion, reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{text.match}</Button>
                       </div>
@@ -793,7 +795,7 @@ export function CanonicalCodDashboard({
                 const reasonId = `cod-collection-reason-${item.orderId}`;
                 return (
                   <div key={operationKey} className="rounded-lg border border-warning/40 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3"><div><Badge variant="outline">{text.collectionCorrection}</Badge><p className="mt-2 font-mono text-sm font-semibold">{item.orderNumber}</p><p className="text-sm text-muted-foreground">{item.customerName}</p></div><div className="text-end text-sm"><p>{text.expectedAmount}: {formatDZD(item.expectedReceivable)}</p><p>{text.collected}: {formatDZD(item.effectiveCollected)}</p><p className="text-destructive">{text.reviewCount}: {formatDZD(item.discrepancy)}</p></div></div>
+                    <div className="flex flex-wrap items-start justify-between gap-3"><div><Badge variant="outline">{text.collectionCorrection}</Badge><p className="mt-2 font-mono text-sm font-semibold">{item.orderNumber}</p><p className="text-sm text-muted-foreground">{item.customerName}</p></div><div className="text-end text-sm"><p>{text.expectedAmount}: {formatDZD(item.expectedReceivable, locale)}</p><p>{text.collected}: {formatDZD(item.effectiveCollected, locale)}</p><p className="text-destructive">{text.reviewCount}: {formatDZD(item.discrepancy, locale)}</p></div></div>
                     <div className="mt-4 grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end"><div className="space-y-1.5"><Label htmlFor={deltaId}>{text.collectionDelta}</Label><Input id={deltaId} inputMode="numeric" value={draft.delta} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, delta: event.target.value } }))} /></div><div className="space-y-1.5"><Label htmlFor={reasonId}>{text.reason}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, reason: event.target.value } }))} /></div><Button disabled={Boolean(busy) || integer(draft.delta) === 0 || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/orders/${item.orderId}/cod/collection/correction`, { expectedVersion: item.orderVersion, amountDelta: integer(draft.delta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{text.correction}</Button></div>
                   </div>
                 );
@@ -812,7 +814,7 @@ export function CanonicalCodDashboard({
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full min-w-[760px] text-sm">
                 <thead className="border-b bg-muted/60 text-muted-foreground"><tr><th className="p-3 text-start">{text.reference}</th><th className="p-3 text-start">{text.provider}</th><th className="p-3 text-start">{text.state}</th><th className="p-3 text-end">{text.gross}</th><th className="p-3 text-end">{text.fees}</th><th className="p-3 text-end">{text.net}</th><th className="p-3 text-end">{text.reviewCount}</th></tr></thead>
-                <tbody className="divide-y">{summary.recentSettlements.map((item) => <tr key={item.settlementId}><td className="p-3"><p className="font-mono font-medium">{item.externalReference}</p><p className="text-xs text-muted-foreground">{formatDate(item.receivedAt)} · {item.lineCount} {text.lines}</p></td><td className="p-3" dir="auto">{item.provider}</td><td className="p-3"><Badge variant={item.status === "posted" ? "outline" : "destructive"}>{item.status === "posted" ? text.posted : text.needsReview}</Badge></td><td className="p-3 text-end tabular-nums">{formatDZD(item.grossAmount)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.feeAmount)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.netAmount)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.discrepancyAmount + item.unmatchedAmount)}</td></tr>)}</tbody>
+                <tbody className="divide-y">{summary.recentSettlements.map((item) => <tr key={item.settlementId}><td className="p-3"><p className="font-mono font-medium">{item.externalReference}</p><p className="text-xs text-muted-foreground">{formatDate(item.receivedAt, locale)} · {item.lineCount} {text.lines}</p></td><td className="p-3" dir="auto">{item.provider}</td><td className="p-3"><Badge variant={item.status === "posted" ? "outline" : "destructive"}>{item.status === "posted" ? text.posted : text.needsReview}</Badge></td><td className="p-3 text-end tabular-nums">{formatDZD(item.grossAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.feeAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.netAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.discrepancyAmount + item.unmatchedAmount, locale)}</td></tr>)}</tbody>
               </table>
             </div>
           )}

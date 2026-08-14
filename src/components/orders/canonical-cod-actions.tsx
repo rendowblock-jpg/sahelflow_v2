@@ -283,12 +283,12 @@ export function CanonicalCodActions({ orderId }: { orderId: string }) {
         ].map(([label, amount]) => (
           <div key={String(label)} className="rounded-md border bg-muted/20 p-2.5">
             <dt className="text-xs text-muted-foreground">{String(label)}</dt>
-            <dd className={`mt-1 font-medium tabular-nums ${label === copy.discrepancy && amount !== 0 ? "text-destructive" : ""}`}>{formatDZD(Number(amount))}</dd>
+            <dd className={`mt-1 font-medium tabular-nums ${label === copy.discrepancy && amount !== 0 ? "text-destructive" : ""}`}>{formatDZD(Number(amount), locale)}</dd>
           </div>
         ))}
       </dl>
 
-      {position.collectedAt ? <p className="text-xs text-muted-foreground">{copy.collected}: {formatDate(position.collectedAt)} · {position.provider ?? "—"} · {position.collectionReference ?? "—"}</p> : null}
+      {position.collectedAt ? <p className="text-xs text-muted-foreground">{copy.collected}: {formatDate(position.collectedAt, locale)} · {position.provider ?? "—"} · {position.collectionReference ?? "—"}</p> : null}
       {notice ? <p role="status" className="text-sm text-success">{notice}</p> : null}
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
 

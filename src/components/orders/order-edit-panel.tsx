@@ -62,7 +62,7 @@ export function OrderEditPanel({
   initialNotes,
   children,
 }: OrderEditPanelProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -218,7 +218,7 @@ export function OrderEditPanel({
                   />
                 </div>
                 <div className="text-sm font-medium w-24 text-end tabular-nums">
-                  {formatDZD(item.total)}
+                  {formatDZD(item.total, locale)}
                 </div>
               </div>
             </div>
@@ -227,7 +227,7 @@ export function OrderEditPanel({
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">{t("orders.detail.subtotal")}</span>
-              <span className="tabular-nums">{formatDZD(itemsTotal)}</span>
+              <span className="tabular-nums">{formatDZD(itemsTotal, locale)}</span>
             </div>
             <div className="flex justify-between items-center text-sm gap-3">
               <span className="text-muted-foreground">{t("orders.detail.shipping")}</span>
@@ -242,7 +242,7 @@ export function OrderEditPanel({
             <Separator />
             <div className="flex justify-between text-base font-bold">
               <span>{t("orders.total")}</span>
-              <span className="tabular-nums">{formatDZD(total)}</span>
+              <span className="tabular-nums">{formatDZD(total, locale)}</span>
             </div>
           </div>
         </CardContent>

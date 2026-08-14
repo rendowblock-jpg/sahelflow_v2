@@ -66,7 +66,7 @@ const COMMAND_KEY = "sf-order-create-command";
 
 export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { format: formatPhone } = usePhoneMask();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -447,7 +447,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                       })
                       .map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.name} — {formatDZD(p.price)} ({t("common.stock")}: {p.stock})
+                          {p.name} — {formatDZD(p.price, locale)} ({t("common.stock")}: {p.stock})
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -484,7 +484,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                           <div className="flex-1 space-y-0.5">
                             <p className="text-sm font-medium">{item.productName}</p>
                             <p className="text-xs text-muted-foreground">
-                              {formatDZD(item.unitPrice)} × {item.quantity} = {formatDZD(item.unitPrice * item.quantity)}
+                              {formatDZD(item.unitPrice, locale)} × {item.quantity} = {formatDZD(item.unitPrice * item.quantity, locale)}
                             </p>
                           </div>
                           <Input
@@ -578,7 +578,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
             {/* Total */}
             <div className="flex items-center justify-between rounded-lg bg-muted p-4">
               <span className="text-sm font-medium">{t("orders.total")}</span>
-              <span className="text-xl font-bold">{formatDZD(total)}</span>
+              <span className="text-xl font-bold">{formatDZD(total, locale)}</span>
             </div>
 
             {error && (

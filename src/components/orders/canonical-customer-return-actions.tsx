@@ -514,11 +514,11 @@ export function CanonicalCustomerReturnActions({
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.refunded}</dt>
-          <dd className="font-medium tabular-nums">{formatDZD(position.effectiveRefundAmount)}</dd>
+          <dd className="font-medium tabular-nums">{formatDZD(position.effectiveRefundAmount, locale)}</dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.refundable}</dt>
-          <dd className="font-medium tabular-nums">{formatDZD(position.remainingOrderRefundableAmount)}</dd>
+          <dd className="font-medium tabular-nums">{formatDZD(position.remainingOrderRefundableAmount, locale)}</dd>
         </div>
       </dl>
 
@@ -546,7 +546,7 @@ export function CanonicalCustomerReturnActions({
                   {item.productName}{item.variantName ? ` · ${item.variantName}` : ""}
                 </span>
                 <span className="shrink-0 tabular-nums">
-                  {item.requestedQuantity}/{item.purchasedQuantity} · {formatDZD(item.unitPrice)}
+                  {item.requestedQuantity}/{item.purchasedQuantity} · {formatDZD(item.unitPrice, locale)}
                 </span>
               </div>
             ))}
@@ -562,9 +562,9 @@ export function CanonicalCustomerReturnActions({
           position.refunds.map((refund) => (
             <div key={refund.refundId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
               <div>
-                <p className="font-medium tabular-nums">{copy.issued}: {formatDZD(refund.amount)}</p>
+                <p className="font-medium tabular-nums">{copy.issued}: {formatDZD(refund.amount, locale)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {copy.reversed}: {formatDZD(refund.reversedAmount)} · {copy.effective}: {formatDZD(refund.effectiveAmount)}
+                  {copy.reversed}: {formatDZD(refund.reversedAmount, locale)} · {copy.effective}: {formatDZD(refund.effectiveAmount, locale)}
                 </p>
               </div>
               {refund.canReverse ? (
@@ -632,7 +632,7 @@ export function CanonicalCustomerReturnActions({
                           {item.productName}{item.variantName ? ` · ${item.variantName}` : ""}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {copy.purchased}: {item.quantity} · {copy.unitPrice}: {formatDZD(item.unitPrice)}
+                          {copy.purchased}: {item.quantity} · {copy.unitPrice}: {formatDZD(item.unitPrice, locale)}
                         </p>
                       </div>
                       <div className="space-y-1">
@@ -795,7 +795,7 @@ export function CanonicalCustomerReturnActions({
                 <div className="space-y-1.5">
                   <Label htmlFor="refund-amount">{copy.amount}</Label>
                   <Input id="refund-amount" type="number" min={1} max={refundMaximum} step={1} value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} />
-                  <p className="text-xs text-muted-foreground">{copy.maximum}: {formatDZD(refundMaximum)}</p>
+                  <p className="text-xs text-muted-foreground">{copy.maximum}: {formatDZD(refundMaximum, locale)}</p>
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="refund-reference">{copy.reference}</Label>
@@ -812,7 +812,7 @@ export function CanonicalCustomerReturnActions({
               <div className="space-y-1.5">
                 <Label htmlFor="refund-reversal-amount">{copy.amount}</Label>
                 <Input id="refund-reversal-amount" type="number" min={1} max={selectedRefund.effectiveAmount} step={1} value={reversalAmount} onChange={(event) => setReversalAmount(event.target.value)} />
-                <p className="text-xs text-muted-foreground">{copy.maximum}: {formatDZD(selectedRefund.effectiveAmount)}</p>
+                <p className="text-xs text-muted-foreground">{copy.maximum}: {formatDZD(selectedRefund.effectiveAmount, locale)}</p>
               </div>
             ) : null}
           </div>
