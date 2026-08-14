@@ -261,7 +261,10 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
   const { loadConnectedRuntimeIfEnrolled } = await import("@/lib/connected-platform/runtime");
   const connected = await loadConnectedRuntimeIfEnrolled(context);
   if (connected) {
-    const operationId = `storefront_pause_delete_${id}`;
+    // Tie the remote idempotency key to this exact live local version. If the
+    // storefront is later republished/reactivated, a subsequent delete gets a
+    // fresh pause operation instead of replaying a historical pause receipt.
+    const operationId = `storefront_pause_delete_${id}_${existing.updatedAt.getTime()}`;
     try {
       const paused = await connected.client.pauseStorefront(id, {
         workspaceId: shopContext.workspaceId,
