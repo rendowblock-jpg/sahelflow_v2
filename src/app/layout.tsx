@@ -5,6 +5,7 @@ import "./globals.css";
 import "./phase5.css";
 import "./product-system.css";
 import "./workspace-system.css";
+import "./motion-system.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
