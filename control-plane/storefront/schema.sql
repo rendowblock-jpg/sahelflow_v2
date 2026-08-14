@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS storefront_release (
   locale TEXT NOT NULL CHECK(locale IN ('ar','fr','en')),
   artifact_json TEXT NOT NULL,
   artifact_digest TEXT NOT NULL,
+  request_digest TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(storefront_id) REFERENCES storefront(storefront_id) ON DELETE CASCADE,
   FOREIGN KEY(parent_release_id) REFERENCES storefront_release(release_id)
@@ -38,7 +39,9 @@ CREATE TRIGGER IF NOT EXISTS storefront_release_activate
 AFTER INSERT ON storefront_release
 BEGIN
   UPDATE storefront
-     SET active_release_id = NEW.release_id, updated_at = CURRENT_TIMESTAMP
+     SET active_release_id = NEW.release_id,
+         state = 'active',
+         updated_at = CURRENT_TIMESTAMP
    WHERE storefront_id = NEW.storefront_id;
 END;
 
@@ -50,6 +53,29 @@ CREATE TABLE IF NOT EXISTS storefront_allocation (
   remaining_quantity INTEGER NOT NULL CHECK(remaining_quantity >= 0),
   PRIMARY KEY(release_id, item_key),
   FOREIGN KEY(release_id) REFERENCES storefront_release(release_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS storefront_allocation_retirement (
+  operation_id TEXT NOT NULL,
+  storefront_id TEXT NOT NULL,
+  source_release_id TEXT NOT NULL,
+  item_key TEXT NOT NULL,
+  retired_quantity INTEGER NOT NULL CHECK(retired_quantity > 0),
+  reason TEXT NOT NULL CHECK(reason IN ('publish','rollback','pause')),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(operation_id, item_key),
+  FOREIGN KEY(storefront_id) REFERENCES storefront(storefront_id) ON DELETE CASCADE,
+  FOREIGN KEY(source_release_id) REFERENCES storefront_release(release_id)
+);
+
+CREATE TABLE IF NOT EXISTS storefront_pause_operation (
+  operation_id TEXT PRIMARY KEY NOT NULL,
+  storefront_id TEXT NOT NULL,
+  workspace_id TEXT NOT NULL,
+  source_release_id TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(storefront_id) REFERENCES storefront(storefront_id) ON DELETE CASCADE,
+  FOREIGN KEY(source_release_id) REFERENCES storefront_release(release_id)
 );
 
 CREATE TABLE IF NOT EXISTS storefront_shipping_rule (
