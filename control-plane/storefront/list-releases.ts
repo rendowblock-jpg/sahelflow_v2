@@ -11,6 +11,11 @@ type ReleaseHistoryRow = {
   is_active: number;
 };
 
+type ActiveAllocationRow = {
+  item_key: string;
+  remaining_quantity: number;
+};
+
 export async function listReleases(
   request: Request,
   environment: StorefrontWorkerEnvironment,
@@ -43,6 +48,18 @@ export async function listReleases(
   )
     .bind(storefrontId, workspaceId, requestedLimit)
     .all<ReleaseHistoryRow>();
+  if (!releases.success) return json({ error: "release_history_unavailable" }, 503);
+
+  const activeReleaseId = (releases.results ?? []).find((release) => release.is_active === 1)?.release_id ?? null;
+  const activeAllocations = activeReleaseId
+    ? await environment.DB.prepare(
+        `SELECT item_key, remaining_quantity
+           FROM storefront_allocation
+          WHERE release_id = ?1 AND remaining_quantity > 0
+          ORDER BY item_key ASC`,
+      ).bind(activeReleaseId).all<ActiveAllocationRow>()
+    : { success: true, results: [] as ActiveAllocationRow[] };
+  if (!activeAllocations.success) return json({ error: "release_allocation_unavailable" }, 503);
 
   return json({
     storefrontId,
@@ -54,6 +71,10 @@ export async function listReleases(
       artifactDigest: release.artifact_digest,
       createdAt: release.created_at,
       isActive: release.is_active === 1,
+    })),
+    activeAllocations: (activeAllocations.results ?? []).map((allocation) => ({
+      itemKey: allocation.item_key,
+      remainingQuantity: allocation.remaining_quantity,
     })),
   });
 }
