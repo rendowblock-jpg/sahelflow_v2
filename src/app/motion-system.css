@@ -1,0 +1,155 @@
+/*
+ * SahelFlow governed motion language.
+ *
+ * Imported after the historical Phase 5 normalization layer so the product no
+ * longer disables its own motion primitives. Motion is intentionally restrained:
+ * opacity/transform only for surface entry, tiny physical feedback for controls,
+ * and no decorative perpetual motion. Reduced-motion remains absolute authority.
+ */
+
+[data-sahelflow-shell="desktop"] {
+  --sf-motion-micro: 120ms;
+  --sf-motion-state: 160ms;
+  --sf-motion-surface: 220ms;
+  --sf-motion-page: 260ms;
+  --sf-motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --sf-motion-ease-state: cubic-bezier(0.2, 0, 0, 1);
+  --sf-motion-inline-entry: -8px;
+}
+
+[data-sahelflow-shell="desktop"][dir="rtl"] {
+  --sf-motion-inline-entry: 8px;
+}
+
+/* Route sections enter as one coherent work surface rather than a collection of
+ * unrelated cards. The distance is intentionally tiny to avoid dashboard theatre. */
+[data-sahelflow-shell="desktop"] .page-sections > * {
+  animation: sf-page-section-enter var(--sf-motion-page) var(--sf-motion-ease-out) both;
+}
+
+[data-sahelflow-shell="desktop"] .page-sections > :nth-child(2) {
+  animation-delay: 28ms;
+}
+[data-sahelflow-shell="desktop"] .page-sections > :nth-child(3) {
+  animation-delay: 44ms;
+}
+[data-sahelflow-shell="desktop"] .page-sections > :nth-child(n + 4) {
+  animation-delay: 56ms;
+}
+
+/* Existing adoption classes now resolve to the same grammar instead of being
+ * disabled by the prior Phase 5 compatibility layer. */
+[data-sahelflow-shell="desktop"] .stagger-grid > * {
+  animation: sf-surface-enter var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
+}
+[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(2) { animation-delay: 24ms !important; }
+[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(3) { animation-delay: 40ms !important; }
+[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(4) { animation-delay: 56ms !important; }
+[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(n + 5) { animation-delay: 68ms !important; }
+
+[data-sahelflow-shell="desktop"] .animate-fade-in {
+  animation: sf-surface-fade var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
+}
+[data-sahelflow-shell="desktop"] .animate-fade-up {
+  animation: sf-surface-enter var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
+}
+[data-sahelflow-shell="desktop"] .animate-scale-in {
+  animation: sf-surface-scale var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
+}
+[data-sahelflow-shell="desktop"] :is(.animate-slide-right, .animate-slide-inline) {
+  animation: sf-surface-inline var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
+}
+
+/* Cards get a one-pixel lift only where callers explicitly opted into a lift
+ * class. Ordinary metric/table surfaces remain stable. */
+@media (hover: hover) and (pointer: fine) {
+  [data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover) {
+    transition-property: transform, border-color, background-color, box-shadow !important;
+    transition-duration: var(--sf-motion-state) !important;
+    transition-timing-function: var(--sf-motion-ease-state) !important;
+  }
+  [data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover):hover {
+    transform: translateY(-1px) !important;
+  }
+}
+
+/* Press feedback makes controls feel native without shifting layout. */
+[data-sahelflow-shell="desktop"] :where(button, [role="button"]):not(:disabled):active {
+  transform: scale(0.985);
+  transition-duration: var(--sf-motion-micro);
+}
+
+/* Selected/navigation state changes stay fast enough to feel immediate. */
+[data-sahelflow-shell="desktop"] :where(
+  [data-slot="dropdown-menu-item"],
+  [data-slot="tabs-trigger"],
+  [data-inbox-conversation],
+  [data-ai-session]
+) {
+  transition-duration: var(--sf-motion-state);
+  transition-timing-function: var(--sf-motion-ease-state);
+}
+
+@keyframes sf-page-section-enter {
+  from {
+    opacity: 0.94;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sf-surface-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sf-surface-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sf-surface-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.987);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes sf-surface-inline {
+  from {
+    opacity: 0;
+    transform: translateX(var(--sf-motion-inline-entry));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sahelflow-shell="desktop"] *,
+  [data-sahelflow-shell="desktop"] *::before,
+  [data-sahelflow-shell="desktop"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  [data-sahelflow-shell="desktop"] :where(button, [role="button"]):active,
+  [data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover):hover {
+    transform: none !important;
+  }
+}
