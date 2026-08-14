@@ -54,7 +54,10 @@ export function useI18n() {
   const [refreshPending, startRefreshTransition] = useTransition();
   const mounted = useIsMounted();
   const locale = mounted ? storeLocale : serverLocale;
-  const isLocalePending = pendingLocale !== null || refreshPending;
+  const localeCommitPending =
+    pendingLocale !== null &&
+    (serverLocale !== pendingLocale || storeLocale !== pendingLocale);
+  const isLocalePending = localeCommitPending || refreshPending;
 
   // All three compact product bundles are synchronously available. The active
   // bundle is therefore ready in the same commit as the server-confirmed locale.
@@ -69,29 +72,26 @@ export function useI18n() {
   }, [locale]);
 
   // The provider clears the visual transition in a layout effect before the
-  // refreshed tree paints. This effect releases the interaction state once the
-  // exact requested server locale is observable from both authorities.
+  // refreshed tree paints. Keep an idempotent external-system cleanup here once
+  // both locale authorities expose the exact requested server commit. The target
+  // state itself is intentionally derived instead of synchronously reset inside
+  // an effect, avoiding a cascading render after every successful switch.
   useEffect(() => {
-    if (
-      pendingLocale !== null &&
-      serverLocale === pendingLocale &&
-      storeLocale === pendingLocale
-    ) {
+    if (pendingLocale !== null && !localeCommitPending) {
       clearLocaleVisualTransition();
-      setPendingLocale(null);
     }
-  }, [pendingLocale, serverLocale, storeLocale]);
+  }, [localeCommitPending, pendingLocale]);
 
   // A failed/aborted RSC refresh must never leave the shell permanently covered
   // or direction controls locked. The hard reload is recovery only, not the
   // normal language-switch path.
   useEffect(() => {
-    if (pendingLocale === null) return;
+    if (!localeCommitPending) return;
     const timeout = window.setTimeout(() => {
       window.location.reload();
     }, LOCALE_REFRESH_FALLBACK_MS);
     return () => window.clearTimeout(timeout);
-  }, [pendingLocale]);
+  }, [localeCommitPending]);
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
