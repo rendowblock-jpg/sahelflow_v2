@@ -7,12 +7,16 @@
 > **Published updater:** `1.0.0-internal.16` / MSI `1.0.0.16`
 > **Signed release run:** `31770292329`
 > **Founder installed result:** Internal.16 installed; frontend acceptance **REJECTED** on 2026-08-14
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active correction frontier:** Internal.17 source-level frontend-system correction under temporary FD-035
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Retained evidence:** #221, #226, #230
 
 Live GitHub is authority. Internal.16 publication is complete. Do **not** restart release-authority work from PR #252 and do **not** treat green CI as Founder visual/UX acceptance.
 
-## What remains protected and should not be reopened generically
+Historical release continuity: the prior Founder checkpoint was Internal.15 from signed run `31657621918`. That line remains for audit continuity only and is not the current release.
+
+## Wave 4 — what is implemented
 
 Internal.16 Waves 1–4 and the signed release infrastructure are protected. Preserve:
 
