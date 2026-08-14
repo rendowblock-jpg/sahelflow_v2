@@ -6,7 +6,22 @@ import { spawnSync } from "node:child_process";
 
 const root = resolve(process.env.SF_REPO_DIR ?? process.cwd());
 const cargoManifest = "src-tauri/Cargo.toml";
-const allowedTrackedChanges = new Set([cargoManifest]);
+const generatedTauriIcons = [
+  "src-tauri/icons/32x32.png",
+  "src-tauri/icons/128x128.png",
+  "src-tauri/icons/128x128@2x.png",
+  "src-tauri/icons/icon.icns",
+  "src-tauri/icons/icon.ico",
+  "src-tauri/icons/icon.png",
+] as const;
+// The signed release workflow deliberately regenerates these tracked desktop
+// icon outputs from public/icons/sahelflow-mark.png before packaging. Keep the
+// post-build guard fail-closed to only that exact generated set plus Cargo's
+// already-proven non-semantic packaging rewrite.
+const allowedTrackedChanges = new Set<string>([
+  cargoManifest,
+  ...generatedTauriIcons,
+]);
 const toml = (
   globalThis as typeof globalThis & {
     Bun: { TOML: { parse(input: string): unknown } };
