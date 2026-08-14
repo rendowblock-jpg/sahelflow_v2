@@ -309,18 +309,23 @@ jobs:
           }
           switch ($authority.licensing.releaseMode) {
             'founder-offline-only' {
+              $founderOfflineAuthority = (
+                ($authority.version -ceq '1.0.0-internal.15' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-032') -or
+                ($authority.version -ceq '1.0.0-internal.16' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-034')
+              )
               if (
-                $authority.version -cne '1.0.0-internal.15' -or
+                -not $founderOfflineAuthority -or
                 $authority.channel -cne 'internal' -or
-                $authority.licensing.authorityDecision -cne 'FD-032' -or
                 $null -ne $authority.licensing.ownedHostSuffix
               ) {
-                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15'
+                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15 or FD-034/Internal.16'
               }
-              # The protected environment may retain an older service secret. The exact
-              # FD-032 artifact must compile and launch without exposing it to the app.
+              # The protected environment may retain an older service secret. Exact
+              # Founder-only checkpoints must compile and launch without exposing it.
               'SF_LICENSE_SERVICE_URL=' >> $env:GITHUB_ENV
-              'SF_RELEASE_SCOPE=founder-offline-only (FD-032; online trial disabled)' >> $env:GITHUB_ENV
+              "SF_RELEASE_SCOPE=founder-offline-only ($($authority.licensing.authorityDecision); online trial disabled)" >> $env:GITHUB_ENV
             }
             'customer-online' {
               if ([string]::IsNullOrWhiteSpace($authority.licensing.ownedHostSuffix)) {
