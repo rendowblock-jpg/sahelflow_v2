@@ -24,13 +24,15 @@ protected Phase 0–4 canonical engine
 + signed Internal.16 publication
 → Founder installs Internal.16
 → frontend acceptance REJECTED
-→ six reconfirmed systemic frontend blockers
-→ one Internal.17 root-correction frontier
-→ deep exact-head proof
+→ six classes reconfirmed failed
+→ reconcile the complete FD-033 frozen P1 register + new motion class
+→ one Internal.17 root-correction frontier containing every still-open class
+→ deep exact-head proof + adversarial review
+→ zero applicable unresolved P0/P1
 → new exact signed candidate authority
-→ Founder-installed #221 acceptance
-→ #226 performance/reliability certification
-→ #230 customer-trial/network certification
+→ one coherent signed candidate
+→ #221 + #226 + #230 on that candidate
+→ explicit Founder accept/reject
 → Phase 9 representative/external launch evidence
 → explicit Founder promotion
 ```
@@ -49,7 +51,7 @@ Phase 3 durable provider, Inbox, AI and automation authority remains protected u
 
 Protected source/browser work remains valid for what its exact heads proved. Internal.16 installed evidence now proves the higher Founder-acceptance layer is still open.
 
-### Six reconfirmed blockers
+### Six reconfirmed failures
 
 1. **`SF16-UI-001` — RTL/direction geometry**
    - still wrong in the sidebar and other UI surfaces;
@@ -76,11 +78,19 @@ Protected source/browser work remains valid for what its exact heads proved. Int
    - still Founder-rejected in the signed installed product;
    - complete task-oriented sessions/context/composer/streaming/tool-result/proposal/permission/error/history/recovery behavior while preserving canonical proposal-bound actions and privacy controls.
 
-### Evidence interpretation
+### Complete frozen P1 register remains binding
 
-These six are explicitly reconfirmed failures. The Founder is not required to enumerate every repeated manifestation.
+The six failures above are reconfirmed installed evidence; they do **not** supersede or silently close FD-033's original 17 P1 classes. The Internal.17 reconnaissance and final sweep must explicitly reconcile:
 
-Other original Internal.15 findings are **not** automatically declared fixed because they were not mentioned in this inspection. Existing acceptance requirements remain until source evidence plus applicable installed observation closes them.
+- `SF16-UI-001`, `SF16-UI-002`, `SF16-UI-003`;
+- `SF16-I18N-004`, `SF16-I18N-007`, `SF16-I18N-016`;
+- `SF16-INBOX-005`, `SF16-AI-006`, `SF16-AI-010`;
+- `SF16-PRODUCTS-008`, `SF16-SEARCH-009`;
+- `SF16-RESP-011`, `SF16-LAYOUT-012`;
+- `SF16-CHART-013`, `SF16-PERF-014`, `SF16-THEME-015`, `SF16-NAV-017`;
+- new `SF17-MOTION-018`.
+
+For every class not freshly reconfirmed as failed, the audit must retain exact current proof if already satisfied or keep the class open in the correction map. No class closes merely because the Founder did not mention it again.
 
 ## Phase 6 — Arabic, RTL and accessibility parity
 
@@ -92,9 +102,9 @@ Acceptance continues to require professional Arabic typography/reading flow, log
 
 Temporary FD-035 authorizes source correction work, not a signed Internal.17 release by itself.
 
-### 1. Focused root reconnaissance
+### 1. Complete reconnaissance and correction-map freeze
 
-Perform a complete reconnaissance of exact current source and production consumers for:
+Perform a complete reconnaissance of exact current source and production consumers for the six reconfirmed root classes, including:
 
 - logical CSS/layout/direction primitives, sidebar/shell, route-level physical positioning, popovers/dialogs/portals, tables, icons, charts and bidi isolation;
 - appearance/theme authority, hydration, DOM/root attributes/classes, semantic tokens, transition windows, chart consumers and causes of mixed old/new frames;
@@ -103,7 +113,9 @@ Perform a complete reconnaissance of exact current source and production consume
 - Inbox data/actions/permissions/provider states/recovery plus queue/thread/context/adaptive layout and scale behavior;
 - AI workspace data/actions/session/context/tools/proposals/provider/readiness/recovery plus long-session behavior.
 
-Freeze one bounded correction map with shared roots, affected production consumers, tests, localization/accessibility/performance consequences and explicit non-goals. Do not create another permanent masterplan.
+In the same complete reconnaissance, inspect the remaining FD-033 classes: Risk KPI hierarchy, stat-card semantics, locale formatting, raw/foreign copy, product thumbnails, universal search, Gemini readiness/inference, responsive composition, layout stretching/dead space, startup, locale cache/prefetch atomicity and navigation IA/reorder behavior.
+
+Freeze one bounded correction map with the explicit status of **every** class, shared roots, affected production consumers, tests, localization/accessibility/performance consequences and non-goals. Do not create another permanent masterplan.
 
 ### 2. Dependency-correct implementation
 
@@ -115,7 +127,8 @@ Implement in this order unless the root audit proves a safer dependency ordering
 4. governed chart system and route adoption;
 5. Inbox convergence;
 6. AI Agents convergence;
-7. exhaustive sibling/adoption sweep across affected production routes.
+7. every additional still-open frozen P1 from the complete register;
+8. exhaustive sibling/adoption sweep across affected production routes.
 
 The purpose is to eliminate root causes, not accumulate page-local exceptions.
 
@@ -167,11 +180,15 @@ The purpose is to eliminate root causes, not accumulate page-local exceptions.
 - proposal-bound canonical mutations, privacy/redaction and ambiguity/idempotency authority remain intact;
 - long sessions remain usable on representative hardware.
 
+#### Other frozen classes
+
+Every other FD-033 class must have an explicit final status on the same candidate. Exact source/installed evidence may prove a class already satisfied; otherwise repair it. Universal search, Gemini lifecycle, locale/cache atomicity, responsive/layout composition, navigation, startup/performance and the remaining visual/i18n classes may not be omitted from the final acceptance sweep.
+
 ### 4. Validation cadence
 
 During implementation use targeted cheap checks. Do not build/sign/install after every small edit and do not retry-away deterministic failures.
 
-Freeze one exact correction head only after the six classes and discovered siblings are source-complete. Then run:
+Freeze one exact correction head only after the complete P1 register has been reconciled and every still-open class is source-complete. Then run:
 
 - current-frontier/authority checks;
 - TypeScript, ESLint and complete relevant Vitest;
@@ -180,20 +197,32 @@ Freeze one exact correction head only after the six classes and discovered sibli
 - dedicated theme-switch and motion-settle matrices;
 - dedicated governed-chart route matrices;
 - Inbox and AI functionality/responsive/recovery/scale matrices;
+- consequence-selected search/Gemini/locale/responsive/layout/navigation/startup matrices;
 - Windows/native/install/authenticated hydrated UI evidence;
 - consequence-selected performance evidence.
 
 Perform one consolidated adversarial review, repair the full actionable finding set, then rerun affected plus final proof. Protect the source through expected-head merge discipline after the selected exact-head gates pass.
 
-### 5. New signed candidate boundary
+### 5. New signed candidate and coherent evidence boundary
 
 FD-034 is exact to Internal.16. FD-035 does not authorize signing/publishing Internal.17.
 
-Only after the correction head is genuinely clean should the Founder create exact version/release authority for the next signed checkpoint. That candidate must then be installed and inspected on the Founder T470 before #221 can close.
+Only after the correction head has zero applicable unresolved P0/P1 should the Founder create exact version/release authority for the next signed checkpoint.
+
+Then, on **one coherent repaired signed candidate**:
+
+1. run applicable #221 installed AR/FR/EN, Arabic/RTL, theme/locale, 1366×768/zoom, keyboard/focus/semantics, reduced-motion and whole-product experience evidence;
+2. run #226 representative installed startup/navigation/search/mutation/resource/reliability certification;
+3. run #230 live production/network customer-trial evidence for the public/customer-online claim;
+4. record explicit Founder accept/reject only after those applicable retained gates describe that same candidate.
+
+Preliminary Founder UX inspection can happen earlier. It is not the final user-ready acceptance record.
+
+If source, packaging, runtime, licensing/network behavior or materially user-facing code changes after any gate, rerun every affected retained gate and repeat Founder acceptance as necessary. Evidence from materially different candidates cannot be combined into one user-ready claim.
 
 ## Phase 7 — performance and reliability remains open
 
-Issue #226 remains a separate installed certification gate.
+Issue #226 remains a separate installed certification gate, but its final evidence must describe the same signed candidate used for the user-ready #221/#230/Founder claim.
 
 T470 targets remain:
 
@@ -214,7 +243,7 @@ The Internal.17 frontend correction does not generically reopen this platform. R
 
 ## Customer licensing/network gate — #230
 
-Issue #230 remains a P1 user-launch blocker.
+Issue #230 remains a P1 user-launch blocker and its final evidence must describe the same coherent signed candidate used for the user-ready acceptance claim.
 
 Before customer-online/public-trial distribution, SahelFlow still requires:
 
@@ -231,10 +260,10 @@ Founder offline permanent activation is not customer-trial certification.
 
 Stable remains separate from Internal completion.
 
-After #221, #226 and #230 are genuinely closed at their required evidence levels, Stable still requires the applicable signed clean install/update, migration/backup/restore, identity/licensing/shop lifecycle, Golden COD/provider reconciliation, connected/storefront/remote-command proof, complete AAA AR/FR/EN/RTL/accessibility experience, representative Algerian seller beta, live provider certification where applicable, independent security/privacy/Law 18-07 review, rollout/support readiness and explicit Founder promotion.
+After the complete P1 register plus `SF17-MOTION-018` and #221/#226/#230 are genuinely satisfied on one coherent signed candidate, Stable still requires the applicable signed clean install/update, migration/backup/restore, identity/licensing/shop lifecycle, Golden COD/provider reconciliation, connected/storefront/remote-command proof, complete AAA AR/FR/EN/RTL/accessibility experience, representative Algerian seller beta, live provider certification where applicable, independent security/privacy/Law 18-07 review, rollout/support readiness and explicit Founder promotion.
 
 ## Definition of done
 
 A source/browser green result is not Founder acceptance. A signed Internal release is not customer readiness. Absence of a fresh complaint is not proof of a fix.
 
-The application is complete for the claimed level only when every applicable Required matrix executes, zero known P0/P1 remains, source/artifact/installed behavior agree, the Founder accepts the installed whole-product experience, and external Phase 9 evidence exists where required.
+The application is complete for the claimed level only when every applicable Required matrix executes, the complete frozen P1 register is reconciled, zero known P0/P1 remains, source/artifact/installed behavior agree on one coherent candidate, the Founder accepts that installed whole-product experience, and external Phase 9 evidence exists where required.
