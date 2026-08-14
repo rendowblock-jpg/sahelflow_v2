@@ -14,7 +14,7 @@
 
 Live GitHub is authority. Internal.16 publication is complete. Do **not** restart release-authority work from PR #252 and do **not** treat green CI as Founder visual/UX acceptance.
 
-Historical release continuity: the prior Founder checkpoint was Internal.15 from signed run `31657621918`. That line remains for audit continuity only and is not the current release.
+Historical release continuity: the prior Founder checkpoint was Internal.15 from signed run `31657621918`. PR #251 merged at `aa7dd2df53286a670fc55e319a281757cf3d28b2` from exact head `73e8d8c466567859bc651bb4d77976fdb2a1bbc3`, with exact Wave 4 CI run `31765143457`. The superseded Internal.16 release-authority branch was `agent/internal-16-founder-offline-checkpoint`. These lines remain for audit/frontier continuity only and are not the current task.
 
 ## Wave 4 — what is implemented
 
