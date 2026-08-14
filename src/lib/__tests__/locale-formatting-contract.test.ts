@@ -33,6 +33,28 @@ function uiSourceFiles(directory: string): string[] {
   return files;
 }
 
+function importedLocaleSensitiveFormatters(sourceFile: ts.SourceFile): Set<string> {
+  const imported = new Set<string>();
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement)) continue;
+    if (
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== "@/lib/utils"
+    ) {
+      continue;
+    }
+    const bindings = statement.importClause?.namedBindings;
+    if (!bindings || !ts.isNamedImports(bindings)) continue;
+    for (const element of bindings.elements) {
+      const importedName = element.propertyName?.text ?? element.name.text;
+      if (localeSensitiveUiFormatters.has(importedName)) {
+        imported.add(element.name.text);
+      }
+    }
+  }
+  return imported;
+}
+
 function missingLocaleFormatterArguments(): string[] {
   const offenders: string[] = [];
   for (const path of [
@@ -47,11 +69,12 @@ function missingLocaleFormatterArguments(): string[] {
       true,
       path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
     );
+    const importedFormatters = importedLocaleSensitiveFormatters(sourceFile);
     const visit = (node: ts.Node): void => {
       if (
         ts.isCallExpression(node) &&
         ts.isIdentifier(node.expression) &&
-        localeSensitiveUiFormatters.has(node.expression.text) &&
+        importedFormatters.has(node.expression.text) &&
         node.arguments.length < 2
       ) {
         const location = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));

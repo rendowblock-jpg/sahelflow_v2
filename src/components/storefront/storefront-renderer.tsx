@@ -229,7 +229,7 @@ function ProductGrid({
   draft: StorefrontPreviewProps["draft"];
   renderProductFooter?: (product: StorefrontStudioProduct) => React.ReactNode;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const theme = draft.theme;
   return (
     <div className={`grid grid-cols-1 sm:grid-cols-2 ${theme.density === "compact" ? "gap-2" : "gap-4"}`}>
@@ -252,7 +252,7 @@ function ProductGrid({
             <div className="space-y-2 p-3">
               <div className="text-sm font-semibold">{product.name}</div>
               {theme.catalog.showSku && product.sku ? <div className="text-[10px] opacity-50">{product.sku}</div> : null}
-              {theme.showPrices ? <div className="text-xs font-semibold" style={{ color: theme.primaryColor }}>{formatDZD(product.price)}</div> : null}
+              {theme.showPrices ? <div className="text-xs font-semibold" style={{ color: theme.primaryColor }}>{formatDZD(product.price, locale)}</div> : null}
               {theme.showStock ? <div className="text-[10px] opacity-60">{t("storefront.studio.stockCount", { count: product.stock })}</div> : null}
               {renderProductFooter?.(product)}
             </div>

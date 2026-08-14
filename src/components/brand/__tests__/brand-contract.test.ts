@@ -17,7 +17,7 @@ describe("SahelFlow canonical brand mark", () => {
     const manifest = read("src/app/manifest.ts");
 
     expect(digest).toBe(
-      "4877597bed501d592b2a7e7f5e14c6f7c7a27693785e06ed8290efe1c4077ffa",
+      "e72154edf829d5aa96d36dc116ef423995b8d1acc75c53ab51f40282fb6f1cbd",
     );
     expect(component).toContain('/icons/sahelflow-mark.png');
     expect(sidebar).toContain("SahelFlowMark");

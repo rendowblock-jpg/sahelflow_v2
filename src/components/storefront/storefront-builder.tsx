@@ -42,7 +42,7 @@ const TEMPLATES: { value: StorefrontTheme["template"]; labelKey: string; descKey
 const PRESET_COLORS = ["#0f766e", "#b45309", "#9f1239", "#1e3a8a", "#166534", "#7c2d12"];
 
 export function StorefrontBuilder({ config: initialConfig, products, mode }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -303,7 +303,7 @@ export function StorefrontBuilder({ config: initialConfig, products, mode }: Pro
                       </div>
                     </div>
                     <div className="text-sm font-semibold whitespace-nowrap">
-                      {formatDZD(product.price)}
+                      {formatDZD(product.price, locale)}
                     </div>
                   </label>
                 );
