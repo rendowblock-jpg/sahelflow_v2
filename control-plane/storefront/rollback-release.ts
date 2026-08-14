@@ -42,18 +42,45 @@ async function rollbackResponse(
     replay: boolean;
   }>,
 ): Promise<Response> {
-  const snapshot = await loadAllocationTransferSnapshot(
-    environment.DB,
-    input.releaseId,
-    input.releaseId,
-  );
+  const [snapshot, source, shipping] = await Promise.all([
+    loadAllocationTransferSnapshot(environment.DB, input.releaseId, input.releaseId),
+    environment.DB.prepare(
+      `SELECT release_id, storefront_id, parent_release_id, template_id, locale,
+              artifact_json, artifact_digest
+         FROM storefront_release
+        WHERE release_id = ?1 AND storefront_id = ?2`,
+    ).bind(input.sourceReleaseId, input.storefrontId).first<ReleaseRow>(),
+    environment.DB.prepare(
+      `SELECT wilaya_code, delivery_mode, fee_dzd
+         FROM storefront_shipping_rule
+        WHERE release_id = ?1
+        ORDER BY wilaya_code ASC, delivery_mode ASC`,
+    ).bind(input.sourceReleaseId).all<ShippingRuleRow>(),
+  ]);
+  if (!source || !shipping.success || !shipping.results?.length) {
+    return json({ error: "rollback_source_unavailable" }, 503);
+  }
+  let publicArtifact: unknown;
+  try {
+    publicArtifact = JSON.parse(source.artifact_json);
+  } catch {
+    return json({ error: "rollback_source_invalid" }, 409);
+  }
   return json(
     {
       storefrontId: input.storefrontId,
       releaseId: input.releaseId,
       sourceReleaseId: input.sourceReleaseId,
       previousReleaseId: input.previousReleaseId,
+      templateId: source.template_id,
+      locale: source.locale,
       artifactDigest: input.artifactDigest,
+      publicArtifact,
+      shippingRules: shipping.results.map((rule) => ({
+        wilayaCode: rule.wilaya_code,
+        deliveryMode: rule.delivery_mode,
+        feeDzd: rule.fee_dzd,
+      })),
       allocations: snapshot.allocations,
       retiredAllocations: snapshot.retiredAllocations,
       status: "rolled_back",
