@@ -326,6 +326,7 @@ async function bootstrap(request: Request, environment: ConnectedWorkerEnvironme
     entitlement?: unknown;
     desktopSigningPublicKey?: unknown;
     desktopEncryptionPublicKey?: unknown;
+    recoveryTransfer?: unknown;
   };
   if (
     typeof input.desktopSigningPublicKey !== "string" ||
@@ -363,22 +364,36 @@ async function bootstrap(request: Request, environment: ConnectedWorkerEnvironme
     const rank = { trial: 0, extension: 1, permanent: 2 } as const;
     const existingType = existing.license_type ??
       (currentExpiry === null ? "permanent" : "trial");
+    const recoveryTransfer = input.recoveryTransfer === true &&
+      existing.license_id === claims.licenseId &&
+      claims.revocationEpoch > existing.entitlement_revocation_epoch;
     if (
       existing.revoked_at !== null ||
       (rank[claims.type] === rank[existingType] && existing.license_id !== claims.licenseId) ||
       rank[claims.type] < rank[existingType] ||
-      existing.installation_id !== claims.installationId ||
-      existing.device_binding !== claims.deviceBinding ||
+      (!recoveryTransfer && existing.installation_id !== claims.installationId) ||
+      (!recoveryTransfer && existing.device_binding !== claims.deviceBinding) ||
       existing.product_major !== claims.productMajor ||
-      existing.desktop_signing_public_key !== input.desktopSigningPublicKey ||
-      existing.desktop_encryption_public_key !== input.desktopEncryptionPublicKey ||
+      (!recoveryTransfer && existing.desktop_signing_public_key !== input.desktopSigningPublicKey) ||
+      (!recoveryTransfer && existing.desktop_encryption_public_key !== input.desktopEncryptionPublicKey) ||
       claims.revocationEpoch < existing.entitlement_revocation_epoch ||
       (currentExpiry === null && nextExpiry !== null) ||
       (currentExpiry !== null && nextExpiry !== null && nextExpiry < currentExpiry)
     ) {
       return json({ error: "entitlement_refresh_rejected" }, 409);
     }
-    const refreshed = await environment.DB.prepare(
+    const workspaceUpdate = environment.DB.prepare(recoveryTransfer
+      ? `UPDATE connected_workspace
+          SET license_id = ?9, installation_id = ?10, device_binding = ?11,
+              product_major = ?12, desktop_signing_public_key = ?13,
+              desktop_encryption_public_key = ?14, license_type = ?15,
+              entitlement_expires_at = ?2, shop_slots = ?3, member_limit = ?4,
+              device_limit = ?5, features_json = ?6,
+              entitlement_revocation_epoch = ?7, desktop_token_hash = ?8,
+              updated_at = CURRENT_TIMESTAMP
+        WHERE workspace_id = ?1 AND license_id = ?9 AND revoked_at IS NULL
+          AND entitlement_revocation_epoch < ?7`
+      :
       `UPDATE connected_workspace
           SET license_id = ?9, license_type = ?15,
               entitlement_expires_at = ?2, shop_slots = ?3, member_limit = ?4,
@@ -388,8 +403,7 @@ async function bootstrap(request: Request, environment: ConnectedWorkerEnvironme
         WHERE workspace_id = ?1 AND installation_id = ?10
           AND device_binding = ?11 AND product_major = ?12
           AND desktop_signing_public_key = ?13 AND desktop_encryption_public_key = ?14
-          AND revoked_at IS NULL AND entitlement_revocation_epoch <= ?7`,
-    ).bind(
+          AND revoked_at IS NULL AND entitlement_revocation_epoch <= ?7`).bind(
       claims.workspaceId,
       claims.expiresAt,
       claims.shopSlots,
@@ -405,15 +419,33 @@ async function bootstrap(request: Request, environment: ConnectedWorkerEnvironme
       input.desktopSigningPublicKey,
       input.desktopEncryptionPublicKey,
       claims.type,
-    ).run();
-    if (!refreshed.success || refreshed.meta?.changes !== 1) {
+    );
+    const outcomes = await environment.DB.batch([
+      workspaceUpdate,
+      ...(recoveryTransfer ? [
+        environment.DB.prepare(
+          `UPDATE connected_device
+              SET revoked_at = COALESCE(revoked_at, CURRENT_TIMESTAMP),
+                  revocation_epoch = MAX(revocation_epoch, ?2)
+            WHERE workspace_id = ?1 AND revoked_at IS NULL`,
+        ).bind(claims.workspaceId, claims.revocationEpoch),
+        environment.DB.prepare(
+          "DELETE FROM connected_command_policy WHERE workspace_id = ?1",
+        ).bind(claims.workspaceId),
+        environment.DB.prepare(
+          `UPDATE connected_command SET state = 'revoked', completed_at = CURRENT_TIMESTAMP
+            WHERE workspace_id = ?1 AND state = 'queued'`,
+        ).bind(claims.workspaceId),
+      ] : []),
+    ]);
+    if (outcomes.some((outcome) => !outcome.success) || outcomes[0]?.meta?.changes !== 1) {
       return json({ error: "entitlement_refresh_conflict" }, 409);
     }
     return json({
       workspaceId: claims.workspaceId,
       desktopToken: token,
       protocolVersion: 1,
-      status: "refreshed",
+      status: recoveryTransfer ? "recovered" : "refreshed",
     });
   }
 
@@ -736,6 +768,24 @@ async function workspaceAuthority(
   });
 }
 
+async function publicStorefrontAuthority(
+  environment: ConnectedWorkerEnvironment,
+  url: URL,
+): Promise<Response> {
+  const workspaceId = url.searchParams.get("workspaceId");
+  if (!validIdentity(workspaceId)) return json({ error: "invalid_request" }, 400);
+  const workspace = await environment.DB.prepare(
+    `SELECT features_json
+       FROM connected_workspace
+      WHERE workspace_id = ?1 AND revoked_at IS NULL
+        AND (entitlement_expires_at IS NULL OR datetime(entitlement_expires_at) > CURRENT_TIMESTAMP)`,
+  ).bind(workspaceId).first<Pick<WorkspaceRow, "features_json">>();
+  if (!workspace || !hasWorkspaceFeature(workspace, STOREFRONT_FEATURE)) {
+    return json({ error: "storefront_unavailable" }, 404);
+  }
+  return json({ workspaceId, storefrontActive: true });
+}
+
 async function putProjection(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
   let body: unknown;
   try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
@@ -792,6 +842,35 @@ async function putProjection(request: Request, environment: ConnectedWorkerEnvir
   return json({ status: "stored", sequence: envelope.sequence }, 202);
 }
 
+async function invalidateCommandPolicies(
+  request: Request,
+  environment: ConnectedWorkerEnvironment,
+): Promise<Response> {
+  let body: unknown;
+  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
+  const input = body as { workspaceId?: unknown; memberId?: unknown };
+  if (!validIdentity(input.workspaceId) || !validIdentity(input.memberId)) {
+    return json({ error: "invalid_request" }, 400);
+  }
+  if (!(await authenticateDesktop(request, environment, input.workspaceId))) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  const outcomes = await environment.DB.batch([
+    environment.DB.prepare(
+      "DELETE FROM connected_command_policy WHERE workspace_id = ?1 AND member_id = ?2",
+    ).bind(input.workspaceId, input.memberId),
+    environment.DB.prepare(
+      `UPDATE connected_command
+          SET state = 'revoked', completed_at = CURRENT_TIMESTAMP
+        WHERE workspace_id = ?1 AND member_id = ?2 AND state = 'queued'`,
+    ).bind(input.workspaceId, input.memberId),
+  ]);
+  if (outcomes.some((outcome) => !outcome.success)) {
+    return json({ error: "policy_invalidation_unavailable" }, 503);
+  }
+  return json({ memberId: input.memberId, status: "invalidated" });
+}
+
 async function getProjection(request: Request, environment: ConnectedWorkerEnvironment, url: URL): Promise<Response> {
   const workspaceId = url.searchParams.get("workspaceId");
   const deviceId = url.searchParams.get("deviceId");
@@ -828,7 +907,7 @@ async function submitCommand(request: Request, environment: ConnectedWorkerEnvir
     Date.parse(envelope.expiresAt) <= Date.now()
   ) return json({ error: "invalid_command_scope" }, 400);
   const device = await authenticateDevice(request, environment, envelope.workspaceId, envelope.deviceId);
-  if (!device || device.member_id !== envelope.memberId || envelope.revocationEpoch !== device.revocation_epoch) {
+  if (!device || device.member_id !== envelope.memberId) {
     return json({ error: "unauthorized" }, 401);
   }
   const workspace = await environment.DB.prepare(
@@ -841,7 +920,8 @@ async function submitCommand(request: Request, environment: ConnectedWorkerEnvir
     return json({ error: "invalid_signature" }, 403);
   }
   const policy = await environment.DB.prepare(
-    `SELECT allowed_commands_json, expires_at, device_revocation_epoch
+    `SELECT policy_version, member_revocation_epoch, allowed_commands_json,
+            expires_at, device_revocation_epoch
        FROM connected_command_policy
       WHERE workspace_id = ?1 AND shop_id = ?2 AND member_id = ?3 AND device_id = ?4`,
   ).bind(
@@ -850,6 +930,8 @@ async function submitCommand(request: Request, environment: ConnectedWorkerEnvir
     envelope.memberId,
     envelope.deviceId,
   ).first<{
+    policy_version: number;
+    member_revocation_epoch: number;
     allowed_commands_json: string;
     expires_at: string;
     device_revocation_epoch: number;
@@ -858,6 +940,8 @@ async function submitCommand(request: Request, environment: ConnectedWorkerEnvir
   if (
     policy &&
     Date.parse(policy.expires_at) > Date.now() &&
+    policy.policy_version === envelope.sequence &&
+    policy.member_revocation_epoch === envelope.revocationEpoch &&
     policy.device_revocation_epoch === device.revocation_epoch
   ) {
     try {
@@ -902,11 +986,12 @@ async function submitCommand(request: Request, environment: ConnectedWorkerEnvir
 
 async function pollCommands(request: Request, environment: ConnectedWorkerEnvironment, url: URL): Promise<Response> {
   const workspaceId = url.searchParams.get("workspaceId");
+  const shopId = url.searchParams.get("shopId");
   const afterRaw = url.searchParams.get("after") ?? "0";
   const limitRaw = url.searchParams.get("limit") ?? "50";
   const after = Number(afterRaw);
   const limit = Number(limitRaw);
-  if (!validIdentity(workspaceId) || !Number.isSafeInteger(after) || after < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > MAX_POLL_LIMIT) {
+  if (!validIdentity(workspaceId) || !validIdentity(shopId) || !Number.isSafeInteger(after) || after < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > MAX_POLL_LIMIT) {
     return json({ error: "invalid_request" }, 400);
   }
   if (!(await authenticateDesktop(request, environment, workspaceId))) return json({ error: "unauthorized" }, 401);
@@ -917,9 +1002,9 @@ async function pollCommands(request: Request, environment: ConnectedWorkerEnviro
   const rows = await environment.DB.prepare(
     `SELECT relay_sequence, command_id, envelope_json
        FROM connected_command
-      WHERE workspace_id = ?1 AND relay_sequence > ?2 AND state = 'queued'
-      ORDER BY relay_sequence ASC LIMIT ?3`,
-  ).bind(workspaceId, after, limit).all<{ relay_sequence: number; command_id: string; envelope_json: string }>();
+      WHERE workspace_id = ?1 AND shop_id = ?2 AND relay_sequence > ?3 AND state = 'queued'
+      ORDER BY relay_sequence ASC LIMIT ?4`,
+  ).bind(workspaceId, shopId, after, limit).all<{ relay_sequence: number; command_id: string; envelope_json: string }>();
   const commands = (rows.results ?? []).map((row) => ({
     relaySequence: row.relay_sequence,
     commandId: row.command_id,
@@ -1070,9 +1155,11 @@ export async function handleConnectedRequest(
   if (request.method === "POST" && url.pathname === "/v1/desktop/pairings") return createPairing(request, environment);
   if (request.method === "POST" && url.pathname === "/v1/pairings/exchange") return exchangePairing(request, environment);
   if (request.method === "GET" && url.pathname === "/v1/desktop/authority") return workspaceAuthority(request, environment, url);
+  if (request.method === "GET" && url.pathname === "/v1/storefront/authority") return publicStorefrontAuthority(environment, url);
   if (request.method === "GET" && url.pathname === "/v1/desktop/devices") return listDevices(request, environment, url);
   if (request.method === "PUT" && url.pathname === "/v1/desktop/projections") return putProjection(request, environment);
   if (request.method === "PUT" && url.pathname === "/v1/desktop/command-policies") return putCommandPolicy(request, environment);
+  if (request.method === "DELETE" && url.pathname === "/v1/desktop/command-policies") return invalidateCommandPolicies(request, environment);
   if (request.method === "GET" && url.pathname === "/v1/projections") return getProjection(request, environment, url);
   if (request.method === "POST" && url.pathname === "/v1/commands") return submitCommand(request, environment);
   if (request.method === "GET" && url.pathname === "/v1/desktop/commands") return pollCommands(request, environment, url);

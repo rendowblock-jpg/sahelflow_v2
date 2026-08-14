@@ -142,6 +142,18 @@ async function nativeBundle(entry: BackupEntry, context: ServiceContext) {
   };
 }
 
+function cloudRetentionClass(
+  entry: BackupEntry,
+  licenseType: "trial" | "extension" | "permanent",
+): "daily" | "weekly" | "monthly" | "pinned" | "trial" {
+  if (licenseType !== "permanent") return "trial";
+  return entry.retentionClass === "weekly" ||
+    entry.retentionClass === "monthly" ||
+    entry.retentionClass === "pinned"
+    ? entry.retentionClass
+    : "daily";
+}
+
 export async function uploadNativeBackupToCloudIfEnrolled(
   context: ServiceContext,
   entry: BackupEntry,
@@ -151,59 +163,74 @@ export async function uploadNativeBackupToCloudIfEnrolled(
   const runtime = await loadBackupRuntimeIfEnrolled(context);
   if (!runtime) return null;
   const bundle = await nativeBundle(entry, context);
-  const initiated = await runtime.client.initiateBackup({
-    workspaceId: context.shop.workspaceId,
-    backupId: entry.backupId,
-    shopId: context.shop.shopId,
-    retentionClass: licenseType === "permanent" ? "pinned" : "trial",
-    wrappedDek: bundle.wrappedDek,
-    manifestSha256: digest(bundle.manifestBytes),
-    manifestBytes: bundle.manifestBytes.byteLength,
-    chunks: bundle.chunks.map(({ file }) => ({
-      index: file.index,
-      sha256: file.sha256,
-      byteSize: file.byteSize,
-    })),
-  });
-  if (initiated.backupId !== entry.backupId || initiated.state !== "initiated") {
-    throw new Error("Cloud backup did not acknowledge the exact native backup");
-  }
-  await runtime.client.uploadBackupManifest(
-    entry.backupId,
-    context.shop.workspaceId,
-    bundle.manifestBytes,
-  );
-  for (const chunk of bundle.chunks) {
-    await runtime.client.uploadBackupChunk(
-      entry.backupId,
-      chunk.file.index,
-      context.shop.workspaceId,
-      chunk.bytes,
-    );
-  }
-  const verifiedAt = new Date().toISOString();
-  const signature = signConnectedBytes(
-    runtime.desktopKeys.signingPrivateKeyPkcs8,
-    canonicalBackupVerificationBytes({
+  let reservationCreated = false;
+  let verificationStarted = false;
+  try {
+    const initiated = await runtime.client.initiateBackup({
       workspaceId: context.shop.workspaceId,
-      shopId: context.shop.shopId,
       backupId: entry.backupId,
+      shopId: context.shop.shopId,
+      retentionClass: cloudRetentionClass(entry, licenseType),
+      wrappedDek: bundle.wrappedDek,
       manifestSha256: digest(bundle.manifestBytes),
-      totalBytes: initiated.totalBytes,
-      chunkCount: bundle.chunks.length,
+      manifestBytes: bundle.manifestBytes.byteLength,
+      chunks: bundle.chunks.map(({ file }) => ({
+        index: file.index,
+        sha256: file.sha256,
+        byteSize: file.byteSize,
+      })),
+    });
+    if (initiated.backupId !== entry.backupId || initiated.state !== "initiated") {
+      throw new Error("Cloud backup did not acknowledge the exact native backup");
+    }
+    reservationCreated = true;
+    await runtime.client.uploadBackupManifest(
+      entry.backupId,
+      context.shop.workspaceId,
+      bundle.manifestBytes,
+    );
+    for (const chunk of bundle.chunks) {
+      await runtime.client.uploadBackupChunk(
+        entry.backupId,
+        chunk.file.index,
+        context.shop.workspaceId,
+        chunk.bytes,
+      );
+    }
+    const verifiedAt = new Date().toISOString();
+    const signature = signConnectedBytes(
+      runtime.desktopKeys.signingPrivateKeyPkcs8,
+      canonicalBackupVerificationBytes({
+        workspaceId: context.shop.workspaceId,
+        shopId: context.shop.shopId,
+        backupId: entry.backupId,
+        manifestSha256: digest(bundle.manifestBytes),
+        totalBytes: initiated.totalBytes,
+        chunkCount: bundle.chunks.length,
+        verifiedAt,
+      }),
+    );
+    verificationStarted = true;
+    const verified = await runtime.client.verifyBackup(entry.backupId, {
+      workspaceId: context.shop.workspaceId,
       verifiedAt,
-    }),
-  );
-  const verified = await runtime.client.verifyBackup(entry.backupId, {
-    workspaceId: context.shop.workspaceId,
-    verifiedAt,
-    signature,
-  });
-  return Object.freeze({
-    backupId: verified.backupId,
-    state: verified.state,
-    receiptDigest: verified.receiptDigest ?? null,
-  });
+      signature,
+    });
+    return Object.freeze({
+      backupId: verified.backupId,
+      state: verified.state,
+      receiptDigest: verified.receiptDigest ?? null,
+    });
+  } catch (error) {
+    if (reservationCreated && !verificationStarted) {
+      try {
+        await runtime.client.deleteRemoteBackup(entry.backupId, context.shop.workspaceId);
+      } catch {
+        // The server expires stale reservations; the verified local backup stays authoritative.
+      }
+    }
+    throw error;
+  }
 }
 
 function parseBundleManifest(bytes: Uint8Array, backupId: string, workspaceId: string): CloudBundleManifest {

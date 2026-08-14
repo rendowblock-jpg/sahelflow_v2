@@ -103,6 +103,7 @@ export async function publishRemoteDashboardProjection(input: Readonly<{
   const expiresAt = new Date(issuedAt.getTime() + PROJECTION_TTL_MS);
   const actorPermissions = input.actorContext.actor.permissions ??
     getPhase2PresetPermissions(input.actorContext.actor.role);
+  const allowedCommands = remoteCommandTypesForPermissions(actorPermissions);
   const policy = await input.client.putCommandPolicy({
     workspaceId: input.actorContext.shop.workspaceId,
     shopId: input.actorContext.shop.shopId,
@@ -111,12 +112,21 @@ export async function publishRemoteDashboardProjection(input: Readonly<{
     policyVersion: input.actorContext.actor.policyVersion,
     memberRevocationEpoch: input.actorContext.actor.revocationEpoch,
     deviceRevocationEpoch: device.revocationEpoch,
-    allowedCommands: [...remoteCommandTypesForPermissions(actorPermissions)],
+    allowedCommands: [...allowedCommands],
     expiresAt: expiresAt.toISOString(),
   });
   if (policy.status !== "stored" || policy.policyVersion !== input.actorContext.actor.policyVersion) {
     throw new Error("Connected command authorization was not acknowledged");
   }
+  const projectionPayload = {
+    ...projection,
+    connectedCommandAuthority: {
+      policyVersion: input.actorContext.actor.policyVersion,
+      memberRevocationEpoch: input.actorContext.actor.revocationEpoch,
+      allowedCommands,
+      expiresAt: expiresAt.toISOString(),
+    },
+  };
   const envelopeId = `projection_${randomUUID().replace(/-/g, "")}`;
   const envelope = createConnectedEnvelope(
     {
@@ -142,7 +152,7 @@ export async function publishRemoteDashboardProjection(input: Readonly<{
       signatureAlgorithm: CONNECTED_SIGNATURE_ALGORITHM,
       signingKeyId: "desktop-ed25519-v1",
     },
-    projection,
+    projectionPayload,
     device.encryptionPublicKey,
     input.desktopKeys.signingPrivateKeyPkcs8,
   );

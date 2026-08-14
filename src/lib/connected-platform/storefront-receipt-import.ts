@@ -154,6 +154,7 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
   }
   const page = await input.client.pollStorefrontReceipts(
     input.workspaceId,
+    shop.shopId,
     input.after,
     input.limit ?? 50,
   );
@@ -176,6 +177,7 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
         productId: authority.productId,
         productVariantId: authority.variantId,
         quantity: line.quantity,
+        unitPrice: line.unitPriceDzd,
       };
     });
     const command = await createCanonicalSourceOrder(
@@ -222,6 +224,7 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
     );
     await input.client.completeStorefrontReceipt(receipt.receiptId, {
       workspaceId: input.workspaceId,
+      shopId: shop.shopId,
       state: "imported",
       canonicalOrderRef: command.result.order.id,
       resultDigest: receiptDigest(receipt, command.result.order.id),

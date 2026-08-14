@@ -56,6 +56,23 @@ export async function authorizeDesktop(
   }
 }
 
+export async function authorizePublicCheckout(
+  environment: StorefrontWorkerEnvironment,
+  workspaceId: string,
+): Promise<boolean> {
+  try {
+    const response = await environment.CONTROL.fetch(new Request(
+      `https://connected.internal/v1/storefront/authority?workspaceId=${encodeURIComponent(workspaceId)}`,
+      { method: "GET" },
+    ));
+    if (response.status !== 200) return false;
+    const body = await response.json() as Record<string, unknown>;
+    return body.workspaceId === workspaceId && body.storefrontActive === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function sha256Hex(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
   const copy = new ArrayBuffer(bytes.byteLength);

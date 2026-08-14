@@ -3,6 +3,7 @@ import "server-only";
 import { getCurrentSessionAuthority } from "@/lib/auth/server";
 import { shopContext } from "@/lib/db";
 import { resolveDurableIdentityActor } from "@/lib/identity/control-authority";
+import { resolveRemoteIdentityActor } from "@/lib/identity/identity-authority";
 import type { Phase2Action } from "@/lib/identity/permissions";
 import type { ShopContext } from "@/lib/shops/context";
 import { SahelFlowError } from "@/types/errors";
@@ -105,6 +106,38 @@ function createPersonContext(
     shop: shopSnapshot,
   });
 
+  trustedActorContexts.add(context);
+  return context as TrustedActorContext;
+}
+
+/** Mint a person context only after durable local member authority is re-read. */
+export async function trustedActorForRemoteCommand(
+  memberId: string,
+  deviceId: string,
+  shop: ShopContext,
+): Promise<TrustedActorContext> {
+  if (!/^[0-9a-f]{32}$/i.test(memberId) || !/^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/.test(deviceId)) {
+    throw new SahelFlowError("Remote identity scope is invalid", "REMOTE_IDENTITY_INVALID", 403);
+  }
+  const identity = await resolveRemoteIdentityActor(memberId, shop);
+  if (!identity || identity.workspaceMemberId !== memberId) {
+    throw new SahelFlowError("Remote member authority is unavailable", "REMOTE_MEMBER_REVOKED", 403);
+  }
+  const context = Object.freeze({
+    version: TRUSTED_ACTOR_CONTEXT_VERSION,
+    actor: Object.freeze({
+      kind: "person" as const,
+      personId: identity.personId,
+      workspaceMemberId: identity.workspaceMemberId,
+      deviceId,
+      sessionId: `connected:${deviceId}`,
+      role: identity.role,
+      ...(identity.permissions !== null ? { permissions: identity.permissions } : {}),
+      policyVersion: identity.policyVersion,
+      revocationEpoch: identity.revocationEpoch,
+    }),
+    shop: Object.freeze({ ...shop }),
+  });
   trustedActorContexts.add(context);
   return context as TrustedActorContext;
 }

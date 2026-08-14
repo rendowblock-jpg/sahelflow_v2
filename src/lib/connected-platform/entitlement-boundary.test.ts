@@ -51,8 +51,22 @@ describe("connected entitlement and quota boundaries", () => {
     expect(schema).toContain("CREATE TABLE IF NOT EXISTS connected_command_policy");
     expect(worker).toContain("command_not_authorized");
     expect(worker).toContain("command === envelope.messageType");
+    expect(worker).toContain("policy.policy_version === envelope.sequence");
+    expect(worker).toContain("policy.member_revocation_epoch === envelope.revocationEpoch");
     expect(projection).toContain("remoteCommandTypesForPermissions");
     expect(projection).toContain("putCommandPolicy");
+  });
+
+  it("polls supported remote commands through current local member authority", () => {
+    const executor = source("src/lib/connected-platform/remote-command-executor.ts");
+    const worker = source("src/lib/connected-platform/remote-command-worker.ts");
+    const instrumentation = source("src/instrumentation.ts");
+    expect(executor).toContain("trustedActorForRemoteCommand");
+    expect(executor).toContain("executeInternalComment");
+    expect(executor).toContain("completeCommand");
+    expect(worker).toContain("executeQueuedRemoteCommands");
+    expect(worker).toContain("${CURSOR_KEY_PREFIX}.${shopContext.shopId}");
+    expect(instrumentation).toContain("startConnectedCommandWorker");
   });
 
   it("renews connected and backup tokens after local signed activation", () => {
@@ -63,6 +77,8 @@ describe("connected entitlement and quota boundaries", () => {
     expect(runtime).toContain("bootstrapBackup");
     expect(runtime).toContain("setSecret(context, CONNECTED_CONTROL_TOKEN_SECRET");
     expect(runtime).toContain("setSecret(context, CONNECTED_BACKUP_TOKEN_SECRET");
+    expect(runtime).toContain("!existingBackupToken");
+    expect(runtime).toContain("!existingControlToken");
     expect(syncRoute).toContain("refreshConnectedEnrollmentIfConfigured");
     expect(trialRoute).toContain("refreshConnectedEnrollmentIfConfigured");
   });
@@ -85,6 +101,11 @@ describe("connected entitlement and quota boundaries", () => {
     ]) expect(client).toContain(method);
     expect(client).toContain("X-SahelFlow-SHA256");
     expect(cloud).toContain("canonicalBackupVerificationBytes");
+    expect(cloud).toContain("cloudRetentionClass");
+    expect(cloud).toContain("deleteRemoteBackup");
+    expect(cloud).toContain("reservationCreated && !verificationStarted");
+    expect(source("control-plane/backup/initiate.ts")).toContain("datetime('now', '-24 hours')");
+    expect(source("control-plane/backup/auth.ts")).toContain("recoveryTransfer");
     expect(createRoute).toContain("uploadNativeBackupToCloudIfEnrolled");
     expect(createRoute).toContain('cloudState = "unavailable"');
     expect(listRoute).toContain('cloudState = "unavailable"');

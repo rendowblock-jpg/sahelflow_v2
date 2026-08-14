@@ -66,7 +66,11 @@ export async function bootstrapBackupWorkspace(
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return json({ error: "invalid_request" }, 400);
   }
-  const input = body as { entitlement?: unknown; desktopSigningPublicKey?: unknown };
+  const input = body as {
+    entitlement?: unknown;
+    desktopSigningPublicKey?: unknown;
+    recoveryTransfer?: unknown;
+  };
   if (
     typeof input.desktopSigningPublicKey !== "string" ||
     !BASE64.test(input.desktopSigningPublicKey) ||
@@ -98,20 +102,32 @@ export async function bootstrapBackupWorkspace(
       : null;
     const nextExpiry = claims.expiresAt ? Date.parse(claims.expiresAt) : null;
     const rank = { trial: 0, extension: 1, permanent: 2 } as const;
+    const recoveryTransfer = input.recoveryTransfer === true &&
+      existing.license_id === claims.licenseId &&
+      claims.revocationEpoch > existing.entitlement_revocation_epoch;
     if (
       existing.revoked_at !== null ||
       (rank[claims.type] === rank[existing.license_type] &&
         existing.license_id !== claims.licenseId) ||
-      existing.installation_id !== claims.installationId ||
-      (existing.device_binding !== null && existing.device_binding !== claims.deviceBinding) ||
+      (!recoveryTransfer && existing.installation_id !== claims.installationId) ||
+      (!recoveryTransfer && existing.device_binding !== null && existing.device_binding !== claims.deviceBinding) ||
       (existing.product_major !== null && existing.product_major !== claims.productMajor) ||
-      existing.desktop_signing_public_key !== input.desktopSigningPublicKey ||
+      (!recoveryTransfer && existing.desktop_signing_public_key !== input.desktopSigningPublicKey) ||
       rank[claims.type] < rank[existing.license_type] ||
       claims.revocationEpoch < existing.entitlement_revocation_epoch ||
       (currentExpiry === null && nextExpiry !== null) ||
       (currentExpiry !== null && nextExpiry !== null && nextExpiry < currentExpiry)
     ) return json({ error: "entitlement_refresh_rejected" }, 409);
-    const refreshed = await environment.DB.prepare(
+    const refreshed = await environment.DB.prepare(recoveryTransfer
+      ? `UPDATE backup_workspace
+          SET license_id = ?8, installation_id = ?9, device_binding = ?10,
+              product_major = ?11, desktop_signing_public_key = ?12,
+              license_type = ?2, entitlement_expires_at = ?3, backup_bytes = ?4,
+              features_json = ?5, entitlement_revocation_epoch = ?6,
+              desktop_token_hash = ?7, updated_at = CURRENT_TIMESTAMP
+        WHERE workspace_id = ?1 AND license_id = ?8 AND revoked_at IS NULL
+          AND entitlement_revocation_epoch < ?6`
+      :
       `UPDATE backup_workspace
           SET license_id = ?8, device_binding = ?10, product_major = ?11,
               license_type = ?2, entitlement_expires_at = ?3, backup_bytes = ?4,
@@ -144,7 +160,7 @@ export async function bootstrapBackupWorkspace(
       backupToken: desktopToken,
       backupBytes: claims.backupBytes,
       licenseType: claims.type,
-      status: "refreshed",
+      status: recoveryTransfer ? "recovered" : "refreshed",
     });
   }
 

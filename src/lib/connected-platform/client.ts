@@ -195,12 +195,12 @@ export class ConnectedPlatformClient {
     );
   }
 
-  pollCommands(workspaceId: string, after: number, limit = 50) {
+  pollCommands(workspaceId: string, shopId: string, after: number, limit = 50) {
     return this.requestJson<{
       commands: Array<{ relaySequence: number; commandId: string; envelope: ConnectedEnvelope }>;
       nextCursor: number;
     }>("control", "/v1/desktop/commands", {
-      query: { workspaceId, after, limit },
+      query: { workspaceId, shopId, after, limit },
     });
   }
 
@@ -332,30 +332,35 @@ export class ConnectedPlatformClient {
     entitlement: unknown,
     desktopSigningPublicKey: string,
     desktopEncryptionPublicKey: string,
+    recoveryTransfer = false,
   ) {
     return this.requestJson<{
       workspaceId: string;
       desktopToken: string;
       protocolVersion: number;
-      status?: "refreshed";
+      status?: "refreshed" | "recovered";
     }>("control", "/v1/bootstrap", {
       method: "POST",
       token: "none",
-      body: { entitlement, desktopSigningPublicKey, desktopEncryptionPublicKey },
+      body: { entitlement, desktopSigningPublicKey, desktopEncryptionPublicKey, recoveryTransfer },
     });
   }
 
-  bootstrapBackup(entitlement: unknown, desktopSigningPublicKey: string) {
+  bootstrapBackup(
+    entitlement: unknown,
+    desktopSigningPublicKey: string,
+    recoveryTransfer = false,
+  ) {
     return this.requestJson<{
       workspaceId: string;
       backupToken: string;
       backupBytes: number;
       licenseType: "trial" | "extension" | "permanent";
-      status?: "refreshed";
+      status?: "refreshed" | "recovered";
     }>("backup", "/v1/bootstrap", {
       method: "POST",
       token: "none",
-      body: { entitlement, desktopSigningPublicKey },
+      body: { entitlement, desktopSigningPublicKey, recoveryTransfer },
     });
   }
 
@@ -374,6 +379,14 @@ export class ConnectedPlatformClient {
       "control",
       "/v1/desktop/command-policies",
       { method: "PUT", body: input },
+    );
+  }
+
+  invalidateMemberCommandPolicies(workspaceId: string, memberId: string) {
+    return this.requestJson<{ memberId: string; status: "invalidated" }>(
+      "control",
+      "/v1/desktop/command-policies",
+      { method: "DELETE", body: { workspaceId, memberId } },
     );
   }
 
@@ -421,11 +434,11 @@ export class ConnectedPlatformClient {
     });
   }
 
-  pollStorefrontReceipts(workspaceId: string, after: number, limit = 50) {
+  pollStorefrontReceipts(workspaceId: string, shopId: string, after: number, limit = 50) {
     return this.requestJson<{ receipts: StorefrontReceipt[]; nextCursor: number }>(
       "storefront",
       "/v1/desktop/storefront/receipts",
-      { query: { workspaceId, after, limit } },
+      { query: { workspaceId, shopId, after, limit } },
     );
   }
 
@@ -433,10 +446,12 @@ export class ConnectedPlatformClient {
     receiptId: string,
     input: {
       workspaceId: string;
+      shopId: string;
       state: "rejected";
       resultDigest: string;
     } | {
       workspaceId: string;
+      shopId: string;
       state: "imported" | "reconciled";
       canonicalOrderRef: string;
       resultDigest: string;

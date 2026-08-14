@@ -81,6 +81,14 @@ export async function initiateBackup(
   }
   if (totalBytes > workspace.backup_bytes) return json({ error: "backup_quota_exceeded" }, 403);
 
+  await environment.DB.prepare(
+    `UPDATE cloud_backup
+        SET state = 'failed'
+      WHERE workspace_id = ?1
+        AND state IN ('initiated','uploading','awaiting_verification')
+        AND datetime(created_at) <= datetime('now', '-24 hours')`,
+  ).bind(workspaceId).run();
+
   const statements: D1Statement[] = [
     environment.DB.prepare(
       `INSERT INTO cloud_backup

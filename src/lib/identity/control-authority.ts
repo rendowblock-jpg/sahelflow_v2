@@ -917,6 +917,48 @@ export async function resolveDurableIdentityActor(
   return actorFromPayload(envelope.payload, sessionId, shop);
 }
 
+/** Resolve current installation-owner authority for a sessionless remote command. */
+export async function resolveDurableIdentityMember(
+  memberId: string,
+  shop: ShopContext,
+): Promise<DurableIdentityActor | null> {
+  exactIdSchema.parse(memberId);
+  const marker = readMarker();
+  const envelope = readAuthority();
+  if (!envelope) {
+    if (marker) {
+      throw identityError(
+        "Identity authority is missing after initialization",
+        "IDENTITY_AUTHORITY_MISSING",
+        503,
+      );
+    }
+    return null;
+  }
+  assertContext(envelope.payload, shop);
+  assertMarkerContext(marker, envelope.payload, shop);
+  const payload = envelope.payload;
+  const member = payload.members.find((candidate) => candidate.id === memberId);
+  if (!member || member.status !== "active" || !member.shopIds.includes(shop.shopId)) return null;
+  const person = payload.people.find(
+    (candidate) => candidate.id === member.personId && candidate.status === "active",
+  );
+  if (!person) return null;
+  return Object.freeze({
+    personId: person.id,
+    workspaceMemberId: member.id,
+    deviceId: payload.installation.id,
+    role: member.role,
+    policyVersion: payload.workspace.policyVersion,
+    revocationEpoch: Math.max(
+      payload.workspace.revocationEpoch,
+      payload.installation.revocationEpoch,
+      person.revocationEpoch,
+      member.revocationEpoch,
+    ),
+  });
+}
+
 export async function ensureDurableIdentityActor(
   sessionId: string,
   shop: ShopContext,

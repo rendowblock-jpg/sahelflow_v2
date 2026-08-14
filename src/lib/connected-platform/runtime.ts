@@ -81,6 +81,28 @@ async function ensureConnectedDesktopKeys(context: ServiceContext): Promise<Conn
   return parseDesktopKeys(winner);
 }
 
+export async function loadConnectedRuntimeIfEnrolled(
+  context: ServiceContext,
+): Promise<Readonly<{
+  client: ConnectedPlatformClient;
+  desktopKeys: ConnectedDesktopKeys;
+}> | null> {
+  const serviceEndpoints = configuredEndpoints();
+  if (!serviceEndpoints) return null;
+  const [controlToken, desktopKeysValue] = await Promise.all([
+    getSecret(context, CONNECTED_CONTROL_TOKEN_SECRET),
+    getSecret(context, CONNECTED_DESKTOP_KEYS_SECRET),
+  ]);
+  if (!controlToken || !desktopKeysValue) return null;
+  return Object.freeze({
+    client: new ConnectedPlatformClient({
+      endpoints: serviceEndpoints,
+      controlToken: async () => controlToken,
+    }),
+    desktopKeys: parseDesktopKeys(desktopKeysValue),
+  });
+}
+
 export async function loadBackupRuntimeIfEnrolled(
   context: ServiceContext,
 ): Promise<Readonly<{
@@ -121,28 +143,37 @@ export async function refreshConnectedEnrollmentIfConfigured(
   if (!connected && !backup) {
     return Object.freeze({ configured: true, connected: false, backup: false });
   }
-  const keys = await ensureConnectedDesktopKeys(context);
+  const [keys, existingControlToken, existingBackupToken] = await Promise.all([
+    ensureConnectedDesktopKeys(context),
+    getSecret(context, CONNECTED_CONTROL_TOKEN_SECRET),
+    getSecret(context, CONNECTED_BACKUP_TOKEN_SECRET),
+  ]);
   const client = new ConnectedPlatformClient({
     endpoints: serviceEndpoints,
     controlToken: async () => { throw new Error("Connected enrollment has no bearer authority yet"); },
   });
+  if (backup) {
+    const result = await client.bootstrapBackup(
+      entitlement,
+      keys.signingPublicKey,
+      !existingBackupToken,
+    );
+    if (result.workspaceId !== entitlement.claims.workspaceId) {
+      throw new Error("Backup enrollment returned another workspace authority");
+    }
+    await setSecret(context, CONNECTED_BACKUP_TOKEN_SECRET, result.backupToken);
+  }
   if (connected) {
     const result = await client.bootstrapConnected(
       entitlement,
       keys.signingPublicKey,
       keys.encryptionPublicKeyJwk,
+      !existingControlToken,
     );
     if (result.workspaceId !== entitlement.claims.workspaceId) {
       throw new Error("Connected enrollment returned another workspace authority");
     }
     await setSecret(context, CONNECTED_CONTROL_TOKEN_SECRET, result.desktopToken);
-  }
-  if (backup) {
-    const result = await client.bootstrapBackup(entitlement, keys.signingPublicKey);
-    if (result.workspaceId !== entitlement.claims.workspaceId) {
-      throw new Error("Backup enrollment returned another workspace authority");
-    }
-    await setSecret(context, CONNECTED_BACKUP_TOKEN_SECRET, result.backupToken);
   }
   return Object.freeze({ configured: true, connected, backup });
 }

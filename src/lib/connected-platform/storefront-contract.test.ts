@@ -84,6 +84,8 @@ describe("hosted storefront contract", () => {
       "utf8",
     ).replace(/\r\n?/g, "\n");
     expect(source).toContain("MIN(?5, COALESCE");
+    expect(source).toContain("receipt.state = 'received'");
+    expect(source).toContain("SUM(line.quantity)");
     expect(source).toContain("SET remaining_quantity = 0");
     expect(source).toContain("WHERE release_id = ?1 AND remaining_quantity > 0");
 
@@ -94,6 +96,27 @@ describe("hosted storefront contract", () => {
       );
       expect(publisher).toContain("appendConservedAllocationStatements");
     }
+  });
+
+  it("gates checkout on current entitlement and scopes receipt import to one shop", () => {
+    const checkout = readFileSync(
+      resolve(process.cwd(), "control-plane/storefront/checkout.ts"),
+      "utf8",
+    );
+    const receipts = readFileSync(
+      resolve(process.cwd(), "control-plane/storefront/receipts.ts"),
+      "utf8",
+    );
+    const importer = readFileSync(
+      resolve(process.cwd(), "src/lib/connected-platform/storefront-receipt-import.ts"),
+      "utf8",
+    );
+    expect(checkout).toContain("authorizePublicCheckout");
+    expect(receipts).toContain("s.shop_id = ?2");
+    expect(importer).toContain("line.unitPriceDzd");
+    expect(importer).toContain("shop.shopId");
+    expect(source("src/lib/connected-platform/storefront-receipt-worker.ts"))
+      .toContain("${CURSOR_KEY_PREFIX}.${shopContext.shopId}");
   });
 
   it("publishes Studio releases through the hosted runtime and durably imports receipts", () => {

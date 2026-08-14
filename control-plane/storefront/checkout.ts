@@ -1,7 +1,7 @@
 import { parseCheckoutInput } from "./checkout-input";
 import { storefrontReceiptAadValue } from "./receipt-protocol";
 import { resolveCheckoutPricing } from "./checkout-pricing";
-import { canonicalJson, json, sha256Hex } from "./shared";
+import { authorizePublicCheckout, canonicalJson, json, sha256Hex } from "./shared";
 import type {
   D1Statement,
   ReceiptRow,
@@ -79,6 +79,9 @@ export async function checkout(
       status: existing.state,
       totalDzd: existing.total_dzd,
     });
+  }
+  if (!(await authorizePublicCheckout(environment, storefront.workspace_id))) {
+    return json({ error: "storefront_unavailable" }, 503);
   }
 
   const pricingResult = await resolveCheckoutPricing(

@@ -7,7 +7,8 @@ import type { D1Database, D1Statement } from "./types";
  * D1 executes the caller's statement batch as one transaction. For an item
  * that already exists in the parent release, the fresh delegation is capped at
  * the parent's remaining quantity. New catalog items may use the desktop's
- * requested physical-stock authority. The final statement retires every
+ * requested physical-stock authority less any still-unimported receipts from
+ * older releases. The final statement retires every
  * remaining parent allocation, so a checkout that raced on the old release
  * either committed before this transfer or fails its allocation guard after it.
  */
@@ -34,7 +35,17 @@ export function appendConservedAllocationStatements(
                SELECT remaining_quantity FROM storefront_allocation
                 WHERE release_id = ?4 AND item_key = ?2
              ), 0))
-             ELSE ?5
+             ELSE MAX(0, ?5 - COALESCE((
+               SELECT SUM(line.quantity)
+                 FROM storefront_receipt_line line
+                 JOIN storefront_receipt receipt ON receipt.receipt_id = line.receipt_id
+                 JOIN storefront_release historical ON historical.release_id = receipt.release_id
+                WHERE historical.storefront_id = (
+                  SELECT storefront_id FROM storefront_release WHERE release_id = ?1
+                )
+                  AND line.item_key = ?2
+                  AND receipt.state = 'received'
+             ), 0))
            END,
            CASE
              WHEN ?4 IS NULL THEN ?5
@@ -45,7 +56,17 @@ export function appendConservedAllocationStatements(
                SELECT remaining_quantity FROM storefront_allocation
                 WHERE release_id = ?4 AND item_key = ?2
              ), 0))
-             ELSE ?5
+             ELSE MAX(0, ?5 - COALESCE((
+               SELECT SUM(line.quantity)
+                 FROM storefront_receipt_line line
+                 JOIN storefront_receipt receipt ON receipt.receipt_id = line.receipt_id
+                 JOIN storefront_release historical ON historical.release_id = receipt.release_id
+                WHERE historical.storefront_id = (
+                  SELECT storefront_id FROM storefront_release WHERE release_id = ?1
+                )
+                  AND line.item_key = ?2
+                  AND receipt.state = 'received'
+             ), 0))
            END
          )`,
       ).bind(

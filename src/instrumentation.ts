@@ -7,6 +7,7 @@ export async function register(): Promise<void> {
     { startCourierOutboxWorker },
     { startCommerceSyncWorker },
     { startStorefrontReceiptWorker },
+    { startConnectedCommandWorker },
   ] = await Promise.all([
     import("./lib/whatsapp/outbox-worker"),
     import("./lib/whatsapp/inbound-worker"),
@@ -14,6 +15,7 @@ export async function register(): Promise<void> {
     import("./lib/delivery/outbox-worker"),
     import("./lib/integrations/ecommerce/worker"),
     import("./lib/connected-platform/storefront-receipt-worker"),
+    import("./lib/connected-platform/remote-command-worker"),
   ]);
   startWhatsAppOutboxWorker();
   startWhatsAppInboundWorker();
@@ -21,4 +23,5 @@ export async function register(): Promise<void> {
   startCourierOutboxWorker();
   startCommerceSyncWorker();
   startStorefrontReceiptWorker();
+  startConnectedCommandWorker();
 }

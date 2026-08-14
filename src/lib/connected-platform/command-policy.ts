@@ -3,13 +3,6 @@ import type { Phase2Action } from "../identity/permissions";
 /** Remote PWA commands are deliberately narrower than desktop permissions. */
 export const REMOTE_COMMAND_ACTIONS = Object.freeze([
   "comments.write",
-  "conversations.update",
-  "conversations.reply",
-  "conversations.claim",
-  "conversations.assign",
-  "orders.update",
-  "orders.assign",
-  "deliveries.manage",
 ] as const satisfies readonly Phase2Action[]);
 
 export type RemoteCommandAction = (typeof REMOTE_COMMAND_ACTIONS)[number];

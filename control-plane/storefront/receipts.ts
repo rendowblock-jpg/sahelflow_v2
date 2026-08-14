@@ -52,10 +52,12 @@ export async function pollReceipts(
   url: URL,
 ): Promise<Response> {
   const workspaceId = url.searchParams.get("workspaceId") ?? "";
+  const shopId = url.searchParams.get("shopId") ?? "";
   const after = Number(url.searchParams.get("after") ?? "0");
   const limit = Number(url.searchParams.get("limit") ?? "50");
   if (
     !ID.test(workspaceId) ||
+    !ID.test(shopId) ||
     !Number.isSafeInteger(after) ||
     after < 0 ||
     !Number.isSafeInteger(limit) ||
@@ -75,16 +77,17 @@ export async function pollReceipts(
               s.shop_id, s.slug AS storefront_slug
          FROM storefront_receipt r
          JOIN storefront s ON s.storefront_id = r.storefront_id
-        WHERE s.workspace_id = ?1 AND r.relay_sequence > ?2 AND r.state = 'received'
+        WHERE s.workspace_id = ?1 AND s.shop_id = ?2
+          AND r.relay_sequence > ?3 AND r.state = 'received'
         ORDER BY r.relay_sequence ASC
-        LIMIT ?3
+       LIMIT ?4
      )
      SELECT selected.*, line.item_key, line.quantity, line.unit_price_dzd
        FROM selected
        LEFT JOIN storefront_receipt_line line ON line.receipt_id = selected.receipt_id
       ORDER BY selected.relay_sequence ASC, line.item_key ASC`,
   )
-    .bind(workspaceId, after, limit)
+    .bind(workspaceId, shopId, after, limit)
     .all<ReceiptPollRow>();
   const receipts = new Map<number, {
     relaySequence: number;
@@ -162,16 +165,19 @@ export async function completeReceipt(
   }
   const input = body as {
     workspaceId?: unknown;
+    shopId?: unknown;
     state?: unknown;
     canonicalOrderRef?: unknown;
     resultDigest?: unknown;
   };
   const workspaceId = String(input.workspaceId ?? "");
+  const shopId = String(input.shopId ?? "");
   const canonicalOrderRef =
     input.canonicalOrderRef === undefined ? null : String(input.canonicalOrderRef);
   const resultDigest = input.resultDigest === undefined ? null : String(input.resultDigest);
   if (
     !ID.test(workspaceId) ||
+    !ID.test(shopId) ||
     !isReceiptResultState(input.state) ||
     (canonicalOrderRef !== null && !ID.test(canonicalOrderRef)) ||
     (resultDigest === null || !/^[0-9a-f]{64}$/.test(resultDigest)) ||
@@ -189,9 +195,9 @@ export async function completeReceipt(
             r.result_digest, r.total_dzd, r.completed_at
        FROM storefront_receipt r
        JOIN storefront s ON s.storefront_id = r.storefront_id
-      WHERE r.receipt_id = ?1 AND s.workspace_id = ?2`,
+      WHERE r.receipt_id = ?1 AND s.workspace_id = ?2 AND s.shop_id = ?3`,
   )
-    .bind(receiptId, workspaceId)
+    .bind(receiptId, workspaceId, shopId)
     .first<ReceiptRow>();
   if (!receipt) return json({ error: "receipt_not_found" }, 404);
 
