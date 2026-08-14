@@ -77,7 +77,18 @@ describe("Windows signed release build contract", () => {
       '["run", "scripts/verify-release-source.ts"]',
     );
     expect(verifyHelper).toContain("toml.parse");
-    expect(verifyHelper).toContain("const allowedTrackedChanges = new Set([cargoManifest])");
+    expect(verifyHelper).toContain(`const generatedTauriIcons = [
+  "src-tauri/icons/32x32.png",
+  "src-tauri/icons/128x128.png",
+  "src-tauri/icons/128x128@2x.png",
+  "src-tauri/icons/icon.icns",
+  "src-tauri/icons/icon.ico",
+  "src-tauri/icons/icon.png",
+] as const;`);
+    expect(verifyHelper).toContain(`const allowedTrackedChanges = new Set<string>([
+  cargoManifest,
+  ...generatedTauriIcons,
+]);`);
     expect(verifyHelper).toContain('code !== " M"');
     expect(verifyHelper).not.toContain("restoreCommittedPath");
     expect(verifyHelper).not.toContain('git(["restore"');
