@@ -80,31 +80,49 @@ function resolveTheme(theme: ThemeMode, systemDark: boolean): ResolvedTheme {
   return theme === "system" ? (systemDark ? "dark" : "light") : theme;
 }
 
+function beginAppearanceTransaction(): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.appearanceTransition = "active";
+}
+
+function endAppearanceTransaction(): void {
+  if (typeof document === "undefined") return;
+  delete document.documentElement.dataset.appearanceTransition;
+}
+
+function finishAppearanceTransactionOnNextPaint(): void {
+  if (typeof window === "undefined") {
+    endAppearanceTransaction();
+    return;
+  }
+  window.requestAnimationFrame(() => endAppearanceTransaction());
+}
+
 /**
- * Commit one complete appearance snapshot. Modern WebView2/Chromium receives a
- * root snapshot cross-fade; reduced-motion and older engines commit immediately.
- * We never interpolate every descendant independently because that exposes mixed
- * token frames while mode/preset variables are changing.
+ * Commit one complete appearance snapshot. Every descendant CSS transition is
+ * temporarily frozen while mode/preset tokens change, preventing the patchwork
+ * "some panels changed first" frame seen in the installed Internal.16 build.
+ * Modern WebView2/Chromium then cross-fades the root snapshot as one surface.
  */
 function commitAppearanceTransition(update: () => void): void {
   if (typeof window === "undefined" || typeof document === "undefined") {
     update();
     return;
   }
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    update();
-    return;
-  }
 
-  // TypeScript's DOM authority now declares View Transitions natively. Runtime
-  // feature detection is still required because older installed WebView2 builds
-  // can expose a Document without the method despite the compile-time library.
+  beginAppearanceTransaction();
+
+  const reducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
   const startViewTransition =
     typeof document.startViewTransition === "function"
       ? document.startViewTransition.bind(document)
       : null;
-  if (!startViewTransition) {
+
+  if (reducedMotion || !startViewTransition) {
     update();
+    finishAppearanceTransactionOnNextPaint();
     return;
   }
 
@@ -117,11 +135,12 @@ function commitAppearanceTransition(update: () => void): void {
 
   try {
     const transition = startViewTransition(commitOnce);
-    void transition.finished.catch(() => {
-      // The appearance commit already happened. Transition rendering is optional.
+    void transition.finished.finally(() => {
+      endAppearanceTransaction();
     });
   } catch {
     commitOnce();
+    finishAppearanceTransactionOnNextPaint();
   }
 }
 
@@ -133,6 +152,7 @@ function applyAppearance(
   const root = document.documentElement;
   root.classList.remove("light", "dark");
   root.classList.add(resolvedTheme);
+  root.dataset.colorMode = resolvedTheme;
   root.dataset.themePreset = preset;
   root.style.colorScheme = resolvedTheme;
 }
