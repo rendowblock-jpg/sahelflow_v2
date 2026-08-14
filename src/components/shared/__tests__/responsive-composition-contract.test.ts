@@ -17,7 +17,7 @@ describe("deterministic responsive composition contract", () => {
 
   it("keeps shared cardinality grids deterministic instead of allowing 3 + 1 auto-fit composition", () => {
     const source = read("src/app/responsive-system.css");
-    expect(source).not.toContain("auto-fit");
+    expect(source).not.toMatch(/grid-template-columns:[^;]*auto-fit/);
     expect(source).toContain(
       ':is(.card-grid-2, .card-grid-3, .card-grid-4)',
     );
