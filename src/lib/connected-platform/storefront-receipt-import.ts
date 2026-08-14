@@ -19,6 +19,7 @@ import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order"
 import { parseStorefrontReleaseItemKey } from "@/lib/storefront/release-artifact";
 import { NotFoundError, ValidationError } from "@/types/errors";
 import type { ConnectedPlatformClient, StorefrontReceipt } from "./client";
+import { releaseRejectedStorefrontReceiptDelegation } from "./storefront-receipt-delegation";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
 const ITEM_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$/;
@@ -187,13 +188,14 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
         unitPrice: line.unitPriceDzd,
       };
     });
+    const businessContext = {
+      ...input.context,
+      businessPrincipal: sourceBusinessPrincipal("storefront", receipt.storefrontSlug),
+    };
     let command;
     try {
       command = await createCanonicalSourceOrder(
-        {
-          ...input.context,
-          businessPrincipal: sourceBusinessPrincipal("storefront", receipt.storefrontSlug),
-        },
+        businessContext,
         {
           idempotencyKey: `storefront-hosted:${receipt.receiptId}`,
           correlationId: `storefront-hosted:${receipt.receiptId}`,
@@ -226,6 +228,15 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
       );
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof ValidationError) {
+        await releaseRejectedStorefrontReceiptDelegation(businessContext, {
+          receiptId: receipt.receiptId,
+          releaseId: receipt.releaseId,
+          items: items.map((item) => ({
+            productId: item.productId,
+            productVariantId: item.productVariantId,
+            quantity: item.quantity,
+          })),
+        });
         await input.client.completeStorefrontReceipt(receipt.receiptId, {
           workspaceId: input.workspaceId,
           shopId: shop.shopId,
