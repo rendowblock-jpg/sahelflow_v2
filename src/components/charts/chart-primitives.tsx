@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { renderBidiText } from "@/components/shared/bidi-text";
 import {
   Card,
   CardContent,
@@ -187,7 +186,7 @@ export function ChartCard({
               </CardTitle>
               {description ? (
                 <CardDescription id={descriptionId} className="mt-0.5 text-sm leading-5">
-                  {renderBidiText(description)}
+                  {description}
                 </CardDescription>
               ) : null}
             </div>
@@ -197,7 +196,7 @@ export function ChartCard({
               className="text-sm leading-5 text-muted-foreground"
               aria-hidden="true"
             >
-              {renderBidiText(summary)}
+              {summary}
             </div>
           ) : null}
         </div>
@@ -219,7 +218,7 @@ export function ChartCard({
         </div>
         {footer ? (
           <div className="mt-3 border-t border-border/70 pt-3 text-sm leading-5 text-muted-foreground">
-            {renderBidiText(footer)}
+            {footer}
           </div>
         ) : null}
       </CardContent>
