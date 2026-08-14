@@ -3,8 +3,6 @@
 /**
  * Sparkline — tiny inline area chart for stat cards and table cells.
  * No axes, no tooltip — purely decorative trend indication.
- * 
- * Premium: gradient fill 0.4→0, smooth natural curve, unique gradient ID.
  */
 import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
 import { useGradientId } from "./chart-primitives";
@@ -30,17 +28,18 @@ export function Sparkline({
       <AreaChart data={data} margin={{ top: 4, right: 2, bottom: 6, left: 2 }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+            <stop offset="0%" stopColor={color} stopOpacity={0.32} />
             <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
-        {/* Pad Y-axis domain so the line doesn't touch the top/bottom edges — prevents clipping */}
+        {/* Small padding keeps extrema visible without letting spline math invent
+            values outside the observed range. */}
         <YAxis domain={["dataMin - 1", "dataMax + 1"]} hide />
         <Area
-          type="natural"
+          type="monotone"
           dataKey="value"
           stroke={color}
-          strokeWidth={1.5}
+          strokeWidth={1.6}
           fill={`url(#${gradientId})`}
           isAnimationActive={false}
           dot={false}
