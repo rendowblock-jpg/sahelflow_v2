@@ -29,6 +29,16 @@ export function ServerLocaleProvider({
 
   useLayoutEffect(() => {
     commitLocale(locale);
+
+    // Locale switching intentionally covers the outgoing tree while a refreshed
+    // RSC payload is in flight. Remove that cover only when this exact server
+    // locale has committed, in the same pre-paint layout phase as lang/dir.
+    const root = document.documentElement;
+    if (root.dataset.localeTarget === locale) {
+      delete root.dataset.localeTransition;
+      delete root.dataset.localeTarget;
+      root.removeAttribute("aria-busy");
+    }
   }, [commitLocale, locale]);
 
   return (

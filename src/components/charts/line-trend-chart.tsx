@@ -21,6 +21,7 @@ import {
   type ChartFormatter,
   type ChartHeight,
 } from "./chart-primitives";
+import { useChartMotion } from "./chart-motion";
 
 interface LineSeries {
   key: string;
@@ -47,6 +48,7 @@ export function LineTrendChart({
   emptyMessage,
 }: LineTrendChartProps) {
   const { dir, t, locale } = useI18n();
+  const { isAnimationActive, baseDuration } = useChartMotion();
   const isRtl = dir === "rtl";
   const chartHeight = normalizeChartHeight(height);
   const fmtY = resolveFormatter(formatY, locale);
@@ -79,32 +81,29 @@ export function LineTrendChart({
           bottom: 0,
         }}
       >
-        <CartesianGrid
-          vertical={false}
-          strokeDasharray="3 3"
-          stroke="var(--border)"
-        />
+        <CartesianGrid vertical={false} />
         <XAxis
           dataKey={xKey}
           tickLine={false}
           axisLine={false}
-          tickMargin={8}
+          tickMargin={10}
           minTickGap={32}
           reversed={isRtl}
           className="text-xs fill-muted-foreground"
-          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
         <YAxis
-          width={56}
+          width={60}
           tickLine={false}
           axisLine={false}
-          tickMargin={4}
+          tickMargin={6}
           tickFormatter={(value: number) => fmtY(value)}
           className="text-xs fill-muted-foreground"
           orientation={isRtl ? "right" : "left"}
+          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
         <ChartTooltip
-          cursor={false}
+          cursor={{ stroke: "var(--sf-chart-grid)", strokeWidth: 1 }}
           content={
             <ChartTooltipContent
               indicator="dot"
@@ -125,17 +124,18 @@ export function LineTrendChart({
           <Line
             key={current.key}
             dataKey={current.key}
-            type="natural"
+            type="monotone"
             stroke={`var(--color-${current.key})`}
-            strokeWidth={2}
+            strokeWidth={2.25}
             dot={false}
             activeDot={{
               r: 4,
               strokeWidth: 2,
               stroke: "var(--background)",
             }}
-            isAnimationActive
-            animationDuration={600}
+            isAnimationActive={isAnimationActive}
+            animationDuration={baseDuration}
+            animationEasing="ease-out"
           />
         ))}
       </LineChart>

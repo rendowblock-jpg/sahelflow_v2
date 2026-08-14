@@ -13,6 +13,7 @@ import {
   normalizeChartHeight,
   type ChartHeight,
 } from "./chart-primitives";
+import { useChartMotion } from "./chart-motion";
 
 export interface DonutDatum {
   key: string;
@@ -39,12 +40,21 @@ export function DonutChart({
   centerLabel,
   centerValue,
   emptyMessage,
-  innerRadius = "46%",
+  innerRadius = "48%",
   outerRadius = "72%",
 }: DonutChartProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const { isAnimationActive, baseDuration } = useChartMotion();
   const chartHeight = normalizeChartHeight(height);
   const total = data.reduce((sum, entry) => sum + entry.value, 0);
+  const localeTag = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+  const countFormatter = new Intl.NumberFormat(localeTag, {
+    maximumFractionDigits: 2,
+  });
+  const percentFormatter = new Intl.NumberFormat(localeTag, {
+    style: "percent",
+    maximumFractionDigits: 0,
+  });
 
   if (!total) {
     return (
@@ -75,10 +85,8 @@ export function DonutChart({
                 formatter={(_value, name) => {
                   const entry = data.find((item) => item.key === name);
                   const numeric = Number(entry?.value ?? 0);
-                  const percent =
-                    total > 0 ? Math.round((numeric / total) * 100) : 0;
                   return [
-                    `${numeric} (${percent}%)`,
+                    `${countFormatter.format(numeric)} · ${percentFormatter.format(total > 0 ? numeric / total : 0)}`,
                     entry?.label ?? name,
                   ];
                 }}
@@ -92,10 +100,12 @@ export function DonutChart({
             innerRadius={innerRadius}
             outerRadius={outerRadius}
             strokeWidth={2}
-            stroke="var(--background)"
-            paddingAngle={2}
-            isAnimationActive
-            animationDuration={600}
+            stroke="var(--card)"
+            paddingAngle={2.5}
+            cornerRadius={3}
+            isAnimationActive={isAnimationActive}
+            animationDuration={baseDuration}
+            animationEasing="ease-out"
           >
             {data.map((entry) => (
               <Cell
@@ -107,14 +117,16 @@ export function DonutChart({
         </PieChart>
       </ChartContainer>
       {centerValue || centerLabel ? (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
           {centerValue ? (
-            <bdi dir="ltr" className="text-2xl font-bold tabular-nums">
+            <bdi dir="auto" className="text-2xl font-semibold tabular-nums tracking-tight">
               {centerValue}
             </bdi>
           ) : null}
           {centerLabel ? (
-            <span className="text-xs text-muted-foreground">{centerLabel}</span>
+            <span className="mt-0.5 max-w-24 text-xs leading-4 text-muted-foreground">
+              {centerLabel}
+            </span>
           ) : null}
         </div>
       ) : null}

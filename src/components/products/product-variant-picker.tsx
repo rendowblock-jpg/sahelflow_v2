@@ -57,7 +57,7 @@ export function ProductVariantPicker({
   disabled = false,
   size = "default",
 }: ProductVariantPickerProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [selectedId, setSelectedId] = useState<string | null>(value ?? null);
   // C-H6 fix: keep internal state in sync with the `value` prop. Previously
   // selectedId was set ONCE at mount — if the parent passed a new value (e.g.
@@ -129,7 +129,7 @@ export function ProductVariantPicker({
                 <div className="flex items-center justify-between gap-3 w-full">
                   <span>{v.name}</span>
                   <span className="text-xs text-muted-foreground tabular-nums">
-                    {formatDZD(variantPrice)} · {v.stock} {t("products.inStock")}
+                    {formatDZD(variantPrice, locale)} · {v.stock} {t("products.inStock")}
                   </span>
                 </div>
               </SelectItem>
@@ -151,7 +151,7 @@ export function ProductVariantPicker({
             </Badge>
           )}
           <span className="text-muted-foreground">
-            {formatDZD(effectivePrice)}
+            {formatDZD(effectivePrice, locale)}
           </span>
         </div>
       )}

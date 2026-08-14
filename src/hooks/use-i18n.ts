@@ -6,16 +6,21 @@ import {
   useMemo,
   useState,
   useSyncExternalStore,
+  useTransition,
 } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   getDirection,
   getTranslations,
+  stabilizeBidiText,
   type Locale,
 } from "@/lib/i18n";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 import { useServerLocale } from "@/lib/i18n/server-locale-context";
 import { requestLocale, useUIStore } from "@/stores/ui-store";
+
+const LOCALE_REFRESH_FALLBACK_MS = 8_000;
 
 function useIsMounted(): boolean {
   return useSyncExternalStore(
@@ -25,13 +30,34 @@ function useIsMounted(): boolean {
   );
 }
 
+function beginLocaleVisualTransition(target: Locale): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.dataset.localeTransition = "pending";
+  root.dataset.localeTarget = target;
+  root.setAttribute("aria-busy", "true");
+}
+
+function clearLocaleVisualTransition(): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  delete root.dataset.localeTransition;
+  delete root.dataset.localeTarget;
+  root.removeAttribute("aria-busy");
+}
+
 export function useI18n() {
+  const router = useRouter();
   const serverLocale = useServerLocale();
   const storeLocale = useUIStore((state) => state.locale);
   const [pendingLocale, setPendingLocale] = useState<Locale | null>(null);
+  const [refreshPending, startRefreshTransition] = useTransition();
   const mounted = useIsMounted();
   const locale = mounted ? storeLocale : serverLocale;
-  const isLocalePending = pendingLocale !== null;
+  const localeCommitPending =
+    pendingLocale !== null &&
+    (serverLocale !== pendingLocale || storeLocale !== pendingLocale);
+  const isLocalePending = localeCommitPending || refreshPending;
 
   // All three compact product bundles are synchronously available. The active
   // bundle is therefore ready in the same commit as the server-confirmed locale.
@@ -44,6 +70,28 @@ export function useI18n() {
     document.documentElement.lang = locale;
     document.documentElement.dir = getDirection(locale);
   }, [locale]);
+
+  // The provider clears the visual transition in a layout effect before the
+  // refreshed tree paints. Keep an idempotent external-system cleanup here once
+  // both locale authorities expose the exact requested server commit. The target
+  // state itself is intentionally derived instead of synchronously reset inside
+  // an effect, avoiding a cascading render after every successful switch.
+  useEffect(() => {
+    if (pendingLocale !== null && !localeCommitPending) {
+      clearLocaleVisualTransition();
+    }
+  }, [localeCommitPending, pendingLocale]);
+
+  // A failed/aborted RSC refresh must never leave the shell permanently covered
+  // or direction controls locked. The hard reload is recovery only, not the
+  // normal language-switch path.
+  useEffect(() => {
+    if (!localeCommitPending) return;
+    const timeout = window.setTimeout(() => {
+      window.location.reload();
+    }, LOCALE_REFRESH_FALLBACK_MS);
+    return () => window.clearTimeout(timeout);
+  }, [localeCommitPending]);
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
@@ -66,26 +114,33 @@ export function useI18n() {
           );
         }
       }
-      return value;
+      return stabilizeBidiText(value, locale);
     },
     [translations, locale],
   );
 
   /**
-   * Locale is a request/server authority, not an optimistic client preference.
-   * Write the canonical cookie, then reload the current document so the new
-   * request cannot inherit any RSC/prefetch entry created under the previous
-   * locale. ServerLocaleProvider commits the returned locale + direction before
-   * paint, so shell geometry and translated route content move as one unit.
+   * Locale is request/server authority, not an optimistic preference. The
+   * current tree remains visually frozen behind a short neutral transition,
+   * then router.refresh() clears the current Next client route cache and fetches
+   * a new Server Component payload under the requested cookie. The returned
+   * ServerLocaleProvider commits copy + lang + direction in a layout effect, so
+   * the user never sees a mixed LTR/RTL tree and the app keeps desktop state
+   * instead of performing a normal full-document restart.
    */
   const setLocale = useCallback(
     (newLocale: Locale) => {
       if (newLocale === locale || isLocalePending) return;
+
+      beginLocaleVisualTransition(newLocale);
       requestLocale(newLocale);
       setPendingLocale(newLocale);
-      window.location.reload();
+
+      startRefreshTransition(() => {
+        router.refresh();
+      });
     },
-    [isLocalePending, locale],
+    [isLocalePending, locale, router],
   );
 
   const dir = useMemo(() => getDirection(locale), [locale]);

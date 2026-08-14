@@ -26,14 +26,14 @@ interface CodControlsProps {
  * canonical accounting workspace through governed commands.
  */
 export function CodControls({ orderNumber, amount }: CodControlsProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <div className="space-y-3">
       <div>
         <p className="text-sm font-medium">{t("orders.cod.title")}</p>
         <p className="text-xs text-muted-foreground">
-          {formatDZD(amount)} · {orderNumber}
+          {formatDZD(amount, locale)} · {orderNumber}
         </p>
       </div>
       <p className="text-sm text-muted-foreground">

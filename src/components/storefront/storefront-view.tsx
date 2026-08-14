@@ -73,7 +73,7 @@ function itemPrice(item: Pick<CartItem, "product" | "variant">): number {
 }
 
 export function StorefrontView({ config, products }: StorefrontViewProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [addedKey, setAddedKey] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -372,7 +372,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{item.product.name}</p>
                     {item.variant ? <p className="truncate text-xs text-muted-foreground">{item.variant.name}</p> : null}
-                    <p className="text-xs text-muted-foreground">{formatDZD(itemPrice(item))}</p>
+                    <p className="text-xs text-muted-foreground">{formatDZD(itemPrice(item), locale)}</p>
                   </div>
                   <div className="flex items-center gap-1">
                     <Button size="icon" variant="outline" className="h-11 w-11" onClick={() => updateQuantity(item.key, -1)} aria-label={t("storefront.view.decreaseQty")}>
@@ -388,8 +388,8 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                   </div>
                 </div>
               ))}
-              {shippingDzd > 0 ? <div className="flex justify-between border-t pt-2 text-sm"><span>{t("storefront.view.shipping")}</span><span>{formatDZD(shippingDzd)}</span></div> : null}
-              <div className="flex justify-between font-bold"><span>{t("storefront.view.total")}</span><span>{formatDZD(cartTotal)}</span></div>
+              {shippingDzd > 0 ? <div className="flex justify-between border-t pt-2 text-sm"><span>{t("storefront.view.shipping")}</span><span>{formatDZD(shippingDzd, locale)}</span></div> : null}
+              <div className="flex justify-between font-bold"><span>{t("storefront.view.total")}</span><span>{formatDZD(cartTotal, locale)}</span></div>
             </>
           )}
         </CardContent>
@@ -497,7 +497,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                   <option value="">—</option>
                   {variants.map((variant) => (
                     <option key={variant.id} value={variant.id}>
-                      {variant.name} · {formatDZD(variant.price ?? product.price)}
+                      {variant.name} · {formatDZD(variant.price ?? product.price, locale)}
                     </option>
                   ))}
                 </select>

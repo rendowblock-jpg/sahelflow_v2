@@ -40,7 +40,7 @@ export default async function StorefrontsPage() {
   return (
     <div className="app-content page-sections">
       <PageHeader
-        title={t("nav.storefronts")}
+        title={t("nav.storefrontBuilder")}
         description={t("storefronts.subtitle")}
         actions={canMutate ? (
           <Button asChild>

@@ -1,0 +1,454 @@
+/*
+ * SahelFlow product visual system.
+ *
+ * This file is intentionally imported after the historical globals/phase CSS so
+ * one current authority governs appearance, motion, Arabic typography, locale
+ * transitions and analytical surfaces without another screenshot-specific patch
+ * layer. Route/components should consume semantic tokens rather than hard-code a
+ * preset color.
+ */
+
+:root {
+  /* Motion grammar — micro/state/surface. */
+  --motion-micro: 120ms;
+  --motion-fast: 160ms;
+  --motion-base: 220ms;
+  --motion-surface: 280ms;
+  --motion-slow: 360ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --sf-inline-entry: -10px;
+
+  /* Sahel / light — warm neutral canvas with an emerald operational accent. */
+  --surface-0: oklch(0.985 0.004 105);
+  --surface-1: oklch(0.997 0.003 105);
+  --surface-2: oklch(0.968 0.007 115);
+  --surface-3: oklch(0.94 0.012 125);
+  --background: oklch(0.985 0.004 105);
+  --foreground: oklch(0.16 0.012 110);
+  --card: oklch(0.997 0.003 105);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.997 0.004 105);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.55 0.18 150);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.965 0.008 120);
+  --secondary-foreground: oklch(0.22 0.012 110);
+  --muted: oklch(0.965 0.008 120);
+  --muted-foreground: oklch(0.43 0.018 110);
+  --accent: oklch(0.955 0.022 150);
+  --accent-foreground: oklch(0.22 0.02 145);
+  --border: oklch(0.90 0.012 115);
+  --input: oklch(0.90 0.012 115);
+  --ring: var(--primary);
+  --chart-1: oklch(0.59 0.19 248);
+  --chart-2: oklch(0.70 0.17 68);
+  --chart-3: oklch(0.62 0.19 315);
+  --chart-4: oklch(0.62 0.17 148);
+  --chart-5: oklch(0.61 0.14 205);
+  --sidebar: oklch(0.974 0.008 115);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.945 0.028 150);
+  --sidebar-accent-foreground: oklch(0.20 0.025 145);
+  --sidebar-border: oklch(0.89 0.014 115);
+  --sidebar-ring: var(--ring);
+  --sf-chart-grid: oklch(0.50 0.01 110 / 0.16);
+  --sf-chart-axis: oklch(0.42 0.012 110);
+  --sf-surface-highlight: oklch(1 0 0 / 0.72);
+}
+
+.dark {
+  /* Sahel / dark — charcoal with a restrained warm-emerald tint, not cold black. */
+  --surface-0: oklch(0.145 0.010 145);
+  --surface-1: oklch(0.178 0.012 145);
+  --surface-2: oklch(0.215 0.015 145);
+  --surface-3: oklch(0.255 0.018 145);
+  --background: var(--surface-0);
+  --foreground: oklch(0.955 0.008 120);
+  --card: var(--surface-1);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.188 0.014 145);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.70 0.18 150);
+  --primary-foreground: oklch(0.13 0.02 145);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-2);
+  --muted-foreground: oklch(0.72 0.018 120);
+  --accent: oklch(0.235 0.030 150);
+  --accent-foreground: oklch(0.965 0.008 120);
+  --border: oklch(0.92 0.01 125 / 0.12);
+  --input: oklch(0.92 0.01 125 / 0.16);
+  --ring: var(--primary);
+  --chart-1: oklch(0.70 0.18 248);
+  --chart-2: oklch(0.78 0.15 70);
+  --chart-3: oklch(0.73 0.19 315);
+  --chart-4: oklch(0.73 0.17 148);
+  --chart-5: oklch(0.72 0.14 205);
+  --sidebar: oklch(0.158 0.012 145);
+  --sidebar-foreground: oklch(0.93 0.01 120);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.235 0.035 150);
+  --sidebar-accent-foreground: oklch(0.97 0.01 120);
+  --sidebar-border: oklch(0.92 0.01 125 / 0.09);
+  --sidebar-ring: var(--ring);
+  --sf-chart-grid: oklch(0.90 0.01 120 / 0.105);
+  --sf-chart-axis: oklch(0.72 0.018 120);
+  --sf-surface-highlight: oklch(1 0 0 / 0.035);
+}
+
+/* Atlas — confident violet / indigo. */
+html[data-theme-preset="atlas"] {
+  --primary: oklch(0.56 0.20 285);
+  --accent: oklch(0.95 0.028 285);
+  --accent-foreground: oklch(0.23 0.05 285);
+  --ring: var(--primary);
+  --surface-0: oklch(0.985 0.006 280);
+  --surface-1: oklch(0.997 0.004 280);
+  --surface-2: oklch(0.965 0.012 280);
+  --surface-3: oklch(0.935 0.018 280);
+  --background: var(--surface-0);
+  --card: var(--surface-1);
+  --secondary: var(--surface-2);
+  --muted: var(--surface-2);
+  --sidebar: oklch(0.972 0.012 282);
+  --sidebar-primary: var(--primary);
+  --sidebar-accent: oklch(0.94 0.035 285);
+  --sidebar-ring: var(--primary);
+  --chart-1: oklch(0.58 0.20 285);
+  --chart-2: oklch(0.62 0.17 245);
+  --chart-3: oklch(0.68 0.18 325);
+  --chart-4: oklch(0.65 0.16 160);
+  --chart-5: oklch(0.72 0.16 75);
+}
+html[data-theme-preset="atlas"].dark {
+  --surface-0: oklch(0.145 0.018 280);
+  --surface-1: oklch(0.178 0.022 280);
+  --surface-2: oklch(0.216 0.028 280);
+  --surface-3: oklch(0.258 0.034 280);
+  --background: var(--surface-0);
+  --card: var(--surface-1);
+  --popover: oklch(0.188 0.026 280);
+  --secondary: var(--surface-2);
+  --muted: var(--surface-2);
+  --accent: oklch(0.25 0.055 285);
+  --primary: oklch(0.72 0.17 285);
+  --primary-foreground: oklch(0.14 0.03 285);
+  --sidebar: oklch(0.158 0.020 280);
+  --sidebar-primary: var(--primary);
+  --sidebar-accent: oklch(0.245 0.055 285);
+  --chart-1: oklch(0.74 0.17 285);
+  --chart-2: oklch(0.71 0.15 245);
+  --chart-3: oklch(0.76 0.17 325);
+  --chart-4: oklch(0.73 0.15 160);
+  --chart-5: oklch(0.79 0.14 75);
+}
+
+/* Oasis — teal / cyan with a fresh but restrained surface tint. */
+html[data-theme-preset="oasis"] {
+  --primary: oklch(0.55 0.15 190);
+  --accent: oklch(0.95 0.025 190);
+  --accent-foreground: oklch(0.22 0.04 190);
+  --ring: var(--primary);
+  --surface-0: oklch(0.985 0.007 190);
+  --surface-1: oklch(0.997 0.004 190);
+  --surface-2: oklch(0.965 0.012 190);
+  --surface-3: oklch(0.935 0.018 190);
+  --background: var(--surface-0);
+  --card: var(--surface-1);
+  --secondary: var(--surface-2);
+  --muted: var(--surface-2);
+  --sidebar: oklch(0.972 0.012 190);
+  --sidebar-primary: var(--primary);
+  --sidebar-accent: oklch(0.94 0.035 190);
+  --sidebar-ring: var(--primary);
+  --chart-1: oklch(0.58 0.16 205);
+  --chart-2: oklch(0.62 0.17 165);
+  --chart-3: oklch(0.67 0.18 260);
+  --chart-4: oklch(0.72 0.16 80);
+  --chart-5: oklch(0.65 0.18 325);
+}
+html[data-theme-preset="oasis"].dark {
+  --surface-0: oklch(0.145 0.018 190);
+  --surface-1: oklch(0.178 0.022 190);
+  --surface-2: oklch(0.216 0.028 190);
+  --surface-3: oklch(0.258 0.034 190);
+  --background: var(--surface-0);
+  --card: var(--surface-1);
+  --popover: oklch(0.188 0.026 190);
+  --secondary: var(--surface-2);
+  --muted: var(--surface-2);
+  --accent: oklch(0.25 0.050 190);
+  --primary: oklch(0.74 0.14 190);
+  --primary-foreground: oklch(0.13 0.03 190);
+  --sidebar: oklch(0.158 0.020 190);
+  --sidebar-primary: var(--primary);
+  --sidebar-accent: oklch(0.245 0.050 190);
+  --chart-1: oklch(0.73 0.15 205);
+  --chart-2: oklch(0.74 0.15 165);
+  --chart-3: oklch(0.75 0.16 260);
+  --chart-4: oklch(0.80 0.14 80);
+  --chart-5: oklch(0.74 0.16 325);
+}
+
+/* Dune — warm amber / copper, intentionally warmer than the base system. */
+html[data-theme-preset="dune"] {
+  --primary: oklch(0.60 0.15 65);
+  --primary-foreground: oklch(0.18 0.025 60);
+  --accent: oklch(0.95 0.032 70);
+  --accent-foreground: oklch(0.25 0.05 60);
+  --ring: var(--primary);
+  --surface-0: oklch(0.985 0.009 75);
+  --surface-1: oklch(0.997 0.006 75);
+  --surface-2: oklch(0.965 0.016 75);
+  --surface-3: oklch(0.935 0.024 70);
+  --background: var(--surface-0);
+  --card: var(--surface-1);
+  --secondary: var(--surface-2);
+  --muted: var(--surface-2);
+  --sidebar: oklch(0.972 0.016 75);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.94 0.045 70);
+  --sidebar-ring: var(--primary);
+  --chart-1: oklch(0.62 0.17 65);
+  --chart-2: oklch(0.62 0.18 28);
+  --chart-3: oklch(0.62 0.17 320);
+  --chart-4: oklch(0.61 0.15 155);
+  --chart-5: oklch(0.59 0.15 235);
+}
+html[data-theme-preset="dune"].dark {
+  --surface-0: oklch(0.145 0.018 65);
+  --surface-1: oklch(0.178 0.023 65);
+  --surface-2: oklch(0.216 0.030 65);
+  --surface-3: oklch(0.258 0.036 65);
+  --background: var(--surface-0);
+  --card: var(--surface-1);
+  --popover: oklch(0.188 0.027 65);
+  --secondary: var(--surface-2);
+  --muted: var(--surface-2);
+  --accent: oklch(0.25 0.058 65);
+  --primary: oklch(0.78 0.14 70);
+  --primary-foreground: oklch(0.16 0.03 65);
+  --sidebar: oklch(0.158 0.021 65);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.245 0.058 65);
+  --chart-1: oklch(0.80 0.14 70);
+  --chart-2: oklch(0.73 0.17 28);
+  --chart-3: oklch(0.75 0.16 320);
+  --chart-4: oklch(0.73 0.14 155);
+  --chart-5: oklch(0.71 0.14 235);
+}
+
+/* ── Arabic product typography + bidi boundaries ─────────────────────────── */
+html[dir="rtl"] body {
+  font-family: var(--font-arabic), "Segoe UI", Tahoma, Arial, sans-serif;
+  line-height: 1.58;
+  font-synthesis: none;
+}
+html[dir="rtl"] :where(button, input, textarea, select) {
+  font-family: inherit;
+}
+html[dir="rtl"] :where(h1, h2, h3, h4) {
+  line-height: 1.34;
+  letter-spacing: normal !important;
+}
+html[dir="rtl"] :where(.font-mono, code, kbd, .technical-value, .numeric-value, .force-ltr) {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Data fragments opt into isolation instead of forcing surrounding Arabic UI
+   into a physical LTR layout. Use bidi-data for mixed currency/date/ID content. */
+.bidi-data,
+.technical-value,
+.numeric-value,
+.force-ltr,
+bdi[dir="ltr"] {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+.bidi-copy,
+bdi:not([dir]) {
+  unicode-bidi: isolate;
+}
+
+/* ── Atomic locale transition ────────────────────────────────────────────── */
+html[data-locale-transition="pending"] body {
+  cursor: progress;
+}
+html[data-locale-transition="pending"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: auto;
+  background: color-mix(in oklch, var(--background) 82%, transparent);
+  backdrop-filter: blur(7px) saturate(0.92);
+  -webkit-backdrop-filter: blur(7px) saturate(0.92);
+  animation: sf-locale-cover-in var(--motion-fast) var(--motion-ease-standard) both;
+}
+html[data-locale-transition="pending"] body::after {
+  content: "";
+  position: fixed;
+  z-index: 2147483001;
+  inset: 50% auto auto 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 2px solid color-mix(in oklch, var(--muted-foreground) 24%, transparent);
+  border-top-color: var(--primary);
+  border-radius: 999px;
+  animation: sf-locale-spin 680ms linear infinite;
+}
+@keyframes sf-locale-cover-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sf-locale-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Appearance transaction ──────────────────────────────────────────────── */
+html[data-appearance-transition="active"] *,
+html[data-appearance-transition="active"] *::before,
+html[data-appearance-transition="active"] *::after {
+  transition: none !important;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--motion-base);
+  animation-timing-function: var(--motion-ease-standard);
+}
+::view-transition-old(root) { animation-name: sf-theme-out; }
+::view-transition-new(root) { animation-name: sf-theme-in; }
+@keyframes sf-theme-out {
+  to { opacity: 0.72; filter: saturate(0.9); }
+}
+@keyframes sf-theme-in {
+  from { opacity: 0.72; filter: saturate(0.9); }
+}
+
+/* ── Governed motion grammar ─────────────────────────────────────────────── */
+button,
+a,
+[role="button"],
+input,
+select,
+textarea {
+  transition-property: background-color, border-color, color, box-shadow, opacity, transform;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--motion-ease-standard);
+}
+.card-lift,
+.card-hover {
+  transition-property: transform, box-shadow, border-color, background-color;
+  transition-duration: var(--motion-base);
+  transition-timing-function: var(--motion-ease-emphasized);
+}
+.card-lift:hover,
+.card-hover:hover {
+  transform: translateY(-1px);
+}
+[dir="rtl"] { --sf-inline-entry: 10px; }
+.animate-slide-right,
+.animate-slide-inline {
+  animation-name: sf-slide-inline;
+  animation-duration: var(--motion-base);
+  animation-timing-function: var(--motion-ease-emphasized);
+  animation-fill-mode: both;
+}
+.animate-in,
+.animate-fade-in {
+  animation-duration: var(--motion-base);
+  animation-timing-function: var(--motion-ease-emphasized);
+}
+.animate-fade-up {
+  animation-duration: var(--motion-surface);
+  animation-timing-function: var(--motion-ease-emphasized);
+}
+.animate-scale-in {
+  animation-duration: var(--motion-base);
+  animation-timing-function: var(--motion-ease-emphasized);
+}
+@keyframes sf-slide-inline {
+  from { opacity: 0; transform: translateX(var(--sf-inline-entry)); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Elevated surfaces ──────────────────────────────────────────────────── */
+.shadow-dropdown,
+.shadow-popover {
+  border-color: color-mix(in oklch, var(--border) 85%, transparent);
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.10),
+    0 12px 34px oklch(0 0 0 / 0.16),
+    0 0 0 1px var(--sf-surface-highlight) inset;
+}
+.dark .shadow-dropdown,
+.dark .shadow-popover {
+  box-shadow:
+    0 8px 28px oklch(0 0 0 / 0.34),
+    0 24px 64px oklch(0 0 0 / 0.22),
+    0 0 0 1px var(--sf-surface-highlight) inset;
+}
+
+/* ── Analytical system ──────────────────────────────────────────────────── */
+[data-chart-card="true"] {
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--card) 97%, var(--primary) 3%), var(--card));
+  border-color: color-mix(in oklch, var(--border) 88%, transparent);
+}
+[data-chart-plot="true"] {
+  isolation: isolate;
+}
+[data-slot="chart"] {
+  direction: ltr;
+  unicode-bidi: isolate;
+  color: var(--sf-chart-axis);
+}
+[data-slot="chart"] :where(.recharts-text, .recharts-cartesian-axis-tick-value) {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  fill: var(--sf-chart-axis);
+}
+[data-slot="chart"] .recharts-cartesian-grid line {
+  stroke: var(--sf-chart-grid);
+  stroke-dasharray: 2 5;
+}
+[data-slot="chart"] :where(.recharts-line-curve, .recharts-area-curve) {
+  vector-effect: non-scaling-stroke;
+}
+[data-slot="chart-tooltip"] {
+  min-width: 9rem;
+  border-color: color-mix(in oklch, var(--border) 90%, transparent);
+  background: color-mix(in oklch, var(--popover) 94%, transparent);
+  box-shadow: 0 12px 32px oklch(0 0 0 / 0.18);
+  backdrop-filter: blur(14px) saturate(1.08);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+}
+html[dir="rtl"] [data-slot="chart-tooltip"],
+html[dir="rtl"] [data-slot="chart-legend"] {
+  font-family: var(--font-arabic), "Segoe UI", Tahoma, Arial, sans-serif;
+  direction: rtl;
+  text-align: start;
+}
+
+/* Accessible reduced-motion authority includes JS-independent CSS motion. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+  html[data-locale-transition="pending"] body::before {
+    animation: none !important;
+  }
+  html[data-locale-transition="pending"] body::after {
+    animation-duration: 1.2s !important;
+  }
+}

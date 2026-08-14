@@ -281,7 +281,7 @@ export default async function OrderDetailPage({
                       <div className="space-y-0.5">
                         <p className="text-sm font-medium">{item.productName}</p>
                         <p className="text-xs text-muted-foreground">
-                          {item.quantity} × {formatDZD(item.unitPrice)}
+                          {item.quantity} × {formatDZD(item.unitPrice, locale)}
                         </p>
                         {item.productVariantName && (
                           <p className="text-xs text-muted-foreground">
@@ -292,7 +292,7 @@ export default async function OrderDetailPage({
                         )}
                       </div>
                       <p className="text-sm font-medium">
-                        {formatDZD(item.total)}
+                        {formatDZD(item.total, locale)}
                       </p>
                     </div>
                   ))}
@@ -305,20 +305,20 @@ export default async function OrderDetailPage({
                     <span className="text-muted-foreground">
                       {t("orders.detail.subtotal")}
                     </span>
-                    <span>{formatDZD(itemsTotal)}</span>
+                    <span>{formatDZD(itemsTotal, locale)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
                       {t("orders.detail.shipping")}
                     </span>
                     <span>
-                      {deliveryCost > 0 ? formatDZD(deliveryCost) : "—"}
+                      {deliveryCost > 0 ? formatDZD(deliveryCost, locale) : "—"}
                     </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-base font-bold">
                     <span>{t("orders.total")}</span>
-                    <span>{formatDZD(order.totalPrice)}</span>
+                    <span>{formatDZD(order.totalPrice, locale)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -479,7 +479,7 @@ export default async function OrderDetailPage({
                               n: customer.orderCount,
                             })}
                         {" · "}
-                        {formatDZD(customer.totalSpent)}
+                        {formatDZD(customer.totalSpent, locale)}
                       </p>
                     )}
                   </div>
@@ -621,7 +621,7 @@ export default async function OrderDetailPage({
                         >
                           <div>
                             <span className="font-medium">
-                              {formatDZD(r.amount)}
+                              {formatDZD(r.amount, locale)}
                             </span>
                             <span className="text-muted-foreground ms-2">
                               · {r.method}
@@ -642,7 +642,7 @@ export default async function OrderDetailPage({
                           {t("orders.refund.total")}
                         </span>
                         <span className="font-bold text-destructive">
-                          {formatDZD(totalRefunded)}
+                          {formatDZD(totalRefunded, locale)}
                         </span>
                       </div>
                     </div>

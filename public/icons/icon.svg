@@ -1,42 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  SahelFlow PWA icon (SVG, scalable).
-  A stylized "S" + flow wave in the brand teal (#0f766e).
-  Chrome accepts SVG icons in the manifest with the right MIME type.
-  For maximum Android compatibility, PNG versions should also be generated
-  (see scripts/generate-pwa-icons.ts for a canvas-based generator).
--->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Background (rounded square for maskable safe zone) -->
-  <rect width="512" height="512" rx="96" fill="#0f766e"/>
-
-  <!-- Flow wave (represents order flow / delivery) -->
-  <path
-    d="M 128 320 Q 192 256 256 320 T 384 320"
-    fill="none"
-    stroke="#ffffff"
-    stroke-width="24"
-    stroke-linecap="round"
-    opacity="0.85"
-  />
-  <path
-    d="M 128 384 Q 192 320 256 384 T 384 384"
-    fill="none"
-    stroke="#ffffff"
-    stroke-width="20"
-    stroke-linecap="round"
-    opacity="0.5"
-  />
-
-  <!-- Stylized "S" (SahelFlow) -->
-  <text
-    x="256"
-    y="280"
-    font-family="system-ui, -apple-system, sans-serif"
-    font-size="200"
-    font-weight="700"
-    fill="#ffffff"
-    text-anchor="middle"
-    dominant-baseline="middle"
-  >S</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="title">
+  <title id="title">SahelFlow</title>
+  <rect width="512" height="512" fill="#101728"/>
+  <g fill="#F2EEE4">
+    <rect x="108" y="140" width="243" height="33"/>
+    <rect x="363" y="140" width="41" height="33"/>
+    <rect x="108" y="206" width="192" height="33"/>
+    <rect x="312" y="206" width="92" height="33"/>
+    <rect x="108" y="272" width="142" height="33"/>
+    <rect x="262" y="272" width="142" height="33"/>
+    <rect x="108" y="338" width="92" height="33"/>
+    <rect x="212" y="338" width="158" height="33"/>
+  </g>
+  <rect x="370" y="337" width="35" height="35" fill="#39D4BF"/>
 </svg>

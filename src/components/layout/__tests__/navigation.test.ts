@@ -11,7 +11,7 @@ import {
 } from "../navigation";
 
 describe("Phase 5 navigation authority", () => {
-  it("exposes exactly seven daily business domains", () => {
+  it("exposes the eight daily business domains including Storefront Builder", () => {
     expect(navigationDomains.map((domain) => domain.id)).toEqual([
       "home",
       "sell",
@@ -19,6 +19,7 @@ describe("Phase 5 navigation authority", () => {
       "fulfill",
       "money",
       "inbox",
+      "storefront",
       "grow",
     ]);
     expect(DEFAULT_NAVIGATION_DOMAIN_ORDER).toEqual(
@@ -32,6 +33,7 @@ describe("Phase 5 navigation authority", () => {
     expect(new Set(hrefs).size).toBe(hrefs.length);
     expect(hrefs).toContain("/orders/confirmation-queue");
     expect(hrefs).toContain("/accounting/cod-reconciliation");
+    expect(hrefs).toContain("/storefronts");
     expect(hrefs).toContain("/settings");
   });
 
@@ -43,6 +45,9 @@ describe("Phase 5 navigation authority", () => {
       navigationDomainForPathname("/accounting/cod-reconciliation")?.id,
     ).toBe("money");
     expect(navigationDomainForPathname("/automations")?.id).toBe("grow");
+    expect(navigationDomainForPathname("/storefronts/new")?.id).toBe(
+      "storefront",
+    );
   });
 
   it("resolves the most specific contextual destination", () => {
@@ -55,6 +60,9 @@ describe("Phase 5 navigation authority", () => {
     expect(
       navigationItemForPathname("/accounting/cod-reconciliation")?.href,
     ).toBe("/accounting/cod-reconciliation");
+    expect(navigationItemForPathname("/storefronts/new")?.href).toBe(
+      "/storefronts",
+    );
   });
 
   it("keeps administration outside daily business domains", () => {
@@ -69,6 +77,7 @@ describe("Phase 5 navigation authority", () => {
   it("applies seller domain ordering without changing child ownership", () => {
     const ordered = orderedNavigationDomains([
       "inbox",
+      "storefront",
       "sell",
       "home",
       "money",
@@ -78,6 +87,7 @@ describe("Phase 5 navigation authority", () => {
     ]);
     expect(ordered.map((domain) => domain.id)).toEqual([
       "inbox",
+      "storefront",
       "sell",
       "home",
       "money",
@@ -111,8 +121,9 @@ describe("Phase 5 navigation authority", () => {
       "customers",
       "fulfill",
       "money",
+      "storefront",
       "grow",
     ]);
-    expect(new Set(ordered.map((domain) => domain.id)).size).toBe(7);
+    expect(new Set(ordered.map((domain) => domain.id)).size).toBe(8);
   });
 });

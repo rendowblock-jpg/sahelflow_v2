@@ -43,7 +43,10 @@ describe("AI operational workspace contract", () => {
     );
     expect(context).toContain("not action authority");
     expect(context).toContain("exact tool/action arguments");
-    expect(agent).toContain("aiChatLocaleSystemContext(locale)");
+    expect(context).toContain("aiChatSystemPrompt");
+    expect(context).toContain("أنت المساعد الذكي");
+    expect(context).toContain("You are SahelFlow's AI assistant");
+    expect(agent).toContain('aiChatSystemPrompt(locale ?? "fr")');
     expect(agent).toContain('{ role: "user", parts: [{ text: userMessage }] }');
     expect(route).toContain("input.message,");
     expect(route).toContain("input.locale,");
@@ -51,6 +54,17 @@ describe("AI operational workspace contract", () => {
     expect(stream).toContain("input.locale,");
     expect(route).not.toContain("withAiChatLocaleContext");
     expect(stream).not.toContain("withAiChatLocaleContext");
+  });
+
+  it("localizes system-owned proposal and tool errors instead of leaking French", () => {
+    const context = read("src/lib/ai/chat/locale-context.ts");
+    const agent = read("src/lib/ai/chat/agent.ts");
+    expect(context).toContain("aiProposalRecordedMessage");
+    expect(context).toContain("aiUnknownToolMessage");
+    expect(agent).toContain("aiProposalRecordedMessage(locale ?? \"fr\", proposal.tool)");
+    expect(agent).toContain("aiUnknownToolMessage(locale ?? \"fr\", call.name)");
+    expect(agent).not.toContain("Outil inconnu:");
+    expect(agent).not.toContain("Une proposition d'action exacte (${proposal.tool})");
   });
 
   it("does not persist streamed provider errors as assistant history", () => {

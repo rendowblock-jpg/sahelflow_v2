@@ -4,9 +4,9 @@
   "version": "1.0.0-internal.16",
   "identifier": "com.sahelflow.desktop",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "bunx tauri icon public/icons/sahelflow-mark.png && bun run dev",
     "devUrl": "http://localhost:3000",
-    "beforeBuildCommand": "bun run src-tauri/build-frontend.ts",
+    "beforeBuildCommand": "bunx tauri icon public/icons/sahelflow-mark.png && bun run src-tauri/build-frontend.ts",
     "frontendDist": "http://localhost:3000"
   },
   "app": {

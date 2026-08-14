@@ -25,7 +25,7 @@ interface RefundDialogProps {
 }
 
 export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded = 0 }: RefundDialogProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(String(maxAmount - alreadyRefunded));
   const [method, setMethod] = useState("cash");
@@ -64,17 +64,17 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
           <div className="rounded-lg bg-muted p-3 text-sm space-y-1">
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("refund.orderTotal")}</span>
-              <span className="font-medium">{formatDZD(maxAmount)}</span>
+              <span className="font-medium">{formatDZD(maxAmount, locale)}</span>
             </div>
             {alreadyRefunded > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("refund.alreadyRefunded")}</span>
-                <span className="font-medium text-warning">{formatDZD(alreadyRefunded)}</span>
+                <span className="font-medium text-warning">{formatDZD(alreadyRefunded, locale)}</span>
               </div>
             )}
             <div className="flex justify-between border-t pt-1">
               <span className="text-muted-foreground">{t("refund.refundableRemaining")}</span>
-              <span className="font-bold">{formatDZD(remaining)}</span>
+              <span className="font-bold">{formatDZD(remaining, locale)}</span>
             </div>
           </div>
 

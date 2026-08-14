@@ -27,6 +27,7 @@ export type NavigationDomainId =
   | "fulfill"
   | "money"
   | "inbox"
+  | "storefront"
   | "grow";
 
 export interface NavigationItem {
@@ -155,6 +156,20 @@ export const navigationDomains: readonly NavigationDomain[] = [
     keywords: ["inbox", "whatsapp", "messages", "conversations"],
   },
   {
+    id: "storefront",
+    labelKey: "nav.storefrontBuilder",
+    href: "/storefronts",
+    icon: Store,
+    keywords: [
+      "storefront",
+      "storefront builder",
+      "store",
+      "website",
+      "catalog",
+      "checkout",
+    ],
+  },
+  {
     id: "grow",
     labelKey: "nav.analytics",
     href: "/analytics",
@@ -170,11 +185,6 @@ export const navigationDomains: readonly NavigationDomain[] = [
         "ai",
         "assistant",
         "agent",
-      ]),
-      item("storefronts", "nav.storefronts", "/storefronts", Store, [
-        "store",
-        "storefront",
-        "website",
       ]),
     ],
   },

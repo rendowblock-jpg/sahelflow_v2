@@ -113,11 +113,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
       <div className="card-grid-4">
         <StatCard
           label={t("products.sellPrice")}
-          value={formatDZD(product.price)}
+          value={formatDZD(product.price, locale)}
           icon={<TrendingUp />}
           subtitle={
             product.cost !== null
-              ? `${t("products.cost")}: ${formatDZD(product.cost)}${margin !== null ? ` · ${t("products.value")}: ${formatDZD(margin)}${marginPct !== null ? ` (${marginPct}%)` : ""}` : ""}`
+              ? `${t("products.cost")}: ${formatDZD(product.cost, locale)}${margin !== null ? ` · ${t("products.value")}: ${formatDZD(margin, locale)}${marginPct !== null ? ` (${marginPct}%)` : ""}` : ""}`
               : undefined
           }
         />
@@ -129,7 +129,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         />
         <StatCard
           label={t("products.inventoryValue")}
-          value={formatDZD(inventoryValue)}
+          value={formatDZD(inventoryValue, locale)}
           icon={<Package />}
         />
         <StatCard
@@ -164,7 +164,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                         <span className="font-medium">{variant.name}</span>
                         <div className="flex items-center gap-3 text-muted-foreground">
                           <span className="tabular-nums">
-                            {formatDZD(variant.price ?? product.price)}
+                            {formatDZD(variant.price ?? product.price, locale)}
                           </span>
                           <span className="tabular-nums">
                             {variant.stock} {t("products.inStock")}
@@ -227,12 +227,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
                           </TableCell>
                           <TableCell className="text-end tabular-nums">
                             {canReadOrderFinancials && item.unitPrice !== null
-                              ? formatDZD(item.unitPrice)
+                              ? formatDZD(item.unitPrice, locale)
                               : "—"}
                           </TableCell>
                           <TableCell className="text-end tabular-nums">
                             {canReadOrderFinancials && item.total !== null
-                              ? formatDZD(item.total)
+                              ? formatDZD(item.total, locale)
                               : "—"}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">

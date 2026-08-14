@@ -26,12 +26,69 @@ import {
   Sun,
 } from "lucide-react";
 
-const PRESET_SWATCH: Record<ThemePreset, string> = {
-  sahel: "bg-emerald-500",
-  atlas: "bg-violet-500",
-  oasis: "bg-cyan-500",
-  dune: "bg-amber-500",
+const PRESET_PREVIEW: Record<
+  ThemePreset,
+  { accent: string; secondary: string; canvas: string; rail: string }
+> = {
+  sahel: {
+    accent: "oklch(0.70 0.18 150)",
+    secondary: "oklch(0.70 0.18 248)",
+    canvas: "oklch(0.178 0.012 145)",
+    rail: "oklch(0.235 0.030 150)",
+  },
+  atlas: {
+    accent: "oklch(0.72 0.17 285)",
+    secondary: "oklch(0.71 0.15 245)",
+    canvas: "oklch(0.178 0.022 280)",
+    rail: "oklch(0.245 0.055 285)",
+  },
+  oasis: {
+    accent: "oklch(0.74 0.14 190)",
+    secondary: "oklch(0.74 0.15 165)",
+    canvas: "oklch(0.178 0.022 190)",
+    rail: "oklch(0.245 0.050 190)",
+  },
+  dune: {
+    accent: "oklch(0.78 0.14 70)",
+    secondary: "oklch(0.73 0.17 28)",
+    canvas: "oklch(0.178 0.023 65)",
+    rail: "oklch(0.245 0.058 65)",
+  },
 };
+
+function PresetPreview({ candidate }: { candidate: ThemePreset }) {
+  const swatch = PRESET_PREVIEW[candidate];
+  return (
+    <span
+      aria-hidden="true"
+      className="relative block h-14 w-full overflow-hidden rounded-lg border border-white/10 shadow-inner"
+      style={{ background: swatch.canvas }}
+    >
+      <span
+        className="absolute inset-y-0 start-0 w-3"
+        style={{ background: swatch.rail }}
+      />
+      <span className="absolute inset-x-5 top-3 flex items-center gap-1.5">
+        <span
+          className="h-1.5 w-10 rounded-full"
+          style={{ background: swatch.accent }}
+        />
+        <span className="h-1.5 w-5 rounded-full bg-white/16" />
+      </span>
+      <span className="absolute inset-x-5 bottom-3 grid grid-cols-3 gap-1.5">
+        <span className="h-4 rounded bg-white/7" />
+        <span
+          className="h-4 rounded"
+          style={{ background: `color-mix(in oklch, ${swatch.secondary} 28%, transparent)` }}
+        />
+        <span
+          className="h-4 rounded"
+          style={{ background: `color-mix(in oklch, ${swatch.accent} 24%, transparent)` }}
+        />
+      </span>
+    </span>
+  );
+}
 
 export function AppearancePanel() {
   const { t } = useI18n();
@@ -86,10 +143,10 @@ export function AppearancePanel() {
                   data-theme-mode={id}
                   className={cn(
                     "flex min-h-12 items-center gap-3 rounded-xl border px-3.5 py-2.5 text-start text-sm font-medium",
-                    "transition-[background-color,border-color,color,box-shadow] duration-150",
+                    "transition-[background-color,border-color,color,box-shadow,transform] duration-150",
                     selected
                       ? "border-primary/50 bg-primary/10 text-foreground shadow-sm"
-                      : "bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                      : "bg-background text-muted-foreground hover:-translate-y-px hover:bg-muted/60 hover:text-foreground",
                   )}
                 >
                   <span
@@ -128,26 +185,27 @@ export function AppearancePanel() {
                   aria-pressed={selected}
                   data-theme-preset-option={candidate}
                   className={cn(
-                    "group flex min-h-12 items-center gap-3 rounded-xl border px-3.5 py-2.5 text-start text-sm font-medium",
-                    "transition-[background-color,border-color,color,box-shadow] duration-150",
+                    "group overflow-hidden rounded-xl border p-2 text-start text-sm font-medium",
+                    "transition-[background-color,border-color,color,box-shadow,transform] duration-150",
                     selected
-                      ? "border-primary/50 bg-primary/10 text-foreground shadow-sm"
-                      : "bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                      ? "border-primary/55 bg-primary/[0.07] text-foreground shadow-sm"
+                      : "bg-background text-muted-foreground hover:-translate-y-px hover:border-border hover:bg-muted/35 hover:text-foreground",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "size-5 shrink-0 rounded-full ring-2 ring-background ring-offset-1 ring-offset-border",
-                      PRESET_SWATCH[candidate],
-                    )}
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0 flex-1 truncate">
-                    {t(`settings.appearance.preset.${candidate}`)}
+                  <PresetPreview candidate={candidate} />
+                  <span className="mt-2 flex min-w-0 items-center gap-2 px-1 pb-0.5">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: PRESET_PREVIEW[candidate].accent }}
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {t(`settings.appearance.preset.${candidate}`)}
+                    </span>
+                    {selected ? (
+                      <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                    ) : null}
                   </span>
-                  {selected ? (
-                    <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
-                  ) : null}
                 </button>
               );
             })}
