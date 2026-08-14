@@ -1,180 +1,269 @@
 # SahelFlow — Final completion roadmap
 
 > **Status:** Binding dependency and completion order
-> **Governing decisions:** FD-028; FD-029; FD-030; FD-031; FD-032; FD-033 — Internal.16 completion convergence
-> **Protected main:** `b78e3eb945d5a66a34198db8ef00df95cc9b37aa` — PR #250 / Internal.16 Wave 3
-> **Latest application-changing protected merge:** PR #250 — Internal.16 Wave 3
-> **Active implementation:** draft PR #251 — Internal.16 Wave 4 Storefront Builder V2 / connected platform
-> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
-> **Published release:** `1.0.0-internal.15` — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
+> **Governing decisions:** FD-028; FD-029; FD-030; FD-031; FD-032; FD-033; temporary FD-034 and FD-035 addenda in `documentation/README.md`
+> **Protected `main`:** `c8200fdd0fe212cc7493de434d19bd8e7395c4ea` — PR #252 / signed Internal.16 authority
+> **Latest application-changing protected merge:** PR #251 — Internal.16 Wave 4 Storefront Builder V2 + connected platform
+> **Published release:** `1.0.0-internal.16` / MSI `1.0.0.16`
+> **Signed release run:** `31770292329`
+> **Founder installed result:** Internal.16 installed; frontend acceptance **REJECTED** on 2026-08-14
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Next milestone:** `1.0.0-internal.16` / MSI `1.0.0.16` complete-product candidate
-> **Installed discovery:** CLOSED 2026-08-13; 17 Founder-installed P1 inputs frozen under FD-033
+> **Active application frontier:** Internal.17 frontend-system correction
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Open retained issues:** #221, #226, #230
-> **Last consolidated:** 2026-08-13
+> **Last consolidated:** 2026-08-14
 
-Protected `main` is source truth. FD-033 changes only the Internal.16 execution sequence; it does not mark any previously open evidence as passed and does not weaken Phase 1–4 canonical authority.
+Protected `main` is source truth. Internal.16 is a successfully signed Founder/internal-lab release and materially completes the connected-platform implementation, but the installed Founder experience still fails the required frontend acceptance bar. The next work is a bounded correction frontier, not another broad product rebuild.
 
-## Internal.16 completion cycle
+## Current completion topology
 
 ```text
-exact documentation-merged post-Internal.15 authority
-→ complete reconnaissance of exact source and every affected sibling/root dependency
-→ merge source findings with frozen 17 Founder-installed findings
-→ one consolidated Problem Register
-→ freeze shared contracts/non-goals/acceptance matrix
-→ one large dependency-correct implementation wave
-→ targeted cheap checks during coding
-→ freeze complete Internal.16 candidate
-→ one deep whole-product certification + adversarial review
-→ one consolidated repair batch
-→ affected proof + final complete certification
-→ expected-head merge only after the selected exact-head gates pass
-→ signed Internal.16 updater only if evidence passes
+protected Phase 0–4 canonical engine
++ protected Phase 5–6 source/browser foundations
++ protected Phase 8 connected platform / Storefront Builder V2 / cloud backup
++ signed Internal.16 publication
+→ Founder installs Internal.16
+→ frontend acceptance REJECTED
+→ six classes reconfirmed failed
+→ reconcile the complete FD-033 frozen P1 register + new motion class
+→ one Internal.17 root-correction frontier containing every still-open class
+→ deep exact-head proof + adversarial review
+→ zero applicable unresolved P0/P1
+→ new exact signed candidate authority
+→ one coherent signed candidate
+→ #221 + #226 + #230 on that candidate
+→ explicit Founder accept/reject
+→ Phase 9 representative/external launch evidence
+→ explicit Founder promotion
 ```
-
-Founder-installed discovery is closed. The next application session may proceed immediately to exact-source reconnaissance and Problem Register freeze; it must not restart screenshot discovery or micro-fix loops.
 
 ## Phases 0–4 — protected canonical foundation
 
-Phase 0 governance, Phase 1 Golden COD, Phase 2 identity/licensing/multi-shop and Phase 4 protection/recovery/migration remain protected under their established authorities. Internal.16 may repair proven bounded defects but may not rewrite those contracts for visual or deadline convenience.
+Phase 0 governance, Phase 1 Golden COD, Phase 2 identity/licensing/multi-shop and Phase 4 data protection/recovery/migrations remain protected under their established authorities.
+
+The Internal.17 frontend correction may repair a proven bounded backend contract defect when necessary, but it may not rewrite canonical business/data/security/recovery authority for visual convenience.
 
 ## Phase 3 — providers, inbox, AI and automations
 
-Phase 3 remains protected through its existing provider, Inbox, AI and automation authority. FD-030 continues to distinguish deterministic source/conformance proof from live real-account provider certification. Internal.16 may enhance the installed Inbox/AI experience and replace the NOEST product surface with EcoTrack Pro, but it must preserve durable provider effects, ambiguity/reconciliation, proposal-bound AI actions and automation recovery.
+Phase 3 durable provider, Inbox, AI and automation authority remains protected under FD-030. The current correction may redesign the installed Inbox and AI product experience, but must preserve durable provider effects, ambiguity/reconciliation, proposal-bound canonical AI actions, recovery semantics and the distinction between source/conformance evidence and Phase 9 live-provider certification.
 
 ## Phase 5 — whole-product AAA desktop experience
 
-Protected source/browser work remains valid: shared roots #236, Inbox #237, AI #240, Settings #242, Orders #244. The Phase 5 application-changing protected baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Installed Internal.15 proves whole-product experience is still open.
+Protected source/browser work remains valid for what its exact heads proved. Internal.16 installed evidence now proves the higher Founder-acceptance layer is still open.
 
-### Protected route evidence retained
+### Six reconfirmed failures
 
-- **Inbox — SATISFIED IN SOURCE/BROWSER BY PR #237** at final exact head `8e9d5aa365f0c5873909c1c8517f88519d743b9d`.
-- **AI Agents — SATISFIED IN SOURCE/BROWSER BY PR #240** at final exact head `6355cc4c797a597af52c90decfe7727e405749be`.
-- **Settings — SATISFIED IN SOURCE/BROWSER BY PR #242** at final exact head `e749b0af05741ee45b16c349750d44092bd3beb9`.
-- **Orders + confirmation — SATISFIED IN SOURCE/BROWSER BY PR #244** at application-changing protected baseline `856f58126327797b467938390586a04f185e70f6`.
-- **Settings satisfied in source/browser — PR #242** remains a historical closure marker; it did not close installed whole-product acceptance.
+1. **`SF16-UI-001` — RTL/direction geometry**
+   - still wrong in the sidebar and other UI surfaces;
+   - charts are also affected;
+   - repair the shared logical-direction system and every materially affected production consumer.
 
-### Remaining route/workspace convergence
+2. **`SF16-THEME-015` — theme switching**
+   - dark/light switching is still perceptibly non-atomic and not smooth enough;
+   - appearance must commit coherently across root state, semantic tokens, shared primitives, charts and hydrated routes.
 
-- Dashboard;
-- customers/risk;
-- products/inventory;
-- delivery/returns;
-- COD/accounting;
-- analytics/charts;
-- automations;
-- setup/login/license;
-- remaining administration/shared shell;
-- final installed convergence for Inbox and AI.
+3. **`SF17-MOTION-018` — motion/micro-interaction system**
+   - installed product still feels materially static;
+   - implement one restrained, interruptible, low-resource-aware grammar with reduced-motion first-class.
 
-### Frozen Internal.15 Founder Problem Register — 17 P1 inputs
+4. **`SF16-CHART-013` — governed charts**
+   - visual/information-design quality remains below target;
+   - chart RTL, theme, responsiveness, labeling, density, tooltips/legends, motion and low-end behavior must be corrected as one system.
 
-- **SF16-UI-001 P1:** systemic Arabic/RTL geometry/bidi across shell/routes/charts/menus/panes/tables;
-- **SF16-UI-002 P1:** Risk KPI hierarchy overloaded/unbalanced;
-- **SF16-UI-003 P1:** shared stat-card hover/focus/actionable/selected semantics incomplete;
-- **SF16-I18N-004 P1:** locale-sensitive formatting can leak French defaults into Arabic;
-- **SF16-INBOX-005 P1:** Inbox final AAA operational convergence, adaptive panes, complete workflows and large-history performance;
-- **SF16-AI-006 P1:** AI final AAA workbench convergence, adaptive rails and long-session performance;
-- **SF16-I18N-007 P1:** zero unresolved translation keys/unintended foreign system copy;
-- **SF16-PRODUCTS-008 P1:** compact product-row primary thumbnails from existing image projection;
-- **SF16-SEARCH-009 P1:** universal permission/shop-aware operational search;
-- **SF16-AI-010 P1:** end-to-end Gemini key/provider/readiness/inference lifecycle;
-- **SF16-RESP-011 P1:** deterministic responsive composition; no ordinary-window `3+1` orphan cards;
-- **SF16-LAYOUT-012 P1:** remove accidental stretched panels and low-information dead space;
-- **SF16-CHART-013 P1:** rebuild governed charts into a top-tier decision-support system;
-- **SF16-PERF-014 P1:** measure and improve startup/first-post-update launch;
-- **SF16-THEME-015 P1:** atomic smooth light/dark/preset switching with no mixed-token frame;
-- **SF16-I18N-016 P1:** atomic locale commit across current and subsequently navigated routes/cache/prefetch;
-- **SF16-NAV-017 P1:** smarter default sidebar order plus user reorder/edit preference layered over canonical navigation authority.
+5. **`SF16-INBOX-005` — Inbox product UX**
+   - still Founder-rejected in the signed installed product;
+   - complete the operational queue/thread/context/status/provider-health/notes/media/extraction/recovery workflow and adaptive/scale behavior.
 
-The implementation agent owns exhaustive sibling discovery for established defect classes; the Founder is not required to screenshot every occurrence. Newly proven source-level root dependencies may extend the combined Problem Register before its source-reconnaissance freeze.
+6. **`SF16-AI-006` — AI Agents product UX**
+   - still Founder-rejected in the signed installed product;
+   - complete task-oriented sessions/context/composer/streaming/tool-result/proposal/permission/error/history/recovery behavior while preserving canonical proposal-bound actions and privacy controls.
 
-### Phase 5 Internal.16 exit
+### Complete frozen P1 register remains binding
 
-Every Required desktop route/workspace uses one coherent product system; no known P0/P1 visual/workflow/responsive/theme/localization/chart/navigation/accessibility defect; no raw translation key/prototype/fake action/dead navigation/accidental layout; installed Founder observation accepts the coherent signed candidate to the evidence level claimed.
+The six failures above are reconfirmed installed evidence; they do **not** supersede or silently close FD-033's original 17 P1 classes. The Internal.17 reconnaissance and final sweep must explicitly reconcile:
+
+- `SF16-UI-001`, `SF16-UI-002`, `SF16-UI-003`;
+- `SF16-I18N-004`, `SF16-I18N-007`, `SF16-I18N-016`;
+- `SF16-INBOX-005`, `SF16-AI-006`, `SF16-AI-010`;
+- `SF16-PRODUCTS-008`, `SF16-SEARCH-009`;
+- `SF16-RESP-011`, `SF16-LAYOUT-012`;
+- `SF16-CHART-013`, `SF16-PERF-014`, `SF16-THEME-015`, `SF16-NAV-017`;
+- new `SF17-MOTION-018`.
+
+For every class not freshly reconfirmed as failed, the audit must retain exact current proof if already satisfied or keep the class open in the correction map. No class closes merely because the Founder did not mention it again.
 
 ## Phase 6 — Arabic, RTL and accessibility parity
 
-Internal.16 must prove equivalent AR/FR/EN behavior, professional Arabic typography, logical geometry, directional icon semantics, bidi isolation, chart/table/command-palette RTL, atomic locale switching, keyboard/focus/semantics, WCAG 2.2 AA where applicable, 100–200% zoom/reflow, 1366×768 and reduced motion.
+The formal active product phase remains Phase 6. The current correction must preserve complete AR/FR/EN semantic parity while fixing the surviving installed RTL/direction system at its root.
 
-`SF16-I18N-016` adds a specific cache/navigation requirement: once a locale is committed, prefetched/cached/future route navigation cannot expose the previous locale even transiently. Direction and geometry commit with the same locale epoch.
+Acceptance continues to require professional Arabic typography/reading flow, logical geometry, directional icon semantics, bidi isolation, table/chart/command-palette RTL, keyboard/focus/semantics, WCAG 2.2 AA where applicable, 100–200% zoom/reflow, 1366×768 containment and reduced-motion behavior. The new motion work must strengthen rather than weaken reduced-motion accessibility.
 
-The **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity remains the formal phase label while FD-033 permits the exact Internal.16 implementation wave to converge remaining Phase 5/6/7 work with Phase 8 implementation.
+## Internal.17 frontend correction program
 
-## Phase 7 — performance, responsiveness and reliability
+Temporary FD-035 authorizes source correction work, not a signed Internal.17 release by itself.
 
-### T470 targets
+### 1. Complete reconnaissance and correction-map freeze
+
+Perform a complete reconnaissance of exact current source and production consumers for the six reconfirmed root classes, including:
+
+- logical CSS/layout/direction primitives, sidebar/shell, route-level physical positioning, popovers/dialogs/portals, tables, icons, charts and bidi isolation;
+- appearance/theme authority, hydration, DOM/root attributes/classes, semantic tokens, transition windows, chart consumers and causes of mixed old/new frames;
+- current motion primitives and every navigation/overlay/list/state/loading transition plus reduced-motion and low-end cost;
+- chart architecture/data contracts/formatting/labels/tooltips/legends/responsiveness/direction/theme/animation and production consumers;
+- Inbox data/actions/permissions/provider states/recovery plus queue/thread/context/adaptive layout and scale behavior;
+- AI workspace data/actions/session/context/tools/proposals/provider/readiness/recovery plus long-session behavior.
+
+In the same complete reconnaissance, inspect the remaining FD-033 classes: Risk KPI hierarchy, stat-card semantics, locale formatting, raw/foreign copy, product thumbnails, universal search, Gemini readiness/inference, responsive composition, layout stretching/dead space, startup, locale cache/prefetch atomicity and navigation IA/reorder behavior.
+
+Freeze one bounded correction map with the explicit status of **every** class, shared roots, affected production consumers, tests, localization/accessibility/performance consequences and non-goals. Do not create another permanent masterplan.
+
+### 2. Dependency-correct implementation
+
+Implement in this order unless the root audit proves a safer dependency ordering:
+
+1. RTL/direction primitives and global adoption;
+2. atomic appearance/theme transaction;
+3. coherent motion/micro-interaction layer;
+4. governed chart system and route adoption;
+5. Inbox convergence;
+6. AI Agents convergence;
+7. every additional still-open frozen P1 from the complete register;
+8. exhaustive sibling/adoption sweep across affected production routes.
+
+The purpose is to eliminate root causes, not accumulate page-local exceptions.
+
+### 3. Required correction acceptance
+
+#### RTL/direction
+
+- zero known wrong-side Arabic geometry across shell/sidebar/routes/overlays/tables/charts/controls;
+- logical geometry by default;
+- correct mixed Arabic/LTR technical content and directional icon semantics;
+- correct 1366×768, resize and zoom behavior;
+- no restart needed to recover direction/layout state.
+
+#### Theme switching
+
+- dark/light/system/presets commit as one coherent visual transaction;
+- no observable mixed-token/intermediate frame under ordinary or rapid switching;
+- charts and shared primitives settle with the same appearance epoch;
+- low-end performance remains acceptable.
+
+#### Motion
+
+- one coherent interaction grammar for navigation, overlays, state/list changes, loading and feedback;
+- interruptible, non-blocking and bounded on T470/floor hardware;
+- reduced-motion behavior preserves meaning without unnecessary animation;
+- no decorative motion added merely for visual noise.
+
+#### Charts
+
+- decision-support first, with appropriate chart grammar for the analytical question;
+- professional hierarchy, labels, legends/tooltips and bounded information density;
+- responsive within actual application container width;
+- correct AR/FR/EN formatting and Arabic/RTL/bidi behavior;
+- coherent theme and reduced-motion behavior;
+- no oversized low-information canvases or generic placeholder presentation.
+
+#### Inbox
+
+- efficient operational queue/thread/customer/order workflow;
+- complete assignment/status/provider-health/degraded/internal-note/media/extraction/recovery states;
+- adaptive panes and large-history usability;
+- no debug/prototype/product-gap surface in required journeys.
+
+#### AI Agents
+
+- coherent task-oriented session/workbench model;
+- polished context/composer/streaming/stop/retry/tool-result/proposal/permission/error/history flows;
+- provider/readiness/degraded/recovery behavior is understandable and actionable;
+- proposal-bound canonical mutations, privacy/redaction and ambiguity/idempotency authority remain intact;
+- long sessions remain usable on representative hardware.
+
+#### Other frozen classes
+
+Every other FD-033 class must have an explicit final status on the same candidate. Exact source/installed evidence may prove a class already satisfied; otherwise repair it. Universal search, Gemini lifecycle, locale/cache atomicity, responsive/layout composition, navigation, startup/performance and the remaining visual/i18n classes may not be omitted from the final acceptance sweep.
+
+### 4. Validation cadence
+
+During implementation use targeted cheap checks. Do not build/sign/install after every small edit and do not retry-away deterministic failures.
+
+Freeze one exact correction head only after the complete P1 register has been reconciled and every still-open class is source-complete. Then run:
+
+- current-frontier/authority checks;
+- TypeScript, ESLint and complete relevant Vitest;
+- Phase 5/6 required browser journeys;
+- complete AR/FR/EN, RTL, reflow/zoom, keyboard/focus/accessibility and reduced-motion matrices;
+- dedicated theme-switch and motion-settle matrices;
+- dedicated governed-chart route matrices;
+- Inbox and AI functionality/responsive/recovery/scale matrices;
+- consequence-selected search/Gemini/locale/responsive/layout/navigation/startup matrices;
+- Windows/native/install/authenticated hydrated UI evidence;
+- consequence-selected performance evidence.
+
+Perform one consolidated adversarial review, repair the full actionable finding set, then rerun affected plus final proof. Protect the source through expected-head merge discipline after the selected exact-head gates pass.
+
+### 5. New signed candidate and coherent evidence boundary
+
+FD-034 is exact to Internal.16. FD-035 does not authorize signing/publishing Internal.17.
+
+Only after the correction head has zero applicable unresolved P0/P1 should the Founder create exact version/release authority for the next signed checkpoint.
+
+Then, on **one coherent repaired signed candidate**:
+
+1. run applicable #221 installed AR/FR/EN, Arabic/RTL, theme/locale, 1366×768/zoom, keyboard/focus/semantics, reduced-motion and whole-product experience evidence;
+2. run #226 representative installed startup/navigation/search/mutation/resource/reliability certification;
+3. run #230 live production/network customer-trial evidence for the public/customer-online claim;
+4. record explicit Founder accept/reject only after those applicable retained gates describe that same candidate.
+
+Preliminary Founder UX inspection can happen earlier. It is not the final user-ready acceptance record.
+
+If source, packaging, runtime, licensing/network behavior or materially user-facing code changes after any gate, rerun every affected retained gate and repeat Founder acceptance as necessary. Evidence from materially different candidates cannot be combined into one user-ready claim.
+
+## Phase 7 — performance and reliability remains open
+
+Issue #226 remains a separate installed certification gate, but its final evidence must describe the same signed candidate used for the user-ready #221/#230/Founder claim.
+
+T470 targets remain:
 
 - cold launch ≤ 8 seconds p95;
 - ordinary navigation ≤ 700 ms p95;
 - indexed search ≤ 350 ms p95;
 - ordinary local mutation ≤ 500 ms p95.
 
-### Declared floor targets
+Declared-floor requirements still include 4 GB evidence, SSD/HDD startup budgets, ≤100 ms input acknowledgement, ≤1.5 s navigation p95, ≤750 ms indexed search p95, ≤1 s local mutation p95, no ordinary freeze >200 ms, bounded working set and no sustained eight-hour memory growth.
 
-- usable shell ≤ 15 seconds p95 SSD / 25 seconds HDD;
-- input acknowledgement ≤ 100 ms;
-- navigation ≤ 1.5 seconds p95;
-- indexed search ≤ 750 ms p95;
-- local mutation ≤ 1 second p95;
-- no ordinary freeze > 200 ms;
-- steady working set ≤ 750 MB with WhatsApp connected;
-- no sustained memory growth over eight hours.
+Do not close #226 from browser/CI-only timing.
 
-### Internal.16 additions
+## Phase 8 — connected platform implementation is protected
 
-- instrument startup stages separately: recovery/preflight, device/license authority, migrations, runtime prepare/spawn, runtime readiness, navigation, authenticated hydration and usable workspace;
-- record ordinary cold, first post-Internal.15→16 update/migration and warm/reopen distributions separately;
-- responsive composition measured by **application container width** after sidebar, including live resize and zoom;
-- no `4 → 3+1` or other visually orphaned primary composition;
-- chart height/labels/animation/tooltips remain bounded on low-end hardware;
-- Inbox large histories, AI long sessions/results, universal search and image rows receive scale tests;
-- theme and locale switch visual-settle behavior measured under repeated/rapid transitions;
-- search and AI latency separate local SahelFlow overhead from database/model/provider/network time;
-- final candidate completes the required eight-hour trend.
+Internal.16 Wave 4 protects the main connected-platform implementation: authenticated encrypted remote projection/commands, installation-wide connected authority, hosted storefront Studio/publish/pause/rollback, server-authoritative hosted COD checkout, durable receipt import, zero-knowledge backup transport/retention and replacement-install recovery transfer.
 
-## Mandatory pre-Phase-8 stabilization and Founder-acceptance gate
+The Internal.17 frontend correction does not generically reopen this platform. Repair only concrete integration/UI defects discovered while adopting the corrected frontend roots.
 
-Before FD-033, the roadmap stated **Implementation frozen behind the mandatory pre-Phase-8 gate** and **Next — FD-032 Internal.15 installed checkpoint**. The **Internal.15 Founder checkpoint — ACTIVE UNDER FD-032** wording describes that exact historical release frontier.
+## Customer licensing/network gate — #230
 
-FD-033 supersedes only that execution-order freeze for Internal.16: Phase 8 implementation may now be developed in the same convergence branch as remaining Phase 5/6/7 work, but every obligation from the mandatory gate remains an integrated Internal.16 acceptance requirement. The old freeze is not evidence that those gates passed.
+Issue #230 remains a P1 user-launch blocker and its final evidence must describe the same coherent signed candidate used for the user-ready acceptance claim.
 
-## Internal.16 integrated acceptance gate
+Before customer-online/public-trial distribution, SahelFlow still requires:
 
-Under FD-033, old pre-Phase-8 sequencing is superseded only for implementation order. Before a user-ready Internal.16 claim:
+- a verified SahelFlow-owned production licensing hostname;
+- distinct primary/recovery HTTPS ingress;
+- bounded timeouts and observable network diagnostics;
+- representative Algerian fixed/mobile reachability and constrained-network checks;
+- clean install/recovery/reinstall/replay/expiry/clock-rollback/outage/key-rotation/mismatch evidence;
+- exact signed installed Windows proof.
 
-1. frozen Founder findings + exact-source reconnaissance are frozen into one complete combined Problem Register;
-2. remaining desktop route/workspace convergence is complete;
-3. RTL/accessibility/localization, theme and responsive behavior are complete;
-4. chart/layout/navigation/search requirements pass their matrices;
-5. performance/reliability/startup targets pass exact final candidate;
-6. AI workspace/extraction/tools/Gemini lifecycle pass;
-7. Inbox passes functionality/responsive/performance/recovery matrices;
-8. full Phase 8 and isolation/outage/replay proof pass;
-9. zero known P0/P1 remains;
-10. Founder accepts the coherent signed installed experience.
-
-## Phase 8 — connected platform and growth completeness
-
-Internal.16 implements authenticated encrypted remote projection/commands, desktop-commit success semantics, multi-tenant Cloudflare control plane, hosted storefront with durable checkout receipt/publish rollback, operational PWA/browser companion, zero-knowledge backup transport, private Founder Console and outage/replay/duplicate/rollback/abuse/rate/cost/tenant-isolation controls.
-
-Cloud outage cannot corrupt/block valid permanent local work; remote success never precedes desktop commit; storefront success has durable receipt; duplicate irreversible effects and cross-tenant leakage are zero in certification; SahelFlow/Cloudflare alone cannot decrypt seller backups.
-
-Cloudflare Free may bootstrap first revenue when measured sufficient; provider hostnames do not satisfy #230. Internal.16 removes NOEST/Nord et Ouest and adds canonical EcoTrack Pro only from authoritative provider-issued contracts, preserving truthful source/conformance/live-certified states.
+Founder offline permanent activation is not customer-trial certification.
 
 ## Phase 9 — release certification and launch readiness
 
-Stable remains separate. It retains signed clean install/update, migration/backup/restore/replacement-install, identity/licensing/shop lifecycle, Golden COD/provider reconciliation, storefront/remote commands, complete AAA UI/AR/FR/EN/RTL/accessibility, T470/floor/eight-hour stability, independent external reviews where applicable, representative Algerian seller beta, rollout/support readiness and explicit Founder promotion.
+Stable remains separate from Internal completion.
 
-Issue #230 remains P1 for customer-online/public trial: verified SahelFlow-owned domain, primary/recovery HTTPS ingress, protected bindings, representative Algerian fixed/mobile reachability, forced recovery and signed installed customer-trial evidence.
-
-## Historical continuity and merge discipline
-
-The earlier completion program used a **complete reconnaissance** before freezing each Phase Problem Register and relied on exact frozen heads plus **expected-head merge** discipline after selected gates passed. FD-033 changes the cadence for the exact Internal.16 completion wave, not those integrity principles.
-
-The current published executable is source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, **Published release:** `1.0.0-internal.15`, signed run `31657621918`. It is Founder/internal-lab evidence, not customer-online, Beta, Stable or Founder-acceptance proof.
+After the complete P1 register plus `SF17-MOTION-018` and #221/#226/#230 are genuinely satisfied on one coherent signed candidate, Stable still requires the applicable signed clean install/update, migration/backup/restore, identity/licensing/shop lifecycle, Golden COD/provider reconciliation, connected/storefront/remote-command proof, complete AAA AR/FR/EN/RTL/accessibility experience, representative Algerian seller beta, live provider certification where applicable, independent security/privacy/Law 18-07 review, rollout/support readiness and explicit Founder promotion.
 
 ## Definition of done
 
-“99.99% sure” means every defined Required matrix executes at the applicable layer, zero known P0/P1 remains, product/source/artifact/installed claims agree, and material post-freeze changes receive proportionate reruns. It is not a mathematical warranty and cannot fabricate external Phase 9 proof.
+A source/browser green result is not Founder acceptance. A signed Internal release is not customer readiness. Absence of a fresh complaint is not proof of a fix.
+
+The application is complete for the claimed level only when every applicable Required matrix executes, the complete frozen P1 register is reconciled, zero known P0/P1 remains, source/artifact/installed behavior agree on one coherent candidate, the Founder accepts that installed whole-product experience, and external Phase 9 evidence exists where required.
