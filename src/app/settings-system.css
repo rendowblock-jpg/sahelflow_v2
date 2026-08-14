@@ -1,0 +1,91 @@
+/*
+ * Premium Settings composition.
+ *
+ * Settings is a single product workspace, not a dashboard of unrelated cards.
+ * These rules are intentionally scoped to the durable settings shell so shared
+ * Card primitives keep their operational presentation everywhere else.
+ */
+
+[data-settings-premium-shell="true"] {
+  container-name: settings-workspace;
+  container-type: inline-size;
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(
+      circle at 82% -12rem,
+      color-mix(in oklch, var(--primary) 6%, transparent),
+      transparent 34rem
+    ),
+    var(--card);
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.04),
+    0 18px 52px oklch(0 0 0 / 0.07),
+    0 0 0 1px var(--sf-surface-highlight) inset;
+}
+
+.dark [data-settings-premium-shell="true"] {
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.18),
+    0 24px 64px oklch(0 0 0 / 0.18),
+    0 0 0 1px var(--sf-surface-highlight) inset;
+}
+
+[data-settings-premium-shell="true"] [data-settings-group-panel] [data-slot="card"] {
+  gap: 0;
+  overflow: clip;
+  padding-block: 0;
+  border-color: color-mix(in oklch, var(--border) 88%, transparent);
+  border-radius: calc(var(--radius) + 0.2rem);
+  background: color-mix(in oklch, var(--card) 96%, var(--surface-2) 4%);
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.035),
+    0 8px 22px oklch(0 0 0 / 0.035);
+}
+
+.dark [data-settings-premium-shell="true"] [data-settings-group-panel] [data-slot="card"] {
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.14),
+    0 8px 26px oklch(0 0 0 / 0.09);
+}
+
+[data-settings-premium-shell="true"] [data-settings-group-panel] [data-slot="card-header"] {
+  gap: 0.4rem;
+  padding: 1.05rem 1.25rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+  background: color-mix(in oklch, var(--surface-2) 32%, var(--card));
+}
+
+[data-settings-premium-shell="true"] [data-settings-group-panel] [data-slot="card-title"] {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+[data-settings-premium-shell="true"] [data-settings-group-panel] [data-slot="card-content"] {
+  padding: 1.25rem;
+}
+
+[data-settings-premium-shell="true"] [data-settings-group-panel] [data-slot="card-footer"] {
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+[data-settings-premium-shell="true"] [data-settings-group-panel] :where(input, textarea, button, [role="combobox"]) {
+  transition-property: background-color, border-color, color, box-shadow, transform;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--motion-ease-standard);
+}
+
+@container settings-workspace (max-width: 52rem) {
+  [data-settings-premium-shell="true"] [data-settings-group-panel] [data-slot="card-header"],
+  [data-settings-premium-shell="true"] [data-settings-group-panel] [data-slot="card-content"],
+  [data-settings-premium-shell="true"] [data-settings-group-panel] [data-slot="card-footer"] {
+    padding-inline: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-settings-premium-shell="true"] * {
+    scroll-behavior: auto !important;
+  }
+}
