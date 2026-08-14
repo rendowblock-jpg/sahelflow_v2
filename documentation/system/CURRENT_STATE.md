@@ -9,6 +9,7 @@
 > **Founder-installed state:** Internal.16 installed on 2026-08-14; frontend acceptance **REJECTED**
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active release frontier:** exact `1.0.0-internal.17` / MSI `1.0.0.17` Founder/internal-lab promotion under FD-036
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Retained evidence:** #221, #226, #230
 
 Live protected GitHub state is source authority. Installed Founder observation remains the authority for visual/interaction acceptance. Green browser, source, native, Windows and MSI-installed automation cannot manufacture Founder visual acceptance.
@@ -68,6 +69,28 @@ For FD-036:
 - no customer-online, Beta, Stable or later-version authority is granted.
 
 Customer-online/public-trial release remains fail-closed until its separate owned-host/network authority exists.
+
+## Historical continuity anchors
+
+### Phase 5 merged result and evidence
+
+The Phase 5 application-changing protected baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Later work may carry stronger evidence, but that baseline remains an audit continuity anchor and does not substitute for current Founder-installed acceptance.
+
+### Active Phase 6 frontier
+
+The formal Active Phase 6 frontier remains **Phase 6 — Arabic, RTL and accessibility parity**. FD-036 changes the release frontier, not the product-phase label or its acceptance standard.
+
+### Internal.14 publication evidence
+
+Historical Internal.14 was published from source `2d60e2e74109b6e03626a5ccdff727c029a34591` by signed run `31388777098`. This remains historical evidence only and grants no current release authority.
+
+### FD-031 exception boundary
+
+FD-031 remains the one-time Internal.14 installed-evidence exception. Historical issue #214 remains part of the recovery-evidence lineage even though stronger later replacement-install proof closed its original obligation; FD-031 is not precedent for bypassing current installed evidence.
+
+### FD-032 Founder-only offline checkpoint boundary
+
+FD-032 remains exact to Internal.15. Internal.16 used separate FD-034 authority, and Internal.17 uses separate FD-036 authority. None of these Founder-only checkpoints grants customer-online/public-trial authority.
 
 ## Current issue truth
 

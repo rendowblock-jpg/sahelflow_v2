@@ -9,6 +9,7 @@
 > **Founder installed result:** Internal.16 installed; frontend acceptance **REJECTED** on 2026-08-14
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active release frontier:** exact Internal.17 / FD-036 Founder-offline promotion
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Open retained issues:** #221, #226, #230
 > **Last consolidated:** 2026-08-14
 
@@ -44,13 +45,15 @@ Phase 0 governance, Phase 1 Golden COD, Phase 2 identity/licensing/multi-shop an
 
 No release or visual-acceptance work may rewrite canonical business/data/security/recovery authority for convenience.
 
-## Phase 3 — providers, Inbox, AI and automations
+## Phase 3 — providers, inbox, AI and automations
 
 Durable provider, Inbox, AI and automation authority remains protected under FD-030. Installed UX acceptance may drive presentation/product refinements only when concrete evidence requires them; durable provider effects, ambiguity/reconciliation, proposal-bound canonical AI actions, recovery semantics and privacy boundaries remain authoritative.
 
 ## Phase 5 — whole-product AAA desktop experience
 
-Source/browser correction is protected. The remaining Phase 5 obligation is installed Founder acceptance on the exact signed Internal.17 checkpoint.
+The Phase 5 application-changing protected baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Source/browser correction is protected. The remaining Phase 5 obligation is installed Founder acceptance on the exact signed Internal.17 checkpoint.
+
+The complete reconnaissance and root-correction program required under FD-035 has already completed; it is retained here as continuity evidence, not as an instruction to restart correction work.
 
 The six classes that require fresh Founder-installed accept/reject are:
 
@@ -128,7 +131,7 @@ The release-authority PR must pass the normal exact-head risk-selected evidence 
 - replacement-install backup, restore, identity and rollback;
 - final `Required PR gate`.
 
-Merge only the exact reviewed head that carries those results.
+Merge only the exact reviewed head that carries those results, using expected-head merge discipline so a moved branch cannot silently substitute a different tree.
 
 ### 3. Protected signed publication
 
