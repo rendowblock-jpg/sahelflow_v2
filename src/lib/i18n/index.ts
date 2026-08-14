@@ -30,12 +30,29 @@ const STATIC_TRANSLATIONS = {
   en: enTranslations,
 } satisfies Record<Locale, Record<string, string>>;
 
+const LRI = "\u2066";
+const PDI = "\u2069";
+const LTR_INLINE_RUN =
+  /(?:[0-9٠-٩۰-۹]+(?:[.,،][0-9٠-٩۰-۹]+)?\s*[%٪]?\s*[-–—]\s*[0-9٠-٩۰-۹]+(?:[.,،][0-9٠-٩۰-۹]+)?\s*[%٪]?|[A-Za-z0-9٠-٩۰-۹]+(?:[._:+/@#-][A-Za-z0-9٠-٩۰-۹]+)*(?:\s*[%٪])?)/g;
+
 export function isRTL(locale: Locale): boolean {
   return RTL_LOCALES.includes(locale);
 }
 
 export function getDirection(locale: Locale): "ltr" | "rtl" {
   return isRTL(locale) ? "rtl" : "ltr";
+}
+
+/**
+ * Keep Arabic product copy readable when it contains Latin provider names,
+ * technical IDs, percentages, dates or numeric ranges. These runs are data-like
+ * LTR islands inside an RTL sentence. Unicode directional isolates are invisible
+ * and do not alter the underlying copy; they only stop the bidi algorithm from
+ * visually reversing punctuation/ranges or leaking direction into neighbors.
+ */
+export function stabilizeBidiText(value: string, locale: Locale): string {
+  if (locale !== "ar" || !value) return value;
+  return value.replace(LTR_INLINE_RUN, (run) => `${LRI}${run}${PDI}`);
 }
 
 /** Type-safe translation key lookup surface (dotted path: "orders.status.confirmed"). */
