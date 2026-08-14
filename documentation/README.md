@@ -20,7 +20,7 @@ Live protected GitHub state is always authority. Internal.16 is a real signed Fo
 
 Read in this order:
 
-1. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — exact resumable frontier and next-session sequence.
+1. [`operations/WORKING_MEMORY.md`](operations/WORKING_MEMORY.md) — exact resumable frontier and complete P1 reconciliation sequence.
 2. [`product/PRODUCT.md`](product/PRODUCT.md) — seller/jobs/outcomes/tier authority.
 3. [`product/EXPERIENCE.md`](product/EXPERIENCE.md) — interaction/visual/RTL/accessibility requirements.
 4. [`product/DECISIONS.md`](product/DECISIONS.md) — consolidated Founder decisions through FD-033; FD-034 and FD-035 addenda below are authoritative until the register is next consolidated.
@@ -65,7 +65,11 @@ The six reconfirmed blocking classes are:
 
 The Founder is not required to screenshot every repeated manifestation. The next implementation session owns exhaustive sibling/root discovery for these six established classes across the current source and installed surfaces.
 
-Silence on the other original Internal.15 findings is **not** evidence that they are accepted or fixed. Do not close them from absence of a new complaint; verify consequence-selected siblings during the correction audit and preserve any still-relevant existing acceptance requirements.
+## Complete acceptance-register rule
+
+The six reconfirmed failures are **not** permission to forget the rest of the FD-033 Problem Register. All 17 frozen Internal.15 P1 classes remain acceptance obligations until explicitly reconciled, and `SF17-MOTION-018` is added as the new motion class. The next-session correction map must cover the complete register: for each class, either retain exact current evidence that it is already satisfied or keep it open and repair it. Silence, absence of a new screenshot, or earlier browser-only success cannot close a class.
+
+The detailed 18-class register and exact next-session sequence live in `operations/WORKING_MEMORY.md`.
 
 ## FD-034 — Internal.16 Founder-only offline checkpoint
 
@@ -85,24 +89,32 @@ Issue #230 remains P1 and blocks user/customer online-trial distribution. Issues
 > **Approved:** 2026-08-14
 > **Scope:** source-level correction work after installed Internal.16 rejection; **not** release-signing authority for Internal.17
 
-The Founder rejects Internal.16 as the final frontend/AAA acceptance candidate because the six blocking classes above remain visible in the installed signed product.
+The Founder rejects Internal.16 as the final frontend/AAA acceptance candidate because the six reconfirmed blocking classes remain visible in the installed signed product. The other frozen P1 classes are carried forward for explicit reconciliation rather than silently declared fixed.
 
 FD-035 directs the next application session to:
 
 - start from exact protected `main` after this documentation reconciliation;
 - use one bounded Internal.17 frontend-correction branch/frontier;
 - audit the root cause and every materially affected sibling for the six reconfirmed classes before patching isolated screenshots;
+- reconcile every other frozen FD-033 P1 class against exact current source/installed evidence and keep every unsatisfied class in the correction map;
 - correct shared RTL/direction primitives and chart direction semantics across the product;
 - make appearance changes commit atomically and smoothly across dark/light/system/presets;
 - implement one coherent low-resource-aware motion/micro-interaction language with reduced-motion behavior;
 - rebuild/adopt the governed chart experience to the required decision-support/RTL standard;
 - complete Inbox as an operational product workspace at the required installed quality;
 - complete AI Agents as an operational AI workbench at the required installed quality;
-- adopt the repaired shared roots across production routes rather than proving only component showcases;
+- complete every additional still-open frozen P1 discovered by reconciliation;
+- adopt repaired shared roots across production routes rather than proving only component showcases;
 - preserve Phase 1–4 business/data/security/recovery authority and completed Wave 4 connected-platform/release work;
-- run targeted cheap checks while implementing, then one deep exact-head source/browser/Windows review and renewed Founder-installed acceptance pass.
+- run targeted cheap checks while implementing, then one deep exact-head source/browser/Windows review.
 
 FD-035 does **not** authorize an Internal.17 signed checkpoint by itself. Before a new signed version is published, version/release authority must be explicitly created for that exact version and must preserve #230/#226/#221 truth.
+
+## Coherent signed-candidate rule
+
+A user-ready claim may not combine Founder acceptance from one build, performance evidence from another, and network/licensing evidence from a third. After the repaired source head is clean and exact release authority exists, one coherent signed candidate must carry the applicable #221 installed experience/RTL/accessibility evidence, #226 installed performance/reliability evidence, and #230 live customer-trial/network evidence before final Founder acceptance is recorded.
+
+If a material source, packaging, runtime, licensing/network or user-facing change occurs after any of those gates, rerun every affected gate and repeat Founder acceptance as necessary. Preliminary UX inspection is useful, but final acceptance for a user-ready claim belongs to the coherent candidate carrying the retained evidence.
 
 ## Release and launch boundary
 
@@ -110,8 +122,7 @@ Internal.16 is published, but it remains Founder/internal-lab evidence and is **
 
 Before user-ready/Stable claims, at minimum:
 
-- #221 must close from a coherent installed Founder visual/RTL/accessibility/experience acceptance pass;
-- #226 must close from representative installed performance/reliability evidence;
-- #230 must close from resilient real customer trial activation on representative Algerian networks;
+- the complete frozen P1 register plus `SF17-MOTION-018` must be reconciled with zero applicable unresolved P0/P1;
+- #221, #226 and #230 must support one coherent signed candidate or be rerun after material changes;
 - applicable Phase 9 provider/security/privacy/legal/representative-beta and rollout evidence must pass;
 - the Founder must explicitly promote the resulting candidate.
