@@ -135,10 +135,11 @@ fn founder_offline_checkpoint(authority: &serde_json::Value) -> bool {
                     (version, decision),
                     (Some("1.0.0-internal.15"), Some("FD-032"))
                         | (Some("1.0.0-internal.16"), Some("FD-034"))
+                        | (Some("1.0.0-internal.17"), Some("FD-036"))
                 );
             if !exact_checkpoint {
                 panic!(
-                    "founder-offline-only licensing is authorized only for exact FD-032/Internal.15 or FD-034/Internal.16 on the internal channel with no owned host suffix"
+                    "founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17 on the internal channel with no owned host suffix"
                 );
             }
             true

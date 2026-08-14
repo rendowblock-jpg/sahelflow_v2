@@ -43,17 +43,17 @@ const signedInternal15Run = "31657621918";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 
 requireMarkers("sahelflow.version.json", [
-  '"version": "1.0.0-internal.16"',
-  '"windowsMsiVersion": "1.0.0.16"',
+  '"version": "1.0.0-internal.17"',
+  '"windowsMsiVersion": "1.0.0.17"',
   '"releaseMode": "founder-offline-only"',
-  '"authorityDecision": "FD-034"',
+  '"authorityDecision": "FD-036"',
   '"approvalScope": "internal-lab"',
 ]);
 
 requireMarkers("scripts/sf-version.ts", [
-  'authority.version === "1.0.0-internal.16"',
-  'authority.licensing?.authorityDecision === "FD-034"',
-  "Internal.15/FD-032 or Internal.16/FD-034",
+  'authority.version === "1.0.0-internal.17"',
+  'authority.licensing?.authorityDecision === "FD-036"',
+  "Internal.15/FD-032, Internal.16/FD-034, or Internal.17/FD-036",
 ]);
 
 requireMarkers("documentation/README.md", [
@@ -63,8 +63,12 @@ requireMarkers("documentation/README.md", [
   wave4Head,
   wave4CiRun,
   "## FD-034 — Internal.16 Founder-only offline checkpoint",
+  "## FD-036 — Internal.17 Founder-only offline correction checkpoint",
   "1.0.0-internal.16",
   "1.0.0.16",
+  "1.0.0-internal.17",
+  "1.0.0.17",
+  "c33f234ecf43842cfcc801592cc601d595ed05c5",
   "Founder/internal-lab",
   "Issue #230 remains open P1",
   "Internal.17",
@@ -80,8 +84,12 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   wave4Head,
   wave4CiRun,
   "agent/internal-16-founder-offline-checkpoint",
+  "agent/internal-17-founder-offline-checkpoint",
   "FD-034",
+  "FD-036",
   "1.0.0-internal.16",
+  "1.0.0-internal.17",
+  "c33f234ecf43842cfcc801592cc601d595ed05c5",
   "Wave 4 — what is implemented",
   "Exact next-session order",
 ]);
@@ -125,6 +133,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: PR #251 / Wave 4 is protected on main, the exact installed evidence matrix is green, Internal.16 is the FD-034 Founder-only checkpoint candidate, Internal.15 remains the published updater until signed promotion, and #221/#226/#230 remain distinct evidence obligations.",
+    "Current execution frontier verified: the Internal.17 correction is protected on main at c33f234ecf43842cfcc801592cc601d595ed05c5, FD-036 synchronizes the exact Founder-only Internal.17 offline checkpoint, and signed promotion plus Founder visual acceptance remain pending.",
   );
 }

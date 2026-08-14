@@ -1,20 +1,20 @@
 # SahelFlow documentation
 
-> **Status:** Active documentation entry point and temporary FD-034 / FD-035 addendum authority
+> **Status:** Active documentation entry point and temporary FD-034 / FD-035 / FD-036 addendum authority
 > **Last reconciled:** 2026-08-14
-> **Protected `main`:** `c8200fdd0fe212cc7493de434d19bd8e7395c4ea` — PR #252 / Internal.16 signed version authority
-> **Latest application-changing protected merge:** PR #251 — Internal.16 Wave 4 Storefront Builder V2 + connected platform
+> **Protected `main`:** `c33f234ecf43842cfcc801592cc601d595ed05c5` — PR #254 / exact green Internal.17 frontend-system correction
+> **Latest application-changing protected merge:** PR #254 — Internal.17 frontend-system correction
 > **Latest published updater:** `1.0.0-internal.16` / MSI `1.0.0.16`
 > **Signed release run:** `31770292329`
 > **Release tag:** `sahelflow-v1.0.0-internal.16-c8200fdd0fe212cc7493de434d19bd8e7395c4ea`
 > **Founder installed checkpoint:** Internal.16 installed on 2026-08-14
 > **Founder frontend acceptance:** **REJECTED** — issue #221 remains open
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Active correction frontier:** Internal.17 frontend-system correction before renewed installed acceptance
+> **Active release frontier:** `agent/internal-17-founder-offline-checkpoint` — exact Internal.17 / FD-036 Founder-offline promotion after green correction evidence
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Retained open evidence:** #221, #226, #230
 
-Live protected GitHub state is always authority. Internal.16 is a real signed Founder/internal-lab release, but its successful source/CI/release evidence does **not** mean the installed frontend achieved Founder acceptance or user-ready AAA quality.
+Live protected GitHub state is always authority. Internal.16 remains the latest published updater; the fully green Internal.17 correction tree is now protected on `main` and is being promoted under exact FD-036 Founder/internal-lab offline authority. Machine-installed evidence does **not** substitute for the Founder visual acceptance still required on the signed Internal.17 candidate.
 
 ## Active resume path
 
@@ -44,7 +44,7 @@ These markers remain deliberately present because `sf-audit` and the current-fro
 
 ## Current execution truth
 
-Internal.16 Waves 1–4 are protected on `main`. PR #251 was squash-merged at `aa7dd2df53286a670fc55e319a281757cf3d28b2`; PR #252 then promoted exact protected source `c8200fdd0fe212cc7493de434d19bd8e7395c4ea` to signed Internal.16 under FD-034. Signed workflow `31770292329` completed successfully and published the exact Internal.16 updater.
+Internal.16 Waves 1–4 remain protected history. PR #251 was squash-merged at `aa7dd2df53286a670fc55e319a281757cf3d28b2`; PR #252 promoted `c8200fdd0fe212cc7493de434d19bd8e7395c4ea` to signed Internal.16 under FD-034. PR #254 then carried the complete Internal.17 frontend-system correction, passed its exact source/browser/native/Windows/MSI-installed `Required PR gate` on head `c965a062cf2719078601374bd0ace771ca011d53`, and was squash-merged to protected `main` at `c33f234ecf43842cfcc801592cc601d595ed05c5` with the identical reviewed tree.
 
 Wave 4 remains protected and includes Storefront Builder V2, immutable hosted publish/pause/rollback, server-authoritative checkout allocation/pricing/shipping, durable receipt import into canonical desktop order authority, installation-wide connected enrollment, encrypted remote projections/commands, zero-knowledge cloud backup lifecycle, retention/cleanup, and replacement-install recovery-transfer authority.
 
@@ -109,6 +109,18 @@ FD-035 directs the next application session to:
 - run targeted cheap checks while implementing, then one deep exact-head source/browser/Windows review.
 
 FD-035 does **not** authorize an Internal.17 signed checkpoint by itself. Before a new signed version is published, version/release authority must be explicitly created for that exact version and must preserve #230/#226/#221 truth.
+
+## FD-036 — Internal.17 Founder-only offline correction checkpoint
+
+> **Status:** Founder-authorized release promotion in progress
+> **Approved:** 2026-08-14
+> **Exact scope:** `1.0.0-internal.17` / MSI `1.0.0.17` only
+> **Reviewed correction source:** `c33f234ecf43842cfcc801592cc601d595ed05c5` / PR #254
+> **Distribution:** Founder/internal-lab only
+
+FD-036 authorizes one exact signed Internal.17 Founder checkpoint after the fully green correction evidence. Its licensing mode remains `founder-offline-only`: the permanent Founder entitlement remains the authority, `ownedHostSuffix` remains null, the signed build must not package `SF_LICENSE_SERVICE_URL`, and online trial initialization remains disabled for this checkpoint.
+
+FD-036 does **not** authorize customer-online distribution, Beta, Stable, or any later version. Those paths continue to fail closed until their separate owned-host/network/release authorities exist. The six Founder-rejected visual/interaction classes still require explicit Founder accept/reject on the signed Internal.17 installation; automated WebView/MSI evidence is necessary but not a substitute for that visual acceptance.
 
 ## Coherent signed-candidate rule
 

@@ -65,17 +65,18 @@ describe("production licensing authority inventory", () => {
     expect(build).toContain("std::net::IpAddr");
     expect(build).toContain("public DNS hostnames, not IP/reserved/private-style destinations");
     expect(build).toContain("provisioned SahelFlow-owned host suffix");
-    expect(versionAuthority).toContain('"version": "1.0.0-internal.16"');
+    expect(versionAuthority).toContain('"version": "1.0.0-internal.17"');
     expect(versionAuthority).toContain('"releaseMode": "founder-offline-only"');
-    expect(versionAuthority).toContain('"authorityDecision": "FD-034"');
+    expect(versionAuthority).toContain('"authorityDecision": "FD-036"');
     expect(versionAuthority).toContain('"ownedHostSuffix": null');
     expect(versionAudit).toContain(
-      "founder-offline-only licensing is authorized only for Internal.15/FD-032 or Internal.16/FD-034",
+      "founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, or Internal.17/FD-036",
     );
     expect(build).toContain('Some("1.0.0-internal.15"), Some("FD-032")');
     expect(build).toContain('Some("1.0.0-internal.16"), Some("FD-034")');
+    expect(build).toContain('Some("1.0.0-internal.17"), Some("FD-036")');
     expect(build).toContain(
-      "founder-offline-only licensing is authorized only for exact FD-032/Internal.15 or FD-034/Internal.16",
+      "founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17",
     );
     expect(build).toContain("Founder-only offline checkpoints must not package SF_LICENSE_SERVICE_URL");
     expect(build).toContain("cargo:rustc-env=SF_LICENSE_SERVICE_URL=");
@@ -89,7 +90,7 @@ describe("production licensing authority inventory", () => {
       "SF_LICENSE_SERVICE_URL: ${{ secrets.SF_LICENSE_SERVICE_URL || vars.SF_LICENSE_SERVICE_URL }}",
     );
     expect(release).toContain("'SF_LICENSE_SERVICE_URL=' >> $env:GITHUB_ENV");
-    expect(release).toContain("exact FD-032/Internal.15 or FD-034/Internal.16");
+    expect(release).toContain("exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17");
     expect(statusRoute).toContain("onlineTrialAvailable:");
     expect(trialRoute).toContain("LICENSE_TRIAL_DISABLED_FOR_FOUNDER_CHECKPOINT");
     expect(licensePanel).toContain("projection?.onlineTrialAvailable === true");

@@ -2,17 +2,17 @@
 
 > **Purpose:** Compact resumable execution frontier; never product/architecture/roadmap authority
 > **Last updated:** 2026-08-14
-> **Protected `main`:** `c8200fdd0fe212cc7493de434d19bd8e7395c4ea` — PR #252 / signed Internal.16 authority
-> **Latest application-changing protected merge:** PR #251 — Internal.16 Wave 4 Storefront Builder V2 + connected platform
+> **Protected `main`:** `c33f234ecf43842cfcc801592cc601d595ed05c5` — PR #254 / exact green Internal.17 correction tree
+> **Latest application-changing protected merge:** PR #254 — Internal.17 frontend-system correction
 > **Published updater:** `1.0.0-internal.16` / MSI `1.0.0.16`
 > **Signed release run:** `31770292329`
 > **Founder installed result:** Internal.16 installed; frontend acceptance **REJECTED** on 2026-08-14
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Active correction frontier:** Internal.17 source-level frontend-system correction under temporary FD-035
+> **Active release frontier:** `agent/internal-17-founder-offline-checkpoint` — FD-036 exact Founder-offline Internal.17 promotion
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Retained evidence:** #221, #226, #230
 
-Live GitHub is authority. Internal.16 publication is complete. Do **not** restart release-authority work from PR #252 and do **not** treat green CI as Founder visual/UX acceptance.
+Live GitHub is authority. Internal.16 remains the latest published updater; the Internal.17 correction is protected and fully green through the exact MSI-installed `Required PR gate`. The current task is the bounded FD-036 release-authority promotion. Do **not** reopen the completed correction broadly, and do **not** treat automated installed evidence as Founder visual/UX acceptance.
 
 Historical release continuity: the prior Founder checkpoint was Internal.15 from signed run `31657621918`. PR #251 merged at `aa7dd2df53286a670fc55e319a281757cf3d28b2` from exact head `73e8d8c466567859bc651bb4d77976fdb2a1bbc3`, with exact Wave 4 CI run `31765143457`. The superseded Internal.16 release-authority branch was `agent/internal-16-founder-offline-checkpoint`. These lines remain for audit/frontier continuity only and are not the current task.
 
@@ -75,34 +75,13 @@ For the twelve classes not freshly reconfirmed as installed failures, the next a
 
 ## Exact next-session order
 
-1. **Refresh live truth first.** Verify protected `main`, this documentation merge, open PRs/issues and the latest signed release. Do not reconstruct the Internal.15 problem list from chat.
-2. **Create one application branch from exact protected main:** recommended `agent/internal-17-frontend-correction` unless an equivalent active branch already exists.
-3. **No version bump at branch start.** FD-035 authorizes source correction work only. FD-034 is exact to Internal.16 and does not authorize signing/releasing Internal.17.
-4. **Run one focused root audit for the six reconfirmed failures** before coding:
-   - logical direction/RTL primitives, shell/sidebar, portals/overlays, tables, charts, icons, mixed bidi content and route-specific physical positioning;
-   - theme/appearance store, token commit, hydration, DOM/root attributes, chart/theme consumers, transition timing and mixed-frame causes;
-   - existing animation/motion primitives, navigation/overlay/list/state transitions, reduced-motion behavior and low-end cost;
-   - chart contracts/components/data formatting/labels/tooltips/legends/responsiveness/direction/animation and production consumers;
-   - Inbox information architecture, panes, queue/thread/customer/order context, assignment/status/provider degradation/media/extraction/recovery and scale behavior;
-   - AI Agents information architecture, session/history/context/composer/tool results/proposals/permissions/streaming/stop/retry/errors/readiness and long-session behavior.
-5. **In the same reconnaissance, reconcile all remaining frozen P1 classes** (`SF16-UI-002/003`, `SF16-I18N-004/007/016`, `SF16-PRODUCTS-008`, `SF16-SEARCH-009`, `SF16-AI-010`, `SF16-RESP-011`, `SF16-LAYOUT-012`, `SF16-PERF-014`, `SF16-NAV-017`). For each, retain exact proof if already satisfied or keep it open in the implementation map.
-6. **Freeze one bounded correction map** that names every still-open class from the complete register, shared roots, affected production consumers, direct tests, localization/accessibility/performance consequences and non-goals. Do not create another permanent masterplan.
-7. **Implement in dependency order:**
-   1. RTL/direction primitives and global adoption;
-   2. atomic appearance/theme transaction;
-   3. shared motion/micro-interaction layer;
-   4. governed chart system and route adoption;
-   5. Inbox product convergence;
-   6. AI Agents product convergence;
-   7. every additional still-open frozen P1 discovered by the reconciliation;
-   8. exhaustive sibling/adoption sweep across affected production routes.
-8. **Use targeted cheap checks during implementation.** Do not repeatedly build MSI after tiny edits and do not retry-away deterministic failures.
-9. **Freeze one correction head only after the complete acceptance register is reconciled:** every class must have exact current proof or be repaired and proven on that head.
-10. **Run deep exact-head proof:** authority/current-frontier checks, TypeScript, ESLint, full relevant Vitest, complete Phase 5/6 browser journeys, AR/FR/EN + RTL/reflow/accessibility matrices, theme/motion/chart matrices, Inbox/AI matrices, search/Gemini/responsive/layout/navigation consequences, Windows/native/install/authenticated UI evidence and consequence-selected performance checks.
-11. **Repair one consolidated finding set**, then rerun affected + final proof. Do not request release authority while any applicable P0/P1 remains unresolved.
-12. **Only after the source candidate is genuinely clean**, request/record exact Internal.17 release authority and publish one signed candidate.
-13. **Certify one coherent signed candidate:** on the same exact signed artifact/source, run the applicable #221 installed AR/FR/EN/RTL/accessibility/experience evidence, #226 installed performance/reliability evidence, and #230 live customer-trial/network evidence; then record explicit Founder accept/reject. A preliminary UX inspection can happen earlier, but final Founder acceptance for a user-ready claim is recorded only against the candidate carrying the applicable retained evidence.
-14. **Artifact-change rule:** if source, packaging, runtime, licensing/network behavior or any material user-facing code changes after one of those gates, rerun every affected retained gate and repeat Founder acceptance as necessary. No user-ready claim may combine evidence from materially different candidates.
+1. **Keep protected correction truth frozen.** PR #254 exact head `c965a062cf2719078601374bd0ace771ca011d53` passed Phase 5, Phase 6–7, native/source quality, Windows runtime, exact MSI build, install/reopen, authenticated hydrated UI twice and replacement-install backup/restore/identity/rollback; its identical reviewed tree is protected on `main` at `c33f234ecf43842cfcc801592cc601d595ed05c5`.
+2. **Complete FD-036 release authority on one branch.** Synchronize `1.0.0-internal.17` / MSI `1.0.0.17` across version authority, package/Cargo/Tauri identities, exact Founder-offline guards, signed workflow contracts, tests and live docs. Preserve Internal.15/FD-032 and Internal.16/FD-034 as historical exact checkpoints; do not broaden the exception.
+3. **Open one release-authority PR only after the branch is internally coherent.** Run the normal risk-aware `Required PR gate` and every selected source/native/Windows/MSI-installed consequence on that exact head. No waiver or force merge.
+4. **Merge only an exact green reviewed head to protected `main`.** The version-authority push may then auto-dispatch the existing signed Internal updater workflow for that exact protected-main SHA.
+5. **Require the signed workflow to finish cleanly.** Verify exact PR-tree/main-tree identity, signed MSI/updater artifacts, install/runtime/authenticated UI evidence, hashes/manifest and release publication. No manually substituted artifact.
+6. **Founder installs the exact signed Internal.17 checkpoint.** Re-run explicit visual accept/reject for RTL, themes, motion, charts, Inbox and AI Agents. These six classes are not closed by browser automation or machine-installed harness evidence.
+7. **Keep customer/user-ready boundaries separate.** #226 and #230 remain their own representative performance/network obligations; FD-036 is Founder/internal-lab only and grants no Beta/Stable/customer-online authority.
 
 ## Acceptance rules for the six reconfirmed blockers
 

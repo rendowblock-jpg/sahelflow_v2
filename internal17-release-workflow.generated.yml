@@ -1,0 +1,706 @@
+name: Build Signed Internal Windows Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Exact lowercase 40-hex commit on protected main to build
+        required: true
+      release_notes:
+        description: Internal release notes shown by the updater
+        required: false
+        default: Internal SahelFlow updater laboratory candidate.
+
+permissions:
+  contents: write
+  actions: read
+  checks: read
+  pull-requests: read
+
+concurrency:
+  group: sahelflow-internal-updater
+  cancel-in-progress: false
+
+jobs:
+  windows-internal-updater:
+    name: Signed Windows updater draft
+    environment: internal-updater
+    runs-on: windows-latest
+    timeout-minutes: 180
+    env:
+      SF_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SF_TEST_FAIL_FAST: "1"
+      SF_LICENSE_SERVICE_URL: ${{ secrets.SF_LICENSE_SERVICE_URL || vars.SF_LICENSE_SERVICE_URL }}
+      SF_LICENSE_TRIAL_PUBLIC_KEYS: ${{ secrets.SF_LICENSE_TRIAL_PUBLIC_KEYS || vars.SF_LICENSE_TRIAL_PUBLIC_KEYS }}
+      SF_LICENSE_PERMANENT_PUBLIC_KEYS: ${{ secrets.SF_LICENSE_PERMANENT_PUBLIC_KEYS || vars.SF_LICENSE_PERMANENT_PUBLIC_KEYS }}
+    steps:
+      - name: Validate exact source and protected main
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ inputs.source_ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:SOURCE_SHA -cnotmatch '^[0-9a-f]{40}$') {
+            throw 'source_ref must be an exact lowercase 40-hex commit SHA'
+          }
+
+          $headers = @{
+            Accept = 'application/vnd.github+json'
+            Authorization = "Bearer $env:GH_TOKEN"
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $branch = Invoke-RestMethod `
+            -Headers $headers `
+            -Uri "https://api.github.com/repos/${{ github.repository }}/branches/main"
+          if (-not $branch.protected) {
+            throw 'origin/main is not protected; internal updater build is blocked'
+          }
+
+      - name: Verify protected licensing verification keyrings
+        shell: pwsh
+        run: |
+          foreach ($name in @(
+            'SF_LICENSE_TRIAL_PUBLIC_KEYS',
+            'SF_LICENSE_PERMANENT_PUBLIC_KEYS'
+          )) {
+            $value = [Environment]::GetEnvironmentVariable($name)
+            if ([string]::IsNullOrWhiteSpace($value)) {
+              throw "$name is missing from the protected internal-updater environment"
+            }
+          }
+          foreach ($name in @('SF_LICENSE_TRIAL_PUBLIC_KEYS', 'SF_LICENSE_PERMANENT_PUBLIC_KEYS')) {
+            try {
+              $parsed = [Environment]::GetEnvironmentVariable($name) | ConvertFrom-Json
+            } catch {
+              throw "$name is not valid JSON"
+            }
+            if ($null -eq $parsed -or $parsed.PSObject.Properties.Count -lt 1) {
+              throw "$name must be a non-empty JSON object"
+            }
+          }
+
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify source is reachable from protected origin/main
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ inputs.source_ref }}
+        run: |
+          git fetch --force --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          if ($LASTEXITCODE -ne 0) { throw 'failed to fetch origin/main' }
+
+          $checkedOut = (git rev-parse HEAD).Trim()
+          if ($checkedOut -cne $env:SOURCE_SHA) {
+            throw "checkout mismatch: expected $env:SOURCE_SHA, found $checkedOut"
+          }
+
+          git cat-file -e "$env:SOURCE_SHA^{commit}"
+          if ($LASTEXITCODE -ne 0) { throw 'source_ref is not a commit' }
+
+          git merge-base --is-ancestor $env:SOURCE_SHA refs/remotes/origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw 'source_ref is not reachable from protected origin/main'
+          }
+
+      - name: Attest clean exact source checkout
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ inputs.source_ref }}
+        run: |
+          $status = @(git status --porcelain --untracked-files=all)
+          if ($LASTEXITCODE -ne 0) { throw 'failed to inspect exact source checkout' }
+          if ($status.Count -gt 0) {
+            $status | ForEach-Object { Write-Host $_ }
+            throw 'exact source checkout is not clean before validation or build'
+          }
+
+          $commit = (git rev-parse HEAD).Trim()
+          $tree = (git rev-parse "HEAD^{tree}").Trim()
+          if ($commit -cne $env:SOURCE_SHA) {
+            throw "source attestation commit mismatch: expected $env:SOURCE_SHA, found $commit"
+          }
+          if ($tree -cnotmatch '^[0-9a-f]{40}$') {
+            throw "source attestation tree is invalid: $tree"
+          }
+          "SF_SOURCE_COMMIT=$commit" >> $env:GITHUB_ENV
+          "SF_SOURCE_TREE=$tree" >> $env:GITHUB_ENV
+
+      - name: Attest reviewed identical PR tree and risk-aware required gate
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_ref }}
+        run: |
+          $repository = '${{ github.repository }}'
+          $pulls = @(
+            gh api `
+              -H 'Accept: application/vnd.github+json' `
+              "repos/$repository/commits/$env:SOURCE_SHA/pulls" |
+              ConvertFrom-Json
+          )
+          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve the merged source PR' }
+          $pull = @(
+            $pulls |
+              Where-Object {
+                $_.base.ref -ceq 'main' -and
+                $null -ne $_.merged_at -and
+                $_.merge_commit_sha -ceq $env:SOURCE_SHA
+              } |
+              Sort-Object -Property merged_at -Descending
+          ) | Select-Object -First 1
+          if ($null -eq $pull) {
+            throw 'protected-main source is not bound to an exact merged PR'
+          }
+          if ($pull.head.repo.full_name -cne $repository) {
+            throw 'signed internal release requires a reviewed branch from this repository'
+          }
+
+          $sourceCommit = gh api "repos/$repository/git/commits/$env:SOURCE_SHA" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve protected-main tree identity' }
+          $headCommit = gh api "repos/$repository/git/commits/$($pull.head.sha)" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve reviewed PR tree identity' }
+          if ($sourceCommit.tree.sha -cne $headCommit.tree.sha) {
+            throw "protected-main tree $($sourceCommit.tree.sha) differs from reviewed PR tree $($headCommit.tree.sha)"
+          }
+          if ($sourceCommit.tree.sha -cne $env:SF_SOURCE_TREE) {
+            throw 'GitHub tree identity does not match the exact local checkout'
+          }
+
+          $checks = gh api `
+            -H 'Accept: application/vnd.github+json' `
+            "repos/$repository/commits/$($pull.head.sha)/check-runs?per_page=100" |
+            ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve reviewed PR checks' }
+          $requiredChecks = @('Required PR gate')
+          foreach ($name in $requiredChecks) {
+            $latest = @(
+              $checks.check_runs |
+                Where-Object { $_.name -ceq $name } |
+                Sort-Object -Property id -Descending
+            ) | Select-Object -First 1
+            if ($null -eq $latest) { throw "reviewed PR is missing required check: $name" }
+            if ($latest.status -cne 'completed' -or $latest.conclusion -cne 'success') {
+              $founderException = (
+                $pull.number -eq 228 -and
+                $env:SOURCE_SHA -ceq '2d60e2e74109b6e03626a5ccdff727c029a34591' -and
+                $pull.head.sha -ceq '15e9c2e9f8e7dd2ca2ee9ddc7a49df781fcf08f6' -and
+                $name -ceq 'Required PR gate' -and
+                $latest.status -ceq 'completed' -and
+                $latest.conclusion -ceq 'failure' -and
+                [string]$latest.details_url -cmatch '/actions/runs/31385482999/job/'
+              )
+              if (-not $founderException) {
+                throw "reviewed PR check is not successful: $name ($($latest.status)/$($latest.conclusion))"
+              }
+
+              $exceptionGreenChecks = @(
+                'Fast authority (version + documentation)',
+                'Quality Gate (authority + sf-verify + coverage + audit)',
+                'Windows database + standalone + contained launcher',
+                'Tauri Rust smoke (cargo check --release)',
+                'windows-rust-release-parity / Windows Rust release parity',
+                'installed-msi / Build exact evidence MSI once',
+                'Native source contract (Rust 1.77 + stable Tauri)',
+                'Required Phase 5 Experience gate',
+                'Required Phase 6-7 completion gate'
+              )
+              foreach ($exceptionCheckName in $exceptionGreenChecks) {
+                $exceptionCheck = @(
+                  $checks.check_runs |
+                    Where-Object { $_.name -ceq $exceptionCheckName } |
+                    Sort-Object -Property id -Descending
+                ) | Select-Object -First 1
+                if (
+                  $null -eq $exceptionCheck -or
+                  $exceptionCheck.status -cne 'completed' -or
+                  $exceptionCheck.conclusion -cne 'success'
+                ) {
+                  throw "Founder exception is missing successful exact-head evidence: $exceptionCheckName"
+                }
+              }
+
+              $installedFailure = @(
+                $checks.check_runs |
+                  Where-Object { $_.name -ceq 'installed-msi / Install and collect every installed gate' } |
+                  Sort-Object -Property id -Descending
+              ) | Select-Object -First 1
+              if (
+                $null -eq $installedFailure -or
+                $installedFailure.status -cne 'completed' -or
+                $installedFailure.conclusion -cne 'failure' -or
+                [string]$installedFailure.details_url -cnotmatch '/actions/runs/31385482999/job/'
+              ) {
+                throw 'Founder exception is not bound to the recorded installed-CDP failure'
+              }
+              Write-Warning 'Applying the recorded Founder exception for PR #228 installed-CDP evidence only.'
+              'SF_REVIEW_EXCEPTION=founder-pr228-installed-cdp' >> $env:GITHUB_ENV
+            }
+          }
+          "SF_REVIEWED_PR=$($pull.number)" >> $env:GITHUB_ENV
+          "SF_REVIEWED_HEAD=$($pull.head.sha)" >> $env:GITHUB_ENV
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+
+      - name: Cache signed-build Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-signed-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-signed-
+
+      - name: Configure disposable test sandbox
+        shell: pwsh
+        run: |
+          $tempRoot = (& bun -e "console.log(require('node:os').tmpdir())").Trim()
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tempRoot)) {
+            throw 'failed to resolve the Bun OS temporary directory'
+          }
+          $sandboxRoot = Join-Path $tempRoot 'sahelflow-test'
+          $dataDir = Join-Path $sandboxRoot 'data'
+          $database = Join-Path $dataDir 'shops\test.db'
+          "SF_TEST_ROOT=$sandboxRoot" >> $env:GITHUB_ENV
+          "SF_DATA_DIR=$dataDir" >> $env:GITHUB_ENV
+          "DATABASE_URL=file:$database" >> $env:GITHUB_ENV
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile --linker=hoisted
+
+      - name: Prepare signed local libsodium distribution
+        shell: pwsh
+        run: ./scripts/prepare-libsodium-windows.ps1
+
+      - name: Prepare disposable test sandbox
+        shell: pwsh
+        run: bun run test:sandbox -- "$env:SF_TEST_ROOT"
+
+      - name: Deploy signed-runtime test database migrations
+        run: bunx prisma migrate deploy
+
+      - name: Verify product, protocol, and updater authority
+        run: bun run sf-version
+
+      - name: Resolve exact internal release identity
+        shell: pwsh
+        run: |
+          $authority = Get-Content 'sahelflow.version.json' -Raw | ConvertFrom-Json
+          if (-not $authority.updater.enabled) {
+            throw 'version authority does not enable the updater'
+          }
+          if ($authority.channel -cne 'internal') {
+            throw "internal workflow cannot build channel $($authority.channel)"
+          }
+          if ($authority.updater.approvalScope -cne 'internal-lab') {
+            throw 'updater approval scope must be internal-lab'
+          }
+          switch ($authority.licensing.releaseMode) {
+            'founder-offline-only' {
+              $founderOfflineAuthority = (
+                ($authority.version -ceq '1.0.0-internal.15' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-032') -or
+                ($authority.version -ceq '1.0.0-internal.16' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-034') -or
+                ($authority.version -ceq '1.0.0-internal.17' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-036')
+              )
+              if (
+                -not $founderOfflineAuthority -or
+                $authority.channel -cne 'internal' -or
+                $null -ne $authority.licensing.ownedHostSuffix
+              ) {
+                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17'
+              }
+              # The protected environment may retain an older service secret. Exact
+              # Founder-only checkpoints must compile and launch without exposing it.
+              'SF_LICENSE_SERVICE_URL=' >> $env:GITHUB_ENV
+              "SF_RELEASE_SCOPE=founder-offline-only ($($authority.licensing.authorityDecision); online trial disabled)" >> $env:GITHUB_ENV
+            }
+            'customer-online' {
+              if ([string]::IsNullOrWhiteSpace($authority.licensing.ownedHostSuffix)) {
+                throw 'customer-online releases require licensing.ownedHostSuffix'
+              }
+              if ([string]::IsNullOrWhiteSpace($env:SF_LICENSE_SERVICE_URL)) {
+                throw 'customer-online releases require SF_LICENSE_SERVICE_URL'
+              }
+              'SF_RELEASE_SCOPE=customer-online' >> $env:GITHUB_ENV
+            }
+            default {
+              throw "unsupported licensing.releaseMode $($authority.licensing.releaseMode)"
+            }
+          }
+          $tag = "sahelflow-v$($authority.version)-$env:SF_SOURCE_COMMIT"
+          "SF_RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+          "SF_RELEASE_VERSION=$($authority.version)" >> $env:GITHUB_ENV
+
+      - name: Verify protected updater signing secret is available
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
+            throw 'TAURI_SIGNING_PRIVATE_KEY is missing from the internal-updater secret boundary'
+          }
+
+      - name: Build signed updater artifacts into a draft release
+        id: tauri
+        uses: tauri-apps/tauri-action@v0.6.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: sahelflow-v__VERSION__-${{ inputs.source_ref }}
+          releaseName: SahelFlow Internal __VERSION__
+          releaseBody: |
+            Internal updater laboratory candidate. Its exact licensing scope is recorded in source authority and the release request. This is not SahelFlow Stable or proof of customer-trial certification.
+
+            ${{ inputs.release_notes }}
+          releaseDraft: true
+          prerelease: false
+          releaseCommitish: ${{ inputs.source_ref }}
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: false
+          args: --bundles msi
+
+      - name: Verify staged packaged runtime reaches authenticated readiness
+        run: bun run scripts/verify-windows-packaged-runtime.ts
+
+      - name: Upload staged packaged runtime diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-windows-packaged-runtime-diagnostics-${{ github.run_id }}
+          path: .sf-windows-runtime-smoke.log
+          if-no-files-found: ignore
+          retention-days: 2
+
+      - name: Verify local MSI and updater signature
+        shell: pwsh
+        run: |
+          $msis = @(Get-ChildItem -File 'src-tauri/target/release/bundle/msi/*.msi')
+          $signatures = @(Get-ChildItem -File 'src-tauri/target/release/bundle/msi/*.msi.sig')
+          if ($msis.Count -ne 1) {
+            throw "expected exactly one MSI, found $($msis.Count)"
+          }
+          if ($signatures.Count -ne 1) {
+            throw "expected exactly one MSI updater signature, found $($signatures.Count)"
+          }
+          $signature = (Get-Content $signatures[0].FullName -Raw).Trim()
+          if ([string]::IsNullOrWhiteSpace($signature)) {
+            throw 'MSI updater signature is empty'
+          }
+          bun run scripts/verify-updater-artifact.ts -- $msis[0].FullName $signatures[0].FullName
+          "SF_MSI_PATH=$($msis[0].FullName)" >> $env:GITHUB_ENV
+          "SF_MSI_NAME=$($msis[0].Name)" >> $env:GITHUB_ENV
+          "SF_MSI_SIG_PATH=$($signatures[0].FullName)" >> $env:GITHUB_ENV
+
+      - name: Install and prove signed runtime launch/reopen
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          try {
+            ./scripts/verify-installed-windows-msi.ps1 -MsiPath $env:SF_MSI_PATH
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'signed-lifecycle-error.txt') -Encoding UTF8
+            throw
+          }
+
+      - name: Prove signed authenticated hydrated WebView UI twice
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'sahelflow-installed-e2e'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          try {
+            ./scripts/verify-installed-windows-ui.ps1
+          } catch {
+            $_ | Format-List * -Force | Out-String |
+              Set-Content -LiteralPath (Join-Path $destination 'signed-ui-lifecycle-error.txt') -Encoding UTF8
+            throw
+          }
+
+      - name: Upload signed installed lifecycle diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-installed-lifecycle-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/sahelflow-installed-e2e/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Verify deterministic build source rewrites
+        run: bun run scripts/verify-release-source.ts
+
+      - name: Generate signed candidate evidence manifest from clean worktree
+        env:
+          SF_RELEASE_TAG: ${{ env.SF_RELEASE_TAG }}
+        run: bun run scripts/generate-release-evidence-worktree.ts
+
+      - name: Download and verify draft latest.json
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $downloadDir = Join-Path $env:RUNNER_TEMP 'sahelflow-release-verification'
+          New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
+          gh release download "$env:SF_RELEASE_TAG" --pattern 'latest.json' --dir $downloadDir
+          if ($LASTEXITCODE -ne 0) { throw 'failed to download latest.json for verification' }
+
+          $metadataPath = Join-Path $downloadDir 'latest.json'
+          $metadata = Get-Content $metadataPath -Raw | ConvertFrom-Json
+          if ($metadata.version -cne $env:SF_RELEASE_VERSION) {
+            throw "latest.json version mismatch: $($metadata.version)"
+          }
+          $platform = $metadata.platforms.'windows-x86_64-msi'
+          if ($null -eq $platform) { $platform = $metadata.platforms.'windows-x86_64' }
+          if ($null -eq $platform) { throw 'latest.json has no Windows x64 MSI platform entry' }
+
+          $expectedSignature = (Get-Content $env:SF_MSI_SIG_PATH -Raw).Trim()
+          if ($platform.signature.Trim() -cne $expectedSignature) {
+            throw 'latest.json signature does not match the generated MSI signature'
+          }
+          if ($platform.url -notmatch [regex]::Escape("/releases/download/$env:SF_RELEASE_TAG/$env:SF_MSI_NAME")) {
+            throw "latest.json URL is not bound to the exact release asset: $($platform.url)"
+          }
+          "SF_LATEST_JSON_PATH=$metadataPath" >> $env:GITHUB_ENV
+
+      - name: Retain signed candidate and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: sahelflow-${{ env.SF_RELEASE_VERSION }}-windows-updater-${{ github.run_id }}
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/msi/*.msi.sig
+            .sf-evidence/candidate-manifest.json
+            src-tauri/resources/runtime/runtime-manifest.json
+            src-tauri/resources/standalone/sahelflow-standalone-manifest.json
+            .sf-build/libsodium-dist/sahelflow-libsodium-build-manifest.json
+            .sf-build/tools/bun-compiler-manifest.json
+            scripts/install-founder-windows.ps1
+            scripts/verify-installed-windows-ui.ps1
+            ${{ runner.temp }}/sahelflow-installed-e2e/**
+            ${{ env.SF_LATEST_JSON_PATH }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Verify exact draft publication target
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:SF_SOURCE_COMMIT -cnotmatch '^[0-9a-f]{40}$') {
+            throw 'protected publication does not have an exact source commit'
+          }
+          if ($env:SF_RELEASE_VERSION -cnotmatch '-internal\.[0-9]+$') {
+            throw "release version is not eligible for automatic Internal publication: $env:SF_RELEASE_VERSION"
+          }
+          $expectedTag = "sahelflow-v${env:SF_RELEASE_VERSION}-${env:SF_SOURCE_COMMIT}"
+          if ($env:SF_RELEASE_TAG -cne $expectedTag) {
+            throw "release tag mismatch: expected $expectedTag, found $env:SF_RELEASE_TAG"
+          }
+
+          $currentMatch = [regex]::Match(
+            $env:SF_RELEASE_VERSION,
+            '^(?<base>[0-9]+\.[0-9]+\.[0-9]+)-internal\.(?<sequence>[0-9]+)$'
+          )
+          if (-not $currentMatch.Success) {
+            throw "release version cannot participate in monotonic Internal publication: $env:SF_RELEASE_VERSION"
+          }
+          $latestRelease = gh api "repos/${{ github.repository }}/releases/latest" |
+            ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $null -eq $latestRelease) {
+            throw 'failed to resolve the currently published release before publication'
+          }
+          $latestMatch = [regex]::Match(
+            [string]$latestRelease.tag_name,
+            '^sahelflow-v(?<base>[0-9]+\.[0-9]+\.[0-9]+)-internal\.(?<sequence>[0-9]+)-[0-9a-f]{40}$'
+          )
+          if (-not $latestMatch.Success) {
+            throw "automatic Internal publication cannot replace non-Internal latest release: $($latestRelease.tag_name)"
+          }
+          $currentBase = [version]$currentMatch.Groups['base'].Value
+          $latestBase = [version]$latestMatch.Groups['base'].Value
+          $currentSequence = [uint64]$currentMatch.Groups['sequence'].Value
+          $latestSequence = [uint64]$latestMatch.Groups['sequence'].Value
+          if (
+            $currentBase -lt $latestBase -or
+            ($currentBase -eq $latestBase -and $currentSequence -le $latestSequence)
+          ) {
+            throw "Internal publication must be strictly newer than $($latestRelease.tag_name)"
+          }
+
+          $releaseMatches = @()
+          $releaseEnumerationComplete = $false
+          for ($page = 1; $page -le 10; $page++) {
+            $releasePage = @(
+              gh api "repos/${{ github.repository }}/releases?per_page=100&page=$page" |
+                ConvertFrom-Json
+            )
+            if ($LASTEXITCODE -ne 0) {
+              throw "failed to enumerate draft publication targets at page $page"
+            }
+            $releaseMatches += @(
+              $releasePage |
+                Where-Object { $_.tag_name -ceq $env:SF_RELEASE_TAG }
+            )
+            if ($releasePage.Count -lt 100) {
+              $releaseEnumerationComplete = $true
+              break
+            }
+          }
+          if (-not $releaseEnumerationComplete) {
+            throw 'draft release enumeration exceeded the protected 1000-release bound'
+          }
+          if ($releaseMatches.Count -ne 1) {
+            throw "expected exactly one draft publication target for $env:SF_RELEASE_TAG; found $($releaseMatches.Count)"
+          }
+          $release = $releaseMatches[0]
+          if (-not $release.draft) { throw 'automatic publication target is not a draft release' }
+          if ($release.prerelease) {
+            throw 'automatic Internal publication target unexpectedly has prerelease semantics'
+          }
+
+          if ([string]$release.target_commitish -cne $env:SF_SOURCE_COMMIT) {
+            throw 'draft release target does not equal the exact verified source commit'
+          }
+
+          $releaseAssets = @($release.assets)
+          $msiAssets = @($releaseAssets | Where-Object { $_.name -like '*.msi' })
+          $signatureAssets = @($releaseAssets | Where-Object { $_.name -like '*.msi.sig' })
+          $manifestAssets = @($releaseAssets | Where-Object { $_.name -ceq 'latest.json' })
+          if ($msiAssets.Count -ne 1 -or $signatureAssets.Count -ne 1 -or $manifestAssets.Count -ne 1) {
+            throw "draft asset set is incomplete: MSI=$($msiAssets.Count) signature=$($signatureAssets.Count) latest.json=$($manifestAssets.Count)"
+          }
+          if ($msiAssets[0].name -cne $env:SF_MSI_NAME) {
+            throw 'draft MSI name does not match the locally verified signed MSI'
+          }
+          if ($signatureAssets[0].name -cne "${env:SF_MSI_NAME}.sig") {
+            throw 'draft updater signature name does not match the locally verified signature'
+          }
+
+          $downloadDir = Join-Path $env:RUNNER_TEMP 'sahelflow-publication-verification'
+          New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
+          gh release download "$env:SF_RELEASE_TAG" `
+            --pattern "$env:SF_MSI_NAME" `
+            --pattern "${env:SF_MSI_NAME}.sig" `
+            --pattern 'latest.json' `
+            --dir $downloadDir
+          if ($LASTEXITCODE -ne 0) { throw 'failed to download the exact draft assets for publication' }
+
+          $remoteMsi = Join-Path $downloadDir $env:SF_MSI_NAME
+          $remoteSignature = Join-Path $downloadDir "${env:SF_MSI_NAME}.sig"
+          $remoteManifest = Join-Path $downloadDir 'latest.json'
+          $comparisons = @(
+            @{ Label = 'MSI'; Local = $env:SF_MSI_PATH; Remote = $remoteMsi },
+            @{ Label = 'updater signature'; Local = $env:SF_MSI_SIG_PATH; Remote = $remoteSignature },
+            @{ Label = 'latest.json'; Local = $env:SF_LATEST_JSON_PATH; Remote = $remoteManifest }
+          )
+          foreach ($comparison in $comparisons) {
+            $localHash = (Get-FileHash -LiteralPath $comparison.Local -Algorithm SHA256).Hash
+            $remoteHash = (Get-FileHash -LiteralPath $comparison.Remote -Algorithm SHA256).Hash
+            if ($localHash -cne $remoteHash) {
+              throw "draft $($comparison.Label) differs from the locally verified candidate"
+            }
+          }
+
+          $metadata = Get-Content -LiteralPath $remoteManifest -Raw | ConvertFrom-Json
+          if ($metadata.version -cne $env:SF_RELEASE_VERSION) {
+            throw 'draft latest.json version does not match the verified Internal version'
+          }
+          $platform = $metadata.platforms.'windows-x86_64-msi'
+          if ($null -eq $platform) { $platform = $metadata.platforms.'windows-x86_64' }
+          if ($null -eq $platform) { throw 'draft latest.json has no Windows x64 MSI entry' }
+          if ($platform.url -notmatch [regex]::Escape("/releases/download/$env:SF_RELEASE_TAG/")) {
+            throw 'draft latest.json is not bound to the exact verified release tag'
+          }
+
+      - name: Create and verify exact release tag while draft remains protected
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/git/ref/tags/$env:SF_RELEASE_TAG" --silent 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh api --method POST "repos/${{ github.repository }}/git/refs" `
+              -f "ref=refs/tags/$env:SF_RELEASE_TAG" `
+              -f "sha=$env:SF_SOURCE_COMMIT" `
+              --silent
+            if ($LASTEXITCODE -ne 0) {
+              throw 'failed to create the exact release tag while the release remained a draft'
+            }
+          }
+
+          $tagObject = gh api "repos/${{ github.repository }}/git/ref/tags/$env:SF_RELEASE_TAG" |
+            ConvertFrom-Json |
+            Select-Object -ExpandProperty object
+          if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
+            throw 'failed to resolve the protected release tag authority'
+          }
+          for ($depth = 0; $depth -lt 5 -and $tagObject.type -ceq 'tag'; $depth++) {
+            $tagObject = gh api "repos/${{ github.repository }}/git/tags/$($tagObject.sha)" |
+              ConvertFrom-Json |
+              Select-Object -ExpandProperty object
+            if ($LASTEXITCODE -ne 0 -or $null -eq $tagObject) {
+              throw 'failed to peel the annotated protected release tag'
+            }
+          }
+          if ($tagObject.type -cne 'commit' -or $tagObject.sha -cne $env:SF_SOURCE_COMMIT) {
+            throw 'protected release tag does not resolve to the exact verified source commit'
+          }
+
+      - name: Publish exact verified Internal release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit "$env:SF_RELEASE_TAG" `
+            --repo '${{ github.repository }}' `
+            --draft=false `
+            --prerelease=false `
+            --latest
+          if ($LASTEXITCODE -ne 0) { throw 'failed to publish the exact verified Internal release' }
+
+          $release = gh api "repos/${{ github.repository }}/releases/tags/$env:SF_RELEASE_TAG" |
+            ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'failed to verify the published Internal release' }
+          if ($release.draft) { throw 'verified Internal release remained a draft after publication' }
+
+          $latestTag = gh api "repos/${{ github.repository }}/releases/latest" --jq '.tag_name'
+          if ($LASTEXITCODE -ne 0) { throw 'failed to resolve the live updater release' }
+          if ($latestTag.Trim() -cne $env:SF_RELEASE_TAG) {
+            throw "live updater release mismatch: expected $env:SF_RELEASE_TAG, found $($latestTag.Trim())"
+          }
+
+          @"
+          ## Verified Internal updater published
+
+          - Version: $env:SF_RELEASE_VERSION
+          - Tag: $env:SF_RELEASE_TAG
+          - Source: ${{ inputs.source_ref }}
+          - Reviewed PR/head: #$env:SF_REVIEWED_PR / $env:SF_REVIEWED_HEAD
+          - Licensing scope: $env:SF_RELEASE_SCOPE
+          - Protected-main and reviewed PR Git trees matched; the risk-aware required PR gate was successful.
+          - Release: ${{ steps.tauri.outputs.releaseHtmlUrl }}
+          - The draft MSI, updater signature and latest.json matched the locally verified candidate byte-for-byte immediately before publication.
+          - The exact signed MSI passed installed runtime launch, authenticated hydrated visible UI, normal close, teardown, and reopen twice.
+          - The retained artifact includes the PowerShell 5.1-safe Founder installer and UI acceptance evidence.
+          - The live updater endpoint now resolves this exact Internal release.
+          - Issue #230 remains open for owned-domain, primary/recovery, Algerian-network, and installed customer-trial certification before any user release.
+          - Beta and Stable promotion remain manual Founder decisions.
+          "@ >> $env:GITHUB_STEP_SUMMARY
