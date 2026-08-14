@@ -23,6 +23,10 @@ function supportedLocale(locale: string): SupportedLocale {
   return locale === "ar" || locale === "en" ? locale : "fr";
 }
 
+export function intlLocale(locale: string = "fr"): string {
+  return LOCALE_MAP[supportedLocale(locale)];
+}
+
 /** Canonical integer-DZD formatter for every seller-facing surface. */
 export function formatDZD(amount: number, locale: string = "fr"): string {
   const resolved = supportedLocale(locale);
@@ -82,35 +86,44 @@ export function formatDateTime(
   }).format(value);
 }
 
+/**
+ * Canonical relative-time formatter. Intl owns Arabic digit shaping, grammatical
+ * plural forms, French/English phrasing and locale punctuation; product code must
+ * not concatenate raw JS numbers into translated relative-time sentences.
+ */
 export function formatRelative(
   date: Date | string,
   locale: SupportedLocale = "fr",
+  now: Date | number = Date.now(),
 ): string {
   const value = typeof date === "string" ? new Date(date) : date;
-  const diff = Date.now() - value.getTime();
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
+  const nowMs = typeof now === "number" ? now : now.getTime();
+  const deltaMs = value.getTime() - nowMs;
+  const absSeconds = Math.abs(deltaMs) / 1000;
+  const formatter = new Intl.RelativeTimeFormat(LOCALE_MAP[locale], {
+    numeric: "auto",
+    style: "long",
+  });
 
-  if (locale === "ar") {
-    if (seconds < 60) return "الآن";
-    if (minutes < 60) return `منذ ${minutes} دقيقة`;
-    if (hours < 24) return `منذ ${hours} ساعة`;
-    if (days < 30) return `منذ ${days} يوم`;
-    return formatDate(value, locale);
+  if (absSeconds < 60) {
+    return formatter.format(Math.round(deltaMs / 1000), "second");
   }
-  if (locale === "fr") {
-    if (seconds < 60) return "à l'instant";
-    if (minutes < 60) return `il y a ${minutes} min`;
-    if (hours < 24) return `il y a ${hours} h`;
-    if (days < 30) return `il y a ${days} j`;
-    return formatDate(value, locale);
+
+  const absMinutes = absSeconds / 60;
+  if (absMinutes < 60) {
+    return formatter.format(Math.round(deltaMs / 60_000), "minute");
   }
-  if (seconds < 60) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 30) return `${days}d ago`;
+
+  const absHours = absMinutes / 60;
+  if (absHours < 24) {
+    return formatter.format(Math.round(deltaMs / 3_600_000), "hour");
+  }
+
+  const absDays = absHours / 24;
+  if (absDays < 30) {
+    return formatter.format(Math.round(deltaMs / 86_400_000), "day");
+  }
+
   return formatDate(value, locale);
 }
 
