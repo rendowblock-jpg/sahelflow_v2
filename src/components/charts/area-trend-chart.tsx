@@ -22,6 +22,7 @@ import {
   type ChartHeight,
   useGradientId,
 } from "./chart-primitives";
+import { useChartMotion } from "./chart-motion";
 
 interface AreaSeries {
   key: string;
@@ -48,10 +49,11 @@ export function AreaTrendChart({
   height = DEFAULT_CHART_HEIGHT,
   formatY,
   showGrid = true,
-  curve = "natural",
+  curve = "monotone",
   emptyMessage,
 }: AreaTrendChartProps) {
   const { dir, t, locale } = useI18n();
+  const { isAnimationActive, baseDuration } = useChartMotion();
   const isRtl = dir === "rtl";
   const chartHeight = normalizeChartHeight(height);
   const fmtY = resolveFormatter(formatY, locale);
@@ -98,44 +100,41 @@ export function AreaTrendChart({
               <stop
                 offset="5%"
                 stopColor={`var(--color-${s.key})`}
-                stopOpacity={0.8}
+                stopOpacity={0.56}
               />
               <stop
                 offset="95%"
                 stopColor={`var(--color-${s.key})`}
-                stopOpacity={0.05}
+                stopOpacity={0.025}
               />
             </linearGradient>
           ))}
         </defs>
         {showGrid && (
-          <CartesianGrid
-            vertical={false}
-            strokeDasharray="3 3"
-            stroke="var(--border)"
-          />
+          <CartesianGrid vertical={false} />
         )}
         <XAxis
           dataKey={xKey}
           tickLine={false}
           axisLine={false}
-          tickMargin={8}
+          tickMargin={10}
           minTickGap={32}
           reversed={isRtl}
           className="text-xs fill-muted-foreground"
-          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
         <YAxis
-          width={56}
+          width={60}
           tickLine={false}
           axisLine={false}
-          tickMargin={4}
+          tickMargin={6}
           tickFormatter={(value: number) => fmtY(value)}
           className="text-xs fill-muted-foreground"
           orientation={isRtl ? "right" : "left"}
+          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
         <ChartTooltip
-          cursor={false}
+          cursor={{ stroke: "var(--sf-chart-grid)", strokeWidth: 1 }}
           content={
             <ChartTooltipContent
               indicator="dot"
@@ -158,7 +157,7 @@ export function AreaTrendChart({
             dataKey={current.key}
             type={curve}
             stroke={`var(--color-${current.key})`}
-            strokeWidth={2}
+            strokeWidth={2.25}
             fill={`url(#${gradientId}-${current.key})`}
             dot={false}
             activeDot={{
@@ -166,8 +165,9 @@ export function AreaTrendChart({
               strokeWidth: 2,
               stroke: "var(--background)",
             }}
-            isAnimationActive
-            animationDuration={600}
+            isAnimationActive={isAnimationActive}
+            animationDuration={baseDuration}
+            animationEasing="ease-out"
           />
         ))}
       </AreaChart>
