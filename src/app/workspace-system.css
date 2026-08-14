@@ -255,10 +255,10 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   }
 }
 
-/* The real available workbench width is the main pane after the durable sidebar,
- * not the browser viewport. Container queries keep 1366px desktop installs from
- * squeezing three columns just because the viewport happens to cross `xl`. */
-@container inbox-workspace (max-width: 72rem) {
+/* Use the actual workbench width after the durable app sidebar. At the target
+ * 1366×768 desktop the Inbox and AI rails fit and remain visible; only narrower
+ * main panes collapse context into the existing Sheet affordance. */
+@container inbox-workspace (max-width: 64rem) {
   [data-inbox-queue="true"] {
     width: 20.5rem !important;
     min-width: 20.5rem !important;
@@ -273,7 +273,7 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   }
 }
 
-@container ai-workspace (max-width: 72rem) {
+@container ai-workspace (max-width: 64rem) {
   [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
     display: none !important;
   }
