@@ -84,7 +84,7 @@ describe("hosted storefront contract", () => {
       "utf8",
     ).replace(/\r\n?/g, "\n");
     expect(source).toContain("MIN(?5, COALESCE");
-    expect(source).toContain("receipt.state = 'received'");
+    expect(source).toContain("receipt.state IN ('received', 'rejected')");
     expect(source).toContain("SUM(line.quantity)");
     expect(source).toContain("SET remaining_quantity = 0");
     expect(source).toContain("WHERE release_id = ?1 AND remaining_quantity > 0");

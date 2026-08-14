@@ -7,8 +7,8 @@ import type { D1Database, D1Statement } from "./types";
  * D1 executes the caller's statement batch as one transaction. For an item
  * that already exists in the parent release, the fresh delegation is capped at
  * the parent's remaining quantity. New catalog items may use the desktop's
- * requested physical-stock authority less any still-unimported receipts from
- * older releases. The final statement retires every
+ * requested physical-stock authority less any unsettled receipts from older
+ * releases that are not reflected in local stock. The final statement retires every
  * remaining parent allocation, so a checkout that raced on the old release
  * either committed before this transfer or fails its allocation guard after it.
  */
@@ -44,7 +44,7 @@ export function appendConservedAllocationStatements(
                   SELECT storefront_id FROM storefront_release WHERE release_id = ?1
                 )
                   AND line.item_key = ?2
-                  AND receipt.state = 'received'
+                  AND receipt.state IN ('received', 'rejected')
              ), 0))
            END,
            CASE
@@ -65,7 +65,7 @@ export function appendConservedAllocationStatements(
                   SELECT storefront_id FROM storefront_release WHERE release_id = ?1
                 )
                   AND line.item_key = ?2
-                  AND receipt.state = 'received'
+                  AND receipt.state IN ('received', 'rejected')
              ), 0))
            END
          )`,
