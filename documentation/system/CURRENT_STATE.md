@@ -1,131 +1,119 @@
 # SahelFlow — Current state
 
-> **Authority:** merged protected source and named evidence only; Founder observations are labeled installed findings, not merged implementation
-> **Last assessed:** 2026-08-13
-> **Protected main:** `b78e3eb945d5a66a34198db8ef00df95cc9b37aa` — PR #250 / Internal.16 Wave 3
-> **Latest application-changing protected merge:** PR #250 — Internal.16 Wave 3
-> **Active implementation:** draft PR #251 — Internal.16 Wave 4 Storefront Builder V2 / connected platform
-> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
-> **Published release:** `1.0.0-internal.15` — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
-> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Next application milestone:** Internal.16 complete-product candidate under FD-033
-> **Installed discovery:** CLOSED 2026-08-13; 17 Founder-installed P1 inputs frozen
+> **Authority:** merged protected source plus named installed/release evidence
+> **Last assessed:** 2026-08-14
+> **Protected `main`:** `c8200fdd0fe212cc7493de434d19bd8e7395c4ea` — PR #252 / signed Internal.16 authority
+> **Latest application-changing protected merge:** PR #251 — Internal.16 Wave 4 Storefront Builder V2 + connected platform
+> **Published release:** `1.0.0-internal.16` / MSI `1.0.0.16`
+> **Signed release run:** `31770292329`
+> **Founder-installed state:** Internal.16 installed on 2026-08-14
+> **Founder frontend acceptance:** **REJECTED**
+> **Active correction frontier:** Internal.17 frontend-system correction under temporary FD-035
 > **Retained evidence:** #221, #226, #230
 
-Protected `main` remains source authority. This documentation branch records Founder decisions and installed observations without pretending those observations have already been repaired.
+Protected `main` remains source authority. Installed Founder observation remains necessary for user-facing quality claims. Green source/browser/Windows/release gates cannot manufacture Founder visual/UX acceptance.
 
 ## Executive truth
 
-SahelFlow retains a strong protected Windows/local-first engine across Golden COD, identity, licensing, providers, AI/automations, protected data and native recovery. PRs #236/#237/#240/#242/#244 materially improved frontend roots and selected workspaces; PR #245 merged the exact Internal.15 Founder-only offline release checkpoint.
+SahelFlow now has a strong protected Windows/local-first engine and a materially complete connected platform. Internal.16 Waves 1–4 protect Golden COD, identity/licensing, providers/AI/automations, protected data and recovery, AAA frontend foundations and selected workspaces, Storefront Builder V2, hosted commerce flows, remote connected authority, encrypted projections/commands, zero-knowledge cloud backup and replacement-install recovery transfer.
 
-The completed installed Internal.15 Founder inspection confirms that the product is still below the final class-AAA/user-ready target. The remaining problem is systemic rather than one page: Arabic/RTL geometry, responsive/layout composition, localization/cache consistency, theme transitions, chart/data-visualization quality, Inbox/AI workflow quality, universal search, Gemini setup, navigation information architecture, startup performance and remaining Phase 5/6/7/8 implementation/certification.
+PR #252 promoted exact protected source `c8200fdd0fe212cc7493de434d19bd8e7395c4ea` to the signed Internal.16 Founder/internal-lab release. Signed workflow `31770292329` passed its release, signed MSI, installed launch/reopen, authenticated UI and publication steps.
 
-The installed discovery phase is closed. FD-033 makes Internal.16 the complete-product convergence candidate. Waves 1–3 are protected through PRs #247/#248/#250. Draft PR #251 is the active Wave 4 Storefront Builder V2 and connected-platform source package; Wave 5 remains dependency-ordered behind it.
+The Founder then installed Internal.16 and explicitly rejected the frontend as the final AAA/Phase 5–6 acceptance candidate. Several systemic Internal.15 complaints remain plainly visible in the signed installed product. Therefore issue #221 remains open and Internal.16 must not be described as Founder-accepted, customer-ready, Beta or Stable.
 
 ## Protected canonical boundaries
 
-Internal.16 must preserve Golden COD command/idempotency/version/audit/event/outbox authority; trusted actor/shop/session/permission authority; protected fields and per-shop isolation; append-only inventory/financial/compensation truth; durable provider effects/reconciliation; signed licensing/installation/secret authority; native runtime containment/backup/recovery; AI proposal-bound execution; and automation recovery. Installed UX defects do not authorize weakening these contracts.
+The next frontend correction must preserve unless a concrete defect requires bounded change:
 
-## Frozen Internal.15 installed Founder findings — Parts 1–3
+- Golden COD command/idempotency/version/audit/event/outbox authority;
+- trusted actor/shop/session/permission authority;
+- protected fields, per-shop isolation and append-only money/inventory truth;
+- durable provider effects/reconciliation and automation recovery;
+- signed licensing/installation/secret authority;
+- native runtime containment, migration, backup and recovery;
+- AI proposal-bound canonical execution;
+- Wave 4 storefront/connected/cloud-backup authority;
+- updater/signing/version/release protections.
 
-- **SF16-UI-001 P1:** systemic Arabic/RTL geometry and bidi wrong-side defects across the application; exhaustive source/route audit required.
-- **SF16-UI-002 P1:** Risk Engine KPI hierarchy overloaded/unbalanced.
-- **SF16-UI-003 P1:** shared stat-card pointer/focus/actionable/selected interaction semantics incomplete.
-- **SF16-I18N-004 P1:** locale-sensitive money/date/number/chart formatting can leak French defaults into Arabic.
-- **SF16-INBOX-005 P1:** Inbox requires final AAA operational convergence, adaptive panes, complete workflow/media/extraction/collaboration behavior and large-history performance.
-- **SF16-AI-006 P1:** AI workspace requires final AAA convergence, adaptive rails, polished session/composer/tool/proposal flow and long-session performance.
-- **SF16-I18N-007 P1:** raw translation keys/unintended foreign system copy remain possible; demo/system content localizes while seller data remains exact.
-- **SF16-PRODUCTS-008 P1:** product rows require compact primary thumbnails from the already-available `images` projection.
-- **SF16-SEARCH-009 P1:** topbar search is not universal; Internal.16 requires permission/shop-aware ranked cross-entity operational search.
-- **SF16-AI-010 P1:** Founder Gemini key setup did not make AI usable; end-to-end reauth/provider verification/encrypted save/readiness/real inference must be certified.
-- **SF16-RESP-011 P1:** current shared card auto-fit can create ugly `3+1` windowed composition; layouts must be deterministic and balanced.
-- **SF16-LAYOUT-012 P1:** accidental panel stretching/fixed chart canvases create low-information dead space; sizing must follow content and hierarchy.
-- **SF16-CHART-013 P1:** charts/analytics look generic and under-engineered; rebuild the governed chart layer into a richer decision-support system without decorative complexity.
-- **SF16-PERF-014 P1:** first/cold launch still feels slow; instrument startup stages and close the bottleneck while preserving recovery/migration/licensing/readiness guarantees.
-- **SF16-THEME-015 P1:** light/dark/preset switching still visibly glitches; appearance commit must be atomic and smooth.
-- **SF16-I18N-016 P1:** after language commit, subsequent route navigation can briefly show previous-language content; locale must be atomic across current tree and route cache/prefetch/navigation.
-- **SF16-NAV-017 P1:** sidebar requires a smarter workflow-based default order plus user reorder/edit preference, without changing canonical route/permission authority.
+Installed UX rejection does not authorize weakening these contracts.
 
-These 17 installed observations are frozen Founder acceptance inputs. The implementation agent owns exhaustive sibling discovery for each established class; additional screenshots are not required to prove repeated manifestations.
+## Internal.16 Founder-installed rejection — reconfirmed blocking classes
 
-## Source evidence supporting the frozen findings
+### `SF16-UI-001` — RTL/direction geometry remains systemic
 
-- shell/sidebar source already attempts RTL and logical utilities, so remaining RTL is a semantic whole-product geometry problem;
-- Risk renders six equal-weight stat cards; shared StatCard lacks card-level interaction contract;
-- command palette searches navigation plus orders/customers/products only;
-- product workbench carries `images`, current product table does not render them;
-- `.card-grid-4` uses `auto-fit/minmax(240px)`, directly permitting `3+1`;
-- AI XL workspace and Inbox queue use fixed rail widths;
-- Gemini key flow uses recent reauthentication and provider/verifier human copy includes hard-coded French;
-- Dashboard Recent Orders and Delivery share one grid row; default stretch makes shorter Delivery match the taller orders panel and leaves unused space;
-- governed `ChartCard` defaults to fixed 300px plot height; donut geometry is fixed within the canvas; Analytics passes an `accent` prop the current `ChartCard` does not consume;
-- theme authority applies a broad 220ms switching window, yet installed evidence still shows a visible mixed/glitch frame;
-- locale change writes the cookie and refreshes the current Server Component tree, while installed evidence proves a subsequent-route stale-language boundary remains;
-- `navigationDomains` is a static canonical order rendered directly by Sidebar;
-- packaged release startup performs protected recovery/preflight, license/device checks, all-shop migration/authority preparation, runtime spawn/readiness and workspace navigation before visible readiness, so startup must be stage-measured rather than optimized blindly.
+The Founder confirms that wrong-side/directional behavior still exists in the sidebar and many other UI areas. Charts also remain affected. This proves the prior correction did not fully eliminate the root direction/layout problem.
 
-These are reconnaissance clues, not a patch-only file list.
+The next correction must audit and repair shared logical-direction primitives, route-level physical positioning, shell/sidebar geometry, portals/overlays, tables, icons, mixed bidi content and chart direction semantics across all affected production consumers.
 
-## Protected route/workspace evidence continuity
+### `SF16-THEME-015` — theme switching remains visibly wrong
 
-### PR #237 — Inbox operational workspace protected
+Dark/light switching is still neither instant nor smooth enough for the intended product quality. The exact visual defect is perceptible as an unacceptable intermediate/glitchy transition.
 
-Final exact head `8e9d5aa365f0c5873909c1c8517f88519d743b9d` protects the source/browser Inbox outcome before merge.
+The next correction must treat appearance as an atomic transaction across theme state, root attributes/classes, semantic tokens, shared primitives, charts and hydrated route consumers. Rapid repeated switching must settle deterministically without mixed old/new frames.
 
-### PR #240 — AI Agents operational workspace protected
+### `SF17-MOTION-018` — motion/micro-interaction layer remains insufficient
 
-Final exact head `6355cc4c797a597af52c90decfe7727e405749be` protects the AI source/browser outcome.
+The installed product still feels materially static. Internal.16 did not deliver the intended coherent interaction language.
 
-### PR #242 — Settings operational workspace protected
+The next correction must establish restrained, interruptible, low-resource-aware motion for navigation, overlays, state/list changes, loading and feedback, with reduced-motion first-class. Decorative motion for its own sake is not the target.
 
-Final exact head `e749b0af05741ee45b16c349750d44092bd3beb9` passed CI/experience/completion runs `31546488691`, `31546488465`, `31546488422` before protected merge.
+### `SF16-CHART-013` — charts remain below target
 
-PR #244 remains the latest route-level application-changing protected merge at `856f58126327797b467938390586a04f185e70f6`; PR #245 is the later FD-032 release/checkpoint merge. Historical Internal.14 publication evidence remains source `2d60e2e74109b6e03626a5ccdff727c029a34591`, release `1.0.0-internal.14`, signed run `31388777098`.
+Charts remain Founder-rejected for visual/information-design quality and also participate in the RTL/direction problem.
 
-## Historical continuity anchors
+The next correction must treat charts as one governed decision-support system: analytical grammar, hierarchy, labeling, legends/tooltips, density, responsiveness, Arabic/RTL/bidi, theme integration, reduced-motion behavior and low-end cost.
 
-### Phase 5 merged result and evidence
+### `SF16-INBOX-005` — Inbox remains unresolved
 
-The earlier Phase 5 source/browser checkpoint remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Later protected route/foundation work improved the source, but the installed Founder acceptance obligation remained open and is now carried into the exact Internal.16 acceptance matrix.
+The installed Inbox is still not accepted as the required AAA operational workspace. Prior source/browser closure does not equal installed product acceptance.
 
-### Active Phase 6 frontier
+The next correction must reassess the complete operational flow: queue/thread structure, customer/order context, assignment/status, provider health/degraded behavior, notes/media/extraction/recovery, adaptive panes and large-history usability.
 
-The formal **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity remains current. FD-033 changes the exact Internal.16 execution sequence so remaining Phase 5/6/7 closure and Phase 8 implementation can converge without marking those gates passed early.
+### `SF16-AI-006` — AI Agents remains unresolved
 
-### Internal.14 publication evidence
+The installed AI Agents workspace is still not accepted as the required AAA product workbench.
 
-The published Internal.14 source was `2d60e2e74109b6e03626a5ccdff727c029a34591`, produced through signed run `31388777098`. That evidence remains historical continuity and is not replaced by documentation wording.
+The next correction must reassess the complete task-oriented workflow: sessions/history, context, composer, streaming/stop/retry, tool results, proposal/permission boundaries, readiness/errors, recovery and long-session behavior while preserving proposal-bound canonical mutations and privacy controls.
 
-### FD-031 exception boundary
+## Important evidence rule
 
-FD-031 remains a one-time Internal.14 installed-evidence exception. It does not authorize future greenwashing or weakening of Internal.16 recovery/installed/release gates. Historical issue #214 is retained in the evidence lineage even though stronger later replacement-install evidence closed its original obligation.
+The six classes above are **reconfirmed failures** from the installed Internal.16 inspection. The Founder is not required to provide screenshots for every repeated manifestation.
 
-### FD-032 Founder-only offline checkpoint boundary
+The absence of a fresh complaint about another original Internal.15 finding is not proof that it is fixed or accepted. Existing acceptance requirements remain unless objective evidence or a later Founder observation closes them. The next root audit should include consequence-selected sibling verification rather than declaring the unmentioned findings resolved.
 
-FD-032 remains exact to Internal.15: Founder/internal-lab offline checkpoint, no customer-online trial authority, and no carry-forward exception into Internal.16. Issue #230 remains the customer-online/public-trial gate.
+## Historical continuity
 
-## Post-Internal.15 route-level frontier
+The original Internal.15 Founder problem register remains the source of the current defect lineage. FD-033 authorized Internal.16 convergence and froze 17 installed P1 inputs. Internal.16 materially improved the product and completed Phase 8 connected-platform implementation, but installed Founder evidence now proves that the frontend convergence did not fully achieve the required acceptance outcome.
 
-The installed Internal.15 inspection is closed. Internal.16 Waves 1–3 are protected and **Phase 8 implementation is active in draft PR #251 / Wave 4**. FD-033 authorizes it without marking branch source, hosted runtime, installed or external evidence complete.
+This does **not** erase successful source/browser/Windows evidence for what those exact heads proved. It changes the higher installed/Founder-acceptance truth.
 
-Retained exact issue status entering Internal.16:
+## Current issue truth
 
-- **#221 — OPEN** — installed Founder visual/accessibility reconciliation;
-- **#226 — OPEN** — installed T470/floor/eight-hour performance/reliability evidence;
-- **#230 — OPEN P1** — customer-online/public-trial owned-domain/network certification.
+- **#221 — OPEN / REJECTED on Internal.16** — installed Founder visual/RTL/accessibility/experience acceptance.
+- **#226 — OPEN** — representative T470/floor/eight-hour performance and reliability certification.
+- **#230 — OPEN P1** — resilient customer-online/public-trial activation on representative Algerian networks.
 
-SahelFlow is **not yet a commercially certified Stable release**. Stable still requires the applicable Phase 9 external/representative evidence and explicit Founder promotion.
+#221 must not be treated as a paperwork-only checkpoint. The six reconfirmed classes require source correction and a new installed candidate.
 
-## Internal.16 frontier — ready for next session
+## Internal.17 correction frontier
 
-1. Merge/reconcile FD-033 documentation authority to protected `main`.
-2. Create/use one Internal.16 application branch from that exact protected main.
-3. Perform one exact-source whole-product reconnaissance and combine newly proven source/root dependencies with the frozen 17 installed findings and defined Phase 8/EcoTrack/AI/release scope.
-4. Freeze one complete Problem Register, shared contracts/non-goals and acceptance matrix.
-5. Execute the large dependency-correct completion wave under one application writer with targeted cheap checks.
-6. Finish remaining Phase 5/6/7 + full Phase 8, EcoTrack, AI/extraction/tools, chart/theme/locale/navigation/search/startup roots and release/update/recovery work.
-7. Freeze one complete Internal.16 head.
-8. Run complete source/Windows/installed/performance/Phase 8 certification + adversarial review.
-9. Repair one consolidated finding set, then run affected + final complete proof.
+Temporary FD-035 authorizes source-level correction work for the next candidate but does not itself authorize an Internal.17 signed release.
 
-FD-032 remains exact to Internal.15 and does not carry into Internal.16. Issue #230 remains P1 for the customer-online/public-trial boundary. #221/#226 remain part of final installed experience/performance reconciliation. External provider/security/privacy/legal/representative-beta evidence remains distinct. No Stable claim exists without applicable Phase 9 proof and explicit Founder promotion.
+The next application session should:
+
+1. start from exact protected `main` after the documentation reconciliation;
+2. create/use one bounded Internal.17 frontend-correction branch;
+3. perform one focused source/root audit for the six reconfirmed classes and their affected siblings;
+4. freeze one bounded correction map, not another permanent masterplan;
+5. implement shared-root fixes in dependency order: RTL/direction → atomic appearance → motion → charts → Inbox → AI → complete sibling adoption sweep;
+6. run targeted checks while coding, then freeze one exact correction head;
+7. run deep source/browser/AR-FR-EN/RTL/accessibility/theme/motion/chart/Inbox/AI/Windows evidence;
+8. repair one consolidated finding set and rerun affected plus final proof;
+9. obtain new exact version/release authority only after the source candidate is actually clean;
+10. publish/install the new signed candidate and repeat Founder #221 acceptance.
+
+## Launch boundary
+
+SahelFlow is not yet a commercially certified Stable release.
+
+After frontend acceptance, user readiness still requires #226 performance/reliability evidence, #230 customer-trial/network resilience, applicable live provider/security/privacy/legal/representative-beta evidence and explicit Founder promotion under Phase 9.
