@@ -54,14 +54,33 @@ describe("Wave 2 analytical frame contract", () => {
     expect(dual).toContain("formatDZD(value, locale)");
   });
 
-  it("uses container-relative polar geometry instead of fixed full-size radii", () => {
+  it("uses container-relative polar geometry rather than fixed pixel radii", () => {
     const donut = source("../donut-chart.tsx");
     const radial = source("../radial-gauge.tsx");
 
-    expect(donut).toContain('innerRadius = "46%"');
-    expect(donut).toContain('outerRadius = "72%"');
-    expect(radial).toContain('innerRadius="66%"');
-    expect(radial).toContain('outerRadius="90%"');
+    expect(donut).toMatch(/innerRadius = "\d+%"/);
+    expect(donut).toMatch(/outerRadius = "\d+%"/);
+    expect(radial).toMatch(/innerRadius="\d+%"/);
+    expect(radial).toMatch(/outerRadius="\d+%"/);
+    expect(donut).not.toMatch(/innerRadius = \d+/);
+    expect(radial).not.toMatch(/innerRadius=\{\d+\}/);
+  });
+
+  it("governs chart motion and prevents spline overshoot outside observed data", () => {
+    for (const file of [
+      "../area-trend-chart.tsx",
+      "../line-trend-chart.tsx",
+      "../horizontal-bar-chart.tsx",
+      "../composed-trend-chart.tsx",
+      "../donut-chart.tsx",
+      "../radial-gauge.tsx",
+      "../dual-bar-chart.tsx",
+    ]) {
+      expect(source(file)).toContain("useChartMotion");
+    }
+    const sparkline = source("../sparkline.tsx");
+    expect(sparkline).toContain('domain={["dataMin - 1", "dataMax + 1"]}');
+    expect(sparkline).toContain("isAnimationActive={false}");
   });
 
   it("removes the fixed 300px ResponsiveContainer from the legacy dual-bar chart", () => {
