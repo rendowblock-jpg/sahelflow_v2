@@ -35,20 +35,66 @@ function rejectMarkers(relativePath: string, markers: readonly string[]): void {
   }
 }
 
-const protectedMain = "b78e3eb945d5a66a34198db8ef00df95cc9b37aa";
-const phase5Baseline = "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734";
+const protectedWave4Main = "aa7dd2df53286a670fc55e319a281757cf3d28b2";
+const wave4Head = "73e8d8c466567859bc651bb4d77976fdb2a1bbc3";
+const wave4CiRun = "31765143457";
 const publishedInternal15 = "371aebc2be3bf0abb1bbe7fe91c035d962fc86a9";
 const signedInternal15Run = "31657621918";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 
-requireMarkers("README.md", [
-  "documentation/README.md",
-  protectedMain,
-  "PR #250 — Internal.16 Wave 3",
-  "PR #251 — Internal.16 Wave 4",
+requireMarkers("sahelflow.version.json", [
+  '"version": "1.0.0-internal.16"',
+  '"windowsMsiVersion": "1.0.0.16"',
+  '"releaseMode": "founder-offline-only"',
+  '"authorityDecision": "FD-034"',
+  '"approvalScope": "internal-lab"',
+]);
+
+requireMarkers("scripts/sf-version.ts", [
+  'authority.version === "1.0.0-internal.16"',
+  'authority.licensing?.authorityDecision === "FD-034"',
+  "Internal.15/FD-032 or Internal.16/FD-034",
+]);
+
+requireMarkers("documentation/product/FD-034-INTERNAL16-FOUNDER-OFFLINE.md", [
+  "FD-034",
+  "1.0.0-internal.16",
+  "1.0.0.16",
+  "Founder/internal-lab",
+  "Issue #230 remains open P1",
+  "Internal.17",
+]);
+
+requireMarkers("documentation/README.md", [
+  protectedWave4Main,
+  "PR #251",
+  "Wave 4",
+  wave4Head,
+  wave4CiRun,
+  "FD-034",
+  "1.0.0-internal.16",
   publishedInternal15,
   signedInternal15Run,
-  "`1.0.0-internal.15`",
+  activePhase,
+  "#221, #226, #230",
+]);
+
+requireMarkers("documentation/operations/WORKING_MEMORY.md", [
+  protectedWave4Main,
+  "PR #251",
+  wave4Head,
+  wave4CiRun,
+  "agent/internal-16-founder-offline-checkpoint",
+  "FD-034",
+  "1.0.0-internal.16",
+  "Exact next-session order",
+]);
+
+requireMarkers("README.md", [
+  "documentation/README.md",
+  "PR #251",
+  publishedInternal15,
+  signedInternal15Run,
   activePhase,
   "#221, #226 and #230",
   "FD-033",
@@ -56,91 +102,20 @@ requireMarkers("README.md", [
 
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
-  protectedMain,
-  "PR #250",
-  publishedInternal15,
-  signedInternal15Run,
   "FD-033",
   "17 P1 installed acceptance classes",
-  phase5Baseline,
   "#221/#226/#230",
 ]);
 
-requireMarkers("documentation/README.md", [
-  protectedMain,
-  "PR #250",
-  "PR #251",
-  "agent/internal-16-wave-4",
-  publishedInternal15,
-  signedInternal15Run,
-  activePhase,
-  phase5Baseline,
-  "#221, #226, #230",
-]);
-
-requireMarkers("documentation/product/DECISIONS.md", [
-  "## FD-033",
-  "Internal.16 completion convergence",
-  "17 P1 classes",
-  "one large implementation wave",
-  "customer release",
-  "owned-domain",
-]);
-
-requireMarkers("documentation/system/CURRENT_STATE.md", [
-  protectedMain,
-  "PR #250 — Internal.16 Wave 3",
+rejectMarkers("documentation/README.md", [
   "draft PR #251",
-  publishedInternal15,
-  signedInternal15Run,
-  activePhase,
-  phase5Baseline,
-  "Wave 5 remains dependency-ordered",
-  "not yet a commercially certified Stable release",
-]);
-
-requireMarkers("documentation/system/ROADMAP.md", [
-  protectedMain,
-  "PR #250 — Internal.16 Wave 3",
-  "draft PR #251",
-  publishedInternal15,
-  signedInternal15Run,
-  activePhase,
-  phase5Baseline,
-  "Internal.16 completion cycle",
-  "expected-head merge",
-]);
-
-requireMarkers("documentation/operations/WORKING_MEMORY.md", [
-  protectedMain,
-  "PR #250",
-  "PR #251",
   "agent/internal-16-wave-4",
-  publishedInternal15,
-  signedInternal15Run,
-  activePhase,
-  phase5Baseline,
-  "Exact next-session order",
+  "Waves 1–3 are protected",
 ]);
-
-const authorityPaths = [
-  "README.md",
-  "AGENTS.md",
-  "documentation/README.md",
-  "documentation/system/CURRENT_STATE.md",
-  "documentation/system/ROADMAP.md",
-  "documentation/operations/WORKING_MEMORY.md",
-] as const;
-for (const path of authorityPaths) {
-  rejectMarkers(path, [
-    "Latest application-changing protected merge: **PR #244",
-    "Published release remains `1.0.0-internal.14`",
-    "Published executable remains **Internal.14**",
-    "Founder-installed release remains **Internal.14**",
-    "**Published release: `1.0.0-internal.14`**",
-    "no Internal.16 application implementation has been written yet",
-  ]);
-}
+rejectMarkers("documentation/operations/WORKING_MEMORY.md", [
+  "draft PR #251",
+  "agent/internal-16-wave-4",
+]);
 
 const duplicateHandoffPath =
   "documentation/archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md";
@@ -156,6 +131,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: Waves 1–3 are protected through PR #250, draft PR #251 owns Wave 4, Internal.15 is the published Founder-only checkpoint, and #221/#226/#230 remain distinct open evidence obligations.",
+    "Current execution frontier verified: PR #251 / Wave 4 is protected on main, the exact installed evidence matrix is green, Internal.16 is the FD-034 Founder-only checkpoint candidate, Internal.15 remains the published updater until signed promotion, and #221/#226/#230 remain distinct evidence obligations.",
   );
 }
