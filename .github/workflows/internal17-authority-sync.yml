@@ -32,14 +32,18 @@ jobs:
                   raise SystemExit(f"{path}: expected {count} exact occurrence(s), found {observed}: {old!r}")
               p.write_text(text.replace(old, new))
 
-          # Cargo's root package identity must match Cargo.toml and the canonical authority.
+          def replace_text(text, old, new, label, count=1):
+              observed = text.count(old)
+              if observed != count:
+                  raise SystemExit(f"{label}: expected {count} exact occurrence(s), found {observed}: {old!r}")
+              return text.replace(old, new)
+
           replace(
               "src-tauri/Cargo.lock",
               'name = "sahelflow"\nversion = "1.0.0-internal.16"\ndependencies = [',
               'name = "sahelflow"\nversion = "1.0.0-internal.17"\ndependencies = [',
           )
 
-          # Version audit: retain historical exact checkpoints and add only FD-036/Internal.17.
           replace(
               "scripts/sf-version.ts",
               '''    (authority.version === "1.0.0-internal.16" &&\n      authority.licensing?.authorityDecision === "FD-034"));''',
@@ -51,7 +55,6 @@ jobs:
               "founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, or Internal.17/FD-036 on the internal channel with no owned host suffix",
           )
 
-          # Native release build boundary: exact allow-list, never a broad Founder bypass.
           replace(
               "src-tauri/build.rs",
               '''                    (Some("1.0.0-internal.15"), Some("FD-032"))\n                        | (Some("1.0.0-internal.16"), Some("FD-034"))''',
@@ -63,19 +66,22 @@ jobs:
               "founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17 on the internal channel with no owned host suffix",
           )
 
-          # Signed workflow resolves the same exact bounded checkpoint and continues to blank service authority.
-          replace(
-              ".github/workflows/release.yml",
+          release_path = Path(".github/workflows/release.yml")
+          release = release_path.read_text()
+          release = replace_text(
+              release,
               '''                ($authority.version -ceq '1.0.0-internal.16' -and\n                  $authority.licensing.authorityDecision -ceq 'FD-034')''',
               '''                ($authority.version -ceq '1.0.0-internal.16' -and\n                  $authority.licensing.authorityDecision -ceq 'FD-034') -or\n                ($authority.version -ceq '1.0.0-internal.17' -and\n                  $authority.licensing.authorityDecision -ceq 'FD-036')''',
+              "release workflow authority",
           )
-          replace(
-              ".github/workflows/release.yml",
+          release = replace_text(
+              release,
               "founder-offline-only release authority is valid only for exact FD-032/Internal.15 or FD-034/Internal.16",
               "founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17",
+              "release workflow error contract",
           )
+          Path("internal17-release-workflow.generated.yml").write_text(release)
 
-          # Production licensing contract follows exactly the same authority boundary.
           replace(
               "src/lib/license/__tests__/license-production-boundary.test.ts",
               '''expect(versionAuthority).toContain('"version": "1.0.0-internal.16"');''',
@@ -107,7 +113,6 @@ jobs:
               "exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17",
           )
 
-          # Current-frontier audit follows the new release authority without erasing historical continuity.
           replace("scripts/verify-current-frontier.ts", '"version": "1.0.0-internal.16"', '"version": "1.0.0-internal.17"')
           replace("scripts/verify-current-frontier.ts", '"windowsMsiVersion": "1.0.0.16"', '"windowsMsiVersion": "1.0.0.17"')
           replace("scripts/verify-current-frontier.ts", '"authorityDecision": "FD-034"', '"authorityDecision": "FD-036"')
@@ -134,7 +139,6 @@ jobs:
               '"Current execution frontier verified: the Internal.17 correction is protected on main at c33f234ecf43842cfcc801592cc601d595ed05c5, FD-036 synchronizes the exact Founder-only Internal.17 offline checkpoint, and signed promotion plus Founder visual acceptance remain pending.",',
           )
 
-          # Documentation entry point: preserve history but make the current release frontier unambiguous.
           replace(
               "documentation/README.md",
               '> **Status:** Active documentation entry point and temporary FD-034 / FD-035 addendum authority',
@@ -173,7 +177,6 @@ jobs:
               raise SystemExit("documentation/README.md: FD-036 insertion marker missing or duplicate")
           p.write_text(text.replace(marker, addition + marker, 1))
 
-          # Working memory now resumes from release promotion, not from the completed correction implementation.
           replace(
               "documentation/operations/WORKING_MEMORY.md",
               '> **Protected `main`:** `c8200fdd0fe212cc7493de434d19bd8e7395c4ea` — PR #252 / signed Internal.16 authority',
@@ -194,16 +197,12 @@ jobs:
               'Live GitHub is authority. Internal.16 publication is complete. Do **not** restart release-authority work from PR #252 and do **not** treat green CI as Founder visual/UX acceptance.',
               'Live GitHub is authority. Internal.16 remains the latest published updater; the Internal.17 correction is protected and fully green through the exact MSI-installed `Required PR gate`. The current task is the bounded FD-036 release-authority promotion. Do **not** reopen the completed correction broadly, and do **not** treat automated installed evidence as Founder visual/UX acceptance.',
           )
-
           p = Path("documentation/operations/WORKING_MEMORY.md")
           text = p.read_text()
           start = text.index("## Exact next-session order\n")
           end = text.index("## Acceptance rules for the six reconfirmed blockers\n")
           replacement = '''## Exact next-session order\n\n1. **Keep protected correction truth frozen.** PR #254 exact head `c965a062cf2719078601374bd0ace771ca011d53` passed Phase 5, Phase 6–7, native/source quality, Windows runtime, exact MSI build, install/reopen, authenticated hydrated UI twice and replacement-install backup/restore/identity/rollback; its identical reviewed tree is protected on `main` at `c33f234ecf43842cfcc801592cc601d595ed05c5`.\n2. **Complete FD-036 release authority on one branch.** Synchronize `1.0.0-internal.17` / MSI `1.0.0.17` across version authority, package/Cargo/Tauri identities, exact Founder-offline guards, signed workflow contracts, tests and live docs. Preserve Internal.15/FD-032 and Internal.16/FD-034 as historical exact checkpoints; do not broaden the exception.\n3. **Open one release-authority PR only after the branch is internally coherent.** Run the normal risk-aware `Required PR gate` and every selected source/native/Windows/MSI-installed consequence on that exact head. No waiver or force merge.\n4. **Merge only an exact green reviewed head to protected `main`.** The version-authority push may then auto-dispatch the existing signed Internal updater workflow for that exact protected-main SHA.\n5. **Require the signed workflow to finish cleanly.** Verify exact PR-tree/main-tree identity, signed MSI/updater artifacts, install/runtime/authenticated UI evidence, hashes/manifest and release publication. No manually substituted artifact.\n6. **Founder installs the exact signed Internal.17 checkpoint.** Re-run explicit visual accept/reject for RTL, themes, motion, charts, Inbox and AI Agents. These six classes are not closed by browser automation or machine-installed harness evidence.\n7. **Keep customer/user-ready boundaries separate.** #226 and #230 remain their own representative performance/network obligations; FD-036 is Founder/internal-lab only and grants no Beta/Stable/customer-online authority.\n\n'''
           p.write_text(text[:start] + replacement + text[end:])
-
-          # Temporary helper must not survive in the reviewed release tree.
-          Path('.github/workflows/internal17-authority-sync.yml').unlink()
           PY
 
       - name: Verify deterministic synchronization
@@ -212,18 +211,17 @@ jobs:
           grep -F 'version = "1.0.0-internal.17"' src-tauri/Cargo.lock
           grep -F 'Internal.17/FD-036' scripts/sf-version.ts
           grep -F 'Some("1.0.0-internal.17"), Some("FD-036")' src-tauri/build.rs
-          grep -F "FD-036/Internal.17" .github/workflows/release.yml
+          grep -F "FD-036/Internal.17" internal17-release-workflow.generated.yml
           grep -F 'FD-036' src/lib/license/__tests__/license-production-boundary.test.ts
           grep -F 'FD-036' documentation/README.md
           grep -F 'FD-036' documentation/operations/WORKING_MEMORY.md
-          test ! -e .github/workflows/internal17-authority-sync.yml
 
-      - name: Commit synchronized release authority
+      - name: Commit staged authority files
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add src-tauri/Cargo.lock scripts/sf-version.ts src-tauri/build.rs src/lib/license/__tests__/license-production-boundary.test.ts scripts/verify-current-frontier.ts documentation/README.md documentation/operations/WORKING_MEMORY.md internal17-release-workflow.generated.yml
           git diff --cached --check
           git commit -m 'release: synchronize Internal.17 Founder authority'
           git push origin HEAD:agent/internal-17-founder-offline-checkpoint
