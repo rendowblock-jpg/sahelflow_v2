@@ -19,6 +19,7 @@ import {
   type ChartHeight,
   useGradientId,
 } from "./chart-primitives";
+import { useChartMotion } from "./chart-motion";
 
 interface DualBarChartProps {
   data: Array<{ month: string; revenue: number; expenses: number }>;
@@ -34,6 +35,7 @@ export function DualBarChart({
   height = DEFAULT_CHART_HEIGHT,
 }: DualBarChartProps) {
   const { dir, locale } = useI18n();
+  const { isAnimationActive, baseDuration } = useChartMotion();
   const isRtl = dir === "rtl";
   const chartHeight = normalizeChartHeight(height);
   const revenueGradientId = useGradientId("revenue");
@@ -59,7 +61,7 @@ export function DualBarChart({
         <BarChart
           data={data}
           barGap={6}
-          barCategoryGap="20%"
+          barCategoryGap="22%"
           margin={{
             left: isRtl ? 14 : 6,
             right: isRtl ? 6 : 14,
@@ -84,7 +86,7 @@ export function DualBarChart({
               <stop
                 offset="100%"
                 stopColor={CHART_COLORS.chart4}
-                stopOpacity={0.68}
+                stopOpacity={0.70}
               />
             </linearGradient>
             <linearGradient
@@ -102,59 +104,56 @@ export function DualBarChart({
               <stop
                 offset="100%"
                 stopColor={CHART_COLORS.chart3}
-                stopOpacity={0.68}
+                stopOpacity={0.70}
               />
             </linearGradient>
           </defs>
-          <CartesianGrid
-            strokeDasharray="3 5"
-            vertical={false}
-            className="stroke-border/60"
-          />
+          <CartesianGrid vertical={false} />
           <XAxis
             dataKey="month"
             tickLine={false}
             axisLine={false}
-            dy={6}
+            dy={8}
             reversed={isRtl}
-            tick={{ fill: "var(--muted-foreground)", fontSize: 13 }}
+            tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
           />
           <YAxis
             tickFormatter={(value: number) => axisFormatter.format(value)}
             tickLine={false}
             axisLine={false}
-            width={54}
+            width={60}
             domain={[0, yMax]}
             orientation={isRtl ? "right" : "left"}
-            tick={{ fill: "var(--muted-foreground)", fontSize: 13 }}
+            tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
           />
           <Tooltip
             formatter={(value: number) => (
-              <bdi dir="ltr" className="numeric-value">
+              <bdi dir="auto" className="numeric-value">
                 {formatDZD(value, locale)}
               </bdi>
             )}
-            cursor={{ fill: "oklch(from var(--muted) l c h / 0.35)" }}
+            cursor={{ fill: "var(--muted)", opacity: 0.26 }}
             wrapperStyle={{
               direction: isRtl ? "rtl" : "ltr",
               textAlign: isRtl ? "right" : "left",
               unicodeBidi: "isolate",
             }}
             contentStyle={{
-              borderRadius: "12px",
+              borderRadius: "10px",
               border: "1px solid var(--border)",
-              background: "var(--popover)",
+              background: "color-mix(in oklch, var(--popover) 94%, transparent)",
               boxShadow: "var(--shadow-popover)",
-              fontSize: "14px",
-              padding: "10px 12px",
+              fontSize: "13px",
+              padding: "9px 11px",
+              backdropFilter: "blur(14px)",
             }}
           />
           <Legend
             iconType="circle"
-            iconSize={8}
+            iconSize={7}
             wrapperStyle={{
-              fontSize: "13px",
-              paddingTop: "10px",
+              fontSize: "12px",
+              paddingTop: "12px",
               direction: isRtl ? "rtl" : "ltr",
             }}
           />
@@ -163,14 +162,20 @@ export function DualBarChart({
             fill={`url(#${revenueGradientId})`}
             radius={[6, 6, 2, 2]}
             name={revenueLabel}
-            maxBarSize={44}
+            maxBarSize={42}
+            isAnimationActive={isAnimationActive}
+            animationDuration={baseDuration}
+            animationEasing="ease-out"
           />
           <Bar
             dataKey="expenses"
             fill={`url(#${expenseGradientId})`}
             radius={[6, 6, 2, 2]}
             name={expensesLabel}
-            maxBarSize={44}
+            maxBarSize={42}
+            isAnimationActive={isAnimationActive}
+            animationDuration={baseDuration}
+            animationEasing="ease-out"
           />
         </BarChart>
       </ResponsiveContainer>
