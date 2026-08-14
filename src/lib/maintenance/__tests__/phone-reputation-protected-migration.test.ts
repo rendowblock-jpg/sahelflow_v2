@@ -98,4 +98,54 @@ describe("phone reputation protected migration", () => {
 
     expect(findRows).not.toHaveBeenCalled();
   });
+
+  it("coalesces concurrent apply callers onto one in-flight migration", async () => {
+    const { prisma, findMarker, findRows, upsertMarker } = fakePrisma();
+    let releaseMarker!: () => void;
+    const markerGate = new Promise<void>((resolve) => {
+      releaseMarker = resolve;
+    });
+    findMarker.mockImplementation(async () => {
+      await markerGate;
+      return null;
+    });
+
+    const options = {
+      mode: "apply" as const,
+      shopContext: TEST_SHOP_CONTEXT,
+      installationRoot: ROOT,
+    };
+    const first = migratePhoneReputationBlindIndexes(prisma, options);
+    const second = migratePhoneReputationBlindIndexes(prisma, options);
+
+    expect(findMarker).toHaveBeenCalledOnce();
+    releaseMarker();
+
+    await expect(Promise.all([first, second])).resolves.toEqual([0, 0]);
+    expect(findMarker).toHaveBeenCalledOnce();
+    expect(findRows).toHaveBeenCalledOnce();
+    expect(upsertMarker).toHaveBeenCalledOnce();
+  });
+
+  it("clears failed in-flight apply work so readiness can retry", async () => {
+    const { prisma, findMarker, findRows } = fakePrisma({
+      marker: { value: "canonical-shop-blind-index-v1" },
+    });
+    findMarker.mockRejectedValueOnce(new Error("temporary database stall"));
+
+    const options = {
+      mode: "apply" as const,
+      shopContext: TEST_SHOP_CONTEXT,
+      installationRoot: ROOT,
+    };
+    await expect(
+      migratePhoneReputationBlindIndexes(prisma, options),
+    ).rejects.toThrow("temporary database stall");
+    await expect(
+      migratePhoneReputationBlindIndexes(prisma, options),
+    ).resolves.toBe(0);
+
+    expect(findMarker).toHaveBeenCalledTimes(2);
+    expect(findRows).not.toHaveBeenCalled();
+  });
 });

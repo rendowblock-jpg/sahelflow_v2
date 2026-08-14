@@ -27,6 +27,14 @@ export interface PhoneReputationProtectedMigrationOptions {
   installationRoot: Buffer;
 }
 
+// Native readiness can retry after its bounded socket read expires while the
+// first request is still completing this one-time migration. Coalesce apply
+// work per Prisma client so those retries join the existing migration instead
+// of repeating expensive protected-data recovery against the same SQLite DB.
+// The entry is removed after both success and failure: the durable DB marker is
+// the completion authority, while failures remain retryable.
+const applyMigrationInFlight = new WeakMap<PrismaClient, Promise<number>>();
+
 function normalizePhone(phone: string): string {
   return phone.replace(/\s+/g, "").trim().toLowerCase();
 }
@@ -167,15 +175,7 @@ function recoverAlgerianMobileFromLegacyHash(
   return null;
 }
 
-/**
- * Converge the legacy PhoneReputation installation-root HMACs to the same
- * independently rewrapped per-shop blind-index authority used by Phase 4.
- *
- * The whole reputation rewrite plus its marker is one SQLite transaction, so
- * interruption cannot leave a mixed generation. The marker is written only
- * after every legacy row has a recoverable source phone and a canonical hash.
- */
-export async function migratePhoneReputationBlindIndexes(
+async function migratePhoneReputationBlindIndexesUnchecked(
   prisma: PrismaClient,
   options: PhoneReputationProtectedMigrationOptions,
 ): Promise<number> {
@@ -270,4 +270,36 @@ export async function migratePhoneReputationBlindIndexes(
   });
 
   return targets.length;
+}
+
+/**
+ * Converge the legacy PhoneReputation installation-root HMACs to the same
+ * independently rewrapped per-shop blind-index authority used by Phase 4.
+ *
+ * The whole reputation rewrite plus its marker is one SQLite transaction, so
+ * interruption cannot leave a mixed generation. The marker is written only
+ * after every legacy row has a recoverable source phone and a canonical hash.
+ * Concurrent apply callers share the same in-flight work for a given Prisma
+ * client, preventing native readiness retries from multiplying first-run work.
+ */
+export async function migratePhoneReputationBlindIndexes(
+  prisma: PrismaClient,
+  options: PhoneReputationProtectedMigrationOptions,
+): Promise<number> {
+  if (options.mode === "verify") {
+    return migratePhoneReputationBlindIndexesUnchecked(prisma, options);
+  }
+
+  const existing = applyMigrationInFlight.get(prisma);
+  if (existing) return existing;
+
+  const migration = migratePhoneReputationBlindIndexesUnchecked(prisma, options);
+  applyMigrationInFlight.set(prisma, migration);
+  try {
+    return await migration;
+  } finally {
+    if (applyMigrationInFlight.get(prisma) === migration) {
+      applyMigrationInFlight.delete(prisma);
+    }
+  }
 }
