@@ -1,8 +1,9 @@
-import type { ImgHTMLAttributes } from "react";
+import Image from "next/image";
+import type { ComponentProps } from "react";
 
 type SahelFlowMarkProps = Omit<
-  ImgHTMLAttributes<HTMLImageElement>,
-  "src" | "alt"
+  ComponentProps<typeof Image>,
+  "src" | "alt" | "width" | "height"
 > & {
   accessibleTitle?: string;
 };
@@ -20,9 +21,11 @@ export function SahelFlowMark({
   ...props
 }: SahelFlowMarkProps) {
   return (
-    <img
+    <Image
       src="/icons/sahelflow-mark.png"
       alt={accessibleTitle ?? ""}
+      width={512}
+      height={512}
       draggable={draggable}
       {...props}
     />
