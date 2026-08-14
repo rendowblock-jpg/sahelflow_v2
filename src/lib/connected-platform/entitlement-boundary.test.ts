@@ -71,6 +71,7 @@ describe("connected entitlement and quota boundaries", () => {
     const client = source("src/lib/connected-platform/client.ts");
     const cloud = source("src/lib/connected-platform/cloud-backup.ts");
     const createRoute = source("src/app/api/backup/create/route.ts");
+    const listRoute = source("src/app/api/backup/list/route.ts");
     const restoreRoute = source("src/app/api/backup/restore/route.ts");
     const deleteRoute = source("src/app/api/backup/[filename]/route.ts");
     for (const method of [
@@ -85,6 +86,9 @@ describe("connected entitlement and quota boundaries", () => {
     expect(client).toContain("X-SahelFlow-SHA256");
     expect(cloud).toContain("canonicalBackupVerificationBytes");
     expect(createRoute).toContain("uploadNativeBackupToCloudIfEnrolled");
+    expect(createRoute).toContain('cloudState = "unavailable"');
+    expect(listRoute).toContain('cloudState = "unavailable"');
+    expect(listRoute).toContain("listCloudBackupsIfEnrolled");
     expect(restoreRoute).toContain("stageCloudBackupForNativeRestoreIfNeeded");
     expect(deleteRoute).toContain("deleteCloudBackupIfEnrolled");
   });

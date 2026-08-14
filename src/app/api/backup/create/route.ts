@@ -16,11 +16,21 @@ export const POST = withErrorHandler(async () => {
   const entitlement = await requireLicenseEntitlement("sahelflow.backup", shopContext);
   const result = await createBackup();
   const context = { prisma: db, shop: shopContext };
-  const cloudBackup = await uploadNativeBackupToCloudIfEnrolled(
-    context,
-    result,
-    entitlement.type ?? "trial",
-  );
+  let cloudBackup: Awaited<ReturnType<typeof uploadNativeBackupToCloudIfEnrolled>> = null;
+  let cloudState: "verified" | "not_enrolled" | "unavailable" = "not_enrolled";
+  try {
+    cloudBackup = await uploadNativeBackupToCloudIfEnrolled(
+      context,
+      result,
+      entitlement.type ?? "trial",
+    );
+    if (cloudBackup) cloudState = "verified";
+  } catch {
+    // The native encrypted backup is already durable. Report cloud degradation
+    // explicitly without turning a successful local backup into a failed request
+    // that encourages duplicate retries.
+    cloudState = "unavailable";
+  }
   await logAudit(
     { prisma: db, shop: shopContext },
     {
@@ -34,11 +44,11 @@ export const POST = withErrorHandler(async () => {
         containerBytes: result.containerBytes,
         verifiedAtUnixMs: result.verifiedAtUnixMs,
         independentRecoveryReady: result.independentRecoveryReady,
-        cloudState: cloudBackup?.state ?? "not_enrolled",
+        cloudState,
       },
     },
   );
-  return NextResponse.json({ ...result, cloudBackup }, {
+  return NextResponse.json({ ...result, cloudBackup, cloudState }, {
     status: 201,
     headers: { "Cache-Control": "no-store" },
   });
