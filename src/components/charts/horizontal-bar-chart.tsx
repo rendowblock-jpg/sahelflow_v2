@@ -15,6 +15,7 @@ import {
   type ChartFormatter,
   type ChartHeight,
 } from "./chart-primitives";
+import { useChartMotion } from "./chart-motion";
 
 export interface HBarDatum {
   key: string;
@@ -31,6 +32,10 @@ interface HorizontalBarChartProps {
   emptyMessage?: string;
 }
 
+function compactCategoryLabel(value: string): string {
+  return value.length > 23 ? `${value.slice(0, 22).trimEnd()}…` : value;
+}
+
 export function HorizontalBarChart({
   data,
   config,
@@ -39,6 +44,7 @@ export function HorizontalBarChart({
   emptyMessage,
 }: HorizontalBarChartProps) {
   const { dir, t, locale } = useI18n();
+  const { isAnimationActive, baseDuration } = useChartMotion();
   const isRtl = dir === "rtl";
   const chartHeight = normalizeChartHeight(height);
   const fmt = resolveFormatter(formatValue, locale);
@@ -54,7 +60,14 @@ export function HorizontalBarChart({
     );
   }
 
-  const maxLabelLen = Math.max(...data.map((entry) => entry.label.length), 4);
+  const maxVisibleLabelLength = Math.max(
+    ...data.map((entry) => compactCategoryLabel(entry.label).length),
+    4,
+  );
+  const categoryWidth = Math.min(
+    Math.max(maxVisibleLabelLength * 6.5 + 12, 84),
+    164,
+  );
 
   return (
     <ChartContainer
@@ -68,25 +81,27 @@ export function HorizontalBarChart({
         data={data}
         layout="vertical"
         margin={{
-          left: isRtl ? 36 : 4,
-          right: isRtl ? 4 : 36,
-          top: 4,
-          bottom: 4,
+          left: isRtl ? 44 : 6,
+          right: isRtl ? 6 : 44,
+          top: 6,
+          bottom: 6,
         }}
-        barCategoryGap={8}
+        barCategoryGap={10}
       >
-        <XAxis type="number" hide />
+        <XAxis type="number" hide reversed={isRtl} domain={[0, "dataMax"]} />
         <YAxis
           type="category"
           dataKey="label"
           tickLine={false}
           axisLine={false}
-          width={Math.min(maxLabelLen * 7 + 8, 120)}
+          width={categoryWidth}
           className="text-xs fill-muted-foreground"
           orientation={isRtl ? "right" : "left"}
+          tickFormatter={compactCategoryLabel}
+          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
         <ChartTooltip
-          cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+          cursor={{ fill: "var(--muted)", opacity: 0.26 }}
           content={
             <ChartTooltipContent
               nameKey="key"
@@ -101,10 +116,11 @@ export function HorizontalBarChart({
         />
         <Bar
           dataKey="value"
-          radius={isRtl ? [4, 0, 0, 4] : [0, 4, 4, 0]}
-          maxBarSize={22}
-          isAnimationActive
-          animationDuration={600}
+          radius={isRtl ? [5, 1, 1, 5] : [1, 5, 5, 1]}
+          maxBarSize={20}
+          isAnimationActive={isAnimationActive}
+          animationDuration={baseDuration}
+          animationEasing="ease-out"
         >
           {data.map((entry) => (
             <Cell
