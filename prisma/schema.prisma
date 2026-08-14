@@ -558,6 +558,15 @@ model StorefrontConfig {
   // JSON: { phone, whatsapp, email, address }
   contact     String?
   isActive    Boolean  @default(true)
+  // Private Studio autosave authority. Public storefronts keep reading the
+  // live fields above until an explicit compare-and-set publish copies these.
+  draftName        String?
+  draftSlug        String?
+  draftDescription String?
+  draftTheme       String?
+  draftProductIds  String?
+  draftIsActive    Boolean?
+  draftUpdatedAt   DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

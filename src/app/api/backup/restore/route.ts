@@ -5,6 +5,7 @@ import { logAudit } from "@/lib/audit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
 import { restoreBackup } from "@/lib/backup";
+import { stageCloudBackupForNativeRestoreIfNeeded } from "@/lib/connected-platform/cloud-backup";
 import { db, shopContext } from "@/lib/db";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 
@@ -25,6 +26,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   ]);
   await requireRecentReauthentication();
   const input = restoreSchema.parse(await req.json());
+  const cloudStage = await stageCloudBackupForNativeRestoreIfNeeded(
+    { prisma: db, shop: shopContext },
+    input.backupId,
+  );
   const result = await restoreBackup(input.backupId, input.recoveryCode);
 
   // Recovery codes and filesystem paths are deliberately excluded from audit.
@@ -41,6 +46,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         sourceWorkspaceId: result.sourceWorkspaceId,
         sourceShopCount: result.sourceShopCount,
         restartRequired: result.restartRequired,
+        cloudStaged: cloudStage?.staged ?? false,
       },
     },
   );

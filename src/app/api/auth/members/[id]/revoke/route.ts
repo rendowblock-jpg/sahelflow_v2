@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireRecentReauthentication } from "@/lib/auth/server";
+import { loadConnectedRuntimeIfEnrolled } from "@/lib/connected-platform/runtime";
+import { db } from "@/lib/db";
 import {
   requireTrustedAction,
   trustedActorAuditIdentity,
@@ -32,7 +34,21 @@ export const POST = withErrorHandler(
       shop: context.shop,
       auditActor: trustedActorAuditIdentity(context.actor),
     });
-    return NextResponse.json(result, {
+    let connectedPolicyInvalidated = false;
+    try {
+      const runtime = await loadConnectedRuntimeIfEnrolled({ prisma: db, shop: context.shop });
+      if (runtime) {
+        const invalidated = await runtime.client.invalidateMemberCommandPolicies(
+          context.shop.workspaceId,
+          result.memberId,
+        );
+        connectedPolicyInvalidated = invalidated.status === "invalidated";
+      }
+    } catch {
+      // Local authority is already revoked. Cloud policy expires fail-closed and
+      // desktop execution revalidates the durable member before any command.
+    }
+    return NextResponse.json({ ...result, connectedPolicyInvalidated }, {
       headers: { "Cache-Control": "no-store" },
     });
   },

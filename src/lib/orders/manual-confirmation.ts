@@ -16,7 +16,11 @@ import type {
 import type { BusinessPrincipalContext } from "@/lib/business-truth/principal";
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { sealBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
-import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { consumeStorefrontDelegation } from "@/lib/connected-platform/storefront-delegation";
+import {
+  isTrustedManualOrderAuthority,
+  readCanonicalSourceOrderAuthority,
+} from "@/lib/orders/manual-order-authority";
 import { redactPii } from "@/lib/redact-pii";
 import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
 
@@ -68,6 +72,21 @@ export interface LowStockProduct {
   name: string;
   stock: number;
   lowStockThreshold: number;
+}
+
+function hostedDelegationReleaseId(
+  source: unknown,
+  sourceMetadata: unknown,
+): string | null {
+  const authority = readCanonicalSourceOrderAuthority(source, sourceMetadata);
+  if (authority?.source !== "storefront") return null;
+  const details = authority.sourceDetails;
+  if (
+    details?.hostedDelegationAuthority !== "v1" ||
+    typeof details.hostedReleaseId !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/.test(details.hostedReleaseId)
+  ) return null;
+  return details.hostedReleaseId;
 }
 
 async function reserveOrderItem(
@@ -285,6 +304,34 @@ export async function executeManualOrderDecision(
       const reservations: OpenReservationFact[] = [];
       const inventoryMovements: InventoryMovementFact[] = [];
       const initialProductStock = new Map<string, number>();
+      const hostedReleaseId = hostedDelegationReleaseId(
+        order.source,
+        order.sourceMetadata,
+      );
+      if (hostedReleaseId) {
+        const delegatedItems = order.items.map((item) => {
+          if (!item.productId) {
+            throw new ValidationError(
+              `Hosted storefront order item '${item.id}' lost its product authority`,
+              "items.productId",
+            );
+          }
+          return {
+            productId: item.productId,
+            productVariantId: item.productVariantId,
+            quantity: item.quantity,
+          };
+        });
+        inventoryMovements.push(...await consumeStorefrontDelegation(
+          tx,
+          commandId,
+          {
+            releaseId: hostedReleaseId,
+            items: delegatedItems,
+            outcome: data.decision === "confirm" ? "confirmed" : "rejected",
+          },
+        ));
+      }
       if (data.decision === "confirm") {
         for (const item of order.items) {
           const reserved = await reserveOrderItem(
@@ -446,6 +493,7 @@ export async function executeManualOrderDecision(
             version: orderVersion,
             decisionVersion: aggregateVersion,
             reservationCount: reservations.length,
+            storefrontDelegationReleaseId: hostedReleaseId,
             lowStockEventCount: lowStockProducts.length,
           },
           metadata: {
@@ -464,6 +512,7 @@ export async function executeManualOrderDecision(
               orderVersion,
               decisionVersion: aggregateVersion,
               reservationCount: reservations.length,
+              storefrontDelegationReleaseId: hostedReleaseId,
               lowStockEventCount: lowStockProducts.length,
               rejectionReason:
                 data.decision === "reject" ? data.reason ?? null : null,

@@ -35,8 +35,7 @@ function rejectMarkers(relativePath: string, markers: readonly string[]): void {
   }
 }
 
-const protectedMain = "5a8d5e3c042abbcee001a68a7168d3c679f6e541";
-const wave1Merge = "9d69958d3dd9658ace192ccc70c9a43d5d815ee1";
+const protectedMain = "b78e3eb945d5a66a34198db8ef00df95cc9b37aa";
 const phase5Baseline = "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734";
 const publishedInternal15 = "371aebc2be3bf0abb1bbe7fe91c035d962fc86a9";
 const signedInternal15Run = "31657621918";
@@ -45,8 +44,8 @@ const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 requireMarkers("README.md", [
   "documentation/README.md",
   protectedMain,
-  "PR #248 — Internal.16 Wave 2",
   "PR #250 — Internal.16 Wave 3",
+  "PR #251 — Internal.16 Wave 4",
   publishedInternal15,
   signedInternal15Run,
   "`1.0.0-internal.15`",
@@ -69,9 +68,9 @@ requireMarkers("AGENTS.md", [
 
 requireMarkers("documentation/README.md", [
   protectedMain,
-  wave1Merge,
   "PR #250",
-  "agent/internal-16-wave-3",
+  "PR #251",
+  "agent/internal-16-wave-4",
   publishedInternal15,
   signedInternal15Run,
   activePhase,
@@ -90,20 +89,20 @@ requireMarkers("documentation/product/DECISIONS.md", [
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
   protectedMain,
-  "PR #248 — Internal.16 Wave 2",
   "PR #250 — Internal.16 Wave 3",
+  "draft PR #251",
   publishedInternal15,
   signedInternal15Run,
   activePhase,
   phase5Baseline,
-  "Wave 4 and Wave 5",
+  "Wave 5 remains dependency-ordered",
   "not yet a commercially certified Stable release",
 ]);
 
 requireMarkers("documentation/system/ROADMAP.md", [
   protectedMain,
-  "PR #248 — Internal.16 Wave 2",
   "PR #250 — Internal.16 Wave 3",
+  "draft PR #251",
   publishedInternal15,
   signedInternal15Run,
   activePhase,
@@ -114,9 +113,9 @@ requireMarkers("documentation/system/ROADMAP.md", [
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   protectedMain,
-  wave1Merge,
   "PR #250",
-  "agent/internal-16-wave-3",
+  "PR #251",
+  "agent/internal-16-wave-4",
   publishedInternal15,
   signedInternal15Run,
   activePhase,
@@ -157,6 +156,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: Waves 1–2 are protected through PR #248, PR #250 owns Wave 3, Internal.15 is the published Founder-only checkpoint, and #221/#226/#230 remain distinct open evidence obligations.",
+    "Current execution frontier verified: Waves 1–3 are protected through PR #250, draft PR #251 owns Wave 4, Internal.15 is the published Founder-only checkpoint, and #221/#226/#230 remain distinct open evidence obligations.",
   );
 }

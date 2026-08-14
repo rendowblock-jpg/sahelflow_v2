@@ -23,6 +23,7 @@ const sourceOrderItemSchema = z.object({
   productId: z.string().min(1),
   productVariantId: z.string().min(1).nullable().optional(),
   quantity: z.number().int().positive().max(999),
+  unitPrice: z.number().int().nonnegative().safe().optional(),
 });
 
 const newCustomerSchema = z.object({
@@ -66,6 +67,16 @@ export const canonicalSourceOrderSchema = z
         code: z.ZodIssueCode.custom,
         path: ["initialStatus"],
         message: "Only AI-created canonical source orders may enter as draft",
+      });
+    }
+    if (
+      value.source !== "storefront" &&
+      value.items.some((item) => item.unitPrice !== undefined)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["items"],
+        message: "Only an authoritative storefront receipt may supply historical line pricing",
       });
     }
   });
@@ -225,7 +236,9 @@ export async function createCanonicalSourceOrder(
             productName: product.name,
             productVariantName: variant.name,
             quantity: item.quantity,
-            unitPrice: variant.price ?? product.price,
+            unitPrice: data.source === "storefront" && item.unitPrice !== undefined
+              ? item.unitPrice
+              : variant.price ?? product.price,
           };
         }
 
@@ -241,7 +254,9 @@ export async function createCanonicalSourceOrder(
           productName: product.name,
           productVariantName: null,
           quantity: item.quantity,
-          unitPrice: product.price,
+          unitPrice: data.source === "storefront" && item.unitPrice !== undefined
+            ? item.unitPrice
+            : product.price,
         };
       });
 

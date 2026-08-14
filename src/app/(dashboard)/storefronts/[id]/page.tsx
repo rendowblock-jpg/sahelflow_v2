@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
+import { StorefrontReleaseHistory } from "@/components/storefront/studio/storefront-release-history";
+import { StorefrontStudio } from "@/components/storefront/studio/storefront-studio";
 import { getI18n } from "@/lib/i18n-server";
 import { storefrontService } from "@/lib/storefront/service";
-import { StorefrontBuilder } from "@/components/storefront/storefront-builder";
 import { db, shopContext } from "@/lib/db";
 import type { Metadata } from "next";
 import {
@@ -27,7 +28,7 @@ export default async function EditStorefrontPage({
   const { id } = await params;
   const { t } = await getI18n();
 
-  const config = await storefrontService.getById({ prisma: db, shop: shopContext }, id);
+  const config = await storefrontService.getStudioDraftById({ prisma: db, shop: shopContext }, id);
   if (!config) {
     notFound();
   }
@@ -54,7 +55,8 @@ export default async function EditStorefrontPage({
           {t("storefronts.editDesc")}
         </p>
       </div>
-      <StorefrontBuilder config={config} products={products} mode="edit" />
+      <StorefrontReleaseHistory storefrontId={id} />
+      <StorefrontStudio config={config} products={products} />
     </div>
   );
 }

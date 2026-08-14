@@ -3,6 +3,7 @@ import "server-only";
 export * from "./control-authority";
 
 import {
+  resolveDurableIdentityMember as resolveCoreIdentityMember,
   resolveDurableIdentityActor as resolveCoreIdentityActor,
   rotateIdentityAuthorityAuthentication as rotateCoreIdentityAuthority,
   type DurableIdentityActor as CoreIdentityActor,
@@ -11,6 +12,7 @@ import {
 import { rotateMemberAuthorityAuthentication } from "./member-authority";
 import type { Phase2Action } from "./permissions";
 import {
+  listTeamMembers,
   resolveTeamIdentityActor,
   rotateTeamDirectoryAuthentication,
   type TeamIdentityActor,
@@ -28,6 +30,32 @@ export type PublicIdentityActor =
 
 function errorCode(error: unknown): string | null {
   return error instanceof SahelFlowError ? error.code : null;
+}
+
+/** Resolve current owner/member policy without trusting a browser session. */
+export async function resolveRemoteIdentityActor(
+  memberId: string,
+  shop: ShopContext,
+): Promise<PublicIdentityActor | null> {
+  const core = await resolveCoreIdentityMember(memberId, shop);
+  if (core) return Object.freeze({ ...core, permissions: null });
+  const members = await listTeamMembers(shop);
+  const member = members.find((candidate) =>
+    candidate.memberId === memberId &&
+    candidate.revokedAt === null &&
+    candidate.shopIds.includes(shop.shopId)
+  );
+  if (!member) return null;
+  await assertTeamMemberActive(member.memberId, shop);
+  return Object.freeze({
+    personId: member.personId,
+    workspaceMemberId: member.memberId,
+    deviceId: member.deviceId,
+    role: member.role,
+    permissions: member.permissions,
+    policyVersion: member.policyVersion,
+    revocationEpoch: member.revocationEpoch,
+  });
 }
 
 /** Resolve an exact active owner or accepted-member actor from one boundary. */

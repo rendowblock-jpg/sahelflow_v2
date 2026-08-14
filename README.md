@@ -8,15 +8,15 @@ settings, licensing, multi-shop and recovery under one protected authority model
 
 ## Current repository truth
 
-- Protected `main`: `5a8d5e3c042abbcee001a68a7168d3c679f6e541` — PR #248 / Internal.16 Wave 2.
-- Latest application-changing protected merge: **PR #248 — Internal.16 Wave 2**.
+- Protected `main`: `b78e3eb945d5a66a34198db8ef00df95cc9b37aa` — PR #250 / Internal.16 Wave 3.
+- Latest application-changing protected merge: **PR #250 — Internal.16 Wave 3**.
 - Shared frontend foundation remains protected by **PR #236**.
 - Inbox route adoption remains protected by **PR #237**.
 - AI Agents route adoption remains protected by **PR #240**.
 - Settings route adoption remains protected by **PR #242**.
 - Orders + confirmation route adoption remains protected by **PR #244**.
-- Internal.16 Wave 1 is protected by **PR #247** and Wave 2 by **PR #248**.
-- Active implementation is **PR #250 — Internal.16 Wave 3 / EcoTrack + Gemini provider truth**.
+- Internal.16 Waves 1–3 are protected by **PRs #247, #248 and #250**.
+- Active implementation is draft **PR #251 — Internal.16 Wave 4 / Storefront Builder V2 + connected platform**.
 - Published executable is **Internal.15**, application source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed publication run `31657621918`.
 - Published release is **`1.0.0-internal.15`** / MSI `1.0.0.15`.
 - Founder-installed release is **Internal.15**; Founder acceptance remains open.
@@ -96,8 +96,8 @@ evidence, not installed Founder acceptance.
 ## Current implementation frontier — Internal.16 completion waves
 
 PR #245 completed and published exact `1.0.0-internal.15` as the FD-032
-Founder/internal-lab offline checkpoint. PRs #247 and #248 protect Internal.16
-Waves 1–2. PR #250 owns Wave 3 provider truth; Wave 4 owns the connected Phase 8
+Founder/internal-lab offline checkpoint. PRs #247, #248 and #250 protect Internal.16
+Waves 1–3. Draft PR #251 owns Wave 4 Storefront Builder V2 and the connected Phase 8
 platform; Wave 5 owns startup/reliability, final certification and signed update
 proof if earned.
 

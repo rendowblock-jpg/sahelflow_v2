@@ -2,9 +2,9 @@
 
 > **Authority:** merged protected source and named evidence only; Founder observations are labeled installed findings, not merged implementation
 > **Last assessed:** 2026-08-13
-> **Protected main:** `5a8d5e3c042abbcee001a68a7168d3c679f6e541` — PR #248 / Internal.16 Wave 2
-> **Latest application-changing protected merge:** PR #248 — Internal.16 Wave 2
-> **Active implementation:** PR #250 — Internal.16 Wave 3
+> **Protected main:** `b78e3eb945d5a66a34198db8ef00df95cc9b37aa` — PR #250 / Internal.16 Wave 3
+> **Latest application-changing protected merge:** PR #250 — Internal.16 Wave 3
+> **Active implementation:** draft PR #251 — Internal.16 Wave 4 Storefront Builder V2 / connected platform
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
 > **Published release:** `1.0.0-internal.15` — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
@@ -20,7 +20,7 @@ SahelFlow retains a strong protected Windows/local-first engine across Golden CO
 
 The completed installed Internal.15 Founder inspection confirms that the product is still below the final class-AAA/user-ready target. The remaining problem is systemic rather than one page: Arabic/RTL geometry, responsive/layout composition, localization/cache consistency, theme transitions, chart/data-visualization quality, Inbox/AI workflow quality, universal search, Gemini setup, navigation information architecture, startup performance and remaining Phase 5/6/7/8 implementation/certification.
 
-The installed discovery phase is closed. FD-033 makes Internal.16 the complete-product convergence candidate. Waves 1–2 are protected through PRs #247–#248; PR #250 is the active Wave 3 EcoTrack/Gemini provider-truth package. Wave 4 and Wave 5 remain dependency-ordered behind it.
+The installed discovery phase is closed. FD-033 makes Internal.16 the complete-product convergence candidate. Waves 1–3 are protected through PRs #247/#248/#250. Draft PR #251 is the active Wave 4 Storefront Builder V2 and connected-platform source package; Wave 5 remains dependency-ordered behind it.
 
 ## Protected canonical boundaries
 
@@ -106,7 +106,7 @@ FD-032 remains exact to Internal.15: Founder/internal-lab offline checkpoint, no
 
 ## Post-Internal.15 route-level frontier
 
-The installed Internal.15 inspection is closed. Internal.16 Waves 1–2 are protected and Wave 3 is active; **Phase 8 implementation remains Wave 4**, dependency-ordered after provider truth closes. FD-033 authorizes it without marking installed or external evidence complete.
+The installed Internal.15 inspection is closed. Internal.16 Waves 1–3 are protected and **Phase 8 implementation is active in draft PR #251 / Wave 4**. FD-033 authorizes it without marking branch source, hosted runtime, installed or external evidence complete.
 
 Retained exact issue status entering Internal.16:
 

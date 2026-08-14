@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { shopContext } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
+import { refreshConnectedEnrollmentIfConfigured } from "@/lib/connected-platform/runtime";
 import {
   activateSignedEntitlement,
   getLicenseAuthorityProjection,
@@ -60,6 +61,7 @@ export const POST = withErrorHandler(async () => {
     }
     throw error;
   }
+  await refreshConnectedEnrollmentIfConfigured({ prisma: db, shop: shopContext }, entitlement);
   return NextResponse.json(activated, {
     status: 200,
     headers: { "Cache-Control": "no-store" },

@@ -34,9 +34,9 @@ interface Props {
 }
 
 const TEMPLATES: { value: StorefrontTheme["template"]; labelKey: string; descKey: string }[] = [
-  { value: "minimal", labelKey: "storefront.builder.template.minimal", descKey: "storefront.builder.template.minimalDesc" },
-  { value: "modern", labelKey: "storefront.builder.template.modern", descKey: "storefront.builder.template.modernDesc" },
-  { value: "classic", labelKey: "storefront.builder.template.classic", descKey: "storefront.builder.template.classicDesc" },
+  { value: "sahara", labelKey: "storefront.builder.template.minimal", descKey: "storefront.builder.template.minimalDesc" },
+  { value: "atlas", labelKey: "storefront.builder.template.modern", descKey: "storefront.builder.template.modernDesc" },
+  { value: "oasis", labelKey: "storefront.builder.template.classic", descKey: "storefront.builder.template.classicDesc" },
 ];
 
 const PRESET_COLORS = ["#0f766e", "#b45309", "#9f1239", "#1e3a8a", "#166534", "#7c2d12"];

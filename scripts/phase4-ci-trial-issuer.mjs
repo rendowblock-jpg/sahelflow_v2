@@ -109,7 +109,10 @@ function issueTrial(request, privateKey, now = new Date()) {
     deviceLimit: 10,
     backupBytes: 50 * 1024 * 1024 * 1024,
     mediaBytes: 10 * 1024 * 1024 * 1024,
-    features: ["core"],
+    // The replacement-install evidence lane creates and restores a native
+    // survivability backup. Grant only the exact product capability exercised
+    // by that CI trial; production feature enforcement remains fail-closed.
+    features: ["core", "sahelflow.backup"],
     transferState: "active",
     transferEpoch: 0,
     recoveryEpoch: 0,

@@ -39,14 +39,14 @@ handoff system.
 
 A lower layer cannot silently weaken a higher one.
 
-## Verified product frontier after PR #244
+## Verified product frontier
 
 The following block is retained as the protected route/release evidence chain that
 FD-033 builds on. It is not the current next-session instruction.
 
 - Historical pre-Internal.16 application baseline: `856f58126327797b467938390586a04f185e70f6` — PR #244.
-- Latest application-changing protected merge: **PR #248 — Internal.16 Wave 2** at
-  `5a8d5e3c042abbcee001a68a7168d3c679f6e541`.
+- Latest application-changing protected merge: **PR #250 — Internal.16 Wave 3** at
+  `b78e3eb945d5a66a34198db8ef00df95cc9b37aa`.
 - Shared frontend foundation remains **PR #236** / `04adb20fb5846499039eda61a9b765deb9c622e6`.
 - Inbox workspace remains protected through **PR #237** / `4d5d5946e7a47e6d9bbe8c13b92c8f6b92e34400`.
 - AI Agents workspace remains protected through **PR #240** / `598e2a0dc0352227431614cf1527672aa78ec015`.
@@ -72,8 +72,8 @@ or destructive authority without verifying them.
 
 ## Current Internal.16 handoff after Internal.15
 
-- Protected `main` is `5a8d5e3c042abbcee001a68a7168d3c679f6e541`
-  through PR #248 / Internal.16 Wave 2; PR #250 is the active Wave 3 branch.
+- Protected `main` is `b78e3eb945d5a66a34198db8ef00df95cc9b37aa`
+  through PR #250 / Internal.16 Wave 3; draft PR #251 is the active Wave 4 branch.
 - Published Internal.15 source is
   `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed publication run
   `31657621918`; installed/published does not mean Founder-accepted.

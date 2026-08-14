@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sahelflow-backup",
+  "main": "worker.ts",
+  "compatibility_date": "2026-08-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sahelflow-backup",
+      "database_id": "replace-with-production-d1-id"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BACKUPS",
+      "bucket_name": "sahelflow-encrypted-backups"
+    }
+  ],
+  "vars": {
+    "PRODUCT_MAJOR": "1",
+    "SF_LICENSE_TRIAL_PUBLIC_KEYS": "{\"trial-2026-01\":\"replace-with-base64-raw-ed25519-public-key\"}",
+    "SF_LICENSE_PERMANENT_PUBLIC_KEYS": "{\"permanent-2026-01\":\"replace-with-base64-raw-ed25519-public-key\"}"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+
+  // BACKUPS contains ciphertext only. Backup DEKs are wrapped by the local
+  // per-license Backup Root Key; no plaintext backup key or seller operation
+  // is configured as a Worker secret or stored in D1/R2.
+}

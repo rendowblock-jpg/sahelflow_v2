@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireRecentReauthentication } from "@/lib/auth/server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
+import { db, shopContext } from "@/lib/db";
+import { refreshConnectedEnrollmentIfConfigured } from "@/lib/connected-platform/runtime";
 import {
   activateSignedEntitlement,
   requiresAuthenticatedEntitlementActivation,
@@ -16,6 +18,7 @@ export const POST = withErrorHandler(async (request: Request) => {
   }
 
   const activated = await activateSignedEntitlement(entitlement);
+  await refreshConnectedEnrollmentIfConfigured({ prisma: db, shop: shopContext }, entitlement);
   return NextResponse.json(activated, {
     status: 200,
     headers: { "Cache-Control": "no-store" },

@@ -5,6 +5,7 @@ import { StorefrontView } from "@/components/storefront/storefront-view";
 import { db, shopContext } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import { storefrontService } from "@/lib/storefront/service";
+import { projectPublicStorefrontConfig } from "@/lib/storefront/public-projection";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,12 @@ export async function generateMetadata({
   );
   const { t } = await getI18n();
   if (!config) return { title: t("metadata.title.storefrontNotFound") };
-  return { title: `${config.name} — SahelFlow` };
+  const seo = config.theme.builder.seo;
+  return {
+    title: seo.title.trim() || `${config.name} — SahelFlow`,
+    description: seo.description.trim() || config.description || undefined,
+    robots: seo.noIndex ? { index: false, follow: false } : undefined,
+  };
 }
 
 export default async function StorefrontPage({
@@ -65,5 +71,5 @@ export default async function StorefrontPage({
         })
       : [];
 
-  return <StorefrontView config={config} products={products} />;
+  return <StorefrontView config={projectPublicStorefrontConfig(config)} products={products} />;
 }
