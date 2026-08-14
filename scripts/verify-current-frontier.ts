@@ -42,7 +42,11 @@ const publishedInternal15 = "371aebc2be3bf0abb1bbe7fe91c035d962fc86a9";
 const signedInternal15Run = "31657621918";
 const protectedInternal17Correction = "c33f234ecf43842cfcc801592cc601d595ed05c5";
 const reviewedInternal17Correction = "c965a062cf2719078601374bd0ace771ca011d53";
-const activeReleaseBranch = "agent/internal-17-founder-offline-final";
+const protectedInternal17ReleaseAuthority = "2a820b801786590a20dc6105f39f732b8a987c5f";
+const blockedSignedInternal17Run = "31840181436";
+const releaseHygieneProtectedBase = "c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9";
+const activeReleaseBranch = "agent/internal-17-signed-publication-request";
+const activeReleaseRequestPath = ".github/release-requests/internal-17-publication-retry.json";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 
 requireMarkers("sahelflow.version.json", [
@@ -59,11 +63,25 @@ requireMarkers("scripts/sf-version.ts", [
   "Internal.15/FD-032, Internal.16/FD-034, or Internal.17/FD-036",
 ]);
 
+requireMarkers(activeReleaseRequestPath, [
+  '"version": "1.0.0-internal.17"',
+  '"windowsMsiVersion": "1.0.0.17"',
+  `"candidateBaseCommit": "${releaseHygieneProtectedBase}"`,
+  '"publication": "founder-only-offline-internal"',
+  "FD-036 exact version-bound founder-offline-only authority",
+  "six canonical Tauri icon outputs",
+]);
+
 requireMarkers("README.md", [
+  releaseHygieneProtectedBase,
   protectedInternal17Correction,
   reviewedInternal17Correction,
+  protectedInternal17ReleaseAuthority,
+  blockedSignedInternal17Run,
   activeReleaseBranch,
-  "PR #257",
+  "PR #259",
+  activeReleaseRequestPath,
+  "resulting protected-main merge SHA",
   "1.0.0-internal.17",
   "1.0.0.17",
   "FD-036",
@@ -82,8 +100,12 @@ requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   protectedInternal17Correction,
   reviewedInternal17Correction,
+  protectedInternal17ReleaseAuthority,
+  blockedSignedInternal17Run,
+  releaseHygieneProtectedBase,
   activeReleaseBranch,
-  "PR #257",
+  "PR #259",
+  activeReleaseRequestPath,
   "1.0.0-internal.17",
   "FD-036",
   "founder-offline-only",
@@ -109,8 +131,12 @@ requireMarkers("documentation/README.md", [
   "1.0.0-internal.17",
   "1.0.0.17",
   protectedInternal17Correction,
+  protectedInternal17ReleaseAuthority,
+  blockedSignedInternal17Run,
+  releaseHygieneProtectedBase,
   activeReleaseBranch,
-  "PR #257",
+  "PR #259",
+  activeReleaseRequestPath,
   "Founder/internal-lab",
   "Issue #230 remains open P1",
   "Internal.17",
@@ -132,6 +158,12 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "1.0.0-internal.16",
   "1.0.0-internal.17",
   protectedInternal17Correction,
+  protectedInternal17ReleaseAuthority,
+  blockedSignedInternal17Run,
+  releaseHygieneProtectedBase,
+  activeReleaseBranch,
+  "PR #259",
+  activeReleaseRequestPath,
   "Wave 4 — what is implemented",
   "Exact next-session order",
 ]);
@@ -139,6 +171,12 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
 requireMarkers("documentation/system/CURRENT_STATE.md", [
   protectedInternal17Correction,
   reviewedInternal17Correction,
+  protectedInternal17ReleaseAuthority,
+  blockedSignedInternal17Run,
+  releaseHygieneProtectedBase,
+  activeReleaseBranch,
+  "PR #259",
+  activeReleaseRequestPath,
   "**Published release:** `1.0.0-internal.16` / MSI `1.0.0.16`",
   "Active release frontier:",
   "1.0.0-internal.17",
@@ -155,9 +193,15 @@ requireMarkers("documentation/system/CURRENT_STATE.md", [
 requireMarkers("documentation/system/ROADMAP.md", [
   protectedInternal17Correction,
   reviewedInternal17Correction,
+  protectedInternal17ReleaseAuthority,
+  blockedSignedInternal17Run,
+  releaseHygieneProtectedBase,
+  activeReleaseBranch,
+  "PR #259",
+  activeReleaseRequestPath,
   "**Published release:** `1.0.0-internal.16` / MSI `1.0.0.16`",
   "Active release frontier:",
-  "Internal.17 / FD-036 Founder-offline promotion",
+  "Internal.17 / FD-036 signed publication retry",
   "## Internal.17 release program — FD-036",
   "founder-offline-only",
   "Required PR gate",
@@ -169,30 +213,41 @@ requireMarkers("documentation/system/ROADMAP.md", [
 ]);
 
 rejectMarkers("README.md", [
+  "Protected `main`: `c33f234ecf43842cfcc801592cc601d595ed05c5`",
+  "Active release frontier: `agent/internal-17-founder-offline-final` / PR #257",
+  "merge only the exact reviewed PR #257 head",
   "Protected `main`: `b78e3eb945d5a66a34198db8ef00df95cc9b37aa` — PR #250 / Internal.16 Wave 3.",
   "Active implementation is draft **PR #251",
   "## Current implementation frontier — Internal.16 completion waves",
 ]);
 rejectMarkers("AGENTS.md", [
+  "Active release branch: `agent/internal-17-founder-offline-final` / PR #257",
   "## Current Internal.16 handoff after Internal.15",
   "draft PR #251 is the active Wave 4 branch",
   "## Exact next outcome — FD-033 Internal.16 completion",
 ]);
 rejectMarkers("documentation/README.md", [
+  "**Protected `main`:** `c33f234ecf43842cfcc801592cc601d595ed05c5`",
+  "**Active release frontier:** `agent/internal-17-founder-offline-final` / PR #257",
+  "**Active release branch:** `agent/internal-17-founder-offline-final` / PR #257",
   "draft PR #251",
   "Waves 1–3 are protected",
   "agent/internal-17-founder-offline-checkpoint` — exact Internal.17 / FD-036",
 ]);
 rejectMarkers("documentation/operations/WORKING_MEMORY.md", [
+  "**Protected `main`:** `c33f234ecf43842cfcc801592cc601d595ed05c5`",
+  "**Active release frontier:** `agent/internal-17-founder-offline-checkpoint`",
   "draft PR #251",
 ]);
 rejectMarkers("documentation/system/CURRENT_STATE.md", [
+  "**Protected `main`:** `c33f234ecf43842cfcc801592cc601d595ed05c5`",
   "Active correction frontier: Internal.17 frontend-system correction under temporary FD-035",
   "## Internal.17 correction frontier",
   "The next frontend correction must preserve",
   "The next application session should:",
 ]);
 rejectMarkers("documentation/system/ROADMAP.md", [
+  "**Protected `main`:** `c33f234ecf43842cfcc801592cc601d595ed05c5`",
   "Active application frontier: Internal.17 frontend-system correction",
   "## Internal.17 frontend correction program",
   "Temporary FD-035 authorizes source correction work, not a signed Internal.17 release by itself.",
@@ -213,6 +268,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: PR #254 protects the Internal.17 correction on main at c33f234ecf43842cfcc801592cc601d595ed05c5; the root README, AGENTS entry point, documentation index, system docs and FD-036 authority now agree on the exact Founder-only Internal.17 offline release frontier; signed promotion remains pending and Founder visual acceptance follows the signed installation.",
+    "Current execution frontier verified: PR #254 protects the Internal.17 correction, PR #257 protects FD-036 release authority, signed run 31840181436 stopped before publication on deterministic icon source hygiene, PR #258 protects the narrow guard correction, and PR #259 is the exact protected-main publication request whose resulting merge SHA must be signed before Founder-installed acceptance.",
   );
 }

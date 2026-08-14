@@ -2,13 +2,16 @@
 
 > **Authority:** protected source plus named release/installed evidence
 > **Last assessed:** 2026-08-14
-> **Protected `main`:** `c33f234ecf43842cfcc801592cc601d595ed05c5` — PR #254 / exact green Internal.17 frontend-system correction
+> **Release-hygiene protected base before active request:** `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9` — PR #258
+> **Protected Internal.17 application correction:** `c33f234ecf43842cfcc801592cc601d595ed05c5` — PR #254
 > **Reviewed correction head:** `c965a062cf2719078601374bd0ace771ca011d53`
+> **Protected Internal.17 release authority:** `2a820b801786590a20dc6105f39f732b8a987c5f` — PR #257 / FD-036
+> **First Internal.17 signed attempt:** run `31840181436` — signed candidate built/installed; publication stopped by deterministic icon source guard
 > **Published release:** `1.0.0-internal.16` / MSI `1.0.0.16`
 > **Signed Internal.16 run:** `31770292329`
 > **Founder-installed state:** Internal.16 installed on 2026-08-14; frontend acceptance **REJECTED**
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Active release frontier:** exact `1.0.0-internal.17` / MSI `1.0.0.17` Founder/internal-lab promotion under FD-036
+> **Active release frontier:** PR #259 / `agent/internal-17-signed-publication-request` — exact `1.0.0-internal.17` / MSI `1.0.0.17` signed publication retry under FD-036
 > **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Retained evidence:** #221, #226, #230
 
@@ -16,9 +19,15 @@ Live protected GitHub state is source authority. Installed Founder observation r
 
 ## Executive truth
 
-The broad Internal.17 frontend correction is complete at source level and protected on `main`. PR #254 reviewed head `c965a062cf2719078601374bd0ace771ca011d53` passed the exact Phase 5, Phase 6–7, source-quality, native, Windows runtime, MSI build, install/reopen, authenticated hydrated WebView UI and replacement-install backup/restore/identity/rollback gates before its identical tree was protected at `c33f234ecf43842cfcc801592cc601d595ed05c5`.
+The broad Internal.17 frontend correction is complete at source level and protected by PR #254 at `c33f234ecf43842cfcc801592cc601d595ed05c5`. Its reviewed head `c965a062cf2719078601374bd0ace771ca011d53` passed the exact Phase 5, Phase 6–7, source-quality, native, Windows runtime, MSI build, install/reopen, authenticated hydrated WebView UI and replacement-install backup/restore/identity/rollback gates before merge.
 
-Internal.16 remains the latest published updater until the Internal.17 release-authority promotion is merged and the protected signed workflow publishes the exact Internal.17 checkpoint. FD-036 authorizes that one exact Founder/internal-lab offline checkpoint only.
+FD-036 release authority was then protected by PR #257 at `2a820b801786590a20dc6105f39f732b8a987c5f`. Signed run `31840181436` reached the protected signed build, exact updater key/artifact binding, signed MSI install/reopen and authenticated hydrated WebView proof, but publication correctly stopped when the deterministic post-build source guard rejected the six tracked Tauri icon outputs regenerated from the corrected canonical mark.
+
+PR #258 repaired only that deterministic release-source guard contract and its matching test; it protected release-hygiene base `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9` without changing product/runtime behavior or widening FD-036.
+
+The current release frontier is PR #259, branch `agent/internal-17-signed-publication-request`, carrying `.github/release-requests/internal-17-publication-retry.json`. Once its exact reviewed head is green and merged, the resulting protected-main merge SHA — not `2a820...`, not `c1d0cb...`, and not an older branch head — is the signed source for the publication retry.
+
+Internal.16 remains the latest published updater until that exact protected signed workflow publishes Internal.17. FD-036 authorizes one exact Founder/internal-lab offline checkpoint only.
 
 The correction being protected does **not** close the six Founder-rejected installed experience classes. RTL, themes, motion, charts, Inbox and AI Agents still require explicit Founder accept/reject on the signed Internal.17 installation.
 
@@ -80,6 +89,10 @@ The Phase 5 application-changing protected baseline remains PR #220 at `cf6bd90d
 
 The formal Active Phase 6 frontier remains **Phase 6 — Arabic, RTL and accessibility parity**. FD-036 changes the release frontier, not the product-phase label or its acceptance standard.
 
+### Internal.17 release continuity
+
+PR #254 protected the correction at `c33f234ecf43842cfcc801592cc601d595ed05c5`. PR #257 protected FD-036 release authority at `2a820b801786590a20dc6105f39f732b8a987c5f`. Signed run `31840181436` stopped before publication on deterministic icon source hygiene. PR #258 protected the narrow guard repair at `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9`. PR #259 is the current protected publication request whose eventual merge SHA is the required signed source.
+
 ### Internal.14 publication evidence
 
 Historical Internal.14 was published from source `2d60e2e74109b6e03626a5ccdff727c029a34591` by signed run `31388777098`. This remains historical evidence only and grants no current release authority.
@@ -102,14 +115,14 @@ FD-032 remains exact to Internal.15. Internal.16 used separate FD-034 authority,
 
 ## Active release frontier — FD-036
 
-The application correction is no longer the active task. The current release order is:
+The application correction and release-authority synchronization are no longer the active tasks. The current release order is:
 
-1. keep protected correction source `c33f234ecf43842cfcc801592cc601d595ed05c5` frozen;
-2. keep one coherent Internal.17 release-authority tree with version `1.0.0-internal.17`, MSI `1.0.0.17`, FD-036 and the bounded Founder-offline exception;
-3. require the normal exact-head Phase 5, Phase 6–7, source-quality, native, Windows and MSI-installed `Required PR gate` with no force/waiver;
-4. merge only an exact green reviewed tree to protected `main`;
-5. allow the protected version-authority dispatcher to run the existing signed Internal updater workflow for that exact protected-main SHA;
-6. require the signed workflow to finish cleanly and publish the exact signed MSI/updater artifacts and hashes;
+1. keep protected PR #254 correction source, PR #257 FD-036 authority and PR #258 release-hygiene repair frozen;
+2. certify PR #259's exact current head through the normal exact-head Phase 5, Phase 6–7, source-quality, native, Windows and MSI-installed `Required PR gate` with no force/waiver;
+3. resolve every actionable review thread on that exact head;
+4. merge only that exact green reviewed PR #259 tree to protected `main`;
+5. allow the `.github/release-requests/internal-17-publication-retry.json` protected-main push to dispatch the existing signed Internal updater workflow for the resulting merge SHA;
+6. require the signed workflow to finish cleanly, pass the deterministic post-build source guard and publish the exact signed MSI/updater artifacts and hashes;
 7. install that exact signed Internal.17 Founder checkpoint;
 8. record explicit Founder accept/reject for RTL, themes, motion, charts, Inbox and AI Agents;
 9. keep #226 and #230 separate from the Founder-only release claim and satisfy them before any broader user-ready/customer-online claim.

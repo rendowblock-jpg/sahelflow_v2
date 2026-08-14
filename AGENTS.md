@@ -35,11 +35,14 @@ A lower layer cannot silently weaken a higher one.
 ## Current Internal.17 release frontier
 
 - Protected application correction: `c33f234ecf43842cfcc801592cc601d595ed05c5` — PR #254; reviewed correction head `c965a062cf2719078601374bd0ace771ca011d53` passed the exact source/browser/native/Windows/MSI-installed `Required PR gate` before protected merge.
-- Active release branch: `agent/internal-17-founder-offline-final` / PR #257.
+- Protected FD-036 release-authority merge: PR #257 at `2a820b801786590a20dc6105f39f732b8a987c5f`.
+- First exact signed Internal.17 attempt: run `31840181436`; signed build/install/UI proof completed, but publication correctly stopped when the deterministic post-build source guard rejected six tracked Tauri icon files regenerated from the corrected canonical mark.
+- Protected release-hygiene repair: PR #258 at `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9`; it changed only the deterministic release-source guard/contract and did not change product/runtime behavior or widen release authority.
+- Active release request: `agent/internal-17-signed-publication-request` / **PR #259**, carrying `.github/release-requests/internal-17-publication-retry.json`. Its exact head must be re-fetched before merge; after merge, the resulting protected-main merge SHA is the only authorized signed source.
 - Release identity: `1.0.0-internal.17` / MSI `1.0.0.17`.
 - Founder authority: FD-036, exact Founder/internal-lab checkpoint only.
 - Licensing: `founder-offline-only`, `ownedHostSuffix: null`; permanent Founder entitlement remains offline authority and the signed Founder build must not package `SF_LICENSE_SERVICE_URL`.
-- Latest published updater remains Internal.16 / MSI `1.0.0.16` until the exact protected Internal.17 authority merge triggers the signed workflow.
+- Latest published updater remains Internal.16 / MSI `1.0.0.16` until the PR #259 protected-main trigger completes the exact signed publication retry.
 - Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**.
 - The broad Internal.17 source correction is complete. Do not reopen the old Internal.16 implementation wave or repeat its root audit unless immutable current source proves a new defect.
 - Automated browser/MSI evidence is necessary but does not close Founder visual acceptance. After the signed Internal.17 install, RTL, themes, motion, charts, Inbox and AI Agents require explicit Founder accept/reject.
@@ -49,13 +52,13 @@ Always re-fetch live truth before a write. Never use copied SHAs for merge, rele
 
 ## Exact next outcome — FD-036 Internal.17 Founder checkpoint
 
-1. Keep the PR #254 application correction frozen; do not mix release-authority cleanup with new product implementation.
-2. Keep version, package/Cargo/Tauri/MSI identity, Founder installer defaults, updater key identity, native/license guards, signed workflow contracts and live documentation synchronized to Internal.17 / FD-036.
-3. Run the normal consequence-selected source/native/Windows/MSI-installed evidence on the exact release-authority head.
+1. Keep the PR #254 application correction, PR #257 FD-036 authority and PR #258 release-hygiene repair frozen; do not mix the publication retry with new product implementation.
+2. Preserve version, package/Cargo/Tauri/MSI identity, Founder installer defaults, updater key identity, native/license guards, signed workflow contracts and live documentation at Internal.17 / FD-036.
+3. Certify the exact current PR #259 head through the normal consequence-selected source/native/Windows/MSI-installed evidence.
 4. Resolve every actionable review thread. Do not paper over a valid finding.
-5. Merge only after the protected `Required PR gate` is green. No force merge, waiver or branch-protection bypass.
-6. Verify the protected-main merge/tree and let the version-authority dispatcher invoke the existing signed Internal release workflow for that exact source.
-7. Require the signed workflow to publish the exact signed MSI/updater artifacts, hashes/manifest and installed lifecycle evidence. No manually substituted artifact.
+5. Merge only after the protected `Required PR gate` and required Phase 5 / Phase 6–7 gates are green on that exact head. No force merge, waiver or branch-protection bypass.
+6. Verify the resulting protected-main merge/tree. The `.github/release-requests/internal-17-publication-retry.json` push must let the version-authority dispatcher invoke the existing signed Internal release workflow for that exact new protected-main source.
+7. Require the signed workflow to pass the deterministic source guard and publish the exact signed MSI/updater artifacts, hashes/manifest and installed lifecycle evidence. No manually substituted artifact.
 8. Founder installs the exact signed Internal.17 checkpoint and records explicit accept/reject for RTL, themes, motion, charts, Inbox and AI Agents.
 9. Keep #226 performance/reliability and #230 customer-online/network certification separate from the Founder-only Internal release claim.
 
@@ -70,6 +73,8 @@ The following anchors are historical continuity, not current-session instruction
 - Internal.16 Waves 1–4, including PR #251, are protected history; Wave 4 protected merge is `aa7dd2df53286a670fc55e319a281757cf3d28b2` from pre-merge head `73e8d8c466567859bc651bb4d77976fdb2a1bbc3`.
 - FD-033 froze **17 P1 installed acceptance classes** for Internal.16 convergence. That register remains historical/current acceptance continuity even though the source correction is now protected.
 - Internal.16 used separate FD-034 Founder-offline release authority. FD-035 authorized the later source correction only. FD-036 is the separate exact Internal.17 release authority.
+- PR #257 protected that FD-036 authority at `2a820b801786590a20dc6105f39f732b8a987c5f`; its first signed run `31840181436` stopped before publication on deterministic source hygiene.
+- PR #258 protected the narrow source-hygiene correction at `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9`.
 - Retained **issue #221** owns installed Founder visual/accessibility acceptance; #226 owns representative performance/reliability evidence; #230 owns customer-online/network evidence.
 - Use the **selected Level 1/2/3 gates** defined by the workflow according to consequence; later releases do not erase earlier exact-head proof.
 
