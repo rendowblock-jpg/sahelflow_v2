@@ -8,7 +8,9 @@
 > **Signed release run:** `31770292329`
 > **Founder-installed state:** Internal.16 installed on 2026-08-14
 > **Founder frontend acceptance:** **REJECTED**
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active correction frontier:** Internal.17 frontend-system correction under temporary FD-035
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Retained evidence:** #221, #226, #230
 
 Protected `main` remains source authority. Installed Founder observation remains necessary for user-facing quality claims. Green source/browser/Windows/release gates cannot manufacture Founder visual/UX acceptance.
@@ -81,11 +83,27 @@ The six classes above are **reconfirmed failures** from the installed Internal.1
 
 The absence of a fresh complaint about another original Internal.15 finding is not proof that it is fixed or accepted. Existing acceptance requirements remain unless objective evidence or a later Founder observation closes them. The next root audit should include consequence-selected sibling verification rather than declaring the unmentioned findings resolved.
 
-## Historical continuity
+## Historical continuity anchors
 
-The original Internal.15 Founder problem register remains the source of the current defect lineage. FD-033 authorized Internal.16 convergence and froze 17 installed P1 inputs. Internal.16 materially improved the product and completed Phase 8 connected-platform implementation, but installed Founder evidence now proves that the frontend convergence did not fully achieve the required acceptance outcome.
+### Phase 5 merged result and evidence
 
-This does **not** erase successful source/browser/Windows evidence for what those exact heads proved. It changes the higher installed/Founder-acceptance truth.
+The Phase 5 application-changing protected baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Later Internal.16 work improved the source, but installed Founder acceptance remains a higher evidence layer and is rejected on the current signed build.
+
+### Active Phase 6 frontier
+
+The formal Active product phase remains Phase 6 — Arabic, RTL and accessibility parity. Temporary FD-035 changes the active correction frontier, not the phase label or its acceptance bar.
+
+### Internal.14 publication evidence
+
+Historical Internal.14 was published from source `2d60e2e74109b6e03626a5ccdff727c029a34591` by signed run `31388777098`. This remains historical evidence only.
+
+### FD-031 exception boundary
+
+FD-031 remains a one-time Internal.14 installed-evidence exception and is not precedent for claiming the current frontend accepted. Historical issue #214 remains part of the recovery-evidence lineage even though stronger later replacement-install proof closed its original obligation.
+
+### FD-032 Founder-only offline checkpoint boundary
+
+FD-032 remains exact to Internal.15. Internal.16 used the separate FD-034 authority. Neither FD-032 nor FD-034 authorizes customer-online/public-trial distribution or a later Internal.17 release.
 
 ## Current issue truth
 
