@@ -103,7 +103,7 @@ Acceptance still means professional Arabic typography and reading flow, logical 
 
 ## Internal.17 release program — FD-036
 
-FD-035 was the temporary source-correction authority. That correction is protected. FD-036 authorizes exactly one `1.0.0-internal.17` / MSI `1.0.0.17` Founder/internal-lab checkpoint.
+FD-035 was the temporary source-correction authority. That correction is protected. FD-036 authorizes exactly one `1.0.0-internal.17` / MSI `1.0.0.17` Founder/internal-lab checkpoint. Its licensing mode remains `founder-offline-only`.
 
 PR #257 protected that release authority. The first signed attempt on source `2a820b801786590a20dc6105f39f732b8a987c5f` reached signed build/install/UI evidence in run `31840181436`, then correctly failed closed before publication because deterministic regeneration of six tracked Tauri icon outputs was not yet allowed by the post-build source guard. PR #258 repaired only that exact guard contract and protected release-hygiene base `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9`.
 

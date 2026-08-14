@@ -16,7 +16,7 @@
 
 Live GitHub is authority. Internal.16 remains the latest published updater. Internal.17 application correction and FD-036 release authority are already protected; PR #258 repaired only the deterministic release-source guard after signed run `31840181436` stopped publication on six regenerated Tauri icon outputs. The current task is PR #259 and the signed publication it must trigger from the resulting protected-main merge SHA. Do **not** reopen the completed correction broadly, and do **not** treat automated installed evidence as Founder visual/UX acceptance.
 
-Historical release continuity: the prior Founder checkpoint was Internal.15 from source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`. PR #251 merged at `aa7dd2df53286a670fc55e319a281757cf3d28b2` from exact head `73e8d8c466567859bc651bb4d77976fdb2a1bbc3`, with exact Wave 4 CI run `31765143457`. The superseded Internal.16 release-authority branch was `agent/internal-16-founder-offline-checkpoint`. These lines remain for audit/frontier continuity only and are not the current task.
+Historical release continuity: the prior Founder checkpoint was Internal.15 from source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`. Internal.16 was published under **FD-034** before the later FD-035 correction boundary and FD-036 Internal.17 release authority. PR #251 merged at `aa7dd2df53286a670fc55e319a281757cf3d28b2` from exact head `73e8d8c466567859bc651bb4d77976fdb2a1bbc3`, with exact Wave 4 CI run `31765143457`. The superseded Internal.16 release-authority branch was `agent/internal-16-founder-offline-checkpoint`. These lines remain for audit/frontier continuity only and are not the current task.
 
 ## Wave 4 — what is implemented
 
