@@ -50,7 +50,7 @@ describe("connected entitlement and quota boundaries", () => {
     const projection = source("src/lib/connected-platform/desktop-projection.ts");
     expect(schema).toContain("CREATE TABLE IF NOT EXISTS connected_command_policy");
     expect(worker).toContain("command_not_authorized");
-    expect(worker).toContain("commands.includes(envelope.messageType)");
+    expect(worker).toContain("command === envelope.messageType");
     expect(projection).toContain("remoteCommandTypesForPermissions");
     expect(projection).toContain("putCommandPolicy");
   });
@@ -65,5 +65,27 @@ describe("connected entitlement and quota boundaries", () => {
     expect(runtime).toContain("setSecret(context, CONNECTED_BACKUP_TOKEN_SECRET");
     expect(syncRoute).toContain("refreshConnectedEnrollmentIfConfigured");
     expect(trialRoute).toContain("refreshConnectedEnrollmentIfConfigured");
+  });
+
+  it("connects the complete zero-knowledge backup lifecycle to production routes", () => {
+    const client = source("src/lib/connected-platform/client.ts");
+    const cloud = source("src/lib/connected-platform/cloud-backup.ts");
+    const createRoute = source("src/app/api/backup/create/route.ts");
+    const restoreRoute = source("src/app/api/backup/restore/route.ts");
+    const deleteRoute = source("src/app/api/backup/[filename]/route.ts");
+    for (const method of [
+      "uploadBackupManifest",
+      "uploadBackupChunk",
+      "verifyBackup",
+      "getBackupRestorePlan",
+      "downloadBackupManifest",
+      "downloadBackupChunk",
+      "deleteRemoteBackup",
+    ]) expect(client).toContain(method);
+    expect(client).toContain("X-SahelFlow-SHA256");
+    expect(cloud).toContain("canonicalBackupVerificationBytes");
+    expect(createRoute).toContain("uploadNativeBackupToCloudIfEnrolled");
+    expect(restoreRoute).toContain("stageCloudBackupForNativeRestoreIfNeeded");
+    expect(deleteRoute).toContain("deleteCloudBackupIfEnrolled");
   });
 });

@@ -863,7 +863,7 @@ async function submitCommand(request: Request, environment: ConnectedWorkerEnvir
     try {
       const commands = JSON.parse(policy.allowed_commands_json) as unknown;
       allowed = Array.isArray(commands) && commands.every(isRemoteCommandType) &&
-        commands.includes(envelope.messageType);
+        commands.some((command) => command === envelope.messageType);
     } catch {
       allowed = false;
     }

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import type { ConnectedEnvelope } from "./protocol";
 
 export class ConnectedPlatformHttpError extends Error {
@@ -237,6 +238,96 @@ export class ConnectedPlatformClient {
     );
   }
 
+  private async backupBinaryRequest<T>(
+    path: string,
+    input: Readonly<{
+      method: "PUT";
+      workspaceId: string;
+      body: Uint8Array;
+    }>,
+  ): Promise<T> {
+    if (!this.options.backupToken) throw new Error("Backup authority is not enrolled");
+    if (input.body.byteLength < 1 || input.body.byteLength > 64 * 1024 * 1024) {
+      throw new RangeError("Connected backup object size is invalid");
+    }
+    const authorization = await this.options.backupToken();
+    if (authorization.length < 32 || authorization.length > 256) {
+      throw new Error("Connected platform local token authority is invalid");
+    }
+    const body = new Uint8Array(input.body.byteLength);
+    body.set(input.body);
+    let response: Response;
+    try {
+      response = await fetch(pathUrl(this.endpoints.backup, path, {
+        workspaceId: input.workspaceId,
+      }), {
+        method: input.method,
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${authorization}`,
+          "Content-Type": "application/octet-stream",
+          "Content-Length": String(body.byteLength),
+        },
+        body,
+        cache: "no-store",
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === "TimeoutError") {
+        throw new ConnectedPlatformHttpError(504, "remote_timeout");
+      }
+      throw new ConnectedPlatformHttpError(503, "remote_unavailable");
+    }
+    if (!response.ok) {
+      throw new ConnectedPlatformHttpError(response.status, await errorCode(response));
+    }
+    try { return await response.json() as T; }
+    catch { throw new ConnectedPlatformHttpError(502, "invalid_remote_response"); }
+  }
+
+  private async downloadBackupObject(
+    path: string,
+    workspaceId: string,
+    expectedBytes: number,
+    expectedSha256: string,
+  ): Promise<Uint8Array> {
+    if (!this.options.backupToken) throw new Error("Backup authority is not enrolled");
+    if (
+      !Number.isSafeInteger(expectedBytes) || expectedBytes < 1 ||
+      expectedBytes > 64 * 1024 * 1024 || !/^[0-9a-f]{64}$/.test(expectedSha256)
+    ) throw new TypeError("Connected backup download authority is invalid");
+    const authorization = await this.options.backupToken();
+    if (authorization.length < 32 || authorization.length > 256) {
+      throw new Error("Connected platform local token authority is invalid");
+    }
+    let response: Response;
+    try {
+      response = await fetch(pathUrl(this.endpoints.backup, path, { workspaceId }), {
+        headers: { Authorization: `Bearer ${authorization}`, Accept: "application/octet-stream" },
+        cache: "no-store",
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === "TimeoutError") {
+        throw new ConnectedPlatformHttpError(504, "remote_timeout");
+      }
+      throw new ConnectedPlatformHttpError(503, "remote_unavailable");
+    }
+    if (!response.ok) {
+      throw new ConnectedPlatformHttpError(response.status, await errorCode(response));
+    }
+    if (
+      response.headers.get("X-SahelFlow-SHA256") !== expectedSha256 ||
+      Number(response.headers.get("Content-Length")) !== expectedBytes
+    ) throw new ConnectedPlatformHttpError(502, "backup_integrity_mismatch");
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (
+      bytes.byteLength !== expectedBytes ||
+      createHash("sha256").update(bytes).digest("hex") !== expectedSha256
+    ) throw new ConnectedPlatformHttpError(502, "backup_integrity_mismatch");
+    return bytes;
+  }
+
   bootstrapConnected(
     entitlement: unknown,
     desktopSigningPublicKey: string,
@@ -367,9 +458,114 @@ export class ConnectedPlatformClient {
   }
 
   listBackups(workspaceId: string, limit = 50) {
-    return this.requestJson<{ backups: unknown[] }>("backup", "/v1/backups", {
+    return this.requestJson<{ backups: Array<{
+      backup_id: string;
+      shop_id: string;
+      retention_class: string;
+      manifest_sha256: string;
+      manifest_bytes: number;
+      chunk_count: number;
+      total_bytes: number;
+      state: string;
+      created_at: string;
+      verified_at: string | null;
+    }> }>("backup", "/v1/backups", {
       query: { workspaceId, limit },
       token: "backup",
     });
+  }
+
+  uploadBackupManifest(backupId: string, workspaceId: string, bytes: Uint8Array) {
+    return this.backupBinaryRequest<{ backupId: string; status: "uploaded"; replay: boolean }>(
+      `/v1/backups/${encodeURIComponent(backupId)}/manifest`,
+      { method: "PUT", workspaceId, body: bytes },
+    );
+  }
+
+  uploadBackupChunk(
+    backupId: string,
+    chunkIndex: number,
+    workspaceId: string,
+    bytes: Uint8Array,
+  ) {
+    return this.backupBinaryRequest<{
+      backupId: string;
+      chunkIndex: number;
+      status: "uploaded";
+      replay: boolean;
+    }>(`/v1/backups/${encodeURIComponent(backupId)}/chunks/${chunkIndex}`, {
+      method: "PUT",
+      workspaceId,
+      body: bytes,
+    });
+  }
+
+  verifyBackup(backupId: string, input: {
+    workspaceId: string;
+    verifiedAt: string;
+    signature: string;
+  }) {
+    return this.requestJson<{
+      backupId: string;
+      state: "verified";
+      verifiedAt: string;
+      receiptDigest?: string;
+    }>("backup", `/v1/backups/${encodeURIComponent(backupId)}/verify`, {
+      method: "POST",
+      token: "backup",
+      body: input,
+    });
+  }
+
+  getBackupRestorePlan(backupId: string, workspaceId: string) {
+    return this.requestJson<{
+      backupId: string;
+      shopId: string;
+      wrappedDek: string;
+      manifestSha256: string;
+      manifestBytes: number;
+      totalBytes: number;
+      chunks: Array<{ chunk_index: number; sha256: string; byte_size: number }>;
+    }>("backup", `/v1/backups/${encodeURIComponent(backupId)}/restore-plan`, {
+      query: { workspaceId },
+      token: "backup",
+    });
+  }
+
+  downloadBackupManifest(
+    backupId: string,
+    workspaceId: string,
+    expectedBytes: number,
+    expectedSha256: string,
+  ) {
+    return this.downloadBackupObject(
+      `/v1/backups/${encodeURIComponent(backupId)}/manifest`,
+      workspaceId,
+      expectedBytes,
+      expectedSha256,
+    );
+  }
+
+  downloadBackupChunk(
+    backupId: string,
+    chunkIndex: number,
+    workspaceId: string,
+    expectedBytes: number,
+    expectedSha256: string,
+  ) {
+    return this.downloadBackupObject(
+      `/v1/backups/${encodeURIComponent(backupId)}/chunks/${chunkIndex}`,
+      workspaceId,
+      expectedBytes,
+      expectedSha256,
+    );
+  }
+
+  deleteRemoteBackup(backupId: string, workspaceId: string) {
+    return this.requestJson<{ backupId: string; state: "deleted" }>(
+      "backup",
+      `/v1/backups/${encodeURIComponent(backupId)}`,
+      { method: "DELETE", query: { workspaceId }, token: "backup" },
+    );
   }
 }

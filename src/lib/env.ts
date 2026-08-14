@@ -146,6 +146,8 @@ export const env = {
   connectedControlOrigin: optional("SF_CONNECTED_CONTROL_ORIGIN"),
   connectedStorefrontOrigin: optional("SF_CONNECTED_STOREFRONT_ORIGIN"),
   connectedBackupOrigin: optional("SF_CONNECTED_BACKUP_ORIGIN"),
+  /** Mirrors the native survivability controller's optional backup root. */
+  backupDirectory: optional("SF_BACKUP_DIRECTORY"),
 
   // ── WhatsApp sidecar ──────────────────────────────────────────────────
   /** WhatsApp sidecar base URL (Baileys, default :3001) */

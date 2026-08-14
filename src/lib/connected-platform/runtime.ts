@@ -81,6 +81,32 @@ async function ensureConnectedDesktopKeys(context: ServiceContext): Promise<Conn
   return parseDesktopKeys(winner);
 }
 
+export async function loadBackupRuntimeIfEnrolled(
+  context: ServiceContext,
+): Promise<Readonly<{
+  client: ConnectedPlatformClient;
+  desktopKeys: ConnectedDesktopKeys;
+}> | null> {
+  const serviceEndpoints = configuredEndpoints();
+  if (!serviceEndpoints) return null;
+  const [controlToken, backupToken, desktopKeysValue] = await Promise.all([
+    getSecret(context, CONNECTED_CONTROL_TOKEN_SECRET),
+    getSecret(context, CONNECTED_BACKUP_TOKEN_SECRET),
+    getSecret(context, CONNECTED_DESKTOP_KEYS_SECRET),
+  ]);
+  if (!backupToken || !desktopKeysValue) return null;
+  const desktopKeys = parseDesktopKeys(desktopKeysValue);
+  return Object.freeze({
+    client: new ConnectedPlatformClient({
+      endpoints: serviceEndpoints,
+      controlToken: async () => controlToken ?? backupToken,
+      backupToken: async () => backupToken,
+      timeoutMs: 60_000,
+    }),
+    desktopKeys,
+  });
+}
+
 export async function refreshConnectedEnrollmentIfConfigured(
   context: ServiceContext,
   rawEntitlement: unknown,

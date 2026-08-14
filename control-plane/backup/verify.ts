@@ -2,32 +2,14 @@ import { authenticateBackupWorkspace, json } from "./auth";
 import { sha256Hex, verifyEd25519 } from "./crypto";
 import { loadBackup, objectMatches } from "./r2-integrity";
 import type { BackupWorkerEnvironment } from "./types";
+import {
+  CLOUD_BACKUP_VERIFICATION_DOMAIN,
+  canonicalBackupVerificationBytes,
+} from "../../src/lib/connected-platform/backup-protocol";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
 const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
-const VERIFICATION_DOMAIN = "sahelflow.cloud-backup.verification.v1";
 const RECEIPT_CLOCK_SKEW_MS = 10 * 60 * 1000;
-
-function canonicalVerificationBytes(input: {
-  workspaceId: string;
-  shopId: string;
-  backupId: string;
-  manifestSha256: string;
-  totalBytes: number;
-  chunkCount: number;
-  verifiedAt: string;
-}): Uint8Array {
-  return new TextEncoder().encode(JSON.stringify([
-    VERIFICATION_DOMAIN,
-    input.workspaceId,
-    input.shopId,
-    input.backupId,
-    input.manifestSha256,
-    input.totalBytes,
-    input.chunkCount,
-    input.verifiedAt,
-  ]));
-}
 
 export async function verifyBackup(
   request: Request,
@@ -90,7 +72,7 @@ export async function verifyBackup(
     return json({ error: "manifest_remote_verification_failed" }, 409);
   }
 
-  const canonical = canonicalVerificationBytes({
+  const canonical = canonicalBackupVerificationBytes({
     workspaceId,
     shopId: backup.shop_id,
     backupId,
@@ -112,7 +94,7 @@ export async function verifyBackup(
   if (!signatureValid) return json({ error: "verification_receipt_rejected" }, 403);
 
   const receiptDigest = await sha256Hex(JSON.stringify([
-    VERIFICATION_DOMAIN,
+    CLOUD_BACKUP_VERIFICATION_DOMAIN,
     workspaceId,
     backup.shop_id,
     backupId,
