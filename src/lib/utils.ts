@@ -16,7 +16,7 @@ const LOCALE_MAP: Record<SupportedLocale, string> = {
 const DZD_SUFFIX: Record<SupportedLocale, string> = {
   ar: " دج",
   fr: " DA",
-  en: " DZD",
+  en: " DA",
 };
 
 function supportedLocale(locale: string): SupportedLocale {
