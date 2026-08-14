@@ -169,16 +169,6 @@ async function selectLocale(
   await option.click();
 }
 
-function waitForAccountingDocument(page: Page) {
-  return page.waitForRequest((request) => {
-    const requestUrl = new URL(request.url());
-    return (
-      request.resourceType() === "document" &&
-      requestUrl.pathname === "/accounting"
-    );
-  });
-}
-
 test.describe.serial("Phase 5 desktop experience evidence", () => {
   // Representative experience evidence is not an authentication stress test. Log
   // in once against the rich seeded database and reuse the authenticated cookies
@@ -292,7 +282,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     }
   });
 
-  test("live locale switching commits server copy, document direction and shell edge atomically", async ({
+  test("live locale switching commits server copy, document direction and shell edge atomically without restarting the document", async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -304,6 +294,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     const shell = page.locator('[data-sahelflow-shell="desktop"]');
     const desktopSidebar = page.locator('aside[data-navigation-density]').first();
     const pageHeading = page.getByRole("heading", { level: 1 });
+    const originalTimeOrigin = await page.evaluate(() => performance.timeOrigin);
 
     await expect(html).toHaveAttribute("lang", "fr");
     await expect(html).toHaveAttribute("dir", "ltr");
@@ -312,46 +303,36 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await expect(pageHeading).toHaveText("Comptabilité");
     await assertDesktopSidebarEdge(page, "ltr");
 
-    // The source contract proves there is no optimistic client-side locale or
-    // direction mutation. Here the rendered evidence proves that the interaction
-    // performs a top-level document request and that the returned server-confirmed
-    // document commits language, direction, translated copy, and shell geometry
-    // together. Avoid pausing a live navigation: Playwright deliberately serializes
-    // DOM reads behind a pending document commit, which cannot observe an old frame.
-    const arabicDocumentRequest = waitForAccountingDocument(page);
     await selectLocale(page, "Français", "العربية");
-    await arabicDocumentRequest;
-    await waitForHydration(page);
     await expect(html).toHaveAttribute("lang", "ar");
     await expect(html).toHaveAttribute("dir", "rtl");
     await expect(shell).toHaveAttribute("dir", "rtl");
     await expect(desktopSidebar).toContainText("لوحة التحكم");
     await expect(pageHeading).toHaveText("المحاسبة");
+    await expect(html).not.toHaveAttribute("data-locale-transition", "pending");
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(originalTimeOrigin);
     await assertDesktopSidebarEdge(page, "rtl");
 
-    const englishDocumentRequest = waitForAccountingDocument(page);
     await selectLocale(page, "العربية", "English");
-    await englishDocumentRequest;
-    await waitForHydration(page);
     await expect(html).toHaveAttribute("lang", "en");
     await expect(html).toHaveAttribute("dir", "ltr");
     await expect(shell).toHaveAttribute("dir", "ltr");
     await expect(desktopSidebar).toContainText("Dashboard");
     await expect(pageHeading).toHaveText("Accounting");
+    await expect(html).not.toHaveAttribute("data-locale-transition", "pending");
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(originalTimeOrigin);
     await assertDesktopSidebarEdge(page, "ltr");
 
-    // Repeat the direction flip once more. The installed Internal.14 failure could
-    // leave the sidebar stuck on the previous edge only after switching back and
-    // forth, so a single cold Arabic boot would not protect this regression.
-    const secondArabicDocumentRequest = waitForAccountingDocument(page);
+    // Repeat the direction flip once more. The installed failure could leave the
+    // sidebar stuck on the previous edge only after switching back and forth.
     await selectLocale(page, "English", "العربية");
-    await secondArabicDocumentRequest;
-    await waitForHydration(page);
     await expect(html).toHaveAttribute("lang", "ar");
     await expect(html).toHaveAttribute("dir", "rtl");
     await expect(shell).toHaveAttribute("dir", "rtl");
     await expect(desktopSidebar).toContainText("لوحة التحكم");
     await expect(pageHeading).toHaveText("المحاسبة");
+    await expect(html).not.toHaveAttribute("data-locale-transition", "pending");
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(originalTimeOrigin);
     await assertDesktopSidebarEdge(page, "rtl");
   });
 
@@ -414,15 +395,14 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await page.keyboard.press("Escape");
 
     // Motion preference is part of the same appearance contract: reduced-motion
-    // users still get the exact mode/preset state change, but never the bounded
-    // interpolation marker used for the ordinary animated transition.
-    await expect(html).not.toHaveAttribute("data-theme-switching", "true", {
+    // users still get the exact mode/preset state change without interpolation.
+    await expect(html).not.toHaveAttribute("data-appearance-transition", "active", {
       timeout: 2_000,
     });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.locator('[data-theme-mode="dark"]').click();
     await expect(html).toHaveClass(/\bdark\b/);
-    await expect(html).not.toHaveAttribute("data-theme-switching", "true");
+    await expect(html).not.toHaveAttribute("data-appearance-transition", "active");
   });
 
   test("coarse-pointer portaled controls preserve 44px interaction targets", async ({
