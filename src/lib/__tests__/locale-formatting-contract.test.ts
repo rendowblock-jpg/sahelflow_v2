@@ -13,23 +13,29 @@ describe("seller-facing locale formatting", () => {
     expect(intlLocale("en")).toBe("en-GB");
   });
 
-  it("shapes Arabic currency digits and keeps the local DZD suffix", () => {
-    const formatted = formatDZD(1893500, "ar");
-    expect(formatted).toContain("دج");
-    expect(formatted).toMatch(/[٠-٩]/);
+  it("uses the platform's Algerian Arabic number conventions with the local DZD suffix", () => {
+    const expectedNumber = new Intl.NumberFormat("ar-DZ", {
+      style: "decimal",
+      maximumFractionDigits: 0,
+    }).format(1_893_500);
+
+    expect(formatDZD(1_893_500, "ar")).toBe(`${expectedNumber} دج`);
   });
 
-  it("uses Intl relative-time grammar instead of concatenating raw JS numbers", () => {
+  it("delegates relative-time grammar to Intl instead of concatenating translated fragments", () => {
     const now = new Date("2026-08-14T12:00:00.000Z");
     const thirtyMinutesAgo = new Date("2026-08-14T11:30:00.000Z");
 
-    const ar = formatRelative(thirtyMinutesAgo, "ar", now);
-    const fr = formatRelative(thirtyMinutesAgo, "fr", now);
-    const en = formatRelative(thirtyMinutesAgo, "en", now);
-
-    expect(ar).toMatch(/[٠-٩]/);
-    expect(ar).not.toContain("30 دقيقة");
-    expect(fr.toLowerCase()).toContain("minute");
-    expect(en.toLowerCase()).toContain("minute");
+    for (const [locale, localeTag] of [
+      ["ar", "ar-DZ"],
+      ["fr", "fr-DZ"],
+      ["en", "en-GB"],
+    ] as const) {
+      const expected = new Intl.RelativeTimeFormat(localeTag, {
+        numeric: "auto",
+        style: "long",
+      }).format(-30, "minute");
+      expect(formatRelative(thirtyMinutesAgo, locale, now)).toBe(expected);
+    }
   });
 });
