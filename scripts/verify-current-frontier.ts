@@ -40,6 +40,8 @@ const wave4Head = "73e8d8c466567859bc651bb4d77976fdb2a1bbc3";
 const wave4CiRun = "31765143457";
 const publishedInternal15 = "371aebc2be3bf0abb1bbe7fe91c035d962fc86a9";
 const signedInternal15Run = "31657621918";
+const protectedInternal17Correction = "c33f234ecf43842cfcc801592cc601d595ed05c5";
+const reviewedInternal17Correction = "c965a062cf2719078601374bd0ace771ca011d53";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 
 requireMarkers("sahelflow.version.json", [
@@ -68,7 +70,7 @@ requireMarkers("documentation/README.md", [
   "1.0.0.16",
   "1.0.0-internal.17",
   "1.0.0.17",
-  "c33f234ecf43842cfcc801592cc601d595ed05c5",
+  protectedInternal17Correction,
   "Founder/internal-lab",
   "Issue #230 remains open P1",
   "Internal.17",
@@ -84,14 +86,45 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   wave4Head,
   wave4CiRun,
   "agent/internal-16-founder-offline-checkpoint",
-  "agent/internal-17-founder-offline-checkpoint",
   "FD-034",
   "FD-036",
   "1.0.0-internal.16",
   "1.0.0-internal.17",
-  "c33f234ecf43842cfcc801592cc601d595ed05c5",
+  protectedInternal17Correction,
   "Wave 4 — what is implemented",
   "Exact next-session order",
+]);
+
+requireMarkers("documentation/system/CURRENT_STATE.md", [
+  protectedInternal17Correction,
+  reviewedInternal17Correction,
+  "Published release: `1.0.0-internal.16` / MSI `1.0.0.16`",
+  "Active release frontier:",
+  "1.0.0-internal.17",
+  "FD-036",
+  "founder-offline-only",
+  "Founder visual acceptance",
+  "RTL, themes, motion, charts, Inbox and AI Agents",
+  "#221",
+  "#226",
+  "#230",
+  activePhase,
+]);
+
+requireMarkers("documentation/system/ROADMAP.md", [
+  protectedInternal17Correction,
+  reviewedInternal17Correction,
+  "Published release: `1.0.0-internal.16` / MSI `1.0.0.16`",
+  "Active release frontier:",
+  "Internal.17 / FD-036 Founder-offline promotion",
+  "## Internal.17 release program — FD-036",
+  "founder-offline-only",
+  "Required PR gate",
+  "Founder-installed acceptance",
+  "#221",
+  "#226",
+  "#230",
+  activePhase,
 ]);
 
 requireMarkers("README.md", [
@@ -118,6 +151,18 @@ rejectMarkers("documentation/README.md", [
 rejectMarkers("documentation/operations/WORKING_MEMORY.md", [
   "draft PR #251",
 ]);
+rejectMarkers("documentation/system/CURRENT_STATE.md", [
+  "Active correction frontier: Internal.17 frontend-system correction under temporary FD-035",
+  "## Internal.17 correction frontier",
+  "The next frontend correction must preserve",
+  "The next application session should:",
+]);
+rejectMarkers("documentation/system/ROADMAP.md", [
+  "Active application frontier: Internal.17 frontend-system correction",
+  "## Internal.17 frontend correction program",
+  "Temporary FD-035 authorizes source correction work, not a signed Internal.17 release by itself.",
+  "FD-035 does not authorize signing/publishing Internal.17.",
+]);
 
 const duplicateHandoffPath =
   "documentation/archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md";
@@ -133,6 +178,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: the Internal.17 correction is protected on main at c33f234ecf43842cfcc801592cc601d595ed05c5, FD-036 synchronizes the exact Founder-only Internal.17 offline checkpoint, and signed promotion plus Founder visual acceptance remain pending.",
+    "Current execution frontier verified: Internal.17 correction source is protected on main at c33f234ecf43842cfcc801592cc601d595ed05c5, FD-036 authorizes the exact Founder-only Internal.17 offline release frontier, live system docs agree, signed promotion remains pending, and Founder visual acceptance still follows the signed installation.",
   );
 }
