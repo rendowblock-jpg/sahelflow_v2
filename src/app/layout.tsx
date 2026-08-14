@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { Inter, Noto_Sans_Arabic } from "next/font/google";
+import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
 import "./globals.css";
 import "./phase5.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,11 +19,11 @@ const inter = Inter({
   display: "swap",
 });
 
-// UI-first Arabic companion to Inter. Unlike the previous editorial serif face,
-// Noto Sans Arabic is used as an application text family across navigation,
-// controls, tables and operational reading surfaces.
-const arabicSans = Noto_Sans_Arabic({
+// Product-grade Arabic UI family: compact enough for dense operational tables,
+// highly legible at navigation/control sizes, and visually compatible with Inter.
+const arabicSans = IBM_Plex_Sans_Arabic({
   subsets: ["arabic"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-arabic",
   display: "swap",
 });
@@ -80,7 +80,7 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             // Storage is only persistence, never a prerequisite for a coherent
             // first paint. Defaults still apply when a WebView denies localStorage.
-            __html: `(function(){var t='dark',p='sahel';try{var st=localStorage.getItem('theme');if(st==='light'||st==='dark'||st==='system')t=st;var sp=localStorage.getItem('sahelflow-theme-preset');if(sp==='atlas'||sp==='oasis'||sp==='dune')p=sp;}catch(e){}try{var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.dataset.themePreset=p;e.style.colorScheme=r;}catch(e){}})();`,
+            __html: `(function(){var t='dark',p='sahel';try{var st=localStorage.getItem('theme');if(st==='light'||st==='dark'||st==='system')t=st;var sp=localStorage.getItem('sahelflow-theme-preset');if(sp==='atlas'||sp==='oasis'||sp==='dune')p=sp;}catch(e){}try{var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.dataset.colorMode=r;e.dataset.themePreset=p;e.style.colorScheme=r;}catch(e){}})();`,
           }}
         />
       </head>
