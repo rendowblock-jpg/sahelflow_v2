@@ -9,7 +9,9 @@
 > **Release tag:** `sahelflow-v1.0.0-internal.16-c8200fdd0fe212cc7493de434d19bd8e7395c4ea`
 > **Founder installed checkpoint:** Internal.16 installed on 2026-08-14
 > **Founder frontend acceptance:** **REJECTED** — issue #221 remains open
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active correction frontier:** Internal.17 frontend-system correction before renewed installed acceptance
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Retained open evidence:** #221, #226, #230
 
 Live protected GitHub state is always authority. Internal.16 is a real signed Founder/internal-lab release, but its successful source/CI/release evidence does **not** mean the installed frontend achieved Founder acceptance or user-ready AAA quality.
@@ -28,6 +30,17 @@ Read in this order:
 8. [`research/RESEARCH.md`](research/RESEARCH.md) — evidence and revalidation triggers.
 
 Repository `AGENTS.md` remains the coding-agent entry point. Do not create a competing permanent masterplan or use archive material as current authority.
+
+## Historical continuity retained
+
+These markers remain deliberately present because `sf-audit` protects continuity between prior exact evidence and the current frontier:
+
+- PR #220 is the Phase 5 application-changing closure line at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- PR #250 was the preceding Internal.16 Wave 3 protected merge.
+- PR #251 was produced from the superseded branch `agent/internal-16-wave-4` and is now protected history.
+- The prior published Founder checkpoint was `1.0.0-internal.15`, signed run `31657621918`.
+- The formal phase label remains Phase 6 — Arabic, RTL and accessibility parity while the installed correction frontier is active.
+- Issues #221, #226 and #230 remain open.
 
 ## Current execution truth
 
