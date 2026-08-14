@@ -7,7 +7,9 @@
 > **Published release:** `1.0.0-internal.16` / MSI `1.0.0.16`
 > **Signed release run:** `31770292329`
 > **Founder installed result:** Internal.16 installed; frontend acceptance **REJECTED** on 2026-08-14
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active application frontier:** Internal.17 frontend-system correction
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Open retained issues:** #221, #226, #230
 > **Last consolidated:** 2026-08-14
 
@@ -35,11 +37,15 @@ protected Phase 0–4 canonical engine
 
 ## Phases 0–4 — protected canonical foundation
 
-Phase 0 governance, Phase 1 Golden COD, Phase 2 identity/licensing/multi-shop, Phase 3 durable providers/Inbox/AI/automations authority, and Phase 4 data protection/recovery/migrations remain protected under their established authorities.
+Phase 0 governance, Phase 1 Golden COD, Phase 2 identity/licensing/multi-shop and Phase 4 data protection/recovery/migrations remain protected under their established authorities.
 
 The Internal.17 frontend correction may repair a proven bounded backend contract defect when necessary, but it may not rewrite canonical business/data/security/recovery authority for visual convenience.
 
-## Phase 5/6 — active installed correction gate
+## Phase 3 — providers, inbox, AI and automations
+
+Phase 3 durable provider, Inbox, AI and automation authority remains protected under FD-030. The current correction may redesign the installed Inbox and AI product experience, but must preserve durable provider effects, ambiguity/reconciliation, proposal-bound canonical AI actions, recovery semantics and the distinction between source/conformance evidence and Phase 9 live-provider certification.
+
+## Phase 5 — whole-product AAA desktop experience
 
 Protected source/browser work remains valid for what its exact heads proved. Internal.16 installed evidence now proves the higher Founder-acceptance layer is still open.
 
@@ -76,13 +82,19 @@ These six are explicitly reconfirmed failures. The Founder is not required to en
 
 Other original Internal.15 findings are **not** automatically declared fixed because they were not mentioned in this inspection. Existing acceptance requirements remain until source evidence plus applicable installed observation closes them.
 
+## Phase 6 — Arabic, RTL and accessibility parity
+
+The formal active product phase remains Phase 6. The current correction must preserve complete AR/FR/EN semantic parity while fixing the surviving installed RTL/direction system at its root.
+
+Acceptance continues to require professional Arabic typography/reading flow, logical geometry, directional icon semantics, bidi isolation, table/chart/command-palette RTL, keyboard/focus/semantics, WCAG 2.2 AA where applicable, 100–200% zoom/reflow, 1366×768 containment and reduced-motion behavior. The new motion work must strengthen rather than weaken reduced-motion accessibility.
+
 ## Internal.17 frontend correction program
 
 Temporary FD-035 authorizes source correction work, not a signed Internal.17 release by itself.
 
 ### 1. Focused root reconnaissance
 
-Before implementation, inspect exact current source and production consumers for:
+Perform a complete reconnaissance of exact current source and production consumers for:
 
 - logical CSS/layout/direction primitives, sidebar/shell, route-level physical positioning, popovers/dialogs/portals, tables, icons, charts and bidi isolation;
 - appearance/theme authority, hydration, DOM/root attributes/classes, semantic tokens, transition windows, chart consumers and causes of mixed old/new frames;
@@ -171,7 +183,7 @@ Freeze one exact correction head only after the six classes and discovered sibli
 - Windows/native/install/authenticated hydrated UI evidence;
 - consequence-selected performance evidence.
 
-Perform one consolidated adversarial review, repair the full actionable finding set, then rerun affected plus final proof.
+Perform one consolidated adversarial review, repair the full actionable finding set, then rerun affected plus final proof. Protect the source through expected-head merge discipline after the selected exact-head gates pass.
 
 ### 5. New signed candidate boundary
 
