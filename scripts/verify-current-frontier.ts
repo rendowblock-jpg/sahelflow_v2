@@ -56,23 +56,18 @@ requireMarkers("scripts/sf-version.ts", [
   "Internal.15/FD-032 or Internal.16/FD-034",
 ]);
 
-requireMarkers("documentation/product/FD-034-INTERNAL16-FOUNDER-OFFLINE.md", [
-  "FD-034",
-  "1.0.0-internal.16",
-  "1.0.0.16",
-  "Founder/internal-lab",
-  "Issue #230 remains open P1",
-  "Internal.17",
-]);
-
 requireMarkers("documentation/README.md", [
   protectedWave4Main,
   "PR #251",
   "Wave 4",
   wave4Head,
   wave4CiRun,
-  "FD-034",
+  "## FD-034 — Internal.16 Founder-only offline checkpoint",
   "1.0.0-internal.16",
+  "1.0.0.16",
+  "Founder/internal-lab",
+  "Issue #230 remains open P1",
+  "Internal.17",
   publishedInternal15,
   signedInternal15Run,
   activePhase,
@@ -87,6 +82,7 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "agent/internal-16-founder-offline-checkpoint",
   "FD-034",
   "1.0.0-internal.16",
+  "Wave 4 — what is implemented",
   "Exact next-session order",
 ]);
 
@@ -109,12 +105,10 @@ requireMarkers("AGENTS.md", [
 
 rejectMarkers("documentation/README.md", [
   "draft PR #251",
-  "agent/internal-16-wave-4",
   "Waves 1–3 are protected",
 ]);
 rejectMarkers("documentation/operations/WORKING_MEMORY.md", [
   "draft PR #251",
-  "agent/internal-16-wave-4",
 ]);
 
 const duplicateHandoffPath =
