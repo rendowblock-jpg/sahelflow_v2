@@ -313,14 +313,16 @@ jobs:
                 ($authority.version -ceq '1.0.0-internal.15' -and
                   $authority.licensing.authorityDecision -ceq 'FD-032') -or
                 ($authority.version -ceq '1.0.0-internal.16' -and
-                  $authority.licensing.authorityDecision -ceq 'FD-034')
+                  $authority.licensing.authorityDecision -ceq 'FD-034') -or
+                ($authority.version -ceq '1.0.0-internal.17' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-036')
               )
               if (
                 -not $founderOfflineAuthority -or
                 $authority.channel -cne 'internal' -or
                 $null -ne $authority.licensing.ownedHostSuffix
               ) {
-                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15 or FD-034/Internal.16'
+                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17'
               }
               # The protected environment may retain an older service secret. Exact
               # Founder-only checkpoints must compile and launch without exposing it.
