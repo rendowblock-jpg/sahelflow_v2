@@ -1,0 +1,234 @@
+/*
+ * Flagship workspace composition for Inbox + AI Agents.
+ *
+ * Both products share the same workbench grammar: a quiet queue/session rail,
+ * a focused primary canvas, a contextual inspector, deliberate selected states,
+ * and elevated composers. This is a system layer, not route-specific screenshot
+ * patching; the selectors bind to durable product data attributes.
+ */
+
+[data-inbox-workspace="v2"],
+[data-ai-workspace="v2"] {
+  position: relative;
+  isolation: isolate;
+  border-color: color-mix(in oklch, var(--border) 92%, transparent);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.05),
+    0 18px 48px oklch(0 0 0 / 0.08),
+    0 0 0 1px var(--sf-surface-highlight) inset;
+}
+
+.dark [data-inbox-workspace="v2"],
+.dark [data-ai-workspace="v2"] {
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.20),
+    0 22px 58px oklch(0 0 0 / 0.20),
+    0 0 0 1px var(--sf-surface-highlight) inset;
+}
+
+/* ── Inbox ─────────────────────────────────────────────────────────────── */
+[data-inbox-workspace="v2"] > header,
+[data-inbox-workspace="v2"] > div[role="status"] {
+  position: relative;
+  z-index: 2;
+}
+
+[data-inbox-workspace="v2"] [data-inbox-queue="true"] {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--surface-2) 48%, var(--card)),
+      color-mix(in oklch, var(--surface-2) 28%, var(--card)) 22rem,
+      var(--card)
+    );
+}
+
+[data-inbox-workspace="v2"] [data-inbox-conversation] {
+  transition-property: background-color, border-color, transform, box-shadow;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--motion-ease-standard);
+}
+
+[data-inbox-workspace="v2"] [data-inbox-conversation]:hover {
+  background: color-mix(in oklch, var(--accent) 58%, var(--card));
+}
+
+[data-inbox-workspace="v2"] [data-inbox-conversation][aria-current="true"] {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--primary) 11%, transparent),
+      color-mix(in oklch, var(--accent) 52%, var(--card))
+    );
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 10%, transparent) inset;
+}
+
+html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-current="true"] {
+  background:
+    linear-gradient(
+      270deg,
+      color-mix(in oklch, var(--primary) 11%, transparent),
+      color-mix(in oklch, var(--accent) 52%, var(--card))
+    );
+}
+
+[data-inbox-thread="empty"] {
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      color-mix(in oklch, var(--primary) 7%, transparent) 0,
+      transparent 17rem
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--surface-2) 22%, var(--background)),
+      var(--background)
+    );
+}
+
+[data-inbox-thread="active"] {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--surface-2) 30%, var(--background)),
+      var(--background) 12rem
+    );
+}
+
+[data-inbox-thread="active"] article,
+[data-inbox-thread="active"] [role="log"] > div {
+  animation: sf-workspace-item-in var(--motion-base) var(--motion-ease-emphasized) both;
+}
+
+[data-inbox-context="true"] {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--surface-2) 55%, var(--card)),
+      var(--card) 18rem
+    );
+}
+
+/* ── AI Agents ─────────────────────────────────────────────────────────── */
+[data-ai-sessions="true"],
+[data-ai-context="true"] {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--surface-2) 58%, var(--card)),
+      color-mix(in oklch, var(--surface-2) 24%, var(--card)) 24rem,
+      var(--card)
+    );
+}
+
+[data-ai-session] {
+  position: relative;
+  transition-property: background-color, border-color, transform, box-shadow;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--motion-ease-standard);
+}
+
+[data-ai-session]:hover {
+  transform: translateY(-1px);
+}
+
+[data-ai-session][class*="bg-primary"] {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--primary) 14%, transparent) inset,
+    0 5px 16px color-mix(in oklch, var(--primary) 7%, transparent);
+}
+
+[data-ai-thread="true"] {
+  background:
+    radial-gradient(
+      circle at 50% -8rem,
+      color-mix(in oklch, var(--primary) 7%, transparent),
+      transparent 30rem
+    ),
+    var(--background);
+}
+
+[data-ai-message="assistant"],
+[data-ai-message="user"] {
+  animation: sf-workspace-item-in var(--motion-base) var(--motion-ease-emphasized) both;
+}
+
+[data-ai-message="assistant"] > div > div:first-child {
+  border-color: color-mix(in oklch, var(--border) 88%, transparent);
+  background: color-mix(in oklch, var(--card) 97%, var(--primary) 3%);
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.04),
+    0 7px 22px oklch(0 0 0 / 0.055);
+}
+
+.dark [data-ai-message="assistant"] > div > div:first-child {
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.18),
+    0 8px 26px oklch(0 0 0 / 0.12);
+}
+
+[data-ai-message="user"] > div > div:first-child {
+  box-shadow: 0 7px 20px color-mix(in oklch, var(--primary) 17%, transparent);
+}
+
+[data-ai-thread="true"] > div:last-child {
+  background: color-mix(in oklch, var(--background) 90%, transparent);
+  backdrop-filter: blur(16px) saturate(1.06);
+  -webkit-backdrop-filter: blur(16px) saturate(1.06);
+}
+
+[data-ai-thread="true"] > div:last-child > div {
+  border-color: color-mix(in oklch, var(--border) 90%, transparent);
+  background: color-mix(in oklch, var(--card) 92%, transparent);
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.06),
+    0 10px 34px oklch(0 0 0 / 0.09);
+  transition-property: border-color, box-shadow, background-color;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--motion-ease-standard);
+}
+
+[data-ai-thread="true"] > div:last-child > div:focus-within {
+  border-color: color-mix(in oklch, var(--primary) 52%, var(--border));
+  box-shadow:
+    0 0 0 3px color-mix(in oklch, var(--primary) 12%, transparent),
+    0 12px 38px oklch(0 0 0 / 0.11);
+}
+
+[data-ai-context="true"] section.rounded-xl,
+[data-inbox-context="true"] section {
+  transition-property: border-color, background-color, box-shadow;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--motion-ease-standard);
+}
+
+@keyframes sf-workspace-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 1280px) {
+  [data-inbox-workspace="v2"] [data-inbox-queue="true"] {
+    width: 22.5rem;
+    min-width: 22.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-inbox-thread="active"] article,
+  [data-inbox-thread="active"] [role="log"] > div,
+  [data-ai-message="assistant"],
+  [data-ai-message="user"] {
+    animation: none !important;
+  }
+  [data-ai-session]:hover {
+    transform: none;
+  }
+}
