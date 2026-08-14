@@ -24,7 +24,7 @@ type ProductsPageProps = {
 };
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
   const actorContext = await requireTrustedAction("products.read");
   const requestedPage = Number.parseInt((await searchParams).page ?? "1", 10);
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0
@@ -60,7 +60,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
       <PageHeader
         title={t("products.title")}
-        description={`${t("products.totalStock")}: ${summary.total} · ${t("products.inventoryValue")}: ${formatDZD(summary.inventoryValue)}`}
+        description={`${t("products.totalStock")}: ${summary.total} · ${t("products.inventoryValue")}: ${formatDZD(summary.inventoryValue, locale)}`}
         actions={access.export || access.import || canCreate ? (
           <div className="flex flex-wrap items-center gap-2">
             {access.export || access.import ? (
@@ -99,7 +99,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         />
         <StatCard
           label={t("products.inventoryValue")}
-          value={formatDZD(summary.inventoryValue)}
+          value={formatDZD(summary.inventoryValue, locale)}
           icon={<DollarSign />}
         />
       </div>
