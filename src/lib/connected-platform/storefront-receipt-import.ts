@@ -17,6 +17,7 @@ import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
 import { parseStorefrontReleaseItemKey } from "@/lib/storefront/release-artifact";
+import { NotFoundError, ValidationError } from "@/types/errors";
 import type { ConnectedPlatformClient, StorefrontReceipt } from "./client";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
@@ -59,6 +60,12 @@ const customerSchema = z.object({
 function receiptDigest(receipt: StorefrontReceipt, orderId: string): string {
   return createHash("sha256")
     .update(`${receipt.receiptId}\n${receipt.requestDigest}\n${orderId}`, "utf8")
+    .digest("hex");
+}
+
+function rejectionDigest(receipt: StorefrontReceipt, code: string): string {
+  return createHash("sha256")
+    .update(`${receipt.receiptId}\n${receipt.requestDigest}\nrejected\n${code}`, "utf8")
     .digest("hex");
 }
 
@@ -180,39 +187,54 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
         unitPrice: line.unitPriceDzd,
       };
     });
-    const command = await createCanonicalSourceOrder(
-      {
-        ...input.context,
-        businessPrincipal: sourceBusinessPrincipal("storefront", receipt.storefrontSlug),
-      },
-      {
-        idempotencyKey: `storefront-hosted:${receipt.receiptId}`,
-        correlationId: `storefront-hosted:${receipt.receiptId}`,
-        source: "storefront",
-        sourceIdentity: `hosted:${receipt.storefrontId}`,
-        sourceOrderId: receipt.receiptId,
-        sourceRevision: receipt.requestDigest,
-        sourceDetails: {
-          hostedReleaseId: receipt.releaseId,
-          hostedDeliveryMode: receipt.deliveryMode,
-          hostedTotalDzd: receipt.totalDzd,
+    let command;
+    try {
+      command = await createCanonicalSourceOrder(
+        {
+          ...input.context,
+          businessPrincipal: sourceBusinessPrincipal("storefront", receipt.storefrontSlug),
         },
-        newCustomer: {
-          name: customer.name,
-          phone: customer.phone,
+        {
+          idempotencyKey: `storefront-hosted:${receipt.receiptId}`,
+          correlationId: `storefront-hosted:${receipt.receiptId}`,
+          source: "storefront",
+          sourceIdentity: `hosted:${receipt.storefrontId}`,
+          sourceOrderId: receipt.receiptId,
+          sourceRevision: receipt.requestDigest,
+          sourceDetails: {
+            hostedStorefrontId: receipt.storefrontId,
+            hostedReleaseId: receipt.releaseId,
+            hostedDeliveryMode: receipt.deliveryMode,
+            hostedTotalDzd: receipt.totalDzd,
+          },
+          newCustomer: {
+            name: customer.name,
+            phone: customer.phone,
+            wilaya: customer.wilayaCode,
+            commune: customer.commune,
+            address: customer.address,
+          },
+          items,
           wilaya: customer.wilayaCode,
           commune: customer.commune,
           address: customer.address,
+          phone: customer.phone,
+          deliveryCost: receipt.shippingDzd,
+          notes: customer.notes,
         },
-        items,
-        wilaya: customer.wilayaCode,
-        commune: customer.commune,
-        address: customer.address,
-        phone: customer.phone,
-        deliveryCost: receipt.shippingDzd,
-        notes: customer.notes,
-      },
-    );
+      );
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof ValidationError) {
+        await input.client.completeStorefrontReceipt(receipt.receiptId, {
+          workspaceId: input.workspaceId,
+          shopId: shop.shopId,
+          state: "rejected",
+          resultDigest: rejectionDigest(receipt, "catalog_conflict"),
+        });
+        continue;
+      }
+      throw error;
+    }
     await dispatchTrigger(
       input.context,
       "order.created" as TriggerEvent,

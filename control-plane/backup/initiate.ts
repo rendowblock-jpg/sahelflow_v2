@@ -1,4 +1,5 @@
 import { authenticateBackupWorkspace, json } from "./auth";
+import { expireInterruptedBackups } from "./retention";
 import type { BackupWorkerEnvironment, D1Statement } from "./types";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
@@ -81,13 +82,11 @@ export async function initiateBackup(
   }
   if (totalBytes > workspace.backup_bytes) return json({ error: "backup_quota_exceeded" }, 403);
 
-  await environment.DB.prepare(
-    `UPDATE cloud_backup
-        SET state = 'failed'
-      WHERE workspace_id = ?1
-        AND state IN ('initiated','uploading','awaiting_verification')
-        AND datetime(created_at) <= datetime('now', '-24 hours')`,
-  ).bind(workspaceId).run();
+  try {
+    await expireInterruptedBackups(environment, workspaceId);
+  } catch {
+    return json({ error: "backup_cleanup_unavailable", retryable: true }, 503);
+  }
 
   const statements: D1Statement[] = [
     environment.DB.prepare(
@@ -131,6 +130,9 @@ export async function initiateBackup(
     }
     if (message.includes("trial_backup_already_exists")) {
       return json({ error: "trial_backup_already_exists" }, 409);
+    }
+    if (message.includes("pinned_backup_limit_reached")) {
+      return json({ error: "pinned_backup_limit_reached" }, 409);
     }
     if (message.includes("backup_entitlement_expired")) {
       return json({ error: "backup_not_entitled" }, 403);

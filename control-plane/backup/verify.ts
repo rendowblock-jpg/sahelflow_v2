@@ -1,6 +1,7 @@
 import { authenticateBackupWorkspace, json } from "./auth";
 import { sha256Hex, verifyEd25519 } from "./crypto";
 import { loadBackup, objectMatches } from "./r2-integrity";
+import { enforceVerifiedRetention } from "./retention";
 import type { BackupWorkerEnvironment } from "./types";
 import {
   CLOUD_BACKUP_VERIFICATION_DOMAIN,
@@ -49,6 +50,16 @@ export async function verifyBackup(
   const backup = await loadBackup(environment, workspaceId, backupId);
   if (!backup) return json({ error: "backup_not_found" }, 404);
   if (backup.state === "verified") {
+    try {
+      await enforceVerifiedRetention(
+        environment,
+        workspaceId,
+        backup.shop_id,
+        backup.retention_class,
+      );
+    } catch {
+      return json({ error: "retention_cleanup_unavailable", retryable: true }, 503);
+    }
     return json({ backupId, state: "verified", verifiedAt: backup.verified_at });
   }
   if (backup.state === "deleted" || backup.state === "deleting" || backup.state === "failed") {
@@ -112,6 +123,16 @@ export async function verifyBackup(
   ).bind(receiptDigest, verifiedAt, workspaceId, backupId).run();
   if (!result.success || result.meta?.changes === 0) {
     return json({ error: "verification_conflict" }, 409);
+  }
+  try {
+    await enforceVerifiedRetention(
+      environment,
+      workspaceId,
+      backup.shop_id,
+      backup.retention_class,
+    );
+  } catch {
+    return json({ error: "retention_cleanup_unavailable", retryable: true }, 503);
   }
   return json({
     backupId,
