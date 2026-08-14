@@ -17,7 +17,7 @@ Protected `main` remains source authority. Installed Founder observation remains
 
 ## Executive truth
 
-SahelFlow now has a strong protected Windows/local-first engine and a materially complete connected platform. Internal.16 Waves 1–4 protect Golden COD, identity/licensing, providers/AI/automations, protected data and recovery, AAA frontend foundations and selected workspaces, Storefront Builder V2, hosted commerce flows, remote connected authority, encrypted projections/commands, zero-knowledge cloud backup and replacement-install recovery transfer.
+SahelFlow now has a strong protected Windows/local-first engine and a materially complete connected platform. Internal.16 Waves 1–4 protect Golden COD, identity/licensing, providers/AI/automations, protected data and recovery, frontend foundations and selected workspaces, Storefront Builder V2, hosted commerce flows, remote connected authority, encrypted projections/commands, zero-knowledge cloud backup and replacement-install recovery transfer.
 
 PR #252 promoted exact protected source `c8200fdd0fe212cc7493de434d19bd8e7395c4ea` to the signed Internal.16 Founder/internal-lab release. Signed workflow `31770292329` passed its release, signed MSI, installed launch/reopen, authenticated UI and publication steps.
 
@@ -43,45 +43,35 @@ Installed UX rejection does not authorize weakening these contracts.
 
 ### `SF16-UI-001` — RTL/direction geometry remains systemic
 
-The Founder confirms that wrong-side/directional behavior still exists in the sidebar and many other UI areas. Charts also remain affected. This proves the prior correction did not fully eliminate the root direction/layout problem.
-
-The next correction must audit and repair shared logical-direction primitives, route-level physical positioning, shell/sidebar geometry, portals/overlays, tables, icons, mixed bidi content and chart direction semantics across all affected production consumers.
+Wrong-side/directional behavior still exists in the sidebar and many other UI areas, including charts. The next correction must repair shared logical-direction primitives and all materially affected production consumers rather than page-local manifestations.
 
 ### `SF16-THEME-015` — theme switching remains visibly wrong
 
-Dark/light switching is still neither instant nor smooth enough for the intended product quality. The exact visual defect is perceptible as an unacceptable intermediate/glitchy transition.
-
-The next correction must treat appearance as an atomic transaction across theme state, root attributes/classes, semantic tokens, shared primitives, charts and hydrated route consumers. Rapid repeated switching must settle deterministically without mixed old/new frames.
+Dark/light switching is still neither instant nor smooth enough for the intended product quality. Appearance must become an atomic transaction across theme state, root attributes/classes, semantic tokens, shared primitives, charts and hydrated route consumers.
 
 ### `SF17-MOTION-018` — motion/micro-interaction layer remains insufficient
 
-The installed product still feels materially static. Internal.16 did not deliver the intended coherent interaction language.
-
-The next correction must establish restrained, interruptible, low-resource-aware motion for navigation, overlays, state/list changes, loading and feedback, with reduced-motion first-class. Decorative motion for its own sake is not the target.
+The installed product still feels materially static. The next correction must establish restrained, interruptible, low-resource-aware motion for navigation, overlays, state/list changes, loading and feedback, with reduced-motion first-class.
 
 ### `SF16-CHART-013` — charts remain below target
 
-Charts remain Founder-rejected for visual/information-design quality and also participate in the RTL/direction problem.
-
-The next correction must treat charts as one governed decision-support system: analytical grammar, hierarchy, labeling, legends/tooltips, density, responsiveness, Arabic/RTL/bidi, theme integration, reduced-motion behavior and low-end cost.
+Charts remain Founder-rejected for visual/information-design quality and also participate in the RTL/direction problem. They must be treated as one governed decision-support system covering analytical grammar, hierarchy, labeling, responsiveness, Arabic/RTL/bidi, theme, reduced motion and low-end cost.
 
 ### `SF16-INBOX-005` — Inbox remains unresolved
 
-The installed Inbox is still not accepted as the required AAA operational workspace. Prior source/browser closure does not equal installed product acceptance.
-
-The next correction must reassess the complete operational flow: queue/thread structure, customer/order context, assignment/status, provider health/degraded behavior, notes/media/extraction/recovery, adaptive panes and large-history usability.
+The installed Inbox is still not accepted as the required operational workspace. Prior source/browser closure does not equal installed product acceptance.
 
 ### `SF16-AI-006` — AI Agents remains unresolved
 
-The installed AI Agents workspace is still not accepted as the required AAA product workbench.
+The installed AI Agents workspace is still not accepted as the required task-oriented product workbench. Proposal-bound canonical mutations, privacy controls and provider/recovery boundaries must remain preserved during redesign.
 
-The next correction must reassess the complete task-oriented workflow: sessions/history, context, composer, streaming/stop/retry, tool results, proposal/permission boundaries, readiness/errors, recovery and long-session behavior while preserving proposal-bound canonical mutations and privacy controls.
+## Complete frozen P1 reconciliation
 
-## Important evidence rule
+The six classes above are reconfirmed failures, but they do not replace FD-033's complete acceptance register. Every frozen Internal.15 P1 class remains an obligation until explicitly reconciled:
 
-The six classes above are **reconfirmed failures** from the installed Internal.16 inspection. The Founder is not required to provide screenshots for every repeated manifestation.
+`SF16-UI-001`, `SF16-UI-002`, `SF16-UI-003`, `SF16-I18N-004`, `SF16-INBOX-005`, `SF16-AI-006`, `SF16-I18N-007`, `SF16-PRODUCTS-008`, `SF16-SEARCH-009`, `SF16-AI-010`, `SF16-RESP-011`, `SF16-LAYOUT-012`, `SF16-CHART-013`, `SF16-PERF-014`, `SF16-THEME-015`, `SF16-I18N-016`, `SF16-NAV-017`, plus new `SF17-MOTION-018`.
 
-The absence of a fresh complaint about another original Internal.15 finding is not proof that it is fixed or accepted. Existing acceptance requirements remain unless objective evidence or a later Founder observation closes them. The next root audit should include consequence-selected sibling verification rather than declaring the unmentioned findings resolved.
+For every class that was not freshly reconfirmed by the Founder, the next source/installed audit must record either exact evidence that current Internal.16 source already satisfies it or keep it open in the Internal.17 correction map. Absence of a repeated complaint is not closure evidence.
 
 ## Historical continuity anchors
 
@@ -111,7 +101,7 @@ FD-032 remains exact to Internal.15. Internal.16 used the separate FD-034 author
 - **#226 — OPEN** — representative T470/floor/eight-hour performance and reliability certification.
 - **#230 — OPEN P1** — resilient customer-online/public-trial activation on representative Algerian networks.
 
-#221 must not be treated as a paperwork-only checkpoint. The six reconfirmed classes require source correction and a new installed candidate.
+#221 must not be treated as a paperwork-only checkpoint. The six reconfirmed classes require correction, while all other frozen P1 classes require explicit reconciliation before a candidate is called clean.
 
 ## Internal.17 correction frontier
 
@@ -121,17 +111,20 @@ The next application session should:
 
 1. start from exact protected `main` after the documentation reconciliation;
 2. create/use one bounded Internal.17 frontend-correction branch;
-3. perform one focused source/root audit for the six reconfirmed classes and their affected siblings;
-4. freeze one bounded correction map, not another permanent masterplan;
-5. implement shared-root fixes in dependency order: RTL/direction → atomic appearance → motion → charts → Inbox → AI → complete sibling adoption sweep;
-6. run targeted checks while coding, then freeze one exact correction head;
-7. run deep source/browser/AR-FR-EN/RTL/accessibility/theme/motion/chart/Inbox/AI/Windows evidence;
-8. repair one consolidated finding set and rerun affected plus final proof;
-9. obtain new exact version/release authority only after the source candidate is actually clean;
-10. publish/install the new signed candidate and repeat Founder #221 acceptance.
+3. perform one focused root audit for the six reconfirmed failures;
+4. in the same reconnaissance, reconcile every remaining FD-033 frozen P1 class against exact current evidence;
+5. freeze one bounded correction map containing every still-open class, not another permanent masterplan;
+6. implement shared-root fixes in dependency order: RTL/direction → atomic appearance → motion → charts → Inbox → AI → every additional still-open frozen P1 → complete sibling adoption sweep;
+7. run targeted checks while coding, then freeze one exact correction head only after the complete register is reconciled;
+8. run deep source/browser/AR-FR-EN/RTL/accessibility/theme/motion/chart/Inbox/AI/search/Gemini/responsive/layout/navigation/Windows evidence;
+9. repair one consolidated finding set and rerun affected plus final proof;
+10. obtain new exact version/release authority only after the source candidate has zero applicable unresolved P0/P1;
+11. publish one signed repaired candidate and use that **same exact candidate** for applicable #221, #226 and #230 evidence before recording final Founder accept/reject.
+
+If any material source, packaging, runtime, licensing/network or user-facing change occurs after one retained gate, rerun every affected gate and repeat Founder acceptance as necessary. A user-ready claim cannot combine evidence from materially different candidates.
 
 ## Launch boundary
 
 SahelFlow is not yet a commercially certified Stable release.
 
-After frontend acceptance, user readiness still requires #226 performance/reliability evidence, #230 customer-trial/network resilience, applicable live provider/security/privacy/legal/representative-beta evidence and explicit Founder promotion under Phase 9.
+After one coherent signed candidate passes the complete acceptance register plus #221/#226/#230 at their required evidence levels, user readiness still requires applicable live provider/security/privacy/legal/representative-beta evidence and explicit Founder promotion under Phase 9.
