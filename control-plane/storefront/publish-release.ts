@@ -76,10 +76,6 @@ export async function publishRelease(
 
   const artifactJson = canonicalJson(input.publicArtifact);
   const artifactDigest = await sha256Hex(artifactJson);
-  // parentReleaseId is intentionally excluded from the replay digest. After a
-  // timeout-after-commit the just-published release is active, so a retry may
-  // rediscover itself as the current parent. The immutable release ID plus the
-  // exact artifact/allocation/shipping authority still identifies the request.
   const requestDigest = await sha256Hex(canonicalJson({
     storefrontId,
     workspaceId: input.workspaceId,
@@ -98,10 +94,10 @@ export async function publishRelease(
       WHERE release_id = ?1 AND storefront_id = ?2`,
   ).bind(input.releaseId, storefrontId).first<ExistingReleaseRow>();
   if (existing) {
-    if (
-      existing.request_digest !== requestDigest ||
-      existing.artifact_digest !== artifactDigest
-    ) {
+    // Release IDs are generated from the durable desktop publish command. Once
+    // committed, allocation/shipping inputs cannot mutate the immutable result;
+    // a retry needs only prove it is replaying the same public artifact.
+    if (existing.artifact_digest !== artifactDigest) {
       return json({ error: "release_idempotency_conflict" }, 409);
     }
     return publicationResponse(environment, {
@@ -167,10 +163,7 @@ export async function publishRelease(
          FROM storefront_release
         WHERE release_id = ?1 AND storefront_id = ?2`,
     ).bind(input.releaseId, storefrontId).first<ExistingReleaseRow>();
-    if (
-      raced?.request_digest === requestDigest &&
-      raced.artifact_digest === artifactDigest
-    ) {
+    if (raced?.artifact_digest === artifactDigest) {
       return publicationResponse(environment, {
         storefrontId,
         releaseId: input.releaseId,
