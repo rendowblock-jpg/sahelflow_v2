@@ -16,6 +16,12 @@ type ActiveAllocationRow = {
   remaining_quantity: number;
 };
 
+type ReleaseCatalogRow = {
+  release_id: string;
+  item_key: string;
+  unit_price_dzd: number;
+};
+
 export async function listReleases(
   request: Request,
   environment: StorefrontWorkerEnvironment,
@@ -51,15 +57,41 @@ export async function listReleases(
   if (!releases.success) return json({ error: "release_history_unavailable" }, 503);
 
   const activeReleaseId = (releases.results ?? []).find((release) => release.is_active === 1)?.release_id ?? null;
-  const activeAllocations = activeReleaseId
-    ? await environment.DB.prepare(
-        `SELECT item_key, remaining_quantity
-           FROM storefront_allocation
-          WHERE release_id = ?1 AND remaining_quantity > 0
-          ORDER BY item_key ASC`,
-      ).bind(activeReleaseId).all<ActiveAllocationRow>()
-    : { success: true, results: [] as ActiveAllocationRow[] };
-  if (!activeAllocations.success) return json({ error: "release_allocation_unavailable" }, 503);
+  const [activeAllocations, catalogRows] = await Promise.all([
+    activeReleaseId
+      ? environment.DB.prepare(
+          `SELECT item_key, remaining_quantity
+             FROM storefront_allocation
+            WHERE release_id = ?1 AND remaining_quantity > 0
+            ORDER BY item_key ASC`,
+        ).bind(activeReleaseId).all<ActiveAllocationRow>()
+      : Promise.resolve({ success: true, results: [] as ActiveAllocationRow[] }),
+    environment.DB.prepare(
+      `SELECT allocation.release_id, allocation.item_key, allocation.unit_price_dzd
+         FROM storefront_allocation allocation
+         JOIN storefront_release release ON release.release_id = allocation.release_id
+         JOIN storefront store ON store.storefront_id = release.storefront_id
+        WHERE release.storefront_id = ?1 AND store.workspace_id = ?2
+          AND allocation.release_id IN (
+            SELECT release_id
+              FROM storefront_release
+             WHERE storefront_id = ?1
+             ORDER BY created_at DESC, release_id DESC
+             LIMIT ?3
+          )
+        ORDER BY allocation.release_id ASC, allocation.item_key ASC`,
+    ).bind(storefrontId, workspaceId, requestedLimit).all<ReleaseCatalogRow>(),
+  ]);
+  if (!activeAllocations.success || !catalogRows.success) {
+    return json({ error: "release_allocation_unavailable" }, 503);
+  }
+
+  const catalogs = new Map<string, Array<{ itemKey: string; unitPriceDzd: number }>>();
+  for (const row of catalogRows.results ?? []) {
+    const rows = catalogs.get(row.release_id) ?? [];
+    rows.push({ itemKey: row.item_key, unitPriceDzd: row.unit_price_dzd });
+    catalogs.set(row.release_id, rows);
+  }
 
   return json({
     storefrontId,
@@ -71,6 +103,7 @@ export async function listReleases(
       artifactDigest: release.artifact_digest,
       createdAt: release.created_at,
       isActive: release.is_active === 1,
+      catalog: catalogs.get(release.release_id) ?? [],
     })),
     activeAllocations: (activeAllocations.results ?? []).map((allocation) => ({
       itemKey: allocation.item_key,
