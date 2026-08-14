@@ -98,7 +98,7 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
 requireMarkers("documentation/system/CURRENT_STATE.md", [
   protectedInternal17Correction,
   reviewedInternal17Correction,
-  "Published release: `1.0.0-internal.16` / MSI `1.0.0.16`",
+  "**Published release:** `1.0.0-internal.16` / MSI `1.0.0.16`",
   "Active release frontier:",
   "1.0.0-internal.17",
   "FD-036",
@@ -114,7 +114,7 @@ requireMarkers("documentation/system/CURRENT_STATE.md", [
 requireMarkers("documentation/system/ROADMAP.md", [
   protectedInternal17Correction,
   reviewedInternal17Correction,
-  "Published release: `1.0.0-internal.16` / MSI `1.0.0.16`",
+  "**Published release:** `1.0.0-internal.16` / MSI `1.0.0.16`",
   "Active release frontier:",
   "Internal.17 / FD-036 Founder-offline promotion",
   "## Internal.17 release program — FD-036",
