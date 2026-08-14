@@ -42,6 +42,7 @@ const publishedInternal15 = "371aebc2be3bf0abb1bbe7fe91c035d962fc86a9";
 const signedInternal15Run = "31657621918";
 const protectedInternal17Correction = "c33f234ecf43842cfcc801592cc601d595ed05c5";
 const reviewedInternal17Correction = "c965a062cf2719078601374bd0ace771ca011d53";
+const activeReleaseBranch = "agent/internal-17-founder-offline-final";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 
 requireMarkers("sahelflow.version.json", [
@@ -58,12 +59,49 @@ requireMarkers("scripts/sf-version.ts", [
   "Internal.15/FD-032, Internal.16/FD-034, or Internal.17/FD-036",
 ]);
 
+requireMarkers("README.md", [
+  protectedInternal17Correction,
+  reviewedInternal17Correction,
+  activeReleaseBranch,
+  "PR #257",
+  "1.0.0-internal.17",
+  "1.0.0.17",
+  "FD-036",
+  "founder-offline-only",
+  "documentation/README.md",
+  "PR #251",
+  publishedInternal15,
+  signedInternal15Run,
+  activePhase,
+  "#221, #226 and #230",
+  "FD-033",
+  "Founder acceptance remains open",
+]);
+
+requireMarkers("AGENTS.md", [
+  "one active implementation agent at a time",
+  protectedInternal17Correction,
+  reviewedInternal17Correction,
+  activeReleaseBranch,
+  "PR #257",
+  "1.0.0-internal.17",
+  "FD-036",
+  "founder-offline-only",
+  "## Exact next outcome — FD-036 Internal.17 Founder checkpoint",
+  "FD-033",
+  "17 P1 installed acceptance classes",
+  "#221/#226/#230",
+  "selected Level 1/2/3 gates",
+  activePhase,
+]);
+
 requireMarkers("documentation/README.md", [
   protectedWave4Main,
   "PR #251",
   "Wave 4",
   wave4Head,
   wave4CiRun,
+  "agent/internal-16-wave-4",
   "## FD-034 — Internal.16 Founder-only offline checkpoint",
   "## FD-036 — Internal.17 Founder-only offline correction checkpoint",
   "1.0.0-internal.16",
@@ -71,6 +109,8 @@ requireMarkers("documentation/README.md", [
   "1.0.0-internal.17",
   "1.0.0.17",
   protectedInternal17Correction,
+  activeReleaseBranch,
+  "PR #257",
   "Founder/internal-lab",
   "Issue #230 remains open P1",
   "Internal.17",
@@ -78,6 +118,7 @@ requireMarkers("documentation/README.md", [
   signedInternal15Run,
   activePhase,
   "#221, #226, #230",
+  "FD-034, FD-035 **and FD-036**",
 ]);
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
@@ -127,26 +168,20 @@ requireMarkers("documentation/system/ROADMAP.md", [
   activePhase,
 ]);
 
-requireMarkers("README.md", [
-  "documentation/README.md",
-  "PR #251",
-  publishedInternal15,
-  signedInternal15Run,
-  activePhase,
-  "#221, #226 and #230",
-  "FD-033",
+rejectMarkers("README.md", [
+  "Protected `main`: `b78e3eb945d5a66a34198db8ef00df95cc9b37aa` — PR #250 / Internal.16 Wave 3.",
+  "Active implementation is draft **PR #251",
+  "## Current implementation frontier — Internal.16 completion waves",
 ]);
-
-requireMarkers("AGENTS.md", [
-  "one active implementation agent at a time",
-  "FD-033",
-  "17 P1 installed acceptance classes",
-  "#221/#226/#230",
+rejectMarkers("AGENTS.md", [
+  "## Current Internal.16 handoff after Internal.15",
+  "draft PR #251 is the active Wave 4 branch",
+  "## Exact next outcome — FD-033 Internal.16 completion",
 ]);
-
 rejectMarkers("documentation/README.md", [
   "draft PR #251",
   "Waves 1–3 are protected",
+  "agent/internal-17-founder-offline-checkpoint` — exact Internal.17 / FD-036",
 ]);
 rejectMarkers("documentation/operations/WORKING_MEMORY.md", [
   "draft PR #251",
@@ -178,6 +213,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: Internal.17 correction source is protected on main at c33f234ecf43842cfcc801592cc601d595ed05c5, FD-036 authorizes the exact Founder-only Internal.17 offline release frontier, live system docs agree, signed promotion remains pending, and Founder visual acceptance still follows the signed installation.",
+    "Current execution frontier verified: PR #254 protects the Internal.17 correction on main at c33f234ecf43842cfcc801592cc601d595ed05c5; the root README, AGENTS entry point, documentation index, system docs and FD-036 authority now agree on the exact Founder-only Internal.17 offline release frontier; signed promotion remains pending and Founder visual acceptance follows the signed installation.",
   );
 }
