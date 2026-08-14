@@ -1,11 +1,49 @@
 import { parseReleaseInput } from "./release-input";
 import { appendConservedAllocationStatements } from "./release-allocation";
+import {
+  appendAllocationRetirementSnapshot,
+  loadAllocationTransferSnapshot,
+} from "./release-transfer";
 import { authorizeDesktop, canonicalJson, json, sha256Hex } from "./shared";
 import type {
   D1Statement,
   StorefrontRow,
   StorefrontWorkerEnvironment,
 } from "./types";
+
+type ExistingReleaseRow = {
+  release_id: string;
+  artifact_digest: string;
+  request_digest: string | null;
+};
+
+async function publicationResponse(
+  environment: StorefrontWorkerEnvironment,
+  input: Readonly<{
+    storefrontId: string;
+    releaseId: string;
+    artifactDigest: string;
+    replay: boolean;
+  }>,
+): Promise<Response> {
+  const snapshot = await loadAllocationTransferSnapshot(
+    environment.DB,
+    input.releaseId,
+    input.releaseId,
+  );
+  return json(
+    {
+      storefrontId: input.storefrontId,
+      releaseId: input.releaseId,
+      artifactDigest: input.artifactDigest,
+      allocations: snapshot.allocations,
+      retiredAllocations: snapshot.retiredAllocations,
+      status: "published",
+      replay: input.replay,
+    },
+    input.replay ? 200 : 201,
+  );
+}
 
 export async function publishRelease(
   request: Request,
@@ -35,12 +73,45 @@ export async function publishRelease(
 
   const artifactJson = canonicalJson(input.publicArtifact);
   const artifactDigest = await sha256Hex(artifactJson);
+  const requestDigest = await sha256Hex(canonicalJson({
+    storefrontId,
+    workspaceId: input.workspaceId,
+    releaseId: input.releaseId,
+    parentReleaseId: input.parentReleaseId,
+    templateId: input.templateId,
+    locale: input.locale,
+    artifactDigest,
+    allocations: [...input.allocations].sort((left, right) => left.itemKey.localeCompare(right.itemKey)),
+    shippingRules: [...input.shippingRules].sort((left, right) =>
+      `${left.wilayaCode}:${left.deliveryMode}`.localeCompare(`${right.wilayaCode}:${right.deliveryMode}`)),
+  }));
+
+  const existing = await environment.DB.prepare(
+    `SELECT release_id, artifact_digest, request_digest
+       FROM storefront_release
+      WHERE release_id = ?1 AND storefront_id = ?2`,
+  ).bind(input.releaseId, storefrontId).first<ExistingReleaseRow>();
+  if (existing) {
+    if (
+      existing.request_digest !== requestDigest ||
+      existing.artifact_digest !== artifactDigest
+    ) {
+      return json({ error: "release_idempotency_conflict" }, 409);
+    }
+    return publicationResponse(environment, {
+      storefrontId,
+      releaseId: input.releaseId,
+      artifactDigest,
+      replay: true,
+    });
+  }
+
   const statements: D1Statement[] = [
     environment.DB.prepare(
       `INSERT INTO storefront_release
         (release_id, storefront_id, parent_release_id, template_id, locale,
-         artifact_json, artifact_digest)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+         artifact_json, artifact_digest, request_digest)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
     ).bind(
       input.releaseId,
       storefrontId,
@@ -49,8 +120,15 @@ export async function publishRelease(
       input.locale,
       artifactJson,
       artifactDigest,
+      requestDigest,
     ),
   ];
+  appendAllocationRetirementSnapshot(environment.DB, statements, {
+    operationId: input.releaseId,
+    storefrontId,
+    sourceReleaseId: input.parentReleaseId,
+    reason: "publish",
+  });
   appendConservedAllocationStatements(
     environment.DB,
     statements,
@@ -77,15 +155,28 @@ export async function publishRelease(
     if (message.includes("stale_release_parent")) {
       return json({ error: "stale_release_parent" }, 409);
     }
+    const raced = await environment.DB.prepare(
+      `SELECT release_id, artifact_digest, request_digest
+         FROM storefront_release
+        WHERE release_id = ?1 AND storefront_id = ?2`,
+    ).bind(input.releaseId, storefrontId).first<ExistingReleaseRow>();
+    if (
+      raced?.request_digest === requestDigest &&
+      raced.artifact_digest === artifactDigest
+    ) {
+      return publicationResponse(environment, {
+        storefrontId,
+        releaseId: input.releaseId,
+        artifactDigest,
+        replay: true,
+      });
+    }
     return json({ error: "release_conflict" }, 409);
   }
-  return json(
-    {
-      storefrontId,
-      releaseId: input.releaseId,
-      artifactDigest,
-      status: "published",
-    },
-    201,
-  );
+  return publicationResponse(environment, {
+    storefrontId,
+    releaseId: input.releaseId,
+    artifactDigest,
+    replay: false,
+  });
 }
