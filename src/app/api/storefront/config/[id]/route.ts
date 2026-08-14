@@ -3,6 +3,8 @@ import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireRecentReauthentication } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
+import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
+import { ConnectedPlatformHttpError } from "@/lib/connected-platform/client";
 import { db, shopContext } from "@/lib/db";
 import {
   assertTrustedAction,
@@ -146,38 +148,86 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 
 /**
  * POST /api/storefront/config/[id]
- *   Seller-only: explicitly publish the exact saved Studio draft to the local
- *   public storefront using a compare-and-set draft version.
+ *   Seller-only: publish one exact saved Studio draft through a durable,
+ *   replayable local + hosted operation. The prepare command snapshots the
+ *   draft and protects stock before any network request. Hosted publication or
+ *   pause commits next; only the final command promotes that prepared snapshot
+ *   into local public fields and reconciles delegated inventory.
  */
 export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
   const actorContext = await requireTrustedAction("storefront.publish");
   const { id } = await params;
   const input = publishDraftSchema.parse(await req.json());
   const context = { prisma: db, shop: shopContext };
+  const businessContext = {
+    ...context,
+    businessPrincipal: businessPrincipalFromTrustedActor(actorContext),
+  };
   const { storefrontService, StorefrontVersionConflictError } = await import("@/lib/storefront/service");
-  const before = await storefrontService.getById(context, id);
-  if (!before) return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
+  if (!(await storefrontService.getById(context, id))) {
+    return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
+  }
+
   try {
+    // Enrollment/key authority must exist before the durable prepare command so
+    // a configuration failure cannot strand a provisional stock hold.
     const { loadStorefrontRuntime } = await import("@/lib/connected-platform/runtime");
     const runtime = await loadStorefrontRuntime(context, { createReceiptKeys: true });
-    const config = await storefrontService.publishStudioDraft(context, id, {
+    const {
+      finalizeActiveStorefrontPublish,
+      finalizePausedStorefrontPublish,
+      prepareStorefrontPublish,
+    } = await import("@/lib/connected-platform/storefront-delegation");
+    const preparedCommand = await prepareStorefrontPublish(businessContext, {
+      storefrontId: id,
       expectedDraftUpdatedAt: input.expectedDraftUpdatedAt,
-    });
-    await logAudit(context, {
-      action: "storefront.published",
-      entity: "storefront",
-      entityId: id,
-      actor: trustedActorAuditIdentity(actorContext.actor),
-      before: before as unknown as Record<string, unknown>,
-      after: config as unknown as Record<string, unknown>,
-    });
-    const { publishHostedStorefront } = await import("@/lib/connected-platform/storefront-publisher");
-    const hostedRelease = await publishHostedStorefront({
-      ...runtime,
-      context,
-      config,
       locale: input.locale,
     });
+    const prepared = preparedCommand.result;
+    const {
+      pauseHostedStorefront,
+      publishHostedStorefront,
+    } = await import("@/lib/connected-platform/storefront-publisher");
+
+    let hostedRelease: Record<string, unknown>;
+    if (prepared.draft.isActive) {
+      const hosted = await publishHostedStorefront({
+        ...runtime,
+        context,
+        prepared,
+      });
+      const finalized = await finalizeActiveStorefrontPublish(
+        businessContext,
+        prepared,
+        hosted,
+      );
+      hostedRelease = {
+        status: "published",
+        releaseId: finalized.result.releaseId,
+        artifactDigest: finalized.result.artifactDigest,
+        prepareReplayed: preparedCommand.replayed,
+        finalizeReplayed: finalized.replayed,
+      };
+    } else {
+      const hosted = await pauseHostedStorefront({
+        ...runtime,
+        context,
+        prepared,
+      });
+      const finalized = await finalizePausedStorefrontPublish(
+        businessContext,
+        prepared,
+        hosted,
+      );
+      hostedRelease = {
+        status: finalized.result.status,
+        sourceReleaseId: hosted.sourceReleaseId,
+        prepareReplayed: preparedCommand.replayed,
+        finalizeReplayed: finalized.replayed,
+      };
+    }
+    const config = await storefrontService.getById(context, id);
+    if (!config) throw new Error("Published storefront disappeared after finalization");
     return NextResponse.json({ config, hostedRelease });
   } catch (error) {
     if (error instanceof StorefrontVersionConflictError) {
@@ -190,7 +240,8 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: RouteC
 
 /**
  * DELETE /api/storefront/config/[id]
- *   Seller-only: permanently delete a storefront config.
+ *   Seller-only: pause any hosted storefront first, reconcile retired unsold
+ *   delegation locally, and only then permanently delete the local config.
  */
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   const actorContext = await requireTrustedAction("storefront.manage");
@@ -206,14 +257,47 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
     return NextResponse.json({ error: "Storefront not found" }, { status: 404 });
   }
 
+  let hostedPaused = false;
+  const { loadConnectedRuntimeIfEnrolled } = await import("@/lib/connected-platform/runtime");
+  const connected = await loadConnectedRuntimeIfEnrolled(context);
+  if (connected) {
+    const operationId = `storefront_pause_delete_${id}`;
+    try {
+      const paused = await connected.client.pauseStorefront(id, {
+        workspaceId: shopContext.workspaceId,
+        operationId,
+      });
+      const { applyHostedPauseRetirement } = await import("@/lib/connected-platform/storefront-delegation");
+      await applyHostedPauseRetirement(context, {
+        storefrontId: id,
+        operationId,
+        transfer: {
+          sourceReleaseId: paused.sourceReleaseId,
+          retiredAllocations: paused.retiredAllocations,
+        },
+      });
+      hostedPaused = true;
+    } catch (error) {
+      if (
+        !(error instanceof ConnectedPlatformHttpError) ||
+        error.status !== 404 ||
+        error.code !== "storefront_not_found"
+      ) {
+        throw error;
+      }
+      // A storefront that was never materialized remotely has no hosted
+      // checkout surface to deactivate.
+    }
+  }
+
   await storefrontService.delete(context, id);
-  // W2-5: audit the delete (existing captured above).
-  await logAudit({ prisma: db, shop: shopContext }, {
+  await logAudit(context, {
     action: "storefront.deleted",
     entity: "storefront",
     entityId: id,
     actor: trustedActorAuditIdentity(actorContext.actor),
     before: existing as unknown as Record<string, unknown> | null,
+    metadata: { hostedPaused },
   });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, hostedPaused });
 }, "DELETE /api/storefront/config/[id]");
