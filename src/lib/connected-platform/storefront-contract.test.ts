@@ -115,7 +115,10 @@ describe("hosted storefront contract", () => {
     expect(receipts).toContain("s.shop_id = ?2");
     expect(importer).toContain("line.unitPriceDzd");
     expect(importer).toContain("shop.shopId");
-    expect(source("src/lib/connected-platform/storefront-receipt-worker.ts"))
+    expect(readFileSync(
+      resolve(process.cwd(), "src/lib/connected-platform/storefront-receipt-worker.ts"),
+      "utf8",
+    ))
       .toContain("${CURSOR_KEY_PREFIX}.${shopContext.shopId}");
   });
 
