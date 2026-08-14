@@ -144,14 +144,14 @@ export const POST = withErrorHandler(async (
       input.sourceReleaseId,
       input.expectedActiveReleaseId,
     );
-    const prepared = await db.$queryRaw<Array<{ id: string }>>`
-      SELECT "id"
-        FROM "BusinessCommand"
-       WHERE "idempotencyKey" = ${operationKey}
-         AND "status" = 'committed'
-       LIMIT 1
-    `;
-    if (prepared.length === 0) {
+    const prepared = await db.businessCommand.findFirst({
+      where: {
+        idempotencyKey: operationKey,
+        status: "committed",
+      },
+      select: { id: true },
+    });
+    if (!prepared) {
       throw new ConflictError("The hosted storefront changed before rollback could start");
     }
   }
