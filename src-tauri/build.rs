@@ -122,19 +122,23 @@ fn founder_offline_checkpoint(authority: &serde_json::Value) -> bool {
         .unwrap_or_else(|| panic!("sahelflow.version.json licensing.releaseMode is missing"));
     match release_mode {
         "founder-offline-only" => {
-            let exact_checkpoint = authority.get("version").and_then(serde_json::Value::as_str)
-                == Some("1.0.0-internal.15")
-                && authority.get("channel").and_then(serde_json::Value::as_str) == Some("internal")
-                && licensing
-                    .get("authorityDecision")
-                    .and_then(serde_json::Value::as_str)
-                    == Some("FD-032")
+            let version = authority.get("version").and_then(serde_json::Value::as_str);
+            let decision = licensing
+                .get("authorityDecision")
+                .and_then(serde_json::Value::as_str);
+            let exact_checkpoint = authority.get("channel").and_then(serde_json::Value::as_str)
+                == Some("internal")
                 && licensing
                     .get("ownedHostSuffix")
-                    .is_some_and(serde_json::Value::is_null);
+                    .is_some_and(serde_json::Value::is_null)
+                && matches!(
+                    (version, decision),
+                    (Some("1.0.0-internal.15"), Some("FD-032"))
+                        | (Some("1.0.0-internal.16"), Some("FD-034"))
+                );
             if !exact_checkpoint {
                 panic!(
-                    "founder-offline-only licensing is authorized only for exact 1.0.0-internal.15 by FD-032 with no owned host suffix"
+                    "founder-offline-only licensing is authorized only for exact FD-032/Internal.15 or FD-034/Internal.16 on the internal channel with no owned host suffix"
                 );
             }
             true
@@ -237,7 +241,7 @@ fn main() {
                 if founder_offline_checkpoint(&authority) {
                     if !service_authority.is_empty() {
                         panic!(
-                            "FD-032 Founder-only Internal.15 must not package SF_LICENSE_SERVICE_URL"
+                            "Founder-only offline checkpoints must not package SF_LICENSE_SERVICE_URL"
                         );
                     }
                     println!("cargo:rustc-env=SF_LICENSE_SERVICE_URL=");
