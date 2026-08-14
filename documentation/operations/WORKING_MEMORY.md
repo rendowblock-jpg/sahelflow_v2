@@ -1,94 +1,76 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact resumable execution frontier; never product/architecture/roadmap authority
-> **Last updated:** 2026-08-13
-> **Protected `main`:** `b78e3eb945d5a66a34198db8ef00df95cc9b37aa` — PR #250 / Internal.16 Wave 3
-> **Active implementation PR:** draft PR #251 — `Internal.16 Wave 4 — Storefront Builder V2 + connected platform`
-> **Active branch:** `agent/internal-16-wave-4`
-> **Last application-changing Wave 4 head:** `18a9a840f2c4b6ce3bb6d0bf75f55091f5283ad8`
+> **Last updated:** 2026-08-14
+> **Protected `main`:** `aa7dd2df53286a670fc55e319a281757cf3d28b2` — PR #251 / Internal.16 Wave 4
+> **Exact Wave 4 pre-merge head:** `73e8d8c466567859bc651bb4d77976fdb2a1bbc3`
+> **Exact Wave 4 CI:** `31765143457` — all selected source, Windows, installed and replacement-restore gates green
+> **Active release-authority branch:** `agent/internal-16-founder-offline-checkpoint`
+> **Checkpoint target:** `1.0.0-internal.16` / MSI `1.0.0.16`, Founder/internal-lab only under FD-034
+> **Currently published updater:** Internal.15 — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` — PR #220
-> **Published release:** `1.0.0-internal.15` — source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`
-> **Retained open evidence:** #221, #226, #230
+> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
+> **Retained evidence:** #221, #226, #230
 
-Live GitHub is authority. Re-fetch protected `main`, PR #251, its head/checks/review threads and retained issues before any further application write. The Founder checkout and `scripts/Founder-install-result.json` remain evidence-bearing and untouched.
+Live GitHub is authority. Do not reopen Wave 4 feature work unless a new concrete defect is proven. The current task is release-authority closure only.
 
 ## Wave 4 — what is implemented
 
-The active PR continues from the handoff comment at:
+PR #251 is merged. Wave 4 protects Storefront Builder V2 and the connected Phase 8 platform, including:
 
-`https://github.com/rendowblock-jpg/sahelflow_v2/pull/251#issuecomment-5285845096`
+- private Studio drafts, conflict-safe autosave/manual save, shared preview/public renderer and three localized RTL-safe templates;
+- durable local/hosted immutable publish, pause, release history and rollback;
+- canonical local inventory delegation that bounds hosted stock and survives republish/removal/re-add races;
+- server-authoritative hosted COD pricing, allocation and shipping with encrypted durable receipts;
+- shop-scoped receipt polling, historical receipt prices and canonical desktop order import;
+- installation-wide connected enrollment, encrypted remote projections/commands and fail-closed policy epochs;
+- zero-knowledge backup upload/verify/list/download/delete, rotating retention, stale-object cleanup and replacement-install recovery transfer.
 
-The Storefront Builder V2 source candidate now contains:
+All PR #251 review threads were resolved before merge.
 
-- strict V2 theme/builder schemas with legacy read normalization and strict V2 writes;
-- three distinct Sahara/Atlas/Oasis template identities with AR/FR/EN and RTL-safe Studio copy;
-- mutable Studio authoring, template gallery, section tree, inspector, bounded undo/redo and compare-and-set autosave/manual save into private draft fields;
-- explicit compare-and-set publication is the only path that copies a saved Studio draft into the local public storefront;
-- one shared data-only renderer used by Studio preview and the public local storefront;
-- persistent local cart, canonical product/variant keys, hard availability caps and home/stop-desk delivery selection;
-- editable server-authoritative wilaya/mode delivery rules and local canonical-order delivery fees;
-- safe public projections that remove hosted domain-verification material;
-- strict V2 hosted artifacts that exclude private domain state and keep catalog/allocation parity;
-- immutable hosted releases, authenticated release history and compare-and-set rollback;
-- browser-compatible RSA-OAEP/AES-256-GCM customer envelopes bound to storefront, release, idempotency key, wilaya and delivery mode;
-- durable hosted receipt polling with exact line/shop/release/idempotency metadata;
-- idempotent desktop receipt import through `createCanonicalSourceOrder`, followed by durable automation and terminal receipt acknowledgement;
-- compare-and-set terminal receipt transitions so imported/rejected/reconciled states cannot race-overwrite one another;
-- persisted connected entitlement expiry, feature, shop, member and device claims with session-time enforcement and atomic provisioning caps;
-- D1-bound storefront slot enforcement and database-triggered backup quota/trial-point enforcement;
-- focused contract coverage for V2 artifacts, public projection privacy, hosted encryption binding, item authority, delivery fees and canonical submission.
+## Exact evidence truth
 
-No arbitrary seller JavaScript or unrestricted HTML was introduced. Cloudflare D1 access stays through Worker bindings, public checkout price/allocation/shipping remain server-derived, and all asynchronous Worker operations are awaited.
+CI run `31765143457` on exact head `73e8d8c466567859bc651bb4d77976fdb2a1bbc3` passed:
 
-## Evidence truth
+- Required PR gate;
+- Quality Gate: authority, TypeScript, ESLint, Vitest, Prisma, dependency and migration checks;
+- Windows database + standalone + contained launcher;
+- exact evidence MSI build;
+- installed MSI launch/reopen;
+- authenticated hydrated WebView UI twice;
+- replacement-install backup, restore, identity and rollback.
 
-Draft-safe GitHub Actions are green through application head `79aada6a453985960ee95286f41d328058b27c40`:
+Phase 4 trial issuer smoke, Phase 5 Experience and Phase 6–7 Completion also passed on the frozen head. The evidence MSI is artifact/installed proof for Wave 4, not the signed Internal.16 updater.
 
-- CI `31750669501` — success, with full Quality Gate skipped because PR #251 is draft;
-- Phase 5 Experience `31750669317` — success;
-- Phase 6–7 Completion `31750669586` — success;
-- Integration source checkpoint `31750669312` — skipped by draft policy.
+## FD-034 / Internal.16 release authority
 
-The latest application head `18a9a840f2c4b6ce3bb6d0bf75f55091f5283ad8` repairs the four current P1 review findings from the obsolete `c9ff7421...` review: entitlement expiry, signed provisioning limits, private Studio autosaves and atomic backup quota/trial enforcement. Re-fetch its draft-safe runs and review-thread outdated state.
+The Founder explicitly approved FD-034 on 2026-08-14. It authorizes only `1.0.0-internal.16` / MSI `1.0.0.16` as a Founder/internal-lab offline checkpoint, mirroring FD-032's narrow Internal.15 boundary. The authoritative addendum is embedded in `documentation/README.md` until the consolidated Founder decision register is next reconciled.
 
-An earlier one-time full run on obsolete head `c9ff7421...` found stale branch compile/lint defects. The later source repairs replaced the preview boundary, corrected connected dashboard projection authority, corrected the Node JWK type and removed the synchronous autosave effect mutation. That old red run is diagnostic history, not exact-head evidence.
+The active branch already carries:
 
-No local app, build, lint, TypeScript, unit, integration or runtime validation is authorized for this continuation. Use GitHub Actions. Draft-safe green is not full source closure.
+- synchronized version authority in `sahelflow.version.json`, `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`;
+- `founder-offline-only` + `FD-034` in version authority;
+- `scripts/sf-version.ts` allowing Founder-offline only for exact Internal.15/FD-032 or Internal.16/FD-034;
+- current-frontier reconciliation for merged Wave 4.
 
-## Source-complete boundary versus remaining evidence
-
-Storefront Builder V2 is complete at the current branch-source candidate boundary defined by the PR handoff. It is not yet protected or released.
-
-Before merge:
-
-1. re-fetch latest PR head and draft-safe Actions;
-2. perform one final full diff/adversarial review against protected `main`;
-3. inspect current PR review threads;
-4. move PR #251 to ready only when the Founder/active agent intentionally opens the normal exact-head full Quality Gate;
-5. require full TypeScript, ESLint, Vitest, Prisma, dependency, migration and selected Phase 5/6–7 evidence on the exact head;
-6. repair only concrete findings, then update the PR body/comment with exact run IDs;
-7. merge only by expected head after current P0/P1 findings are zero.
-
-After merge, Internal.16 is still not an update. A signed Internal.16 candidate, clean upgrade/install, close/reopen, preservation, hosted-domain/network, T470/floor, Founder acceptance and retained #221/#226/#230 evidence remain separate.
+Issue #230 remains P1 and still blocks customer/public online-trial distribution. #221/#226 remain separate installed experience/performance obligations. FD-034 does not authorize Internal.17 or later.
 
 ## Exact next-session order
 
-1. Read `AGENTS.md`, `documentation/README.md`, this file, governing product/experience/architecture sections and the latest PR #251 handoff comment.
-2. Fetch protected `main` and PR #251; verify one active implementation seat and a clean isolated worktree.
-3. Do not repeat the whole repository/documentation audit.
-4. Review `origin/main...PR_HEAD` for P0/P1 authority, privacy, idempotency, tenant/shop and checkout-transition defects.
-5. Check the exact-head draft-safe workflows and current review threads.
-6. If source review is clean, intentionally open the normal non-draft full CI gate; do not simulate it locally.
-7. Repair concrete CI/review findings in small compile-safe commits.
-8. Freeze the exact green application head, reconcile PR evidence and proceed through expected-head merge discipline.
+1. Verify the active branch head and inspect only its small release-authority diff from `aa7dd2df53286a670fc55e319a281757cf3d28b2`.
+2. Continue PR #252 — Internal.16 Founder-offline checkpoint and signed version authority — against protected `main`.
+3. Require its exact `Required PR gate` and selected version/Windows/release lanes to pass; repair only concrete failures.
+4. Merge by the repository-allowed method with an expected-head guard. Merge commits are disabled; PR #251 used squash successfully.
+5. Confirm protected `main` contains `1.0.0-internal.16`, MSI `1.0.0.16`, `FD-034` and the exact approved updater authority.
+6. Observe `.github/workflows/release-on-version-authority.yml` dispatch the signed `release.yml` workflow from the exact protected-main source.
+7. Require the signed Internal.16 workflow to finish green and verify the live updater/release points to the exact protected source before calling Internal.16 published.
+8. Download/present the signed Internal.16 MSI/updater artifact for Founder installation.
+9. After publication, reconcile broader active documentation with the exact signed source/run without another application/version change.
 
 ## Hard rules
 
-- One active implementation agent, branch and PR for this coherent outcome.
-- Protected `main` is source authority; PR #251 is proposed until merged.
-- Preserve Founder checkout changes and `scripts/Founder-install-result.json`.
-- Local work is limited to inspection, editing, diff review, commit and push; validation executes in GitHub Actions.
-- Desktop remains canonical for customer/order/stock truth; hosted success means durable queued receipt, never premature canonical commit.
-- Customer price, allocation and shipping input is never trusted.
-- No merge, release, updater publication, installed claim, Founder-acceptance claim, Beta claim or Stable claim without its exact evidence layer.
+- No new Wave 4 scope during checkpoint release closure.
+- Do not weaken FD-034, updater signing, installed/recovery or customer-online boundaries.
+- Do not call the CI evidence MSI the formal Internal.16 updater.
+- No customer release/Beta/Stable claim from this Founder-only checkpoint.
+- Preserve Founder AppData, shop databases, installation identity and retained evidence.

@@ -120,15 +120,17 @@ if (
 }
 
 const founderOfflineCheckpoint =
-  authority.version === "1.0.0-internal.15" &&
   authority.channel === "internal" &&
   authority.licensing?.releaseMode === "founder-offline-only" &&
-  authority.licensing?.authorityDecision === "FD-032" &&
-  authority.licensing?.ownedHostSuffix === null;
+  authority.licensing?.ownedHostSuffix === null &&
+  ((authority.version === "1.0.0-internal.15" &&
+    authority.licensing?.authorityDecision === "FD-032") ||
+    (authority.version === "1.0.0-internal.16" &&
+      authority.licensing?.authorityDecision === "FD-034"));
 if (authority.licensing?.releaseMode === "founder-offline-only") {
   if (!founderOfflineCheckpoint) {
     console.error(
-      "founder-offline-only licensing is authorized only for 1.0.0-internal.15 by FD-032 with no owned host suffix",
+      "founder-offline-only licensing is authorized only for Internal.15/FD-032 or Internal.16/FD-034 on the internal channel with no owned host suffix",
     );
     failed = true;
   }
