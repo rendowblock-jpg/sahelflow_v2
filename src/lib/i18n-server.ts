@@ -9,7 +9,11 @@ import "server-only";
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import type { Locale } from "@/lib/i18n";
-import { getDirection, DEFAULT_LOCALE } from "@/lib/i18n";
+import {
+  getDirection,
+  DEFAULT_LOCALE,
+  stabilizeBidiText,
+} from "@/lib/i18n";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 import { cookies } from "next/headers";
 
@@ -66,7 +70,7 @@ export async function getI18n() {
         );
       }
     }
-    return value;
+    return stabilizeBidiText(value, locale);
   };
 
   return { t, locale, dir };
