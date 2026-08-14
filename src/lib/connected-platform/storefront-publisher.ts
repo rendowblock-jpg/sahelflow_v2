@@ -34,7 +34,11 @@ export async function publishHostedStorefront(input: Readonly<{
     shop.workspaceId,
     100,
   );
-  const parentReleaseId = history.releases.find((release) => release.isActive)?.releaseId ?? null;
+  const preparedHistory = history.releases.find(
+    (release) => release.releaseId === input.prepared.releaseId,
+  );
+  const parentReleaseId = preparedHistory?.parentReleaseId ??
+    history.releases.find((release) => release.isActive)?.releaseId ?? null;
   const release = createStorefrontReleaseInput({
     workspaceId: shop.workspaceId,
     releaseId: input.prepared.releaseId,
@@ -56,7 +60,7 @@ export async function publishHostedStorefront(input: Readonly<{
   }
   return Object.freeze({
     releaseId: published.releaseId,
-    parentReleaseId: published.parentReleaseId ?? null,
+    parentReleaseId,
     artifactDigest: published.artifactDigest,
     allocations: Object.freeze(published.allocations.map((allocation) => Object.freeze({ ...allocation }))),
     retiredAllocations: Object.freeze(
