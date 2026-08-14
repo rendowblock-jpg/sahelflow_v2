@@ -13,7 +13,7 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(source).not.toContain("lg:p-2");
   });
 
-  it("commits locale, server copy, document direction and shell geometry as one server-confirmed document", () => {
+  it("commits locale, server copy, document direction and shell geometry as one server-confirmed tree", () => {
     const routeLayout = read("src/app/(dashboard)/layout.tsx");
     const dashboardLayout = read("src/components/layout/dashboard-layout.tsx");
     const topbar = read("src/components/layout/topbar.tsx");
@@ -21,6 +21,7 @@ describe("Phase 5 experience foundation source contract", () => {
     const hook = read("src/hooks/use-i18n.ts");
     const i18n = read("src/lib/i18n/index.ts");
     const serverLocale = read("src/lib/i18n/server-locale-context.tsx");
+    const productSystem = read("src/app/product-system.css");
 
     expect(routeLayout).not.toContain("serverDir");
     expect(dashboardLayout).toContain("const { t, locale, dir } = useI18n()");
@@ -30,13 +31,16 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(store).toContain("applyDocumentLocale(locale)");
     expect(hook).toContain("requestLocale(newLocale)");
     expect(hook).toContain("setPendingLocale(newLocale)");
+    expect(hook).toContain("router.refresh();");
+    expect(hook).toContain("LOCALE_REFRESH_FALLBACK_MS");
     expect(hook).toContain("window.location.reload();");
-    expect(hook).not.toContain("router.refresh();");
-    expect(hook).not.toContain("startLocaleTransition");
+    expect(hook).toContain('root.dataset.localeTransition = "pending"');
     expect(topbar).not.toContain("router.refresh()");
     expect(topbar).toContain("isLocalePending");
     expect(serverLocale).toContain("useLayoutEffect");
     expect(serverLocale).toContain("commitLocale(locale)");
+    expect(serverLocale).toContain("root.dataset.localeTarget === locale");
+    expect(productSystem).toContain('html[data-locale-transition="pending"] body::before');
     expect(hook).toContain("const translations = getTranslations(locale)");
     expect(hook).not.toContain("use(getTranslationPromise(locale))");
     expect(i18n).toContain("const STATIC_TRANSLATIONS");
@@ -47,6 +51,7 @@ describe("Phase 5 experience foundation source contract", () => {
     const appearance = read("src/components/settings/appearance-panel.tsx");
     const provider = read("src/components/theme-provider.tsx");
     const rootLayout = read("src/app/layout.tsx");
+    const productSystem = read("src/app/product-system.css");
 
     expect(appearance).toContain('from "@/components/theme-provider"');
     expect(appearance).not.toContain('from "next-themes"');
@@ -60,8 +65,12 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(provider).toContain("runtimePresetOverride = preset");
     expect(provider).toContain("persistTheme(normalized)");
     expect(provider).toContain("persistPreset(normalized)");
+    expect(provider).toContain("beginAppearanceTransaction()");
     expect(provider).toContain("notifyAppearanceChanged();");
     expect(rootLayout).toContain("e.dataset.themePreset=p");
+    expect(productSystem).toContain('html[data-theme-preset="atlas"]');
+    expect(productSystem).toContain('html[data-theme-preset="oasis"]');
+    expect(productSystem).toContain('html[data-theme-preset="dune"]');
   });
 
   it("hydrates and validates one persisted density authority through a server-safe snapshot", () => {
