@@ -133,12 +133,12 @@ export default async function AccountingPage() {
           ) : null}
 
           <div className="card-grid-4">
-            <StatCard label={t("accounting.netRevenue")} value={formatDZD(profitability.netRevenue)} icon={<TrendingUp />} />
-            <StatCard label={t("accounting.cogs")} value={formatDZD(profitability.cogs)} icon={<Package />} />
-            <StatCard label={t("accounting.expenses")} value={formatDZD(totalExpenses ?? 0)} icon={<Receipt />} />
+            <StatCard label={t("accounting.netRevenue")} value={formatDZD(profitability.netRevenue, locale)} icon={<TrendingUp />} />
+            <StatCard label={t("accounting.cogs")} value={formatDZD(profitability.cogs, locale)} icon={<Package />} />
+            <StatCard label={t("accounting.expenses")} value={formatDZD(totalExpenses ?? 0, locale)} icon={<Receipt />} />
             <StatCard
               label={t("accounting.netProfit")}
-              value={formatDZD(profitability.netProfit)}
+              value={formatDZD(profitability.netProfit, locale)}
               icon={<Wallet />}
               trend={profitability.netProfit > 0 ? 1 : profitability.netProfit < 0 ? -1 : 0}
               trendLabel={profitability.netProfit >= 0 ? t("accounting.profit") : t("accounting.loss")}
@@ -147,7 +147,7 @@ export default async function AccountingPage() {
 
           <ChartCard
             title={t("accounting.revenueVsExpenses")}
-            summary={`${t("accounting.netRevenue")}: ${formatDZD(profitability.netRevenue)} · ${t("accounting.expenses")}: ${formatDZD(totalExpenses ?? 0)}`}
+            summary={`${t("accounting.netRevenue")}: ${formatDZD(profitability.netRevenue, locale)} · ${t("accounting.expenses")}: ${formatDZD(totalExpenses ?? 0, locale)}`}
             icon={<TrendingUp className="size-4" />}
             config={{}}
           >
@@ -189,7 +189,7 @@ export default async function AccountingPage() {
                     <TableRow key={expense.id}>
                       <TableCell className="text-muted-foreground">{formatDate(expense.date, locale)}</TableCell>
                       <TableCell className="font-medium">{t(`accounting.category.${expense.category}`)}</TableCell>
-                      <TableCell className="text-end font-medium tabular-nums">−{formatDZD(expense.amount)}</TableCell>
+                      <TableCell className="text-end font-medium tabular-nums">−{formatDZD(expense.amount, locale)}</TableCell>
                       <TableCell className="max-w-xs text-muted-foreground">{expense.notes ?? "—"}</TableCell>
                       {canUpdate ? (
                         <TableCell className="text-end">
