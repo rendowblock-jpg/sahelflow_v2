@@ -22,6 +22,7 @@ export interface ThemeProviderProps {
   children: React.ReactNode;
   attribute?: string; // accepted for compatibility; SahelFlow uses class authority
   defaultTheme?: string;
+  defaultPreset?: ThemePreset;
   enableSystem?: boolean;
   disableTransitionOnChange?: boolean;
 }
@@ -42,15 +43,19 @@ interface ThemeContextValue {
 
 const STORAGE_KEY = "theme";
 const PRESET_STORAGE_KEY = "sahelflow-theme-preset";
+const THEME_COOKIE_KEY = "sahelflow-theme";
+const PRESET_COOKIE_KEY = "sahelflow-theme-preset";
+const APPEARANCE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 2;
 const THEME_CHANGE_EVENT = "sahelflow:theme-change";
 const DEFAULT_THEME: ThemeMode = "dark";
 const DEFAULT_PRESET: ThemePreset = "sahel";
 const PRESETS: ThemePreset[] = ["sahel", "atlas", "oasis", "dune"];
 
-// A WebView can deny/quota-fail localStorage while the application is otherwise
-// healthy. These bounded in-memory overrides keep context state and the DOM under
-// one authority for the current session when persistence is unavailable. A later
-// successful write or an external storage event releases the relevant override.
+// Desktop production serves the packaged app from a localhost port selected at
+// runtime. localStorage is port/origin scoped, so it cannot be the only durable
+// appearance store across app restarts. Cookies are host scoped (not port scoped)
+// and therefore bridge packaged-runtime port changes while localStorage remains a
+// compatible browser/PWA mirror.
 let runtimeThemeOverride: ThemeMode | null = null;
 let runtimePresetOverride: ThemePreset | null = null;
 
@@ -64,20 +69,55 @@ const ThemeContext = createContext<ThemeContextValue>({
   presets: PRESETS,
 });
 
-function normalizeTheme(value: string | null | undefined): ThemeMode {
+function parseTheme(value: string | null | undefined): ThemeMode | null {
   return value === "light" || value === "dark" || value === "system"
     ? value
-    : DEFAULT_THEME;
+    : null;
+}
+
+function normalizeTheme(value: string | null | undefined): ThemeMode {
+  return parseTheme(value) ?? DEFAULT_THEME;
+}
+
+function parsePreset(value: string | null | undefined): ThemePreset | null {
+  return value === "sahel" ||
+    value === "atlas" ||
+    value === "oasis" ||
+    value === "dune"
+    ? value
+    : null;
 }
 
 function normalizePreset(value: string | null | undefined): ThemePreset {
-  return value === "atlas" || value === "oasis" || value === "dune"
-    ? value
-    : DEFAULT_PRESET;
+  return parsePreset(value) ?? DEFAULT_PRESET;
 }
 
 function resolveTheme(theme: ThemeMode, systemDark: boolean): ResolvedTheme {
   return theme === "system" ? (systemDark ? "dark" : "light") : theme;
+}
+
+function readCookie(key: string): string | null {
+  if (typeof document === "undefined") return null;
+  try {
+    const prefix = `${encodeURIComponent(key)}=`;
+    const entry = document.cookie
+      .split(";")
+      .map((value) => value.trim())
+      .find((value) => value.startsWith(prefix));
+    return entry ? decodeURIComponent(entry.slice(prefix.length)) : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistCookie(key: string, value: string): boolean {
+  if (typeof document === "undefined") return false;
+  try {
+    document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; Path=/; Max-Age=${APPEARANCE_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
+    return readCookie(key) === value;
+  } catch {
+    return false;
+  }
 }
 
 function beginAppearanceTransaction(): void {
@@ -183,48 +223,52 @@ function subscribe(callback: () => void): () => void {
 
 function getThemeSnapshot(): ThemeMode {
   if (runtimeThemeOverride !== null) return runtimeThemeOverride;
+
+  const cookieTheme = parseTheme(readCookie(THEME_COOKIE_KEY));
+  if (cookieTheme) return cookieTheme;
+
   try {
-    return normalizeTheme(localStorage.getItem(STORAGE_KEY));
+    return parseTheme(localStorage.getItem(STORAGE_KEY)) ?? DEFAULT_THEME;
   } catch {
     return DEFAULT_THEME;
   }
 }
 
-function getThemeServerSnapshot(): ThemeMode {
-  return DEFAULT_THEME;
-}
-
 function getPresetSnapshot(): ThemePreset {
   if (runtimePresetOverride !== null) return runtimePresetOverride;
+
+  const cookiePreset = parsePreset(readCookie(PRESET_COOKIE_KEY));
+  if (cookiePreset) return cookiePreset;
+
   try {
-    return normalizePreset(localStorage.getItem(PRESET_STORAGE_KEY));
+    return parsePreset(localStorage.getItem(PRESET_STORAGE_KEY)) ?? DEFAULT_PRESET;
   } catch {
     return DEFAULT_PRESET;
   }
 }
 
-function getPresetServerSnapshot(): ThemePreset {
-  return DEFAULT_PRESET;
-}
-
 function persistTheme(theme: ThemeMode): void {
   runtimeThemeOverride = theme;
+  let persisted = persistCookie(THEME_COOKIE_KEY, theme);
   try {
     localStorage.setItem(STORAGE_KEY, theme);
-    runtimeThemeOverride = null;
+    persisted = true;
   } catch {
-    // Keep the in-memory override. Persistence is optional; coherent live state is not.
+    // Cookie persistence still carries desktop restarts when localStorage fails.
   }
+  if (persisted) runtimeThemeOverride = null;
 }
 
 function persistPreset(preset: ThemePreset): void {
   runtimePresetOverride = preset;
+  let persisted = persistCookie(PRESET_COOKIE_KEY, preset);
   try {
     localStorage.setItem(PRESET_STORAGE_KEY, preset);
-    runtimePresetOverride = null;
+    persisted = true;
   } catch {
-    // Keep the in-memory override. Persistence is optional; coherent live state is not.
+    // Cookie persistence still carries desktop restarts when localStorage fails.
   }
+  if (persisted) runtimePresetOverride = null;
 }
 
 function notifyAppearanceChanged(): void {
@@ -254,17 +298,18 @@ function getSystemServerSnapshot(): boolean {
 export function ThemeProvider({
   children,
   defaultTheme = DEFAULT_THEME,
+  defaultPreset = DEFAULT_PRESET,
   enableSystem = true,
 }: ThemeProviderProps) {
   const storedTheme = useSyncExternalStore(
     subscribe,
     getThemeSnapshot,
-    getThemeServerSnapshot,
+    () => normalizeTheme(defaultTheme),
   );
   const preset = useSyncExternalStore(
     subscribe,
     getPresetSnapshot,
-    getPresetServerSnapshot,
+    () => normalizePreset(defaultPreset),
   );
   const systemDark = useSyncExternalStore(
     subscribeSystem,
@@ -275,10 +320,13 @@ export function ThemeProvider({
   const theme = storedTheme || normalizeTheme(defaultTheme);
   const resolvedTheme = resolveTheme(theme, systemDark);
 
-  // Reconcile initial hydration, preset storage events and OS scheme changes.
+  // Reconcile initial hydration, migrate older localStorage-only preferences to
+  // the host-scoped cookie, and respond to preset storage / OS scheme changes.
   useEffect(() => {
+    persistTheme(theme);
+    persistPreset(preset);
     applyAppearance(resolvedTheme, preset);
-  }, [resolvedTheme, preset]);
+  }, [theme, resolvedTheme, preset]);
 
   const setTheme = useCallback((newTheme: string) => {
     const normalized = normalizeTheme(newTheme);
@@ -290,7 +338,6 @@ export function ThemeProvider({
     commitAppearanceTransition(() => {
       persistTheme(normalized);
       applyAppearance(resolveTheme(normalized, systemPrefersDark), currentPreset);
-      // Always notify the external store, even when localStorage persistence failed.
       notifyAppearanceChanged();
     });
   }, []);
@@ -305,7 +352,6 @@ export function ThemeProvider({
     commitAppearanceTransition(() => {
       persistPreset(normalized);
       applyAppearance(resolveTheme(currentTheme, systemPrefersDark), normalized);
-      // Always notify the external store, even when localStorage persistence failed.
       notifyAppearanceChanged();
     });
   }, []);

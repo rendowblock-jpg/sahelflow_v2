@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
+import { SahelFlowMark } from "@/components/brand/sahelflow-mark";
 import { useI18n } from "@/hooks/use-i18n";
 import { useUIStore } from "@/stores/ui-store";
 import { cn } from "@/lib/utils";
@@ -105,7 +106,7 @@ function SidebarLink({
  * Desktop navigation exposes seller destinations directly. Historical domain
  * relationships still power command/search and route context, but the sidebar no
  * longer hides ordinary pages behind active-domain dropdowns. Seller preference
- * changes only the seven domain blocks; genuine child routes remain attached to
+ * changes only the daily domain blocks; genuine child routes remain attached to
  * their canonical parent and Profile/Settings stay fixed utilities.
  */
 export function Sidebar({
@@ -140,9 +141,10 @@ export function Sidebar({
           collapsed && "justify-center px-0",
         )}
       >
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-xs font-bold tracking-tight text-primary">
-          SF
-        </div>
+        <SahelFlowMark
+          className="size-9 shrink-0 rounded-lg shadow-sm ring-1 ring-white/8"
+          accessibleTitle={collapsed ? "SahelFlow" : undefined}
+        />
         {!collapsed && (
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold leading-none text-sidebar-foreground">

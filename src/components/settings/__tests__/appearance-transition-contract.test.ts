@@ -22,6 +22,22 @@ describe("appearance transition authority", () => {
     expect(css).not.toContain("data-theme-switching");
   });
 
+  it("persists mode and preset across packaged localhost port changes", () => {
+    const provider = source("../../theme-provider.tsx");
+    const layout = source("../../../app/layout.tsx");
+
+    expect(provider).toContain('const THEME_COOKIE_KEY = "sahelflow-theme"');
+    expect(provider).toContain(
+      'const PRESET_COOKIE_KEY = "sahelflow-theme-preset"',
+    );
+    expect(provider).toContain("APPEARANCE_COOKIE_MAX_AGE_SECONDS");
+    expect(provider).toContain("persistCookie(THEME_COOKIE_KEY, theme)");
+    expect(provider).toContain("persistCookie(PRESET_COOKIE_KEY, preset)");
+    expect(layout).toContain('cookieStore.get("sahelflow-theme")');
+    expect(layout).toContain('cookieStore.get("sahelflow-theme-preset")');
+    expect(layout).toContain("defaultPreset={initialPreset}");
+  });
+
   it("makes every non-default preset a coordinated surface family, not an accent-only swap", () => {
     const css = source("../../../app/product-system.css");
 

@@ -4,9 +4,9 @@
   "version": "1.0.0-internal.16",
   "identifier": "com.sahelflow.desktop",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "bunx tauri icon public/icons/icon.svg && bun run dev",
     "devUrl": "http://localhost:3000",
-    "beforeBuildCommand": "bun run src-tauri/build-frontend.ts",
+    "beforeBuildCommand": "bunx tauri icon public/icons/icon.svg && bun run src-tauri/build-frontend.ts",
     "frontendDist": "http://localhost:3000"
   },
   "app": {
@@ -62,7 +62,7 @@
       "endpoints": [
         "https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM3MTgzNjkzQTA1ODlCNTUKUldSVm0xaWdrellZeDNWZ3BYU2xmakFsR0VQQkNQY1Y2VGxpN0F4bm5ib2kzT0xPb2cyMnlaRG0K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM3MTgzNjkzQTA1ODlCNTUKUldSVmoxaWdrellZeDNWZ3BYU2xmakFsR0VQQkNQY1Y2VGxpN0F4bm5ib2kzT0xPb2cyMnlaRG0K",
       "windows": {
         "installMode": "passive"
       }
