@@ -14,8 +14,9 @@ describe("storefront hosted delegation authority", () => {
     expect(route).toContain("prepareStorefrontPublish");
     expect(route).toContain("publishHostedStorefront");
     expect(route).toContain("finalizeActiveStorefrontPublish");
-    expect(route.indexOf("publishHostedStorefront")).toBeLessThan(
-      route.indexOf("finalizeActiveStorefrontPublish"),
+    const activePublishFlow = route.slice(route.indexOf("if (prepared.draft.isActive)"));
+    expect(activePublishFlow.indexOf("await publishHostedStorefront({")).toBeLessThan(
+      activePublishFlow.indexOf("await finalizeActiveStorefrontPublish("),
     );
     expect(delegation).toContain("storefront.publish.prepare.v1");
     expect(delegation).toContain("storefront.publish.finalize.v1");
