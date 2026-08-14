@@ -33,14 +33,14 @@ Repository `AGENTS.md` remains the coding-agent entry point. Do not create a com
 
 ## Historical continuity retained
 
-These markers remain deliberately present because `sf-audit` protects continuity between prior exact evidence and the current frontier:
+These markers remain deliberately present because `sf-audit` and the current-frontier verifier protect continuity between prior exact evidence and the current frontier:
 
 - PR #220 is the Phase 5 application-changing closure line at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 - PR #250 was the preceding Internal.16 Wave 3 protected merge.
-- PR #251 was produced from the superseded branch `agent/internal-16-wave-4` and is now protected history.
-- The prior published Founder checkpoint was `1.0.0-internal.15`, signed run `31657621918`.
+- PR #251 was produced from the superseded branch `agent/internal-16-wave-4` and is now protected history; its exact pre-merge head was `73e8d8c466567859bc651bb4d77976fdb2a1bbc3` and its exact Wave 4 CI was `31765143457`.
+- The prior published Founder checkpoint was `1.0.0-internal.15` from protected source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`.
 - The formal phase label remains Phase 6 — Arabic, RTL and accessibility parity while the installed correction frontier is active.
-- Issues #221, #226 and #230 remain open.
+- Issues #221, #226 and #230 remain open. Issue #230 remains open P1 and still blocks customer/public online-trial distribution.
 
 ## Current execution truth
 
