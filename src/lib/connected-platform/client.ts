@@ -28,6 +28,11 @@ export type ConnectedPlatformClientOptions = Readonly<{
   timeoutMs?: number;
 }>;
 
+export type StorefrontAllocationTransfer = Readonly<{
+  itemKey: string;
+  quantity: number;
+}>;
+
 export type StorefrontReceipt = Readonly<{
   relaySequence: number;
   receiptId: string;
@@ -231,9 +236,34 @@ export class ConnectedPlatformClient {
   }
 
   publishStorefrontRelease(storefrontId: string, input: unknown) {
-    return this.requestJson<{ releaseId: string; artifactDigest: string; status: string }>(
+    return this.requestJson<{
+      storefrontId: string;
+      releaseId: string;
+      artifactDigest: string;
+      allocations: StorefrontAllocationTransfer[];
+      retiredAllocations: StorefrontAllocationTransfer[];
+      status: "published";
+      replay: boolean;
+    }>(
       "storefront",
       `/v1/desktop/storefronts/${encodeURIComponent(storefrontId)}/releases`,
+      { method: "POST", body: input },
+    );
+  }
+
+  pauseStorefront(
+    storefrontId: string,
+    input: { workspaceId: string; operationId: string },
+  ) {
+    return this.requestJson<{
+      storefrontId: string;
+      operationId: string;
+      sourceReleaseId: string | null;
+      retiredAllocations: StorefrontAllocationTransfer[];
+      status: "paused";
+    }>(
+      "storefront",
+      `/v1/desktop/storefronts/${encodeURIComponent(storefrontId)}/pause`,
       { method: "POST", body: input },
     );
   }
@@ -427,7 +457,10 @@ export class ConnectedPlatformClient {
       sourceReleaseId: string;
       previousReleaseId: string;
       artifactDigest: string;
+      allocations: StorefrontAllocationTransfer[];
+      retiredAllocations: StorefrontAllocationTransfer[];
       status: "rolled_back";
+      replay: boolean;
     }>("storefront", `/v1/desktop/storefronts/${encodeURIComponent(storefrontId)}/rollback`, {
       method: "POST",
       body: input,
