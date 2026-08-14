@@ -19,12 +19,53 @@
     0 0 0 1px var(--sf-surface-highlight) inset;
 }
 
+[data-inbox-workspace="v2"] {
+  container-name: inbox-workspace;
+  container-type: inline-size;
+}
+
+[data-ai-workspace="v2"] {
+  container-name: ai-workspace;
+  container-type: inline-size;
+}
+
 .dark [data-inbox-workspace="v2"],
 .dark [data-ai-workspace="v2"] {
   box-shadow:
     0 1px 2px oklch(0 0 0 / 0.20),
     0 22px 58px oklch(0 0 0 / 0.20),
     0 0 0 1px var(--sf-surface-highlight) inset;
+}
+
+/* Metadata must remain genuinely readable on a 1366×768 installed workbench.
+ * Internal.16 used 9–11px labels heavily in the two flagship products, which
+ * survived automated reflow but failed human SaaS-density acceptance. */
+[data-inbox-workspace="v2"] :where(
+    [class~="text-[9px]"],
+    [class~="text-[10px]"],
+    [class~="text-[11px]"]
+  ),
+[data-ai-workspace="v2"] :where(
+    [class~="text-[9px]"],
+    [class~="text-[10px]"],
+    [class~="text-[11px]"]
+  ) {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+html[dir="rtl"] [data-inbox-workspace="v2"] :where(
+    [class~="text-[9px]"],
+    [class~="text-[10px]"],
+    [class~="text-[11px]"]
+  ),
+html[dir="rtl"] [data-ai-workspace="v2"] :where(
+    [class~="text-[9px]"],
+    [class~="text-[10px]"],
+    [class~="text-[11px]"]
+  ) {
+  font-size: 0.8125rem;
+  line-height: 1.2rem;
 }
 
 /* ── Inbox ─────────────────────────────────────────────────────────────── */
@@ -211,6 +252,34 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* The real available workbench width is the main pane after the durable sidebar,
+ * not the browser viewport. Container queries keep 1366px desktop installs from
+ * squeezing three columns just because the viewport happens to cross `xl`. */
+@container inbox-workspace (max-width: 72rem) {
+  [data-inbox-queue="true"] {
+    width: 20.5rem !important;
+    min-width: 20.5rem !important;
+  }
+
+  aside:has(> [data-inbox-context="true"]) {
+    display: none !important;
+  }
+
+  [data-inbox-thread="active"] [data-slot="sheet-trigger"] {
+    display: inline-flex !important;
+  }
+}
+
+@container ai-workspace (max-width: 72rem) {
+  [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
+    display: none !important;
+  }
+
+  [data-ai-thread="true"] [data-slot="sheet-trigger"] {
+    display: inline-flex !important;
   }
 }
 
