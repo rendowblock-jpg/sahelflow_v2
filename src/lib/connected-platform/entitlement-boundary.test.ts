@@ -48,6 +48,8 @@ describe("connected entitlement and quota boundaries", () => {
     const schema = source("control-plane/connected/schema.sql");
     const worker = source("control-plane/connected/worker.ts");
     const projection = source("src/lib/connected-platform/desktop-projection.ts");
+    const projectionWorker = source("src/lib/connected-platform/remote-projection-worker.ts");
+    const instrumentation = source("src/instrumentation.ts");
     expect(schema).toContain("CREATE TABLE IF NOT EXISTS connected_command_policy");
     expect(worker).toContain("command_not_authorized");
     expect(worker).toContain("command === envelope.messageType");
@@ -55,6 +57,8 @@ describe("connected entitlement and quota boundaries", () => {
     expect(worker).toContain("policy.member_revocation_epoch === envelope.revocationEpoch");
     expect(projection).toContain("remoteCommandTypesForPermissions");
     expect(projection).toContain("putCommandPolicy");
+    expect(projectionWorker).toContain("publishRemoteDashboardProjection");
+    expect(instrumentation).toContain("startConnectedProjectionWorker");
   });
 
   it("polls supported remote commands through current local member authority", () => {
@@ -69,16 +73,20 @@ describe("connected entitlement and quota boundaries", () => {
     expect(instrumentation).toContain("startConnectedCommandWorker");
   });
 
-  it("renews connected and backup tokens after local signed activation", () => {
+  it("renews installation-wide connected and backup tokens after signed activation", () => {
     const runtime = source("src/lib/connected-platform/runtime.ts");
+    const installation = source("src/lib/connected-platform/installation-authority.ts");
     const syncRoute = source("src/app/api/license/sync/route.ts");
     const trialRoute = source("src/app/api/license/trial/route.ts");
     expect(runtime).toContain("bootstrapConnected");
     expect(runtime).toContain("bootstrapBackup");
-    expect(runtime).toContain("setSecret(context, CONNECTED_CONTROL_TOKEN_SECRET");
-    expect(runtime).toContain("setSecret(context, CONNECTED_BACKUP_TOKEN_SECRET");
-    expect(runtime).toContain("!existingBackupToken");
-    expect(runtime).toContain("!existingControlToken");
+    expect(runtime).toContain("updateConnectedInstallationTokens");
+    expect(runtime).toContain("!authority.backupToken");
+    expect(runtime).toContain("!current.controlToken");
+    expect(installation).toContain("connected-installation-authority-v1.json");
+    expect(installation).toContain("LEGACY_CONNECTED_CONTROL_TOKEN_SECRET");
+    expect(installation).toContain("LEGACY_CONNECTED_BACKUP_TOKEN_SECRET");
+    expect(installation).toContain("LEGACY_CONNECTED_DESKTOP_KEYS_SECRET");
     expect(syncRoute).toContain("refreshConnectedEnrollmentIfConfigured");
     expect(trialRoute).toContain("refreshConnectedEnrollmentIfConfigured");
   });
@@ -90,6 +98,7 @@ describe("connected entitlement and quota boundaries", () => {
     const listRoute = source("src/app/api/backup/list/route.ts");
     const restoreRoute = source("src/app/api/backup/restore/route.ts");
     const deleteRoute = source("src/app/api/backup/[filename]/route.ts");
+    const retention = source("control-plane/backup/retention.ts");
     for (const method of [
       "uploadBackupManifest",
       "uploadBackupChunk",
@@ -104,7 +113,8 @@ describe("connected entitlement and quota boundaries", () => {
     expect(cloud).toContain("cloudRetentionClass");
     expect(cloud).toContain("deleteRemoteBackup");
     expect(cloud).toContain("reservationCreated && !verificationStarted");
-    expect(source("control-plane/backup/initiate.ts")).toContain("datetime('now', '-24 hours')");
+    expect(retention).toContain("datetime('now', '-24 hours')");
+    expect(retention).toContain("KEEP_BY_CLASS");
     expect(source("control-plane/backup/auth.ts")).toContain("recoveryTransfer");
     expect(createRoute).toContain("uploadNativeBackupToCloudIfEnrolled");
     expect(createRoute).toContain('cloudState = "unavailable"');

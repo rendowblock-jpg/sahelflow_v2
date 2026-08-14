@@ -36,7 +36,7 @@ export function startConnectedProjectionWorker(): void {
     state.running = true;
     try {
       const [
-        { shopContext },
+        { db, shopContext },
         { requireLicenseEntitlement },
         { loadConnectedRuntimeIfEnrolled },
         { trustedActorForRemoteCommand },
@@ -49,10 +49,7 @@ export function startConnectedProjectionWorker(): void {
         import("./desktop-projection"),
       ]);
       await requireLicenseEntitlement("sahelflow.connected", shopContext);
-      const runtime = await loadConnectedRuntimeIfEnrolled({
-        prisma: (await import("@/lib/db")).db,
-        shop: shopContext,
-      });
+      const runtime = await loadConnectedRuntimeIfEnrolled({ prisma: db, shop: shopContext });
       if (!runtime) return;
       const enrolled = await runtime.client.listDevices(shopContext.workspaceId);
       for (const device of enrolled.devices.map(parseDevice).filter((value): value is DeviceRow => value !== null)) {
