@@ -1,6 +1,7 @@
 import { checkout } from "./checkout";
 import { createStorefront } from "./create-storefront";
 import { listReleases } from "./list-releases";
+import { pauseStorefront } from "./pause-storefront";
 import { publicStorefront } from "./public-storefront";
 import { publishRelease } from "./publish-release";
 import { completeReceipt, pollReceipts, receiptStatus } from "./receipts";
@@ -14,6 +15,8 @@ async function health(environment: StorefrontWorkerEnvironment): Promise<Respons
       .first<{ storefront_id: string }>();
     await environment.DB.prepare("SELECT receipt_id FROM storefront_receipt LIMIT 1")
       .first<{ receipt_id: string }>();
+    await environment.DB.prepare("SELECT operation_id FROM storefront_pause_operation LIMIT 1")
+      .first<{ operation_id: string }>();
     return json({ status: "ok" });
   } catch {
     return json({ status: "unavailable" }, 503);
@@ -51,6 +54,13 @@ export async function handleStorefrontRequest(
     );
   if (request.method === "POST" && rollbackMatch?.[1]) {
     return rollbackRelease(request, environment, rollbackMatch[1]);
+  }
+  const pauseMatch =
+    /^\/v1\/desktop\/storefronts\/([A-Za-z0-9][A-Za-z0-9_-]{7,127})\/pause$/.exec(
+      url.pathname,
+    );
+  if (request.method === "POST" && pauseMatch?.[1]) {
+    return pauseStorefront(request, environment, pauseMatch[1]);
   }
   const completeMatch =
     /^\/v1\/desktop\/storefront\/receipts\/([A-Za-z0-9][A-Za-z0-9_-]{7,127})\/result$/.exec(
