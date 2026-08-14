@@ -96,8 +96,32 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
   }, [copy.loadFailed, storefrontId]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    const controller = new AbortController();
+    void fetch(
+      `/api/storefront/config/${encodeURIComponent(storefrontId)}/releases`,
+      { cache: "no-store", signal: controller.signal },
+    )
+      .then(async (response) => {
+        const body = await response.json() as HistoryResponse;
+        if (!response.ok || !body.history) {
+          throw new Error(body.error ?? "release_history_unavailable");
+        }
+        return body.history.releases;
+      })
+      .then((nextReleases) => {
+        if (controller.signal.aborted) return;
+        setReleases(nextReleases);
+        setMessage(null);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setMessage(copy.loadFailed);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [copy.loadFailed, storefrontId]);
 
   const active = useMemo(() => releases.find((release) => release.isActive) ?? null, [releases]);
 
