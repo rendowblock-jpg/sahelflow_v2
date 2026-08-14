@@ -202,6 +202,7 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
           sourceOrderId: receipt.receiptId,
           sourceRevision: receipt.requestDigest,
           sourceDetails: {
+            hostedDelegationAuthority: "v1",
             hostedStorefrontId: receipt.storefrontId,
             hostedReleaseId: receipt.releaseId,
             hostedDeliveryMode: receipt.deliveryMode,
