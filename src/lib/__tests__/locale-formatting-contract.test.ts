@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { relative, resolve } from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -5,6 +8,63 @@ import {
   formatRelative,
   intlLocale,
 } from "@/lib/utils";
+
+const root = process.cwd();
+const localeSensitiveUiFormatters = new Set([
+  "formatDZD",
+  "formatDZDBare",
+  "formatDZDShort",
+  "formatDate",
+  "formatDateTime",
+  "formatRelative",
+]);
+
+function uiSourceFiles(directory: string): string[] {
+  const files: string[] = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.name === "__tests__") continue;
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...uiSourceFiles(path));
+    } else if (/\.(?:ts|tsx)$/.test(entry.name) && !/\.(?:test|spec)\./.test(entry.name)) {
+      files.push(path);
+    }
+  }
+  return files;
+}
+
+function missingLocaleFormatterArguments(): string[] {
+  const offenders: string[] = [];
+  for (const path of [
+    ...uiSourceFiles(resolve(root, "src/app")),
+    ...uiSourceFiles(resolve(root, "src/components")),
+  ]) {
+    const source = readFileSync(path, "utf8");
+    const sourceFile = ts.createSourceFile(
+      path,
+      source,
+      ts.ScriptTarget.Latest,
+      true,
+      path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    );
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        localeSensitiveUiFormatters.has(node.expression.text) &&
+        node.arguments.length < 2
+      ) {
+        const location = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+        offenders.push(
+          `${relative(root, path).replaceAll("\\", "/")}:${location.line + 1} ${node.expression.text}`,
+        );
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+  }
+  return offenders.sort();
+}
 
 describe("seller-facing locale formatting", () => {
   it("uses the Algeria-aware locale map consistently", () => {
@@ -37,5 +97,9 @@ describe("seller-facing locale formatting", () => {
       }).format(-30, "minute");
       expect(formatRelative(thirtyMinutesAgo, locale, now)).toBe(expected);
     }
+  });
+
+  it("requires explicit locale adoption on every seller-facing formatter call", () => {
+    expect(missingLocaleFormatterArguments()).toEqual([]);
   });
 });
