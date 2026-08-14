@@ -114,7 +114,6 @@ async function snapshotProductsAndProvisionalReservations(
     select: {
       id: true,
       name: true,
-      description: true,
       sku: true,
       images: true,
       price: true,
@@ -197,7 +196,6 @@ async function snapshotProductsAndProvisionalReservations(
     products: Object.freeze(products.map((product) => Object.freeze({
       id: product.id,
       name: product.name,
-      description: product.description,
       sku: product.sku,
       images: product.images,
       price: product.price,
