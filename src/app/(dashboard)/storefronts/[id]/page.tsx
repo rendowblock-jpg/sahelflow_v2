@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
+import { StorefrontReleaseHistory } from "@/components/storefront/studio/storefront-release-history";
+import { StorefrontStudio } from "@/components/storefront/studio/storefront-studio";
 import { getI18n } from "@/lib/i18n-server";
 import { storefrontService } from "@/lib/storefront/service";
-import { StorefrontStudio } from "@/components/storefront/studio/storefront-studio";
 import { db, shopContext } from "@/lib/db";
 import type { Metadata } from "next";
 import {
@@ -54,6 +55,7 @@ export default async function EditStorefrontPage({
           {t("storefronts.editDesc")}
         </p>
       </div>
+      <StorefrontReleaseHistory storefrontId={id} />
       <StorefrontStudio config={config} products={products} />
     </div>
   );
