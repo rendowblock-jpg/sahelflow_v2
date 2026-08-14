@@ -149,6 +149,12 @@ export function Topbar({
   const activeLocaleLabel =
     LOCALE_OPTIONS.find((option) => option.value === locale)?.label ??
     locale.toUpperCase();
+  const displayShopName = (
+    shop: (typeof shops)[number] | null | undefined,
+  ): string =>
+    shop?.id === "default" && shop.name === "Ma Boutique"
+      ? t("topbar.defaultShopName")
+      : (shop?.name ?? "");
 
   const handleShopSwitch = useCallback(
     async (shopId: string) => {
@@ -179,11 +185,11 @@ export function Topbar({
 
   const shopLabel =
     switchStatus === "pending"
-      ? t("topbar.shopSwitchPending", { shop: switchTarget?.name ?? "" })
+      ? t("topbar.shopSwitchPending", { shop: displayShopName(switchTarget) })
       : switchStatus === "blocked"
-        ? t("topbar.shopSwitchBlocked", { shop: switchTarget?.name ?? "" })
+        ? t("topbar.shopSwitchBlocked", { shop: displayShopName(switchTarget) })
         : loaded
-          ? (activeShop?.name ?? t("topbar.selectShop"))
+          ? (displayShopName(activeShop) || t("topbar.selectShop"))
           : t("topbar.loading");
 
   return (
@@ -259,7 +265,9 @@ export function Topbar({
                 <span className="text-base" aria-hidden="true">
                   {shop.icon ?? "🏪"}
                 </span>
-                <span className="min-w-0 flex-1 truncate">{shop.name}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {displayShopName(shop)}
+                </span>
                 {shop.id === activeShopId ? (
                   <Check className="size-4 text-primary" aria-hidden="true" />
                 ) : null}
@@ -444,7 +452,7 @@ export function Topbar({
             >
               <Avatar className="size-7 ring-1 ring-border">
                 <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-                  {activeShop?.name.charAt(0).toUpperCase() ?? "S"}
+                  {displayShopName(activeShop).charAt(0).toUpperCase() || "S"}
                 </AvatarFallback>
               </Avatar>
             </Button>

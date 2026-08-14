@@ -4,7 +4,6 @@ import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { getIdentityAdministrationSnapshot } from "@/lib/identity/control-authority";
-import { getI18n } from "@/lib/i18n-server";
 import { listShops } from "@/lib/shops";
 import { enqueueAuthorizedNativeLifecycle } from "@/lib/shops/native-lifecycle-authority";
 
@@ -14,13 +13,6 @@ export const dynamic = "force-dynamic";
 export const GET = withErrorHandler(async (): Promise<NextResponse> => {
   const actorContext = await requireTrustedAction("shops.read");
   const shops = listShops();
-  const { t } = await getI18n();
-  const projectShopNames = (values: typeof shops) =>
-    values.map((shop) =>
-      shop.id === "default" && shop.name === "Ma Boutique"
-        ? { ...shop, name: t("topbar.defaultShopName") }
-        : shop,
-    );
 
   if (actorContext.actor.kind === "person") {
     const identity = await getIdentityAdministrationSnapshot(
@@ -45,15 +37,13 @@ export const GET = withErrorHandler(async (): Promise<NextResponse> => {
           ? shops.filter((shop) => identity.member.shopIds.includes(shop.id))
           : [];
     return NextResponse.json({
-      shops: projectShopNames(visibleShops),
+      shops: visibleShops,
       activeShopId: actorContext.shop.shopId,
     });
   }
 
   return NextResponse.json({
-    shops: projectShopNames(
-      shops.filter((shop) => shop.id === actorContext.shop.shopId),
-    ),
+    shops: shops.filter((shop) => shop.id === actorContext.shop.shopId),
     activeShopId: actorContext.shop.shopId,
   });
 }, "GET /api/shops");

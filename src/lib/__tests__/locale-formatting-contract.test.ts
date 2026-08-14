@@ -100,6 +100,10 @@ describe("seller-facing locale formatting", () => {
   });
 
   it("requires explicit locale adoption on every seller-facing formatter call", () => {
-    expect(missingLocaleFormatterArguments()).toEqual([]);
+    const offenders = missingLocaleFormatterArguments();
+    expect(
+      offenders,
+      `Missing explicit locale arguments:\n${offenders.join("\n")}`,
+    ).toEqual([]);
   });
 });
