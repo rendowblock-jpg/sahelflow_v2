@@ -13,6 +13,7 @@ import type {
 
 type ExistingReleaseRow = {
   release_id: string;
+  parent_release_id: string | null;
   artifact_digest: string;
   request_digest: string | null;
 };
@@ -22,6 +23,7 @@ async function publicationResponse(
   input: Readonly<{
     storefrontId: string;
     releaseId: string;
+    parentReleaseId: string | null;
     artifactDigest: string;
     replay: boolean;
   }>,
@@ -35,6 +37,7 @@ async function publicationResponse(
     {
       storefrontId: input.storefrontId,
       releaseId: input.releaseId,
+      parentReleaseId: input.parentReleaseId,
       artifactDigest: input.artifactDigest,
       allocations: snapshot.allocations,
       retiredAllocations: snapshot.retiredAllocations,
@@ -73,11 +76,14 @@ export async function publishRelease(
 
   const artifactJson = canonicalJson(input.publicArtifact);
   const artifactDigest = await sha256Hex(artifactJson);
+  // parentReleaseId is intentionally excluded from the replay digest. After a
+  // timeout-after-commit the just-published release is active, so a retry may
+  // rediscover itself as the current parent. The immutable release ID plus the
+  // exact artifact/allocation/shipping authority still identifies the request.
   const requestDigest = await sha256Hex(canonicalJson({
     storefrontId,
     workspaceId: input.workspaceId,
     releaseId: input.releaseId,
-    parentReleaseId: input.parentReleaseId,
     templateId: input.templateId,
     locale: input.locale,
     artifactDigest,
@@ -87,7 +93,7 @@ export async function publishRelease(
   }));
 
   const existing = await environment.DB.prepare(
-    `SELECT release_id, artifact_digest, request_digest
+    `SELECT release_id, parent_release_id, artifact_digest, request_digest
        FROM storefront_release
       WHERE release_id = ?1 AND storefront_id = ?2`,
   ).bind(input.releaseId, storefrontId).first<ExistingReleaseRow>();
@@ -101,6 +107,7 @@ export async function publishRelease(
     return publicationResponse(environment, {
       storefrontId,
       releaseId: input.releaseId,
+      parentReleaseId: existing.parent_release_id,
       artifactDigest,
       replay: true,
     });
@@ -156,7 +163,7 @@ export async function publishRelease(
       return json({ error: "stale_release_parent" }, 409);
     }
     const raced = await environment.DB.prepare(
-      `SELECT release_id, artifact_digest, request_digest
+      `SELECT release_id, parent_release_id, artifact_digest, request_digest
          FROM storefront_release
         WHERE release_id = ?1 AND storefront_id = ?2`,
     ).bind(input.releaseId, storefrontId).first<ExistingReleaseRow>();
@@ -167,6 +174,7 @@ export async function publishRelease(
       return publicationResponse(environment, {
         storefrontId,
         releaseId: input.releaseId,
+        parentReleaseId: raced.parent_release_id,
         artifactDigest,
         replay: true,
       });
@@ -176,6 +184,7 @@ export async function publishRelease(
   return publicationResponse(environment, {
     storefrontId,
     releaseId: input.releaseId,
+    parentReleaseId: input.parentReleaseId,
     artifactDigest,
     replay: false,
   });
