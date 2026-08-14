@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -7,35 +8,36 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("SahelFlow canonical brand mark", () => {
-  it("keeps the Founder mark as the shared web and application identity", () => {
-    const icon = read("public/icons/icon.svg");
+  it("keeps the exact Founder-provided PNG as the shared web and application identity", () => {
+    const icon = readFileSync(resolve(root, "public/icons/sahelflow-mark.png"));
+    const digest = createHash("sha256").update(icon).digest("hex");
     const component = read("src/components/brand/sahelflow-mark.tsx");
     const sidebar = read("src/components/layout/sidebar.tsx");
     const layout = read("src/app/layout.tsx");
     const manifest = read("src/app/manifest.ts");
 
-    for (const color of ["#101728", "#F2EEE4", "#39D4BF"]) {
-      expect(icon).toContain(color);
-      expect(component).toContain(color);
-    }
+    expect(digest).toBe(
+      "4877597bed501d592b2a7e7f5e14c6f7c7a27693785e06ed8290efe1c4077ffa",
+    );
+    expect(component).toContain('/icons/sahelflow-mark.png');
     expect(sidebar).toContain("SahelFlowMark");
     expect(sidebar).not.toContain(">SF<");
-    expect(layout).toContain('/icons/icon.svg');
-    expect(manifest).toContain('/icons/icon.svg');
-    expect(manifest).not.toContain("icon-1024.png");
+    expect(layout).toContain('/icons/sahelflow-mark.png');
+    expect(manifest).toContain('/icons/sahelflow-mark.png');
+    expect(`${layout}\n${manifest}`).not.toContain('/icons/icon.svg');
   });
 
-  it("regenerates native Windows bundle icons from the same source mark", () => {
+  it("regenerates native Windows bundle icons from those same PNG bytes", () => {
     const tauri = JSON.parse(read("src-tauri/tauri.conf.json")) as {
       build?: { beforeDevCommand?: string; beforeBuildCommand?: string };
       bundle?: { icon?: string[] };
     };
 
     expect(tauri.build?.beforeDevCommand).toContain(
-      "tauri icon public/icons/icon.svg",
+      "tauri icon public/icons/sahelflow-mark.png",
     );
     expect(tauri.build?.beforeBuildCommand).toContain(
-      "tauri icon public/icons/icon.svg",
+      "tauri icon public/icons/sahelflow-mark.png",
     );
     expect(tauri.bundle?.icon).toContain("icons/icon.ico");
   });

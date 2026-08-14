@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 /**
  * Web App Manifest — makes SahelFlow installable as a PWA on Android (and
- * desktop Chromium browsers). The canonical SVG mark is also the source used by
- * the Tauri icon generator for Windows bundle assets.
+ * desktop Chromium browsers). The Founder-provided PNG is the canonical mark
+ * and is also the source used by the Tauri icon generator for Windows assets.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -22,15 +22,15 @@ export default function manifest(): MetadataRoute.Manifest {
     dir: "auto",
     icons: [
       {
-        src: "/icons/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/icons/sahelflow-mark.png",
+        sizes: "512x512",
+        type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icons/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/icons/sahelflow-mark.png",
+        sizes: "512x512",
+        type: "image/png",
         purpose: "maskable",
       },
     ],

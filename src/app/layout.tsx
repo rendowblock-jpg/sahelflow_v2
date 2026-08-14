@@ -59,9 +59,13 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "SahelFlow",
     },
     icons: {
-      icon: { url: "/icons/icon.svg", sizes: "any", type: "image/svg+xml" },
-      apple: "/icons/icon.svg",
-      shortcut: "/icons/icon.svg",
+      icon: {
+        url: "/icons/sahelflow-mark.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+      apple: "/icons/sahelflow-mark.png",
+      shortcut: "/icons/sahelflow-mark.png",
     },
   };
 }
