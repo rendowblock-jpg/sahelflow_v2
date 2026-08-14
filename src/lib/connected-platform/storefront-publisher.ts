@@ -71,6 +71,7 @@ export async function publishHostedStorefront(input: Readonly<{
 
 export async function pauseHostedStorefront(input: Readonly<{
   client: ConnectedPlatformClient;
+  receiptKeys: StorefrontReceiptKeys;
   context: ServiceContext;
   prepared: PreparedStorefrontPublish;
 }>): Promise<HostedPauseTransfer> {
@@ -79,6 +80,16 @@ export async function pauseHostedStorefront(input: Readonly<{
   if (input.prepared.draft.isActive) {
     throw new Error("Active storefront drafts cannot use the hosted pause transition");
   }
+  // Creating is idempotent and gives even a never-published inactive draft a
+  // durable remote object that can be explicitly paused rather than relying on
+  // the absence of a release as deactivation semantics.
+  await input.client.createStorefront({
+    workspaceId: shop.workspaceId,
+    storefrontId: input.prepared.storefrontId,
+    shopId: shop.shopId,
+    slug: input.prepared.draft.slug,
+    receiptEncryptionPublicKey: input.receiptKeys.publicKeyJwk,
+  });
   const paused = await input.client.pauseStorefront(input.prepared.storefrontId, {
     workspaceId: shop.workspaceId,
     operationId: `storefront_pause_${input.prepared.releaseId}`,
