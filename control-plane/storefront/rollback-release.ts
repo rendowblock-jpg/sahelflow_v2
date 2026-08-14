@@ -1,6 +1,10 @@
 import { parseReleaseInput } from "./release-input";
 import { appendConservedAllocationStatements } from "./release-allocation";
 import {
+  appendAllocationRetirementSnapshot,
+  loadAllocationTransferSnapshot,
+} from "./release-transfer";
+import {
   ID,
   authorizeDesktop,
   canonicalJson,
@@ -15,11 +19,49 @@ import type {
 
 type RollbackSourceRow = ReleaseRow & { active_release_id: string | null };
 
+type ExistingRollbackRow = {
+  release_id: string;
+  artifact_digest: string;
+  request_digest: string | null;
+};
+
 type ShippingRuleRow = {
   wilaya_code: string;
   delivery_mode: "home" | "desk";
   fee_dzd: number;
 };
+
+async function rollbackResponse(
+  environment: StorefrontWorkerEnvironment,
+  input: Readonly<{
+    storefrontId: string;
+    releaseId: string;
+    sourceReleaseId: string;
+    previousReleaseId: string;
+    artifactDigest: string;
+    replay: boolean;
+  }>,
+): Promise<Response> {
+  const snapshot = await loadAllocationTransferSnapshot(
+    environment.DB,
+    input.releaseId,
+    input.releaseId,
+  );
+  return json(
+    {
+      storefrontId: input.storefrontId,
+      releaseId: input.releaseId,
+      sourceReleaseId: input.sourceReleaseId,
+      previousReleaseId: input.previousReleaseId,
+      artifactDigest: input.artifactDigest,
+      allocations: snapshot.allocations,
+      retiredAllocations: snapshot.retiredAllocations,
+      status: "rolled_back",
+      replay: input.replay,
+    },
+    input.replay ? 200 : 201,
+  );
+}
 
 export async function rollbackRelease(
   request: Request,
@@ -70,9 +112,6 @@ export async function rollbackRelease(
     .bind(sourceReleaseId, storefrontId, workspaceId)
     .first<RollbackSourceRow>();
   if (!source) return json({ error: "release_not_found" }, 404);
-  if (source.active_release_id !== expectedActiveReleaseId) {
-    return json({ error: "rollback_conflict" }, 409);
-  }
 
   const shipping = await environment.DB.prepare(
     `SELECT wilaya_code, delivery_mode, fee_dzd
@@ -113,13 +152,50 @@ export async function rollbackRelease(
   if (artifactDigest !== source.artifact_digest) {
     return json({ error: "rollback_source_invalid" }, 409);
   }
+  const requestDigest = await sha256Hex(canonicalJson({
+    storefrontId,
+    workspaceId,
+    sourceReleaseId,
+    releaseId,
+    expectedActiveReleaseId,
+    artifactDigest,
+    allocations: [...parsed.allocations].sort((left, right) => left.itemKey.localeCompare(right.itemKey)),
+    shippingRules: [...parsed.shippingRules].sort((left, right) =>
+      `${left.wilayaCode}:${left.deliveryMode}`.localeCompare(`${right.wilayaCode}:${right.deliveryMode}`)),
+  }));
+
+  const existing = await environment.DB.prepare(
+    `SELECT release_id, artifact_digest, request_digest
+       FROM storefront_release
+      WHERE release_id = ?1 AND storefront_id = ?2`,
+  ).bind(releaseId, storefrontId).first<ExistingRollbackRow>();
+  if (existing) {
+    if (
+      existing.request_digest !== requestDigest ||
+      existing.artifact_digest !== artifactDigest
+    ) {
+      return json({ error: "rollback_idempotency_conflict" }, 409);
+    }
+    return rollbackResponse(environment, {
+      storefrontId,
+      releaseId,
+      sourceReleaseId,
+      previousReleaseId: expectedActiveReleaseId,
+      artifactDigest,
+      replay: true,
+    });
+  }
+
+  if (source.active_release_id !== expectedActiveReleaseId) {
+    return json({ error: "rollback_conflict" }, 409);
+  }
 
   const statements: D1Statement[] = [
     environment.DB.prepare(
       `INSERT INTO storefront_release
         (release_id, storefront_id, parent_release_id, template_id, locale,
-         artifact_json, artifact_digest)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+         artifact_json, artifact_digest, request_digest)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
     ).bind(
       parsed.releaseId,
       storefrontId,
@@ -128,8 +204,15 @@ export async function rollbackRelease(
       parsed.locale,
       artifactJson,
       artifactDigest,
+      requestDigest,
     ),
   ];
+  appendAllocationRetirementSnapshot(environment.DB, statements, {
+    operationId: parsed.releaseId,
+    storefrontId,
+    sourceReleaseId: parsed.parentReleaseId,
+    reason: "rollback",
+  });
   appendConservedAllocationStatements(
     environment.DB,
     statements,
@@ -157,18 +240,33 @@ export async function rollbackRelease(
     if (message.includes("stale_release_parent")) {
       return json({ error: "rollback_conflict" }, 409);
     }
+    const raced = await environment.DB.prepare(
+      `SELECT release_id, artifact_digest, request_digest
+         FROM storefront_release
+        WHERE release_id = ?1 AND storefront_id = ?2`,
+    ).bind(releaseId, storefrontId).first<ExistingRollbackRow>();
+    if (
+      raced?.request_digest === requestDigest &&
+      raced.artifact_digest === artifactDigest
+    ) {
+      return rollbackResponse(environment, {
+        storefrontId,
+        releaseId,
+        sourceReleaseId,
+        previousReleaseId: expectedActiveReleaseId,
+        artifactDigest,
+        replay: true,
+      });
+    }
     return json({ error: "rollback_conflict" }, 409);
   }
 
-  return json(
-    {
-      storefrontId,
-      releaseId: parsed.releaseId,
-      sourceReleaseId,
-      previousReleaseId: expectedActiveReleaseId,
-      artifactDigest,
-      status: "rolled_back",
-    },
-    201,
-  );
+  return rollbackResponse(environment, {
+    storefrontId,
+    releaseId: parsed.releaseId,
+    sourceReleaseId,
+    previousReleaseId: expectedActiveReleaseId,
+    artifactDigest,
+    replay: false,
+  });
 }
