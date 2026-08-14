@@ -54,6 +54,14 @@ type ReleaseHistory = Readonly<{
   }>[];
 }>;
 
+function rollbackOperationKey(
+  storefrontId: string,
+  sourceReleaseId: string,
+  expectedActiveReleaseId: string,
+): string {
+  return `storefront-rollback:${storefrontId}:${sourceReleaseId}:${expectedActiveReleaseId}`;
+}
+
 async function loadReleaseHistory(
   storefrontId: string,
   limit = 50,
@@ -116,15 +124,36 @@ export const POST = withErrorHandler(async (
     shopContext.workspaceId,
     100,
   ) as unknown as ReleaseHistory;
-  const active = history.releases.find((release) => release.isActive);
-  if (!active || active.releaseId !== input.expectedActiveReleaseId) {
-    throw new ConflictError("The hosted storefront changed before rollback could start");
-  }
   const source = history.releases.find(
     (release) => release.releaseId === input.sourceReleaseId,
   );
   if (!source || source.catalog.length < 1) {
     throw new NotFoundError("Storefront release", input.sourceReleaseId);
+  }
+
+  const active = history.releases.find((release) => release.isActive);
+  if (!active) {
+    throw new ConflictError("Hosted storefront has no active release to roll back");
+  }
+  if (active.releaseId !== input.expectedActiveReleaseId) {
+    // A timeout after cloud commit moves the hosted active release before local
+    // finalization. Permit only a previously committed local prepare command to
+    // cross this mismatch; a fresh stale request still fails closed.
+    const operationKey = rollbackOperationKey(
+      id,
+      input.sourceReleaseId,
+      input.expectedActiveReleaseId,
+    );
+    const prepared = await db.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+        FROM "BusinessCommand"
+       WHERE "idempotencyKey" = ${operationKey}
+         AND "status" = 'committed'
+       LIMIT 1
+    `;
+    if (prepared.length === 0) {
+      throw new ConflictError("The hosted storefront changed before rollback could start");
+    }
   }
 
   const businessContext = {
