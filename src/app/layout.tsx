@@ -4,6 +4,7 @@ import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
 import "./globals.css";
 import "./phase5.css";
 import "./product-system.css";
+import "./responsive-system.css";
 import "./workspace-system.css";
 import "./motion-system.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
