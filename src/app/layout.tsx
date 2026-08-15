@@ -10,8 +10,7 @@ import "./settings-system.css";
 import "./theme-preset-system.css";
 import "./arabic-system.css";
 import "./motion-system.css";
-import "./direction-system.css";
-import "./locale-system.css";
+import "./experience-system.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import {
