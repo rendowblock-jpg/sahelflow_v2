@@ -18,5 +18,9 @@ export default async function StorefrontStudioPage({ params }: { params: Promise
     select: { id: true, name: true, price: true, sku: true, stock: true, images: true },
     orderBy: { name: "asc" },
   });
-  return <StorefrontStudio config={config} products={products} />;
+  return (
+    <div className="app-workspace-content">
+      <StorefrontStudio config={config} products={products} />
+    </div>
+  );
 }
