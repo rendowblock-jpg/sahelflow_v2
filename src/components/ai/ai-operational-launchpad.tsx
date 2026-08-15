@@ -29,40 +29,22 @@ type Task = {
 };
 
 const TASKS: readonly Task[] = [
-  {
-    id: "pending",
-    title: "launchPendingTitle",
-    description: "launchPendingDescription",
-    prompt: "launchPendingPrompt",
-    icon: ClipboardCheck,
-  },
-  {
-    id: "revenue",
-    title: "launchRevenueTitle",
-    description: "launchRevenueDescription",
-    prompt: "launchRevenuePrompt",
-    icon: CircleDollarSign,
-  },
-  {
-    id: "returns",
-    title: "launchReturnsTitle",
-    description: "launchReturnsDescription",
-    prompt: "launchReturnsPrompt",
-    icon: RotateCcw,
-  },
-  {
-    id: "products",
-    title: "launchProductsTitle",
-    description: "launchProductsDescription",
-    prompt: "launchProductsPrompt",
-    icon: PackageSearch,
-  },
+  { id: "pending", title: "launchPendingTitle", description: "launchPendingDescription", prompt: "launchPendingPrompt", icon: ClipboardCheck },
+  { id: "revenue", title: "launchRevenueTitle", description: "launchRevenueDescription", prompt: "launchRevenuePrompt", icon: CircleDollarSign },
+  { id: "returns", title: "launchReturnsTitle", description: "launchReturnsDescription", prompt: "launchReturnsPrompt", icon: RotateCcw },
+  { id: "products", title: "launchProductsTitle", description: "launchProductsDescription", prompt: "launchProductsPrompt", icon: PackageSearch },
 ] as const;
 
 type SetupResponse = {
   ready?: boolean;
   consentAccepted?: boolean;
   keyConfigured?: boolean;
+};
+
+type AiMessageResponse = {
+  response?: string;
+  error?: string | null;
+  persisted?: boolean;
 };
 
 function localizedSetupFailure(
@@ -72,6 +54,20 @@ function localizedSetupFailure(
   if (setup.consentAccepted === false) return copy("consentMissing");
   if (setup.keyConfigured === false) return copy("keyMissing");
   return copy("providerDegraded");
+}
+
+function localizedMessageFailure(
+  body: AiMessageResponse,
+  copy: (key: AiWorkspaceCopyKey) => string,
+): string {
+  if (body.error === "consent_required" || body.error === "AI_CONSENT_REQUIRED") {
+    return copy("consentMissing");
+  }
+  if (body.error === "AI_RATE_LIMITED") return copy("rateLimited");
+  if (body.error === "AI_LICENSE_REQUIRED") return copy("licenseRequired");
+  if (body.persisted === false && body.response) return copy("responseNotPersisted");
+  if (body.error) return copy("providerDegraded");
+  return copy("launchFailed");
 }
 
 export function AiOperationalLaunchpad() {
@@ -111,31 +107,23 @@ export function AiOperationalLaunchpad() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: copy(task.prompt),
-            locale,
-          }),
+          body: JSON.stringify({ message: copy(task.prompt), locale }),
         },
       );
-      if (!messageResponse.ok) {
-        const body = (await messageResponse.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        if (body.error === "consent_required" || body.error === "AI_CONSENT_REQUIRED") {
-          throw new Error(copy("consentMissing"));
-        }
-        if (body.error === "AI_RATE_LIMITED") {
-          throw new Error(copy("rateLimited"));
-        }
-        if (body.error === "AI_LICENSE_REQUIRED") {
-          throw new Error(copy("licenseRequired"));
-        }
-        throw new Error(copy("launchFailed"));
+      const messageBody = (await messageResponse.json().catch(() => ({}))) as AiMessageResponse;
+      // runAgent deliberately reports provider/model failures inside the normal
+      // response envelope so the seller prompt can remain durable. HTTP 200 is
+      // therefore not success authority here: a focused launch is complete only
+      // when a real assistant response was persisted.
+      if (
+        !messageResponse.ok ||
+        messageBody.error ||
+        messageBody.persisted !== true ||
+        !messageBody.response
+      ) {
+        throw new Error(localizedMessageFailure(messageBody, copy));
       }
 
-      // The sessions API sorts by the latest durable activity. A normal reload
-      // therefore opens the focused session through the same workspace authority
-      // instead of maintaining a second client-side chat state here.
       window.location.assign("/agents");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : copy("launchFailed"));
@@ -152,12 +140,8 @@ export function AiOperationalLaunchpad() {
     >
       <div className="flex flex-wrap items-start justify-between gap-3 px-1 pb-3">
         <div>
-          <h2 id="ai-launchpad-title" className="text-sm font-semibold">
-            {copy("launchTitle")}
-          </h2>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">
-            {copy("launchDescription")}
-          </p>
+          <h2 id="ai-launchpad-title" className="text-sm font-semibold">{copy("launchTitle")}</h2>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">{copy("launchDescription")}</p>
         </div>
       </div>
 
@@ -178,10 +162,7 @@ export function AiOperationalLaunchpad() {
               )}
             >
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-primary/7 text-primary">
-                <Icon
-                  className={cn("size-4", active && "animate-pulse")}
-                  aria-hidden="true"
-                />
+                <Icon className={cn("size-4", active && "animate-pulse")} aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2">
@@ -191,9 +172,7 @@ export function AiOperationalLaunchpad() {
                     aria-hidden="true"
                   />
                 </span>
-                <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">
-                  {copy(task.description)}
-                </span>
+                <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">{copy(task.description)}</span>
               </span>
             </button>
           );
