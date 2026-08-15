@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -39,6 +40,7 @@ type Props = {
   selected: string | null;
   onSelect: (id: string) => void;
   onMove: (id: string, direction: -1 | 1) => void;
+  onReorder: (id: string, targetIndex: number) => void;
   onToggle: (id: string) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
@@ -50,12 +52,20 @@ export function SectionTree({
   selected,
   onSelect,
   onMove,
+  onReorder,
   onToggle,
   onDuplicate,
   onDelete,
   onAdd,
 }: Props) {
   const { t } = useI18n();
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+
+  const clearDrag = () => {
+    setDraggingId(null);
+    setDropIndex(null);
+  };
 
   return (
     <div className="space-y-2.5">
@@ -66,21 +76,48 @@ export function SectionTree({
       >
         {sections.map((section, index) => {
           const active = selected === section.id;
+          const dragging = draggingId === section.id;
+          const dropTarget =
+            draggingId !== null && draggingId !== section.id && dropIndex === index;
           return (
             <div
               key={section.id}
               role="listitem"
+              draggable
               data-storefront-section-row={section.id}
               data-storefront-section-type={section.type}
+              data-dragging={dragging ? "true" : undefined}
+              data-drop-target={dropTarget ? "true" : undefined}
+              onDragStart={(event) => {
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", section.id);
+                setDraggingId(section.id);
+                setDropIndex(index);
+              }}
+              onDragOver={(event) => {
+                if (!draggingId || draggingId === section.id) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDropIndex(index);
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                const id = event.dataTransfer.getData("text/plain") || draggingId;
+                if (id && id !== section.id) onReorder(id, index);
+                clearDrag();
+              }}
+              onDragEnd={clearDrag}
               className={cn(
-                "group relative overflow-hidden rounded-xl border bg-background transition-[border-color,background-color,box-shadow]",
+                "group relative overflow-hidden rounded-xl border bg-background transition-[border-color,background-color,box-shadow,opacity,transform]",
                 active
                   ? "border-primary/45 bg-primary/[0.04] shadow-sm"
                   : "border-border/75 hover:border-primary/20 hover:bg-muted/30",
                 !section.enabled && "opacity-65",
+                dragging && "scale-[0.985] opacity-55",
+                dropTarget && "border-primary bg-primary/[0.07] shadow-sm",
               )}
             >
-              {active ? (
+              {active || dropTarget ? (
                 <span
                   className="absolute inset-block-2 start-0 w-0.5 rounded-full bg-primary"
                   aria-hidden="true"
@@ -89,7 +126,7 @@ export function SectionTree({
 
               <div className="flex min-w-0 items-center gap-1 px-1.5 py-1.5">
                 <span
-                  className="flex size-7 shrink-0 cursor-default items-center justify-center rounded-md text-muted-foreground/60"
+                  className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground/60 active:cursor-grabbing"
                   title={t("storefront.studio.sectionsLabel")}
                   aria-hidden="true"
                 >
