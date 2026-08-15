@@ -33,7 +33,13 @@ export default async function StorefrontsPage() {
     "storefront.publish",
     resource,
   );
+  const canApprove = trustedActionAllowed(
+    actorContext,
+    "approvals.approve",
+    resource,
+  );
   const canMutate = canManage && canPublish;
+  const canDelete = canMutate && canApprove;
   const { t } = await getI18n();
   const configs = await storefrontService.list({ prisma: db, shop: shopContext });
 
@@ -69,6 +75,7 @@ export default async function StorefrontsPage() {
           configs={configs}
           canManage={canManage}
           canPublish={canPublish}
+          canDelete={canDelete}
         />
       )}
     </div>
