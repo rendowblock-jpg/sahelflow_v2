@@ -52,10 +52,13 @@ describe("appearance transition authority", () => {
   it("keeps dark structural surfaces neutral while presets remain accent and chart families", () => {
     const css = source("../../../app/theme-preset-system.css");
 
-    expect(css).toContain("html.dark {");
+    expect(css).toContain("html.dark,\nhtml.dark[data-theme-preset] {");
     expect(css).toContain("--surface-0: oklch(0.145 0.004 260);");
     expect(css).toContain("--card: var(--surface-1);");
+    expect(css).toContain("--border: oklch(0.94 0.006 90 / 0.12);");
+    expect(css).toContain("--input: oklch(0.94 0.006 90 / 0.16);");
     expect(css).toContain("--sidebar: oklch(0.158 0.004 260);");
+    expect(css).toContain("--sidebar-border: oklch(0.94 0.006 90 / 0.09);");
 
     for (const preset of ["sahel", "atlas", "oasis", "dune"] as const) {
       const selector = `html.dark[data-theme-preset=\"${preset}\"]`;
