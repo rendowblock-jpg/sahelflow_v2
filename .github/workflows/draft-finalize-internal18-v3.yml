@@ -1,0 +1,137 @@
+name: Draft finalize Internal.18 v3
+
+on:
+  push:
+    branches: [agent/founder-visual-acceptance-repair]
+    paths: [.github/workflows/draft-finalize-internal18-v3.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/founder-visual-acceptance-repair
+          fetch-depth: 0
+      - name: Finalize draft tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          PARENT = "5234573030e8eb82c579e23c75c3c6c87175c6d4"
+          files = [
+            "package.json", "src-tauri/Cargo.toml", "src-tauri/Cargo.lock",
+            "src-tauri/tauri.conf.json", "scripts/sf-version.ts", "src-tauri/build.rs",
+            "scripts/install-founder-windows.ps1",
+            "src/lib/license/__tests__/license-production-boundary.test.ts",
+            ".github/workflows/release.yml",
+          ]
+          subprocess.run(["git", "checkout", PARENT, "--", *files], check=True)
+
+          def r(p): return Path(p).read_text(encoding="utf-8")
+          def w(p,s): Path(p).write_text(s, encoding="utf-8")
+          def one(p, old, new):
+            s=r(p)
+            if s.count(old) != 1:
+              raise SystemExit(f"{p}: expected one match for {old!r}, got {s.count(old)}")
+            w(p,s.replace(old,new,1))
+
+          one("package.json", '"version": "1.0.0-internal.17"', '"version": "1.0.0-internal.18"')
+          one("src-tauri/Cargo.toml", 'version = "1.0.0-internal.17"', 'version = "1.0.0-internal.18"')
+          one("src-tauri/Cargo.lock", '[[package]]\nname = "sahelflow"\nversion = "1.0.0-internal.17"', '[[package]]\nname = "sahelflow"\nversion = "1.0.0-internal.18"')
+          one("src-tauri/tauri.conf.json", '"version": "1.0.0-internal.17"', '"version": "1.0.0-internal.18"')
+          one("src-tauri/tauri.conf.json", '"version": "1.0.0.17"', '"version": "1.0.0.18"')
+          one("scripts/install-founder-windows.ps1", "[string]$ExpectedDisplayVersion = '1.0.0.17'", "[string]$ExpectedDisplayVersion = '1.0.0.18'")
+          one("scripts/install-founder-windows.ps1", "[string]$ExpectedAppVersion = '1.0.0-internal.17'", "[string]$ExpectedAppVersion = '1.0.0-internal.18'")
+
+          one("scripts/sf-version.ts",
+          """    (authority.version === "1.0.0-internal.17" &&
+              authority.licensing?.authorityDecision === "FD-036"));""",
+          """    (authority.version === "1.0.0-internal.17" &&
+              authority.licensing?.authorityDecision === "FD-036") ||
+            (authority.version === "1.0.0-internal.18" &&
+              authority.licensing?.authorityDecision === "FD-037"));""")
+          one("scripts/sf-version.ts",
+              "founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, or Internal.17/FD-036 on the internal channel with no owned host suffix",
+              "founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, or Internal.18/FD-037 on the internal channel with no owned host suffix")
+
+          one("src-tauri/build.rs",
+          """                        | (Some("1.0.0-internal.17"), Some("FD-036"))
+                        );""",
+          """                        | (Some("1.0.0-internal.17"), Some("FD-036"))
+                        | (Some("1.0.0-internal.18"), Some("FD-037"))
+                        );""")
+          one("src-tauri/build.rs",
+              "founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17 on the internal channel with no owned host suffix",
+              "founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, or FD-037/Internal.18 on the internal channel with no owned host suffix")
+
+          t="src/lib/license/__tests__/license-production-boundary.test.ts"
+          one(t, "expect(versionAuthority).toContain('\\\"version\\\": \\\"1.0.0-internal.17\\\"');", "expect(versionAuthority).toContain('\\\"version\\\": \\\"1.0.0-internal.18\\\"');")
+          one(t, "expect(versionAuthority).toContain('\\\"authorityDecision\\\": \\\"FD-036\\\"');", "expect(versionAuthority).toContain('\\\"authorityDecision\\\": \\\"FD-037\\\"');")
+          one(t,
+              "founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, or Internal.17/FD-036",
+              "founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, or Internal.18/FD-037")
+          one(t,
+          """    expect(build).toContain('Some("1.0.0-internal.17"), Some("FD-036")');""",
+          """    expect(build).toContain('Some("1.0.0-internal.17"), Some("FD-036")');
+              expect(build).toContain('Some("1.0.0-internal.18"), Some("FD-037")');""")
+          one(t,
+              "founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17",
+              "founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, or FD-037/Internal.18")
+          one(t,
+              'expect(release).toContain("exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17");',
+              'expect(release).toContain("exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, or FD-037/Internal.18");')
+
+          one(".github/workflows/release.yml",
+          """                ($authority.version -ceq '1.0.0-internal.17' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-036')
+              )""",
+          """                ($authority.version -ceq '1.0.0-internal.17' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-036') -or
+                ($authority.version -ceq '1.0.0-internal.18' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-037')
+              )""")
+          one(".github/workflows/release.yml",
+              "founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17",
+              "founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, or FD-037/Internal.18")
+
+          studio="src/components/storefront/studio/storefront-studio.tsx"
+          s=r(studio)
+          if "draft.isActive && draft.theme.builder.shippingRules.length === 0" not in s:
+            old='  const publish = useCallback(async () => {\n    if (!version || dirty || saveState === "saving" || saveState === "conflict") {'
+            new='  const publish = useCallback(async () => {\n    if (draft.isActive && draft.theme.builder.shippingRules.length === 0) {\n      setPanel("checkout");\n      setMessage(t("storefront.studio.shippingEmpty"));\n      return;\n    }\n    if (!version || dirty || saveState === "saving" || saveState === "conflict") {'
+            if s.count(old)!=1: raise SystemExit("Storefront publish anchor mismatch")
+            s=s.replace(old,new,1)
+            olddeps='}, [config.id, dirty, draft.isActive, locale, saveState, t, version]);'
+            newdeps='}, [config.id, dirty, draft.isActive, draft.theme.builder.shippingRules.length, locale, saveState, t, version]);'
+            if s.count(olddeps)!=1: raise SystemExit("Storefront dependency anchor mismatch")
+            s=s.replace(olddeps,newdeps,1)
+            w(studio,s)
+
+          contract="src/lib/storefront/storefront-founder-contract.test.ts"
+          s=r(contract)
+          if "blocks active publish without a delivery rule" not in s:
+            anchor='  it("exposes active/pause intent in Studio and never reports a pause as published", () => {'
+            block='  it("blocks active publish without a delivery rule and opens the actionable checkout panel", () => {\n    const studio = read("src/components/storefront/studio/storefront-studio.tsx");\n    expect(studio).toContain("draft.isActive && draft.theme.builder.shippingRules.length === 0");\n    expect(studio).toContain(\'setPanel("checkout")\');\n    expect(studio).toContain(\'setMessage(t("storefront.studio.shippingEmpty"))\');\n  });\n\n'
+            if s.count(anchor)!=1: raise SystemExit("Storefront contract anchor mismatch")
+            w(contract,s.replace(anchor,block+anchor,1))
+          PY
+
+          git diff --check
+          git diff 5234573030e8eb82c579e23c75c3c6c87175c6d4 -- src-tauri/Cargo.lock | tee /tmp/cargo.diff
+          grep -F '+version = "1.0.0-internal.18"' /tmp/cargo.diff >/dev/null
+          if grep -E '^[-+](name|checksum|dependencies|source)[ =]' /tmp/cargo.diff >/dev/null; then exit 1; fi
+          grep -F 'draft.isActive && draft.theme.builder.shippingRules.length === 0' src/components/storefront/studio/storefront-studio.tsx >/dev/null
+
+          git config user.name sahelflow-release-bot
+          git config user.email actions@users.noreply.github.com
+          git add package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json scripts/sf-version.ts src-tauri/build.rs scripts/install-founder-windows.ps1 src/lib/license/__tests__/license-production-boundary.test.ts .github/workflows/release.yml src/components/storefront/studio/storefront-studio.tsx src/lib/storefront/storefront-founder-contract.test.ts
+          git commit -m 'chore(internal.18): finalize release source and storefront publish guard'
+          git push origin HEAD:agent/founder-visual-acceptance-repair
