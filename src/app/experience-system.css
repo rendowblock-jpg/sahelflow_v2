@@ -1,0 +1,357 @@
+/*
+ * SahelFlow Internal.19 experience authority.
+ *
+ * This is the final convergence layer for direction, immersive workbench
+ * geometry and locale-transition presentation. It intentionally centralizes the
+ * cross-product rules introduced by Internal.19 instead of accumulating one
+ * route-specific fix file per problem class.
+ */
+
+/* ── Desktop shell direction authority ──────────────────────────────────── */
+[data-sahelflow-shell="desktop"] {
+  direction: ltr;
+}
+
+[data-sahelflow-shell="desktop"] > [data-shell-region="navigation"] {
+  order: 1;
+}
+
+[data-sahelflow-shell="desktop"] > [data-shell-region="workspace"] {
+  order: 2;
+}
+
+[data-sahelflow-shell="desktop"][data-locale-dir="rtl"] > [data-shell-region="navigation"] {
+  order: 2;
+}
+
+[data-sahelflow-shell="desktop"][data-locale-dir="rtl"] > [data-shell-region="workspace"] {
+  order: 1;
+}
+
+[data-sahelflow-shell="desktop"][data-locale-dir="ltr"] > [data-shell-region="navigation"],
+[data-sahelflow-shell="desktop"][data-locale-dir="ltr"] > [data-shell-region="workspace"] {
+  direction: ltr;
+}
+
+[data-sahelflow-shell="desktop"][data-locale-dir="rtl"] > [data-shell-region="navigation"],
+[data-sahelflow-shell="desktop"][data-locale-dir="rtl"] > [data-shell-region="workspace"] {
+  direction: rtl;
+}
+
+/* ── Immersive operational workbenches ──────────────────────────────────── */
+[data-sahelflow-shell="desktop"] .app-workspace-content {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+[data-sahelflow-shell="desktop"] #main-content:has(> .app-workspace-content) {
+  overflow: hidden;
+}
+
+[data-sahelflow-shell="desktop"] .app-workspace-inset {
+  padding-block: 0.5rem;
+  padding-inline: 0.5rem;
+}
+
+@media (min-width: 1440px) {
+  [data-sahelflow-shell="desktop"] .app-workspace-inset {
+    padding-block: 0.625rem;
+    padding-inline: 0.625rem;
+  }
+}
+
+[data-sahelflow-shell="desktop"] :is(
+  [data-ai-workspace="v2"],
+  [data-inbox-workspace="v2"],
+  [data-storefront-studio="v2"],
+  [data-storefront-studio="bootstrap"]
+) {
+  height: 100%;
+  min-height: 0 !important;
+  border-radius: 0 !important;
+  border-inline: 0 !important;
+  border-block-end: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ── Inbox deterministic pane order ─────────────────────────────────────── */
+[data-inbox-workspace="v2"] > div:last-child {
+  direction: ltr;
+}
+
+[data-inbox-workspace="v2"] [data-inbox-queue="true"] {
+  order: 1;
+}
+
+[data-inbox-workspace="v2"] [data-inbox-thread] {
+  order: 2;
+}
+
+[data-inbox-workspace="v2"] aside:has(> [data-inbox-context="true"]) {
+  order: 3;
+}
+
+html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-queue="true"] {
+  order: 3;
+  direction: rtl;
+}
+
+html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-thread],
+html[dir="rtl"] [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="true"]) {
+  direction: rtl;
+}
+
+html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-thread] {
+  order: 2;
+}
+
+html[dir="rtl"] [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="true"]) {
+  order: 1;
+}
+
+@media (min-width: 768px) {
+  [data-inbox-workspace="v2"] [data-inbox-queue="true"] {
+    width: 19rem !important;
+    min-width: 19rem !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  [data-inbox-workspace="v2"] [data-inbox-queue="true"] {
+    width: 20rem !important;
+    min-width: 20rem !important;
+  }
+
+  [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="true"]) {
+    width: 17rem !important;
+    min-width: 17rem !important;
+  }
+}
+
+/* ── AI deterministic pane order ────────────────────────────────────────── */
+@media (min-width: 768px) {
+  [data-ai-workspace="v2"] {
+    direction: ltr;
+    grid-template-areas: "sessions thread";
+    grid-template-columns: 14rem minmax(0, 1fr) !important;
+  }
+
+  [data-ai-workspace="v2"] > [data-ai-sessions="true"] {
+    grid-area: sessions;
+  }
+
+  [data-ai-workspace="v2"] > [data-ai-thread="true"] {
+    grid-area: thread;
+  }
+
+  html[dir="rtl"] [data-ai-workspace="v2"] {
+    grid-template-areas: "thread sessions";
+  }
+
+  html[dir="rtl"] [data-ai-workspace="v2"] > [data-ai-sessions="true"],
+  html[dir="rtl"] [data-ai-workspace="v2"] > [data-ai-thread="true"] {
+    direction: rtl;
+  }
+}
+
+@media (min-width: 1280px) {
+  [data-ai-workspace="v2"] {
+    grid-template-areas: "sessions thread context";
+    grid-template-columns: 14rem minmax(30rem, 1fr) 18rem !important;
+  }
+
+  [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
+    grid-area: context;
+  }
+
+  html[dir="rtl"] [data-ai-workspace="v2"] {
+    grid-template-areas: "context thread sessions";
+  }
+
+  html[dir="rtl"] [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
+    direction: rtl;
+  }
+}
+
+/* ── Storefront Studio deterministic pane order ─────────────────────────── */
+[data-storefront-studio="v2"] > div.grid {
+  direction: ltr;
+  grid-template-areas: "controls preview";
+  grid-template-columns: 13rem minmax(0, 1fr) !important;
+}
+
+[data-storefront-studio="v2"] > div.grid > aside:first-child {
+  grid-area: controls;
+}
+
+[data-storefront-studio="v2"] > div.grid > main {
+  grid-area: preview;
+}
+
+[data-storefront-studio="v2"] > div.grid > aside:last-child {
+  grid-area: inspector;
+}
+
+html[dir="rtl"] [data-storefront-studio="v2"] > div.grid {
+  grid-template-areas: "preview controls";
+}
+
+html[dir="rtl"] [data-storefront-studio="v2"] > div.grid > :is(aside, main) {
+  direction: rtl;
+}
+
+[data-storefront-studio="bootstrap"] > div.grid {
+  direction: ltr;
+}
+
+html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid > :is(aside, main) {
+  direction: rtl;
+}
+
+@media (min-width: 1280px) {
+  [data-storefront-studio="v2"] > div.grid {
+    grid-template-areas: "controls preview inspector";
+    grid-template-columns: 13rem minmax(0, 1fr) 16.5rem !important;
+  }
+
+  html[dir="rtl"] [data-storefront-studio="v2"] > div.grid {
+    grid-template-areas: "inspector preview controls";
+  }
+
+  [data-storefront-studio="bootstrap"] > div.grid {
+    grid-template-areas: "setup preview";
+    grid-template-columns: 21rem minmax(0, 1fr) !important;
+  }
+
+  [data-storefront-studio="bootstrap"] > div.grid > aside {
+    grid-area: setup;
+  }
+
+  [data-storefront-studio="bootstrap"] > div.grid > main {
+    grid-area: preview;
+  }
+
+  html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid {
+    grid-template-areas: "preview setup";
+  }
+}
+
+/* ── Settings deterministic navigation geometry ─────────────────────────── */
+@media (min-width: 1024px) {
+  [data-settings-workspace="v2"] > div.grid {
+    direction: ltr;
+    grid-template-areas: "settings-nav settings-panel";
+  }
+
+  [data-settings-workspace="v2"] > div.grid > aside {
+    grid-area: settings-nav;
+  }
+
+  [data-settings-workspace="v2"] > div.grid > section {
+    grid-area: settings-panel;
+  }
+
+  html[dir="rtl"] [data-settings-workspace="v2"] > div.grid {
+    grid-template-areas: "settings-panel settings-nav";
+  }
+
+  html[dir="rtl"] [data-settings-workspace="v2"] > div.grid > :is(aside, section) {
+    direction: rtl;
+  }
+}
+
+/* ── Logical bidi helpers ───────────────────────────────────────────────── */
+[data-sf-align="start"] {
+  text-align: start;
+}
+
+[data-sf-align="end"] {
+  text-align: end;
+}
+
+[data-sf-technical-value="true"] {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: start;
+  font-family: var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-sf-user-content="true"] {
+  unicode-bidi: plaintext;
+}
+
+/* ── Locale transition presentation ─────────────────────────────────────── */
+html[data-locale-transition="pending"] body {
+  cursor: default;
+}
+
+/* Override the historical full-screen blur cover from product-system.css. */
+html[data-locale-transition="pending"] body::before {
+  content: "";
+  position: fixed;
+  z-index: 2147483001;
+  inset: 0 0 auto 0;
+  width: 38%;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--primary) 88%, white 12%),
+    transparent
+  );
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  animation: sf-locale-progress 760ms var(--motion-ease-emphasized) infinite;
+}
+
+html[data-locale-transition="pending"] body::after {
+  display: none;
+  content: none;
+}
+
+@keyframes sf-locale-progress {
+  from {
+    transform: translateX(-115%);
+    opacity: 0.4;
+  }
+  45% {
+    opacity: 1;
+  }
+  to {
+    transform: translateX(300%);
+    opacity: 0.45;
+  }
+}
+
+html[dir="rtl"][data-locale-transition="pending"] body::before {
+  animation-name: sf-locale-progress-rtl;
+}
+
+@keyframes sf-locale-progress-rtl {
+  from {
+    transform: translateX(300%);
+    opacity: 0.4;
+  }
+  45% {
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-115%);
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-locale-transition="pending"] body::before {
+    width: 100%;
+    opacity: 0.7;
+    animation: none !important;
+  }
+}
