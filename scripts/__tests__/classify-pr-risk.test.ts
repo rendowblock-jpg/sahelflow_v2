@@ -7,6 +7,17 @@ import {
 } from "../classify-pr-risk";
 
 const releaseIdentityDiffs = {
+  "sahelflow.version.json": `diff --git a/sahelflow.version.json b/sahelflow.version.json
+--- a/sahelflow.version.json
++++ b/sahelflow.version.json
+@@
+-  "version": "1.0.0-internal.18",
++  "version": "1.0.0-internal.19",
+-  "windowsMsiVersion": "1.0.0.18",
++  "windowsMsiVersion": "1.0.0.19",
+@@
+-    "authorityDecision": "FD-037",
++    "authorityDecision": "FD-038",`,
   "package.json": `diff --git a/package.json b/package.json
 --- a/package.json
 +++ b/package.json
@@ -331,8 +342,10 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("forces every release proof lane but skips redundant browser programs for pure authority data", () => {
-    expect(classifyPrRisk(["sahelflow.version.json"])).toMatchObject({
+  it("forces every release proof lane and skips browsers only with verified version identity diff", () => {
+    expect(
+      classifyPrRisk(["sahelflow.version.json"], releaseIdentityDiffs),
+    ).toMatchObject({
       runQuality: true,
       runTauri: true,
       runWindowsStandalone: true,
@@ -374,9 +387,20 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("fails closed when a sensitive release file has no inspectable diff", () => {
+  it("fails closed when version authority has no inspectable identity diff", () => {
+    expect(classifyPrRisk(["sahelflow.version.json"])).toMatchObject({
+      runPhase5: true,
+      runPhase67: true,
+    });
+  });
+
+  it("re-enables browser proof for non-identity version-authority changes", () => {
+    const diffs = {
+      ...releaseIdentityDiffs,
+      "sahelflow.version.json": `${releaseIdentityDiffs["sahelflow.version.json"]}\n-    "releaseMode": "founder-offline-only",\n+    "releaseMode": "customer-online",`,
+    };
     expect(
-      classifyPrRisk(["sahelflow.version.json", "package.json"]),
+      classifyPrRisk(["sahelflow.version.json"], diffs),
     ).toMatchObject({ runPhase5: true, runPhase67: true });
   });
 
@@ -462,13 +486,16 @@ describe("classifyPrRisk", () => {
 
   it("does not let either historical exception suppress full release proof", () => {
     const releaseAuthority = "sahelflow.version.json";
-    const baseline = classifyPrRisk([releaseAuthority]);
+    const baseline = classifyPrRisk([releaseAuthority], releaseIdentityDiffs);
 
     for (const exceptionPath of [
       ".github/phase-exceptions/pr-200-installed-ui-waiver.md",
       ".github/phase-exceptions/pr-207-phase4-closure-override.md",
     ]) {
-      const mixed = classifyPrRisk([releaseAuthority, exceptionPath]);
+      const mixed = classifyPrRisk(
+        [releaseAuthority, exceptionPath],
+        releaseIdentityDiffs,
+      );
       expect(mixed).toMatchObject({
         changedCount: 2,
         runTauri: true,
