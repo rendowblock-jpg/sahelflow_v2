@@ -109,7 +109,8 @@ for (const path of currentDocs) {
     "#221",
     "#226",
     "#230",
-    "resolve",
+    "Live protected",
+    "application/source baseline",
   ]);
 }
 
@@ -164,6 +165,8 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "4672.7 ms",
   "31.1 ms",
   "retry-free",
+  "15ca8781f034b25116d645e2ced7f76be567ae1b",
+  "6f8cc100db134495226ab4f7c5588dc4f86acd75",
   "## Exact next actions",
 ]);
 
