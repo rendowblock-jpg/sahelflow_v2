@@ -15,7 +15,6 @@ import type { StorefrontContactInfo } from "@/lib/storefront/presentation-types"
 import type {
   StorefrontBlock,
   StorefrontSection,
-  StorefrontSectionType,
 } from "@/lib/storefront/studio-sections";
 import { formatDZD } from "@/lib/utils";
 import type {
