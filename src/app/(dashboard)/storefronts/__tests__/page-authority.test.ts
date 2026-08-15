@@ -19,18 +19,25 @@ describe("storefront dashboard page authority", () => {
     expect(query).toBeGreaterThan(readGuard);
     expect(page).toContain('"storefront.manage"');
     expect(page).toContain('"storefront.publish"');
+    expect(page).toContain('"approvals.approve"');
     expect(page).toContain("canManage={canManage}");
     expect(page).toContain("canPublish={canPublish}");
+    expect(page).toContain("canDelete={canDelete}");
   });
 
-  it("projects both management grants into client-side mutation visibility", () => {
+  it("projects edit/publish authority separately from protected delete authority", () => {
+    const page = source("src/app/(dashboard)/storefronts/page.tsx");
     const client = source(
       "src/components/storefront/storefronts-list-client.tsx",
     );
 
+    expect(page).toContain("const canMutate = canManage && canPublish");
+    expect(page).toContain("const canDelete = canMutate && canApprove");
     expect(client).toContain("canManage: boolean");
     expect(client).toContain("canPublish: boolean");
+    expect(client).toContain("canDelete: boolean");
     expect(client).toContain("const canMutate = canManage && canPublish");
-    expect(client).toContain("open={canMutate && deleteTarget !== null}");
+    expect(client).toContain("open={canDelete && deleteTarget !== null}");
+    expect(client).toContain('payload.code === "REAUTHENTICATION_REQUIRED"');
   });
 });
