@@ -14,11 +14,26 @@ export interface StorefrontStudioDraft {
 }
 
 export function createStorefrontStudioDraft(config: StorefrontConfig): StorefrontStudioDraft {
+  const theme = normalizeStorefrontTheme(config.theme);
+  const contact = theme.builder.contact;
+  const hasDraftContact = Boolean(
+    contact.phone || contact.whatsapp || contact.email || contact.address,
+  );
+  // Existing V2 rows stored contact beside theme. Bring that legacy projection
+  // into the private Studio authority on first edit without a schema migration.
+  if (!hasDraftContact && config.contact) {
+    theme.builder.contact = {
+      phone: config.contact.phone ?? "",
+      whatsapp: config.contact.whatsapp ?? "",
+      email: config.contact.email ?? "",
+      address: config.contact.address ?? "",
+    };
+  }
   return {
     name: config.name,
     slug: config.slug,
     description: config.description ?? "",
-    theme: normalizeStorefrontTheme(config.theme),
+    theme,
     selectedProductIds: [...config.productIds],
     isActive: config.isActive,
   };
