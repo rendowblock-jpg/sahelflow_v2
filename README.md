@@ -4,32 +4,36 @@ SahelFlow is a **Windows-first, local-first operations system for Algerian COD s
 
 ## Current repository truth
 
-- Protected `main`: `5cb7f5040249a540ed635cdea16dc933843b40aa` — PR #260 merge and the published signed **Internal.18** source.
+- Protected `main`: `8448c47123290f2e1af702ff24a427cc11c4781c` — merged **Internal.19 source correction** from PR #262.
+- Latest signed/published package source: `5cb7f5040249a540ed635cdea16dc933843b40aa` — PR #260 / signed **Internal.18**.
 - Latest package authority: **Internal.18**, `1.0.0-internal.18`, MSI `1.0.0.18`, **FD-037**, `founder-offline-only`.
 - Founder-installed Internal.18 result: **REJECTED / PARTIALLY IMPROVED**; #221 remains open.
-- Current source frontier: **Internal.19**, branch `agent/internal19-product-convergence`, **PR #262**.
-- **No Internal.19 release authority exists yet.** PR #262 is source correction only until a newer explicit Founder release decision/version authority exists.
+- PR #262 / branch `agent/internal19-product-convergence` is merged historical source-convergence context, not an active PR frontier.
+- **No Internal.19 release authority exists yet.** The Internal.19 source merge is not release permission.
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
 - Independent retained obligations remain **#221**, **#226** and **#230**.
 
-GitHub live ref owns the transient PR head SHA. Never use a copied documentation SHA for write, review, merge or release authority.
+GitHub live protected ref owns current source truth. Never use a copied documentation SHA for write, review, merge or release authority.
 
 ## Internal.19 convergence
 
-PR #262 is the consolidated response to the installed Internal.18 rejection. It repairs shared product roots rather than repeating screenshot-specific patches: Arabic/RTL geometry and typography, neutral theme structure, motion, charts, Inbox, AI, Settings, Storefront V2 authoring, locale switching and retry-free Phase 5 / Phase 6–7 evidence.
+PR #262 was the consolidated response to the installed Internal.18 rejection and is now merged on protected main `8448c47123290f2e1af702ff24a427cc11c4781c`. It repaired shared product roots rather than repeating screenshot-specific patches: Arabic/RTL geometry and typography, neutral theme structure, motion, charts, Inbox, AI, Settings, Storefront V2 authoring, locale switching and retry-free Phase 5 / Phase 6–7 evidence.
 
-The final source hardening specifically protects application-vs-preview heading semantics, focus-managed Storefront section insertion, slow-RSC locale reconciliation without mixed-language frames, Next route-transition scroll integration, saved Arabic Studio evidence and repeatable persisted controlled-browser performance evidence.
+The final source hardening protects application-vs-preview heading semantics, focus-managed Storefront section insertion, slow-RSC locale reconciliation without mixed-language frames, Next route-transition scroll integration, saved Arabic Studio evidence, deterministic Playwright server readiness and repeatable persisted controlled-browser performance evidence.
+
+On exact PR head `8d43e6142aab508e54f038b13e2639ac6966682e`, Required PR, retry-free Phase 5 and retry-free Phase 6–7 were green. Human artifact inspection confirmed loaded Arabic Inbox messages, a loaded AI session with real messages/tool content, saved Storefront Studio, Analytics and dark-theme evidence. The protected squash merge is `8448c47123290f2e1af702ff24a427cc11c4781c`.
 
 ## Evidence and release discipline
 
 - Protected GitHub source and exact Actions artifacts outrank chat summaries.
 - Founder-installed observation is authority for whole-product visual/interaction acceptance.
 - Browser/CI performance is regression evidence only; #226 requires representative installed hardware evidence.
+- Final controlled CI trend for PR #262 recorded worst route median `4672.7 ms` and search p95 `31.1 ms`; this does **not** close #226.
 - Do not retry away deterministic failures or combine materially different SHAs.
 - No force merge, waiver, branch-protection bypass, signing-key weakening or release-source substitution.
 - FD-037 authorizes only Internal.18; customer-online/Beta/Stable remain unauthorized.
 
-After PR #262 is exact-head green and reviewed, merge only that verified tree to protected `main`, then stop before packaging until explicit newer Founder release authority exists.
+After the PR #262 source merge, stop before packaging until explicit newer Founder release authority exists. Any later signed checkpoint must be versioned/certified from the then-live protected-main source under a separate explicit decision.
 
 ## Documentation and resume
 
@@ -43,4 +47,4 @@ The earlier Founder-only internal path included **`1.0.0-internal.15`** and sign
 
 ## Historical continuity
 
-Internal.16 Wave 4 later merged through PR #251. Internal.17 correction/release progressed through PRs #254/#257/#258/#259 under FD-036. Internal.18 correction/release completed through PR #260 at protected source `5cb7f5040249a540ed635cdea16dc933843b40aa`; the Founder then recorded **REJECTED / PARTIALLY IMPROVED**. Current source work is PR #262 / Internal.19.
+Internal.16 Wave 4 later merged through PR #251. Internal.17 correction/release progressed through PRs #254/#257/#258/#259 under FD-036. Internal.18 correction/release completed through PR #260 at protected source `5cb7f5040249a540ed635cdea16dc933843b40aa`; the Founder then recorded **REJECTED / PARTIALLY IMPROVED**. Internal.19 source convergence completed through PR #262 / `agent/internal19-product-convergence` and merged as protected-main source `8448c47123290f2e1af702ff24a427cc11c4781c`; no Internal.19 release authority has been granted.

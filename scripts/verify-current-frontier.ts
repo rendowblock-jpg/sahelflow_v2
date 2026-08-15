@@ -35,9 +35,10 @@ function rejectMarkers(relativePath: string, markers: readonly string[]): void {
   }
 }
 
-const protectedMainInternal18 = "5cb7f5040249a540ed635cdea16dc933843b40aa";
-const currentBranch = "agent/internal19-product-convergence";
-const currentPr = "PR #262";
+const protectedMainInternal19 = "8448c47123290f2e1af702ff24a427cc11c4781c";
+const latestSignedInternal18Source = "5cb7f5040249a540ed635cdea16dc933843b40aa";
+const mergedBranch = "agent/internal19-product-convergence";
+const mergedPr = "PR #262";
 const currentSourceFrontier = "Internal.19";
 const installedCheckpoint = "Internal.18";
 const installedVersion = "1.0.0-internal.18";
@@ -47,10 +48,10 @@ const currentReleaseRequest =
   ".github/release-requests/internal-18-founder-visual-correction.json";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 
-// Release authority and implementation frontier are intentionally separate.
+// Release authority and source frontier are intentionally separate.
+// Protected main now contains the merged Internal.19 source correction, while
 // Internal.18/FD-037 remains the latest authorized signed package until a newer
-// Founder decision/version-authority change exists. PR #262 is source correction,
-// not implicit permission to publish an Internal.19 package.
+// explicit Founder release/version decision exists.
 requireMarkers("sahelflow.version.json", [
   `"version": "${installedVersion}"`,
   `"windowsMsiVersion": "${installedMsiVersion}"`,
@@ -97,9 +98,9 @@ const currentDocs = [
 
 for (const path of currentDocs) {
   requireMarkers(path, [
-    protectedMainInternal18,
-    currentBranch,
-    currentPr,
+    protectedMainInternal19,
+    latestSignedInternal18Source,
+    mergedPr,
     currentSourceFrontier,
     installedCheckpoint,
     "REJECTED / PARTIALLY IMPROVED",
@@ -116,40 +117,50 @@ requireMarkers("README.md", [
   installedVersion,
   installedMsiVersion,
   installedDecision,
-  "GitHub live ref owns the transient PR head SHA",
+  mergedBranch,
+  "merged historical source-convergence context",
 ]);
 
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   activePhase,
+  mergedBranch,
   "Do not restart a generic codebase audit",
-  "Resolve PR #262 head from live GitHub before every write or merge",
+  "PR #262 / `agent/internal19-product-convergence` is **merged historical source-convergence context**",
 ]);
 
 requireMarkers("documentation/README.md", [
+  mergedBranch,
   "## FD-034 — Internal.16 Founder-only offline checkpoint",
   "## FD-035 — Internal.17 source-correction authority",
   "## FD-036 — Internal.17 Founder-only offline checkpoint",
   "## FD-037 — Internal.18 Founder visual-correction checkpoint",
   "FD-037 is historical/executed release authority",
+  "## Current release-authority order after PR #262 merge",
 ]);
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
+  mergedBranch,
   "## Installed authority",
-  "## Current source frontier — PR #262 / Internal.19",
+  "## Current source frontier — protected main after PR #262",
+  "## Exact source/evidence state",
   "## Remaining launch blockers",
 ]);
 
 requireMarkers("documentation/system/ROADMAP.md", [
   "## Current dependency order",
+  "expected-head merge",
   "## Release-authority boundary",
   "## Phase 7 — installed performance and reliability",
   "## Customer licensing/network gate — #230",
 ]);
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
+  mergedBranch,
   "## Exact resumable frontier",
   "8109 ms",
+  "4672.7 ms",
+  "31.1 ms",
   "retry-free",
   "## Exact next actions",
 ]);
@@ -163,6 +174,10 @@ const staleCurrentMarkers = [
   "PR #260 is one consolidated response",
   "Current Founder verdict: Founder-installed Internal.17",
   "Protected main before current package: `898904a11178c8d7b69c755f13794b2ca8bf0356`",
+  "Resolve PR #262 head from live GitHub before every write or merge",
+  "Current source frontier: `agent/internal19-product-convergence` / PR #262 / Internal.19",
+  "Current source work: **Internal.19**, `agent/internal19-product-convergence`, **PR #262**",
+  "After PR #262 is exact-head green and reviewed, merge only that verified tree",
 ];
 for (const path of currentDocs) rejectMarkers(path, staleCurrentMarkers);
 
@@ -180,6 +195,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: protected main 5cb7f504... published signed Internal.18/FD-037 and Founder-installed acceptance is REJECTED / PARTIALLY IMPROVED; PR #262 / agent/internal19-product-convergence is the current source correction frontier. No Internal.19 release authority exists yet. Finish one exact-head certification/review, merge only the protected green tree, then obtain explicit newer release authority before building a new signed Founder checkpoint. #221/#226/#230 remain independent obligations.",
+    "Current execution frontier verified: protected main 8448c471... contains the merged Internal.19 source correction from PR #262; latest signed/installed package remains Internal.18/FD-037 from source 5cb7f504... with Founder result REJECTED / PARTIALLY IMPROVED. No Internal.19 release authority exists yet. Stop before packaging until an explicit newer Founder release decision exists. #221/#226/#230 remain independent obligations.",
   );
 }

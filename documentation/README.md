@@ -2,13 +2,14 @@
 
 > **Status:** Active documentation entry point and FD-034 / FD-035 / FD-036 / **FD-037** addendum authority
 > **Last reconciled:** 2026-08-15
-> **Protected main:** `5cb7f5040249a540ed635cdea16dc933843b40aa` — PR #260 / published signed Internal.18 checkpoint
+> **Protected main:** `8448c47123290f2e1af702ff24a427cc11c4781c` — merged Internal.19 source correction from PR #262
+> **Latest signed/published package source:** `5cb7f5040249a540ed635cdea16dc933843b40aa` — Internal.18 / FD-037
 > **Founder-installed Internal.18 result:** **REJECTED / PARTIALLY IMPROVED** — issue #221 remains open
-> **Current source frontier:** `agent/internal19-product-convergence` / PR #262 / Internal.19
+> **Current source frontier:** protected `main` / `8448c47123290f2e1af702ff24a427cc11c4781c` / Internal.19 source
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Retained open evidence:** #221, #226, #230
 
-Live protected GitHub state is authority. GitHub live ref owns the transient PR head SHA. The latest published/installed package remains **Internal.18** (`1.0.0-internal.18`, MSI `1.0.0.18`) under FD-037 with `founder-offline-only` licensing. **No Internal.19 release authority exists yet.** PR #262 is source correction only until a newer explicit Founder decision changes release/version authority.
+Live protected GitHub state is authority. The latest published/installed package remains **Internal.18** (`1.0.0-internal.18`, MSI `1.0.0.18`) under FD-037 with `founder-offline-only` licensing. **No Internal.19 release authority exists yet.** PR #262 / `agent/internal19-product-convergence` is merged source-convergence history, not permission to publish a newer package.
 
 ## Active resume path
 
@@ -25,13 +26,15 @@ Read in this order:
 
 Repository `AGENTS.md` is the coding-agent entry point. Archive material is evidence/context only.
 
-## Current source frontier — PR #262 / Internal.19
+## Current source frontier — protected main after PR #262
 
-The Founder has installed signed Internal.18 from protected source `5cb7f5040249a540ed635cdea16dc933843b40aa` and recorded **REJECTED / PARTIALLY IMPROVED**. PR #262 is the consolidated source response. It owns the remaining shared-root Arabic/RTL geometry, theme/motion/chart quality, Inbox/AI/Settings product workspaces, Storefront V2 authoring experience, locale reconciliation and retry-free evidence contracts.
+The Founder installed signed Internal.18 from protected source `5cb7f5040249a540ed635cdea16dc933843b40aa` and recorded **REJECTED / PARTIALLY IMPROVED**. PR #262 was the consolidated Internal.19 source response and merged to protected main as `8448c47123290f2e1af702ff24a427cc11c4781c`.
 
-The current final hardening also distinguishes application work-surface headings from embedded Storefront preview-document headings, keeps the public customer storefront hero as `<h1>`, uses the shared focus-managed Add Section menu, proves slow-RSC locale switching without mixed old/new language frames, declares Next route-transition scroll ownership, captures the real saved Arabic Studio, and persists repeatable controlled-browser performance evidence.
+That source convergence owns the shared-root Arabic/RTL geometry, theme/motion/chart quality, Inbox/AI/Settings product workspaces, Storefront V2 authoring experience, locale reconciliation and retry-free evidence contracts. Final hardening distinguishes application work-surface headings from embedded Storefront preview-document headings, keeps the public customer storefront hero as `<h1>`, uses the shared focus-managed Add Section menu, proves slow-RSC locale switching without mixed old/new language frames, declares Next route-transition scroll ownership, captures the real saved Arabic Studio, makes Playwright server readiness deterministic and persists repeatable controlled-browser performance evidence.
 
-No Golden COD, licensing, recovery, provider-effect, connected-platform or canonical inventory/money authority may be weakened for this source correction.
+Exact PR head `8d43e6142aab508e54f038b13e2639ac6966682e` passed Required PR, retry-free Phase 5 and retry-free Phase 6–7. Human artifact inspection confirmed loaded Arabic Inbox/AI, saved Studio, Analytics and dark-theme evidence. The protected squash merge is `8448c47123290f2e1af702ff24a427cc11c4781c`.
+
+No Golden COD, licensing, recovery, provider-effect, connected-platform or canonical inventory/money authority may be weakened by a later release-authority follow-up.
 
 ## Historical continuity retained
 
@@ -42,7 +45,7 @@ No Golden COD, licensing, recovery, provider-effect, connected-platform or canon
 - Internal.17 application correction: PR #254 at `c33f234ecf43842cfcc801592cc601d595ed05c5`, reviewed head `c965a062cf2719078601374bd0ace771ca011d53`.
 - Internal.17 release authority: PR #257 / FD-036 at `2a820b801786590a20dc6105f39f732b8a987c5f`; signed run `31840181436` stopped before publication on deterministic Tauri icon source hygiene; PR #258 protected the narrow guard repair at `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9`; PR #259 produced the published Internal.17 checkpoint.
 - Internal.18 source/release: PR #260 merged to protected main `5cb7f5040249a540ed635cdea16dc933843b40aa`, published signed under FD-037, then Founder-installed with result **REJECTED / PARTIALLY IMPROVED**.
-- Current source convergence: PR #262 / `agent/internal19-product-convergence` / Internal.19.
+- Internal.19 source convergence: PR #262 / `agent/internal19-product-convergence`, exact certified head `8d43e6142aab508e54f038b13e2639ac6966682e`, protected squash merge `8448c47123290f2e1af702ff24a427cc11c4781c`.
 
 These anchors remain for audit continuity. They are not current implementation instructions. **Issues #221, #226 and #230 remain open.**
 
@@ -91,24 +94,23 @@ FD-036 authorized exactly Internal.17 with `founder-offline-only` licensing, `ow
 
 FD-037 is historical/executed release authority. It authorized one exact signed Internal.18 checkpoint carrying the complete Founder-rejected Internal.17 visual correction. Its licensing mode is `founder-offline-only`; `ownedHostSuffix` is null; permanent Founder entitlement remains offline authority; the signed build must not package `SF_LICENSE_SERVICE_URL`; online trial initialization remains disabled.
 
-The resulting protected source is `5cb7f5040249a540ed635cdea16dc933843b40aa`. The signed release/install/runtime evidence remains valid for what it proved. The later Founder-installed result is **REJECTED / PARTIALLY IMPROVED**, so #221 remains open.
+The resulting signed-package source is `5cb7f5040249a540ed635cdea16dc933843b40aa`. The signed release/install/runtime evidence remains valid for what it proved. The later Founder-installed result is **REJECTED / PARTIALLY IMPROVED**, so #221 remains open.
 
 FD-037 does **not** authorize Internal.19, customer-online distribution, Beta, Stable or any later version.
 
 ### Executed FD-037 order — historical continuity
 
-FD-037 required the Internal.18 source package to finish before certification, one exact-head source/rendered/native/Windows/MSI gate set, review, protected merge, deterministic signed publication from protected main, exact artifacts/hashes/updater binding, and Founder-installed accept/reject. That sequence has executed through installation; its current human acceptance result is **REJECTED / PARTIALLY IMPROVED**.
+FD-037 required the Internal.18 source package to finish before certification, one exact-head source/rendered/native/Windows/MSI gate set, review, protected merge, deterministic signed publication from protected main, exact artifacts/hashes/updater binding, and Founder-installed accept/reject. That sequence executed through installation; its current human acceptance result is **REJECTED / PARTIALLY IMPROVED**.
 
-## Current release-authority order after PR #262
+## Current release-authority order after PR #262 merge
 
-1. Finish PR #262 on one exact source head with required retry-free source/rendered gates, artifact inspection and exact-head review.
-2. Merge only that exact reviewed green tree to protected `main` with no force/waiver.
-3. Verify the protected-main merge/tree identity.
-4. Stop before packaging: **No Internal.19 release authority exists yet.**
-5. Obtain a newer explicit Founder release decision before changing version/MSI/release request/native/signing allowlists.
-6. After that decision, synchronize release authority in one bounded protected-main follow-up and publish only exact signed artifacts from protected main.
-7. Founder installs the exact next signed checkpoint and records explicit #221 accept/reject.
-8. Keep #226 representative installed performance/reliability and #230 customer-online/network certification independent.
+1. PR #262 source convergence is complete and protected main is `8448c47123290f2e1af702ff24a427cc11c4781c`.
+2. Preserve its exact-head evidence and the verified protected-main tree identity.
+3. Stop before packaging: **No Internal.19 release authority exists yet.**
+4. Obtain a newer explicit Founder release decision before changing version/MSI/release request/native/signing allowlists.
+5. After that decision, synchronize release authority in one bounded protected-main follow-up and publish only exact signed artifacts from the then-live protected main.
+6. Founder installs the exact next signed checkpoint and records explicit #221 accept/reject.
+7. Keep #226 representative installed performance/reliability and #230 customer-online/network certification independent.
 
 ## Coherent signed-candidate rule
 
@@ -116,7 +118,7 @@ A readiness claim may not combine Founder acceptance from one build, performance
 
 ## Release and launch boundary
 
-Internal.18 under FD-037 is a Founder/internal-lab checkpoint, not a customer release. PR #262 is source correction, not release permission. #226 and #230 remain separate. Stable still requires the complete applicable acceptance register, representative/live provider/network evidence, security/privacy/legal/rollout readiness and explicit Founder promotion.
+Internal.18 under FD-037 is a Founder/internal-lab checkpoint, not a customer release. Internal.19 source now exists on protected main, but that merge is not release permission. #226 and #230 remain separate. Stable still requires the complete applicable acceptance register, representative/live provider/network evidence, security/privacy/legal/rollout readiness and explicit Founder promotion.
 
 ## Historical checkpoint continuity
 
