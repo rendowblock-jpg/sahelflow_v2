@@ -143,4 +143,33 @@ describe("Storefront Builder V2", () => {
     expect(publicPage).toContain("storefrontService.getBySlug");
     expect(publicPage).not.toContain("getStudioDraftById");
   });
+
+  it("starts new storefronts inside a live V2 Studio preview instead of the legacy settings form", () => {
+    const root = process.cwd();
+    const page = readFileSync(
+      join(root, "src/app/(dashboard)/storefronts/new/page.tsx"),
+      "utf8",
+    );
+    const bootstrap = readFileSync(
+      join(root, "src/components/storefront/studio/storefront-studio-bootstrap.tsx"),
+      "utf8",
+    );
+    const studio = readFileSync(
+      join(root, "src/components/storefront/studio/storefront-studio.tsx"),
+      "utf8",
+    );
+
+    expect(page).toContain("StorefrontStudioBootstrap");
+    expect(page).not.toContain("StorefrontBuilder");
+    expect(bootstrap).toContain("StorefrontRenderer");
+    expect(bootstrap).toContain("createDefaultStorefrontTheme");
+    expect(bootstrap).toContain("storefront.studio.template.sahara");
+    expect(bootstrap).toContain("storefront.studio.template.atlas");
+    expect(bootstrap).toContain("storefront.studio.template.oasis");
+    expect(bootstrap).toContain('router.push(`/storefronts/${encodeURIComponent(data.config.id)}`)');
+    expect(studio).toContain("SectionTree");
+    expect(studio).toContain("undoStorefrontStudioHistory");
+    expect(studio).toContain("redoStorefrontStudioHistory");
+    expect(studio).toContain("expectedDraftUpdatedAt: version");
+  });
 });
