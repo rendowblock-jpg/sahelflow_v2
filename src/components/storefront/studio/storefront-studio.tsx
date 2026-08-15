@@ -141,6 +141,11 @@ export function StorefrontStudio({
   }, [config.id, t, version]);
 
   const publish = useCallback(async () => {
+    if (draft.isActive && draft.theme.builder.shippingRules.length === 0) {
+      setPanel("checkout");
+      setMessage(t("storefront.studio.shippingEmpty"));
+      return;
+    }
     if (!version || dirty || saveState === "saving" || saveState === "conflict") {
       setMessage(t("storefront.studio.saveBeforePublishing"));
       return;
@@ -174,7 +179,7 @@ export function StorefrontStudio({
       setSaveState("error");
       setMessage(t("storefront.studio.publishFailed"));
     }
-  }, [config.id, dirty, draft.isActive, locale, saveState, t, version]);
+  }, [config.id, dirty, draft.isActive, draft.theme.builder.shippingRules.length, locale, saveState, t, version]);
 
   useEffect(() => {
     if (!dirty || conflict || saveState === "saving" || saveState === "error") return;

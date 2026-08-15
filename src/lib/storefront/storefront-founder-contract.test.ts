@@ -45,6 +45,13 @@ describe("Founder Storefront V2 acceptance repair", () => {
     expect(saveDraft).not.toContain("publishedLegacyContact");
   });
 
+  it("blocks active publish without a delivery rule and opens the actionable checkout panel", () => {
+    const studio = read("src/components/storefront/studio/storefront-studio.tsx");
+    expect(studio).toContain("draft.isActive && draft.theme.builder.shippingRules.length === 0");
+    expect(studio).toContain('setPanel("checkout")');
+    expect(studio).toContain('setMessage(t("storefront.studio.shippingEmpty"))');
+  });
+
   it("exposes active/pause intent in Studio and never reports a pause as published", () => {
     const studio = read("src/components/storefront/studio/storefront-studio.tsx");
     expect(studio).toContain("checked={draft.isActive}");
