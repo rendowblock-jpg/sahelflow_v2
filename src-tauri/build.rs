@@ -137,9 +137,10 @@ fn founder_offline_checkpoint(authority: &serde_json::Value) -> bool {
                         | (Some("1.0.0-internal.16"), Some("FD-034"))
                         | (Some("1.0.0-internal.17"), Some("FD-036"))
                         | (Some("1.0.0-internal.18"), Some("FD-037"))
+                        | (Some("1.0.0-internal.19"), Some("FD-038"))
                 );
             if !exact_checkpoint {
-                panic!("founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, or FD-037/Internal.18 on the internal channel with no owned host suffix");
+                panic!("founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, or FD-038/Internal.19 on the internal channel with no owned host suffix");
             }
             true
         }
