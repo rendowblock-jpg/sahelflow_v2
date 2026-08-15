@@ -1,0 +1,25 @@
+/*
+ * Locale reconciliation presentation.
+ *
+ * Client-owned shell geometry and copy switch immediately. Server-rendered route
+ * fragments can arrive later through router.refresh(), so keep the already-correct
+ * shell visible while temporarily occluding only the stale work surface. The
+ * ServerLocaleProvider removes data-locale-transition in a layout effect once the
+ * requested server tree is committed, before the reconciled route paints.
+ */
+html[data-locale-transition="pending"] #main-content {
+  position: relative;
+}
+
+html[data-locale-transition="pending"] #main-content > * {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+html[data-locale-transition="pending"] #main-content::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--background);
+}

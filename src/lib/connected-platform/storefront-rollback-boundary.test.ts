@@ -34,10 +34,15 @@ describe("storefront immutable rollback surface", () => {
     expect(preparer).toContain("shippingRules: hosted.shippingRules");
   });
 
-  it("surfaces localized release history and rollback controls beside Studio", () => {
-    const page = source("src/app/(dashboard)/storefronts/[id]/page.tsx");
-    const control = source("src/components/storefront/studio/storefront-release-history.tsx");
+  it("surfaces localized release history and rollback controls in a dedicated history workspace", () => {
+    const page = source(
+      "src/app/(dashboard)/storefronts/[id]/history/page.tsx",
+    );
+    const control = source(
+      "src/components/storefront/studio/storefront-release-history.tsx",
+    );
     expect(page).toContain("StorefrontReleaseHistory");
+    expect(page).toContain("/studio");
     expect(control).toContain("Release history");
     expect(control).toContain("Historique des versions");
     expect(control).toContain("سجل الإصدارات");

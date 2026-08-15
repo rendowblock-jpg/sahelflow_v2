@@ -6,15 +6,17 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("Settings operational workspace contract", () => {
-  it("routes Settings through four task-shaped groups and removes legacy aggregators", () => {
+  it("routes Settings through six task-shaped groups and removes legacy aggregators", () => {
     const page = read("src/app/(dashboard)/settings/page.tsx");
     const workspace = read("src/components/settings/settings-workspace.tsx");
     expect(page).toContain("SettingsWorkspace");
     expect(page).not.toContain("SettingsTabs");
     expect(workspace).toContain('data-settings-workspace="v2"');
-    expect(workspace).toContain('id: "experience"');
+    expect(workspace).toContain('id: "workspace"');
+    expect(workspace).toContain('id: "operations"');
     expect(workspace).toContain('id: "connections"');
-    expect(workspace).toContain('id: "team"');
+    expect(workspace).toContain('id: "intelligence"');
+    expect(workspace).toContain('id: "access"');
     expect(workspace).toContain('id: "data"');
     expect(workspace).toContain("AppearancePanel");
     expect(workspace).toContain("SecurityAuthorityPanel");
@@ -160,14 +162,17 @@ describe("Settings operational workspace contract", () => {
     expect(panel).toContain("verifyPinAndResume");
   });
 
-  it("centralizes new Settings workspace copy in AR, FR and EN", () => {
+  it("centralizes task-shaped Settings copy in AR, FR and EN", () => {
     const copy = read("src/lib/i18n/settings-workspace.ts");
     expect(copy).toContain("en:");
     expect(copy).toContain("fr:");
     expect(copy).toContain("ar:");
-    expect(copy).toContain("Experience & operations");
-    expect(copy).toContain("Expérience et opérations");
-    expect(copy).toContain("التجربة والعمليات");
+    expect(copy).toContain("Workspace");
+    expect(copy).toContain("Espace de travail");
+    expect(copy).toContain("مساحة العمل");
+    expect(copy).toContain("Access & security");
+    expect(copy).toContain("Accès et sécurité");
+    expect(copy).toContain("الوصول والأمان");
     expect(copy).toContain("Export orders");
     expect(copy).toContain("Exporter les commandes");
     expect(copy).toContain("تصدير الطلبات");

@@ -193,8 +193,8 @@ jobs:
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
 
-      - name: Run Phase 6-7 browser evidence
-        run: bunx playwright test e2e/phase6-7-completion.spec.ts
+      - name: Run Phase 6-7 browser evidence without retries
+        run: bunx playwright test --retries=0 --grep-invert "Phase 7 throttled browser performance trend stays bounded" e2e/phase6-7-completion.spec.ts e2e/phase7-performance-trend.spec.ts
 
       - name: Upload rendered and performance evidence
         if: always()

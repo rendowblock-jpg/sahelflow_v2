@@ -12,21 +12,40 @@ import {
 
 import { useI18n } from "@/hooks/use-i18n";
 import type { StorefrontContactInfo } from "@/lib/storefront/presentation-types";
-import type { StorefrontSection, StorefrontSectionType } from "@/lib/storefront/studio-sections";
+import type {
+  StorefrontBlock,
+  StorefrontSection,
+} from "@/lib/storefront/studio-sections";
 import { formatDZD } from "@/lib/utils";
-import type { StorefrontPreviewProps, StorefrontStudioProduct } from "./studio/studio-types";
+import type {
+  StorefrontPreviewProps,
+  StorefrontStudioProduct,
+} from "./studio/studio-types";
 import { studioImageUrl } from "./studio/studio-types";
 
-type InspectProps = React.HTMLAttributes<HTMLElement> & { "data-studio-section"?: string };
+type InspectProps = React.HTMLAttributes<HTMLElement> & {
+  "data-studio-section"?: string;
+};
 
 export interface StorefrontRendererProps extends StorefrontPreviewProps {
   selectedSectionId?: string | null;
   onInspectSection?: (id: string) => void;
   maxProducts?: number;
+  embeddedPreview?: boolean;
   renderProductFooter?: (product: StorefrontStudioProduct) => React.ReactNode;
   renderCheckout?: React.ReactNode;
   renderSupport?: React.ReactNode;
   emptyCatalog?: React.ReactNode;
+}
+
+function textSetting(section: StorefrontSection, key: string): string {
+  const value = section.settings[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function blockText(block: StorefrontBlock, key: string): string {
+  const value = block.settings[key];
+  return typeof value === "string" ? value.trim() : "";
 }
 
 /** Canonical Storefront V2 renderer shared by Studio and customer routes. */
@@ -36,6 +55,7 @@ export function StorefrontRenderer({
   selectedSectionId,
   onInspectSection,
   maxProducts,
+  embeddedPreview,
   renderProductFooter,
   renderCheckout,
   renderSupport,
@@ -47,9 +67,16 @@ export function StorefrontRenderer({
   const selectedProducts = draft.selectedProductIds
     .map((id) => productMap.get(id))
     .filter((product): product is StorefrontStudioProduct => Boolean(product));
-  const visibleProducts = typeof maxProducts === "number"
-    ? selectedProducts.slice(0, maxProducts)
-    : selectedProducts;
+  const visibleProducts =
+    typeof maxProducts === "number"
+      ? selectedProducts.slice(0, maxProducts)
+      : selectedProducts;
+  // Existing Studio/bootstrap callers bound the preview with maxProducts while
+  // the customer StorefrontView does not. Keep that compatibility inference but
+  // expose an explicit override so future limited customer renders never have to
+  // inherit preview heading semantics accidentally.
+  const isEmbeddedPreview =
+    embeddedPreview ?? typeof maxProducts === "number";
 
   function inspect(section: StorefrontSection): InspectProps {
     if (!onInspectSection) return {};
@@ -59,9 +86,10 @@ export function StorefrontRenderer({
         event.stopPropagation();
         onInspectSection(section.id);
       },
-      className: selectedSectionId === section.id
-        ? "ring-2 ring-primary ring-offset-2"
-        : undefined,
+      className:
+        selectedSectionId === section.id
+          ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+          : undefined,
     };
   }
 
@@ -72,6 +100,7 @@ export function StorefrontRenderer({
   function renderSection(section: StorefrontSection): React.ReactNode {
     if (!section.enabled) return null;
     const props = inspect(section);
+
     switch (section.type) {
       case "announcement":
         if (!theme.announcement.enabled) return null;
@@ -79,141 +108,452 @@ export function StorefrontRenderer({
           <div
             key={section.id}
             {...props}
-            className={sectionClass(section, "mb-4 rounded-lg px-3 py-2 text-center text-[11px] font-medium text-white")}
-            style={{ background: theme.template === "oasis" ? theme.accentColor : theme.primaryColor }}
+            className={sectionClass(
+              section,
+              "mb-4 rounded-lg px-3 py-2 text-center text-[11px] font-medium text-white",
+            )}
+            style={{
+              background:
+                theme.template === "oasis"
+                  ? theme.accentColor
+                  : theme.primaryColor,
+            }}
           >
-            {theme.announcement.text || t("storefront.studio.freePhoneConfirmation")}
+            {theme.announcement.text ||
+              t("storefront.studio.freePhoneConfirmation")}
           </div>
         );
+
       case "navbar":
         return (
           <header
             key={section.id}
             {...props}
-            className={sectionClass(section, theme.template === "sahara"
-              ? "text-xs font-semibold uppercase tracking-[.18em]"
-              : "flex items-center justify-between border-b pb-4")}
+            className={sectionClass(
+              section,
+              theme.template === "sahara"
+                ? "text-xs font-semibold uppercase tracking-[.18em]"
+                : "flex items-center justify-between border-b pb-4",
+            )}
           >
             <b>{draft.name || t("storefront.studio.storeFallback")}</b>
             {theme.template === "sahara" ? null : (
-              <span className="text-xs font-normal opacity-50">{t("storefront.studio.catalogCod")}</span>
+              <span className="text-xs font-normal opacity-50">
+                {t("storefront.studio.catalogCod")}
+              </span>
             )}
           </header>
         );
+
       case "hero":
         if (!theme.hero.enabled) return null;
         return (
           <section
             key={section.id}
             {...props}
-            className={sectionClass(section, heroClass(theme.template, theme.radius))}
-            style={theme.template === "oasis" ? { background: theme.primaryColor } : undefined}
+            className={sectionClass(
+              section,
+              heroClass(theme.template, theme.radius),
+            )}
+            style={
+              theme.template === "oasis"
+                ? { background: theme.primaryColor }
+                : undefined
+            }
           >
             <span
               className="text-[10px] font-bold uppercase tracking-widest"
-              style={theme.template === "oasis" ? undefined : { color: theme.primaryColor }}
+              style={
+                theme.template === "oasis"
+                  ? undefined
+                  : { color: theme.primaryColor }
+              }
             >
-              {theme.hero.eyebrow || (theme.template === "oasis"
-                ? t("storefront.studio.payOnDelivery")
-                : t("storefront.studio.algeriaCod"))}
+              {theme.hero.eyebrow ||
+                (theme.template === "oasis"
+                  ? t("storefront.studio.payOnDelivery")
+                  : t("storefront.studio.algeriaCod"))}
             </span>
-            <h1 className="mt-3 text-4xl font-semibold leading-none tracking-tight">
-              {theme.hero.headline || draft.name}
-            </h1>
+            {isEmbeddedPreview ? (
+              <h2 className="mt-3 text-4xl font-semibold leading-none tracking-tight">
+                {theme.hero.headline || draft.name}
+              </h2>
+            ) : (
+              <h1 className="mt-3 text-4xl font-semibold leading-none tracking-tight">
+                {theme.hero.headline || draft.name}
+              </h1>
+            )}
             <p className="mt-4 text-sm leading-6 opacity-70">
               {theme.hero.body || draft.description}
             </p>
             <a
               href="#storefront-catalog"
               className={`${radius(theme.radius)} mt-5 inline-flex px-4 py-2 text-xs font-semibold ${theme.template === "oasis" ? "bg-white" : "text-white"}`}
-              style={theme.template === "oasis"
-                ? { color: theme.primaryColor }
-                : { background: theme.primaryColor }}
+              style={
+                theme.template === "oasis"
+                  ? { color: theme.primaryColor }
+                  : { background: theme.primaryColor }
+              }
             >
-              {theme.hero.ctaLabel || (theme.template === "oasis"
-                ? t("storefront.studio.orderNow")
-                : t("storefront.studio.shopNow"))}
+              {theme.hero.ctaLabel ||
+                (theme.template === "oasis"
+                  ? t("storefront.studio.orderNow")
+                  : t("storefront.studio.shopNow"))}
             </a>
           </section>
         );
+
       case "trust":
         return (
           <section
             key={section.id}
             {...props}
-            className={sectionClass(section, "grid grid-cols-2 gap-2 py-5 text-[10px] sm:grid-cols-4")}
+            className={sectionClass(
+              section,
+              "grid grid-cols-2 gap-2 py-5 text-[10px] sm:grid-cols-4",
+            )}
           >
-            {theme.trust.showCodBadge ? <Trust icon={<BadgeCheck />} label={t("storefront.studio.cashOnDelivery")} /> : null}
-            {theme.trust.showPhoneConfirmationBadge ? <Trust icon={<PhoneCall />} label={t("storefront.studio.phoneConfirmation")} /> : null}
-            {theme.trust.showDeliveryBadge ? <Trust icon={<PackageCheck />} label={t("storefront.studio.homeDeskDelivery")} /> : null}
-            {theme.trust.showSupportBadge ? <Trust icon={<Headphones />} label={t("storefront.studio.sellerSupport")} /> : null}
+            {theme.trust.showCodBadge ? (
+              <Trust
+                icon={<BadgeCheck />}
+                label={t("storefront.studio.cashOnDelivery")}
+              />
+            ) : null}
+            {theme.trust.showPhoneConfirmationBadge ? (
+              <Trust
+                icon={<PhoneCall />}
+                label={t("storefront.studio.phoneConfirmation")}
+              />
+            ) : null}
+            {theme.trust.showDeliveryBadge ? (
+              <Trust
+                icon={<PackageCheck />}
+                label={t("storefront.studio.homeDeskDelivery")}
+              />
+            ) : null}
+            {theme.trust.showSupportBadge ? (
+              <Trust
+                icon={<Headphones />}
+                label={t("storefront.studio.sellerSupport")}
+              />
+            ) : null}
           </section>
         );
+
       case "featured-products":
       case "product-grid": {
-        const catalogProducts = section.type === "featured-products"
-          ? visibleProducts.slice(0, 4)
-          : visibleProducts;
+        const catalogProducts =
+          section.type === "featured-products"
+            ? visibleProducts.slice(0, 4)
+            : visibleProducts;
+        const title = textSetting(section, "title");
         return (
           <section
             key={section.id}
             {...props}
             id={section.type === "product-grid" ? "storefront-catalog" : undefined}
-            className={sectionClass(section, theme.template === "sahara" ? "mt-10" : "py-6")}
+            className={sectionClass(
+              section,
+              theme.template === "sahara" ? "mt-10" : "py-6",
+            )}
           >
+            {title ? (
+              <h2 dir="auto" className="mb-4 text-xl font-semibold tracking-tight">
+                {title}
+              </h2>
+            ) : null}
             {catalogProducts.length === 0
-              ? emptyCatalog ?? <p className="text-sm opacity-60">{t("storefront.view.noProducts")}</p>
-              : <ProductGrid products={catalogProducts} draft={draft} renderProductFooter={renderProductFooter} />}
+              ? emptyCatalog ?? (
+                  <p className="text-sm opacity-60">
+                    {t("storefront.view.noProducts")}
+                  </p>
+                )
+              : (
+                  <ProductGrid
+                    products={catalogProducts}
+                    draft={draft}
+                    renderProductFooter={renderProductFooter}
+                  />
+                )}
           </section>
         );
       }
+
       case "categories": {
-        const collections = theme.builder.collections.filter((collection) => collection.enabled);
-        if (collections.length === 0) return onInspectSection ? <EmptyStudioSection key={section.id} section={section} props={props} label={t("storefront.studio.section.categories")} /> : null;
+        const title = textSetting(section, "title");
+        const collections = theme.builder.collections.filter(
+          (collection) => collection.enabled,
+        );
+        if (collections.length === 0) {
+          return onInspectSection ? (
+            <EmptyStudioSection
+              key={section.id}
+              section={section}
+              props={props}
+              label={t("storefront.studio.section.categories")}
+            />
+          ) : null;
+        }
         return (
-          <nav key={section.id} {...props} className={sectionClass(section, "flex flex-wrap gap-2 py-4")}>
-            {collections.map((collection) => (
-              <span key={collection.id} className={`${radius(theme.radius)} border px-3 py-1.5 text-xs font-medium`}>
-                {collection.title}
-              </span>
-            ))}
-          </nav>
+          <section
+            key={section.id}
+            {...props}
+            className={sectionClass(section, "py-5")}
+          >
+            {title ? (
+              <h2 dir="auto" className="mb-3 text-lg font-semibold">
+                {title}
+              </h2>
+            ) : null}
+            <nav className="flex flex-wrap gap-2">
+              {collections.map((collection) => (
+                <span
+                  key={collection.id}
+                  className={`${radius(theme.radius)} border px-3 py-1.5 text-xs font-medium`}
+                >
+                  {collection.title}
+                </span>
+              ))}
+            </nav>
+          </section>
         );
       }
+
+      case "media": {
+        const eyebrow = textSetting(section, "eyebrow");
+        const title = textSetting(section, "title");
+        const body = textSetting(section, "body");
+        const imageUrl = textSetting(section, "imageUrl");
+        const imageAlt = textSetting(section, "imageAlt");
+        const align = textSetting(section, "align");
+        const hasImage = /^https:\/\//i.test(imageUrl);
+        const hasContent = Boolean(eyebrow || title || body || hasImage);
+        if (!hasContent) {
+          return onInspectSection ? (
+            <EmptyStudioSection
+              key={section.id}
+              section={section}
+              props={props}
+              label={t("storefront.studio.section.media")}
+            />
+          ) : null;
+        }
+        return (
+          <section
+            key={section.id}
+            {...props}
+            className={sectionClass(
+              section,
+              `${radius(theme.radius)} my-6 overflow-hidden border`,
+            )}
+            style={{ background: theme.surfaceColor }}
+          >
+            <div
+              className={`grid items-stretch ${hasImage ? "md:grid-cols-2" : ""}`}
+            >
+              {hasImage ? (
+                <div
+                  className={`min-h-56 ${align === "media-end" ? "md:order-2" : ""}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- merchant-authored HTTPS media */}
+                  <img
+                    src={imageUrl}
+                    alt={imageAlt || title || draft.name}
+                    className="h-full min-h-56 w-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              ) : null}
+              <div className="flex flex-col justify-center p-6 sm:p-8">
+                {eyebrow ? (
+                  <p
+                    dir="auto"
+                    className="text-[10px] font-bold uppercase tracking-wider"
+                    style={{ color: theme.primaryColor }}
+                  >
+                    {eyebrow}
+                  </p>
+                ) : null}
+                {title ? (
+                  <h2 dir="auto" className="mt-2 text-2xl font-semibold tracking-tight">
+                    {title}
+                  </h2>
+                ) : null}
+                {body ? (
+                  <p dir="auto" className="mt-3 whitespace-pre-wrap text-sm leading-6 opacity-70">
+                    {body}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case "testimonials": {
+        const title = textSetting(section, "title");
+        const entries = section.blocks.filter((block) => blockText(block, "quote"));
+        if (entries.length === 0) {
+          return onInspectSection ? (
+            <EmptyStudioSection
+              key={section.id}
+              section={section}
+              props={props}
+              label={t("storefront.studio.section.testimonials")}
+            />
+          ) : null;
+        }
+        return (
+          <section
+            key={section.id}
+            {...props}
+            className={sectionClass(section, "py-7")}
+          >
+            {title ? (
+              <h2 dir="auto" className="mb-4 text-xl font-semibold tracking-tight">
+                {title}
+              </h2>
+            ) : null}
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {entries.map((entry) => {
+                const quote = blockText(entry, "quote");
+                const name = blockText(entry, "name");
+                const role = blockText(entry, "role");
+                return (
+                  <figure
+                    key={entry.id}
+                    className={`${radius(theme.radius)} border p-4`}
+                    style={{ background: theme.surfaceColor }}
+                  >
+                    <blockquote dir="auto" className="text-sm leading-6">
+                      “{quote}”
+                    </blockquote>
+                    {name || role ? (
+                      <figcaption className="mt-3 border-t pt-3 text-xs opacity-70">
+                        {name ? <strong dir="auto">{name}</strong> : null}
+                        {role ? <span dir="auto">{name ? " · " : ""}{role}</span> : null}
+                      </figcaption>
+                    ) : null}
+                  </figure>
+                );
+              })}
+            </div>
+          </section>
+        );
+      }
+
+      case "faq": {
+        const title = textSetting(section, "title");
+        const entries = section.blocks.filter(
+          (block) => blockText(block, "question") && blockText(block, "answer"),
+        );
+        if (entries.length === 0) {
+          return onInspectSection ? (
+            <EmptyStudioSection
+              key={section.id}
+              section={section}
+              props={props}
+              label={t("storefront.studio.section.faq")}
+            />
+          ) : null;
+        }
+        return (
+          <section
+            key={section.id}
+            {...props}
+            className={sectionClass(section, "py-7")}
+          >
+            {title ? (
+              <h2 dir="auto" className="mb-4 text-xl font-semibold tracking-tight">
+                {title}
+              </h2>
+            ) : null}
+            <div className="space-y-2">
+              {entries.map((entry) => (
+                <details
+                  key={entry.id}
+                  className={`${radius(theme.radius)} border px-4 py-3`}
+                  style={{ background: theme.surfaceColor }}
+                >
+                  <summary
+                    dir="auto"
+                    className="cursor-pointer select-none text-sm font-semibold"
+                  >
+                    {blockText(entry, "question")}
+                  </summary>
+                  <p dir="auto" className="mt-3 whitespace-pre-wrap text-sm leading-6 opacity-70">
+                    {blockText(entry, "answer")}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </section>
+        );
+      }
+
       case "cod-checkout":
         return (
-          <section key={section.id} {...props} className={sectionClass(section, `${radius(theme.radius)} mt-5 space-y-5 border p-4`)}>
+          <section
+            key={section.id}
+            {...props}
+            className={sectionClass(
+              section,
+              `${radius(theme.radius)} mt-5 space-y-5 border p-4`,
+            )}
+          >
             {theme.checkout.showCodPromise ? (
               <p className="text-center text-xs font-semibold">
-                {theme.checkout.codPromiseText || t("storefront.studio.defaultCodPromise")}
+                {theme.checkout.codPromiseText ||
+                  t("storefront.studio.defaultCodPromise")}
               </p>
             ) : null}
             {renderCheckout}
           </section>
         );
+
       case "support": {
-        const authoredSupport = hasContact(theme.builder.contact)
-          ? <StorefrontContactBlock contact={theme.builder.contact} />
-          : null;
-        // Once a V2 release contains contact, it is immutable release authority.
-        // The legacy sibling field remains read-compatible only for older rows.
+        const authoredSupport = hasContact(theme.builder.contact) ? (
+          <StorefrontContactBlock contact={theme.builder.contact} />
+        ) : null;
         const support = authoredSupport ?? renderSupport;
         return support ? (
-          <section key={section.id} {...props} className={sectionClass(section, "py-5")}>
+          <section
+            key={section.id}
+            {...props}
+            className={sectionClass(section, "py-5")}
+          >
             {support}
           </section>
-        ) : onInspectSection ? <EmptyStudioSection key={section.id} section={section} props={props} label={t("storefront.studio.section.support")} /> : null;
+        ) : onInspectSection ? (
+          <EmptyStudioSection
+            key={section.id}
+            section={section}
+            props={props}
+            label={t("storefront.studio.section.support")}
+          />
+        ) : null;
       }
-      case "footer":
+
+      case "footer": {
+        const tagline = textSetting(section, "tagline");
         return (
-          <footer key={section.id} {...props} className={sectionClass(section, "mt-6 border-t pt-5 text-center text-[11px] opacity-60")}>
-            {t("storefront.studio.footerBrand", { name: draft.name })}
+          <footer
+            key={section.id}
+            {...props}
+            className={sectionClass(
+              section,
+              "mt-6 border-t pt-5 text-center text-[11px] opacity-60",
+            )}
+          >
+            <span>{t("storefront.studio.footerBrand", { name: draft.name })}</span>
+            {tagline ? (
+              <span dir="auto" className="mt-1 block">
+                {tagline}
+              </span>
+            ) : null}
           </footer>
         );
-      case "media":
-      case "testimonials":
-      case "faq":
-        return onInspectSection ? <EmptyStudioSection key={section.id} section={section} props={props} label={t(sectionLabelKey(section.type))} /> : null;
+      }
     }
   }
 
@@ -223,7 +563,15 @@ export function StorefrontRenderer({
       data-storefront-template={theme.template}
       style={{ background: theme.backgroundColor, color: theme.textColor }}
     >
-      <div className={`mx-auto max-w-6xl ${theme.template === "sahara" ? "p-7" : theme.template === "oasis" ? "p-5" : "p-6"}`}>
+      <div
+        className={`mx-auto max-w-6xl ${
+          theme.template === "sahara"
+            ? "p-7"
+            : theme.template === "oasis"
+              ? "p-5"
+              : "p-6"
+        }`}
+      >
         {theme.builder.composition.sections.map(renderSection)}
       </div>
     </div>
@@ -242,29 +590,59 @@ function ProductGrid({
   const { t, locale } = useI18n();
   const theme = draft.theme;
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 ${theme.density === "compact" ? "gap-2" : "gap-4"}`}>
+    <div
+      className={`grid grid-cols-1 sm:grid-cols-2 ${
+        theme.density === "compact" ? "gap-2" : "gap-4"
+      }`}
+    >
       {products.map((product) => {
         const image = studioImageUrl(product.images);
-        const ratio = theme.catalog.imageRatio === "portrait"
-          ? "aspect-[4/5]"
-          : theme.catalog.imageRatio === "landscape" ? "aspect-[4/3]" : "aspect-square";
+        const ratio =
+          theme.catalog.imageRatio === "portrait"
+            ? "aspect-[4/5]"
+            : theme.catalog.imageRatio === "landscape"
+              ? "aspect-[4/3]"
+              : "aspect-square";
         return (
           <article
             key={product.id}
-            className={`overflow-hidden border ${radius(theme.radius)} ${theme.catalog.cardStyle === "elevated" ? "shadow-sm" : ""}`}
+            className={`overflow-hidden border ${radius(theme.radius)} ${
+              theme.catalog.cardStyle === "elevated" ? "shadow-sm" : ""
+            }`}
             style={{ background: theme.surfaceColor }}
           >
             {image ? (
               // eslint-disable-next-line @next/next/no-img-element -- seller media is dynamic and already bounded by storefront media authority
-              <img src={image} alt={product.name} className={`${ratio} w-full object-cover`} loading="lazy" />
+              <img
+                src={image}
+                alt={product.name}
+                className={`${ratio} w-full object-cover`}
+                loading="lazy"
+              />
             ) : (
-              <div className={`${ratio} opacity-20`} style={{ background: theme.accentColor }} />
+              <div
+                className={`${ratio} opacity-20`}
+                style={{ background: theme.accentColor }}
+              />
             )}
             <div className="space-y-2 p-3">
               <div className="text-sm font-semibold">{product.name}</div>
-              {theme.catalog.showSku && product.sku ? <div className="text-[10px] opacity-50">{product.sku}</div> : null}
-              {theme.showPrices ? <div className="text-xs font-semibold" style={{ color: theme.primaryColor }}>{formatDZD(product.price, locale)}</div> : null}
-              {theme.showStock ? <div className="text-[10px] opacity-60">{t("storefront.studio.stockCount", { count: product.stock })}</div> : null}
+              {theme.catalog.showSku && product.sku ? (
+                <div className="text-[10px] opacity-50">{product.sku}</div>
+              ) : null}
+              {theme.showPrices ? (
+                <div
+                  className="text-xs font-semibold"
+                  style={{ color: theme.primaryColor }}
+                >
+                  {formatDZD(product.price, locale)}
+                </div>
+              ) : null}
+              {theme.showStock ? (
+                <div className="text-[10px] opacity-60">
+                  {t("storefront.studio.stockCount", { count: product.stock })}
+                </div>
+              ) : null}
               {renderProductFooter?.(product)}
             </div>
           </article>
@@ -275,49 +653,102 @@ function ProductGrid({
 }
 
 function Trust({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return <div className="flex items-center gap-1.5 rounded-lg border bg-white/40 px-2 py-2 [&_svg]:h-3.5 [&_svg]:w-3.5"><span aria-hidden="true">{icon}</span><span>{label}</span></div>;
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border bg-white/40 px-2 py-2 [&_svg]:h-3.5 [&_svg]:w-3.5">
+      <span aria-hidden="true">{icon}</span>
+      <span>{label}</span>
+    </div>
+  );
 }
 
 function hasContact(contact: StorefrontContactInfo): boolean {
   return Boolean(
     contact.phone.trim() ||
-    contact.whatsapp.trim() ||
-    contact.email.trim() ||
-    contact.address.trim(),
+      contact.whatsapp.trim() ||
+      contact.email.trim() ||
+      contact.address.trim(),
   );
 }
 
-function StorefrontContactBlock({ contact }: { contact: StorefrontContactInfo }) {
+function StorefrontContactBlock({
+  contact,
+}: {
+  contact: StorefrontContactInfo;
+}) {
   const { t } = useI18n();
   return (
-    <div className="rounded-xl border p-4 text-sm" style={{ background: "color-mix(in srgb, currentColor 4%, transparent)" }}>
+    <div
+      className="rounded-xl border p-4 text-sm"
+      style={{ background: "color-mix(in srgb, currentColor 4%, transparent)" }}
+    >
       <p className="mb-3 font-semibold">{t("storefront.view.contact")}</p>
       <div className="grid gap-2 sm:grid-cols-2">
-        {contact.phone ? <p className="flex items-center gap-2 opacity-70"><PhoneCall className="size-4" /><bdi dir="ltr">{contact.phone}</bdi></p> : null}
-        {contact.whatsapp ? <p className="flex items-center gap-2 opacity-70"><MessageCircle className="size-4" /><bdi dir="ltr">{contact.whatsapp}</bdi></p> : null}
-        {contact.email ? <p className="flex items-center gap-2 opacity-70"><Mail className="size-4" /><bdi dir="ltr">{contact.email}</bdi></p> : null}
-        {contact.address ? <p className="flex items-center gap-2 opacity-70"><MapPin className="size-4" />{contact.address}</p> : null}
+        {contact.phone ? (
+          <p className="flex items-center gap-2 opacity-70">
+            <PhoneCall className="size-4" />
+            <bdi dir="ltr">{contact.phone}</bdi>
+          </p>
+        ) : null}
+        {contact.whatsapp ? (
+          <p className="flex items-center gap-2 opacity-70">
+            <MessageCircle className="size-4" />
+            <bdi dir="ltr">{contact.whatsapp}</bdi>
+          </p>
+        ) : null}
+        {contact.email ? (
+          <p className="flex items-center gap-2 opacity-70">
+            <Mail className="size-4" />
+            <bdi dir="ltr">{contact.email}</bdi>
+          </p>
+        ) : null}
+        {contact.address ? (
+          <p className="flex items-center gap-2 opacity-70">
+            <MapPin className="size-4" />
+            <span dir="auto">{contact.address}</span>
+          </p>
+        ) : null}
       </div>
     </div>
   );
 }
 
-function EmptyStudioSection({ section, props, label }: { section: StorefrontSection; props: InspectProps; label: string }) {
-  return <section key={section.id} {...props} className={`${props.className ?? ""} my-3 rounded-lg border border-dashed p-4 text-center text-xs opacity-60`}>{label}</section>;
+function EmptyStudioSection({
+  section,
+  props,
+  label,
+}: {
+  section: StorefrontSection;
+  props: InspectProps;
+  label: string;
+}) {
+  return (
+    <section
+      key={section.id}
+      {...props}
+      className={`${props.className ?? ""} my-3 rounded-lg border border-dashed p-4 text-center text-xs opacity-60`}
+    >
+      {label}
+    </section>
+  );
 }
 
-function heroClass(template: StorefrontPreviewProps["draft"]["theme"]["template"], radiusValue: StorefrontPreviewProps["draft"]["theme"]["radius"]): string {
-  if (template === "oasis") return `${radius(radiusValue)} p-7 text-center text-white`;
+function heroClass(
+  template: StorefrontPreviewProps["draft"]["theme"]["template"],
+  radiusValue: StorefrontPreviewProps["draft"]["theme"]["radius"],
+): string {
+  if (template === "oasis") {
+    return `${radius(radiusValue)} p-7 text-center text-white`;
+  }
   if (template === "atlas") return "max-w-2xl py-10";
   return "mt-14 max-w-xl";
 }
 
-function sectionLabelKey(type: StorefrontSectionType): string {
-  if (type === "testimonials") return "storefront.studio.section.testimonials";
-  if (type === "faq") return "storefront.studio.section.faq";
-  return "storefront.studio.section.media";
-}
-
-function radius(value: StorefrontPreviewProps["draft"]["theme"]["radius"]): string {
-  return value === "sharp" ? "rounded-none" : value === "rounded" ? "rounded-2xl" : "rounded-xl";
+function radius(
+  value: StorefrontPreviewProps["draft"]["theme"]["radius"],
+): string {
+  return value === "sharp"
+    ? "rounded-none"
+    : value === "rounded"
+      ? "rounded-2xl"
+      : "rounded-xl";
 }

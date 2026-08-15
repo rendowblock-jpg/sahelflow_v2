@@ -28,21 +28,22 @@ interface DashboardLayoutProps {
 /**
  * SahelFlow desktop application frame.
  *
+ * The shell keeps the semantic locale `dir` attribute for assistive technology
+ * and DOM contracts. Internal.19's experience-system.css independently fixes the
+ * outer flex coordinate system to physical LTR and explicitly orders navigation
+ * and workspace regions, so semantic RTL never leaves sidebar placement to
+ * inherited flex-direction behavior.
+ *
+ * Storefront authoring is a deliberate focus-mode exception. The first-run and
+ * visual Studio routes already carry their own back navigation, save/publish
+ * state, preview controls and editor panels, so duplicating the global sidebar
+ * and topbar only steals canvas space and creates an "editor inside a dashboard"
+ * hierarchy. Storefront list/history remain ordinary SahelFlow work surfaces.
+ *
  * Locale and direction are consumed from the same reactive client authority as
  * translated copy. Server rendering still seeds that authority through the root
  * locale provider, but the shell never holds a stale server-only direction prop
  * after an interactive language switch.
- *
- * Density uses a server-safe hydration snapshot before converging to the one
- * persisted UI-store preference. Returning compact users therefore never hydrate
- * compact markup over the server's comfortable shell and split shell/portal/table
- * sizing.
- *
- * The workspace is one edge-to-edge software frame with durable navigation, one
- * command/title bar and one scroll authority for the active work surface. Client
- * route transitions move focus to the new main surface after the first render so
- * keyboard and screen-reader users receive an explicit page-entry point without
- * stealing focus during initial startup.
  */
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [commandOpen, setCommandOpen] = useState(false);
@@ -51,13 +52,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { density } = useUiDensity();
   const pathname = usePathname();
   const previousPath = useRef<string | null>(null);
+  const storefrontFocusMode = /^\/storefronts\/[^/]+(?:\/studio)?\/?$/.test(
+    pathname,
+  );
+  const storefrontFocusTitle = storefrontFocusMode
+    ? pathname === "/storefronts/new"
+      ? t("metadata.title.storefrontNew")
+      : t("metadata.title.storefrontEdit")
+    : null;
 
   // Radix dialogs/popovers are portaled under <body>, outside the dashboard shell.
   // Mirror the hydration-safe density to the document root before paint. The
   // ordinary control-height follows density, while a separate root touch-target
   // floor remains immune to shell-local density overrides and therefore also
-  // protects compact controls (for example the mobile Sheet trigger) rendered
-  // inside the shell on coarse-pointer hardware.
+  // protects compact controls rendered inside the shell on coarse-pointer hardware.
   useLayoutEffect(() => {
     const root = document.documentElement;
     const coarsePointer = window.matchMedia("(pointer: coarse)");
@@ -119,30 +127,49 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       dir={dir}
       className="flex h-[100dvh] min-h-0 overflow-hidden bg-background text-foreground"
       data-sahelflow-shell="desktop"
+      data-shell-mode={storefrontFocusMode ? "storefront-focus" : "standard"}
+      data-locale-dir={dir}
       data-density={density}
     >
       <a
         href="#main-content"
+        dir={dir}
         className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-[100] focus:rounded-md focus:border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg"
       >
         {t("common.skipToContent")}
       </a>
 
-      <div className="hidden h-full min-h-0 shrink-0 lg:flex">
-        <Sidebar serverLocale={locale} serverDir={dir} />
-      </div>
+      {!storefrontFocusMode ? (
+        <div
+          data-shell-region="navigation"
+          dir={dir}
+          className="hidden h-full min-h-0 shrink-0 lg:flex"
+        >
+          <Sidebar serverLocale={locale} serverDir={dir} />
+        </div>
+      ) : null}
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar
-          onCommandPaletteOpen={() => setCommandOpen(true)}
-          serverLocale={locale}
-          serverDir={dir}
-        />
+      <div
+        data-shell-region="workspace"
+        dir={dir}
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+      >
+        {!storefrontFocusMode ? (
+          <Topbar
+            onCommandPaletteOpen={() => setCommandOpen(true)}
+            serverLocale={locale}
+            serverDir={dir}
+          />
+        ) : null}
         <main
           id="main-content"
           tabIndex={-1}
+          dir={dir}
           className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scroll-pt-14 outline-none"
         >
+          {storefrontFocusTitle ? (
+            <h1 className="sr-only">{storefrontFocusTitle}</h1>
+          ) : null}
           {children}
         </main>
       </div>

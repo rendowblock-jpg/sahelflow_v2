@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 
-import { AiOperationalLaunchpad } from "@/components/ai/ai-operational-launchpad";
-import { AiWorkspace } from "@/components/ai/ai-workspace";
+import { AiWorkspaceShell } from "@/components/ai/ai-workspace-shell";
 import { FeatureGate } from "@/components/license/feature-gate";
-import { PageHeader } from "@/components/shared/page-header";
 import { getI18n } from "@/lib/i18n-server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
-import styles from "./agents-wave2.module.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -20,15 +17,10 @@ export default async function AgentsPage() {
   const { t } = await getI18n();
 
   return (
-    <div
-      className={`app-content flex h-full min-h-0 flex-col gap-3 overflow-hidden ${styles.page}`}
-    >
-      <PageHeader title={t("metadata.title.agents")} />
+    <div className="app-workspace-content">
+      <h1 className="sr-only">{t("metadata.title.agents")}</h1>
       <FeatureGate feature="ai_chat">
-        <AiOperationalLaunchpad />
-        <div className="min-h-0 flex-1">
-          <AiWorkspace />
-        </div>
+        <AiWorkspaceShell />
       </FeatureGate>
     </div>
   );

@@ -8,7 +8,6 @@ import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
-import styles from "./inbox-wave2.module.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -31,13 +30,13 @@ export default async function InboxPage() {
     trustedActionAllowed(actorContext, "conversations.update", resource);
 
   return (
-    <div
-      className={`app-content flex h-full min-h-0 flex-col gap-3 overflow-hidden ${styles.page}`}
-    >
+    <div className="app-workspace-content flex flex-col">
       <h1 className="sr-only">{t("metadata.title.inbox")}</h1>
       <InboxDesktopPrimer />
       {canViewIngress ? (
-        <WhatsAppIngressRecoveryDock canRetry={canRetryIngress} />
+        <div className="shrink-0 px-2 pt-2">
+          <WhatsAppIngressRecoveryDock canRetry={canRetryIngress} />
+        </div>
       ) : null}
       <div className="min-h-0 flex-1">
         <InboxWorkspace />

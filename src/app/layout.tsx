@@ -10,6 +10,8 @@ import "./settings-system.css";
 import "./theme-preset-system.css";
 import "./arabic-system.css";
 import "./motion-system.css";
+import "./experience-system.css";
+import "./locale-transition-system.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -108,7 +110,12 @@ export default async function RootLayout({
   const appearanceBootstrap = `(function(){var t=${JSON.stringify(initialTheme)},p=${JSON.stringify(initialPreset)},ht=${hasThemeCookie ? "true" : "false"},hp=${hasPresetCookie ? "true" : "false"};try{if(!ht){var st=localStorage.getItem('theme');if(st==='light'||st==='dark'||st==='system')t=st;}if(!hp){var sp=localStorage.getItem('sahelflow-theme-preset');if(sp==='sahel'||sp==='atlas'||sp==='oasis'||sp==='dune')p=sp;}}catch(e){}try{var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.dataset.colorMode=r;e.dataset.themePreset=p;e.style.colorScheme=r;}catch(e){}})();`;
 
   return (
-    <html lang={locale} dir={dir} suppressHydrationWarning>
+    <html
+      lang={locale}
+      dir={dir}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: appearanceBootstrap }} />
       </head>

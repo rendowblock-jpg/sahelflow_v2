@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import {
-  ArrowUpRight,
   CircleDollarSign,
   ClipboardCheck,
   PackageSearch,
   RotateCcw,
+  Sparkles,
 } from "lucide-react";
 
 import { useI18n } from "@/hooks/use-i18n";
@@ -29,10 +29,34 @@ type Task = {
 };
 
 const TASKS: readonly Task[] = [
-  { id: "pending", title: "launchPendingTitle", description: "launchPendingDescription", prompt: "launchPendingPrompt", icon: ClipboardCheck },
-  { id: "revenue", title: "launchRevenueTitle", description: "launchRevenueDescription", prompt: "launchRevenuePrompt", icon: CircleDollarSign },
-  { id: "returns", title: "launchReturnsTitle", description: "launchReturnsDescription", prompt: "launchReturnsPrompt", icon: RotateCcw },
-  { id: "products", title: "launchProductsTitle", description: "launchProductsDescription", prompt: "launchProductsPrompt", icon: PackageSearch },
+  {
+    id: "pending",
+    title: "launchPendingTitle",
+    description: "launchPendingDescription",
+    prompt: "launchPendingPrompt",
+    icon: ClipboardCheck,
+  },
+  {
+    id: "revenue",
+    title: "launchRevenueTitle",
+    description: "launchRevenueDescription",
+    prompt: "launchRevenuePrompt",
+    icon: CircleDollarSign,
+  },
+  {
+    id: "returns",
+    title: "launchReturnsTitle",
+    description: "launchReturnsDescription",
+    prompt: "launchReturnsPrompt",
+    icon: RotateCcw,
+  },
+  {
+    id: "products",
+    title: "launchProductsTitle",
+    description: "launchProductsDescription",
+    prompt: "launchProductsPrompt",
+    icon: PackageSearch,
+  },
 ] as const;
 
 type SetupResponse = {
@@ -70,7 +94,11 @@ function localizedMessageFailure(
   return copy("launchFailed");
 }
 
-export function AiOperationalLaunchpad() {
+export function AiOperationalLaunchpad({
+  onSessionCreated,
+}: {
+  onSessionCreated?: (sessionId: string) => void;
+}) {
   const { locale: rawLocale } = useI18n();
   const locale = rawLocale as AiWorkspaceLocale;
   const copy = (key: AiWorkspaceCopyKey) => getAiWorkspaceCopy(locale, key);
@@ -111,10 +139,6 @@ export function AiOperationalLaunchpad() {
         },
       );
       const messageBody = (await messageResponse.json().catch(() => ({}))) as AiMessageResponse;
-      // runAgent deliberately reports provider/model failures inside the normal
-      // response envelope so the seller prompt can remain durable. HTTP 200 is
-      // therefore not success authority here: a focused launch is complete only
-      // when a real assistant response was persisted.
       if (
         !messageResponse.ok ||
         messageBody.error ||
@@ -124,7 +148,7 @@ export function AiOperationalLaunchpad() {
         throw new Error(localizedMessageFailure(messageBody, copy));
       }
 
-      window.location.assign("/agents");
+      onSessionCreated?.(sessionId);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : copy("launchFailed"));
     } finally {
@@ -135,17 +159,28 @@ export function AiOperationalLaunchpad() {
   return (
     <section
       data-ai-launchpad="operational"
-      className="rounded-xl border bg-card/70 p-3 shadow-sm"
+      className="flex min-h-14 shrink-0 items-center gap-2 overflow-x-auto border-b bg-background/92 px-3 py-2 backdrop-blur-sm"
       aria-labelledby="ai-launchpad-title"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 px-1 pb-3">
-        <div>
-          <h2 id="ai-launchpad-title" className="text-sm font-semibold">{copy("launchTitle")}</h2>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">{copy("launchDescription")}</p>
+      <div className="me-1 hidden shrink-0 items-center gap-2 lg:flex">
+        <span className="flex size-8 items-center justify-center rounded-lg bg-primary/8 text-primary">
+          <Sparkles className="size-4" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <h2 id="ai-launchpad-title" className="text-xs font-semibold">
+            {copy("launchTitle")}
+          </h2>
+          <p className="max-w-48 truncate text-[10px] text-muted-foreground">
+            {copy("launchDescription")}
+          </p>
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        className="flex min-w-max flex-1 items-center gap-1.5"
+        role="group"
+        aria-label={copy("launchTitle")}
+      >
         {TASKS.map((task) => {
           const Icon = task.icon;
           const active = starting === task.id;
@@ -155,25 +190,20 @@ export function AiOperationalLaunchpad() {
               type="button"
               disabled={starting !== null}
               onClick={() => void launch(task)}
+              title={copy(task.description)}
               className={cn(
-                "group flex min-h-24 items-start gap-3 rounded-lg border bg-background px-3 py-3 text-start transition",
-                "hover:border-primary/35 hover:bg-primary/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35",
+                "group inline-flex min-h-9 items-center gap-2 rounded-lg border border-border/75 bg-card px-2.5 text-start text-xs font-semibold outline-none",
+                "transition-[background-color,border-color,color,box-shadow] hover:border-primary/30 hover:bg-primary/[0.035] focus-visible:ring-2 focus-visible:ring-ring",
                 "disabled:cursor-wait disabled:opacity-60",
               )}
             >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-primary/7 text-primary">
-                <Icon className={cn("size-4", active && "animate-pulse")} aria-hidden="true" />
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/7 text-primary">
+                <Icon
+                  className={cn("size-3.5", active && "animate-pulse")}
+                  aria-hidden="true"
+                />
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold">{copy(task.title)}</span>
-                  <ArrowUpRight
-                    className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 rtl:-scale-x-100"
-                    aria-hidden="true"
-                  />
-                </span>
-                <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">{copy(task.description)}</span>
-              </span>
+              <span className="whitespace-nowrap">{copy(task.title)}</span>
             </button>
           );
         })}

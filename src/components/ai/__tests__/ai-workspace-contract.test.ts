@@ -6,23 +6,27 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("AI operational workspace contract", () => {
-  it("routes Agents through the typed workspace instead of the legacy monolith", () => {
+  it("routes Agents through the typed in-place workspace shell instead of the legacy monolith", () => {
     const page = read("src/app/(dashboard)/agents/page.tsx");
-    expect(page).toContain("AiWorkspace");
+    const shell = read("src/components/ai/ai-workspace-shell.tsx");
+    expect(page).toContain("AiWorkspaceShell");
     expect(page).not.toContain("AiChat");
+    expect(shell).toContain("AiWorkspace");
+    expect(shell).toContain("AiOperationalLaunchpad");
+    expect(shell).toContain("setWorkspaceVersion");
   });
 
-  it("starts from real seller tasks instead of presenting an empty generic chat as the workbench", () => {
-    const page = read("src/app/(dashboard)/agents/page.tsx");
+  it("starts from real seller tasks without reloading the document after completion", () => {
     const launchpad = read("src/components/ai/ai-operational-launchpad.tsx");
     const copy = read("src/lib/i18n/ai-workspace.ts");
 
-    expect(page).toContain("AiOperationalLaunchpad");
     expect(launchpad).toContain('data-ai-launchpad="operational"');
     expect(launchpad).toContain('fetch("/api/ai/status"');
     expect(launchpad).toContain('fetch("/api/ai/sessions"');
     expect(launchpad).toContain("/messages");
-    expect(launchpad).toContain('window.location.assign("/agents")');
+    expect(launchpad).toContain("onSessionCreated?.(sessionId)");
+    expect(launchpad).not.toContain('window.location.assign("/agents")');
+    expect(launchpad).not.toContain("window.location.reload");
     expect(copy).toContain("launchPendingPrompt");
     expect(copy).toContain("launchRevenuePrompt");
     expect(copy).toContain("launchReturnsPrompt");

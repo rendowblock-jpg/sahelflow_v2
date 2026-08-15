@@ -127,7 +127,7 @@ describe("Algerian Founder demo contract", () => {
     expect(panel).toContain("رسالة واتساب من فاطمة الزهراء");
 
     expect(settings).toContain(
-      'type Group = "experience" | "connections" | "team" | "data"',
+      'type Group =\n  | "workspace"\n  | "operations"\n  | "connections"\n  | "intelligence"\n  | "access"\n  | "data"',
     );
     expect(settings).toContain(
       "GROUPS.filter((group) => groupVisible(group.id, access))",

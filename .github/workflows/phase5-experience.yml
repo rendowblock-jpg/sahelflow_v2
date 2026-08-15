@@ -98,8 +98,8 @@ jobs:
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
 
-      - name: Run fresh-install browser journey
-        run: bunx playwright test e2e/phase5-auth-entry.spec.ts
+      - name: Run fresh-install browser journey without retries
+        run: bunx playwright test --retries=0 e2e/phase5-auth-entry.spec.ts
 
       - name: Upload fresh-install visual evidence
         if: always()
@@ -115,12 +115,13 @@ jobs:
     name: Representative LTR + Arabic RTL workbenches
     needs: static-experience
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       SF_TEST_ROOT: /tmp/sahelflow-phase5-representative
       SF_DATA_DIR: /tmp/sahelflow-phase5-representative/data
       DATABASE_URL: file:/tmp/sahelflow-phase5-representative/data/shops/test.db
       AUTH_SECRET: dev-auth-secret-for-testing-only-not-production
+      SF_PHASE5_OWNER_STORAGE_STATE: /tmp/sahelflow-phase5-representative/owner-storage-state.json
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@v4
@@ -151,8 +152,8 @@ jobs:
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
 
-      - name: Run controlled desktop, Founder visual, Inbox, AI, Settings, command-touch and RTL journeys
-        run: bunx playwright test e2e/phase5-experience.spec.ts e2e/founder-visual-acceptance.spec.ts e2e/inbox-workspace.spec.ts e2e/ai-workspace.spec.ts e2e/settings-workspace.spec.ts e2e/phase5-command-touch.spec.ts
+      - name: Run retry-free controlled desktop, live locale, Founder visual, flagship workspace and Storefront Studio journeys
+        run: bunx playwright test --retries=0 e2e/phase5-experience.spec.ts e2e/language-switch.spec.ts e2e/founder-visual-acceptance.spec.ts e2e/inbox-workspace.spec.ts e2e/ai-workspace.spec.ts e2e/settings-workspace.spec.ts e2e/storefront-studio.spec.ts e2e/phase5-command-touch.spec.ts
 
       - name: Upload rendered Phase 5 evidence
         if: always()
