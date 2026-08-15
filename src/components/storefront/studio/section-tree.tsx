@@ -13,9 +13,10 @@ import {
 } from "lucide-react";
 
 import { useI18n } from "@/hooks/use-i18n";
-import type {
-  StorefrontSection,
-  StorefrontSectionType,
+import {
+  STOREFRONT_SECTION_TYPES,
+  type StorefrontSection,
+  type StorefrontSectionType,
 } from "@/lib/storefront/studio-sections";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +45,7 @@ type Props = {
   onToggle: (id: string) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
-  onAdd: () => void;
+  onAdd: (type: StorefrontSectionType) => void;
 };
 
 export function SectionTree({
@@ -61,6 +62,7 @@ export function SectionTree({
   const { t } = useI18n();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
 
   const clearDrag = () => {
     setDraggingId(null);
@@ -218,14 +220,35 @@ export function SectionTree({
         })}
       </div>
 
-      <button
-        type="button"
-        onClick={onAdd}
-        className="flex min-h-9 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs font-semibold text-muted-foreground outline-none transition-[border-color,background-color,color] hover:border-primary/45 hover:bg-primary/[0.035] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <Plus className="size-3.5" aria-hidden="true" />
-        {t("storefront.studio.addSection")}
-      </button>
+      <div className="relative">
+        <button
+          type="button"
+          aria-expanded={addOpen}
+          onClick={() => setAddOpen((current) => !current)}
+          className="flex min-h-9 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs font-semibold text-muted-foreground outline-none transition-[border-color,background-color,color] hover:border-primary/45 hover:bg-primary/[0.035] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          {t("storefront.studio.addSection")}
+        </button>
+
+        {addOpen ? (
+          <div className="absolute inset-x-0 bottom-full z-20 mb-2 max-h-72 overflow-y-auto rounded-xl border bg-popover p-1.5 shadow-popover">
+            {STOREFRONT_SECTION_TYPES.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => {
+                  onAdd(type);
+                  setAddOpen(false);
+                }}
+                className="flex min-h-9 w-full items-center rounded-lg px-2.5 text-start text-xs font-medium text-popover-foreground outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t(SECTION_LABEL_KEYS[type])}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
