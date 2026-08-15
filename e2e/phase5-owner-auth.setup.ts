@@ -8,14 +8,12 @@ import { AUTH_COOKIE } from "@/lib/auth/config";
 const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
 
-async function waitForHydration(page: Parameters<typeof setup>[0] extends never ? never : never) {
-  void page;
-}
-
 setup("authenticate representative owner once", async ({ page, context, baseURL }) => {
   const authFile = process.env.SF_PHASE5_OWNER_STORAGE_STATE?.trim();
   if (!authFile) {
-    throw new Error("SF_PHASE5_OWNER_STORAGE_STATE is required for the representative auth setup project");
+    throw new Error(
+      "SF_PHASE5_OWNER_STORAGE_STATE is required for the representative auth setup project",
+    );
   }
 
   await mkdir(dirname(authFile), { recursive: true });
@@ -34,7 +32,9 @@ setup("authenticate representative owner once", async ({ page, context, baseURL 
     timeout: 30_000,
   });
   if (page.url().includes("/setup")) {
-    throw new Error("Representative Phase 5 evidence requires the rich seeded owner authority");
+    throw new Error(
+      "Representative Phase 5 evidence requires the rich seeded owner authority",
+    );
   }
   await expect(page).toHaveURL(/\/login/);
 
@@ -58,7 +58,9 @@ setup("authenticate representative owner once", async ({ page, context, baseURL 
 
   const cookies = await context.cookies();
   expect(
-    cookies.some((cookie) => cookie.name === AUTH_COOKIE && cookie.value.length > 0),
+    cookies.some(
+      (cookie) => cookie.name === AUTH_COOKIE && cookie.value.length > 0,
+    ),
     "representative auth setup must persist the canonical owner session cookie",
   ).toBe(true);
 
