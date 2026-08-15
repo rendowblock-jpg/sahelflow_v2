@@ -23,6 +23,8 @@ const COPY = {
     footerTagline: "Footer tagline",
     removeItem: "Remove item",
     optional: "Optional",
+    openStudio: "Open Studio",
+    releaseManagement: "Manage publishing history and open the visual Studio for content changes.",
     contentHint: "Select a section on the canvas or in the section list to edit its content.",
   },
   fr: {
@@ -47,6 +49,8 @@ const COPY = {
     footerTagline: "Phrase du pied de page",
     removeItem: "Supprimer l’élément",
     optional: "Facultatif",
+    openStudio: "Ouvrir Studio",
+    releaseManagement: "Gérez l’historique de publication et ouvrez le Studio visuel pour modifier le contenu.",
     contentHint: "Sélectionnez une section dans l’aperçu ou la liste pour modifier son contenu.",
   },
   ar: {
@@ -71,6 +75,8 @@ const COPY = {
     footerTagline: "عبارة تذييل المتجر",
     removeItem: "حذف العنصر",
     optional: "اختياري",
+    openStudio: "فتح الاستوديو",
+    releaseManagement: "أدر سجل النشر وافتح الاستوديو المرئي لتعديل محتوى المتجر.",
     contentHint: "اختر قسماً من المعاينة أو قائمة الأقسام لتعديل محتواه.",
   },
 } as const;
