@@ -6,35 +6,40 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
-describe("Wave 2 AI composition contract", () => {
-  it("keeps composition changes route-scoped and leaves the AI authority hook untouched", () => {
+describe("Internal.19 AI composition contract", () => {
+  it("keeps composition in the shared experience system and leaves AI business authority intact", () => {
     const page = read("src/app/(dashboard)/agents/page.tsx");
-    const css = read("src/app/(dashboard)/agents/agents-wave2.module.css");
+    const experience = read("src/app/experience-system.css");
     const hook = read("src/hooks/use-ai-workspace.ts");
 
-    expect(page).toContain('import styles from "./agents-wave2.module.css"');
-    expect(page).toContain("${styles.page}");
-    expect(css).toContain('[data-ai-workspace="v2"]');
+    expect(page).toContain("AiWorkspaceShell");
+    expect(page).toContain('className="app-workspace-content"');
+    expect(page).not.toContain("agents-wave2.module.css");
+    expect(experience).toContain('[data-ai-workspace="v2"]');
+    expect(experience).toContain('grid-template-areas: "sessions thread"');
+    expect(experience).toContain('grid-template-areas: "context thread sessions"');
     expect(hook).toContain("approveProposal");
     expect(hook).toContain("stop");
   });
 
-  it("keeps the conversation thread dominant across desktop breakpoints", () => {
-    const css = read("src/app/(dashboard)/agents/agents-wave2.module.css");
+  it("keeps the conversation thread dominant while explicitly mirroring RTL rail order", () => {
+    const experience = read("src/app/experience-system.css");
 
-    expect(css).toContain("grid-template-columns: clamp(13.5rem, 18vw, 16rem) minmax(0, 1fr)");
-    expect(css).toContain("minmax(30rem, 1fr)");
-    expect(css).toContain("clamp(18rem, 20vw, 21rem)");
+    expect(experience).toContain("grid-template-columns: 14rem minmax(0, 1fr) !important");
+    expect(experience).toContain(
+      "grid-template-columns: 14rem minmax(30rem, 1fr) 18rem !important",
+    );
+    expect(experience).toContain('grid-template-areas: "thread sessions"');
+    expect(experience).toContain('grid-template-areas: "context thread sessions"');
   });
 
-  it("raises legacy 9–11px metadata and stabilizes scroll rails", () => {
-    const css = read("src/app/(dashboard)/agents/agents-wave2.module.css");
+  it("keeps microcopy readable and scroll behavior governed by shared workspace styling", () => {
+    const workspace = read("src/app/workspace-system.css");
 
-    expect(css).toContain('[class~="text-[9px]"]');
-    expect(css).toContain('[class~="text-[10px]"]');
-    expect(css).toContain('[class~="text-[11px]"]');
-    expect(css).toContain("font-size: 0.75rem");
-    expect(css).toContain("scrollbar-gutter: stable");
-    expect(css).toContain("overscroll-behavior: contain");
+    expect(workspace).toContain('[data-ai-workspace="v2"]');
+    expect(workspace).toContain('[class~="text-[9px]"]');
+    expect(workspace).toContain('[class~="text-[10px]"]');
+    expect(workspace).toContain('[class~="text-[11px]"]');
+    expect(workspace).toContain("font-size: 0.75rem");
   });
 });
