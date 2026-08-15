@@ -10,7 +10,9 @@ const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
 let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 
-type Box = NonNullable<Awaited<ReturnType<ReturnType<Page["locator"]>["boundingBox"]>>>;
+type Box = NonNullable<
+  Awaited<ReturnType<ReturnType<Page["locator"]>["boundingBox"]>>
+>;
 
 async function waitForHydration(page: Page) {
   await page.locator('html[data-sf-hydrated="true"]').waitFor({
@@ -80,6 +82,20 @@ function expectLeftOf(left: Box, right: Box, label: string) {
   );
 }
 
+function expectWidthBetween(
+  box: Box,
+  minimum: number,
+  maximum: number,
+  label: string,
+) {
+  expect(box.width, `${label}: width must not collapse below ${minimum}px`).toBeGreaterThanOrEqual(
+    minimum,
+  );
+  expect(box.width, `${label}: width must not expand beyond ${maximum}px`).toBeLessThanOrEqual(
+    maximum,
+  );
+}
+
 async function expectNoHorizontalOverflow(page: Page) {
   const geometry = await page.evaluate(() => ({
     viewport: window.innerWidth,
@@ -92,13 +108,24 @@ async function expectNoHorizontalOverflow(page: Page) {
 
 async function expectRtlShellGeometry(page: Page) {
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await expect(page.locator('[data-sahelflow-shell="desktop"]')).toHaveAttribute(
-    "data-locale-dir",
-    "rtl",
-  );
+  const shell = page.locator('[data-sahelflow-shell="desktop"]');
+  await expect(shell).toHaveAttribute("data-locale-dir", "rtl");
+  await expect(shell).toHaveAttribute("data-shell-mode", "standard");
   const workspace = await visibleBox(page, '[data-shell-region="workspace"]');
   const navigation = await visibleBox(page, '[data-shell-region="navigation"]');
   expectRightOf(navigation, workspace, "RTL application shell");
+  expectWidthBetween(navigation, 250, 270, "RTL application navigation");
+}
+
+async function expectRtlStorefrontFocusGeometry(page: Page) {
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  const shell = page.locator('[data-sahelflow-shell="desktop"]');
+  await expect(shell).toHaveAttribute("data-locale-dir", "rtl");
+  await expect(shell).toHaveAttribute("data-shell-mode", "storefront-focus");
+  await expect(page.locator('[data-shell-region="navigation"]')).toHaveCount(0);
+  const workspace = await visibleBox(page, '[data-shell-region="workspace"]');
+  expect(workspace.x).toBeLessThanOrEqual(1);
+  expect(workspace.width).toBeGreaterThanOrEqual(DESKTOP.width - 2);
 }
 
 async function neutralStructure(page: Page) {
@@ -135,7 +162,7 @@ test.describe.serial("Founder visual correction evidence", () => {
     await page.setViewportSize(DESKTOP);
   });
 
-  test("dark presets keep one neutral material system instead of tinting the application", async ({
+  test("dark presets keep one neutral material system with usable RTL Settings proportions", async ({
     page,
     context,
     baseURL,
@@ -155,6 +182,11 @@ test.describe.serial("Founder visual correction evidence", () => {
       '[data-settings-workspace="v2"] > div > section',
     );
     expectRightOf(settingsNavigation, settingsPanel, "RTL Settings workspace");
+    expectWidthBetween(settingsNavigation, 230, 250, "RTL Settings navigation");
+    expect(
+      settingsPanel.width,
+      "RTL Settings content must remain the dominant work surface",
+    ).toBeGreaterThan(settingsNavigation.width * 2);
 
     await page.locator("#settings-tab-appearance").click();
     await page.locator('[data-theme-mode="dark"]').click();
@@ -177,7 +209,7 @@ test.describe.serial("Founder visual correction evidence", () => {
     }
   });
 
-  test("Arabic flagship workbenches render with correct physical RTL geometry", async ({
+  test("Arabic flagship workbenches render with correct RTL sides and usable pane proportions", async ({
     page,
     context,
     baseURL,
@@ -188,17 +220,21 @@ test.describe.serial("Founder visual correction evidence", () => {
     await page.goto("/inbox", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
     await expectRtlShellGeometry(page);
-    await expect(page.locator('[data-inbox-workspace="v2"]')).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator('[data-inbox-workspace="v2"]')).toBeVisible({
+      timeout: 60_000,
+    });
     await expect(page.locator('[data-inbox-conversation]').first()).toBeVisible();
     await expect(page.locator('[data-inbox-thread="active"]')).toBeVisible();
     const inboxQueue = await visibleBox(page, '[data-inbox-queue="true"]');
     const inboxThread = await visibleBox(page, '[data-inbox-thread="active"]');
     expectRightOf(inboxQueue, inboxThread, "RTL Inbox queue");
+    expectWidthBetween(inboxQueue, 310, 330, "RTL Inbox queue");
     const inboxContext = page.locator('aside:has(> [data-inbox-context="true"])');
     if (await inboxContext.isVisible()) {
       const contextBox = await inboxContext.boundingBox();
       expect(contextBox).not.toBeNull();
       expectLeftOf(contextBox as Box, inboxThread, "RTL Inbox context rail");
+      expectWidthBetween(contextBox as Box, 260, 280, "RTL Inbox context rail");
     }
     await expectNoHorizontalOverflow(page);
     await shot(page, testInfo, "founder-rtl-inbox-loaded");
@@ -206,23 +242,32 @@ test.describe.serial("Founder visual correction evidence", () => {
     await page.goto("/agents", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
     await expectRtlShellGeometry(page);
-    await expect(page.locator('[data-ai-workspace="v2"]')).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator('[data-ai-workspace="v2"]')).toBeVisible({
+      timeout: 60_000,
+    });
     const aiSessions = await visibleBox(page, '[data-ai-sessions="true"]');
     const aiThread = await visibleBox(page, '[data-ai-thread="true"]');
     expectRightOf(aiSessions, aiThread, "RTL AI sessions rail");
-    const aiContext = page.locator('[data-ai-workspace="v2"] > div:has(> [data-ai-context="true"])');
+    expectWidthBetween(aiSessions, 215, 235, "RTL AI sessions rail");
+    const aiContext = page.locator(
+      '[data-ai-workspace="v2"] > div:has(> [data-ai-context="true"])',
+    );
     if (await aiContext.isVisible()) {
       const contextBox = await aiContext.boundingBox();
       expect(contextBox).not.toBeNull();
       expectLeftOf(contextBox as Box, aiThread, "RTL AI context rail");
+      expectWidthBetween(contextBox as Box, 280, 300, "RTL AI context rail");
     }
+    expect(aiThread.width, "AI thread must remain the dominant pane").toBeGreaterThan(430);
     await expectNoHorizontalOverflow(page);
     await shot(page, testInfo, "founder-rtl-ai-loaded");
 
     await page.goto("/storefronts/new", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
-    await expectRtlShellGeometry(page);
-    await expect(page.locator('[data-storefront-studio="bootstrap"]')).toBeVisible({ timeout: 60_000 });
+    await expectRtlStorefrontFocusGeometry(page);
+    await expect(page.locator('[data-storefront-studio="bootstrap"]')).toBeVisible({
+      timeout: 60_000,
+    });
     const storefrontSetup = await visibleBox(
       page,
       '[data-storefront-studio="bootstrap"] > div.grid > aside',
@@ -232,6 +277,11 @@ test.describe.serial("Founder visual correction evidence", () => {
       '[data-storefront-studio="bootstrap"] > div.grid > main',
     );
     expectRightOf(storefrontSetup, storefrontPreview, "RTL Storefront setup rail");
+    expectWidthBetween(storefrontSetup, 325, 345, "RTL Storefront setup rail");
+    expect(
+      storefrontPreview.width,
+      "Storefront live preview must dominate the focused authoring frame",
+    ).toBeGreaterThan(storefrontSetup.width * 2);
     await expectNoHorizontalOverflow(page);
     await shot(page, testInfo, "founder-rtl-storefront-studio");
   });
@@ -246,7 +296,9 @@ test.describe.serial("Founder visual correction evidence", () => {
     await page.goto("/analytics", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
     await expectRtlShellGeometry(page);
-    await expect(page.locator('[data-analytics-workspace="v2"]')).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator('[data-analytics-workspace="v2"]')).toBeVisible({
+      timeout: 60_000,
+    });
 
     const curve = page.locator("path.recharts-area-curve").first();
     await expect(curve).toBeVisible();
