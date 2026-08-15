@@ -33,7 +33,7 @@ interface HorizontalBarChartProps {
 }
 
 function compactCategoryLabel(value: string): string {
-  return value.length > 23 ? `${value.slice(0, 22).trimEnd()}…` : value;
+  return value.length > 27 ? `${value.slice(0, 26).trimEnd()}…` : value;
 }
 
 export function HorizontalBarChart({
@@ -43,9 +43,8 @@ export function HorizontalBarChart({
   formatValue,
   emptyMessage,
 }: HorizontalBarChartProps) {
-  const { dir, t, locale } = useI18n();
+  const { t, locale } = useI18n();
   const { isAnimationActive, baseDuration } = useChartMotion();
-  const isRtl = dir === "rtl";
   const chartHeight = normalizeChartHeight(height);
   const fmt = resolveFormatter(formatValue, locale);
 
@@ -65,12 +64,13 @@ export function HorizontalBarChart({
     4,
   );
   const categoryWidth = Math.min(
-    Math.max(maxVisibleLabelLength * 6.5 + 12, 84),
-    164,
+    Math.max(maxVisibleLabelLength * 6.8 + 16, 96),
+    190,
   );
 
   return (
     <ChartContainer
+      dir="ltr"
       role="img"
       aria-label={t("charts.horizontalBar")}
       config={config}
@@ -80,23 +80,17 @@ export function HorizontalBarChart({
       <BarChart
         data={data}
         layout="vertical"
-        margin={{
-          left: isRtl ? 44 : 6,
-          right: isRtl ? 6 : 44,
-          top: 6,
-          bottom: 6,
-        }}
+        margin={{ left: 8, right: 58, top: 6, bottom: 6 }}
         barCategoryGap={10}
       >
-        <XAxis type="number" hide reversed={isRtl} domain={[0, "dataMax"]} />
+        <XAxis type="number" hide domain={[0, "dataMax"]} />
         <YAxis
           type="category"
           dataKey="label"
           tickLine={false}
           axisLine={false}
           width={categoryWidth}
-          className="text-xs fill-muted-foreground"
-          orientation={isRtl ? "right" : "left"}
+          orientation="left"
           tickFormatter={compactCategoryLabel}
           tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
@@ -116,7 +110,7 @@ export function HorizontalBarChart({
         />
         <Bar
           dataKey="value"
-          radius={isRtl ? [5, 1, 1, 5] : [1, 5, 5, 1]}
+          radius={[1, 5, 5, 1]}
           maxBarSize={20}
           isAnimationActive={isAnimationActive}
           animationDuration={baseDuration}
@@ -130,7 +124,7 @@ export function HorizontalBarChart({
           ))}
           <LabelList
             dataKey="value"
-            position={isRtl ? "left" : "right"}
+            position="right"
             className="fill-muted-foreground text-xs font-medium tabular-nums"
             formatter={(value: number) => fmt(value)}
           />

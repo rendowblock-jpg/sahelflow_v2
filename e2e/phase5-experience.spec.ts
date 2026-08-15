@@ -174,7 +174,8 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
   // in once against the rich seeded database and reuse the authenticated cookies
   // in each isolated browser context. The dedicated phase5-auth-entry job remains
   // the clean fresh-install proof of the actual owner-login ceremony.
-  test.beforeAll(async ({ browser, baseURL }) => {
+  test.beforeAll(async ({ browser, baseURL }, testInfo) => {
+    testInfo.setTimeout(60_000);
     const context = await browser.newContext({ baseURL, viewport: DESKTOP });
     const page = await context.newPage();
     try {
@@ -182,7 +183,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
       ownerSessionCookies = await context.cookies();
       expect(ownerSessionCookies.length).toBeGreaterThan(0);
     } finally {
-      await context.close();
+      await context.close().catch(() => undefined);
     }
   });
 

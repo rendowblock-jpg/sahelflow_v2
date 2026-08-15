@@ -136,11 +136,10 @@ fn founder_offline_checkpoint(authority: &serde_json::Value) -> bool {
                     (Some("1.0.0-internal.15"), Some("FD-032"))
                         | (Some("1.0.0-internal.16"), Some("FD-034"))
                         | (Some("1.0.0-internal.17"), Some("FD-036"))
+                        | (Some("1.0.0-internal.18"), Some("FD-037"))
                 );
             if !exact_checkpoint {
-                panic!(
-                    "founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17 on the internal channel with no owned host suffix"
-                );
+                panic!("founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, or FD-037/Internal.18 on the internal channel with no owned host suffix");
             }
             true
         }
@@ -150,15 +149,7 @@ fn founder_offline_checkpoint(authority: &serde_json::Value) -> bool {
 }
 
 fn configured_owned_host_suffix(authority: &serde_json::Value) -> String {
-    let suffix = authority
-        .get("licensing")
-        .and_then(|value| value.get("ownedHostSuffix"))
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or_else(|| {
-            panic!(
-                "sahelflow.version.json licensing.ownedHostSuffix must be provisioned before any customer release build"
-            )
-        });
+    let suffix = authority.get("licensing").and_then(|value| value.get("ownedHostSuffix")).and_then(serde_json::Value::as_str).unwrap_or_else(|| panic!("sahelflow.version.json licensing.ownedHostSuffix must be provisioned before any customer release build"));
     let canonical = suffix.to_ascii_lowercase();
     if suffix != canonical || !public_dns_hostname(&canonical) {
         panic!("licensing.ownedHostSuffix must be a lowercase public DNS hostname");
@@ -228,22 +219,17 @@ fn main() {
             }
             let routes = configured_service_urls(&service_authority);
             if routes.len() != 1 || !exact_restore_evidence_loopback_url(routes[0]) {
-                panic!(
-                    "the explicit Phase 4 restore-evidence build must use one exact http://127.0.0.1:<port> disposable trial issuer"
-                );
+                panic!("the explicit Phase 4 restore-evidence build must use one exact http://127.0.0.1:<port> disposable trial issuer");
             }
         } else {
             let routes = (!service_authority.is_empty())
                 .then(|| configured_service_urls(&service_authority));
             if routes.as_deref().is_some_and(non_release_ci_placeholder) {
-                // Source and Rust parity checks use an explicit non-release placeholder.
             } else {
                 let authority = configured_version_authority();
                 if founder_offline_checkpoint(&authority) {
                     if !service_authority.is_empty() {
-                        panic!(
-                            "Founder-only offline checkpoints must not package SF_LICENSE_SERVICE_URL"
-                        );
+                        panic!("Founder-only offline checkpoints must not package SF_LICENSE_SERVICE_URL");
                     }
                     println!("cargo:rustc-env=SF_LICENSE_SERVICE_URL=");
                 } else {
@@ -251,9 +237,7 @@ fn main() {
                         panic!("customer-online releases require SF_LICENSE_SERVICE_URL")
                     });
                     if routes.len() != 2 {
-                        panic!(
-                            "production SF_LICENSE_SERVICE_URL must contain distinct primary and recovery HTTPS origins separated by '|'"
-                        );
+                        panic!("production SF_LICENSE_SERVICE_URL must contain distinct primary and recovery HTTPS origins separated by '|'");
                     }
                     let owned_host_suffix = configured_owned_host_suffix(&authority);
                     let primary_origin = production_https_origin(routes[0], &owned_host_suffix);

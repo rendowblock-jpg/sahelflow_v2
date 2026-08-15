@@ -1,39 +1,36 @@
 # SahelFlow — Current state
 
 > **Authority:** protected source plus named release/installed evidence
-> **Last assessed:** 2026-08-14
-> **Release-hygiene protected base before active request:** `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9` — PR #258
-> **Protected Internal.17 application correction:** `c33f234ecf43842cfcc801592cc601d595ed05c5` — PR #254
-> **Reviewed correction head:** `c965a062cf2719078601374bd0ace771ca011d53`
-> **Protected Internal.17 release authority:** `2a820b801786590a20dc6105f39f732b8a987c5f` — PR #257 / FD-036
-> **First Internal.17 signed attempt:** run `31840181436` — signed candidate built/installed; publication stopped by deterministic icon source guard
-> **Published release:** `1.0.0-internal.16` / MSI `1.0.0.16`
-> **Signed Internal.16 run:** `31770292329`
-> **Founder-installed state:** Internal.16 installed on 2026-08-14; frontend acceptance **REJECTED**
+> **Last assessed:** 2026-08-15
+> **Protected main before current package:** `898904a11178c8d7b69c755f13794b2ca8bf0356` — PR #259 / published Internal.17
+> **Founder-installed Internal.17 result:** **REJECTED**
+> **Current branch/PR:** `agent/founder-visual-acceptance-repair` / PR #260
+> **Next checkpoint:** `1.0.0-internal.18` / MSI `1.0.0.18` / FD-037
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Active release frontier:** PR #259 / `agent/internal-17-signed-publication-request` — exact `1.0.0-internal.17` / MSI `1.0.0.17` signed publication retry under FD-036
-> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Retained evidence:** #221, #226, #230
 
-Live protected GitHub state is source authority. Installed Founder observation remains the authority for visual/interaction acceptance. Green browser, source, native, Windows and MSI-installed automation cannot manufacture Founder visual acceptance.
+Live GitHub is source authority. Installed Founder observation is authority for visual/interaction acceptance. Green browser, source, native, Windows and MSI-installed automation cannot manufacture Founder acceptance.
 
 ## Executive truth
 
-The broad Internal.17 frontend correction is complete at source level and protected by PR #254 at `c33f234ecf43842cfcc801592cc601d595ed05c5`. Its reviewed head `c965a062cf2719078601374bd0ace771ca011d53` passed the exact Phase 5, Phase 6–7, source-quality, native, Windows runtime, MSI build, install/reopen, authenticated hydrated WebView UI and replacement-install backup/restore/identity/rollback gates before merge.
+Internal.17 is no longer an unpublished or pending checkpoint. It is published, installed by the Founder, and its visual/interaction acceptance was rejected. That result invalidates the earlier claim that the source-level correction was sufficient for RTL/direction, themes, motion, charts, Inbox and AI Agents.
 
-FD-036 release authority was then protected by PR #257 at `2a820b801786590a20dc6105f39f732b8a987c5f`. Signed run `31840181436` reached the protected signed build, exact updater key/artifact binding, signed MSI install/reopen and authenticated hydrated WebView proof, but publication correctly stopped when the deterministic post-build source guard rejected the six tracked Tauri icon outputs regenerated from the corrected canonical mark.
+The current job is **PR #260**, one consolidated Internal.18 correction. It must finish the rejected product surface, strengthen the rendered evidence so it captures actual loaded workspaces rather than route spinners, synchronize all version/release authority to Internal.18/FD-037, and only then cross one final exact-head certification boundary.
 
-PR #258 repaired only that deterministic release-source guard contract and its matching test; it protected release-hygiene base `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9` without changing product/runtime behavior or widening FD-036.
+The package currently targets:
 
-The current release frontier is PR #259, branch `agent/internal-17-signed-publication-request`, carrying `.github/release-requests/internal-17-publication-retry.json`. Once its exact reviewed head is green and merged, the resulting protected-main merge SHA — not `2a820...`, not `c1d0cb...`, and not an older branch head — is the signed source for the publication retry.
-
-Internal.16 remains the latest published updater until that exact protected signed workflow publishes Internal.17. FD-036 authorizes one exact Founder/internal-lab offline checkpoint only.
-
-The correction being protected does **not** close the six Founder-rejected installed experience classes. RTL, themes, motion, charts, Inbox and AI Agents still require explicit Founder accept/reject on the signed Internal.17 installation.
+- professional Arabic UI typography/reading floor and logical RTL geometry;
+- neutral charcoal dark structural materials for every preset with accent-only identity;
+- restrained but visible motion with absolute reduced-motion handling;
+- stable Cartesian coordinates independent from Arabic UI direction;
+- loaded, task-complete Inbox and AI workbenches;
+- a real Storefront V2 first-run Studio bootstrap instead of the legacy settings form;
+- exact Storefront private-draft → durable publish authority for active/pause/contact;
+- focused 1366×768 Arabic Founder visual evidence for dark presets, loaded Inbox/AI, Storefront Studio and Analytics with a real revenue curve.
 
 ## Protected canonical boundaries
 
-Internal.17 release and installed acceptance must preserve the already-protected product authority unless a concrete defect proves otherwise:
+PR #260 must preserve unless concrete source evidence requires a bounded repair:
 
 - Golden COD command, idempotency, version, audit, event and outbox authority;
 - trusted actor/shop/session/permission authority;
@@ -42,93 +39,77 @@ Internal.17 release and installed acceptance must preserve the already-protected
 - signed licensing, installation and secret authority;
 - native runtime containment, migration, backup and recovery;
 - AI proposal-bound canonical execution;
-- Wave 4 storefront, connected authority, remote commands and zero-knowledge backup;
+- Storefront hosted publish/pause/rollback, server-authoritative checkout, connected commands/projections and zero-knowledge backup;
 - updater, signing, version and release protections.
 
 Installed UX rejection never authorizes weakening these contracts.
 
-## Internal.17 acceptance register
+## Founder rejection register carried into Internal.18
 
-The complete frozen P1 register remains binding:
+The historical register remains:
 
-`SF16-UI-001`, `SF16-UI-002`, `SF16-UI-003`, `SF16-I18N-004`, `SF16-INBOX-005`, `SF16-AI-006`, `SF16-I18N-007`, `SF16-PRODUCTS-008`, `SF16-SEARCH-009`, `SF16-AI-010`, `SF16-RESP-011`, `SF16-LAYOUT-012`, `SF16-CHART-013`, `SF16-PERF-014`, `SF16-THEME-015`, `SF16-I18N-016`, `SF16-NAV-017`, plus `SF17-MOTION-018`.
+`SF16-UI-001`, `SF16-UI-002`, `SF16-UI-003`, `SF16-I18N-004`, `SF16-INBOX-005`, `SF16-AI-006`, `SF16-I18N-007`, `SF16-PRODUCTS-008`, `SF16-SEARCH-009`, `SF16-AI-010`, `SF16-RESP-011`, `SF16-LAYOUT-012`, `SF16-CHART-013`, `SF16-PERF-014`, `SF16-THEME-015`, `SF16-I18N-016`, `SF16-NAV-017`, `SF17-MOTION-018`.
 
-The correction source reconciled this register. The following six classes still require new Founder-installed visual/interaction acceptance on the signed Internal.17 candidate:
+Fresh installed Internal.18 Founder judgment is explicitly required for:
 
-1. `SF16-UI-001` — RTL/direction geometry.
-2. `SF16-THEME-015` — atomic theme switching and appearance quality.
-3. `SF17-MOTION-018` — motion/micro-interaction quality and reduced-motion behavior.
-4. `SF16-CHART-013` — governed chart quality, RTL, theme and responsiveness.
-5. `SF16-INBOX-005` — Inbox operational product experience.
-6. `SF16-AI-006` — AI Agents task-oriented product experience.
+1. `SF16-UI-001` — Arabic/RTL/direction geometry.
+2. `SF16-THEME-015` — dark-theme/preset quality and appearance coherence.
+3. `SF17-MOTION-018` — meaningful motion/micro-interaction quality.
+4. `SF16-CHART-013` — chart quality, analytical direction, theme and responsiveness.
+5. `SF16-INBOX-005` — Inbox operational workspace.
+6. `SF16-AI-006` — AI Agents task-oriented workbench.
+7. Storefront V2 first-run/Studio adoption — because the Founder exposed a real product mismatch even though the underlying Studio existed.
 
-For the remaining classes, exact source/browser/native evidence may be reused only where the Internal.17 release promotion does not invalidate it. Absence of a repeated Founder complaint is not closure evidence.
+For all other classes, exact retained evidence remains valid only where PR #260 does not materially invalidate it. Silence is not closure.
 
 ## Licensing and release boundary
 
-FD-032 remains exact to Internal.15. FD-034 remains exact to Internal.16. FD-036 is the separate authority for exactly `1.0.0-internal.17` / MSI `1.0.0.17` on the internal channel.
+- FD-032 remains exact to Internal.15.
+- FD-034 remains exact to Internal.16.
+- FD-036 remains exact to the historical published Internal.17 checkpoint.
+- **FD-037** authorizes exactly `1.0.0-internal.18` / MSI `1.0.0.18` on the internal channel.
 
-For FD-036:
+For FD-037:
 
-- licensing mode is `founder-offline-only`;
-- `ownedHostSuffix` remains null;
-- the signed Founder checkpoint must not package `SF_LICENSE_SERVICE_URL`;
-- the permanent Founder entitlement remains valid offline;
+- release mode is `founder-offline-only`;
+- `ownedHostSuffix` is null;
+- signed artifacts must not package `SF_LICENSE_SERVICE_URL`;
+- permanent Founder entitlement remains valid offline;
 - online trial initialization remains disabled;
 - no customer-online, Beta, Stable or later-version authority is granted.
 
-Customer-online/public-trial release remains fail-closed until its separate owned-host/network authority exists.
+Customer-online/public-trial release remains fail-closed until separate owned-host/network authority and #230 evidence exist.
 
-## Historical continuity anchors
+## Historical continuity
 
-### Phase 5 merged result and evidence
-
-The Phase 5 application-changing protected baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Later work may carry stronger evidence, but that baseline remains an audit continuity anchor and does not substitute for current Founder-installed acceptance.
-
-### Active Phase 6 frontier
-
-The formal Active Phase 6 frontier remains **Phase 6 — Arabic, RTL and accessibility parity**. FD-036 changes the release frontier, not the product-phase label or its acceptance standard.
-
-### Internal.17 release continuity
-
-PR #254 protected the correction at `c33f234ecf43842cfcc801592cc601d595ed05c5`. PR #257 protected FD-036 release authority at `2a820b801786590a20dc6105f39f732b8a987c5f`. Signed run `31840181436` stopped before publication on deterministic icon source hygiene. PR #258 protected the narrow guard repair at `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9`. PR #259 is the current protected publication request whose eventual merge SHA is the required signed source.
-
-### Internal.14 publication evidence
-
-Historical Internal.14 was published from source `2d60e2e74109b6e03626a5ccdff727c029a34591` by signed run `31388777098`. This remains historical evidence only and grants no current release authority.
-
-### FD-031 exception boundary
-
-FD-031 remains the one-time Internal.14 installed-evidence exception. Historical issue #214 remains part of the recovery-evidence lineage even though stronger later replacement-install proof closed its original obligation; FD-031 is not precedent for bypassing current installed evidence.
-
-### FD-032 Founder-only offline checkpoint boundary
-
-FD-032 remains exact to Internal.15. Internal.16 used separate FD-034 authority, and Internal.17 uses separate FD-036 authority. None of these Founder-only checkpoints grants customer-online/public-trial authority.
+- Phase 5 protected baseline: PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- Internal.15: source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`, FD-032.
+- Internal.16 Wave 4: PR #251; exact head `73e8d8c466567859bc651bb4d77976fdb2a1bbc3`; merge `aa7dd2df53286a670fc55e319a281757cf3d28b2`; CI `31765143457`.
+- Internal.17 correction: PR #254 at `c33f234ecf43842cfcc801592cc601d595ed05c5`, reviewed head `c965a062cf2719078601374bd0ace771ca011d53`.
+- Internal.17 release authority: PR #257 / FD-036 at `2a820b801786590a20dc6105f39f732b8a987c5f`; signed run `31840181436` stopped on deterministic icon source hygiene; PR #258 fixed that narrow guard at `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9`; PR #259 produced protected main `898904a11178c8d7b69c755f13794b2ca8bf0356` and the published Internal.17 checkpoint.
 
 ## Current issue truth
 
-- **#221 — OPEN** — installed Founder visual/RTL/accessibility/whole-product acceptance. Internal.16 was rejected; Internal.17 must be judged after exact signed installation.
-- **#226 — OPEN** — representative T470/floor/eight-hour performance and reliability certification.
-- **#230 — OPEN P1** — resilient customer-online/public-trial activation on representative Algerian networks.
+- **#221 — OPEN:** Founder-installed visual/RTL/accessibility/whole-product acceptance. Internal.17 was rejected; Internal.18 must be judged after exact signed installation.
+- **#226 — OPEN:** representative T470/floor/eight-hour performance and reliability certification.
+- **#230 — OPEN P1:** resilient customer-online/public-trial activation on representative Algerian networks.
 
-#221 is not paperwork. The six installed classes above require direct Founder judgment. #226 and #230 remain separate evidence obligations and must not be inferred from desktop source/browser automation.
+## Exact current release order — FD-037
 
-## Active release frontier — FD-036
-
-The application correction and release-authority synchronization are no longer the active tasks. The current release order is:
-
-1. keep protected PR #254 correction source, PR #257 FD-036 authority and PR #258 release-hygiene repair frozen;
-2. certify PR #259's exact current head through the normal exact-head Phase 5, Phase 6–7, source-quality, native, Windows and MSI-installed `Required PR gate` with no force/waiver;
-3. resolve every actionable review thread on that exact head;
-4. merge only that exact green reviewed PR #259 tree to protected `main`;
-5. allow the `.github/release-requests/internal-17-publication-retry.json` protected-main push to dispatch the existing signed Internal updater workflow for the resulting merge SHA;
-6. require the signed workflow to finish cleanly, pass the deterministic post-build source guard and publish the exact signed MSI/updater artifacts and hashes;
-7. install that exact signed Internal.17 Founder checkpoint;
-8. record explicit Founder accept/reject for RTL, themes, motion, charts, Inbox and AI Agents;
-9. keep #226 and #230 separate from the Founder-only release claim and satisfy them before any broader user-ready/customer-online claim.
-
-If source, packaging, runtime, licensing/network behavior or material user-facing code changes after one retained gate, rerun every affected gate and repeat installed acceptance as necessary. Evidence from materially different candidates cannot be combined into one user-ready claim.
+1. Complete all PR #260 product, evidence, version, release and documentation work before certification.
+2. Freeze one exact Internal.18 head.
+3. Run exact-head source quality, focused rendered Phase 5, Phase 6–7, native/Rust, Windows and MSI-installed gates; require final `Required PR gate` success.
+4. Resolve every actionable exact-head review finding.
+5. Merge only that exact green reviewed tree to protected `main` with expected-head discipline.
+6. The Internal.18 version/release-request push must dispatch the existing signed updater workflow for the resulting protected-main merge SHA.
+7. Require deterministic source hygiene, exact signed MSI/updater artifacts, hashes/manifest and installed lifecycle evidence.
+8. Verify the live updater publishes Internal.18.
+9. Founder updates to exact signed Internal.18 and records explicit accept/reject. Until then, #221 remains open.
+10. Keep #226 and #230 separate from the Founder-only checkpoint and satisfy them before broader claims.
 
 ## Launch boundary
 
-SahelFlow is not yet a commercially certified Stable release. Internal.17 is a bounded Founder/internal-lab checkpoint. Stable/customer readiness still requires the applicable complete acceptance register, #221/#226/#230 at their required evidence levels, representative/live provider and network proof where applicable, security/privacy/legal/rollout readiness and explicit Founder promotion.
+SahelFlow is not yet a commercially certified Stable release. Internal.18 is a bounded Founder/internal-lab checkpoint. Stable/customer readiness still requires the applicable acceptance register, #221/#226/#230 at their required evidence levels, representative/live provider and network proof where applicable, security/privacy/legal/rollout readiness and explicit Founder promotion.
+
+## Historical authority continuity
+The Phase 5 merged result and evidence remains the product baseline behind the current correction. The earlier Active Phase 6 frontier followed Internal.14 publication evidence and the FD-031 exception boundary; the FD-032 Founder-only offline checkpoint boundary then introduced the `1.0.0-internal.15` release path. issue #214 is retained here as a continuity reference to that historical gate sequence, while the current release authority remains the Internal.18/FD-037 source declared above.

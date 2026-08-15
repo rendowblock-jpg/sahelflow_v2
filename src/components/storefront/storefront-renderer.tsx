@@ -1,8 +1,17 @@
 "use client";
 
-import { BadgeCheck, Headphones, PackageCheck, PhoneCall } from "lucide-react";
+import {
+  BadgeCheck,
+  Headphones,
+  Mail,
+  MapPin,
+  MessageCircle,
+  PackageCheck,
+  PhoneCall,
+} from "lucide-react";
 
 import { useI18n } from "@/hooks/use-i18n";
+import type { StorefrontContactInfo } from "@/lib/storefront/presentation-types";
 import type { StorefrontSection, StorefrontSectionType } from "@/lib/storefront/studio-sections";
 import { formatDZD } from "@/lib/utils";
 import type { StorefrontPreviewProps, StorefrontStudioProduct } from "./studio/studio-types";
@@ -20,13 +29,7 @@ export interface StorefrontRendererProps extends StorefrontPreviewProps {
   emptyCatalog?: React.ReactNode;
 }
 
-/**
- * Canonical Storefront V2 renderer.
- *
- * Studio and customer routes share this exact composition/template renderer.
- * Authoring overlays are added only when onInspectSection is supplied, so
- * editor state and controls cannot leak into the public storefront.
- */
+/** Canonical Storefront V2 renderer shared by Studio and customer routes. */
 export function StorefrontRenderer({
   draft,
   products,
@@ -188,12 +191,19 @@ export function StorefrontRenderer({
             {renderCheckout}
           </section>
         );
-      case "support":
-        return renderSupport ? (
+      case "support": {
+        const authoredSupport = hasContact(theme.builder.contact)
+          ? <StorefrontContactBlock contact={theme.builder.contact} />
+          : null;
+        // Once a V2 release contains contact, it is immutable release authority.
+        // The legacy sibling field remains read-compatible only for older rows.
+        const support = authoredSupport ?? renderSupport;
+        return support ? (
           <section key={section.id} {...props} className={sectionClass(section, "py-5")}>
-            {renderSupport}
+            {support}
           </section>
         ) : onInspectSection ? <EmptyStudioSection key={section.id} section={section} props={props} label={t("storefront.studio.section.support")} /> : null;
+      }
       case "footer":
         return (
           <footer key={section.id} {...props} className={sectionClass(section, "mt-6 border-t pt-5 text-center text-[11px] opacity-60")}>
@@ -245,6 +255,7 @@ function ProductGrid({
             style={{ background: theme.surfaceColor }}
           >
             {image ? (
+              // eslint-disable-next-line @next/next/no-img-element -- seller media is dynamic and already bounded by storefront media authority
               <img src={image} alt={product.name} className={`${ratio} w-full object-cover`} loading="lazy" />
             ) : (
               <div className={`${ratio} opacity-20`} style={{ background: theme.accentColor }} />
@@ -265,6 +276,30 @@ function ProductGrid({
 
 function Trust({ icon, label }: { icon: React.ReactNode; label: string }) {
   return <div className="flex items-center gap-1.5 rounded-lg border bg-white/40 px-2 py-2 [&_svg]:h-3.5 [&_svg]:w-3.5"><span aria-hidden="true">{icon}</span><span>{label}</span></div>;
+}
+
+function hasContact(contact: StorefrontContactInfo): boolean {
+  return Boolean(
+    contact.phone.trim() ||
+    contact.whatsapp.trim() ||
+    contact.email.trim() ||
+    contact.address.trim(),
+  );
+}
+
+function StorefrontContactBlock({ contact }: { contact: StorefrontContactInfo }) {
+  const { t } = useI18n();
+  return (
+    <div className="rounded-xl border p-4 text-sm" style={{ background: "color-mix(in srgb, currentColor 4%, transparent)" }}>
+      <p className="mb-3 font-semibold">{t("storefront.view.contact")}</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {contact.phone ? <p className="flex items-center gap-2 opacity-70"><PhoneCall className="size-4" /><bdi dir="ltr">{contact.phone}</bdi></p> : null}
+        {contact.whatsapp ? <p className="flex items-center gap-2 opacity-70"><MessageCircle className="size-4" /><bdi dir="ltr">{contact.whatsapp}</bdi></p> : null}
+        {contact.email ? <p className="flex items-center gap-2 opacity-70"><Mail className="size-4" /><bdi dir="ltr">{contact.email}</bdi></p> : null}
+        {contact.address ? <p className="flex items-center gap-2 opacity-70"><MapPin className="size-4" />{contact.address}</p> : null}
+      </div>
+    </div>
+  );
 }
 
 function EmptyStudioSection({ section, props, label }: { section: StorefrontSection; props: InspectProps; label: string }) {

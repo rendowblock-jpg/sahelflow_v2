@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.18 Founder visual correction publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.18",
+  "windowsMsiVersion": "1.0.0.18",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-037",
+  "licenseServiceUrl": null,
+  "reason": "Publish the complete Founder-rejected Internal.17 visual correction only from the exact protected-main merge after exact-head source, rendered experience, Phase 6-7, and review gates are clean. Customer-online distribution remains out of scope."
+}

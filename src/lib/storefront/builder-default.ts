@@ -11,6 +11,7 @@ export function createDefaultStorefrontBuilderState(): StorefrontBuilderState {
     productMedia: {},
     collections: [],
     seo: { title: "", description: "", socialImageUrl: null, noIndex: false },
+    contact: { phone: "", whatsapp: "", email: "", address: "" },
     domain: {
       hostname: null,
       status: "disconnected",

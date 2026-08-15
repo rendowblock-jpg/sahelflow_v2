@@ -1,44 +1,51 @@
 /*
  * SahelFlow governed motion language.
  *
- * Imported after the historical Phase 5 normalization layer so the product no
- * longer disables its own motion primitives. Motion is intentionally restrained:
- * opacity/transform only for surface entry, tiny physical feedback for controls,
- * and no decorative perpetual motion. Reduced-motion remains absolute authority.
+ * Motion is part of interaction feedback, not decoration. The previous
+ * Internal.17 values started route surfaces almost fully opaque and moved them
+ * only 3–5px, which was technically animated but visually imperceptible on the
+ * installed desktop. This authority keeps motion restrained while making route,
+ * workspace, selection and control feedback clearly perceivable. Reduced motion
+ * remains absolute authority.
  */
 
 [data-sahelflow-shell="desktop"] {
-  --sf-motion-micro: 120ms;
+  --sf-motion-micro: 110ms;
   --sf-motion-state: 160ms;
-  --sf-motion-surface: 220ms;
-  --sf-motion-page: 260ms;
+  --sf-motion-surface: 210ms;
+  --sf-motion-page: 250ms;
   --sf-motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --sf-motion-ease-state: cubic-bezier(0.2, 0, 0, 1);
-  --sf-motion-inline-entry: -8px;
+  --sf-motion-inline-entry: -10px;
+  --sf-motion-row-nudge: 2px;
 }
 
 [data-sahelflow-shell="desktop"][dir="rtl"] {
-  --sf-motion-inline-entry: 8px;
+  --sf-motion-inline-entry: 10px;
+  --sf-motion-row-nudge: -2px;
 }
 
-/* Route sections enter as one coherent work surface rather than a collection of
- * unrelated cards. The distance is intentionally tiny to avoid dashboard theatre. */
+/* A route enters as one work surface. The distance is intentionally bounded,
+ * but the starting frame is visually distinct enough to be felt on a desktop
+ * WebView instead of existing only as a source-code claim. */
 [data-sahelflow-shell="desktop"] .page-sections > * {
   animation: sf-page-section-enter var(--sf-motion-page) var(--sf-motion-ease-out) both;
 }
+[data-sahelflow-shell="desktop"] .page-sections > :nth-child(2) { animation-delay: 28ms; }
+[data-sahelflow-shell="desktop"] .page-sections > :nth-child(3) { animation-delay: 44ms; }
+[data-sahelflow-shell="desktop"] .page-sections > :nth-child(n + 4) { animation-delay: 60ms; }
 
-[data-sahelflow-shell="desktop"] .page-sections > :nth-child(2) {
-  animation-delay: 28ms;
-}
-[data-sahelflow-shell="desktop"] .page-sections > :nth-child(3) {
-  animation-delay: 44ms;
-}
-[data-sahelflow-shell="desktop"] .page-sections > :nth-child(n + 4) {
-  animation-delay: 56ms;
+/* Flagship workspaces should visibly settle into place as coherent products,
+ * not appear as a collection of instantly painted boxes. */
+[data-sahelflow-shell="desktop"] :is(
+  [data-inbox-workspace],
+  [data-ai-workspace],
+  [data-storefront-studio]
+) {
+  animation: sf-workspace-enter var(--sf-motion-page) var(--sf-motion-ease-out) both;
 }
 
-/* Existing adoption classes now resolve to the same grammar instead of being
- * disabled by the prior Phase 5 compatibility layer. */
+/* Existing adoption classes resolve to the same grammar. */
 [data-sahelflow-shell="desktop"] .stagger-grid > * {
   animation: sf-surface-enter var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
 }
@@ -60,8 +67,7 @@
   animation: sf-surface-inline var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
 }
 
-/* Cards get a one-pixel lift only where callers explicitly opted into a lift
- * class. Ordinary metric/table surfaces remain stable. */
+/* Hover is physical feedback, not a decorative floating-card effect. */
 @media (hover: hover) and (pointer: fine) {
   [data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover) {
     transition-property: transform, border-color, background-color, box-shadow !important;
@@ -69,31 +75,53 @@
     transition-timing-function: var(--sf-motion-ease-state) !important;
   }
   [data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover):hover {
-    transform: translateY(-1px) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  /* Dense operational rows get a tiny logical-direction nudge so hover/selection
+   * is perceivable without shifting table geometry. */
+  [data-sahelflow-shell="desktop"] :is(
+    [data-inbox-conversation],
+    [data-ai-session]
+  ):not([aria-current="true"]):hover {
+    transform: translateX(var(--sf-motion-row-nudge));
   }
 }
 
-/* Press feedback makes controls feel native without shifting layout. */
+/* Press feedback makes controls feel native without delaying the action. */
 [data-sahelflow-shell="desktop"] :where(button, [role="button"]):not(:disabled):active {
-  transform: scale(0.985);
+  transform: scale(0.98);
   transition-duration: var(--sf-motion-micro);
 }
 
-/* Selected/navigation state changes stay fast enough to feel immediate. */
+/* Selection and navigation state changes share one fast visual transaction. */
 [data-sahelflow-shell="desktop"] :where(
   [data-slot="dropdown-menu-item"],
   [data-slot="tabs-trigger"],
   [data-inbox-conversation],
-  [data-ai-session]
+  [data-ai-session],
+  [aria-pressed="true"],
+  [aria-current="true"]
 ) {
+  transition-property: background-color, border-color, color, box-shadow, opacity, transform;
   transition-duration: var(--sf-motion-state);
   transition-timing-function: var(--sf-motion-ease-state);
 }
 
+/* New messages/tool results and proposal cards should read as state arriving,
+ * rather than materializing with no feedback. */
+[data-sahelflow-shell="desktop"] :is(
+  [data-ai-message],
+  [data-slot="chart-tooltip"],
+  [data-inbox-thread="active"] [role="log"] > *
+) {
+  animation: sf-state-arrive var(--sf-motion-state) var(--sf-motion-ease-out) both;
+}
+
 @keyframes sf-page-section-enter {
   from {
-    opacity: 0.94;
-    transform: translateY(3px);
+    opacity: 0.72;
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -101,10 +129,21 @@
   }
 }
 
+@keyframes sf-workspace-enter {
+  from {
+    opacity: 0.78;
+    transform: translateY(7px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes sf-surface-enter {
   from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: translateY(7px);
   }
   to {
     opacity: 1;
@@ -120,7 +159,7 @@
 @keyframes sf-surface-scale {
   from {
     opacity: 0;
-    transform: scale(0.987);
+    transform: scale(0.98);
   }
   to {
     opacity: 1;
@@ -139,17 +178,30 @@
   }
 }
 
+@keyframes sf-state-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-sahelflow-shell="desktop"] *,
   [data-sahelflow-shell="desktop"] *::before,
   [data-sahelflow-shell="desktop"] *::after {
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 
   [data-sahelflow-shell="desktop"] :where(button, [role="button"]):active,
-  [data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover):hover {
+  [data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover):hover,
+  [data-sahelflow-shell="desktop"] :is([data-inbox-conversation], [data-ai-session]):hover {
     transform: none !important;
   }
 }

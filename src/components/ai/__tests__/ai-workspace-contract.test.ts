@@ -12,6 +12,26 @@ describe("AI operational workspace contract", () => {
     expect(page).not.toContain("AiChat");
   });
 
+  it("starts from real seller tasks instead of presenting an empty generic chat as the workbench", () => {
+    const page = read("src/app/(dashboard)/agents/page.tsx");
+    const launchpad = read("src/components/ai/ai-operational-launchpad.tsx");
+    const copy = read("src/lib/i18n/ai-workspace.ts");
+
+    expect(page).toContain("AiOperationalLaunchpad");
+    expect(launchpad).toContain('data-ai-launchpad="operational"');
+    expect(launchpad).toContain('fetch("/api/ai/status"');
+    expect(launchpad).toContain('fetch("/api/ai/sessions"');
+    expect(launchpad).toContain("/messages");
+    expect(launchpad).toContain('window.location.assign("/agents")');
+    expect(copy).toContain("launchPendingPrompt");
+    expect(copy).toContain("launchRevenuePrompt");
+    expect(copy).toContain("launchReturnsPrompt");
+    expect(copy).toContain("launchProductsPrompt");
+    expect(copy).toContain("ابدأ من العمل، لا من محادثة فارغة");
+    expect(copy).toContain("Commencez par le travail");
+    expect(copy).toContain("Start from the work, not a blank chat");
+  });
+
   it("loads the most recent durable AI history and returns it chronologically", () => {
     const history = read("src/lib/ai/chat/session-history.ts");
     expect(history).toContain('orderBy: [{ createdAt: "desc" }, { id: "desc" }]');

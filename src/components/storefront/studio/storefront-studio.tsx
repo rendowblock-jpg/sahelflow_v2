@@ -38,7 +38,7 @@ import { SECTION_LABEL_KEYS, SectionTree } from "./section-tree";
 import { TemplateGallery } from "./template-gallery";
 import type { StorefrontStudioDevice, StorefrontStudioProduct } from "./studio-types";
 
-type StudioPanel = "sections" | "theme" | "products" | "checkout" | "seo";
+type StudioPanel = "sections" | "theme" | "products" | "checkout" | "contact" | "seo";
 type SaveState = "saved" | "pending" | "saving" | "error" | "conflict";
 type SerializedConfig = Omit<StorefrontStudioConfig, "createdAt" | "updatedAt" | "draftUpdatedAt" | "liveUpdatedAt"> & {
   createdAt: string;
@@ -52,6 +52,7 @@ const PANELS: readonly { id: StudioPanel; labelKey: string }[] = [
   { id: "theme", labelKey: "storefront.studio.panels.theme" },
   { id: "products", labelKey: "storefront.studio.panels.products" },
   { id: "checkout", labelKey: "storefront.studio.panels.checkout" },
+  { id: "contact", labelKey: "storefront.builder.contactInfo" },
   { id: "seo", labelKey: "storefront.studio.panels.seo" },
 ];
 
@@ -140,6 +141,11 @@ export function StorefrontStudio({
   }, [config.id, t, version]);
 
   const publish = useCallback(async () => {
+    if (draft.isActive && draft.theme.builder.shippingRules.length === 0) {
+      setPanel("checkout");
+      setMessage(t("storefront.studio.shippingEmpty"));
+      return;
+    }
     if (!version || dirty || saveState === "saving" || saveState === "conflict") {
       setMessage(t("storefront.studio.saveBeforePublishing"));
       return;
@@ -167,13 +173,13 @@ export function StorefrontStudio({
       }
       if (!response.ok) throw new Error(body.error ?? t("storefront.studio.publishFailed"));
       setSaveState("saved");
-      setMessage(t("storefront.studio.published"));
+      setMessage(draft.isActive ? t("storefront.studio.published") : t("storefront.inactive"));
     } catch {
       if (sequence !== requestSequence.current) return;
       setSaveState("error");
       setMessage(t("storefront.studio.publishFailed"));
     }
-  }, [config.id, dirty, locale, saveState, t, version]);
+  }, [config.id, dirty, draft.isActive, draft.theme.builder.shippingRules.length, locale, saveState, t, version]);
 
   useEffect(() => {
     if (!dirty || conflict || saveState === "saving" || saveState === "error") return;
@@ -222,12 +228,20 @@ export function StorefrontStudio({
   const width = device === "mobile" ? "max-w-[390px]" : device === "tablet" ? "max-w-[760px]" : "max-w-[1180px]";
 
   return (
-    <div className="flex min-h-[760px] flex-col overflow-hidden rounded-2xl border bg-muted/30" dir={dir}>
+    <div data-storefront-studio="v2" className="flex min-h-[760px] flex-col overflow-hidden rounded-2xl border bg-muted/30" dir={dir}>
       <header className="flex flex-wrap items-center gap-3 border-b bg-background px-4 py-3">
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold">{draft.name}</div>
           <div className="text-[11px] text-muted-foreground">{t("storefront.studio.homePage", { template: draft.theme.template })}</div>
         </div>
+        <label className="inline-flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[11px] font-medium">
+          <input
+            type="checkbox"
+            checked={draft.isActive}
+            onChange={(event) => commitDraft({ ...draft, isActive: event.target.checked })}
+          />
+          <span>{draft.isActive ? t("storefront.active") : t("storefront.inactive")}</span>
+        </label>
         <div className="flex rounded-lg border p-0.5" aria-label={t("storefront.studio.previewDevice")}>
           <DeviceButton id="desktop" label={t("storefront.studio.device.desktop")} active={device === "desktop"} onClick={setDevice} icon={<Monitor />} />
           <DeviceButton id="tablet" label={t("storefront.studio.device.tablet")} active={device === "tablet"} onClick={setDevice} icon={<Tablet />} />
@@ -289,6 +303,7 @@ export function StorefrontStudio({
             {panel === "theme" ? <TemplateGallery value={draft.theme.template} onChange={(template) => updateTheme((theme) => switchStorefrontTemplate(theme, template))} /> : null}
             {panel === "products" ? <ProductPicker products={products} selected={draft.selectedProductIds} onChange={updateSelectedProducts} /> : null}
             {panel === "checkout" ? <ShippingRulesPanel draft={draft} commit={commitDraft} /> : null}
+            {panel === "contact" ? <ContactPanel draft={draft} commit={commitDraft} /> : null}
             {panel === "seo" ? <SeoPanel draft={draft} commit={commitDraft} /> : null}
           </div>
         </aside>
@@ -301,7 +316,8 @@ export function StorefrontStudio({
               selectedSectionId={selectedSectionId}
               onInspectSection={(id) => {
                 setSelectedSectionId(id);
-                setPanel("sections");
+                const selected = sections.find((section) => section.id === id);
+                setPanel(selected?.type === "support" ? "contact" : "sections");
               }}
             />
           </div>
@@ -360,6 +376,33 @@ function ShippingRulesPanel({ draft, commit }: { draft: StorefrontStudioDraft; c
   );
 }
 
+function ContactPanel({ draft, commit }: { draft: StorefrontStudioDraft; commit: (draft: StorefrontStudioDraft) => void }) {
+  const { t } = useI18n();
+  const contact = draft.theme.builder.contact;
+  const setContact = (patch: Partial<typeof contact>) => commit({
+    ...draft,
+    theme: {
+      ...draft.theme,
+      builder: {
+        ...draft.theme.builder,
+        contact: { ...contact, ...patch },
+      },
+    },
+  });
+  return (
+    <div className="space-y-3">
+      <div>
+        <h2 className="text-xs font-semibold">{t("storefront.builder.contactInfo")}</h2>
+        <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{t("storefront.builder.contactInfoDesc")}</p>
+      </div>
+      <Field label={t("storefront.builder.phone")}><input dir="ltr" value={contact.phone} maxLength={64} onChange={(event) => setContact({ phone: event.target.value })} /></Field>
+      <Field label={t("storefront.builder.whatsapp")}><input dir="ltr" value={contact.whatsapp} maxLength={64} onChange={(event) => setContact({ whatsapp: event.target.value })} /></Field>
+      <Field label={t("storefront.builder.email")}><input dir="ltr" type="email" value={contact.email} maxLength={254} onChange={(event) => setContact({ email: event.target.value })} /></Field>
+      <Field label={t("storefront.builder.address")}><input value={contact.address} maxLength={240} onChange={(event) => setContact({ address: event.target.value })} /></Field>
+    </div>
+  );
+}
+
 function Inspector({ draft, selectedType, commit }: { draft: StorefrontStudioDraft; selectedType: StorefrontSectionType | null; commit: (draft: StorefrontStudioDraft) => void }) {
   const { t } = useI18n();
   const theme = draft.theme;
@@ -413,6 +456,8 @@ function Inspector({ draft, selectedType, commit }: { draft: StorefrontStudioDra
           <Toggle label={t("storefront.studio.support")} checked={theme.trust.showSupportBadge} onChange={(showSupportBadge) => patchTheme({ trust: { ...theme.trust, showSupportBadge } })} />
         </InspectorGroup>
       ) : null}
+
+      {selectedType === "support" ? <ContactPanel draft={draft} commit={commit} /> : null}
     </div>
   );
 }

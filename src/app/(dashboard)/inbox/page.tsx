@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { InboxDesktopPrimer } from "@/components/inbox/inbox-desktop-primer";
 import { InboxWorkspace } from "@/components/inbox/inbox-workspace";
 import { WhatsAppIngressRecoveryDock } from "@/components/inbox/whatsapp-ingress-recovery-dock";
 import { getI18n } from "@/lib/i18n-server";
@@ -34,6 +35,7 @@ export default async function InboxPage() {
       className={`app-content flex h-full min-h-0 flex-col gap-3 overflow-hidden ${styles.page}`}
     >
       <h1 className="sr-only">{t("metadata.title.inbox")}</h1>
+      <InboxDesktopPrimer />
       {canViewIngress ? (
         <WhatsAppIngressRecoveryDock canRetry={canRetryIngress} />
       ) : null}

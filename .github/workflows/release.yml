@@ -315,17 +315,17 @@ jobs:
                 ($authority.version -ceq '1.0.0-internal.16' -and
                   $authority.licensing.authorityDecision -ceq 'FD-034') -or
                 ($authority.version -ceq '1.0.0-internal.17' -and
-                  $authority.licensing.authorityDecision -ceq 'FD-036')
+                  $authority.licensing.authorityDecision -ceq 'FD-036') -or
+                ($authority.version -ceq '1.0.0-internal.18' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-037')
               )
               if (
                 -not $founderOfflineAuthority -or
                 $authority.channel -cne 'internal' -or
                 $null -ne $authority.licensing.ownedHostSuffix
               ) {
-                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17'
+                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, or FD-037/Internal.18'
               }
-              # The protected environment may retain an older service secret. Exact
-              # Founder-only checkpoints must compile and launch without exposing it.
               'SF_LICENSE_SERVICE_URL=' >> $env:GITHUB_ENV
               "SF_RELEASE_SCOPE=founder-offline-only ($($authority.licensing.authorityDecision); online trial disabled)" >> $env:GITHUB_ENV
             }

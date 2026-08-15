@@ -51,6 +51,13 @@ export const storefrontCompositionSchema = z.object({
   }
 });
 
+const storefrontContactSchema = z.object({
+  phone: text(64),
+  whatsapp: text(64),
+  email: text(254),
+  address: text(240),
+}).strict();
+
 const storefrontBuilderSchema = z.object({
   schemaVersion: z.literal(1),
   composition: storefrontCompositionSchema,
@@ -69,6 +76,14 @@ const storefrontBuilderSchema = z.object({
     socialImageUrl: httpsUrl.nullable(),
     noIndex: z.boolean(),
   }).strict(),
+  // Existing V2 rows predate contact-in-theme. Defaulting here upgrades them in
+  // memory without invalidating their composition, SEO, media or shipping state.
+  contact: storefrontContactSchema.optional().default({
+    phone: "",
+    whatsapp: "",
+    email: "",
+    address: "",
+  }),
   domain: z.object({
     hostname: z.string().max(253).nullable(),
     status: z.enum(["disconnected", "pending", "verified", "error"]),

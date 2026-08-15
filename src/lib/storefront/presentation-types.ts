@@ -42,6 +42,13 @@ export interface StorefrontSeo {
   noIndex: boolean;
 }
 
+export interface StorefrontContactInfo {
+  phone: string;
+  whatsapp: string;
+  email: string;
+  address: string;
+}
+
 /** Last-known hosted domain projection. The control plane owns verification/routing state. */
 export interface StorefrontDomainProjection {
   hostname: string | null;
@@ -60,6 +67,8 @@ export interface StorefrontShippingRule {
 /**
  * Builder authoring metadata lives inside StorefrontConfig.theme so SQLite stays
  * the single mutable draft authority and existing rows need no schema migration.
+ * Public contact information belongs here as well: it is part of the immutable
+ * storefront release and must not bypass the Studio/publish transaction.
  */
 export interface StorefrontBuilderState {
   schemaVersion: typeof STOREFRONT_BUILDER_SCHEMA_VERSION;
@@ -67,6 +76,7 @@ export interface StorefrontBuilderState {
   productMedia: Record<string, StorefrontMediaSet>;
   collections: StorefrontCollection[];
   seo: StorefrontSeo;
+  contact: StorefrontContactInfo;
   domain: StorefrontDomainProjection;
   shippingRules: StorefrontShippingRule[];
 }

@@ -208,8 +208,11 @@ function validComposition(value: unknown): boolean {
 
 function validBuilder(value: unknown): boolean {
   const builder = record(value);
+  const legacyKeys = ["schemaVersion", "composition", "productMedia", "collections", "seo"] as const;
+  const contactKeys = [...legacyKeys, "contact"] as const;
   if (
-    !builder || !exactKeys(builder, ["schemaVersion", "composition", "productMedia", "collections", "seo"]) ||
+    !builder ||
+    (!exactKeys(builder, legacyKeys) && !exactKeys(builder, contactKeys)) ||
     builder.schemaVersion !== 1 || !validComposition(builder.composition)
   ) return false;
   const productMedia = record(builder.productMedia);
@@ -230,12 +233,20 @@ function validBuilder(value: unknown): boolean {
     collectionIds.add(id);
   }
   const seo = record(builder.seo);
-  return Boolean(
+  const validSeo = Boolean(
     seo && exactKeys(seo, ["title", "description", "socialImageUrl", "noIndex"]) &&
     boundedText(seo.title, 120) && boundedText(seo.description, 320) &&
     (seo.socialImageUrl === null ||
       (typeof seo.socialImageUrl === "string" && seo.socialImageUrl.length <= 2_048 && seo.socialImageUrl.startsWith("https://"))) &&
     typeof seo.noIndex === "boolean"
+  );
+  if (!validSeo) return false;
+  if (builder.contact === undefined) return true;
+  const contact = record(builder.contact);
+  return Boolean(
+    contact && exactKeys(contact, ["phone", "whatsapp", "email", "address"]) &&
+    boundedText(contact.phone, 64) && boundedText(contact.whatsapp, 64) &&
+    boundedText(contact.email, 254) && boundedText(contact.address, 240)
   );
 }
 

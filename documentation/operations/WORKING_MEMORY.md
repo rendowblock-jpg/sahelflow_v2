@@ -1,147 +1,126 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact resumable execution frontier; never product/architecture/roadmap authority
-> **Last updated:** 2026-08-14
-> **Release-hygiene protected base before active request:** `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9` — PR #258
-> **Latest application-changing protected merge:** PR #254 — Internal.17 frontend-system correction at `c33f234ecf43842cfcc801592cc601d595ed05c5`
-> **Protected Internal.17 release authority:** PR #257 — `2a820b801786590a20dc6105f39f732b8a987c5f` / FD-036
-> **First Internal.17 signed attempt:** run `31840181436` — signed build/install proof completed; publication stopped by deterministic Tauri icon source guard
-> **Published updater:** `1.0.0-internal.16` / MSI `1.0.0.16`
-> **Latest published signed run:** `31770292329`
-> **Founder installed result:** Internal.16 installed; frontend acceptance **REJECTED** on 2026-08-14
+> **Last updated:** 2026-08-15
+> **Protected main before current package:** `898904a11178c8d7b69c755f13794b2ca8bf0356` — PR #259 / published Internal.17
+> **Founder-installed Internal.17 result:** **REJECTED**
+> **Current branch/PR:** `agent/founder-visual-acceptance-repair` / PR #260
+> **Next checkpoint:** `1.0.0-internal.18` / MSI `1.0.0.18` / FD-037
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Active release frontier:** `agent/internal-17-signed-publication-request` / PR #259 — FD-036 exact Founder-offline Internal.17 signed publication retry
-> **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`
 > **Retained evidence:** #221, #226, #230
 
-Live GitHub is authority. Internal.16 remains the latest published updater. Internal.17 application correction and FD-036 release authority are already protected; PR #258 repaired only the deterministic release-source guard after signed run `31840181436` stopped publication on six regenerated Tauri icon outputs. The current task is PR #259 and the signed publication it must trigger from the resulting protected-main merge SHA. Do **not** reopen the completed correction broadly, and do **not** treat automated installed evidence as Founder visual/UX acceptance.
+Live GitHub is authority. Internal.17 is published and installed; its Founder visual/interaction acceptance is rejected. PR #260 is the one consolidated response and must not be broken into repeated tiny full-gate loops. Finish product + evidence + Internal.18 release authority first, freeze one head, certify it once, merge, publish the exact signed update, then return to the Founder for installed judgment.
 
-Historical release continuity: the prior Founder checkpoint was Internal.15 from source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`. Internal.16 was published under **FD-034** before the later FD-035 correction boundary and FD-036 Internal.17 release authority. PR #251 merged at `aa7dd2df53286a670fc55e319a281757cf3d28b2` from exact head `73e8d8c466567859bc651bb4d77976fdb2a1bbc3`, with exact Wave 4 CI run `31765143457`. The superseded Internal.16 release-authority branch was `agent/internal-16-founder-offline-checkpoint`. These lines remain for audit/frontier continuity only and are not the current task.
+## Protected implementation continuity
 
-## Wave 4 — what is implemented
+Preserve:
 
-Internal.16 Waves 1–4 and the signed release infrastructure are protected. Preserve:
-
-- Golden COD, canonical command/idempotency/version/audit/event/outbox authority;
+- Golden COD command/idempotency/version/audit/event/outbox authority;
 - identity, permissions, shop/session and protected-field boundaries;
 - provider durability/reconciliation and AI proposal-bound mutations;
 - backup/recovery/migration/native runtime containment;
-- Storefront Builder V2, hosted publish/pause/rollback and durable checkout receipts;
+- Storefront Builder V2 hosted publish/pause/rollback and server-authoritative checkout/receipt authority;
 - connected enrollment, encrypted remote projection/commands and policy epochs;
-- zero-knowledge cloud backup, retention and replacement-install recovery transfer;
+- zero-knowledge backup/retention/replacement-install recovery transfer;
 - exact signing/version/update/release protections.
 
-Frontend correction may change shared UI/runtime presentation roots and workspace UX, but it may not weaken these authorities for convenience.
+Installed UX rejection never authorizes weakening these authorities.
 
-## Internal.17 release chain now protected
+## Founder-installed Internal.17 rejection
 
-1. **PR #254** protected the complete Internal.17 source correction at `c33f234ecf43842cfcc801592cc601d595ed05c5`; reviewed head `c965a062cf2719078601374bd0ace771ca011d53` passed the exact source/browser/native/Windows/MSI-installed `Required PR gate`.
-2. **PR #257** protected FD-036 Internal.17 Founder-offline release authority at `2a820b801786590a20dc6105f39f732b8a987c5f`.
-3. Signed run **`31840181436`** built the exact signed candidate, verified updater key/artifact binding, installed/reopened it and proved authenticated hydrated WebView UI. Publication then failed closed because deterministic Tauri icon regeneration appeared as unexpected tracked source drift.
-4. **PR #258** repaired only that guard contract and its matching test. It protected release-hygiene base `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9`. No product/runtime or FD-036 scope changed.
-5. **PR #259** is now the active release request on `agent/internal-17-signed-publication-request`, carrying `.github/release-requests/internal-17-publication-retry.json`. Its exact current head must be re-fetched before merge. The resulting protected-main merge SHA is the only source authorized for the signed retry.
+The Founder’s current installed verdict is binding:
 
-## Founder-installed Internal.16 rejection — six reconfirmed blockers
+1. **RTL / Arabic / direction (`SF16-UI-001`)** — did not work; chart direction/presentation became worse.
+2. **Themes (`SF16-THEME-015`)** — the old switching defects are substantially corrected, but dark colored presets tint the application too aggressively. Sahel/green is only somewhat better.
+3. **Motion (`SF17-MOTION-018`)** — meaningful motion does not exist perceptibly in the installed product.
+4. **Charts (`SF16-CHART-013`)** — rejected; visual/analytical/RTL result did not deliver the promised chart system.
+5. **Inbox (`SF16-INBOX-005`)** — rejected as a mature operational workspace.
+6. **AI Agents (`SF16-AI-006`)** — rejected as a task-oriented AI workbench.
+7. **Storefront V2 first-run** — the installed create page exposed a long configuration form rather than the real Studio; source showed the real V2 Studio only appeared after creation.
 
-The Founder updated to the signed Internal.16 build and explicitly confirmed that these original problem classes remain materially unresolved:
+Do not close #221 from automation.
 
-1. **`SF16-UI-001` — systemic RTL/direction geometry.** Sidebar still has wrong-side behavior; other UI surfaces and charts also remain directionally wrong.
-2. **`SF16-THEME-015` — appearance transition.** Dark/light switching is still visibly non-atomic, non-instant and not smooth enough for the intended product quality.
-3. **`SF17-MOTION-018` — motion/micro-interaction system.** The app still feels static; coherent purposeful motion remains missing/insufficient.
-4. **`SF16-CHART-013` — governed charts.** Charts remain visually/product-wise below target and also participate in RTL/direction defects.
-5. **`SF16-INBOX-005` — Inbox.** Installed Inbox remains Founder-rejected as a product workspace.
-6. **`SF16-AI-006` — AI Agents.** Installed AI Agents remains Founder-rejected as a product workbench.
+## PR #260 — implemented consolidated correction
 
-This is an explicit rejection of #221 acceptance for Internal.16. Do not close #221.
+Shared-root/product changes carried by the branch include:
 
-The Founder is not required to enumerate every sibling manifestation. The next writer owns complete source/component/route discovery for each established class if the signed Internal.17 install still fails them.
+- Noto Sans Arabic application typography, higher Arabic reading floor, logical bidi/technical isolation;
+- neutral dark structural material stack for Sahel/Atlas/Oasis/Dune, with identity through accents/selection/charts instead of canvas/card/sidebar tint;
+- perceivable restrained route/workspace/state/hover/press motion with absolute reduced motion;
+- explicit LTR Cartesian analytical coordinate planes while localized Arabic copy/tooltips remain RTL;
+- Inbox desktop priming to a real canonical conversation without a deep-link URL side effect; mobile queue-first preserved;
+- task-oriented AI seller jobs using actual status/session/message/provider APIs and correct application-level provider error handling;
+- `/storefronts/new` V2 live renderer/bootstrap feeding the real Studio;
+- private first Studio draft active for publish while the live store remains private until explicit durable publication;
+- V2 contact authoring inside the Studio theme/draft and hosted artifact;
+- real durable Storefront finalize transaction synchronizes/clears the legacy contact compatibility projection atomically with live theme/products/active state;
+- control-plane public artifact validator accepts contact while pre-contact V2 rows remain readable.
 
-## Complete P1 reconciliation rule — no silent carry-forward
+## Evidence weakness found and corrected
 
-The six classes above are **reconfirmed installed failures**, not the whole acceptance register. FD-033 froze 17 Internal.16 P1 classes, and absence of a new complaint does not close any of them. The Internal.17 correction and exact source/browser/native/Windows/MSI-installed evidence reconciled the source-level register, but installed Founder acceptance remains open for the six named classes and any class invalidated by a later material change.
+The broad Phase 5 browser run could pass while screenshots for Inbox/AI were still generic route spinners. That is not acceptable Founder evidence.
 
-The full retained register is:
+The final Phase 5 representative run therefore includes `e2e/founder-visual-acceptance.spec.ts`, which at 1366×768 must:
 
-- `SF16-UI-001` — RTL/direction geometry;
-- `SF16-UI-002` — Risk KPI hierarchy;
-- `SF16-UI-003` — stat-card interaction semantics;
-- `SF16-I18N-004` — locale-sensitive formatting;
-- `SF16-INBOX-005` — Inbox;
-- `SF16-AI-006` — AI Agents;
-- `SF16-I18N-007` — raw/unintended foreign system copy;
-- `SF16-PRODUCTS-008` — product-row thumbnails;
-- `SF16-SEARCH-009` — universal operational search;
-- `SF16-AI-010` — Gemini key/provider/readiness/real-inference lifecycle;
-- `SF16-RESP-011` — deterministic responsive composition;
-- `SF16-LAYOUT-012` — stretched panels/dead space;
-- `SF16-CHART-013` — governed charts;
-- `SF16-PERF-014` — startup/first-launch performance root, also feeding #226;
-- `SF16-THEME-015` — theme switching;
-- `SF16-I18N-016` — atomic locale commit across navigation/cache/prefetch;
-- `SF16-NAV-017` — sidebar information architecture/reorder preference;
-- `SF17-MOTION-018` — coherent motion/micro-interaction system.
+- prove dark Atlas/Oasis/Dune/Sahel use identical neutral structural material tokens and capture each preset;
+- wait for and capture loaded Arabic Inbox with a real conversation/thread;
+- wait for and capture loaded Arabic AI launchpad/workbench;
+- wait for and capture the Arabic Storefront V2 first-run Studio;
+- wait for Arabic Analytics, require a measurable non-flat revenue curve and no horizontal overflow, then capture it.
 
-No class may disappear because it was not mentioned again.
+This focused evidence supplements existing Inbox/AI/Settings/command-touch/Phase5 journeys; it still does not substitute for installed Founder acceptance.
 
-## Exact next-session order
+## Internal.18 / FD-037 release package
 
-1. **Keep protected application/release truth frozen.** PR #254 correction, PR #257 FD-036 release authority and PR #258 release-hygiene correction are protected history; do not add product changes to the publication request.
-2. **Use PR #259 only for the signed publication retry.** Re-fetch its exact head and all review threads/checks. The release identity remains `1.0.0-internal.17` / MSI `1.0.0.17`, `founder-offline-only`, FD-036, `ownedHostSuffix: null`, with no packaged `SF_LICENSE_SERVICE_URL`.
-3. **Require exact-head certification.** The exact current PR #259 head must pass required Phase 5, Phase 6–7, source/native/Windows/MSI-installed lanes and final `Required PR gate`. Resolve every actionable review finding. No waiver or force merge.
-4. **Merge only that exact green reviewed head to protected `main`.** Use expected-head discipline.
-5. **Treat the resulting protected-main merge SHA as the signed source.** The `.github/release-requests/internal-17-publication-retry.json` push must let `release-on-version-authority.yml` dispatch the existing signed Internal updater workflow for that exact SHA.
-6. **Require the signed workflow to finish cleanly.** Verify the deterministic post-build source guard now accepts only the approved `Cargo.toml` packaging rewrite plus the six exact canonical Tauri icon outputs, while rejecting every other tracked drift. Verify exact signed MSI/updater artifacts, key binding, hashes/manifest, signed install/reopen and authenticated hydrated UI proof.
-7. **Founder installs the exact signed Internal.17 checkpoint.** Re-run explicit visual accept/reject for RTL, themes, motion, charts, Inbox and AI Agents. These six classes are not closed by browser automation or machine-installed harness evidence.
-8. **Keep customer/user-ready boundaries separate.** #226 and #230 remain their own representative performance/network obligations; FD-036 is Founder/internal-lab only and grants no Beta/Stable/customer-online authority.
+The final frozen PR #260 tree must synchronize:
 
-## Acceptance rules for the six reconfirmed blockers
+- `sahelflow.version.json` → `1.0.0-internal.18`, MSI `1.0.0.18`, `founder-offline-only`, FD-037, `ownedHostSuffix: null`;
+- `package.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `src-tauri/tauri.conf.json`;
+- Founder installer defaults;
+- native/build licensing guards and license boundary tests;
+- signed release workflow FD-037 allowlist;
+- `.github/release-requests/internal-18-founder-visual-correction.json`;
+- root/live documentation and `scripts/verify-current-frontier.ts`.
 
-### RTL/direction
+Do not weaken the Rust `--locked` or release-source hygiene contracts merely to make the version bump easier. Generated lock/version authority must agree in source before certification.
 
-- No wrong-side shell/sidebar/overlay/table/chart/control behavior in Arabic.
-- Use logical geometry as the default; physical left/right only when semantically required.
-- Direction must hold across navigation, resize/zoom, portals, popovers/dialogs, charts and mixed Arabic/LTR technical content.
-- Installed 1366×768 Arabic inspection must not require restart to recover geometry.
+## Exact next-session/order
 
-### Theme switching
+1. Finish all remaining Internal.18 release/version/documentation objects without moving the PR head piecemeal.
+2. Create one final Git tree/commit from the current PR #260 base head and move `agent/founder-visual-acceptance-repair` **once** to that complete commit.
+3. Update PR #260 title/body to the Internal.18/FD-037 truth and request a fresh exact-head Codex review.
+4. Run/wait for the one final consequence-selected certification set: source/`sf-verify`, focused Phase 5, Phase 6–7, native/Rust, Windows database/runtime, Windows Rust release parity, MSI/installed lanes and final protected `Required PR gate`.
+5. Diagnose only genuine deterministic failures. Do not rerun away red evidence and do not restart micro-fix/full-CI loops.
+6. Resolve every actionable exact-head review finding.
+7. Merge only the exact green reviewed PR #260 head to protected `main` with expected-head discipline.
+8. Verify the resulting protected-main merge SHA/tree; it is the only signed source.
+9. Let the Internal.18 version/release-request change dispatch the existing signed Internal updater workflow. Require deterministic source hygiene, exact updater key/artifact binding, signed MSI, hashes/manifest, install/reopen and authenticated hydrated UI evidence.
+10. Verify the live updater/latest release is Internal.18.
+11. Founder updates the real installed app and judges it. Until that step, never describe RTL/themes/motion/charts/Inbox/AI/Storefront acceptance as closed.
+12. Keep #226 representative performance/reliability and #230 customer-online/network certification separate from the Founder-only Internal checkpoint.
 
-- Appearance commits as one coherent transaction; no visible mixed old/new token frame.
-- Dark/light/system/presets update shared primitives and charts consistently.
-- Rapid repeated switching settles deterministically and remains low-cost on T470/floor hardware.
+## Historical continuity
 
-### Motion
-
-- One restrained motion grammar for navigation, overlays, state/list changes, loading and feedback.
-- Motion is interruptible and avoids input blocking/layout thrash.
-- Reduced-motion is first-class and behavior remains understandable without animation.
-- No decorative animation added merely to make the product look busy.
-
-### Charts
-
-- Decision-support first: correct analytical grammar, hierarchy, labels, legends/tooltips and bounded density.
-- Responsive within actual application container width and 1366×768.
-- Arabic/RTL/bidi semantics correct, including direction-sensitive labels/axes/legends where applicable.
-- Theme switching and reduced-motion behavior remain coherent.
-
-### Inbox
-
-- Must feel like a complete operational workspace, not a collection of panels.
-- Queue/thread/context/actions/status/provider health/internal notes/extraction/recovery must form one efficient workflow.
-- Adaptive panes and large-history behavior must remain usable on the declared floor.
-
-### AI Agents
-
-- Must feel like a complete task-oriented AI workbench, not implementation/debug UI.
-- Sessions/context/composer/tool-result/proposal/permission boundaries/streaming/stop/retry/errors/history must be coherent.
-- Proposal-bound canonical mutations, privacy/redaction and provider degradation remain preserved.
+- Phase 5 baseline: PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- Internal.15: source `371aebc2be3bf0abb1bbe7fe91c035d962fc86a9`, signed run `31657621918`, FD-032.
+- Internal.16 Wave 4: PR #251; head `73e8d8c466567859bc651bb4d77976fdb2a1bbc3`; CI `31765143457`; protected merge `aa7dd2df53286a670fc55e319a281757cf3d28b2`; Founder release authority FD-034.
+- FD-035 later authorized source correction only.
+- Internal.17 correction: PR #254 / `c33f234ecf43842cfcc801592cc601d595ed05c5`, reviewed head `c965a062cf2719078601374bd0ace771ca011d53`.
+- Internal.17 release authority: PR #257 / FD-036 `2a820b801786590a20dc6105f39f732b8a987c5f`; signed run `31840181436` stopped before publication on icon source hygiene; PR #258 protected narrow guard repair `c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9`; PR #259 produced main `898904a11178c8d7b69c755f13794b2ca8bf0356` and published Internal.17.
 
 ## Hard rules
 
-- No broad Phase 1–4 or Wave 4 rewrite unless a concrete defect proves it necessary.
-- Do not patch screenshots one-by-one when a shared root explains the class.
-- Do not claim the six reconfirmed blockers fixed from unit/browser evidence alone; installed evidence remains required.
-- Do not infer acceptance for unmentioned FD-033 findings; reconcile the complete frozen P1 register.
-- Do not close #230 from CI mocks; it still requires live representative Algerian network evidence.
-- Do not close #226 without representative installed performance/reliability evidence including the required long-run trend.
-- #221, #226 and #230 must support the same coherent signed candidate for a user-ready claim, with affected gates rerun after material artifact changes.
-- No customer release/Beta/Stable claim until applicable launch gates pass.
+- No broad Phase 1–4/Wave 4 rewrite without concrete source evidence.
+- Fix shared roots, not screenshots one by one.
+- No full certification after every tiny change; use one frozen final head.
+- No Founder acceptance claim from browser/unit/MSI harness evidence alone.
+- No customer release/Beta/Stable claim from FD-037.
+- No force/waiver/protection bypass.
+- No cross-SHA evidence mix.
+- No weakening `Cargo.lock`, `--locked`, updater signing or deterministic release-source guards for convenience.
+
+## Wave 4 — what is implemented
+Wave 4 implementation is represented by the live source and protected evidence on the current branch; historical notes remain continuity context rather than a second source of truth.
+
+## Exact next-session order
+Finish the one exact-head certification, obtain fresh review on that same SHA, merge only through the protected gate, publish the signed Internal.18 checkpoint from protected main, and then perform Founder-installed acceptance on that exact artifact.

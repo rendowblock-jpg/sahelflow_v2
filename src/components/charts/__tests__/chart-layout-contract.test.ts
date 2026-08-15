@@ -26,16 +26,22 @@ describe("shared chart layout authority", () => {
     }
   });
 
-  it("keeps explicit RTL chart geometry on directional axes and ranked bars", () => {
+  it("keeps analytical coordinates stable while localized copy remains direction-aware", () => {
     const area = source("../area-trend-chart.tsx");
     const line = source("../line-trend-chart.tsx");
     const bars = source("../horizontal-bar-chart.tsx");
+    const dual = source("../dual-bar-chart.tsx");
 
-    expect(area).toContain("reversed={isRtl}");
-    expect(area).toContain('orientation={isRtl ? "right" : "left"}');
-    expect(line).toContain("reversed={isRtl}");
-    expect(line).toContain('orientation={isRtl ? "right" : "left"}');
-    expect(bars).toContain('orientation={isRtl ? "right" : "left"}');
-    expect(bars).toContain('position={isRtl ? "left" : "right"}');
+    for (const chart of [area, line, bars, dual]) {
+      expect(chart).not.toContain("reversed={isRtl}");
+      expect(chart).not.toContain('orientation={isRtl ? "right" : "left"}');
+      expect(chart).not.toContain('position={isRtl ? "left" : "right"}');
+    }
+
+    expect(area).toContain('orientation="left"');
+    expect(line).toContain('orientation="left"');
+    expect(bars).toContain('orientation="left"');
+    expect(bars).toContain('position="right"');
+    expect(dual).toContain('direction: isRtl ? "rtl" : "ltr"');
   });
 });

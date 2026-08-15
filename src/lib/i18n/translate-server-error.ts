@@ -74,21 +74,34 @@ const RULES: readonly ErrorRule[] = [
   { match: "validation", key: "error.validationFailed" },
 ];
 
+function extractErrorMessage(rawError: unknown): string {
+  if (typeof rawError === "string") return rawError;
+  if (
+    rawError !== null &&
+    typeof rawError === "object" &&
+    "message" in rawError &&
+    typeof rawError.message === "string"
+  ) {
+    return rawError.message;
+  }
+  return "";
+}
+
 /**
- * Translate a server-provided error string to the active locale.
+ * Translate an untrusted server-provided error payload to the active locale.
  *
- * @param rawError - the raw `error` string from the API JSON response (may be undefined/null)
+ * @param rawError - the raw `error` value from API JSON. Network responses are
+ * untrusted, so this helper performs its own runtime narrowing.
  * @param t - the i18n `t()` function
  * @param fallback - a pre-translated fallback message (e.g. `t("common.error")`)
  * @returns the best-effort translated message
  */
 export function translateServerError(
-  rawError: string | { message?: string } | undefined | null,
+  rawError: unknown,
   t: TFunc,
   fallback: string,
 ): string {
-  if (!rawError) return fallback;
-  const raw = typeof rawError === "string" ? rawError : (rawError.message ?? "");
+  const raw = extractErrorMessage(rawError);
   if (!raw) return fallback;
   const lower = raw.toLowerCase();
   for (const rule of RULES) {
