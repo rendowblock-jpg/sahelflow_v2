@@ -14,21 +14,25 @@ describe("locale transition authority", () => {
 
     expect(hook).toContain('import { useRouter } from "next/navigation";');
     expect(hook).toContain("requestLocale(newLocale);");
+    expect(hook).toContain("commitLocale(newLocale);");
     expect(hook).toContain("router.refresh();");
     expect(hook).toContain("LOCALE_REFRESH_FALLBACK_MS");
     expect(hook).toContain("window.location.reload();");
     expect(hook).toContain('root.dataset.localeTransition = "pending";');
     expect(hook.indexOf("requestLocale(newLocale);")).toBeLessThan(
+      hook.indexOf("commitLocale(newLocale);"),
+    );
+    expect(hook.indexOf("commitLocale(newLocale);")).toBeLessThan(
       hook.indexOf("router.refresh();"),
     );
   });
 
-  it("keeps cookie request authority and commits server-confirmed geometry before paint", () => {
+  it("keeps cookie request authority, commits live geometry immediately, and reconciles server state before paint", () => {
     const uiStore = source("../../../stores/ui-store.ts");
     const provider = source("../server-locale-context.tsx");
 
     expect(uiStore).toContain("sahelflow-locale=${locale}");
-    expect(uiStore).toContain("router.refresh()");
+    expect(uiStore).toContain("applyDocumentLocale(locale)");
     expect(uiStore).toContain("recovery-only");
     expect(provider).toContain("useLayoutEffect");
     expect(provider).toContain("commitLocale(locale);");
