@@ -1,6 +1,69 @@
 import { describe, expect, it } from "vitest";
 
-import { classifyPrRisk, githubOutputs } from "../classify-pr-risk";
+import {
+  classifyPrRisk,
+  githubOutputs,
+  isVerifiedReleaseIdentityDiff,
+} from "../classify-pr-risk";
+
+const releaseIdentityDiffs = {
+  "package.json": `diff --git a/package.json b/package.json
+--- a/package.json
++++ b/package.json
+@@
+-  "version": "1.0.0-internal.18",
++  "version": "1.0.0-internal.19",`,
+  "src-tauri/Cargo.toml": `diff --git a/src-tauri/Cargo.toml b/src-tauri/Cargo.toml
+--- a/src-tauri/Cargo.toml
++++ b/src-tauri/Cargo.toml
+@@
+-version = "1.0.0-internal.18"
++version = "1.0.0-internal.19"`,
+  "src-tauri/Cargo.lock": `diff --git a/src-tauri/Cargo.lock b/src-tauri/Cargo.lock
+--- a/src-tauri/Cargo.lock
++++ b/src-tauri/Cargo.lock
+@@
+-version = "1.0.0-internal.18"
++version = "1.0.0-internal.19"`,
+  "src-tauri/tauri.conf.json": `diff --git a/src-tauri/tauri.conf.json b/src-tauri/tauri.conf.json
+--- a/src-tauri/tauri.conf.json
++++ b/src-tauri/tauri.conf.json
+@@
+-  "version": "1.0.0-internal.18",
++  "version": "1.0.0-internal.19",
+@@
+-        "version": "1.0.0.18",
++        "version": "1.0.0.19",`,
+  "src-tauri/build.rs": `diff --git a/src-tauri/build.rs b/src-tauri/build.rs
+--- a/src-tauri/build.rs
++++ b/src-tauri/build.rs
+@@
++                        | (Some("1.0.0-internal.19"), Some("FD-038"))
+@@
+-                panic!("founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, or FD-037/Internal.18 on the internal channel with no owned host suffix");
++                panic!("founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, or FD-038/Internal.19 on the internal channel with no owned host suffix");`,
+  "scripts/sf-version.ts": `diff --git a/scripts/sf-version.ts b/scripts/sf-version.ts
+--- a/scripts/sf-version.ts
++++ b/scripts/sf-version.ts
+@@
+-    (authority.version === "1.0.0-internal.18" && authority.licensing?.authorityDecision === "FD-037"));
++    (authority.version === "1.0.0-internal.18" && authority.licensing?.authorityDecision === "FD-037") ||
++    (authority.version === "1.0.0-internal.19" && authority.licensing?.authorityDecision === "FD-038"));
+@@
+-    console.error("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, or Internal.18/FD-037 on the internal channel with no owned host suffix");
++    console.error("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, Internal.18/FD-037, or Internal.19/FD-038 on the internal channel with no owned host suffix");`,
+  ".github/workflows/release.yml": `diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@
+-                  $authority.licensing.authorityDecision -ceq 'FD-037')
++                  $authority.licensing.authorityDecision -ceq 'FD-037') -or
++                ($authority.version -ceq '1.0.0-internal.19' -and
++                  $authority.licensing.authorityDecision -ceq 'FD-038')
+@@
+-                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, or FD-037/Internal.18'
++                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, or FD-038/Internal.19'`,
+} as const;
 
 describe("classifyPrRisk", () => {
   it("keeps documentation-only work on the fast authority lane", () => {
@@ -268,7 +331,7 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("forces every release proof lane but skips redundant browser programs for bounded version authority", () => {
+  it("forces every release proof lane but skips redundant browser programs for pure authority data", () => {
     expect(classifyPrRisk(["sahelflow.version.json"])).toMatchObject({
       runQuality: true,
       runTauri: true,
@@ -280,22 +343,27 @@ describe("classifyPrRisk", () => {
     });
   });
 
-  it("keeps a synchronized Founder release-authority envelope off repeated browser evidence", () => {
-    expect(
-      classifyPrRisk([
-        "sahelflow.version.json",
-        "package.json",
-        "src-tauri/Cargo.toml",
-        "src-tauri/Cargo.lock",
-        "src-tauri/tauri.conf.json",
-        "src-tauri/build.rs",
-        "scripts/sf-version.ts",
-        ".github/workflows/release.yml",
-        ".github/release-requests/internal-19-founder-convergence.json",
-        "documentation/README.md",
-        "documentation/system/CURRENT_STATE.md",
-      ]),
-    ).toMatchObject({
+  it("accepts only explicit identity changes in behavior-capable release files", () => {
+    for (const [path, diff] of Object.entries(releaseIdentityDiffs)) {
+      expect(isVerifiedReleaseIdentityDiff(path, diff), path).toBe(true);
+    }
+  });
+
+  it("keeps a verified synchronized Founder release-authority envelope off repeated browser evidence", () => {
+    const paths = [
+      "sahelflow.version.json",
+      "package.json",
+      "src-tauri/Cargo.toml",
+      "src-tauri/Cargo.lock",
+      "src-tauri/tauri.conf.json",
+      "src-tauri/build.rs",
+      "scripts/sf-version.ts",
+      ".github/workflows/release.yml",
+      ".github/release-requests/internal-19-founder-convergence.json",
+      "documentation/README.md",
+      "documentation/system/CURRENT_STATE.md",
+    ];
+    expect(classifyPrRisk(paths, releaseIdentityDiffs)).toMatchObject({
       runQuality: true,
       runTauri: true,
       runWindowsStandalone: true,
@@ -306,13 +374,45 @@ describe("classifyPrRisk", () => {
     });
   });
 
+  it("fails closed when a sensitive release file has no inspectable diff", () => {
+    expect(
+      classifyPrRisk(["sahelflow.version.json", "package.json"]),
+    ).toMatchObject({ runPhase5: true, runPhase67: true });
+  });
+
+  it("re-enables browser proof for dependency changes hidden inside a release PR", () => {
+    const diffs = {
+      ...releaseIdentityDiffs,
+      "package.json": `${releaseIdentityDiffs["package.json"]}\n-    "next": "16.2.11",\n+    "next": "16.3.0",`,
+    };
+    expect(
+      classifyPrRisk(["sahelflow.version.json", "package.json"], diffs),
+    ).toMatchObject({ runPhase5: true, runPhase67: true });
+  });
+
+  it("re-enables browser proof for behavior changes hidden inside a release workflow", () => {
+    const diffs = {
+      ...releaseIdentityDiffs,
+      ".github/workflows/release.yml": `${releaseIdentityDiffs[".github/workflows/release.yml"]}\n-      timeout-minutes: 180\n+      timeout-minutes: 30`,
+    };
+    expect(
+      classifyPrRisk(
+        ["sahelflow.version.json", ".github/workflows/release.yml"],
+        diffs,
+      ),
+    ).toMatchObject({ runPhase5: true, runPhase67: true });
+  });
+
   it("does not hide application changes inside a release-authority PR", () => {
     expect(
-      classifyPrRisk([
-        "sahelflow.version.json",
-        "package.json",
-        "src/components/orders/order-card.tsx",
-      ]),
+      classifyPrRisk(
+        [
+          "sahelflow.version.json",
+          "package.json",
+          "src/components/orders/order-card.tsx",
+        ],
+        releaseIdentityDiffs,
+      ),
     ).toMatchObject({
       runPhase5: true,
       runPhase67: true,
@@ -320,7 +420,9 @@ describe("classifyPrRisk", () => {
   });
 
   it("does not exempt a package manifest change without explicit release authority", () => {
-    expect(classifyPrRisk(["package.json"])).toMatchObject({
+    expect(
+      classifyPrRisk(["package.json"], releaseIdentityDiffs),
+    ).toMatchObject({
       runQuality: true,
       runPhase5: true,
       runPhase67: true,
