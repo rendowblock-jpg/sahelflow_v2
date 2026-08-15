@@ -11,7 +11,8 @@
  * Light-mode preset surfaces remain owned by product-system.css.
  */
 
-html.dark {
+html.dark,
+html.dark[data-theme-preset] {
   /* One neutral dark material stack for every preset. */
   --surface-0: oklch(0.145 0.004 260);
   --surface-1: oklch(0.178 0.004 260);
