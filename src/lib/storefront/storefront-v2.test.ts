@@ -43,14 +43,28 @@ describe("Storefront Builder V2", () => {
     expect(theme.primaryColor).toBe("#123456");
     expect(theme.showPrices).toBe(false);
     expect(theme.builder.composition.sections.map((section) => section.type)).toContain("cod-checkout");
+    expect(theme.builder.contact).toEqual({ phone: "", whatsapp: "", email: "", address: "" });
     expect(storefrontStudioThemeSchema.safeParse(theme).success).toBe(true);
   });
 
-  it("preserves intentional brand and content overrides across template changes", () => {
+  it("upgrades pre-contact V2 themes without discarding their builder state", () => {
+    const existing = createDefaultStorefrontTheme("atlas");
+    existing.hero.headline = "Existing headline";
+    existing.builder.seo.title = "Existing SEO";
+    const legacy = structuredClone(existing) as typeof existing & { builder: Omit<typeof existing.builder, "contact"> & { contact?: never } };
+    delete legacy.builder.contact;
+    const normalized = normalizeStorefrontTheme(legacy);
+    expect(normalized.hero.headline).toBe("Existing headline");
+    expect(normalized.builder.seo.title).toBe("Existing SEO");
+    expect(normalized.builder.contact).toEqual({ phone: "", whatsapp: "", email: "", address: "" });
+  });
+
+  it("preserves intentional brand, content and contact overrides across template changes", () => {
     const atlas = createDefaultStorefrontTheme("atlas");
     atlas.primaryColor = "#123456";
     atlas.hero.headline = "Handmade in Algeria";
     atlas.builder.seo.title = "Atlas SEO";
+    atlas.builder.contact.phone = "0555123456";
     const oasis = switchStorefrontTemplate(atlas, "oasis");
     expect(oasis.template).toBe("oasis");
     expect(oasis.primaryColor).toBe("#123456");
@@ -58,6 +72,7 @@ describe("Storefront Builder V2", () => {
     expect(oasis.hero.headline).toBe("Handmade in Algeria");
     expect(oasis.hero.style).toBe("centered");
     expect(oasis.builder.seo.title).toBe("Atlas SEO");
+    expect(oasis.builder.contact.phone).toBe("0555123456");
   });
 
   it("rejects unsafe or ambiguous composition payloads", () => {
@@ -99,8 +114,14 @@ describe("Storefront Builder V2", () => {
     expect(storefrontStudioDraftSchema.safeParse({ ...draft(), selectedProductIds: [] }).success).toBe(false);
   });
 
-  it("removes domain-verification material from public storefront serialization", () => {
+  it("publishes contact while removing domain-verification material from public storefront serialization", () => {
     const value = draft();
+    value.theme.builder.contact = {
+      phone: "0555123456",
+      whatsapp: "0555987654",
+      email: "shop@example.dz",
+      address: "Alger, Algérie",
+    };
     value.theme.builder.domain = {
       hostname: "shop.example.com",
       status: "pending",
@@ -120,6 +141,7 @@ describe("Storefront Builder V2", () => {
       createdAt: new Date("2026-08-13T12:00:00.000Z"),
       updatedAt: new Date("2026-08-13T12:00:00.000Z"),
     });
+    expect(projected.theme.builder.contact).toEqual(value.theme.builder.contact);
     expect(projected.theme.builder.domain).toEqual({
       hostname: "shop.example.com",
       status: "pending",
@@ -144,20 +166,12 @@ describe("Storefront Builder V2", () => {
     expect(publicPage).not.toContain("getStudioDraftById");
   });
 
-  it("starts new storefronts inside a live V2 Studio preview instead of the legacy settings form", () => {
+  it("starts new storefronts as private live configs with active private drafts", () => {
     const root = process.cwd();
-    const page = readFileSync(
-      join(root, "src/app/(dashboard)/storefronts/new/page.tsx"),
-      "utf8",
-    );
-    const bootstrap = readFileSync(
-      join(root, "src/components/storefront/studio/storefront-studio-bootstrap.tsx"),
-      "utf8",
-    );
-    const studio = readFileSync(
-      join(root, "src/components/storefront/studio/storefront-studio.tsx"),
-      "utf8",
-    );
+    const page = readFileSync(join(root, "src/app/(dashboard)/storefronts/new/page.tsx"), "utf8");
+    const bootstrap = readFileSync(join(root, "src/components/storefront/studio/storefront-studio-bootstrap.tsx"), "utf8");
+    const studio = readFileSync(join(root, "src/components/storefront/studio/storefront-studio.tsx"), "utf8");
+    const service = readFileSync(join(root, "src/lib/storefront/service.ts"), "utf8");
 
     expect(page).toContain("StorefrontStudioBootstrap");
     expect(page).not.toContain("StorefrontBuilder");
@@ -166,8 +180,14 @@ describe("Storefront Builder V2", () => {
     expect(bootstrap).toContain("storefront.studio.template.sahara");
     expect(bootstrap).toContain("storefront.studio.template.atlas");
     expect(bootstrap).toContain("storefront.studio.template.oasis");
+    expect(bootstrap).toContain("initialDraftIsActive: true");
+    expect(bootstrap).toContain("isActive: false");
+    expect(bootstrap).toContain("storefront.builder.contactInfo");
     expect(bootstrap).toContain('router.push(`/storefronts/${encodeURIComponent(data.config.id)}`)');
+    expect(service).toContain("draftIsActive: input.initialDraftIsActive");
     expect(studio).toContain("SectionTree");
+    expect(studio).toContain("ContactPanel");
+    expect(studio).toContain('checked={draft.isActive}');
     expect(studio).toContain("undoStorefrontStudioHistory");
     expect(studio).toContain("redoStorefrontStudioHistory");
     expect(studio).toContain("expectedDraftUpdatedAt: version");
