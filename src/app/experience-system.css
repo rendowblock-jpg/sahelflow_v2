@@ -151,6 +151,7 @@ html[dir="rtl"] [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="tru
 
   html[dir="rtl"] [data-ai-workspace="v2"] {
     grid-template-areas: "thread sessions";
+    grid-template-columns: minmax(0, 1fr) 14rem !important;
   }
 
   html[dir="rtl"] [data-ai-workspace="v2"] > [data-ai-sessions="true"],
@@ -171,6 +172,7 @@ html[dir="rtl"] [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="tru
 
   html[dir="rtl"] [data-ai-workspace="v2"] {
     grid-template-areas: "context thread sessions";
+    grid-template-columns: 18rem minmax(30rem, 1fr) 14rem !important;
   }
 
   html[dir="rtl"] [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
@@ -199,6 +201,7 @@ html[dir="rtl"] [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="tru
 
 html[dir="rtl"] [data-storefront-studio="v2"] > div.grid {
   grid-template-areas: "preview controls";
+  grid-template-columns: minmax(0, 1fr) 13rem !important;
 }
 
 html[dir="rtl"] [data-storefront-studio="v2"] > div.grid > :is(aside, main) {
@@ -221,6 +224,7 @@ html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid > :is(aside, mai
 
   html[dir="rtl"] [data-storefront-studio="v2"] > div.grid {
     grid-template-areas: "inspector preview controls";
+    grid-template-columns: 16.5rem minmax(0, 1fr) 13rem !important;
   }
 
   [data-storefront-studio="bootstrap"] > div.grid {
@@ -238,6 +242,7 @@ html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid > :is(aside, mai
 
   html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid {
     grid-template-areas: "preview setup";
+    grid-template-columns: minmax(0, 1fr) 21rem !important;
   }
 }
 
@@ -246,6 +251,7 @@ html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid > :is(aside, mai
   [data-settings-workspace="v2"] > div.grid {
     direction: ltr;
     grid-template-areas: "settings-nav settings-panel";
+    grid-template-columns: 15rem minmax(0, 1fr) !important;
   }
 
   [data-settings-workspace="v2"] > div.grid > aside {
@@ -258,6 +264,7 @@ html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid > :is(aside, mai
 
   html[dir="rtl"] [data-settings-workspace="v2"] > div.grid {
     grid-template-areas: "settings-panel settings-nav";
+    grid-template-columns: minmax(0, 1fr) 15rem !important;
   }
 
   html[dir="rtl"] [data-settings-workspace="v2"] > div.grid > :is(aside, section) {
