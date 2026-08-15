@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 export interface PrRiskLanes {
@@ -10,11 +11,26 @@ export interface PrRiskLanes {
   runWindowsStandalone: boolean;
   runWindowsRust: boolean;
   runInstalledMsi: boolean;
+  runPhase5: boolean;
+  runPhase67: boolean;
 }
+
+type DiffMap = Readonly<Record<string, string>>;
 
 const QUALITY_OWNED_PHASE_CHECKPOINTS = new Set([
   ".github/phase-checkpoints/phase3-provider-convergence.json",
   ".github/phase-checkpoints/phase3-commerce-runtime.json",
+]);
+
+const RELEASE_IDENTITY_FILES = new Set([
+  "sahelflow.version.json",
+  "package.json",
+  "src-tauri/Cargo.toml",
+  "src-tauri/Cargo.lock",
+  "src-tauri/tauri.conf.json",
+  "src-tauri/build.rs",
+  "scripts/sf-version.ts",
+  ".github/workflows/release.yml",
 ]);
 
 function normalized(path: string): string {
@@ -38,21 +54,11 @@ function isFastPhaseCheckpoint(path: string): boolean {
   );
 }
 
-/**
- * Authority-only changes are executable governance inputs, but they do not
- * change the shipped application. The fast authority job already verifies
- * version truth, documentation structure, links, and audit rules for every PR.
- * Changed Vitest files and checkpoints with Vitest-owned content contracts are
- * deliberately excluded because their assertions must execute on the quality lane.
- *
- * Historical `.github/phase-exceptions/**` records are deliberately excluded as
- * well. They are retained only as evidence of past Founder decisions and have no
- * live lane-selection authority. If one is touched, the quality lane must execute.
- */
 function isFastAuthorityOnly(path: string): boolean {
   return (
     isDocumentationOnly(path) ||
     path === "scripts/sf-audit.ts" ||
+    path === "scripts/verify-current-frontier.ts" ||
     isFastPhaseCheckpoint(path)
   );
 }
@@ -64,6 +70,68 @@ function isVersionOrReleaseAuthority(path: string): boolean {
     path === ".github/workflows/release.yml" ||
     path === ".github/workflows/release-on-version-authority.yml"
   );
+}
+
+function changedLines(diff: string): string[] {
+  return diff
+    .split(/\r?\n/)
+    .filter(
+      (line) =>
+        (line.startsWith("+") || line.startsWith("-")) &&
+        !line.startsWith("+++") &&
+        !line.startsWith("---"),
+    )
+    .map((line) => line.slice(1).trim());
+}
+
+function releaseIdentityLineAllowed(path: string, line: string): boolean {
+  switch (path) {
+    case "sahelflow.version.json":
+      return (
+        /^"version":\s*"1\.0\.0-internal\.\d+",?$/.test(line) ||
+        /^"windowsMsiVersion":\s*"1\.0\.0\.\d+",?$/.test(line) ||
+        /^"authorityDecision":\s*"FD-\d+",?$/.test(line)
+      );
+    case "package.json":
+      return /^"version":\s*"1\.0\.0-internal\.\d+",?$/.test(line);
+    case "src-tauri/Cargo.toml":
+    case "src-tauri/Cargo.lock":
+      return /^version\s*=\s*"1\.0\.0-internal\.\d+"$/.test(line);
+    case "src-tauri/tauri.conf.json":
+      return /^"version":\s*"1\.0\.0(?:-internal\.\d+|\.\d+)",?$/.test(line);
+    case "src-tauri/build.rs":
+      return (
+        /^\|?\s*\(Some\("1\.0\.0-internal\.\d+"\), Some\("FD-\d+"\)\)$/.test(line) ||
+        /^panic!\("founder-offline-only licensing is authorized only for exact .+"\);$/.test(line)
+      );
+    case "scripts/sf-version.ts":
+      return (
+        /^\(*authority\.version === "1\.0\.0-internal\.\d+" && authority\.licensing\?\.authorityDecision === "FD-\d+"\)*\s*(?:\|\|)?;?$/.test(
+          line,
+        ) ||
+        /^console\.error\("founder-offline-only licensing is authorized only for .+"\);$/.test(line)
+      );
+    case ".github/workflows/release.yml":
+      return (
+        /^\(\$authority\.version -ceq '1\.0\.0-internal\.\d+' -and$/.test(line) ||
+        /^\$authority\.licensing\.authorityDecision -ceq 'FD-\d+'\)\s*(?:-or)?$/.test(line) ||
+        /^throw 'founder-offline-only release authority is valid only for exact .+'$/.test(line)
+      );
+    default:
+      return false;
+  }
+}
+
+export function isVerifiedReleaseIdentityDiff(path: string, diff: string | undefined): boolean {
+  if (!RELEASE_IDENTITY_FILES.has(path) || !diff) return false;
+  const lines = changedLines(diff);
+  return lines.length > 0 && lines.every((line) => releaseIdentityLineAllowed(path, line));
+}
+
+function isReleaseAuthorityEnvelope(path: string, diffs: DiffMap): boolean {
+  if (isFastAuthorityOnly(path)) return true;
+  if (path.startsWith(".github/release-requests/")) return true;
+  return isVerifiedReleaseIdentityDiff(path, diffs[path]);
 }
 
 function changesNativeSource(path: string): boolean {
@@ -94,12 +162,6 @@ function changesInstalledMsiProof(path: string): boolean {
   );
 }
 
-/**
- * Native authorities are matched by category, not only today's filenames. New
- * backup/restore code, destructive shop lifecycle, protected commercial state,
- * root-key transport and startup recovery must never silently fall back to
- * generic Linux Rust proof.
- */
 function changesNativeDataSurvivability(path: string): boolean {
   const nativeAuthorityPrefixes = [
     "src-tauri/src/lib.rs",
@@ -133,21 +195,10 @@ function changesNativeDataSurvivability(path: string): boolean {
   return nativeAuthorityPrefixes.some((prefix) => path.startsWith(prefix));
 }
 
-/**
- * TypeScript maintenance authorities are also matched by category. Existing and
- * future protected-data migration, re-encryption, backup, restore, recovery and
- * key-rotation implementations must not remain on source-only evidence merely
- * because they live outside `src/lib/crypto`.
- */
 function changesProtectedDataMaintenance(path: string): boolean {
   return path.startsWith("scripts/migrate-") || path.startsWith("src/lib/maintenance/");
 }
 
-/**
- * Shop archive, recovery, delete and reset paths can remove or replace live
- * SQLite authority. Match the complete command/route families rather than a
- * historical list of individual files.
- */
 function changesDestructiveDataLifecycle(path: string): boolean {
   return (
     path.startsWith("src/app/api/shops/") ||
@@ -157,11 +208,6 @@ function changesDestructiveDataLifecycle(path: string): boolean {
   );
 }
 
-/**
- * Installation identity, licensing and commercial recovery state determine
- * whether a replacement or recovered installation can safely open seller data.
- * These are part of the Phase 4 recovery set even when no SQLite schema changes.
- */
 function changesInstallationRecoveryAuthority(path: string): boolean {
   return (
     path.startsWith("src/lib/license/") ||
@@ -171,12 +217,6 @@ function changesInstallationRecoveryAuthority(path: string): boolean {
   );
 }
 
-/**
- * These paths can change whether protected seller data remains readable after
- * an upgrade, restore, replacement install, key transition or destructive shop
- * lifecycle. They require packaged Windows runtime and installed lifecycle proof
- * rather than Linux/source tests alone.
- */
 function changesDataSurvivability(path: string): boolean {
   return (
     path === "prisma/schema.prisma" ||
@@ -199,12 +239,15 @@ function changesDataSurvivability(path: string): boolean {
   );
 }
 
-export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
+export function classifyPrRisk(inputPaths: string[], diffs: DiffMap = {}): PrRiskLanes {
   const paths = [...new Set(inputPaths.map(normalized).filter(Boolean))];
   const docsOnly = paths.length > 0 && paths.every(isDocumentationOnly);
-
   const authorityOnly = paths.length > 0 && paths.every(isFastAuthorityOnly);
   const forcesFullReleaseProof = paths.some(isVersionOrReleaseAuthority);
+  const releaseAuthorityOnly =
+    forcesFullReleaseProof && paths.every((path) => isReleaseAuthorityEnvelope(path, diffs));
+  const browserEvidenceRequired =
+    paths.length > 0 && !authorityOnly && !releaseAuthorityOnly;
   const changesNative = paths.some(changesNativeSource);
   const changesSurvivability = paths.some(changesDataSurvivability);
   const changesNativeSurvivability = paths.some(changesNativeDataSurvivability);
@@ -213,9 +256,6 @@ export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
     changedCount: paths.length,
     docsOnly,
     runQuality: !authorityOnly && paths.length > 0,
-    // Every ordinary native package must at least compile and run its Rust
-    // integration contracts on Linux. Windows release parity and installed MSI
-    // remain risk-selected milestone/phase proof rather than per-edit rebuilds.
     runTauri: forcesFullReleaseProof || changesNative,
     runWindowsStandalone:
       forcesFullReleaseProof ||
@@ -229,6 +269,8 @@ export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
       forcesFullReleaseProof ||
       changesSurvivability ||
       paths.some(changesInstalledMsiProof),
+    runPhase5: browserEvidenceRequired,
+    runPhase67: browserEvidenceRequired,
   };
 }
 
@@ -241,12 +283,32 @@ export function githubOutputs(lanes: PrRiskLanes): string {
     `run_windows_standalone=${lanes.runWindowsStandalone}`,
     `run_windows_rust=${lanes.runWindowsRust}`,
     `run_installed_msi=${lanes.runInstalledMsi}`,
+    `run_phase5=${lanes.runPhase5}`,
+    `run_phase67=${lanes.runPhase67}`,
   ].join("\n");
+}
+
+function loadDiffs(paths: string[]): DiffMap {
+  const base = process.env.BASE_SHA?.trim();
+  const head = process.env.HEAD_SHA?.trim();
+  if (!base || !head) return {};
+  const result: Record<string, string> = {};
+  for (const path of paths.filter((entry) => RELEASE_IDENTITY_FILES.has(entry))) {
+    result[path] = execFileSync(
+      "git",
+      ["diff", "--unified=0", `${base}...${head}`, "--", path],
+      { encoding: "utf8" },
+    );
+  }
+  return result;
 }
 
 if (import.meta.main) {
   const raw = readFileSync(0);
   const text = raw.toString("utf8");
   const paths = text.includes("\0") ? text.split("\0") : text.split(/\r?\n/);
-  process.stdout.write(`${githubOutputs(classifyPrRisk(paths))}\n`);
+  const normalizedPaths = [...new Set(paths.map(normalized).filter(Boolean))];
+  process.stdout.write(
+    `${githubOutputs(classifyPrRisk(normalizedPaths, loadDiffs(normalizedPaths)))}\n`,
+  );
 }
