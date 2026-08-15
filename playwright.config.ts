@@ -3,6 +3,9 @@ import { assertTestSandbox } from "./scripts/test-sandbox";
 
 assertTestSandbox("Playwright");
 
+const phase5OwnerStorageState =
+  process.env.SF_PHASE5_OWNER_STORAGE_STATE?.trim() || null;
+
 /**
  * Playwright E2E configuration.
  *
@@ -23,12 +26,33 @@ export default defineConfig({
       "x-requested-with": "sahelflow", // CSRF header
     },
   },
-  projects: [
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-    },
-  ],
+  projects: phase5OwnerStorageState
+    ? [
+        {
+          name: "phase5-owner-auth",
+          testMatch: /phase5-owner-auth\.setup\.ts/,
+          use: {
+            ...devices["Desktop Chrome"],
+            storageState: { cookies: [], origins: [] },
+          },
+        },
+        {
+          name: "chromium",
+          testIgnore: /phase5-owner-auth\.setup\.ts/,
+          use: {
+            ...devices["Desktop Chrome"],
+            storageState: phase5OwnerStorageState,
+          },
+          dependencies: ["phase5-owner-auth"],
+        },
+      ]
+    : [
+        {
+          name: "chromium",
+          testIgnore: /phase5-owner-auth\.setup\.ts/,
+          use: { ...devices["Desktop Chrome"] },
+        },
+      ],
   webServer: process.env.CI
     ? {
         command: "bun run dev",
