@@ -1,0 +1,86 @@
+/*
+ * SahelFlow Arabic workbench authority.
+ *
+ * Arabic is not a translated Latin skin. Keep the layout dense enough for
+ * operations while giving Arabic connected forms the width, line-height and
+ * minimum reading sizes they need on the 1366×768 Founder reference display.
+ */
+
+html[dir="rtl"] body {
+  font-family:
+    var(--font-arabic),
+    "Noto Sans Arabic",
+    "Segoe UI",
+    Tahoma,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  font-synthesis: none;
+  font-feature-settings: "kern", "liga", "calt";
+}
+
+/* Dense Latin microcopy maps too small in Arabic. Preserve hierarchy while
+ * lifting the operational floor by one step instead of globally zooming UI. */
+html[dir="rtl"] [data-sahelflow-shell="desktop"] .text-sm {
+  font-size: 0.9375rem;
+  line-height: 1.45rem;
+}
+
+html[dir="rtl"] [data-sahelflow-shell="desktop"] .text-xs {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+html[dir="rtl"] [data-sahelflow-shell="desktop"] :is(
+  [class~="text-[9px]"],
+  [class~="text-[10px]"],
+  [class~="text-[11px]"]
+) {
+  font-size: 0.75rem;
+  line-height: 1.05rem;
+}
+
+html[dir="rtl"] :is(h1, h2, h3, h4) {
+  font-family:
+    var(--font-arabic),
+    "Noto Sans Arabic",
+    "Segoe UI",
+    Tahoma,
+    sans-serif;
+  letter-spacing: normal !important;
+  text-wrap: balance;
+}
+
+html[dir="rtl"] h1 {
+  line-height: 1.3;
+}
+
+html[dir="rtl"] :is(h2, h3, h4) {
+  line-height: 1.42;
+}
+
+/* Keep seller-entered and technical Latin/numeric values isolated instead of
+ * letting the Arabic font reshape IDs, phone numbers, SKUs or money figures. */
+html[dir="rtl"] :is(
+  .force-ltr,
+  .technical-value,
+  .numeric-value,
+  [dir="ltr"]
+) {
+  font-family: var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Tables retain RTL column flow while technical cell content can isolate itself.
+ * Long headers wrap instead of compressing into unreadable one-line fragments. */
+html[dir="rtl"] [data-sahelflow-shell="desktop"] th {
+  line-height: 1.35;
+  white-space: normal;
+}
+
+/* Directional control glyphs are explicitly logical; neutral icons are left
+ * untouched. */
+html[dir="rtl"] .icon-rtl-flip {
+  transform: scaleX(-1);
+}
