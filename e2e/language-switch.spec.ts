@@ -10,17 +10,24 @@ import { test, expect, type Page } from "@playwright/test";
 
 const PIN = "12345678";
 
+async function waitForHydration(page: Page): Promise<void> {
+  await page.locator('html[data-sf-hydrated="true"]').waitFor({
+    state: "attached",
+    timeout: 30_000,
+  });
+}
+
 async function login(page: Page): Promise<void> {
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForHydration(page);
   if (!page.url().includes("/login")) return;
 
-  await page.waitForLoadState("networkidle");
   const pinInput = page.locator('input[type="password"]');
   await pinInput.waitFor({ state: "visible" });
   await pinInput.fill(PIN);
-  await page.waitForTimeout(300);
   await page.locator('button[type="submit"]').click({ force: true });
   await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
+  await waitForHydration(page);
 }
 
 async function expectShellSide(page: Page, direction: "ltr" | "rtl") {
@@ -70,8 +77,13 @@ test.describe("Language switch", () => {
   });
 
   test("FR (LTR) → Arabic (RTL) → back to FR (LTR) without mixed server copy or restart-only convergence", async ({ page }) => {
-    await page.goto("/dashboard");
-    await page.waitForLoadState("networkidle");
+    test.setTimeout(90_000);
+
+    // App readiness is hydration + the actual work surface, not global network
+    // idleness. SahelFlow intentionally owns long-lived/background browser work,
+    // so networkidle can remain false while the application is fully usable.
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
     await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText("Tableau de bord", { exact: false }).first()).toBeVisible({
       timeout: 10_000,
@@ -82,8 +94,6 @@ test.describe("Language switch", () => {
 
     await installSlowDashboardRefresh(page);
 
-    // The trigger's accessible name is the human language name; the compact
-    // visible locale code is presentation only.
     const langTrigger = page
       .getByRole("button", { name: /^Français$/i })
       .first();
@@ -124,8 +134,8 @@ test.describe("Language switch", () => {
 
     // Reload only after live convergence has already been proven, to verify the
     // locale cookie also seeds the next server-rendered document correctly.
-    await page.reload();
-    await page.waitForLoadState("networkidle");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expectShellSide(page, "rtl");

@@ -17,6 +17,20 @@ The Founder-owned Windows checkout is evidence-bearing local state. Never reset,
 
 **Do not restart a generic codebase audit.** The repository/layers/current problem register are already mapped; inspect only source roots implicated by measured evidence or the frozen correction scope.
 
+## Authority precedence
+
+1. Newer explicit Founder decision for the choice it changes.
+2. Product contract.
+3. Experience/capability/journey contract.
+4. Architecture and protected invariants.
+5. Source-grounded current state and exact evidence.
+6. Final roadmap.
+7. Workflow.
+8. Working Memory.
+9. Research/archive.
+
+A lower layer cannot silently weaken a higher one. Current documentation can clarify execution state, but it cannot rewrite product/architecture/Founder authority by omission.
+
 ## Current source frontier
 
 - Protected `main`: `5cb7f5040249a540ed635cdea16dc933843b40aa` — published signed **Internal.18** source.
