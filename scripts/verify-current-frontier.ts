@@ -101,7 +101,6 @@ for (const path of currentDocs) {
     protectedMainInternal19,
     latestSignedInternal18Source,
     mergedPr,
-    mergedBranch,
     currentSourceFrontier,
     installedCheckpoint,
     "REJECTED / PARTIALLY IMPROVED",
@@ -118,17 +117,20 @@ requireMarkers("README.md", [
   installedVersion,
   installedMsiVersion,
   installedDecision,
+  mergedBranch,
   "merged historical source-convergence context",
 ]);
 
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
   activePhase,
+  mergedBranch,
   "Do not restart a generic codebase audit",
   "PR #262 / `agent/internal19-product-convergence` is **merged historical source-convergence context**",
 ]);
 
 requireMarkers("documentation/README.md", [
+  mergedBranch,
   "## FD-034 — Internal.16 Founder-only offline checkpoint",
   "## FD-035 — Internal.17 source-correction authority",
   "## FD-036 — Internal.17 Founder-only offline checkpoint",
@@ -138,6 +140,7 @@ requireMarkers("documentation/README.md", [
 ]);
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
+  mergedBranch,
   "## Installed authority",
   "## Current source frontier — protected main after PR #262",
   "## Exact source/evidence state",
@@ -146,12 +149,14 @@ requireMarkers("documentation/system/CURRENT_STATE.md", [
 
 requireMarkers("documentation/system/ROADMAP.md", [
   "## Current dependency order",
+  "expected-head merge",
   "## Release-authority boundary",
   "## Phase 7 — installed performance and reliability",
   "## Customer licensing/network gate — #230",
 ]);
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
+  mergedBranch,
   "## Exact resumable frontier",
   "8109 ms",
   "4672.7 ms",
