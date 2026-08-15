@@ -22,10 +22,7 @@ import {
   type StorefrontStudioContentLocale,
 } from "@/lib/i18n/storefront-studio-content";
 import type { StorefrontStudioConfig } from "@/lib/storefront/service";
-import type {
-  StorefrontSection,
-  StorefrontSectionType,
-} from "@/lib/storefront/studio-sections";
+import type { StorefrontSection } from "@/lib/storefront/studio-sections";
 import {
   addStorefrontBlock,
   addStorefrontSection,
