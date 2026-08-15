@@ -4,12 +4,11 @@
  * ServerLocaleContext — carries the locale of the currently committed Server
  * Component tree into hydrated client components.
  *
- * Interactive locale changes are requested through the cookie first, but client
- * copy and direction remain on the old committed tree while `router.refresh()`
- * is pending. When the refreshed server tree arrives, this provider receives the
- * exact locale that rendered that tree and commits it to the client mirror in a
- * layout effect before the browser paints. Server-rendered route copy, client
- * translations and shell geometry therefore move together.
+ * Interactive locale changes commit the client mirror immediately so translated
+ * client surfaces and shell geometry do not wait on RSC/network latency. The
+ * request cookie remains durable server authority. When router.refresh() returns,
+ * this provider receives the exact locale that rendered the new Server Component
+ * tree and reconciles the client mirror in a layout effect before paint.
  */
 
 import { createContext, useContext, useLayoutEffect } from "react";
@@ -30,9 +29,9 @@ export function ServerLocaleProvider({
   useLayoutEffect(() => {
     commitLocale(locale);
 
-    // Locale switching intentionally covers the outgoing tree while a refreshed
-    // RSC payload is in flight. Remove that cover only when this exact server
-    // locale has committed, in the same pre-paint layout phase as lang/dir.
+    // The lightweight pending indicator remains until this exact server locale
+    // confirms the request. Clear it in the same pre-paint phase as reconciliation
+    // so the user never sees a completed transition with a stale server fragment.
     const root = document.documentElement;
     if (root.dataset.localeTarget === locale) {
       delete root.dataset.localeTransition;
