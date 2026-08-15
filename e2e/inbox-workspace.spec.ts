@@ -33,7 +33,11 @@ test.describe.serial("Inbox operational workspace evidence", () => {
   let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 
   test.beforeAll(async ({ browser, baseURL }) => {
-    const context = await browser.newContext({ baseURL, viewport: DESKTOP });
+    const context = await browser.newContext({
+      baseURL,
+      viewport: DESKTOP,
+      storageState: process.env.SF_PHASE5_OWNER_STORAGE_STATE,
+    });
     const page = await context.newPage();
     try {
       await context.addCookies([
