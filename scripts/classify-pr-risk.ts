@@ -10,6 +10,8 @@ export interface PrRiskLanes {
   runWindowsStandalone: boolean;
   runWindowsRust: boolean;
   runInstalledMsi: boolean;
+  runPhase5: boolean;
+  runPhase67: boolean;
 }
 
 const QUALITY_OWNED_PHASE_CHECKPOINTS = new Set([
@@ -53,6 +55,7 @@ function isFastAuthorityOnly(path: string): boolean {
   return (
     isDocumentationOnly(path) ||
     path === "scripts/sf-audit.ts" ||
+    path === "scripts/verify-current-frontier.ts" ||
     isFastPhaseCheckpoint(path)
   );
 }
@@ -63,6 +66,30 @@ function isVersionOrReleaseAuthority(path: string): boolean {
     path.startsWith(".github/release-requests/") ||
     path === ".github/workflows/release.yml" ||
     path === ".github/workflows/release-on-version-authority.yml"
+  );
+}
+
+/**
+ * A bounded version/release-authority PR can alter package identity and release
+ * guards without changing application behavior. Those PRs still force native,
+ * Windows and installed-MSI proof through CI, but they do not need to replay the
+ * full Phase 5/Phase 6-7 browser programs when every changed path stays inside
+ * this narrow authority envelope.
+ *
+ * `package.json`, Cargo/Tauri manifests and build/version guards are included
+ * only when the same PR also changes explicit version/release authority. A lone
+ * dependency or manifest edit therefore remains browser-evidence eligible.
+ */
+function isReleaseAuthorityEnvelope(path: string): boolean {
+  return (
+    isFastAuthorityOnly(path) ||
+    isVersionOrReleaseAuthority(path) ||
+    path === "package.json" ||
+    path === "src-tauri/Cargo.toml" ||
+    path === "src-tauri/Cargo.lock" ||
+    path === "src-tauri/tauri.conf.json" ||
+    path === "src-tauri/build.rs" ||
+    path === "scripts/sf-version.ts"
   );
 }
 
@@ -205,6 +232,10 @@ export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
 
   const authorityOnly = paths.length > 0 && paths.every(isFastAuthorityOnly);
   const forcesFullReleaseProof = paths.some(isVersionOrReleaseAuthority);
+  const releaseAuthorityOnly =
+    forcesFullReleaseProof && paths.every(isReleaseAuthorityEnvelope);
+  const browserEvidenceRequired =
+    paths.length > 0 && !authorityOnly && !releaseAuthorityOnly;
   const changesNative = paths.some(changesNativeSource);
   const changesSurvivability = paths.some(changesDataSurvivability);
   const changesNativeSurvivability = paths.some(changesNativeDataSurvivability);
@@ -229,6 +260,8 @@ export function classifyPrRisk(inputPaths: string[]): PrRiskLanes {
       forcesFullReleaseProof ||
       changesSurvivability ||
       paths.some(changesInstalledMsiProof),
+    runPhase5: browserEvidenceRequired,
+    runPhase67: browserEvidenceRequired,
   };
 }
 
@@ -241,6 +274,8 @@ export function githubOutputs(lanes: PrRiskLanes): string {
     `run_windows_standalone=${lanes.runWindowsStandalone}`,
     `run_windows_rust=${lanes.runWindowsRust}`,
     `run_installed_msi=${lanes.runInstalledMsi}`,
+    `run_phase5=${lanes.runPhase5}`,
+    `run_phase67=${lanes.runPhase67}`,
   ].join("\n");
 }
 

@@ -14,13 +14,16 @@ describe("classifyPrRisk", () => {
       runWindowsStandalone: false,
       runWindowsRust: false,
       runInstalledMsi: false,
+      runPhase5: false,
+      runPhase67: false,
     });
   });
 
-  it("keeps documentation audit rules and documentation-only checkpoints fast", () => {
+  it("keeps documentation audit and current-frontier rules on the fast authority lane", () => {
     expect(
       classifyPrRisk([
         "scripts/sf-audit.ts",
+        "scripts/verify-current-frontier.ts",
         ".github/phase-checkpoints/phase2-native-multishop.json",
       ]),
     ).toMatchObject({
@@ -30,6 +33,8 @@ describe("classifyPrRisk", () => {
       runWindowsStandalone: false,
       runWindowsRust: false,
       runInstalledMsi: false,
+      runPhase5: false,
+      runPhase67: false,
     });
   });
 
@@ -45,6 +50,8 @@ describe("classifyPrRisk", () => {
         runWindowsStandalone: false,
         runWindowsRust: false,
         runInstalledMsi: false,
+        runPhase5: true,
+        runPhase67: true,
       });
     }
   });
@@ -59,10 +66,12 @@ describe("classifyPrRisk", () => {
       runWindowsStandalone: false,
       runWindowsRust: false,
       runInstalledMsi: false,
+      runPhase5: true,
+      runPhase67: true,
     });
   });
 
-  it("runs only source quality for an ordinary UI component", () => {
+  it("runs source and browser experience proof for an ordinary UI component", () => {
     expect(classifyPrRisk(["src/components/orders/order-card.tsx"])).toMatchObject({
       docsOnly: false,
       runQuality: true,
@@ -70,6 +79,8 @@ describe("classifyPrRisk", () => {
       runWindowsStandalone: false,
       runWindowsRust: false,
       runInstalledMsi: false,
+      runPhase5: true,
+      runPhase67: true,
     });
   });
 
@@ -80,6 +91,8 @@ describe("classifyPrRisk", () => {
       runWindowsStandalone: false,
       runWindowsRust: false,
       runInstalledMsi: false,
+      runPhase5: true,
+      runPhase67: true,
     });
   });
 
@@ -95,6 +108,8 @@ describe("classifyPrRisk", () => {
       runWindowsStandalone: true,
       runWindowsRust: true,
       runInstalledMsi: true,
+      runPhase5: true,
+      runPhase67: true,
     });
   });
 
@@ -155,6 +170,8 @@ describe("classifyPrRisk", () => {
       runWindowsStandalone: false,
       runWindowsRust: false,
       runInstalledMsi: false,
+      runPhase5: true,
+      runPhase67: true,
     });
   });
 
@@ -246,16 +263,67 @@ describe("classifyPrRisk", () => {
       runWindowsStandalone: false,
       runWindowsRust: false,
       runInstalledMsi: false,
+      runPhase5: true,
+      runPhase67: true,
     });
   });
 
-  it("forces every phase candidate proof when version authority changes", () => {
+  it("forces every release proof lane but skips redundant browser programs for bounded version authority", () => {
     expect(classifyPrRisk(["sahelflow.version.json"])).toMatchObject({
       runQuality: true,
       runTauri: true,
       runWindowsStandalone: true,
       runWindowsRust: true,
       runInstalledMsi: true,
+      runPhase5: false,
+      runPhase67: false,
+    });
+  });
+
+  it("keeps a synchronized Founder release-authority envelope off repeated browser evidence", () => {
+    expect(
+      classifyPrRisk([
+        "sahelflow.version.json",
+        "package.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/build.rs",
+        "scripts/sf-version.ts",
+        ".github/workflows/release.yml",
+        ".github/release-requests/internal-19-founder-convergence.json",
+        "documentation/README.md",
+        "documentation/system/CURRENT_STATE.md",
+      ]),
+    ).toMatchObject({
+      runQuality: true,
+      runTauri: true,
+      runWindowsStandalone: true,
+      runWindowsRust: true,
+      runInstalledMsi: true,
+      runPhase5: false,
+      runPhase67: false,
+    });
+  });
+
+  it("does not hide application changes inside a release-authority PR", () => {
+    expect(
+      classifyPrRisk([
+        "sahelflow.version.json",
+        "package.json",
+        "src/components/orders/order-card.tsx",
+      ]),
+    ).toMatchObject({
+      runPhase5: true,
+      runPhase67: true,
+    });
+  });
+
+  it("does not exempt a package manifest change without explicit release authority", () => {
+    expect(classifyPrRisk(["package.json"])).toMatchObject({
+      runQuality: true,
+      runPhase5: true,
+      runPhase67: true,
     });
   });
 
@@ -298,10 +366,18 @@ describe("classifyPrRisk", () => {
       ".github/phase-exceptions/pr-200-installed-ui-waiver.md",
       ".github/phase-exceptions/pr-207-phase4-closure-override.md",
     ]) {
-      expect(classifyPrRisk([releaseAuthority, exceptionPath])).toEqual({
-        ...baseline,
+      const mixed = classifyPrRisk([releaseAuthority, exceptionPath]);
+      expect(mixed).toMatchObject({
         changedCount: 2,
+        runTauri: true,
+        runWindowsStandalone: true,
+        runWindowsRust: true,
+        runInstalledMsi: true,
+        runPhase5: true,
+        runPhase67: true,
       });
+      expect(mixed.runQuality).toBe(true);
+      expect(baseline.runPhase5).toBe(false);
     }
   });
 
@@ -317,6 +393,8 @@ describe("classifyPrRisk", () => {
       runWindowsStandalone: false,
       runWindowsRust: true,
       runInstalledMsi: true,
+      runPhase5: true,
+      runPhase67: true,
     });
   });
 
@@ -329,5 +407,7 @@ describe("classifyPrRisk", () => {
     expect(lanes.changedCount).toBe(1);
     expect(githubOutputs(lanes)).toContain("docs_only=true");
     expect(githubOutputs(lanes)).toContain("run_quality=false");
+    expect(githubOutputs(lanes)).toContain("run_phase5=false");
+    expect(githubOutputs(lanes)).toContain("run_phase67=false");
   });
 });
