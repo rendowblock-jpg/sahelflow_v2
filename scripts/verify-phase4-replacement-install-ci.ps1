@@ -81,6 +81,25 @@ try {
     }
 
     $source = Get-Content -LiteralPath $sourceScript -Raw
+
+    # Every installed-runtime request in this CI-only replacement drill must be
+    # bounded independently. A dead loopback request must surface as evidence,
+    # not consume the entire 90-minute job timeout.
+    $httpAnchor = @'
+        UseBasicParsing = $true
+'@
+    $httpReplacement = @'
+        UseBasicParsing = $true
+        TimeoutSec = 45
+'@
+    $httpAnchorText = $httpAnchor.TrimEnd()
+    $httpAnchorFirst = $source.IndexOf($httpAnchorText, [StringComparison]::Ordinal)
+    $httpAnchorLast = $source.LastIndexOf($httpAnchorText, [StringComparison]::Ordinal)
+    if ($httpAnchorFirst -lt 0 -or $httpAnchorFirst -ne $httpAnchorLast) {
+        throw "Replacement harness HTTP timeout anchor drifted."
+    }
+    $source = $source.Replace($httpAnchorText, $httpReplacement.TrimEnd())
+
     $activationTemplate = @'
 __OWNER__
 $trialActivation = Invoke-SahelFlowJson -Method POST -BaseUrl __BASE__ -Path "/api/license/trial" -Session __SESSION__
