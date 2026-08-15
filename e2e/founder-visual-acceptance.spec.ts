@@ -10,6 +10,8 @@ const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
 let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 
+type Box = NonNullable<Awaited<ReturnType<ReturnType<Page["locator"]>["boundingBox"]>>>;
+
 async function waitForHydration(page: Page) {
   await page.locator('html[data-sf-hydrated="true"]').waitFor({
     state: "attached",
@@ -51,6 +53,52 @@ async function shot(page: Page, testInfo: TestInfo, name: string) {
     fullPage: false,
     animations: "disabled",
   });
+}
+
+async function visibleBox(page: Page, selector: string): Promise<Box> {
+  const target = page.locator(selector).first();
+  await expect(target).toBeVisible();
+  const box = await target.boundingBox();
+  expect(box, `${selector} must have measurable geometry`).not.toBeNull();
+  return box as Box;
+}
+
+function expectRightOf(right: Box, left: Box, label: string) {
+  expect(
+    right.x,
+    `${label}: right-side region must start to the right of the left-side region`,
+  ).toBeGreaterThanOrEqual(left.x + Math.min(left.width, 1));
+}
+
+function expectLeftOf(left: Box, right: Box, label: string) {
+  expect(
+    left.x + left.width,
+    `${label}: left-side region must finish before the right-side region finishes`,
+  ).toBeLessThanOrEqual(right.x + right.width);
+  expect(left.x, `${label}: left-side region must begin further left`).toBeLessThan(
+    right.x,
+  );
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  const geometry = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    document: document.documentElement.scrollWidth,
+    body: document.body.scrollWidth,
+  }));
+  expect(geometry.document).toBeLessThanOrEqual(geometry.viewport + 1);
+  expect(geometry.body).toBeLessThanOrEqual(geometry.viewport + 1);
+}
+
+async function expectRtlShellGeometry(page: Page) {
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.locator('[data-sahelflow-shell="desktop"]')).toHaveAttribute(
+    "data-locale-dir",
+    "rtl",
+  );
+  const workspace = await visibleBox(page, '[data-shell-region="workspace"]');
+  const navigation = await visibleBox(page, '[data-shell-region="navigation"]');
+  expectRightOf(navigation, workspace, "RTL application shell");
 }
 
 async function neutralStructure(page: Page) {
@@ -96,6 +144,18 @@ test.describe.serial("Founder visual correction evidence", () => {
     await setLocale(context, baseURL, "ar");
     await page.goto("/settings", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
+    await expectRtlShellGeometry(page);
+
+    const settingsNavigation = await visibleBox(
+      page,
+      '[data-settings-workspace="v2"] > div > aside',
+    );
+    const settingsPanel = await visibleBox(
+      page,
+      '[data-settings-workspace="v2"] > div > section',
+    );
+    expectRightOf(settingsNavigation, settingsPanel, "RTL Settings workspace");
+
     await page.locator("#settings-tab-appearance").click();
     await page.locator('[data-theme-mode="dark"]').click();
     await expect(page.locator("html")).toHaveClass(/\bdark\b/);
@@ -112,11 +172,12 @@ test.describe.serial("Founder visual correction evidence", () => {
       const structure = await neutralStructure(page);
       if (structuralReference === null) structuralReference = structure;
       else expect(structure).toEqual(structuralReference);
+      await expectNoHorizontalOverflow(page);
       await shot(page, testInfo, `founder-dark-${preset}`);
     }
   });
 
-  test("Arabic flagship workbenches render their actual product surfaces before evidence is captured", async ({
+  test("Arabic flagship workbenches render with correct physical RTL geometry", async ({
     page,
     context,
     baseURL,
@@ -126,20 +187,52 @@ test.describe.serial("Founder visual correction evidence", () => {
 
     await page.goto("/inbox", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
+    await expectRtlShellGeometry(page);
     await expect(page.locator('[data-inbox-workspace="v2"]')).toBeVisible({ timeout: 60_000 });
     await expect(page.locator('[data-inbox-conversation]').first()).toBeVisible();
     await expect(page.locator('[data-inbox-thread="active"]')).toBeVisible();
+    const inboxQueue = await visibleBox(page, '[data-inbox-queue="true"]');
+    const inboxThread = await visibleBox(page, '[data-inbox-thread="active"]');
+    expectRightOf(inboxQueue, inboxThread, "RTL Inbox queue");
+    const inboxContext = page.locator('aside:has(> [data-inbox-context="true"])');
+    if (await inboxContext.isVisible()) {
+      const contextBox = await inboxContext.boundingBox();
+      expect(contextBox).not.toBeNull();
+      expectLeftOf(contextBox as Box, inboxThread, "RTL Inbox context rail");
+    }
+    await expectNoHorizontalOverflow(page);
     await shot(page, testInfo, "founder-rtl-inbox-loaded");
 
     await page.goto("/agents", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
-    await expect(page.locator('[data-ai-launchpad="operational"]')).toBeVisible({ timeout: 60_000 });
-    await expect(page.locator('[data-ai-workspace="v2"]')).toBeVisible();
+    await expectRtlShellGeometry(page);
+    await expect(page.locator('[data-ai-workspace="v2"]')).toBeVisible({ timeout: 60_000 });
+    const aiSessions = await visibleBox(page, '[data-ai-sessions="true"]');
+    const aiThread = await visibleBox(page, '[data-ai-thread="true"]');
+    expectRightOf(aiSessions, aiThread, "RTL AI sessions rail");
+    const aiContext = page.locator('[data-ai-workspace="v2"] > div:has(> [data-ai-context="true"])');
+    if (await aiContext.isVisible()) {
+      const contextBox = await aiContext.boundingBox();
+      expect(contextBox).not.toBeNull();
+      expectLeftOf(contextBox as Box, aiThread, "RTL AI context rail");
+    }
+    await expectNoHorizontalOverflow(page);
     await shot(page, testInfo, "founder-rtl-ai-loaded");
 
     await page.goto("/storefronts/new", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
+    await expectRtlShellGeometry(page);
     await expect(page.locator('[data-storefront-studio="bootstrap"]')).toBeVisible({ timeout: 60_000 });
+    const storefrontSetup = await visibleBox(
+      page,
+      '[data-storefront-studio="bootstrap"] > div.grid > aside',
+    );
+    const storefrontPreview = await visibleBox(
+      page,
+      '[data-storefront-studio="bootstrap"] > div.grid > main',
+    );
+    expectRightOf(storefrontSetup, storefrontPreview, "RTL Storefront setup rail");
+    await expectNoHorizontalOverflow(page);
     await shot(page, testInfo, "founder-rtl-storefront-studio");
   });
 
@@ -152,6 +245,7 @@ test.describe.serial("Founder visual correction evidence", () => {
     await setLocale(context, baseURL, "ar");
     await page.goto("/analytics", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
+    await expectRtlShellGeometry(page);
     await expect(page.locator('[data-analytics-workspace="v2"]')).toBeVisible({ timeout: 60_000 });
 
     const curve = page.locator("path.recharts-area-curve").first();
@@ -163,13 +257,7 @@ test.describe.serial("Founder visual correction evidence", () => {
       "representative revenue data must not collapse into a zero-height RTL curve",
     ).toBeGreaterThan(2);
 
-    const geometry = await page.evaluate(() => ({
-      viewport: window.innerWidth,
-      document: document.documentElement.scrollWidth,
-      body: document.body.scrollWidth,
-    }));
-    expect(geometry.document).toBeLessThanOrEqual(geometry.viewport + 1);
-    expect(geometry.body).toBeLessThanOrEqual(geometry.viewport + 1);
+    await expectNoHorizontalOverflow(page);
     await shot(page, testInfo, "founder-rtl-analytics-data-plane");
   });
 });
