@@ -28,6 +28,21 @@ describe("Founder Storefront V2 acceptance repair", () => {
     expect(projection).toContain("verificationValue: null");
   });
 
+  it("synchronizes or clears the legacy contact projection only when V2 is explicitly published", () => {
+    const service = read("src/lib/storefront/service.ts");
+    expect(service).toContain("function publishedLegacyContact");
+    expect(service).toContain("return hasAny ? JSON.stringify(contact) : null");
+    expect(service).toContain("contact: publishedLegacyContact(publishedTheme)");
+    expect(service.indexOf("contact: publishedLegacyContact(publishedTheme)")).toBeGreaterThan(
+      service.indexOf("async publishStudioDraft"),
+    );
+    const saveDraft = service.slice(
+      service.indexOf("async saveStudioDraft"),
+      service.indexOf("async publishStudioDraft"),
+    );
+    expect(saveDraft).not.toContain("publishedLegacyContact");
+  });
+
   it("exposes active/pause intent in Studio and never reports a pause as published", () => {
     const studio = read("src/components/storefront/studio/storefront-studio.tsx");
     expect(studio).toContain("checked={draft.isActive}");
