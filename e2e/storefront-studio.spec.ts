@@ -99,7 +99,9 @@ test.describe("Storefront Studio authoring", () => {
       studio.getByText("Built for cash on delivery", { exact: true }),
     ).toBeVisible();
 
-    // Testimonial blocks author directly into the same live renderer.
+    // Testimonial blocks author directly into the same live renderer. Scope the
+    // assertion to semantic rendered output so the editor textarea cannot satisfy
+    // the same text query and hide a broken preview.
     await addSection(page, /Testimonials/i);
     details = await inspector(page);
     await details.getByRole("button", { name: /Add testimonial/i }).click();
@@ -109,10 +111,9 @@ test.describe("Storefront Studio authoring", () => {
     await details.getByLabel("Customer name").fill("Amine");
     await details.getByLabel("Context / role").fill("Algiers customer");
     await expect(
-      studio.getByText(
-        "The order arrived quickly and the confirmation was clear.",
-        { exact: false },
-      ),
+      studio.locator("blockquote", {
+        hasText: "The order arrived quickly and the confirmation was clear.",
+      }),
     ).toBeVisible();
 
     // FAQ blocks are authorable and render as accessible disclosure controls.
@@ -124,7 +125,7 @@ test.describe("Storefront Studio authoring", () => {
       .getByLabel("Answer")
       .fill("Yes. This storefront supports cash on delivery.");
     await expect(
-      studio.getByText("Can I pay on delivery?", { exact: true }),
+      studio.locator("summary", { hasText: "Can I pay on delivery?" }),
     ).toBeVisible();
 
     // Drag is supported, while the UI also retains buttons and Alt+Arrow
