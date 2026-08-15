@@ -1,6 +1,13 @@
 import type { StorefrontConfig } from "./service";
-import type { StorefrontSection, StorefrontSectionType } from "./studio-sections";
-import { STOREFRONT_SECTION_TYPES } from "./studio-sections";
+import type {
+  StorefrontBlock,
+  StorefrontSection,
+  StorefrontSectionType,
+} from "./studio-sections";
+import {
+  createStorefrontSection,
+  STOREFRONT_SECTION_TYPES,
+} from "./studio-sections";
 import type { StorefrontTheme } from "./presentation-types";
 import { normalizeStorefrontTheme } from "./theme-normalize";
 
@@ -13,7 +20,9 @@ export interface StorefrontStudioDraft {
   isActive: boolean;
 }
 
-export function createStorefrontStudioDraft(config: StorefrontConfig): StorefrontStudioDraft {
+export function createStorefrontStudioDraft(
+  config: StorefrontConfig,
+): StorefrontStudioDraft {
   const theme = normalizeStorefrontTheme(config.theme);
   const contact = theme.builder.contact;
   const hasDraftContact = Boolean(
@@ -74,14 +83,44 @@ export function moveStorefrontSection(
   return withSections(draft, sections);
 }
 
-export function toggleStorefrontSection(draft: StorefrontStudioDraft, id: string): StorefrontStudioDraft {
-  return withSections(draft, draft.theme.builder.composition.sections.map((section) =>
-    section.id === id ? { ...section, enabled: !section.enabled } : section));
+/** Move one section directly to an exact index while preserving its durable id. */
+export function reorderStorefrontSection(
+  draft: StorefrontStudioDraft,
+  id: string,
+  targetIndex: number,
+): StorefrontStudioDraft {
+  const sections = [...draft.theme.builder.composition.sections];
+  const sourceIndex = sections.findIndex((section) => section.id === id);
+  if (sourceIndex < 0 || sections.length < 2) return draft;
+  const boundedTarget = Math.max(0, Math.min(sections.length - 1, targetIndex));
+  if (sourceIndex === boundedTarget) return draft;
+  const [section] = sections.splice(sourceIndex, 1);
+  if (!section) return draft;
+  sections.splice(boundedTarget, 0, section);
+  return withSections(draft, sections);
 }
 
-export function deleteStorefrontSection(draft: StorefrontStudioDraft, id: string): StorefrontStudioDraft {
+export function toggleStorefrontSection(
+  draft: StorefrontStudioDraft,
+  id: string,
+): StorefrontStudioDraft {
+  return withSections(
+    draft,
+    draft.theme.builder.composition.sections.map((section) =>
+      section.id === id ? { ...section, enabled: !section.enabled } : section,
+    ),
+  );
+}
+
+export function deleteStorefrontSection(
+  draft: StorefrontStudioDraft,
+  id: string,
+): StorefrontStudioDraft {
   if (draft.theme.builder.composition.sections.length <= 1) return draft;
-  return withSections(draft, draft.theme.builder.composition.sections.filter((section) => section.id !== id));
+  return withSections(
+    draft,
+    draft.theme.builder.composition.sections.filter((section) => section.id !== id),
+  );
 }
 
 export function duplicateStorefrontSection(
@@ -113,6 +152,79 @@ export function addStorefrontSection(
   const sections = draft.theme.builder.composition.sections;
   if (sections.length >= 50) return draft;
   const existing = new Set(sections.map((section) => section.type));
-  const type = preferredType ?? STOREFRONT_SECTION_TYPES.find((candidate) => !existing.has(candidate)) ?? "media";
-  return withSections(draft, [...sections, { id, type, enabled: true, settings: {}, blocks: [] }]);
+  const type =
+    preferredType ??
+    STOREFRONT_SECTION_TYPES.find((candidate) => !existing.has(candidate)) ??
+    "media";
+  return withSections(draft, [...sections, createStorefrontSection(type, id)]);
+}
+
+export function patchStorefrontSectionSettings(
+  draft: StorefrontStudioDraft,
+  id: string,
+  patch: StorefrontSection["settings"],
+): StorefrontStudioDraft {
+  return withSections(
+    draft,
+    draft.theme.builder.composition.sections.map((section) =>
+      section.id === id
+        ? { ...section, settings: { ...section.settings, ...patch } }
+        : section,
+    ),
+  );
+}
+
+export function addStorefrontBlock(
+  draft: StorefrontStudioDraft,
+  sectionId: string,
+  block: StorefrontBlock,
+): StorefrontStudioDraft {
+  return withSections(
+    draft,
+    draft.theme.builder.composition.sections.map((section) => {
+      if (section.id !== sectionId || section.blocks.length >= 50) return section;
+      return { ...section, blocks: [...section.blocks, block] };
+    }),
+  );
+}
+
+export function patchStorefrontBlockSettings(
+  draft: StorefrontStudioDraft,
+  sectionId: string,
+  blockId: string,
+  patch: StorefrontBlock["settings"],
+): StorefrontStudioDraft {
+  return withSections(
+    draft,
+    draft.theme.builder.composition.sections.map((section) =>
+      section.id === sectionId
+        ? {
+            ...section,
+            blocks: section.blocks.map((block) =>
+              block.id === blockId
+                ? { ...block, settings: { ...block.settings, ...patch } }
+                : block,
+            ),
+          }
+        : section,
+    ),
+  );
+}
+
+export function deleteStorefrontBlock(
+  draft: StorefrontStudioDraft,
+  sectionId: string,
+  blockId: string,
+): StorefrontStudioDraft {
+  return withSections(
+    draft,
+    draft.theme.builder.composition.sections.map((section) =>
+      section.id === sectionId
+        ? {
+            ...section,
+            blocks: section.blocks.filter((block) => block.id !== blockId),
+          }
+        : section,
+    ),
+  );
 }
