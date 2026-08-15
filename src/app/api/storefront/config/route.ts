@@ -23,7 +23,6 @@ export const dynamic = "force-dynamic";
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const slug = req.nextUrl.searchParams.get("slug");
 
-  // Public path: fetch by slug for the storefront page
   if (slug) {
     const { storefrontService } = await import("@/lib/storefront/service");
     const config = await storefrontService.getBySlug(
@@ -44,10 +43,6 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     return NextResponse.json({ config: projectPublicStorefrontConfig(config), products });
   }
 
-  // Seller path: list all storefronts (management view)
-  // A-H1: the seller-management branch (no ?slug=) must require auth — it
-  // lists ALL storefronts incl. inactive. The public ?slug= branch above
-  // stays public (correct — renders the public storefront page).
   await requireTrustedAction("storefront.read");
   const { storefrontService } = await import("@/lib/storefront/service");
   const configs = await storefrontService.list({ prisma: db, shop: shopContext });
@@ -70,20 +65,22 @@ const createConfigSchema = z.object({
   theme: writableThemeSchema,
   productIds: z.array(z.string().min(2).max(128)).max(500).default([]),
   contact: z.object({
-    phone: z.string().optional(),
-    whatsapp: z.string().optional(),
-    email: z.string().optional(),
-    address: z.string().optional(),
+    phone: z.string().max(64).optional(),
+    whatsapp: z.string().max(64).optional(),
+    email: z.string().max(254).optional(),
+    address: z.string().max(240).optional(),
   }).strict().optional(),
   isActive: z.boolean().optional(),
+  // This controls the private Studio draft only. It never makes the public/live
+  // storefront active before the explicit publish transaction.
+  initialDraftIsActive: z.boolean().optional(),
 }).strict();
 
 /** POST /api/storefront/config — create a new storefront config (seller-only). */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("storefront.manage");
   assertTrustedAction(actorContext, "storefront.publish");
-  const body = await req.json();
-  const input = createConfigSchema.parse(body);
+  const input = createConfigSchema.parse(await req.json());
 
   const { storefrontService, DEFAULT_THEME } = await import("@/lib/storefront/service");
   const config = await storefrontService.create({ prisma: db, shop: shopContext }, {
@@ -94,6 +91,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     productIds: input.productIds,
     contact: input.contact,
     isActive: input.isActive,
+    initialDraftIsActive: input.initialDraftIsActive,
   });
   void DEFAULT_THEME;
   await logAudit(
