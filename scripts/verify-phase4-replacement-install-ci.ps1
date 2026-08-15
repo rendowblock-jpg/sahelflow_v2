@@ -159,6 +159,44 @@ $kit = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/bac
     }
     $source = $source.Replace($kitCommand, $kitPrelude.TrimEnd())
 
+    $acceptanceAnchor = @'
+$committedAcceptance = Invoke-CommittedWebViewAcceptance `
+    -BaseUrl $committedBaseUrl `
+    -Pin $pin `
+    -Phone $sourcePhone `
+    -ActivateTrial
+'@
+    $acceptanceReplacement = @'
+# The installed-MSI workflow separately proves that the real WebView hydrates
+# and authenticates twice. Keep the committed-restore authority check focused
+# on the restored installed runtime instead of holding a DevTools WebSocket open
+# across the production PIN derivation and all protected reads. CDP remains
+# limited to the short read-only runtime-cookie handoff inside
+# Establish-OwnerSession; the long acceptance journey uses the same loopback
+# HTTP authority as the installed app and never changes production cookie policy.
+$committedSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+Establish-OwnerSession $committedBaseUrl $committedSession -RequireSetup
+$committedTrial = Invoke-SahelFlowJson -Method POST -BaseUrl $committedBaseUrl -Path "/api/license/trial" -Session $committedSession
+$committedSearch = Invoke-SahelFlowJson -Method GET -BaseUrl $committedBaseUrl -Path "/api/customers/search?q=$sourcePhone" -Session $committedSession
+$committedSecret = Invoke-SahelFlowJson -Method GET -BaseUrl $committedBaseUrl -Path "/api/secrets/gemini-key" -Session $committedSession
+$committedAcceptance = [pscustomobject]@{
+    setupStatus = 200
+    trialStatus = [int]$committedTrial.status
+    trialState = if ($null -ne $committedTrial.body) { [string]$committedTrial.body.status } else { $null }
+    searchStatus = [int]$committedSearch.status
+    customerTotal = if ($null -ne $committedSearch.body -and $null -ne $committedSearch.body.total) { [int]$committedSearch.body.total } else { 0 }
+    secretStatus = [int]$committedSecret.status
+    secretConfigured = if ($null -ne $committedSecret.body) { [bool]$committedSecret.body.configured } else { $false }
+}
+'@
+    $acceptanceCommand = $acceptanceAnchor.TrimEnd()
+    $acceptanceCommandFirst = $source.IndexOf($acceptanceCommand, [StringComparison]::Ordinal)
+    $acceptanceCommandLast = $source.LastIndexOf($acceptanceCommand, [StringComparison]::Ordinal)
+    if ($acceptanceCommandFirst -lt 0 -or $acceptanceCommandFirst -ne $acceptanceCommandLast) {
+        throw "Replacement harness committed-acceptance anchor drifted."
+    }
+    $source = $source.Replace($acceptanceCommand, $acceptanceReplacement.TrimEnd())
+
     Set-Content -LiteralPath $patchedScript -Value $source -Encoding UTF8
 
     & $patchedScript -MsiPath $MsiPath -RepositoryRoot $repoRoot
