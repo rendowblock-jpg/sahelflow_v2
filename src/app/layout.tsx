@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
+import { Inter, Noto_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 import "./phase5.css";
 import "./product-system.css";
@@ -8,6 +8,7 @@ import "./responsive-system.css";
 import "./workspace-system.css";
 import "./settings-system.css";
 import "./theme-preset-system.css";
+import "./arabic-system.css";
 import "./motion-system.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -29,7 +30,11 @@ const inter = Inter({
   display: "swap",
 });
 
-const arabicSans = IBM_Plex_Sans_Arabic({
+// Noto Sans Arabic was the original UI convergence authority before Internal.17
+// replaced it with IBM Plex Sans Arabic. Restore the neutral, highly legible
+// application face and keep the Arabic stack sans-serif all the way through
+// fallback so packaged font failure cannot drop the workbench into editorial type.
+const arabicSans = Noto_Sans_Arabic({
   subsets: ["arabic"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-arabic",
