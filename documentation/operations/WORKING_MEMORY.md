@@ -25,7 +25,7 @@ Historical diagnostic continuity: an earlier single-sample controlled timing ass
 
 Current application hardening covers locale reconciliation, Next scroll integration, Storefront focus-mode heading semantics, focus-managed Add Section, saved Arabic Studio evidence, public-vs-embedded storefront heading semantics, Inbox unread convergence and deterministic Playwright server readiness.
 
-PR #263 reconciled the active handoff documents and current-frontier verifier after PR #262. Its own exact head passed CI/Required PR, retry-free Phase 5 and retry-free Phase 6–7; two P1 governance review comments were repaired and resolved.
+PR #263 reconciled the active handoff documents and current-frontier verifier after PR #262. Its reviewed exact head was `15ca8781f034b25116d645e2ced7f76be567ae1b`; its protected squash merge was `6f8cc100db134495226ab4f7c5588dc4f86acd75`. That exact head passed CI/Required PR, retry-free Phase 5 and retry-free Phase 6–7; two P1 governance review comments were repaired and resolved. These SHAs are historical governance evidence only and do not replace the live protected-main lookup rule or the fixed Internal.19 application baseline.
 
 ## Release boundary
 
