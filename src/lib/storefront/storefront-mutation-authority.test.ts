@@ -20,6 +20,18 @@ describe("Storefront mutation authority", () => {
     expect(list).toContain("/history");
   });
 
+  it("projects delete only with approval authority and guides recent-PIN recovery", () => {
+    const page = read("src/app/(dashboard)/storefronts/page.tsx");
+    const list = read("src/components/storefront/storefronts-list-client.tsx");
+    expect(page).toContain('"approvals.approve"');
+    expect(page).toContain("const canDelete = canMutate && canApprove");
+    expect(page).toContain("canDelete={canDelete}");
+    expect(list).toContain("canDelete: boolean");
+    expect(list).toContain('payload.code === "REAUTHENTICATION_REQUIRED"');
+    expect(list).toContain('fetch("/api/auth/reauthenticate"');
+    expect(list).toContain("verifyPinAndDelete");
+  });
+
   it("rejects legacy PUT and reserves public-state changes for exact draft publish", () => {
     const route = read("src/app/api/storefront/config/[id]/route.ts");
     expect(route).toContain('error: "storefront_live_update_disabled"');
