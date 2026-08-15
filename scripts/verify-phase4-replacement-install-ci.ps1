@@ -236,7 +236,7 @@ function Invoke-CommittedWebViewRequest {
     $inputBase64 = [Convert]::ToBase64String(
         [System.Text.Encoding]::UTF8.GetBytes($requestInput)
     )
-    $expressionTemplate = @'
+    $expressionTemplate = @"
 (async () => {
   const bytes = Uint8Array.from(atob("__INPUT_BASE64__"), (character) => character.charCodeAt(0));
   const input = JSON.parse(new TextDecoder().decode(bytes));
@@ -253,7 +253,7 @@ function Invoke-CommittedWebViewRequest {
   try { decoded = await response.json(); } catch {}
   return { status: response.status, body: decoded };
 })()
-'@
+"@
     $expression = $expressionTemplate.Replace("__INPUT_BASE64__", $inputBase64)
     $deadline = (Get-Date).AddSeconds(35)
     $debugEndpoint = "http://127.0.0.1:$runtimeDebuggingPort/json/list"
