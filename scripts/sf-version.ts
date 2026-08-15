@@ -88,10 +88,11 @@ const founderOfflineCheckpoint =
   ((authority.version === "1.0.0-internal.15" && authority.licensing?.authorityDecision === "FD-032") ||
     (authority.version === "1.0.0-internal.16" && authority.licensing?.authorityDecision === "FD-034") ||
     (authority.version === "1.0.0-internal.17" && authority.licensing?.authorityDecision === "FD-036") ||
-    (authority.version === "1.0.0-internal.18" && authority.licensing?.authorityDecision === "FD-037"));
+    (authority.version === "1.0.0-internal.18" && authority.licensing?.authorityDecision === "FD-037") ||
+    (authority.version === "1.0.0-internal.19" && authority.licensing?.authorityDecision === "FD-038"));
 if (authority.licensing?.releaseMode === "founder-offline-only") {
   if (!founderOfflineCheckpoint) {
-    console.error("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, or Internal.18/FD-037 on the internal channel with no owned host suffix");
+    console.error("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, Internal.18/FD-037, or Internal.19/FD-038 on the internal channel with no owned host suffix");
     failed = true;
   }
 } else if (authority.licensing?.releaseMode === "customer-online") {

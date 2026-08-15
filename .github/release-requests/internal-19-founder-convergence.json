@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.19 Founder convergence publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.19",
+  "windowsMsiVersion": "1.0.0.19",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-038",
+  "licenseServiceUrl": null,
+  "reason": "Publish the merged Internal.19 product-convergence checkpoint only from the exact protected-main release-authority merge after the selected release/source/Windows/MSI gates are clean. Founder-installed acceptance remains separate; customer-online, Beta, and Stable remain out of scope."
+}

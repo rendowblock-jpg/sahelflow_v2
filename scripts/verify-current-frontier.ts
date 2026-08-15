@@ -44,46 +44,51 @@ const installedCheckpoint = "Internal.18";
 const installedVersion = "1.0.0-internal.18";
 const installedMsiVersion = "1.0.0.18";
 const installedDecision = "FD-037";
+const candidateVersion = "1.0.0-internal.19";
+const candidateMsiVersion = "1.0.0.19";
+const candidateDecision = "FD-038";
+const candidateAuthorityMarker =
+  "Internal.19 release authority is approved under FD-038";
 const currentReleaseRequest =
-  ".github/release-requests/internal-18-founder-visual-correction.json";
+  ".github/release-requests/internal-19-founder-convergence.json";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 
-// Release authority, application-source identity, and the live Git branch head
-// are intentionally separate. The live protected `main` SHA is resolved from
-// GitHub at action time; governance-only merges may advance it without changing
-// the fixed Internal.19 application baseline below.
+// Release authority, installed evidence, application-source identity, and the
+// live Git branch head are intentionally separate. FD-038 authorizes the next
+// Founder-only signed candidate, but does not pre-claim publication or installed
+// acceptance. Live protected `main` is always resolved from GitHub at action time.
 requireMarkers("sahelflow.version.json", [
-  `"version": "${installedVersion}"`,
-  `"windowsMsiVersion": "${installedMsiVersion}"`,
+  `"version": "${candidateVersion}"`,
+  `"windowsMsiVersion": "${candidateMsiVersion}"`,
   '"releaseMode": "founder-offline-only"',
-  `"authorityDecision": "${installedDecision}"`,
+  `"authorityDecision": "${candidateDecision}"`,
   '"approvalScope": "internal-lab"',
   '"ownedHostSuffix": null',
 ]);
 
 requireMarkers("scripts/sf-version.ts", [
-  'authority.version === "1.0.0-internal.18"',
-  'authority.licensing?.authorityDecision === "FD-037"',
-  "Internal.18/FD-037",
+  'authority.version === "1.0.0-internal.19"',
+  'authority.licensing?.authorityDecision === "FD-038"',
+  "Internal.19/FD-038",
 ]);
 
 requireMarkers("src-tauri/build.rs", [
-  'Some("1.0.0-internal.18"), Some("FD-037")',
+  'Some("1.0.0-internal.19"), Some("FD-038")',
   "Founder-only offline checkpoints must not package SF_LICENSE_SERVICE_URL",
 ]);
 
 requireMarkers(".github/workflows/release.yml", [
-  installedVersion,
-  installedDecision,
-  "FD-037/Internal.18",
+  candidateVersion,
+  candidateDecision,
+  "FD-038/Internal.19",
 ]);
 
 requireMarkers(currentReleaseRequest, [
   '"sourcePolicy": "exact-protected-main"',
-  `"version": "${installedVersion}"`,
-  `"windowsMsiVersion": "${installedMsiVersion}"`,
+  `"version": "${candidateVersion}"`,
+  `"windowsMsiVersion": "${candidateMsiVersion}"`,
   '"releaseMode": "founder-offline-only"',
-  `"authorityDecision": "${installedDecision}"`,
+  `"authorityDecision": "${candidateDecision}"`,
   '"ownedHostSuffix": null',
 ]);
 
@@ -104,7 +109,10 @@ for (const path of currentDocs) {
     currentSourceFrontier,
     installedCheckpoint,
     "REJECTED / PARTIALLY IMPROVED",
-    "No Internal.19 release authority exists yet",
+    candidateVersion,
+    candidateMsiVersion,
+    candidateDecision,
+    candidateAuthorityMarker,
     "founder-offline-only",
     "#221",
     "#226",
@@ -137,7 +145,12 @@ requireMarkers("documentation/README.md", [
   "## FD-035 — Internal.17 source-correction authority",
   "## FD-036 — Internal.17 Founder-only offline checkpoint",
   "## FD-037 — Internal.18 Founder visual-correction checkpoint",
-  "FD-037 is historical/executed release authority",
+  "## FD-038 — Internal.19 Founder convergence checkpoint",
+  "Internal.19 release authority is approved under FD-038; signed publication and Founder install remain pending",
+  candidateVersion,
+  candidateMsiVersion,
+  candidateDecision,
+  currentReleaseRequest,
   "## Current release-authority order after PR #262 merge",
 ]);
 
@@ -183,6 +196,7 @@ const staleCurrentMarkers = [
   "Current source frontier: `agent/internal19-product-convergence` / PR #262 / Internal.19",
   "Current source work: **Internal.19**, `agent/internal19-product-convergence`, **PR #262**",
   "After PR #262 is exact-head green and reviewed, merge only that verified tree",
+  "No Internal.19 release authority exists yet",
   `> **Protected main:** \`${internal19ApplicationBaseline}\``,
   `- Protected \`main\`: \`${internal19ApplicationBaseline}\``,
 ];
@@ -202,6 +216,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: live protected main must be resolved from GitHub at action time; Internal.19 application baseline is 8448c471... from PR #262; latest signed/installed package remains Internal.18/FD-037 from source 5cb7f504... with Founder result REJECTED / PARTIALLY IMPROVED. No Internal.19 release authority exists yet. Stop before packaging until an explicit newer Founder release decision exists. #221/#226/#230 remain independent obligations.",
+    `Current execution frontier verified: live protected main is resolved from GitHub at action time; Internal.19 application baseline is 8448c471... from PR #262; FD-038 authorizes ${candidateVersion} / MSI ${candidateMsiVersion} as the next founder-offline-only internal-lab candidate. Latest published/Founder-installed evidence remains ${installedCheckpoint}/${installedDecision} from source 5cb7f504... with result REJECTED / PARTIALLY IMPROVED until FD-038 publication and Founder install complete. #221/#226/#230 remain independent obligations.`,
   );
 }
