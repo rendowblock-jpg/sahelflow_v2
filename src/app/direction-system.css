@@ -191,8 +191,8 @@ html[dir="rtl"] [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="tru
 /* ── Storefront Studio deterministic pane order ─────────────────────────── */
 [data-storefront-studio="v2"] > div.grid {
   direction: ltr;
-  grid-template-areas: "controls preview inspector";
-  grid-template-columns: 13rem minmax(0, 1fr) 16.5rem !important;
+  grid-template-areas: "controls preview";
+  grid-template-columns: 13rem minmax(0, 1fr) !important;
 }
 
 [data-storefront-studio="v2"] > div.grid > aside:first-child {
@@ -208,7 +208,7 @@ html[dir="rtl"] [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="tru
 }
 
 html[dir="rtl"] [data-storefront-studio="v2"] > div.grid {
-  grid-template-areas: "inspector preview controls";
+  grid-template-areas: "preview controls";
 }
 
 html[dir="rtl"] [data-storefront-studio="v2"] > div.grid > :is(aside, main) {
@@ -217,23 +217,38 @@ html[dir="rtl"] [data-storefront-studio="v2"] > div.grid > :is(aside, main) {
 
 [data-storefront-studio="bootstrap"] > div.grid {
   direction: ltr;
-  grid-template-areas: "setup preview";
-}
-
-[data-storefront-studio="bootstrap"] > div.grid > aside {
-  grid-area: setup;
-}
-
-[data-storefront-studio="bootstrap"] > div.grid > main {
-  grid-area: preview;
-}
-
-html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid {
-  grid-template-areas: "preview setup";
 }
 
 html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid > :is(aside, main) {
   direction: rtl;
+}
+
+@media (min-width: 1280px) {
+  [data-storefront-studio="v2"] > div.grid {
+    grid-template-areas: "controls preview inspector";
+    grid-template-columns: 13rem minmax(0, 1fr) 16.5rem !important;
+  }
+
+  html[dir="rtl"] [data-storefront-studio="v2"] > div.grid {
+    grid-template-areas: "inspector preview controls";
+  }
+
+  [data-storefront-studio="bootstrap"] > div.grid {
+    grid-template-areas: "setup preview";
+    grid-template-columns: 21rem minmax(0, 1fr) !important;
+  }
+
+  [data-storefront-studio="bootstrap"] > div.grid > aside {
+    grid-area: setup;
+  }
+
+  [data-storefront-studio="bootstrap"] > div.grid > main {
+    grid-area: preview;
+  }
+
+  html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid {
+    grid-template-areas: "preview setup";
+  }
 }
 
 /* ── Settings deterministic navigation geometry ─────────────────────────── */
