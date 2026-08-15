@@ -55,6 +55,8 @@ PR #262 exact head `8d43e6142aab508e54f038b13e2639ac6966682e` passed Required PR
 
 The certified head passed product/version/documentation authority, TypeScript, ESLint, complete Vitest, production dependency audit, migration status, Required PR, retry-free Phase 5 and retry-free Phase 6–7. Rendered/performance artifacts were persisted and inspected; no actionable review submissions or inline threads remained.
 
+Historical merge discipline remains **expected-head merge**: if a PR head moves, prior exact-head evidence becomes historical. PR #262 ultimately used a protected squash merge after repository policy rejected a merge commit; the expected-head SHA remained pinned through the successful merge.
+
 The controlled browser trend recorded worst route median `4672.7 ms` and search p95 `31.1 ms` under the existing retry-free CI tripwire. This is not installed T470 certification and does not close #226.
 
 ## Release-authority boundary
