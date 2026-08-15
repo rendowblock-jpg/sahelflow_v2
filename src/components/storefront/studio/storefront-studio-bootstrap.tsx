@@ -31,16 +31,16 @@ const TEMPLATE_COPY: Record<
   { label: string; description: string }
 > = {
   sahara: {
-    label: "storefront.builder.template.minimal",
-    description: "storefront.builder.template.minimalDesc",
+    label: "storefront.studio.template.sahara",
+    description: "storefront.studio.template.saharaRole",
   },
   atlas: {
-    label: "storefront.builder.template.modern",
-    description: "storefront.builder.template.modernDesc",
+    label: "storefront.studio.template.atlas",
+    description: "storefront.studio.template.atlasRole",
   },
   oasis: {
-    label: "storefront.builder.template.classic",
-    description: "storefront.builder.template.classicDesc",
+    label: "storefront.studio.template.oasis",
+    description: "storefront.studio.template.oasisRole",
   },
 };
 
@@ -93,7 +93,9 @@ export function StorefrontStudioBootstrap({ products }: Props) {
 
   function handleNameChange(value: string) {
     setName(value);
-    setSlug((current) => (current === slugify(name) || current === "" ? slugify(value) : current));
+    setSlug((current) =>
+      current === slugify(name) || current === "" ? slugify(value) : current,
+    );
   }
 
   function toggleProduct(id: string) {
@@ -107,7 +109,9 @@ export function StorefrontStudioBootstrap({ products }: Props) {
   function validate(): string | null {
     if (!name.trim()) return t("storefront.builder.error.nameRequired");
     if (!slug.trim()) return t("storefront.builder.error.slugRequired");
-    if (!/^[a-z0-9-]+$/.test(slug)) return t("storefront.builder.error.slugFormat");
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      return t("storefront.builder.error.slugFormat");
+    }
     if (selectedProductIds.length === 0) {
       return t("storefront.builder.error.productRequired");
     }
@@ -162,7 +166,10 @@ export function StorefrontStudioBootstrap({ products }: Props) {
   }
 
   return (
-    <div data-storefront-studio="bootstrap" className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background">
+    <div
+      data-storefront-studio="bootstrap"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background"
+    >
       <header className="flex min-h-16 items-center justify-between gap-3 border-b px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <Button asChild variant="ghost" size="icon-sm">
@@ -174,12 +181,20 @@ export function StorefrontStudioBootstrap({ products }: Props) {
             <Store className="size-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold">{t("storefront.studio.title")}</h2>
-            <p className="truncate text-xs text-muted-foreground">{t("storefront.studio.preview")}</p>
+            <h2 className="truncate text-sm font-semibold">
+              {t("storefronts.newTitle")}
+            </h2>
+            <p className="truncate text-xs text-muted-foreground">
+              {t("storefronts.newDesc")}
+            </p>
           </div>
         </div>
         <Button onClick={createAndOpenStudio} disabled={pending}>
-          {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+          {pending ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Save className="size-4" aria-hidden="true" />
+          )}
           {t("storefront.builder.create")}
         </Button>
       </header>
@@ -189,11 +204,17 @@ export function StorefrontStudioBootstrap({ products }: Props) {
           <div className="space-y-5">
             <section className="space-y-3">
               <div>
-                <h3 className="text-sm font-semibold">{t("storefront.builder.generalInfo")}</h3>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("storefront.builder.subtitle")}</p>
+                <h3 className="text-sm font-semibold">
+                  {t("storefront.builder.generalInfo")}
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {t("storefronts.newDesc")}
+                </p>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="studio-name">{t("storefront.builder.shopName")} *</Label>
+                <Label htmlFor="studio-name">
+                  {t("storefront.builder.shopName")} *
+                </Label>
                 <Input
                   id="studio-name"
                   value={name}
@@ -203,9 +224,16 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="studio-slug">{t("storefront.builder.slug")} *</Label>
+                <Label htmlFor="studio-slug">
+                  {t("storefront.builder.slug")} *
+                </Label>
                 <div className="flex items-center gap-2 rounded-lg border bg-background px-3 focus-within:ring-2 focus-within:ring-ring/25">
-                  <span dir="ltr" className="shrink-0 text-xs text-muted-foreground">/storefront/</span>
+                  <span
+                    dir="ltr"
+                    className="shrink-0 text-xs text-muted-foreground"
+                  >
+                    /storefront/
+                  </span>
                   <input
                     id="studio-slug"
                     dir="ltr"
@@ -217,7 +245,9 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="studio-description">{t("storefront.builder.description")}</Label>
+                <Label htmlFor="studio-description">
+                  {t("storefront.builder.description")}
+                </Label>
                 <Textarea
                   id="studio-description"
                   value={description}
@@ -230,7 +260,9 @@ export function StorefrontStudioBootstrap({ products }: Props) {
             </section>
 
             <section className="border-t pt-4">
-              <h3 className="text-sm font-semibold">{t("storefront.studio.templates")}</h3>
+              <h3 className="text-sm font-semibold">
+                {t("storefront.builder.appearance")}
+              </h3>
               <div className="mt-3 grid gap-2">
                 {STOREFRONT_TEMPLATE_IDS.map((id) => {
                   const selected = template === id;
@@ -240,13 +272,26 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                       type="button"
                       aria-pressed={selected}
                       onClick={() => setTemplate(id)}
-                      className={`rounded-xl border p-3 text-start transition ${selected ? "border-primary bg-primary/8 ring-1 ring-primary/20" : "bg-background hover:bg-muted/50"}`}
+                      className={`rounded-xl border p-3 text-start transition ${
+                        selected
+                          ? "border-primary bg-primary/8 ring-1 ring-primary/20"
+                          : "bg-background hover:bg-muted/50"
+                      }`}
                     >
                       <span className="flex items-center justify-between gap-3">
-                        <span className="text-sm font-semibold">{t(TEMPLATE_COPY[id].label)}</span>
-                        {selected ? <Check className="size-4 text-primary" aria-hidden="true" /> : null}
+                        <span className="text-sm font-semibold">
+                          {t(TEMPLATE_COPY[id].label)}
+                        </span>
+                        {selected ? (
+                          <Check
+                            className="size-4 text-primary"
+                            aria-hidden="true"
+                          />
+                        ) : null}
                       </span>
-                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">{t(TEMPLATE_COPY[id].description)}</span>
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                        {t(TEMPLATE_COPY[id].description)}
+                      </span>
                     </button>
                   );
                 })}
@@ -255,11 +300,20 @@ export function StorefrontStudioBootstrap({ products }: Props) {
 
             <section className="border-t pt-4">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold">{t("storefront.builder.productsDisplayed")} *</h3>
-                <Badge variant="secondary">{t("storefront.builder.selectedCount", { count: selectedProductIds.length })}</Badge>
+                <h3 className="text-sm font-semibold">
+                  {t("storefront.builder.productsDisplayed")} *
+                </h3>
+                <Badge variant="secondary">
+                  {t("storefront.builder.selectedCount", {
+                    count: selectedProductIds.length,
+                  })}
+                </Badge>
               </div>
               <div className="relative mt-3">
-                <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Search
+                  className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
@@ -283,13 +337,27 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                         type="button"
                         aria-pressed={selected}
                         onClick={() => toggleProduct(product.id)}
-                        className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start transition ${selected ? "bg-primary/8" : "hover:bg-muted/60"}`}
+                        className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start transition ${
+                          selected ? "bg-primary/8" : "hover:bg-muted/60"
+                        }`}
                       >
-                        <span className={`flex size-5 shrink-0 items-center justify-center rounded border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}>
-                          {selected ? <Check className="size-3" aria-hidden="true" /> : null}
+                        <span
+                          className={`flex size-5 shrink-0 items-center justify-center rounded border ${
+                            selected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-input"
+                          }`}
+                        >
+                          {selected ? (
+                            <Check className="size-3" aria-hidden="true" />
+                          ) : null}
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-xs font-medium">{product.name}</span>
-                        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">{product.stock}</span>
+                        <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                          {product.name}
+                        </span>
+                        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                          {product.stock}
+                        </span>
                       </button>
                     );
                   })
@@ -303,12 +371,20 @@ export function StorefrontStudioBootstrap({ products }: Props) {
           <div className="mx-auto min-h-full max-w-6xl overflow-hidden rounded-xl border bg-background shadow-sm">
             <div className="flex items-center justify-between gap-3 border-b bg-background px-4 py-2.5">
               <div>
-                <p className="text-xs font-semibold">{t("storefront.studio.preview")}</p>
-                <p className="text-[10px] text-muted-foreground">{t("storefront.studio.previewHint")}</p>
+                <p className="text-xs font-semibold">
+                  {t("storefront.studio.preview")}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {t("storefronts.newDesc")}
+                </p>
               </div>
-              <Badge variant="outline">{template.toUpperCase()}</Badge>
+              <Badge variant="outline">{t(TEMPLATE_COPY[template].label)}</Badge>
             </div>
-            <StorefrontRenderer draft={draft} products={products} maxProducts={8} />
+            <StorefrontRenderer
+              draft={draft}
+              products={products}
+              maxProducts={8}
+            />
           </div>
         </main>
       </div>
