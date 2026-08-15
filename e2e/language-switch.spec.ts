@@ -10,7 +10,9 @@ import { test, expect, type Page } from "@playwright/test";
 const PIN = "12345678";
 
 async function login(page: Page): Promise<void> {
-  await page.goto("/login");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  if (!page.url().includes("/login")) return;
+
   await page.waitForLoadState("networkidle");
   const pinInput = page.locator('input[type="password"]');
   await pinInput.waitFor({ state: "visible" });
