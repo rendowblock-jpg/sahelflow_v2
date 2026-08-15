@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  BriefcaseBusiness,
+  Activity,
+  Bot,
   DatabaseBackup,
   Palette,
   PlugZap,
@@ -11,7 +12,6 @@ import {
   UserRound,
 } from "lucide-react";
 
-import { SahelFlowMark } from "@/components/brand/sahelflow-mark";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
 import { BackupRestorePanel } from "@/components/settings/backup-restore-panel";
@@ -60,7 +60,14 @@ export type SettingsWorkspaceAccess = {
   dangerReset: boolean;
 };
 
-type Group = "experience" | "connections" | "team" | "data";
+type Group =
+  | "workspace"
+  | "operations"
+  | "connections"
+  | "intelligence"
+  | "access"
+  | "data";
+
 type GroupDefinition = {
   id: Group;
   icon: typeof Palette;
@@ -68,35 +75,51 @@ type GroupDefinition = {
 };
 
 const DEFAULT_GROUP: GroupDefinition = {
-  id: "experience",
+  id: "workspace",
   icon: Palette,
-  descriptionKey: "experienceDescription",
+  descriptionKey: "workspaceDescription",
 };
 
 const GROUPS: GroupDefinition[] = [
   DEFAULT_GROUP,
   {
+    id: "operations",
+    icon: Activity,
+    descriptionKey: "operationsDescription",
+  },
+  {
     id: "connections",
     icon: PlugZap,
     descriptionKey: "connectionsDescription",
   },
-  { id: "team", icon: ShieldCheck, descriptionKey: "teamDescription" },
-  { id: "data", icon: DatabaseBackup, descriptionKey: "dataDescription" },
+  {
+    id: "intelligence",
+    icon: Bot,
+    descriptionKey: "intelligenceDescription",
+  },
+  {
+    id: "access",
+    icon: ShieldCheck,
+    descriptionKey: "accessDescription",
+  },
+  {
+    id: "data",
+    icon: DatabaseBackup,
+    descriptionKey: "dataDescription",
+  },
 ];
 
 function groupVisible(group: Group, access: SettingsWorkspaceAccess): boolean {
   switch (group) {
-    case "experience":
-      return access.profile || access.appearance || access.reports || access.phone;
+    case "workspace":
+      return access.profile || access.appearance;
+    case "operations":
+      return access.reports || access.phone;
     case "connections":
-      return (
-        access.commerceRead ||
-        access.commerceManage ||
-        access.delivery ||
-        access.aiKey ||
-        access.aiConsent
-      );
-    case "team":
+      return access.commerceRead || access.commerceManage || access.delivery;
+    case "intelligence":
+      return access.aiKey || access.aiConsent;
+    case "access":
       return access.security || access.team || access.license;
     case "data":
       return (
@@ -125,15 +148,17 @@ export function SettingsWorkspace({
     () => GROUPS.filter((group) => groupVisible(group.id, access)),
     [access],
   );
-  const [active, setActive] = useState<Group>(visibleGroups[0]?.id ?? "experience");
+  const [active, setActive] = useState<Group>(
+    visibleGroups[0]?.id ?? "workspace",
+  );
   const effectiveGroup =
     visibleGroups.find((group) => group.id === active) ??
     visibleGroups[0] ??
     DEFAULT_GROUP;
   const effectiveActive = effectiveGroup.id;
 
-  const renderExperience = () => (
-    <div className="space-y-6">
+  const renderWorkspace = () => (
+    <div className="space-y-5">
       {access.profile ? (
         <Card>
           <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
@@ -159,6 +184,11 @@ export function SettingsWorkspace({
           <AppearancePanel />
         </div>
       ) : null}
+    </div>
+  );
+
+  const renderOperations = () => (
+    <div className="space-y-5">
       {access.reports ? <DailyReportPanel /> : null}
       {access.phone ? (
         <PhoneReputationPanel canManage={access.phoneManage} />
@@ -167,7 +197,7 @@ export function SettingsWorkspace({
   );
 
   const renderConnections = () => (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {access.commerceRead || access.commerceManage ? (
         <CommerceIntegrationsPanel
           integrations={integrations}
@@ -177,6 +207,11 @@ export function SettingsWorkspace({
       ) : null}
       {access.commerceManage ? <CommerceSyncRecoveryPanel /> : null}
       {access.delivery ? <DeliveryCredentialsPanel /> : null}
+    </div>
+  );
+
+  const renderIntelligence = () => (
+    <div className="space-y-5">
       {access.aiKey || access.aiConsent ? (
         <AiKeyPanel
           canManageKey={access.aiKey}
@@ -186,8 +221,8 @@ export function SettingsWorkspace({
     </div>
   );
 
-  const renderTeam = () => (
-    <div className="space-y-6">
+  const renderAccess = () => (
+    <div className="space-y-5">
       {access.security ? <SecurityAuthorityPanel /> : null}
       {access.team ? (
         <>
@@ -201,7 +236,7 @@ export function SettingsWorkspace({
   );
 
   const renderData = () => (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {access.backupRead || access.backupCreate || access.backupRestore ? (
         <BackupRestorePanel
           canRead={access.backupRead}
@@ -220,13 +255,17 @@ export function SettingsWorkspace({
   );
 
   const content =
-    effectiveActive === "experience"
-      ? renderExperience()
-      : effectiveActive === "connections"
-        ? renderConnections()
-        : effectiveActive === "team"
-          ? renderTeam()
-          : renderData();
+    effectiveActive === "workspace"
+      ? renderWorkspace()
+      : effectiveActive === "operations"
+        ? renderOperations()
+        : effectiveActive === "connections"
+          ? renderConnections()
+          : effectiveActive === "intelligence"
+            ? renderIntelligence()
+            : effectiveActive === "access"
+              ? renderAccess()
+              : renderData();
 
   const EffectiveIcon = effectiveGroup.icon;
 
@@ -234,29 +273,19 @@ export function SettingsWorkspace({
     <div
       data-settings-workspace="v2"
       data-settings-premium-shell="true"
-      className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm"
+      className="overflow-hidden rounded-xl border border-border/80 bg-card"
     >
-      <div className="grid min-h-[34rem] lg:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside className="min-w-0 border-b border-border/80 bg-muted/15 p-3 lg:border-b-0 lg:border-e lg:p-4">
-          <div className="mb-3 flex items-center gap-3 rounded-xl border border-border/70 bg-background/75 p-3 shadow-xs">
-            <SahelFlowMark className="size-9 shrink-0 rounded-lg shadow-sm" />
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                <BriefcaseBusiness
-                  className="size-4 shrink-0 text-primary"
-                  aria-hidden="true"
-                />
-                <span className="truncate">SahelFlow</span>
-              </div>
-              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                {copy("workspaceHint")}
-              </p>
-            </div>
+      <div className="grid min-h-[36rem] lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <aside className="min-w-0 border-b border-border/80 bg-muted/10 p-3 lg:border-b-0 lg:border-e lg:p-3.5">
+          <div className="px-2 pb-3 pt-1">
+            <p className="text-sm font-semibold text-foreground">
+              {copy("workspaceHint")}
+            </p>
           </div>
 
           <nav
             aria-label={copy("workspaceHint")}
-            className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-1"
+            className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1"
           >
             {visibleGroups.map((group) => {
               const Icon = group.icon;
@@ -269,18 +298,24 @@ export function SettingsWorkspace({
                   aria-pressed={selected}
                   onClick={() => setActive(group.id)}
                   className={cn(
-                    "group rounded-xl border px-3 py-3 text-start outline-none",
-                    "transition-[background-color,border-color,color,box-shadow,transform] duration-150",
+                    "group relative rounded-lg px-2.5 py-2.5 text-start outline-none",
+                    "transition-[background-color,color,box-shadow] duration-150",
                     "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
                     selected
-                      ? "border-primary/25 bg-primary/[0.08] text-foreground shadow-sm"
-                      : "border-transparent text-muted-foreground hover:-translate-y-px hover:border-border/80 hover:bg-background/80 hover:text-foreground",
+                      ? "bg-primary/[0.09] text-foreground shadow-xs"
+                      : "text-muted-foreground hover:bg-background/75 hover:text-foreground",
                   )}
                 >
-                  <span className="flex items-center gap-2.5 text-xs font-semibold">
+                  {selected ? (
+                    <span
+                      className="absolute inset-block-2 start-0 w-0.5 rounded-full bg-primary"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                  <span className="flex items-center gap-2.5">
                     <span
                       className={cn(
-                        "flex size-8 shrink-0 items-center justify-center rounded-lg border bg-background/80",
+                        "flex size-8 shrink-0 items-center justify-center rounded-lg border bg-background/85",
                         selected
                           ? "border-primary/25 text-primary"
                           : "border-border/70 text-muted-foreground group-hover:text-foreground",
@@ -288,10 +323,14 @@ export function SettingsWorkspace({
                     >
                       <Icon className="size-4" aria-hidden="true" />
                     </span>
-                    <span className="min-w-0 truncate">{copy(group.id)}</span>
-                  </span>
-                  <span className="mt-1.5 hidden ps-10 text-[11px] leading-4 text-muted-foreground lg:block">
-                    {copy(group.descriptionKey)}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold">
+                        {copy(group.id)}
+                      </span>
+                      <span className="mt-0.5 hidden text-[11px] leading-4 text-muted-foreground lg:block">
+                        {copy(group.descriptionKey)}
+                      </span>
+                    </span>
                   </span>
                 </button>
               );
@@ -302,28 +341,30 @@ export function SettingsWorkspace({
         <section
           data-settings-group-panel={effectiveActive}
           aria-labelledby={`settings-workspace-${effectiveActive}`}
-          className="min-w-0 bg-background/45"
+          className="min-w-0 bg-background/35"
         >
-          <header className="border-b border-border/80 bg-card/85 px-4 py-4 backdrop-blur-sm sm:px-5 lg:px-6">
-            <div className="flex min-w-0 items-center gap-3.5">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.08] text-primary shadow-xs">
-                <EffectiveIcon className="size-[18px]" aria-hidden="true" />
+          <header className="border-b border-border/75 bg-card/88 px-4 py-4 sm:px-5 lg:px-6 lg:py-5">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/[0.07] text-primary">
+                <EffectiveIcon className="size-4" aria-hidden="true" />
               </span>
               <div className="min-w-0">
                 <h2
                   id={`settings-workspace-${effectiveActive}`}
-                  className="truncate text-base font-semibold tracking-tight"
+                  className="text-lg font-semibold tracking-tight"
                 >
                   {copy(effectiveActive)}
                 </h2>
-                <p className="mt-0.5 max-w-3xl text-xs leading-5 text-muted-foreground sm:text-sm">
+                <p className="mt-1 max-w-3xl text-sm leading-5 text-muted-foreground">
                   {copy(effectiveGroup.descriptionKey)}
                 </p>
               </div>
             </div>
           </header>
 
-          <div className="p-3 sm:p-5 lg:p-6">{content}</div>
+          <div className="mx-auto w-full max-w-5xl p-3 sm:p-5 lg:p-6">
+            {content}
+          </div>
         </section>
       </div>
     </div>
