@@ -45,6 +45,7 @@ test("coarse-pointer command entry and portaled results preserve 44px targets", 
     baseURL,
     viewport: DESKTOP,
     hasTouch: true,
+    storageState: process.env.SF_PHASE5_OWNER_STORAGE_STATE,
   });
   const page = await context.newPage();
 
