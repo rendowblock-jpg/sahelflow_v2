@@ -14,9 +14,11 @@ export const dynamic = "force-dynamic";
 /** Durable, task-oriented AI workspace with proposal-bound sensitive actions. */
 export default async function AgentsPage() {
   await requireTrustedAction("ai.use");
+  const { t } = await getI18n();
 
   return (
     <div className="app-workspace-content">
+      <h1 className="sr-only">{t("metadata.title.agents")}</h1>
       <FeatureGate feature="ai_chat">
         <AiWorkspaceShell />
       </FeatureGate>
