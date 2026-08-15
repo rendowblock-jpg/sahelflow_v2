@@ -65,6 +65,7 @@ export function LineTrendChart({
 
   return (
     <ChartContainer
+      dir="ltr"
       role="img"
       aria-label={t("charts.lineTrend")}
       config={config}

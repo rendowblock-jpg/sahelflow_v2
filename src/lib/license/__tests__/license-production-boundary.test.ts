@@ -10,10 +10,9 @@ describe("production licensing authority inventory", () => {
   it("uses direct native SMBIOS binding without raw browser or shell identity", () => {
     const nativeBinding = read("src-tauri/src/device_binding.rs");
     const tauri = read("src-tauri/src/lib.rs");
-
     expect(nativeBinding).toContain("GetSystemFirmwareTable");
     expect(nativeBinding).toContain("sahelflow.device-binding.v1");
-    expect(tauri).toContain('"SF_DEVICE_BINDING"');
+    expect(tauri).toContain('\"SF_DEVICE_BINDING\"');
     expect(tauri).not.toContain("Get-CimInstance");
     expect(tauri).not.toContain("MachineGuid");
     expect(existsSync(join(process.cwd(), "src/lib/license/machine-id.ts"))).toBe(false);
@@ -22,9 +21,7 @@ describe("production licensing authority inventory", () => {
   it("removes self-issued, browser-persisted and shop-setting license authority", () => {
     expect(existsSync(join(process.cwd(), "src/lib/license/license-client.ts"))).toBe(false);
     expect(read("src/stores/license-store.ts")).not.toContain("persist(");
-    expect(read("src/lib/license/license-authority.ts")).not.toContain(
-      "active_license_status",
-    );
+    expect(read("src/lib/license/license-authority.ts")).not.toContain("active_license_status");
     expect(read("src/app/api/license/sync/route.ts")).not.toContain("prisma.setting");
   });
 
@@ -46,13 +43,9 @@ describe("production licensing authority inventory", () => {
     const statusRoute = read("src/app/api/license/status/route.ts");
     const trialRoute = read("src/app/api/license/trial/route.ts");
     const licensePanel = read("src/components/settings/license-panel.tsx");
-    for (const name of [
-      "SF_LICENSE_SERVICE_URL",
-      "SF_LICENSE_TRIAL_PUBLIC_KEYS",
-      "SF_LICENSE_PERMANENT_PUBLIC_KEYS",
-    ]) {
-      expect(build).toContain(`"${name}"`);
-      expect(tauri).toContain(`env!("${name}")`);
+    for (const name of ["SF_LICENSE_SERVICE_URL", "SF_LICENSE_TRIAL_PUBLIC_KEYS", "SF_LICENSE_PERMANENT_PUBLIC_KEYS"]) {
+      expect(build).toContain(`\"${name}\"`);
+      expect(tauri).toContain(`env!(\"${name}\")`);
     }
     expect(build).toContain("required_release_value(name)");
     expect(build).toContain("configured_service_urls");
@@ -65,37 +58,32 @@ describe("production licensing authority inventory", () => {
     expect(build).toContain("std::net::IpAddr");
     expect(build).toContain("public DNS hostnames, not IP/reserved/private-style destinations");
     expect(build).toContain("provisioned SahelFlow-owned host suffix");
-    expect(versionAuthority).toContain('"version": "1.0.0-internal.17"');
-    expect(versionAuthority).toContain('"releaseMode": "founder-offline-only"');
-    expect(versionAuthority).toContain('"authorityDecision": "FD-036"');
-    expect(versionAuthority).toContain('"ownedHostSuffix": null');
-    expect(versionAudit).toContain(
-      "founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, or Internal.17/FD-036",
-    );
-    expect(build).toContain('Some("1.0.0-internal.15"), Some("FD-032")');
-    expect(build).toContain('Some("1.0.0-internal.16"), Some("FD-034")');
-    expect(build).toContain('Some("1.0.0-internal.17"), Some("FD-036")');
-    expect(build).toContain(
-      "founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17",
-    );
+    expect(versionAuthority).toContain('\"version\": \"1.0.0-internal.18\"');
+    expect(versionAuthority).toContain('\"releaseMode\": \"founder-offline-only\"');
+    expect(versionAuthority).toContain('\"authorityDecision\": \"FD-037\"');
+    expect(versionAuthority).toContain('\"ownedHostSuffix\": null');
+    expect(versionAudit).toContain("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, or Internal.18/FD-037");
+    expect(build).toContain('Some(\"1.0.0-internal.15\"), Some(\"FD-032\")');
+    expect(build).toContain('Some(\"1.0.0-internal.16\"), Some(\"FD-034\")');
+    expect(build).toContain('Some(\"1.0.0-internal.17\"), Some(\"FD-036\")');
+    expect(build).toContain('Some(\"1.0.0-internal.18\"), Some(\"FD-037\")');
+    expect(build).toContain("founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, or FD-037/Internal.18");
     expect(build).toContain("Founder-only offline checkpoints must not package SF_LICENSE_SERVICE_URL");
     expect(build).toContain("cargo:rustc-env=SF_LICENSE_SERVICE_URL=");
     expect(build).toContain("customer-online releases require SF_LICENSE_SERVICE_URL");
-    expect(build).toContain('std::env::var("GITHUB_WORKFLOW")');
-    expect(build).toContain('"CI" | "Native source contract" | "Windows Rust release parity"');
-    expect(build).toContain('routes == ["https://license.invalid"]');
+    expect(build).toContain('std::env::var(\"GITHUB_WORKFLOW\")');
+    expect(build).toContain('\"CI\" | \"Native source contract\" | \"Windows Rust release parity\"');
+    expect(build).toContain('routes == [\"https://license.invalid\"]');
     expect(build).toContain("validate_keyring");
     expect(release).toContain("name: Build Signed Internal Windows Update");
-    expect(release).toContain(
-      "SF_LICENSE_SERVICE_URL: ${{ secrets.SF_LICENSE_SERVICE_URL || vars.SF_LICENSE_SERVICE_URL }}",
-    );
+    expect(release).toContain("SF_LICENSE_SERVICE_URL: ${{ secrets.SF_LICENSE_SERVICE_URL || vars.SF_LICENSE_SERVICE_URL }}");
     expect(release).toContain("'SF_LICENSE_SERVICE_URL=' >> $env:GITHUB_ENV");
-    expect(release).toContain("exact FD-032/Internal.15, FD-034/Internal.16, or FD-036/Internal.17");
+    expect(release).toContain("exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, or FD-037/Internal.18");
     expect(statusRoute).toContain("onlineTrialAvailable:");
     expect(trialRoute).toContain("LICENSE_TRIAL_DISABLED_FOR_FOUNDER_CHECKPOINT");
     expect(licensePanel).toContain("projection?.onlineTrialAvailable === true");
-    expect(licensePanel).toContain('t("license.founderOfflineCheckpoint")');
-    expect(build).not.toContain('"Build Signed Internal Windows Update" |');
+    expect(licensePanel).toContain('t(\"license.founderOfflineCheckpoint\")');
+    expect(build).not.toContain('\"Build Signed Internal Windows Update\" |');
   });
 
   it("keeps the production worker off workers.dev and makes health prove issuance readiness", () => {
@@ -107,22 +95,16 @@ describe("production licensing authority inventory", () => {
     expect(wrangler).toContain("enabled = true");
     expect(wrangler).toContain("SF_LICENSE_TRIAL_PUBLIC_KEYS =");
     expect(worker).toContain('url.pathname === "/healthz"');
-    expect(worker).toContain(
-      '"SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1"',
-    );
-    expect(worker).toContain(
-      '"SELECT sql FROM sqlite_master WHERE type = \'table\' AND name = \'trial_entitlement\'"',
-    );
+    expect(worker).toContain('\"SELECT device_binding, license_id, issued_at, expires_at FROM trial_entitlement LIMIT 1\"');
+    expect(worker).toContain('\"SELECT sql FROM sqlite_master WHERE type = \'table\' AND name = \'trial_entitlement\'\"');
     expect(worker).toContain("assertTrialSchemaDefinition");
-    expect(worker).toContain('"device_binding text primary key not null"');
-    expect(worker).toContain('"license_id text unique not null"');
+    expect(worker).toContain('\"device_binding text primary key not null\"');
+    expect(worker).toContain('\"license_id text unique not null\"');
     expect(worker).toContain("trialConfiguration(environment)");
     expect(worker).toContain("publishedTrialPublicKey");
     expect(worker).toContain("assertTrialSignerIdentity");
     expect(worker).toContain("importTrialPublicKey");
-    expect(worker).toContain(
-      "TRIAL_PRIVATE_KEY_PKCS8 does not match SF_LICENSE_TRIAL_PUBLIC_KEYS[TRIAL_KEY_ID]",
-    );
+    expect(worker).toContain("TRIAL_PRIVATE_KEY_PKCS8 does not match SF_LICENSE_TRIAL_PUBLIC_KEYS[TRIAL_KEY_ID]");
     expect(worker).toContain("TRIAL_KEY_ID is absent from SF_LICENSE_TRIAL_PUBLIC_KEYS");
     expect(worker).toContain("TRIAL_KEY_ID_PATTERN");
     expect(worker).toContain("TRIAL_MEMBER_LIMIT, \"TRIAL_MEMBER_LIMIT\", 25");
@@ -132,12 +114,12 @@ describe("production licensing authority inventory", () => {
     expect(worker).toContain("ON CONFLICT(probe_key) DO UPDATE");
     expect(worker).toContain("await assertD1WriteReadiness(environment)");
     expect(worker).toContain("D1 licensing readiness write failed");
-    expect(worker).toContain('RATE_LIMITER_HEALTH_KEY = "health:licensing-readiness"');
+    expect(worker).toContain('RATE_LIMITER_HEALTH_KEY = \"health:licensing-readiness\"');
     expect(worker).toContain("await limitForKey(environment, RATE_LIMITER_HEALTH_KEY)");
     expect(worker).toContain("TRIAL_RATE_LIMITER binding is unavailable");
     expect(worker).toContain("const signingKey = await assertTrialSignerIdentity(environment)");
     expect(worker).toContain("signature: await signTrial(claims, signingKey)");
-    expect(worker).toContain('return json({ status: "unavailable" }, 503)');
+    expect(worker).toContain('return json({ status: \"unavailable\" }, 503)');
   });
 
   it("anchors trial time outside replayable AppData before starting the server", () => {
@@ -145,7 +127,6 @@ describe("production licensing authority inventory", () => {
     const tauri = read("src-tauri/src/lib.rs");
     const authority = read("src/lib/license/license-authority.ts");
     const nativeAuthority = read("src/lib/license/native-commercial-authority.ts");
-
     expect(anchor).toContain("HKEY_CURRENT_USER");
     expect(anchor).toContain("CryptProtectData");
     expect(anchor).toContain("CryptUnprotectData");
@@ -159,14 +140,14 @@ describe("production licensing authority inventory", () => {
     expect(anchor).toContain("installation_authority_preexists");
     expect(anchor).toContain("observe(&device_binding, true)");
     expect(tauri).toContain("license_clock::start_runtime_observer");
-    expect(tauri).toContain('"SF_LICENSE_REVOCATION_FLOOR"');
-    expect(tauri).toContain('"SF_LICENSE_MINIMUM_PERMANENT_RECOVERY_EPOCH"');
+    expect(tauri).toContain('\"SF_LICENSE_REVOCATION_FLOOR\"');
+    expect(tauri).toContain('\"SF_LICENSE_MINIMUM_PERMANENT_RECOVERY_EPOCH\"');
     expect(authority).toContain("advanceNativeRevocationFloor");
     expect(authority).toContain("nativeRevocationFloor");
     expect(nativeAuthority).toContain("timingSafeEqual");
     expect(nativeAuthority).toContain("REQUEST_MAC_DOMAIN");
     expect(nativeAuthority).toContain("initializePermanentRecovery");
-    expect(nativeAuthority).toContain("process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS = \"ready\"");
+    expect(nativeAuthority).toContain('process.env.SF_LICENSE_CLOCK_ANCHOR_STATUS = \"ready\"');
     expect(authority).toContain("LICENSE_ENTITLEMENT_DOWNGRADE");
     expect(authority).toContain("LICENSE_RECOVERY_CHALLENGE_REQUIRED");
     expect(authority).toContain('reconcileExpiredOnlineTrial =');
@@ -177,11 +158,9 @@ describe("production licensing authority inventory", () => {
     expect(licensePanel).toContain("{permanentActivationAvailable && (");
     const trialRoute = read("src/app/api/license/trial/route.ts");
     expect(trialRoute).toContain("nativeAuthorityNeedsOnlineInitialization");
-    expect(trialRoute).toContain(
-      "allowOnlineTrialInitialization: true",
-    );
-    expect(tauri).toContain('"SF_LICENSE_CLOCK_ANCHOR_MS"');
-    expect(tauri).toContain('"SF_LICENSE_CLOCK_ANCHOR_STATUS"');
+    expect(trialRoute).toContain("allowOnlineTrialInitialization: true");
+    expect(tauri).toContain('\"SF_LICENSE_CLOCK_ANCHOR_MS\"');
+    expect(tauri).toContain('\"SF_LICENSE_CLOCK_ANCHOR_STATUS\"');
     expect(authority).toContain("highestObservedAt(lastObservedAt, permitsClockRecovery)");
   });
 
@@ -190,17 +169,10 @@ describe("production licensing authority inventory", () => {
     const dashboardLayout = read("src/app/(dashboard)/layout.tsx");
     const whatsAppWorker = read("src/lib/whatsapp/outbox-worker.ts");
     const courierWorker = read("src/lib/delivery/outbox-worker.ts");
-
     expect(rootLayout).not.toContain("<LicenseBoundary>");
     expect(dashboardLayout).toContain("getLicenseAuthorityProjection");
-    expect(dashboardLayout.indexOf("if (!licenseValid)")).toBeLessThan(
-      dashboardLayout.indexOf("{children}"),
-    );
-    expect(whatsAppWorker.indexOf("requireLicenseEntitlement")).toBeLessThan(
-      whatsAppWorker.indexOf("drainDueWhatsAppEffects({"),
-    );
-    expect(courierWorker.indexOf("requireLicenseEntitlement")).toBeLessThan(
-      courierWorker.indexOf("drainDueCourierBookings({"),
-    );
+    expect(dashboardLayout.indexOf("if (!licenseValid)")).toBeLessThan(dashboardLayout.indexOf("{children}"));
+    expect(whatsAppWorker.indexOf("requireLicenseEntitlement")).toBeLessThan(whatsAppWorker.indexOf("drainDueWhatsAppEffects({"));
+    expect(courierWorker.indexOf("requireLicenseEntitlement")).toBeLessThan(courierWorker.indexOf("drainDueCourierBookings({"));
   });
 });

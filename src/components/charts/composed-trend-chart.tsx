@@ -76,6 +76,7 @@ export function ComposedTrendChart({
 
   return (
     <ChartContainer
+      dir="ltr"
       role="img"
       aria-label={t("charts.composedTrend")}
       config={config}
