@@ -6,41 +6,40 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
-describe("Wave 2 Inbox composition contract", () => {
-  it("keeps the adaptive layout route-scoped instead of adding page rules to the global foundation", () => {
+describe("Internal.19 Inbox composition contract", () => {
+  it("keeps adaptive geometry in the shared experience authority instead of route patch CSS", () => {
     const page = read("src/app/(dashboard)/inbox/page.tsx");
-    const css = read("src/app/(dashboard)/inbox/inbox-wave2.module.css");
+    const experience = read("src/app/experience-system.css");
     const foundation = read("src/app/phase5.css");
 
-    expect(page).toContain('import styles from "./inbox-wave2.module.css"');
-    expect(page).toContain("${styles.page}");
-    expect(css).toContain('[data-inbox-workspace="v2"]');
+    expect(page).toContain('className="app-workspace-content flex flex-col"');
+    expect(page).not.toContain("inbox-wave2.module.css");
+    expect(experience).toContain('[data-inbox-workspace="v2"]');
+    expect(experience).toContain('[data-inbox-queue="true"]');
+    expect(experience).toContain('[data-inbox-thread]');
+    expect(experience).toContain('aside:has(> [data-inbox-context="true"])');
     expect(foundation).not.toContain("data-inbox-workspace");
   });
 
-  it("gives the thread adaptive two- and three-pane desktop geometry", () => {
-    const css = read("src/app/(dashboard)/inbox/inbox-wave2.module.css");
+  it("gives the thread deterministic two- and three-pane geometry with explicit RTL order", () => {
+    const experience = read("src/app/experience-system.css");
 
-    expect(css).toContain('> div:has(> [data-inbox-queue="true"])');
-    expect(css).toContain(
-      "grid-template-columns: clamp(17.5rem, 22vw, 20rem) minmax(0, 1fr)",
-    );
-    expect(css).toContain(
-      '> div:has(> aside > [data-inbox-context="true"])',
-    );
-    expect(css).toContain("minmax(26rem, 1fr)");
-    expect(css).toContain('aside:has(> [data-inbox-context="true"])');
+    expect(experience).toContain("width: 19rem !important");
+    expect(experience).toContain("width: 20rem !important");
+    expect(experience).toContain("width: 17rem !important");
+    expect(experience).toContain('html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-queue="true"]');
+    expect(experience).toContain("order: 3");
+    expect(experience).toContain("order: 1");
   });
 
-  it("raises legacy microcopy and stabilizes long scrolling workspaces", () => {
-    const css = read("src/app/(dashboard)/inbox/inbox-wave2.module.css");
+  it("raises legacy microcopy through shared workspace styling and preserves bounded thread scrolling", () => {
+    const workspace = read("src/app/workspace-system.css");
     const hook = read("src/hooks/use-inbox-workspace.ts");
 
-    expect(css).toContain('[class~="text-[10px]"]');
-    expect(css).toContain('[class~="text-[11px]"]');
-    expect(css).toContain("font-size: 0.75rem");
-    expect(css).toContain("scrollbar-gutter: stable");
-    expect(css).toContain("overscroll-behavior: contain");
+    expect(workspace).toContain('[data-inbox-workspace="v2"]');
+    expect(workspace).toContain('[class~="text-[10px]"]');
+    expect(workspace).toContain('[class~="text-[11px]"]');
+    expect(workspace).toContain("font-size: 0.75rem");
     expect(hook).toContain("messages?limit=200");
     expect(hook).toContain("isNearBottomRef");
   });
