@@ -88,12 +88,14 @@ function expectWidthBetween(
   maximum: number,
   label: string,
 ) {
-  expect(box.width, `${label}: width must not collapse below ${minimum}px`).toBeGreaterThanOrEqual(
-    minimum,
-  );
-  expect(box.width, `${label}: width must not expand beyond ${maximum}px`).toBeLessThanOrEqual(
-    maximum,
-  );
+  expect(
+    box.width,
+    `${label}: width must not collapse below ${minimum}px`,
+  ).toBeGreaterThanOrEqual(minimum);
+  expect(
+    box.width,
+    `${label}: width must not expand beyond ${maximum}px`,
+  ).toBeLessThanOrEqual(maximum);
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -214,12 +216,12 @@ test.describe.serial("Founder visual correction evidence", () => {
     }
   });
 
-  test("Arabic flagship workbenches render with correct RTL sides and usable pane proportions", async ({
+  test("Arabic flagship workbenches render loaded content with correct RTL sides and usable pane proportions", async ({
     page,
     context,
     baseURL,
   }, testInfo) => {
-    test.setTimeout(180_000);
+    test.setTimeout(210_000);
     await setLocale(context, baseURL, "ar");
 
     await page.goto("/inbox", { waitUntil: "domcontentloaded" });
@@ -229,7 +231,15 @@ test.describe.serial("Founder visual correction evidence", () => {
       timeout: 60_000,
     });
     await expect(page.locator('[data-inbox-conversation]').first()).toBeVisible();
-    await expect(page.locator('[data-inbox-thread="active"]')).toBeVisible();
+    const inboxThreadLocator = page.locator('[data-inbox-thread="active"]');
+    await expect(inboxThreadLocator).toBeVisible();
+    const inboxMessageLog = inboxThreadLocator.getByRole("log");
+    await expect(inboxMessageLog).toBeVisible({ timeout: 30_000 });
+    await expect(inboxMessageLog.locator(".animate-spin")).toHaveCount(0, {
+      timeout: 30_000,
+    });
+    await expect(inboxMessageLog).not.toHaveText("", { timeout: 30_000 });
+
     const inboxQueue = await visibleBox(page, '[data-inbox-queue="true"]');
     const inboxThread = await visibleBox(page, '[data-inbox-thread="active"]');
     expectRightOf(inboxQueue, inboxThread, "RTL Inbox queue");
@@ -250,6 +260,24 @@ test.describe.serial("Founder visual correction evidence", () => {
     await expect(page.locator('[data-ai-workspace="v2"]')).toBeVisible({
       timeout: 60_000,
     });
+
+    // Rich representative data always includes durable sessions with messages.
+    // Select the last seeded session explicitly so the screenshot proves the
+    // loaded conversation workbench rather than a newly created empty session.
+    const aiSessionRows = page.locator("[data-ai-session]");
+    await expect(aiSessionRows.first()).toBeVisible({ timeout: 30_000 });
+    await aiSessionRows.last().click();
+
+    const aiThreadLocator = page.locator('[data-ai-thread="true"]');
+    const aiMessageLog = aiThreadLocator.getByRole("log");
+    await expect(aiMessageLog).toBeVisible({ timeout: 30_000 });
+    await expect(aiMessageLog.locator(".animate-spin")).toHaveCount(0, {
+      timeout: 30_000,
+    });
+    await expect(aiMessageLog.locator("[data-ai-message]").first()).toBeVisible({
+      timeout: 30_000,
+    });
+
     const aiSessions = await visibleBox(page, '[data-ai-sessions="true"]');
     const aiThread = await visibleBox(page, '[data-ai-thread="true"]');
     expectRightOf(aiSessions, aiThread, "RTL AI sessions rail");
