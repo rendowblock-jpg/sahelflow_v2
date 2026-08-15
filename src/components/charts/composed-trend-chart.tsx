@@ -1,14 +1,7 @@
 "use client";
 
 import { useI18n } from "@/hooks/use-i18n";
-import {
-  Bar,
-  CartesianGrid,
-  ComposedChart,
-  Line,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -61,19 +54,15 @@ export function ComposedTrendChart({
   formatRightY,
   emptyMessage,
 }: ComposedTrendChartProps) {
-  const { dir, t, locale } = useI18n();
+  const { t, locale } = useI18n();
   const { isAnimationActive, fastDuration, baseDuration } = useChartMotion();
-  const isRtl = dir === "rtl";
   const chartHeight = normalizeChartHeight(height);
   const fmtLeft = resolveFormatter(formatLeftY, locale);
   const fmtRight = resolveFormatter(formatRightY, locale);
 
   if (!data.length) {
     return (
-      <div
-        className="flex w-full items-center justify-center text-sm text-muted-foreground"
-        style={{ height: chartHeight }}
-      >
+      <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height: chartHeight }}>
         {emptyMessage ?? "—"}
       </div>
     );
@@ -93,15 +82,7 @@ export function ComposedTrendChart({
       style={{ height: chartHeight }}
       className="aspect-auto w-full"
     >
-      <ComposedChart
-        data={data}
-        margin={{
-          left: isRtl ? 12 : 4,
-          right: isRtl ? 4 : 12,
-          top: 8,
-          bottom: 0,
-        }}
-      >
+      <ComposedChart data={data} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey={xKey}
@@ -109,7 +90,6 @@ export function ComposedTrendChart({
           axisLine={false}
           tickMargin={10}
           minTickGap={24}
-          reversed={isRtl}
           className="text-xs fill-muted-foreground"
           tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
@@ -121,13 +101,13 @@ export function ComposedTrendChart({
           tickMargin={6}
           tickFormatter={(value: number) => fmtLeft(value)}
           className="text-xs fill-muted-foreground"
-          orientation={isRtl ? "right" : "left"}
+          orientation="left"
           tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
         {hasRight ? (
           <YAxis
             yAxisId="right"
-            orientation={isRtl ? "left" : "right"}
+            orientation="right"
             width={60}
             tickLine={false}
             axisLine={false}
@@ -180,11 +160,7 @@ export function ComposedTrendChart({
               stroke={`var(--color-${current.key})`}
               strokeWidth={2.25}
               dot={false}
-              activeDot={{
-                r: 4,
-                strokeWidth: 2,
-                stroke: "var(--background)",
-              }}
+              activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--background)" }}
               isAnimationActive={isAnimationActive}
               animationDuration={baseDuration}
               animationEasing="ease-out"
