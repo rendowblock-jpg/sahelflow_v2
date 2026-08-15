@@ -7,11 +7,11 @@ SahelFlow is a **Windows-first, local-first operations system for Algerian COD s
 - **Live protected `main`: resolve from GitHub before any write/review/release action.** Do not treat a SHA copied into documentation as the permanently current branch head.
 - Internal.19 application/source baseline introduced by PR #262: `8448c47123290f2e1af702ff24a427cc11c4781c`.
 - Latest signed/published package source: `5cb7f5040249a540ed635cdea16dc933843b40aa` — PR #260 / signed **Internal.18**.
-- Latest package authority: **Internal.18**, `1.0.0-internal.18`, MSI `1.0.0.18`, **FD-037**, `founder-offline-only`.
+- Latest installed package authority remains **Internal.18**, `1.0.0-internal.18`, MSI `1.0.0.18`, **FD-037**, `founder-offline-only`, until the FD-038 candidate is published and installed.
 - Founder-installed Internal.18 result: **REJECTED / PARTIALLY IMPROVED**; #221 remains open.
 - PR #262 / branch `agent/internal19-product-convergence` is merged historical source-convergence context, not an active PR frontier.
-- PR #263 is historical governance reconciliation after the source merge; it does not change application/package authority.
-- **No Internal.19 release authority exists yet.** The Internal.19 source merge is not release permission.
+- PR #263/#264 are historical governance reconciliation; PR #265 is historical CI lane-selection work. They do not change application acceptance.
+- **Internal.19 release authority is approved under FD-038:** candidate `1.0.0-internal.19`, MSI `1.0.0.19`, `founder-offline-only`, Founder/internal-lab only; signed publication and Founder install are pending.
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
 - Independent retained obligations remain **#221**, **#226** and **#230**.
 
@@ -25,7 +25,7 @@ The final source hardening protects application-vs-preview heading semantics, fo
 
 On exact PR head `8d43e6142aab508e54f038b13e2639ac6966682e`, Required PR, retry-free Phase 5 and retry-free Phase 6–7 were green. Human artifact inspection confirmed loaded Arabic Inbox messages, a loaded AI session with real messages/tool content, saved Storefront Studio, Analytics and dark-theme evidence.
 
-PR #263 then reconciled active non-archive documentation after that source merge. It was governance-only and did not move the application baseline, signed-package source or release authority.
+PR #263/#264 reconciled active non-archive documentation after that source merge, and PR #265 made heavy browser evidence risk-aware while remaining fail-closed for behavioral changes. Those were governance/CI-only and did not move the fixed Internal.19 application baseline.
 
 ## Evidence and release discipline
 
@@ -35,9 +35,9 @@ PR #263 then reconciled active non-archive documentation after that source merge
 - Final controlled CI trend for PR #262 recorded worst route median `4672.7 ms` and search p95 `31.1 ms`; this does **not** close #226.
 - Do not retry away deterministic failures or combine materially different SHAs.
 - No force merge, waiver, branch-protection bypass, signing-key weakening or release-source substitution.
-- FD-037 authorizes only Internal.18; customer-online/Beta/Stable remain unauthorized.
+- **FD-038 authorizes only Internal.19 `1.0.0-internal.19` / MSI `1.0.0.19` as a Founder/internal-lab `founder-offline-only` checkpoint; customer-online/Beta/Stable remain unauthorized.**
 
-After the PR #262 source merge and governance reconciliation, stop before packaging until explicit newer Founder release authority exists. Any later signed checkpoint must be versioned/certified from the then-live protected-main source under a separate explicit decision.
+The bounded FD-038 release-authority follow-up must pass its selected source/native/Windows/MSI/signing gates on one exact reviewed head. After protected merge, the release dispatcher may build and publish only the exact signed Internal.19 artifacts from that protected-main merge SHA. Founder-installed acceptance remains separate.
 
 ## Documentation and resume
 
@@ -51,4 +51,4 @@ The earlier Founder-only internal path included **`1.0.0-internal.15`** and sign
 
 ## Historical continuity
 
-Internal.16 Wave 4 later merged through PR #251. Internal.17 correction/release progressed through PRs #254/#257/#258/#259 under FD-036. Internal.18 correction/release completed through PR #260 at signed-package source `5cb7f5040249a540ed635cdea16dc933843b40aa`; the Founder then recorded **REJECTED / PARTIALLY IMPROVED**. Internal.19 source convergence completed through PR #262 / `agent/internal19-product-convergence` and established application baseline `8448c47123290f2e1af702ff24a427cc11c4781c`; PR #263 reconciled post-merge documentation. No Internal.19 release authority has been granted.
+Internal.16 Wave 4 later merged through PR #251. Internal.17 correction/release progressed through PRs #254/#257/#258/#259 under FD-036. Internal.18 correction/release completed through PR #260 at signed-package source `5cb7f5040249a540ed635cdea16dc933843b40aa`; the Founder then recorded **REJECTED / PARTIALLY IMPROVED**. Internal.19 source convergence completed through PR #262 / `agent/internal19-product-convergence` and established application baseline `8448c47123290f2e1af702ff24a427cc11c4781c`; PR #263/#264 reconciled post-merge documentation; PR #265 made CI evidence risk-aware. FD-038 now authorizes the exact Internal.19 Founder-only signed checkpoint; publication/install evidence remains pending.
