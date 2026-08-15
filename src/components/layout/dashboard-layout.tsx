@@ -28,6 +28,11 @@ interface DashboardLayoutProps {
 /**
  * SahelFlow desktop application frame.
  *
+ * The physical desktop frame uses a stable LTR coordinate system while locale
+ * direction is applied explicitly to navigation and the active work surface.
+ * This prevents shell placement from depending on inherited flex/grid direction
+ * semantics while keeping Arabic copy, logical spacing and bidi behavior RTL.
+ *
  * Locale and direction are consumed from the same reactive client authority as
  * translated copy. Server rendering still seeds that authority through the root
  * locale provider, but the shell never holds a stale server-only direction prop
@@ -116,23 +121,33 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div
-      dir={dir}
+      dir="ltr"
       className="flex h-[100dvh] min-h-0 overflow-hidden bg-background text-foreground"
       data-sahelflow-shell="desktop"
+      data-locale-dir={dir}
       data-density={density}
     >
       <a
         href="#main-content"
+        dir={dir}
         className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-[100] focus:rounded-md focus:border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg"
       >
         {t("common.skipToContent")}
       </a>
 
-      <div className="hidden h-full min-h-0 shrink-0 lg:flex">
+      <div
+        data-shell-region="navigation"
+        dir={dir}
+        className="hidden h-full min-h-0 shrink-0 lg:flex"
+      >
         <Sidebar serverLocale={locale} serverDir={dir} />
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div
+        data-shell-region="workspace"
+        dir={dir}
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+      >
         <Topbar
           onCommandPaletteOpen={() => setCommandOpen(true)}
           serverLocale={locale}
@@ -141,6 +156,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <main
           id="main-content"
           tabIndex={-1}
+          dir={dir}
           className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scroll-pt-14 outline-none"
         >
           {children}
