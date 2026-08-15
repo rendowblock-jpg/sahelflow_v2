@@ -1,0 +1,34 @@
+name: Draft remove pre-certification helpers
+
+on:
+  push:
+    branches: [agent/founder-visual-acceptance-repair]
+    paths: [.github/workflows/draft-remove-finalizers.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/founder-visual-acceptance-repair
+          fetch-depth: 0
+      - name: Remove draft-only helper workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -f --ignore-unmatch \
+            .github/workflows/draft-finalize-internal18.yml \
+            .github/workflows/draft-finalize-internal18-v2.yml \
+            .github/workflows/draft-finalize-internal18-v3.yml \
+            .github/workflows/draft-finalize-internal18-final.yml \
+            .github/workflows/draft-apply-product-final.yml \
+            .github/workflows/draft-remove-finalizers.yml
+          git config user.name sahelflow-release-bot
+          git config user.email actions@users.noreply.github.com
+          git commit -m 'chore(internal.18): remove draft-only finalizers'
+          git push origin HEAD:agent/founder-visual-acceptance-repair
