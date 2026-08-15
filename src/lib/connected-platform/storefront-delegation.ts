@@ -394,6 +394,17 @@ function allocationAuthority(
   return Object.freeze({ productId: product.id, productVariantId: variant.id });
 }
 
+function publishedLegacyContact(draft: StorefrontStudioDraft): string | null {
+  const contact = draft.theme.builder.contact;
+  const hasAny = Boolean(
+    contact.phone.trim() ||
+    contact.whatsapp.trim() ||
+    contact.email.trim() ||
+    contact.address.trim(),
+  );
+  return hasAny ? JSON.stringify(contact) : null;
+}
+
 async function promotePreparedDraft(
   tx: BusinessTransaction,
   prepared: PreparedStorefrontPublish,
@@ -406,6 +417,10 @@ async function promotePreparedDraft(
       description: prepared.draft.description || null,
       theme: JSON.stringify(prepared.draft.theme),
       productIds: JSON.stringify(prepared.draft.selectedProductIds),
+      // The durable finalize transaction is the real publication boundary.
+      // Keep the legacy sibling projection synchronized here so V2 contact
+      // edits and explicit clears cannot diverge from local public fallback.
+      contact: publishedLegacyContact(prepared.draft),
       isActive: prepared.draft.isActive,
     },
   });
