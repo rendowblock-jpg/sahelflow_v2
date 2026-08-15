@@ -195,7 +195,9 @@ export function StorefrontRenderer({
         const authoredSupport = hasContact(theme.builder.contact)
           ? <StorefrontContactBlock contact={theme.builder.contact} />
           : null;
-        const support = renderSupport ?? authoredSupport;
+        // Once a V2 release contains contact, it is immutable release authority.
+        // The legacy sibling field remains read-compatible only for older rows.
+        const support = authoredSupport ?? renderSupport;
         return support ? (
           <section key={section.id} {...props} className={sectionClass(section, "py-5")}>
             {support}
