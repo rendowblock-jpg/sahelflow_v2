@@ -28,14 +28,16 @@ describe("Founder Storefront V2 acceptance repair", () => {
     expect(projection).toContain("verificationValue: null");
   });
 
-  it("synchronizes or clears the legacy contact projection only when V2 is explicitly published", () => {
+  it("synchronizes or clears legacy contact inside the actual durable publish transaction", () => {
     const service = read("src/lib/storefront/service.ts");
-    expect(service).toContain("function publishedLegacyContact");
-    expect(service).toContain("return hasAny ? JSON.stringify(contact) : null");
-    expect(service).toContain("contact: publishedLegacyContact(publishedTheme)");
-    expect(service.indexOf("contact: publishedLegacyContact(publishedTheme)")).toBeGreaterThan(
-      service.indexOf("async publishStudioDraft"),
+    const delegation = read("src/lib/connected-platform/storefront-delegation.ts");
+    expect(delegation).toContain("function publishedLegacyContact");
+    expect(delegation).toContain("return hasAny ? JSON.stringify(contact) : null");
+    expect(delegation).toContain("contact: publishedLegacyContact(prepared.draft)");
+    expect(delegation.indexOf("contact: publishedLegacyContact(prepared.draft)")).toBeGreaterThan(
+      delegation.indexOf("async function promotePreparedDraft"),
     );
+    expect(delegation).toContain("await promotePreparedDraft(tx, prepared)");
     const saveDraft = service.slice(
       service.indexOf("async saveStudioDraft"),
       service.indexOf("async publishStudioDraft"),
