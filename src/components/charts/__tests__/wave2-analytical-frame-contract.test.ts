@@ -54,6 +54,26 @@ describe("Wave 2 analytical frame contract", () => {
     expect(dual).toContain("formatDZD(value, locale)");
   });
 
+  it("keeps quantitative and chronological coordinates stable when Arabic is active", () => {
+    for (const file of [
+      "../area-trend-chart.tsx",
+      "../line-trend-chart.tsx",
+      "../horizontal-bar-chart.tsx",
+      "../composed-trend-chart.tsx",
+      "../dual-bar-chart.tsx",
+    ]) {
+      const chart = source(file);
+      expect(chart).not.toContain("reversed={isRtl}");
+      expect(chart).not.toContain('orientation={isRtl ? "right" : "left"}');
+      expect(chart).not.toContain('orientation={isRtl ? "left" : "right"}');
+    }
+
+    expect(source("../horizontal-bar-chart.tsx")).toContain('orientation="left"');
+    expect(source("../horizontal-bar-chart.tsx")).toContain('position="right"');
+    expect(source("../line-trend-chart.tsx")).toContain('orientation="left"');
+    expect(source("../area-trend-chart.tsx")).toContain('orientation="left"');
+  });
+
   it("uses container-relative polar geometry rather than fixed pixel radii", () => {
     const donut = source("../donut-chart.tsx");
     const radial = source("../radial-gauge.tsx");
