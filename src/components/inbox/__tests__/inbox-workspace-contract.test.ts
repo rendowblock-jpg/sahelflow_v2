@@ -15,13 +15,15 @@ describe("Inbox operational workspace contract", () => {
     expect(page).not.toContain("WhatsAppIngressRecoveryPanel");
   });
 
-  it("opens the newest permitted conversation on desktop without stealing mobile queue-first navigation", () => {
+  it("opens the first rendered conversation on desktop without stealing mobile queue-first navigation", () => {
     const primer = read("src/components/inbox/inbox-desktop-primer.tsx");
     expect(primer).toContain("useMobile");
     expect(primer).toContain("if (mobile || conversation) return");
-    expect(primer).toContain('fetch("/api/conversations"');
-    expect(primer).toContain('next.set("conversation", firstId)');
-    expect(primer).toContain("router.replace");
+    expect(primer).toContain('"[data-inbox-conversation]"');
+    expect(primer).toContain("firstConversation.click()");
+    expect(primer).toContain("MutationObserver");
+    expect(primer).not.toContain('next.set("conversation"');
+    expect(primer).not.toContain("router.replace");
   });
 
   it("keeps persisted conversations authoritative independently of transport health", () => {
