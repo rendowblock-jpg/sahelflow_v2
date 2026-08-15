@@ -1,0 +1,78 @@
+/*
+ * SahelFlow locale-transition presentation.
+ *
+ * The client locale now commits synchronously at the interaction boundary while
+ * the Server Component tree reconciles in the background. A language change is
+ * therefore presented as a lightweight state transition, never as a full-screen
+ * loading/restart ceremony. Product controls already prevent a second locale
+ * request while reconciliation is pending.
+ */
+
+html[data-locale-transition="pending"] body {
+  cursor: default;
+}
+
+/* Override the historical full-screen blur cover from product-system.css. */
+html[data-locale-transition="pending"] body::before {
+  content: "";
+  position: fixed;
+  z-index: 2147483001;
+  inset: 0 0 auto 0;
+  width: 38%;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--primary) 88%, white 12%),
+    transparent
+  );
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  animation: sf-locale-progress 760ms var(--motion-ease-emphasized) infinite;
+}
+
+html[data-locale-transition="pending"] body::after {
+  display: none;
+  content: none;
+}
+
+@keyframes sf-locale-progress {
+  from {
+    transform: translateX(-115%);
+    opacity: 0.4;
+  }
+  45% {
+    opacity: 1;
+  }
+  to {
+    transform: translateX(300%);
+    opacity: 0.45;
+  }
+}
+
+html[dir="rtl"][data-locale-transition="pending"] body::before {
+  animation-name: sf-locale-progress-rtl;
+}
+
+@keyframes sf-locale-progress-rtl {
+  from {
+    transform: translateX(300%);
+    opacity: 0.4;
+  }
+  45% {
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-115%);
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-locale-transition="pending"] body::before {
+    width: 100%;
+    opacity: 0.7;
+    animation: none !important;
+  }
+}
