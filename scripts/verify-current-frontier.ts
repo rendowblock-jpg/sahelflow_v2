@@ -47,6 +47,8 @@ const installedDecision = "FD-037";
 const candidateVersion = "1.0.0-internal.19";
 const candidateMsiVersion = "1.0.0.19";
 const candidateDecision = "FD-038";
+const candidateAuthorityMarker =
+  "Internal.19 release authority is approved under FD-038";
 const currentReleaseRequest =
   ".github/release-requests/internal-19-founder-convergence.json";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
@@ -107,6 +109,10 @@ for (const path of currentDocs) {
     currentSourceFrontier,
     installedCheckpoint,
     "REJECTED / PARTIALLY IMPROVED",
+    candidateVersion,
+    candidateMsiVersion,
+    candidateDecision,
+    candidateAuthorityMarker,
     "founder-offline-only",
     "#221",
     "#226",
@@ -190,6 +196,7 @@ const staleCurrentMarkers = [
   "Current source frontier: `agent/internal19-product-convergence` / PR #262 / Internal.19",
   "Current source work: **Internal.19**, `agent/internal19-product-convergence`, **PR #262**",
   "After PR #262 is exact-head green and reviewed, merge only that verified tree",
+  "No Internal.19 release authority exists yet",
   `> **Protected main:** \`${internal19ApplicationBaseline}\``,
   `- Protected \`main\`: \`${internal19ApplicationBaseline}\``,
 ];
