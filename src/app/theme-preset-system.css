@@ -1,0 +1,109 @@
+/*
+ * SahelFlow dark preset authority.
+ *
+ * Founder-installed Internal.17 showed that tinting every dark structural
+ * surface with the selected preset makes Atlas/Oasis/Dune feel aggressive and
+ * visually exhausting. Dark mode therefore keeps one premium neutral charcoal
+ * material system. Presets express identity through accents, focus/selection,
+ * active navigation and analytical colors instead of recoloring the canvas,
+ * panels, inputs and sidebar.
+ *
+ * Light-mode preset surfaces remain owned by product-system.css.
+ */
+
+html.dark {
+  /* One neutral dark material stack for every preset. */
+  --surface-0: oklch(0.145 0.004 260);
+  --surface-1: oklch(0.178 0.004 260);
+  --surface-2: oklch(0.215 0.005 260);
+  --surface-3: oklch(0.255 0.006 260);
+  --background: var(--surface-0);
+  --foreground: oklch(0.955 0.006 90);
+  --card: var(--surface-1);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.188 0.005 260);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-2);
+  --muted-foreground: oklch(0.72 0.010 90);
+  --border: oklch(0.94 0.006 90 / 0.12);
+  --input: oklch(0.94 0.006 90 / 0.16);
+  --sidebar: oklch(0.158 0.004 260);
+  --sidebar-foreground: oklch(0.93 0.006 90);
+  --sidebar-border: oklch(0.94 0.006 90 / 0.09);
+  --sf-chart-grid: oklch(0.90 0.006 90 / 0.105);
+  --sf-chart-axis: oklch(0.72 0.010 90);
+  --sf-surface-highlight: oklch(1 0 0 / 0.035);
+}
+
+/* Sahel — emerald identity on neutral charcoal. */
+html.dark[data-theme-preset="sahel"] {
+  --primary: oklch(0.70 0.16 150);
+  --primary-foreground: oklch(0.13 0.018 150);
+  --ring: var(--primary);
+  --accent: color-mix(in oklch, var(--primary) 13%, var(--surface-2));
+  --accent-foreground: oklch(0.95 0.018 150);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: color-mix(in oklch, var(--primary) 12%, var(--surface-2));
+  --sidebar-accent-foreground: oklch(0.95 0.018 150);
+  --sidebar-ring: var(--ring);
+}
+
+/* Atlas — violet identity without a purple canvas. */
+html.dark[data-theme-preset="atlas"] {
+  --primary: oklch(0.72 0.15 285);
+  --primary-foreground: oklch(0.14 0.024 285);
+  --ring: var(--primary);
+  --accent: color-mix(in oklch, var(--primary) 14%, var(--surface-2));
+  --accent-foreground: oklch(0.95 0.018 285);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: color-mix(in oklch, var(--primary) 13%, var(--surface-2));
+  --sidebar-accent-foreground: oklch(0.95 0.018 285);
+  --sidebar-ring: var(--ring);
+  --chart-1: oklch(0.72 0.15 285);
+  --chart-2: oklch(0.70 0.13 245);
+  --chart-3: oklch(0.73 0.14 325);
+  --chart-4: oklch(0.70 0.13 160);
+  --chart-5: oklch(0.76 0.12 75);
+}
+
+/* Oasis — teal identity without a cyan/green canvas. */
+html.dark[data-theme-preset="oasis"] {
+  --primary: oklch(0.72 0.125 190);
+  --primary-foreground: oklch(0.13 0.024 190);
+  --ring: var(--primary);
+  --accent: color-mix(in oklch, var(--primary) 13%, var(--surface-2));
+  --accent-foreground: oklch(0.95 0.018 190);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: color-mix(in oklch, var(--primary) 12%, var(--surface-2));
+  --sidebar-accent-foreground: oklch(0.95 0.018 190);
+  --sidebar-ring: var(--ring);
+  --chart-1: oklch(0.71 0.13 205);
+  --chart-2: oklch(0.71 0.13 165);
+  --chart-3: oklch(0.72 0.14 260);
+  --chart-4: oklch(0.76 0.12 80);
+  --chart-5: oklch(0.72 0.14 325);
+}
+
+/* Dune — amber/copper identity without a brown canvas. */
+html.dark[data-theme-preset="dune"] {
+  --primary: oklch(0.76 0.125 70);
+  --primary-foreground: oklch(0.16 0.024 65);
+  --ring: var(--primary);
+  --accent: color-mix(in oklch, var(--primary) 14%, var(--surface-2));
+  --accent-foreground: oklch(0.96 0.018 72);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: color-mix(in oklch, var(--primary) 13%, var(--surface-2));
+  --sidebar-accent-foreground: oklch(0.96 0.018 72);
+  --sidebar-ring: var(--ring);
+  --chart-1: oklch(0.76 0.13 70);
+  --chart-2: oklch(0.70 0.15 28);
+  --chart-3: oklch(0.72 0.14 320);
+  --chart-4: oklch(0.70 0.13 155);
+  --chart-5: oklch(0.69 0.13 235);
+}
