@@ -43,17 +43,32 @@ export async function StorefrontStudioRoute({ id }: { id: string }) {
   });
 
   return (
-    <div className="app-workspace-content relative">
-      <Link
-        href="/storefronts"
-        data-storefront-focus-exit="true"
-        aria-label={t("storefront.builder.back")}
-        title={t("storefront.builder.back")}
-        className="absolute start-2 top-2 z-30 flex size-9 items-center justify-center rounded-lg border border-border/80 bg-background/92 text-muted-foreground shadow-sm backdrop-blur hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <div className="app-workspace-content flex flex-col">
+      <header
+        data-storefront-focus-bar="true"
+        className="flex h-11 shrink-0 items-center gap-3 border-b border-border/80 bg-background px-2.5"
       >
-        <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
-      </Link>
-      <StorefrontStudio config={config} products={products} />
+        <Link
+          href="/storefronts"
+          aria-label={t("storefront.builder.back")}
+          title={t("storefront.builder.back")}
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
+        </Link>
+        <div className="h-5 w-px shrink-0 bg-border" aria-hidden="true" />
+        <div className="min-w-0">
+          <p className="truncate text-xs font-semibold text-foreground">
+            {config.name}
+          </p>
+          <p className="truncate text-[10px] text-muted-foreground">
+            {t("metadata.title.storefrontEdit")}
+          </p>
+        </div>
+      </header>
+      <div className="min-h-0 flex-1">
+        <StorefrontStudio config={config} products={products} />
+      </div>
     </div>
   );
 }
