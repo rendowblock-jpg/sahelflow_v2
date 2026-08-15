@@ -31,6 +31,7 @@ export interface StorefrontRendererProps extends StorefrontPreviewProps {
   selectedSectionId?: string | null;
   onInspectSection?: (id: string) => void;
   maxProducts?: number;
+  embeddedPreview?: boolean;
   renderProductFooter?: (product: StorefrontStudioProduct) => React.ReactNode;
   renderCheckout?: React.ReactNode;
   renderSupport?: React.ReactNode;
@@ -54,6 +55,7 @@ export function StorefrontRenderer({
   selectedSectionId,
   onInspectSection,
   maxProducts,
+  embeddedPreview,
   renderProductFooter,
   renderCheckout,
   renderSupport,
@@ -69,6 +71,12 @@ export function StorefrontRenderer({
     typeof maxProducts === "number"
       ? selectedProducts.slice(0, maxProducts)
       : selectedProducts;
+  // Existing Studio/bootstrap callers bound the preview with maxProducts while
+  // the customer StorefrontView does not. Keep that compatibility inference but
+  // expose an explicit override so future limited customer renders never have to
+  // inherit preview heading semantics accidentally.
+  const isEmbeddedPreview =
+    embeddedPreview ?? typeof maxProducts === "number";
 
   function inspect(section: StorefrontSection): InspectProps {
     if (!onInspectSection) return {};
@@ -166,9 +174,15 @@ export function StorefrontRenderer({
                   ? t("storefront.studio.payOnDelivery")
                   : t("storefront.studio.algeriaCod"))}
             </span>
-            <h1 className="mt-3 text-4xl font-semibold leading-none tracking-tight">
-              {theme.hero.headline || draft.name}
-            </h1>
+            {isEmbeddedPreview ? (
+              <h2 className="mt-3 text-4xl font-semibold leading-none tracking-tight">
+                {theme.hero.headline || draft.name}
+              </h2>
+            ) : (
+              <h1 className="mt-3 text-4xl font-semibold leading-none tracking-tight">
+                {theme.hero.headline || draft.name}
+              </h1>
+            )}
             <p className="mt-4 text-sm leading-6 opacity-70">
               {theme.hero.body || draft.description}
             </p>
