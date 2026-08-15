@@ -1,13 +1,9 @@
 /**
  * Storefront types + service.
  *
- * A StorefrontConfig holds the seller's mini-storefront settings. The public
- * storefront is served at /storefront/[slug] — customers browse products,
- * fill a COD form, and the order is created via /api/storefront/submit.
- *
- * The storefront is intentionally simple (Phase 0 #14 v1): one page, product
- * grid, cart, COD checkout. No custom domains, discount codes, or theming
- * beyond the 3 built-in templates (those are Phase 2).
+ * A StorefrontConfig holds the seller's storefront settings. Public reads use
+ * the last published fields while Studio authoring uses the compare-and-set
+ * draft columns plus V2 builder metadata inside theme JSON.
  */
 import "server-only";
 
@@ -114,6 +110,25 @@ function parseStudioConfig(row: StorefrontRow): StorefrontStudioConfig {
   };
 }
 
+function contactIntoTheme(
+  theme: StorefrontTheme,
+  contact: StorefrontContact | undefined,
+): StorefrontTheme {
+  if (!contact) return theme;
+  return {
+    ...theme,
+    builder: {
+      ...theme.builder,
+      contact: {
+        phone: contact.phone ?? "",
+        whatsapp: contact.whatsapp ?? "",
+        email: contact.email ?? "",
+        address: contact.address ?? "",
+      },
+    },
+  };
+}
+
 export const storefrontService = {
   async getBySlug(context: ServiceContext, slug: string): Promise<StorefrontConfig | null> {
     const row = await context.prisma.storefrontConfig.findUnique({ where: { slug } });
@@ -147,8 +162,16 @@ export const storefrontService = {
     productIds: string[];
     contact?: StorefrontContact;
     isActive?: boolean;
+    /** Seeds a private Studio draft without making the public storefront live. */
+    initialDraftIsActive?: boolean;
   }): Promise<StorefrontConfig> {
-    const theme = storefrontStudioThemeSchema.parse(input.theme);
+    const parsedTheme = storefrontStudioThemeSchema.parse(input.theme);
+    const theme = storefrontStudioThemeSchema.parse(
+      contactIntoTheme(parsedTheme, input.contact),
+    );
+    const draftUpdatedAt = input.initialDraftIsActive === undefined
+      ? null
+      : new Date();
     const row = await context.prisma.storefrontConfig.create({
       data: {
         slug: input.slug,
@@ -156,8 +179,21 @@ export const storefrontService = {
         description: input.description ?? null,
         theme: JSON.stringify(theme),
         productIds: JSON.stringify(input.productIds),
+        // Retain the legacy live projection for older local/public consumers.
+        // V2 authoring + hosted release authority lives in theme.builder.contact.
         contact: input.contact ? JSON.stringify(input.contact) : null,
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        ...(draftUpdatedAt
+          ? {
+              draftName: input.name,
+              draftSlug: input.slug,
+              draftDescription: input.description ?? null,
+              draftTheme: JSON.stringify(theme),
+              draftProductIds: JSON.stringify(input.productIds),
+              draftIsActive: input.initialDraftIsActive,
+              draftUpdatedAt,
+            }
+          : {}),
       },
     });
     return parseConfig(row);
