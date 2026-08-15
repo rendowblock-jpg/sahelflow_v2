@@ -35,7 +35,7 @@ function rejectMarkers(relativePath: string, markers: readonly string[]): void {
   }
 }
 
-const protectedMainInternal19 = "8448c47123290f2e1af702ff24a427cc11c4781c";
+const internal19ApplicationBaseline = "8448c47123290f2e1af702ff24a427cc11c4781c";
 const latestSignedInternal18Source = "5cb7f5040249a540ed635cdea16dc933843b40aa";
 const mergedBranch = "agent/internal19-product-convergence";
 const mergedPr = "PR #262";
@@ -48,10 +48,10 @@ const currentReleaseRequest =
   ".github/release-requests/internal-18-founder-visual-correction.json";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 
-// Release authority and source frontier are intentionally separate.
-// Protected main now contains the merged Internal.19 source correction, while
-// Internal.18/FD-037 remains the latest authorized signed package until a newer
-// explicit Founder release/version decision exists.
+// Release authority, application-source identity, and the live Git branch head
+// are intentionally separate. The live protected `main` SHA is resolved from
+// GitHub at action time; governance-only merges may advance it without changing
+// the fixed Internal.19 application baseline below.
 requireMarkers("sahelflow.version.json", [
   `"version": "${installedVersion}"`,
   `"windowsMsiVersion": "${installedMsiVersion}"`,
@@ -98,7 +98,7 @@ const currentDocs = [
 
 for (const path of currentDocs) {
   requireMarkers(path, [
-    protectedMainInternal19,
+    internal19ApplicationBaseline,
     latestSignedInternal18Source,
     mergedPr,
     currentSourceFrontier,
@@ -109,6 +109,7 @@ for (const path of currentDocs) {
     "#221",
     "#226",
     "#230",
+    "resolve",
   ]);
 }
 
@@ -118,7 +119,7 @@ requireMarkers("README.md", [
   installedMsiVersion,
   installedDecision,
   mergedBranch,
-  "merged historical source-convergence context",
+  "application/source baseline",
 ]);
 
 requireMarkers("AGENTS.md", [
@@ -126,7 +127,7 @@ requireMarkers("AGENTS.md", [
   activePhase,
   mergedBranch,
   "Do not restart a generic codebase audit",
-  "PR #262 / `agent/internal19-product-convergence` is **merged historical source-convergence context**",
+  "application/source baseline",
 ]);
 
 requireMarkers("documentation/README.md", [
@@ -142,7 +143,7 @@ requireMarkers("documentation/README.md", [
 requireMarkers("documentation/system/CURRENT_STATE.md", [
   mergedBranch,
   "## Installed authority",
-  "## Current source frontier — protected main after PR #262",
+  "## Current source frontier — live main plus fixed Internal.19 application baseline",
   "## Exact source/evidence state",
   "## Remaining launch blockers",
 ]);
@@ -150,6 +151,7 @@ requireMarkers("documentation/system/CURRENT_STATE.md", [
 requireMarkers("documentation/system/ROADMAP.md", [
   "## Current dependency order",
   "expected-head merge",
+  "## Governance reconciliation after source merge",
   "## Release-authority boundary",
   "## Phase 7 — installed performance and reliability",
   "## Customer licensing/network gate — #230",
@@ -178,6 +180,8 @@ const staleCurrentMarkers = [
   "Current source frontier: `agent/internal19-product-convergence` / PR #262 / Internal.19",
   "Current source work: **Internal.19**, `agent/internal19-product-convergence`, **PR #262**",
   "After PR #262 is exact-head green and reviewed, merge only that verified tree",
+  `> **Protected main:** \`${internal19ApplicationBaseline}\``,
+  `- Protected \`main\`: \`${internal19ApplicationBaseline}\``,
 ];
 for (const path of currentDocs) rejectMarkers(path, staleCurrentMarkers);
 
@@ -195,6 +199,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: protected main 8448c471... contains the merged Internal.19 source correction from PR #262; latest signed/installed package remains Internal.18/FD-037 from source 5cb7f504... with Founder result REJECTED / PARTIALLY IMPROVED. No Internal.19 release authority exists yet. Stop before packaging until an explicit newer Founder release decision exists. #221/#226/#230 remain independent obligations.",
+    "Current execution frontier verified: live protected main must be resolved from GitHub at action time; Internal.19 application baseline is 8448c471... from PR #262; latest signed/installed package remains Internal.18/FD-037 from source 5cb7f504... with Founder result REJECTED / PARTIALLY IMPROVED. No Internal.19 release authority exists yet. Stop before packaging until an explicit newer Founder release decision exists. #221/#226/#230 remain independent obligations.",
   );
 }
