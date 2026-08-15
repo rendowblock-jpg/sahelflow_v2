@@ -62,50 +62,17 @@ export function DualBarChart({
           data={data}
           barGap={6}
           barCategoryGap="22%"
-          margin={{
-            left: isRtl ? 14 : 6,
-            right: isRtl ? 6 : 14,
-            top: 10,
-            bottom: 2,
-          }}
+          margin={{ left: 6, right: 14, top: 10, bottom: 2 }}
           accessibilityLayer
         >
           <defs>
-            <linearGradient
-              id={revenueGradientId}
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="1"
-            >
-              <stop
-                offset="0%"
-                stopColor={CHART_COLORS.chart4}
-                stopOpacity={1}
-              />
-              <stop
-                offset="100%"
-                stopColor={CHART_COLORS.chart4}
-                stopOpacity={0.70}
-              />
+            <linearGradient id={revenueGradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={CHART_COLORS.chart4} stopOpacity={1} />
+              <stop offset="100%" stopColor={CHART_COLORS.chart4} stopOpacity={0.70} />
             </linearGradient>
-            <linearGradient
-              id={expenseGradientId}
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="1"
-            >
-              <stop
-                offset="0%"
-                stopColor={CHART_COLORS.chart3}
-                stopOpacity={1}
-              />
-              <stop
-                offset="100%"
-                stopColor={CHART_COLORS.chart3}
-                stopOpacity={0.70}
-              />
+            <linearGradient id={expenseGradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={CHART_COLORS.chart3} stopOpacity={1} />
+              <stop offset="100%" stopColor={CHART_COLORS.chart3} stopOpacity={0.70} />
             </linearGradient>
           </defs>
           <CartesianGrid vertical={false} />
@@ -114,7 +81,6 @@ export function DualBarChart({
             tickLine={false}
             axisLine={false}
             dy={8}
-            reversed={isRtl}
             tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
           />
           <YAxis
@@ -123,7 +89,7 @@ export function DualBarChart({
             axisLine={false}
             width={60}
             domain={[0, yMax]}
-            orientation={isRtl ? "right" : "left"}
+            orientation="left"
             tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
           />
           <Tooltip
