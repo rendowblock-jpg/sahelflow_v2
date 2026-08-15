@@ -47,9 +47,8 @@ export function LineTrendChart({
   formatY,
   emptyMessage,
 }: LineTrendChartProps) {
-  const { dir, t, locale } = useI18n();
+  const { t, locale } = useI18n();
   const { isAnimationActive, baseDuration } = useChartMotion();
-  const isRtl = dir === "rtl";
   const chartHeight = normalizeChartHeight(height);
   const fmtY = resolveFormatter(formatY, locale);
 
@@ -74,12 +73,7 @@ export function LineTrendChart({
     >
       <LineChart
         data={data}
-        margin={{
-          left: isRtl ? 12 : 4,
-          right: isRtl ? 4 : 12,
-          top: 8,
-          bottom: 0,
-        }}
+        margin={{ left: 4, right: 12, top: 8, bottom: 0 }}
       >
         <CartesianGrid vertical={false} />
         <XAxis
@@ -88,7 +82,6 @@ export function LineTrendChart({
           axisLine={false}
           tickMargin={10}
           minTickGap={32}
-          reversed={isRtl}
           className="text-xs fill-muted-foreground"
           tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
@@ -99,7 +92,7 @@ export function LineTrendChart({
           tickMargin={6}
           tickFormatter={(value: number) => fmtY(value)}
           className="text-xs fill-muted-foreground"
-          orientation={isRtl ? "right" : "left"}
+          orientation="left"
           tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
         <ChartTooltip
