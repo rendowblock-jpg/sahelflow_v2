@@ -51,7 +51,10 @@ describe("Storefront Builder V2", () => {
     const existing = createDefaultStorefrontTheme("atlas");
     existing.hero.headline = "Existing headline";
     existing.builder.seo.title = "Existing SEO";
-    const legacy = structuredClone(existing) as typeof existing & { builder: Omit<typeof existing.builder, "contact"> & { contact?: never } };
+    const legacy = structuredClone(existing) as unknown as {
+      builder: Record<string, unknown>;
+      [key: string]: unknown;
+    };
     delete legacy.builder.contact;
     const normalized = normalizeStorefrontTheme(legacy);
     expect(normalized.hero.headline).toBe("Existing headline");
