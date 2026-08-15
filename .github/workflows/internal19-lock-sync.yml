@@ -22,6 +22,8 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      # Temporary branch-only helper. Cargo owns the generated lockfile update;
+      # the diff guard below refuses any dependency or non-version change.
       - name: Synchronize only SahelFlow root package version
         shell: bash
         run: |
