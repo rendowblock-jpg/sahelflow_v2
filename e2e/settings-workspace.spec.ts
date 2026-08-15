@@ -42,6 +42,16 @@ async function setLocale(
   ]);
 }
 
+async function expectNoHorizontalOverflow(page: Page) {
+  const overflow = await page.evaluate(() => ({
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: window.innerWidth,
+  }));
+  expect(overflow.documentWidth).toBeLessThanOrEqual(
+    overflow.viewportWidth + 1,
+  );
+}
+
 test.describe.serial("Settings operational workspace evidence", () => {
   let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 
@@ -66,20 +76,27 @@ test.describe.serial("Settings operational workspace evidence", () => {
     await waitForHydration(page);
   });
 
-  test("desktop groups expose one task-shaped workspace without overflow", async ({
+  test("desktop exposes predictable task-based settings destinations without overflow", async ({
     page,
   }) => {
     const workspace = page.locator('[data-settings-workspace="v2"]');
     await expect(workspace).toBeVisible();
 
     const groups = page.locator("[data-settings-group]");
-    await expect(groups).toHaveCount(4);
-    await expect(page.locator('[data-settings-group="experience"]')).toHaveAttribute(
+    await expect(groups).toHaveCount(6);
+    await expect(page.locator('[data-settings-group="workspace"]')).toHaveAttribute(
       "aria-pressed",
       "true",
     );
 
-    for (const group of ["connections", "team", "data", "experience"] as const) {
+    for (const group of [
+      "operations",
+      "connections",
+      "intelligence",
+      "access",
+      "data",
+      "workspace",
+    ] as const) {
       await page.locator(`[data-settings-group="${group}"]`).click();
       await expect(
         page.locator(`[data-settings-group-panel="${group}"]`),
@@ -90,39 +107,27 @@ test.describe.serial("Settings operational workspace evidence", () => {
       );
     }
 
-    const overflow = await page.evaluate(() => ({
-      documentWidth: document.documentElement.scrollWidth,
-      viewportWidth: window.innerWidth,
-    }));
-    expect(overflow.documentWidth).toBeLessThanOrEqual(
-      overflow.viewportWidth + 1,
-    );
+    await expectNoHorizontalOverflow(page);
   });
 
-  test("mobile keeps group navigation usable without horizontal page overflow", async ({
+  test("mobile keeps task navigation usable without horizontal page overflow", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 640, height: 768 });
     const workspace = page.locator('[data-settings-workspace="v2"]');
     await expect(workspace).toBeVisible();
 
-    await page.locator('[data-settings-group="connections"]').click();
-    await expect(
-      page.locator('[data-settings-group-panel="connections"]'),
-    ).toBeVisible();
-    await page.locator('[data-settings-group="data"]').click();
-    await expect(page.locator('[data-settings-group-panel="data"]')).toBeVisible();
+    for (const group of ["connections", "intelligence", "data"] as const) {
+      await page.locator(`[data-settings-group="${group}"]`).click();
+      await expect(
+        page.locator(`[data-settings-group-panel="${group}"]`),
+      ).toBeVisible();
+    }
 
-    const overflow = await page.evaluate(() => ({
-      documentWidth: document.documentElement.scrollWidth,
-      viewportWidth: window.innerWidth,
-    }));
-    expect(overflow.documentWidth).toBeLessThanOrEqual(
-      overflow.viewportWidth + 1,
-    );
+    await expectNoHorizontalOverflow(page);
   });
 
-  test("Arabic RTL keeps group direction and content coherent", async ({
+  test("Arabic RTL places settings navigation on the physical right and content on the left", async ({
     context,
     page,
     baseURL,
@@ -135,15 +140,21 @@ test.describe.serial("Settings operational workspace evidence", () => {
     const workspace = page.locator('[data-settings-workspace="v2"]');
     await expect(workspace).toBeVisible();
 
-    await page.locator('[data-settings-group="team"]').click();
-    await expect(page.locator('[data-settings-group-panel="team"]')).toBeVisible();
+    await page.locator('[data-settings-group="access"]').click();
+    await expect(page.locator('[data-settings-group-panel="access"]')).toBeVisible();
 
-    const overflow = await page.evaluate(() => ({
-      documentWidth: document.documentElement.scrollWidth,
-      viewportWidth: window.innerWidth,
-    }));
-    expect(overflow.documentWidth).toBeLessThanOrEqual(
-      overflow.viewportWidth + 1,
-    );
+    const navigationBox = await page
+      .locator('[data-settings-workspace="v2"] > div > aside')
+      .boundingBox();
+    const panelBox = await page
+      .locator('[data-settings-workspace="v2"] > div > section')
+      .boundingBox();
+    expect(navigationBox).not.toBeNull();
+    expect(panelBox).not.toBeNull();
+    if (navigationBox && panelBox) {
+      expect(navigationBox.x).toBeGreaterThan(panelBox.x);
+    }
+
+    await expectNoHorizontalOverflow(page);
   });
 });
