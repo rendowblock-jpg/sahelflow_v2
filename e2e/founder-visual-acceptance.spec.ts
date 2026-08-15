@@ -123,6 +123,7 @@ async function expectRtlStorefrontFocusGeometry(page: Page) {
   await expect(shell).toHaveAttribute("data-locale-dir", "rtl");
   await expect(shell).toHaveAttribute("data-shell-mode", "storefront-focus");
   await expect(page.locator('[data-shell-region="navigation"]')).toHaveCount(0);
+  await expect(page.locator("#main-content h1")).toHaveCount(1);
   const workspace = await visibleBox(page, '[data-shell-region="workspace"]');
   expect(workspace.x).toBeLessThanOrEqual(1);
   expect(workspace.width).toBeGreaterThanOrEqual(DESKTOP.width - 2);
@@ -288,6 +289,43 @@ test.describe.serial("Founder visual correction evidence", () => {
     ).toBeGreaterThan(storefrontSetup.width * 2);
     await expectNoHorizontalOverflow(page);
     await shot(page, testInfo, "founder-rtl-storefront-studio");
+
+    // The rich seed owns a real storefront. Capture the actual saved Studio as
+    // Founder evidence too; first-run bootstrap alone cannot prove the editor.
+    await page.goto("/storefronts", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+    const editLink = page.locator('a[href^="/storefronts/"][href$="/studio"]').first();
+    await expect(editLink).toBeVisible({ timeout: 30_000 });
+    const studioHref = await editLink.getAttribute("href");
+    expect(studioHref).toBeTruthy();
+    await page.goto(studioHref!, { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+    await expectRtlStorefrontFocusGeometry(page);
+    await expect(page.locator('[data-storefront-studio="v2"]')).toBeVisible({
+      timeout: 60_000,
+    });
+    const studioControls = await visibleBox(
+      page,
+      '[data-storefront-studio="v2"] > div.grid > aside:first-child',
+    );
+    const studioPreview = await visibleBox(
+      page,
+      '[data-storefront-studio="v2"] > div.grid > main',
+    );
+    const studioInspector = await visibleBox(
+      page,
+      '[data-storefront-studio="v2"] > div.grid > aside:last-child',
+    );
+    expectRightOf(studioControls, studioPreview, "RTL Storefront Studio controls");
+    expectLeftOf(studioInspector, studioPreview, "RTL Storefront Studio inspector");
+    expectWidthBetween(studioControls, 200, 216, "RTL Storefront Studio controls");
+    expectWidthBetween(studioInspector, 255, 275, "RTL Storefront Studio inspector");
+    expect(
+      studioPreview.width,
+      "Saved Studio preview must remain the dominant authoring surface",
+    ).toBeGreaterThan(studioControls.width * 3);
+    await expectNoHorizontalOverflow(page);
+    await shot(page, testInfo, "founder-rtl-storefront-saved-studio");
   });
 
   test("Arabic analytics keeps the data plane stable and paints a real revenue curve", async ({

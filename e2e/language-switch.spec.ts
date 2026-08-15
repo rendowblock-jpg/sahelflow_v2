@@ -3,7 +3,8 @@
  *
  * This gate proves both the live hydrated transition and the durable server
  * request authority. A reload is no longer allowed to hide a shell that only
- * converges after restart.
+ * converges after restart. It also deliberately slows the RSC refresh so stale
+ * server-rendered route copy cannot leak under the newly selected locale.
  */
 import { test, expect, type Page } from "@playwright/test";
 
@@ -45,12 +46,30 @@ async function expectShellSide(page: Page, direction: "ltr" | "rtl") {
   }
 }
 
+async function installSlowDashboardRefresh(page: Page, delayMs = 1_200) {
+  await page.route("**/dashboard**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const rsc = request.headers()["rsc"] === "1" || url.searchParams.has("_rsc");
+    if (url.pathname === "/dashboard" && rsc) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    await route.continue();
+  });
+}
+
+async function expectPendingWorkspaceOccluded(page: Page) {
+  const root = page.locator("html");
+  await expect(root).toHaveAttribute("data-locale-transition", "pending");
+  await expect(page.locator("#main-content > *").first()).toBeHidden();
+}
+
 test.describe("Language switch", () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
   });
 
-  test("FR (LTR) → Arabic (RTL) → back to FR (LTR) without restart-only convergence", async ({ page }) => {
+  test("FR (LTR) → Arabic (RTL) → back to FR (LTR) without mixed server copy or restart-only convergence", async ({ page }) => {
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 10_000 });
@@ -60,6 +79,8 @@ test.describe("Language switch", () => {
     await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
     await expect(page.locator("html")).toHaveAttribute("lang", "fr");
     await expectShellSide(page, "ltr");
+
+    await installSlowDashboardRefresh(page);
 
     // The trigger's accessible name is the human language name; the compact
     // visible locale code is presentation only.
@@ -77,18 +98,29 @@ test.describe("Language switch", () => {
     const localeCookie = cookies.find((cookie) => cookie.name === "sahelflow-locale");
     expect(localeCookie?.value).toBe("ar");
 
-    // Critical regression contract: the already-open application must converge
-    // without a manual reload or process restart.
+    // The shell/client authority changes immediately, while the deliberately
+    // delayed server tree remains occluded rather than exposing mixed FR/AR copy.
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl", {
-      timeout: 8_000,
+      timeout: 2_000,
     });
     await expect(page.locator("html")).toHaveAttribute("lang", "ar", {
-      timeout: 8_000,
+      timeout: 2_000,
     });
     await expectShellSide(page, "rtl");
+    await expectPendingWorkspaceOccluded(page);
+    await expect(
+      page.getByText("Tableau de bord", { exact: false }).first(),
+    ).not.toBeVisible();
+
+    await expect(page.locator("html")).not.toHaveAttribute(
+      "data-locale-transition",
+      "pending",
+      { timeout: 12_000 },
+    );
     await expect(page.getByText("لوحة التحكم", { exact: false }).first()).toBeVisible({
       timeout: 10_000,
     });
+    await page.unroute("**/dashboard**");
 
     // Reload only after live convergence has already been proven, to verify the
     // locale cookie also seeds the next server-rendered document correctly.
@@ -98,6 +130,7 @@ test.describe("Language switch", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expectShellSide(page, "rtl");
 
+    await installSlowDashboardRefresh(page);
     const langTriggerAfterAr = page
       .getByRole("button", { name: /^العربية$/ })
       .first();
@@ -115,14 +148,23 @@ test.describe("Language switch", () => {
     expect(localeCookieAfter?.value).toBe("fr");
 
     await expect(page.locator("html")).toHaveAttribute("dir", "ltr", {
-      timeout: 8_000,
+      timeout: 2_000,
     });
     await expect(page.locator("html")).toHaveAttribute("lang", "fr", {
-      timeout: 8_000,
+      timeout: 2_000,
     });
     await expectShellSide(page, "ltr");
+    await expectPendingWorkspaceOccluded(page);
+    await expect(page.getByText("لوحة التحكم", { exact: false }).first()).not.toBeVisible();
+
+    await expect(page.locator("html")).not.toHaveAttribute(
+      "data-locale-transition",
+      "pending",
+      { timeout: 12_000 },
+    );
     await expect(page.getByText("Tableau de bord", { exact: false }).first()).toBeVisible({
       timeout: 10_000,
     });
+    await page.unroute("**/dashboard**");
   });
 });

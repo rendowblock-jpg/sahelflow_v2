@@ -55,6 +55,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const storefrontFocusMode = /^\/storefronts\/[^/]+(?:\/studio)?\/?$/.test(
     pathname,
   );
+  const storefrontFocusTitle = storefrontFocusMode
+    ? pathname === "/storefronts/new"
+      ? t("metadata.title.storefrontNew")
+      : t("metadata.title.storefrontEdit")
+    : null;
 
   // Radix dialogs/popovers are portaled under <body>, outside the dashboard shell.
   // Mirror the hydration-safe density to the document root before paint. The
@@ -162,6 +167,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           dir={dir}
           className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scroll-pt-14 outline-none"
         >
+          {storefrontFocusTitle ? (
+            <h1 className="sr-only">{storefrontFocusTitle}</h1>
+          ) : null}
           {children}
         </main>
       </div>

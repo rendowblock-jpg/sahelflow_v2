@@ -27,7 +27,7 @@ async function useEnglish(page: Page) {
 async function addSection(page: Page, name: RegExp) {
   const studio = page.locator('[data-storefront-studio="v2"]');
   await studio.getByRole("button", { name: /Add section/i }).click();
-  await studio.getByRole("button", { name }).last().click();
+  await page.getByRole("menuitem", { name }).last().click();
 }
 
 async function inspector(page: Page) {
@@ -49,6 +49,12 @@ test.describe("Storefront Studio authoring", () => {
     page,
   }) => {
     const suffix = Date.now().toString().slice(-8);
+
+    await page.goto("/storefronts/new", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("#main-content h1")).toHaveCount(1);
+    await expect(page.locator('[data-storefront-studio="bootstrap"]')).toBeVisible({
+      timeout: 30_000,
+    });
 
     const productResponse = await page.request.post("/api/products", {
       data: {
@@ -88,6 +94,16 @@ test.describe("Storefront Studio authoring", () => {
     });
     const studio = page.locator('[data-storefront-studio="v2"]');
     await expect(studio).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("#main-content h1")).toHaveCount(1);
+
+    // Add Section is a focus-managed menu, not a hand-rolled popup. Keyboard
+    // opening focuses the menu and Escape returns focus to the trigger.
+    const addSectionTrigger = studio.getByRole("button", { name: /Add section/i });
+    await addSectionTrigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("menuitem").first()).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(addSectionTrigger).toBeFocused();
 
     // Media is a real authored section, not a placeholder.
     await addSection(page, /^Media$/i);
@@ -147,6 +163,7 @@ test.describe("Storefront Studio authoring", () => {
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(studio).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("#main-content h1")).toHaveCount(1);
 
     const restoredMedia = studio
       .locator('[data-storefront-section-type="media"]')

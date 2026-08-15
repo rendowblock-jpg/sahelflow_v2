@@ -30,27 +30,32 @@ function rejectMarkers(relativePath: string, markers: readonly string[]): void {
   if (!content) return;
   for (const marker of markers) {
     if (content.includes(marker)) {
-      findings.push(`${relativePath}: stale frontier marker remains: ${marker}`);
+      findings.push(`${relativePath}: stale current-frontier marker remains: ${marker}`);
     }
   }
 }
 
-const protectedMainBeforeInternal18 = "898904a11178c8d7b69c755f13794b2ca8bf0356";
-const protectedInternal17Correction = "c33f234ecf43842cfcc801592cc601d595ed05c5";
-const reviewedInternal17Correction = "c965a062cf2719078601374bd0ace771ca011d53";
-const protectedInternal17ReleaseAuthority = "2a820b801786590a20dc6105f39f732b8a987c5f";
-const blockedSignedInternal17Run = "31840181436";
-const releaseHygieneProtectedBase = "c1d0cb135c9a54687bc87a7fc9ae250c4fae38c9";
-const currentBranch = "agent/founder-visual-acceptance-repair";
-const currentPr = "PR #260";
-const currentReleaseRequest = ".github/release-requests/internal-18-founder-visual-correction.json";
+const protectedMainInternal18 = "5cb7f5040249a540ed635cdea16dc933843b40aa";
+const currentBranch = "agent/internal19-product-convergence";
+const currentPr = "PR #262";
+const currentSourceFrontier = "Internal.19";
+const installedCheckpoint = "Internal.18";
+const installedVersion = "1.0.0-internal.18";
+const installedMsiVersion = "1.0.0.18";
+const installedDecision = "FD-037";
+const currentReleaseRequest =
+  ".github/release-requests/internal-18-founder-visual-correction.json";
 const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
 
+// Release authority and implementation frontier are intentionally separate.
+// Internal.18/FD-037 remains the latest authorized signed package until a newer
+// Founder decision/version-authority change exists. PR #262 is source correction,
+// not implicit permission to publish an Internal.19 package.
 requireMarkers("sahelflow.version.json", [
-  '"version": "1.0.0-internal.18"',
-  '"windowsMsiVersion": "1.0.0.18"',
+  `"version": "${installedVersion}"`,
+  `"windowsMsiVersion": "${installedMsiVersion}"`,
   '"releaseMode": "founder-offline-only"',
-  '"authorityDecision": "FD-037"',
+  `"authorityDecision": "${installedDecision}"`,
   '"approvalScope": "internal-lab"',
   '"ownedHostSuffix": null',
 ]);
@@ -67,17 +72,17 @@ requireMarkers("src-tauri/build.rs", [
 ]);
 
 requireMarkers(".github/workflows/release.yml", [
-  "1.0.0-internal.18",
-  "FD-037",
+  installedVersion,
+  installedDecision,
   "FD-037/Internal.18",
 ]);
 
 requireMarkers(currentReleaseRequest, [
   '"sourcePolicy": "exact-protected-main"',
-  '"version": "1.0.0-internal.18"',
-  '"windowsMsiVersion": "1.0.0.18"',
+  `"version": "${installedVersion}"`,
+  `"windowsMsiVersion": "${installedMsiVersion}"`,
   '"releaseMode": "founder-offline-only"',
-  '"authorityDecision": "FD-037"',
+  `"authorityDecision": "${installedDecision}"`,
   '"ownedHostSuffix": null',
 ]);
 
@@ -92,14 +97,13 @@ const currentDocs = [
 
 for (const path of currentDocs) {
   requireMarkers(path, [
-    protectedMainBeforeInternal18,
+    protectedMainInternal18,
+    currentBranch,
     currentPr,
-    "Internal.18",
-    "1.0.0-internal.18",
-    "1.0.0.18",
-    "FD-037",
-    "Founder-installed Internal.17",
-    "REJECTED",
+    currentSourceFrontier,
+    installedCheckpoint,
+    "REJECTED / PARTIALLY IMPROVED",
+    "No Internal.19 release authority exists yet",
     "founder-offline-only",
     "#221",
     "#226",
@@ -108,64 +112,57 @@ for (const path of currentDocs) {
 }
 
 requireMarkers("README.md", [
-  currentBranch,
-  currentReleaseRequest,
   activePhase,
-  protectedInternal17Correction,
-  reviewedInternal17Correction,
-  protectedInternal17ReleaseAuthority,
-  blockedSignedInternal17Run,
-  releaseHygieneProtectedBase,
+  installedVersion,
+  installedMsiVersion,
+  installedDecision,
+  "GitHub live ref owns the transient PR head SHA",
 ]);
 
 requireMarkers("AGENTS.md", [
   "one active implementation agent at a time",
-  currentBranch,
-  currentReleaseRequest,
-  "## Exact next outcome — FD-037 Internal.18 Founder checkpoint",
-  "17 Internal.16 P1 installed acceptance classes",
   activePhase,
+  "Do not restart a generic codebase audit",
+  "Resolve PR #262 head from live GitHub before every write or merge",
 ]);
 
 requireMarkers("documentation/README.md", [
+  "## FD-034 — Internal.16 Founder-only offline checkpoint",
+  "## FD-035 — Internal.17 source-correction authority",
+  "## FD-036 — Internal.17 Founder-only offline checkpoint",
   "## FD-037 — Internal.18 Founder visual-correction checkpoint",
-  currentBranch,
-  currentReleaseRequest,
-  "Storefront V2 first-run adoption",
-  activePhase,
+  "FD-037 is historical/executed release authority",
 ]);
 
 requireMarkers("documentation/system/CURRENT_STATE.md", [
-  "## Founder rejection register carried into Internal.18",
-  "Storefront V2 first-run/Studio adoption",
-  "## Exact current release order — FD-037",
-  activePhase,
+  "## Installed authority",
+  "## Current source frontier — PR #262 / Internal.19",
+  "## Remaining launch blockers",
 ]);
 
 requireMarkers("documentation/system/ROADMAP.md", [
-  "## Internal.18 release program — FD-037",
-  "### Focused Founder evidence requirement",
-  "A screenshot captured on a generic route spinner is not product evidence.",
-  activePhase,
+  "## Current dependency order",
+  "## Release-authority boundary",
+  "## Phase 7 — installed performance and reliability",
+  "## Customer licensing/network gate — #230",
 ]);
 
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
-  "## Founder-installed Internal.17 rejection",
-  "## Evidence weakness found and corrected",
-  "## Internal.18 / FD-037 release package",
-  "Do not weaken the Rust `--locked`",
+  "## Exact resumable frontier",
+  "8109 ms",
+  "retry-free",
+  "## Exact next actions",
 ]);
 
 const staleCurrentMarkers = [
-  "Active release request: `agent/internal-17-signed-publication-request`",
-  "Active release frontier: `agent/internal-17-signed-publication-request`",
-  "PR #259 is the current release request",
-  "latest published updater remains Internal.16",
-  "Latest published updater remains **`1.0.0-internal.16`",
-  "Internal.16 remains the latest published updater",
-  "The current task is PR #259",
-  "Internal.17 / FD-036 signed publication retry",
-  "## Exact next outcome — FD-036 Internal.17 Founder checkpoint",
+  "Current branch/PR: `agent/founder-visual-acceptance-repair` / PR #260",
+  "Current implementation/release frontier: `agent/founder-visual-acceptance-repair` / PR #260",
+  "Current implementation/release branch: `agent/founder-visual-acceptance-repair` / **PR #260**",
+  "Current frontier: PR #260 / `agent/founder-visual-acceptance-repair`",
+  "The current job is **PR #260**",
+  "PR #260 is one consolidated response",
+  "Current Founder verdict: Founder-installed Internal.17",
+  "Protected main before current package: `898904a11178c8d7b69c755f13794b2ca8bf0356`",
 ];
 for (const path of currentDocs) rejectMarkers(path, staleCurrentMarkers);
 
@@ -183,6 +180,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    "Current execution frontier verified: Internal.17 is a published Founder-installed rejected checkpoint; PR #260 is the consolidated Internal.18 / FD-037 visual-correction and Founder-only signed-release frontier. Finish one exact head, run required gates/review once, merge to protected main, publish exact signed Internal.18, then return to Founder-installed acceptance.",
+    "Current execution frontier verified: protected main 5cb7f504... published signed Internal.18/FD-037 and Founder-installed acceptance is REJECTED / PARTIALLY IMPROVED; PR #262 / agent/internal19-product-convergence is the current source correction frontier. No Internal.19 release authority exists yet. Finish one exact-head certification/review, merge only the protected green tree, then obtain explicit newer release authority before building a new signed Founder checkpoint. #221/#226/#230 remain independent obligations.",
   );
 }
