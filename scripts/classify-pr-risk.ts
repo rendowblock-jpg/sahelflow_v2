@@ -23,6 +23,7 @@ const QUALITY_OWNED_PHASE_CHECKPOINTS = new Set([
 ]);
 
 const RELEASE_IDENTITY_FILES = new Set([
+  "sahelflow.version.json",
   "package.json",
   "src-tauri/Cargo.toml",
   "src-tauri/Cargo.lock",
@@ -53,17 +54,6 @@ function isFastPhaseCheckpoint(path: string): boolean {
   );
 }
 
-/**
- * Authority-only changes are executable governance inputs, but they do not
- * change the shipped application. The fast authority job already verifies
- * version truth, documentation structure, links, and audit rules for every PR.
- * Changed Vitest files and checkpoints with Vitest-owned content contracts are
- * deliberately excluded because their assertions must execute on the quality lane.
- *
- * Historical `.github/phase-exceptions/**` records are deliberately excluded as
- * well. They are retained only as evidence of past Founder decisions and have no
- * live lane-selection authority. If one is touched, the quality lane must execute.
- */
 function isFastAuthorityOnly(path: string): boolean {
   return (
     isDocumentationOnly(path) ||
@@ -96,13 +86,19 @@ function changedLines(diff: string): string[] {
 
 function releaseIdentityLineAllowed(path: string, line: string): boolean {
   switch (path) {
+    case "sahelflow.version.json":
+      return (
+        /^"version":\s*"1\.0\.0-internal\.\d+",?$/.test(line) ||
+        /^"windowsMsiVersion":\s*"1\.0\.0\.\d+",?$/.test(line) ||
+        /^"authorityDecision":\s*"FD-\d+",?$/.test(line)
+      );
     case "package.json":
       return /^"version":\s*"1\.0\.0-internal\.\d+",?$/.test(line);
     case "src-tauri/Cargo.toml":
     case "src-tauri/Cargo.lock":
       return /^version\s*=\s*"1\.0\.0-internal\.\d+"$/.test(line);
     case "src-tauri/tauri.conf.json":
-      return /^"version":\s*"1\.0\.0-(?:internal\.\d+|\d+)",?$/.test(line);
+      return /^"version":\s*"1\.0\.0(?:-internal\.\d+|\.\d+)",?$/.test(line);
     case "src-tauri/build.rs":
       return (
         /^\|?\s*\(Some\("1\.0\.0-internal\.\d+"\), Some\("FD-\d+"\)\)$/.test(line) ||
@@ -110,7 +106,7 @@ function releaseIdentityLineAllowed(path: string, line: string): boolean {
       );
     case "scripts/sf-version.ts":
       return (
-        /^\(?authority\.version === "1\.0\.0-internal\.\d+" && authority\.licensing\?\.authorityDecision === "FD-\d+"\)\)?(?: \|\|)?;?$/.test(
+        /^\(*authority\.version === "1\.0\.0-internal\.\d+" && authority\.licensing\?\.authorityDecision === "FD-\d+"\)*\s*(?:\|\|)?;?$/.test(
           line,
         ) ||
         /^console\.error\("founder-offline-only licensing is authorized only for .+"\);$/.test(line)
@@ -134,9 +130,7 @@ export function isVerifiedReleaseIdentityDiff(path: string, diff: string | undef
 
 function isReleaseAuthorityEnvelope(path: string, diffs: DiffMap): boolean {
   if (isFastAuthorityOnly(path)) return true;
-  if (path === "sahelflow.version.json" || path.startsWith(".github/release-requests/")) {
-    return true;
-  }
+  if (path.startsWith(".github/release-requests/")) return true;
   return isVerifiedReleaseIdentityDiff(path, diffs[path]);
 }
 
