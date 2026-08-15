@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
-import { AiOperationalLaunchpad } from "@/components/ai/ai-operational-launchpad";
-import { AiWorkspace } from "@/components/ai/ai-workspace";
+import { AiWorkspaceShell } from "@/components/ai/ai-workspace-shell";
 import { FeatureGate } from "@/components/license/feature-gate";
 import { getI18n } from "@/lib/i18n-server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
@@ -17,12 +16,9 @@ export default async function AgentsPage() {
   await requireTrustedAction("ai.use");
 
   return (
-    <div className="app-workspace-content flex flex-col">
+    <div className="app-workspace-content">
       <FeatureGate feature="ai_chat">
-        <AiOperationalLaunchpad />
-        <div className="min-h-0 flex-1">
-          <AiWorkspace />
-        </div>
+        <AiWorkspaceShell />
       </FeatureGate>
     </div>
   );
