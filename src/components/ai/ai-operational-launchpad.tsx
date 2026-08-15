@@ -94,7 +94,11 @@ function localizedMessageFailure(
   return copy("launchFailed");
 }
 
-export function AiOperationalLaunchpad() {
+export function AiOperationalLaunchpad({
+  onSessionCreated,
+}: {
+  onSessionCreated?: (sessionId: string) => void;
+}) {
   const { locale: rawLocale } = useI18n();
   const locale = rawLocale as AiWorkspaceLocale;
   const copy = (key: AiWorkspaceCopyKey) => getAiWorkspaceCopy(locale, key);
@@ -144,7 +148,7 @@ export function AiOperationalLaunchpad() {
         throw new Error(localizedMessageFailure(messageBody, copy));
       }
 
-      window.location.assign("/agents");
+      onSessionCreated?.(sessionId);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : copy("launchFailed"));
     } finally {
@@ -172,7 +176,11 @@ export function AiOperationalLaunchpad() {
         </div>
       </div>
 
-      <div className="flex min-w-max flex-1 items-center gap-1.5" role="group" aria-label={copy("launchTitle")}>
+      <div
+        className="flex min-w-max flex-1 items-center gap-1.5"
+        role="group"
+        aria-label={copy("launchTitle")}
+      >
         {TASKS.map((task) => {
           const Icon = task.icon;
           const active = starting === task.id;
@@ -190,7 +198,10 @@ export function AiOperationalLaunchpad() {
               )}
             >
               <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/7 text-primary">
-                <Icon className={cn("size-3.5", active && "animate-pulse")} aria-hidden="true" />
+                <Icon
+                  className={cn("size-3.5", active && "animate-pulse")}
+                  aria-hidden="true"
+                />
               </span>
               <span className="whitespace-nowrap">{copy(task.title)}</span>
             </button>
