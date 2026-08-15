@@ -1,0 +1,83 @@
+name: Draft final pre-certification cleanup
+
+on:
+  push:
+    branches: [agent/founder-visual-acceptance-repair]
+    paths: [.github/workflows/draft-finalize-internal18-final.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/founder-visual-acceptance-repair
+          fetch-depth: 0
+      - name: Finalize exact draft source and remove temporary runners
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          lock = Path("src-tauri/Cargo.lock")
+          s = lock.read_text(encoding="utf-8")
+          old = '[[package]]\nname = "sahelflow"\nversion = "1.0.0-internal.17"'
+          new = '[[package]]\nname = "sahelflow"\nversion = "1.0.0-internal.18"'
+          if old in s:
+              if s.count(old) != 1: raise SystemExit("Cargo.lock has ambiguous SahelFlow root package")
+              s = s.replace(old, new, 1)
+              lock.write_text(s, encoding="utf-8")
+          elif new not in s:
+              raise SystemExit("Cargo.lock has neither Internal.17 nor Internal.18 SahelFlow root package")
+
+          studio = Path("src/components/storefront/studio/storefront-studio.tsx")
+          s = studio.read_text(encoding="utf-8")
+          if "draft.isActive && draft.theme.builder.shippingRules.length === 0" not in s:
+              old = '  const publish = useCallback(async () => {\n    if (!version || dirty || saveState === "saving" || saveState === "conflict") {'
+              new = '  const publish = useCallback(async () => {\n    if (draft.isActive && draft.theme.builder.shippingRules.length === 0) {\n      setPanel("checkout");\n      setMessage(t("storefront.studio.shippingEmpty"));\n      return;\n    }\n    if (!version || dirty || saveState === "saving" || saveState === "conflict") {'
+              if s.count(old) != 1: raise SystemExit("Storefront publish anchor mismatch")
+              s = s.replace(old, new, 1)
+              olddeps = '}, [config.id, dirty, draft.isActive, locale, saveState, t, version]);'
+              newdeps = '}, [config.id, dirty, draft.isActive, draft.theme.builder.shippingRules.length, locale, saveState, t, version]);'
+              if s.count(olddeps) != 1: raise SystemExit("Storefront publish dependency anchor mismatch")
+              s = s.replace(olddeps, newdeps, 1)
+              studio.write_text(s, encoding="utf-8")
+
+          contract = Path("src/lib/storefront/storefront-founder-contract.test.ts")
+          s = contract.read_text(encoding="utf-8")
+          if "blocks active publish without a delivery rule" not in s:
+              anchor = '  it("exposes active/pause intent in Studio and never reports a pause as published", () => {'
+              block = '  it("blocks active publish without a delivery rule and opens the actionable checkout panel", () => {\n    const studio = read("src/components/storefront/studio/storefront-studio.tsx");\n    expect(studio).toContain("draft.isActive && draft.theme.builder.shippingRules.length === 0");\n    expect(studio).toContain(\'setPanel("checkout")\');\n    expect(studio).toContain(\'setMessage(t("storefront.studio.shippingEmpty"))\');\n  });\n\n'
+              if s.count(anchor) != 1: raise SystemExit("Storefront contract anchor mismatch")
+              contract.write_text(s.replace(anchor, block + anchor, 1), encoding="utf-8")
+          PY
+
+          git rm -f --ignore-unmatch \
+            .github/workflows/draft-finalize-internal18.yml \
+            .github/workflows/draft-finalize-internal18-v2.yml \
+            .github/workflows/draft-finalize-internal18-v3.yml \
+            .github/workflows/draft-finalize-internal18-final.yml
+
+          git diff --check
+          git diff 5234573030e8eb82c579e23c75c3c6c87175c6d4 -- src-tauri/Cargo.lock | tee /tmp/cargo.diff
+          grep -F '+version = "1.0.0-internal.18"' /tmp/cargo.diff >/dev/null
+          if grep -E '^[-+](name|checksum|dependencies|source)[ =]' /tmp/cargo.diff >/dev/null; then
+            echo 'Cargo.lock drift exceeds root package version' >&2
+            exit 1
+          fi
+          grep -F 'draft.isActive && draft.theme.builder.shippingRules.length === 0' src/components/storefront/studio/storefront-studio.tsx >/dev/null
+          test ! -e .github/workflows/draft-finalize-internal18.yml
+          test ! -e .github/workflows/draft-finalize-internal18-v2.yml
+          test ! -e .github/workflows/draft-finalize-internal18-v3.yml
+          test ! -e .github/workflows/draft-finalize-internal18-final.yml
+
+          git config user.name sahelflow-release-bot
+          git config user.email actions@users.noreply.github.com
+          git add -A
+          git commit -m 'chore(internal.18): freeze final Founder correction source'
+          git push origin HEAD:agent/founder-visual-acceptance-repair
