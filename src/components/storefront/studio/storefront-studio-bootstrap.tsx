@@ -63,11 +63,23 @@ export function StorefrontStudioBootstrap({ products }: Props) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
+  const [phone, setPhone] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
   const [template, setTemplate] = useState<StorefrontTemplateId>("atlas");
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
 
-  const theme = useMemo(() => createDefaultStorefrontTheme(template), [template]);
+  const contact = useMemo(
+    () => ({ phone, whatsapp, email, address }),
+    [address, email, phone, whatsapp],
+  );
+  const theme = useMemo(() => {
+    const next = createDefaultStorefrontTheme(template);
+    next.builder.contact = contact;
+    return next;
+  }, [contact, template]);
   const draft = useMemo<StorefrontStudioDraft>(
     () => ({
       name: name.trim() || t("storefront.builder.shopNamePlaceholder"),
@@ -75,7 +87,9 @@ export function StorefrontStudioBootstrap({ products }: Props) {
       description,
       theme,
       selectedProductIds,
-      isActive: false,
+      // The bootstrap is a private preview of the first publish intent. The
+      // public StorefrontConfig remains inactive until the Studio publish commit.
+      isActive: true,
       version: null,
     }),
     [description, name, selectedProductIds, slug, t, theme],
@@ -136,7 +150,12 @@ export function StorefrontStudioBootstrap({ products }: Props) {
             description: description.trim() || undefined,
             theme,
             productIds: selectedProductIds,
+            contact,
+            // Keep the public projection private until an explicit Studio publish.
             isActive: false,
+            // The private draft is intentionally active so the first Publish is
+            // a publish, not a hidden pause that requires a list-page workaround.
+            initialDraftIsActive: true,
           }),
         });
         if (!response.ok) {
@@ -228,10 +247,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                   {t("storefront.builder.slug")} *
                 </Label>
                 <div className="flex items-center gap-2 rounded-lg border bg-background px-3 focus-within:ring-2 focus-within:ring-ring/25">
-                  <span
-                    dir="ltr"
-                    className="shrink-0 text-xs text-muted-foreground"
-                  >
+                  <span dir="ltr" className="shrink-0 text-xs text-muted-foreground">
                     /storefront/
                   </span>
                   <input
@@ -259,6 +275,35 @@ export function StorefrontStudioBootstrap({ products }: Props) {
               </div>
             </section>
 
+            <section className="space-y-3 border-t pt-4">
+              <div>
+                <h3 className="text-sm font-semibold">
+                  {t("storefront.builder.contactInfo")}
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {t("storefront.builder.contactInfoDesc")}
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="space-y-1.5">
+                  <Label htmlFor="studio-phone">{t("storefront.builder.phone")}</Label>
+                  <Input id="studio-phone" dir="ltr" value={phone} onChange={(event) => setPhone(event.target.value)} maxLength={64} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="studio-whatsapp">{t("storefront.builder.whatsapp")}</Label>
+                  <Input id="studio-whatsapp" dir="ltr" value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} maxLength={64} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="studio-email">{t("storefront.builder.email")}</Label>
+                  <Input id="studio-email" dir="ltr" type="email" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={254} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="studio-address">{t("storefront.builder.address")}</Label>
+                  <Input id="studio-address" value={address} onChange={(event) => setAddress(event.target.value)} maxLength={240} />
+                </div>
+              </div>
+            </section>
+
             <section className="border-t pt-4">
               <h3 className="text-sm font-semibold">
                 {t("storefront.builder.appearance")}
@@ -282,12 +327,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                         <span className="text-sm font-semibold">
                           {t(TEMPLATE_COPY[id].label)}
                         </span>
-                        {selected ? (
-                          <Check
-                            className="size-4 text-primary"
-                            aria-hidden="true"
-                          />
-                        ) : null}
+                        {selected ? <Check className="size-4 text-primary" aria-hidden="true" /> : null}
                       </span>
                       <span className="mt-1 block text-xs leading-5 text-muted-foreground">
                         {t(TEMPLATE_COPY[id].description)}
@@ -310,16 +350,8 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                 </Badge>
               </div>
               <div className="relative mt-3">
-                <Search
-                  className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <Input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder={t("storefront.builder.searchProduct")}
-                  className="ps-9"
-                />
+                <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("storefront.builder.searchProduct")} className="ps-9" />
               </div>
               <div className="mt-2 max-h-64 space-y-1 overflow-y-auto rounded-lg border bg-background p-1">
                 {filteredProducts.length === 0 ? (
@@ -337,27 +369,13 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                         type="button"
                         aria-pressed={selected}
                         onClick={() => toggleProduct(product.id)}
-                        className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start transition ${
-                          selected ? "bg-primary/8" : "hover:bg-muted/60"
-                        }`}
+                        className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start transition ${selected ? "bg-primary/8" : "hover:bg-muted/60"}`}
                       >
-                        <span
-                          className={`flex size-5 shrink-0 items-center justify-center rounded border ${
-                            selected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-input"
-                          }`}
-                        >
-                          {selected ? (
-                            <Check className="size-3" aria-hidden="true" />
-                          ) : null}
+                        <span className={`flex size-5 shrink-0 items-center justify-center rounded border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}>
+                          {selected ? <Check className="size-3" aria-hidden="true" /> : null}
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-xs font-medium">
-                          {product.name}
-                        </span>
-                        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-                          {product.stock}
-                        </span>
+                        <span className="min-w-0 flex-1 truncate text-xs font-medium">{product.name}</span>
+                        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">{product.stock}</span>
                       </button>
                     );
                   })
@@ -371,20 +389,12 @@ export function StorefrontStudioBootstrap({ products }: Props) {
           <div className="mx-auto min-h-full max-w-6xl overflow-hidden rounded-xl border bg-background shadow-sm">
             <div className="flex items-center justify-between gap-3 border-b bg-background px-4 py-2.5">
               <div>
-                <p className="text-xs font-semibold">
-                  {t("storefront.studio.preview")}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  {t("storefronts.newDesc")}
-                </p>
+                <p className="text-xs font-semibold">{t("storefront.studio.preview")}</p>
+                <p className="text-[10px] text-muted-foreground">{t("storefronts.newDesc")}</p>
               </div>
               <Badge variant="outline">{t(TEMPLATE_COPY[template].label)}</Badge>
             </div>
-            <StorefrontRenderer
-              draft={draft}
-              products={products}
-              maxProducts={8}
-            />
+            <StorefrontRenderer draft={draft} products={products} maxProducts={8} />
           </div>
         </main>
       </div>
