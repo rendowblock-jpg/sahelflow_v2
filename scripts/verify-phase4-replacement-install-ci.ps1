@@ -187,11 +187,11 @@ $committedAcceptance = Invoke-CommittedWebViewAcceptance `
 '@
     $acceptanceReplacement = @'
 # The installed-MSI workflow separately proves that the real WebView hydrates
-# and authenticates twice. After a committed restore the local Next runtime can
-# become ready before the Tauri WebView has completed its bootstrap. Wait for
-# the exact restored runtime instance to publish its UI-ready receipt before
-# asking CDP for the short-lived HttpOnly runtime cookie. The long acceptance
-# journey then runs over bounded loopback HTTP, not a long-lived DevTools socket.
+# and authenticates repeatedly. After a committed restore, require a matching
+# UI-ready receipt for this exact runtime instance, then keep both HttpOnly
+# runtime/session bearers inside Chromium. Acceptance uses short same-origin
+# WebView requests over disposable CDP sockets; no bearer is exported to
+# PowerShell and no long-lived DevTools journey spans PIN derivation or reads.
 $committedUiReadyPath = Join-Path $roamingRoot "runtime-ui-ready.json"
 $committedUiDeadline = (Get-Date).AddSeconds(100)
 $committedUiReady = $null
@@ -218,13 +218,105 @@ if ($null -eq $committedUiReady) {
     throw "Committed restored installation did not publish matching WebView readiness before acceptance."
 }
 
-$committedSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
-Establish-OwnerSession $committedBaseUrl $committedSession -RequireSetup
-$committedTrial = Invoke-SahelFlowJson -Method POST -BaseUrl $committedBaseUrl -Path "/api/license/trial" -Session $committedSession
-$committedSearch = Invoke-SahelFlowJson -Method GET -BaseUrl $committedBaseUrl -Path "/api/customers/search?q=$sourcePhone" -Session $committedSession
-$committedSecret = Invoke-SahelFlowJson -Method GET -BaseUrl $committedBaseUrl -Path "/api/secrets/gemini-key" -Session $committedSession
+function Invoke-CommittedWebViewRequest {
+    param(
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [Parameter(Mandatory = $true)][string]$Method,
+        [Parameter(Mandatory = $true)][string]$Path,
+        $Body = $null,
+        [switch]$Mutation
+    )
+
+    $requestInput = @{
+        method = $Method
+        path = $Path
+        hasBody = $null -ne $Body
+        body = $Body
+    } | ConvertTo-Json -Depth 12 -Compress
+    $inputBase64 = [Convert]::ToBase64String(
+        [System.Text.Encoding]::UTF8.GetBytes($requestInput)
+    )
+    $expressionTemplate = @'
+(async () => {
+  const bytes = Uint8Array.from(atob("__INPUT_BASE64__"), (character) => character.charCodeAt(0));
+  const input = JSON.parse(new TextDecoder().decode(bytes));
+  const options = {
+    method: input.method,
+    credentials: "same-origin",
+  };
+  if (input.hasBody) {
+    options.headers = { "Content-Type": "application/json" };
+    options.body = JSON.stringify(input.body);
+  }
+  const response = await fetch(input.path, options);
+  let decoded = null;
+  try { decoded = await response.json(); } catch {}
+  return { status: response.status, body: decoded };
+})()
+'@
+    $expression = $expressionTemplate.Replace("__INPUT_BASE64__", $inputBase64)
+    $deadline = (Get-Date).AddSeconds(35)
+    $debugEndpoint = "http://127.0.0.1:$runtimeDebuggingPort/json/list"
+    $lastTransportFailure = "none"
+    $lastTargetCount = 0
+    do {
+        try {
+            $targets = @(Invoke-RestMethod -Uri $debugEndpoint -TimeoutSec 2)
+        } catch {
+            $targets = @()
+            $lastTransportFailure = $_.Exception.GetType().Name
+        }
+        $candidates = @(
+            $targets | Where-Object {
+                Test-AppWebViewTarget -BaseUrl $BaseUrl -Target $_
+            }
+        )
+        $lastTargetCount = $candidates.Count
+        foreach ($target in $candidates) {
+            try {
+                return Invoke-WebViewExpressionForTarget `
+                    -WebSocketUrl ([string]$target.webSocketDebuggerUrl) `
+                    -Expression $expression
+            } catch {
+                $lastTransportFailure = $_.Exception.GetType().Name
+                $commandDispatched = $_.Exception.Data["SahelFlowCommandDispatched"] -eq $true
+                $commandCompleted = $_.Exception.Data["SahelFlowCommandCompleted"] -eq $true
+                if ($commandCompleted) {
+                    throw
+                }
+                if ($commandDispatched -and $Mutation) {
+                    throw "The installed WebView lost CDP transport after a mutating committed-restore request was dispatched; the mutation was not retried."
+                }
+                # Read-only requests are safe to retry after an ambiguous
+                # transport loss. Mutations retry only when nothing was sent.
+            }
+        }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+    throw "The installed WebView did not complete the bounded committed-restore $Method $Path request (target count $lastTargetCount, transport $lastTransportFailure)."
+}
+
+$committedSetup = Invoke-CommittedWebViewRequest `
+    -BaseUrl $committedBaseUrl `
+    -Method "POST" `
+    -Path "/api/auth/setup" `
+    -Body @{ pin = $pin } `
+    -Mutation
+$committedTrial = Invoke-CommittedWebViewRequest `
+    -BaseUrl $committedBaseUrl `
+    -Method "POST" `
+    -Path "/api/license/trial" `
+    -Mutation
+$committedSearch = Invoke-CommittedWebViewRequest `
+    -BaseUrl $committedBaseUrl `
+    -Method "GET" `
+    -Path "/api/customers/search?q=$sourcePhone"
+$committedSecret = Invoke-CommittedWebViewRequest `
+    -BaseUrl $committedBaseUrl `
+    -Method "GET" `
+    -Path "/api/secrets/gemini-key"
 $committedAcceptance = [pscustomobject]@{
-    setupStatus = 200
+    setupStatus = [int]$committedSetup.status
     trialStatus = [int]$committedTrial.status
     trialState = if ($null -ne $committedTrial.body) { [string]$committedTrial.body.status } else { $null }
     searchStatus = [int]$committedSearch.status
