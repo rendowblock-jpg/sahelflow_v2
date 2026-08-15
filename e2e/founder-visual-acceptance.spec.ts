@@ -62,6 +62,8 @@ async function neutralStructure(page: Page) {
       popover: root.getPropertyValue("--popover").trim(),
       sidebar: root.getPropertyValue("--sidebar").trim(),
       border: root.getPropertyValue("--border").trim(),
+      input: root.getPropertyValue("--input").trim(),
+      sidebarBorder: root.getPropertyValue("--sidebar-border").trim(),
     };
   });
 }
