@@ -187,12 +187,37 @@ $committedAcceptance = Invoke-CommittedWebViewAcceptance `
 '@
     $acceptanceReplacement = @'
 # The installed-MSI workflow separately proves that the real WebView hydrates
-# and authenticates twice. Keep the committed-restore authority check focused
-# on the restored installed runtime instead of holding a DevTools WebSocket open
-# across the production PIN derivation and all protected reads. CDP remains
-# limited to the short read-only runtime-cookie handoff inside
-# Establish-OwnerSession; the long acceptance journey uses the same loopback
-# HTTP authority as the installed app and never changes production cookie policy.
+# and authenticates twice. After a committed restore the local Next runtime can
+# become ready before the Tauri WebView has completed its bootstrap. Wait for
+# the exact restored runtime instance to publish its UI-ready receipt before
+# asking CDP for the short-lived HttpOnly runtime cookie. The long acceptance
+# journey then runs over bounded loopback HTTP, not a long-lived DevTools socket.
+$committedUiReadyPath = Join-Path $roamingRoot "runtime-ui-ready.json"
+$committedUiDeadline = (Get-Date).AddSeconds(100)
+$committedUiReady = $null
+$committedPort = ([Uri]$committedBaseUrl).Port
+do {
+    $committedProcess.Refresh()
+    if ($committedProcess.HasExited) {
+        throw "Committed restored installation exited before WebView readiness with code $($committedProcess.ExitCode)."
+    }
+    $candidateUiReady = Read-JsonFile $committedUiReadyPath
+    if (
+        $null -ne $candidateUiReady -and
+        [int]$candidateUiReady.formatVersion -eq 1 -and
+        [string]$candidateUiReady.state -ceq "ready" -and
+        [string]$candidateUiReady.instanceId -ceq [string]$committedEndpoint.instanceId -and
+        [string]$candidateUiReady.pageUrl -match ":$committedPort(?:/|$)"
+    ) {
+        $committedUiReady = $candidateUiReady
+        break
+    }
+    Start-Sleep -Milliseconds 250
+} while ((Get-Date) -lt $committedUiDeadline)
+if ($null -eq $committedUiReady) {
+    throw "Committed restored installation did not publish matching WebView readiness before acceptance."
+}
+
 $committedSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 Establish-OwnerSession $committedBaseUrl $committedSession -RequireSetup
 $committedTrial = Invoke-SahelFlowJson -Method POST -BaseUrl $committedBaseUrl -Path "/api/license/trial" -Session $committedSession
