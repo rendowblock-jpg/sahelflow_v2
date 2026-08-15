@@ -12,10 +12,10 @@ The Founder-owned Windows checkout is evidence-bearing local state. Never reset,
 4. Read `documentation/operations/WORKFLOW.md`.
 5. Read `documentation/operations/WORKING_MEMORY.md`.
 6. Read governing PRODUCT, EXPERIENCE, ARCHITECTURE and RESEARCH sections for the task.
-7. Re-fetch protected `main`, PR #262 and issues #221/#226/#230 before any write.
-8. **Resolve PR #262 head from live GitHub before every write or merge**.
+7. Re-fetch protected `main` and issues #221/#226/#230 before any write.
+8. Resolve the live protected-main SHA before every new branch, review, release-authority change or package action.
 
-**Do not restart a generic codebase audit.** The repository/layers/current problem register are already mapped; inspect only source roots implicated by measured evidence or the frozen correction scope.
+**Do not restart a generic codebase audit.** The repository/layers/current problem register are already mapped; inspect only source roots implicated by measured evidence or a newly authorized bounded scope.
 
 ## Authority precedence
 
@@ -33,15 +33,16 @@ A lower layer cannot silently weaken a higher one. Current documentation can cla
 
 ## Current source frontier
 
-- Protected `main`: `5cb7f5040249a540ed635cdea16dc933843b40aa` — published signed **Internal.18** source.
+- Protected `main`: `8448c47123290f2e1af702ff24a427cc11c4781c` — merged **Internal.19 source correction** from PR #262.
+- Latest signed/published package source: `5cb7f5040249a540ed635cdea16dc933843b40aa` — **Internal.18**.
 - Latest package authority: Internal.18 / `1.0.0-internal.18` / MSI `1.0.0.18` / FD-037 / `founder-offline-only`.
-- Founder-installed result: **REJECTED / PARTIALLY IMPROVED**.
-- Current source work: **Internal.19**, `agent/internal19-product-convergence`, **PR #262**.
+- Founder-installed Internal.18 result: **REJECTED / PARTIALLY IMPROVED**.
+- PR #262 / `agent/internal19-product-convergence` is **merged historical source-convergence context**, not an active implementation frontier.
 - **No Internal.19 release authority exists yet.**
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
 - Retained independent obligations: **#221, #226, #230**.
 
-PR #262 is source correction, not implicit permission to bump version or publish a new signed checkpoint.
+The PR #262 source merge is not implicit permission to bump version or publish a new signed checkpoint.
 
 ## Protected boundaries
 
@@ -49,20 +50,18 @@ Current experience/evidence work may not weaken Golden COD idempotency/version/a
 
 ## Exact next outcome
 
-1. Finish one coherent PR #262 exact head.
-2. Require exact-head general CI/Required PR, retry-free Phase 5 and retry-free Phase 6–7.
-3. Inspect rendered/performance artifacts instead of trusting badge color alone.
-4. Resolve every actionable exact-head review finding.
-5. Merge only the exact reviewed green head with expected-head discipline.
-6. Verify the resulting protected-main tree.
-7. Stop before new packaging until explicit newer Founder release authority exists.
-8. Keep #221 installed acceptance, #226 installed performance/reliability and #230 customer-network licensing separate.
+1. Treat `8448c47123290f2e1af702ff24a427cc11c4781c` as the current protected-main source frontier.
+2. Preserve the exact-head PR #262 evidence: Required PR, retry-free Phase 5 and retry-free Phase 6–7 were green; Founder artifacts were manually inspected.
+3. Stop before new packaging/version changes until explicit newer Founder release authority exists.
+4. If the Founder authorizes a next signed checkpoint, create one bounded release-authority/version follow-up from the then-live protected main and certify that exact source independently.
+5. Keep #221 installed acceptance, #226 installed performance/reliability and #230 customer-network licensing separate.
+6. Do not infer Beta/Stable/customer-online readiness from a source merge or Founder-only package.
 
 ## Verified product frontier — retained gate continuity
 
 The historical **Verified product frontier** was established through the repository's **selected Level 1/2/3 gates**. Its Phase 5 application-changing protected baseline is **`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`** / PR #220. Historical **issue #221** remains important because installed Founder acceptance is an independent evidence authority even when later source supersedes the old implementation.
 
-These are continuity anchors only. Current installed truth is Internal.18 **REJECTED / PARTIALLY IMPROVED** and current source response is PR #262 / Internal.19.
+PR #262 / `agent/internal19-product-convergence` later converged the rejected Internal.18 experience and merged to protected main as `8448c47123290f2e1af702ff24a427cc11c4781c`. The current installed truth is still Internal.18 **REJECTED / PARTIALLY IMPROVED** until a newer signed checkpoint is explicitly authorized, installed and judged.
 
 ## Evidence rules
 

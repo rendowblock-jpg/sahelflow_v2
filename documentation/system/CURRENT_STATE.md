@@ -2,37 +2,44 @@
 
 > **Authority:** protected source + exact Actions artifacts + installed Founder observation
 > **Last assessed:** 2026-08-15
-> **Protected main:** `5cb7f5040249a540ed635cdea16dc933843b40aa`
+> **Protected main:** `8448c47123290f2e1af702ff24a427cc11c4781c` — Internal.19 source correction merged from PR #262
 > **Latest published/installed checkpoint:** Internal.18 / `1.0.0-internal.18` / MSI `1.0.0.18` / FD-037
+> **Latest signed-package source:** `5cb7f5040249a540ed635cdea16dc933843b40aa`
 > **Founder-installed result:** **REJECTED / PARTIALLY IMPROVED**
-> **Current source frontier:** `agent/internal19-product-convergence` / PR #262 / Internal.19
+> **Current source frontier:** protected `main` / `8448c47123290f2e1af702ff24a427cc11c4781c` / Internal.19 source
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Retained evidence:** #221, #226, #230
 
-GitHub live ref owns the transient PR head SHA. Resolve PR #262 live before every write, review or merge. **No Internal.19 release authority exists yet.**
+PR #262 / `agent/internal19-product-convergence` is merged. **No Internal.19 release authority exists yet.** A source merge does not authorize a version bump, signing or publication.
 
 ## Installed authority
 
-Protected main `5cb7f5040249a540ed635cdea16dc933843b40aa` produced the published signed Internal.18 Founder checkpoint under FD-037. Signed release/install/runtime evidence remains valid for the properties it proved. The Founder then recorded **REJECTED / PARTIALLY IMPROVED**, so automation does not close #221 and Internal.18 is not an accepted whole-product baseline.
+Protected source `5cb7f5040249a540ed635cdea16dc933843b40aa` produced the published signed Internal.18 Founder checkpoint under FD-037. Signed release/install/runtime evidence remains valid for the properties it proved. The Founder then recorded **REJECTED / PARTIALLY IMPROVED**, so automation does not close #221 and Internal.18 is not an accepted whole-product baseline.
 
 Package authority remains `founder-offline-only`; customer-online/Beta/Stable remain unauthorized.
 
-## Current source frontier — PR #262 / Internal.19
+## Current source frontier — protected main after PR #262
 
-PR #262 is one consolidated source correction wave after installed Internal.18 rejection. It covers professional Arabic typography/bidi, deterministic RTL shell/workbench geometry, neutral theme structure, coherent motion, chart direction, immersive Inbox/AI, task-based Settings, Storefront V2 authoring and retry-free Phase 5 / Phase 6–7 evidence.
+PR #262 was one consolidated Internal.19 source-correction wave after installed Internal.18 rejection. Its exact certified head `8d43e6142aab508e54f038b13e2639ac6966682e` passed Required PR, retry-free Phase 5 and retry-free Phase 6–7, then squash-merged to protected main as `8448c47123290f2e1af702ff24a427cc11c4781c`.
 
-Final hardening also covers application-vs-embedded-preview heading semantics, focus-managed Storefront section insertion, locale reconciliation without mixed old/new language frames, Next route-transition scroll integration, saved Arabic Studio evidence and repeatable persisted controlled-browser performance timing.
+The merged source covers professional Arabic typography/bidi, deterministic RTL shell/workbench geometry, neutral theme structure, coherent motion, chart direction, immersive Inbox/AI, task-based Settings, Storefront V2 authoring, application-vs-embedded-preview heading semantics, focus-managed Storefront section insertion, locale reconciliation without mixed old/new language frames, Next route-transition scroll integration, saved Arabic Studio evidence, deterministic Playwright server readiness and repeatable controlled-browser performance timing.
 
-## Evidence state entering final certification
+Human artifact inspection on the certified PR head confirmed loaded Arabic Inbox messages, a loaded AI session with real messages/tool content, saved Storefront Studio, Analytics and dark-theme evidence.
 
-A diagnostic PR head proved general source quality and Phase 5 broadly green but exposed the old one-sample controlled performance tripwire at **8109 ms** against the unchanged 8000 ms ceiling. The new harness retains the ceiling, measures repeatable per-route medians under 4× renderer CPU throttling and persists full evidence before asserting.
+## Exact source/evidence state
 
-Any result from an older PR head becomes historical after the branch moves. No cross-SHA evidence mix is allowed.
+- CI / Required PR: green on `8d43e6142aab508e54f038b13e2639ac6966682e`.
+- Phase 5: green retry-free on the same head; `.last-run = passed`; no failed-test/retry/error/trace residue in the inspected artifact.
+- Phase 6–7 source/static: TypeScript, ESLint, full Vitest, production dependency audit, migrations and localization/RTL/accessibility contract green.
+- Phase 6–7 browser: green retry-free; AR/FR/EN accessibility/reflow/performance evidence passed.
+- Controlled CI trend: worst route median `4672.7 ms` (`/analytics`) against `<8000 ms`; search p95 `31.1 ms` against `<2000 ms`.
+- Those browser numbers are regression evidence only and do **not** close installed-performance issue #226.
+- Historical diagnostic evidence included the earlier one-sample `8109 ms` tripwire; it was replaced by the repeatable median-based controlled trend without changing the ceiling.
 
 ## Remaining launch blockers
 
-1. PR #262 exact-head general CI/Required PR + retry-free Phase 5 + retry-free Phase 6–7 + artifact inspection + exact-head review + protected merge.
-2. New explicit Founder release authority after source merge and before any new signed Internal package.
+1. New explicit Founder release authority before any Internal.19 version/package/signing/publication change.
+2. After that authority, one bounded release-authority/version follow-up from the then-live protected main, followed by exact-source signed package certification.
 3. #221 — Founder-installed whole-product visual/interaction acceptance on the exact next signed checkpoint.
 4. #226 — representative installed T470/declared-floor p95 and eight-hour reliability certification.
 5. #230 — SahelFlow-owned licensing hostname, primary/recovery ingress and representative Algerian fixed/mobile trial/recovery evidence.

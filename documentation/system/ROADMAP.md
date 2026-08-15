@@ -1,28 +1,29 @@
 # SahelFlow — Final completion roadmap
 
 > **Status:** Binding dependency/completion order
-> **Protected main:** `5cb7f5040249a540ed635cdea16dc933843b40aa`
+> **Protected main:** `8448c47123290f2e1af702ff24a427cc11c4781c` — Internal.19 source correction merged from PR #262
 > **Latest published/installed checkpoint:** Internal.18 / FD-037
+> **Latest signed-package source:** `5cb7f5040249a540ed635cdea16dc933843b40aa`
 > **Founder-installed result:** **REJECTED / PARTIALLY IMPROVED**
-> **Current source frontier:** `agent/internal19-product-convergence` / PR #262 / Internal.19
+> **Current source frontier:** protected `main` / Internal.19 source
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Open retained issues:** #221, #226, #230
 
-GitHub live ref owns the transient PR head SHA. **No Internal.19 release authority exists yet.** Current package authority remains `1.0.0-internal.18` / MSI `1.0.0.18` / FD-037 / `founder-offline-only` until a newer explicit Founder decision changes it.
+Current package authority remains `1.0.0-internal.18` / MSI `1.0.0.18` / FD-037 / `founder-offline-only` until a newer explicit Founder decision changes it. **No Internal.19 release authority exists yet.**
 
 ## Current dependency order
 
 ```text
 protected canonical engine + protected connected/storefront platform
-→ signed Internal.18 on main 5cb7f504...
+→ signed Internal.18 on source 5cb7f504...
 → Founder installs Internal.18
 → REJECTED / PARTIALLY IMPROVED
 → PR #262 / Internal.19 source convergence
-→ one final exact-head retry-free CI + Phase 5 + Phase 6–7 certification
+→ one exact-head retry-free CI + Phase 5 + Phase 6–7 certification
 → artifact inspection + exact-head review
-→ protected expected-head merge of only that verified tree
+→ protected squash merge 8448c471...
 → explicit newer Founder release authority
-→ bounded version/release-authority follow-up on protected main
+→ bounded version/release-authority follow-up on then-live protected main
 → exact signed MSI/updater publication
 → Founder-installed #221 accept/reject
 → #226 installed performance/reliability
@@ -36,27 +37,29 @@ Governance, Golden COD, identity/licensing/multi-shop, provider durability, prot
 
 ## Phase 3 — providers, inbox, AI and automations
 
-This historical phase was executed through **complete reconnaissance**, package-level source closure and protected evidence before later phases built on it. Provider effects/reconciliation, Inbox/AI authority and automation recovery remain protected; PR #262 changes only demonstrated product/workspace behavior.
+This historical phase was executed through **complete reconnaissance**, package-level source closure and protected evidence before later phases built on it. Provider effects/reconciliation, Inbox/AI authority and automation recovery remain protected; PR #262 changed only demonstrated product/workspace behavior and is now merged history.
 
 ## Phase 5 — whole-product AAA desktop experience
 
-The historical **Phase 5 application-changing protected baseline** is PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Installed Internal.18 proved source/browser completion alone was insufficient for Founder acceptance, so PR #262 strengthens shared-root product behavior and loaded Founder evidence around Arabic/RTL, themes/motion/charts, Inbox, AI, Settings and Storefront.
+The historical **Phase 5 application-changing protected baseline** is PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Installed Internal.18 proved source/browser completion alone was insufficient for Founder acceptance, so PR #262 strengthened shared-root product behavior and loaded Founder evidence around Arabic/RTL, themes/motion/charts, Inbox, AI, Settings and Storefront before merging to protected main.
 
 Real loaded workspaces are required; route spinners/placeholders are not product evidence.
 
 ## Phase 6 — Arabic, RTL and accessibility parity
 
-The active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**. Exact-head completion requires AR/FR/EN parity, deterministic pane placement plus semantic direction, bidi isolation, keyboard/focus/naming/heading semantics, 1366×768 containment, 200%-equivalent reflow, reduced motion, live locale switching without restart/mixed-language frames and retry-free rendered evidence.
+The active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**. Exact-head source completion now includes AR/FR/EN parity, deterministic pane placement plus semantic direction, bidi isolation, keyboard/focus/naming/heading semantics, 1366×768 containment, 200%-equivalent reflow, reduced motion, live locale switching without restart/mixed-language frames and retry-free rendered evidence.
 
-## PR #262 — final source certification
+PR #262 exact head `8d43e6142aab508e54f038b13e2639ac6966682e` passed Required PR, retry-free Phase 5 and retry-free Phase 6–7. Human artifact review confirmed loaded Arabic Inbox/AI, saved Studio, Analytics and dark-theme evidence. Protected source merge is `8448c47123290f2e1af702ff24a427cc11c4781c`.
 
-Require one exact head to pass product/version/documentation authority, TypeScript, ESLint, complete Vitest, production dependency audit, migration status, Required PR, retry-free Phase 5 and retry-free Phase 6–7. Persist and inspect rendered/performance artifacts. Resolve all actionable exact-head review findings.
+## Source certification — completed PR #262
 
-Use **expected-head merge** discipline: if the head moves, prior exact-head success is historical. Do not retry away deterministic failure.
+The certified head passed product/version/documentation authority, TypeScript, ESLint, complete Vitest, production dependency audit, migration status, Required PR, retry-free Phase 5 and retry-free Phase 6–7. Rendered/performance artifacts were persisted and inspected; no actionable review submissions or inline threads remained.
+
+The controlled browser trend recorded worst route median `4672.7 ms` and search p95 `31.1 ms` under the existing retry-free CI tripwire. This is not installed T470 certification and does not close #226.
 
 ## Release-authority boundary
 
-FD-037 is historical/executed Internal.18 authority only. After PR #262 merges: verify protected-main tree, stop before packaging, obtain explicit newer Founder release authority, then synchronize version/MSI/release request/package/Cargo/Tauri/native/signing allowlists in one bounded follow-up and publish only exact protected-main signed artifacts.
+FD-037 is historical/executed Internal.18 authority only. After the PR #262 source merge, protected main is `8448c47123290f2e1af702ff24a427cc11c4781c`. Stop before packaging, obtain explicit newer Founder release authority, then synchronize version/MSI/release request/package/Cargo/Tauri/native/signing allowlists in one bounded follow-up and publish only exact artifacts from the then-live protected main.
 
 No manual artifact substitution, cross-SHA mix, force/waiver or signing-key shortcut.
 
