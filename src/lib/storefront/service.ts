@@ -129,6 +129,17 @@ function contactIntoTheme(
   };
 }
 
+function publishedLegacyContact(theme: StorefrontTheme): string | null {
+  const contact = theme.builder.contact;
+  const hasAny = Boolean(
+    contact.phone.trim() ||
+    contact.whatsapp.trim() ||
+    contact.email.trim() ||
+    contact.address.trim(),
+  );
+  return hasAny ? JSON.stringify(contact) : null;
+}
+
 export const storefrontService = {
   async getBySlug(context: ServiceContext, slug: string): Promise<StorefrontConfig | null> {
     const row = await context.prisma.storefrontConfig.findUnique({ where: { slug } });
@@ -280,14 +291,19 @@ export const storefrontService = {
       throw new StorefrontVersionConflictError();
     }
     const draft = parseStudioConfig(row);
+    const publishedTheme = storefrontStudioThemeSchema.parse(draft.theme);
     const result = await context.prisma.storefrontConfig.updateMany({
       where: { id, draftUpdatedAt: expected },
       data: {
         slug: draft.slug,
         name: draft.name,
         description: draft.description,
-        theme: JSON.stringify(storefrontStudioThemeSchema.parse(draft.theme)),
+        theme: JSON.stringify(publishedTheme),
         productIds: JSON.stringify(draft.productIds),
+        // Keep the old sibling projection synchronized only at the explicit
+        // publication boundary. Clearing all V2 contact fields must clear the
+        // legacy projection too, otherwise removed seller data can reappear.
+        contact: publishedLegacyContact(publishedTheme),
         isActive: draft.isActive,
       },
     });
