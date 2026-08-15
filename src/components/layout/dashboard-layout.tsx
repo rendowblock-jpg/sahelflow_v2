@@ -28,10 +28,11 @@ interface DashboardLayoutProps {
 /**
  * SahelFlow desktop application frame.
  *
- * The physical desktop frame uses a stable LTR coordinate system while locale
- * direction is applied explicitly to navigation and the active work surface.
- * This prevents shell placement from depending on inherited flex/grid direction
- * semantics while keeping Arabic copy, logical spacing and bidi behavior RTL.
+ * The shell keeps the semantic locale `dir` attribute for assistive technology
+ * and DOM contracts. Internal.19's experience-system.css independently fixes the
+ * outer flex coordinate system to physical LTR and explicitly orders navigation
+ * and workspace regions, so semantic RTL never leaves sidebar placement to
+ * inherited flex-direction behavior.
  *
  * Locale and direction are consumed from the same reactive client authority as
  * translated copy. Server rendering still seeds that authority through the root
@@ -121,7 +122,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div
-      dir="ltr"
+      dir={dir}
       className="flex h-[100dvh] min-h-0 overflow-hidden bg-background text-foreground"
       data-sahelflow-shell="desktop"
       data-locale-dir={dir}
