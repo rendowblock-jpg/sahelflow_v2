@@ -120,3 +120,8 @@ Installed UX rejection never authorizes weakening these contracts.
 Current authority belongs in live files under `documentation/`, not `documentation/archive/`. Archive material may preserve research/evidence but is not current authority. Keep one durable session resume in `documentation/operations/WORKING_MEMORY.md`.
 
 When release state changes, reconcile together: root `README.md`, this `AGENTS.md`, `documentation/README.md`, `CURRENT_STATE.md`, `ROADMAP.md`, `WORKING_MEMORY.md` and `scripts/verify-current-frontier.ts`.
+
+## Verified product frontier
+The Verified product frontier is enforced through the selected Level 1/2/3 gates and the repository's protected-boundary contracts. Historical continuity includes issue #221; later implementation may supersede its product state, but not the gate authority and evidence discipline it established.
+
+Current Founder verdict: REJECTED after Founder-installed Internal.17. Keep PR #260 as the single Internal.18 / FD-037 founder-offline-only correction frontier until exact-head certification, review, protected merge, signed publication and installed acceptance complete.

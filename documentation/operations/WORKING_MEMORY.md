@@ -118,3 +118,9 @@ Do not weaken the Rust `--locked` or release-source hygiene contracts merely to 
 - No force/waiver/protection bypass.
 - No cross-SHA evidence mix.
 - No weakening `Cargo.lock`, `--locked`, updater signing or deterministic release-source guards for convenience.
+
+## Wave 4 — what is implemented
+Wave 4 implementation is represented by the live source and protected evidence on the current branch; historical notes remain continuity context rather than a second source of truth.
+
+## Exact next-session order
+Finish the one exact-head certification, obtain fresh review on that same SHA, merge only through the protected gate, publish the signed Internal.18 checkpoint from protected main, and then perform Founder-installed acceptance on that exact artifact.

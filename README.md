@@ -61,3 +61,10 @@ These are historical anchors, not instructions to restart old waves.
 ## Documentation and session resume
 
 Start with [`AGENTS.md`](AGENTS.md), then [`documentation/README.md`](documentation/README.md). The single compact resumable owner is [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md), reconciled against [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md) and [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md). Archive material is evidence/context only.
+
+## Historical gate continuity
+
+### Phase 5 closure
+The Phase 5 closure remains part of the protected product history behind the current Founder correction. Its continuity register covered issues #201, #214, #221, #226 and #230, and the earlier `1.0.0-internal.15` checkpoint established the FD-032 Founder-only offline path later advanced by subsequent internal checkpoints. Founder acceptance remains open until the exact signed current checkpoint is installed and judged.
+
+Current Founder verdict: Founder-installed Internal.17 was REJECTED; PR #260 is the consolidated Internal.18 / FD-037 correction and founder-offline-only signed-checkpoint frontier.

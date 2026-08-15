@@ -110,3 +110,6 @@ Customer-online/public-trial release remains fail-closed until separate owned-ho
 ## Launch boundary
 
 SahelFlow is not yet a commercially certified Stable release. Internal.18 is a bounded Founder/internal-lab checkpoint. Stable/customer readiness still requires the applicable acceptance register, #221/#226/#230 at their required evidence levels, representative/live provider and network proof where applicable, security/privacy/legal/rollout readiness and explicit Founder promotion.
+
+## Historical authority continuity
+The Phase 5 merged result and evidence remains the product baseline behind the current correction. The earlier Active Phase 6 frontier followed Internal.14 publication evidence and the FD-031 exception boundary; the FD-032 Founder-only offline checkpoint boundary then introduced the `1.0.0-internal.15` release path. issue #214 is retained here as a continuity reference to that historical gate sequence, while the current release authority remains the Internal.18/FD-037 source declared above.

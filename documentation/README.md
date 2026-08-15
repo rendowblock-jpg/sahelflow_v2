@@ -118,3 +118,6 @@ A user-ready claim may not combine Founder acceptance from one build, performanc
 ## Release and launch boundary
 
 Internal.18 under FD-037 is a Founder/internal-lab checkpoint, not a customer release. #226 performance/reliability and #230 customer-online/network certification remain separate. Stable still requires the complete applicable acceptance register, representative/live provider/network evidence, security/privacy/legal/rollout readiness and explicit Founder promotion.
+
+## Historical checkpoint continuity
+PR #250 carried the `1.0.0-internal.15` Founder-offline checkpoint into the later internal release line. At that checkpoint the live register stated: Issues #221, #226 and #230 remain open. This sentence is retained as historical evidence; current issue state is governed by CURRENT_STATE.md and GitHub, not by that older checkpoint.

@@ -132,3 +132,6 @@ Stable remains separate. After #221/#226/#230 and the applicable acceptance regi
 A green source/browser result is not Founder acceptance. A signed Internal release is not customer readiness. Absence of a fresh complaint is not proof of a fix.
 
 The application is complete for the claimed level only when every applicable matrix executes, zero known P0/P1 remains for that claim, source/artifact/installed behavior agree on one coherent candidate, the Founder accepts the installed whole-product experience, and external evidence exists where required.
+
+## Phase 3 — providers, inbox, AI and automations
+This historical phase began with complete reconnaissance of provider, inbox, AI and automation authority before implementation. Protected transitions from that frontier used expected-head merge discipline so evidence and source could not be mixed across SHAs.
