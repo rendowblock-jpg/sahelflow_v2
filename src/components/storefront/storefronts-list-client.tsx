@@ -35,6 +35,7 @@ interface Props {
   configs: StorefrontConfig[];
   canManage: boolean;
   canPublish: boolean;
+  canDelete: boolean;
 }
 
 type ApiPayload = { error?: string; code?: string };
@@ -43,6 +44,7 @@ export function StorefrontsListClient({
   configs: initial,
   canManage,
   canPublish,
+  canDelete,
 }: Props) {
   const { t, locale } = useI18n();
   const language = (
@@ -69,6 +71,7 @@ export function StorefrontsListClient({
   }
 
   function openDelete(config: StorefrontConfig) {
+    if (!canDelete) return;
     setDeleteTarget(config);
     setDeleteBusy(false);
     setReauthRequired(false);
@@ -77,7 +80,7 @@ export function StorefrontsListClient({
   }
 
   async function confirmDelete(proofRefreshed = false) {
-    if (!deleteTarget || deleteBusy) return;
+    if (!canDelete || !deleteTarget || deleteBusy) return;
     const target = deleteTarget;
     setDeleteBusy(true);
     setReauthError(null);
@@ -230,7 +233,7 @@ export function StorefrontsListClient({
                   </a>
                 </Button>
 
-                {canMutate ? (
+                {canDelete ? (
                   <Button
                     size="sm"
                     variant="ghost"
@@ -249,7 +252,7 @@ export function StorefrontsListClient({
       </div>
 
       <Dialog
-        open={canMutate && deleteTarget !== null}
+        open={canDelete && deleteTarget !== null}
         onOpenChange={(open) => !open && resetDeleteFlow()}
       >
         <DialogContent>
