@@ -6,12 +6,22 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("Inbox operational workspace contract", () => {
-  it("routes the Inbox through the new durable workspace and compact recovery dock", () => {
+  it("routes the Inbox through the durable workspace, compact recovery dock and desktop primer", () => {
     const page = read("src/app/(dashboard)/inbox/page.tsx");
+    expect(page).toContain("InboxDesktopPrimer");
     expect(page).toContain("InboxWorkspace");
     expect(page).toContain("WhatsAppIngressRecoveryDock");
     expect(page).not.toContain("<InboxLive");
     expect(page).not.toContain("WhatsAppIngressRecoveryPanel");
+  });
+
+  it("opens the newest permitted conversation on desktop without stealing mobile queue-first navigation", () => {
+    const primer = read("src/components/inbox/inbox-desktop-primer.tsx");
+    expect(primer).toContain("useMobile");
+    expect(primer).toContain("if (mobile || conversation) return");
+    expect(primer).toContain('fetch("/api/conversations"');
+    expect(primer).toContain('next.set("conversation", firstId)');
+    expect(primer).toContain("router.replace");
   });
 
   it("keeps persisted conversations authoritative independently of transport health", () => {
