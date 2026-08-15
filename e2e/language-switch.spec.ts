@@ -59,8 +59,10 @@ test.describe("Language switch", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "fr");
     await expectShellSide(page, "ltr");
 
+    // The trigger's accessible name is the human language name; the compact
+    // visible locale code is presentation only.
     const langTrigger = page
-      .getByRole("button", { name: /^FR$/i })
+      .getByRole("button", { name: /^Français$/i })
       .first();
     await langTrigger.waitFor({ state: "visible", timeout: 5_000 });
     await langTrigger.click();
@@ -95,7 +97,7 @@ test.describe("Language switch", () => {
     await expectShellSide(page, "rtl");
 
     const langTriggerAfterAr = page
-      .getByRole("button", { name: /^AR$/i })
+      .getByRole("button", { name: /^العربية$/ })
       .first();
     await langTriggerAfterAr.waitFor({ state: "visible", timeout: 5_000 });
     await langTriggerAfterAr.click();
