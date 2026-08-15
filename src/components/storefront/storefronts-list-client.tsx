@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import {
   ExternalLink,
   History,
+  KeyRound,
   Loader2,
   Pencil,
   Trash2,
@@ -21,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
 import {
   getStorefrontStudioContentCopy,
@@ -35,6 +37,8 @@ interface Props {
   canPublish: boolean;
 }
 
+type ApiPayload = { error?: string; code?: string };
+
 export function StorefrontsListClient({
   configs: initial,
   canManage,
@@ -48,34 +52,92 @@ export function StorefrontsListClient({
     getStorefrontStudioContentCopy(language, key);
   const canMutate = canManage && canPublish;
   const [configs, setConfigs] = useState(initial);
-  const [pending, startTransition] = useTransition();
   const [deleteTarget, setDeleteTarget] = useState<StorefrontConfig | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [reauthRequired, setReauthRequired] = useState(false);
+  const [pin, setPin] = useState("");
+  const [reauthBusy, setReauthBusy] = useState(false);
+  const [reauthError, setReauthError] = useState<string | null>(null);
 
-  async function confirmDelete() {
-    if (!deleteTarget) return;
+  function resetDeleteFlow() {
+    setDeleteTarget(null);
+    setDeleteBusy(false);
+    setReauthRequired(false);
+    setPin("");
+    setReauthBusy(false);
+    setReauthError(null);
+  }
+
+  function openDelete(config: StorefrontConfig) {
+    setDeleteTarget(config);
+    setDeleteBusy(false);
+    setReauthRequired(false);
+    setPin("");
+    setReauthError(null);
+  }
+
+  async function confirmDelete(proofRefreshed = false) {
+    if (!deleteTarget || deleteBusy) return;
     const target = deleteTarget;
-    startTransition(async () => {
-      try {
-        const res = await fetch(`/api/storefront/config/${target.id}`, {
-          method: "DELETE",
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(
-            data.error || t("storefront.list.error.deleteFailed"),
-          );
-        }
-        setConfigs((prev) => prev.filter((config) => config.id !== target.id));
-        toast.success(t("storefront.list.deleted"));
-        setDeleteTarget(null);
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : t("storefront.list.error.generic"),
+    setDeleteBusy(true);
+    setReauthError(null);
+    try {
+      const response = await fetch(`/api/storefront/config/${target.id}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json().catch(() => ({}))) as ApiPayload;
+      if (
+        response.status === 403 &&
+        payload.code === "REAUTHENTICATION_REQUIRED" &&
+        !proofRefreshed
+      ) {
+        setReauthRequired(true);
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(
+          payload.error || t("storefront.list.error.deleteFailed"),
         );
       }
-    });
+      setConfigs((previous) =>
+        previous.filter((config) => config.id !== target.id),
+      );
+      toast.success(t("storefront.list.deleted"));
+      resetDeleteFlow();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("storefront.list.error.generic"),
+      );
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
+  async function verifyPinAndDelete() {
+    if (!pin.trim() || reauthBusy) return;
+    setReauthBusy(true);
+    setReauthError(null);
+    try {
+      const response = await fetch("/api/auth/reauthenticate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as ApiPayload;
+      if (!response.ok) {
+        setReauthError(payload.error ?? studioCopy("verificationFailed"));
+        return;
+      }
+      setReauthRequired(false);
+      setPin("");
+      await confirmDelete(true);
+    } catch {
+      setReauthError(studioCopy("verificationFailed"));
+    } finally {
+      setReauthBusy(false);
+    }
   }
 
   return (
@@ -175,7 +237,7 @@ export function StorefrontsListClient({
                     title={t("storefront.list.delete")}
                     aria-label={t("storefront.list.delete")}
                     className="text-destructive hover:text-destructive"
-                    onClick={() => setDeleteTarget(config)}
+                    onClick={() => openDelete(config)}
                   >
                     <Trash2 className="size-3.5" aria-hidden="true" />
                   </Button>
@@ -188,34 +250,86 @@ export function StorefrontsListClient({
 
       <Dialog
         open={canMutate && deleteTarget !== null}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onOpenChange={(open) => !open && resetDeleteFlow()}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("storefront.list.deleteTitle")}</DialogTitle>
+            <DialogTitle>
+              {reauthRequired
+                ? studioCopy("deleteVerificationTitle")
+                : t("storefront.list.deleteTitle")}
+            </DialogTitle>
             <DialogDescription>
-              {t("storefront.list.deleteConfirm", {
-                name: deleteTarget?.name ?? "",
-              })}{" "}
-              {t("storefront.list.deleteWarning", {
-                slug: `/storefront/${deleteTarget?.slug ?? ""}`,
-              })}
+              {reauthRequired ? (
+                studioCopy("deleteVerificationDescription")
+              ) : (
+                <>
+                  {t("storefront.list.deleteConfirm", {
+                    name: deleteTarget?.name ?? "",
+                  })}{" "}
+                  {t("storefront.list.deleteWarning", {
+                    slug: `/storefront/${deleteTarget?.slug ?? ""}`,
+                  })}
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
+
+          {reauthRequired ? (
+            <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <KeyRound className="size-4" aria-hidden="true" />
+                {studioCopy("deleteVerificationTitle")}
+              </div>
+              <Input
+                type="password"
+                inputMode="numeric"
+                autoComplete="current-password"
+                value={pin}
+                onChange={(event) => setPin(event.target.value)}
+                placeholder={studioCopy("pinPlaceholder")}
+                aria-label={studioCopy("pinPlaceholder")}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void verifyPinAndDelete();
+                }}
+              />
+              {reauthError ? (
+                <p role="alert" className="text-xs text-destructive">
+                  {reauthError}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+            <Button variant="outline" onClick={resetDeleteFlow} disabled={reauthBusy}>
               {t("storefront.list.cancel")}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={pending}
-            >
-              {pending ? (
-                <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
-              ) : null}
-              {t("storefront.list.confirmDelete")}
-            </Button>
+            {reauthRequired ? (
+              <Button
+                variant="destructive"
+                onClick={() => void verifyPinAndDelete()}
+                disabled={!pin.trim() || reauthBusy || deleteBusy}
+              >
+                {reauthBusy || deleteBusy ? (
+                  <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <KeyRound className="me-2 size-4" aria-hidden="true" />
+                )}
+                {studioCopy("verifyAndDelete")}
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                onClick={() => void confirmDelete()}
+                disabled={deleteBusy}
+              >
+                {deleteBusy ? (
+                  <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
+                ) : null}
+                {t("storefront.list.confirmDelete")}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
