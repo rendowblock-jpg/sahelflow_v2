@@ -4,7 +4,9 @@ const PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
 
 async function login(page: Page): Promise<void> {
-  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  if (!page.url().includes("/login")) return;
+
   const pinInput = page.locator('input[type="password"]');
   await pinInput.waitFor({ state: "visible" });
   await pinInput.fill(PIN);
