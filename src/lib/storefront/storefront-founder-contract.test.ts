@@ -24,7 +24,8 @@ describe("Founder Storefront V2 acceptance repair", () => {
     expect(studio).toContain("ContactPanel");
     expect(studio).toContain("contact: { ...contact, ...patch }");
     expect(renderer).toContain("authoredSupport ?? renderSupport");
-    expect(projection).toContain("publicBuilder");
+    expect(projection).toContain("...config.theme.builder");
+    expect(projection).toContain("verificationValue: null");
   });
 
   it("exposes active/pause intent in Studio and never reports a pause as published", () => {
