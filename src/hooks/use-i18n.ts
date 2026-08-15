@@ -50,6 +50,7 @@ export function useI18n() {
   const router = useRouter();
   const serverLocale = useServerLocale();
   const storeLocale = useUIStore((state) => state.locale);
+  const commitLocale = useUIStore((state) => state.setLocale);
   const [pendingLocale, setPendingLocale] = useState<Locale | null>(null);
   const [refreshPending, startRefreshTransition] = useTransition();
   const mounted = useIsMounted();
@@ -59,32 +60,30 @@ export function useI18n() {
     (serverLocale !== pendingLocale || storeLocale !== pendingLocale);
   const isLocalePending = localeCommitPending || refreshPending;
 
-  // All three compact product bundles are synchronously available. The active
-  // bundle is therefore ready in the same commit as the server-confirmed locale.
+  // All three compact product bundles are synchronously available. Client-owned
+  // copy and geometry can therefore move in one render as soon as a locale is
+  // requested; the refreshed server tree reconciles server-rendered fragments.
   const translations = getTranslations(locale);
 
-  // ServerLocaleProvider commits document language/direction in a layout effect
-  // when a server tree arrives. Keep this as an idempotent safeguard for initial
-  // hydration and any future committed-locale update path.
+  // Keep the document boundary idempotently aligned with the client locale. The
+  // UI store performs the synchronous event-boundary commit; this effect covers
+  // hydration and any future external locale reconciliation path.
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = getDirection(locale);
   }, [locale]);
 
-  // The provider clears the visual transition in a layout effect before the
-  // refreshed tree paints. Keep an idempotent external-system cleanup here once
-  // both locale authorities expose the exact requested server commit. The target
-  // state itself is intentionally derived instead of synchronously reset inside
-  // an effect, avoiding a cascading render after every successful switch.
+  // ServerLocaleProvider clears the transition in a layout effect when the new
+  // RSC tree arrives. Keep this idempotent cleanup once both authorities agree.
   useEffect(() => {
     if (pendingLocale !== null && !localeCommitPending) {
       clearLocaleVisualTransition();
     }
   }, [localeCommitPending, pendingLocale]);
 
-  // A failed/aborted RSC refresh must never leave the shell permanently covered
-  // or direction controls locked. The hard reload is recovery only, not the
-  // normal language-switch path.
+  // A failed/aborted RSC refresh must never leave the locale request unresolved.
+  // The hard reload is recovery only; normal switching commits the client shell
+  // immediately and reconciles the server tree in place.
   useEffect(() => {
     if (!localeCommitPending) return;
     const timeout = window.setTimeout(() => {
@@ -120,13 +119,15 @@ export function useI18n() {
   );
 
   /**
-   * Locale is request/server authority, not an optimistic preference. The
-   * current tree remains visually frozen behind a short neutral transition,
-   * then router.refresh() clears the current Next client route cache and fetches
-   * a new Server Component payload under the requested cookie. The returned
-   * ServerLocaleProvider commits copy + lang + direction in a layout effect, so
-   * the user never sees a mixed LTR/RTL tree and the app keeps desktop state
-   * instead of performing a normal full-document restart.
+   * Locale switching is one client transaction followed by server reconciliation:
+   * 1. persist the request cookie for the next server render;
+   * 2. commit the client locale immediately so shell geometry and client copy do
+   *    not wait on network/RSC latency;
+   * 3. refresh the current Server Component tree under the requested cookie;
+   * 4. clear the pending state when ServerLocaleProvider confirms the same locale.
+   *
+   * This removes the historical restart-only/stale-side failure while preserving
+   * the cookie as durable request authority.
    */
   const setLocale = useCallback(
     (newLocale: Locale) => {
@@ -135,12 +136,13 @@ export function useI18n() {
       beginLocaleVisualTransition(newLocale);
       requestLocale(newLocale);
       setPendingLocale(newLocale);
+      commitLocale(newLocale);
 
       startRefreshTransition(() => {
         router.refresh();
       });
     },
-    [isLocalePending, locale, router],
+    [commitLocale, isLocalePending, locale, router],
   );
 
   const dir = useMemo(() => getDirection(locale), [locale]);
