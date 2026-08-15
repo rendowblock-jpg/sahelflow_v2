@@ -1,8 +1,8 @@
-import { getI18n } from "@/lib/i18n-server";
-import { DEFAULT_THEME } from "@/lib/storefront/service";
-import { StorefrontBuilder } from "@/components/storefront/storefront-builder";
-import { db } from "@/lib/db";
 import type { Metadata } from "next";
+
+import { StorefrontStudioBootstrap } from "@/components/storefront/studio/storefront-studio-bootstrap";
+import { db } from "@/lib/db";
+import { getI18n } from "@/lib/i18n-server";
 import {
   assertTrustedAction,
   requireTrustedAction,
@@ -14,13 +14,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const dynamic = "force-dynamic";
 
+/**
+ * First-run Storefront V2 entry. The old settings-form builder is intentionally
+ * not used here: sellers start from the shared live renderer and continue into
+ * the same Studio that owns section composition, inspector, autosave and publish.
+ */
 export default async function NewStorefrontPage() {
   const actorContext = await requireTrustedAction("storefront.manage");
   assertTrustedAction(actorContext, "storefront.publish");
   assertTrustedAction(actorContext, "products.read");
-  const { t } = await getI18n();
 
-  // Fetch all active, non-soft-deleted products for the picker (P-M6)
   const products = await db.product.findMany({
     where: { isActive: true, deletedAt: null },
     select: {
@@ -34,31 +37,9 @@ export default async function NewStorefrontPage() {
     orderBy: { name: "asc" },
   });
 
-  // Build an empty config shape for the builder
-  const emptyConfig = {
-    id: "",
-    slug: "",
-    name: "",
-    description: null,
-    theme: DEFAULT_THEME,
-    productIds: [],
-    contact: null,
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
   return (
-    <div className="app-content page-sections">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("storefronts.newTitle")}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t("storefronts.newDesc")}
-        </p>
-      </div>
-      <StorefrontBuilder config={emptyConfig} products={products} mode="create" />
+    <div className="app-content flex h-full min-h-0 flex-col overflow-hidden">
+      <StorefrontStudioBootstrap products={products} />
     </div>
   );
 }
