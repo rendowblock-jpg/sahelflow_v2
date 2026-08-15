@@ -12,7 +12,7 @@ The Founder-owned Windows checkout is evidence-bearing local state. Never reset,
 4. Read `documentation/operations/WORKFLOW.md`.
 5. Read `documentation/operations/WORKING_MEMORY.md`.
 6. Read governing PRODUCT, EXPERIENCE, ARCHITECTURE and RESEARCH sections for the task.
-7. Re-fetch protected `main` and issues #221/#226/#230 before any write.
+7. Re-fetch live protected `main` and issues #221/#226/#230 before any write.
 8. Resolve the live protected-main SHA before every new branch, review, release-authority change or package action.
 
 **Do not restart a generic codebase audit.** The repository/layers/current problem register are already mapped; inspect only source roots implicated by measured evidence or a newly authorized bounded scope.
@@ -33,7 +33,9 @@ A lower layer cannot silently weaken a higher one. Current documentation can cla
 
 ## Current source frontier
 
-- Protected `main`: `8448c47123290f2e1af702ff24a427cc11c4781c` — merged **Internal.19 source correction** from PR #262.
+- **Live protected `main`: resolve from GitHub before every write/review/release action; do not copy a documentation SHA as the live ref.**
+- Internal.19 application/source baseline introduced by PR #262: `8448c47123290f2e1af702ff24a427cc11c4781c`.
+- Post-merge governance reconciliation PR #263 advanced `main` without changing application/runtime authority; its merge SHA is historical governance evidence, not a fixed live-main identifier.
 - Latest signed/published package source: `5cb7f5040249a540ed635cdea16dc933843b40aa` — **Internal.18**.
 - Latest package authority: Internal.18 / `1.0.0-internal.18` / MSI `1.0.0.18` / FD-037 / `founder-offline-only`.
 - Founder-installed Internal.18 result: **REJECTED / PARTIALLY IMPROVED**.
@@ -42,7 +44,7 @@ A lower layer cannot silently weaken a higher one. Current documentation can cla
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
 - Retained independent obligations: **#221, #226, #230**.
 
-The PR #262 source merge is not implicit permission to bump version or publish a new signed checkpoint.
+The PR #262 source merge and later governance-only reconciliation are not implicit permission to bump version or publish a new signed checkpoint.
 
 ## Protected boundaries
 
@@ -50,7 +52,7 @@ Current experience/evidence work may not weaken Golden COD idempotency/version/a
 
 ## Exact next outcome
 
-1. Treat `8448c47123290f2e1af702ff24a427cc11c4781c` as the current protected-main source frontier.
+1. Resolve live protected `main` from GitHub; treat the `8448c471...` tree as the fixed Internal.19 **application baseline**, not the live ref.
 2. Preserve the exact-head PR #262 evidence: Required PR, retry-free Phase 5 and retry-free Phase 6–7 were green; Founder artifacts were manually inspected.
 3. Stop before new packaging/version changes until explicit newer Founder release authority exists.
 4. If the Founder authorizes a next signed checkpoint, create one bounded release-authority/version follow-up from the then-live protected main and certify that exact source independently.
@@ -61,7 +63,7 @@ Current experience/evidence work may not weaken Golden COD idempotency/version/a
 
 The historical **Verified product frontier** was established through the repository's **selected Level 1/2/3 gates**. Its Phase 5 application-changing protected baseline is **`cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`** / PR #220. Historical **issue #221** remains important because installed Founder acceptance is an independent evidence authority even when later source supersedes the old implementation.
 
-PR #262 / `agent/internal19-product-convergence` later converged the rejected Internal.18 experience and merged to protected main as `8448c47123290f2e1af702ff24a427cc11c4781c`. The current installed truth is still Internal.18 **REJECTED / PARTIALLY IMPROVED** until a newer signed checkpoint is explicitly authorized, installed and judged.
+PR #262 / `agent/internal19-product-convergence` later converged the rejected Internal.18 experience and established the Internal.19 application baseline `8448c47123290f2e1af702ff24a427cc11c4781c`. The current installed truth is still Internal.18 **REJECTED / PARTIALLY IMPROVED** until a newer signed checkpoint is explicitly authorized, installed and judged.
 
 ## Evidence rules
 
