@@ -7,22 +7,23 @@
 > **Latest published/installed checkpoint:** Internal.18 / `1.0.0-internal.18` / MSI `1.0.0.18` / FD-037
 > **Latest signed-package source:** `5cb7f5040249a540ed635cdea16dc933843b40aa`
 > **Founder-installed result:** **REJECTED / PARTIALLY IMPROVED**
+> **Current authorized candidate:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19` / FD-038 / `founder-offline-only`; publication/install pending
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Retained evidence:** #221, #226, #230
 
-PR #262 / `agent/internal19-product-convergence` is merged historical source convergence. PR #263 is governance-only reconciliation. **No Internal.19 release authority exists yet.** A source or docs merge does not authorize a version bump, signing or publication.
+PR #262 / `agent/internal19-product-convergence` is merged historical source convergence. PR #263/#264 are governance-only reconciliation and PR #265 is CI lane-selection history. **Internal.19 release authority is approved under FD-038; signed publication and Founder install remain pending.** This authority is bounded to the exact Founder/internal-lab checkpoint and does not authorize customer-online, Beta or Stable.
 
 ## Installed authority
 
 Signed-package source `5cb7f5040249a540ed635cdea16dc933843b40aa` produced the published Internal.18 Founder checkpoint under FD-037. Signed release/install/runtime evidence remains valid for the properties it proved. The Founder then recorded **REJECTED / PARTIALLY IMPROVED**, so automation does not close #221 and Internal.18 is not an accepted whole-product baseline.
 
-Package authority remains `founder-offline-only`; customer-online/Beta/Stable remain unauthorized.
+The currently installed evidence remains Internal.18 until FD-038 publication/install completes. Package authority for the pending Internal.19 checkpoint remains `founder-offline-only`; customer-online/Beta/Stable remain unauthorized.
 
 ## Current source frontier — live main plus fixed Internal.19 application baseline
 
 PR #262 was one consolidated Internal.19 source-correction wave after installed Internal.18 rejection. Its exact certified head `8d43e6142aab508e54f038b13e2639ac6966682e` passed Required PR, retry-free Phase 5 and retry-free Phase 6–7, then established application/source baseline `8448c47123290f2e1af702ff24a427cc11c4781c`.
 
-Later governance-only merges can advance the live protected `main` ref without changing the application baseline. Therefore **live main must always be resolved from GitHub**, while `8448c471...` is a fixed historical/application baseline.
+Later governance/CI/release-authority merges can advance the live protected `main` ref without changing the application baseline. Therefore **live main must always be resolved from GitHub**, while `8448c471...` is a fixed historical/application baseline.
 
 The merged application source covers professional Arabic typography/bidi, deterministic RTL shell/workbench geometry, neutral theme structure, coherent motion, chart direction, immersive Inbox/AI, task-based Settings, Storefront V2 authoring, application-vs-embedded-preview heading semantics, focus-managed Storefront section insertion, locale reconciliation without mixed old/new language frames, Next route-transition scroll integration, saved Arabic Studio evidence, deterministic Playwright server readiness and repeatable controlled-browser performance timing.
 
@@ -37,13 +38,14 @@ Human artifact inspection on the certified PR head confirmed loaded Arabic Inbox
 - Controlled CI trend: worst route median `4672.7 ms` (`/analytics`) against `<8000 ms`; search p95 `31.1 ms` against `<2000 ms`.
 - Those browser numbers are regression evidence only and do **not** close installed-performance issue #226.
 - Historical diagnostic evidence included the earlier one-sample `8109 ms` tripwire; it was replaced by the repeatable median-based controlled trend without changing the ceiling.
-- PR #263 reconciled docs/current-frontier verification only; its exact head also passed CI/Required PR, retry-free Phase 5 and retry-free Phase 6–7.
+- PR #263/#264 reconciled docs/current-frontier authority; PR #265 made Phase 5/6–7 execution risk-aware while failing closed for behavioral release hunks.
+- **FD-038 now authorizes exactly Internal.19 `1.0.0-internal.19` / MSI `1.0.0.19` as the next Founder/internal-lab signed checkpoint.** Its release-authority PR must pass the selected source/native/Windows/MSI/signing gates on one exact head before protected merge/publication.
 
 ## Remaining launch blockers
 
-1. New explicit Founder release authority before any Internal.19 version/package/signing/publication change.
-2. After that authority, one bounded release-authority/version follow-up from the then-live protected main, followed by exact-source signed package certification.
-3. #221 — Founder-installed whole-product visual/interaction acceptance on the exact next signed checkpoint.
+1. Complete the bounded FD-038 release-authority/version follow-up and its exact-source release-specific source/native/Windows/MSI gates.
+2. Merge only the reviewed exact tree, then publish the signed Internal.19 candidate from that exact protected-main merge SHA.
+3. #221 — Founder-installed whole-product visual/interaction acceptance on that exact signed Internal.19 checkpoint.
 4. #226 — representative installed T470/declared-floor p95 and eight-hour reliability certification.
 5. #230 — SahelFlow-owned licensing hostname, primary/recovery ingress and representative Algerian fixed/mobile trial/recovery evidence.
 6. Later security/privacy/legal/rollout and representative beta requirements before Stable.
