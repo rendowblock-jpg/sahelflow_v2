@@ -145,7 +145,11 @@ async function neutralStructure(page: Page) {
 
 test.describe.serial("Founder visual correction evidence", () => {
   test.beforeAll(async ({ browser, baseURL }) => {
-    const context = await browser.newContext({ baseURL, viewport: DESKTOP });
+    const context = await browser.newContext({
+      baseURL,
+      viewport: DESKTOP,
+      storageState: process.env.SF_PHASE5_OWNER_STORAGE_STATE,
+    });
     const page = await context.newPage();
     try {
       await setLocale(context, baseURL, "fr");
