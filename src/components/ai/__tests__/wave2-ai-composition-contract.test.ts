@@ -6,40 +6,54 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
-describe("Internal.19 AI composition contract", () => {
-  it("keeps composition in the shared experience system and leaves AI business authority intact", () => {
+describe("Class-AAA AI composition contract", () => {
+  it("replaces the rejected nested mini-app with full-height decision roots", () => {
     const page = read("src/app/(dashboard)/agents/page.tsx");
-    const experience = read("src/app/experience-system.css");
-    const hook = read("src/hooks/use-ai-workspace.ts");
+    const shell = read("src/components/ai/ai-workspace-shell.tsx");
+    const workspace = read("src/components/ai/ai-decision-workspace.tsx");
 
-    expect(page).toContain("AiWorkspaceShell");
     expect(page).toContain('className="app-workspace-content"');
-    expect(page).not.toContain("agents-wave2.module.css");
-    expect(experience).toContain('[data-ai-workspace="v2"]');
-    expect(experience).toContain('grid-template-areas: "sessions thread"');
-    expect(experience).toContain('grid-template-areas: "context thread sessions"');
-    expect(hook).toContain("approveProposal");
-    expect(hook).toContain("stop");
+    expect(shell).toContain("AiDecisionWorkspace");
+    expect(shell).toContain('className="h-full min-h-0 overflow-hidden"');
+    expect(workspace).toContain('data-ai-decision-workspace="true"');
+    expect(workspace).toContain('data-ai-layout={wideReview ? "wide" : "desktop"}');
+    expect(workspace).not.toContain('rounded-xl border bg-card');
   });
 
-  it("keeps the conversation thread dominant while explicitly mirroring RTL rail order", () => {
-    const experience = read("src/app/experience-system.css");
+  it("keeps the decision canvas dominant and review progressive at 1366", () => {
+    const workspace = read("src/components/ai/ai-decision-workspace.tsx");
+    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
 
-    expect(experience).toContain("grid-template-columns: 14rem minmax(0, 1fr) !important");
-    expect(experience).toContain(
-      "grid-template-columns: 14rem minmax(30rem, 1fr) 18rem !important",
+    expect(workspace).toContain('grid-cols-[17.5rem_minmax(0,1fr)]');
+    expect(workspace).toContain(
+      'grid-cols-[17.5rem_minmax(0,1fr)_20rem]',
     );
-    expect(experience).toContain('grid-template-areas: "thread sessions"');
-    expect(experience).toContain('grid-template-areas: "context thread sessions"');
+    expect(workspace).toContain('useMediaQuery("(min-width: 1500px)")');
+    expect(canvas).toContain('data-ai-decision-canvas="true"');
+    expect(canvas).toContain('data-ai-inline-proposals="true"');
+    expect(canvas).toContain('<SheetContent side="end"');
   });
 
-  it("keeps microcopy readable and scroll behavior governed by shared workspace styling", () => {
-    const workspace = read("src/app/workspace-system.css");
+  it("uses logical RTL geometry instead of locale-coded physical sides", () => {
+    const history = read("src/components/ai/ai-work-history.tsx");
+    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    const workspace = read("src/components/ai/ai-decision-workspace.tsx");
 
-    expect(workspace).toContain('[data-ai-workspace="v2"]');
-    expect(workspace).toContain('[class~="text-[9px]"]');
-    expect(workspace).toContain('[class~="text-[10px]"]');
-    expect(workspace).toContain('[class~="text-[11px]"]');
-    expect(workspace).toContain("font-size: 0.75rem");
+    expect(history).toContain("border-e");
+    expect(workspace).toContain("border-s");
+    expect(canvas).toContain('side="end"');
+    expect(canvas).not.toContain('side={workspace.locale');
+    expect(canvas).not.toContain('? "left" : "right"');
+  });
+
+  it("keeps starter jobs contextual and proposals first-class", () => {
+    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    const shell = read("src/components/ai/ai-workspace-shell.tsx");
+
+    expect(canvas).toContain('data-ai-start-state="true"');
+    expect(canvas).toContain("messages.length === 0");
+    expect(canvas).toContain("STARTERS.map");
+    expect(canvas).toContain("AiActionProposalCard");
+    expect(shell).not.toContain("AiOperationalLaunchpad");
   });
 });
