@@ -98,11 +98,12 @@ export function getAiDecisionCopy(
   key: AiDecisionCopyKey,
   params?: Params,
 ): string {
-  const template = COPY[locale]?.[key] ?? COPY.en[key];
+  const template: string = COPY[locale]?.[key] ?? COPY.en[key];
   if (!params) return template;
-  return Object.entries(params).reduce(
-    (value, [name, replacement]) =>
-      value.replaceAll(`{${name}}`, String(replacement)),
-    template,
-  );
+
+  let value = template;
+  for (const [name, replacement] of Object.entries(params)) {
+    value = value.replaceAll(`{${name}}`, String(replacement));
+  }
+  return value;
 }
