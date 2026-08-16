@@ -1,0 +1,22 @@
+/*
+ * Internal.20 hard interaction/geometry constraints.
+ *
+ * These are acceptance budgets, not visual decoration: the expanded desktop
+ * navigation must stay inside the Founder 1366px workspace budget, and portaled
+ * navigation remains safely above the 44px coarse-pointer interaction floor.
+ */
+
+[data-navigation-density] {
+  width: 16.75rem !important; /* 268px; Founder budget is <= 270px. */
+}
+
+[data-navigation-density="rail"] {
+  width: 4.5rem !important;
+}
+
+@media (pointer: coarse) {
+  [data-navigation-density] nav a {
+    min-height: 3rem !important;
+    min-width: var(--sf-touch-target, 3rem);
+  }
+}
