@@ -43,8 +43,8 @@ export function InboxOperationsDesk({
   const [queueFilter, setQueueFilter] = useState<DeskQueueFilter>("all");
   const [workflowFilter, setWorkflowFilter] = useState<WorkflowFilter>("all");
   const [candidateByConversation, setCandidateByConversation] = useState<Record<string, string>>({});
+  const [defaultQueueResolved, setDefaultQueueResolved] = useState(false);
   const queueTouchedRef = useRef(false);
-  const defaultQueueResolvedRef = useRef(false);
   const desktopPrimedRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -70,27 +70,19 @@ export function InboxOperationsDesk({
   }, []);
 
   useEffect(() => {
-    if (
-      defaultQueueResolvedRef.current ||
-      queueTouchedRef.current ||
-      loadingChats ||
-      !authority
-    ) {
+    if (defaultQueueResolved || loadingChats || !authority) {
       return;
     }
 
-    defaultQueueResolvedRef.current = true;
-    const currentMemberId = authority.currentMemberId;
-    if (!currentMemberId) return;
+    if (!queueTouchedRef.current && authority.currentMemberId) {
+      const hasMine = chats.some(
+        (chat) => chat.workflow.assigneeId === authority.currentMemberId,
+      );
+      if (hasMine) setQueueFilter("mine");
+    }
 
-    const hasMine = chats.some(
-      (chat) => chat.workflow.assigneeId === currentMemberId,
-    );
-    if (!hasMine) return;
-
-    const timer = window.setTimeout(() => setQueueFilter("mine"), 0);
-    return () => window.clearTimeout(timer);
-  }, [authority, chats, loadingChats]);
+    setDefaultQueueResolved(true);
+  }, [authority, chats, defaultQueueResolved, loadingChats]);
 
   const visibleQueueChats = useMemo(() => {
     return chats.filter((chat) => {
@@ -128,7 +120,15 @@ export function InboxOperationsDesk({
   }, [chats.length, loadingChats, queueFilter, visibleQueueChats.length]);
 
   useEffect(() => {
-    if (isMobile || loadingChats || activeChat || requestedConversationId) return;
+    if (
+      !defaultQueueResolved ||
+      isMobile ||
+      loadingChats ||
+      activeChat ||
+      requestedConversationId
+    ) {
+      return;
+    }
     const first = visibleQueueChats[0] ?? chats[0];
     if (!first) return;
     const fingerprint = `${first.conversationId}:${queueFilter}:${workflowFilter}`;
@@ -139,6 +139,7 @@ export function InboxOperationsDesk({
   }, [
     activeChat,
     chats,
+    defaultQueueResolved,
     isMobile,
     loadingChats,
     queueFilter,
@@ -169,14 +170,14 @@ export function InboxOperationsDesk({
 
   const handleQueueChange = (filter: DeskQueueFilter) => {
     queueTouchedRef.current = true;
-    defaultQueueResolvedRef.current = true;
+    setDefaultQueueResolved(true);
     desktopPrimedRef.current = null;
     setQueueFilter(filter);
   };
 
   const handleWorkflowChange = (filter: WorkflowFilter) => {
     queueTouchedRef.current = true;
-    defaultQueueResolvedRef.current = true;
+    setDefaultQueueResolved(true);
     desktopPrimedRef.current = null;
     setWorkflowFilter(filter);
   };
