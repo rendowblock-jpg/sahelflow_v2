@@ -365,7 +365,7 @@ export function InboxThreadWorkbench({
                 </Button>
               </SheetTrigger>
               <SheetContent
-                side={locale === "ar" ? "left" : "right"}
+                side="end"
                 className="w-[min(390px,94vw)] p-0 sm:max-w-none"
               >
                 <SheetHeader className="sr-only">

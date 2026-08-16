@@ -27,7 +27,8 @@ describe("Class-AAA Inbox composition contract", () => {
     expect(thread).toContain("!isMobile && showContextRail ? (");
     expect(thread).toContain("InboxCustomerWorkPanel");
     expect(thread).toContain("<Sheet>");
-    expect(thread).toContain('side={locale === "ar" ? "left" : "right"}');
+    expect(thread).toContain('side="end"');
+    expect(thread).not.toContain('side={locale === "ar" ? "left" : "right"}');
     expect(thread).not.toContain('className="min-[1500px]:hidden"');
   });
 
