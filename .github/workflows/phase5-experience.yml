@@ -46,15 +46,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          reuse_output="$(bun scripts/verify-certified-product-evidence.ts)"
-          printf '%s\n' "${reuse_output}"
-          if grep -qx 'reuse_certified_product=true' <<<"${reuse_output}"; then
-            echo 'run_phase5=false' >> "${GITHUB_OUTPUT}"
-            echo 'Certified exact parent Phase 5 evidence reused for this strictly release-only head.' >> "${GITHUB_STEP_SUMMARY}"
+          git diff --name-only -z "${BASE_SHA}...${HEAD_SHA}" > "${RUNNER_TEMP}/sahelflow-changed-paths"
+          classifier_output="$(bun scripts/classify-pr-risk.ts < "${RUNNER_TEMP}/sahelflow-changed-paths")"
+          printf '%s\n' "${classifier_output}"
+
+          if grep -qx 'run_phase5=false' <<<"${classifier_output}"; then
+            printf '%s\n' "${classifier_output}" >> "${GITHUB_OUTPUT}"
+            echo 'Path classifier: application/browser experience is unchanged; certified-release evidence lookup is unnecessary.' >> "${GITHUB_STEP_SUMMARY}"
             exit 0
           fi
-          git diff --name-only -z "${BASE_SHA}...${HEAD_SHA}" > "${RUNNER_TEMP}/sahelflow-changed-paths"
-          bun scripts/classify-pr-risk.ts < "${RUNNER_TEMP}/sahelflow-changed-paths" | tee -a "${GITHUB_OUTPUT}"
+
+          if reuse_output="$(bun scripts/verify-certified-product-evidence.ts 2>&1)"; then
+            printf '%s\n' "${reuse_output}"
+            if grep -qx 'reuse_certified_product=true' <<<"${reuse_output}"; then
+              echo 'run_phase5=false' >> "${GITHUB_OUTPUT}"
+              echo 'Certified exact parent Phase 5 evidence reused for this strictly release-only head.' >> "${GITHUB_STEP_SUMMARY}"
+              exit 0
+            fi
+          else
+            printf '%s\n' "${reuse_output}"
+            echo 'Certified-product evidence reuse is not applicable; retaining fail-closed path classification.' >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+          printf '%s\n' "${classifier_output}" >> "${GITHUB_OUTPUT}"
 
       - name: Record Phase 5 decision
         env:
