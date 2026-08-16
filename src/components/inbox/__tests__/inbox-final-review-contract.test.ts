@@ -20,8 +20,9 @@ describe("Inbox final review invariants", () => {
     expect(route).toContain("phone,\n          deletedAt: null");
   });
 
-  it("pins enriched persistent-search chats and keeps every active thread in the canonical URL", () => {
+  it("pins enriched search chats and keeps manual plus auto selections in the canonical URL", () => {
     const queue = source("src/components/inbox/inbox-work-queue.tsx");
+    const desk = source("src/components/inbox/inbox-operations-desk.tsx");
     const workspace = source("src/hooks/use-inbox-workspace.ts");
     const deskTypes = source("src/components/inbox/inbox-desk-types.ts");
 
@@ -30,6 +31,10 @@ describe("Inbox final review invariants", () => {
       "router.replace(`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`)",
     );
     expect(queue).not.toContain("if (!canonical)");
+    expect(desk).toContain("selectChat(first)");
+    expect(desk).toContain(
+      "router.replace(`/inbox?conversation=${encodeURIComponent(first.conversationId)}`)",
+    );
     expect(workspace).toContain("pinnedDeepLinkChatRef.current = chat");
     expect(workspace).toContain(
       "(entry) => entry.conversationId === chat.conversationId",
