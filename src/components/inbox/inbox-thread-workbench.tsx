@@ -229,17 +229,18 @@ function MessageBubble({
 export function InboxThreadWorkbench({
   workspace,
   selectedCandidate,
+  onBackToQueue,
   onSelectCandidate,
 }: {
   workspace: ReturnType<typeof useInboxWorkspace>;
   selectedCandidate: InboxMessage | null;
+  onBackToQueue: () => void;
   onSelectCandidate: (messageId: string) => void;
 }) {
   const isMobile = useMobile();
   const showContextRail = useMediaQuery("(min-width: 1500px)");
   const {
     activeChat,
-    clearActiveChat,
     messages,
     loadingMessages,
     messagesInnerRef,
@@ -311,7 +312,7 @@ export function InboxThreadWorkbench({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                onClick={clearActiveChat}
+                onClick={onBackToQueue}
                 aria-label={t("common.backToConversations")}
               >
                 <ArrowLeft
