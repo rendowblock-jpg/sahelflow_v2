@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 
-import { InboxDesktopPrimer } from "@/components/inbox/inbox-desktop-primer";
-import { InboxWorkspace } from "@/components/inbox/inbox-workspace";
-import { WhatsAppIngressRecoveryDock } from "@/components/inbox/whatsapp-ingress-recovery-dock";
+import { InboxOperationsDesk } from "@/components/inbox/inbox-operations-desk";
 import { getI18n } from "@/lib/i18n-server";
 import {
   requireTrustedAction,
@@ -15,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const dynamic = "force-dynamic";
 
-/** Database-authoritative operational inbox with bounded provider recovery. */
+/** Database-authoritative Class-AAA operational Inbox. */
 export default async function InboxPage() {
   const actorContext = await requireTrustedAction("conversations.read");
   const { t } = await getI18n();
@@ -32,14 +30,11 @@ export default async function InboxPage() {
   return (
     <div className="app-workspace-content flex flex-col">
       <h1 className="sr-only">{t("metadata.title.inbox")}</h1>
-      <InboxDesktopPrimer />
-      {canViewIngress ? (
-        <div className="shrink-0 px-2 pt-2">
-          <WhatsAppIngressRecoveryDock canRetry={canRetryIngress} />
-        </div>
-      ) : null}
       <div className="min-h-0 flex-1">
-        <InboxWorkspace />
+        <InboxOperationsDesk
+          canViewIngress={canViewIngress}
+          canRetryIngress={canRetryIngress}
+        />
       </div>
     </div>
   );
