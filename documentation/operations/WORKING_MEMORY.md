@@ -8,7 +8,9 @@
 > **Founder-installed Internal.20 result:** **REJECTED — WORSE THAN INTERNAL.19 FOR THE REQUESTED EXPERIENCE**
 > **Founder-requested product baseline:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19`
 > **Internal.19 protected release source:** `42e50f22f45bd524725300b3973ac45caffb6711`
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Next-session mode:** design-first reset; no production UI implementation until visual direction is approved
+> **Retained evidence/issues:** #221, #226, #230
 
 ## Current truth
 
@@ -52,8 +54,6 @@ The repeated RTL/Inbox/AI/Settings loop was caused by working at the wrong abstr
 
 ## Binding next-session strategy
 
-Read `documentation/operations/NEXT_SESSION_HANDOFF.md` immediately after this file.
-
 Do **not** start Internal.21 by editing production UI. Do not begin another generic RTL fix wave. Do not add another `rtl-fix.css`-style patch layer.
 
 The four design projects are:
@@ -95,3 +95,19 @@ Automated gates protect correctness and regressions; they do not certify visual 
 - Preserve canonical business/data/native/licensing/recovery boundaries while redesigning presentation.
 - No customer-online/Beta/Stable claim from Founder-only internal packages.
 - Do not restart generic codebase reconnaissance; use the existing architecture/docs and inspect only what the approved design work requires.
+
+## Wave 4 — what is implemented
+
+Wave 4 remains protected historical continuity behind the current product line. Connected/storefront/backup work from that wave is not generically reopened by this visual reset. The design reset may change presentation and interaction architecture, but it must not weaken protected provider, storefront, backup/recovery, canonical data or native boundaries.
+
+## Historical continuity required by active authority
+
+- Phase 5 application-changing protected baseline: `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` / PR #220.
+- The **Phase 5 merged result and evidence** remain historical technical continuity; they do not override later Founder-installed rejection.
+- Internal.15 signed run `31657621918` remains audit continuity only.
+- The **Active Phase 6 frontier** remains `Phase 6 — Arabic, RTL and accessibility parity`, but its current execution mode is design-first because source/browser parity did not produce Founder-approved visual quality.
+- Issues #221, #226, #230 remain independent acceptance/performance/customer-network authorities.
+
+## Exact next-session order
+
+Resolve live protected `main`, confirm the actual installed Founder version, use Internal.19 as the requested visual comparison baseline, capture paired English/Arabic screens for shell + Inbox + AI Agents + Settings, produce one shared-root design diagnosis, obtain Founder approval for the replacement visual direction, and only then begin a new implementation wave. Do not restart historical phases or treat Internal.20 technical certification as visual acceptance.
