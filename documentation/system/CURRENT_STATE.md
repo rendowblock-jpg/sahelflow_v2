@@ -7,6 +7,7 @@
 > **Latest published checkpoint:** Internal.20 / `1.0.0-internal.20` / MSI `1.0.0.20` / FD-039
 > **Founder-installed Internal.20 result:** **REJECTED**
 > **Founder-requested comparison/baseline:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19`
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Active product mode:** design reset before further implementation
 > **Retained evidence/issues:** #221, #226, #230
 
@@ -74,7 +75,7 @@ Automated gates remain mandatory for correctness/regression protection after imp
 ## Next-session order
 
 1. Resolve live protected `main`.
-2. Read `documentation/operations/WORKING_MEMORY.md` and `documentation/operations/NEXT_SESSION_HANDOFF.md`.
+2. Read `documentation/operations/WORKING_MEMORY.md`.
 3. Verify actual Founder-installed version and complete/confirm rollback to Internal.19 if necessary.
 4. Capture paired English/Arabic Internal.19 screenshots for the shell, Inbox, AI Agents and Settings at the same desktop resolution.
 5. Build one concise shared-root visual diagnosis.
@@ -87,4 +88,10 @@ Automated gates remain mandatory for correctness/regression protection after imp
 
 The design reset must not weaken Golden COD transitions/idempotency/audit/event/outbox authority; identity/shop/session/permission boundaries; append-only inventory/money truth; provider durability/reconciliation; proposal-bound AI actions; native containment; licensing/key authority; migrations/backup/recovery; Storefront durable publish/checkout/receipt semantics; updater signing/version protections.
 
-SahelFlow is **not a commercially certified Stable release**. Founder visual acceptance, #226 installed performance/reliability, #230 customer-network/licensing and later launch evidence remain separate authorities.
+## Historical authority continuity
+
+The **Phase 5 merged result and evidence** remain part of protected product history. The Phase 5 application-changing protected baseline is `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` / PR #220. That evidence is technical continuity only and does not override later Founder-installed rejection.
+
+The **Active Phase 6 frontier** was originally entered after **Internal.14 publication evidence** and the **FD-031 exception boundary**, then continued through the **FD-032 Founder-only offline checkpoint boundary** and **issue #214**. Those anchors remain audit continuity only, not instructions to restart the old implementation loop.
+
+SahelFlow is **not yet a commercially certified Stable release**. Founder visual acceptance, #226 installed performance/reliability, #230 customer-network/licensing and later launch evidence remain separate authorities.
