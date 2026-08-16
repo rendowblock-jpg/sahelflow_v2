@@ -1,20 +1,33 @@
 /**
  * GET /api/conversations/search?q=<query>
  *
- * Searches conversations + messages by content. Message.body is PII-encrypted
- * (AES-256-GCM), so search is done in-memory: load conversations + their
- * recent messages, decrypt, filter by query. Practical for local-first shops
- * (typically <10K messages).
+ * Searches canonical conversations plus recent decrypted message bodies. The
+ * local shop database remains authoritative; this endpoint is deliberately
+ * permission-filtered and returns enough workflow/provider identity to open a
+ * result as a fully operational Inbox conversation instead of a read-only row.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { db } from "@/lib/db";
 import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
+
+function parseLabels(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((entry): entry is string => typeof entry === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("conversations.read");
@@ -23,41 +36,81 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     "customers.contact.read",
     { shopId: actorContext.shop.shopId },
   );
-  const q = req.nextUrl.searchParams.get("q")?.trim().toLowerCase();
-  if (!q) return NextResponse.json({ results: [] });
+  const query = req.nextUrl.searchParams.get("q")?.trim().toLocaleLowerCase();
+  if (!query) return NextResponse.json({ results: [] });
 
-  // Load all conversations with recent messages
+  // Local-first shops can search deeper than the 100-row live queue without
+  // moving plaintext message search into a remote index.
   const conversations = await db.conversation.findMany({
     include: {
       messages: {
         orderBy: { timestamp: "desc" },
-        take: 50, // last 50 messages per conversation
+        take: 50,
       },
     },
-    take: 100, // limit to 100 conversations
+    orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
+    take: 500,
   });
 
-  // Decrypt + search in-memory (body is PII-encrypted, transparently decrypted by the extension)
   const results = conversations
-    .filter((conv) => {
-      // Search contact name
-      if (canReadContact && conv.contactName?.toLowerCase().includes(q)) return true;
-      // Search contact phone
-      if (canReadContact && conv.contactPhone?.toLowerCase().includes(q)) return true;
-      // Search message bodies (decrypted transparently by the PII extension)
-      return conv.messages.some((m) => m.body?.toLowerCase().includes(q));
+    .filter((conversation) => {
+      if (
+        canReadContact &&
+        conversation.contactName?.toLocaleLowerCase().includes(query)
+      ) {
+        return true;
+      }
+      if (
+        canReadContact &&
+        conversation.contactPhone?.toLocaleLowerCase().includes(query)
+      ) {
+        return true;
+      }
+      return conversation.messages.some((message) =>
+        message.body?.toLocaleLowerCase().includes(query),
+      );
     })
-    .map((conv) => ({
-      id: conv.id,
-      contactName: canReadContact ? conv.contactName : null,
-      contactPhone: canReadContact ? conv.contactPhone : null,
-      channel: conv.channel,
-      lastMessageAt: conv.lastMessageAt,
-      unreadCount: conv.unreadCount,
-      matchType: canReadContact && conv.contactName?.toLowerCase().includes(q) ? "name" :
-                  canReadContact && conv.contactPhone?.toLowerCase().includes(q) ? "phone" : "message",
-      fieldAccess: { contact: canReadContact },
-    }));
+    .slice(0, 100)
+    .map((conversation) => {
+      const lastMessage = conversation.messages[0];
+      const matchType =
+        canReadContact &&
+        conversation.contactName?.toLocaleLowerCase().includes(query)
+          ? "name"
+          : canReadContact &&
+              conversation.contactPhone?.toLocaleLowerCase().includes(query)
+            ? "phone"
+            : "message";
+
+      return {
+        id: conversation.id,
+        conversationId: conversation.id,
+        contactName: canReadContact ? conversation.contactName : null,
+        contactPhone: canReadContact ? conversation.contactPhone : null,
+        sourceId: canReadContact ? conversation.sourceId : null,
+        channel: conversation.channel,
+        lastMessageAt: conversation.lastMessageAt,
+        unreadCount: conversation.unreadCount,
+        lastMessage: lastMessage
+          ? {
+              body: lastMessage.body,
+              direction: lastMessage.direction,
+              timestamp: lastMessage.timestamp,
+            }
+          : null,
+        workflow: {
+          status: conversation.status,
+          assigneeId: conversation.assigneeId,
+          priority: conversation.priority,
+          labels: parseLabels(conversation.labels),
+          snoozedUntil: conversation.snoozedUntil,
+          waitingSince: conversation.waitingSince,
+          firstReplyAt: conversation.firstReplyAt,
+        },
+        matchType,
+        fieldAccess: { contact: canReadContact },
+      };
+    });
 
   return NextResponse.json({ results });
 }, "GET /api/conversations/search");
