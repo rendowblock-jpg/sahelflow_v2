@@ -43,6 +43,10 @@ protected canonical engine + protected connected/storefront platform
 
 Governance, Golden COD, identity/licensing/multi-shop, provider durability, protected data, migrations, backup/recovery, connected-platform and Storefront durable authority remain protected. Experience redesign may not weaken them for convenience.
 
+## Phase 3 — providers, inbox, AI and automations
+
+This historical phase completed **complete reconnaissance** and protected source/effect authority before later experience work. Provider durability/reconciliation, Inbox/AI authority boundaries and automation recovery remain protected during the design reset; the current work may redesign presentation and information architecture but may not weaken those canonical contracts.
+
 ## Phase 5 — whole-product AAA desktop experience
 
 Historical Phase 5 application-changing protected baseline: PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
@@ -111,7 +115,7 @@ After visual approval:
 - inspect paired English/Arabic screens repeatedly;
 - preserve canonical behavior and durable data authority.
 
-Only freeze the product SHA when the approved design is materially present and visually inspected.
+Only freeze the product SHA when the approved design is materially present and visually inspected. Preserve **expected-head merge** discipline whenever a certified implementation PR is merged; if the reviewed head moves, prior exact-head evidence becomes historical.
 
 ## Certification gate after product freeze
 
@@ -131,7 +135,7 @@ Acceptance hierarchy for this reset:
 
 #230 remains independent. Customer-online/public-trial claims still require owned licensing ingress, recovery path, representative Algerian fixed/mobile reachability and exact signed installed trial/recovery/outage/key-rotation evidence.
 
-## Stable readiness
+## Phase 9 — release certification and launch readiness
 
 Stable/customer readiness requires coherent Founder product acceptance plus applicable installed performance/reliability, customer-network/licensing, provider, security/privacy/legal, rollout/support and representative seller-beta evidence, followed by explicit Founder promotion.
 
