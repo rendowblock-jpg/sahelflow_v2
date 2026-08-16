@@ -10,6 +10,7 @@ import {
   EntityLink,
   EntityPreview,
 } from "@/components/entities/entity-context";
+import { TechnicalValue } from "@/components/i18n/technical-value";
 import { CustomersEmptyState } from "@/components/shared/empty-states";
 import { StateSurface } from "@/components/shared/state-surface";
 import { Badge } from "@/components/ui/badge";
@@ -59,9 +60,9 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
       accessorKey: "phone",
       header: () => t("customers.phone"),
       cell: ({ row }) => (
-        <span dir="ltr" className="font-mono text-sm">
+        <TechnicalValue className="text-sm">
           {row.original.phone ?? "—"}
-        </span>
+        </TechnicalValue>
       ),
     },
     {
@@ -112,7 +113,9 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
           <EntityInspector
             title={label}
             description={
-              customer.phone ? <bdi dir="ltr">{customer.phone}</bdi> : undefined
+              customer.phone ? (
+                <TechnicalValue>{customer.phone}</TechnicalValue>
+              ) : undefined
             }
             fullHref={`/customers/${customer.id}`}
             fullLabel={t("common.view")}
