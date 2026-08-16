@@ -125,12 +125,11 @@ export function EntityInspector({
   fullLabel,
   children,
 }: EntityInspectorProps) {
-  const { dir } = useI18n();
   return (
     <Sheet>
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent
-        side={dir === "rtl" ? "left" : "right"}
+        side="end"
         className="w-[min(92vw,30rem)] sm:max-w-[30rem]"
       >
         <SheetHeader className="border-b">
