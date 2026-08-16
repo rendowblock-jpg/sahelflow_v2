@@ -18,6 +18,22 @@ describe("AI Class-AAA final review regressions", () => {
     );
   });
 
+  it("locks history navigation for the complete session-creation handoff", () => {
+    const workspace = read("src/components/ai/ai-decision-workspace.tsx");
+    const history = read("src/components/ai/ai-work-history.tsx");
+
+    expect(workspace).toContain(
+      "const navigationLocked = startingAnalysis || workspace.creatingSession;",
+    );
+    expect(workspace).toContain("if (navigationLocked) return;");
+    expect(workspace.match(/navigationLocked=\{navigationLocked\}/g)?.length).toBe(2);
+    expect(history).toContain("navigationLocked: boolean;");
+    expect(history).toContain("disabled={navigationLocked}");
+    expect(history).toContain(
+      "disabled:cursor-not-allowed disabled:opacity-50",
+    );
+  });
+
   it("releases a queued first prompt when the operator selects another session", () => {
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
 
