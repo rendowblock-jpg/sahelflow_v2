@@ -1,0 +1,300 @@
+/* Internal.20 interaction + flagship refinement. Imported after internal20-system. */
+
+/* ── Native locale choreography ─────────────────────────────────────────── */
+[data-shell-region="navigation"] {
+  view-transition-name: sf20-navigation;
+}
+
+[data-shell-region="workspace"] {
+  view-transition-name: sf20-workspace;
+}
+
+[data-inbox-queue="true"] {
+  view-transition-name: sf20-inbox-queue;
+}
+
+[data-inbox-thread] {
+  view-transition-name: sf20-inbox-thread;
+}
+
+aside:has(> [data-inbox-context="true"]) {
+  view-transition-name: sf20-inbox-context;
+}
+
+[data-ai-sessions="true"] {
+  view-transition-name: sf20-ai-sessions;
+}
+
+[data-ai-thread="true"] {
+  view-transition-name: sf20-ai-thread;
+}
+
+[data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
+  view-transition-name: sf20-ai-context;
+}
+
+[data-settings-workspace="v2"] > div.grid > aside {
+  view-transition-name: sf20-settings-nav;
+}
+
+[data-settings-workspace="v2"] > div.grid > section {
+  view-transition-name: sf20-settings-panel;
+}
+
+html[data-locale-transition="pending"]::view-transition-group(root),
+html[data-locale-transition="pending"]::view-transition-group(sf20-navigation),
+html[data-locale-transition="pending"]::view-transition-group(sf20-workspace),
+html[data-locale-transition="pending"]::view-transition-group(sf20-inbox-queue),
+html[data-locale-transition="pending"]::view-transition-group(sf20-inbox-thread),
+html[data-locale-transition="pending"]::view-transition-group(sf20-inbox-context),
+html[data-locale-transition="pending"]::view-transition-group(sf20-ai-sessions),
+html[data-locale-transition="pending"]::view-transition-group(sf20-ai-thread),
+html[data-locale-transition="pending"]::view-transition-group(sf20-ai-context),
+html[data-locale-transition="pending"]::view-transition-group(sf20-settings-nav),
+html[data-locale-transition="pending"]::view-transition-group(sf20-settings-panel) {
+  animation-duration: 340ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html[data-locale-transition="pending"]::view-transition-old(root) {
+  animation: sf20-locale-old 240ms ease-out both;
+}
+
+html[data-locale-transition="pending"]::view-transition-new(root) {
+  animation: sf20-locale-new 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes sf20-locale-old {
+  to {
+    opacity: 0.55;
+    filter: saturate(0.92);
+  }
+}
+
+@keyframes sf20-locale-new {
+  from {
+    opacity: 0.55;
+    filter: saturate(0.92);
+  }
+  to {
+    opacity: 1;
+    filter: saturate(1);
+  }
+}
+
+/* ── Appearance transitions should feel like one window, not token flicker ─ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Flagship workspaces: stronger hierarchy and central work dominance ─── */
+@media (min-width: 768px) {
+  [data-inbox-workspace="v2"] [data-inbox-queue="true"] {
+    width: 20.5rem !important;
+    min-width: 20.5rem !important;
+  }
+
+  [data-ai-workspace="v2"] {
+    grid-template-columns: 15.5rem minmax(0, 1fr) !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="true"]) {
+    width: 17.5rem !important;
+    min-width: 17.5rem !important;
+  }
+
+  [data-ai-workspace="v2"] {
+    grid-template-columns: 15.5rem minmax(31rem, 1fr) 19rem !important;
+  }
+}
+
+[data-inbox-workspace="v2"] > header,
+[data-ai-thread="true"] > header {
+  min-height: 4.25rem;
+  padding-inline: 1rem;
+  background: color-mix(in oklch, var(--card) 92%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+[data-inbox-workspace="v2"] > header h1 {
+  font-size: 1.125rem;
+  line-height: 1.55rem;
+  font-weight: 700;
+}
+
+[data-inbox-workspace="v2"] > header p,
+[data-ai-thread="true"] > header p {
+  font-size: 0.8125rem !important;
+  line-height: 1.2rem !important;
+}
+
+[data-inbox-queue="true"] > div:first-child {
+  padding: 0.9rem 0.85rem;
+}
+
+[data-inbox-queue="true"] h2 {
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+[data-inbox-conversation] {
+  min-height: 5.5rem !important;
+  padding: 0.85rem !important;
+}
+
+[data-inbox-conversation] > span:last-child > span:first-child > span:first-child {
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+[data-inbox-thread="active"] > header h2,
+[data-ai-thread="true"] > header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+[data-inbox-thread="active"] [role="log"] {
+  max-width: 58rem;
+  padding-block: 1.4rem;
+}
+
+[data-inbox-thread="active"] [role="log"] p,
+[data-ai-thread="true"] [role="log"] p {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+html[dir="rtl"] [data-inbox-thread="active"] [role="log"] p,
+html[dir="rtl"] [data-ai-thread="true"] [role="log"] p {
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+[data-inbox-thread="active"] > footer {
+  padding: 0.9rem 1rem 1rem;
+  background: color-mix(in oklch, var(--card) 92%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+[data-inbox-thread="active"] > footer > div > div:first-child,
+[data-ai-thread="true"] > div:last-child > div {
+  min-height: 3.25rem;
+  border-radius: 0.9rem;
+  border-color: color-mix(in oklch, var(--primary) 16%, var(--border));
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.06),
+    0 10px 30px oklch(0 0 0 / 0.08);
+}
+
+[data-ai-sessions="true"] > div:first-child,
+[data-ai-context="true"] > div:first-child {
+  min-height: 4rem;
+  padding-inline: 0.85rem;
+}
+
+[data-ai-session] {
+  min-height: 4.5rem !important;
+  padding: 0.75rem !important;
+  border-radius: 0.75rem !important;
+}
+
+[data-ai-session] span[class*="text-xs"] {
+  font-size: 0.875rem !important;
+}
+
+[data-ai-context="true"] section {
+  border-radius: 0.85rem !important;
+  padding: 0.9rem !important;
+}
+
+[data-ai-context="true"] section > p:first-child,
+[data-inbox-context="true"] section > h3:first-child {
+  font-size: 0.875rem !important;
+  font-weight: 700;
+}
+
+/* Settings should read as a product workspace, not a stack of old forms. */
+[data-settings-workspace="v2"] {
+  min-height: calc(100dvh - 6.5rem);
+}
+
+[data-settings-workspace="v2"] > div.grid > aside {
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--surface-2) 58%, var(--card)), var(--card));
+}
+
+[data-settings-workspace="v2"] [data-settings-group] {
+  min-height: 3.35rem;
+  border-radius: 0.8rem;
+  padding: 0.7rem 0.75rem;
+}
+
+[data-settings-workspace="v2"] [data-settings-group] span[class*="text-xs"] {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+}
+
+[data-settings-workspace="v2"] [data-settings-group-panel] > header {
+  padding: 1.3rem 1.5rem;
+}
+
+[data-settings-workspace="v2"] [data-settings-group-panel] > header h2 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 700;
+}
+
+[data-settings-workspace="v2"] [data-settings-group-panel] [data-slot="card-title"] {
+  font-size: 0.95rem;
+  line-height: 1.35rem;
+  font-weight: 700;
+}
+
+html[dir="rtl"] [data-settings-workspace="v2"] [data-settings-group-panel] [data-slot="card-title"] {
+  font-size: 1rem;
+}
+
+/* ── Overlays and transient UI must have meaningful motion ──────────────── */
+[data-slot="dialog-content"][data-state="open"],
+[data-slot="alert-dialog-content"][data-state="open"],
+[data-slot="sheet-content"][data-state="open"],
+[data-slot="popover-content"][data-state="open"],
+[data-slot="dropdown-menu-content"][data-state="open"] {
+  animation: sf20-overlay-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+
+[data-slot="dropdown-menu-content"],
+[data-slot="popover-content"] {
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin, center);
+}
+
+@keyframes sf20-overlay-in {
+  from {
+    opacity: 0;
+    transform: translateY(7px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-shell-region="navigation"],
+  [data-shell-region="workspace"],
+  [data-inbox-queue="true"],
+  [data-inbox-thread],
+  aside:has(> [data-inbox-context="true"]),
+  [data-ai-sessions="true"],
+  [data-ai-thread="true"],
+  [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]),
+  [data-settings-workspace="v2"] > div.grid > aside,
+  [data-settings-workspace="v2"] > div.grid > section {
+    view-transition-name: none;
+  }
+}
