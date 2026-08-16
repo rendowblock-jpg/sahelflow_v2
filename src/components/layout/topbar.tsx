@@ -145,7 +145,6 @@ export function Topbar({
   const activeShop = shops.find((shop) => shop.id === activeShopId) ?? null;
   const switchTarget =
     shops.find((shop) => shop.id === switchTargetId) ?? null;
-  const isRtl = serverDir === "rtl";
   const activeLocaleLabel =
     LOCALE_OPTIONS.find((option) => option.value === locale)?.label ??
     locale.toUpperCase();
@@ -207,7 +206,7 @@ export function Topbar({
               </Button>
             </SheetTrigger>
             <SheetContent
-              side={isRtl ? "right" : "left"}
+              side="start"
               className="w-[min(290px,88vw)] p-0"
             >
               <Sidebar serverLocale={serverLocale} serverDir={serverDir} />
