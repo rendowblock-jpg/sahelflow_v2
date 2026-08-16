@@ -554,17 +554,19 @@ export function AiDecisionCanvas({
         </div>
       </div>
 
-      <Sheet open={reviewOpen} onOpenChange={setReviewOpen}>
-        <SheetContent side="end" className="w-[min(440px,96vw)] p-0 sm:max-w-none">
-          <SheetHeader className="sr-only">
-            <SheetTitle>{getAiDecisionCopy(workspace.locale, "reviewEvidence")}</SheetTitle>
-            <SheetDescription>
-              {getAiDecisionCopy(workspace.locale, "reviewEvidenceDescription")}
-            </SheetDescription>
-          </SheetHeader>
-          <AiReviewEvidence workspace={workspace} />
-        </SheetContent>
-      </Sheet>
+      {!wideReview ? (
+        <Sheet open={reviewOpen} onOpenChange={setReviewOpen}>
+          <SheetContent side="end" className="w-[min(440px,96vw)] p-0 sm:max-w-none">
+            <SheetHeader className="sr-only">
+              <SheetTitle>{getAiDecisionCopy(workspace.locale, "reviewEvidence")}</SheetTitle>
+              <SheetDescription>
+                {getAiDecisionCopy(workspace.locale, "reviewEvidenceDescription")}
+              </SheetDescription>
+            </SheetHeader>
+            <AiReviewEvidence workspace={workspace} />
+          </SheetContent>
+        </Sheet>
+      ) : null}
     </main>
   );
 }
