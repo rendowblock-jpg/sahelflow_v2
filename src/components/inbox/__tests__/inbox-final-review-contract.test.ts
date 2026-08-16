@@ -48,10 +48,12 @@ describe("Inbox final review invariants", () => {
     expect(desk).toContain("!defaultQueueResolved ||");
   });
 
-  it("re-probes QR readiness from the main refresh control", () => {
+  it("waits for QR readiness before mounting the image and still supports re-probe", () => {
     const header = source("src/components/inbox/inbox-operations-header.tsx");
 
-    expect(header).toContain("refreshQr,\n    canManageWhatsApp");
+    expect(header).toContain('transport.status === "qr" ? (');
+    expect(header).toContain('key={`${transport.status}:${qrKey}`}');
+    expect(header).toContain('copy("transportChecking")');
     expect(header).toContain("refreshQr();\n              void refreshChats();");
   });
 
