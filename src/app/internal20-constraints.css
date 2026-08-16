@@ -1,12 +1,13 @@
 /*
  * Internal.20 hard interaction/geometry constraints.
  *
- * These are acceptance budgets, not visual decoration. Desktop flagship panes
- * use source-order flex geometry rather than named CSS Grid placement. A normal
- * flex row follows the document writing direction, so the same DOM order works
- * in LTR and RTL without mirrored track/area bookkeeping or first-paint drift.
- * Fixed rails keep bounded flex bases; the operational work surface owns the
- * remaining width.
+ * These are acceptance budgets, not visual decoration. Settings and Storefront
+ * panes use source-order flex geometry because their ordinary children compose
+ * cleanly in both writing directions. AI remains an explicit physical grid: its
+ * Radix scroll viewport and central thread must own disjoint tracks, so a stable
+ * LTR grid coordinate system assigns sessions/thread/context while the RTL area
+ * map reverses their physical placement exactly once. Child content still reads
+ * in the active locale direction.
  *
  * The `body` scope is intentional: this file is the final geometry authority
  * and must outrank older Internal.20 `!important` reset rules regardless of
@@ -28,25 +29,32 @@ body [data-navigation-density="rail"] {
   }
 
   body [data-ai-workspace="v2"] {
-    display: flex !important;
-    flex-direction: row !important;
-    grid-template-columns: none !important;
-    grid-template-areas: none !important;
+    display: grid !important;
+    direction: ltr !important;
+    grid-template-columns: 14rem minmax(0, 1fr) !important;
+    grid-template-areas: "sessions thread" !important;
   }
 
   body [data-ai-workspace="v2"] > [data-ai-sessions="true"] {
-    flex: 0 0 14rem !important; /* 224px */
-    width: 14rem !important;
-    min-width: 14rem !important;
-    max-width: 14rem !important;
-    grid-area: auto !important;
+    grid-area: sessions !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
   }
 
   body [data-ai-workspace="v2"] > [data-ai-thread="true"] {
-    flex: 1 1 0% !important;
+    grid-area: thread !important;
     width: auto !important;
     min-width: 0 !important;
-    grid-area: auto !important;
+  }
+
+  html[dir="rtl"] body [data-ai-workspace="v2"] {
+    grid-template-columns: minmax(0, 1fr) 14rem !important;
+    grid-template-areas: "thread sessions" !important;
+  }
+
+  html[dir="rtl"] body [data-ai-workspace="v2"] > * {
+    direction: rtl !important;
   }
 }
 
@@ -81,13 +89,22 @@ body [data-navigation-density="rail"] {
     min-width: 17rem !important;
   }
 
+  body [data-ai-workspace="v2"] {
+    grid-template-columns: 14rem minmax(0, 1fr) 18rem !important;
+    grid-template-areas: "sessions thread context" !important;
+  }
+
   body [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
     display: block !important;
-    flex: 0 0 18rem !important; /* 288px */
-    width: 18rem !important;
-    min-width: 18rem !important;
-    max-width: 18rem !important;
-    grid-area: auto !important;
+    grid-area: context !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  html[dir="rtl"] body [data-ai-workspace="v2"] {
+    grid-template-columns: 18rem minmax(0, 1fr) 14rem !important;
+    grid-template-areas: "context thread sessions" !important;
   }
 
   body [data-storefront-studio="v2"] > div.grid {
