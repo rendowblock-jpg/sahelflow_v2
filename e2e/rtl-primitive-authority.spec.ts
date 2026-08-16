@@ -7,6 +7,7 @@ import {
 
 const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
+const MOBILE = { width: 640, height: 768 };
 let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 
 async function waitForHydration(page: Page) {
@@ -112,6 +113,68 @@ test.describe.serial("Arabic shared primitive direction authority", () => {
       geometry!.iconX,
       "in Arabic navigation the leading icon must sit physically to the right of its label",
     ).toBeGreaterThan(geometry!.labelX);
+  });
+
+  test("mobile navigation sheet resolves Arabic inline-start to the physical right edge", async ({
+    page,
+  }) => {
+    await page.setViewportSize(MOBILE);
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+    const sheetTrigger = page.locator('[data-slot="sheet-trigger"]').first();
+    await expect(sheetTrigger).toBeVisible();
+    await sheetTrigger.click();
+
+    const sheet = page.locator('[data-slot="sheet-content"]:visible').first();
+    await expect(sheet).toBeVisible();
+    await expect(sheet).toHaveAttribute("data-sheet-side", "start");
+    await expect(sheet).toHaveAttribute("data-sheet-physical-side", "right");
+    expect(await computedDirection(sheet)).toBe("rtl");
+
+    // Visibility is true while the 500ms sheet entrance animation is still
+    // translating the panel. Assert the settled physical edge instead of
+    // sampling an intermediate animation frame.
+    await expect
+      .poll(
+        async () => {
+          const box = await sheet.boundingBox();
+          if (!box) return Number.POSITIVE_INFINITY;
+          return Math.abs(box.x + box.width - MOBILE.width);
+        },
+        {
+          message: "Arabic inline-start sheet must settle on the physical right viewport edge",
+          timeout: 2_000,
+        },
+      )
+      .toBeLessThanOrEqual(2);
+
+    const geometry = await sheet.evaluate((node) => {
+      const box = node.getBoundingClientRect();
+      return {
+        left: box.left,
+        right: box.right,
+        width: box.width,
+        viewportWidth: window.innerWidth,
+      };
+    });
+    expect(geometry.width, "mobile navigation sheet should have measurable width").toBeGreaterThan(0);
+    expect(
+      Math.abs(geometry.right - geometry.viewportWidth),
+      "Arabic inline-start sheet must attach to the physical right viewport edge",
+    ).toBeLessThanOrEqual(2);
+    expect(
+      geometry.left,
+      "Arabic mobile navigation sheet should not occupy the whole viewport",
+    ).toBeGreaterThan(0);
+
+    const dashboardLink = sheet.locator('a[href="/dashboard"]').first();
+    await expect(dashboardLink).toBeVisible();
+    expect(await computedDirection(dashboardLink)).toBe("rtl");
+
+    await sheet.locator('[data-slot="sheet-close"]').first().click();
+    await expect(sheet).toBeHidden();
   });
 
   test("notification popup inherits Arabic direction through its portal", async ({

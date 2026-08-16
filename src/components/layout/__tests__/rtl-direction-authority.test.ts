@@ -48,4 +48,16 @@ describe("application RTL direction authority", () => {
     expect(dropdown).toContain("absolute start-2");
     expect(dropdown).toContain("ms-auto");
   });
+
+  it("declares mobile navigation as inline-start and leaves physical placement to Sheet", () => {
+    const topbar = source("../topbar.tsx");
+    const sheet = source("../../ui/sheet.tsx");
+
+    expect(topbar).toContain('side="start"');
+    expect(topbar).not.toContain('side={isRtl ? "right" : "left"}');
+    expect(topbar).not.toContain('const isRtl = serverDir === "rtl"');
+    expect(topbar).toContain("<Sidebar serverLocale={serverLocale} serverDir={serverDir} />");
+    expect(sheet).toContain("resolvePanelSide(side, dir)");
+    expect(sheet).toContain("data-sheet-physical-side={resolvedSide}");
+  });
 });
