@@ -109,7 +109,7 @@ function ConversationRow({
       onClick={onSelect}
       aria-current={active ? "true" : undefined}
       className={cn(
-        "group relative flex min-h-[5.5rem] w-full items-start gap-3 border-b px-3.5 py-3 text-start outline-none transition-colors last:border-b-0 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+        "group relative flex min-h-[5.5rem] w-full items-start gap-3 overflow-hidden border-b px-3.5 py-3 text-start outline-none transition-colors last:border-b-0 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
         active ? "bg-accent/75" : "bg-background hover:bg-muted/45",
       )}
     >
@@ -119,15 +119,22 @@ function ConversationRow({
           {chat.name.charAt(0).toUpperCase() || <MessageSquareText className="size-4" />}
         </AvatarFallback>
       </Avatar>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-start gap-2">
-          <span className="min-w-0 flex-1 truncate text-sm font-semibold">{chat.name}</span>
+      <span className="min-w-0 flex-1 overflow-hidden">
+        <span className="flex min-w-0 items-start gap-2 overflow-hidden">
+          <span dir="auto" className="block min-w-0 flex-1 truncate text-sm font-semibold">{chat.name}</span>
           <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
             {relativeTime(chat.lastMessageAt, locale)}
           </span>
         </span>
-        <span className="mt-1 flex items-center gap-2">
-          <span className={cn("min-w-0 flex-1 truncate text-xs leading-5", chat.unread > 0 ? "font-medium text-foreground" : "text-muted-foreground")}>
+        <span className="mt-1 flex min-w-0 items-center gap-2 overflow-hidden">
+          <span
+            dir="auto"
+            data-inbox-preview="true"
+            className={cn(
+              "block min-w-0 max-w-full flex-1 truncate text-xs leading-5",
+              chat.unread > 0 ? "font-medium text-foreground" : "text-muted-foreground",
+            )}
+          >
             {chat.lastMessageText || "—"}
           </span>
           {priority ? (
@@ -151,8 +158,8 @@ function ConversationRow({
             </span>
           ) : null}
         </span>
-        <span className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="truncate">
+        <span className="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-xs text-muted-foreground">
+          <span className="block min-w-0 truncate">
             {status === "pending"
               ? t("inbox.status.pending")
               : status === "resolved"
@@ -161,8 +168,8 @@ function ConversationRow({
                   ? t("inbox.status.snooze")
                   : t("inbox.status.open")}
           </span>
-          <span aria-hidden="true">·</span>
-          <span className="truncate">
+          <span className="shrink-0" aria-hidden="true">·</span>
+          <span className="block min-w-0 truncate">
             {chat.workflow.assigneeId ? copy("assignment") : copy("unassigned")}
           </span>
         </span>
