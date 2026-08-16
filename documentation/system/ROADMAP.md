@@ -9,10 +9,12 @@
 > **Founder-requested visual/comparison baseline:** Internal.19 / FD-038
 > **Source rollback status:** **COMPLETE** — affected application/experience layer restored to Internal.19 product baseline; release authority remains Internal.20
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Current execution mode:** design-first reset before further production UI implementation
+> **Current execution mode:** Founder-authorized app-wide structural RTL correction; design-first Class-AAA replacement targets for Inbox, AI Agents and Settings
 > **Open retained issues:** #221, #226, #230
 
-Internal.20 is the latest published technical checkpoint, but it is not the accepted product baseline. The Founder installed it and rejected the requested RTL/Arabic, Inbox, AI Agents, Settings and overall visual/product result, judging it worse than Internal.19. PR #269 restored the affected application/experience layer on protected `main` to the exact Internal.19 product baseline without rolling back package/release identity. Internal.19 is therefore the requested visual comparison baseline while the next direction is redesigned.
+Internal.20 is the latest published technical checkpoint, but it is not the accepted product baseline. The Founder installed it and rejected the requested RTL/Arabic, Inbox, AI Agents, Settings and overall visual/product result, judging it worse than Internal.19. PR #269 restored the affected application/experience layer on protected `main` to the exact Internal.19 product baseline without rolling back package/release identity. Internal.19 remains the requested visual comparison baseline.
+
+On 2026-08-16 the Founder supplied representative English/Arabic screens and explicitly refined the failure: the shell can flip while component internals remain LTR or mixed, including navigation icon/text order, Notifications portal content and analytical surfaces. The Founder then explicitly authorized starting the corrective work. Under authority precedence, **the shared structural RTL foundation is now approved implementation scope**. That newer decision does not approve another cosmetic pass for Inbox, AI Agents or Settings; those remain full rebuilds requiring concrete replacement targets before broad production reconstruction.
 
 ## Current dependency order
 
@@ -26,15 +28,20 @@ protected canonical engine + protected connected/storefront platform
 → REJECTED
 → PR #269 source/application rollback to Internal.19 product baseline
 → product/source anchor c8a81550... with Internal.20 release authority preserved
-→ verify/complete installed Internal.19 rollback on Founder machine
-→ paired English/Arabic baseline screenshots
-→ one shared-root visual diagnosis
-→ Founder-approved target designs for shell/RTL + Inbox + AI Agents + Settings
-→ one coherent implementation branch / one writer
-→ repeated installed/screenshot visual inspection during implementation
-→ freeze one product SHA only after approved visual direction is present
+→ Founder supplies representative English/Arabic screenshots
+→ Founder identifies partial component-level RTL defects and authorizes structural repair
+→ shared reactive direction authority for shell + primitives + portals
+→ semantic RTL sweep: logical geometry + directional controls + bidi isolation
+→ analytical direction contract: RTL product chrome / explicitly isolated coordinate geometry
+→ runtime geometry evidence for Arabic sidebar + Notifications + charts + representative primitives
+→ replacement Class-AAA IA/design targets for Inbox + AI Agents + Settings
+→ Founder approves those replacement targets
+→ coherent workspace reconstruction on one writer branch
+→ repeated paired English/Arabic inspection during implementation
+→ verify actual Founder-installed version/state before package acceptance
+→ freeze one product SHA only after approved direction is materially present
 → affected technical certification lanes
-→ next signed Founder-only internal checkpoint
+→ next signed Founder-only internal checkpoint when separately authorized
 → Founder-installed accept/reject
 → #226 installed performance/reliability
 → #230 owned licensing ingress + Algerian network trial/recovery evidence
@@ -58,18 +65,32 @@ Later internal checkpoints proved that source/browser completion alone is insuff
 
 ## Phase 6 — Arabic, RTL and accessibility parity
 
-The active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**, but the execution method changes after the Internal.20 rejection.
+The active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**. The Internal.20 rejection and the 2026-08-16 Founder screenshot review sharpen the execution method.
 
-Do not restart another generic RTL correction wave. The next work begins with approved product design.
+### Structural RTL foundation — approved implementation scope
 
-The four design projects are:
+The problem is not adequately described as “move the page/sidebar to the right.” Arabic parity requires component-level authority:
 
-1. Global shell + true Arabic RTL.
-2. Inbox.
-3. AI Agents.
-4. Settings.
+- the document boundary and client locale transaction must agree on `dir`;
+- shared primitive libraries and portal content must consume that same reactive direction authority;
+- navigation rows, menus, dropdowns, popovers, sheets, dialogs, filters, tables and other compound UI must use logical start/end semantics where direction is meaningful;
+- directional icons/chevrons must be explicitly governed;
+- technical and mixed-script values must use bidi isolation instead of inheriting ambiguous paragraph direction;
+- tests must verify actual computed direction/geometry inside representative components rather than checking only `html[dir="rtl"]` or shell position.
 
-Each project must define a concrete English + Arabic target before broad implementation: Arabic/Latin typography, line heights, density, spacing, navigation geometry, pane dominance/proportions, surfaces, control/icon sizing, information architecture, state design, interactions and motion.
+This structural pass is authorized now from Founder evidence. Do not defer the root repair merely because another page screenshot could be collected.
+
+### Analytical RTL contract
+
+Charts are not one direction domain. Arabic card chrome, headings, summaries, controls, legends and tooltips follow RTL. Cartesian/time/quantitative coordinate geometry must not be blindly mirrored just because the surrounding UI is Arabic. SVG/category labels, values, mixed Arabic/French/English product names and currency strings require explicit semantic handling and bidi isolation.
+
+### Full rebuild projects — target approval still required
+
+1. Inbox.
+2. AI Agents.
+3. Settings.
+
+The current workspace concepts are rejected. Do not “polish” them into permanence. Preserve canonical jobs/actions/provider boundaries, but redesign their information architecture and interaction model as complete Class-AAA workspaces. Each must receive a concrete English + Arabic target and Founder approval before broad production reconstruction.
 
 Arabic parity does not mean mechanical mirroring. Arabic may require different composition, grouping and rhythm while preserving the same product capability and authority.
 
@@ -82,7 +103,7 @@ Internal.19 remains published and available as the requested installed rollback/
 - FD-038 / `founder-offline-only`;
 - MSI SHA-256 `044475e079a37f37319a77d6ee42821074e197b9ca5fac9abaea62b6b86f753e`.
 
-PR #269 restored the affected application/experience layer on protected `main` to Internal.19 product blobs. That source rollback does not prove the Founder machine has been rolled back. Verify the actual installed version and preserve SahelFlow AppData/shop databases during any installed rollback. Internal.20 is still the newest updater release, so do not accept another Internal.20 prompt during the design reset.
+PR #269 restored the affected application/experience layer on protected `main` to Internal.19 product blobs. That source rollback does not prove the Founder machine has been rolled back. Verify the actual installed version before package/installed acceptance and preserve SahelFlow AppData/shop databases during any installed rollback. Internal.20 is still the newest updater release, so do not accept another Internal.20 prompt during the design reset.
 
 ## Internal.20 checkpoint — technical success, product rejection
 
@@ -94,26 +115,37 @@ It does **not** establish Founder visual acceptance. The Founder installed Inter
 
 That rejection is binding for product direction. PR #269 does not erase or rewrite this publication/rejection history; it only restores the affected product presentation source to the requested Internal.19 baseline.
 
-## Design-first reset gate
+## RTL implementation gate
 
-Before production implementation expands:
+For the approved structural RTL wave:
 
-1. Verify/complete the installed Internal.19 rollback on the Founder machine.
-2. Capture paired English/Arabic Internal.19 screenshots at the same desktop resolution for shell, Inbox, AI Agents and Settings.
-3. Produce one concise shared-root diagnosis. Avoid screenshot-local CSS fixes.
-4. Establish explicit target designs for English and Arabic.
-5. Founder approves the visual direction.
+- one branch / one application writer;
+- shared roots before page-local overrides;
+- no new `rtl-fix.css` patch layer;
+- direct runtime assertions for primitive direction and child geometry;
+- preserve non-directional mathematical/temporal geometry explicitly;
+- targeted checks while editing, with Phase 5/6-7/Required PR exact-head evidence before merge;
+- no release/version/native/business/data churn.
+
+The static route inventory may flag physical geometry for review, but a passing count alone is not proof. The final RTL sweep must classify physical-side usage semantically and convert accidental directional layout to logical start/end utilities while allowlisting geometry that is intentionally physical/non-directional.
+
+## Workspace target gate
+
+Before broad production reconstruction of Inbox, AI Agents or Settings:
+
+1. Map each workspace's protected jobs/actions/data authority.
+2. Define replacement information architecture and interaction model rather than preserving the rejected panels.
+3. Produce concrete English + Arabic target designs at the Founder reference desktop size.
+4. Founder approves the target direction.
 
 A good design-reset checkpoint is not another release number. It is a Founder-approved target that is concrete enough to implement without guessing.
 
-## Implementation gate after approval
+## Implementation gate after workspace approval
 
 After visual approval:
 
-- one branch;
-- one writer;
+- one active writer;
 - shared design-system/information-architecture roots before page-local overrides;
-- no new `rtl-fix.css` patch layer;
 - targeted checks while implementing;
 - no version/release churn during visual exploration;
 - inspect paired English/Arabic screens repeatedly;
@@ -125,7 +157,7 @@ Only freeze the product SHA when the approved design is materially present and v
 
 Run only technical lanes affected by the frozen source. Preserve existing evidence when exact identity/risk rules allow. Do not replay browser/native/MSI programs solely because documentation or release metadata changed.
 
-Then create one coherent signed Founder-only internal checkpoint and judge the installed result.
+Then create one coherent signed Founder-only internal checkpoint when separately authorized and judge the installed result.
 
 Acceptance hierarchy for this reset:
 

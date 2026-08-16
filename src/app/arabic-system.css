@@ -72,6 +72,30 @@ html[dir="rtl"] :is(
   font-family: var(--font-inter), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Analytical surfaces have two different direction domains. The card chrome,
+ * title/icon order, summaries, actions, empty states, legends and tooltips are
+ * product copy and therefore follow Arabic reading order. Recharts' Cartesian
+ * coordinate plane remains an explicitly isolated LTR geometry domain so dates
+ * and quantitative axes are not blindly mirrored. */
+html[dir="rtl"] [data-chart-card="true"],
+html[dir="rtl"] [data-chart-card="true"] [data-slot="card-header"],
+html[dir="rtl"] [data-chart-card="true"] [data-chart-plot="true"] {
+  direction: rtl;
+  text-align: start;
+}
+
+html[dir="rtl"] [data-chart-card="true"] [data-slot="chart"] {
+  direction: ltr;
+}
+
+html[dir="rtl"] [data-chart-card="true"] :is(
+  [data-slot="chart-tooltip"],
+  [data-slot="chart-legend"]
+) {
+  direction: rtl;
+  text-align: start;
+}
+
 /* Tables retain RTL column flow while technical cell content can isolate itself.
  * Long headers wrap instead of compressing into unreadable one-line fragments. */
 html[dir="rtl"] [data-sahelflow-shell="desktop"] th {

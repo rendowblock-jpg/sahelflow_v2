@@ -12,6 +12,7 @@ import "./arabic-system.css";
 import "./motion-system.css";
 import "./experience-system.css";
 import "./locale-transition-system.css";
+import { AppDirectionProvider } from "@/components/i18n/app-direction-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -124,24 +125,26 @@ export default async function RootLayout({
       >
         <NuqsAdapter>
           <ServerLocaleProvider locale={locale}>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme={initialTheme}
-              defaultPreset={initialPreset}
-              enableSystem
-            >
-              <TooltipProvider delayDuration={300}>
-                {children}
-                <ServiceWorkerRegister />
-                <UpdateChecker />
-                <Toaster
-                  initialDirection={dir}
-                  richColors
-                  closeButton
-                  toastOptions={{ className: "shadow-popover" }}
-                />
-              </TooltipProvider>
-            </ThemeProvider>
+            <AppDirectionProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme={initialTheme}
+                defaultPreset={initialPreset}
+                enableSystem
+              >
+                <TooltipProvider delayDuration={300}>
+                  {children}
+                  <ServiceWorkerRegister />
+                  <UpdateChecker />
+                  <Toaster
+                    initialDirection={dir}
+                    richColors
+                    closeButton
+                    toastOptions={{ className: "shadow-popover" }}
+                  />
+                </TooltipProvider>
+              </ThemeProvider>
+            </AppDirectionProvider>
           </ServerLocaleProvider>
         </NuqsAdapter>
       </body>
