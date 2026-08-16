@@ -38,11 +38,13 @@ export function searchResultToChat(
   result: InboxSearchResult,
   restrictedContact: string,
 ): InboxChat {
-  const hasTransport = result.channel === "whatsapp" && Boolean(result.sourceId);
+  const transportId =
+    result.channel === "whatsapp" ? result.sourceId ?? undefined : undefined;
+  const hasTransport = Boolean(transportId);
   return {
-    id: result.sourceId ?? result.id,
+    id: transportId ?? result.id,
     conversationId: result.id,
-    ...(result.sourceId ? { transportId: result.sourceId } : {}),
+    ...(transportId ? { transportId } : {}),
     name: result.contactName ?? restrictedContact,
     ...(result.contactPhone ? { phone: result.contactPhone } : {}),
     channel: hasTransport ? "whatsapp" : "conversation",
