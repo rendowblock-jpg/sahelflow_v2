@@ -199,6 +199,24 @@ body [data-navigation-density="rail"] {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  /* The normal overlay authority is an !important animation shorthand on a
+   * two-attribute selector. Match that state specificity at the final cascade
+   * boundary so reduced motion wins the shorthand itself rather than trying to
+   * override only its duration with a weaker selector. */
+  body :is(
+    [data-slot="dialog-content"],
+    [data-slot="alert-dialog-content"],
+    [data-slot="sheet-content"],
+    [data-slot="popover-content"],
+    [data-slot="dropdown-menu-content"]
+  )[data-state] {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+}
+
 @media (pointer: coarse) {
   body [data-navigation-density] nav a {
     min-height: 3rem !important;
