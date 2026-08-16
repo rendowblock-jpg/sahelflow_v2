@@ -13,6 +13,7 @@ import "./motion-system.css";
 import "./experience-system.css";
 import "./locale-transition-system.css";
 import "./internal20-system.css";
+import "./internal20-interaction.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import {
