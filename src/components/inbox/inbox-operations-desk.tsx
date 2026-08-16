@@ -74,14 +74,17 @@ export function InboxOperationsDesk({
       return;
     }
 
-    if (!queueTouchedRef.current && authority.currentMemberId) {
-      const hasMine = chats.some(
-        (chat) => chat.workflow.assigneeId === authority.currentMemberId,
-      );
-      if (hasMine) setQueueFilter("mine");
-    }
+    const currentMemberId = authority.currentMemberId;
+    const hasMine =
+      !queueTouchedRef.current &&
+      Boolean(currentMemberId) &&
+      chats.some((chat) => chat.workflow.assigneeId === currentMemberId);
 
-    setDefaultQueueResolved(true);
+    const timer = window.setTimeout(() => {
+      if (!queueTouchedRef.current && hasMine) setQueueFilter("mine");
+      setDefaultQueueResolved(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [authority, chats, defaultQueueResolved, loadingChats]);
 
   const visibleQueueChats = useMemo(() => {
