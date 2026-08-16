@@ -23,4 +23,17 @@ describe("Cartesian chart direction authority", () => {
     const dualBar = read("src/components/charts/dual-bar-chart.tsx");
     expect(dualBar).toContain('dir="ltr"');
   });
+
+  it("keeps Arabic chart chrome RTL while isolating only Recharts geometry as LTR", () => {
+    const arabicSystem = read("src/app/arabic-system.css");
+    const chartUi = read("src/components/ui/chart.tsx");
+
+    expect(arabicSystem).toContain('html[dir="rtl"] [data-chart-card="true"]');
+    expect(arabicSystem).toContain('[data-chart-card="true"] [data-slot="chart"]');
+    expect(arabicSystem).toContain("direction: ltr");
+    expect(arabicSystem).toContain('[data-slot="chart-tooltip"]');
+    expect(arabicSystem).toContain('[data-slot="chart-legend"]');
+    expect(chartUi).toContain("dir={dir}");
+    expect(chartUi).toContain('<bdi dir="ltr"');
+  });
 });
