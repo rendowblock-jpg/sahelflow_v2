@@ -19,11 +19,14 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(header).toContain("canRetryIngress");
   });
 
-  it("selects desktop work through workspace state instead of DOM click priming", () => {
+  it("selects desktop work through resolved workspace state instead of DOM click priming", () => {
     const desk = read("src/components/inbox/inbox-operations-desk.tsx");
+    expect(desk).toContain(
+      "const [defaultQueueResolved, setDefaultQueueResolved] = useState(false)",
+    );
+    expect(desk).toContain("!defaultQueueResolved ||");
     expect(desk).toContain("visibleQueueChats[0] ?? chats[0]");
     expect(desk).toContain("selectChat(first)");
-    expect(desk).toContain("if (isMobile || loadingChats || activeChat || requestedConversationId) return");
     expect(desk).not.toContain("MutationObserver");
     expect(desk).not.toContain("querySelector");
     expect(desk).not.toContain(".click()");
@@ -67,7 +70,10 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(hook).toContain('searchParams.get("conversation")');
     expect(hook).toContain("pinnedDeepLinkChatRef");
     expect(queue).toContain("/api/conversations/search?q=");
-    expect(queue).toContain("router.push(`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`)");
+    expect(queue).toContain("selectChat(canonical ?? chat)");
+    expect(queue).toContain(
+      "router.replace(`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`)",
+    );
   });
 
   it("keeps transport and durable outbox authority in the existing workspace hook", () => {
