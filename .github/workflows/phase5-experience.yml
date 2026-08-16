@@ -215,7 +215,7 @@ jobs:
         run: bunx playwright install --with-deps chromium
 
       - name: Run retry-free controlled desktop, live locale, Founder visual, flagship workspace and Storefront Studio journeys
-        run: bunx playwright test --retries=0 e2e/phase5-experience.spec.ts e2e/language-switch.spec.ts e2e/founder-visual-acceptance.spec.ts e2e/inbox-workspace.spec.ts e2e/ai-workspace.spec.ts e2e/settings-workspace.spec.ts e2e/storefront-studio.spec.ts e2e/phase5-command-touch.spec.ts
+        run: bunx playwright test --retries=0 e2e/phase5-experience.spec.ts e2e/language-switch.spec.ts e2e/founder-visual-acceptance.spec.ts e2e/rtl-primitive-authority.spec.ts e2e/inbox-workspace.spec.ts e2e/ai-workspace.spec.ts e2e/settings-workspace.spec.ts e2e/storefront-studio.spec.ts e2e/phase5-command-touch.spec.ts
 
       - name: Upload rendered Phase 5 evidence
         if: always()
