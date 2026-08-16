@@ -57,7 +57,10 @@ Acceptance hierarchy for this reset:
 
 The canonical foundation and earlier internal checkpoints remain protected history. Relevant recent anchors include:
 
-- Phase 5 application-changing baseline: PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- **Phase 5 closure** remains historical technical continuity; its application-changing baseline is PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- The Phase 5 continuity register included **issues #201, #214, #221, #226 and #230**. Later source supersedes old implementations but does not erase those evidence anchors.
+- The Founder-only **`1.0.0-internal.15`** checkpoint and signed run **`31657621918`** remain historical audit continuity, not current release instructions.
+- **Founder acceptance remains open** on the current design-reset path: Internal.20 was explicitly rejected and no later package has been Founder-accepted.
 - Internal.19 product convergence: PR #262, with published release source `42e50f22f45bd524725300b3973ac45caffb6711`.
 - Internal.20 convergence/publication: PR #267 / published source `7c794f72a545313a0cf6fe34c2fabd9c583357ec`.
 - Internal.20 Founder rejection and safe source rollback: PR #269 / product-source anchor `c8a8155079260dc4065ff30767c45cde95c266d2`.
