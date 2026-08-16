@@ -95,3 +95,10 @@ The historical Phase 5 application-changing protected baseline remains PR #220 a
 Experience work must not weaken Golden COD command/idempotency/version/audit/event/outbox authority; identity/shop/session/permission boundaries; append-only money/inventory truth; provider durability/reconciliation; proposal-bound AI actions; native containment; installation/key/licensing authority; migrations/backup/recovery; Storefront durable publish/checkout/receipt semantics; updater signing/version/release-source protections.
 
 Internal releases remain Founder/internal-lab checkpoints. Customer-online, Beta and Stable require their own explicit authority and coherent acceptance evidence. SahelFlow is not yet commercially certified Stable.
+
+## Historical release continuity retained
+
+- PR #250 carried the historical Internal.15 Founder checkpoint: `1.0.0-internal.15`; signed run `31657621918`.
+- PR #251 / `agent/internal-16-wave-4` carried the historical Internal.16 Wave 4 continuity behind the current product line.
+- These anchors are audit continuity only and do not supersede the current Internal.20 rejection/design-reset frontier.
+- **Issues #221, #226 and #230 remain open.**
