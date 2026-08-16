@@ -23,6 +23,7 @@ export function AiDecisionWorkspace() {
   const [mobilePane, setMobilePane] = useState<"history" | "canvas">("history");
   const [startingAnalysis, setStartingAnalysis] = useState(false);
   const pendingPromptRef = useRef<PendingPrompt | null>(null);
+  const navigationLocked = startingAnalysis || workspace.creatingSession;
 
   useEffect(() => {
     const pending = pendingPromptRef.current;
@@ -47,6 +48,8 @@ export function AiDecisionWorkspace() {
   ]);
 
   const openSession = (sessionId: string) => {
+    if (navigationLocked) return;
+
     const pending = pendingPromptRef.current;
     if (pending && pending.sessionId !== sessionId) {
       pendingPromptRef.current = null;
@@ -117,6 +120,7 @@ export function AiDecisionWorkspace() {
         {mobilePane === "history" ? (
           <AiWorkHistory
             workspace={workspace}
+            navigationLocked={navigationLocked}
             onOpenSession={openSession}
             onNewAnalysis={() => void newAnalysis()}
           />
@@ -148,6 +152,7 @@ export function AiDecisionWorkspace() {
     >
       <AiWorkHistory
         workspace={workspace}
+        navigationLocked={navigationLocked}
         onOpenSession={openSession}
         onNewAnalysis={() => void newAnalysis()}
       />
