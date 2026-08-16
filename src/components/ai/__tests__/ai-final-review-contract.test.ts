@@ -37,6 +37,14 @@ describe("AI Class-AAA final review regressions", () => {
     );
   });
 
+  it("starts the hydrated queued prompt without a deferred timer gap", () => {
+    const workspace = read("src/components/ai/ai-decision-workspace.tsx");
+
+    expect(workspace).toContain("pendingPromptRef.current = null;");
+    expect(workspace).toContain("void workspace.send(pending.prompt).finally(() => {");
+    expect(workspace).not.toContain("window.setTimeout");
+  });
+
   it("releases a queued first prompt when the operator selects another session", () => {
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
 
@@ -57,6 +65,17 @@ describe("AI Class-AAA final review regressions", () => {
     expect(card).toContain("interactive = true");
     expect(card).toContain("interactive && approvable");
     expect(review).toContain("onApprove={approveProposal}");
+  });
+
+  it("keeps exactly one interactive review surface across the wide breakpoint", () => {
+    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    const browser = read("e2e/ai-workspace.spec.ts");
+
+    expect(canvas).toContain("!wideReview ? (\n        <Sheet open={reviewOpen}");
+    expect(canvas).toContain('<SheetContent side="end"');
+    expect(browser).toContain("await page.setViewportSize({ width: 1600, height: 900 });");
+    expect(browser).toContain("await expect(reviewEvidence).toHaveCount(1);");
+    expect(browser).toContain('data-ai-layout", "wide"');
   });
 
   it("labels consent/key readiness as configuration truth rather than provider health", () => {
