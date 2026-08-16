@@ -45,7 +45,9 @@ const SUMMARY_LABELS: Record<string, AiWorkspaceCopyKey> = {
 };
 
 const MONEY_FIELDS = new Set(["fromPrice", "toPrice", "price"]);
+const ORDER_STATUS_SUMMARY_FIELDS = new Set(["fromStatus", "toStatus"]);
 const TECHNICAL_SUMMARY_FIELDS = new Set(["orderNumber"]);
+type Translate = (key: string) => string;
 
 function statusKey(status: string): AiWorkspaceCopyKey {
   switch (status) {
@@ -86,10 +88,19 @@ function statusIcon(status: string) {
   return <Clock3 className="size-4 text-warning" aria-hidden="true" />;
 }
 
+function localizeOrderStatus(value: string, translate: Translate): string {
+  const normalized = value.trim().toLocaleLowerCase().replace(/[\s-]+/g, "_");
+  if (!normalized) return value;
+  const key = `orders.status.${normalized}`;
+  const translated = translate(key);
+  return translated === key ? value : translated;
+}
+
 function summaryValue(
   key: string,
   value: unknown,
   locale: AiWorkspaceLocale,
+  translate: Translate,
 ): string | null {
   if (typeof value === "number") {
     if (MONEY_FIELDS.has(key)) {
@@ -102,6 +113,9 @@ function summaryValue(
     return new Intl.NumberFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`).format(value);
   }
   if (typeof value === "boolean") return value ? "✓" : "—";
+  if (typeof value === "string" && ORDER_STATUS_SUMMARY_FIELDS.has(key)) {
+    return localizeOrderStatus(value, translate);
+  }
   if (typeof value === "string") return value;
   return null;
 }
@@ -117,7 +131,7 @@ export function AiActionProposalCard({
   onApprove: (handle: AiActionProposalHandle, reason?: string) => Promise<boolean>;
   interactive?: boolean;
 }) {
-  const { locale: rawLocale } = useI18n();
+  const { locale: rawLocale, t } = useI18n();
   const locale = rawLocale as AiWorkspaceLocale;
   const copy = (
     key: AiWorkspaceCopyKey,
@@ -140,7 +154,7 @@ export function AiActionProposalCard({
     ].includes(effectiveStatus);
   const summary = Object.entries(proposal.summary).flatMap(([key, value]) => {
     if (!SUMMARY_LABELS[key]) return [];
-    const formatted = summaryValue(key, value, locale);
+    const formatted = summaryValue(key, value, locale, t);
     return formatted === null ? [] : [{ key, value: formatted }];
   });
 
