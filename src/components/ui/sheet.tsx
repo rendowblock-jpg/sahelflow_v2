@@ -6,22 +6,12 @@ import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { useI18n } from "@/hooks/use-i18n"
 import {
-  resolveInlineSide,
-  type LogicalInlineSide,
+  resolvePanelSide,
+  type SemanticPanelSide,
 } from "@/lib/i18n/directional-geometry"
 import { cn } from "@/lib/utils"
 
-type PhysicalSheetSide = "top" | "right" | "bottom" | "left"
-export type SheetSide = PhysicalSheetSide | LogicalInlineSide
-
-export function resolveSheetSide(
-  side: SheetSide,
-  direction: "ltr" | "rtl",
-): PhysicalSheetSide {
-  return side === "start" || side === "end"
-    ? resolveInlineSide(side, direction)
-    : side
-}
+export type SheetSide = SemanticPanelSide
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -82,7 +72,7 @@ function SheetContent({
   showCloseButton?: boolean
 }) {
   const { t, dir } = useI18n()
-  const resolvedSide = resolveSheetSide(side, dir)
+  const resolvedSide = resolvePanelSide(side, dir)
 
   return (
     <SheetPortal>
