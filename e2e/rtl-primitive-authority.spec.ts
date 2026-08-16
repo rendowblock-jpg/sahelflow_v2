@@ -133,6 +133,23 @@ test.describe.serial("Arabic shared primitive direction authority", () => {
     await expect(sheet).toHaveAttribute("data-sheet-physical-side", "right");
     expect(await computedDirection(sheet)).toBe("rtl");
 
+    // Visibility is true while the 500ms sheet entrance animation is still
+    // translating the panel. Assert the settled physical edge instead of
+    // sampling an intermediate animation frame.
+    await expect
+      .poll(
+        async () => {
+          const box = await sheet.boundingBox();
+          if (!box) return Number.POSITIVE_INFINITY;
+          return Math.abs(box.x + box.width - MOBILE.width);
+        },
+        {
+          message: "Arabic inline-start sheet must settle on the physical right viewport edge",
+          timeout: 2_000,
+        },
+      )
+      .toBeLessThanOrEqual(2);
+
     const geometry = await sheet.evaluate((node) => {
       const box = node.getBoundingClientRect();
       return {
