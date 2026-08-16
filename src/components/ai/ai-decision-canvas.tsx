@@ -474,7 +474,7 @@ export function AiDecisionCanvas({
                   <MessageBubble key={message.id} message={message} workspace={workspace} />
                 ))}
 
-                {!wideReview && proposals.length > 0 ? (
+                {proposals.length > 0 ? (
                   <section
                     data-ai-inline-proposals="true"
                     className="ms-11 max-w-3xl border-s-2 border-primary/20 ps-4"
@@ -495,6 +495,7 @@ export function AiDecisionCanvas({
                           handle={handle}
                           approving={workspace.approvingProposalId === handle.proposal.id}
                           onApprove={workspace.approveProposal}
+                          interactive={false}
                         />
                       ))}
                     </div>
