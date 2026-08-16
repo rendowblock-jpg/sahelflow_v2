@@ -110,10 +110,12 @@ export function AiActionProposalCard({
   handle,
   approving,
   onApprove,
+  interactive = true,
 }: {
   handle: AiActionProposalHandle;
   approving: boolean;
   onApprove: (handle: AiActionProposalHandle, reason?: string) => Promise<boolean>;
+  interactive?: boolean;
 }) {
   const { locale: rawLocale } = useI18n();
   const locale = rawLocale as AiWorkspaceLocale;
@@ -190,23 +192,25 @@ export function AiActionProposalCard({
           </dl>
         ) : null}
 
-        <div className="rounded-lg border bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
-          <div className="flex items-center justify-between gap-3">
-            <span>{copy("proposalDigest")}</span>
-            <TechnicalValue className="text-foreground">
-              {proposal.proposalDigestPrefix}
-            </TechnicalValue>
+        {interactive ? (
+          <div className="rounded-lg border bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-3">
+              <span>{copy("proposalDigest")}</span>
+              <TechnicalValue className="text-foreground">
+                {proposal.proposalDigestPrefix}
+              </TechnicalValue>
+            </div>
+            <div className="mt-1.5 flex items-center justify-between gap-3">
+              <span>{copy("expires")}</span>
+              <time dateTime={proposal.expiresAt} className="tabular-nums text-foreground">
+                {new Intl.DateTimeFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`, {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                }).format(new Date(proposal.expiresAt))}
+              </time>
+            </div>
           </div>
-          <div className="mt-1.5 flex items-center justify-between gap-3">
-            <span>{copy("expires")}</span>
-            <time dateTime={proposal.expiresAt} className="tabular-nums text-foreground">
-              {new Intl.DateTimeFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`, {
-                dateStyle: "short",
-                timeStyle: "short",
-              }).format(new Date(proposal.expiresAt))}
-            </time>
-          </div>
-        </div>
+        ) : null}
 
         {effectiveStatus === "conflict" ? (
           <p className="text-xs leading-5 text-destructive">{copy("actionRequiresNewProposal")}</p>
@@ -215,7 +219,7 @@ export function AiActionProposalCard({
           <p className="text-xs leading-5 text-muted-foreground">{copy("actionExpired")}</p>
         ) : null}
 
-        {retrying && approvable ? (
+        {interactive && retrying && approvable ? (
           <div className="space-y-1.5">
             <Label htmlFor={`ai-recovery-${proposal.id}`} className="text-xs">
               {copy("recoveryReason")}
@@ -231,7 +235,7 @@ export function AiActionProposalCard({
           </div>
         ) : null}
 
-        {approvable ? (
+        {interactive && approvable ? (
           <Button
             type="button"
             size="sm"
@@ -254,9 +258,11 @@ export function AiActionProposalCard({
           </Button>
         ) : null}
 
-        <p className="text-xs leading-5 text-muted-foreground">
-          {copy("exactApprovalNotice")}
-        </p>
+        {interactive ? (
+          <p className="text-xs leading-5 text-muted-foreground">
+            {copy("exactApprovalNotice")}
+          </p>
+        ) : null}
       </div>
     </section>
   );
