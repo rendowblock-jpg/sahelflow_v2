@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import type { AiToolCallView } from "@/components/ai/ai-workspace-types";
+import { TechnicalValue } from "@/components/i18n/technical-value";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/use-i18n";
@@ -93,6 +94,8 @@ const MONEY_FIELDS = new Set([
   "cost",
 ]);
 
+const TECHNICAL_FIELDS = new Set(["orderNumber", "phone"]);
+
 const IMPORTANT_FIELDS = [
   "orderNumber",
   "name",
@@ -156,7 +159,7 @@ function recordFields(
     if (!FIELD_COPY[key]) return [];
     const formatted = formatValue(key, record[key], locale);
     if (formatted === null || formatted.length > 120) return [];
-    return [{ key, value: formatted }];
+    return [{ key, value: formatted, technical: TECHNICAL_FIELDS.has(key) }];
   });
 }
 
@@ -172,14 +175,18 @@ function ResultRecord({
   const fields = recordFields(value, locale).slice(0, 6);
   if (fields.length === 0) return null;
   return (
-    <dl className="grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
+    <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
       {fields.map((field) => (
         <div key={field.key} className="min-w-0">
-          <dt className="text-[11px] text-muted-foreground">
+          <dt className="text-xs text-muted-foreground">
             {copy(FIELD_COPY[field.key]!)}
           </dt>
-          <dd dir="auto" className="truncate font-medium text-foreground">
-            {field.value}
+          <dd className="mt-0.5 truncate font-medium text-foreground">
+            {field.technical ? (
+              <TechnicalValue>{field.value}</TechnicalValue>
+            ) : (
+              <span dir="auto">{field.value}</span>
+            )}
           </dd>
         </div>
       ))}
@@ -210,27 +217,27 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
 
   return (
     <section className="mt-2 overflow-hidden rounded-lg border bg-background/70 text-start">
-      <header className="flex min-h-10 items-center justify-between gap-3 border-b px-3 py-2">
+      <header className="flex min-h-11 items-center justify-between gap-3 border-b px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
           {running ? (
-            <Loader2 className="size-3.5 shrink-0 animate-spin text-primary" aria-hidden="true" />
+            <Loader2 className="size-4 shrink-0 animate-spin text-primary" aria-hidden="true" />
           ) : failed ? (
-            <AlertTriangle className="size-3.5 shrink-0 text-destructive" aria-hidden="true" />
+            <AlertTriangle className="size-4 shrink-0 text-destructive" aria-hidden="true" />
           ) : (
-            <Database className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+            <Database className="size-4 shrink-0 text-primary" aria-hidden="true" />
           )}
           <div className="min-w-0">
-            <p className="truncate text-xs font-semibold">{getAiToolLabel(locale, tool.name)}</p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="truncate text-sm font-semibold">{getAiToolLabel(locale, tool.name)}</p>
+            <p className="text-xs text-muted-foreground">
               {running ? copy("toolWorking") : failed ? copy("toolFailed") : copy("toolResult")}
             </p>
           </div>
         </div>
         {!running ? (
-          <Badge variant={failed ? "destructive" : "secondary"} className="shrink-0 text-[10px]">
+          <Badge variant={failed ? "destructive" : "secondary"} className="shrink-0 text-xs">
             {failed ? copy("failed") : (
               <span className="inline-flex items-center gap-1">
-                <CheckCircle2 className="size-3" aria-hidden="true" />
+                <CheckCircle2 className="size-3.5" aria-hidden="true" />
                 {copy("succeeded")}
               </span>
             )}
@@ -241,7 +248,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
       {!running ? (
         <div className="space-y-3 p-3">
           {Array.isArray(result) ? (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {copy("resultItems", { count: result.length })}
             </p>
           ) : null}
@@ -255,10 +262,10 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
             <p className="text-xs text-muted-foreground">{copy("toolResult")}</p>
           ) : null}
           {route ? (
-            <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-xs">
+            <Button asChild variant="ghost" size="sm" className="px-2 text-xs">
               <Link href={route}>
                 {copy("viewInProduct")}
-                <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                <ArrowUpRight className="size-3.5 rtl:-scale-x-100" aria-hidden="true" />
               </Link>
             </Button>
           ) : null}
