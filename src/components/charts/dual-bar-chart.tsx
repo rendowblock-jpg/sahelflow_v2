@@ -52,7 +52,7 @@ export function DualBarChart({
 
   return (
     <div
-      dir="ltr"
+      dir={dir}
       className="w-full"
       data-slot="chart"
       style={{ height: chartHeight }}
@@ -62,7 +62,12 @@ export function DualBarChart({
           data={data}
           barGap={6}
           barCategoryGap="22%"
-          margin={{ left: 6, right: 14, top: 10, bottom: 2 }}
+          margin={{
+            left: isRtl ? 14 : 6,
+            right: isRtl ? 6 : 14,
+            top: 10,
+            bottom: 2,
+          }}
           accessibilityLayer
         >
           <defs>
@@ -81,16 +86,22 @@ export function DualBarChart({
             tickLine={false}
             axisLine={false}
             dy={8}
-            tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
+            tick={{
+              fill: "var(--sf-chart-axis)",
+              fontSize: isRtl ? 13 : 12,
+            }}
           />
           <YAxis
             tickFormatter={(value: number) => axisFormatter.format(value)}
             tickLine={false}
             axisLine={false}
-            width={60}
+            width={isRtl ? 68 : 60}
             domain={[0, yMax]}
-            orientation="left"
-            tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
+            orientation={isRtl ? "right" : "left"}
+            tick={{
+              fill: "var(--sf-chart-axis)",
+              fontSize: isRtl ? 13 : 12,
+            }}
           />
           <Tooltip
             formatter={(value: number) => (
@@ -105,12 +116,12 @@ export function DualBarChart({
               unicodeBidi: "isolate",
             }}
             contentStyle={{
-              borderRadius: "10px",
+              borderRadius: "12px",
               border: "1px solid var(--border)",
               background: "color-mix(in oklch, var(--popover) 94%, transparent)",
               boxShadow: "var(--shadow-popover)",
-              fontSize: "13px",
-              padding: "9px 11px",
+              fontSize: isRtl ? "14px" : "13px",
+              padding: "10px 12px",
               backdropFilter: "blur(14px)",
             }}
           />
@@ -118,7 +129,7 @@ export function DualBarChart({
             iconType="circle"
             iconSize={7}
             wrapperStyle={{
-              fontSize: "12px",
+              fontSize: isRtl ? "13px" : "12px",
               paddingTop: "12px",
               direction: isRtl ? "rtl" : "ltr",
             }}
@@ -126,9 +137,9 @@ export function DualBarChart({
           <Bar
             dataKey="revenue"
             fill={`url(#${revenueGradientId})`}
-            radius={[6, 6, 2, 2]}
+            radius={[7, 7, 2, 2]}
             name={revenueLabel}
-            maxBarSize={42}
+            maxBarSize={44}
             isAnimationActive={isAnimationActive}
             animationDuration={baseDuration}
             animationEasing="ease-out"
@@ -136,9 +147,9 @@ export function DualBarChart({
           <Bar
             dataKey="expenses"
             fill={`url(#${expenseGradientId})`}
-            radius={[6, 6, 2, 2]}
+            radius={[7, 7, 2, 2]}
             name={expensesLabel}
-            maxBarSize={42}
+            maxBarSize={44}
             isAnimationActive={isAnimationActive}
             animationDuration={baseDuration}
             animationEasing="ease-out"

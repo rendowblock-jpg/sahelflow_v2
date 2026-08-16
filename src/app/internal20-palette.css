@@ -1,0 +1,37 @@
+/* Internal.20 material tokens. */
+html.dark {
+  --surface-0: oklch(0.145 0.008 78);
+  --surface-1: oklch(0.178 0.009 78);
+  --surface-2: oklch(0.218 0.011 78);
+  --surface-3: oklch(0.262 0.013 78);
+  --background: var(--surface-0);
+  --card: var(--surface-1);
+  --popover: oklch(0.19 0.01 78);
+  --secondary: var(--surface-2);
+  --muted: var(--surface-2);
+  --foreground: oklch(0.962 0.007 88);
+  --muted-foreground: oklch(0.75 0.013 88);
+  --border: oklch(0.94 0.01 88 / 0.135);
+  --input: oklch(0.94 0.01 88 / 0.18);
+  --sidebar: color-mix(in oklch, var(--surface-1) 91%, var(--primary) 9%);
+  --sidebar-border: oklch(0.94 0.01 88 / 0.105);
+}
+
+html:not(.dark) {
+  --surface-0: oklch(0.982 0.007 92);
+  --surface-1: oklch(0.997 0.003 92);
+  --surface-2: oklch(0.958 0.01 95);
+  --surface-3: oklch(0.925 0.014 95);
+  --background: var(--surface-0);
+  --card: var(--surface-1);
+  --popover: var(--surface-1);
+  --sidebar: color-mix(in oklch, var(--surface-1) 93%, var(--primary) 7%);
+}
+
+[data-sahelflow-shell="desktop"] {
+  background: radial-gradient(circle at 16% 0%, color-mix(in oklch, var(--primary) 9%, transparent), transparent 34rem), var(--background) !important;
+}
+
+html[dir="rtl"] [data-sahelflow-shell="desktop"] {
+  background: radial-gradient(circle at 84% 0%, color-mix(in oklch, var(--primary) 9%, transparent), transparent 34rem), var(--background) !important;
+}

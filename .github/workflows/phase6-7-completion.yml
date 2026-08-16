@@ -11,6 +11,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 env:
   SF_MASTER_KEY: ${{ secrets.SF_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
@@ -41,16 +42,25 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
+          reuse_output="$(bun scripts/verify-certified-product-evidence.ts)"
+          printf '%s\n' "${reuse_output}"
+          if grep -qx 'reuse_certified_product=true' <<<"${reuse_output}"; then
+            echo 'run_phase67=false' >> "${GITHUB_OUTPUT}"
+            echo 'Certified exact parent Phase 6-7 evidence reused for this strictly release-only head.' >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
           git diff --name-only -z "${BASE_SHA}...${HEAD_SHA}" > "${RUNNER_TEMP}/sahelflow-changed-paths"
           bun scripts/classify-pr-risk.ts < "${RUNNER_TEMP}/sahelflow-changed-paths" | tee -a "${GITHUB_OUTPUT}"
 
       - name: Record Phase 6-7 decision
         env:
           RUN_PHASE67: ${{ steps.risk.outputs.run_phase67 }}
-        run: echo "Phase 6-7 browser evidence required: ${RUN_PHASE67}" >> "${GITHUB_STEP_SUMMARY}"
+        run: |
+          echo "Phase 6-7 browser evidence required: ${RUN_PHASE67}" >> "${GITHUB_STEP_SUMMARY}"
 
   static-contract:
     name: Static localization, RTL and accessibility contract
@@ -274,7 +284,7 @@ jobs:
             exit 0
           fi
           if [[ "${RUN_PHASE67}" != "true" ]]; then
-            echo "Risk classifier: application/browser behavior is unchanged; Phase 6-7 browser matrix is not required for this exact head."
+            echo "Risk classifier: application/browser behavior is unchanged or exact certified-parent evidence was verified; Phase 6-7 browser matrix is not required for this exact release head."
             exit 0
           fi
           [[ "${STATIC_RESULT}" == "success" ]] || { echo "Static Phase 6-7 verification failed or was skipped: ${STATIC_RESULT}"; exit 1; }

@@ -26,22 +26,29 @@ describe("shared chart layout authority", () => {
     }
   });
 
-  it("keeps analytical coordinates stable while localized copy remains direction-aware", () => {
+  it("keeps data semantics stable while analytical presentation follows locale direction", () => {
     const area = source("../area-trend-chart.tsx");
     const line = source("../line-trend-chart.tsx");
     const bars = source("../horizontal-bar-chart.tsx");
     const dual = source("../dual-bar-chart.tsx");
 
-    for (const chart of [area, line, bars, dual]) {
+    // Time-series data order stays semantic; Arabic changes the presentation
+    // frame rather than reversing the underlying chronological sequence.
+    for (const chart of [area, line, dual]) {
+      expect(chart).not.toContain("reversed={rtl}");
       expect(chart).not.toContain("reversed={isRtl}");
-      expect(chart).not.toContain('orientation={isRtl ? "right" : "left"}');
-      expect(chart).not.toContain('position={isRtl ? "left" : "right"}');
     }
 
-    expect(area).toContain('orientation="left"');
-    expect(line).toContain('orientation="left"');
-    expect(bars).toContain('orientation="left"');
-    expect(bars).toContain('position="right"');
+    expect(area).toContain('orientation={rtl ? "right" : "left"}');
+    expect(line).toContain('orientation={rtl ? "right" : "left"}');
+
+    // Horizontal quantitative bars intentionally mirror their numeric origin,
+    // category axis and value label placement for the active writing direction.
+    expect(bars).toContain("reversed={rtl}");
+    expect(bars).toContain('orientation={rtl ? "right" : "left"}');
+    expect(bars).toContain('position={rtl ? "left" : "right"}');
+
     expect(dual).toContain('direction: isRtl ? "rtl" : "ltr"');
+    expect(dual).toContain('orientation={isRtl ? "right" : "left"}');
   });
 });

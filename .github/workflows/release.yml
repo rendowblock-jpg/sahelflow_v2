@@ -319,14 +319,16 @@ jobs:
                 ($authority.version -ceq '1.0.0-internal.18' -and
                   $authority.licensing.authorityDecision -ceq 'FD-037') -or
                 ($authority.version -ceq '1.0.0-internal.19' -and
-                  $authority.licensing.authorityDecision -ceq 'FD-038')
+                  $authority.licensing.authorityDecision -ceq 'FD-038') -or
+                ($authority.version -ceq '1.0.0-internal.20' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-039')
               )
               if (
                 -not $founderOfflineAuthority -or
                 $authority.channel -cne 'internal' -or
                 $null -ne $authority.licensing.ownedHostSuffix
               ) {
-                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, or FD-038/Internal.19'
+                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, FD-038/Internal.19, or FD-039/Internal.20'
               }
               'SF_LICENSE_SERVICE_URL=' >> $env:GITHUB_ENV
               "SF_RELEASE_SCOPE=founder-offline-only ($($authority.licensing.authorityDecision); online trial disabled)" >> $env:GITHUB_ENV

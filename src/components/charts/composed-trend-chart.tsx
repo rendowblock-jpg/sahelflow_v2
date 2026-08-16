@@ -54,15 +54,20 @@ export function ComposedTrendChart({
   formatRightY,
   emptyMessage,
 }: ComposedTrendChartProps) {
-  const { t, locale } = useI18n();
+  const { t, locale, dir } = useI18n();
   const { isAnimationActive, fastDuration, baseDuration } = useChartMotion();
   const chartHeight = normalizeChartHeight(height);
   const fmtLeft = resolveFormatter(formatLeftY, locale);
   const fmtRight = resolveFormatter(formatRightY, locale);
+  const rtl = dir === "rtl";
 
   if (!data.length) {
     return (
-      <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height: chartHeight }}>
+      <div
+        dir={dir}
+        className="flex w-full items-center justify-center text-sm text-muted-foreground"
+        style={{ height: chartHeight }}
+      >
         {emptyMessage ?? "—"}
       </div>
     );
@@ -76,14 +81,22 @@ export function ComposedTrendChart({
 
   return (
     <ChartContainer
-      dir="ltr"
+      dir={dir}
       role="img"
       aria-label={t("charts.composedTrend")}
       config={config}
       style={{ height: chartHeight }}
       className="aspect-auto w-full"
     >
-      <ComposedChart data={data} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
+      <ComposedChart
+        data={data}
+        margin={{
+          left: rtl ? 12 : 4,
+          right: rtl ? 4 : 12,
+          top: 8,
+          bottom: 0,
+        }}
+      >
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey={xKey}
@@ -92,30 +105,39 @@ export function ComposedTrendChart({
           tickMargin={10}
           minTickGap={24}
           className="text-xs fill-muted-foreground"
-          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
+          tick={{
+            fill: "var(--sf-chart-axis)",
+            fontSize: rtl ? 13 : 12,
+          }}
         />
         <YAxis
           yAxisId="left"
-          width={60}
+          width={rtl ? 68 : 60}
           tickLine={false}
           axisLine={false}
-          tickMargin={6}
+          tickMargin={8}
           tickFormatter={(value: number) => fmtLeft(value)}
           className="text-xs fill-muted-foreground"
-          orientation="left"
-          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
+          orientation={rtl ? "right" : "left"}
+          tick={{
+            fill: "var(--sf-chart-axis)",
+            fontSize: rtl ? 13 : 12,
+          }}
         />
         {hasRight ? (
           <YAxis
             yAxisId="right"
-            orientation="right"
-            width={60}
+            orientation={rtl ? "left" : "right"}
+            width={rtl ? 68 : 60}
             tickLine={false}
             axisLine={false}
-            tickMargin={6}
+            tickMargin={8}
             tickFormatter={(value: number) => fmtRight(value)}
             className="text-xs fill-muted-foreground"
-            tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
+            tick={{
+              fill: "var(--sf-chart-axis)",
+              fontSize: rtl ? 13 : 12,
+            }}
           />
         ) : null}
         <ChartTooltip
@@ -146,8 +168,8 @@ export function ComposedTrendChart({
               dataKey={current.key}
               yAxisId={current.yAxis ?? "left"}
               fill={`var(--color-${current.key})`}
-              radius={[5, 5, 1, 1]}
-              maxBarSize={28}
+              radius={[6, 6, 1, 1]}
+              maxBarSize={30}
               isAnimationActive={isAnimationActive}
               animationDuration={fastDuration}
               animationEasing="ease-out"
@@ -159,9 +181,13 @@ export function ComposedTrendChart({
               yAxisId={current.yAxis ?? "right"}
               type="monotone"
               stroke={`var(--color-${current.key})`}
-              strokeWidth={2.25}
+              strokeWidth={2.5}
               dot={false}
-              activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--background)" }}
+              activeDot={{
+                r: 4.5,
+                strokeWidth: 2,
+                stroke: "var(--background)",
+              }}
               isAnimationActive={isAnimationActive}
               animationDuration={baseDuration}
               animationEasing="ease-out"
