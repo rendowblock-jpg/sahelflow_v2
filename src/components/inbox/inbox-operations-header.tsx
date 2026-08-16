@@ -157,6 +157,7 @@ export function InboxOperationsHeader({
     transport,
     dataDegraded,
     refreshChats,
+    refreshQr,
     canManageWhatsApp,
     setLogoutConfirmOpen,
   } = workspace;
@@ -187,7 +188,10 @@ export function InboxOperationsHeader({
             type="button"
             variant="ghost"
             size="icon-sm"
-            onClick={() => void refreshChats()}
+            onClick={() => {
+              refreshQr();
+              void refreshChats();
+            }}
             aria-label={t("common.refresh")}
           >
             <RefreshCw className="size-4" aria-hidden="true" />
