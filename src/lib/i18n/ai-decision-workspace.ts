@@ -20,7 +20,7 @@ const COPY = {
     proposedChangesDescription:
       "Nothing below changes the business until the exact persisted proposal is approved.",
     providerPrivacy: "Provider & privacy",
-    providerReady: "Ready for new analysis",
+    providerReady: "Configuration ready",
     savedHistoryAvailable: "Saved history remains available",
     setupAttention: "AI setup needs attention",
     setupChecking: "Checking AI setup",
@@ -49,7 +49,7 @@ const COPY = {
     proposedChangesDescription:
       "Rien ci-dessous ne modifie l’activité tant que la proposition persistée exacte n’est pas approuvée.",
     providerPrivacy: "Fournisseur & confidentialité",
-    providerReady: "Prêt pour une nouvelle analyse",
+    providerReady: "Configuration prête",
     savedHistoryAvailable: "L’historique enregistré reste disponible",
     setupAttention: "La configuration IA demande votre attention",
     setupChecking: "Vérification de la configuration IA",
@@ -78,7 +78,7 @@ const COPY = {
     proposedChangesDescription:
       "لا يغيّر أي شيء أدناه حالة العمل حتى تتم الموافقة على المقترح المحفوظ المطابق.",
     providerPrivacy: "المزود والخصوصية",
-    providerReady: "جاهز لتحليل جديد",
+    providerReady: "الإعداد جاهز",
     savedHistoryAvailable: "يبقى السجل المحفوظ متاحًا",
     setupAttention: "إعداد الذكاء الاصطناعي يحتاج إلى انتباه",
     setupChecking: "جارٍ التحقق من إعداد الذكاء الاصطناعي",
