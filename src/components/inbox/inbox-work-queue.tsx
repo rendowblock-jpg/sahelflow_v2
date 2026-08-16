@@ -326,11 +326,10 @@ export function InboxWorkQueue({
 
   const openChat = (chat: InboxChat) => {
     const canonical = chats.find((entry) => entry.conversationId === chat.conversationId);
-    if (canonical) {
-      selectChat(canonical);
-      return;
+    selectChat(canonical ?? chat);
+    if (!canonical) {
+      router.replace(`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`);
     }
-    router.push(`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`);
   };
 
   const unreadEmpty = queueFilter === "unread" && queueCounts.unread === 0 && !normalizedQuery;
