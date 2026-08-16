@@ -43,6 +43,13 @@ async function fetchUnreadAuthority(page: Page): Promise<{
   });
 }
 
+async function selectAllQueue(page: Page) {
+  const all = page.getByRole("button", { name: /Toutes/ });
+  await expect(all).toBeVisible({ timeout: 30_000 });
+  await all.click();
+  await expect(all).toHaveAttribute("aria-pressed", "true");
+}
+
 test.describe.serial("Inbox operational workspace evidence", () => {
   let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 
@@ -98,6 +105,7 @@ test.describe.serial("Inbox operational workspace evidence", () => {
 
     const workspace = page.locator('[data-inbox-workspace="v2"]');
     await expect(workspace).toBeVisible();
+    await selectAllQueue(page);
     const rows = page.locator("[data-inbox-conversation]");
     await expect(rows).toHaveCount(authority.chats.length);
     await expect(page.locator("body")).not.toContainText("(démo)");
@@ -111,14 +119,14 @@ test.describe.serial("Inbox operational workspace evidence", () => {
     }
   });
 
-  test("queue views drive attention without hiding durable conversations", async ({
+  test("task queues drive attention without hiding durable conversations", async ({
     page,
   }) => {
-    // Desktop Inbox intentionally primes the first canonical conversation. For
-    // seeded/database authority, opening the thread acknowledges it as read via
-    // PATCH and only then updates the row's local unread state. Wait for that
-    // explicit convergence before taking the durable unread snapshot; otherwise
-    // the test can compare a pre-ack API count with a post-ack UI count.
+    await selectAllQueue(page);
+
+    // Desktop opens useful work immediately. Opening a thread acknowledges it
+    // through the explicit PATCH authority, so wait for that convergence before
+    // comparing durable unread state with the rendered work queue.
     const activeConversation = page.locator(
       '[data-inbox-conversation][aria-current="true"]',
     );
@@ -140,9 +148,9 @@ test.describe.serial("Inbox operational workspace evidence", () => {
       page.locator('[data-inbox-conversation][data-inbox-unread="true"]'),
     ).toHaveCount(expectedUnread);
 
-    const unreadFilter = page.locator('[data-inbox-filter="unread"]');
-    await unreadFilter.click();
-    await expect(unreadFilter).toHaveAttribute("aria-pressed", "true");
+    const unreadQueue = page.getByRole("button", { name: /Non lues/ });
+    await unreadQueue.click();
+    await expect(unreadQueue).toHaveAttribute("aria-pressed", "true");
     await expect(
       page.locator('[data-inbox-conversation][data-inbox-unread="true"]'),
     ).toHaveCount(expectedUnread);
@@ -150,14 +158,15 @@ test.describe.serial("Inbox operational workspace evidence", () => {
       page.locator('[data-inbox-conversation][data-inbox-unread="false"]'),
     ).toHaveCount(0);
 
-    await page.locator('[data-inbox-filter="all"]').click();
+    await selectAllQueue(page);
     await expect(allRows).toHaveCount(authority.chats.length);
   });
 
-  test("desktop thread, workflow context and mobile drill-in remain coherent", async ({
+  test("desktop thread, progressive work context and mobile drill-in remain coherent", async ({
     page,
   }) => {
     test.setTimeout(90_000);
+    await selectAllQueue(page);
     const firstConversation = page.locator("[data-inbox-conversation]").first();
     await expect(firstConversation).toBeVisible();
     await firstConversation.click();
@@ -165,14 +174,23 @@ test.describe.serial("Inbox operational workspace evidence", () => {
     const thread = page.locator('[data-inbox-thread="active"]');
     await expect(thread).toBeVisible();
     await expect(thread.getByRole("log")).toBeVisible();
+
+    // 1366px keeps the common path two-pane. Advanced Customer / Work / Order
+    // context is still one action away instead of consuming permanent width.
+    const contextTrigger = page.getByRole("button", {
+      name: "Contexte de la conversation",
+    });
+    await expect(contextTrigger).toBeVisible();
+    await contextTrigger.click();
     await expect(page.locator('[data-inbox-context="true"]')).toBeVisible();
+    await page.keyboard.press("Escape");
 
     await page.setViewportSize({ width: 640, height: 768 });
     await expect(page.locator('[data-inbox-thread="active"]')).toBeVisible();
     await expect(page.locator('[data-inbox-queue="true"]')).toHaveCount(0);
 
-    // The mobile back control is the first button in the active thread header.
-    await thread.locator("header button").first().click();
+    const back = thread.locator("header button").first();
+    await back.click();
     await expect(page.locator('[data-inbox-queue="true"]')).toBeVisible();
     await expect(page.locator('[data-inbox-thread="active"]')).toHaveCount(0);
   });
