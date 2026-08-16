@@ -137,6 +137,14 @@ function PairingDialog({
                   {copy("refreshQr")}
                 </Button>
               </>
+            ) : transport.status === "connected" ? (
+              <div
+                className="flex min-h-56 flex-col items-center justify-center gap-3 text-center text-sm text-success"
+                role="status"
+              >
+                <CheckCircle2 className="size-8" aria-hidden="true" />
+                <span className="font-medium">{copy("transportConnected")}</span>
+              </div>
             ) : (
               <div className="flex min-h-56 items-center justify-center gap-2 text-sm text-muted-foreground" role="status">
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
