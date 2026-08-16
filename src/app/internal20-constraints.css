@@ -1,17 +1,53 @@
 /*
  * Internal.20 hard interaction/geometry constraints.
  *
- * These are acceptance budgets, not visual decoration: the expanded desktop
- * navigation must stay inside the Founder 1366px workspace budget, and portaled
- * navigation remains safely above the 44px coarse-pointer interaction floor.
+ * These are acceptance budgets, not visual decoration. They keep the Founder
+ * 1366x768 desktop work surfaces dominant in both directions and keep portaled
+ * navigation safely above the coarse-pointer interaction floor.
  */
 
 [data-navigation-density] {
-  width: 16.75rem !important; /* 268px; Founder budget is <= 270px. */
+  width: 16.75rem !important; /* 268px; application nav budget <= 270px. */
 }
 
 [data-navigation-density="rail"] {
   width: 4.5rem !important;
+}
+
+@media (min-width: 768px) {
+  [data-inbox-workspace="v2"] [data-inbox-queue="true"] {
+    width: 20rem !important; /* 320px */
+    min-width: 20rem !important;
+  }
+
+  [data-ai-workspace="v2"] {
+    grid-template-columns: 14rem minmax(0, 1fr) !important; /* 224px sessions */
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-settings-workspace="v2"] > div.grid {
+    grid-template-columns: 15rem minmax(0, 1fr) !important; /* 240px settings nav */
+  }
+}
+
+@media (min-width: 1280px) {
+  [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="true"]) {
+    width: 17rem !important; /* 272px */
+    min-width: 17rem !important;
+  }
+
+  [data-ai-workspace="v2"] {
+    grid-template-columns: 14rem minmax(31rem, 1fr) 18rem !important; /* 224 / dominant / 288 */
+  }
+
+  [data-storefront-studio="v2"] > div.grid {
+    grid-template-columns: 13rem minmax(0, 1fr) 16.5rem !important; /* 208 / dominant / 264 */
+  }
+
+  [data-storefront-studio="bootstrap"] > div.grid {
+    grid-template-columns: 21rem minmax(0, 1fr) !important; /* 336 / dominant */
+  }
 }
 
 @media (pointer: coarse) {
