@@ -1,31 +1,19 @@
 "use client";
 
-import { useState } from "react";
-
-import { AiOperationalLaunchpad } from "@/components/ai/ai-operational-launchpad";
-import { AiWorkspace } from "@/components/ai/ai-workspace";
+import { AiDecisionWorkspace } from "@/components/ai/ai-decision-workspace";
 
 /**
  * AI page composition boundary.
  *
- * Focused launch actions create a real durable session and first response through
- * the same APIs as the workspace. Refresh only the AI workspace subtree after a
- * successful launch so session state converges without a full document reload or
- * loss of application-shell state.
+ * The Founder-approved Class-AAA direction is a seller decision workspace:
+ * durable work history at logical start, a dominant decision canvas, and
+ * progressive review/evidence. The protected AI engine remains owned by the
+ * existing workspace hook and server APIs.
  */
 export function AiWorkspaceShell() {
-  const [workspaceVersion, setWorkspaceVersion] = useState(0);
-
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <AiOperationalLaunchpad
-        onSessionCreated={() =>
-          setWorkspaceVersion((current) => current + 1)
-        }
-      />
-      <div className="min-h-0 flex-1">
-        <AiWorkspace key={workspaceVersion} />
-      </div>
+    <div className="h-full min-h-0 overflow-hidden">
+      <AiDecisionWorkspace />
     </div>
   );
 }
