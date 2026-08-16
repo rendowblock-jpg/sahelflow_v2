@@ -120,20 +120,29 @@ function PairingDialog({
             <DialogDescription>{copy("pairingDescription")}</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center gap-3 py-2">
-            <div className="rounded-xl border bg-white p-3 shadow-xs">
-              {/* Dynamic opaque QR endpoint: browser image loading is intentional. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                key={qrKey}
-                src={`/api/whatsapp/qr-image?refresh=${qrKey}`}
-                alt={t("inbox.qrAlt")}
-                className="size-56"
-              />
-            </div>
-            <Button type="button" variant="ghost" size="sm" onClick={refreshQr}>
-              <RefreshCw className="size-3.5" aria-hidden="true" />
-              {copy("refreshQr")}
-            </Button>
+            {transport.status === "qr" ? (
+              <>
+                <div className="rounded-xl border bg-white p-3 shadow-xs">
+                  {/* Dynamic opaque QR endpoint: browser image loading is intentional. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    key={`${transport.status}:${qrKey}`}
+                    src={`/api/whatsapp/qr-image?refresh=${qrKey}`}
+                    alt={t("inbox.qrAlt")}
+                    className="size-56"
+                  />
+                </div>
+                <Button type="button" variant="ghost" size="sm" onClick={refreshQr}>
+                  <RefreshCw className="size-3.5" aria-hidden="true" />
+                  {copy("refreshQr")}
+                </Button>
+              </>
+            ) : (
+              <div className="flex min-h-56 items-center justify-center gap-2 text-sm text-muted-foreground" role="status">
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                <span>{copy("transportChecking")}</span>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
