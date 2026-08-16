@@ -81,7 +81,10 @@ describe("Class-AAA Inbox composition contract", () => {
     expect(hook).toContain("isNearBottomRef");
     expect(desk).toContain("!isMobile || !activeChat");
     expect(desk).toContain("!isMobile || activeChat");
-    expect(thread).toContain("clearActiveChat");
+    expect(desk).toContain("onBackToQueue={handleBackToQueue}");
+    expect(thread).toContain("onBackToQueue: () => void");
+    expect(thread).toContain("onClick={onBackToQueue}");
+    expect(thread).not.toContain("clearActiveChat");
   });
 
   it("keeps a localized semantic work-surface heading without consuming layout space", () => {
