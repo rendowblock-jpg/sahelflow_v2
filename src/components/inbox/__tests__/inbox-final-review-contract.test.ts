@@ -20,42 +20,52 @@ describe("Inbox final review invariants", () => {
     expect(route).toContain("phone,\n          deletedAt: null");
   });
 
-  it("pins enriched persistent-search chats before selecting their provider thread", () => {
+  it("pins enriched persistent-search chats and keeps every active thread in the canonical URL", () => {
     const queue = source("src/components/inbox/inbox-work-queue.tsx");
     const workspace = source("src/hooks/use-inbox-workspace.ts");
+    const deskTypes = source("src/components/inbox/inbox-desk-types.ts");
 
     expect(queue).toContain("selectChat(canonical ?? chat)");
     expect(queue).toContain(
       "router.replace(`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`)",
     );
+    expect(queue).not.toContain("if (!canonical)");
     expect(workspace).toContain("pinnedDeepLinkChatRef.current = chat");
     expect(workspace).toContain(
       "(entry) => entry.conversationId === chat.conversationId",
     );
     expect(workspace).toContain("if (index === -1) return [chat, ...current]");
+    expect(workspace).toContain("if (!existing) return [chat, ...current]");
     expect(workspace).toContain("next[index] = { ...existing, ...chat }");
+    expect(deskTypes).toContain('result.channel === "whatsapp"');
+    expect(deskTypes).toContain("id: transportId ?? result.id");
+    expect(deskTypes).toContain("...(transportId ? { transportId } : {})");
   });
 
-  it("resolves the default Mine or All queue before desktop auto-prime", () => {
+  it("defaults members to Mine without auto-opening another assignee's work", () => {
     const desk = source("src/components/inbox/inbox-operations-desk.tsx");
 
     expect(desk).not.toContain("defaultQueueResolvedRef");
     expect(desk).toContain(
       "const [defaultQueueResolved, setDefaultQueueResolved] = useState(false)",
     );
-    expect(desk).toContain("const hasMine =");
-    expect(desk).toContain("chats.some((chat) => chat.workflow.assigneeId === currentMemberId)");
-    expect(desk).toContain("const timer = window.setTimeout(() => {");
+    expect(desk).toContain("const currentMemberId = authority.currentMemberId");
+    expect(desk).toContain("if (!queueTouchedRef.current && currentMemberId)");
     expect(desk).toContain('setQueueFilter("mine")');
     expect(desk).toContain("setDefaultQueueResolved(true)");
     expect(desk).toContain("!defaultQueueResolved ||");
+    expect(desk).toContain("const first = visibleQueueChats[0]");
+    expect(desk).not.toContain("visibleQueueChats[0] ?? chats[0]");
+    expect(desk).not.toContain("setQueueFilter(\"all\")");
   });
 
-  it("waits for QR readiness before mounting the image and still supports re-probe", () => {
+  it("waits for QR readiness and renders successful pairing instead of an endless loader", () => {
     const header = source("src/components/inbox/inbox-operations-header.tsx");
 
     expect(header).toContain('transport.status === "qr" ? (');
     expect(header).toContain('key={`${transport.status}:${qrKey}`}');
+    expect(header).toContain('transport.status === "connected" ? (');
+    expect(header).toContain('copy("transportConnected")');
     expect(header).toContain('copy("transportChecking")');
     expect(header).toContain("refreshQr();\n              void refreshChats();");
   });
