@@ -10,7 +10,8 @@
 > **Founder-requested product baseline:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19`
 > **Source rollback status:** **COMPLETE**
 > **Structural/semantic RTL wave status:** **COMPLETE FOR CURRENT SOURCE SCOPE**
-> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity; next execution frontier is the Class-AAA workspace replacement program
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
+> **Current execution frontier:** Class-AAA workspace replacement program
 > **Retained evidence/issues:** #221, #226, #230
 
 ## Current truth
@@ -122,6 +123,10 @@ Acceptance hierarchy remains:
 - Preserve canonical business/data/native/licensing/recovery/provider/storefront boundaries.
 - No customer-online/Beta/Stable claim from Founder-only internal packages.
 - Issues #221, #226 and #230 remain independent obligations.
+
+## Wave 4 — what is implemented
+
+Wave 4 remains protected historical continuity behind the current product line. Connected-platform, Storefront, provider, backup/recovery and protected-data work from that wave is not generically reopened by the workspace design reset. Presentation and information architecture may change, but those canonical durability/recovery/provider/storefront boundaries remain protected.
 
 ## Historical continuity required by active authority
 
