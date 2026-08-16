@@ -141,6 +141,6 @@ Wave 4 remains protected historical continuity behind the current product line. 
 - PR #269 is the protected source rollback anchor from rejected Internal.20 product presentation back to the Internal.19 product baseline, without rewriting release history.
 - Issues #221, #226, #230 remain independent acceptance/performance/customer-network authorities.
 
-## Exact resume order
+## Exact next-session order
 
 Resolve fresh GitHub state → continue the one active structural RTL PR to exact-head green/review clean → merge with expected-head discipline → run the wider semantic RTL sweep serially → make the Inbox/AI Agents/Settings replacement targets concrete in English + Arabic → obtain Founder approval → reconstruct those workspaces → inspect repeatedly → freeze/certify only after product direction is materially accepted.
