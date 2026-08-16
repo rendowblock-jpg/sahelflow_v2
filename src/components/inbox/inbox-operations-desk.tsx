@@ -108,6 +108,26 @@ export function InboxOperationsDesk({
   }, [authority?.currentMemberId, chats, queueFilter, workflowFilter]);
 
   useEffect(() => {
+    if (
+      queueTouchedRef.current ||
+      loadingChats ||
+      chats.length === 0 ||
+      queueFilter === "all" ||
+      visibleQueueChats.length > 0
+    ) {
+      return;
+    }
+
+    // The automatic Mine preference is advisory, not an authority boundary.
+    // Conversation projections can refresh after the preference is chosen; if
+    // that makes the automatic queue empty, fall back to canonical All rather
+    // than hiding durable work while an already-open thread remains visible.
+    desktopPrimedRef.current = null;
+    const timer = window.setTimeout(() => setQueueFilter("all"), 0);
+    return () => window.clearTimeout(timer);
+  }, [chats.length, loadingChats, queueFilter, visibleQueueChats.length]);
+
+  useEffect(() => {
     if (isMobile || loadingChats || activeChat || requestedConversationId) return;
     const first = visibleQueueChats[0] ?? chats[0];
     if (!first) return;
@@ -155,6 +175,8 @@ export function InboxOperationsDesk({
   };
 
   const handleWorkflowChange = (filter: WorkflowFilter) => {
+    queueTouchedRef.current = true;
+    defaultQueueResolvedRef.current = true;
     desktopPrimedRef.current = null;
     setWorkflowFilter(filter);
   };
