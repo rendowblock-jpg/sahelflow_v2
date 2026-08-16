@@ -31,6 +31,10 @@ body [data-navigation-density="rail"] {
   body [data-ai-workspace="v2"] {
     display: grid !important;
     direction: ltr !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
     grid-template-columns: 14rem minmax(0, 1fr) !important;
     grid-template-areas: "sessions thread" !important;
   }
@@ -40,12 +44,44 @@ body [data-navigation-density="rail"] {
     width: auto !important;
     min-width: 0 !important;
     max-width: none !important;
+    overflow: hidden !important;
+  }
+
+  /*
+   * Radix ScrollArea wraps viewport children in an intrinsic-width helper. Long
+   * durable-session previews can otherwise make the button box much wider than
+   * the visible 224px rail even though the rail itself is clipped. In RTL that
+   * puts Playwright's (and a real pointer's) target centre under the thread or
+   * global navigation. Keep this vertical rail strictly width-bound to its grid
+   * track and let the existing truncate utilities do the text clipping.
+   */
+  body [data-ai-sessions="true"] [data-slot="scroll-area"],
+  body [data-ai-sessions="true"] [data-radix-scroll-area-viewport] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  body [data-ai-sessions="true"] [data-radix-scroll-area-viewport] > div {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  body [data-ai-sessions="true"] [data-ai-session] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden;
   }
 
   body [data-ai-workspace="v2"] > [data-ai-thread="true"] {
     grid-area: thread !important;
     width: auto !important;
     min-width: 0 !important;
+    overflow: hidden !important;
   }
 
   html[dir="rtl"] body [data-ai-workspace="v2"] {
@@ -100,6 +136,7 @@ body [data-navigation-density="rail"] {
     width: auto !important;
     min-width: 0 !important;
     max-width: none !important;
+    overflow: hidden !important;
   }
 
   html[dir="rtl"] body [data-ai-workspace="v2"] {
