@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 type PendingPrompt = {
   sessionId: string;
   prompt: string;
+  sawConversationLoad: boolean;
 };
 
 export function AiDecisionWorkspace() {
@@ -27,11 +28,24 @@ export function AiDecisionWorkspace() {
     const pending = pendingPromptRef.current;
     if (!pending || workspace.activeSessionId !== pending.sessionId) return;
 
+    if (workspace.loadingConversation) {
+      pending.sawConversationLoad = true;
+      return;
+    }
+    if (!pending.sawConversationLoad) return;
+
     pendingPromptRef.current = null;
-    void workspace.send(pending.prompt).finally(() => {
-      setStartingAnalysis(false);
-    });
-  }, [workspace.activeSessionId, workspace.send]);
+    const timeoutId = window.setTimeout(() => {
+      void workspace.send(pending.prompt).finally(() => {
+        setStartingAnalysis(false);
+      });
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    workspace.activeSessionId,
+    workspace.loadingConversation,
+    workspace.send,
+  ]);
 
   const openSession = (sessionId: string) => {
     workspace.selectSession(sessionId);
@@ -54,7 +68,11 @@ export function AiDecisionWorkspace() {
       setStartingAnalysis(false);
       return false;
     }
-    pendingPromptRef.current = { sessionId, prompt };
+    pendingPromptRef.current = {
+      sessionId,
+      prompt,
+      sawConversationLoad: false,
+    };
     if (mobile) setMobilePane("canvas");
     return true;
   };
