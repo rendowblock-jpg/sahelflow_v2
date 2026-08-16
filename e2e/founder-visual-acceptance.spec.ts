@@ -230,6 +230,9 @@ test.describe.serial("Founder visual correction evidence", () => {
     await expect(page.locator('[data-inbox-workspace="v2"]')).toBeVisible({
       timeout: 60_000,
     });
+    const allInboxQueue = page.getByRole("button", { name: /^الكل/ });
+    await expect(allInboxQueue).toBeVisible();
+    await allInboxQueue.click();
     await expect(page.locator('[data-inbox-conversation]').first()).toBeVisible();
     const inboxThreadLocator = page.locator('[data-inbox-thread="active"]');
     await expect(inboxThreadLocator).toBeVisible();
