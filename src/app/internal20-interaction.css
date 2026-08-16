@@ -297,4 +297,19 @@ html[dir="rtl"] [data-settings-workspace="v2"] [data-settings-group-panel] [data
   [data-settings-workspace="v2"] > div.grid > section {
     view-transition-name: none;
   }
+
+  /* Radix transient surfaces are portaled under <body>, outside the dashboard
+   * shell. The shell-scoped reduced-motion authority cannot reach them, so the
+   * 240ms Internal.20 overlay animation must be collapsed explicitly here. */
+  :is(
+    [data-slot="dialog-content"],
+    [data-slot="alert-dialog-content"],
+    [data-slot="sheet-content"],
+    [data-slot="popover-content"],
+    [data-slot="dropdown-menu-content"]
+  ) {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
