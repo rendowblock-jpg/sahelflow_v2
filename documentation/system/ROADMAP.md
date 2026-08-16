@@ -10,7 +10,8 @@
 > **Founder-requested visual/comparison baseline:** Internal.19 / FD-038
 > **Source rollback status:** **COMPLETE**
 > **Structural/semantic RTL wave:** **COMPLETE FOR CURRENT SOURCE SCOPE**
-> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity; current execution frontier is Class-AAA workspace replacement
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
+> **Current execution frontier:** Class-AAA workspace replacement
 > **Open retained issues:** #221, #226, #230
 
 Internal.20 remains the latest published technical checkpoint but not the accepted product baseline. The Founder installed it and rejected the requested RTL/Arabic, Inbox, AI Agents, Settings and overall visual/product result. PR #269 restored the affected application/experience presentation to the Internal.19 product baseline without rewriting package/release history.
@@ -55,9 +56,9 @@ protected canonical engine + connected/storefront platform
 
 Governance, Golden COD, identity/licensing/multi-shop, provider durability, protected data, migrations, backup/recovery, connected-platform and Storefront durable authority remain protected. Experience redesign may change presentation/information architecture but may not weaken these boundaries for convenience.
 
-## Phase 3 — providers, Inbox, AI and automations
+## Phase 3 — providers, inbox, AI and automations
 
-Historical Phase 3 completed source/effect authority for provider durability/reconciliation, database-authoritative Inbox, proposal-bound AI, automations and commerce. The next workspace replacement program must preserve those contracts while replacing rejected presentation and interaction concepts.
+Historical Phase 3 completed **complete reconnaissance** and source/effect authority for provider durability/reconciliation, database-authoritative Inbox, proposal-bound AI, automations and commerce. The next workspace replacement program must preserve those contracts while replacing rejected presentation and interaction concepts.
 
 ## Phase 5 — whole-product AAA desktop experience
 
@@ -139,7 +140,7 @@ After a workspace target is approved:
 - keep the existing structural RTL runtime/static contracts green;
 - do not introduce release/version churn while the design is still converging.
 
-Complete one workspace coherently before starting a competing application branch for the next.
+Complete one workspace coherently before starting a competing application branch for the next. Preserve **expected-head merge** discipline on every reviewed application PR: if the head moves after exact-head evidence, that evidence becomes historical and the new head must be revalidated.
 
 ## Internal.19 baseline checkpoint
 
