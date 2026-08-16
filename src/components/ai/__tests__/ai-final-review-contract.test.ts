@@ -63,4 +63,18 @@ describe("AI Class-AAA final review regressions", () => {
     expect(authority).toContain("src/components/ai/ai-decision-canvas.tsx");
     expect(authority).not.toContain('"src/components/ai/ai-workspace.tsx"');
   });
+
+  it("keeps Founder RTL evidence on the approved 1366px decision-workspace geometry", () => {
+    const founder = read("e2e/founder-visual-acceptance.spec.ts");
+
+    expect(founder).toContain('data-ai-decision-workspace="true"');
+    expect(founder).toContain('data-ai-work-history="true"');
+    expect(founder).toContain('data-ai-decision-canvas="true"');
+    expect(founder).toContain("RTL AI work history");
+    expect(founder).toContain("275, 285");
+    expect(founder).not.toContain('data-ai-workspace="v2"');
+    expect(founder).not.toContain('data-ai-sessions="true"');
+    expect(founder).not.toContain('data-ai-thread="true"');
+    expect(founder).not.toContain('data-ai-context="true"');
+  });
 });
