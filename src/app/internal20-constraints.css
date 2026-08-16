@@ -1,10 +1,10 @@
 /*
  * Internal.20 hard interaction/geometry constraints.
  *
- * These are acceptance budgets, not visual decoration. They keep the Founder
- * 1366x768 desktop work surfaces dominant in both directions, explicitly place
- * CSS-grid workspaces in LTR/RTL, and keep portaled navigation safely above the
- * coarse-pointer interaction floor.
+ * These are acceptance budgets, not visual decoration. Grid definitions are
+ * logical: native `direction: rtl` mirrors them physically exactly once. Do not
+ * add a second RTL-specific track/area reversal or the rails return to the wrong
+ * physical side.
  */
 
 [data-navigation-density] {
@@ -33,11 +33,6 @@
   [data-ai-workspace="v2"] > [data-ai-thread="true"] {
     grid-area: thread !important;
   }
-
-  html[dir="rtl"] [data-ai-workspace="v2"] {
-    grid-template-columns: minmax(0, 1fr) 14rem !important;
-    grid-template-areas: "thread sessions" !important;
-  }
 }
 
 @media (min-width: 1024px) {
@@ -56,11 +51,6 @@
   [data-settings-workspace="v2"] > div.grid > section {
     grid-area: settings-panel !important;
   }
-
-  html[dir="rtl"] [data-settings-workspace="v2"] > div.grid {
-    grid-template-columns: minmax(0, 1fr) 15rem !important;
-    grid-template-areas: "settings-panel settings-nav" !important;
-  }
 }
 
 @media (min-width: 1280px) {
@@ -76,11 +66,6 @@
 
   [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
     grid-area: context !important;
-  }
-
-  html[dir="rtl"] [data-ai-workspace="v2"] {
-    grid-template-columns: 18rem minmax(31rem, 1fr) 14rem !important;
-    grid-template-areas: "context thread sessions" !important;
   }
 
   [data-storefront-studio="v2"] > div.grid {
@@ -100,11 +85,6 @@
     grid-area: inspector !important;
   }
 
-  html[dir="rtl"] [data-storefront-studio="v2"] > div.grid {
-    grid-template-columns: 16.5rem minmax(0, 1fr) 13rem !important;
-    grid-template-areas: "inspector preview controls" !important;
-  }
-
   [data-storefront-studio="bootstrap"] > div.grid {
     grid-template-columns: 21rem minmax(0, 1fr) !important;
     grid-template-areas: "setup preview" !important;
@@ -116,11 +96,6 @@
 
   [data-storefront-studio="bootstrap"] > div.grid > main {
     grid-area: preview !important;
-  }
-
-  html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid {
-    grid-template-columns: minmax(0, 1fr) 21rem !important;
-    grid-template-areas: "preview setup" !important;
   }
 }
 
