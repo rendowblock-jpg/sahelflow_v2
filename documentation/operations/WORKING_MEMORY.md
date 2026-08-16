@@ -1,64 +1,97 @@
 # SahelFlow working memory
 
 > **Purpose:** Compact resumable execution frontier; never product/architecture/roadmap authority
-> **Last updated:** 2026-08-15
-> **Live protected main:** resolve the GitHub `main` ref before every write/review/release action
-> **Internal.19 application/source baseline:** `8448c47123290f2e1af702ff24a427cc11c4781c` — PR #262
-> **Latest signed-package source:** `5cb7f5040249a540ed635cdea16dc933843b40aa` — Internal.18 / FD-037
-> **Founder-installed Internal.18 result:** **REJECTED / PARTIALLY IMPROVED**
-> **Current authorized candidate:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19` / FD-038 / `founder-offline-only`; publication/install pending
-> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Retained evidence:** #221, #226, #230
+> **Last updated:** 2026-08-16
+> **Live protected main:** resolve GitHub `main` before every write/review/release action
+> **Current protected-main SHA at this handoff:** `7c794f72a545313a0cf6fe34c2fabd9c583357ec`
+> **Latest published release:** Internal.20 / `1.0.0-internal.20` / MSI `1.0.0.20` / FD-039
+> **Founder-installed Internal.20 result:** **REJECTED — WORSE THAN INTERNAL.19 FOR THE REQUESTED EXPERIENCE**
+> **Founder-requested product baseline:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19`
+> **Internal.19 protected release source:** `42e50f22f45bd524725300b3973ac45caffb6711`
+> **Next-session mode:** design-first reset; no production UI implementation until visual direction is approved
 
-PR #262 / `agent/internal19-product-convergence` is merged historical source convergence. PR #263/#264 are governance reconciliation and PR #265 is CI lane-selection history. Latest published/Founder-installed evidence remains Internal.18 / `1.0.0-internal.18` / MSI `1.0.0.18` / FD-037 until FD-038 publication/install completes. **Internal.19 release authority is approved under FD-038; signed publication and Founder install remain pending.**
+## Current truth
 
-## Exact resumable frontier
+Internal.20 is published and technically valid as a signed Founder/internal-lab package, but it is **not Founder-accepted product evidence**. The Founder installed it and explicitly rejected the result: the requested Arabic/RTL experience, Inbox, AI Agents, Settings and overall visual/product quality were not delivered, and the update was judged worse than Internal.19.
 
-Do not restart generic reconnaissance. Resolve the live protected `main` SHA from GitHub at the start of the next write/review/release action; do not reuse a documentation SHA as the live ref.
+Do not reinterpret green CI, Phase 5/6-7, native, MSI, signed-install or authenticated-WebView evidence as UX acceptance. Those gates remain valid only for the technical properties they proved.
 
-The fixed Internal.19 **application/source baseline** is `8448c47123290f2e1af702ff24a427cc11c4781c` from PR #262. Later governance/CI/release-authority merges may advance `main` without changing that application baseline.
+The Founder requested a rollback to Internal.19. At the start of the next session, verify the actual installed version on the Founder machine; do not assume the rollback completed. The intended comparison/design baseline is Internal.19.
 
-PR #262 exact head `8d43e6142aab508e54f038b13e2639ac6966682e` passed Required PR, retry-free Phase 5 and retry-free Phase 6–7, with no remaining actionable review threads. Human Phase 5 artifact inspection confirmed loaded Arabic Inbox messages, a loaded AI session with real messages/tool content, saved Arabic Storefront Studio, Analytics and dark-theme evidence.
+### Internal.20 publication facts
 
-The final controlled Phase 6–7 trend persisted `.sf-inventory/phase7-performance/browser-trend.json`: worst route median `4672.7 ms` (`/analytics`) against `<8000 ms`; indexed-search p95 `31.1 ms` against `<2000 ms`. This is browser regression evidence only, not #226 installed T470 certification.
+- Protected-main source: `7c794f72a545313a0cf6fe34c2fabd9c583357ec`.
+- Reviewed PR: #267; final reviewed head `f2d6bc684907eacb003608a45cb6f219e16a3bd4`.
+- Product certification SHA: `2af1f7f2b432e55df5e7a36ecaeda9662be65b14`.
+- Release: `1.0.0-internal.20`; MSI `1.0.0.20`; FD-039; `founder-offline-only`.
+- Published tag: `sahelflow-v1.0.0-internal.20-7c794f72a545313a0cf6fe34c2fabd9c583357ec`.
+- Final published MSI: `SahelFlow_1.0.0-internal.20_x64_en-US.msi`.
+- Final published MSI SHA-256: `40f654145ffb548c7d9a43d2557d39d52bdecf6c240eb1a458c0c09bd8c7136d`.
+- The first signed-release attempt created the tag but failed while immediately reading it back before publication. The tag later resolved correctly to the exact source commit. Attempt 2 was started, the draft was manually published while that rerun was active, and the rerun was later cancelled. This was release plumbing, not a product-code defect.
 
-Historical diagnostic continuity: an earlier single-sample controlled timing assertion hit **8109 ms** against the unchanged `<8000 ms` route ceiling. The final harness kept the ceiling but moved to three samples per route and worst-route median, avoiding a one-spike pseudo-p95 while still failing persistent slowness.
+### Internal.19 rollback facts
 
-Current application hardening covers locale reconciliation, Next scroll integration, Storefront focus-mode heading semantics, focus-managed Add Section, saved Arabic Studio evidence, public-vs-embedded storefront heading semantics, Inbox unread convergence and deterministic Playwright server readiness.
+- Published release source: `42e50f22f45bd524725300b3973ac45caffb6711`.
+- Tag: `sahelflow-v1.0.0-internal.19-42e50f22f45bd524725300b3973ac45caffb6711`.
+- MSI: `SahelFlow_1.0.0-internal.19_x64_en-US.msi`.
+- MSI SHA-256: `044475e079a37f37319a77d6ee42821074e197b9ca5fac9abaea62b6b86f753e`.
+- Preserve `%APPDATA%\com.sahelflow.desktop` and `%LOCALAPPDATA%\com.sahelflow.desktop`; do not delete local shop databases during rollback.
+- Internal.20 remains the newest updater release, so a rolled-back Internal.19 install may offer Internal.20 again. Do not accept that update during the design-reset period.
 
-PR #263 reconciled the active handoff documents and current-frontier verifier after PR #262. Its reviewed exact head was `15ca8781f034b25116d645e2ced7f76be567ae1b`; its protected squash merge was `6f8cc100db134495226ab4f7c5588dc4f86acd75`. That exact head passed CI/Required PR, retry-free Phase 5 and retry-free Phase 6–7; two P1 governance review comments were repaired and resolved. These SHAs are historical governance evidence only and do not replace the live protected-main lookup rule or the fixed Internal.19 application baseline.
+## Why the previous approach failed
 
-## Release boundary
+The repeated RTL/Inbox/AI/Settings loop was caused by working at the wrong abstraction level:
 
-FD-037 is historical/executed Internal.18 release authority. **FD-038 authorizes exactly one Internal.19 Founder convergence checkpoint: `1.0.0-internal.19` / MSI `1.0.0.19`, `founder-offline-only`, internal-lab only, `ownedHostSuffix: null`, no packaged `SF_LICENSE_SERVICE_URL`.** It does not authorize customer-online, Beta, Stable or unrelated application behavior.
+1. Engineering correctness was treated as evidence of product-design quality.
+2. RTL was handled too much as mirroring/direction/overflow/layout mechanics instead of Arabic-native composition, typography, hierarchy and information architecture.
+3. Inbox, AI Agents and Settings were iteratively patched rather than redesigned as complete workspaces.
+4. The visual direction was frozen before Founder approval.
+5. Too many surfaces moved in one convergence wave, creating corrective CSS/layout loops without producing coherent visual quality.
+6. Screenshot/installed visual acceptance came too late; automated gates became over-weighted.
+7. “Top-tier SaaS / AAA” was not converted into an explicit enough visual contract before implementation.
+
+## Binding next-session strategy
+
+Read `documentation/operations/NEXT_SESSION_HANDOFF.md` immediately after this file.
+
+Do **not** start Internal.21 by editing production UI. Do not begin another generic RTL fix wave. Do not add another `rtl-fix.css`-style patch layer.
+
+The four design projects are:
+
+1. Global shell + true Arabic RTL.
+2. Inbox.
+3. AI Agents.
+4. Settings.
+
+For each area, establish an approved English + Arabic desktop design first, using the Founder-installed Internal.19 screen as the comparison baseline. Specify actual typography, line heights, spacing, panel proportions, navigation geometry, icon/control sizing, surfaces, information architecture, interactions and motion before implementation.
+
+Acceptance hierarchy for this reset:
+
+**Founder-installed visual judgment > direct screenshot comparison > interaction testing > automated gates.**
+
+Automated gates protect correctness and regressions; they do not certify visual taste or product quality.
 
 ## Exact next actions
 
-1. Complete the bounded FD-038 release-authority PR from the exact live protected-main descendant; no new application features.
-2. Keep version/MSI/package/Cargo/Tauri/native release guards, release-bound tests, Founder installer defaults, release request and current handoff authority synchronized to `.19` / FD-038.
-3. Run the selected release-relevant source/native/Windows/MSI/signing gates on one exact head. The risk classifier may skip duplicate Phase 5/6–7 only when all behavior-capable release hunks are proven identity-only.
-4. Merge only the reviewed exact release-authority tree using expected-head discipline.
-5. Let the protected-main dispatcher build and publish only the exact signed `1.0.0-internal.19` artifacts from that merge SHA.
-6. Founder installs that exact checkpoint and records #221 `PASS / PARTIAL / FAIL` from real installed use.
-7. Keep #226 representative installed performance/reliability and #230 customer-network licensing separate.
-8. Do not claim Beta/Stable/customer-online readiness from the Founder-only package.
+1. Resolve live protected `main` from GitHub.
+2. Verify which version is actually installed on the Founder machine and complete/confirm Internal.19 rollback if still needed.
+3. Collect paired Internal.19 screenshots at the same desktop resolution for English and Arabic: global shell, Inbox, AI Agents and Settings.
+4. Build a concise visual root-cause register from those real screens; do not patch production code yet.
+5. Establish and obtain Founder approval for the replacement visual direction for each area.
+6. Only after approval, create one product branch/one writer and implement the approved system coherently.
+7. Use targeted checks while implementing; no release/version churn and no repeated Phase 5/6-7/MSI loop after tiny edits.
+8. Freeze one product SHA only after visual direction is materially implemented and inspected.
+9. Certify the affected technical lanes, then produce the next signed internal checkpoint.
+10. Founder-installed result remains the final product truth.
 
 ## Hard rules
 
-- one active application writer;
-- retry-free required browser evidence when browser evidence is selected;
-- no cross-SHA evidence mix;
-- no repeated MSI/release loop after tiny edits;
-- no Founder acceptance claim from automation;
-- no customer-online/Beta/Stable claim from FD-038;
-- no force/waiver/protection bypass.
-
-## Wave 4 — what is implemented
-
-Wave 4 is historical protected continuity behind the current application source baseline. The connected/storefront/backup work from that wave remains protected and is not generically reopened by the Internal.19 source merge.
-
-Historical evidence anchors include the Phase 5 protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` and earlier Internal.15 signed run **`31657621918`**. These are audit continuity only.
-
-## Exact next-session order
-
-Resolve live protected `main` from GitHub, preserve application baseline `8448c47123290f2e1af702ff24a427cc11c4781c` as historical/source identity, and continue with the **Exact next actions** above. FD-038 is already the explicit newer Founder release authority for the exact Internal.19 Founder-only checkpoint; do not restart historical phases or widen scope.
+- Internal.20 is **Founder rejected**, regardless of its technical certification.
+- Internal.19 is the requested visual/product comparison baseline; confirm actual installed state at session start.
+- No Internal.21 release until Founder approves the visual direction first.
+- One branch, one writer for the eventual implementation wave.
+- No screenshot-local patching; fix shared design-system/information-architecture roots.
+- No CI-green argument against a Founder visual rejection.
+- Preserve canonical business/data/native/licensing/recovery boundaries while redesigning presentation.
+- No customer-online/Beta/Stable claim from Founder-only internal packages.
+- Do not restart generic codebase reconnaissance; use the existing architecture/docs and inspect only what the approved design work requires.
