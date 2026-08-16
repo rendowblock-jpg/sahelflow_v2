@@ -6,16 +6,9 @@ import { AlertTriangle, Loader2, Save, User } from "lucide-react";
 import { PhotoUpload } from "@/components/shared/photo-upload";
 import { StateSurface } from "@/components/shared/state-surface";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
@@ -53,9 +46,7 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
       })
       .catch((error) => {
         if (!controller.signal.aborted) {
-          setLoadError(
-            error instanceof Error ? error.message : t("error.requestFailed"),
-          );
+          setLoadError(error instanceof Error ? error.message : t("error.requestFailed"));
         }
       })
       .finally(() => {
@@ -70,9 +61,7 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
     try {
       setProfile(await requestProfile());
     } catch (error) {
-      setLoadError(
-        error instanceof Error ? error.message : t("error.requestFailed"),
-      );
+      setLoadError(error instanceof Error ? error.message : t("error.requestFailed"));
     } finally {
       setLoading(false);
     }
@@ -91,9 +80,7 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
       if (!response.ok) throw new Error(data.error ?? t("profile.saveFailed"));
       toast.success(t("profile.saved"));
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("profile.saveFailed"),
-      );
+      toast.error(error instanceof Error ? error.message : t("profile.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -101,35 +88,12 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
 
   if (loading) {
     return (
-      <Card role="status" aria-label={t("common.loading")}>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <Skeleton className="size-10 rounded-xl" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-36" />
-              <Skeleton className="h-3 w-64 max-w-[55vw]" />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Skeleton className="size-24 rounded-full" />
-          <div className="grid gap-4 sm:grid-cols-2">
-            {[0, 1, 2].map((item) => (
-              <div key={item} className="space-y-2">
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-11 w-full rounded-lg" />
-              </div>
-            ))}
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-24 w-full rounded-lg" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-2 rounded-md border p-4 text-sm text-muted-foreground" role="status">
+        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        {t("common.loading")}
+      </div>
     );
   }
-
   if (loadError) {
     return (
       <StateSurface
@@ -137,13 +101,9 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
         title={t("error.requestFailed")}
         description={loadError}
         tone="danger"
-        size="panel"
+        size="inline"
         role="alert"
-        actions={
-          <Button variant="outline" onClick={() => void reload()}>
-            {t("common.retry")}
-          </Button>
-        }
+        actions={<Button variant="outline" onClick={() => void reload()}>{t("common.retry")}</Button>}
       />
     );
   }
@@ -161,9 +121,7 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
       <CardContent className="space-y-6">
         <PhotoUpload
           value={profile.photo ?? null}
-          onChange={(url) =>
-            setProfile((current) => ({ ...current, photo: url ?? undefined }))
-          }
+          onChange={(url) => setProfile((current) => ({ ...current, photo: url ?? undefined }))}
           fallback={initials}
           size={96}
           disabled={!canManage}
@@ -172,67 +130,27 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">{t("profile.name")}</Label>
-            <Input
-              id="name"
-              value={profile.name ?? ""}
-              readOnly={!canManage}
-              onChange={(event) =>
-                setProfile((current) => ({ ...current, name: event.target.value }))
-              }
-              placeholder={t("profile.namePlaceholder")}
-            />
+            <Input id="name" value={profile.name ?? ""} readOnly={!canManage} onChange={(event) => setProfile((current) => ({ ...current, name: event.target.value }))} placeholder={t("profile.namePlaceholder")} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">{t("profile.email")}</Label>
-            <Input
-              id="email"
-              type="email"
-              value={profile.email ?? ""}
-              readOnly={!canManage}
-              onChange={(event) =>
-                setProfile((current) => ({ ...current, email: event.target.value }))
-              }
-              placeholder="contact@example.com"
-              dir="ltr"
-            />
+            <Input id="email" type="email" value={profile.email ?? ""} readOnly={!canManage} onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))} placeholder="contact@example.com" dir="ltr" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">{t("profile.phone")}</Label>
-            <Input
-              id="phone"
-              value={profile.phone ?? ""}
-              readOnly={!canManage}
-              onChange={(event) =>
-                setProfile((current) => ({ ...current, phone: event.target.value }))
-              }
-              placeholder="06 00 00 00 00"
-              dir="ltr"
-            />
+            <Input id="phone" value={profile.phone ?? ""} readOnly={!canManage} onChange={(event) => setProfile((current) => ({ ...current, phone: event.target.value }))} placeholder="06 00 00 00 00" dir="ltr" />
           </div>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="bio">{t("profile.bio")}</Label>
-          <Textarea
-            id="bio"
-            value={profile.bio ?? ""}
-            readOnly={!canManage}
-            onChange={(event) =>
-              setProfile((current) => ({ ...current, bio: event.target.value }))
-            }
-            placeholder={t("profile.bioPlaceholder")}
-            rows={3}
-          />
+          <Textarea id="bio" value={profile.bio ?? ""} readOnly={!canManage} onChange={(event) => setProfile((current) => ({ ...current, bio: event.target.value }))} placeholder={t("profile.bioPlaceholder")} rows={3} />
         </div>
 
         {canManage ? (
           <div className="flex justify-end">
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? (
-                <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Save className="me-2 size-4" aria-hidden="true" />
-              )}
+              {saving ? <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" /> : <Save className="me-2 size-4" aria-hidden="true" />}
               {t("profile.save")}
             </Button>
           </div>

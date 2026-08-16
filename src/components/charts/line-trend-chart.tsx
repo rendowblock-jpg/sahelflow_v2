@@ -47,16 +47,14 @@ export function LineTrendChart({
   formatY,
   emptyMessage,
 }: LineTrendChartProps) {
-  const { t, locale, dir } = useI18n();
+  const { t, locale } = useI18n();
   const { isAnimationActive, baseDuration } = useChartMotion();
   const chartHeight = normalizeChartHeight(height);
   const fmtY = resolveFormatter(formatY, locale);
-  const rtl = dir === "rtl";
 
   if (!data.length) {
     return (
       <div
-        dir={dir}
         className="flex w-full items-center justify-center text-sm text-muted-foreground"
         style={{ height: chartHeight }}
       >
@@ -67,7 +65,7 @@ export function LineTrendChart({
 
   return (
     <ChartContainer
-      dir={dir}
+      dir="ltr"
       role="img"
       aria-label={t("charts.lineTrend")}
       config={config}
@@ -76,12 +74,7 @@ export function LineTrendChart({
     >
       <LineChart
         data={data}
-        margin={{
-          left: rtl ? 12 : 4,
-          right: rtl ? 4 : 12,
-          top: 8,
-          bottom: 0,
-        }}
+        margin={{ left: 4, right: 12, top: 8, bottom: 0 }}
       >
         <CartesianGrid vertical={false} />
         <XAxis
@@ -91,23 +84,17 @@ export function LineTrendChart({
           tickMargin={10}
           minTickGap={32}
           className="text-xs fill-muted-foreground"
-          tick={{
-            fill: "var(--sf-chart-axis)",
-            fontSize: rtl ? 13 : 12,
-          }}
+          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
         <YAxis
-          width={rtl ? 68 : 60}
+          width={60}
           tickLine={false}
           axisLine={false}
-          tickMargin={8}
+          tickMargin={6}
           tickFormatter={(value: number) => fmtY(value)}
           className="text-xs fill-muted-foreground"
-          orientation={rtl ? "right" : "left"}
-          tick={{
-            fill: "var(--sf-chart-axis)",
-            fontSize: rtl ? 13 : 12,
-          }}
+          orientation="left"
+          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
         <ChartTooltip
           cursor={{ stroke: "var(--sf-chart-grid)", strokeWidth: 1 }}
@@ -133,10 +120,10 @@ export function LineTrendChart({
             dataKey={current.key}
             type="monotone"
             stroke={`var(--color-${current.key})`}
-            strokeWidth={2.5}
+            strokeWidth={2.25}
             dot={false}
             activeDot={{
-              r: 4.5,
+              r: 4,
               strokeWidth: 2,
               stroke: "var(--background)",
             }}

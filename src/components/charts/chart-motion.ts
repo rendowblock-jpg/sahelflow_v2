@@ -16,8 +16,8 @@ function getSnapshot(): boolean {
 }
 
 function getServerSnapshot(): boolean {
-  // Never SSR motion. Hydration enables one deliberate chart entrance when the
-  // installed user's motion preference allows it.
+  // Do not SSR an animated analytical surface. Hydration may enable the short
+  // governed animation after the user's motion preference becomes observable.
   return true;
 }
 
@@ -31,7 +31,7 @@ export function useChartMotion() {
   return {
     reducedMotion,
     isAnimationActive: !reducedMotion,
-    fastDuration: reducedMotion ? 0 : 480,
-    baseDuration: reducedMotion ? 0 : 680,
+    fastDuration: reducedMotion ? 0 : 320,
+    baseDuration: reducedMotion ? 0 : 420,
   } as const;
 }

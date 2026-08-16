@@ -44,9 +44,7 @@ describe("Wave 2 analytical frame contract", () => {
       "../composed-trend-chart.tsx",
     ]) {
       const chart = source(file);
-      expect(chart).toMatch(
-        /const\s+\{[^}]*locale[^}]*\}\s*=\s*useI18n\(\)/,
-      );
+      expect(chart).toContain("locale } = useI18n()");
       expect(chart).toContain("locale)");
     }
 
@@ -56,30 +54,24 @@ describe("Wave 2 analytical frame contract", () => {
     expect(dual).toContain("formatDZD(value, locale)");
   });
 
-  it("keeps chronological semantics stable while making the coordinate frame locale-native", () => {
-    const area = source("../area-trend-chart.tsx");
-    const line = source("../line-trend-chart.tsx");
-    const horizontal = source("../horizontal-bar-chart.tsx");
-    const composed = source("../composed-trend-chart.tsx");
-    const dual = source("../dual-bar-chart.tsx");
-
-    // Chronological series are never data-reversed merely because Arabic is active.
-    for (const chart of [area, line, composed, dual]) {
-      expect(chart).not.toContain("reversed={rtl}");
+  it("keeps quantitative and chronological coordinates stable when Arabic is active", () => {
+    for (const file of [
+      "../area-trend-chart.tsx",
+      "../line-trend-chart.tsx",
+      "../horizontal-bar-chart.tsx",
+      "../composed-trend-chart.tsx",
+      "../dual-bar-chart.tsx",
+    ]) {
+      const chart = source(file);
       expect(chart).not.toContain("reversed={isRtl}");
+      expect(chart).not.toContain('orientation={isRtl ? "right" : "left"}');
+      expect(chart).not.toContain('orientation={isRtl ? "left" : "right"}');
     }
 
-    expect(area).toContain('orientation={rtl ? "right" : "left"}');
-    expect(line).toContain('orientation={rtl ? "right" : "left"}');
-    expect(composed).toContain('orientation={rtl ? "right" : "left"}');
-    expect(composed).toContain('orientation={rtl ? "left" : "right"}');
-
-    // Horizontal bars are not chronological; mirroring their numeric origin and
-    // labels is presentation behavior and is required for native RTL reading.
-    expect(horizontal).toContain("reversed={rtl}");
-    expect(horizontal).toContain('orientation={rtl ? "right" : "left"}');
-    expect(horizontal).toContain('position={rtl ? "left" : "right"}');
-    expect(dual).toContain('orientation={isRtl ? "right" : "left"}');
+    expect(source("../horizontal-bar-chart.tsx")).toContain('orientation="left"');
+    expect(source("../horizontal-bar-chart.tsx")).toContain('position="right"');
+    expect(source("../line-trend-chart.tsx")).toContain('orientation="left"');
+    expect(source("../area-trend-chart.tsx")).toContain('orientation="left"');
   });
 
   it("uses container-relative polar geometry rather than fixed pixel radii", () => {
