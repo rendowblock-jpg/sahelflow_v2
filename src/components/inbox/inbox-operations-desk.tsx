@@ -44,6 +44,7 @@ export function InboxOperationsDesk({
   const [workflowFilter, setWorkflowFilter] = useState<WorkflowFilter>("all");
   const [candidateByConversation, setCandidateByConversation] = useState<Record<string, string>>({});
   const queueTouchedRef = useRef(false);
+  const defaultQueueResolvedRef = useRef(false);
   const desktopPrimedRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -55,11 +56,7 @@ export function InboxOperationsDesk({
           signal: controller.signal,
         });
         if (!response.ok) return;
-        const next = (await response.json()) as InboxAuthorityView;
-        setAuthority(next);
-        if (!queueTouchedRef.current && next.currentMemberId) {
-          setQueueFilter("mine");
-        }
+        setAuthority((await response.json()) as InboxAuthorityView);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setAuthority(null);
@@ -71,6 +68,29 @@ export function InboxOperationsDesk({
       window.clearTimeout(timer);
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      defaultQueueResolvedRef.current ||
+      queueTouchedRef.current ||
+      loadingChats ||
+      !authority
+    ) {
+      return;
+    }
+
+    defaultQueueResolvedRef.current = true;
+    const currentMemberId = authority.currentMemberId;
+    if (!currentMemberId) return;
+
+    const hasMine = chats.some(
+      (chat) => chat.workflow.assigneeId === currentMemberId,
+    );
+    if (!hasMine) return;
+
+    const timer = window.setTimeout(() => setQueueFilter("mine"), 0);
+    return () => window.clearTimeout(timer);
+  }, [authority, chats, loadingChats]);
 
   const visibleQueueChats = useMemo(() => {
     return chats.filter((chat) => {
@@ -129,6 +149,7 @@ export function InboxOperationsDesk({
 
   const handleQueueChange = (filter: DeskQueueFilter) => {
     queueTouchedRef.current = true;
+    defaultQueueResolvedRef.current = true;
     desktopPrimedRef.current = null;
     setQueueFilter(filter);
   };
