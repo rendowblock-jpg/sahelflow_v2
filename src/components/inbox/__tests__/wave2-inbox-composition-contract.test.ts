@@ -33,14 +33,15 @@ describe("Class-AAA Inbox composition contract", () => {
     expect(thread).not.toContain('className="min-[1500px]:hidden"');
   });
 
-  it("does not select an empty Mine queue while canonical work exists", () => {
+  it("resolves Mine only when canonical work is assigned to the current member", () => {
     const desk = read("src/components/inbox/inbox-operations-desk.tsx");
-    expect(desk).toContain("defaultQueueResolvedRef");
-    expect(desk).toContain("const hasMine = chats.some");
-    expect(desk).toContain('setQueueFilter("mine")');
-    expect(desk.indexOf("if (!hasMine) return")).toBeLessThan(
-      desk.indexOf('setQueueFilter("mine")'),
+    expect(desk).toContain(
+      "const [defaultQueueResolved, setDefaultQueueResolved] = useState(false)",
     );
+    expect(desk).toContain("const hasMine = chats.some");
+    expect(desk).toContain('if (hasMine) setQueueFilter("mine")');
+    expect(desk).toContain("setDefaultQueueResolved(true)");
+    expect(desk).toContain("!defaultQueueResolved ||");
   });
 
   it("uses task-shaped queues instead of five equal workflow tabs", () => {
@@ -112,5 +113,4 @@ describe("Class-AAA Inbox composition contract", () => {
       "matchesDeskFilters(chat, queueFilter, workflowFilter, currentMemberId)",
     );
   });
-
 });
