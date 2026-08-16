@@ -5,122 +5,131 @@
  * logical and native `direction: rtl` mirrors their physical placement. Track
  * sizes, however, must be reversed in RTL so fixed rails stay attached to the
  * same named areas while the main work surface remains dominant.
+ *
+ * The `body` scope is intentional: this file is the final geometry authority
+ * and must outrank older Internal.20 `!important` reset rules regardless of
+ * stylesheet injection order in dev, packaged WebView, or route transitions.
  */
 
-[data-navigation-density] {
+body [data-navigation-density] {
   width: 16.75rem !important; /* 268px; application nav budget <= 270px. */
 }
 
-[data-navigation-density="rail"] {
+body [data-navigation-density="rail"] {
   width: 4.5rem !important;
 }
 
 @media (min-width: 768px) {
-  [data-inbox-workspace="v2"] [data-inbox-queue="true"] {
+  body [data-inbox-workspace="v2"] [data-inbox-queue="true"] {
     width: 20rem !important; /* 320px */
     min-width: 20rem !important;
   }
 
-  [data-ai-workspace="v2"] {
+  body [data-ai-workspace="v2"] {
     grid-template-columns: 14rem minmax(0, 1fr) !important;
     grid-template-areas: "sessions thread" !important;
   }
 
-  [data-ai-workspace="v2"] > [data-ai-sessions="true"] {
+  body [data-ai-workspace="v2"] > [data-ai-sessions="true"] {
     grid-area: sessions !important;
   }
 
-  [data-ai-workspace="v2"] > [data-ai-thread="true"] {
+  body [data-ai-workspace="v2"] > [data-ai-thread="true"] {
     grid-area: thread !important;
   }
 
-  html[dir="rtl"] [data-ai-workspace="v2"] {
+  html[dir="rtl"] body [data-ai-workspace="v2"] {
     grid-template-columns: minmax(0, 1fr) 14rem !important;
+    grid-template-areas: "sessions thread" !important;
   }
 }
 
 @media (min-width: 1024px) {
-  [data-settings-workspace="v2"] > div.grid {
+  body [data-settings-workspace="v2"] > div.grid {
     grid-template-columns: 15rem minmax(0, 1fr) !important;
     grid-template-areas: "settings-nav settings-panel" !important;
   }
 
-  [data-settings-workspace="v2"] > div.grid > aside {
+  body [data-settings-workspace="v2"] > div.grid > aside {
     grid-area: settings-nav !important;
     width: 15rem !important;
     min-width: 15rem !important;
     max-width: 15rem !important;
   }
 
-  [data-settings-workspace="v2"] > div.grid > section {
+  body [data-settings-workspace="v2"] > div.grid > section {
     grid-area: settings-panel !important;
   }
 
-  html[dir="rtl"] [data-settings-workspace="v2"] > div.grid {
+  html[dir="rtl"] body [data-settings-workspace="v2"] > div.grid {
     grid-template-columns: minmax(0, 1fr) 15rem !important;
+    grid-template-areas: "settings-nav settings-panel" !important;
   }
 }
 
 @media (min-width: 1280px) {
-  [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="true"]) {
+  body [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="true"]) {
     width: 17rem !important; /* 272px */
     min-width: 17rem !important;
   }
 
-  [data-ai-workspace="v2"] {
+  body [data-ai-workspace="v2"] {
     grid-template-columns: 14rem minmax(31rem, 1fr) 18rem !important;
     grid-template-areas: "sessions thread context" !important;
   }
 
-  [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
+  body [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
     grid-area: context !important;
   }
 
-  html[dir="rtl"] [data-ai-workspace="v2"] {
+  html[dir="rtl"] body [data-ai-workspace="v2"] {
     grid-template-columns: 18rem minmax(31rem, 1fr) 14rem !important;
+    grid-template-areas: "sessions thread context" !important;
   }
 
-  [data-storefront-studio="v2"] > div.grid {
+  body [data-storefront-studio="v2"] > div.grid {
     grid-template-columns: 13rem minmax(0, 1fr) 16.5rem !important;
     grid-template-areas: "controls preview inspector" !important;
   }
 
-  [data-storefront-studio="v2"] > div.grid > aside:first-child {
+  body [data-storefront-studio="v2"] > div.grid > aside:first-child {
     grid-area: controls !important;
   }
 
-  [data-storefront-studio="v2"] > div.grid > main {
+  body [data-storefront-studio="v2"] > div.grid > main {
     grid-area: preview !important;
   }
 
-  [data-storefront-studio="v2"] > div.grid > aside:last-child {
+  body [data-storefront-studio="v2"] > div.grid > aside:last-child {
     grid-area: inspector !important;
   }
 
-  html[dir="rtl"] [data-storefront-studio="v2"] > div.grid {
+  html[dir="rtl"] body [data-storefront-studio="v2"] > div.grid {
     grid-template-columns: 16.5rem minmax(0, 1fr) 13rem !important;
+    grid-template-areas: "controls preview inspector" !important;
   }
 
-  [data-storefront-studio="bootstrap"] > div.grid {
+  body [data-storefront-studio="bootstrap"] > div.grid {
     grid-template-columns: 21rem minmax(0, 1fr) !important;
     grid-template-areas: "setup preview" !important;
   }
 
-  [data-storefront-studio="bootstrap"] > div.grid > aside {
+  body [data-storefront-studio="bootstrap"] > div.grid > aside {
     grid-area: setup !important;
   }
 
-  [data-storefront-studio="bootstrap"] > div.grid > main {
+  body [data-storefront-studio="bootstrap"] > div.grid > main {
     grid-area: preview !important;
   }
 
-  html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid {
+  html[dir="rtl"] body [data-storefront-studio="bootstrap"] > div.grid {
     grid-template-columns: minmax(0, 1fr) 21rem !important;
+    grid-template-areas: "setup preview" !important;
   }
 }
 
 @media (pointer: coarse) {
-  [data-navigation-density] nav a {
+  body [data-navigation-density] nav a {
     min-height: 3rem !important;
     min-width: var(--sf-touch-target, 3rem);
   }
