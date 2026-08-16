@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AiDecisionCanvas } from "@/components/ai/ai-decision-canvas";
 import { AiReviewEvidence } from "@/components/ai/ai-review-evidence";
@@ -20,29 +20,18 @@ export function AiDecisionWorkspace() {
   const mobile = useMobile();
   const wideReview = useMediaQuery("(min-width: 1500px)");
   const [mobilePane, setMobilePane] = useState<"history" | "canvas">("history");
-  const [pendingPrompt, setPendingPrompt] = useState<PendingPrompt | null>(null);
   const [startingAnalysis, setStartingAnalysis] = useState(false);
+  const pendingPromptRef = useRef<PendingPrompt | null>(null);
 
   useEffect(() => {
-    if (
-      !pendingPrompt ||
-      workspace.activeSessionId !== pendingPrompt.sessionId ||
-      workspace.sending
-    ) {
-      return;
-    }
+    const pending = pendingPromptRef.current;
+    if (!pending || workspace.activeSessionId !== pending.sessionId) return;
 
-    let cancelled = false;
-    void workspace.send(pendingPrompt.prompt).finally(() => {
-      if (cancelled) return;
-      setPendingPrompt(null);
+    pendingPromptRef.current = null;
+    void workspace.send(pending.prompt).finally(() => {
       setStartingAnalysis(false);
     });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pendingPrompt, workspace.activeSessionId, workspace.send, workspace.sending]);
+  }, [workspace.activeSessionId, workspace.send]);
 
   const openSession = (sessionId: string) => {
     workspace.selectSession(sessionId);
@@ -65,7 +54,7 @@ export function AiDecisionWorkspace() {
       setStartingAnalysis(false);
       return false;
     }
-    setPendingPrompt({ sessionId, prompt });
+    pendingPromptRef.current = { sessionId, prompt };
     if (mobile) setMobilePane("canvas");
     return true;
   };
