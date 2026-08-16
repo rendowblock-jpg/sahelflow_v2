@@ -1,9 +1,10 @@
 # AI Agents — Class-AAA replacement target
 
-> **Status:** PROPOSED — Founder approval required before broad production reconstruction
+> **Status:** FOUNDER-APPROVED — implementation authority for PR #279
+> **Founder approval:** 2026-08-16
 > **Branch:** `agent/ai-agents-class-aaa-reconstruction`
 > **Base authority:** protected `main` `dfbb5c22f393850d4dbbd19538fa3a5fff4371af`
-> **Scope:** product/interaction target for the `/agents` workspace only. This proposal does not amend AI, permission, business, provider, release, or data authority.
+> **Scope:** product/interaction target for the `/agents` workspace only. This target does not amend AI, permission, business, provider, release, or data authority.
 
 ## 1. Product intent
 
@@ -177,6 +178,6 @@ Broad reconstruction should remove these presentation assumptions rather than be
 
 The underlying focused prompts, session APIs, provider setup projection, tool-result routes and proposal authority may be reused behind the replacement interaction model.
 
-## 10. Founder approval gate
+## 10. Founder approval gate — satisfied
 
-Broad production reconstruction begins only after this target is explicitly approved. Approval means the product direction above—not every pixel—is accepted as the implementation authority for the AI Agents wave.
+Founder approval was explicitly granted on 2026-08-16. This product direction is now the implementation authority for PR #279. Pixel-level details may evolve during implementation, but the information architecture, interaction hierarchy, RTL semantics and protected-authority boundaries above must remain intact unless the Founder changes them explicitly.
