@@ -47,12 +47,24 @@ export function AiDecisionWorkspace() {
   ]);
 
   const openSession = (sessionId: string) => {
+    const pending = pendingPromptRef.current;
+    if (pending && pending.sessionId !== sessionId) {
+      pendingPromptRef.current = null;
+      setStartingAnalysis(false);
+    }
     workspace.selectSession(sessionId);
     if (mobile) setMobilePane("canvas");
   };
 
   const newAnalysis = async () => {
-    if (startingAnalysis || workspace.creatingSession || workspace.sending) return;
+    if (
+      workspace.loadingSessions ||
+      startingAnalysis ||
+      workspace.creatingSession ||
+      workspace.sending
+    ) {
+      return;
+    }
     setStartingAnalysis(true);
     const sessionId = await workspace.createSession();
     setStartingAnalysis(false);
@@ -60,7 +72,12 @@ export function AiDecisionWorkspace() {
   };
 
   const queuePromptInNewSession = async (prompt: string) => {
-    if (startingAnalysis || workspace.creatingSession || workspace.sending) {
+    if (
+      workspace.loadingSessions ||
+      startingAnalysis ||
+      workspace.creatingSession ||
+      workspace.sending
+    ) {
       return false;
     }
     setStartingAnalysis(true);
