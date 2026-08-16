@@ -10,6 +10,35 @@ import {
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
+function algerianPhoneCandidates(value: string): string[] {
+  const raw = value.trim();
+  const address = raw.split("@", 1)[0] ?? raw;
+  const digits = address.replace(/\D/g, "");
+  let national = "";
+
+  if (/^0[5-7]\d{8}$/.test(digits)) {
+    national = digits.slice(1);
+  } else if (/^213[5-7]\d{8}$/.test(digits)) {
+    national = digits.slice(3);
+  } else if (/^00213[5-7]\d{8}$/.test(digits)) {
+    national = digits.slice(5);
+  } else if (/^[5-7]\d{8}$/.test(digits)) {
+    national = digits;
+  }
+
+  if (!national) return raw ? [raw] : [];
+
+  return Array.from(
+    new Set([
+      `0${national}`,
+      `213${national}`,
+      `+213${national}`,
+      `00213${national}`,
+      raw,
+    ]),
+  );
+}
+
 /**
  * Permission-filtered customer/order context for the operational Inbox rail.
  * Conversation access never implicitly grants customer, contact, order or
@@ -78,21 +107,33 @@ export const GET = withErrorHandler(
       });
     }
 
-    const customer = await db.customer.findFirst({
-      where: {
-        phone: conversation.contactPhone,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        wilaya: true,
-        commune: true,
-        orderCount: true,
-        totalSpent: true,
-      },
-    });
+    let customer: {
+      id: string;
+      name: string;
+      phone: string | null;
+      wilaya: string | null;
+      commune: string | null;
+      orderCount: number;
+      totalSpent: number;
+    } | null = null;
+    for (const phone of algerianPhoneCandidates(conversation.contactPhone)) {
+      customer = await db.customer.findFirst({
+        where: {
+          phone,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          wilaya: true,
+          commune: true,
+          orderCount: true,
+          totalSpent: true,
+        },
+      });
+      if (customer) break;
+    }
 
     if (!customer) {
       return NextResponse.json({
