@@ -10,7 +10,8 @@
 > **Founder-requested comparison/baseline:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19`
 > **Source rollback status:** **COMPLETE**
 > **Structural/semantic RTL wave:** **COMPLETE FOR CURRENT SOURCE SCOPE**
-> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity; execution frontier now moves to the Class-AAA workspace replacement program
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
+> **Current execution frontier:** Class-AAA workspace replacement program
 > **Retained evidence/issues:** #221, #226, #230
 
 ## Installed/product authority
@@ -124,6 +125,10 @@ The workspace replacement program must not weaken Golden COD transitions/idempot
 Issues #221, #226 and #230 remain independent authorities. #226 installed performance/reliability and #230 customer-network/licensing are not closed by the RTL source wave.
 
 ## Historical authority continuity
+
+The **Phase 5 merged result and evidence** remain historical technical continuity. The Phase 5 application-changing protected baseline is PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`; later Founder rejection changes product acceptance, not historical evidence.
+
+The **Active Phase 6 frontier** remains `Phase 6 — Arabic, RTL and accessibility parity`. Historical entry into this frontier followed **Internal.14 publication evidence**, the **FD-031 exception boundary**, the **FD-032 Founder-only offline checkpoint boundary**, and **issue #214**. These are continuity anchors only; they do not instruct the next session to reopen the completed RTL wave.
 
 - **Phase 5 closure** remains historical technical continuity; application-changing protected baseline PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 - The Phase 5 continuity register included issues #201, #214, #221, #226 and #230.
