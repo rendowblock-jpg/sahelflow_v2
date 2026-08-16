@@ -40,13 +40,18 @@ export function ConfirmationQueueTable({
         canOpenDetail ? (
           <Link
             href={`/orders/${row.original.id}`}
+            dir="ltr"
             className="font-mono text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
             data-order-number
           >
             {row.original.orderNumber}
           </Link>
         ) : (
-          <span className="font-mono text-sm font-medium" data-order-number>
+          <span
+            dir="ltr"
+            className="font-mono text-sm font-medium"
+            data-order-number
+          >
             {row.original.orderNumber}
           </span>
         ),
