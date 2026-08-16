@@ -477,6 +477,7 @@ export function useInboxWorkspace() {
         if (index === -1) return [chat, ...current];
 
         const existing = current[index];
+        if (!existing) return [chat, ...current];
         if (
           existing.id === chat.id &&
           existing.transportId === chat.transportId &&
