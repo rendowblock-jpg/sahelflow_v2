@@ -260,19 +260,21 @@ test.describe.serial("Founder visual correction evidence", () => {
     await page.goto("/agents", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
     await expectRtlShellGeometry(page);
-    await expect(page.locator('[data-ai-workspace="v2"]')).toBeVisible({
-      timeout: 60_000,
-    });
+    const aiWorkspace = page.locator('[data-ai-decision-workspace="true"]');
+    await expect(aiWorkspace).toBeVisible({ timeout: 60_000 });
+    await expect(aiWorkspace).toHaveAttribute("data-ai-layout", "desktop");
+    await expect(page.locator('[data-ai-review-evidence="true"]')).toHaveCount(0);
 
     // Rich representative data always includes durable sessions with messages.
     // Select the last seeded session explicitly so the screenshot proves the
-    // loaded conversation workbench rather than a newly created empty session.
+    // loaded decision canvas rather than a newly created empty analysis.
     const aiSessionRows = page.locator("[data-ai-session]");
     await expect(aiSessionRows.first()).toBeVisible({ timeout: 30_000 });
     await aiSessionRows.last().click();
 
-    const aiThreadLocator = page.locator('[data-ai-thread="true"]');
-    const aiMessageLog = aiThreadLocator.getByRole("log");
+    const aiCanvasLocator = page.locator('[data-ai-decision-canvas="true"]');
+    await expect(aiCanvasLocator).toBeVisible({ timeout: 30_000 });
+    const aiMessageLog = aiCanvasLocator.getByRole("log");
     await expect(aiMessageLog).toBeVisible({ timeout: 30_000 });
     await expect(aiMessageLog.locator(".animate-spin")).toHaveCount(0, {
       timeout: 30_000,
@@ -281,20 +283,14 @@ test.describe.serial("Founder visual correction evidence", () => {
       timeout: 30_000,
     });
 
-    const aiSessions = await visibleBox(page, '[data-ai-sessions="true"]');
-    const aiThread = await visibleBox(page, '[data-ai-thread="true"]');
-    expectRightOf(aiSessions, aiThread, "RTL AI sessions rail");
-    expectWidthBetween(aiSessions, 215, 235, "RTL AI sessions rail");
-    const aiContext = page.locator(
-      '[data-ai-workspace="v2"] > div:has(> [data-ai-context="true"])',
-    );
-    if (await aiContext.isVisible()) {
-      const contextBox = await aiContext.boundingBox();
-      expect(contextBox).not.toBeNull();
-      expectLeftOf(contextBox as Box, aiThread, "RTL AI context rail");
-      expectWidthBetween(contextBox as Box, 280, 300, "RTL AI context rail");
-    }
-    expect(aiThread.width, "AI thread must remain the dominant pane").toBeGreaterThan(430);
+    const aiHistory = await visibleBox(page, '[data-ai-work-history="true"]');
+    const aiCanvas = await visibleBox(page, '[data-ai-decision-canvas="true"]');
+    expectRightOf(aiHistory, aiCanvas, "RTL AI work history");
+    expectWidthBetween(aiHistory, 275, 285, "RTL AI work history");
+    expect(
+      aiCanvas.width,
+      "AI decision canvas must remain the dominant 1366px work surface",
+    ).toBeGreaterThan(700);
     await expectNoHorizontalOverflow(page);
     await shot(page, testInfo, "founder-rtl-ai-loaded");
 
