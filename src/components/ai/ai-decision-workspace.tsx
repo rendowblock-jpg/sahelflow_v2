@@ -36,11 +36,9 @@ export function AiDecisionWorkspace() {
     if (!pending.sawConversationLoad) return;
 
     pendingPromptRef.current = null;
-    window.setTimeout(() => {
-      void workspace.send(pending.prompt).finally(() => {
-        setStartingAnalysis(false);
-      });
-    }, 0);
+    void workspace.send(pending.prompt).finally(() => {
+      setStartingAnalysis(false);
+    });
   }, [
     workspace.activeSessionId,
     workspace.loadingConversation,
