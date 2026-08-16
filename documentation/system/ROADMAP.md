@@ -3,15 +3,16 @@
 > **Status:** Binding dependency/completion order
 > **Last reconciled:** 2026-08-16
 > **Live protected main:** resolve GitHub `main` before every write/review/release action
-> **Current protected-main SHA at this handoff:** `7c794f72a545313a0cf6fe34c2fabd9c583357ec`
+> **Current protected-main SHA at this handoff:** `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269
 > **Latest published checkpoint:** Internal.20 / FD-039
 > **Founder-installed Internal.20 result:** **REJECTED**
 > **Founder-requested visual/comparison baseline:** Internal.19 / FD-038
+> **Source rollback status:** **COMPLETE** — affected application/experience layer restored to Internal.19 product baseline; release authority remains Internal.20
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Current execution mode:** design-first reset before further production UI implementation
 > **Open retained issues:** #221, #226, #230
 
-Internal.20 is the latest published technical checkpoint, but it is not the accepted product baseline. The Founder installed it and rejected the requested RTL/Arabic, Inbox, AI Agents, Settings and overall visual/product result, judging it worse than Internal.19. Internal.19 is therefore the requested visual comparison baseline while the next direction is redesigned.
+Internal.20 is the latest published technical checkpoint, but it is not the accepted product baseline. The Founder installed it and rejected the requested RTL/Arabic, Inbox, AI Agents, Settings and overall visual/product result, judging it worse than Internal.19. PR #269 restored the affected application/experience layer on protected `main` to the exact Internal.19 product baseline without rolling back package/release identity. Internal.19 is therefore the requested visual comparison baseline while the next direction is redesigned.
 
 ## Current dependency order
 
@@ -23,7 +24,9 @@ protected canonical engine + protected connected/storefront platform
 → signed/published Internal.20 / FD-039
 → Founder installs Internal.20
 → REJECTED
-→ rollback/confirm Internal.19 as visual comparison baseline
+→ PR #269 source/application rollback to Internal.19 product baseline
+→ protected main c8a81550... with Internal.20 release authority preserved
+→ verify/complete installed Internal.19 rollback on Founder machine
 → paired English/Arabic baseline screenshots
 → one shared-root visual diagnosis
 → Founder-approved target designs for shell/RTL + Inbox + AI Agents + Settings
@@ -72,14 +75,14 @@ Arabic parity does not mean mechanical mirroring. Arabic may require different c
 
 ## Internal.19 baseline checkpoint
 
-Internal.19 remains published and available as the requested rollback/comparison baseline:
+Internal.19 remains published and available as the requested installed rollback/comparison baseline:
 
-- source `42e50f22f45bd524725300b3973ac45caffb6711`;
+- published source `42e50f22f45bd524725300b3973ac45caffb6711`;
 - `1.0.0-internal.19` / MSI `1.0.0.19`;
 - FD-038 / `founder-offline-only`;
 - MSI SHA-256 `044475e079a37f37319a77d6ee42821074e197b9ca5fac9abaea62b6b86f753e`.
 
-The next session must verify the actual Founder-installed version; rollback completion is not assumed from documentation alone. Preserve SahelFlow AppData/shop databases during rollback. Internal.20 is currently the newest updater release, so do not accept another Internal.20 prompt during the design reset.
+PR #269 restored the affected application/experience layer on protected `main` to Internal.19 product blobs. That source rollback does not prove the Founder machine has been rolled back. Verify the actual installed version and preserve SahelFlow AppData/shop databases during any installed rollback. Internal.20 is still the newest updater release, so do not accept another Internal.20 prompt during the design reset.
 
 ## Internal.20 checkpoint — technical success, product rejection
 
@@ -89,16 +92,17 @@ Its technical evidence remains valid for the things actually measured: source ch
 
 It does **not** establish Founder visual acceptance. The Founder installed Internal.20 and rejected the product result.
 
-That rejection is binding for product direction.
+That rejection is binding for product direction. PR #269 does not erase or rewrite this publication/rejection history; it only restores the affected product presentation source to the requested Internal.19 baseline.
 
 ## Design-first reset gate
 
 Before production implementation expands:
 
-1. Capture paired English/Arabic Internal.19 screenshots at the same desktop resolution for shell, Inbox, AI Agents and Settings.
-2. Produce one concise shared-root diagnosis. Avoid screenshot-local CSS fixes.
-3. Establish explicit target designs for English and Arabic.
-4. Founder approves the visual direction.
+1. Verify/complete the installed Internal.19 rollback on the Founder machine.
+2. Capture paired English/Arabic Internal.19 screenshots at the same desktop resolution for shell, Inbox, AI Agents and Settings.
+3. Produce one concise shared-root diagnosis. Avoid screenshot-local CSS fixes.
+4. Establish explicit target designs for English and Arabic.
+5. Founder approves the visual direction.
 
 A good design-reset checkpoint is not another release number. It is a Founder-approved target that is concrete enough to implement without guessing.
 

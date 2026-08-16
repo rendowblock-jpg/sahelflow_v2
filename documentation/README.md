@@ -3,17 +3,18 @@
 > **Status:** Active documentation entry point; FD-038 and FD-039 Founder-only internal authority retained
 > **Last reconciled:** 2026-08-16
 > **Live protected main:** resolve GitHub `main` before every write/review/release action; do not treat a documentation SHA as the permanent branch head
-> **Current protected-main SHA at this handoff:** `7c794f72a545313a0cf6fe34c2fabd9c583357ec`
+> **Current protected-main SHA at this handoff:** `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269
 > **Latest published checkpoint:** Internal.20 / `1.0.0-internal.20` / MSI `1.0.0.20` / FD-039
 > **Founder-installed Internal.20 result:** **REJECTED**
 > **Founder-requested visual/comparison baseline:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19` / FD-038
+> **Source rollback status:** **COMPLETE** — affected application/experience layer restored to the Internal.19 product baseline in PR #269; release/version/native authority remains Internal.20
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Current execution mode:** design-first reset before further production UI implementation
 > **Retained open evidence/issues:** #221, #226, #230
 
 Live protected GitHub state is authority. Internal.20 was technically certified, merged and published, but the Founder installed it and rejected the visual/product result. Green CI/native/MSI/install evidence remains valid only for the properties it proved and does not override the Founder-installed rejection.
 
-The Founder requested a rollback to Internal.19 and wants Internal.19 used as the comparison/design baseline. The next session must verify the actual installed version rather than assume rollback completion.
+The Founder requested a rollback to Internal.19 and wants Internal.19 used as the comparison/design baseline. PR #269 has completed the **source/application rollback** without downgrading release identity or dispatching a new signed release. The actual Founder Windows installation must still be verified independently; source rollback completion is not installed-state evidence.
 
 ## Active resume path
 
@@ -45,13 +46,14 @@ Repository `AGENTS.md` is the coding-agent entry point. Archive material is evid
 
 The first signed-release run created the exact tag but failed during an immediate tag re-read before publication. The tag later resolved correctly to the exact source commit. A second attempt started, the existing draft was manually published, and the rerun was later cancelled. This was release plumbing, not a new product defect.
 
-### Internal.19 — requested rollback/comparison baseline
+### Internal.19 — restored source/product comparison baseline
 
-- Source: `42e50f22f45bd524725300b3973ac45caffb6711`.
+- Published release source: `42e50f22f45bd524725300b3973ac45caffb6711`.
 - Version: `1.0.0-internal.19`; MSI `1.0.0.19`; FD-038; `founder-offline-only`.
 - Tag: `sahelflow-v1.0.0-internal.19-42e50f22f45bd524725300b3973ac45caffb6711`.
 - MSI SHA-256: `044475e079a37f37319a77d6ee42821074e197b9ca5fac9abaea62b6b86f753e`.
-- Preserve `%APPDATA%\com.sahelflow.desktop` and `%LOCALAPPDATA%\com.sahelflow.desktop` during rollback.
+- PR #269 restored the affected application/experience layer on protected `main` to the exact Internal.19 product blobs while retaining Internal.20 package/version/release/native authority.
+- Preserve `%APPDATA%\com.sahelflow.desktop` and `%LOCALAPPDATA%\com.sahelflow.desktop` during any installed rollback.
 - Internal.20 remains the newest published updater release; do not re-accept it during the design-reset period.
 
 ## Product conclusion after Internal.20
@@ -78,7 +80,7 @@ Automated gates remain required for correctness; they cannot certify visual tast
 ## Exact next-session order
 
 1. Resolve live protected `main`.
-2. Verify the actual Founder-installed version and complete/confirm rollback to Internal.19 if needed.
+2. Verify the actual Founder-installed version and complete/confirm the **installed** rollback to Internal.19 if needed.
 3. Capture paired English/Arabic Internal.19 screenshots at the same desktop resolution for shell, loaded Inbox, loaded AI Agents and Settings.
 4. Produce one concise shared-root visual diagnosis; no screenshot-local patching.
 5. Produce and obtain Founder approval for replacement visual targets.
@@ -90,7 +92,7 @@ Automated gates remain required for correctness; they cannot certify visual tast
 
 ## Protected continuity
 
-The historical Phase 5 application-changing protected baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. PR #262 established the Internal.19 application/source baseline `8448c47123290f2e1af702ff24a427cc11c4781c`. These are audit/source continuity anchors, not instructions to restart old implementation phases.
+The historical Phase 5 application-changing protected baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. PR #262 established the Internal.19 application/source baseline `8448c47123290f2e1af702ff24a427cc11c4781c`. PR #269 restored the affected application/experience layer to the Internal.19 product baseline after the rejected Internal.20 checkpoint. These are audit/source continuity anchors, not instructions to restart old implementation phases.
 
 Experience work must not weaken Golden COD command/idempotency/version/audit/event/outbox authority; identity/shop/session/permission boundaries; append-only money/inventory truth; provider durability/reconciliation; proposal-bound AI actions; native containment; installation/key/licensing authority; migrations/backup/recovery; Storefront durable publish/checkout/receipt semantics; updater signing/version/release-source protections.
 
