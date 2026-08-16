@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
@@ -24,6 +24,7 @@ export function InboxOperationsDesk({
 }) {
   const workspace = useInboxWorkspace();
   const isMobile = useMobile();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const requestedConversationId = searchParams.get("conversation");
   const {
@@ -32,6 +33,7 @@ export function InboxOperationsDesk({
     activeChat,
     activeChatId,
     selectChat,
+    clearActiveChat,
     messages,
     logoutConfirmOpen,
     setLogoutConfirmOpen,
@@ -44,6 +46,7 @@ export function InboxOperationsDesk({
   const [workflowFilter, setWorkflowFilter] = useState<WorkflowFilter>("all");
   const [candidateByConversation, setCandidateByConversation] = useState<Record<string, string>>({});
   const [defaultQueueResolved, setDefaultQueueResolved] = useState(false);
+  const [returningToQueue, setReturningToQueue] = useState(false);
   const queueTouchedRef = useRef(false);
   const desktopPrimedRef = useRef<string | null>(null);
 
@@ -128,6 +131,15 @@ export function InboxOperationsDesk({
     workflowFilter,
   ]);
 
+  useEffect(() => {
+    if (!returningToQueue || requestedConversationId) return;
+    const timer = window.setTimeout(() => {
+      clearActiveChat();
+      setReturningToQueue(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [clearActiveChat, requestedConversationId, returningToQueue]);
+
   const selectedCandidate = useMemo(() => {
     if (!activeChat) return null;
     const explicitId = candidateByConversation[activeChat.conversationId];
@@ -161,6 +173,11 @@ export function InboxOperationsDesk({
     setWorkflowFilter(filter);
   };
 
+  const handleBackToQueue = () => {
+    setReturningToQueue(true);
+    router.replace("/inbox");
+  };
+
   return (
     <>
       <div
@@ -192,6 +209,7 @@ export function InboxOperationsDesk({
             <InboxThreadWorkbench
               workspace={workspace}
               selectedCandidate={selectedCandidate}
+              onBackToQueue={handleBackToQueue}
               onSelectCandidate={(messageId) => {
                 if (!activeChat) return;
                 setCandidateByConversation((current) => ({
