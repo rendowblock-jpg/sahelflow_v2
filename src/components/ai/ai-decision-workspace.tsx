@@ -52,7 +52,7 @@ export function AiDecisionWorkspace() {
   };
 
   const newAnalysis = async () => {
-    if (startingAnalysis || workspace.creatingSession) return;
+    if (startingAnalysis || workspace.creatingSession || workspace.sending) return;
     setStartingAnalysis(true);
     const sessionId = await workspace.createSession();
     setStartingAnalysis(false);
@@ -60,7 +60,9 @@ export function AiDecisionWorkspace() {
   };
 
   const queuePromptInNewSession = async (prompt: string) => {
-    if (startingAnalysis || workspace.creatingSession) return false;
+    if (startingAnalysis || workspace.creatingSession || workspace.sending) {
+      return false;
+    }
     setStartingAnalysis(true);
     const sessionId = await workspace.createSession();
     if (!sessionId) {
