@@ -24,8 +24,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
+import { cn } from "@/lib/utils";
 
 function TransportPill({
   transport,
@@ -215,7 +215,7 @@ export function InboxOperationsHeader({
       ) : null}
 
       {canViewIngress ? (
-        <div className="border-t px-3 py-2 sm:px-4">
+        <div className="border-t px-3 py-2 empty:hidden sm:px-4">
           <WhatsAppIngressRecoveryDock canRetry={canRetryIngress} />
         </div>
       ) : null}
