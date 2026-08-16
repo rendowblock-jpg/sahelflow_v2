@@ -23,7 +23,7 @@ export function AiDecisionWorkspace() {
   const [mobilePane, setMobilePane] = useState<"history" | "canvas">("history");
   const [startingAnalysis, setStartingAnalysis] = useState(false);
   const pendingPromptRef = useRef<PendingPrompt | null>(null);
-  const navigationLocked = startingAnalysis || workspace.creatingSession;
+  const navigationLocked = workspace.creatingSession;
 
   useEffect(() => {
     const pending = pendingPromptRef.current;
