@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 
 const root = resolve(process.env.SF_REPO_DIR ?? process.cwd());
 const cargoManifest = "src-tauri/Cargo.toml";
+const cargoLock = "src-tauri/Cargo.lock";
 const generatedTauriIcons = [
   "src-tauri/icons/32x32.png",
   "src-tauri/icons/128x128.png",
@@ -15,13 +16,15 @@ const generatedTauriIcons = [
   "src-tauri/icons/icon.png",
 ] as const;
 // The signed release workflow deliberately regenerates these tracked desktop
-// icon outputs from public/icons/sahelflow-mark.png before packaging. Keep the
-// post-build guard fail-closed to only that exact generated set plus Cargo's
-// already-proven non-semantic packaging rewrite.
+// icon outputs from public/icons/sahelflow-mark.png before packaging. Cargo may
+// also format Cargo.toml and regenerate only the root package version recorded
+// in Cargo.lock after a synchronized application version bump. Every permitted
+// source rewrite is verified semantically below; all other tracked changes fail.
 const allowedTrackedChanges = new Set<string>([
   cargoManifest,
   ...generatedTauriIcons,
 ]);
+allowedTrackedChanges.add(cargoLock);
 const toml = (
   globalThis as typeof globalThis & {
     Bun: { TOML: { parse(input: string): unknown } };
@@ -59,6 +62,19 @@ function stable(value: unknown): unknown {
 
 function parsedToml(text: string): string {
   return JSON.stringify(stable(toml.parse(text)));
+}
+
+function normalizedCargoLock(text: string): { normalized: string; rootVersion: string } {
+  const parsed = toml.parse(text) as { package?: Array<Record<string, unknown>> };
+  const packages = parsed.package;
+  if (!Array.isArray(packages)) throw new Error("Cargo.lock has no package array");
+  const roots = packages.filter((entry) => entry.name === "sahelflow");
+  if (roots.length !== 1) throw new Error(`Cargo.lock must contain exactly one sahelflow package, found ${roots.length}`);
+  const rootPackage = roots[0]!;
+  if (typeof rootPackage.version !== "string") throw new Error("Cargo.lock sahelflow package version is missing");
+  const rootVersion = rootPackage.version;
+  rootPackage.version = "__SAHELFLOW_ROOT_VERSION__";
+  return { normalized: JSON.stringify(stable(parsed)), rootVersion };
 }
 
 function statusPath(line: string): string {
@@ -121,8 +137,25 @@ if (changed.some(({ path }) => path === cargoManifest)) {
   }
 }
 
+if (changed.some(({ path }) => path === cargoLock)) {
+  const currentPath = resolve(root, cargoLock);
+  if (!existsSync(currentPath)) throw new Error(`${cargoLock} was removed during build`);
+  const committedText = git(["show", `${sourceCommit}:${cargoLock}`]);
+  const currentText = readFileSync(currentPath, "utf8");
+  const committed = normalizedCargoLock(committedText);
+  const current = normalizedCargoLock(currentText);
+  const authority = JSON.parse(readFileSync(resolve(root, "sahelflow.version.json"), "utf8")) as { version?: string };
+  if (current.rootVersion !== authority.version) {
+    throw new Error(`Cargo.lock root package version ${current.rootVersion} does not equal committed version authority ${authority.version ?? "missing"}`);
+  }
+  if (committed.normalized !== current.normalized) {
+    const diff = git(["diff", "--no-ext-diff", "--", cargoLock]);
+    throw new Error(`Cargo regenerated more than the sahelflow root package version in Cargo.lock; evidence is blocked:\n${diff}`);
+  }
+}
+
 console.log(
   changed.length === 0
     ? `Tracked source remained clean for ${sourceCommit}`
-    : `Verified approved non-semantic packaging rewrite without restoring the build worktree: ${changed.map(({ path }) => path).join(", ")}`,
+    : `Verified approved deterministic packaging rewrite without restoring the build worktree: ${changed.map(({ path }) => path).join(", ")}`,
 );

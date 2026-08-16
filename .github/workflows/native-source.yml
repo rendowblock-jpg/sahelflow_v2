@@ -57,6 +57,14 @@ jobs:
         with:
           components: rustfmt
 
+      - name: Setup Bun for generated lock synchronization
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Synchronize generated Cargo root package identity
+        run: bun run scripts/sync-cargo-root-lock.ts
+
       - name: Install Linux Tauri dependencies
         run: |
           sudo apt-get update

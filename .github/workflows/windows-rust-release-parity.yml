@@ -35,6 +35,9 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Synchronize generated Cargo root package identity
+        run: bun run scripts/sync-cargo-root-lock.ts
+
       - name: Cache Windows Rust dependencies
         uses: actions/cache@v4
         with:
