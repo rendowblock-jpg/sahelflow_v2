@@ -33,17 +33,18 @@ describe("Class-AAA Inbox composition contract", () => {
     expect(thread).not.toContain('className="min-[1500px]:hidden"');
   });
 
-  it("resolves Mine only when canonical work is assigned to the current member", () => {
+  it("defaults member work to Mine without auto-opening another assignee's queue", () => {
     const desk = read("src/components/inbox/inbox-operations-desk.tsx");
     expect(desk).toContain(
       "const [defaultQueueResolved, setDefaultQueueResolved] = useState(false)",
     );
-    expect(desk).toContain("const hasMine =");
-    expect(desk).toContain("chats.some((chat) => chat.workflow.assigneeId === currentMemberId)");
-    expect(desk).toContain("const timer = window.setTimeout(() => {");
+    expect(desk).toContain("const currentMemberId = authority.currentMemberId");
+    expect(desk).toContain("if (!queueTouchedRef.current && currentMemberId)");
     expect(desk).toContain('setQueueFilter("mine")');
     expect(desk).toContain("setDefaultQueueResolved(true)");
-    expect(desk).toContain("!defaultQueueResolved ||");
+    expect(desk).toContain("const first = visibleQueueChats[0]");
+    expect(desk).not.toContain("visibleQueueChats[0] ?? chats[0]");
+    expect(desk).not.toContain("setQueueFilter(\"all\")");
   });
 
   it("uses task-shaped queues instead of five equal workflow tabs", () => {
@@ -53,6 +54,9 @@ describe("Class-AAA Inbox composition contract", () => {
     expect(queue).toContain("queueFilter === \"mine\"");
     expect(queue).toContain("queueFilter === \"unassigned\"");
     expect(queue).toContain("/api/conversations/search?q=");
+    expect(queue).toContain("selectChat(canonical ?? chat)");
+    expect(queue).toContain("router.replace(`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`)");
+    expect(queue).not.toContain("if (!canonical)");
   });
 
   it("keeps operational typography above legacy microcopy sizes", () => {
@@ -88,6 +92,8 @@ describe("Class-AAA Inbox composition contract", () => {
 
   it("closes adversarial Inbox review gaps at their authority boundaries", () => {
     const queue = read("src/components/inbox/inbox-work-queue.tsx");
+    const deskTypes = read("src/components/inbox/inbox-desk-types.ts");
+    const header = read("src/components/inbox/inbox-operations-header.tsx");
     const panel = read("src/components/inbox/inbox-customer-work-panel.tsx");
     const collaboration = read(
       "src/components/inbox/conversation-collaboration-inline.tsx",
@@ -114,5 +120,9 @@ describe("Class-AAA Inbox composition contract", () => {
     expect(queue).toContain(
       "matchesDeskFilters(chat, queueFilter, workflowFilter, currentMemberId)",
     );
+    expect(deskTypes).toContain("id: transportId ?? result.id");
+    expect(deskTypes).toContain("...(transportId ? { transportId } : {})");
+    expect(header).toContain('transport.status === "connected" ? (');
+    expect(header).toContain('copy("transportConnected")');
   });
 });
