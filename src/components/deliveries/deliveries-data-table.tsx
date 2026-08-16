@@ -9,6 +9,7 @@ import { getBrandIcon } from "@/components/brand/brand-icons";
 import { DataTable } from "@/components/data-table/data-table";
 import { DeliveryRowActions } from "@/components/deliveries/delivery-row-actions";
 import { DeliveryStatusBadge } from "@/components/deliveries/delivery-status-badge";
+import { TechnicalValue } from "@/components/i18n/technical-value";
 import { DeliveriesEmptyState } from "@/components/shared/empty-states";
 import { StateSurface } from "@/components/shared/state-surface";
 import {
@@ -46,14 +47,16 @@ export function DeliveriesDataTable({
         canViewDetail ? (
           <Link
             href={`/deliveries/${row.original.id}`}
-            className="font-mono text-xs font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            className="text-xs font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {row.original.trackingNumber ?? row.original.id}
+            <TechnicalValue data-tracking-number>
+              {row.original.trackingNumber ?? row.original.id}
+            </TechnicalValue>
           </Link>
         ) : (
-          <span className="font-mono text-xs">
+          <TechnicalValue className="text-xs" data-tracking-number>
             {row.original.trackingNumber ?? row.original.id}
-          </span>
+          </TechnicalValue>
         ),
     },
     {
@@ -65,14 +68,16 @@ export function DeliveriesDataTable({
           canViewDetail ? (
             <Link
               href={`/orders/${row.original.order.id}`}
-              className="font-mono text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+              className="text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {row.original.order.orderNumber}
+              <TechnicalValue data-order-number>
+                {row.original.order.orderNumber}
+              </TechnicalValue>
             </Link>
           ) : (
-            <span className="font-mono text-sm font-medium">
+            <TechnicalValue className="text-sm font-medium" data-order-number>
               {row.original.order.orderNumber}
-            </span>
+            </TechnicalValue>
           )
         ) : (
           "—"

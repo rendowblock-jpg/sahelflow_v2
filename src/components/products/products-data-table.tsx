@@ -10,6 +10,7 @@ import {
   EntityLink,
   EntityPreview,
 } from "@/components/entities/entity-context";
+import { TechnicalValue } from "@/components/i18n/technical-value";
 import { ProductRowActions } from "@/components/products/product-row-actions";
 import { ProductThumbnail } from "@/components/products/product-thumbnail";
 import { ProductsEmptyState } from "@/components/shared/empty-states";
@@ -69,9 +70,9 @@ export function ProductsDataTable({
               />
               <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                 {product.sku ? (
-                  <span className="max-w-40 truncate font-mono" dir="auto">
+                  <TechnicalValue className="inline-block max-w-40 truncate align-bottom">
                     {product.sku}
-                  </span>
+                  </TechnicalValue>
                 ) : null}
                 {product.sku && category ? (
                   <span aria-hidden="true">·</span>
@@ -149,7 +150,13 @@ export function ProductsDataTable({
           <div className="flex items-center justify-end gap-1">
             <EntityInspector
               title={product.name}
-              description={product.sku ?? category}
+              description={
+                product.sku ? (
+                  <TechnicalValue>{product.sku}</TechnicalValue>
+                ) : (
+                  category
+                )
+              }
               fullHref={`/products/${product.id}`}
               fullLabel={t("products.viewDetails", { name: product.name })}
               trigger={
@@ -169,9 +176,12 @@ export function ProductsDataTable({
                 title={product.name}
                 description={category}
                 metadata={
-                  product.sku
-                    ? `${t("products.sku")}: ${product.sku}`
-                    : undefined
+                  product.sku ? (
+                    <>
+                      {t("products.sku")}: {" "}
+                      <TechnicalValue>{product.sku}</TechnicalValue>
+                    </>
+                  ) : undefined
                 }
               >
                 <div className="mb-3 flex items-center gap-3 rounded-lg border border-border/70 bg-muted/20 p-2.5">
@@ -185,8 +195,13 @@ export function ProductsDataTable({
                       {product.name}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {[product.sku, category].filter(Boolean).join(" · ") ||
-                        "—"}
+                      {product.sku ? (
+                        <TechnicalValue>{product.sku}</TechnicalValue>
+                      ) : null}
+                      {product.sku && category ? (
+                        <span aria-hidden="true"> · </span>
+                      ) : null}
+                      {category ?? (product.sku ? null : "—")}
                     </p>
                   </div>
                 </div>

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { selectColumn } from "@/components/data-table/data-table";
+import { TechnicalValue } from "@/components/i18n/technical-value";
 import { RiskBadge } from "@/components/risk/risk-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,15 +69,16 @@ export function useOrdersColumns(
         canOpenDetail ? (
           <Link
             href={`/orders/${row.original.id}`}
-            className="font-mono text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-            data-order-number
+            className="text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {row.original.orderNumber}
+            <TechnicalValue data-order-number>
+              {row.original.orderNumber}
+            </TechnicalValue>
           </Link>
         ) : (
-          <span className="font-mono text-sm font-medium" data-order-number>
+          <TechnicalValue className="text-sm font-medium" data-order-number>
             {row.original.orderNumber}
-          </span>
+          </TechnicalValue>
         ),
     },
     ...(fieldAccess.contact
@@ -88,9 +90,9 @@ export function useOrdersColumns(
             cell: ({ row }: { row: { original: OrderListItem } }) => (
               <div className="max-w-[170px] text-sm">
                 <div className="truncate font-medium">{row.original.customer?.name ?? "—"}</div>
-                <div className="truncate font-mono text-xs text-muted-foreground" dir="ltr">
+                <TechnicalValue className="block truncate text-xs text-muted-foreground">
                   {row.original.customer?.phone ?? row.original.phone ?? "—"}
-                </div>
+                </TechnicalValue>
               </div>
             ),
             enableSorting: false,

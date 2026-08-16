@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Phone } from "lucide-react";
 
 import { DataTable } from "@/components/data-table/data-table";
+import { TechnicalValue } from "@/components/i18n/technical-value";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { StateSurface } from "@/components/shared/state-surface";
 import { Button } from "@/components/ui/button";
@@ -40,20 +41,16 @@ export function ConfirmationQueueTable({
         canOpenDetail ? (
           <Link
             href={`/orders/${row.original.id}`}
-            dir="ltr"
-            className="font-mono text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-            data-order-number
+            className="text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {row.original.orderNumber}
+            <TechnicalValue data-order-number>
+              {row.original.orderNumber}
+            </TechnicalValue>
           </Link>
         ) : (
-          <span
-            dir="ltr"
-            className="font-mono text-sm font-medium"
-            data-order-number
-          >
+          <TechnicalValue className="text-sm font-medium" data-order-number>
             {row.original.orderNumber}
-          </span>
+          </TechnicalValue>
         ),
       enableSorting: false,
     },
@@ -76,12 +73,11 @@ export function ConfirmationQueueTable({
               row.original.phone ? (
                 <a
                   href={`tel:${row.original.phone}`}
-                  dir="ltr"
-                  className="inline-flex items-center gap-1 font-mono text-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex items-center gap-1 text-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                   data-no-row-click
                 >
                   <Phone className="size-3 text-muted-foreground" aria-hidden="true" />
-                  {row.original.phone}
+                  <TechnicalValue>{row.original.phone}</TechnicalValue>
                 </a>
               ) : (
                 "—"

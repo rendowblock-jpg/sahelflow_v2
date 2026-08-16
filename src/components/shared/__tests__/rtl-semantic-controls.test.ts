@@ -24,16 +24,17 @@ describe("shared RTL semantic controls", () => {
   it("isolates order numbers without changing the surrounding RTL table domain", () => {
     const queue = read("src/components/orders/confirmation-queue-table.tsx");
 
-    expect(queue).toContain('href={`/orders/${row.original.id}`}\n            dir="ltr"');
-    expect(queue).toContain('<span\n            dir="ltr"\n            className="font-mono text-sm font-medium"\n            data-order-number');
+    expect(queue).toContain('import { TechnicalValue } from "@/components/i18n/technical-value"');
+    expect(queue).toContain("<TechnicalValue data-order-number>");
+    expect(queue).toContain('<TechnicalValue className="text-sm font-medium" data-order-number>');
     expect(queue).not.toContain('<DataTable\n      dir="ltr"');
   });
 
   it("isolates customer phones in both the table and inspector header", () => {
     const customers = read("src/components/customers/customers-data-table.tsx");
 
-    expect(customers).toContain('<span dir="ltr" className="font-mono text-sm">');
-    expect(customers).toContain('<bdi dir="ltr">{customer.phone}</bdi>');
+    expect(customers).toContain('<TechnicalValue className="text-sm">');
+    expect(customers).toContain("<TechnicalValue>{customer.phone}</TechnicalValue>");
   });
 
   it("lets Sheet resolve semantic sides while retaining explicit physical-side metadata", () => {
