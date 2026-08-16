@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import type { AiActionProposalHandle } from "@/components/ai/ai-workspace-types";
+import { TechnicalValue } from "@/components/i18n/technical-value";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ const SUMMARY_LABELS: Record<string, AiWorkspaceCopyKey> = {
 };
 
 const MONEY_FIELDS = new Set(["fromPrice", "toPrice", "price"]);
+const TECHNICAL_SUMMARY_FIELDS = new Set(["orderNumber"]);
 
 function statusKey(status: string): AiWorkspaceCopyKey {
   switch (status) {
@@ -142,14 +144,14 @@ export function AiActionProposalCard({
 
   return (
     <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <header className="flex items-start justify-between gap-3 border-b px-3.5 py-3">
+      <header className="flex items-start justify-between gap-3 border-b px-4 py-3.5">
         <div className="flex min-w-0 items-start gap-2.5">
           <div className="mt-0.5">{statusIcon(effectiveStatus)}</div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-foreground">
+            <p className="text-sm font-semibold text-foreground">
               {copy("sensitiveProposal")}
             </p>
-            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
               {getAiToolLabel(locale, proposal.toolName)}
             </p>
           </div>
@@ -162,38 +164,42 @@ export function AiActionProposalCard({
                 ? "destructive"
                 : "outline"
           }
-          className="shrink-0 text-[10px]"
+          className="shrink-0 text-xs"
         >
           {copy(statusKey(effectiveStatus))}
         </Badge>
       </header>
 
-      <div className="space-y-3 p-3.5">
+      <div className="space-y-3.5 p-4">
         {summary.length > 0 ? (
-          <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+          <dl className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
             {summary.slice(0, 8).map((field) => (
               <div key={field.key} className="min-w-0">
-                <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                <dt className="text-xs font-medium text-muted-foreground">
                   {copy(SUMMARY_LABELS[field.key]!)}
                 </dt>
-                <dd dir="auto" className="mt-0.5 truncate text-xs font-medium">
-                  {field.value}
+                <dd className="mt-0.5 truncate text-sm font-medium">
+                  {TECHNICAL_SUMMARY_FIELDS.has(field.key) ? (
+                    <TechnicalValue>{field.value}</TechnicalValue>
+                  ) : (
+                    <span dir="auto">{field.value}</span>
+                  )}
                 </dd>
               </div>
             ))}
           </dl>
         ) : null}
 
-        <div className="rounded-lg border bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
+        <div className="rounded-lg border bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
           <div className="flex items-center justify-between gap-3">
             <span>{copy("proposalDigest")}</span>
-            <code dir="ltr" className="font-mono text-foreground">
+            <TechnicalValue className="text-foreground">
               {proposal.proposalDigestPrefix}
-            </code>
+            </TechnicalValue>
           </div>
-          <div className="mt-1 flex items-center justify-between gap-3">
+          <div className="mt-1.5 flex items-center justify-between gap-3">
             <span>{copy("expires")}</span>
-            <time dir="ltr" dateTime={proposal.expiresAt} className="tabular-nums text-foreground">
+            <time dateTime={proposal.expiresAt} className="tabular-nums text-foreground">
               {new Intl.DateTimeFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`, {
                 dateStyle: "short",
                 timeStyle: "short",
@@ -203,10 +209,10 @@ export function AiActionProposalCard({
         </div>
 
         {effectiveStatus === "conflict" ? (
-          <p className="text-xs text-destructive">{copy("actionRequiresNewProposal")}</p>
+          <p className="text-xs leading-5 text-destructive">{copy("actionRequiresNewProposal")}</p>
         ) : null}
         {effectiveStatus === "expired" ? (
-          <p className="text-xs text-muted-foreground">{copy("actionExpired")}</p>
+          <p className="text-xs leading-5 text-muted-foreground">{copy("actionExpired")}</p>
         ) : null}
 
         {retrying && approvable ? (
@@ -248,7 +254,7 @@ export function AiActionProposalCard({
           </Button>
         ) : null}
 
-        <p className="text-[10px] leading-4 text-muted-foreground">
+        <p className="text-xs leading-5 text-muted-foreground">
           {copy("exactApprovalNotice")}
         </p>
       </div>
