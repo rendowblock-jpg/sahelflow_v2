@@ -19,14 +19,18 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(header).toContain("canRetryIngress");
   });
 
-  it("selects desktop work through resolved workspace state instead of DOM click priming", () => {
+  it("selects desktop work through resolved Mine state and synchronizes the canonical URL", () => {
     const desk = read("src/components/inbox/inbox-operations-desk.tsx");
     expect(desk).toContain(
       "const [defaultQueueResolved, setDefaultQueueResolved] = useState(false)",
     );
     expect(desk).toContain("!defaultQueueResolved ||");
-    expect(desk).toContain("visibleQueueChats[0] ?? chats[0]");
+    expect(desk).toContain("const first = visibleQueueChats[0]");
+    expect(desk).not.toContain("visibleQueueChats[0] ?? chats[0]");
     expect(desk).toContain("selectChat(first)");
+    expect(desk).toContain(
+      "router.replace(`/inbox?conversation=${encodeURIComponent(first.conversationId)}`)",
+    );
     expect(desk).not.toContain("MutationObserver");
     expect(desk).not.toContain("querySelector");
     expect(desk).not.toContain(".click()");
