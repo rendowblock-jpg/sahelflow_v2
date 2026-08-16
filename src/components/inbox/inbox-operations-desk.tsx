@@ -75,17 +75,14 @@ export function InboxOperationsDesk({
     }
 
     const currentMemberId = authority.currentMemberId;
-    const hasMine =
-      !queueTouchedRef.current &&
-      Boolean(currentMemberId) &&
-      chats.some((chat) => chat.workflow.assigneeId === currentMemberId);
-
     const timer = window.setTimeout(() => {
-      if (!queueTouchedRef.current && hasMine) setQueueFilter("mine");
+      if (!queueTouchedRef.current && currentMemberId) {
+        setQueueFilter("mine");
+      }
       setDefaultQueueResolved(true);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [authority, chats, defaultQueueResolved, loadingChats]);
+  }, [authority, defaultQueueResolved, loadingChats]);
 
   const visibleQueueChats = useMemo(() => {
     return chats.filter((chat) => {
@@ -104,26 +101,6 @@ export function InboxOperationsDesk({
 
   useEffect(() => {
     if (
-      queueTouchedRef.current ||
-      loadingChats ||
-      chats.length === 0 ||
-      queueFilter === "all" ||
-      visibleQueueChats.length > 0
-    ) {
-      return;
-    }
-
-    // The automatic Mine preference is advisory, not an authority boundary.
-    // Conversation projections can refresh after the preference is chosen; if
-    // that makes the automatic queue empty, fall back to canonical All rather
-    // than hiding durable work while an already-open thread remains visible.
-    desktopPrimedRef.current = null;
-    const timer = window.setTimeout(() => setQueueFilter("all"), 0);
-    return () => window.clearTimeout(timer);
-  }, [chats.length, loadingChats, queueFilter, visibleQueueChats.length]);
-
-  useEffect(() => {
-    if (
       !defaultQueueResolved ||
       isMobile ||
       loadingChats ||
@@ -132,7 +109,7 @@ export function InboxOperationsDesk({
     ) {
       return;
     }
-    const first = visibleQueueChats[0] ?? chats[0];
+    const first = visibleQueueChats[0];
     if (!first) return;
     const fingerprint = `${first.conversationId}:${queueFilter}:${workflowFilter}`;
     if (desktopPrimedRef.current === fingerprint) return;
@@ -141,7 +118,6 @@ export function InboxOperationsDesk({
     return () => window.clearTimeout(timer);
   }, [
     activeChat,
-    chats,
     defaultQueueResolved,
     isMobile,
     loadingChats,
