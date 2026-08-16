@@ -21,31 +21,31 @@ interface BreadcrumbsProps {
  * The last item is the current page (non-clickable, muted).
  */
 export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
-  const { dir, t } = useI18n();
-  const isRtl = dir === "rtl";
+  const { t } = useI18n();
 
   return (
-    <nav aria-label={t("common.breadcrumb")} className={cn("flex items-center gap-1 text-sm", className)}>
+    <nav
+      aria-label={t("common.breadcrumb")}
+      className={cn("flex items-center gap-1 text-sm", className)}
+    >
       {items.map((item, i) => {
         const isLast = i === items.length - 1;
         return (
           <React.Fragment key={i}>
             {i > 0 && (
               <ChevronRight
-                className={cn(
-                  "size-3.5 text-muted-foreground/50 shrink-0",
-                  isRtl && "icon-rtl-flip",
-                )} icon-rtl-flip
+                className="size-3.5 shrink-0 text-muted-foreground/50 rtl:rotate-180"
+                aria-hidden="true"
               />
             )}
             {isLast || !item.href ? (
-              <span className="font-medium text-foreground truncate max-w-[200px]">
+              <span className="max-w-[200px] truncate font-medium text-foreground">
                 {item.label}
               </span>
             ) : (
               <Link
                 href={item.href}
-                className="text-muted-foreground hover:text-foreground transition-colors truncate max-w-[200px]"
+                className="max-w-[200px] truncate text-muted-foreground transition-colors hover:text-foreground"
               >
                 {item.label}
               </Link>
