@@ -27,20 +27,22 @@ export function RadialGauge({
   centerLabel,
   colorVar,
 }: RadialGaugeProps) {
-  const { t, locale } = useI18n();
+  const { t, locale, dir } = useI18n();
   const { isAnimationActive, baseDuration } = useChartMotion();
   const chartHeight = normalizeChartHeight(height);
   const clamped = Math.max(0, Math.min(100, value));
   const data = [{ [dataKey]: clamped }];
-  const localeTag = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+  const localeTag =
+    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
   const percent = new Intl.NumberFormat(localeTag, {
     style: "percent",
     maximumFractionDigits: 0,
   }).format(clamped / 100);
 
   return (
-    <div className="relative" style={{ height: chartHeight }}>
+    <div dir={dir} className="relative" style={{ height: chartHeight }}>
       <ChartContainer
+        dir={dir}
         role="img"
         aria-label={t("charts.radialGauge")}
         config={config}
@@ -51,14 +53,14 @@ export function RadialGauge({
           data={data}
           startAngle={90}
           endAngle={-270}
-          innerRadius="68%"
-          outerRadius="88%"
+          innerRadius="67%"
+          outerRadius="89%"
         >
           <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
           <RadialBar
             dataKey={dataKey}
-            background={{ fill: "var(--muted)", opacity: 0.46 }}
-            cornerRadius={12}
+            background={{ fill: "var(--muted)", opacity: 0.42 }}
+            cornerRadius={14}
             fill={colorVar ?? `var(--color-${dataKey})`}
             isAnimationActive={isAnimationActive}
             animationDuration={baseDuration}
@@ -67,11 +69,14 @@ export function RadialGauge({
         </RadialBarChart>
       </ChartContainer>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-        <bdi dir="auto" className="text-3xl font-semibold tabular-nums tracking-tight">
+        <bdi
+          dir="auto"
+          className="text-[2rem] font-bold tabular-nums tracking-tight rtl:tracking-normal"
+        >
           {percent}
         </bdi>
         {centerLabel ? (
-          <span className="mt-1 max-w-28 text-xs leading-4 text-muted-foreground">
+          <span className="mt-1 max-w-32 text-xs leading-5 text-muted-foreground rtl:text-sm">
             {centerLabel}
           </span>
         ) : null}
