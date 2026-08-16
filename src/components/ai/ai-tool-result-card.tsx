@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import type { AiToolCallView } from "@/components/ai/ai-workspace-types";
+import { TechnicalValue } from "@/components/i18n/technical-value";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/use-i18n";
@@ -43,6 +44,11 @@ const TOOL_ROUTE: Record<string, string> = {
   search_conversations: "/inbox",
   get_conversation_messages: "/inbox",
 };
+
+const DELIVERY_STATUS_TOOLS = new Set([
+  "get_delivery_status",
+  "get_pending_deliveries",
+]);
 
 const FIELD_COPY: Record<string, AiWorkspaceCopyKey> = {
   name: "fieldName",
@@ -93,6 +99,9 @@ const MONEY_FIELDS = new Set([
   "cost",
 ]);
 
+const STATUS_FIELDS = new Set(["status", "fromStatus", "toStatus"]);
+const TECHNICAL_FIELDS = new Set(["orderNumber", "phone"]);
+
 const IMPORTANT_FIELDS = [
   "orderNumber",
   "name",
@@ -109,6 +118,9 @@ const IMPORTANT_FIELDS = [
   "riskScore",
 ] as const;
 
+type StatusNamespace = "orders" | "deliveries";
+type Translate = (key: string) => string;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -124,10 +136,39 @@ function simpleValue(value: unknown): string | null {
   return null;
 }
 
+function normalizeStatus(value: string): string {
+  return value
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[\s-]+/g, "_")
+    .toLowerCase();
+}
+
+function localizeStatus(
+  value: string,
+  translate: Translate,
+  namespace: StatusNamespace,
+): string {
+  const normalized = normalizeStatus(value);
+  if (!normalized) return value;
+
+  const suffix =
+    namespace === "deliveries"
+      ? normalized.replace(/_([a-z0-9])/g, (_match, character: string) =>
+          character.toUpperCase(),
+        )
+      : normalized;
+  const key = `${namespace}.status.${suffix}`;
+  const translated = translate(key);
+  return translated === key ? value : translated;
+}
+
 function formatValue(
   key: string,
   value: unknown,
   locale: AiWorkspaceLocale,
+  translate: Translate,
+  statusNamespace: StatusNamespace,
 ): string | null {
   if (typeof value === "number") {
     if (MONEY_FIELDS.has(key)) {
@@ -139,12 +180,21 @@ function formatValue(
     }
     return new Intl.NumberFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`).format(value);
   }
+  if (typeof value === "string" && STATUS_FIELDS.has(key)) {
+    return localizeStatus(
+      value,
+      translate,
+      key === "status" ? statusNamespace : "orders",
+    );
+  }
   return simpleValue(value);
 }
 
 function recordFields(
   record: Record<string, unknown>,
   locale: AiWorkspaceLocale,
+  translate: Translate,
+  statusNamespace: StatusNamespace,
 ) {
   const ordered = [
     ...IMPORTANT_FIELDS.filter((key) => key in record),
@@ -154,9 +204,15 @@ function recordFields(
   ];
   return ordered.flatMap((key) => {
     if (!FIELD_COPY[key]) return [];
-    const formatted = formatValue(key, record[key], locale);
+    const formatted = formatValue(
+      key,
+      record[key],
+      locale,
+      translate,
+      statusNamespace,
+    );
     if (formatted === null || formatted.length > 120) return [];
-    return [{ key, value: formatted }];
+    return [{ key, value: formatted, technical: TECHNICAL_FIELDS.has(key) }];
   });
 }
 
@@ -164,22 +220,30 @@ function ResultRecord({
   value,
   locale,
   copy,
+  translate,
+  statusNamespace,
 }: {
   value: Record<string, unknown>;
   locale: AiWorkspaceLocale;
   copy: (key: AiWorkspaceCopyKey, params?: Record<string, string | number>) => string;
+  translate: Translate;
+  statusNamespace: StatusNamespace;
 }) {
-  const fields = recordFields(value, locale).slice(0, 6);
+  const fields = recordFields(value, locale, translate, statusNamespace).slice(0, 6);
   if (fields.length === 0) return null;
   return (
-    <dl className="grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
+    <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
       {fields.map((field) => (
         <div key={field.key} className="min-w-0">
-          <dt className="text-[11px] text-muted-foreground">
+          <dt className="text-xs text-muted-foreground">
             {copy(FIELD_COPY[field.key]!)}
           </dt>
-          <dd dir="auto" className="truncate font-medium text-foreground">
-            {field.value}
+          <dd className="mt-0.5 truncate font-medium text-foreground">
+            {field.technical ? (
+              <TechnicalValue>{field.value}</TechnicalValue>
+            ) : (
+              <span dir="auto">{field.value}</span>
+            )}
           </dd>
         </div>
       ))}
@@ -188,7 +252,7 @@ function ResultRecord({
 }
 
 export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
-  const { locale: rawLocale } = useI18n();
+  const { locale: rawLocale, t } = useI18n();
   const locale = rawLocale as AiWorkspaceLocale;
   const copy = (
     key: AiWorkspaceCopyKey,
@@ -201,6 +265,9 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
   const failed = tool.state === "failed";
   const running = tool.state === "running";
   const result = tool.result;
+  const statusNamespace: StatusNamespace = DELIVERY_STATUS_TOOLS.has(tool.name)
+    ? "deliveries"
+    : "orders";
   const records = Array.isArray(result)
     ? result.filter(isRecord).slice(0, 3)
     : isRecord(result)
@@ -210,27 +277,27 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
 
   return (
     <section className="mt-2 overflow-hidden rounded-lg border bg-background/70 text-start">
-      <header className="flex min-h-10 items-center justify-between gap-3 border-b px-3 py-2">
+      <header className="flex min-h-11 items-center justify-between gap-3 border-b px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
           {running ? (
-            <Loader2 className="size-3.5 shrink-0 animate-spin text-primary" aria-hidden="true" />
+            <Loader2 className="size-4 shrink-0 animate-spin text-primary" aria-hidden="true" />
           ) : failed ? (
-            <AlertTriangle className="size-3.5 shrink-0 text-destructive" aria-hidden="true" />
+            <AlertTriangle className="size-4 shrink-0 text-destructive" aria-hidden="true" />
           ) : (
-            <Database className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+            <Database className="size-4 shrink-0 text-primary" aria-hidden="true" />
           )}
           <div className="min-w-0">
-            <p className="truncate text-xs font-semibold">{getAiToolLabel(locale, tool.name)}</p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="truncate text-sm font-semibold">{getAiToolLabel(locale, tool.name)}</p>
+            <p className="text-xs text-muted-foreground">
               {running ? copy("toolWorking") : failed ? copy("toolFailed") : copy("toolResult")}
             </p>
           </div>
         </div>
         {!running ? (
-          <Badge variant={failed ? "destructive" : "secondary"} className="shrink-0 text-[10px]">
+          <Badge variant={failed ? "destructive" : "secondary"} className="shrink-0 text-xs">
             {failed ? copy("failed") : (
               <span className="inline-flex items-center gap-1">
-                <CheckCircle2 className="size-3" aria-hidden="true" />
+                <CheckCircle2 className="size-3.5" aria-hidden="true" />
                 {copy("succeeded")}
               </span>
             )}
@@ -241,13 +308,19 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
       {!running ? (
         <div className="space-y-3 p-3">
           {Array.isArray(result) ? (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {copy("resultItems", { count: result.length })}
             </p>
           ) : null}
           {records.map((record, index) => (
             <div key={`${tool.id}:record:${index}`} className={index > 0 ? "border-t pt-2" : ""}>
-              <ResultRecord value={record} locale={locale} copy={copy} />
+              <ResultRecord
+                value={record}
+                locale={locale}
+                copy={copy}
+                translate={t}
+                statusNamespace={statusNamespace}
+              />
             </div>
           ))}
           {scalar ? <p dir="auto" className="text-xs text-foreground">{scalar}</p> : null}
@@ -255,10 +328,10 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
             <p className="text-xs text-muted-foreground">{copy("toolResult")}</p>
           ) : null}
           {route ? (
-            <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-xs">
+            <Button asChild variant="ghost" size="sm" className="px-2 text-xs">
               <Link href={route}>
                 {copy("viewInProduct")}
-                <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                <ArrowUpRight className="size-3.5 rtl:-scale-x-100" aria-hidden="true" />
               </Link>
             </Button>
           ) : null}

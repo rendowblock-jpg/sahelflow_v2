@@ -5,22 +5,30 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
-describe("AI operational launchpad", () => {
-  it("rejects provider-envelope failures and completes successful launches in place", () => {
-    const launchpad = read("src/components/ai/ai-operational-launchpad.tsx");
+describe("AI Class-AAA start-state authority", () => {
+  it("keeps focused seller jobs inside the empty decision canvas instead of permanent chrome", () => {
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
+    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    const workspace = read("src/components/ai/ai-decision-workspace.tsx");
+    const copy = read("src/lib/i18n/ai-workspace.ts");
 
-    expect(launchpad).toContain("type AiMessageResponse");
-    expect(launchpad).toContain("messageBody.error");
-    expect(launchpad).toContain("messageBody.persisted !== true");
-    expect(launchpad).toContain("!messageBody.response");
-    expect(launchpad).toContain('return copy("providerDegraded")');
-    expect(launchpad).toContain("onSessionCreated?.(sessionId)");
-    expect(launchpad).not.toContain('window.location.assign("/agents")');
-    expect(launchpad).not.toContain("window.location.reload");
+    expect(shell).toContain("AiDecisionWorkspace");
+    expect(shell).not.toContain("AiOperationalLaunchpad");
+    expect(shell).not.toContain('from "@/components/ai/ai-workspace"');
+    expect(shell).not.toContain("<AiWorkspace ");
+    expect(canvas).toContain('data-ai-start-state="true"');
+    expect(canvas).toContain("messages.length === 0");
+    expect(canvas).toContain("STARTERS.map");
+    expect(copy).toContain("launchPendingPrompt");
+    expect(copy).toContain("launchRevenuePrompt");
+    expect(copy).toContain("launchReturnsPrompt");
+    expect(copy).toContain("launchProductsPrompt");
 
-    expect(shell).toContain("onSessionCreated");
-    expect(shell).toContain("setWorkspaceVersion");
-    expect(shell).toContain("<AiWorkspace key={workspaceVersion}");
+    expect(workspace).toContain("queuePromptInNewSession");
+    expect(workspace).toContain("pendingPromptRef");
+    expect(workspace).toContain("sawConversationLoad");
+    expect(workspace).toContain("workspace.send(pending.prompt)");
+    expect(workspace).not.toContain("window.location.reload");
+    expect(workspace).not.toContain("window.location.assign");
   });
 });
