@@ -2,8 +2,9 @@
  * Internal.20 hard interaction/geometry constraints.
  *
  * These are acceptance budgets, not visual decoration. They keep the Founder
- * 1366x768 desktop work surfaces dominant in both directions and keep portaled
- * navigation safely above the coarse-pointer interaction floor.
+ * 1366x768 desktop work surfaces dominant in both directions, explicitly place
+ * CSS-grid workspaces in LTR/RTL, and keep portaled navigation safely above the
+ * coarse-pointer interaction floor.
  */
 
 [data-navigation-density] {
@@ -21,13 +22,44 @@
   }
 
   [data-ai-workspace="v2"] {
-    grid-template-columns: 14rem minmax(0, 1fr) !important; /* 224px sessions */
+    grid-template-columns: 14rem minmax(0, 1fr) !important;
+    grid-template-areas: "sessions thread" !important;
+  }
+
+  [data-ai-workspace="v2"] > [data-ai-sessions="true"] {
+    grid-area: sessions !important;
+  }
+
+  [data-ai-workspace="v2"] > [data-ai-thread="true"] {
+    grid-area: thread !important;
+  }
+
+  html[dir="rtl"] [data-ai-workspace="v2"] {
+    grid-template-columns: minmax(0, 1fr) 14rem !important;
+    grid-template-areas: "thread sessions" !important;
   }
 }
 
 @media (min-width: 1024px) {
   [data-settings-workspace="v2"] > div.grid {
-    grid-template-columns: 15rem minmax(0, 1fr) !important; /* 240px settings nav */
+    grid-template-columns: 15rem minmax(0, 1fr) !important;
+    grid-template-areas: "settings-nav settings-panel" !important;
+  }
+
+  [data-settings-workspace="v2"] > div.grid > aside {
+    grid-area: settings-nav !important;
+    width: 15rem !important;
+    min-width: 15rem !important;
+    max-width: 15rem !important;
+  }
+
+  [data-settings-workspace="v2"] > div.grid > section {
+    grid-area: settings-panel !important;
+  }
+
+  html[dir="rtl"] [data-settings-workspace="v2"] > div.grid {
+    grid-template-columns: minmax(0, 1fr) 15rem !important;
+    grid-template-areas: "settings-panel settings-nav" !important;
   }
 }
 
@@ -38,15 +70,57 @@
   }
 
   [data-ai-workspace="v2"] {
-    grid-template-columns: 14rem minmax(31rem, 1fr) 18rem !important; /* 224 / dominant / 288 */
+    grid-template-columns: 14rem minmax(31rem, 1fr) 18rem !important;
+    grid-template-areas: "sessions thread context" !important;
+  }
+
+  [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
+    grid-area: context !important;
+  }
+
+  html[dir="rtl"] [data-ai-workspace="v2"] {
+    grid-template-columns: 18rem minmax(31rem, 1fr) 14rem !important;
+    grid-template-areas: "context thread sessions" !important;
   }
 
   [data-storefront-studio="v2"] > div.grid {
-    grid-template-columns: 13rem minmax(0, 1fr) 16.5rem !important; /* 208 / dominant / 264 */
+    grid-template-columns: 13rem minmax(0, 1fr) 16.5rem !important;
+    grid-template-areas: "controls preview inspector" !important;
+  }
+
+  [data-storefront-studio="v2"] > div.grid > aside:first-child {
+    grid-area: controls !important;
+  }
+
+  [data-storefront-studio="v2"] > div.grid > main {
+    grid-area: preview !important;
+  }
+
+  [data-storefront-studio="v2"] > div.grid > aside:last-child {
+    grid-area: inspector !important;
+  }
+
+  html[dir="rtl"] [data-storefront-studio="v2"] > div.grid {
+    grid-template-columns: 16.5rem minmax(0, 1fr) 13rem !important;
+    grid-template-areas: "inspector preview controls" !important;
   }
 
   [data-storefront-studio="bootstrap"] > div.grid {
-    grid-template-columns: 21rem minmax(0, 1fr) !important; /* 336 / dominant */
+    grid-template-columns: 21rem minmax(0, 1fr) !important;
+    grid-template-areas: "setup preview" !important;
+  }
+
+  [data-storefront-studio="bootstrap"] > div.grid > aside {
+    grid-area: setup !important;
+  }
+
+  [data-storefront-studio="bootstrap"] > div.grid > main {
+    grid-area: preview !important;
+  }
+
+  html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid {
+    grid-template-columns: minmax(0, 1fr) 21rem !important;
+    grid-template-areas: "preview setup" !important;
   }
 }
 
