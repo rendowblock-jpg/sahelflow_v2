@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
@@ -151,7 +152,9 @@ function MessageBubble({
               <p
                 className={cn(
                   "mt-1.5 text-xs leading-5",
-                  inbound ? "text-muted-foreground" : "text-primary-foreground/75",
+                  inbound
+                    ? "text-muted-foreground"
+                    : "text-primary-foreground/75",
                 )}
               >
                 {copy("mediaMetadataOnly")}
@@ -160,7 +163,11 @@ function MessageBubble({
           ) : null}
 
           {message.body.trim() ? (
-            <p className="whitespace-pre-wrap break-words text-[14px] leading-6" dir="auto" data-sf-user-content="true">
+            <p
+              className="whitespace-pre-wrap break-words text-[14px] leading-6"
+              dir="auto"
+              data-sf-user-content="true"
+            >
               {message.body}
             </p>
           ) : null}
@@ -168,11 +175,15 @@ function MessageBubble({
           <div
             className={cn(
               "mt-1 flex items-center justify-end gap-1 text-xs tabular-nums",
-              inbound ? "text-muted-foreground" : "text-primary-foreground/75",
+              inbound
+                ? "text-muted-foreground"
+                : "text-primary-foreground/75",
             )}
           >
             <span>{messageTime(message.timestamp, locale)}</span>
-            {!inbound ? <MessageStatus status={message.deliveryStatus ?? "sent"} /> : null}
+            {!inbound ? (
+              <MessageStatus status={message.deliveryStatus ?? "sent"} />
+            ) : null}
           </div>
         </div>
       </div>
@@ -196,9 +207,16 @@ function MessageBubble({
         </div>
       ) : null}
 
-      {!inbound && message.deliveryStatus === "failed" && message.outboxEffectKey ? (
+      {!inbound &&
+      message.deliveryStatus === "failed" &&
+      message.outboxEffectKey ? (
         <div className="flex justify-end">
-          <Button type="button" variant="outline" size="sm" onClick={() => onRetry(message)}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onRetry(message)}
+          >
             <RefreshCw className="size-3.5" aria-hidden="true" />
             {t("inbox.retry")}
           </Button>
@@ -218,6 +236,7 @@ export function InboxThreadWorkbench({
   onSelectCandidate: (messageId: string) => void;
 }) {
   const isMobile = useMobile();
+  const showContextRail = useMediaQuery("(min-width: 1500px)");
   const {
     activeChat,
     clearActiveChat,
@@ -248,10 +267,17 @@ export function InboxThreadWorkbench({
       >
         <div className="max-w-sm text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl border bg-background">
-            <MessageSquareText className="size-5 text-muted-foreground" aria-hidden="true" />
+            <MessageSquareText
+              className="size-5 text-muted-foreground"
+              aria-hidden="true"
+            />
           </div>
-          <h3 className="mt-4 text-base font-semibold">{copy("selectConversation")}</h3>
-          <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{copy("selectConversationHint")}</p>
+          <h3 className="mt-4 text-base font-semibold">
+            {copy("selectConversation")}
+          </h3>
+          <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
+            {copy("selectConversationHint")}
+          </p>
         </div>
       </section>
     );
@@ -273,7 +299,10 @@ export function InboxThreadWorkbench({
 
   return (
     <>
-      <section data-inbox-thread="active" className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/10">
+      <section
+        data-inbox-thread="active"
+        className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/10"
+      >
         <header className="flex min-h-16 items-center justify-between gap-3 border-b bg-background px-3 py-2.5 sm:px-4">
           <div className="flex min-w-0 items-center gap-3">
             {isMobile ? (
@@ -284,7 +313,10 @@ export function InboxThreadWorkbench({
                 onClick={clearActiveChat}
                 aria-label={t("common.backToConversations")}
               >
-                <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
+                <ArrowLeft
+                  className="size-4 icon-rtl-flip"
+                  aria-hidden="true"
+                />
               </Button>
             ) : null}
             <Avatar className="size-9 border bg-background">
@@ -294,40 +326,56 @@ export function InboxThreadWorkbench({
             </Avatar>
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
-                <h3 className="truncate text-sm font-semibold">{activeChat.name}</h3>
-                <ConversationStatusBadge status={activeChat.workflow.status ?? "open"} />
+                <h3 className="truncate text-sm font-semibold">
+                  {activeChat.name}
+                </h3>
+                <ConversationStatusBadge
+                  status={activeChat.workflow.status ?? "open"}
+                />
               </div>
               <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-                {activeChat.phone ? <span dir="ltr" className="truncate tabular-nums">{activeChat.phone}</span> : null}
+                {activeChat.phone ? (
+                  <span dir="ltr" className="truncate tabular-nums">
+                    {activeChat.phone}
+                  </span>
+                ) : null}
                 <span aria-hidden="true">·</span>
-                <span className="truncate">{activeChat.channel === "whatsapp" ? "WhatsApp" : copy("savedHistory")}</span>
+                <span className="truncate">
+                  {activeChat.channel === "whatsapp"
+                    ? "WhatsApp"
+                    : copy("savedHistory")}
+                </span>
               </div>
             </div>
           </div>
 
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                className="min-[1500px]:hidden"
-                aria-label={copy("conversationContext")}
+          {!showContextRail ? (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={copy("conversationContext")}
+                >
+                  <PanelRight
+                    className="size-4 icon-rtl-flip"
+                    aria-hidden="true"
+                  />
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side={locale === "ar" ? "left" : "right"}
+                className="w-[min(390px,94vw)] p-0 sm:max-w-none"
               >
-                <PanelRight className="size-4 icon-rtl-flip" aria-hidden="true" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent
-              side={locale === "ar" ? "left" : "right"}
-              className="w-[min(390px,94vw)] p-0 sm:max-w-none"
-            >
-              <SheetHeader className="sr-only">
-                <SheetTitle>{copy("conversationContext")}</SheetTitle>
-                <SheetDescription>{activeChat.name}</SheetDescription>
-              </SheetHeader>
-              {renderContextPanel()}
-            </SheetContent>
-          </Sheet>
+                <SheetHeader className="sr-only">
+                  <SheetTitle>{copy("conversationContext")}</SheetTitle>
+                  <SheetDescription>{activeChat.name}</SheetDescription>
+                </SheetHeader>
+                {renderContextPanel()}
+              </SheetContent>
+            </Sheet>
+          ) : null}
         </header>
 
         <ScrollArea className="min-h-0 flex-1">
@@ -339,11 +387,19 @@ export function InboxThreadWorkbench({
             aria-label={copy("messages")}
           >
             {loadingMessages ? (
-              <div className="flex min-h-40 items-center justify-center" role="status">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden="true" />
+              <div
+                className="flex min-h-40 items-center justify-center"
+                role="status"
+              >
+                <Loader2
+                  className="size-5 animate-spin text-muted-foreground"
+                  aria-hidden="true"
+                />
               </div>
             ) : messages.length === 0 ? (
-              <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">{t("inbox.noMessages")}</div>
+              <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">
+                {t("inbox.noMessages")}
+              </div>
             ) : (
               messages.map((message) => (
                 <MessageBubble
@@ -370,7 +426,9 @@ export function InboxThreadWorkbench({
                   disabled={sending}
                   onSelect={(text) =>
                     setReplyText((current) =>
-                      current.trim() ? `${current.trimEnd()}\n${text}` : text,
+                      current.trim()
+                        ? `${current.trimEnd()}\n${text}`
+                        : text,
                     )
                   }
                 />
@@ -397,7 +455,17 @@ export function InboxThreadWorkbench({
                   disabled={sending || !replyText.trim()}
                   aria-label={t("inbox.send")}
                 >
-                  {sending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Send className="size-4 icon-rtl-flip" aria-hidden="true" />}
+                  {sending ? (
+                    <Loader2
+                      className="size-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Send
+                      className="size-4 icon-rtl-flip"
+                      aria-hidden="true"
+                    />
+                  )}
                 </Button>
               </div>
               <div className="mt-1.5 flex items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
@@ -407,21 +475,30 @@ export function InboxThreadWorkbench({
             </div>
           ) : (
             <div className="mx-auto flex max-w-4xl items-center gap-2 rounded-lg border bg-muted/25 px-3 py-2.5 text-sm text-muted-foreground">
-              {canReply ? <WifiOff className="size-4 shrink-0" aria-hidden="true" /> : <Info className="size-4 shrink-0" aria-hidden="true" />}
-              <span>{canReply ? copy("replyLiveOnly") : copy("replyRestricted")}</span>
+              {canReply ? (
+                <WifiOff className="size-4 shrink-0" aria-hidden="true" />
+              ) : (
+                <Info className="size-4 shrink-0" aria-hidden="true" />
+              )}
+              <span>
+                {canReply ? copy("replyLiveOnly") : copy("replyRestricted")}
+              </span>
             </div>
           )}
           {sendError ? (
             <div className="mx-auto mt-2 flex max-w-4xl items-center gap-2 text-xs text-destructive">
-              <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+              <AlertCircle
+                className="size-3.5 shrink-0"
+                aria-hidden="true"
+              />
               <span>{sendError}</span>
             </div>
           ) : null}
         </footer>
       </section>
 
-      {!isMobile ? (
-        <aside className="hidden min-h-0 w-[19rem] min-w-[19rem] border-s bg-background min-[1500px]:block">
+      {!isMobile && showContextRail ? (
+        <aside className="min-h-0 w-[19rem] min-w-[19rem] border-s bg-background">
           {renderContextPanel()}
         </aside>
       ) : null}
