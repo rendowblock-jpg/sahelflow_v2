@@ -1,98 +1,138 @@
 # SahelFlow — Final completion roadmap
 
 > **Status:** Binding dependency/completion order
-> **Live protected main:** resolve the GitHub `main` ref before every write/review/release action
-> **Internal.19 application/source baseline:** `8448c47123290f2e1af702ff24a427cc11c4781c` — PR #262
-> **Latest published/installed checkpoint:** Internal.18 / FD-037
-> **Latest signed-package source:** `5cb7f5040249a540ed635cdea16dc933843b40aa`
-> **Founder-installed result:** **REJECTED / PARTIALLY IMPROVED**
-> **Current authorized candidate:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19` / FD-038 / `founder-offline-only`; publication/install pending
+> **Last reconciled:** 2026-08-16
+> **Live protected main:** resolve GitHub `main` before every write/review/release action
+> **Current protected-main SHA at this handoff:** `7c794f72a545313a0cf6fe34c2fabd9c583357ec`
+> **Latest published checkpoint:** Internal.20 / FD-039
+> **Founder-installed Internal.20 result:** **REJECTED**
+> **Founder-requested visual/comparison baseline:** Internal.19 / FD-038
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
+> **Current execution mode:** design-first reset before further production UI implementation
 > **Open retained issues:** #221, #226, #230
 
-The latest installed package remains `1.0.0-internal.18` / MSI `1.0.0.18` / FD-037 until the FD-038 candidate is published and installed. **Internal.19 release authority is approved under FD-038** for exactly `1.0.0-internal.19` / MSI `1.0.0.19`, Founder/internal-lab only.
+Internal.20 is the latest published technical checkpoint, but it is not the accepted product baseline. The Founder installed it and rejected the requested RTL/Arabic, Inbox, AI Agents, Settings and overall visual/product result, judging it worse than Internal.19. Internal.19 is therefore the requested visual comparison baseline while the next direction is redesigned.
 
 ## Current dependency order
 
 ```text
 protected canonical engine + protected connected/storefront platform
-→ signed Internal.18 on source 5cb7f504...
-→ Founder installs Internal.18
-→ REJECTED / PARTIALLY IMPROVED
-→ PR #262 / Internal.19 source convergence
-→ one exact-head retry-free CI + Phase 5 + Phase 6–7 certification
-→ artifact inspection + exact-head review
-→ Internal.19 application baseline 8448c471...
-→ governance/CI-only reconciliation
-→ FD-038 Founder release authority
-→ bounded Internal.19 version/release-authority follow-up
-→ exact-head source/native/Windows/MSI release certification
-→ protected expected-head merge
-→ automatic exact signed MSI/updater publication from that merge SHA
-→ Founder-installed #221 accept/reject
+→ Internal.19 published Founder checkpoint
+→ Internal.20 product/release convergence and technical certification
+→ protected-main merge 7c794f72...
+→ signed/published Internal.20 / FD-039
+→ Founder installs Internal.20
+→ REJECTED
+→ rollback/confirm Internal.19 as visual comparison baseline
+→ paired English/Arabic baseline screenshots
+→ one shared-root visual diagnosis
+→ Founder-approved target designs for shell/RTL + Inbox + AI Agents + Settings
+→ one coherent implementation branch / one writer
+→ repeated installed/screenshot visual inspection during implementation
+→ freeze one product SHA only after approved visual direction is present
+→ affected technical certification lanes
+→ next signed Founder-only internal checkpoint
+→ Founder-installed accept/reject
 → #226 installed performance/reliability
 → #230 owned licensing ingress + Algerian network trial/recovery evidence
 → remaining release-readiness evidence
+→ explicit Beta/Stable promotion only when separately authorized
 ```
 
 ## Phase 0–4 — protected canonical foundation
 
-Governance, Golden COD, identity/licensing/multi-shop, provider durability, protected data, migrations and backup/recovery remain protected. Experience work cannot weaken them for convenience.
-
-## Phase 3 — providers, inbox, AI and automations
-
-This historical phase was executed through **complete reconnaissance**, package-level source closure and protected evidence before later phases built on it. Provider effects/reconciliation, Inbox/AI authority and automation recovery remain protected; PR #262 changed only demonstrated product/workspace behavior and is now merged history.
+Governance, Golden COD, identity/licensing/multi-shop, provider durability, protected data, migrations, backup/recovery, connected-platform and Storefront durable authority remain protected. Experience redesign may not weaken them for convenience.
 
 ## Phase 5 — whole-product AAA desktop experience
 
-The historical **Phase 5 application-changing protected baseline** is PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Installed Internal.18 proved source/browser completion alone was insufficient for Founder acceptance, so PR #262 strengthened shared-root product behavior and loaded Founder evidence around Arabic/RTL, themes/motion/charts, Inbox, AI, Settings and Storefront before merging.
+Historical Phase 5 application-changing protected baseline: PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 
-Real loaded workspaces are required; route spinners/placeholders are not product evidence.
+Later internal checkpoints proved that source/browser completion alone is insufficient for Founder visual acceptance. Phase 5 automation remains regression evidence, not a substitute for installed visual judgment.
 
 ## Phase 6 — Arabic, RTL and accessibility parity
 
-The active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**. Exact-head source completion includes AR/FR/EN parity, deterministic pane placement plus semantic direction, bidi isolation, keyboard/focus/naming/heading semantics, 1366×768 containment, 200%-equivalent reflow, reduced motion, live locale switching without restart/mixed-language frames and retry-free rendered evidence.
+The active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**, but the execution method changes after the Internal.20 rejection.
 
-PR #262 exact head `8d43e6142aab508e54f038b13e2639ac6966682e` passed Required PR, retry-free Phase 5 and retry-free Phase 6–7. Human artifact review confirmed loaded Arabic Inbox/AI, saved Studio, Analytics and dark-theme evidence. Its fixed application/source baseline is `8448c47123290f2e1af702ff24a427cc11c4781c`.
+Do not restart another generic RTL correction wave. The next work begins with approved product design.
 
-## Source certification — completed PR #262
+The four design projects are:
 
-The certified head passed product/version/documentation authority, TypeScript, ESLint, complete Vitest, production dependency audit, migration status, Required PR, retry-free Phase 5 and retry-free Phase 6–7. Rendered/performance artifacts were persisted and inspected; no actionable review submissions or inline threads remained.
+1. Global shell + true Arabic RTL.
+2. Inbox.
+3. AI Agents.
+4. Settings.
 
-Historical merge discipline remains **expected-head merge**: if a PR head moves, prior exact-head evidence becomes historical. PR #262 ultimately used a protected squash merge after repository policy rejected a merge commit; the expected-head SHA remained pinned through the successful merge.
+Each project must define a concrete English + Arabic target before broad implementation: Arabic/Latin typography, line heights, density, spacing, navigation geometry, pane dominance/proportions, surfaces, control/icon sizing, information architecture, state design, interactions and motion.
 
-The controlled browser trend recorded worst route median `4672.7 ms` and search p95 `31.1 ms` under the existing retry-free CI tripwire. This is not installed T470 certification and does not close #226.
+Arabic parity does not mean mechanical mirroring. Arabic may require different composition, grouping and rhythm while preserving the same product capability and authority.
 
-## Governance reconciliation after source merge
+## Internal.19 baseline checkpoint
 
-PR #263/#264 reconciled active non-archive handoff/current-frontier documentation and its verifier after PR #262. PR #265 made the heavy browser programs risk-aware and fail-closed for behavior-capable release hunks. These were governance/CI-only. Such merges may advance the live `main` SHA without changing the application source baseline. Therefore current documentation must **resolve live protected main from GitHub** rather than embed a self-updating head SHA.
+Internal.19 remains published and available as the requested rollback/comparison baseline:
 
-## Release-authority boundary
+- source `42e50f22f45bd524725300b3973ac45caffb6711`;
+- `1.0.0-internal.19` / MSI `1.0.0.19`;
+- FD-038 / `founder-offline-only`;
+- MSI SHA-256 `044475e079a37f37319a77d6ee42821074e197b9ca5fac9abaea62b6b86f753e`.
 
-FD-037 is historical/executed Internal.18 authority. **FD-038 now authorizes exactly Internal.19 `1.0.0-internal.19` / MSI `1.0.0.19` as a Founder/internal-lab `founder-offline-only` checkpoint.** Internal.19 application baseline remains `8448c47123290f2e1af702ff24a427cc11c4781c`, while the live protected-main SHA must be resolved from GitHub at action time.
+The next session must verify the actual Founder-installed version; rollback completion is not assumed from documentation alone. Preserve SahelFlow AppData/shop databases during rollback. Internal.20 is currently the newest updater release, so do not accept another Internal.20 prompt during the design reset.
 
-The FD-038 follow-up may synchronize only the authorized version/MSI/release request/package/Cargo/Tauri/native/signing identity, Founder installer defaults, release-bound tests and current handoff truth. Require its selected source/native/Windows/MSI/signing gates; the risk classifier may skip duplicate browser programs only when all behavior-capable release hunks are proven identity-only. Merge only the reviewed exact tree and publish only exact signed artifacts from its protected-main merge SHA.
+## Internal.20 checkpoint — technical success, product rejection
 
-No manual artifact substitution, cross-SHA mix, force/waiver or signing-key shortcut.
+Internal.20 was built from protected-main source `7c794f72a545313a0cf6fe34c2fabd9c583357ec`, reviewed through PR #267, technically certified, signed and published under FD-039.
 
-## Installed Founder acceptance — #221
+Its technical evidence remains valid for the things actually measured: source checks, Phase 5/6-7 behavior, native/runtime contracts, signed MSI, install/reopen and authenticated hydrated WebView proof.
 
-Browser/unit/MSI harness evidence is not Founder acceptance. The Founder must install the exact signed Internal.19 FD-038 checkpoint and explicitly judge the whole-product experience.
+It does **not** establish Founder visual acceptance. The Founder installed Internal.20 and rejected the product result.
+
+That rejection is binding for product direction.
+
+## Design-first reset gate
+
+Before production implementation expands:
+
+1. Capture paired English/Arabic Internal.19 screenshots at the same desktop resolution for shell, Inbox, AI Agents and Settings.
+2. Produce one concise shared-root diagnosis. Avoid screenshot-local CSS fixes.
+3. Establish explicit target designs for English and Arabic.
+4. Founder approves the visual direction.
+
+A good design-reset checkpoint is not another release number. It is a Founder-approved target that is concrete enough to implement without guessing.
+
+## Implementation gate after approval
+
+After visual approval:
+
+- one branch;
+- one writer;
+- shared design-system/information-architecture roots before page-local overrides;
+- no new `rtl-fix.css` patch layer;
+- targeted checks while implementing;
+- no version/release churn during visual exploration;
+- inspect paired English/Arabic screens repeatedly;
+- preserve canonical behavior and durable data authority.
+
+Only freeze the product SHA when the approved design is materially present and visually inspected.
+
+## Certification gate after product freeze
+
+Run only technical lanes affected by the frozen source. Preserve existing evidence when exact identity/risk rules allow. Do not replay browser/native/MSI programs solely because documentation or release metadata changed.
+
+Then create one coherent signed Founder-only internal checkpoint and judge the installed result.
+
+Acceptance hierarchy for this reset:
+
+**Founder-installed visual judgment > side-by-side screenshot comparison > real interaction behavior > automated technical gates.**
 
 ## Phase 7 — installed performance and reliability
 
-#226 remains independent. T470 targets remain cold launch ≤8 s p95, navigation ≤700 ms p95, indexed search ≤350 ms p95, ordinary local mutation ≤500 ms p95, plus declared low-end floor and eight-hour reliability evidence. Controlled Chromium CI timing is only a retry-free regression tripwire.
+#226 remains independent. T470/declared-floor performance and extended reliability evidence are not closed by browser timings, visual acceptance or signed MSI success.
 
-## Phase 8 — connected platform remains protected
+## Customer licensing/network gate
 
-Authenticated encrypted remote projection/commands, Storefront hosted publish/pause/rollback, server-authoritative COD checkout/receipt import, zero-knowledge backup and replacement-install recovery remain protected.
+#230 remains independent. Customer-online/public-trial claims still require owned licensing ingress, recovery path, representative Algerian fixed/mobile reachability and exact signed installed trial/recovery/outage/key-rotation evidence.
 
-## Customer licensing/network gate — #230
+## Stable readiness
 
-Before customer-online/public-trial claims: verified SahelFlow-owned licensing hostname, distinct primary/recovery HTTPS ingress, bounded timeout/failover/diagnostics, representative Algerian fixed/mobile reachability and exact signed installed trial/recovery/replay/expiry/outage/key-rotation evidence.
-
-## Phase 9 — release certification and launch readiness
-
-Stable/customer readiness requires coherent #221/#226/#230 evidence plus applicable provider/network, independent security/privacy/Law 18-07, rollout/support and representative seller beta evidence, followed by explicit Founder promotion.
+Stable/customer readiness requires coherent Founder product acceptance plus applicable installed performance/reliability, customer-network/licensing, provider, security/privacy/legal, rollout/support and representative seller-beta evidence, followed by explicit Founder promotion.
 
 A green source tree is not a signed release. A signed release is not Founder acceptance. Founder acceptance is not installed performance or network certification.
