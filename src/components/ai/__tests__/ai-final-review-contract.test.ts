@@ -18,15 +18,18 @@ describe("AI Class-AAA final review regressions", () => {
     );
   });
 
-  it("locks history navigation for the complete session-creation handoff", () => {
+  it("locks history navigation for the complete session POST and releases it for streaming", () => {
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
     const history = read("src/components/ai/ai-work-history.tsx");
 
     expect(workspace).toContain(
-      "const navigationLocked = startingAnalysis || workspace.creatingSession;",
+      "const navigationLocked = workspace.creatingSession;",
     );
     expect(workspace).toContain("if (navigationLocked) return;");
     expect(workspace.match(/navigationLocked=\{navigationLocked\}/g)?.length).toBe(2);
+    expect(workspace).not.toContain(
+      "const navigationLocked = startingAnalysis || workspace.creatingSession;",
+    );
     expect(history).toContain("navigationLocked: boolean;");
     expect(history).toContain("disabled={navigationLocked}");
     expect(history).toContain(
