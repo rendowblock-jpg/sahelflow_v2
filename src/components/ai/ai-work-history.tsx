@@ -84,7 +84,7 @@ export function AiWorkHistory({
           type="button"
           size="sm"
           className="mt-3 w-full justify-center"
-          disabled={creatingSession || sending}
+          disabled={loadingSessions || creatingSession || sending}
           onClick={onNewAnalysis}
         >
           {creatingSession ? (
