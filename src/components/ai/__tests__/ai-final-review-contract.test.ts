@@ -51,19 +51,34 @@ describe("AI Class-AAA final review regressions", () => {
     expect(copy).not.toContain('providerReady: "Ready for new analysis"');
   });
 
-  it("localizes order-status evidence through the shared product translation authority", () => {
+  it("localizes order and delivery status evidence through shared product translations", () => {
     const tool = read("src/components/ai/ai-tool-result-card.tsx");
     const proposal = read("src/components/ai/ai-action-proposal-card.tsx");
+    const ar = read("src/lib/i18n/locales/ar.json");
+    const fr = read("src/lib/i18n/locales/fr.json");
 
-    expect(tool).toContain('ORDER_STATUS_FIELDS = new Set(["status", "fromStatus", "toStatus"])');
-    expect(tool).toContain("const key = `orders.status.${normalized}`;");
+    expect(tool).toContain('const DELIVERY_STATUS_TOOLS = new Set([');
+    expect(tool).toContain('"get_delivery_status"');
+    expect(tool).toContain('"get_pending_deliveries"');
+    expect(tool).toContain('const STATUS_FIELDS = new Set(["status", "fromStatus", "toStatus"])');
+    expect(tool).toContain('type StatusNamespace = "orders" | "deliveries";');
+    expect(tool).toContain('const key = `${namespace}.status.${suffix}`;');
+    expect(tool).toContain('key === "status" ? statusNamespace : "orders"');
+    expect(tool).toContain('DELIVERY_STATUS_TOOLS.has(tool.name)');
     expect(tool).toContain("translated === key ? value : translated");
     expect(tool).toContain("locale: rawLocale, t");
+
     expect(proposal).toContain(
       'ORDER_STATUS_SUMMARY_FIELDS = new Set(["fromStatus", "toStatus"])',
     );
     expect(proposal).toContain("const key = `orders.status.${normalized}`;");
     expect(proposal).toContain("summaryValue(key, value, locale, t)");
+
+    expect(ar).toContain('"orders.status.cancelled": "ملغي"');
+    expect(ar).toContain('"deliveries.status.inTransit": "في الطريق"');
+    expect(ar).toContain('"deliveries.status.outForDelivery": "خرج للتوصيل"');
+    expect(fr).toContain('"orders.status.cancelled": "Annulée"');
+    expect(fr).toContain('"deliveries.status.inTransit": "En transit"');
   });
 
   it("keeps the i18n formatter type-safe and proposal authority tests on live composition files", () => {
