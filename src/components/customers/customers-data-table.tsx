@@ -59,7 +59,9 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
       accessorKey: "phone",
       header: () => t("customers.phone"),
       cell: ({ row }) => (
-        <span className="font-mono text-sm">{row.original.phone ?? "—"}</span>
+        <span dir="ltr" className="font-mono text-sm">
+          {row.original.phone ?? "—"}
+        </span>
       ),
     },
     {
@@ -109,7 +111,9 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
         return (
           <EntityInspector
             title={label}
-            description={customer.phone ?? undefined}
+            description={
+              customer.phone ? <bdi dir="ltr">{customer.phone}</bdi> : undefined
+            }
             fullHref={`/customers/${customer.id}`}
             fullLabel={t("common.view")}
             trigger={
