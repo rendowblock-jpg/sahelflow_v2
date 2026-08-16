@@ -59,6 +59,22 @@ describe("Inbox final review invariants", () => {
     expect(desk).not.toContain("setQueueFilter(\"all\")");
   });
 
+  it("clears the mobile conversation URL before clearing active thread state", () => {
+    const desk = source("src/components/inbox/inbox-operations-desk.tsx");
+    const thread = source("src/components/inbox/inbox-thread-workbench.tsx");
+
+    expect(desk).toContain(
+      "const [returningToQueue, setReturningToQueue] = useState(false)",
+    );
+    expect(desk).toContain("if (!returningToQueue || requestedConversationId) return");
+    expect(desk).toContain('router.replace("/inbox")');
+    expect(desk).toContain("clearActiveChat();");
+    expect(desk).toContain("onBackToQueue={handleBackToQueue}");
+    expect(thread).toContain("onBackToQueue: () => void");
+    expect(thread).toContain("onClick={onBackToQueue}");
+    expect(thread).not.toContain("onClick={clearActiveChat}");
+  });
+
   it("waits for QR readiness and renders successful pairing instead of an endless loader", () => {
     const header = source("src/components/inbox/inbox-operations-header.tsx");
 
