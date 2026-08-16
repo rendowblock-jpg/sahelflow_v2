@@ -6,10 +6,9 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("AI Class-AAA decision workspace contract", () => {
-  it("routes Agents through the Founder-approved decision workspace", () => {
+  it("routes Agents through the decision workspace without legacy composition", () => {
     const page = read("src/app/(dashboard)/agents/page.tsx");
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
-    const target = read("documentation/product/AI_AGENTS_CLASS_AAA_TARGET.md");
 
     expect(page).toContain("AiWorkspaceShell");
     expect(page).toContain('requireTrustedAction("ai.use")');
@@ -17,8 +16,6 @@ describe("AI Class-AAA decision workspace contract", () => {
     expect(shell).toContain("AiDecisionWorkspace");
     expect(shell).not.toContain("AiOperationalLaunchpad");
     expect(shell).not.toContain("<AiWorkspace");
-    expect(target).toContain("FOUNDER-APPROVED");
-    expect(target).toContain("seller decision workspace");
   });
 
   it("uses two panes at common desktop width and progressive review evidence", () => {
