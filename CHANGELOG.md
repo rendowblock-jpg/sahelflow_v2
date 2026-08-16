@@ -8,6 +8,21 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-08-16 — Internal.20 rejection, Internal.19 product-source rollback and design reset
+
+- **Internal.20 remains the latest signed/published package:** `1.0.0-internal.20`, MSI `1.0.0.20`, FD-039, `founder-offline-only`, published from protected source `7c794f72a545313a0cf6fe34c2fabd9c583357ec`.
+- Founder installed Internal.20 and **REJECTED** the requested Arabic/RTL experience, Inbox, AI Agents, Settings and overall visual/product result, judging it worse than Internal.19. Technical certification remains valid only for the properties it proved and does not override that human product verdict.
+- Internal.19 remains the requested visual/comparison baseline: `1.0.0-internal.19`, MSI `1.0.0.19`, FD-038, published source `42e50f22f45bd524725300b3973ac45caffb6711`.
+- PR #269 safely restored the affected Internal.20 application/experience delta to the exact Internal.19 product blobs. The protected post-rollback product/source anchor is `c8a8155079260dc4065ff30767c45cde95c266d2`.
+- The rollback intentionally preserved Internal.20 package/version/release/native authority; it did not regress the release sequence, request Internal.19 publication again or dispatch a new signed release.
+- PR #269 passed its exact-head Phase 5, Phase 6-7 and Required PR/CI gates before squash merge. The two experience workflows were also repaired to classify path risk before attempting release-only certified-evidence reuse.
+- PRs #270 and #271 reconciled active non-archive authority after the rollback and replaced self-referential “current main SHA” wording with the stable PR #269 product/source anchor. Later docs-only commits may advance live `main` without changing that product tree.
+- Source/application rollback is complete, but the actual Founder Windows installation remains independent evidence. Verify/complete the installed Internal.19 rollback before claiming the machine is on the comparison baseline, preserving SahelFlow AppData and shop databases.
+- Active execution is now **design-first Phase 6**: establish Founder-approved English + Arabic targets for global shell/true RTL, Inbox, AI Agents and Settings before another broad production UI wave. No Internal.21 release is authorized merely by this rollback.
+- Customer-online, Beta and Stable remain unauthorized; issues #221, #226 and #230 retain their independent acceptance/performance/network obligations.
+
+> Older `Unreleased` entries below are retained as milestone-time chronology. Statements such as “latest published” or “release pending” inside those historical entries describe the repository state when that entry was written, not the current frontier above.
+
 ### Internal.14 Phase 5–6 installed checkpoint candidate request
 
 - Requests one unique `1.0.0-internal.14` / MSI `1.0.0.14` milestone from the protected Phase 6 source/browser baseline.
