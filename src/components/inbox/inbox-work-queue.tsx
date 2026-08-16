@@ -83,6 +83,24 @@ function workflowLabel(
   }
 }
 
+function matchesDeskFilters(
+  chat: InboxChat,
+  queueFilter: DeskQueueFilter,
+  workflowFilter: WorkflowFilter,
+  currentMemberId: string | null,
+): boolean {
+  const queueMatches =
+    queueFilter === "all" ||
+    (queueFilter === "unread" && chat.unread > 0) ||
+    (queueFilter === "unassigned" && !chat.workflow.assigneeId) ||
+    (queueFilter === "mine" &&
+      Boolean(currentMemberId) &&
+      chat.workflow.assigneeId === currentMemberId);
+  if (!queueMatches) return false;
+  const status = chat.workflow.status ?? "open";
+  return workflowFilter === "all" || status === workflowFilter;
+}
+
 function ConversationRow({
   chat,
   active,
@@ -120,19 +138,25 @@ function ConversationRow({
         </AvatarFallback>
       </Avatar>
       <span className="min-w-0 flex-1 overflow-hidden">
-        <span className="flex min-w-0 items-start gap-2 overflow-hidden">
-          <span dir="auto" className="block min-w-0 flex-1 truncate text-sm font-semibold">{chat.name}</span>
+        <span className="flex items-start gap-2">
+          <span
+            dir="auto"
+            className="block min-w-0 flex-1 truncate text-sm font-semibold [unicode-bidi:isolate]"
+          >
+            {chat.name}
+          </span>
           <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
             {relativeTime(chat.lastMessageAt, locale)}
           </span>
         </span>
-        <span className="mt-1 flex min-w-0 items-center gap-2 overflow-hidden">
+        <span className="mt-1 flex items-center gap-2">
           <span
             dir="auto"
-            data-inbox-preview="true"
             className={cn(
-              "block min-w-0 max-w-full flex-1 truncate text-xs leading-5",
-              chat.unread > 0 ? "font-medium text-foreground" : "text-muted-foreground",
+              "block min-w-0 flex-1 truncate text-xs leading-5 [unicode-bidi:isolate]",
+              chat.unread > 0
+                ? "font-medium text-foreground"
+                : "text-muted-foreground",
             )}
           >
             {chat.lastMessageText || "—"}
@@ -159,7 +183,7 @@ function ConversationRow({
           ) : null}
         </span>
         <span className="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-xs text-muted-foreground">
-          <span className="block min-w-0 truncate">
+          <span className="truncate">
             {status === "pending"
               ? t("inbox.status.pending")
               : status === "resolved"
@@ -168,8 +192,8 @@ function ConversationRow({
                   ? t("inbox.status.snooze")
                   : t("inbox.status.open")}
           </span>
-          <span className="shrink-0" aria-hidden="true">·</span>
-          <span className="block min-w-0 truncate">
+          <span aria-hidden="true">·</span>
+          <span className="truncate">
             {chat.workflow.assigneeId ? copy("assignment") : copy("unassigned")}
           </span>
         </span>
@@ -218,18 +242,13 @@ export function InboxWorkQueue({
     [chats, currentMemberId],
   );
 
-  const baseRows = useMemo(() => {
-    return chats.filter((chat) => {
-      const queueMatches =
-        queueFilter === "all" ||
-        (queueFilter === "unread" && chat.unread > 0) ||
-        (queueFilter === "unassigned" && !chat.workflow.assigneeId) ||
-        (queueFilter === "mine" && Boolean(currentMemberId) && chat.workflow.assigneeId === currentMemberId);
-      if (!queueMatches) return false;
-      const status = chat.workflow.status ?? "open";
-      return workflowFilter === "all" || status === workflowFilter;
-    });
-  }, [chats, currentMemberId, queueFilter, workflowFilter]);
+  const baseRows = useMemo(
+    () =>
+      chats.filter((chat) =>
+        matchesDeskFilters(chat, queueFilter, workflowFilter, currentMemberId),
+      ),
+    [chats, currentMemberId, queueFilter, workflowFilter],
+  );
 
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const localMatches = useMemo(() => {
@@ -288,12 +307,28 @@ export function InboxWorkQueue({
     if (!normalizedQuery) return localMatches;
     const byConversation = new Map<string, InboxChat>();
     const serverResults =
-      searchState.query === normalizedQuery ? searchState.results : [];
+      searchState.query === normalizedQuery
+        ? searchState.results.filter((chat) =>
+            matchesDeskFilters(
+              chat,
+              queueFilter,
+              workflowFilter,
+              currentMemberId,
+            ),
+          )
+        : [];
     for (const chat of [...localMatches, ...serverResults]) {
       if (!byConversation.has(chat.conversationId)) byConversation.set(chat.conversationId, chat);
     }
     return [...byConversation.values()];
-  }, [localMatches, normalizedQuery, searchState]);
+  }, [
+    currentMemberId,
+    localMatches,
+    normalizedQuery,
+    queueFilter,
+    searchState,
+    workflowFilter,
+  ]);
 
   const openChat = (chat: InboxChat) => {
     const canonical = chats.find((entry) => entry.conversationId === chat.conversationId);

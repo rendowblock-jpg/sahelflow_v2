@@ -57,6 +57,11 @@ export const GET = withErrorHandler(
       "orders.financials.read",
       resource,
     );
+    const canReadRisk =
+      canReadCustomer &&
+      canReadContact &&
+      canReadFinancials &&
+      trustedActionAllowed(actorContext, "risk.read", resource);
 
     if (!canReadCustomer || !canReadContact || !conversation.contactPhone) {
       return NextResponse.json({
@@ -68,6 +73,7 @@ export const GET = withErrorHandler(
           contact: canReadContact,
           orders: canReadOrders,
           financials: canReadFinancials,
+          risk: canReadRisk,
         },
       });
     }
@@ -85,9 +91,6 @@ export const GET = withErrorHandler(
         commune: true,
         orderCount: true,
         totalSpent: true,
-        riskScore: true,
-        isBlacklisted: true,
-        blacklistReason: true,
       },
     });
 
@@ -101,9 +104,21 @@ export const GET = withErrorHandler(
           contact: true,
           orders: canReadOrders,
           financials: canReadFinancials,
+          risk: canReadRisk,
         },
       });
     }
+
+    const risk = canReadRisk
+      ? await db.customer.findUnique({
+          where: { id: customer.id },
+          select: {
+            riskScore: true,
+            isBlacklisted: true,
+            blacklistReason: true,
+          },
+        })
+      : null;
 
     const [recentOrders, totalOrders, deliveredOrders] = canReadOrders
       ? await Promise.all([
@@ -143,9 +158,9 @@ export const GET = withErrorHandler(
         commune: customer.commune,
         orderCount: customer.orderCount,
         totalSpent: canReadFinancials ? customer.totalSpent : null,
-        riskScore: customer.riskScore,
-        isBlacklisted: customer.isBlacklisted,
-        blacklistReason: customer.blacklistReason,
+        riskScore: risk?.riskScore ?? null,
+        isBlacklisted: risk?.isBlacklisted ?? null,
+        blacklistReason: risk?.blacklistReason ?? null,
       },
       recentOrders: recentOrders.map((order) => ({
         ...order,
@@ -158,6 +173,7 @@ export const GET = withErrorHandler(
         contact: true,
         orders: canReadOrders,
         financials: canReadFinancials,
+        risk: canReadRisk,
       },
     });
   },

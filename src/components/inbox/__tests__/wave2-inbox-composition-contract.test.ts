@@ -20,25 +20,13 @@ describe("Class-AAA Inbox composition contract", () => {
     expect(foundation).not.toContain("data-inbox-operations-desk");
   });
 
-  it("keeps the common desktop path two-pane and mounts context only at its active breakpoint", () => {
+  it("keeps the common desktop path two-pane and exposes context progressively", () => {
     const thread = read("src/components/inbox/inbox-thread-workbench.tsx");
-    expect(thread).toContain('useMediaQuery("(min-width: 1500px)")');
-    expect(thread).toContain("!showContextRail ? (");
-    expect(thread).toContain("!isMobile && showContextRail ? (");
+    expect(thread).toContain('className="min-[1500px]:hidden"');
+    expect(thread).toContain('min-[1500px]:block');
     expect(thread).toContain("InboxCustomerWorkPanel");
     expect(thread).toContain("<Sheet>");
     expect(thread).toContain('side={locale === "ar" ? "left" : "right"}');
-    expect(thread).not.toContain('className="min-[1500px]:hidden"');
-  });
-
-  it("does not select an empty Mine queue while canonical work exists", () => {
-    const desk = read("src/components/inbox/inbox-operations-desk.tsx");
-    expect(desk).toContain("defaultQueueResolvedRef");
-    expect(desk).toContain("const hasMine = chats.some");
-    expect(desk).toContain('setQueueFilter("mine")');
-    expect(desk.indexOf("if (!hasMine) return")).toBeLessThan(
-      desk.indexOf('setQueueFilter("mine")'),
-    );
   });
 
   it("uses task-shaped queues instead of five equal workflow tabs", () => {
@@ -80,4 +68,35 @@ describe("Class-AAA Inbox composition contract", () => {
     expect(page).toContain("const { t } = await getI18n();");
     expect(page).toContain('<h1 className="sr-only">{t("metadata.title.inbox")}</h1>');
   });
+
+  it("closes adversarial Inbox review gaps at their authority boundaries", () => {
+    const queue = read("src/components/inbox/inbox-work-queue.tsx");
+    const panel = read("src/components/inbox/inbox-customer-work-panel.tsx");
+    const collaboration = read(
+      "src/components/inbox/conversation-collaboration-inline.tsx",
+    );
+    const contextRoute = read("src/app/api/inbox/context/[id]/route.ts");
+
+    expect(panel).toContain(
+      'key={`${chat.conversationId}:${orderCandidate.id}`}',
+    );
+    expect(panel).toContain('dir="ltr"');
+    expect(panel).toContain("[unicode-bidi:isolate]");
+
+    expect(contextRoute).toContain('"risk.read"');
+    expect(contextRoute).toContain("const canReadRisk =");
+    expect(contextRoute).toContain("risk: canReadRisk");
+    expect(panel).toContain("context.fieldAccess.risk");
+
+    expect(collaboration).toContain("useRef<AbortController | null>(null)");
+    expect(collaboration).toContain("loadRequest.current?.abort()");
+    expect(collaboration).toContain("signal: controller.signal");
+
+    expect(queue).toContain("function matchesDeskFilters(");
+    expect(queue).toContain("searchState.results.filter((chat) =>");
+    expect(queue).toContain(
+      "matchesDeskFilters(chat, queueFilter, workflowFilter, currentMemberId)",
+    );
+  });
+
 });

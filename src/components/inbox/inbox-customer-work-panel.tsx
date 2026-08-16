@@ -37,8 +37,8 @@ type ContextResponse = {
     commune: string | null;
     orderCount: number;
     totalSpent: number | null;
-    riskScore: number;
-    isBlacklisted: boolean;
+    riskScore: number | null;
+    isBlacklisted: boolean | null;
     blacklistReason: string | null;
   } | null;
   recentOrders: Array<{
@@ -56,6 +56,7 @@ type ContextResponse = {
     contact: boolean;
     orders: boolean;
     financials: boolean;
+    risk: boolean;
   };
 };
 
@@ -200,23 +201,27 @@ export function InboxCustomerWorkPanel({
                         {context.customer.phone}
                       </p>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "shrink-0 gap-1 text-xs",
-                        riskClass(
-                          context.customer.riskScore,
-                          context.customer.isBlacklisted,
-                        ),
-                      )}
-                    >
-                      {context.customer.isBlacklisted ? (
-                        <ShieldAlert className="size-3" aria-hidden="true" />
-                      ) : (
-                        <ShieldCheck className="size-3" aria-hidden="true" />
-                      )}
-                      {context.customer.riskScore}
-                    </Badge>
+                    {context.fieldAccess.risk &&
+                    context.customer.riskScore !== null &&
+                    context.customer.isBlacklisted !== null ? (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "shrink-0 gap-1 text-xs",
+                          riskClass(
+                            context.customer.riskScore,
+                            context.customer.isBlacklisted,
+                          ),
+                        )}
+                      >
+                        {context.customer.isBlacklisted ? (
+                          <ShieldAlert className="size-3" aria-hidden="true" />
+                        ) : (
+                          <ShieldCheck className="size-3" aria-hidden="true" />
+                        )}
+                        {context.customer.riskScore}
+                      </Badge>
+                    ) : null}
                   </div>
 
                   {location ? (
@@ -225,7 +230,7 @@ export function InboxCustomerWorkPanel({
                       <span>{location}</span>
                     </div>
                   ) : null}
-                  {context.customer.isBlacklisted ? (
+                  {context.fieldAccess.risk && context.customer.isBlacklisted ? (
                     <div className="mt-3 rounded-md border border-destructive/20 bg-destructive/6 px-2.5 py-2 text-xs text-destructive">
                       <span className="font-semibold">{copy("blacklisted")}</span>
                       {context.customer.blacklistReason ? (
@@ -307,7 +312,12 @@ export function InboxCustomerWorkPanel({
                         className="group flex items-center justify-between gap-3 rounded-lg border bg-muted/15 px-3 py-2.5 text-sm transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <span className="min-w-0">
-                          <span className="block truncate font-medium">{order.orderNumber}</span>
+                          <span
+                            dir="ltr"
+                            className="block truncate text-start font-medium [unicode-bidi:isolate]"
+                          >
+                            {order.orderNumber}
+                          </span>
                           <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                             {order.status}
                             {order.totalPrice !== null
@@ -340,6 +350,7 @@ export function InboxCustomerWorkPanel({
               {orderCandidate && chat.transportId ? (
                 <div className="mt-3">
                   <MessageExtraction
+                    key={`${chat.conversationId}:${orderCandidate.id}`}
                     conversationId={chat.transportId}
                     messageId={orderCandidate.id}
                     messageBody={orderCandidate.body}

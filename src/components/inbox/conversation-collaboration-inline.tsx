@@ -96,6 +96,7 @@ export function ConversationCollaborationInline({
   const [savingComment, setSavingComment] = useState(false);
   const routeRequest = useRef<{ fingerprint: string; key: string } | null>(null);
   const commentRequest = useRef<{ fingerprint: string; key: string } | null>(null);
+  const loadRequest = useRef<AbortController | null>(null);
 
   const keyFor = (
     ref: MutableRefObject<{ fingerprint: string; key: string } | null>,
@@ -108,11 +109,15 @@ export function ConversationCollaborationInline({
   };
 
   const load = useCallback(async () => {
+    loadRequest.current?.abort();
+    loadRequest.current = null;
     if (!navigator.onLine) {
       setMode("offline");
       setNotice(copy("collaborationOffline"));
       return;
     }
+    const controller = new AbortController();
+    loadRequest.current = controller;
     setMode("loading");
     setNotice(null);
     try {
@@ -120,17 +125,18 @@ export function ConversationCollaborationInline({
       const [commentsResponse, routingResponse] = await Promise.all([
         fetch(
           `/api/collaboration/comments?entityType=conversation&entityId=${encoded}`,
-          { cache: "no-store" },
+          { cache: "no-store", signal: controller.signal },
         ),
         fetch(
           `/api/collaboration/routing?entityType=conversation&entityId=${encoded}`,
-          { cache: "no-store" },
+          { cache: "no-store", signal: controller.signal },
         ),
       ]);
       const [commentsBody, routingBody] = await Promise.all([
         responseBody<CommentsView>(commentsResponse),
         responseBody<RoutingView>(routingResponse),
       ]);
+      if (controller.signal.aborted) return;
 
       if (
         needsReauthentication(commentsResponse, commentsBody) ||
@@ -157,14 +163,19 @@ export function ConversationCollaborationInline({
         setQueueId(routingBody.assignment.queueId ?? "none");
         setWorkState(routingBody.assignment.state);
       }
+      if (controller.signal.aborted) return;
       setMode("ready");
-    } catch {
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      if (controller.signal.aborted) return;
       setMode(navigator.onLine ? "error" : "offline");
       setNotice(
         navigator.onLine
           ? copy("collaborationUnavailable")
           : copy("collaborationOffline"),
       );
+    } finally {
+      if (loadRequest.current === controller) loadRequest.current = null;
     }
   }, [conversationId, copy]);
 
@@ -178,6 +189,8 @@ export function ConversationCollaborationInline({
     window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
     return () => {
+      loadRequest.current?.abort();
+      loadRequest.current = null;
       window.clearTimeout(timer);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
