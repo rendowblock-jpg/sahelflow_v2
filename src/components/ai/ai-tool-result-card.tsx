@@ -94,6 +94,7 @@ const MONEY_FIELDS = new Set([
   "cost",
 ]);
 
+const ORDER_STATUS_FIELDS = new Set(["status", "fromStatus", "toStatus"]);
 const TECHNICAL_FIELDS = new Set(["orderNumber", "phone"]);
 
 const IMPORTANT_FIELDS = [
@@ -112,6 +113,8 @@ const IMPORTANT_FIELDS = [
   "riskScore",
 ] as const;
 
+type Translate = (key: string) => string;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -127,10 +130,19 @@ function simpleValue(value: unknown): string | null {
   return null;
 }
 
+function localizeOrderStatus(value: string, translate: Translate): string {
+  const normalized = value.trim().toLocaleLowerCase().replace(/[\s-]+/g, "_");
+  if (!normalized) return value;
+  const key = `orders.status.${normalized}`;
+  const translated = translate(key);
+  return translated === key ? value : translated;
+}
+
 function formatValue(
   key: string,
   value: unknown,
   locale: AiWorkspaceLocale,
+  translate: Translate,
 ): string | null {
   if (typeof value === "number") {
     if (MONEY_FIELDS.has(key)) {
@@ -142,12 +154,16 @@ function formatValue(
     }
     return new Intl.NumberFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`).format(value);
   }
+  if (typeof value === "string" && ORDER_STATUS_FIELDS.has(key)) {
+    return localizeOrderStatus(value, translate);
+  }
   return simpleValue(value);
 }
 
 function recordFields(
   record: Record<string, unknown>,
   locale: AiWorkspaceLocale,
+  translate: Translate,
 ) {
   const ordered = [
     ...IMPORTANT_FIELDS.filter((key) => key in record),
@@ -157,7 +173,7 @@ function recordFields(
   ];
   return ordered.flatMap((key) => {
     if (!FIELD_COPY[key]) return [];
-    const formatted = formatValue(key, record[key], locale);
+    const formatted = formatValue(key, record[key], locale, translate);
     if (formatted === null || formatted.length > 120) return [];
     return [{ key, value: formatted, technical: TECHNICAL_FIELDS.has(key) }];
   });
@@ -167,12 +183,14 @@ function ResultRecord({
   value,
   locale,
   copy,
+  translate,
 }: {
   value: Record<string, unknown>;
   locale: AiWorkspaceLocale;
   copy: (key: AiWorkspaceCopyKey, params?: Record<string, string | number>) => string;
+  translate: Translate;
 }) {
-  const fields = recordFields(value, locale).slice(0, 6);
+  const fields = recordFields(value, locale, translate).slice(0, 6);
   if (fields.length === 0) return null;
   return (
     <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
@@ -195,7 +213,7 @@ function ResultRecord({
 }
 
 export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
-  const { locale: rawLocale } = useI18n();
+  const { locale: rawLocale, t } = useI18n();
   const locale = rawLocale as AiWorkspaceLocale;
   const copy = (
     key: AiWorkspaceCopyKey,
@@ -254,7 +272,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
           ) : null}
           {records.map((record, index) => (
             <div key={`${tool.id}:record:${index}`} className={index > 0 ? "border-t pt-2" : ""}>
-              <ResultRecord value={record} locale={locale} copy={copy} />
+              <ResultRecord value={record} locale={locale} copy={copy} translate={t} />
             </div>
           ))}
           {scalar ? <p dir="auto" className="text-xs text-foreground">{scalar}</p> : null}
