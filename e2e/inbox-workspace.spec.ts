@@ -182,8 +182,15 @@ test.describe.serial("Inbox operational workspace evidence", () => {
     });
     await expect(contextTrigger).toBeVisible();
     await contextTrigger.click();
-    await expect(page.locator('[data-inbox-context="true"]')).toBeVisible();
+    const contextDialog = page.getByRole("dialog", {
+      name: "Contexte de la conversation",
+    });
+    await expect(contextDialog).toBeVisible();
+    await expect(
+      contextDialog.locator('[data-inbox-context="true"]'),
+    ).toBeVisible();
     await page.keyboard.press("Escape");
+    await expect(contextDialog).toBeHidden();
 
     await page.setViewportSize({ width: 640, height: 768 });
     await expect(page.locator('[data-inbox-thread="active"]')).toBeVisible();
