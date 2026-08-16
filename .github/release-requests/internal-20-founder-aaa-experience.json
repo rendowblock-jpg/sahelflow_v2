@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.20 Founder AAA experience publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.20",
+  "windowsMsiVersion": "1.0.0.20",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-039",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "2af1f7f2b432e55df5e7a36ecaeda9662be65b14",
+    "phase5RunId": 31923095951,
+    "phase67RunId": 31923095930,
+    "ciRunId": 31923096186
+  },
+  "reason": "Publish the certified Internal.20 AAA Arabic/RTL/full-product experience checkpoint only from exact protected main. Founder-installed acceptance remains separate; customer-online, Beta, and Stable remain out of scope."
+}
