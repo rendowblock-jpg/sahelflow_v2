@@ -50,7 +50,8 @@ jobs:
       - name: Record Phase 6-7 decision
         env:
           RUN_PHASE67: ${{ steps.risk.outputs.run_phase67 }}
-        run: echo "Phase 6-7 browser evidence required: ${RUN_PHASE67}" >> "${GITHUB_STEP_SUMMARY}"
+        run: |
+          echo "Phase 6-7 browser evidence required: ${RUN_PHASE67}" >> "${GITHUB_STEP_SUMMARY}"
 
   static-contract:
     name: Static localization, RTL and accessibility contract
