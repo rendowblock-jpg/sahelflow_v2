@@ -35,6 +35,7 @@ const Toaster = ({
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
+      dir={direction}
       position={resolvedPosition}
       className="toaster group"
       style={
