@@ -11,7 +11,6 @@ import {
   ClipboardCheck,
   Loader2,
   PackageSearch,
-  PanelRight,
   RefreshCw,
   RotateCcw,
   Send,
@@ -418,9 +417,9 @@ export function AiDecisionCanvas({
             <Bot className="size-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold tracking-tight">
+            <h2 className="truncate text-base font-semibold tracking-tight">
               {activeSession?.title || workspace.copy("newSessionTitle")}
-            </h1>
+            </h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {activeSession
                 ? getAiDecisionCopy(workspace.locale, "durableSession")
@@ -436,7 +435,7 @@ export function AiDecisionCanvas({
             variant="outline"
             onClick={() => setReviewOpen(true)}
           >
-            <PanelRight className="size-4" aria-hidden="true" />
+            <ShieldCheck className="size-4" aria-hidden="true" />
             {getAiDecisionCopy(workspace.locale, "reviewEvidence")}
             {proposals.length > 0 ? (
               <Badge variant="secondary" className="ms-1 text-xs">
@@ -466,7 +465,7 @@ export function AiDecisionCanvas({
             ) : messages.length === 0 ? (
               <StartSurface
                 workspace={workspace}
-                starting={startingAnalysis}
+                starting={startingAnalysis || sending}
                 onStart={onStart}
               />
             ) : (
@@ -475,7 +474,7 @@ export function AiDecisionCanvas({
                   <MessageBubble key={message.id} message={message} workspace={workspace} />
                 ))}
 
-                {proposals.length > 0 ? (
+                {!wideReview && proposals.length > 0 ? (
                   <section
                     data-ai-inline-proposals="true"
                     className="ms-11 max-w-3xl border-s-2 border-primary/20 ps-4"
