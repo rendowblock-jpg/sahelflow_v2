@@ -35,12 +35,11 @@ export function AiDecisionWorkspace() {
     if (!pending.sawConversationLoad) return;
 
     pendingPromptRef.current = null;
-    const timeoutId = window.setTimeout(() => {
+    window.setTimeout(() => {
       void workspace.send(pending.prompt).finally(() => {
         setStartingAnalysis(false);
       });
     }, 0);
-    return () => window.clearTimeout(timeoutId);
   }, [
     workspace.activeSessionId,
     workspace.loadingConversation,
