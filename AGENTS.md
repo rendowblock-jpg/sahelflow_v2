@@ -34,7 +34,7 @@ A lower layer cannot silently weaken a higher one. Current documentation can cla
 ## Current source/product frontier
 
 - **Live protected `main`: resolve from GitHub before every write/review/release action; do not copy a documentation SHA as the live ref.**
-- Current protected-main source at this handoff: `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269.
+- Protected post-rollback product/source anchor: `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269. This is the latest application-changing protected-main commit; later docs-only commits may advance live `main` without changing this product tree.
 - Latest published package: **Internal.20** / `1.0.0-internal.20` / MSI `1.0.0.20` / FD-039 / `founder-offline-only`.
 - Internal.20 published source: `7c794f72a545313a0cf6fe34c2fabd9c583357ec`; PR #267 final reviewed head `f2d6bc684907eacb003608a45cb6f219e16a3bd4`; product certification SHA `2af1f7f2b432e55df5e7a36ecaeda9662be65b14`.
 - Founder-installed Internal.20 result: **REJECTED**. The Founder judged the requested RTL/Arabic experience, Inbox, AI Agents, Settings and overall product quality not delivered and worse than Internal.19.

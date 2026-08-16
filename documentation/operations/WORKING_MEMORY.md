@@ -3,7 +3,7 @@
 > **Purpose:** Compact resumable execution frontier; never product/architecture/roadmap authority
 > **Last updated:** 2026-08-16
 > **Live protected main:** resolve GitHub `main` before every write/review/release action
-> **Current protected-main SHA at this handoff:** `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269
+> **Protected post-rollback product/source anchor:** `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269; later docs-only commits may advance live `main` without changing this product tree
 > **Latest published release:** Internal.20 / `1.0.0-internal.20` / MSI `1.0.0.20` / FD-039
 > **Founder-installed Internal.20 result:** **REJECTED — WORSE THAN INTERNAL.19 FOR THE REQUESTED EXPERIENCE**
 > **Founder-requested product baseline:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19`
@@ -40,7 +40,7 @@ The Founder Windows installation is a separate evidence surface. At the start of
 - Tag: `sahelflow-v1.0.0-internal.19-42e50f22f45bd524725300b3973ac45caffb6711`.
 - MSI: `SahelFlow_1.0.0-internal.19_x64_en-US.msi`.
 - MSI SHA-256: `044475e079a37f37319a77d6ee42821074e197b9ca5fac9abaea62b6b86f753e`.
-- Protected source after PR #269: `c8a8155079260dc4065ff30767c45cde95c266d2`, with the affected application/experience files restored to their Internal.19 product blobs and Internal.20 release/version/native authority intentionally retained.
+- Protected source rollback anchor: `c8a8155079260dc4065ff30767c45cde95c266d2`, with the affected application/experience files restored to their Internal.19 product blobs and Internal.20 release/version/native authority intentionally retained.
 - Preserve `%APPDATA%\com.sahelflow.desktop` and `%LOCALAPPDATA%\com.sahelflow.desktop`; do not delete local shop databases during any installed rollback.
 - Internal.20 remains the newest updater release, so a rolled-back Internal.19 install may offer Internal.20 again. Do not accept that update during the design-reset period.
 

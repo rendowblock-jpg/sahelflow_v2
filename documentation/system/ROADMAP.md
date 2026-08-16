@@ -3,7 +3,7 @@
 > **Status:** Binding dependency/completion order
 > **Last reconciled:** 2026-08-16
 > **Live protected main:** resolve GitHub `main` before every write/review/release action
-> **Current protected-main SHA at this handoff:** `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269
+> **Protected post-rollback product/source anchor:** `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269; later docs-only commits may advance live `main` without changing this product tree
 > **Latest published checkpoint:** Internal.20 / FD-039
 > **Founder-installed Internal.20 result:** **REJECTED**
 > **Founder-requested visual/comparison baseline:** Internal.19 / FD-038
@@ -25,7 +25,7 @@ protected canonical engine + protected connected/storefront platform
 → Founder installs Internal.20
 → REJECTED
 → PR #269 source/application rollback to Internal.19 product baseline
-→ protected main c8a81550... with Internal.20 release authority preserved
+→ product/source anchor c8a81550... with Internal.20 release authority preserved
 → verify/complete installed Internal.19 rollback on Founder machine
 → paired English/Arabic baseline screenshots
 → one shared-root visual diagnosis
