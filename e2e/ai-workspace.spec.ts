@@ -69,7 +69,7 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
     await waitForHydration(page);
   });
 
-  test("1366 desktop is two-pane, safe, durable and progressively reviewable", async ({
+  test("1366 desktop is two-pane, safe, durable and singularly reviewable across resize", async ({
     page,
   }) => {
     const workspace = page.locator('[data-ai-decision-workspace="true"]');
@@ -109,13 +109,19 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
       );
     }
 
+    const reviewEvidence = page.locator('[data-ai-review-evidence="true"]');
     await page.getByRole("button", { name: "Revue & preuves" }).click();
-    await expect(page.locator('[data-ai-review-evidence="true"]')).toBeVisible();
-    await expect(page.locator('[data-ai-review-evidence="true"]')).toContainText(
+    await expect(reviewEvidence).toHaveCount(1);
+    await expect(reviewEvidence).toBeVisible();
+    await expect(reviewEvidence).toContainText(
       "Fournisseur & confidentialité",
     );
-    await page.keyboard.press("Escape");
-    await expect(page.locator('[data-ai-review-evidence="true"]')).toHaveCount(0);
+
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await expect(workspace).toHaveAttribute("data-ai-layout", "wide");
+    await expect(reviewEvidence).toHaveCount(1);
+    await expect(reviewEvidence).toBeVisible();
+    await expect(page.getByRole("button", { name: "Revue & preuves" })).toHaveCount(0);
   });
 
   test("wide desktop promotes review evidence without shrinking the decision canvas", async ({
@@ -126,6 +132,7 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
     await expect(workspace).toHaveAttribute("data-ai-layout", "wide");
     await expect(page.locator('[data-ai-work-history="true"]')).toBeVisible();
     await expect(page.locator('[data-ai-decision-canvas="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-review-evidence="true"]')).toHaveCount(1);
     await expect(page.locator('[data-ai-review-evidence="true"]')).toBeVisible();
     await expect(page.getByRole("button", { name: "Revue & preuves" })).toHaveCount(0);
   });
@@ -174,6 +181,7 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
     await page.locator("[data-ai-session]").first().click();
     await expect(page.locator('[data-ai-decision-canvas="true"]')).toBeVisible();
     await page.getByRole("button", { name: "المراجعة والأدلة" }).click();
+    await expect(page.locator('[data-ai-review-evidence="true"]')).toHaveCount(1);
     await expect(page.locator('[data-ai-review-evidence="true"]')).toBeVisible();
     await expect(page.locator('[data-ai-review-evidence="true"]')).toContainText(
       "المزود والخصوصية",
