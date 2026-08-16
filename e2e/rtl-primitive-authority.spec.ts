@@ -144,27 +144,31 @@ test.describe.serial("Arabic shared primitive direction authority", () => {
     await page.goto("/risk", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
 
-    const chartCard = page.locator('[data-chart-card="true"]').first();
+    const chartCard = page
+      .locator(
+        '[data-chart-card="true"]:has([data-chart-header-icon="true"]):has([data-slot="chart"])',
+      )
+      .first();
     await expect(chartCard).toBeVisible();
     expect(await computedDirection(chartCard)).toBe("rtl");
 
-    const headerRow = chartCard
-      .locator('[data-slot="card-header"] > div')
-      .first();
+    const headerRow = chartCard.locator('[data-chart-header-row="true"]').first();
+    await expect(headerRow).toBeVisible();
     const headerGeometry = await headerRow.evaluate((node) => {
-      const children = Array.from(node.children).filter(
-        (child) => child instanceof HTMLElement,
-      ) as HTMLElement[];
-      if (children.length < 2) return null;
-      const iconBox = children[0].getBoundingClientRect();
-      const copyBox = children[1].getBoundingClientRect();
+      const icon = node.querySelector('[data-chart-header-icon="true"]');
+      const copy = node.querySelector('[data-chart-header-copy="true"]');
+      if (!(icon instanceof HTMLElement) || !(copy instanceof HTMLElement)) {
+        return null;
+      }
+      const iconBox = icon.getBoundingClientRect();
+      const copyBox = copy.getBoundingClientRect();
       return {
         direction: getComputedStyle(node).direction,
         iconX: iconBox.x,
         copyX: copyBox.x,
       };
     });
-    expect(headerGeometry, "chart header must expose icon + copy geometry").not.toBeNull();
+    expect(headerGeometry, "chart header must expose exact icon + copy geometry").not.toBeNull();
     expect(headerGeometry?.direction).toBe("rtl");
     expect(
       headerGeometry!.iconX,
