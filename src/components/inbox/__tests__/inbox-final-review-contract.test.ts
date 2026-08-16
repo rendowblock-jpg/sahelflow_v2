@@ -63,6 +63,9 @@ describe("Inbox final review invariants", () => {
     expect(panel).toContain("const ORDER_STATUS_COPY");
     expect(panel).toContain("function orderStatusLabel(");
     expect(panel).toContain("orderStatusLabel(order.status, locale)");
+    expect(panel).toContain('refused: "Refused"');
+    expect(panel).toContain('refused: "Refusée"');
+    expect(panel).toContain('refused: "مرفوض"');
     expect(panel).not.toContain("{order.status}");
   });
 
