@@ -10,11 +10,13 @@ describe("Internal.20 AAA experience authority", () => {
     const layout = read("src/app/layout.tsx");
     const legacy = layout.indexOf('import "./locale-transition-system.css"');
     const system = layout.indexOf('import "./internal20-system.css"');
+    const palette = layout.indexOf('import "./internal20-palette.css"');
     const interaction = layout.indexOf('import "./internal20-interaction.css"');
 
     expect(legacy).toBeGreaterThan(-1);
     expect(system).toBeGreaterThan(legacy);
-    expect(interaction).toBeGreaterThan(system);
+    expect(palette).toBeGreaterThan(system);
+    expect(interaction).toBeGreaterThan(palette);
   });
 
   it("uses natural shell direction and removes the historical physical-LTR ordering trick", () => {
@@ -71,5 +73,14 @@ describe("Internal.20 AAA experience authority", () => {
     expect(interaction).toContain("width: 17.5rem !important");
     expect(interaction).toContain("grid-template-columns: 15.5rem minmax(31rem, 1fr) 19rem !important");
     expect(interaction).toContain("min-height: calc(100dvh - 6.5rem)");
+  });
+
+  it("keeps the premium warm material palette above the legacy cold dark stack", () => {
+    const palette = read("src/app/internal20-palette.css");
+
+    expect(palette).toContain("--surface-0: oklch(0.145 0.008 78)");
+    expect(palette).toContain("--surface-1: oklch(0.178 0.009 78)");
+    expect(palette).toContain('html[dir="rtl"] [data-sahelflow-shell="desktop"]');
+    expect(palette).toContain("circle at 84% 0%");
   });
 });
