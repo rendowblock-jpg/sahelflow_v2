@@ -3,10 +3,11 @@
 > **Purpose:** Compact resumable execution frontier; never product/architecture/roadmap authority
 > **Last updated:** 2026-08-16
 > **Live protected main:** resolve GitHub `main` before every write/review/release action
-> **Current protected-main SHA at this handoff:** `7c794f72a545313a0cf6fe34c2fabd9c583357ec`
+> **Current protected-main SHA at this handoff:** `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269
 > **Latest published release:** Internal.20 / `1.0.0-internal.20` / MSI `1.0.0.20` / FD-039
 > **Founder-installed Internal.20 result:** **REJECTED — WORSE THAN INTERNAL.19 FOR THE REQUESTED EXPERIENCE**
 > **Founder-requested product baseline:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19`
+> **Source rollback status:** **COMPLETE** — affected application/experience layer restored to Internal.19 product baseline; Internal.20 release authority preserved
 > **Internal.19 protected release source:** `42e50f22f45bd524725300b3973ac45caffb6711`
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Next-session mode:** design-first reset; no production UI implementation until visual direction is approved
@@ -18,11 +19,13 @@ Internal.20 is published and technically valid as a signed Founder/internal-lab 
 
 Do not reinterpret green CI, Phase 5/6-7, native, MSI, signed-install or authenticated-WebView evidence as UX acceptance. Those gates remain valid only for the technical properties they proved.
 
-The Founder requested a rollback to Internal.19. At the start of the next session, verify the actual installed version on the Founder machine; do not assume the rollback completed. The intended comparison/design baseline is Internal.19.
+PR #269 completed the **source/application rollback** on protected `main`: the affected Internal.20 application/experience delta was restored to the exact Internal.19 product baseline while package/version/release/native authority remained Internal.20. The rollback PR passed Phase 5, Phase 6-7 and Required PR/CI on exact head before squash merge, and no new signed release was dispatched.
+
+The Founder Windows installation is a separate evidence surface. At the start of the next session, verify the actual installed version; do not infer installed rollback from source state. The intended comparison/design baseline is Internal.19.
 
 ### Internal.20 publication facts
 
-- Protected-main source: `7c794f72a545313a0cf6fe34c2fabd9c583357ec`.
+- Published protected-main source: `7c794f72a545313a0cf6fe34c2fabd9c583357ec`.
 - Reviewed PR: #267; final reviewed head `f2d6bc684907eacb003608a45cb6f219e16a3bd4`.
 - Product certification SHA: `2af1f7f2b432e55df5e7a36ecaeda9662be65b14`.
 - Release: `1.0.0-internal.20`; MSI `1.0.0.20`; FD-039; `founder-offline-only`.
@@ -37,7 +40,8 @@ The Founder requested a rollback to Internal.19. At the start of the next sessio
 - Tag: `sahelflow-v1.0.0-internal.19-42e50f22f45bd524725300b3973ac45caffb6711`.
 - MSI: `SahelFlow_1.0.0-internal.19_x64_en-US.msi`.
 - MSI SHA-256: `044475e079a37f37319a77d6ee42821074e197b9ca5fac9abaea62b6b86f753e`.
-- Preserve `%APPDATA%\com.sahelflow.desktop` and `%LOCALAPPDATA%\com.sahelflow.desktop`; do not delete local shop databases during rollback.
+- Protected source after PR #269: `c8a8155079260dc4065ff30767c45cde95c266d2`, with the affected application/experience files restored to their Internal.19 product blobs and Internal.20 release/version/native authority intentionally retained.
+- Preserve `%APPDATA%\com.sahelflow.desktop` and `%LOCALAPPDATA%\com.sahelflow.desktop`; do not delete local shop databases during any installed rollback.
 - Internal.20 remains the newest updater release, so a rolled-back Internal.19 install may offer Internal.20 again. Do not accept that update during the design-reset period.
 
 ## Why the previous approach failed
@@ -74,7 +78,7 @@ Automated gates protect correctness and regressions; they do not certify visual 
 ## Exact next actions
 
 1. Resolve live protected `main` from GitHub.
-2. Verify which version is actually installed on the Founder machine and complete/confirm Internal.19 rollback if still needed.
+2. Verify which version is actually installed on the Founder machine and complete/confirm the **installed** Internal.19 rollback if still needed.
 3. Collect paired Internal.19 screenshots at the same desktop resolution for English and Arabic: global shell, Inbox, AI Agents and Settings.
 4. Build a concise visual root-cause register from those real screens; do not patch production code yet.
 5. Establish and obtain Founder approval for the replacement visual direction for each area.
@@ -87,7 +91,7 @@ Automated gates protect correctness and regressions; they do not certify visual 
 ## Hard rules
 
 - Internal.20 is **Founder rejected**, regardless of its technical certification.
-- Internal.19 is the requested visual/product comparison baseline; confirm actual installed state at session start.
+- Internal.19 is the requested visual/product comparison baseline; source rollback is complete, installed state must still be verified.
 - No Internal.21 release until Founder approves the visual direction first.
 - One branch, one writer for the eventual implementation wave.
 - No screenshot-local patching; fix shared design-system/information-architecture roots.
@@ -106,8 +110,9 @@ Wave 4 remains protected historical continuity behind the current product line. 
 - The **Phase 5 merged result and evidence** remain historical technical continuity; they do not override later Founder-installed rejection.
 - Internal.15 signed run `31657621918` remains audit continuity only.
 - The **Active Phase 6 frontier** remains `Phase 6 — Arabic, RTL and accessibility parity`, but its current execution mode is design-first because source/browser parity did not produce Founder-approved visual quality.
+- PR #269 is the protected source rollback anchor from rejected Internal.20 product presentation back to the Internal.19 product baseline, without rewriting release history.
 - Issues #221, #226, #230 remain independent acceptance/performance/customer-network authorities.
 
 ## Exact next-session order
 
-Resolve live protected `main`, confirm the actual installed Founder version, use Internal.19 as the requested visual comparison baseline, capture paired English/Arabic screens for shell + Inbox + AI Agents + Settings, produce one shared-root design diagnosis, obtain Founder approval for the replacement visual direction, and only then begin a new implementation wave. Do not restart historical phases or treat Internal.20 technical certification as visual acceptance.
+Resolve live protected `main`, confirm the actual installed Founder version, complete/confirm the installed Internal.19 rollback if needed, capture paired English/Arabic screens for shell + Inbox + AI Agents + Settings, produce one shared-root design diagnosis, obtain Founder approval for the replacement visual direction, and only then begin a new implementation wave. Do not restart historical phases or treat Internal.20 technical certification as visual acceptance.
