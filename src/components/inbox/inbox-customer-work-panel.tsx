@@ -60,6 +60,69 @@ type ContextResponse = {
   };
 };
 
+const ORDER_STATUS_COPY = {
+  en: {
+    draft: "Draft",
+    pending: "Pending",
+    confirmed: "Confirmed",
+    processing: "Processing",
+    packed: "Packed",
+    shipped: "Shipped",
+    delivered: "Delivered",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    canceled: "Cancelled",
+    returned: "Returned",
+    return_completed: "Return completed",
+    failed: "Failed",
+  },
+  fr: {
+    draft: "Brouillon",
+    pending: "En attente",
+    confirmed: "Confirmée",
+    processing: "En préparation",
+    packed: "Emballée",
+    shipped: "Expédiée",
+    delivered: "Livrée",
+    completed: "Terminée",
+    cancelled: "Annulée",
+    canceled: "Annulée",
+    returned: "Retournée",
+    return_completed: "Retour terminé",
+    failed: "Échec",
+  },
+  ar: {
+    draft: "مسودة",
+    pending: "قيد الانتظار",
+    confirmed: "مؤكد",
+    processing: "قيد التحضير",
+    packed: "مجهز",
+    shipped: "تم الشحن",
+    delivered: "تم التسليم",
+    completed: "مكتمل",
+    cancelled: "ملغى",
+    canceled: "ملغى",
+    returned: "مرتجع",
+    return_completed: "اكتمل الإرجاع",
+    failed: "فشل",
+  },
+} as const;
+
+function orderStatusLabel(status: string, locale: "ar" | "fr" | "en"): string {
+  const normalized = status.trim().toLowerCase();
+  const known = ORDER_STATUS_COPY[locale][
+    normalized as keyof (typeof ORDER_STATUS_COPY)[typeof locale]
+  ];
+  if (known) return known;
+  return (
+    normalized
+      .split(/[_-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ") || status
+  );
+}
+
 function formatMoney(value: number, locale: "ar" | "fr" | "en"): string {
   return new Intl.NumberFormat(
     locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-DZ" : "en-DZ",
@@ -319,7 +382,7 @@ export function InboxCustomerWorkPanel({
                             {order.orderNumber}
                           </span>
                           <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                            {order.status}
+                            {orderStatusLabel(order.status, locale)}
                             {order.totalPrice !== null
                               ? ` · ${formatMoney(order.totalPrice, locale)}`
                               : ""}
