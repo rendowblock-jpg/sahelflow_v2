@@ -73,30 +73,12 @@ export function AiWorkHistory({
       className="flex h-full min-h-0 w-full flex-col border-e bg-muted/[0.035]"
     >
       <div className="border-b px-4 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold">
-              {getAiDecisionCopy(locale, "workHistory")}
-            </h2>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              {getAiDecisionCopy(locale, "workHistoryDescription")}
-            </p>
-          </div>
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            disabled={creatingSession}
-            aria-label={getAiDecisionCopy(locale, "newAnalysis")}
-            onClick={onNewAnalysis}
-          >
-            {creatingSession ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Plus className="size-4" aria-hidden="true" />
-            )}
-          </Button>
-        </div>
+        <h2 className="text-sm font-semibold">
+          {getAiDecisionCopy(locale, "workHistory")}
+        </h2>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          {getAiDecisionCopy(locale, "workHistoryDescription")}
+        </p>
         <Button
           type="button"
           size="sm"
@@ -104,7 +86,11 @@ export function AiWorkHistory({
           disabled={creatingSession}
           onClick={onNewAnalysis}
         >
-          <Plus className="size-4" aria-hidden="true" />
+          {creatingSession ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Plus className="size-4" aria-hidden="true" />
+          )}
           {getAiDecisionCopy(locale, "newAnalysis")}
         </Button>
       </div>
