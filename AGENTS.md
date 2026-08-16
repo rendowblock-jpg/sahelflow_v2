@@ -34,12 +34,13 @@ A lower layer cannot silently weaken a higher one. Current documentation can cla
 ## Current source/product frontier
 
 - **Live protected `main`: resolve from GitHub before every write/review/release action; do not copy a documentation SHA as the live ref.**
-- Current protected-main source at this handoff: `7c794f72a545313a0cf6fe34c2fabd9c583357ec`.
+- Current protected-main source at this handoff: `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269.
 - Latest published package: **Internal.20** / `1.0.0-internal.20` / MSI `1.0.0.20` / FD-039 / `founder-offline-only`.
 - Internal.20 published source: `7c794f72a545313a0cf6fe34c2fabd9c583357ec`; PR #267 final reviewed head `f2d6bc684907eacb003608a45cb6f219e16a3bd4`; product certification SHA `2af1f7f2b432e55df5e7a36ecaeda9662be65b14`.
 - Founder-installed Internal.20 result: **REJECTED**. The Founder judged the requested RTL/Arabic experience, Inbox, AI Agents, Settings and overall product quality not delivered and worse than Internal.19.
+- Source rollback status: **COMPLETE**. PR #269 squash-merged the affected application/experience layer back to the exact Internal.19 product baseline while preserving Internal.20 release/version/native authority and the Internal.20 rejection record. No new signed release was requested or dispatched.
 - Founder-requested visual/comparison baseline: **Internal.19** / `1.0.0-internal.19` / MSI `1.0.0.19` / FD-038; published source `42e50f22f45bd524725300b3973ac45caffb6711`.
-- Verify the actual installed Founder version at session start; rollback completion must not be assumed.
+- Verify the actual installed Founder version at session start; source rollback completion does **not** prove that the Windows installation has been rolled back.
 - Active product phase: **Phase 6 — Arabic, RTL and accessibility parity**.
 - Active execution mode: **design-first reset before further production UI implementation**.
 - Retained independent obligations: **#221, #226, #230**.
@@ -53,7 +54,7 @@ Current experience/design work may not weaken Golden COD idempotency/version/aud
 ## Exact next outcome
 
 1. Resolve live protected `main` from GitHub.
-2. Verify the actual version installed on the Founder machine and complete/confirm rollback to Internal.19 if still required; preserve `%APPDATA%\com.sahelflow.desktop` and `%LOCALAPPDATA%\com.sahelflow.desktop`.
+2. Verify the actual version installed on the Founder machine and complete/confirm the **installed** rollback to Internal.19 if still required; preserve `%APPDATA%\com.sahelflow.desktop` and `%LOCALAPPDATA%\com.sahelflow.desktop`.
 3. Use Internal.19 as the requested visual comparison baseline and capture paired English/Arabic screens for the global shell, Inbox, AI Agents and Settings at the same desktop resolution.
 4. Produce one concise shared-root visual diagnosis covering typography, density, spacing, pane hierarchy, navigation geometry, information architecture, surfaces, controls, Arabic-native composition and motion.
 5. Establish a concrete English + Arabic target design for each of the four rejected areas and obtain Founder approval **before production UI implementation expands**.
@@ -67,7 +68,7 @@ Current experience/design work may not weaken Golden COD idempotency/version/aud
 
 The historical **Verified product frontier** was established through the repository's selected Level 1/2/3 gates. Its Phase 5 application-changing protected baseline is `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` / PR #220. Historical issue #221 remains important because installed Founder acceptance is independent evidence even when later source supersedes older implementations.
 
-PR #262 / `agent/internal19-product-convergence` established the Internal.19 application/source baseline `8448c47123290f2e1af702ff24a427cc11c4781c`. PR #267 later produced Internal.20, but the Founder-installed Internal.20 verdict is **REJECTED**. Green source/browser/native/MSI evidence cannot convert that rejection into acceptance.
+PR #262 / `agent/internal19-product-convergence` established the Internal.19 application/source baseline `8448c47123290f2e1af702ff24a427cc11c4781c`. PR #267 later produced Internal.20, but the Founder-installed Internal.20 verdict is **REJECTED**. PR #269 then restored the affected application/experience layer to the Internal.19 product baseline without rewriting the published Internal.20 release identity. Green source/browser/native/MSI evidence cannot convert the Internal.20 rejection into acceptance.
 
 ## Evidence rules
 
