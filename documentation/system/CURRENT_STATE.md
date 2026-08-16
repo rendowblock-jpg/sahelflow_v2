@@ -1,6 +1,6 @@
 # SahelFlow — Current state
 
-> **Authority:** protected source + exact release artifacts + Founder-installed observation
+> **Authority:** protected source + exact release artifacts + Founder-installed/screenshot observation + newer explicit Founder decisions
 > **Last assessed:** 2026-08-16
 > **Live protected main:** resolve GitHub `main` before every write/review/release action
 > **Protected post-rollback product/source anchor:** `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269; later docs-only commits may advance live `main` without changing this product tree
@@ -9,7 +9,7 @@
 > **Founder-requested comparison/baseline:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19`
 > **Source rollback status:** **COMPLETE** — affected application/experience layer restored to Internal.19 baseline; Internal.20 release authority preserved
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Active product mode:** design reset before further implementation
+> **Active product mode:** Founder-authorized structural RTL repair now; design-first full rebuild targets for Inbox, AI Agents and Settings
 > **Retained evidence/issues:** #221, #226, #230
 
 ## Installed/product authority
@@ -20,7 +20,25 @@ The Founder then installed Internal.20 and explicitly rejected the visual/produc
 
 PR #269 completed the requested **source/application rollback**. Protected `main` now carries the affected application/experience files from the exact Internal.19 product baseline while retaining Internal.20 package/version/release/native authority and the historical fact that Internal.20 was published and rejected. The rollback PR was green on Phase 5, Phase 6-7 and Required PR/CI before squash merge; it did not request or dispatch a new signed release.
 
-The actual Founder Windows installation remains a separate evidence surface. Verify the installed version before assuming the machine has been rolled back. Internal.19 is the intended comparison/design baseline during the reset.
+The actual Founder Windows installation remains a separate evidence surface. Verify the installed version before any installed/package acceptance claim. Internal.19 remains the intended comparison baseline during the reset.
+
+## Newest Founder decision — 2026-08-16
+
+The Founder supplied a representative English/Arabic screenshot set and then explicitly identified the defect class that prior work had underweighted:
+
+- the Arabic shell/sidebar can be physically on the right while the **icon/label child order inside navigation remains LTR**;
+- the Notifications popover/portal can open on the Arabic side while its **internal title/count/icon/copy ordering remains LTR or mixed**;
+- analytical cards/charts can mix Arabic RTL chrome with LTR child ordering, tooltip/legend alignment or data labels;
+- the same partial-RTL defect is expected across shared primitives and pages, including defects hidden among regions that already appear on the correct side;
+- Inbox, AI Agents and Settings are not candidates for another cosmetic pass: they require complete Class-AAA product/UX reconstruction rather than preserving the rejected workspace concepts.
+
+After that diagnosis the Founder explicitly authorized starting the work and getting it right “once and for all.” Under the repository authority order, that newer decision **supersedes the earlier blanket sequencing rule that prohibited all production RTL correction until another baseline screenshot cycle was completed**.
+
+The authorization is deliberately bounded:
+
+1. **Structural app-wide RTL foundation is authorized immediately.** Shared direction authority, Radix/portal behavior, logical start/end geometry, directional primitives, chart chrome domains, bidi isolation and runtime RTL regression evidence may be implemented now from the supplied evidence.
+2. **Inbox, AI Agents and Settings remain design-first full rebuilds.** Their current information architecture is rejected. Source mapping and replacement target design may proceed, but broad production reconstruction of those three workspaces still requires a concrete English + Arabic target and Founder approval.
+3. This decision does not authorize Internal.21, release/version churn, native/business/data changes or any weakening of protected canonical boundaries.
 
 ## Release identities
 
@@ -47,46 +65,57 @@ Internal.20 remains the newest published updater release, so Internal.19 may off
 
 ## Product conclusion from Internal.20
 
-The failure was not primarily missing technical RTL mechanics. The repeated loop came from solving the wrong class of problem:
+The previous loop came from solving the wrong class of problem and from measuring the wrong thing:
 
 - engineering correctness was over-weighted against product-design quality;
-- RTL was approached too much as direction/mirroring/geometry rather than Arabic-native visual composition;
+- page/shell direction was mistaken for complete component-level RTL behavior;
+- shared primitives and portal content could retain LTR internals even when the page moved correctly;
+- charts need distinct direction domains instead of either leaving mixed behavior or blindly mirroring mathematical geometry;
 - Inbox, AI Agents and Settings were patched/evolved instead of redesigned as complete workspaces;
 - the visual direction was frozen before Founder approval;
 - broad convergence changed too many surfaces at once;
 - screenshot/installed visual review occurred too late;
-- automated gates proved behavior but could not certify typography, balance, hierarchy, coherence or visual taste.
+- automated gates proved behavior but did not directly verify primitive child geometry, typography, balance, hierarchy, coherence or visual taste.
 
 ## Active product frontier
 
-Do not begin another production implementation wave immediately.
+The current frontier contains **two deliberately separate workstreams**.
 
-The next frontier is a **design-first reset** around four separate product-design projects:
+### A. App-wide structural RTL authority — implementation authorized
 
-1. Global shell + true Arabic RTL.
-2. Inbox.
-3. AI Agents.
-4. Settings.
+Start at shared roots, not screenshots or route-local overrides:
 
-Each must establish an approved English + Arabic desktop target first. Use the real Internal.19 installed screen as the baseline and define typography, spacing, density, pane proportions, navigation geometry, surfaces, controls, information architecture, interactions and motion before production code changes.
+- one reactive locale/direction authority for the document shell and shared primitive libraries/portals;
+- logical inline start/end geometry in directional UI;
+- correct icon/label/control ordering in Arabic navigation, menus, popovers, sheets, dialogs, tables, filters and other compound components;
+- explicit bidi isolation for technical/mixed-script values such as order IDs, SKUs, phone numbers, French/English product names and currency/value strings;
+- explicit analytical domains: card chrome/copy/legend/tooltip follows Arabic RTL while Cartesian/time/quantitative coordinate geometry is not blindly mirrored;
+- runtime regression tests that assert computed direction and actual child geometry inside representative Arabic primitives.
 
-The acceptance hierarchy is now explicit:
+A right-side sidebar or `html[dir="rtl"]` alone is **not** completion evidence.
+
+### B. Inbox + AI Agents + Settings — full replacement design
+
+These are not “restyle” projects. Preserve protected business/provider/AI authority, but treat the rejected workspace layout/interaction concepts as replaceable. Map the jobs and canonical actions, define a clear Class-AAA information architecture and interaction model, produce concrete English + Arabic target designs, obtain Founder approval, then reconstruct production UI coherently.
+
+The acceptance hierarchy remains:
 
 **Founder-installed visual judgment > screenshot comparison > interaction testing > automated gates.**
 
 Automated gates remain mandatory for correctness/regression protection after implementation, but they do not substitute for Founder visual acceptance.
 
-## Next-session order
+## Next-session/order of execution
 
-1. Resolve live protected `main`.
-2. Read `documentation/operations/WORKING_MEMORY.md`.
-3. Verify actual Founder-installed version and complete/confirm the **installed** rollback to Internal.19 if necessary.
-4. Capture paired English/Arabic Internal.19 screenshots for the shell, Inbox, AI Agents and Settings at the same desktop resolution.
-5. Build one concise shared-root visual diagnosis.
-6. Produce/approve the replacement visual direction before editing production UI.
-7. After approval, implement coherently on one branch with one writer and targeted checks.
-8. Freeze/certify/release only after the approved visual system exists in the product.
-9. Founder-installed outcome remains final truth.
+1. Resolve live protected `main` and keep one active application writer.
+2. Complete the shared RTL direction foundation and direct regression evidence from the Founder-reported sidebar, Notifications and chart cases.
+3. Perform a wider semantic RTL sweep across shared primitives and route dependency graphs; replace accidental physical-side layout with logical geometry where direction is semantic, and preserve explicitly non-directional analytical geometry.
+4. Audit mixed-script/bidi data paths and SVG/chart label/value behavior.
+5. Separately map Inbox, AI Agents and Settings jobs/authority and produce replacement English + Arabic Class-AAA target designs instead of polishing the rejected layouts.
+6. Obtain Founder approval of those replacement targets before broad production reconstruction of the three workspaces.
+7. Inspect paired English/Arabic screens repeatedly while implementing; do not wait until release time to discover direction defects.
+8. Verify the actual Founder-installed version/state before any new package/installed acceptance claim. Preserve Founder AppData and shop databases.
+9. Freeze/certify/release only after the approved product direction is materially present and inspected. No Internal.21 has been authorized merely by this RTL work.
+10. Founder-installed outcome remains final truth; #226 and #230 remain independent.
 
 ## Protected canonical boundaries
 
