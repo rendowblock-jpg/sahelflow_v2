@@ -1,10 +1,12 @@
 /*
  * Internal.20 hard interaction/geometry constraints.
  *
- * These are acceptance budgets, not visual decoration. Workspace grids use one
- * logical track/area definition in both locales. Native CSS Grid `direction: rtl`
- * mirrors that definition physically; duplicating or reversing track definitions
- * would mirror the layout twice and detach fixed rail sizes from their areas.
+ * These are acceptance budgets, not visual decoration. Desktop flagship panes
+ * use source-order flex geometry rather than named CSS Grid placement. A normal
+ * flex row follows the document writing direction, so the same DOM order works
+ * in LTR and RTL without mirrored track/area bookkeeping or first-paint drift.
+ * Fixed rails keep bounded flex bases; the operational work surface owns the
+ * remaining width.
  *
  * The `body` scope is intentional: this file is the final geometry authority
  * and must outrank older Internal.20 `!important` reset rules regardless of
@@ -26,34 +28,50 @@ body [data-navigation-density="rail"] {
   }
 
   body [data-ai-workspace="v2"] {
-    grid-template-columns: 14rem minmax(0, 1fr) !important;
-    grid-template-areas: "sessions thread" !important;
+    display: flex !important;
+    flex-direction: row !important;
+    grid-template-columns: none !important;
+    grid-template-areas: none !important;
   }
 
   body [data-ai-workspace="v2"] > [data-ai-sessions="true"] {
-    grid-area: sessions !important;
+    flex: 0 0 14rem !important; /* 224px */
+    width: 14rem !important;
+    min-width: 14rem !important;
+    max-width: 14rem !important;
+    grid-area: auto !important;
   }
 
   body [data-ai-workspace="v2"] > [data-ai-thread="true"] {
-    grid-area: thread !important;
+    flex: 1 1 0% !important;
+    width: auto !important;
+    min-width: 0 !important;
+    grid-area: auto !important;
   }
 }
 
 @media (min-width: 1024px) {
   body [data-settings-workspace="v2"] > div.grid {
-    grid-template-columns: 15rem minmax(0, 1fr) !important;
-    grid-template-areas: "settings-nav settings-panel" !important;
+    display: flex !important;
+    flex-direction: row !important;
+    grid-template-columns: none !important;
+    grid-template-areas: none !important;
+    width: 100% !important;
   }
 
   body [data-settings-workspace="v2"] > div.grid > aside {
-    grid-area: settings-nav !important;
+    flex: 0 0 15rem !important; /* 240px */
     width: 15rem !important;
     min-width: 15rem !important;
     max-width: 15rem !important;
+    grid-area: auto !important;
   }
 
   body [data-settings-workspace="v2"] > div.grid > section {
-    grid-area: settings-panel !important;
+    flex: 1 1 0% !important;
+    width: auto !important;
+    min-width: 0 !important;
+    grid-area: auto !important;
   }
 }
 
@@ -63,43 +81,67 @@ body [data-navigation-density="rail"] {
     min-width: 17rem !important;
   }
 
-  body [data-ai-workspace="v2"] {
-    grid-template-columns: 14rem minmax(31rem, 1fr) 18rem !important;
-    grid-template-areas: "sessions thread context" !important;
-  }
-
   body [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
-    grid-area: context !important;
+    display: block !important;
+    flex: 0 0 18rem !important; /* 288px */
+    width: 18rem !important;
+    min-width: 18rem !important;
+    max-width: 18rem !important;
+    grid-area: auto !important;
   }
 
   body [data-storefront-studio="v2"] > div.grid {
-    grid-template-columns: 13rem minmax(0, 1fr) 16.5rem !important;
-    grid-template-areas: "controls preview inspector" !important;
+    display: flex !important;
+    flex-direction: row !important;
+    grid-template-columns: none !important;
+    grid-template-areas: none !important;
+    width: 100% !important;
   }
 
   body [data-storefront-studio="v2"] > div.grid > aside:first-child {
-    grid-area: controls !important;
+    flex: 0 0 13rem !important; /* 208px */
+    width: 13rem !important;
+    min-width: 13rem !important;
+    max-width: 13rem !important;
+    grid-area: auto !important;
   }
 
   body [data-storefront-studio="v2"] > div.grid > main {
-    grid-area: preview !important;
+    flex: 1 1 0% !important;
+    width: auto !important;
+    min-width: 0 !important;
+    grid-area: auto !important;
   }
 
   body [data-storefront-studio="v2"] > div.grid > aside:last-child {
-    grid-area: inspector !important;
+    flex: 0 0 16.5rem !important; /* 264px */
+    width: 16.5rem !important;
+    min-width: 16.5rem !important;
+    max-width: 16.5rem !important;
+    grid-area: auto !important;
   }
 
   body [data-storefront-studio="bootstrap"] > div.grid {
-    grid-template-columns: 21rem minmax(0, 1fr) !important;
-    grid-template-areas: "setup preview" !important;
+    display: flex !important;
+    flex-direction: row !important;
+    grid-template-columns: none !important;
+    grid-template-areas: none !important;
+    width: 100% !important;
   }
 
   body [data-storefront-studio="bootstrap"] > div.grid > aside {
-    grid-area: setup !important;
+    flex: 0 0 21rem !important; /* 336px */
+    width: 21rem !important;
+    min-width: 21rem !important;
+    max-width: 21rem !important;
+    grid-area: auto !important;
   }
 
   body [data-storefront-studio="bootstrap"] > div.grid > main {
-    grid-area: preview !important;
+    flex: 1 1 0% !important;
+    width: auto !important;
+    min-width: 0 !important;
+    grid-area: auto !important;
   }
 }
 
