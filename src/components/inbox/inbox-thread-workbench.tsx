@@ -290,6 +290,7 @@ export function InboxThreadWorkbench({
 
   const renderContextPanel = () => (
     <InboxCustomerWorkPanel
+      key={activeChat.conversationId}
       chat={activeChat}
       orderCandidate={selectedCandidate}
       canUpdateConversation={canUpdateConversation}
