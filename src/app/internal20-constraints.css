@@ -1,10 +1,10 @@
 /*
  * Internal.20 hard interaction/geometry constraints.
  *
- * These are acceptance budgets, not visual decoration. Named grid areas stay
- * logical and native `direction: rtl` mirrors their physical placement. Track
- * sizes, however, must be reversed in RTL so fixed rails stay attached to the
- * same named areas while the main work surface remains dominant.
+ * These are acceptance budgets, not visual decoration. Workspace grids use one
+ * logical track/area definition in both locales. Native CSS Grid `direction: rtl`
+ * mirrors that definition physically; duplicating or reversing track definitions
+ * would mirror the layout twice and detach fixed rail sizes from their areas.
  *
  * The `body` scope is intentional: this file is the final geometry authority
  * and must outrank older Internal.20 `!important` reset rules regardless of
@@ -37,11 +37,6 @@ body [data-navigation-density="rail"] {
   body [data-ai-workspace="v2"] > [data-ai-thread="true"] {
     grid-area: thread !important;
   }
-
-  html[dir="rtl"] body [data-ai-workspace="v2"] {
-    grid-template-columns: minmax(0, 1fr) 14rem !important;
-    grid-template-areas: "sessions thread" !important;
-  }
 }
 
 @media (min-width: 1024px) {
@@ -60,11 +55,6 @@ body [data-navigation-density="rail"] {
   body [data-settings-workspace="v2"] > div.grid > section {
     grid-area: settings-panel !important;
   }
-
-  html[dir="rtl"] body [data-settings-workspace="v2"] > div.grid {
-    grid-template-columns: minmax(0, 1fr) 15rem !important;
-    grid-template-areas: "settings-nav settings-panel" !important;
-  }
 }
 
 @media (min-width: 1280px) {
@@ -80,11 +70,6 @@ body [data-navigation-density="rail"] {
 
   body [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
     grid-area: context !important;
-  }
-
-  html[dir="rtl"] body [data-ai-workspace="v2"] {
-    grid-template-columns: 18rem minmax(31rem, 1fr) 14rem !important;
-    grid-template-areas: "sessions thread context" !important;
   }
 
   body [data-storefront-studio="v2"] > div.grid {
@@ -104,11 +89,6 @@ body [data-navigation-density="rail"] {
     grid-area: inspector !important;
   }
 
-  html[dir="rtl"] body [data-storefront-studio="v2"] > div.grid {
-    grid-template-columns: 16.5rem minmax(0, 1fr) 13rem !important;
-    grid-template-areas: "controls preview inspector" !important;
-  }
-
   body [data-storefront-studio="bootstrap"] > div.grid {
     grid-template-columns: 21rem minmax(0, 1fr) !important;
     grid-template-areas: "setup preview" !important;
@@ -120,11 +100,6 @@ body [data-navigation-density="rail"] {
 
   body [data-storefront-studio="bootstrap"] > div.grid > main {
     grid-area: preview !important;
-  }
-
-  html[dir="rtl"] body [data-storefront-studio="bootstrap"] > div.grid {
-    grid-template-columns: minmax(0, 1fr) 21rem !important;
-    grid-template-areas: "setup preview" !important;
   }
 }
 
