@@ -20,13 +20,25 @@ describe("Class-AAA Inbox composition contract", () => {
     expect(foundation).not.toContain("data-inbox-operations-desk");
   });
 
-  it("keeps the common desktop path two-pane and exposes context progressively", () => {
+  it("keeps the common desktop path two-pane and mounts context only at its active breakpoint", () => {
     const thread = read("src/components/inbox/inbox-thread-workbench.tsx");
-    expect(thread).toContain('className="min-[1500px]:hidden"');
-    expect(thread).toContain('min-[1500px]:block');
+    expect(thread).toContain('useMediaQuery("(min-width: 1500px)")');
+    expect(thread).toContain("!showContextRail ? (");
+    expect(thread).toContain("!isMobile && showContextRail ? (");
     expect(thread).toContain("InboxCustomerWorkPanel");
     expect(thread).toContain("<Sheet>");
     expect(thread).toContain('side={locale === "ar" ? "left" : "right"}');
+    expect(thread).not.toContain('className="min-[1500px]:hidden"');
+  });
+
+  it("does not select an empty Mine queue while canonical work exists", () => {
+    const desk = read("src/components/inbox/inbox-operations-desk.tsx");
+    expect(desk).toContain("defaultQueueResolvedRef");
+    expect(desk).toContain("const hasMine = chats.some");
+    expect(desk).toContain('setQueueFilter("mine")');
+    expect(desk.indexOf("if (!hasMine) return")).toBeLessThan(
+      desk.indexOf('setQueueFilter("mine")'),
+    );
   });
 
   it("uses task-shaped queues instead of five equal workflow tabs", () => {
