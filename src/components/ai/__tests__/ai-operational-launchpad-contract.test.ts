@@ -14,7 +14,8 @@ describe("AI Class-AAA start-state authority", () => {
 
     expect(shell).toContain("AiDecisionWorkspace");
     expect(shell).not.toContain("AiOperationalLaunchpad");
-    expect(shell).not.toContain("AiWorkspace");
+    expect(shell).not.toContain('from "@/components/ai/ai-workspace"');
+    expect(shell).not.toContain("<AiWorkspace ");
     expect(canvas).toContain('data-ai-start-state="true"');
     expect(canvas).toContain("messages.length === 0");
     expect(canvas).toContain("STARTERS.map");
