@@ -45,6 +45,11 @@ const TOOL_ROUTE: Record<string, string> = {
   get_conversation_messages: "/inbox",
 };
 
+const DELIVERY_STATUS_TOOLS = new Set([
+  "get_delivery_status",
+  "get_pending_deliveries",
+]);
+
 const FIELD_COPY: Record<string, AiWorkspaceCopyKey> = {
   name: "fieldName",
   status: "fieldStatus",
@@ -94,7 +99,7 @@ const MONEY_FIELDS = new Set([
   "cost",
 ]);
 
-const ORDER_STATUS_FIELDS = new Set(["status", "fromStatus", "toStatus"]);
+const STATUS_FIELDS = new Set(["status", "fromStatus", "toStatus"]);
 const TECHNICAL_FIELDS = new Set(["orderNumber", "phone"]);
 
 const IMPORTANT_FIELDS = [
@@ -113,6 +118,7 @@ const IMPORTANT_FIELDS = [
   "riskScore",
 ] as const;
 
+type StatusNamespace = "orders" | "deliveries";
 type Translate = (key: string) => string;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -130,10 +136,29 @@ function simpleValue(value: unknown): string | null {
   return null;
 }
 
-function localizeOrderStatus(value: string, translate: Translate): string {
-  const normalized = value.trim().toLocaleLowerCase().replace(/[\s-]+/g, "_");
+function normalizeStatus(value: string): string {
+  return value
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[\s-]+/g, "_")
+    .toLowerCase();
+}
+
+function localizeStatus(
+  value: string,
+  translate: Translate,
+  namespace: StatusNamespace,
+): string {
+  const normalized = normalizeStatus(value);
   if (!normalized) return value;
-  const key = `orders.status.${normalized}`;
+
+  const suffix =
+    namespace === "deliveries"
+      ? normalized.replace(/_([a-z0-9])/g, (_match, character: string) =>
+          character.toUpperCase(),
+        )
+      : normalized;
+  const key = `${namespace}.status.${suffix}`;
   const translated = translate(key);
   return translated === key ? value : translated;
 }
@@ -143,6 +168,7 @@ function formatValue(
   value: unknown,
   locale: AiWorkspaceLocale,
   translate: Translate,
+  statusNamespace: StatusNamespace,
 ): string | null {
   if (typeof value === "number") {
     if (MONEY_FIELDS.has(key)) {
@@ -154,8 +180,12 @@ function formatValue(
     }
     return new Intl.NumberFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`).format(value);
   }
-  if (typeof value === "string" && ORDER_STATUS_FIELDS.has(key)) {
-    return localizeOrderStatus(value, translate);
+  if (typeof value === "string" && STATUS_FIELDS.has(key)) {
+    return localizeStatus(
+      value,
+      translate,
+      key === "status" ? statusNamespace : "orders",
+    );
   }
   return simpleValue(value);
 }
@@ -164,6 +194,7 @@ function recordFields(
   record: Record<string, unknown>,
   locale: AiWorkspaceLocale,
   translate: Translate,
+  statusNamespace: StatusNamespace,
 ) {
   const ordered = [
     ...IMPORTANT_FIELDS.filter((key) => key in record),
@@ -173,7 +204,13 @@ function recordFields(
   ];
   return ordered.flatMap((key) => {
     if (!FIELD_COPY[key]) return [];
-    const formatted = formatValue(key, record[key], locale, translate);
+    const formatted = formatValue(
+      key,
+      record[key],
+      locale,
+      translate,
+      statusNamespace,
+    );
     if (formatted === null || formatted.length > 120) return [];
     return [{ key, value: formatted, technical: TECHNICAL_FIELDS.has(key) }];
   });
@@ -184,13 +221,15 @@ function ResultRecord({
   locale,
   copy,
   translate,
+  statusNamespace,
 }: {
   value: Record<string, unknown>;
   locale: AiWorkspaceLocale;
   copy: (key: AiWorkspaceCopyKey, params?: Record<string, string | number>) => string;
   translate: Translate;
+  statusNamespace: StatusNamespace;
 }) {
-  const fields = recordFields(value, locale, translate).slice(0, 6);
+  const fields = recordFields(value, locale, translate, statusNamespace).slice(0, 6);
   if (fields.length === 0) return null;
   return (
     <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
@@ -226,6 +265,9 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
   const failed = tool.state === "failed";
   const running = tool.state === "running";
   const result = tool.result;
+  const statusNamespace: StatusNamespace = DELIVERY_STATUS_TOOLS.has(tool.name)
+    ? "deliveries"
+    : "orders";
   const records = Array.isArray(result)
     ? result.filter(isRecord).slice(0, 3)
     : isRecord(result)
@@ -272,7 +314,13 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
           ) : null}
           {records.map((record, index) => (
             <div key={`${tool.id}:record:${index}`} className={index > 0 ? "border-t pt-2" : ""}>
-              <ResultRecord value={record} locale={locale} copy={copy} translate={t} />
+              <ResultRecord
+                value={record}
+                locale={locale}
+                copy={copy}
+                translate={t}
+                statusNamespace={statusNamespace}
+              />
             </div>
           ))}
           {scalar ? <p dir="auto" className="text-xs text-foreground">{scalar}</p> : null}
