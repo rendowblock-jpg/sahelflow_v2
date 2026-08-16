@@ -3,7 +3,7 @@
 > **Authority:** protected source + exact release artifacts + Founder-installed observation
 > **Last assessed:** 2026-08-16
 > **Live protected main:** resolve GitHub `main` before every write/review/release action
-> **Current protected-main SHA at this handoff:** `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269
+> **Protected post-rollback product/source anchor:** `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269; later docs-only commits may advance live `main` without changing this product tree
 > **Latest published checkpoint:** Internal.20 / `1.0.0-internal.20` / MSI `1.0.0.20` / FD-039
 > **Founder-installed Internal.20 result:** **REJECTED**
 > **Founder-requested comparison/baseline:** Internal.19 / `1.0.0-internal.19` / MSI `1.0.0.19`
