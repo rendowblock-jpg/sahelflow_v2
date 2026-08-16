@@ -469,6 +469,26 @@ export function useInboxWorkspace() {
 
   const selectChat = useCallback(
     (chat: InboxChat) => {
+      pinnedDeepLinkChatRef.current = chat;
+      setChats((current) => {
+        const index = current.findIndex(
+          (entry) => entry.conversationId === chat.conversationId,
+        );
+        if (index === -1) return [chat, ...current];
+
+        const existing = current[index];
+        if (
+          existing.id === chat.id &&
+          existing.transportId === chat.transportId &&
+          existing.channel === chat.channel
+        ) {
+          return current;
+        }
+
+        const next = [...current];
+        next[index] = { ...existing, ...chat };
+        return next;
+      });
       activeTransportIdRef.current = chat.transportId ?? null;
       setActiveChatId(chat.id);
       setMessages([]);
