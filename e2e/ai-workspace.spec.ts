@@ -29,7 +29,7 @@ async function ensureOwnerSession(page: Page) {
   }
 }
 
-test.describe.serial("AI operational workspace evidence", () => {
+test.describe.serial("AI Class-AAA decision workspace evidence", () => {
   let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 
   test.beforeAll(async ({ browser, baseURL }) => {
@@ -69,14 +69,15 @@ test.describe.serial("AI operational workspace evidence", () => {
     await waitForHydration(page);
   });
 
-  test("desktop workspace exposes safe setup truth and durable session creation", async ({
+  test("1366 desktop is two-pane, safe, durable and progressively reviewable", async ({
     page,
   }) => {
-    const workspace = page.locator('[data-ai-workspace="v2"]');
+    const workspace = page.locator('[data-ai-decision-workspace="true"]');
     await expect(workspace).toBeVisible();
-    await expect(page.locator('[data-ai-sessions="true"]')).toBeVisible();
-    await expect(page.locator('[data-ai-thread="true"]')).toBeVisible();
-    await expect(page.locator('[data-ai-context="true"]')).toBeVisible();
+    await expect(workspace).toHaveAttribute("data-ai-layout", "desktop");
+    await expect(page.locator('[data-ai-work-history="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-decision-canvas="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-review-evidence="true"]')).toHaveCount(0);
 
     const status = await page.evaluate(async () => {
       const response = await fetch("/api/ai/status", { cache: "no-store" });
@@ -89,11 +90,12 @@ test.describe.serial("AI operational workspace evidence", () => {
     expect(status).not.toHaveProperty("apiKey");
     expect(status).not.toHaveProperty("secret");
 
-    await page.getByRole("button", { name: "Nouvelle session" }).first().click();
+    await page.getByRole("button", { name: "Nouvelle analyse" }).click();
     await expect(page.locator("[data-ai-session]").first()).toBeVisible();
-    await expect(page.locator('[data-ai-thread="true"]')).toContainText(
+    await expect(page.locator('[data-ai-decision-canvas="true"]')).toContainText(
       "Nouvelle conversation",
     );
+    await expect(page.locator('[data-ai-start-state="true"]')).toBeVisible();
 
     const composer = page.getByRole("textbox", {
       name: "Posez une question sur vos opérations…",
@@ -106,27 +108,46 @@ test.describe.serial("AI operational workspace evidence", () => {
         "La configuration IA demande votre attention",
       );
     }
+
+    await page.getByRole("button", { name: "Revue & preuves" }).click();
+    await expect(page.locator('[data-ai-review-evidence="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-review-evidence="true"]')).toContainText(
+      "Fournisseur & confidentialité",
+    );
+    await page.keyboard.press("Escape");
+    await expect(page.locator('[data-ai-review-evidence="true"]')).toHaveCount(0);
   });
 
-  test("mobile drill-in stays single-pane and Arabic geometry remains RTL-safe", async ({
+  test("wide desktop promotes review evidence without shrinking the decision canvas", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    const workspace = page.locator('[data-ai-decision-workspace="true"]');
+    await expect(workspace).toHaveAttribute("data-ai-layout", "wide");
+    await expect(page.locator('[data-ai-work-history="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-decision-canvas="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-review-evidence="true"]')).toBeVisible();
+    await expect(page.getByRole("button", { name: "Revue & preuves" })).toHaveCount(0);
+  });
+
+  test("mobile drills history to decision canvas and Arabic remains semantically contained", async ({
     page,
     context,
     baseURL,
   }) => {
-    if ((await page.locator("[data-ai-session]").count()) === 0) {
-      await page.getByRole("button", { name: "Nouvelle session" }).first().click();
-      await expect(page.locator("[data-ai-session]").first()).toBeVisible();
-    }
-
     await page.setViewportSize({ width: 640, height: 768 });
-    await expect(page.locator('[data-ai-sessions="true"]')).toBeVisible();
-    await expect(page.locator('[data-ai-thread="true"]')).toHaveCount(0);
+    await expect(page.locator('[data-ai-decision-workspace="true"]')).toHaveAttribute(
+      "data-ai-layout",
+      "mobile",
+    );
+    await expect(page.locator('[data-ai-work-history="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-decision-canvas="true"]')).toHaveCount(0);
 
     await page.locator("[data-ai-session]").first().click();
-    await expect(page.locator('[data-ai-thread="true"]')).toBeVisible();
-    await expect(page.locator('[data-ai-sessions="true"]')).toHaveCount(0);
+    await expect(page.locator('[data-ai-decision-canvas="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-work-history="true"]')).toHaveCount(0);
     await page.getByRole("button", { name: "Retour aux sessions" }).click();
-    await expect(page.locator('[data-ai-sessions="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-work-history="true"]')).toBeVisible();
 
     await context.addCookies([
       {
@@ -139,7 +160,8 @@ test.describe.serial("AI operational workspace evidence", () => {
     await waitForHydration(page);
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expect(page.locator('[data-ai-workspace="v2"]')).toBeVisible();
+    await expect(page.locator('[data-ai-decision-workspace="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-work-history="true"]')).toBeVisible();
 
     const geometry = await page.evaluate(() => ({
       viewport: window.innerWidth,
@@ -148,5 +170,13 @@ test.describe.serial("AI operational workspace evidence", () => {
     }));
     expect(geometry.document).toBeLessThanOrEqual(geometry.viewport + 1);
     expect(geometry.body).toBeLessThanOrEqual(geometry.viewport + 1);
+
+    await page.locator("[data-ai-session]").first().click();
+    await expect(page.locator('[data-ai-decision-canvas="true"]')).toBeVisible();
+    await page.getByRole("button", { name: "المراجعة والأدلة" }).click();
+    await expect(page.locator('[data-ai-review-evidence="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-review-evidence="true"]')).toContainText(
+      "المزود والخصوصية",
+    );
   });
 });
