@@ -117,7 +117,10 @@ export function InboxOperationsDesk({
     const fingerprint = `${first.conversationId}:${queueFilter}:${workflowFilter}`;
     if (desktopPrimedRef.current === fingerprint) return;
     desktopPrimedRef.current = fingerprint;
-    const timer = window.setTimeout(() => selectChat(first), 0);
+    const timer = window.setTimeout(() => {
+      selectChat(first);
+      router.replace(`/inbox?conversation=${encodeURIComponent(first.conversationId)}`);
+    }, 0);
     return () => window.clearTimeout(timer);
   }, [
     activeChat,
@@ -126,6 +129,7 @@ export function InboxOperationsDesk({
     loadingChats,
     queueFilter,
     requestedConversationId,
+    router,
     selectChat,
     visibleQueueChats,
     workflowFilter,
