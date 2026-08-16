@@ -43,7 +43,10 @@ describe("Inbox final review invariants", () => {
     expect(desk).toContain(
       "const [defaultQueueResolved, setDefaultQueueResolved] = useState(false)",
     );
-    expect(desk).toContain("if (hasMine) setQueueFilter(\"mine\")");
+    expect(desk).toContain("const hasMine =");
+    expect(desk).toContain("chats.some((chat) => chat.workflow.assigneeId === currentMemberId)");
+    expect(desk).toContain("const timer = window.setTimeout(() => {");
+    expect(desk).toContain('setQueueFilter("mine")');
     expect(desk).toContain("setDefaultQueueResolved(true)");
     expect(desk).toContain("!defaultQueueResolved ||");
   });
