@@ -46,10 +46,12 @@ function groupLabel(
 
 export function AiWorkHistory({
   workspace,
+  navigationLocked,
   onOpenSession,
   onNewAnalysis,
 }: {
   workspace: ReturnType<typeof useAiWorkspace>;
+  navigationLocked: boolean;
   onOpenSession: (sessionId: string) => void;
   onNewAnalysis: () => void;
 }) {
@@ -131,10 +133,12 @@ export function AiWorkHistory({
                           type="button"
                           data-ai-session={session.id}
                           aria-current={active ? "page" : undefined}
+                          disabled={navigationLocked}
                           onClick={() => onOpenSession(session.id)}
                           className={cn(
                             "w-full rounded-lg border border-transparent px-3 py-2.5 text-start transition-colors",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            "disabled:cursor-not-allowed disabled:opacity-50",
                             active
                               ? "border-primary/15 bg-primary/[0.055]"
                               : "hover:bg-muted/55",
