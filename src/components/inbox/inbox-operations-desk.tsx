@@ -37,7 +37,6 @@ export function InboxOperationsDesk({
     setLogoutConfirmOpen,
     disconnectWhatsApp,
     t,
-    locale,
   } = workspace;
 
   const [authority, setAuthority] = useState<InboxAuthorityView | null>(null);
@@ -144,7 +143,7 @@ export function InboxOperationsDesk({
       <div
         data-inbox-workspace="v2"
         data-inbox-operations-desk="true"
-        className="flex h-full min-h-0 flex-col overflow-hidden border bg-background"
+        className="flex h-full min-h-0 flex-col overflow-hidden bg-background"
       >
         <InboxOperationsHeader
           workspace={workspace}
@@ -152,10 +151,7 @@ export function InboxOperationsDesk({
           canRetryIngress={canRetryIngress}
         />
 
-        <div
-          className="flex min-h-0 flex-1 overflow-hidden"
-          style={{ direction: locale === "ar" ? "rtl" : "ltr" }}
-        >
+        <div className="flex min-h-0 flex-1 overflow-hidden">
           {!isMobile || !activeChat ? (
             <InboxWorkQueue
               workspace={workspace}
