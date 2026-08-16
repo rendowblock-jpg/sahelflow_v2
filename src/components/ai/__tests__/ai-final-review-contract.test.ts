@@ -51,6 +51,21 @@ describe("AI Class-AAA final review regressions", () => {
     expect(copy).not.toContain('providerReady: "Ready for new analysis"');
   });
 
+  it("localizes order-status evidence through the shared product translation authority", () => {
+    const tool = read("src/components/ai/ai-tool-result-card.tsx");
+    const proposal = read("src/components/ai/ai-action-proposal-card.tsx");
+
+    expect(tool).toContain('ORDER_STATUS_FIELDS = new Set(["status", "fromStatus", "toStatus"])');
+    expect(tool).toContain("const key = `orders.status.${normalized}`;");
+    expect(tool).toContain("translated === key ? value : translated");
+    expect(tool).toContain("locale: rawLocale, t");
+    expect(proposal).toContain(
+      'ORDER_STATUS_SUMMARY_FIELDS = new Set(["fromStatus", "toStatus"])',
+    );
+    expect(proposal).toContain("const key = `orders.status.${normalized}`;");
+    expect(proposal).toContain("summaryValue(key, value, locale, t)");
+  });
+
   it("keeps the i18n formatter type-safe and proposal authority tests on live composition files", () => {
     const decisionCopy = read("src/lib/i18n/ai-decision-workspace.ts");
     const authority = read("src/lib/ai/actions/__tests__/source-contract.test.ts");
