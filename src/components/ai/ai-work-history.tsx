@@ -58,6 +58,7 @@ export function AiWorkHistory({
     activeSessionId,
     loadingSessions,
     creatingSession,
+    sending,
     proposals,
     locale,
   } = workspace;
@@ -83,7 +84,7 @@ export function AiWorkHistory({
           type="button"
           size="sm"
           className="mt-3 w-full justify-center"
-          disabled={creatingSession}
+          disabled={creatingSession || sending}
           onClick={onNewAnalysis}
         >
           {creatingSession ? (
