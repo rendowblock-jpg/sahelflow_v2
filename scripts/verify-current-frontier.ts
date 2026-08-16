@@ -1,147 +1,221 @@
 #!/usr/bin/env bun
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-type VersionAuthority = {
-  version: string;
-  windowsMsiVersion: string;
-  channel: string;
-  licensing: {
-    releaseMode: "founder-offline-only" | "customer-online";
-    authorityDecision: string | null;
-    ownedHostSuffix: string | null;
-  };
-};
+const repoRoot = resolve(process.env.SF_REPO_DIR ?? process.cwd());
+const findings: string[] = [];
 
-type Certification = {
-  productSha?: string;
-  phase5RunId?: number;
-  phase67RunId?: number;
-  ciRunId?: number;
-};
-
-type ReleaseRequest = {
-  schemaVersion?: number;
-  request?: string;
-  sourcePolicy?: string;
-  version?: string;
-  windowsMsiVersion?: string;
-  channel?: string;
-  releaseMode?: string;
-  ownedHostSuffix?: string | null;
-  authorityDecision?: string | null;
-  licenseServiceUrl?: string | null;
-  certification?: Certification;
-};
-
-const root = resolve(process.env.SF_REPO_DIR ?? process.cwd());
-
-function pathOf(relative: string): string {
-  return resolve(root, relative);
+function read(relativePath: string): string {
+  const absolutePath = resolve(repoRoot, relativePath);
+  if (!existsSync(absolutePath)) {
+    findings.push(`${relativePath}: required frontier authority is missing`);
+    return "";
+  }
+  return readFileSync(absolutePath, "utf8");
 }
 
-function requiredText(relative: string): string {
-  const path = pathOf(relative);
-  if (!existsSync(path)) throw new Error(`required frontier authority file is missing: ${relative}`);
-  return readFileSync(path, "utf8");
-}
-
-function requiredJson<T>(relative: string): T {
-  try {
-    return JSON.parse(requiredText(relative)) as T;
-  } catch (error) {
-    throw new Error(`${relative} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+function requireMarkers(relativePath: string, markers: readonly string[]): void {
+  const content = read(relativePath);
+  if (!content) return;
+  for (const marker of markers) {
+    if (!content.includes(marker)) {
+      findings.push(`${relativePath}: missing current-frontier marker: ${marker}`);
+    }
   }
 }
 
-function positiveRunId(value: unknown): value is number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
-}
-
-const authority = requiredJson<VersionAuthority>("sahelflow.version.json");
-if (authority.channel !== "internal") throw new Error(`current frontier channel must be internal, found ${authority.channel}`);
-if (!/^\d+\.\d+\.\d+-internal\.\d+$/.test(authority.version)) {
-  throw new Error(`current frontier version is not an Internal SemVer: ${authority.version}`);
-}
-if (!/^\d+\.\d+\.\d+\.\d+$/.test(authority.windowsMsiVersion)) {
-  throw new Error(`current frontier MSI version is invalid: ${authority.windowsMsiVersion}`);
-}
-if (!authority.licensing?.authorityDecision) throw new Error("current frontier authorityDecision is missing");
-
-const requestsDir = pathOf(".github/release-requests");
-if (!existsSync(requestsDir)) throw new Error(".github/release-requests is missing");
-const requestFiles = readdirSync(requestsDir)
-  .filter((name) => name.endsWith(".json"))
-  .sort();
-const matchingRequests: Array<{ file: string; request: ReleaseRequest }> = [];
-for (const file of requestFiles) {
-  const request = requiredJson<ReleaseRequest>(`.github/release-requests/${file}`);
-  if (
-    request.version === authority.version &&
-    request.windowsMsiVersion === authority.windowsMsiVersion &&
-    request.channel === authority.channel &&
-    request.releaseMode === authority.licensing.releaseMode &&
-    request.authorityDecision === authority.licensing.authorityDecision &&
-    request.ownedHostSuffix === authority.licensing.ownedHostSuffix
-  ) {
-    matchingRequests.push({ file, request });
+function rejectMarkers(relativePath: string, markers: readonly string[]): void {
+  const content = read(relativePath);
+  if (!content) return;
+  for (const marker of markers) {
+    if (content.includes(marker)) {
+      findings.push(`${relativePath}: stale current-frontier marker remains: ${marker}`);
+    }
   }
 }
-if (matchingRequests.length !== 1) {
-  throw new Error(
-    `expected exactly one release request matching ${authority.version}/${authority.windowsMsiVersion}/${authority.licensing.authorityDecision}; found ${matchingRequests.length}`,
+
+const internal19ApplicationBaseline = "8448c47123290f2e1af702ff24a427cc11c4781c";
+const latestSignedInternal18Source = "5cb7f5040249a540ed635cdea16dc933843b40aa";
+const mergedBranch = "agent/internal19-product-convergence";
+const mergedPr = "PR #262";
+const currentSourceFrontier = "Internal.19";
+const installedCheckpoint = "Internal.18";
+const installedVersion = "1.0.0-internal.18";
+const installedMsiVersion = "1.0.0.18";
+const installedDecision = "FD-037";
+const candidateVersion = "1.0.0-internal.19";
+const candidateMsiVersion = "1.0.0.19";
+const candidateDecision = "FD-038";
+const candidateAuthorityMarker =
+  "Internal.19 release authority is approved under FD-038";
+const currentReleaseRequest =
+  ".github/release-requests/internal-19-founder-convergence.json";
+const activePhase = "Phase 6 — Arabic, RTL and accessibility parity";
+
+// Release authority, installed evidence, application-source identity, and the
+// live Git branch head are intentionally separate. FD-038 authorizes the next
+// Founder-only signed candidate, but does not pre-claim publication or installed
+// acceptance. Live protected `main` is always resolved from GitHub at action time.
+requireMarkers("sahelflow.version.json", [
+  `"version": "${candidateVersion}"`,
+  `"windowsMsiVersion": "${candidateMsiVersion}"`,
+  '"releaseMode": "founder-offline-only"',
+  `"authorityDecision": "${candidateDecision}"`,
+  '"approvalScope": "internal-lab"',
+  '"ownedHostSuffix": null',
+]);
+
+requireMarkers("scripts/sf-version.ts", [
+  'authority.version === "1.0.0-internal.19"',
+  'authority.licensing?.authorityDecision === "FD-038"',
+  "Internal.19/FD-038",
+]);
+
+requireMarkers("src-tauri/build.rs", [
+  'Some("1.0.0-internal.19"), Some("FD-038")',
+  "Founder-only offline checkpoints must not package SF_LICENSE_SERVICE_URL",
+]);
+
+requireMarkers(".github/workflows/release.yml", [
+  candidateVersion,
+  candidateDecision,
+  "FD-038/Internal.19",
+]);
+
+requireMarkers(currentReleaseRequest, [
+  '"sourcePolicy": "exact-protected-main"',
+  `"version": "${candidateVersion}"`,
+  `"windowsMsiVersion": "${candidateMsiVersion}"`,
+  '"releaseMode": "founder-offline-only"',
+  `"authorityDecision": "${candidateDecision}"`,
+  '"ownedHostSuffix": null',
+]);
+
+const currentDocs = [
+  "README.md",
+  "AGENTS.md",
+  "documentation/README.md",
+  "documentation/system/CURRENT_STATE.md",
+  "documentation/system/ROADMAP.md",
+  "documentation/operations/WORKING_MEMORY.md",
+] as const;
+
+for (const path of currentDocs) {
+  requireMarkers(path, [
+    internal19ApplicationBaseline,
+    latestSignedInternal18Source,
+    mergedPr,
+    currentSourceFrontier,
+    installedCheckpoint,
+    "REJECTED / PARTIALLY IMPROVED",
+    candidateVersion,
+    candidateMsiVersion,
+    candidateDecision,
+    candidateAuthorityMarker,
+    "founder-offline-only",
+    "#221",
+    "#226",
+    "#230",
+    "Live protected",
+    "application/source baseline",
+  ]);
+}
+
+requireMarkers("README.md", [
+  activePhase,
+  installedVersion,
+  installedMsiVersion,
+  installedDecision,
+  mergedBranch,
+  "application/source baseline",
+]);
+
+requireMarkers("AGENTS.md", [
+  "one active implementation agent at a time",
+  activePhase,
+  mergedBranch,
+  "Do not restart a generic codebase audit",
+  "application/source baseline",
+]);
+
+requireMarkers("documentation/README.md", [
+  mergedBranch,
+  "## FD-034 — Internal.16 Founder-only offline checkpoint",
+  "## FD-035 — Internal.17 source-correction authority",
+  "## FD-036 — Internal.17 Founder-only offline checkpoint",
+  "## FD-037 — Internal.18 Founder visual-correction checkpoint",
+  "## FD-038 — Internal.19 Founder convergence checkpoint",
+  "Internal.19 release authority is approved under FD-038; signed publication and Founder install remain pending",
+  candidateVersion,
+  candidateMsiVersion,
+  candidateDecision,
+  currentReleaseRequest,
+  "## Current release-authority order after PR #262 merge",
+]);
+
+requireMarkers("documentation/system/CURRENT_STATE.md", [
+  mergedBranch,
+  "## Installed authority",
+  "## Current source frontier — live main plus fixed Internal.19 application baseline",
+  "## Exact source/evidence state",
+  "## Remaining launch blockers",
+]);
+
+requireMarkers("documentation/system/ROADMAP.md", [
+  "## Current dependency order",
+  "expected-head merge",
+  "## Governance reconciliation after source merge",
+  "## Release-authority boundary",
+  "## Phase 7 — installed performance and reliability",
+  "## Customer licensing/network gate — #230",
+]);
+
+requireMarkers("documentation/operations/WORKING_MEMORY.md", [
+  mergedBranch,
+  "## Exact resumable frontier",
+  "8109 ms",
+  "4672.7 ms",
+  "31.1 ms",
+  "retry-free",
+  "15ca8781f034b25116d645e2ced7f76be567ae1b",
+  "6f8cc100db134495226ab4f7c5588dc4f86acd75",
+  "## Exact next actions",
+]);
+
+const staleCurrentMarkers = [
+  "Current branch/PR: `agent/founder-visual-acceptance-repair` / PR #260",
+  "Current implementation/release frontier: `agent/founder-visual-acceptance-repair` / PR #260",
+  "Current implementation/release branch: `agent/founder-visual-acceptance-repair` / **PR #260**",
+  "Current frontier: PR #260 / `agent/founder-visual-acceptance-repair`",
+  "The current job is **PR #260**",
+  "PR #260 is one consolidated response",
+  "Current Founder verdict: Founder-installed Internal.17",
+  "Protected main before current package: `898904a11178c8d7b69c755f13794b2ca8bf0356`",
+  "Resolve PR #262 head from live GitHub before every write or merge",
+  "Current source frontier: `agent/internal19-product-convergence` / PR #262 / Internal.19",
+  "Current source work: **Internal.19**, `agent/internal19-product-convergence`, **PR #262**",
+  "After PR #262 is exact-head green and reviewed, merge only that verified tree",
+  "No Internal.19 release authority exists yet",
+  `> **Protected main:** \`${internal19ApplicationBaseline}\``,
+  `- Protected \`main\`: \`${internal19ApplicationBaseline}\``,
+];
+for (const path of currentDocs) rejectMarkers(path, staleCurrentMarkers);
+
+const duplicateHandoffPath =
+  "documentation/archive/handoffs/PRE_PHASE8_SESSION_HANDOFF-2026-08-11.md";
+if (existsSync(resolve(repoRoot, duplicateHandoffPath))) {
+  findings.push(
+    `${duplicateHandoffPath}: duplicate permanent handoff exists; fold resumable context into WORKING_MEMORY.md instead`,
   );
 }
 
-const { file: requestFile, request } = matchingRequests[0]!;
-if (request.schemaVersion !== 1) throw new Error(`${requestFile}: schemaVersion must be 1`);
-if (request.sourcePolicy !== "exact-protected-main") {
-  throw new Error(`${requestFile}: sourcePolicy must be exact-protected-main`);
-}
-
-if (authority.licensing.releaseMode === "founder-offline-only") {
-  if (authority.licensing.ownedHostSuffix !== null) {
-    throw new Error("Founder-offline authority must not provision ownedHostSuffix");
-  }
-  if (request.licenseServiceUrl !== null) {
-    throw new Error(`${requestFile}: Founder-offline request must keep licenseServiceUrl null`);
-  }
+if (findings.length > 0) {
+  console.error("Current execution-frontier authority is stale or incomplete:");
+  for (const finding of findings) console.error(` - ${finding}`);
+  process.exitCode = 1;
 } else {
-  if (!authority.licensing.ownedHostSuffix?.trim()) {
-    throw new Error("customer-online authority requires ownedHostSuffix");
-  }
-  if (!request.licenseServiceUrl?.trim()) {
-    throw new Error(`${requestFile}: customer-online request requires licenseServiceUrl`);
-  }
+  console.log(
+    `Current execution frontier verified: live protected main is resolved from GitHub at action time; Internal.19 application baseline is 8448c471... from PR #262; FD-038 authorizes ${candidateVersion} / MSI ${candidateMsiVersion} as the next founder-offline-only internal-lab candidate. Latest published/Founder-installed evidence remains ${installedCheckpoint}/${installedDecision} from source 5cb7f504... with result REJECTED / PARTIALLY IMPROVED until FD-038 publication and Founder install complete. #221/#226/#230 remain independent obligations.`,
+  );
 }
-
-const certification = request.certification;
-if (!certification || !/^[0-9a-f]{40}$/.test(certification.productSha ?? "")) {
-  throw new Error(`${requestFile}: certification.productSha must be exact lowercase 40-hex`);
-}
-for (const [name, value] of [
-  ["phase5RunId", certification.phase5RunId],
-  ["phase67RunId", certification.phase67RunId],
-  ["ciRunId", certification.ciRunId],
-] as const) {
-  if (!positiveRunId(value)) throw new Error(`${requestFile}: certification.${name} must be a positive integer`);
-}
-
-const markers = [
-  ["scripts/sf-version.ts", authority.version, authority.licensing.authorityDecision],
-  ["src-tauri/build.rs", authority.version, authority.licensing.authorityDecision],
-  [".github/workflows/release.yml", authority.version, authority.licensing.authorityDecision],
-  ["scripts/install-founder-windows.ps1", authority.version, authority.windowsMsiVersion],
-] as const;
-for (const [relative, first, second] of markers) {
-  const content = requiredText(relative);
-  if (!content.includes(first) || !content.includes(second)) {
-    throw new Error(`${relative} does not encode current release authority ${first} / ${second}`);
-  }
-}
-
-console.log(
-  `Current release frontier verified: ${authority.version}; MSI ${authority.windowsMsiVersion}; ${authority.licensing.authorityDecision}; request ${requestFile}; certified product ${certification.productSha}`,
-);
-console.log("Documentation chronology reconciliation is deliberately non-blocking and remains a post-publication task.");

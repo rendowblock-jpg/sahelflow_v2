@@ -43,12 +43,11 @@ export function DonutChart({
   innerRadius = "48%",
   outerRadius = "72%",
 }: DonutChartProps) {
-  const { t, locale, dir } = useI18n();
+  const { t, locale } = useI18n();
   const { isAnimationActive, baseDuration } = useChartMotion();
   const chartHeight = normalizeChartHeight(height);
   const total = data.reduce((sum, entry) => sum + entry.value, 0);
-  const localeTag =
-    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+  const localeTag = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
   const countFormatter = new Intl.NumberFormat(localeTag, {
     maximumFractionDigits: 2,
   });
@@ -60,7 +59,6 @@ export function DonutChart({
   if (!total) {
     return (
       <div
-        dir={dir}
         className="flex w-full items-center justify-center text-sm text-muted-foreground"
         style={{ height: chartHeight }}
       >
@@ -70,9 +68,8 @@ export function DonutChart({
   }
 
   return (
-    <div dir={dir} className="relative" style={{ height: chartHeight }}>
+    <div className="relative" style={{ height: chartHeight }}>
       <ChartContainer
-        dir={dir}
         role="img"
         aria-label={t("charts.donut")}
         config={config}
@@ -102,10 +99,10 @@ export function DonutChart({
             nameKey="key"
             innerRadius={innerRadius}
             outerRadius={outerRadius}
-            strokeWidth={2.5}
+            strokeWidth={2}
             stroke="var(--card)"
-            paddingAngle={3}
-            cornerRadius={4}
+            paddingAngle={2.5}
+            cornerRadius={3}
             isAnimationActive={isAnimationActive}
             animationDuration={baseDuration}
             animationEasing="ease-out"
@@ -122,15 +119,12 @@ export function DonutChart({
       {centerValue || centerLabel ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
           {centerValue ? (
-            <bdi
-              dir="auto"
-              className="text-[1.7rem] font-bold tabular-nums tracking-tight rtl:tracking-normal"
-            >
+            <bdi dir="auto" className="text-2xl font-semibold tabular-nums tracking-tight">
               {centerValue}
             </bdi>
           ) : null}
           {centerLabel ? (
-            <span className="mt-1 max-w-28 text-xs leading-5 text-muted-foreground rtl:text-sm">
+            <span className="mt-0.5 max-w-24 text-xs leading-4 text-muted-foreground">
               {centerLabel}
             </span>
           ) : null}

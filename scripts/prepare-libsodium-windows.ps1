@@ -62,11 +62,6 @@ if ($env:OS -ne "Windows_NT" -or -not [Environment]::Is64BitOperatingSystem) {
     throw "SahelFlow libsodium preparation supports Windows x64 only"
 }
 
-& bun run scripts/sync-cargo-root-lock.ts
-if ($LASTEXITCODE -ne 0) {
-    throw "failed to synchronize generated Cargo root package identity before libsodium preparation"
-}
-
 & cargo fetch --manifest-path $manifestPath --locked
 if ($LASTEXITCODE -ne 0) {
     throw "cargo fetch failed while locating libsodium-sys-stable $crateVersion"

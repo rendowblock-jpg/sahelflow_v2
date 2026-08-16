@@ -108,7 +108,7 @@ describe("release tracked-source hygiene", () => {
 
     expect(result.status, output(result)).toBe(0);
     expect(result.stdout).toContain(
-      "Verified approved deterministic packaging rewrite without restoring the build worktree",
+      "Verified approved non-semantic packaging rewrite without restoring the build worktree",
     );
     expect(readFileSync(state.cargoPath, "utf8")).toBe(rewritten);
     expect(readFileSync(state.placeholderPath, "utf8")).toBe(state.placeholder);

@@ -46,46 +46,6 @@ function clearLocaleVisualTransition(): void {
   root.removeAttribute("aria-busy");
 }
 
-/**
- * Treat a locale switch as one visual snapshot instead of letting text, shell
- * direction and workspace geometry repaint independently. View Transitions are
- * already supported by the packaged Chromium/WebView runtime; reduced-motion
- * users and older browsers keep the same immediate atomic commit.
- */
-function commitLocaleViewTransition(update: () => void): void {
-  if (typeof window === "undefined" || typeof document === "undefined") {
-    update();
-    return;
-  }
-
-  const reducedMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
-  const startViewTransition =
-    typeof document.startViewTransition === "function"
-      ? document.startViewTransition.bind(document)
-      : null;
-
-  if (reducedMotion || !startViewTransition) {
-    update();
-    return;
-  }
-
-  let committed = false;
-  const commitOnce = () => {
-    if (committed) return;
-    committed = true;
-    update();
-  };
-
-  try {
-    const transition = startViewTransition(commitOnce);
-    void transition.finished.catch(() => undefined);
-  } catch {
-    commitOnce();
-  }
-}
-
 export function useI18n() {
   const router = useRouter();
   const serverLocale = useServerLocale();
@@ -101,10 +61,13 @@ export function useI18n() {
   const isLocalePending = localeCommitPending || refreshPending;
 
   // All three compact product bundles are synchronously available. Client-owned
-  // copy and geometry therefore move in the same committed snapshot; the refreshed
-  // server tree reconciles server-rendered fragments afterward.
+  // copy and geometry can therefore move in one render as soon as a locale is
+  // requested; the refreshed server tree reconciles server-rendered fragments.
   const translations = getTranslations(locale);
 
+  // Keep the document boundary idempotently aligned with the client locale. The
+  // UI store performs the synchronous event-boundary commit; this effect covers
+  // hydration and any future external locale reconciliation path.
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = getDirection(locale);
@@ -119,7 +82,8 @@ export function useI18n() {
   }, [localeCommitPending, pendingLocale]);
 
   // A failed/aborted RSC refresh must never leave the locale request unresolved.
-  // Hard reload remains recovery only; normal switching reconciles in place.
+  // The hard reload is recovery only; normal switching commits the client shell
+  // immediately and reconciles the server tree in place.
   useEffect(() => {
     if (!localeCommitPending) return;
     const timeout = window.setTimeout(() => {
@@ -155,9 +119,15 @@ export function useI18n() {
   );
 
   /**
-   * Locale switching is one client visual transaction followed by server
-   * reconciliation: persist request → snapshot/commit live copy + direction →
-   * refresh RSC → clear pending when both authorities agree.
+   * Locale switching is one client transaction followed by server reconciliation:
+   * 1. persist the request cookie for the next server render;
+   * 2. commit the client locale immediately so shell geometry and client copy do
+   *    not wait on network/RSC latency;
+   * 3. refresh the current Server Component tree under the requested cookie;
+   * 4. clear the pending state when ServerLocaleProvider confirms the same locale.
+   *
+   * This removes the historical restart-only/stale-side failure while preserving
+   * the cookie as durable request authority.
    */
   const setLocale = useCallback(
     (newLocale: Locale) => {
@@ -166,9 +136,7 @@ export function useI18n() {
       beginLocaleVisualTransition(newLocale);
       requestLocale(newLocale);
       setPendingLocale(newLocale);
-      commitLocaleViewTransition(() => {
-        commitLocale(newLocale);
-      });
+      commitLocale(newLocale);
 
       startRefreshTransition(() => {
         router.refresh();

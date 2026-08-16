@@ -69,17 +69,6 @@ if (process.versions.bun !== PINNED_BUN_VERSION) {
   );
 }
 
-// Keep the generated lockfile's root package identity synchronized with the
-// committed Cargo.toml version before any later --locked Rust proof or Tauri
-// packaging step. The helper is fail-closed: it reparses both states and allows
-// only the local sahelflow package version to change.
-step("0a. Synchronize generated Cargo root package identity");
-execSync("bun run scripts/sync-cargo-root-lock.ts", {
-  stdio: "inherit",
-  cwd: ROOT,
-});
-ok("Cargo root lock identity synchronized");
-
 // The installed candidate must never depend on a developer PATH runtime.
 step("0. Prepare pinned Windows runtime");
 execSync("bun run scripts/prepare-runtime.ts", {

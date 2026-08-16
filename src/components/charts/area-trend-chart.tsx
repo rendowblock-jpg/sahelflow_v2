@@ -46,20 +46,15 @@ export function AreaTrendChart({
   curve = "monotone",
   emptyMessage,
 }: AreaTrendChartProps) {
-  const { t, locale, dir } = useI18n();
+  const { t, locale } = useI18n();
   const { isAnimationActive, baseDuration } = useChartMotion();
   const chartHeight = normalizeChartHeight(height);
   const fmtY = resolveFormatter(formatY, locale);
   const gradientId = useGradientId("area");
-  const rtl = dir === "rtl";
 
   if (!data.length) {
     return (
-      <div
-        dir={dir}
-        className="flex w-full items-center justify-center text-sm text-muted-foreground"
-        style={{ height: chartHeight }}
-      >
+      <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height: chartHeight }}>
         {emptyMessage ?? "—"}
       </div>
     );
@@ -67,42 +62,19 @@ export function AreaTrendChart({
 
   return (
     <ChartContainer
-      dir={dir}
+      dir="ltr"
       role="img"
       aria-label={t("charts.areaTrend")}
       config={config}
       style={{ height: chartHeight }}
       className="aspect-auto w-full"
     >
-      <AreaChart
-        data={data}
-        margin={{
-          left: rtl ? 12 : 4,
-          right: rtl ? 4 : 12,
-          top: 8,
-          bottom: 0,
-        }}
-      >
+      <AreaChart data={data} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
         <defs>
           {series.map((current) => (
-            <linearGradient
-              key={current.key}
-              id={`${gradientId}-${current.key}`}
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="1"
-            >
-              <stop
-                offset="5%"
-                stopColor={`var(--color-${current.key})`}
-                stopOpacity={0.56}
-              />
-              <stop
-                offset="95%"
-                stopColor={`var(--color-${current.key})`}
-                stopOpacity={0.025}
-              />
+            <linearGradient key={current.key} id={`${gradientId}-${current.key}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={`var(--color-${current.key})`} stopOpacity={0.56} />
+              <stop offset="95%" stopColor={`var(--color-${current.key})`} stopOpacity={0.025} />
             </linearGradient>
           ))}
         </defs>
@@ -114,23 +86,17 @@ export function AreaTrendChart({
           tickMargin={10}
           minTickGap={32}
           className="text-xs fill-muted-foreground"
-          tick={{
-            fill: "var(--sf-chart-axis)",
-            fontSize: rtl ? 13 : 12,
-          }}
+          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
         <YAxis
-          width={rtl ? 68 : 60}
+          width={60}
           tickLine={false}
           axisLine={false}
-          tickMargin={8}
+          tickMargin={6}
           tickFormatter={(value: number) => fmtY(value)}
           className="text-xs fill-muted-foreground"
-          orientation={rtl ? "right" : "left"}
-          tick={{
-            fill: "var(--sf-chart-axis)",
-            fontSize: rtl ? 13 : 12,
-          }}
+          orientation="left"
+          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
         />
         <ChartTooltip
           cursor={{ stroke: "var(--sf-chart-grid)", strokeWidth: 1 }}
@@ -156,10 +122,10 @@ export function AreaTrendChart({
             dataKey={current.key}
             type={curve}
             stroke={`var(--color-${current.key})`}
-            strokeWidth={2.5}
+            strokeWidth={2.25}
             fill={`url(#${gradientId}-${current.key})`}
             dot={false}
-            activeDot={{ r: 4.5, strokeWidth: 2, stroke: "var(--background)" }}
+            activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--background)" }}
             isAnimationActive={isAnimationActive}
             animationDuration={baseDuration}
             animationEasing="ease-out"
