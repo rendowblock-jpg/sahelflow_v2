@@ -80,6 +80,7 @@ type GroupDefinition = {
 
 type SettingsCopy = (key: SettingsWorkspaceCopyKey) => string;
 type FocusIntent = "detail" | "directory" | null;
+type BreakpointFocusRegion = "directory" | "detail" | "back" | null;
 
 const DEFAULT_GROUP: GroupDefinition = {
   id: "workspace",
@@ -242,6 +243,7 @@ export function SettingsWorkspace({
   const directoryRef = useRef<HTMLElement | null>(null);
   const detailHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const focusIntentRef = useRef<FocusIntent>(null);
+  const lastFocusRegionRef = useRef<BreakpointFocusRegion>(null);
   const breakpointReadyRef = useRef(false);
   const previousMobileRef = useRef(false);
 
@@ -261,11 +263,21 @@ export function SettingsWorkspace({
       return;
     }
 
-    if (mobile && !previousMobileRef.current) {
+    const wasMobile = previousMobileRef.current;
+    if (mobile && !wasMobile) {
       setMobilePane("detail");
+      if (lastFocusRegionRef.current === "directory") {
+        detailHeadingRef.current?.focus();
+      }
+    } else if (!mobile && wasMobile && lastFocusRegionRef.current === "back") {
+      directoryRef.current
+        ?.querySelector<HTMLButtonElement>(
+          `[data-settings-group="${effectiveActive}"]`,
+        )
+        ?.focus();
     }
     previousMobileRef.current = mobile;
-  }, [mobile]);
+  }, [effectiveActive, mobile]);
 
   useEffect(() => {
     if (!mobile || !focusIntentRef.current) return;
@@ -445,6 +457,9 @@ export function SettingsWorkspace({
       >
         <aside
           ref={directoryRef}
+          onFocusCapture={() => {
+            lastFocusRegionRef.current = "directory";
+          }}
           className={cn(
             mobile
               ? visibleMobilePane === "directory"
@@ -479,6 +494,9 @@ export function SettingsWorkspace({
           data-settings-group-panel={effectiveActive}
           data-settings-domain-canvas="true"
           aria-labelledby={`settings-control-center-${effectiveActive}`}
+          onFocusCapture={() => {
+            lastFocusRegionRef.current = "detail";
+          }}
           className={cn(
             "min-w-0",
             mobile
@@ -502,6 +520,9 @@ export function SettingsWorkspace({
                 variant="ghost"
                 size="icon"
                 aria-label={copy("backToSettings")}
+                onFocus={() => {
+                  lastFocusRegionRef.current = "back";
+                }}
                 onClick={returnToDirectory}
               >
                 <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
