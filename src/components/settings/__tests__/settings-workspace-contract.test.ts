@@ -54,7 +54,7 @@ describe("Settings Class-AAA control-center contract", () => {
     expect(workspace).toContain('setMobilePane("directory")');
     expect(workspace).toContain('aria-label={copy("backToSettings")}');
     expect(workspace).toContain(
-      "md:grid-cols-[15.625rem_minmax(0,1fr)]",
+      "md:grid-cols-[16.25rem_minmax(0,1fr)]",
     );
   });
 
