@@ -63,6 +63,29 @@ async function settingsGeometry(page: Page) {
   };
 }
 
+async function expectFlatDataDomain(page: Page) {
+  const topLevelCards = page.locator(
+    '[data-settings-domain-stack="data"] > [data-slot="card"], ' +
+      '[data-settings-domain-stack="data"] > * > [data-slot="card"]:first-child',
+  );
+  await expect(topLevelCards).toHaveCount(3);
+  const styles = await topLevelCards.evaluateAll((cards) =>
+    cards.map((card) => {
+      const style = getComputedStyle(card);
+      return {
+        borderTopWidth: style.borderTopWidth,
+        borderRadius: style.borderRadius,
+        boxShadow: style.boxShadow,
+      };
+    }),
+  );
+  for (const style of styles) {
+    expect(style.borderTopWidth).toBe("0px");
+    expect(style.borderRadius).toBe("0px");
+    expect(style.boxShadow).toBe("none");
+  }
+}
+
 test.describe.serial("Settings Class-AAA control center evidence", () => {
   let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 
@@ -140,6 +163,7 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
         "aria-pressed",
         "true",
       );
+      if (group === "data") await expectFlatDataDomain(page);
     }
 
     await expectNoHorizontalOverflow(page);
@@ -173,6 +197,7 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
 
     await page.locator('[data-settings-group="data"]').click();
     await expect(page.locator('[data-settings-group-panel="data"]')).toBeVisible();
+    await expectFlatDataDomain(page);
     await expectNoHorizontalOverflow(page);
   });
 
