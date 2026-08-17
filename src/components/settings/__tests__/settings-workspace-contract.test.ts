@@ -15,7 +15,8 @@ describe("Settings Class-AAA control-center contract", () => {
 
     expect(page).toContain("SettingsWorkspace");
     expect(page).not.toContain("SettingsTabs");
-    expect(workspace).toContain('data-settings-workspace="v3"');
+    expect(workspace).toContain('data-settings-workspace="v2"');
+    expect(workspace).toContain('data-settings-generation="class-aaa"');
     expect(workspace).toContain('data-settings-control-center="true"');
     expect(workspace).toContain('data-settings-layout="desktop"');
     expect(workspace).toContain('data-settings-layout="mobile"');
@@ -41,7 +42,7 @@ describe("Settings Class-AAA control-center contract", () => {
     ).toBe(false);
   });
 
-  it("uses a persistent desktop command rail and deliberate mobile directory-to-detail drill-in", () => {
+  it("uses a persistent 250px desktop command rail and deliberate mobile directory-to-detail drill-in", () => {
     const workspace = read("src/components/settings/settings-workspace.tsx");
 
     expect(workspace).toContain("useMobile()");
@@ -53,7 +54,7 @@ describe("Settings Class-AAA control-center contract", () => {
     expect(workspace).toContain('setMobilePane("directory")');
     expect(workspace).toContain('aria-label={copy("backToSettings")}');
     expect(workspace).toContain(
-      "md:grid-cols-[16.25rem_minmax(0,1fr)]",
+      "md:grid-cols-[15.625rem_minmax(0,1fr)]",
     );
   });
 
