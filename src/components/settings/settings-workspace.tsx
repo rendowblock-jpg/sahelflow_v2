@@ -272,6 +272,13 @@ export function SettingsWorkspace({
       if (event.matches && directoryRef.current?.contains(activeElement)) {
         setMobilePane("detail");
         window.requestAnimationFrame(() => {
+          const currentActive = document.activeElement;
+          if (
+            currentActive !== activeElement &&
+            currentActive !== document.body
+          ) {
+            return;
+          }
           detailHeadingRef.current?.focus();
         });
         return;
@@ -279,6 +286,13 @@ export function SettingsWorkspace({
 
       if (!event.matches && backButtonRef.current?.contains(activeElement)) {
         window.requestAnimationFrame(() => {
+          const currentActive = document.activeElement;
+          if (
+            currentActive !== activeElement &&
+            currentActive !== document.body
+          ) {
+            return;
+          }
           directoryRef.current
             ?.querySelector<HTMLButtonElement>(
               `[data-settings-group="${effectiveActive}"]`,
