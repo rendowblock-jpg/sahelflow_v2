@@ -466,6 +466,7 @@ export function SettingsWorkspace({
       data-settings-layout={mobile ? "mobile" : "desktop"}
       data-settings-mobile-pane={mobile ? mobilePane : undefined}
       className={cn(
+        styles.controlCenter,
         "border-y border-border/80 bg-background",
         mobile
           ? "min-h-[calc(100dvh-9rem)]"

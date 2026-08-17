@@ -1,23 +1,23 @@
-:global([data-settings-workspace="v2"][data-settings-generation="class-aaa"] > div.grid) {
+.controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) {
   direction: ltr;
   grid-template-areas: "settings-nav settings-panel";
   grid-template-columns: 15.625rem minmax(0, 1fr) !important;
 }
 
-:global([data-settings-workspace="v2"][data-settings-generation="class-aaa"] > div.grid > aside) {
+.controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) > aside {
   grid-area: settings-nav;
 }
 
-:global([data-settings-workspace="v2"][data-settings-generation="class-aaa"] > div.grid > section) {
+.controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) > section {
   grid-area: settings-panel;
 }
 
-:global(html[dir="rtl"] [data-settings-workspace="v2"][data-settings-generation="class-aaa"] > div.grid) {
+:global(html[dir="rtl"]) .controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) {
   grid-template-areas: "settings-panel settings-nav";
   grid-template-columns: minmax(0, 1fr) 15.625rem !important;
 }
 
-:global(html[dir="rtl"] [data-settings-workspace="v2"][data-settings-generation="class-aaa"] > div.grid > :is(aside, section)) {
+:global(html[dir="rtl"]) .controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) > :is(aside, section) {
   direction: rtl;
 }
 

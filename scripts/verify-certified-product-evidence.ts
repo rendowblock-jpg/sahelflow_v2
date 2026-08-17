@@ -76,7 +76,7 @@ async function fetchRun(runId: number): Promise<WorkflowRun> {
 }
 
 const allowedImmediatePaths = new Set([
-  ".github/release-requests/internal-21-founder-aaa-experience.json",
+  ".github/release-requests/internal-20-founder-aaa-experience.json",
   ".github/workflows/native-source.yml",
   ".github/workflows/phase5-experience.yml",
   ".github/workflows/phase6-7-completion.yml",
@@ -121,8 +121,8 @@ if (matching.length !== 1) {
 }
 
 const { name: requestName, request } = matching[0]!;
-if (requestName !== "internal-21-founder-aaa-experience.json") {
-  throw new Error(`Internal.21 certified-parent reuse must use internal-21-founder-aaa-experience.json, found ${requestName}`);
+if (requestName !== "internal-20-founder-aaa-experience.json") {
+  throw new Error(`Internal.20 certified-parent reuse must use internal-20-founder-aaa-experience.json, found ${requestName}`);
 }
 if (request.sourcePolicy !== "exact-protected-main") throw new Error("release request sourcePolicy must be exact-protected-main");
 
