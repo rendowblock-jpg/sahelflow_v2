@@ -52,6 +52,17 @@ async function expectNoHorizontalOverflow(page: Page) {
   );
 }
 
+async function settingsGeometry(page: Page) {
+  return {
+    rail: await page
+      .locator('[data-settings-control-center="true"] > div > aside')
+      .boundingBox(),
+    canvas: await page
+      .locator('[data-settings-domain-canvas="true"]')
+      .boundingBox(),
+  };
+}
+
 test.describe.serial("Settings Class-AAA control center evidence", () => {
   let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 
@@ -104,18 +115,13 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     );
     expect(radius).toBe("0px");
 
-    const railBox = await page
-      .locator('[data-settings-control-center="true"] > div > aside')
-      .boundingBox();
-    const canvasBox = await page
-      .locator('[data-settings-domain-canvas="true"]')
-      .boundingBox();
-    expect(railBox).not.toBeNull();
-    expect(canvasBox).not.toBeNull();
-    if (railBox && canvasBox) {
-      expect(railBox.width).toBeGreaterThanOrEqual(248);
-      expect(railBox.width).toBeLessThanOrEqual(252);
-      expect(canvasBox.width).toBeGreaterThan(railBox.width * 2.5);
+    const { rail, canvas } = await settingsGeometry(page);
+    expect(rail).not.toBeNull();
+    expect(canvas).not.toBeNull();
+    if (rail && canvas) {
+      expect(rail.width).toBeGreaterThanOrEqual(248);
+      expect(rail.width).toBeLessThanOrEqual(252);
+      expect(canvas.width).toBeGreaterThan(rail.width * 2.5);
     }
 
     for (const group of [
@@ -170,7 +176,7 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("Arabic RTL keeps the command rail on physical right and canvas dominant", async ({
+  test("Arabic RTL keeps the command rail on physical right from tablet through desktop", async ({
     context,
     page,
     baseURL,
@@ -187,21 +193,28 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await page.locator('[data-settings-group="access"]').click();
     await expect(page.locator('[data-settings-group-panel="access"]')).toBeVisible();
 
-    const navigationBox = await page
-      .locator('[data-settings-control-center="true"] > div > aside')
-      .boundingBox();
-    const panelBox = await page
-      .locator('[data-settings-domain-canvas="true"]')
-      .boundingBox();
-    expect(navigationBox).not.toBeNull();
-    expect(panelBox).not.toBeNull();
-    if (navigationBox && panelBox) {
-      expect(navigationBox.x).toBeGreaterThan(panelBox.x);
-      expect(navigationBox.width).toBeGreaterThanOrEqual(248);
-      expect(navigationBox.width).toBeLessThanOrEqual(252);
-      expect(panelBox.width).toBeGreaterThan(navigationBox.width * 2.5);
+    let geometry = await settingsGeometry(page);
+    expect(geometry.rail).not.toBeNull();
+    expect(geometry.canvas).not.toBeNull();
+    if (geometry.rail && geometry.canvas) {
+      expect(geometry.rail.x).toBeGreaterThan(geometry.canvas.x);
+      expect(geometry.rail.width).toBeGreaterThanOrEqual(248);
+      expect(geometry.rail.width).toBeLessThanOrEqual(252);
+      expect(geometry.canvas.width).toBeGreaterThan(geometry.rail.width * 2.5);
     }
+    await expectNoHorizontalOverflow(page);
 
+    await page.setViewportSize({ width: 900, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
+    geometry = await settingsGeometry(page);
+    expect(geometry.rail).not.toBeNull();
+    expect(geometry.canvas).not.toBeNull();
+    if (geometry.rail && geometry.canvas) {
+      expect(geometry.rail.x).toBeGreaterThan(geometry.canvas.x);
+      expect(geometry.rail.width).toBeGreaterThanOrEqual(248);
+      expect(geometry.rail.width).toBeLessThanOrEqual(252);
+      expect(geometry.canvas.width).toBeGreaterThan(geometry.rail.width);
+    }
     await expectNoHorizontalOverflow(page);
   });
 });
