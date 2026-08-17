@@ -240,60 +240,77 @@ export function SettingsWorkspace({
   const [mobilePane, setMobilePane] = useState<"directory" | "detail">(
     "directory",
   );
-  const [breakpointReady, setBreakpointReady] = useState(false);
-  const [committedMobile, setCommittedMobile] = useState(false);
   const directoryRef = useRef<HTMLElement | null>(null);
+  const detailRef = useRef<HTMLElement | null>(null);
   const detailHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const backButtonRef = useRef<HTMLButtonElement | null>(null);
   const focusIntentRef = useRef<FocusIntent>(null);
-  const lastFocusRegionRef = useRef<BreakpointFocusRegion>(null);
+  const focusRegionRef = useRef<BreakpointFocusRegion>(null);
 
   const effectiveGroup =
     visibleGroups.find((group) => group.id === active) ??
     visibleGroups[0] ??
     DEFAULT_GROUP;
   const effectiveActive = effectiveGroup.id;
-  const enteringMobile = mobile && breakpointReady && !committedMobile;
-  const visibleMobilePane = enteringMobile ? "detail" : mobilePane;
 
   useEffect(() => {
-    if (!breakpointReady) {
-      setCommittedMobile(window.innerWidth < 768);
-      setBreakpointReady(true);
-      return;
-    }
+    const media = window.matchMedia("(max-width: 767px)");
 
-    const wasMobile = committedMobile;
-    if (mobile && !wasMobile) {
-      setMobilePane("detail");
-      if (lastFocusRegionRef.current === "directory") {
-        detailHeadingRef.current?.focus();
+    const handleFocusIn = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        focusRegionRef.current = null;
+        return;
       }
-    } else if (!mobile && wasMobile && lastFocusRegionRef.current === "back") {
-      directoryRef.current
-        ?.querySelector<HTMLButtonElement>(
-          `[data-settings-group="${effectiveActive}"]`,
-        )
-        ?.focus();
-    }
-    setCommittedMobile(mobile);
-  }, [breakpointReady, committedMobile, effectiveActive, mobile]);
+      if (backButtonRef.current?.contains(target)) {
+        focusRegionRef.current = "back";
+        return;
+      }
+      if (directoryRef.current?.contains(target)) {
+        focusRegionRef.current = "directory";
+        if (!media.matches) setMobilePane("detail");
+        return;
+      }
+      if (detailRef.current?.contains(target)) {
+        focusRegionRef.current = "detail";
+        if (!media.matches) setMobilePane("detail");
+        return;
+      }
+      focusRegionRef.current = null;
+    };
+
+    const handleBreakpointChange = (event: MediaQueryListEvent) => {
+      if (event.matches && focusRegionRef.current === "directory") {
+        detailHeadingRef.current?.focus();
+        return;
+      }
+      if (!event.matches && focusRegionRef.current === "back") {
+        directoryRef.current
+          ?.querySelector<HTMLButtonElement>(
+            `[data-settings-group="${effectiveActive}"]`,
+          )
+          ?.focus();
+      }
+    };
+
+    document.addEventListener("focusin", handleFocusIn, true);
+    media.addEventListener("change", handleBreakpointChange);
+    return () => {
+      document.removeEventListener("focusin", handleFocusIn, true);
+      media.removeEventListener("change", handleBreakpointChange);
+    };
+  }, [effectiveActive]);
 
   useEffect(() => {
     if (!mobile || !focusIntentRef.current) return;
 
-    if (
-      focusIntentRef.current === "detail" &&
-      visibleMobilePane === "detail"
-    ) {
+    if (focusIntentRef.current === "detail" && mobilePane === "detail") {
       detailHeadingRef.current?.focus();
       focusIntentRef.current = null;
       return;
     }
 
-    if (
-      focusIntentRef.current === "directory" &&
-      visibleMobilePane === "directory"
-    ) {
+    if (focusIntentRef.current === "directory" && mobilePane === "directory") {
       directoryRef.current
         ?.querySelector<HTMLButtonElement>(
           `[data-settings-group="${effectiveActive}"]`,
@@ -301,14 +318,12 @@ export function SettingsWorkspace({
         ?.focus();
       focusIntentRef.current = null;
     }
-  }, [effectiveActive, mobile, visibleMobilePane]);
+  }, [effectiveActive, mobile, mobilePane]);
 
   const selectGroup = (group: Group) => {
     setActive(group);
-    if (mobile) {
-      focusIntentRef.current = "detail";
-      setMobilePane("detail");
-    }
+    setMobilePane("detail");
+    if (mobile) focusIntentRef.current = "detail";
   };
 
   const returnToDirectory = () => {
@@ -438,7 +453,7 @@ export function SettingsWorkspace({
       data-settings-generation="class-aaa"
       data-settings-control-center="true"
       data-settings-layout={mobile ? "mobile" : "desktop"}
-      data-settings-mobile-pane={mobile ? visibleMobilePane : undefined}
+      data-settings-mobile-pane={mobile ? mobilePane : undefined}
       className={cn(
         "border-y border-border/80 bg-background",
         mobile
@@ -456,12 +471,9 @@ export function SettingsWorkspace({
       >
         <aside
           ref={directoryRef}
-          onFocusCapture={() => {
-            lastFocusRegionRef.current = "directory";
-          }}
           className={cn(
             mobile
-              ? visibleMobilePane === "directory"
+              ? mobilePane === "directory"
                 ? "block px-3 py-4 sm:px-4"
                 : "hidden"
               : "min-h-0 overflow-y-auto border-e border-border/80 bg-muted/[0.025] px-3 py-4",
@@ -490,16 +502,14 @@ export function SettingsWorkspace({
         </aside>
 
         <section
+          ref={detailRef}
           data-settings-group-panel={effectiveActive}
           data-settings-domain-canvas="true"
           aria-labelledby={`settings-control-center-${effectiveActive}`}
-          onFocusCapture={() => {
-            lastFocusRegionRef.current = "detail";
-          }}
           className={cn(
             "min-w-0",
             mobile
-              ? visibleMobilePane === "detail"
+              ? mobilePane === "detail"
                 ? "block min-h-[calc(100dvh-9rem)]"
                 : "hidden"
               : "flex min-h-0 flex-col",
@@ -515,13 +525,11 @@ export function SettingsWorkspace({
           >
             {mobile ? (
               <Button
+                ref={backButtonRef}
                 type="button"
                 variant="ghost"
                 size="icon"
                 aria-label={copy("backToSettings")}
-                onFocus={() => {
-                  lastFocusRegionRef.current = "back";
-                }}
                 onClick={returnToDirectory}
               >
                 <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
