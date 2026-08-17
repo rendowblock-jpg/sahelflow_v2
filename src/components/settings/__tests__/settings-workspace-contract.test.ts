@@ -43,7 +43,7 @@ describe("Settings Class-AAA control-center contract", () => {
     ).toBe(false);
   });
 
-  it("keeps one persistent responsive subtree, a 250px desktop rail and explicit mobile focus movement", () => {
+  it("keeps one persistent responsive subtree, a 250px desktop rail and explicit focus movement", () => {
     const workspace = read("src/components/settings/settings-workspace.tsx");
 
     expect(workspace).toContain("useMobile()");
@@ -51,6 +51,7 @@ describe("Settings Class-AAA control-center contract", () => {
     expect(workspace).toContain("previousMobileRef");
     expect(workspace).toContain("breakpointReadyRef");
     expect(workspace).toContain("focusIntentRef");
+    expect(workspace).toContain("lastFocusRegionRef");
     expect(workspace).toContain("visibleMobilePane");
     expect(workspace).toContain(
       'data-settings-mobile-pane={mobile ? visibleMobilePane : undefined}',
@@ -60,9 +61,15 @@ describe("Settings Class-AAA control-center contract", () => {
     expect(workspace).toContain('data-settings-detail-heading="true"');
     expect(workspace).toContain('focusIntentRef.current = "detail"');
     expect(workspace).toContain('focusIntentRef.current = "directory"');
+    expect(workspace).toContain('lastFocusRegionRef.current === "directory"');
+    expect(workspace).toContain('lastFocusRegionRef.current === "back"');
+    expect(workspace).toContain('lastFocusRegionRef.current = "directory"');
+    expect(workspace).toContain('lastFocusRegionRef.current = "detail"');
+    expect(workspace).toContain('lastFocusRegionRef.current = "back"');
     expect(workspace).toContain("detailHeadingRef.current?.focus()");
     expect(workspace).toContain("querySelector<HTMLButtonElement>");
     expect(workspace).toContain('aria-label={copy("backToSettings")}');
+    expect(workspace).toContain("onFocusCapture={() => {");
     expect(workspace).toContain(
       "md:grid-cols-[15.625rem_minmax(0,1fr)]",
     );
