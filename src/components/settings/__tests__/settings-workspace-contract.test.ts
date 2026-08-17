@@ -43,13 +43,12 @@ describe("Settings Class-AAA control-center contract", () => {
     ).toBe(false);
   });
 
-  it("keeps one persistent responsive subtree, a 250px desktop rail and event-owned focus transfer", () => {
+  it("keeps one persistent responsive subtree, a 250px desktop rail and active-element focus transfer", () => {
     const workspace = read("src/components/settings/settings-workspace.tsx");
 
     expect(workspace).toContain("useMobile()");
     expect(workspace).toContain('useState<"directory" | "detail">');
     expect(workspace).toContain("focusIntentRef");
-    expect(workspace).toContain("focusRegionRef");
     expect(workspace).toContain("detailRef");
     expect(workspace).toContain("backButtonRef");
     expect(workspace).toContain(
@@ -61,12 +60,13 @@ describe("Settings Class-AAA control-center contract", () => {
     expect(workspace).toContain(
       'media.addEventListener("change", handleBreakpointChange)',
     );
-    expect(workspace).toContain('focusRegionRef.current = "directory"');
-    expect(workspace).toContain('focusRegionRef.current = "detail"');
-    expect(workspace).toContain('focusRegionRef.current = "back"');
-    expect(workspace).toContain("focusRegionRef.current = null");
-    expect(workspace).toContain('focusRegionRef.current === "directory"');
-    expect(workspace).toContain('focusRegionRef.current === "back"');
+    expect(workspace).toContain("const activeElement = document.activeElement;");
+    expect(workspace).toContain(
+      "directoryRef.current?.contains(activeElement)",
+    );
+    expect(workspace).toContain(
+      "backButtonRef.current?.contains(activeElement)",
+    );
     expect(workspace).toContain(
       'data-settings-mobile-pane={mobile ? mobilePane : undefined}',
     );
@@ -78,10 +78,11 @@ describe("Settings Class-AAA control-center contract", () => {
     expect(workspace).toContain("detailHeadingRef.current?.focus()");
     expect(workspace).toContain("querySelector<HTMLButtonElement>");
     expect(workspace).toContain('aria-label={copy("backToSettings")}');
-    expect(workspace).toContain("setMobilePane(\"detail\")");
+    expect(workspace).toContain('setMobilePane("detail")');
     expect(workspace).toContain(
       "md:grid-cols-[15.625rem_minmax(0,1fr)]",
     );
+    expect(workspace).not.toContain("focusRegionRef");
     expect(workspace).not.toContain("breakpointReady");
     expect(workspace).not.toContain("committedMobile");
     expect(workspace).not.toContain("previousMobileRef");
