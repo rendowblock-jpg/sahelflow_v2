@@ -261,6 +261,25 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
     await expect(resetDraft).toHaveValue("RES");
     await expect(dataButton).toBeFocused();
+
+    await page.evaluate(() => {
+      const outside = document.createElement("button");
+      outside.type = "button";
+      outside.dataset.settingsTestOutsideFocus = "true";
+      outside.textContent = "Outside Settings";
+      document.body.append(outside);
+    });
+    const outsideFocus = page.locator(
+      '[data-settings-test-outside-focus="true"]',
+    );
+    await dataButton.focus();
+    await outsideFocus.focus();
+    await page.setViewportSize({ width: 640, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(outsideFocus).toBeFocused();
+    await expect(resetDraft).toHaveValue("RES");
+
     await expectNoHorizontalOverflow(page);
   });
 
