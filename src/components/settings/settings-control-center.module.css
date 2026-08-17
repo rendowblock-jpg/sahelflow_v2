@@ -35,18 +35,29 @@
 }
 
 .stack > :global([data-slot="card"]),
-.cardReset > :global([data-slot="card"]) {
+.cardReset > :global([data-slot="card"]),
+.stack > * > :global([data-slot="card"]):first-child {
   gap: 1.25rem;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.stack > :global([data-slot="card"]),
+.cardReset > :global([data-slot="card"]) {
   padding-block: 1.75rem;
+}
+
+.stack > * > :global([data-slot="card"]):first-child {
+  padding-block: 0;
 }
 
 .stack > :global([data-slot="card"]) > :global([data-slot="card-header"]),
 .stack > :global([data-slot="card"]) > :global([data-slot="card-content"]),
 .cardReset > :global([data-slot="card"]) > :global([data-slot="card-header"]),
-.cardReset > :global([data-slot="card"]) > :global([data-slot="card-content"]) {
+.cardReset > :global([data-slot="card"]) > :global([data-slot="card-content"]),
+.stack > * > :global([data-slot="card"]):first-child > :global([data-slot="card-header"]),
+.stack > * > :global([data-slot="card"]):first-child > :global([data-slot="card-content"]) {
   padding-inline: 0;
 }
