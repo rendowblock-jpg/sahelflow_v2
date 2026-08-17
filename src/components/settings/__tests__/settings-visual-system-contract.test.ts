@@ -21,7 +21,12 @@ describe("Settings Class-AAA visual system", () => {
     expect(existsSync(legacyCss)).toBe(false);
     expect(css).toContain('data-settings-generation="class-aaa"');
     expect(css).toContain("15.625rem");
+    expect(css).toContain('grid-template-areas: "settings-nav settings-panel"');
+    expect(css).toContain('grid-template-areas: "settings-panel settings-nav"');
+    expect(css).toContain("direction: ltr");
     expect(css).toContain('html[dir="rtl"]');
+    expect(css).toContain('> :is(aside, section))');
+    expect(css).toContain("direction: rtl");
     expect(css).toContain('[data-slot="card"]');
     expect(css).toContain("border-radius: 0");
     expect(css).toContain("box-shadow: none");
