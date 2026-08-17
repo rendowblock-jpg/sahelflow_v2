@@ -18,8 +18,9 @@ describe("Settings Class-AAA control-center contract", () => {
     expect(workspace).toContain('data-settings-workspace="v2"');
     expect(workspace).toContain('data-settings-generation="class-aaa"');
     expect(workspace).toContain('data-settings-control-center="true"');
-    expect(workspace).toContain('data-settings-layout="desktop"');
-    expect(workspace).toContain('data-settings-layout="mobile"');
+    expect(workspace).toContain(
+      'data-settings-layout={mobile ? "mobile" : "desktop"}',
+    );
     expect(workspace).not.toContain("data-settings-premium-shell");
     expect(workspace).not.toContain("text-[11px]");
     expect(workspace).toContain('id: "workspace"');
@@ -42,20 +43,30 @@ describe("Settings Class-AAA control-center contract", () => {
     ).toBe(false);
   });
 
-  it("uses a persistent 250px desktop command rail and deliberate mobile directory-to-detail drill-in", () => {
+  it("keeps one persistent responsive subtree, a 250px desktop rail and explicit mobile focus movement", () => {
     const workspace = read("src/components/settings/settings-workspace.tsx");
 
     expect(workspace).toContain("useMobile()");
     expect(workspace).toContain('useState<"directory" | "detail">');
-    expect(workspace).toContain('data-settings-mobile-pane={mobilePane}');
+    expect(workspace).toContain("previousMobileRef");
+    expect(workspace).toContain("breakpointReadyRef");
+    expect(workspace).toContain("focusIntentRef");
+    expect(workspace).toContain("visibleMobilePane");
+    expect(workspace).toContain(
+      'data-settings-mobile-pane={mobile ? visibleMobilePane : undefined}',
+    );
     expect(workspace).toContain('data-settings-directory="true"');
     expect(workspace).toContain('data-settings-domain-canvas="true"');
-    expect(workspace).toContain('setMobilePane("detail")');
-    expect(workspace).toContain('setMobilePane("directory")');
+    expect(workspace).toContain('data-settings-detail-heading="true"');
+    expect(workspace).toContain('focusIntentRef.current = "detail"');
+    expect(workspace).toContain('focusIntentRef.current = "directory"');
+    expect(workspace).toContain("detailHeadingRef.current?.focus()");
+    expect(workspace).toContain("querySelector<HTMLButtonElement>");
     expect(workspace).toContain('aria-label={copy("backToSettings")}');
     expect(workspace).toContain(
       "md:grid-cols-[15.625rem_minmax(0,1fr)]",
     );
+    expect(workspace).not.toContain("if (mobile) {");
   });
 
   it("keeps commerce status separate from delivery, WhatsApp and Gemini authority", () => {
