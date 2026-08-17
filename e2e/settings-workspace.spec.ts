@@ -169,10 +169,13 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("mobile is directory first and drills into one focused settings domain", async ({
+  test("mobile starts in the directory and manages keyboard focus through drill-in and Back", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 640, height: 768 });
+    await page.goto("/settings", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+
     const workspace = page.locator('[data-settings-control-center="true"]');
     await expect(workspace).toBeVisible();
     await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
@@ -181,23 +184,64 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
       "directory",
     );
     await expect(page.locator('[data-settings-directory="true"]')).toBeVisible();
-    await expect(page.locator('[data-settings-domain-canvas="true"]')).toHaveCount(0);
+    await expect(page.locator('[data-settings-domain-canvas="true"]')).not.toBeVisible();
 
-    await page.locator('[data-settings-group="connections"]').click();
+    const connectionsButton = page.locator(
+      '[data-settings-group="connections"]',
+    );
+    await connectionsButton.focus();
+    await page.keyboard.press("Enter");
     await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
     await expect(page.locator('[data-settings-group-panel="connections"]')).toBeVisible();
-    await expect(page.locator('[data-settings-directory="true"]')).toHaveCount(0);
+    await expect(page.locator('[data-settings-directory="true"]')).not.toBeVisible();
+    await expect(page.locator('[data-settings-detail-heading="true"]')).toBeFocused();
+
+    const backButton = page.getByRole("button", {
+      name: "Retour aux paramètres",
+    });
+    await backButton.focus();
+    await page.keyboard.press("Enter");
+    await expect(workspace).toHaveAttribute(
+      "data-settings-mobile-pane",
+      "directory",
+    );
+    await expect(page.locator('[data-settings-directory="true"]')).toBeVisible();
+    await expect(connectionsButton).toBeFocused();
+
+    await page.locator('[data-settings-group="data"]').click();
+    await expect(page.locator('[data-settings-group-panel="data"]')).toBeVisible();
+    await expectFlatDataDomain(page);
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("live breakpoint and mobile-pane changes preserve an unsaved Data draft and focused control", async ({
+    page,
+  }) => {
+    const workspace = page.locator('[data-settings-control-center="true"]');
+    await page.locator('[data-settings-group="data"]').click();
+    const resetDraft = page.getByPlaceholder("RESET");
+    await resetDraft.fill("RES");
+    await resetDraft.focus();
+
+    await page.setViewportSize({ width: 640, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(resetDraft).toHaveValue("RES");
+    await expect(resetDraft).toBeFocused();
 
     await page.getByRole("button", { name: "Retour aux paramètres" }).click();
     await expect(workspace).toHaveAttribute(
       "data-settings-mobile-pane",
       "directory",
     );
-    await expect(page.locator('[data-settings-directory="true"]')).toBeVisible();
-
     await page.locator('[data-settings-group="data"]').click();
-    await expect(page.locator('[data-settings-group-panel="data"]')).toBeVisible();
-    await expectFlatDataDomain(page);
+    await expect(resetDraft).toHaveValue("RES");
+
+    await resetDraft.focus();
+    await page.setViewportSize({ width: 900, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
+    await expect(resetDraft).toHaveValue("RES");
+    await expect(resetDraft).toBeFocused();
     await expectNoHorizontalOverflow(page);
   });
 
