@@ -8,9 +8,11 @@ const workspace = readFileSync(
 );
 
 describe("Settings breakpoint focus handoff contract", () => {
-  it("commits breakpoint focus in layout without a deferred animation-frame race", () => {
+  it("commits every breakpoint-owned focus handoff in layout without a deferred frame race", () => {
     expect(workspace).toContain("useLayoutEffect");
     expect(workspace).toContain("breakpointFocusSourceRef");
+    expect(workspace).toContain("focusHandoffRevision");
+    expect(workspace).toContain("setFocusHandoffRevision");
     expect(workspace).toContain('focusIntentRef.current = "detail"');
     expect(workspace).toContain('focusIntentRef.current = "directory"');
     expect(workspace).not.toContain("requestAnimationFrame");

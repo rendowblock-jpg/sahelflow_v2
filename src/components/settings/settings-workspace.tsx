@@ -239,6 +239,7 @@ export function SettingsWorkspace({
   const [mobilePane, setMobilePane] = useState<"directory" | "detail">(
     "directory",
   );
+  const [focusHandoffRevision, setFocusHandoffRevision] = useState(0);
   const directoryRef = useRef<HTMLElement | null>(null);
   const detailRef = useRef<HTMLElement | null>(null);
   const detailHeadingRef = useRef<HTMLHeadingElement | null>(null);
@@ -274,6 +275,7 @@ export function SettingsWorkspace({
         breakpointFocusSourceRef.current = activeElement;
         focusIntentRef.current = "detail";
         setMobilePane("detail");
+        setFocusHandoffRevision((revision) => revision + 1);
         return;
       }
 
@@ -281,6 +283,7 @@ export function SettingsWorkspace({
         breakpointFocusSourceRef.current = activeElement;
         focusIntentRef.current = "directory";
         setMobilePane("directory");
+        setFocusHandoffRevision((revision) => revision + 1);
       }
     };
 
@@ -324,7 +327,7 @@ export function SettingsWorkspace({
       focusIntentRef.current = null;
       breakpointFocusSourceRef.current = null;
     }
-  }, [effectiveActive, mobile, mobilePane]);
+  }, [effectiveActive, focusHandoffRevision, mobile, mobilePane]);
 
   const selectGroup = (group: Group) => {
     breakpointFocusSourceRef.current = null;
