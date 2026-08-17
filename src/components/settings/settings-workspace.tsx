@@ -368,7 +368,8 @@ export function SettingsWorkspace({
   if (mobile) {
     return (
       <div
-        data-settings-workspace="v3"
+        data-settings-workspace="v2"
+        data-settings-generation="class-aaa"
         data-settings-control-center="true"
         data-settings-layout="mobile"
         data-settings-mobile-pane={mobilePane}
@@ -431,58 +432,61 @@ export function SettingsWorkspace({
 
   return (
     <div
-      data-settings-workspace="v3"
+      data-settings-workspace="v2"
+      data-settings-generation="class-aaa"
       data-settings-control-center="true"
       data-settings-layout="desktop"
-      className="grid h-[calc(100dvh-10.5rem)] min-h-[36rem] overflow-hidden border-y border-border/80 bg-background md:grid-cols-[16.25rem_minmax(0,1fr)]"
+      className="h-[calc(100dvh-10.5rem)] min-h-[36rem] border-y border-border/80 bg-background"
     >
-      <aside className="min-h-0 overflow-y-auto border-e border-border/80 bg-muted/[0.025] px-3 py-4">
-        <div className="px-2 pb-4">
-          <p className="text-base font-semibold tracking-tight text-foreground">
-            {copy("controlCenter")}
-          </p>
-          <p className="mt-1 text-sm leading-5 text-muted-foreground">
-            {copy("workspaceHint")}
-          </p>
-        </div>
-        <SettingsDirectory
-          groups={visibleGroups}
-          active={effectiveActive}
-          copy={copy}
-          mobile={false}
-          onSelect={selectGroup}
-        />
-      </aside>
-
-      <section
-        data-settings-group-panel={effectiveActive}
-        data-settings-domain-canvas="true"
-        aria-labelledby={`settings-control-center-${effectiveActive}`}
-        className="flex min-h-0 min-w-0 flex-col"
-      >
-        <header className="shrink-0 border-b border-border/75 bg-background/92 px-6 py-5 backdrop-blur">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.07] text-primary">
-              <EffectiveIcon className="size-4.5" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <h2
-                id={`settings-control-center-${effectiveActive}`}
-                className="text-xl font-semibold tracking-tight"
-              >
-                {copy(effectiveActive)}
-              </h2>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
-                {copy(effectiveGroup.descriptionKey)}
-              </p>
-            </div>
+      <div className="grid h-full min-h-0 overflow-hidden md:grid-cols-[15.625rem_minmax(0,1fr)]">
+        <aside className="min-h-0 overflow-y-auto border-e border-border/80 bg-muted/[0.025] px-3 py-4">
+          <div className="px-2 pb-4">
+            <p className="text-base font-semibold tracking-tight text-foreground">
+              {copy("controlCenter")}
+            </p>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              {copy("workspaceHint")}
+            </p>
           </div>
-        </header>
+          <SettingsDirectory
+            groups={visibleGroups}
+            active={effectiveActive}
+            copy={copy}
+            mobile={false}
+            onSelect={selectGroup}
+          />
+        </aside>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-5xl px-6 pb-12">{content}</div>
-        </div>
-      </section>
+        <section
+          data-settings-group-panel={effectiveActive}
+          data-settings-domain-canvas="true"
+          aria-labelledby={`settings-control-center-${effectiveActive}`}
+          className="flex min-h-0 min-w-0 flex-col"
+        >
+          <header className="shrink-0 border-b border-border/75 bg-background/92 px-6 py-5 backdrop-blur">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.07] text-primary">
+                <EffectiveIcon className="size-4.5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h2
+                  id={`settings-control-center-${effectiveActive}`}
+                  className="text-xl font-semibold tracking-tight"
+                >
+                  {copy(effectiveActive)}
+                </h2>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
+                  {copy(effectiveGroup.descriptionKey)}
+                </p>
+              </div>
+            </div>
+          </header>
+
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="mx-auto w-full max-w-5xl px-6 pb-12">{content}</div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
