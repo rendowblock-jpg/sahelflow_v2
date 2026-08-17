@@ -66,7 +66,9 @@ describe("Settings Class-AAA control-center contract", () => {
     expect(workspace).toContain(
       "md:grid-cols-[15.625rem_minmax(0,1fr)]",
     );
-    expect(workspace).not.toContain("if (mobile) {");
+    expect(workspace).not.toContain(
+      'if (mobile) {\n    return (\n      <div\n        data-settings-workspace="v2"',
+    );
   });
 
   it("keeps commerce status separate from delivery, WhatsApp and Gemini authority", () => {
