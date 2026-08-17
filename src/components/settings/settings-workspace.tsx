@@ -508,24 +508,28 @@ export function SettingsWorkspace({
         >
           <header
             className={cn(
-              "flex items-start gap-3 border-b border-border/80 bg-background/95 backdrop-blur",
+              "relative flex items-start gap-3 border-b border-border/80 bg-background/95 backdrop-blur",
               mobile
                 ? "sticky top-0 z-10 px-3 py-3"
                 : "shrink-0 px-6 py-5",
             )}
           >
-            {mobile ? (
-              <Button
-                ref={backButtonRef}
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={copy("backToSettings")}
-                onClick={returnToDirectory}
-              >
-                <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
-              </Button>
-            ) : null}
+            <Button
+              ref={backButtonRef}
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={copy("backToSettings")}
+              aria-hidden={mobile ? undefined : true}
+              tabIndex={mobile ? 0 : -1}
+              className={cn(
+                !mobile &&
+                  "pointer-events-none absolute size-px overflow-hidden opacity-0",
+              )}
+              onClick={returnToDirectory}
+            >
+              <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
+            </Button>
             <span
               className={cn(
                 "mt-0.5 flex shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.07] text-primary",
