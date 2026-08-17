@@ -52,7 +52,7 @@ async function expectNoHorizontalOverflow(page: Page) {
   );
 }
 
-test.describe.serial("Settings operational workspace evidence", () => {
+test.describe.serial("Settings Class-AAA control center evidence", () => {
   let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 
   test.beforeAll(async ({ browser, baseURL }) => {
@@ -80,11 +80,13 @@ test.describe.serial("Settings operational workspace evidence", () => {
     await waitForHydration(page);
   });
 
-  test("desktop exposes predictable task-based settings destinations without overflow", async ({
+  test("1366 desktop is a full-height command rail plus dominant control canvas", async ({
     page,
   }) => {
-    const workspace = page.locator('[data-settings-workspace="v2"]');
+    const workspace = page.locator('[data-settings-control-center="true"]');
     await expect(workspace).toBeVisible();
+    await expect(workspace).toHaveAttribute("data-settings-workspace", "v3");
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
 
     const groups = page.locator("[data-settings-group]");
     await expect(groups).toHaveCount(6);
@@ -92,6 +94,25 @@ test.describe.serial("Settings operational workspace evidence", () => {
       "aria-pressed",
       "true",
     );
+
+    const radius = await workspace.evaluate((element) =>
+      getComputedStyle(element).borderRadius,
+    );
+    expect(radius).toBe("0px");
+
+    const directoryBox = await page
+      .locator('[data-settings-directory="true"]')
+      .boundingBox();
+    const canvasBox = await page
+      .locator('[data-settings-domain-canvas="true"]')
+      .boundingBox();
+    expect(directoryBox).not.toBeNull();
+    expect(canvasBox).not.toBeNull();
+    if (directoryBox && canvasBox) {
+      expect(directoryBox.width).toBeGreaterThanOrEqual(235);
+      expect(directoryBox.width).toBeLessThanOrEqual(260);
+      expect(canvasBox.width).toBeGreaterThan(directoryBox.width * 2.5);
+    }
 
     for (const group of [
       "operations",
@@ -114,24 +135,38 @@ test.describe.serial("Settings operational workspace evidence", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("mobile keeps task navigation usable without horizontal page overflow", async ({
+  test("mobile is directory first and drills into one focused settings domain", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 640, height: 768 });
-    const workspace = page.locator('[data-settings-workspace="v2"]');
+    const workspace = page.locator('[data-settings-control-center="true"]');
     await expect(workspace).toBeVisible();
+    await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
+    await expect(workspace).toHaveAttribute(
+      "data-settings-mobile-pane",
+      "directory",
+    );
+    await expect(page.locator('[data-settings-directory="true"]')).toBeVisible();
+    await expect(page.locator('[data-settings-domain-canvas="true"]')).toHaveCount(0);
 
-    for (const group of ["connections", "intelligence", "data"] as const) {
-      await page.locator(`[data-settings-group="${group}"]`).click();
-      await expect(
-        page.locator(`[data-settings-group-panel="${group}"]`),
-      ).toBeVisible();
-    }
+    await page.locator('[data-settings-group="connections"]').click();
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(page.locator('[data-settings-group-panel="connections"]')).toBeVisible();
+    await expect(page.locator('[data-settings-directory="true"]')).toHaveCount(0);
 
+    await page.getByRole("button", { name: "Retour aux paramètres" }).click();
+    await expect(workspace).toHaveAttribute(
+      "data-settings-mobile-pane",
+      "directory",
+    );
+    await expect(page.locator('[data-settings-directory="true"]')).toBeVisible();
+
+    await page.locator('[data-settings-group="data"]').click();
+    await expect(page.locator('[data-settings-group-panel="data"]')).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 
-  test("Arabic RTL places settings navigation on the physical right and content on the left", async ({
+  test("Arabic RTL keeps the command rail on physical right and canvas dominant", async ({
     context,
     page,
     baseURL,
@@ -141,22 +176,26 @@ test.describe.serial("Settings operational workspace evidence", () => {
     await waitForHydration(page);
 
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    const workspace = page.locator('[data-settings-workspace="v2"]');
+    const workspace = page.locator('[data-settings-control-center="true"]');
     await expect(workspace).toBeVisible();
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
 
     await page.locator('[data-settings-group="access"]').click();
     await expect(page.locator('[data-settings-group-panel="access"]')).toBeVisible();
 
     const navigationBox = await page
-      .locator('[data-settings-workspace="v2"] > div > aside')
+      .locator('[data-settings-control-center="true"] > aside')
       .boundingBox();
     const panelBox = await page
-      .locator('[data-settings-workspace="v2"] > div > section')
+      .locator('[data-settings-domain-canvas="true"]')
       .boundingBox();
     expect(navigationBox).not.toBeNull();
     expect(panelBox).not.toBeNull();
     if (navigationBox && panelBox) {
       expect(navigationBox.x).toBeGreaterThan(panelBox.x);
+      expect(navigationBox.width).toBeGreaterThanOrEqual(250);
+      expect(navigationBox.width).toBeLessThanOrEqual(270);
+      expect(panelBox.width).toBeGreaterThan(navigationBox.width * 2.5);
     }
 
     await expectNoHorizontalOverflow(page);
