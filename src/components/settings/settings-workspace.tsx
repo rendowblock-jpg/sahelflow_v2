@@ -270,13 +270,21 @@ export function SettingsWorkspace({
       if (!(activeElement instanceof Node)) return;
 
       if (event.matches && directoryRef.current?.contains(activeElement)) {
-        focusIntentRef.current = "detail";
         setMobilePane("detail");
+        window.requestAnimationFrame(() => {
+          detailHeadingRef.current?.focus();
+        });
         return;
       }
 
       if (!event.matches && backButtonRef.current?.contains(activeElement)) {
-        focusIntentRef.current = "directory";
+        window.requestAnimationFrame(() => {
+          directoryRef.current
+            ?.querySelector<HTMLButtonElement>(
+              `[data-settings-group="${effectiveActive}"]`,
+            )
+            ?.focus();
+        });
       }
     };
 
@@ -289,22 +297,15 @@ export function SettingsWorkspace({
   }, [effectiveActive]);
 
   useEffect(() => {
-    if (!focusIntentRef.current) return;
+    if (!mobile || !focusIntentRef.current) return;
 
-    if (
-      focusIntentRef.current === "detail" &&
-      mobile &&
-      mobilePane === "detail"
-    ) {
+    if (focusIntentRef.current === "detail" && mobilePane === "detail") {
       detailHeadingRef.current?.focus();
       focusIntentRef.current = null;
       return;
     }
 
-    if (
-      focusIntentRef.current === "directory" &&
-      (!mobile || mobilePane === "directory")
-    ) {
+    if (focusIntentRef.current === "directory" && mobilePane === "directory") {
       directoryRef.current
         ?.querySelector<HTMLButtonElement>(
           `[data-settings-group="${effectiveActive}"]`,
