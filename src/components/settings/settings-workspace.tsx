@@ -240,30 +240,29 @@ export function SettingsWorkspace({
   const [mobilePane, setMobilePane] = useState<"directory" | "detail">(
     "directory",
   );
+  const [breakpointReady, setBreakpointReady] = useState(false);
+  const [committedMobile, setCommittedMobile] = useState(false);
   const directoryRef = useRef<HTMLElement | null>(null);
   const detailHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const focusIntentRef = useRef<FocusIntent>(null);
   const lastFocusRegionRef = useRef<BreakpointFocusRegion>(null);
-  const breakpointReadyRef = useRef(false);
-  const previousMobileRef = useRef(false);
 
   const effectiveGroup =
     visibleGroups.find((group) => group.id === active) ??
     visibleGroups[0] ??
     DEFAULT_GROUP;
   const effectiveActive = effectiveGroup.id;
-  const enteringMobile =
-    mobile && breakpointReadyRef.current && !previousMobileRef.current;
+  const enteringMobile = mobile && breakpointReady && !committedMobile;
   const visibleMobilePane = enteringMobile ? "detail" : mobilePane;
 
   useEffect(() => {
-    if (!breakpointReadyRef.current) {
-      breakpointReadyRef.current = true;
-      previousMobileRef.current = window.innerWidth < 768;
+    if (!breakpointReady) {
+      setCommittedMobile(window.innerWidth < 768);
+      setBreakpointReady(true);
       return;
     }
 
-    const wasMobile = previousMobileRef.current;
+    const wasMobile = committedMobile;
     if (mobile && !wasMobile) {
       setMobilePane("detail");
       if (lastFocusRegionRef.current === "directory") {
@@ -276,8 +275,8 @@ export function SettingsWorkspace({
         )
         ?.focus();
     }
-    previousMobileRef.current = mobile;
-  }, [effectiveActive, mobile]);
+    setCommittedMobile(mobile);
+  }, [breakpointReady, committedMobile, effectiveActive, mobile]);
 
   useEffect(() => {
     if (!mobile || !focusIntentRef.current) return;
