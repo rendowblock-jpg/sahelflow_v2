@@ -85,7 +85,11 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
   }) => {
     const workspace = page.locator('[data-settings-control-center="true"]');
     await expect(workspace).toBeVisible();
-    await expect(workspace).toHaveAttribute("data-settings-workspace", "v3");
+    await expect(workspace).toHaveAttribute("data-settings-workspace", "v2");
+    await expect(workspace).toHaveAttribute(
+      "data-settings-generation",
+      "class-aaa",
+    );
     await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
 
     const groups = page.locator("[data-settings-group]");
@@ -100,18 +104,18 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     );
     expect(radius).toBe("0px");
 
-    const directoryBox = await page
-      .locator('[data-settings-directory="true"]')
+    const railBox = await page
+      .locator('[data-settings-control-center="true"] > div > aside')
       .boundingBox();
     const canvasBox = await page
       .locator('[data-settings-domain-canvas="true"]')
       .boundingBox();
-    expect(directoryBox).not.toBeNull();
+    expect(railBox).not.toBeNull();
     expect(canvasBox).not.toBeNull();
-    if (directoryBox && canvasBox) {
-      expect(directoryBox.width).toBeGreaterThanOrEqual(235);
-      expect(directoryBox.width).toBeLessThanOrEqual(260);
-      expect(canvasBox.width).toBeGreaterThan(directoryBox.width * 2.5);
+    if (railBox && canvasBox) {
+      expect(railBox.width).toBeGreaterThanOrEqual(248);
+      expect(railBox.width).toBeLessThanOrEqual(252);
+      expect(canvasBox.width).toBeGreaterThan(railBox.width * 2.5);
     }
 
     for (const group of [
@@ -184,7 +188,7 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await expect(page.locator('[data-settings-group-panel="access"]')).toBeVisible();
 
     const navigationBox = await page
-      .locator('[data-settings-control-center="true"] > aside')
+      .locator('[data-settings-control-center="true"] > div > aside')
       .boundingBox();
     const panelBox = await page
       .locator('[data-settings-domain-canvas="true"]')
@@ -193,8 +197,8 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     expect(panelBox).not.toBeNull();
     if (navigationBox && panelBox) {
       expect(navigationBox.x).toBeGreaterThan(panelBox.x);
-      expect(navigationBox.width).toBeGreaterThanOrEqual(250);
-      expect(navigationBox.width).toBeLessThanOrEqual(270);
+      expect(navigationBox.width).toBeGreaterThanOrEqual(248);
+      expect(navigationBox.width).toBeLessThanOrEqual(252);
       expect(panelBox.width).toBeGreaterThan(navigationBox.width * 2.5);
     }
 
