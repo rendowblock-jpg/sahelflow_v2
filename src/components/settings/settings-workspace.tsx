@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   ArrowLeft,
@@ -244,6 +244,7 @@ export function SettingsWorkspace({
   const detailHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const backButtonRef = useRef<HTMLButtonElement | null>(null);
   const focusIntentRef = useRef<FocusIntent>(null);
+  const breakpointFocusSourceRef = useRef<HTMLElement | null>(null);
 
   const effectiveGroup =
     visibleGroups.find((group) => group.id === active) ??
@@ -267,38 +268,19 @@ export function SettingsWorkspace({
 
     const handleBreakpointChange = (event: MediaQueryListEvent) => {
       const activeElement = document.activeElement;
-      if (!(activeElement instanceof Node)) return;
+      if (!(activeElement instanceof HTMLElement)) return;
 
       if (event.matches && directoryRef.current?.contains(activeElement)) {
+        breakpointFocusSourceRef.current = activeElement;
+        focusIntentRef.current = "detail";
         setMobilePane("detail");
-        window.requestAnimationFrame(() => {
-          const currentActive = document.activeElement;
-          if (
-            currentActive !== activeElement &&
-            currentActive !== document.body
-          ) {
-            return;
-          }
-          detailHeadingRef.current?.focus();
-        });
         return;
       }
 
       if (!event.matches && backButtonRef.current?.contains(activeElement)) {
-        window.requestAnimationFrame(() => {
-          const currentActive = document.activeElement;
-          if (
-            currentActive !== activeElement &&
-            currentActive !== document.body
-          ) {
-            return;
-          }
-          directoryRef.current
-            ?.querySelector<HTMLButtonElement>(
-              `[data-settings-group="${effectiveActive}"]`,
-            )
-            ?.focus();
-        });
+        breakpointFocusSourceRef.current = activeElement;
+        focusIntentRef.current = "directory";
+        setMobilePane("directory");
       }
     };
 
@@ -310,32 +292,49 @@ export function SettingsWorkspace({
     };
   }, [effectiveActive]);
 
-  useEffect(() => {
-    if (!mobile || !focusIntentRef.current) return;
+  useLayoutEffect(() => {
+    const intent = focusIntentRef.current;
+    if (!intent) return;
 
-    if (focusIntentRef.current === "detail" && mobilePane === "detail") {
-      detailHeadingRef.current?.focus();
+    const source = breakpointFocusSourceRef.current;
+    const currentActive = document.activeElement;
+    if (
+      source &&
+      currentActive !== source &&
+      currentActive !== document.body
+    ) {
       focusIntentRef.current = null;
+      breakpointFocusSourceRef.current = null;
       return;
     }
 
-    if (focusIntentRef.current === "directory" && mobilePane === "directory") {
+    if (intent === "detail" && mobilePane === "detail") {
+      detailHeadingRef.current?.focus();
+      focusIntentRef.current = null;
+      breakpointFocusSourceRef.current = null;
+      return;
+    }
+
+    if (intent === "directory" && (!mobile || mobilePane === "directory")) {
       directoryRef.current
         ?.querySelector<HTMLButtonElement>(
           `[data-settings-group="${effectiveActive}"]`,
         )
         ?.focus();
       focusIntentRef.current = null;
+      breakpointFocusSourceRef.current = null;
     }
   }, [effectiveActive, mobile, mobilePane]);
 
   const selectGroup = (group: Group) => {
+    breakpointFocusSourceRef.current = null;
     setActive(group);
     setMobilePane("detail");
     if (mobile) focusIntentRef.current = "detail";
   };
 
   const returnToDirectory = () => {
+    breakpointFocusSourceRef.current = null;
     focusIntentRef.current = "directory";
     setMobilePane("directory");
   };
