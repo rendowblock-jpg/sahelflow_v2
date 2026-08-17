@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.21 Founder AAA experience publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.21",
+  "windowsMsiVersion": "1.0.0.21",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-040",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "0b381ccea44ff4e4b151d459655677a847913158",
+    "phase5RunId": 32068788095,
+    "phase67RunId": 32068788018,
+    "ciRunId": 32068789296
+  },
+  "reason": "Publish the certified Internal.21 AAA Settings/Inbox/AI reconstruction, security-remediated dependency graph, production CSS Module build repair, and aligned visual contract only from exact protected main. Founder-installed acceptance remains separate; customer-online, Beta, and Stable remain out of scope."
+}
