@@ -43,49 +43,50 @@ describe("Settings Class-AAA control-center contract", () => {
     ).toBe(false);
   });
 
-  it("keeps one persistent responsive subtree, a 250px desktop rail and lint-safe explicit focus movement", () => {
+  it("keeps one persistent responsive subtree, a 250px desktop rail and event-owned focus transfer", () => {
     const workspace = read("src/components/settings/settings-workspace.tsx");
 
     expect(workspace).toContain("useMobile()");
     expect(workspace).toContain('useState<"directory" | "detail">');
-    expect(workspace).toContain(
-      "const [breakpointReady, setBreakpointReady] = useState(false);",
-    );
-    expect(workspace).toContain(
-      "const [committedMobile, setCommittedMobile] = useState(false);",
-    );
-    expect(workspace).toContain(
-      "mobile && breakpointReady && !committedMobile",
-    );
-    expect(workspace).toContain(
-      "setCommittedMobile(window.innerWidth < 768);",
-    );
-    expect(workspace).toContain("setCommittedMobile(mobile);");
-    expect(workspace).not.toContain("previousMobileRef");
-    expect(workspace).not.toContain("breakpointReadyRef");
     expect(workspace).toContain("focusIntentRef");
-    expect(workspace).toContain("lastFocusRegionRef");
-    expect(workspace).toContain("visibleMobilePane");
+    expect(workspace).toContain("focusRegionRef");
+    expect(workspace).toContain("detailRef");
+    expect(workspace).toContain("backButtonRef");
     expect(workspace).toContain(
-      'data-settings-mobile-pane={mobile ? visibleMobilePane : undefined}',
+      'window.matchMedia("(max-width: 767px)")',
+    );
+    expect(workspace).toContain(
+      'document.addEventListener("focusin", handleFocusIn, true)',
+    );
+    expect(workspace).toContain(
+      'media.addEventListener("change", handleBreakpointChange)',
+    );
+    expect(workspace).toContain('focusRegionRef.current = "directory"');
+    expect(workspace).toContain('focusRegionRef.current = "detail"');
+    expect(workspace).toContain('focusRegionRef.current = "back"');
+    expect(workspace).toContain("focusRegionRef.current = null");
+    expect(workspace).toContain('focusRegionRef.current === "directory"');
+    expect(workspace).toContain('focusRegionRef.current === "back"');
+    expect(workspace).toContain(
+      'data-settings-mobile-pane={mobile ? mobilePane : undefined}',
     );
     expect(workspace).toContain('data-settings-directory="true"');
     expect(workspace).toContain('data-settings-domain-canvas="true"');
     expect(workspace).toContain('data-settings-detail-heading="true"');
     expect(workspace).toContain('focusIntentRef.current = "detail"');
     expect(workspace).toContain('focusIntentRef.current = "directory"');
-    expect(workspace).toContain('lastFocusRegionRef.current === "directory"');
-    expect(workspace).toContain('lastFocusRegionRef.current === "back"');
-    expect(workspace).toContain('lastFocusRegionRef.current = "directory"');
-    expect(workspace).toContain('lastFocusRegionRef.current = "detail"');
-    expect(workspace).toContain('lastFocusRegionRef.current = "back"');
     expect(workspace).toContain("detailHeadingRef.current?.focus()");
     expect(workspace).toContain("querySelector<HTMLButtonElement>");
     expect(workspace).toContain('aria-label={copy("backToSettings")}');
-    expect(workspace).toContain("onFocusCapture={() => {");
+    expect(workspace).toContain("setMobilePane(\"detail\")");
     expect(workspace).toContain(
       "md:grid-cols-[15.625rem_minmax(0,1fr)]",
     );
+    expect(workspace).not.toContain("breakpointReady");
+    expect(workspace).not.toContain("committedMobile");
+    expect(workspace).not.toContain("previousMobileRef");
+    expect(workspace).not.toContain("setBreakpointReady");
+    expect(workspace).not.toContain("setCommittedMobile");
     expect(workspace).not.toContain(
       'if (mobile) {\n    return (\n      <div\n        data-settings-workspace="v2"',
     );
