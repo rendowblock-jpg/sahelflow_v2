@@ -20,7 +20,7 @@ describe("Settings Class-AAA visual system", () => {
     expect(layout).not.toContain('import "./settings-system.css"');
     expect(existsSync(legacyCss)).toBe(false);
     expect(css).toContain('data-settings-generation="class-aaa"');
-    expect(css).toContain("16.25rem");
+    expect(css).toContain("15.625rem");
     expect(css).toContain('html[dir="rtl"]');
     expect(css).toContain('[data-slot="card"]');
     expect(css).toContain("border-radius: 0");
