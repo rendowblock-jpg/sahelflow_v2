@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   ArrowLeft,
@@ -79,6 +79,7 @@ type GroupDefinition = {
 };
 
 type SettingsCopy = (key: SettingsWorkspaceCopyKey) => string;
+type FocusIntent = "detail" | "directory" | null;
 
 const DEFAULT_GROUP: GroupDefinition = {
   id: "workspace",
@@ -238,15 +239,70 @@ export function SettingsWorkspace({
   const [mobilePane, setMobilePane] = useState<"directory" | "detail">(
     "directory",
   );
+  const directoryRef = useRef<HTMLElement | null>(null);
+  const detailHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const focusIntentRef = useRef<FocusIntent>(null);
+  const breakpointReadyRef = useRef(false);
+  const previousMobileRef = useRef(false);
+
   const effectiveGroup =
     visibleGroups.find((group) => group.id === active) ??
     visibleGroups[0] ??
     DEFAULT_GROUP;
   const effectiveActive = effectiveGroup.id;
+  const enteringMobile =
+    mobile && breakpointReadyRef.current && !previousMobileRef.current;
+  const visibleMobilePane = enteringMobile ? "detail" : mobilePane;
+
+  useEffect(() => {
+    if (!breakpointReadyRef.current) {
+      breakpointReadyRef.current = true;
+      previousMobileRef.current = window.innerWidth < 768;
+      return;
+    }
+
+    if (mobile && !previousMobileRef.current) {
+      setMobilePane("detail");
+    }
+    previousMobileRef.current = mobile;
+  }, [mobile]);
+
+  useEffect(() => {
+    if (!mobile || !focusIntentRef.current) return;
+
+    if (
+      focusIntentRef.current === "detail" &&
+      visibleMobilePane === "detail"
+    ) {
+      detailHeadingRef.current?.focus();
+      focusIntentRef.current = null;
+      return;
+    }
+
+    if (
+      focusIntentRef.current === "directory" &&
+      visibleMobilePane === "directory"
+    ) {
+      directoryRef.current
+        ?.querySelector<HTMLButtonElement>(
+          `[data-settings-group="${effectiveActive}"]`,
+        )
+        ?.focus();
+      focusIntentRef.current = null;
+    }
+  }, [effectiveActive, mobile, visibleMobilePane]);
 
   const selectGroup = (group: Group) => {
     setActive(group);
-    if (mobile) setMobilePane("detail");
+    if (mobile) {
+      focusIntentRef.current = "detail";
+      setMobilePane("detail");
+    }
+  };
+
+  const returnToDirectory = () => {
+    focusIntentRef.current = "directory";
+    setMobilePane("directory");
   };
 
   const renderWorkspace = () => (
@@ -365,86 +421,48 @@ export function SettingsWorkspace({
 
   const EffectiveIcon = effectiveGroup.icon;
 
-  if (mobile) {
-    return (
-      <div
-        data-settings-workspace="v2"
-        data-settings-generation="class-aaa"
-        data-settings-control-center="true"
-        data-settings-layout="mobile"
-        data-settings-mobile-pane={mobilePane}
-        className="min-h-[calc(100dvh-9rem)] border-y border-border/80 bg-background"
-      >
-        {mobilePane === "directory" ? (
-          <section className="px-3 py-4 sm:px-4">
-            <header className="px-1 pb-4">
-              <p className="text-base font-semibold tracking-tight">
-                {copy("controlCenter")}
-              </p>
-              <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">
-                {copy("workspaceHint")}
-              </p>
-            </header>
-            <SettingsDirectory
-              groups={visibleGroups}
-              active={effectiveActive}
-              copy={copy}
-              mobile
-              onSelect={selectGroup}
-            />
-          </section>
-        ) : (
-          <section
-            data-settings-group-panel={effectiveActive}
-            data-settings-domain-canvas="true"
-            className="min-h-[calc(100dvh-9rem)]"
-          >
-            <header className="sticky top-0 z-10 flex items-start gap-3 border-b border-border/80 bg-background/95 px-3 py-3 backdrop-blur">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={copy("backToSettings")}
-                onClick={() => setMobilePane("directory")}
-              >
-                <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
-              </Button>
-              <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.07] text-primary">
-                <EffectiveIcon className="size-4" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <h2 className="text-base font-semibold tracking-tight">
-                  {copy(effectiveActive)}
-                </h2>
-                <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                  {copy(effectiveGroup.descriptionKey)}
-                </p>
-              </div>
-            </header>
-            <div className="mx-auto w-full max-w-3xl px-4 pb-10">
-              {content}
-            </div>
-          </section>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div
       data-settings-workspace="v2"
       data-settings-generation="class-aaa"
       data-settings-control-center="true"
-      data-settings-layout="desktop"
-      className="h-[calc(100dvh-10.5rem)] min-h-[36rem] border-y border-border/80 bg-background"
+      data-settings-layout={mobile ? "mobile" : "desktop"}
+      data-settings-mobile-pane={mobile ? visibleMobilePane : undefined}
+      className={cn(
+        "border-y border-border/80 bg-background",
+        mobile
+          ? "min-h-[calc(100dvh-9rem)]"
+          : "h-[calc(100dvh-10.5rem)] min-h-[36rem]",
+      )}
     >
-      <div className="grid h-full min-h-0 overflow-hidden md:grid-cols-[15.625rem_minmax(0,1fr)]">
-        <aside className="min-h-0 overflow-y-auto border-e border-border/80 bg-muted/[0.025] px-3 py-4">
-          <div className="px-2 pb-4">
+      <div
+        className={cn(
+          "min-h-0 overflow-hidden",
+          mobile
+            ? "min-h-[calc(100dvh-9rem)]"
+            : "grid h-full md:grid-cols-[15.625rem_minmax(0,1fr)]",
+        )}
+      >
+        <aside
+          ref={directoryRef}
+          className={cn(
+            mobile
+              ? visibleMobilePane === "directory"
+                ? "block px-3 py-4 sm:px-4"
+                : "hidden"
+              : "min-h-0 overflow-y-auto border-e border-border/80 bg-muted/[0.025] px-3 py-4",
+          )}
+        >
+          <div className={mobile ? "px-1 pb-4" : "px-2 pb-4"}>
             <p className="text-base font-semibold tracking-tight text-foreground">
               {copy("controlCenter")}
             </p>
-            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+            <p
+              className={cn(
+                "mt-1 text-sm text-muted-foreground",
+                mobile ? "max-w-xl leading-6" : "leading-5",
+              )}
+            >
               {copy("workspaceHint")}
             </p>
           </div>
@@ -452,7 +470,7 @@ export function SettingsWorkspace({
             groups={visibleGroups}
             active={effectiveActive}
             copy={copy}
-            mobile={false}
+            mobile={mobile}
             onSelect={selectGroup}
           />
         </aside>
@@ -461,29 +479,78 @@ export function SettingsWorkspace({
           data-settings-group-panel={effectiveActive}
           data-settings-domain-canvas="true"
           aria-labelledby={`settings-control-center-${effectiveActive}`}
-          className="flex min-h-0 min-w-0 flex-col"
+          className={cn(
+            "min-w-0",
+            mobile
+              ? visibleMobilePane === "detail"
+                ? "block min-h-[calc(100dvh-9rem)]"
+                : "hidden"
+              : "flex min-h-0 flex-col",
+          )}
         >
-          <header className="shrink-0 border-b border-border/75 bg-background/92 px-6 py-5 backdrop-blur">
-            <div className="flex min-w-0 items-start gap-3">
-              <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.07] text-primary">
-                <EffectiveIcon className="size-4.5" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <h2
-                  id={`settings-control-center-${effectiveActive}`}
-                  className="text-xl font-semibold tracking-tight"
-                >
-                  {copy(effectiveActive)}
-                </h2>
-                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
-                  {copy(effectiveGroup.descriptionKey)}
-                </p>
-              </div>
+          <header
+            className={cn(
+              "flex items-start gap-3 border-b border-border/80 bg-background/95 backdrop-blur",
+              mobile
+                ? "sticky top-0 z-10 px-3 py-3"
+                : "shrink-0 px-6 py-5",
+            )}
+          >
+            {mobile ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={copy("backToSettings")}
+                onClick={returnToDirectory}
+              >
+                <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
+              </Button>
+            ) : null}
+            <span
+              className={cn(
+                "mt-0.5 flex shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.07] text-primary",
+                mobile ? "size-9" : "size-10",
+              )}
+            >
+              <EffectiveIcon
+                className={mobile ? "size-4" : "size-4.5"}
+                aria-hidden="true"
+              />
+            </span>
+            <div className="min-w-0">
+              <h2
+                ref={detailHeadingRef}
+                id={`settings-control-center-${effectiveActive}`}
+                data-settings-detail-heading="true"
+                tabIndex={-1}
+                className={cn(
+                  "font-semibold tracking-tight outline-none",
+                  mobile ? "text-base" : "text-xl",
+                )}
+              >
+                {copy(effectiveActive)}
+              </h2>
+              <p
+                className={cn(
+                  "mt-1 max-w-3xl text-sm text-muted-foreground",
+                  mobile ? "leading-5" : "leading-6",
+                )}
+              >
+                {copy(effectiveGroup.descriptionKey)}
+              </p>
             </div>
           </header>
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-5xl px-6 pb-12">{content}</div>
+          <div className={mobile ? undefined : "min-h-0 flex-1 overflow-y-auto"}>
+            <div
+              className={cn(
+                "mx-auto w-full",
+                mobile ? "max-w-3xl px-4 pb-10" : "max-w-5xl px-6 pb-12",
+              )}
+            >
+              {content}
+            </div>
           </div>
         </section>
       </div>
