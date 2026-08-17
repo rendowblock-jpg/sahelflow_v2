@@ -262,6 +262,17 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await expect(resetDraft).toHaveValue("RES");
     await expect(dataButton).toBeFocused();
 
+    await dataButton.evaluate((element) => (element as HTMLElement).blur());
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement === document.body))
+      .toBe(true);
+    await page.setViewportSize({ width: 640, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(detailHeading).not.toBeFocused();
+    await expect(resetDraft).toHaveValue("RES");
+
+    await page.setViewportSize({ width: 900, height: 768 });
     await page.evaluate(() => {
       const outside = document.createElement("button");
       outside.type = "button";
