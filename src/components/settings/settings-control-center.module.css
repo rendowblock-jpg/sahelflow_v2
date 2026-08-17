@@ -1,3 +1,11 @@
+:global([data-settings-workspace="v2"][data-settings-generation="class-aaa"] > div.grid) {
+  grid-template-columns: 16.25rem minmax(0, 1fr) !important;
+}
+
+:global(html[dir="rtl"] [data-settings-workspace="v2"][data-settings-generation="class-aaa"] > div.grid) {
+  grid-template-columns: minmax(0, 1fr) 16.25rem !important;
+}
+
 .stack {
   display: flex;
   flex-direction: column;
