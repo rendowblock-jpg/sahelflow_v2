@@ -32,6 +32,22 @@ describe("Settings Class-AAA visual system", () => {
     expect(css).toContain("box-shadow: none");
   });
 
+  it("flattens direct and one-wrapper top-level cards without flattening arbitrary nested status surfaces", () => {
+    const css = source("../settings-control-center.module.css");
+    const backup = source("../backup-restore-panel.tsx");
+    const demo = source("../demo-data-panel.tsx");
+
+    expect(backup).toContain("<Card>");
+    expect(demo).toContain('<Card className="shadow-none">');
+    expect(css).toContain(
+      '.stack > * > :global([data-slot="card"]):first-child',
+    );
+    expect(css).toContain(
+      '.stack > :global([data-slot="card"]),',
+    );
+    expect(css).not.toContain('.stack :global([data-slot="card"])');
+  });
+
   it("keeps Settings-only surface overrides scoped to the control center", () => {
     const css = source("../settings-control-center.module.css");
     const cardSelectors = css
