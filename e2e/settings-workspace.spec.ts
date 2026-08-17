@@ -214,11 +214,14 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("live breakpoint and mobile-pane changes preserve an unsaved Data draft and focused control", async ({
+  test("live breakpoint and mobile-pane changes preserve draft state and transfer focus only when its control hides", async ({
     page,
   }) => {
     const workspace = page.locator('[data-settings-control-center="true"]');
-    await page.locator('[data-settings-group="data"]').click();
+    const dataButton = page.locator('[data-settings-group="data"]');
+    const detailHeading = page.locator('[data-settings-detail-heading="true"]');
+
+    await dataButton.click();
     const resetDraft = page.getByPlaceholder("RESET");
     await resetDraft.fill("RES");
     await resetDraft.focus();
@@ -234,7 +237,7 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
       "data-settings-mobile-pane",
       "directory",
     );
-    await page.locator('[data-settings-group="data"]').click();
+    await dataButton.click();
     await expect(resetDraft).toHaveValue("RES");
 
     await resetDraft.focus();
@@ -242,6 +245,22 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
     await expect(resetDraft).toHaveValue("RES");
     await expect(resetDraft).toBeFocused();
+
+    await dataButton.focus();
+    await page.setViewportSize({ width: 640, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(resetDraft).toHaveValue("RES");
+    await expect(detailHeading).toBeFocused();
+
+    const backButton = page.getByRole("button", {
+      name: "Retour aux paramètres",
+    });
+    await backButton.focus();
+    await page.setViewportSize({ width: 900, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
+    await expect(resetDraft).toHaveValue("RES");
+    await expect(dataButton).toBeFocused();
     await expectNoHorizontalOverflow(page);
   });
 
