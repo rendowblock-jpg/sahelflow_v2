@@ -80,7 +80,6 @@ type GroupDefinition = {
 
 type SettingsCopy = (key: SettingsWorkspaceCopyKey) => string;
 type FocusIntent = "detail" | "directory" | null;
-type BreakpointFocusRegion = "directory" | "detail" | "back" | null;
 
 const DEFAULT_GROUP: GroupDefinition = {
   id: "workspace",
@@ -245,7 +244,6 @@ export function SettingsWorkspace({
   const detailHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const backButtonRef = useRef<HTMLButtonElement | null>(null);
   const focusIntentRef = useRef<FocusIntent>(null);
-  const focusRegionRef = useRef<BreakpointFocusRegion>(null);
 
   const effectiveGroup =
     visibleGroups.find((group) => group.id === active) ??
@@ -258,33 +256,25 @@ export function SettingsWorkspace({
 
     const handleFocusIn = (event: FocusEvent) => {
       const target = event.target;
-      if (!(target instanceof Node)) {
-        focusRegionRef.current = null;
-        return;
+      if (!(target instanceof Node) || media.matches) return;
+      if (
+        directoryRef.current?.contains(target) ||
+        detailRef.current?.contains(target)
+      ) {
+        setMobilePane("detail");
       }
-      if (backButtonRef.current?.contains(target)) {
-        focusRegionRef.current = "back";
-        return;
-      }
-      if (directoryRef.current?.contains(target)) {
-        focusRegionRef.current = "directory";
-        if (!media.matches) setMobilePane("detail");
-        return;
-      }
-      if (detailRef.current?.contains(target)) {
-        focusRegionRef.current = "detail";
-        if (!media.matches) setMobilePane("detail");
-        return;
-      }
-      focusRegionRef.current = null;
     };
 
     const handleBreakpointChange = (event: MediaQueryListEvent) => {
-      if (event.matches && focusRegionRef.current === "directory") {
+      const activeElement = document.activeElement;
+      if (!(activeElement instanceof Node)) return;
+
+      if (event.matches && directoryRef.current?.contains(activeElement)) {
         detailHeadingRef.current?.focus();
         return;
       }
-      if (!event.matches && focusRegionRef.current === "back") {
+
+      if (!event.matches && backButtonRef.current?.contains(activeElement)) {
         directoryRef.current
           ?.querySelector<HTMLButtonElement>(
             `[data-settings-group="${effectiveActive}"]`,
