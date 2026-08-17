@@ -2,6 +2,8 @@ export type SettingsWorkspaceLocale = "en" | "fr" | "ar";
 
 const COPY = {
   en: {
+    controlCenter: "Control center",
+    backToSettings: "Back to settings",
     workspace: "Workspace",
     workspaceDescription: "Profile, appearance and the way SahelFlow feels while you work.",
     operations: "Operations",
@@ -18,7 +20,7 @@ const COPY = {
     teamDescription: "Identity, sessions, access, collaboration and commercial entitlement.",
     data: "Data & recovery",
     dataDescription: "Backups, recovery, demo data and destructive lifecycle controls.",
-    workspaceHint: "Settings are organized by the job you are trying to do.",
+    workspaceHint: "Choose the operating area you want to configure or inspect.",
     profile: "Profile",
     profileDescription: "Your personal profile is managed in its dedicated workspace.",
     openProfile: "Open profile",
@@ -43,6 +45,8 @@ const COPY = {
     ordersExportDescription: "Download the authorized order export only when your role includes the exact order, contact, financial and export permissions.",
   },
   fr: {
+    controlCenter: "Centre de contrôle",
+    backToSettings: "Retour aux paramètres",
     workspace: "Espace de travail",
     workspaceDescription: "Profil, apparence et manière dont SahelFlow se présente pendant votre travail.",
     operations: "Opérations",
@@ -59,7 +63,7 @@ const COPY = {
     teamDescription: "Identité, sessions, accès, collaboration et droit commercial.",
     data: "Données et récupération",
     dataDescription: "Sauvegardes, récupération, données de démonstration et contrôles destructifs.",
-    workspaceHint: "Les paramètres sont organisés selon la tâche que vous voulez accomplir.",
+    workspaceHint: "Choisissez la zone opérationnelle à configurer ou à inspecter.",
     profile: "Profil",
     profileDescription: "Votre profil personnel est géré dans son espace dédié.",
     openProfile: "Ouvrir le profil",
@@ -84,6 +88,8 @@ const COPY = {
     ordersExportDescription: "Téléchargez l’export de commandes autorisé uniquement si votre rôle possède exactement les droits commande, contact, financier et export requis.",
   },
   ar: {
+    controlCenter: "مركز التحكم",
+    backToSettings: "العودة إلى الإعدادات",
     workspace: "مساحة العمل",
     workspaceDescription: "الملف الشخصي والمظهر وطريقة ظهور SahelFlow أثناء العمل.",
     operations: "العمليات",
@@ -100,7 +106,7 @@ const COPY = {
     teamDescription: "الهوية والجلسات والصلاحيات والتعاون والاستحقاق التجاري.",
     data: "البيانات والاستعادة",
     dataDescription: "النسخ الاحتياطية والاستعادة والبيانات التجريبية وإجراءات دورة الحياة الحساسة.",
-    workspaceHint: "تم تنظيم الإعدادات حسب المهمة التي تريد إنجازها.",
+    workspaceHint: "اختر مجال التشغيل الذي تريد ضبطه أو مراجعته.",
     profile: "الملف الشخصي",
     profileDescription: "تتم إدارة ملفك الشخصي في مساحة العمل المخصصة له.",
     openProfile: "فتح الملف الشخصي",

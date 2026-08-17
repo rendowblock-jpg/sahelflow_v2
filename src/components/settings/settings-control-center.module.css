@@ -1,0 +1,63 @@
+.controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) {
+  direction: ltr;
+  grid-template-areas: "settings-nav settings-panel";
+  grid-template-columns: 15.625rem minmax(0, 1fr) !important;
+}
+
+.controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) > aside {
+  grid-area: settings-nav;
+}
+
+.controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) > section {
+  grid-area: settings-panel;
+}
+
+:global(html[dir="rtl"]) .controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) {
+  grid-template-areas: "settings-panel settings-nav";
+  grid-template-columns: minmax(0, 1fr) 15.625rem !important;
+}
+
+:global(html[dir="rtl"]) .controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) > :is(aside, section) {
+  direction: rtl;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.stack > * + * {
+  border-top: 1px solid var(--border);
+}
+
+.stack > :not(:global([data-slot="card"])):not(.cardReset) {
+  padding-block: 1.75rem;
+}
+
+.stack > :global([data-slot="card"]),
+.cardReset > :global([data-slot="card"]),
+.stack > :not(.cardReset) > :global([data-slot="card"]):first-child {
+  gap: 1.25rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.stack > :global([data-slot="card"]),
+.cardReset > :global([data-slot="card"]) {
+  padding-block: 1.75rem;
+}
+
+.stack > :not(.cardReset) > :global([data-slot="card"]):first-child {
+  padding-block: 0;
+}
+
+.stack > :global([data-slot="card"]) > :global([data-slot="card-header"]),
+.stack > :global([data-slot="card"]) > :global([data-slot="card-content"]),
+.cardReset > :global([data-slot="card"]) > :global([data-slot="card-header"]),
+.cardReset > :global([data-slot="card"]) > :global([data-slot="card-content"]),
+.stack > :not(.cardReset) > :global([data-slot="card"]):first-child > :global([data-slot="card-header"]),
+.stack > :not(.cardReset) > :global([data-slot="card"]):first-child > :global([data-slot="card-content"]) {
+  padding-inline: 0;
+}

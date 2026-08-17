@@ -52,7 +52,41 @@ async function expectNoHorizontalOverflow(page: Page) {
   );
 }
 
-test.describe.serial("Settings operational workspace evidence", () => {
+async function settingsGeometry(page: Page) {
+  return {
+    rail: await page
+      .locator('[data-settings-control-center="true"] > div > aside')
+      .boundingBox(),
+    canvas: await page
+      .locator('[data-settings-domain-canvas="true"]')
+      .boundingBox(),
+  };
+}
+
+async function expectFlatDataDomain(page: Page) {
+  const topLevelCards = page.locator(
+    '[data-settings-domain-stack="data"] > [data-slot="card"], ' +
+      '[data-settings-domain-stack="data"] > * > [data-slot="card"]:first-child',
+  );
+  await expect(topLevelCards).toHaveCount(3);
+  const styles = await topLevelCards.evaluateAll((cards) =>
+    cards.map((card) => {
+      const style = getComputedStyle(card);
+      return {
+        borderTopWidth: style.borderTopWidth,
+        borderRadius: style.borderRadius,
+        boxShadow: style.boxShadow,
+      };
+    }),
+  );
+  for (const style of styles) {
+    expect(style.borderTopWidth).toBe("0px");
+    expect(style.borderRadius).toBe("0px");
+    expect(style.boxShadow).toBe("none");
+  }
+}
+
+test.describe.serial("Settings Class-AAA control center evidence", () => {
   let ownerSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 
   test.beforeAll(async ({ browser, baseURL }) => {
@@ -80,11 +114,17 @@ test.describe.serial("Settings operational workspace evidence", () => {
     await waitForHydration(page);
   });
 
-  test("desktop exposes predictable task-based settings destinations without overflow", async ({
+  test("1366 desktop is a full-height command rail plus dominant control canvas", async ({
     page,
   }) => {
-    const workspace = page.locator('[data-settings-workspace="v2"]');
+    const workspace = page.locator('[data-settings-control-center="true"]');
     await expect(workspace).toBeVisible();
+    await expect(workspace).toHaveAttribute("data-settings-workspace", "v2");
+    await expect(workspace).toHaveAttribute(
+      "data-settings-generation",
+      "class-aaa",
+    );
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
 
     const groups = page.locator("[data-settings-group]");
     await expect(groups).toHaveCount(6);
@@ -92,6 +132,20 @@ test.describe.serial("Settings operational workspace evidence", () => {
       "aria-pressed",
       "true",
     );
+
+    const radius = await workspace.evaluate((element) =>
+      getComputedStyle(element).borderRadius,
+    );
+    expect(radius).toBe("0px");
+
+    const { rail, canvas } = await settingsGeometry(page);
+    expect(rail).not.toBeNull();
+    expect(canvas).not.toBeNull();
+    if (rail && canvas) {
+      expect(rail.width).toBeGreaterThanOrEqual(248);
+      expect(rail.width).toBeLessThanOrEqual(252);
+      expect(canvas.width).toBeGreaterThan(rail.width * 2.5);
+    }
 
     for (const group of [
       "operations",
@@ -109,29 +163,155 @@ test.describe.serial("Settings operational workspace evidence", () => {
         "aria-pressed",
         "true",
       );
+      if (group === "data") await expectFlatDataDomain(page);
     }
 
     await expectNoHorizontalOverflow(page);
   });
 
-  test("mobile keeps task navigation usable without horizontal page overflow", async ({
+  test("mobile starts in the directory and manages keyboard focus through drill-in and Back", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 640, height: 768 });
-    const workspace = page.locator('[data-settings-workspace="v2"]');
-    await expect(workspace).toBeVisible();
+    await page.goto("/settings", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
 
-    for (const group of ["connections", "intelligence", "data"] as const) {
-      await page.locator(`[data-settings-group="${group}"]`).click();
-      await expect(
-        page.locator(`[data-settings-group-panel="${group}"]`),
-      ).toBeVisible();
-    }
+    const workspace = page.locator('[data-settings-control-center="true"]');
+    await expect(workspace).toBeVisible();
+    await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
+    await expect(workspace).toHaveAttribute(
+      "data-settings-mobile-pane",
+      "directory",
+    );
+    await expect(page.locator('[data-settings-directory="true"]')).toBeVisible();
+    await expect(page.locator('[data-settings-domain-canvas="true"]')).not.toBeVisible();
+
+    const connectionsButton = page.locator(
+      '[data-settings-group="connections"]',
+    );
+    await connectionsButton.focus();
+    await page.keyboard.press("Enter");
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(page.locator('[data-settings-group-panel="connections"]')).toBeVisible();
+    await expect(page.locator('[data-settings-directory="true"]')).not.toBeVisible();
+    await expect(page.locator('[data-settings-detail-heading="true"]')).toBeFocused();
+
+    const backButton = page.getByRole("button", {
+      name: "Retour aux paramètres",
+    });
+    await backButton.focus();
+    await page.keyboard.press("Enter");
+    await expect(workspace).toHaveAttribute(
+      "data-settings-mobile-pane",
+      "directory",
+    );
+    await expect(page.locator('[data-settings-directory="true"]')).toBeVisible();
+    await expect(connectionsButton).toBeFocused();
+
+    await page.locator('[data-settings-group="data"]').click();
+    await expect(page.locator('[data-settings-group-panel="data"]')).toBeVisible();
+    await expectFlatDataDomain(page);
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("live breakpoint and mobile-pane changes preserve draft state and transfer focus only when its control hides", async ({
+    page,
+  }) => {
+    const workspace = page.locator('[data-settings-control-center="true"]');
+    const dataButton = page.locator('[data-settings-group="data"]');
+    const detailHeading = page.locator('[data-settings-detail-heading="true"]');
+
+    await dataButton.click();
+    const resetDraft = page.getByPlaceholder("RESET");
+    await resetDraft.fill("RES");
+    await resetDraft.focus();
+
+    await page.setViewportSize({ width: 640, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(resetDraft).toHaveValue("RES");
+    await expect(resetDraft).toBeFocused();
+
+    await page.getByRole("button", { name: "Retour aux paramètres" }).click();
+    await expect(workspace).toHaveAttribute(
+      "data-settings-mobile-pane",
+      "directory",
+    );
+    await dataButton.click();
+    await expect(resetDraft).toHaveValue("RES");
+
+    await resetDraft.focus();
+    await page.setViewportSize({ width: 900, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
+    await expect(resetDraft).toHaveValue("RES");
+    await expect(resetDraft).toBeFocused();
+
+    await dataButton.focus();
+    await page.setViewportSize({ width: 640, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(resetDraft).toHaveValue("RES");
+    await expect(detailHeading).toBeFocused();
+
+    const backButton = page.getByRole("button", {
+      name: "Retour aux paramètres",
+    });
+    await backButton.focus();
+    await page.setViewportSize({ width: 900, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
+    await expect(resetDraft).toHaveValue("RES");
+    await expect(dataButton).toBeFocused();
+
+    await page.setViewportSize({ width: 640, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(detailHeading).toBeFocused();
+    await backButton.click();
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "directory");
+    await expect(dataButton).toBeFocused();
+    await page.setViewportSize({ width: 900, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
+    await expect(dataButton).toBeFocused();
+    await page.setViewportSize({ width: 640, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(detailHeading).toBeFocused();
+    await expect(resetDraft).toHaveValue("RES");
+
+    await page.setViewportSize({ width: 900, height: 768 });
+    await dataButton.focus();
+    await dataButton.evaluate((element) => (element as HTMLElement).blur());
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement === document.body))
+      .toBe(true);
+    await page.setViewportSize({ width: 640, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(detailHeading).not.toBeFocused();
+    await expect(resetDraft).toHaveValue("RES");
+
+    await page.setViewportSize({ width: 900, height: 768 });
+    await page.evaluate(() => {
+      const outside = document.createElement("button");
+      outside.type = "button";
+      outside.dataset.settingsTestOutsideFocus = "true";
+      outside.textContent = "Outside Settings";
+      document.body.append(outside);
+    });
+    const outsideFocus = page.locator(
+      '[data-settings-test-outside-focus="true"]',
+    );
+    await dataButton.focus();
+    await outsideFocus.focus();
+    await page.setViewportSize({ width: 640, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
+    await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
+    await expect(outsideFocus).toBeFocused();
+    await expect(resetDraft).toHaveValue("RES");
 
     await expectNoHorizontalOverflow(page);
   });
 
-  test("Arabic RTL places settings navigation on the physical right and content on the left", async ({
+  test("Arabic RTL keeps the command rail on physical right from tablet through desktop", async ({
     context,
     page,
     baseURL,
@@ -141,24 +321,35 @@ test.describe.serial("Settings operational workspace evidence", () => {
     await waitForHydration(page);
 
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    const workspace = page.locator('[data-settings-workspace="v2"]');
+    const workspace = page.locator('[data-settings-control-center="true"]');
     await expect(workspace).toBeVisible();
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
 
     await page.locator('[data-settings-group="access"]').click();
     await expect(page.locator('[data-settings-group-panel="access"]')).toBeVisible();
 
-    const navigationBox = await page
-      .locator('[data-settings-workspace="v2"] > div > aside')
-      .boundingBox();
-    const panelBox = await page
-      .locator('[data-settings-workspace="v2"] > div > section')
-      .boundingBox();
-    expect(navigationBox).not.toBeNull();
-    expect(panelBox).not.toBeNull();
-    if (navigationBox && panelBox) {
-      expect(navigationBox.x).toBeGreaterThan(panelBox.x);
+    let geometry = await settingsGeometry(page);
+    expect(geometry.rail).not.toBeNull();
+    expect(geometry.canvas).not.toBeNull();
+    if (geometry.rail && geometry.canvas) {
+      expect(geometry.rail.x).toBeGreaterThan(geometry.canvas.x);
+      expect(geometry.rail.width).toBeGreaterThanOrEqual(248);
+      expect(geometry.rail.width).toBeLessThanOrEqual(252);
+      expect(geometry.canvas.width).toBeGreaterThan(geometry.rail.width * 2.5);
     }
+    await expectNoHorizontalOverflow(page);
 
+    await page.setViewportSize({ width: 900, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
+    geometry = await settingsGeometry(page);
+    expect(geometry.rail).not.toBeNull();
+    expect(geometry.canvas).not.toBeNull();
+    if (geometry.rail && geometry.canvas) {
+      expect(geometry.rail.x).toBeGreaterThan(geometry.canvas.x);
+      expect(geometry.rail.width).toBeGreaterThanOrEqual(248);
+      expect(geometry.rail.width).toBeLessThanOrEqual(252);
+      expect(geometry.canvas.width).toBeGreaterThan(geometry.rail.width);
+    }
     await expectNoHorizontalOverflow(page);
   });
 });
