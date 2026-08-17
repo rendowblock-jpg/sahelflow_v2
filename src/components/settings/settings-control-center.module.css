@@ -1,9 +1,9 @@
 :global([data-settings-workspace="v2"][data-settings-generation="class-aaa"] > div.grid) {
-  grid-template-columns: 16.25rem minmax(0, 1fr) !important;
+  grid-template-columns: 15.625rem minmax(0, 1fr) !important;
 }
 
 :global(html[dir="rtl"] [data-settings-workspace="v2"][data-settings-generation="class-aaa"] > div.grid) {
-  grid-template-columns: minmax(0, 1fr) 16.25rem !important;
+  grid-template-columns: minmax(0, 1fr) 15.625rem !important;
 }
 
 .stack {
