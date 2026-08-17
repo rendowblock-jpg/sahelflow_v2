@@ -1,0 +1,36 @@
+name: Dependency lock probe
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  lock-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Regenerate lockfile only
+        run: bun install --lockfile-only --ignore-scripts
+
+      - name: Print exact lockfile delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff -- bun.lock
+          echo '--- deepmerge-ts resolved entry ---'
+          grep -n -C 1 'deepmerge-ts' bun.lock
