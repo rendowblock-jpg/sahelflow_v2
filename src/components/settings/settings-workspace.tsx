@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   Activity,
+  ArrowLeft,
   Bot,
+  ChevronRight,
   DatabaseBackup,
   Palette,
   PlugZap,
@@ -28,14 +30,16 @@ import { SecurityAuthorityPanel } from "@/components/settings/security-authority
 import { TeamAccessAuthorityPanel } from "@/components/settings/team-access-authority-panel";
 import { TeamMembersPanel } from "@/components/settings/team-members-panel";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/hooks/use-i18n";
+import { useMobile } from "@/hooks/use-mobile";
 import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceCopyKey,
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
 import { cn } from "@/lib/utils";
+
+import styles from "./settings-control-center.module.css";
 
 export type SettingsWorkspaceAccess = {
   profile: boolean;
@@ -73,6 +77,8 @@ type GroupDefinition = {
   icon: typeof Palette;
   descriptionKey: SettingsWorkspaceCopyKey;
 };
+
+type SettingsCopy = (key: SettingsWorkspaceCopyKey) => string;
 
 const DEFAULT_GROUP: GroupDefinition = {
   id: "workspace",
@@ -133,6 +139,84 @@ function groupVisible(group: Group, access: SettingsWorkspaceAccess): boolean {
   }
 }
 
+function SettingsDirectory({
+  groups,
+  active,
+  copy,
+  mobile,
+  onSelect,
+}: {
+  groups: GroupDefinition[];
+  active: Group;
+  copy: SettingsCopy;
+  mobile: boolean;
+  onSelect: (group: Group) => void;
+}) {
+  return (
+    <nav
+      data-settings-directory="true"
+      aria-label={copy("workspaceHint")}
+      className={mobile ? "space-y-2" : "space-y-1"}
+    >
+      {groups.map((group) => {
+        const Icon = group.icon;
+        const selected = active === group.id;
+        return (
+          <button
+            key={group.id}
+            type="button"
+            data-settings-group={group.id}
+            aria-pressed={selected}
+            onClick={() => onSelect(group.id)}
+            className={cn(
+              "group relative w-full rounded-xl text-start outline-none transition-[background-color,color,box-shadow] duration-150",
+              "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              mobile ? "px-3.5 py-3.5" : "px-3 py-2.5",
+              selected && !mobile
+                ? "bg-primary/[0.085] text-foreground shadow-xs"
+                : "text-muted-foreground hover:bg-muted/55 hover:text-foreground",
+            )}
+          >
+            {selected && !mobile ? (
+              <span
+                className="absolute inset-block-2 start-0 w-0.5 rounded-full bg-primary"
+                aria-hidden="true"
+              />
+            ) : null}
+            <span className="flex items-center gap-3">
+              <span
+                className={cn(
+                  "flex shrink-0 items-center justify-center rounded-xl border bg-background",
+                  mobile ? "size-10" : "size-9",
+                  selected && !mobile
+                    ? "border-primary/30 text-primary"
+                    : "border-border/70 text-muted-foreground group-hover:text-foreground",
+                )}
+              >
+                <Icon className="size-4" aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-foreground">
+                  {copy(group.id)}
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                  {copy(group.descriptionKey)}
+                </span>
+              </span>
+              {mobile ? (
+                <ChevronRight
+                  className="size-4 shrink-0 text-muted-foreground rtl:rotate-180"
+                  aria-hidden="true"
+                />
+              ) : null}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 export function SettingsWorkspace({
   integrations,
   access,
@@ -142,8 +226,8 @@ export function SettingsWorkspace({
 }) {
   const { locale: rawLocale } = useI18n();
   const locale = rawLocale as SettingsWorkspaceLocale;
-  const copy = (key: SettingsWorkspaceCopyKey) =>
-    getSettingsWorkspaceCopy(locale, key);
+  const mobile = useMobile();
+  const copy: SettingsCopy = (key) => getSettingsWorkspaceCopy(locale, key);
   const visibleGroups = useMemo(
     () => GROUPS.filter((group) => groupVisible(group.id, access)),
     [access],
@@ -151,36 +235,48 @@ export function SettingsWorkspace({
   const [active, setActive] = useState<Group>(
     visibleGroups[0]?.id ?? "workspace",
   );
+  const [mobilePane, setMobilePane] = useState<"directory" | "detail">(
+    "directory",
+  );
   const effectiveGroup =
     visibleGroups.find((group) => group.id === active) ??
     visibleGroups[0] ??
     DEFAULT_GROUP;
   const effectiveActive = effectiveGroup.id;
 
+  const selectGroup = (group: Group) => {
+    setActive(group);
+    if (mobile) setMobilePane("detail");
+  };
+
   const renderWorkspace = () => (
-    <div className="space-y-5">
+    <div className={styles.stack} data-settings-domain-stack="workspace">
       {access.profile ? (
-        <Card>
-          <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
-            <div className="flex min-w-0 items-start gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-muted/30 text-muted-foreground">
-                <UserRound className="size-5" aria-hidden="true" />
-              </span>
-              <div>
-                <p className="text-sm font-semibold">{copy("profile")}</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {copy("profileDescription")}
-                </p>
-              </div>
+        <section className="flex flex-wrap items-center justify-between gap-4 py-7">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-muted/30 text-muted-foreground">
+              <UserRound className="size-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold">{copy("profile")}</p>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                {copy("profileDescription")}
+              </p>
             </div>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/profile">{copy("openProfile")}</Link>
-            </Button>
-          </CardContent>
-        </Card>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/profile">{copy("openProfile")}</Link>
+          </Button>
+        </section>
       ) : null}
       {access.appearance ? (
-        <div id="settings-tab-appearance">
+        <div
+          id="settings-tab-appearance"
+          className={cn(
+            styles.cardReset,
+            access.profile && "border-t border-border",
+          )}
+        >
           <AppearancePanel />
         </div>
       ) : null}
@@ -188,7 +284,7 @@ export function SettingsWorkspace({
   );
 
   const renderOperations = () => (
-    <div className="space-y-5">
+    <div className={styles.stack} data-settings-domain-stack="operations">
       {access.reports ? <DailyReportPanel /> : null}
       {access.phone ? (
         <PhoneReputationPanel canManage={access.phoneManage} />
@@ -197,7 +293,7 @@ export function SettingsWorkspace({
   );
 
   const renderConnections = () => (
-    <div className="space-y-5">
+    <div className={styles.stack} data-settings-domain-stack="connections">
       {access.commerceRead || access.commerceManage ? (
         <CommerceIntegrationsPanel
           integrations={integrations}
@@ -211,7 +307,7 @@ export function SettingsWorkspace({
   );
 
   const renderIntelligence = () => (
-    <div className="space-y-5">
+    <div className={styles.stack} data-settings-domain-stack="intelligence">
       {access.aiKey || access.aiConsent ? (
         <AiKeyPanel
           canManageKey={access.aiKey}
@@ -222,7 +318,7 @@ export function SettingsWorkspace({
   );
 
   const renderAccess = () => (
-    <div className="space-y-5">
+    <div className={styles.stack} data-settings-domain-stack="access">
       {access.security ? <SecurityAuthorityPanel /> : null}
       {access.team ? (
         <>
@@ -236,7 +332,7 @@ export function SettingsWorkspace({
   );
 
   const renderData = () => (
-    <div className="space-y-5">
+    <div className={styles.stack} data-settings-domain-stack="data">
       {access.backupRead || access.backupCreate || access.backupRestore ? (
         <BackupRestorePanel
           canRead={access.backupRead}
@@ -269,104 +365,124 @@ export function SettingsWorkspace({
 
   const EffectiveIcon = effectiveGroup.icon;
 
-  return (
-    <div
-      data-settings-workspace="v2"
-      data-settings-premium-shell="true"
-      className="overflow-hidden rounded-xl border border-border/80 bg-card"
-    >
-      <div className="grid min-h-[36rem] lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside className="min-w-0 border-b border-border/80 bg-muted/10 p-3 lg:border-b-0 lg:border-e lg:p-3.5">
-          <div className="px-2 pb-3 pt-1">
-            <p className="text-sm font-semibold text-foreground">
-              {copy("workspaceHint")}
-            </p>
-          </div>
-
-          <nav
-            aria-label={copy("workspaceHint")}
-            className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1"
+  if (mobile) {
+    return (
+      <div
+        data-settings-workspace="v3"
+        data-settings-control-center="true"
+        data-settings-layout="mobile"
+        data-settings-mobile-pane={mobilePane}
+        className="min-h-[calc(100dvh-9rem)] border-y border-border/80 bg-background"
+      >
+        {mobilePane === "directory" ? (
+          <section className="px-3 py-4 sm:px-4">
+            <header className="px-1 pb-4">
+              <p className="text-base font-semibold tracking-tight">
+                {copy("controlCenter")}
+              </p>
+              <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">
+                {copy("workspaceHint")}
+              </p>
+            </header>
+            <SettingsDirectory
+              groups={visibleGroups}
+              active={effectiveActive}
+              copy={copy}
+              mobile
+              onSelect={selectGroup}
+            />
+          </section>
+        ) : (
+          <section
+            data-settings-group-panel={effectiveActive}
+            data-settings-domain-canvas="true"
+            className="min-h-[calc(100dvh-9rem)]"
           >
-            {visibleGroups.map((group) => {
-              const Icon = group.icon;
-              const selected = effectiveActive === group.id;
-              return (
-                <button
-                  key={group.id}
-                  type="button"
-                  data-settings-group={group.id}
-                  aria-pressed={selected}
-                  onClick={() => setActive(group.id)}
-                  className={cn(
-                    "group relative rounded-lg px-2.5 py-2.5 text-start outline-none",
-                    "transition-[background-color,color,box-shadow] duration-150",
-                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
-                    selected
-                      ? "bg-primary/[0.09] text-foreground shadow-xs"
-                      : "text-muted-foreground hover:bg-background/75 hover:text-foreground",
-                  )}
-                >
-                  {selected ? (
-                    <span
-                      className="absolute inset-block-2 start-0 w-0.5 rounded-full bg-primary"
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                  <span className="flex items-center gap-2.5">
-                    <span
-                      className={cn(
-                        "flex size-8 shrink-0 items-center justify-center rounded-lg border bg-background/85",
-                        selected
-                          ? "border-primary/25 text-primary"
-                          : "border-border/70 text-muted-foreground group-hover:text-foreground",
-                      )}
-                    >
-                      <Icon className="size-4" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-semibold">
-                        {copy(group.id)}
-                      </span>
-                      <span className="mt-0.5 hidden text-[11px] leading-4 text-muted-foreground lg:block">
-                        {copy(group.descriptionKey)}
-                      </span>
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
-
-        <section
-          data-settings-group-panel={effectiveActive}
-          aria-labelledby={`settings-workspace-${effectiveActive}`}
-          className="min-w-0 bg-background/35"
-        >
-          <header className="border-b border-border/75 bg-card/88 px-4 py-4 sm:px-5 lg:px-6 lg:py-5">
-            <div className="flex min-w-0 items-start gap-3">
-              <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/[0.07] text-primary">
+            <header className="sticky top-0 z-10 flex items-start gap-3 border-b border-border/80 bg-background/95 px-3 py-3 backdrop-blur">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={copy("backToSettings")}
+                onClick={() => setMobilePane("directory")}
+              >
+                <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
+              </Button>
+              <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.07] text-primary">
                 <EffectiveIcon className="size-4" aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <h2
-                  id={`settings-workspace-${effectiveActive}`}
-                  className="text-lg font-semibold tracking-tight"
-                >
+                <h2 className="text-base font-semibold tracking-tight">
                   {copy(effectiveActive)}
                 </h2>
-                <p className="mt-1 max-w-3xl text-sm leading-5 text-muted-foreground">
+                <p className="mt-1 text-sm leading-5 text-muted-foreground">
                   {copy(effectiveGroup.descriptionKey)}
                 </p>
               </div>
+            </header>
+            <div className="mx-auto w-full max-w-3xl px-4 pb-10">
+              {content}
             </div>
-          </header>
-
-          <div className="mx-auto w-full max-w-5xl p-3 sm:p-5 lg:p-6">
-            {content}
-          </div>
-        </section>
+          </section>
+        )}
       </div>
+    );
+  }
+
+  return (
+    <div
+      data-settings-workspace="v3"
+      data-settings-control-center="true"
+      data-settings-layout="desktop"
+      className="grid h-[calc(100dvh-10.5rem)] min-h-[36rem] overflow-hidden border-y border-border/80 bg-background md:grid-cols-[16.25rem_minmax(0,1fr)]"
+    >
+      <aside className="min-h-0 overflow-y-auto border-e border-border/80 bg-muted/[0.025] px-3 py-4">
+        <div className="px-2 pb-4">
+          <p className="text-base font-semibold tracking-tight text-foreground">
+            {copy("controlCenter")}
+          </p>
+          <p className="mt-1 text-sm leading-5 text-muted-foreground">
+            {copy("workspaceHint")}
+          </p>
+        </div>
+        <SettingsDirectory
+          groups={visibleGroups}
+          active={effectiveActive}
+          copy={copy}
+          mobile={false}
+          onSelect={selectGroup}
+        />
+      </aside>
+
+      <section
+        data-settings-group-panel={effectiveActive}
+        data-settings-domain-canvas="true"
+        aria-labelledby={`settings-control-center-${effectiveActive}`}
+        className="flex min-h-0 min-w-0 flex-col"
+      >
+        <header className="shrink-0 border-b border-border/75 bg-background/92 px-6 py-5 backdrop-blur">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.07] text-primary">
+              <EffectiveIcon className="size-4.5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2
+                id={`settings-control-center-${effectiveActive}`}
+                className="text-xl font-semibold tracking-tight"
+              >
+                {copy(effectiveActive)}
+              </h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
+                {copy(effectiveGroup.descriptionKey)}
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-5xl px-6 pb-12">{content}</div>
+        </div>
+      </section>
     </div>
   );
 }
