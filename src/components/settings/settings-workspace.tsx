@@ -270,6 +270,7 @@ export function SettingsWorkspace({
       if (!(activeElement instanceof Node)) return;
 
       if (event.matches && directoryRef.current?.contains(activeElement)) {
+        setMobilePane("detail");
         detailHeadingRef.current?.focus();
         return;
       }
