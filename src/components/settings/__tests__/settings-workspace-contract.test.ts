@@ -43,13 +43,26 @@ describe("Settings Class-AAA control-center contract", () => {
     ).toBe(false);
   });
 
-  it("keeps one persistent responsive subtree, a 250px desktop rail and explicit focus movement", () => {
+  it("keeps one persistent responsive subtree, a 250px desktop rail and lint-safe explicit focus movement", () => {
     const workspace = read("src/components/settings/settings-workspace.tsx");
 
     expect(workspace).toContain("useMobile()");
     expect(workspace).toContain('useState<"directory" | "detail">');
-    expect(workspace).toContain("previousMobileRef");
-    expect(workspace).toContain("breakpointReadyRef");
+    expect(workspace).toContain(
+      "const [breakpointReady, setBreakpointReady] = useState(false);",
+    );
+    expect(workspace).toContain(
+      "const [committedMobile, setCommittedMobile] = useState(false);",
+    );
+    expect(workspace).toContain(
+      "mobile && breakpointReady && !committedMobile",
+    );
+    expect(workspace).toContain(
+      "setCommittedMobile(window.innerWidth < 768);",
+    );
+    expect(workspace).toContain("setCommittedMobile(mobile);");
+    expect(workspace).not.toContain("previousMobileRef");
+    expect(workspace).not.toContain("breakpointReadyRef");
     expect(workspace).toContain("focusIntentRef");
     expect(workspace).toContain("lastFocusRegionRef");
     expect(workspace).toContain("visibleMobilePane");
