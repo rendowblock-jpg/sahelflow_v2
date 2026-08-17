@@ -5,13 +5,22 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
-describe("Settings operational workspace contract", () => {
-  it("routes Settings through six task-shaped groups and removes legacy aggregators", () => {
+describe("Settings Class-AAA control-center contract", () => {
+  it("routes Settings through six task-shaped domains without the rejected nested mega-card shell", () => {
     const page = read("src/app/(dashboard)/settings/page.tsx");
     const workspace = read("src/components/settings/settings-workspace.tsx");
+    const surfaces = read(
+      "src/components/settings/settings-control-center.module.css",
+    );
+
     expect(page).toContain("SettingsWorkspace");
     expect(page).not.toContain("SettingsTabs");
-    expect(workspace).toContain('data-settings-workspace="v2"');
+    expect(workspace).toContain('data-settings-workspace="v3"');
+    expect(workspace).toContain('data-settings-control-center="true"');
+    expect(workspace).toContain('data-settings-layout="desktop"');
+    expect(workspace).toContain('data-settings-layout="mobile"');
+    expect(workspace).not.toContain("data-settings-premium-shell");
+    expect(workspace).not.toContain("text-[11px]");
     expect(workspace).toContain('id: "workspace"');
     expect(workspace).toContain('id: "operations"');
     expect(workspace).toContain('id: "connections"');
@@ -21,12 +30,31 @@ describe("Settings operational workspace contract", () => {
     expect(workspace).toContain("AppearancePanel");
     expect(workspace).toContain("SecurityAuthorityPanel");
     expect(workspace).toContain("LicensePanel");
+    expect(surfaces).toContain('> :global([data-slot="card"])');
+    expect(surfaces).toContain("border-radius: 0");
+    expect(surfaces).toContain("box-shadow: none");
     expect(
       existsSync(resolve(root, "src/components/settings/settings-tabs.tsx")),
     ).toBe(false);
     expect(
       existsSync(resolve(root, "src/components/settings/integrations-panel.tsx")),
     ).toBe(false);
+  });
+
+  it("uses a persistent desktop command rail and deliberate mobile directory-to-detail drill-in", () => {
+    const workspace = read("src/components/settings/settings-workspace.tsx");
+
+    expect(workspace).toContain("useMobile()");
+    expect(workspace).toContain('useState<"directory" | "detail">');
+    expect(workspace).toContain('data-settings-mobile-pane={mobilePane}');
+    expect(workspace).toContain('data-settings-directory="true"');
+    expect(workspace).toContain('data-settings-domain-canvas="true"');
+    expect(workspace).toContain('setMobilePane("detail")');
+    expect(workspace).toContain('setMobilePane("directory")');
+    expect(workspace).toContain('aria-label={copy("backToSettings")}');
+    expect(workspace).toContain(
+      "md:grid-cols-[16.25rem_minmax(0,1fr)]",
+    );
   });
 
   it("keeps commerce status separate from delivery, WhatsApp and Gemini authority", () => {
@@ -162,19 +190,19 @@ describe("Settings operational workspace contract", () => {
     expect(panel).toContain("verifyPinAndResume");
   });
 
-  it("centralizes task-shaped Settings copy in AR, FR and EN", () => {
+  it("centralizes control-center copy in AR, FR and EN", () => {
     const copy = read("src/lib/i18n/settings-workspace.ts");
     expect(copy).toContain("en:");
     expect(copy).toContain("fr:");
     expect(copy).toContain("ar:");
-    expect(copy).toContain("Workspace");
-    expect(copy).toContain("Espace de travail");
-    expect(copy).toContain("مساحة العمل");
+    expect(copy).toContain('controlCenter: "Control center"');
+    expect(copy).toContain('controlCenter: "Centre de contrôle"');
+    expect(copy).toContain('controlCenter: "مركز التحكم"');
+    expect(copy).toContain('backToSettings: "Back to settings"');
+    expect(copy).toContain('backToSettings: "Retour aux paramètres"');
+    expect(copy).toContain('backToSettings: "العودة إلى الإعدادات"');
     expect(copy).toContain("Access & security");
     expect(copy).toContain("Accès et sécurité");
     expect(copy).toContain("الوصول والأمان");
-    expect(copy).toContain("Export orders");
-    expect(copy).toContain("Exporter les commandes");
-    expect(copy).toContain("تصدير الطلبات");
   });
 });
