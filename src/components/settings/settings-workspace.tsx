@@ -438,7 +438,7 @@ export function SettingsWorkspace({
       data-settings-layout="desktop"
       className="h-[calc(100dvh-10.5rem)] min-h-[36rem] border-y border-border/80 bg-background"
     >
-      <div className="grid h-full min-h-0 overflow-hidden md:grid-cols-[15.625rem_minmax(0,1fr)]">
+      <div className="grid h-full min-h-0 overflow-hidden md:grid-cols-[16.25rem_minmax(0,1fr)]">
         <aside className="min-h-0 overflow-y-auto border-e border-border/80 bg-muted/[0.025] px-3 py-4">
           <div className="px-2 pb-4">
             <p className="text-base font-semibold tracking-tight text-foreground">
