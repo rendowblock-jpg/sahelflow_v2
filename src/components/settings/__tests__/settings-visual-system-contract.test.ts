@@ -25,7 +25,7 @@ describe("Settings Class-AAA visual system", () => {
     expect(css).toContain('grid-template-areas: "settings-panel settings-nav"');
     expect(css).toContain("direction: ltr");
     expect(css).toContain('html[dir="rtl"]');
-    expect(css).toContain('> :is(aside, section))');
+    expect(css).toContain('> :global(.grid) > :is(aside, section)');
     expect(css).toContain("direction: rtl");
     expect(css).toContain('[data-slot="card"]');
     expect(css).toContain("border-radius: 0");
