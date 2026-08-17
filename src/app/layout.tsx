@@ -6,7 +6,6 @@ import "./phase5.css";
 import "./product-system.css";
 import "./responsive-system.css";
 import "./workspace-system.css";
-import "./settings-system.css";
 import "./theme-preset-system.css";
 import "./arabic-system.css";
 import "./motion-system.css";
