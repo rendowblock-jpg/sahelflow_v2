@@ -2,40 +2,28 @@
 
 import { useI18n } from "@/hooks/use-i18n";
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import {
   DEFAULT_CHART_HEIGHT,
-  normalizeChartHeight,
-  resolveFormatter,
   type ChartFormatter,
   type ChartHeight,
 } from "./chart-primitives";
-import { useChartMotion } from "./chart-motion";
+import type {
+  ChartConfig,
+  ChartReferenceBand,
+  ChartReferenceLine,
+} from "./chart-types";
+import { TimeSeriesChart, type TimeSeriesDefinition } from "./time-series-chart";
 
-interface LineSeries {
-  key: string;
-  label: string;
-  format?: ChartFormatter;
-}
 interface LineTrendChartProps {
   data: Array<Record<string, string | number>>;
   xKey: string;
-  series: LineSeries[];
+  series: TimeSeriesDefinition[];
   config: ChartConfig;
   height?: ChartHeight;
   formatY?: ChartFormatter;
   emptyMessage?: string;
+  referenceLines?: ChartReferenceLine[];
+  referenceBands?: ChartReferenceBand[];
+  yDomain?: [number, number];
 }
 
 export function LineTrendChart({
@@ -46,93 +34,25 @@ export function LineTrendChart({
   height = DEFAULT_CHART_HEIGHT,
   formatY,
   emptyMessage,
+  referenceLines,
+  referenceBands,
+  yDomain,
 }: LineTrendChartProps) {
-  const { t, locale } = useI18n();
-  const { isAnimationActive, baseDuration } = useChartMotion();
-  const chartHeight = normalizeChartHeight(height);
-  const fmtY = resolveFormatter(formatY, locale);
-
-  if (!data.length) {
-    return (
-      <div
-        className="flex w-full items-center justify-center text-sm text-muted-foreground"
-        style={{ height: chartHeight }}
-      >
-        {emptyMessage ?? "—"}
-      </div>
-    );
-  }
-
+  const { t } = useI18n();
   return (
-    <ChartContainer
-      dir="ltr"
-      role="img"
-      aria-label={t("charts.lineTrend")}
+    <TimeSeriesChart
+      data={data}
+      xKey={xKey}
+      series={series}
       config={config}
-      style={{ height: chartHeight }}
-      className="aspect-auto w-full"
-    >
-      <LineChart
-        data={data}
-        margin={{ left: 4, right: 12, top: 8, bottom: 0 }}
-      >
-        <CartesianGrid vertical={false} />
-        <XAxis
-          dataKey={xKey}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={10}
-          minTickGap={32}
-          className="text-xs fill-muted-foreground"
-          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
-        />
-        <YAxis
-          width={60}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={6}
-          tickFormatter={(value: number) => fmtY(value)}
-          className="text-xs fill-muted-foreground"
-          orientation="left"
-          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
-        />
-        <ChartTooltip
-          cursor={{ stroke: "var(--sf-chart-grid)", strokeWidth: 1 }}
-          content={
-            <ChartTooltipContent
-              indicator="dot"
-              formatter={(value, name) => {
-                const current = series.find((entry) => entry.key === name);
-                const numeric = Number(value);
-                return [
-                  current?.format
-                    ? resolveFormatter(current.format, locale)(numeric)
-                    : fmtY(numeric),
-                  current?.label ?? name,
-                ];
-              }}
-            />
-          }
-        />
-        {series.map((current) => (
-          <Line
-            key={current.key}
-            dataKey={current.key}
-            type="monotone"
-            stroke={`var(--color-${current.key})`}
-            strokeWidth={2.25}
-            dot={false}
-            activeDot={{
-              r: 4,
-              strokeWidth: 2,
-              stroke: "var(--background)",
-            }}
-            isAnimationActive={isAnimationActive}
-            animationDuration={baseDuration}
-            animationEasing="ease-out"
-          />
-        ))}
-      </LineChart>
-    </ChartContainer>
+      height={height}
+      formatY={formatY}
+      emptyMessage={emptyMessage}
+      mode="line"
+      ariaLabel={t("charts.lineTrend")}
+      referenceLines={referenceLines}
+      referenceBands={referenceBands}
+      yDomain={yDomain}
+    />
   );
 }

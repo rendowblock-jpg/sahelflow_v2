@@ -125,6 +125,53 @@ function themeSignature(theme: SahelChartTheme) {
   ].join("|");
 }
 
+export function resolveChartColor(
+  value: string | undefined,
+  theme: SahelChartTheme,
+  fallbackIndex = 0,
+): string {
+  if (!value) return theme.chart[fallbackIndex % theme.chart.length] ?? theme.primary;
+  const known: Record<string, string> = {
+    "--color-chart-1": theme.chart[0],
+    "--color-chart-2": theme.chart[1],
+    "--color-chart-3": theme.chart[2],
+    "--color-chart-4": theme.chart[3],
+    "--color-chart-5": theme.chart[4],
+    "--chart-1": theme.chart[0],
+    "--chart-2": theme.chart[1],
+    "--chart-3": theme.chart[2],
+    "--chart-4": theme.chart[3],
+    "--chart-5": theme.chart[4],
+    "--color-primary": theme.primary,
+    "--primary": theme.primary,
+    "--color-destructive": theme.destructive,
+    "--destructive": theme.destructive,
+    "--color-success": theme.success,
+    "--success": theme.success,
+    "--color-warning": theme.warning,
+    "--warning": theme.warning,
+    "--color-info": theme.info,
+    "--info": theme.info,
+  };
+  const variable = value.match(/^var\((--[^,)]+)(?:,[^)]+)?\)$/)?.[1];
+  if (!variable) return value;
+  if (known[variable]) return known[variable]!;
+  if (typeof document === "undefined") {
+    return theme.chart[fallbackIndex % theme.chart.length] ?? theme.primary;
+  }
+  const rootStyle = getComputedStyle(document.documentElement);
+  const direct = rootStyle.getPropertyValue(variable).trim();
+  if (direct) return direct;
+  const normalized = variable.startsWith("--color-")
+    ? `--${variable.slice("--color-".length)}`
+    : variable;
+  return (
+    rootStyle.getPropertyValue(normalized).trim() ||
+    theme.chart[fallbackIndex % theme.chart.length] ||
+    theme.primary
+  );
+}
+
 function withRuntimePolicy(
   option: EChartsCoreOption,
   ariaLabel: string,
@@ -140,6 +187,7 @@ function withRuntimePolicy(
     animationEasingUpdate: "cubicOut",
     aria: {
       enabled: true,
+      show: true,
       description: ariaLabel,
       decal: { show: true },
       ...((option.aria as object | undefined) ?? {}),
@@ -147,7 +195,10 @@ function withRuntimePolicy(
   };
 }
 
-export function chartTooltip(theme: SahelChartTheme) {
+export function chartTooltip(
+  theme: SahelChartTheme,
+  dir: "ltr" | "rtl" = "ltr",
+) {
   return {
     trigger: "axis" as const,
     confine: true,
@@ -161,6 +212,7 @@ export function chartTooltip(theme: SahelChartTheme) {
       color: theme.foreground,
       fontSize: 12,
       fontFamily: "ui-sans-serif, system-ui, sans-serif",
+      align: dir === "rtl" ? ("right" as const) : ("left" as const),
     },
     axisPointer: {
       type: "line" as const,
@@ -172,8 +224,7 @@ export function chartTooltip(theme: SahelChartTheme) {
         opacity: 0.55,
       },
     },
-    extraCssText:
-      "border-radius:10px;box-shadow:0 12px 32px rgb(0 0 0 / 0.16);backdrop-filter:blur(12px);",
+    extraCssText: `direction:${dir};text-align:${dir === "rtl" ? "right" : "left"};unicode-bidi:isolate;border-radius:10px;box-shadow:0 12px 32px rgb(0 0 0 / 0.16);backdrop-filter:blur(12px);`,
   };
 }
 
@@ -199,14 +250,11 @@ export function cartesianAxisStyle(theme: SahelChartTheme) {
   };
 }
 
-export function chartDataZoom(
-  pointCount: number,
-  theme: SahelChartTheme,
-): EChartsCoreOption["dataZoom"] {
+export function chartDataZoom(pointCount: number, theme: SahelChartTheme) {
   if (pointCount <= 45) return undefined;
   return [
     {
-      type: "inside",
+      type: "inside" as const,
       start: Math.max(0, 100 - (45 / pointCount) * 100),
       end: 100,
       zoomOnMouseWheel: false,
@@ -215,7 +263,7 @@ export function chartDataZoom(
       preventDefaultMouseMove: false,
     },
     {
-      type: "slider",
+      type: "slider" as const,
       height: 18,
       bottom: 1,
       borderColor: "transparent",
@@ -266,10 +314,7 @@ export function EChartSurface({
     const container = containerRef.current;
     if (!container) return;
 
-    const chart = init(container, undefined, {
-      renderer: "svg",
-      useDirtyRect: true,
-    });
+    const chart = init(container, undefined, { renderer: "svg" });
     readyRef.current?.(chart);
 
     let lastThemeSignature = "";
@@ -337,7 +382,7 @@ export function EChartSurface({
     <div
       ref={containerRef}
       data-echarts-surface="true"
-      className={cn("w-full min-w-0", className)}
+      className={cn("w-full min-w-0 outline-none", className)}
       style={{ height }}
       role="img"
       aria-label={ariaLabel}

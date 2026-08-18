@@ -1,13 +1,8 @@
 "use client";
 
+import * as React from "react";
+
 import { useI18n } from "@/hooks/use-i18n";
-import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
 import {
   DEFAULT_CHART_HEIGHT,
   normalizeChartHeight,
@@ -15,7 +10,15 @@ import {
   type ChartFormatter,
   type ChartHeight,
 } from "./chart-primitives";
-import { useChartMotion } from "./chart-motion";
+import type { ChartConfig } from "./chart-types";
+import {
+  cartesianAxisStyle,
+  chartDataZoom,
+  chartTooltip,
+  EChartSurface,
+  resolveChartColor,
+  type SahelChartTheme,
+} from "./echarts-runtime";
 
 interface BarSeries {
   kind: "bar";
@@ -44,6 +47,23 @@ interface ComposedTrendChartProps {
   emptyMessage?: string;
 }
 
+function isolate(value: unknown) {
+  return `\u2068${String(value ?? "")}\u2069`;
+}
+
+function seriesColor(
+  config: ChartConfig,
+  key: string,
+  theme: SahelChartTheme,
+  index: number,
+) {
+  const entry = config[key];
+  const requested = entry?.theme
+    ? entry.theme[theme.dark ? "dark" : "light"]
+    : entry?.color;
+  return resolveChartColor(requested, theme, index);
+}
+
 export function ComposedTrendChart({
   data,
   xKey,
@@ -54,121 +74,169 @@ export function ComposedTrendChart({
   formatRightY,
   emptyMessage,
 }: ComposedTrendChartProps) {
-  const { t, locale } = useI18n();
-  const { isAnimationActive, fastDuration, baseDuration } = useChartMotion();
+  const { t, locale, dir } = useI18n();
   const chartHeight = normalizeChartHeight(height);
-  const fmtLeft = resolveFormatter(formatLeftY, locale);
-  const fmtRight = resolveFormatter(formatRightY, locale);
-
-  if (!data.length) {
-    return (
-      <div className="flex w-full items-center justify-center text-sm text-muted-foreground" style={{ height: chartHeight }}>
-        {emptyMessage ?? "—"}
-      </div>
-    );
-  }
-
+  const fmtLeft = React.useMemo(
+    () => resolveFormatter(formatLeftY, locale),
+    [formatLeftY, locale],
+  );
+  const fmtRight = React.useMemo(
+    () => resolveFormatter(formatRightY, locale),
+    [formatRightY, locale],
+  );
   const hasRight = series.some(
     (entry) =>
       entry.yAxis === "right" ||
       (entry.kind === "line" && entry.yAxis === undefined),
   );
 
-  return (
-    <ChartContainer
-      dir="ltr"
-      role="img"
-      aria-label={t("charts.composedTrend")}
-      config={config}
-      style={{ height: chartHeight }}
-      className="aspect-auto w-full"
-    >
-      <ComposedChart data={data} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
-        <CartesianGrid vertical={false} />
-        <XAxis
-          dataKey={xKey}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={10}
-          minTickGap={24}
-          className="text-xs fill-muted-foreground"
-          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
-        />
-        <YAxis
-          yAxisId="left"
-          width={60}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={6}
-          tickFormatter={(value: number) => fmtLeft(value)}
-          className="text-xs fill-muted-foreground"
-          orientation="left"
-          tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
-        />
-        {hasRight ? (
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            width={60}
-            tickLine={false}
-            axisLine={false}
-            tickMargin={6}
-            tickFormatter={(value: number) => fmtRight(value)}
-            className="text-xs fill-muted-foreground"
-            tick={{ fill: "var(--sf-chart-axis)", fontSize: 12 }}
-          />
-        ) : null}
-        <ChartTooltip
-          cursor={{ stroke: "var(--sf-chart-grid)", strokeWidth: 1 }}
-          content={
-            <ChartTooltipContent
-              indicator="dot"
-              formatter={(value, name) => {
-                const current = series.find((entry) => entry.key === name);
-                const numeric = Number(value);
-                const currentAxis =
-                  current?.yAxis ??
-                  (current?.kind === "line" ? "right" : "left");
-                const format = current?.format
-                  ? resolveFormatter(current.format, locale)
-                  : currentAxis === "right"
-                    ? fmtRight
-                    : fmtLeft;
-                return [format(numeric), current?.label ?? name];
-              }}
-            />
+  const option = React.useCallback(
+    (theme: SahelChartTheme) => {
+      const axis = cartesianAxisStyle(theme);
+      const zoom = chartDataZoom(data.length, theme);
+      return {
+        color: series.map((current, index) =>
+          seriesColor(config, current.key, theme, index),
+        ),
+        grid: {
+          left: 8,
+          right: hasRight ? 14 : 8,
+          top: 16,
+          bottom: zoom ? 45 : 12,
+          containLabel: true,
+        },
+        tooltip: chartTooltip(theme, dir),
+        axisPointer: {
+          link: [{ xAxisIndex: "all" }],
+          label: {
+            show: true,
+            backgroundColor: theme.foreground,
+            color: theme.card,
+            borderRadius: 5,
+            padding: [4, 6],
+          },
+        },
+        xAxis: {
+          type: "category",
+          boundaryGap: true,
+          data: data.map((row) => String(row[xKey] ?? "")),
+          axisLine: { show: false },
+          axisTick: { show: false },
+          axisPointer: { show: true, snap: true },
+          axisLabel: {
+            color: theme.mutedForeground,
+            fontSize: 12,
+            hideOverlap: true,
+            margin: 12,
+            formatter: (value: string) => isolate(value),
+          },
+        },
+        yAxis: [
+          {
+            type: "value",
+            min: 0,
+            position: "left",
+            ...axis,
+            axisLabel: {
+              ...axis.axisLabel,
+              formatter: (value: number) => isolate(fmtLeft(value)),
+            },
+          },
+          ...(hasRight
+            ? [
+                {
+                  type: "value" as const,
+                  min: 0,
+                  position: "right" as const,
+                  ...axis,
+                  splitLine: { show: false },
+                  axisLabel: {
+                    ...axis.axisLabel,
+                    formatter: (value: number) => isolate(fmtRight(value)),
+                  },
+                },
+              ]
+            : []),
+        ],
+        dataZoom: zoom,
+        series: series.map((current, index) => {
+          const color = seriesColor(config, current.key, theme, index);
+          const currentAxis =
+            current.yAxis ?? (current.kind === "line" ? "right" : "left");
+          const valueFormatter = current.format
+            ? resolveFormatter(current.format, locale)
+            : currentAxis === "right"
+              ? fmtRight
+              : fmtLeft;
+          if (current.kind === "bar") {
+            return {
+              id: current.key,
+              name: current.label,
+              type: "bar" as const,
+              yAxisIndex: currentAxis === "right" && hasRight ? 1 : 0,
+              data: data.map((row) => Number(row[current.key] ?? 0)),
+              barMaxWidth: 28,
+              barMinWidth: 5,
+              itemStyle: {
+                color,
+                borderRadius: [6, 6, 2, 2],
+                opacity: 0.92,
+              },
+              emphasis: {
+                focus: "series" as const,
+                itemStyle: { opacity: 1 },
+              },
+              tooltip: {
+                valueFormatter: (value: unknown) =>
+                  valueFormatter(Number(value ?? 0)),
+              },
+            };
           }
-        />
-        {series.map((current) =>
-          current.kind === "bar" ? (
-            <Bar
-              key={current.key}
-              dataKey={current.key}
-              yAxisId={current.yAxis ?? "left"}
-              fill={`var(--color-${current.key})`}
-              radius={[5, 5, 1, 1]}
-              maxBarSize={28}
-              isAnimationActive={isAnimationActive}
-              animationDuration={fastDuration}
-              animationEasing="ease-out"
-            />
-          ) : (
-            <Line
-              key={current.key}
-              dataKey={current.key}
-              yAxisId={current.yAxis ?? "right"}
-              type="monotone"
-              stroke={`var(--color-${current.key})`}
-              strokeWidth={2.25}
-              dot={false}
-              activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--background)" }}
-              isAnimationActive={isAnimationActive}
-              animationDuration={baseDuration}
-              animationEasing="ease-out"
-            />
-          ),
-        )}
-      </ComposedChart>
-    </ChartContainer>
+          return {
+            id: current.key,
+            name: current.label,
+            type: "line" as const,
+            yAxisIndex: currentAxis === "right" && hasRight ? 1 : 0,
+            data: data.map((row) => Number(row[current.key] ?? 0)),
+            smooth: 0.26,
+            showSymbol: false,
+            symbol: "circle",
+            symbolSize: 7,
+            lineStyle: { color, width: 2.35 },
+            itemStyle: { color, borderColor: theme.card, borderWidth: 2 },
+            emphasis: {
+              focus: "series" as const,
+              scale: 1.15,
+              lineStyle: { width: 3 },
+            },
+            tooltip: {
+              valueFormatter: (value: unknown) =>
+                valueFormatter(Number(value ?? 0)),
+            },
+          };
+        }),
+      };
+    },
+    [config, data, dir, fmtLeft, fmtRight, hasRight, locale, series, xKey],
+  );
+
+  if (!data.length || !series.length) {
+    return (
+      <div
+        className="flex w-full items-center justify-center text-sm text-muted-foreground"
+        style={{ height: chartHeight }}
+      >
+        {emptyMessage ?? "—"}
+      </div>
+    );
+  }
+
+  return (
+    <EChartSurface
+      option={option}
+      ariaLabel={t("charts.composedTrend")}
+      height={chartHeight}
+      className="aspect-auto"
+    />
   );
 }
