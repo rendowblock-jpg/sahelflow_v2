@@ -47,6 +47,15 @@ describe("universal command search contract", () => {
     expect(server).not.toContain("phone: { contains: query }");
   });
 
+  it("preserves exact protected order-phone search through blind-index authority", () => {
+    const server = source("../../../lib/search/universal-search-server.ts");
+
+    expect(server).toContain("deriveExistingShopBlindIndex");
+    expect(server).toContain('{ recordType: "Order", field: "phone" }');
+    expect(server).toContain("phoneBlindIndex: orderPhoneBlindIndex");
+    expect(server).not.toContain("phone: { contains: query }");
+  });
+
   it("bounds recent message search instead of loading 500 × 50 messages per query", () => {
     const server = source("../../../lib/search/universal-search-server.ts");
 
@@ -63,5 +72,13 @@ describe("universal command search contract", () => {
     expect(route).toContain('"Server-Timing"');
     expect(route).toContain("result.tookMs");
     expect(route).toContain('"Cache-Control": "no-store"');
+  });
+
+  it("uses the Windows-native Ctrl+K shortcut language", () => {
+    const topbar = source("../topbar.tsx");
+
+    expect(topbar).toContain('aria-keyshortcuts="Control+K"');
+    expect(topbar).toContain(">Ctrl</span>");
+    expect(topbar).not.toContain("<Command");
   });
 });
