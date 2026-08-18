@@ -17,6 +17,7 @@ const MAX_PREFIX_LENGTH = 40;
 const GRAM_SIZE = 4;
 const CUSTOMER_PROJECTION_PAGE_SIZE = 400;
 const CUSTOMER_RELEVANCE_BOOST = 64;
+const CANDIDATE_SCAN_BUDGET = DEFAULT_CANDIDATE_LIMIT * 4;
 
 type ProjectedCandidate = UniversalSearchCandidate & {
   entityId: string;
@@ -26,6 +27,7 @@ type ProjectedCandidate = UniversalSearchCandidate & {
 interface SearchIndex {
   records: Map<string, ProjectedCandidate>;
   keys: Map<string, Set<string>>;
+  exactKeys: Map<string, Set<string>>;
   byCustomerId: Map<string, Set<string>>;
 }
 
@@ -109,15 +111,20 @@ function emptyIndex(): SearchIndex {
   return {
     records: new Map(),
     keys: new Map(),
+    exactKeys: new Map(),
     byCustomerId: new Map(),
   };
 }
 
-function addKey(index: SearchIndex, key: string, id: string): void {
+function addMapKey(
+  map: Map<string, Set<string>>,
+  key: string,
+  id: string,
+): void {
   if (!key) return;
-  const bucket = index.keys.get(key);
+  const bucket = map.get(key);
   if (bucket) bucket.add(id);
-  else index.keys.set(key, new Set([id]));
+  else map.set(key, new Set([id]));
 }
 
 function prefixes(value: string): string[] {
@@ -142,15 +149,18 @@ function indexValue(index: SearchIndex, id: string, rawValue: string): void {
   const normalized = normalizeSearchText(rawValue);
   if (!normalized) return;
 
+  addMapKey(index.exactKeys, `n:${normalized}`, id);
+
   for (const word of normalized.split(/\s+/u)) {
     if (word.length < 2) continue;
-    for (const prefix of prefixes(word)) addKey(index, `w:${prefix}`, id);
+    for (const prefix of prefixes(word)) addMapKey(index.keys, `w:${prefix}`, id);
   }
 
   const compact = compactSearchText(normalized);
   if (compact.length >= 2) {
-    for (const prefix of prefixes(compact)) addKey(index, `c:${prefix}`, id);
-    for (const gram of grams(compact)) addKey(index, `g:${gram}`, id);
+    addMapKey(index.exactKeys, `c:${compact}`, id);
+    for (const prefix of prefixes(compact)) addMapKey(index.keys, `c:${prefix}`, id);
+    for (const gram of grams(compact)) addMapKey(index.keys, `g:${gram}`, id);
   }
 }
 
@@ -177,9 +187,31 @@ function intersect(left: Set<string>, right: Set<string>): Set<string> {
   return new Set([...small].filter((value) => large.has(value)));
 }
 
+function appendBounded(
+  target: Set<string>,
+  source: Iterable<string>,
+  budget = CANDIDATE_SCAN_BUDGET,
+): void {
+  for (const id of source) {
+    target.add(id);
+    if (target.size >= budget) return;
+  }
+}
+
 function candidateIdsForQuery(index: SearchIndex, rawQuery: string): string[] {
   const query = normalizeSearchText(rawQuery);
   if (query.length < 2) return [];
+
+  const compact = compactSearchText(query);
+  const selected = new Set<string>();
+
+  // Exact candidates are injected before any broad prefix/gram budget so an
+  // exact SKU/order/name/phone cannot disappear behind hundreds of earlier
+  // prefix matches merely because of insertion order.
+  appendBounded(selected, index.exactKeys.get(`n:${query}`) ?? []);
+  if (compact.length >= 2) {
+    appendBounded(selected, index.exactKeys.get(`c:${compact}`) ?? []);
+  }
 
   const buckets: Set<string>[] = [];
   for (const token of query.split(/\s+/u)) {
@@ -188,32 +220,32 @@ function candidateIdsForQuery(index: SearchIndex, rawQuery: string): string[] {
     if (bucket) buckets.push(bucket);
   }
 
-  const compact = compactSearchText(query);
   if (compact.length >= 2) {
     const compactBucket = index.keys.get(`c:${compact}`);
     if (compactBucket) buckets.push(compactBucket);
   }
 
-  if (buckets.length > 0) {
+  if (buckets.length > 0 && selected.size < CANDIDATE_SCAN_BUDGET) {
     let ids = new Set(buckets[0]);
     for (const bucket of buckets.slice(1)) ids = intersect(ids, bucket);
-    if (ids.size > 0) {
-      return [...ids].slice(0, DEFAULT_CANDIDATE_LIMIT * 4);
-    }
+    appendBounded(selected, ids);
   }
 
-  if (compact.length >= GRAM_SIZE) {
+  if (
+    selected.size < CANDIDATE_SCAN_BUDGET &&
+    compact.length >= GRAM_SIZE
+  ) {
     const gramBuckets = grams(compact)
       .map((gram) => index.keys.get(`g:${gram}`))
       .filter((bucket): bucket is Set<string> => Boolean(bucket));
     if (gramBuckets.length > 0) {
       let ids = new Set(gramBuckets[0]);
       for (const bucket of gramBuckets.slice(1)) ids = intersect(ids, bucket);
-      return [...ids].slice(0, DEFAULT_CANDIDATE_LIMIT * 4);
+      appendBounded(selected, ids);
     }
   }
 
-  return [];
+  return [...selected];
 }
 
 function queryIndex(
@@ -295,7 +327,6 @@ async function buildOrderIndex(): Promise<SearchIndex> {
     select: {
       id: true,
       orderNumber: true,
-      wilaya: true,
       customerId: true,
       updatedAt: true,
     },
@@ -307,7 +338,6 @@ async function buildOrderIndex(): Promise<SearchIndex> {
       customerId: order.customerId,
       kind: "order" as const,
       label: order.orderNumber,
-      sublabel: order.wilaya,
       href: `/orders/${order.id}`,
       updatedAt: order.updatedAt,
       rankBoost: 12,
