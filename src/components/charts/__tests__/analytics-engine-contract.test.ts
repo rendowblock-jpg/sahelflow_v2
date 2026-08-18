@@ -70,4 +70,18 @@ describe("Class-AAA analytics engine boundary", () => {
     expect(sparkline).toContain('data-chart-engine="native-svg"');
     expect(sparkline).not.toContain("EChartSurface");
   });
+
+  it("clears keyboard pointer emphasis when the readout is dismissed", () => {
+    const runtime = readFileSync(
+      join(SOURCE_ROOT, "components", "charts", "echarts-runtime.tsx"),
+      "utf8",
+    );
+
+    expect(runtime).toContain("triggerEmphasis: false");
+    expect(runtime).toContain(
+      'chart.dispatchAction({ type: "updateAxisPointer", currTrigger: "leave" });',
+    );
+    expect(runtime).toContain("if (chart) hideKeyboardPoint(chart);");
+    expect(runtime).toContain("hideKeyboardPoint(chart);\n        return;");
+  });
 });
