@@ -7,17 +7,14 @@ import {
   rankUniversalSearchCandidates,
   type UniversalSearchCandidate,
 } from "@/lib/search/universal-search";
-import {
-  subscribeSearchProjectionMutations,
-  type SearchProjectionModel,
-} from "@/lib/search/search-projection-events";
 
 const DEFAULT_CANDIDATE_LIMIT = 48;
 const MAX_PREFIX_LENGTH = 40;
 const GRAM_SIZE = 4;
-const CUSTOMER_PROJECTION_PAGE_SIZE = 400;
+const PROJECTION_PAGE_SIZE = 400;
 const CUSTOMER_RELEVANCE_BOOST = 64;
 const CANDIDATE_SCAN_BUDGET = DEFAULT_CANDIDATE_LIMIT * 4;
+const STABLE_BUILD_ATTEMPTS = 3;
 
 type ProjectedCandidate = UniversalSearchCandidate & {
   entityId: string;
@@ -31,12 +28,26 @@ interface SearchIndex {
   byCustomerId: Map<string, Set<string>>;
 }
 
+type ProjectionSlot =
+  | "customer"
+  | "product"
+  | "order"
+  | "delivery"
+  | "return"
+  | "conversation";
+
+interface CachedProjection {
+  revision: number;
+  promise: Promise<SearchIndex>;
+}
+
 interface ShopProjectionCache {
-  customer?: Promise<SearchIndex>;
-  product?: Promise<SearchIndex>;
-  order?: Promise<SearchIndex>;
-  delivery?: Promise<SearchIndex>;
-  return?: Promise<SearchIndex>;
+  customer?: CachedProjection;
+  product?: CachedProjection;
+  order?: CachedProjection;
+  delivery?: CachedProjection;
+  return?: CachedProjection;
+  conversation?: CachedProjection;
 }
 
 export interface SearchProjectionWarmScope {
@@ -45,11 +56,11 @@ export interface SearchProjectionWarmScope {
   order: boolean;
   delivery: boolean;
   return: boolean;
+  conversation: boolean;
 }
 
 const globalSearchProjection = globalThis as unknown as {
   sahelflowLocalSearchProjection?: Map<string, ShopProjectionCache>;
-  sahelflowLocalSearchProjectionSubscribed?: boolean;
 };
 
 function cacheRoot(): Map<string, ShopProjectionCache> {
@@ -65,46 +76,28 @@ function shopCache(shopId: string): ShopProjectionCache {
   return created;
 }
 
-function projectionSlot(model: SearchProjectionModel): keyof ShopProjectionCache {
-  switch (model) {
-    case "Customer":
-      return "customer";
-    case "Product":
-      return "product";
-    case "Order":
-      return "order";
-    case "Delivery":
-      return "delivery";
-    case "Return":
-      return "return";
-  }
-}
-
-function invalidateDependentProjection(
-  cache: ShopProjectionCache,
-  model: SearchProjectionModel,
-): void {
-  cache[projectionSlot(model)] = undefined;
-
-  if (model === "Customer") {
-    // Customer deletion cascades through orders and may consequently remove
-    // delivery/return rows. Keep every dependent derived projection fresh.
-    cache.order = undefined;
-    cache.delivery = undefined;
-    cache.return = undefined;
-  } else if (model === "Order") {
-    // Delivery/return projections carry order identifiers.
-    cache.delivery = undefined;
-    cache.return = undefined;
-  }
-}
-
-if (!globalSearchProjection.sahelflowLocalSearchProjectionSubscribed) {
-  globalSearchProjection.sahelflowLocalSearchProjectionSubscribed = true;
-  subscribeSearchProjectionMutations(({ shopId, model }) => {
-    const cache = cacheRoot().get(shopId);
-    if (cache) invalidateDependentProjection(cache, model);
+async function committedRevision(slot: ProjectionSlot): Promise<number> {
+  const row = await db.searchProjectionRevision.findUnique({
+    where: { id: slot },
+    select: { revision: true },
   });
+  if (!row) {
+    throw new Error(`Missing committed search projection revision for ${slot}`);
+  }
+  return row.revision;
+}
+
+async function buildStableProjection(
+  slot: ProjectionSlot,
+  build: () => Promise<SearchIndex>,
+): Promise<{ index: SearchIndex; revision: number }> {
+  for (let attempt = 0; attempt < STABLE_BUILD_ATTEMPTS; attempt += 1) {
+    const before = await committedRevision(slot);
+    const index = await build();
+    const after = await committedRevision(slot);
+    if (before === after) return { index, revision: after };
+  }
+  throw new Error(`Search projection ${slot} changed continuously while building`);
 }
 
 function emptyIndex(): SearchIndex {
@@ -275,7 +268,7 @@ async function buildCustomerIndex(): Promise<SearchIndex> {
         updatedAt: true,
       },
       orderBy: { id: "asc" },
-      take: CUSTOMER_PROJECTION_PAGE_SIZE,
+      take: PROJECTION_PAGE_SIZE,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
 
@@ -289,13 +282,53 @@ async function buildCustomerIndex(): Promise<SearchIndex> {
         href: `/customers/${customer.id}`,
         keywords: [customer.wilaya ?? "", customer.commune ?? ""],
         updatedAt: customer.updatedAt,
-        // Direct contact matches should outrank related orders that inherit the
-        // same customer name/phone as contextual keywords.
         rankBoost: CUSTOMER_RELEVANCE_BOOST,
       });
     }
 
-    if (rows.length < CUSTOMER_PROJECTION_PAGE_SIZE) break;
+    if (rows.length < PROJECTION_PAGE_SIZE) break;
+    cursor = rows.at(-1)?.id;
+    if (!cursor) break;
+  }
+
+  return index;
+}
+
+async function buildConversationIndex(): Promise<SearchIndex> {
+  const index = emptyIndex();
+  let cursor: string | undefined;
+
+  while (true) {
+    // This protected contact projection is called only after the universal
+    // authority verifies conversations.read + customers.contact.read.
+    const rows = await db.conversation.findMany({
+      select: {
+        id: true,
+        channel: true,
+        contactName: true,
+        contactPhone: true,
+        lastMessageAt: true,
+        updatedAt: true,
+      },
+      orderBy: { id: "asc" },
+      take: PROJECTION_PAGE_SIZE,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
+
+    for (const conversation of rows) {
+      addCandidate(index, {
+        id: `conversation:${conversation.id}`,
+        entityId: conversation.id,
+        kind: "conversation",
+        label: conversation.contactName || `Inbox · ${conversation.id.slice(-6)}`,
+        sublabel: conversation.contactPhone ?? conversation.channel,
+        href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
+        keywords: [conversation.channel],
+        updatedAt: conversation.lastMessageAt ?? conversation.updatedAt,
+      });
+    }
+
+    if (rows.length < PROJECTION_PAGE_SIZE) break;
     cursor = rows.at(-1)?.id;
     if (!cursor) break;
   }
@@ -398,19 +431,28 @@ async function buildReturnIndex(): Promise<SearchIndex> {
   );
 }
 
-function cached(
+async function cached(
   shopId: string,
-  slot: keyof ShopProjectionCache,
+  slot: ProjectionSlot,
   build: () => Promise<SearchIndex>,
 ): Promise<SearchIndex> {
   const cache = shopCache(shopId);
+  const revision = await committedRevision(slot);
   const existing = cache[slot];
-  if (existing) return existing;
-  const pending = build().catch((error) => {
-    if (cache[slot] === pending) cache[slot] = undefined;
-    throw error;
-  });
-  cache[slot] = pending;
+  if (existing?.revision === revision) return existing.promise;
+
+  let entry: CachedProjection;
+  const pending = buildStableProjection(slot, build)
+    .then(({ index, revision: stableRevision }) => {
+      if (cache[slot] === entry) entry.revision = stableRevision;
+      return index;
+    })
+    .catch((error) => {
+      if (cache[slot] === entry) cache[slot] = undefined;
+      throw error;
+    });
+  entry = { revision, promise: pending };
+  cache[slot] = entry;
   return pending;
 }
 
@@ -421,6 +463,18 @@ export async function searchProjectedCustomers(
 ) {
   return queryIndex(
     await cached(shopId, "customer", buildCustomerIndex),
+    query,
+    limit,
+  );
+}
+
+export async function searchProjectedConversations(
+  shopId: string,
+  query: string,
+  limit?: number,
+) {
+  return queryIndex(
+    await cached(shopId, "conversation", buildConversationIndex),
     query,
     limit,
   );
@@ -492,6 +546,9 @@ export async function warmLocalSearchProjection(
 ): Promise<void> {
   const work: Promise<unknown>[] = [];
   if (scope.customer) work.push(cached(shopId, "customer", buildCustomerIndex));
+  if (scope.conversation) {
+    work.push(cached(shopId, "conversation", buildConversationIndex));
+  }
   if (scope.product) work.push(cached(shopId, "product", buildProductIndex));
   if (scope.order) work.push(cached(shopId, "order", buildOrderIndex));
   if (scope.delivery) work.push(cached(shopId, "delivery", buildDeliveryIndex));
