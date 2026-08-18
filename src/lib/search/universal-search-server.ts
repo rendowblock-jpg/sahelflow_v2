@@ -2,40 +2,53 @@ import "server-only";
 
 import { deriveExistingShopBlindIndex } from "@/lib/crypto/protected-record";
 import { db } from "@/lib/db";
-import { getDeliveryWorkbenchPage } from "@/lib/deliveries/delivery-workbench";
 import { trustedActionAllowed } from "@/lib/identity/authorization";
 import {
   requireTrustedActor,
   type TrustedActorContext,
 } from "@/lib/identity/trusted-actor";
-import { getReturnWorkbenchPage } from "@/lib/returns/return-workbench";
+import { logger } from "@/lib/logger";
 import {
-  canOpenProtectedOperationalDetail,
+  projectedOrdersForCustomers,
+  searchProjectedCustomers,
+  searchProjectedDeliveries,
+  searchProjectedOrders,
+  searchProjectedProducts,
+  searchProjectedReturns,
+  warmLocalSearchProjection,
+} from "@/lib/search/local-search-projection";
+import {
+  compactSearchText,
   normalizeSearchText,
   rankUniversalSearchCandidates,
   type UniversalSearchCandidate,
 } from "@/lib/search/universal-search";
 
 const MAX_RESULTS = 24;
-const PROTECTED_MATCH_BUDGET = 32;
-const CONVERSATION_SCAN_LIMIT = 350;
-const RECENT_MESSAGES_PER_CONVERSATION = 12;
+const FAMILY_MATCH_BUDGET = 48;
+const CONVERSATION_SCAN_LIMIT = 160;
+const RECENT_MESSAGES_PER_CONVERSATION = 8;
 
 type BlindIndexClient = Parameters<typeof deriveExistingShopBlindIndex>[0];
 
+type RecordKind =
+  | "order"
+  | "customer"
+  | "product"
+  | "conversation"
+  | "delivery"
+  | "return";
+
 type RecordCandidate = UniversalSearchCandidate & {
-  kind:
-    | "order"
-    | "customer"
-    | "product"
-    | "conversation"
-    | "delivery"
-    | "return";
+  kind: RecordKind;
+  entityId?: string;
+  customerId?: string;
 };
 
 export interface UniversalRecordSearchResponse {
   query: string;
   results: Array<RecordCandidate & { score: number }>;
+  degradedFamilies: RecordKind[];
   tookMs: number;
 }
 
@@ -53,71 +66,116 @@ function clampLimit(value: number | undefined): number {
   return Math.min(value!, MAX_RESULTS);
 }
 
-function customerCandidates(
-  query: string,
-  rows: ReadonlyArray<{
-    id: string;
-    name: string;
-    phone: string;
-    wilaya: string | null;
-    commune: string | null;
-    updatedAt: Date;
-  }>,
-) {
-  return rankUniversalSearchCandidates(
-    query,
-    rows.map(
-      (customer): RecordCandidate => ({
-        id: `customer:${customer.id}`,
-        kind: "customer",
-        label: customer.name,
-        sublabel: customer.phone,
-        href: `/customers/${customer.id}`,
-        keywords: [customer.wilaya ?? "", customer.commune ?? ""],
-        updatedAt: customer.updatedAt,
-      }),
-    ),
-    PROTECTED_MATCH_BUDGET,
-  );
+async function safeFamily<T>(
+  family: RecordKind,
+  fallback: T,
+  degraded: Set<RecordKind>,
+  work: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    degraded.add(family);
+    logger.warn("search.universal.family-degraded", {
+      family,
+      failure: error instanceof Error ? error.name : "unknown",
+    });
+    return fallback;
+  }
 }
 
-function conversationCandidates(
+async function conversationCandidates(
   query: string,
-  rows: ReadonlyArray<{
-    id: string;
-    contactName: string;
-    contactPhone: string | null;
-    channel: string;
-    lastMessageAt: Date | null;
-    updatedAt: Date;
-    messages: ReadonlyArray<{ body: string }>;
-  }>,
   canReadContact: boolean,
-) {
+): Promise<Array<RecordCandidate & { score: number }>> {
+  const commonSelect = {
+    id: true,
+    channel: true,
+    lastMessageAt: true,
+    updatedAt: true,
+    messages: {
+      orderBy: { timestamp: "desc" as const },
+      take: RECENT_MESSAGES_PER_CONVERSATION,
+      select: { body: true },
+    },
+  };
+
+  const rows = canReadContact
+    ? await db.conversation.findMany({
+        select: {
+          ...commonSelect,
+          contactName: true,
+          contactPhone: true,
+        },
+        orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
+        take: CONVERSATION_SCAN_LIMIT,
+      })
+    : await db.conversation.findMany({
+        select: commonSelect,
+        orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
+        take: CONVERSATION_SCAN_LIMIT,
+      });
+
   return rankUniversalSearchCandidates(
     query,
     rows.map((conversation): RecordCandidate => {
-      const contactLabel = canReadContact
-        ? conversation.contactName
-        : `Inbox · ${conversation.id.slice(-6)}`;
-      const contactMeta = canReadContact
-        ? (conversation.contactPhone ?? conversation.channel)
-        : conversation.channel;
+      const contactName =
+        "contactName" in conversation ? conversation.contactName : undefined;
+      const contactPhone =
+        "contactPhone" in conversation ? conversation.contactPhone : undefined;
       return {
         id: `conversation:${conversation.id}`,
+        entityId: conversation.id,
         kind: "conversation",
-        label: contactLabel,
-        sublabel: contactMeta,
+        label:
+          canReadContact && contactName
+            ? contactName
+            : `Inbox · ${conversation.id.slice(-6)}`,
+        sublabel:
+          canReadContact && contactPhone
+            ? contactPhone
+            : conversation.channel,
         href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
-        // Message bodies remain encrypted at rest. The Prisma protection layer
-        // decrypts these bounded recent rows only after conversations.read has
-        // been proven, then matching happens in process memory.
         keywords: conversation.messages.map((message) => message.body),
         updatedAt: conversation.lastMessageAt ?? conversation.updatedAt,
       };
     }),
-    PROTECTED_MATCH_BUDGET,
+    FAMILY_MATCH_BUDGET,
   );
+}
+
+function isLikelyPhoneQuery(query: string): boolean {
+  const compact = compactSearchText(query);
+  return compact.length >= 6 && /^\d+$/u.test(compact);
+}
+
+function decorateOrderCandidates(
+  rows: readonly RecordCandidate[],
+  customersById: ReadonlyMap<string, RecordCandidate>,
+): RecordCandidate[] {
+  return rows.map((order) => {
+    const customer = order.customerId
+      ? customersById.get(order.customerId)
+      : undefined;
+    return {
+      ...order,
+      sublabel: customer?.label ?? order.sublabel,
+      keywords: [
+        ...(order.keywords ?? []),
+        customer?.label ?? "",
+        customer?.sublabel ?? "",
+      ],
+    };
+  });
+}
+
+export async function warmUniversalSearchRecords(): Promise<void> {
+  const actorContext = await requireTrustedActor();
+  const canCustomers = allowed(actorContext, "customers.read");
+  const canReadContact = allowed(actorContext, "customers.contact.read");
+  await warmLocalSearchProjection(actorContext.shop.shopId, {
+    includeProtectedCustomers: canCustomers && canReadContact,
+  });
 }
 
 export async function searchUniversalRecords(
@@ -128,236 +186,149 @@ export async function searchUniversalRecords(
   const query = normalizeSearchText(rawQuery);
   const limit = clampLimit(requestedLimit);
   if (query.length < 2) {
-    return { query, results: [], tookMs: Date.now() - startedAt };
+    return {
+      query,
+      results: [],
+      degradedFamilies: [],
+      tookMs: Date.now() - startedAt,
+    };
   }
 
   const actorContext = await requireTrustedActor();
+  const shopId = actorContext.shop.shopId;
   const canOrders = allowed(actorContext, "orders.read");
   const canCustomers = allowed(actorContext, "customers.read");
   const canReadContact = allowed(actorContext, "customers.contact.read");
   const canProducts = allowed(actorContext, "products.read");
   const canConversations = allowed(actorContext, "conversations.read");
   const canDeliveries = allowed(actorContext, "deliveries.read");
+  const degraded = new Set<RecordKind>();
 
-  const [
-    customerRows,
-    productRows,
-    conversationRows,
-    deliveryPage,
-    returnPage,
-    orderPhoneBlindIndex,
-  ] = await Promise.all([
-    canCustomers && canReadContact
-      ? db.customer.findMany({
-          where: { deletedAt: null },
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            wilaya: true,
-            commune: true,
-            updatedAt: true,
-          },
-        })
-      : Promise.resolve([]),
-    canProducts
-      ? db.product.findMany({
-          where: {
-            deletedAt: null,
-            OR: [
-              { name: { contains: query } },
-              { sku: { contains: query } },
-            ],
-          },
-          select: {
-            id: true,
-            name: true,
-            sku: true,
-            updatedAt: true,
-          },
-          orderBy: { updatedAt: "desc" },
-          take: PROTECTED_MATCH_BUDGET,
-        })
-      : Promise.resolve([]),
-    canConversations
-      ? db.conversation.findMany({
-          select: {
-            id: true,
-            contactName: true,
-            contactPhone: true,
-            channel: true,
-            lastMessageAt: true,
-            updatedAt: true,
-            messages: {
-              orderBy: { timestamp: "desc" },
-              take: RECENT_MESSAGES_PER_CONVERSATION,
-              select: { body: true },
-            },
-          },
-          orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
-          take: CONVERSATION_SCAN_LIMIT,
-        })
-      : Promise.resolve([]),
-    canDeliveries
-      ? getDeliveryWorkbenchPage(actorContext, {
-          page: 1,
-          pageSize: 8,
-          q: query,
-        })
-      : Promise.resolve(null),
-    canOrders
-      ? getReturnWorkbenchPage(actorContext, {
-          page: 1,
-          pageSize: 8,
-          q: query,
-        })
-      : Promise.resolve(null),
-    canOrders && canReadContact
-      ? deriveExistingShopBlindIndex(
-          db as unknown as BlindIndexClient,
-          query,
-          { recordType: "Order", field: "phone" },
-          { shopContext: actorContext.shop },
-        )
-      : Promise.resolve(null),
-  ]);
+  const [customers, products, conversations, deliveries, returns] =
+    await Promise.all([
+      canCustomers && canReadContact
+        ? safeFamily("customer", [], degraded, () =>
+            searchProjectedCustomers(shopId, query, FAMILY_MATCH_BUDGET),
+          )
+        : Promise.resolve([]),
+      canProducts
+        ? safeFamily("product", [], degraded, () =>
+            searchProjectedProducts(shopId, query, FAMILY_MATCH_BUDGET),
+          )
+        : Promise.resolve([]),
+      canConversations
+        ? safeFamily("conversation", [], degraded, () =>
+            conversationCandidates(query, canReadContact),
+          )
+        : Promise.resolve([]),
+      canDeliveries
+        ? safeFamily("delivery", [], degraded, () =>
+            searchProjectedDeliveries(shopId, query, FAMILY_MATCH_BUDGET),
+          )
+        : Promise.resolve([]),
+      canOrders
+        ? safeFamily("return", [], degraded, () =>
+            searchProjectedReturns(shopId, query, FAMILY_MATCH_BUDGET),
+          )
+        : Promise.resolve([]),
+    ]);
 
-  const customers = customerCandidates(query, customerRows);
-  const matchedCustomerIds = customers.map((candidate) =>
-    candidate.id.slice("customer:".length),
+  const customerRows = customers as RecordCandidate[];
+  const customersById = new Map(
+    customerRows
+      .filter((candidate) => candidate.entityId)
+      .map((candidate) => [candidate.entityId!, candidate] as const),
   );
 
-  const sourceOrderRows = canOrders
-    ? await db.order.findMany({
-        where: {
-          deletedAt: null,
-          OR: [
-            { orderNumber: { contains: query } },
-            { wilaya: { contains: query } },
-            ...(orderPhoneBlindIndex
-              ? [{ phoneBlindIndex: orderPhoneBlindIndex }]
-              : []),
-            ...(canReadContact && matchedCustomerIds.length > 0
-              ? [{ customerId: { in: matchedCustomerIds } }]
-              : []),
-          ],
-        },
-        select: {
-          id: true,
-          orderNumber: true,
-          phone: canReadContact,
-          wilaya: true,
-          updatedAt: true,
-          customer: canReadContact
-            ? { select: { name: true, phone: true } }
-            : false,
-        },
-        orderBy: { updatedAt: "desc" },
-        take: PROTECTED_MATCH_BUDGET,
+  const orders = canOrders
+    ? await safeFamily("order", [], degraded, async () => {
+        const technical = (await searchProjectedOrders(
+          shopId,
+          query,
+          FAMILY_MATCH_BUDGET,
+        )) as RecordCandidate[];
+
+        const linked = canReadContact
+          ? ((await projectedOrdersForCustomers(
+              shopId,
+              [...customersById.keys()],
+            )) as RecordCandidate[])
+          : [];
+
+        let exactPhone: RecordCandidate[] = [];
+        if (canReadContact && isLikelyPhoneQuery(query)) {
+          const phoneBlindIndex = await deriveExistingShopBlindIndex(
+            db as unknown as BlindIndexClient,
+            compactSearchText(query),
+            { recordType: "Order", field: "phone" },
+            { shopContext: actorContext.shop },
+          );
+          if (phoneBlindIndex) {
+            const rows = await db.order.findMany({
+              where: { deletedAt: null, phoneBlindIndex },
+              select: {
+                id: true,
+                orderNumber: true,
+                wilaya: true,
+                customerId: true,
+                updatedAt: true,
+              },
+              orderBy: { updatedAt: "desc" },
+              take: FAMILY_MATCH_BUDGET,
+            });
+            exactPhone = rows.map(
+              (order): RecordCandidate => ({
+                id: `order:${order.id}`,
+                entityId: order.id,
+                customerId: order.customerId,
+                kind: "order",
+                label: order.orderNumber,
+                sublabel: order.wilaya,
+                href: `/orders/${order.id}`,
+                keywords: [query],
+                updatedAt: order.updatedAt,
+                rankBoost: 12,
+              }),
+            );
+          }
+        }
+
+        const combined = new Map<string, RecordCandidate>();
+        for (const candidate of decorateOrderCandidates(
+          [...technical, ...linked, ...exactPhone],
+          customersById,
+        )) {
+          const existing = combined.get(candidate.id);
+          if (!existing) {
+            combined.set(candidate.id, candidate);
+            continue;
+          }
+          combined.set(candidate.id, {
+            ...existing,
+            ...candidate,
+            keywords: [
+              ...(existing.keywords ?? []),
+              ...(candidate.keywords ?? []),
+            ],
+          });
+        }
+        return rankUniversalSearchCandidates(
+          query,
+          [...combined.values()],
+          FAMILY_MATCH_BUDGET,
+        );
       })
     : [];
-
-  const orderRows = sourceOrderRows as unknown as Array<{
-    id: string;
-    orderNumber: string;
-    phone?: string;
-    wilaya: string | null;
-    updatedAt: Date;
-    customer?: { name: string; phone: string } | null;
-  }>;
-
-  const orders = rankUniversalSearchCandidates(
-    query,
-    orderRows.map(
-      (order): RecordCandidate => ({
-        id: `order:${order.id}`,
-        kind: "order",
-        label: order.orderNumber,
-        sublabel: order.customer?.name ?? order.wilaya ?? undefined,
-        href: `/orders/${order.id}`,
-        keywords: [
-          order.phone ?? "",
-          order.customer?.phone ?? "",
-          order.wilaya ?? "",
-        ],
-        updatedAt: order.updatedAt,
-        rankBoost: 12,
-      }),
-    ),
-    PROTECTED_MATCH_BUDGET,
-  );
-
-  const products = rankUniversalSearchCandidates(
-    query,
-    productRows.map(
-      (product): RecordCandidate => ({
-        id: `product:${product.id}`,
-        kind: "product",
-        label: product.name,
-        sublabel: product.sku ?? undefined,
-        href: `/products/${product.id}`,
-        updatedAt: product.updatedAt,
-      }),
-    ),
-    PROTECTED_MATCH_BUDGET,
-  );
-
-  const conversations = conversationCandidates(
-    query,
-    conversationRows,
-    canReadContact,
-  );
-
-  const deliveries =
-    deliveryPage && canOpenProtectedOperationalDetail(deliveryPage.fieldAccess)
-      ? rankUniversalSearchCandidates(
-          query,
-          deliveryPage.deliveries.map(
-            (delivery): RecordCandidate => ({
-              id: `delivery:${delivery.id}`,
-              kind: "delivery",
-              label:
-                delivery.trackingNumber ??
-                delivery.order?.orderNumber ??
-                delivery.id.slice(-8),
-              sublabel: [delivery.provider, delivery.order?.orderNumber]
-                .filter(Boolean)
-                .join(" · "),
-              href: `/deliveries/${delivery.id}`,
-              updatedAt: delivery.createdAt,
-            }),
-          ),
-          8,
-        )
-      : [];
-
-  const returns =
-    returnPage && canOpenProtectedOperationalDetail(returnPage.fieldAccess)
-      ? rankUniversalSearchCandidates(
-          query,
-          returnPage.returns.map(
-            (returnRecord): RecordCandidate => ({
-              id: `return:${returnRecord.id}`,
-              kind: "return",
-              label: returnRecord.order.orderNumber,
-              sublabel: `${returnRecord.type} · ${returnRecord.status}`,
-              href: `/returns/${returnRecord.id}`,
-              updatedAt: returnRecord.createdAt,
-            }),
-          ),
-          8,
-        )
-      : [];
 
   const results = rankUniversalSearchCandidates(
     query,
     [
-      ...orders,
-      ...customers,
-      ...products,
-      ...conversations,
-      ...deliveries,
-      ...returns,
+      ...(orders as RecordCandidate[]),
+      ...customerRows,
+      ...(products as RecordCandidate[]),
+      ...(conversations as RecordCandidate[]),
+      ...(deliveries as RecordCandidate[]),
+      ...(returns as RecordCandidate[]),
     ],
     limit,
   );
@@ -365,6 +336,7 @@ export async function searchUniversalRecords(
   return {
     query,
     results,
+    degradedFamilies: [...degraded],
     tookMs: Date.now() - startedAt,
   };
 }
