@@ -238,10 +238,20 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const searching =
     normalizedQuery.length >= 2 &&
     (waitingForRequest || liveRecordState.searching);
+  const degraded = liveRecordState.degradedFamilies.length > 0;
+  const partiallyDegraded = degraded && visibleResults.length > 0;
+  const degradedEmpty =
+    normalizedQuery.length > 0 &&
+    !searching &&
+    !liveRecordState.failed &&
+    degraded &&
+    visibleResults.length === 0;
   const noResults =
-    normalizedQuery.length > 0 && !searching && visibleResults.length === 0;
-  const partiallyDegraded =
-    liveRecordState.degradedFamilies.length > 0 && visibleResults.length > 0;
+    normalizedQuery.length > 0 &&
+    !searching &&
+    !liveRecordState.failed &&
+    !degraded &&
+    visibleResults.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -400,7 +410,25 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               </div>
             ) : null}
 
-            {noResults && !liveRecordState.failed ? (
+            {degradedEmpty ? (
+              <div
+                className="flex min-h-44 flex-col items-center justify-center px-6 text-center"
+                role="status"
+              >
+                <AlertTriangle
+                  className="size-6 text-warning"
+                  aria-hidden="true"
+                />
+                <p className="mt-3 text-sm font-semibold">
+                  {copy("degradedTitle")}
+                </p>
+                <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
+                  {copy("degradedHint")}
+                </p>
+              </div>
+            ) : null}
+
+            {noResults ? (
               <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center">
                 <SearchX
                   className="size-6 text-muted-foreground"
