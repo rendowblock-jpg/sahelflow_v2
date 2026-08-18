@@ -35,6 +35,12 @@ export function DualBarChart({
 }: DualBarChartProps) {
   const { dir, locale } = useI18n();
   const chartHeight = normalizeChartHeight(height);
+  const netLabel = `${revenueLabel} − ${expensesLabel}`;
+  const netValues = React.useMemo(
+    () => data.map((entry) => entry.revenue - entry.expenses),
+    [data],
+  );
+  const yMin = Math.min(0, ...netValues);
   const axisFormatter = React.useMemo(
     () =>
       new Intl.NumberFormat(
@@ -48,15 +54,24 @@ export function DualBarChart({
     (theme: SahelChartTheme) => {
       const axis = cartesianAxisStyle(theme);
       return {
-        color: [theme.chart[0], theme.chart[1]],
+        color: [theme.chart[0], theme.chart[1], theme.foreground],
         grid: {
           left: 8,
-          right: 12,
-          top: 24,
+          right: 14,
+          top: 26,
           bottom: 10,
           containLabel: true,
         },
         tooltip: chartTooltip(theme, dir),
+        axisPointer: {
+          label: {
+            show: true,
+            backgroundColor: theme.foreground,
+            color: theme.card,
+            borderRadius: 5,
+            padding: [4, 6],
+          },
+        },
         xAxis: {
           type: "category",
           data: data.map((entry) => entry.month),
@@ -73,7 +88,7 @@ export function DualBarChart({
         },
         yAxis: {
           type: "value",
-          min: 0,
+          min: yMin < 0 ? Math.floor(yMin * 1.1) : 0,
           ...axis,
           axisLabel: {
             ...axis.axisLabel,
@@ -139,10 +154,58 @@ export function DualBarChart({
                 formatDZD(Number(value ?? 0), locale),
             },
           },
+          {
+            id: "net",
+            name: netLabel,
+            type: "line" as const,
+            data: netValues,
+            smooth: 0.22,
+            showSymbol: true,
+            symbol: "circle",
+            symbolSize: 6,
+            z: 4,
+            lineStyle: { color: theme.foreground, width: 2 },
+            itemStyle: {
+              color: theme.card,
+              borderColor: theme.foreground,
+              borderWidth: 2,
+            },
+            emphasis: {
+              focus: "series" as const,
+              scale: 1.2,
+              lineStyle: { width: 2.75 },
+            },
+            markLine: {
+              silent: true,
+              symbol: ["none", "none"],
+              label: { show: false },
+              lineStyle: {
+                color: theme.mutedForeground,
+                width: 1,
+                type: "dashed" as const,
+                opacity: 0.45,
+              },
+              data: [{ yAxis: 0 }],
+            },
+            tooltip: {
+              valueFormatter: (value: unknown) =>
+                formatDZD(Number(value ?? 0), locale),
+            },
+          },
         ],
       };
     },
-    [axisFormatter, data, dir, expensesLabel, locale, revenueLabel],
+    [
+      axisFormatter,
+      data,
+      dir,
+      expensesLabel,
+      locale,
+      netLabel,
+      netValues,
+      revenueLabel,
+      yMin,
+    ],
   );
 
   if (!data.length) return null;
@@ -170,11 +233,18 @@ export function DualBarChart({
           />
           {expensesLabel}
         </span>
+        <span className="inline-flex items-center gap-2">
+          <span
+            className="h-px w-3 bg-foreground"
+            aria-hidden="true"
+          />
+          {netLabel}
+        </span>
       </div>
       <div className="min-h-0 flex-1">
         <EChartSurface
           option={option}
-          ariaLabel={`${revenueLabel} / ${expensesLabel}`}
+          ariaLabel={`${revenueLabel} / ${expensesLabel} / ${netLabel}`}
           height="100%"
         />
       </div>
