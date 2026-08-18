@@ -3,18 +3,27 @@ import { describe, expect, it, vi } from "vitest";
 import { WhatsAppManager } from "./whatsapp";
 
 describe("WhatsAppManager startup recovery", () => {
-  it("releases the startup guard after a failed connection attempt", async () => {
+  it("reports disconnected and releases the guard after a failed start", async () => {
     const manager = new WhatsAppManager();
+    const events: string[] = [];
+    manager.subscribe((event) => {
+      if (event.type === "status" && event.status) events.push(event.status);
+    });
     const connect = vi.fn<() => Promise<void>>();
     connect
-      .mockRejectedValueOnce(new Error("version lookup failed"))
+      .mockRejectedValueOnce(new Error("pairing setup failed"))
       .mockResolvedValueOnce(undefined);
 
     (manager as unknown as { connect: () => Promise<void> }).connect = connect;
 
-    await expect(manager.start()).rejects.toThrow("version lookup failed");
-    await expect(manager.start()).resolves.toBeUndefined();
+    await expect(manager.start()).rejects.toThrow("pairing setup failed");
+    expect(manager.getStatus()).toMatchObject({
+      status: "disconnected",
+      hasQr: false,
+    });
+    expect(events.at(-1)).toBe("disconnected");
 
+    await expect(manager.start()).resolves.toBeUndefined();
     expect(connect).toHaveBeenCalledTimes(2);
   });
 

@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { db, shopContext } from "@/lib/db";
 import { resolveConversationIdForRead } from "@/lib/data/conversation-service";
+import { db, shopContext } from "@/lib/db";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { projectConversationForTrustedActor } from "@/lib/identity/conversation-projection";
+import { normalizeInboxMessageDirection } from "@/lib/inbox/message-direction";
 
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/conversations/[id] — exact-shop workflow and seeded message
+ * GET /api/conversations/[id] — exact-shop workflow and persisted message
  * projection. This read never creates a live-JID row or clears unread state;
  * those are explicit authorized mutations.
  */
@@ -37,12 +38,20 @@ export const GET = withErrorHandler(
       );
     }
 
+    const projected = projectConversationForTrustedActor(
+      conversation,
+      actorContext,
+    );
+
     return NextResponse.json({
-      conversation: projectConversationForTrustedActor(
-        conversation,
-        actorContext,
-      ),
-      source: "seeded",
+      conversation: {
+        ...projected,
+        messages: projected.messages.map((message) => ({
+          ...message,
+          direction: normalizeInboxMessageDirection(message.direction),
+        })),
+      },
+      source: "persisted",
     });
   },
   "GET /api/conversations/[id]",

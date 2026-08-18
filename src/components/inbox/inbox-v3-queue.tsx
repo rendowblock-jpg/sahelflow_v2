@@ -8,6 +8,7 @@ import {
   Loader2,
   MessageSquareText,
   Search,
+  UserMinus,
 } from "lucide-react";
 
 import type {
@@ -23,7 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { cn } from "@/lib/utils";
 
-const QUEUES: DeskQueueFilter[] = ["mine", "unassigned", "unread", "all"];
+const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread"];
 const WORKFLOW_FILTERS: WorkflowFilter[] = [
   "all",
   "open",
@@ -147,7 +148,7 @@ function ConversationRow({
       aria-current={active ? "true" : undefined}
       className={cn(
         "group relative flex min-h-[4.75rem] w-full items-start gap-2.5 overflow-hidden border-b border-border/55 px-3 py-2.5 text-start outline-none transition-colors last:border-b-0 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        active ? "bg-primary/[0.065]" : "bg-background hover:bg-muted/35",
+        active ? "bg-primary/[0.055]" : "bg-background hover:bg-muted/35",
       )}
     >
       {active ? (
@@ -164,15 +165,15 @@ function ConversationRow({
 
       <span className="min-w-0 flex-1 overflow-hidden">
         <span className="flex min-w-0 items-center gap-2 overflow-hidden">
-          <span
+          <bdi
             dir="auto"
             className={cn(
-              "block min-w-0 flex-1 truncate text-[13px]",
+              "block min-w-0 flex-1 truncate text-start text-[13px] [unicode-bidi:plaintext]",
               chat.unread > 0 ? "font-semibold text-foreground" : "font-medium",
             )}
           >
             {chat.name}
-          </span>
+          </bdi>
           <span
             className={cn(
               "shrink-0 text-[11px] tabular-nums",
@@ -184,18 +185,18 @@ function ConversationRow({
         </span>
 
         <span className="mt-1 flex min-w-0 items-center gap-1.5 overflow-hidden">
-          <span
+          <bdi
             dir="auto"
             data-inbox-preview="true"
             className={cn(
-              "block min-w-0 max-w-full flex-1 truncate text-xs leading-5",
+              "block min-w-0 max-w-full flex-1 truncate text-start text-xs leading-5 [unicode-bidi:plaintext]",
               chat.unread > 0
                 ? "font-medium text-foreground/90"
                 : "text-muted-foreground",
             )}
           >
             {chat.lastMessageText || copy("savedHistory")}
-          </span>
+          </bdi>
 
           {priority ? (
             <Flag
@@ -381,6 +382,8 @@ export function InboxV3Queue({
 
   const unreadEmpty =
     queueFilter === "unread" && queueCounts.unread === 0 && !normalizedQuery;
+  const workflowSelectLabel = (filter: WorkflowFilter) =>
+    `${copy("status")} · ${workflowLabel(filter, copy, t)}`;
 
   return (
     <section
@@ -407,13 +410,13 @@ export function InboxV3Queue({
           ) : null}
         </div>
 
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-2 flex items-center gap-1.5">
           <div
-            className="flex min-w-0 flex-1 gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex min-w-0 flex-1 gap-1 rounded-full bg-muted/25 p-0.5"
             role="group"
             aria-label={copy("workQueue")}
           >
-            {QUEUES.map((filter) => {
+            {PRIMARY_QUEUES.map((filter) => {
               const selected = queueFilter === filter;
               return (
                 <button
@@ -422,17 +425,17 @@ export function InboxV3Queue({
                   aria-pressed={selected}
                   onClick={() => onQueueFilterChange(filter)}
                   className={cn(
-                    "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    "inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-1.5 text-[10px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                     selected
-                      ? "border-primary/25 bg-primary/9 text-primary"
-                      : "border-transparent bg-muted/35 text-muted-foreground hover:bg-muted/65 hover:text-foreground",
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  <span>{queueLabel(filter, copy)}</span>
+                  <span className="truncate">{queueLabel(filter, copy)}</span>
                   <span
                     className={cn(
-                      "min-w-4 text-center tabular-nums",
-                      selected ? "text-primary" : "text-muted-foreground/80",
+                      "shrink-0 tabular-nums",
+                      selected ? "text-primary" : "text-muted-foreground/75",
                     )}
                   >
                     {queueCounts[filter]}
@@ -442,22 +445,39 @@ export function InboxV3Queue({
             })}
           </div>
 
-          <select
-            value={workflowFilter}
-            onChange={(event) =>
-              onWorkflowFilterChange(event.target.value as WorkflowFilter)
-            }
-            aria-label={copy("status")}
-            title={copy("status")}
-            className="h-8 w-[6.75rem] shrink-0 rounded-full border border-border/70 bg-background px-2 text-[11px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <button
+            type="button"
+            aria-pressed={queueFilter === "unassigned"}
+            aria-label={`${queueLabel("unassigned", copy)} · ${queueCounts.unassigned}`}
+            title={`${queueLabel("unassigned", copy)} · ${queueCounts.unassigned}`}
+            onClick={() => onQueueFilterChange("unassigned")}
+            className={cn(
+              "inline-flex size-8 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+              queueFilter === "unassigned"
+                ? "border-primary/25 bg-primary/9 text-primary"
+                : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            )}
           >
-            {WORKFLOW_FILTERS.map((filter) => (
-              <option key={filter} value={filter}>
-                {workflowLabel(filter, copy, t)}
-              </option>
-            ))}
-          </select>
+            <UserMinus className="size-3.5" aria-hidden="true" />
+            <span className="sr-only">{queueCounts.unassigned}</span>
+          </button>
         </div>
+
+        <select
+          value={workflowFilter}
+          onChange={(event) =>
+            onWorkflowFilterChange(event.target.value as WorkflowFilter)
+          }
+          aria-label={copy("status")}
+          title={copy("status")}
+          className="mt-2 h-8 w-full rounded-lg border border-border/65 bg-background px-2 text-[11px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {WORKFLOW_FILTERS.map((filter) => (
+            <option key={filter} value={filter}>
+              {workflowSelectLabel(filter)}
+            </option>
+          ))}
+        </select>
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
@@ -508,8 +528,7 @@ export function InboxV3Queue({
                 key={`${chat.conversationId}:${chat.id}`}
                 chat={chat}
                 active={
-                  chat.conversationId ===
-                    workspace.activeChat?.conversationId ||
+                  chat.conversationId === workspace.activeChat?.conversationId ||
                   chat.id === activeChatId
                 }
                 locale={locale}

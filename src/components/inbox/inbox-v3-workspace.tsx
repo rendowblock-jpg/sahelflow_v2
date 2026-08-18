@@ -78,15 +78,20 @@ export function InboxV3Workspace({
   useEffect(() => {
     if (defaultQueueResolved || loadingChats || !authority) return;
 
-    const currentMemberId = authority.currentMemberId;
     const timer = window.setTimeout(() => {
-      if (!queueTouchedRef.current && currentMemberId) {
-        setQueueFilter("mine");
+      if (!queueTouchedRef.current) {
+        const currentMemberId = authority.currentMemberId;
+        const hasMine = Boolean(
+          currentMemberId &&
+            chats.some((chat) => chat.workflow.assigneeId === currentMemberId),
+        );
+        const hasUnassigned = chats.some((chat) => !chat.workflow.assigneeId);
+        setQueueFilter(hasMine ? "mine" : hasUnassigned ? "unassigned" : "all");
       }
       setDefaultQueueResolved(true);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [authority, defaultQueueResolved, loadingChats]);
+  }, [authority, chats, defaultQueueResolved, loadingChats]);
 
   const visibleQueueChats = useMemo(() => {
     return chats.filter((chat) => {
