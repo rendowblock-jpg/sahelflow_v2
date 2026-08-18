@@ -8,7 +8,6 @@ import {
   Bell,
   Check,
   ChevronDown,
-  Command,
   Globe,
   HelpCircle,
   LogOut,
@@ -278,16 +277,19 @@ export function Topbar({
 
       <button
         type="button"
+        data-command-trigger="true"
         onClick={onCommandPaletteOpen}
-        className="mx-auto hidden h-8 min-h-(--sf-touch-target) min-w-0 max-w-xl flex-1 items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex"
+        className="mx-auto hidden h-8 min-h-(--sf-touch-target) min-w-0 max-w-xl flex-1 items-center gap-2 rounded-lg border border-border/80 bg-muted/30 px-2.5 text-sm text-muted-foreground outline-none transition-[background-color,border-color,box-shadow,color] hover:border-border hover:bg-muted/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex"
         aria-label={t("topbar.searchPlaceholder")}
+        aria-keyshortcuts="Control+K"
       >
         <Search className="size-3.5 shrink-0" aria-hidden="true" />
         <span className="min-w-0 flex-1 truncate text-start">
           {t("topbar.searchPlaceholder")}
         </span>
-        <kbd className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-          <Command className="size-2.5" aria-hidden="true" />K
+        <kbd className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-md border border-border/80 bg-background/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-sm">
+          <span aria-hidden="true">Ctrl</span>
+          <span aria-hidden="true">K</span>
         </kbd>
       </button>
 
@@ -299,6 +301,7 @@ export function Topbar({
           className="sm:hidden"
           onClick={onCommandPaletteOpen}
           aria-label={t("topbar.searchPlaceholder")}
+          aria-keyshortcuts="Control+K"
         >
           <Search className="size-4" aria-hidden="true" />
         </Button>
