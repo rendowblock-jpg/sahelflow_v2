@@ -258,9 +258,7 @@ function Wait-ForAuthenticatedUi {
             }
         )
         $workspaceWindows = @($visibleWindows | Where-Object { $_.title -ceq $workspaceWindowTitle })
-        if ($workspaceWindows.Count -eq 0) {
-            $workspaceVisibleAt = $null
-        } elseif ($null -eq $workspaceVisibleAt) {
+        if ($workspaceWindows.Count -ne 0 -and $null -eq $workspaceVisibleAt) {
             $workspaceVisibleAt = Get-Date
         }
         $workspaceEvidenceLeadMilliseconds = if ($null -ne $workspaceVisibleAt -and -not $matching) {
