@@ -109,9 +109,8 @@ function failureClass(error: unknown): string {
   return "other";
 }
 
-function writeWireResult(value: unknown, exitCode: number): never {
+function writeWireResult(value: unknown, exitCode: number): void {
   process.stdout.write(`${JSON.stringify(value)}\n`, () => process.exit(exitCode));
-  throw new Error("unreachable");
 }
 
 function validateResult(value: unknown): AcceptanceResult {
@@ -238,6 +237,7 @@ async function main(): Promise<void> {
     }, input);
 
     writeWireResult({ ok: true, result: validateResult(result) }, 0);
+    return;
   } catch (error) {
     writeWireResult(
       {
