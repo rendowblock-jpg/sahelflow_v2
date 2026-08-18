@@ -122,6 +122,7 @@ export function TimeSeriesChart({
     data.length >= 14 &&
     meaningfulPointCount > 0 &&
     meaningfulPointCount <= Math.max(4, Math.ceil(data.length * 0.16));
+  const preserveZeroBaseline = mode === "area" && yDomain === undefined;
 
   const option = React.useCallback(
     (theme: SahelChartTheme) => {
@@ -314,9 +315,9 @@ export function TimeSeriesChart({
         },
         yAxis: {
           type: "value",
-          min: useSparseBars ? 0 : yDomain?.[0],
+          min: yDomain?.[0] ?? (preserveZeroBaseline ? 0 : undefined),
           max: yDomain?.[1],
-          scale: useSparseBars ? false : yDomain === undefined,
+          scale: yDomain === undefined && !preserveZeroBaseline,
           ...axis,
           splitLine: showGrid ? axis.splitLine : { show: false },
           axisLabel: {
@@ -337,6 +338,7 @@ export function TimeSeriesChart({
       locale,
       meaningfulPointCount,
       mode,
+      preserveZeroBaseline,
       referenceBands,
       referenceLines,
       series,
