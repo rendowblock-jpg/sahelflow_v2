@@ -56,9 +56,13 @@ describe("universal command search contract", () => {
     expect(projection).toContain("searchProjectionRevision.findUnique");
     expect(projection).toContain("buildStableProjection");
     expect(projection).not.toContain("subscribeSearchProjectionMutations");
+    expect(projection).not.toContain("Customer search projection is still warming");
     expect(migration).toContain('CREATE TABLE "SearchProjectionRevision"');
     expect(migration).toContain('CREATE TABLE "SearchProjectionToken"');
     expect(migration).toContain('CREATE TABLE "SearchProjectionDirty"');
+    expect(migration).toContain(
+      'CREATE INDEX "SearchProjectionDirty_family_revision_entity_idx"',
+    );
     expect(migration).toContain(
       'AFTER UPDATE OF "name", "phone", "wilaya", "commune", "deletedAt" ON "Customer"',
     );
@@ -74,7 +78,7 @@ describe("universal command search contract", () => {
       'AFTER UPDATE OF "name", "sku", "deletedAt" ON "Product"',
     );
     expect(migration).toContain(
-      'AFTER UPDATE OF "orderNumber", "customerId", "deletedAt" ON "Order"',
+      'AFTER UPDATE OF "orderNumber", "deletedAt" ON "Order"',
     );
     expect(migration).toContain(
       'AFTER UPDATE OF "provider", "trackingNumber", "orderId", "deletedAt" ON "Delivery"',
@@ -103,6 +107,9 @@ describe("universal command search contract", () => {
 
   it("preserves formatting-insensitive technical identifiers and exact candidates", () => {
     const projection = source("../../../lib/search/local-search-projection.ts");
+    const migration = source(
+      "../../../../prisma/migrations/20260818134500_search_projection_revision/migration.sql",
+    );
 
     expect(projection).toContain("compactSearchText");
     expect(projection).toContain("MAX_PREFIX_LENGTH");
@@ -111,8 +118,14 @@ describe("universal command search contract", () => {
     expect(projection).toContain("appendBounded(selected, index.primaryExactKeys");
     expect(projection).toContain("appendBounded(selected, index.exactKeys");
     expect(projection).toContain("buildProductIndex");
-    expect(projection).toContain("buildOrderIndex");
+    expect(projection).not.toContain("buildOrderIndex");
+    expect(projection).toContain("ORDER_DIRTY_BATCH_SIZE = 64");
+    expect(projection).toContain("refreshOrderProjectionBatch");
+    expect(projection).toContain("queryPersistedOrders");
+    expect(projection).toContain('ORDER_TOKEN_FAMILY = "order"');
     expect(projection).toContain("buildDeliveryIndex");
+    expect(migration).toContain("SELECT 'order', \"id\", 0 FROM \"Order\"");
+    expect(migration).toContain("'order',\n    NEW.\"id\"");
   });
 
   it("preserves exact protected order-phone search through blind-index authority", () => {
