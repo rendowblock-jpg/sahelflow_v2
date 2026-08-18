@@ -16,32 +16,41 @@ describe("shared chart layout authority", () => {
     for (const file of [
       "../area-trend-chart.tsx",
       "../line-trend-chart.tsx",
-      "../horizontal-bar-chart.tsx",
-      "../donut-chart.tsx",
+      "../time-series-chart.tsx",
+      "../composed-trend-chart.tsx",
+      "../dual-bar-chart.tsx",
     ]) {
       const chart = source(file);
-      expect(chart).toContain("DEFAULT_CHART_HEIGHT");
       expect(chart).not.toContain("height = 300");
       expect(chart).toContain("height?: ChartHeight");
     }
   });
 
-  it("keeps analytical coordinates stable while localized copy remains direction-aware", () => {
-    const area = source("../area-trend-chart.tsx");
-    const line = source("../line-trend-chart.tsx");
-    const bars = source("../horizontal-bar-chart.tsx");
+  it("keeps one responsive ECharts plot authority and stable Cartesian geometry", () => {
+    const runtime = source("../echarts-runtime.tsx");
+    const timeSeries = source("../time-series-chart.tsx");
+    const composed = source("../composed-trend-chart.tsx");
     const dual = source("../dual-bar-chart.tsx");
 
-    for (const chart of [area, line, bars, dual]) {
+    expect(runtime).toContain("new ResizeObserver");
+    expect(runtime).toContain("chart.resize()");
+    expect(runtime).toContain('renderer: "svg"');
+
+    for (const chart of [timeSeries, composed, dual]) {
+      expect(chart).toContain("EChartSurface");
+      expect(chart).not.toContain("ResponsiveContainer");
       expect(chart).not.toContain("reversed={isRtl}");
       expect(chart).not.toContain('orientation={isRtl ? "right" : "left"}');
-      expect(chart).not.toContain('position={isRtl ? "left" : "right"}');
     }
+  });
 
-    expect(area).toContain('orientation="left"');
-    expect(line).toContain('orientation="left"');
-    expect(bars).toContain('orientation="left"');
-    expect(bars).toContain('position="right"');
-    expect(dual).toContain('direction: isRtl ? "rtl" : "ltr"');
+  it("keeps sparse additive periods compact without changing bounded analytical charts", () => {
+    const timeSeries = source("../time-series-chart.tsx");
+    expect(timeSeries).toContain("adaptiveSparseBars");
+    expect(timeSeries).toContain("useSparseBars");
+    expect(timeSeries).toContain('type: "bar" as const');
+    expect(timeSeries).toContain("referenceLines.length === 0");
+    expect(timeSeries).toContain("referenceBands.length === 0");
+    expect(timeSeries).toContain("yDomain === undefined");
   });
 });
