@@ -171,10 +171,17 @@ function decorateOrderCandidates(
 
 export async function warmUniversalSearchRecords(): Promise<void> {
   const actorContext = await requireTrustedActor();
+  const canOrders = allowed(actorContext, "orders.read");
   const canCustomers = allowed(actorContext, "customers.read");
   const canReadContact = allowed(actorContext, "customers.contact.read");
+  const canProducts = allowed(actorContext, "products.read");
+  const canDeliveries = allowed(actorContext, "deliveries.read");
   await warmLocalSearchProjection(actorContext.shop.shopId, {
-    includeProtectedCustomers: canCustomers && canReadContact,
+    customer: canCustomers && canReadContact,
+    product: canProducts,
+    order: canOrders,
+    delivery: canDeliveries,
+    return: canOrders,
   });
 }
 
