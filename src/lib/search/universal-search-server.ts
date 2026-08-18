@@ -204,7 +204,7 @@ export async function warmUniversalSearchRecords(): Promise<void> {
     customer: canCustomers && canReadContact,
     conversation: canConversations && canReadContact,
     product: canProducts,
-    order: canOrders,
+    order: canOrders && canOpenProtectedOperationalDetail,
     delivery: canDeliveries && canOpenProtectedOperationalDetail,
     return: canOrders && canOpenProtectedOperationalDetail,
   });
@@ -292,7 +292,7 @@ export async function searchUniversalRecords(
     recentConversations as RecordCandidate[],
   );
 
-  const orders = canOrders
+  const orders = canOrders && canOpenProtectedOperationalDetail
     ? await safeFamily("order", [], degraded, async () => {
         const technical = (await searchProjectedOrders(
           shopId,

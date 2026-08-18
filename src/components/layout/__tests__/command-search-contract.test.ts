@@ -36,7 +36,7 @@ describe("universal command search contract", () => {
     expect(palette).not.toContain("{item.href}");
   });
 
-  it("uses revision-bound token projections instead of decrypting all customers per keystroke", () => {
+  it("uses persistent keyed customer tokens with bounded incremental refresh", () => {
     const server = source("../../../lib/search/universal-search-server.ts");
     const projection = source("../../../lib/search/local-search-projection.ts");
     const migration = source(
@@ -47,15 +47,43 @@ describe("universal command search contract", () => {
     expect(server).toContain('allowed(actorContext, "customers.contact.read")');
     expect(server).toContain("searchProjectedCustomers");
     expect(server).not.toContain("db.customer.findMany");
-    expect(projection).toContain("buildCustomerIndex");
+    expect(projection).not.toContain("buildCustomerIndex");
+    expect(projection).toContain("CUSTOMER_DIRTY_BATCH_SIZE = 64");
+    expect(projection).toContain("searchProjectionDirty.findMany");
+    expect(projection).toContain("searchProjectionToken.findMany");
+    expect(projection).toContain("deriveExistingShopBlindIndexes");
     expect(projection).toContain("candidateIdsForQuery");
-    expect(projection).toContain("index.keys.get");
     expect(projection).toContain("searchProjectionRevision.findUnique");
     expect(projection).toContain("buildStableProjection");
     expect(projection).not.toContain("subscribeSearchProjectionMutations");
     expect(migration).toContain('CREATE TABLE "SearchProjectionRevision"');
-    expect(migration).toContain('AFTER UPDATE ON "Customer"');
+    expect(migration).toContain('CREATE TABLE "SearchProjectionToken"');
+    expect(migration).toContain('CREATE TABLE "SearchProjectionDirty"');
+    expect(migration).toContain(
+      'AFTER UPDATE OF "name", "phone", "wilaya", "commune", "deletedAt" ON "Customer"',
+    );
     expect(migration).toContain("'conversation'");
+  });
+
+  it("scopes revision churn to fields that actually affect each projection", () => {
+    const migration = source(
+      "../../../../prisma/migrations/20260818134500_search_projection_revision/migration.sql",
+    );
+
+    expect(migration).toContain(
+      'AFTER UPDATE OF "name", "sku", "deletedAt" ON "Product"',
+    );
+    expect(migration).toContain(
+      'AFTER UPDATE OF "orderNumber", "customerId", "deletedAt" ON "Order"',
+    );
+    expect(migration).toContain(
+      'AFTER UPDATE OF "provider", "trackingNumber", "orderId", "deletedAt" ON "Delivery"',
+    );
+    expect(migration).toContain(
+      'AFTER UPDATE OF "channel", "contactName", "contactPhone", "lastMessageAt" ON "Conversation"',
+    );
+    expect(migration).not.toContain('AFTER UPDATE ON "Customer"');
+    expect(migration).not.toContain('AFTER UPDATE ON "Order"');
   });
 
   it("indexes the full permitted conversation contact set while keeping recent message search bounded", () => {
@@ -79,7 +107,8 @@ describe("universal command search contract", () => {
     expect(projection).toContain("compactSearchText");
     expect(projection).toContain("MAX_PREFIX_LENGTH");
     expect(projection).toContain("GRAM_SIZE");
-    expect(projection).toContain("exactKeys");
+    expect(projection).toContain("primaryExactKeys");
+    expect(projection).toContain("appendBounded(selected, index.primaryExactKeys");
     expect(projection).toContain("appendBounded(selected, index.exactKeys");
     expect(projection).toContain("buildProductIndex");
     expect(projection).toContain("buildOrderIndex");
@@ -116,7 +145,7 @@ describe("universal command search contract", () => {
     expect(server).toContain("take: RECENT_MESSAGES_PER_CONVERSATION");
   });
 
-  it("gates protected operational deep links on their real detail authority", () => {
+  it("gates every protected operational deep link on its real detail authority", () => {
     const server = source("../../../lib/search/universal-search-server.ts");
 
     expect(server).toContain('allowed(actorContext, "orders.financials.read")');
@@ -125,6 +154,18 @@ describe("universal command search contract", () => {
       "canDeliveries && canOpenProtectedOperationalDetail",
     );
     expect(server).toContain("canOrders && canOpenProtectedOperationalDetail");
+    expect(server).toContain(
+      "const orders = canOrders && canOpenProtectedOperationalDetail",
+    );
+  });
+
+  it("uses the shared technical-value boundary for RTL-safe result identifiers", () => {
+    const palette = source("../../command-palette.tsx");
+
+    expect(palette).toContain('from "@/components/i18n/technical-value"');
+    expect(palette).toContain("<TechnicalValue");
+    expect(palette).toContain("hasTechnicalLabel");
+    expect(palette).toContain("hasTechnicalSublabel");
   });
 
   it("prewarms only permitted projections after the authenticated shell is usable", () => {
@@ -139,6 +180,9 @@ describe("universal command search contract", () => {
     expect(server).toContain("customer: canCustomers && canReadContact");
     expect(server).toContain("conversation: canConversations && canReadContact");
     expect(server).toContain("product: canProducts");
+    expect(server).toContain(
+      "order: canOrders && canOpenProtectedOperationalDetail",
+    );
   });
 
   it("exposes server timing for Phase 7 latency evidence", () => {

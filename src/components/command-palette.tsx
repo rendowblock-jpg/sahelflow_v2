@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { TechnicalValue } from "@/components/i18n/technical-value";
 import { flattenNavigationItems } from "@/components/layout/navigation";
 import {
   Command,
@@ -103,6 +104,19 @@ const KIND_COPY: Record<UniversalSearchKind, SearchCommandCopyKey> = {
   delivery: "typeDelivery",
   return: "typeReturn",
 };
+
+function hasTechnicalLabel(kind: UniversalSearchKind): boolean {
+  return kind === "order" || kind === "delivery" || kind === "return";
+}
+
+function hasTechnicalSublabel(
+  kind: UniversalSearchKind,
+  value: string,
+): boolean {
+  if (kind === "customer" || kind === "product") return true;
+  if (kind !== "conversation") return false;
+  return /^[0-9\s()+\-./]+$/u.test(value);
+}
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
@@ -355,19 +369,31 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         <Icon className="size-4" aria-hidden="true" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <bdi
-                          dir="auto"
-                          className="block truncate text-start text-[13px] font-semibold [unicode-bidi:plaintext]"
-                        >
-                          {result.label}
-                        </bdi>
-                        {result.sublabel ? (
+                        {hasTechnicalLabel(result.kind) ? (
+                          <TechnicalValue className="block truncate text-start text-[13px] font-semibold">
+                            {result.label}
+                          </TechnicalValue>
+                        ) : (
                           <bdi
                             dir="auto"
-                            className="mt-0.5 block truncate text-start text-[11px] leading-4 text-muted-foreground [unicode-bidi:plaintext]"
+                            className="block truncate text-start text-[13px] font-semibold [unicode-bidi:plaintext]"
                           >
-                            {result.sublabel}
+                            {result.label}
                           </bdi>
+                        )}
+                        {result.sublabel ? (
+                          hasTechnicalSublabel(result.kind, result.sublabel) ? (
+                            <TechnicalValue className="mt-0.5 block truncate text-start text-[11px] leading-4 text-muted-foreground">
+                              {result.sublabel}
+                            </TechnicalValue>
+                          ) : (
+                            <bdi
+                              dir="auto"
+                              className="mt-0.5 block truncate text-start text-[11px] leading-4 text-muted-foreground [unicode-bidi:plaintext]"
+                            >
+                              {result.sublabel}
+                            </bdi>
+                          )
                         ) : null}
                       </span>
                       <span className="ms-2 shrink-0 rounded-full border border-border/60 bg-muted/35 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">

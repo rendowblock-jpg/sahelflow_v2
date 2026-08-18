@@ -2,3 +2,21 @@ model SearchProjectionRevision {
   id       String @id
   revision Int    @default(0)
 }
+
+model SearchProjectionToken {
+  family    String
+  entityId  String
+  tokenHash String
+
+  @@id([family, entityId, tokenHash])
+  @@index([family, tokenHash])
+}
+
+model SearchProjectionDirty {
+  family   String
+  entityId String
+  revision Int    @default(0)
+
+  @@id([family, entityId])
+  @@index([family])
+}

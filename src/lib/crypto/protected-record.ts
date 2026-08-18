@@ -132,14 +132,15 @@ export async function openShopRecordField(
   );
 }
 
-export async function deriveShopBlindIndex(
+export async function deriveShopBlindIndexes(
   prisma: ProtectedRecordClient,
-  value: string,
+  values: readonly string[],
   reference: Pick<ProtectedRecordReference, "recordType" | "field">,
   options: ProtectedRecordOptions & {
     normalize?: (value: string) => string;
   } = {},
-): Promise<string> {
+): Promise<string[]> {
+  if (values.length === 0) return [];
   const context = options.shopContext ?? processShopContext();
   const authority = await resolveShopProtectedKey(
     prisma,
@@ -150,15 +151,50 @@ export async function deriveShopBlindIndex(
       createIfMissing: options.createIfMissing ?? true,
     },
   );
-  const normalized = (options.normalize ?? ((entry: string) => entry.trim().toLowerCase()))(
-    value,
+  const normalize =
+    options.normalize ?? ((entry: string) => entry.trim().toLowerCase());
+  const indexContext = blindIndexContext(context, reference);
+  return values.map((value) =>
+    createHmac("sha256", authority.key)
+      .update(BLIND_INDEX_DOMAIN)
+      .update(indexContext)
+      .update(Buffer.from([0]))
+      .update(normalize(value), "utf8")
+      .digest("hex"),
   );
-  return createHmac("sha256", authority.key)
-    .update(BLIND_INDEX_DOMAIN)
-    .update(blindIndexContext(context, reference))
-    .update(Buffer.from([0]))
-    .update(normalized, "utf8")
-    .digest("hex");
+}
+
+export async function deriveShopBlindIndex(
+  prisma: ProtectedRecordClient,
+  value: string,
+  reference: Pick<ProtectedRecordReference, "recordType" | "field">,
+  options: ProtectedRecordOptions & {
+    normalize?: (value: string) => string;
+  } = {},
+): Promise<string> {
+  const [index] = await deriveShopBlindIndexes(prisma, [value], reference, options);
+  return index!;
+}
+
+/** Return current contextual indexes without creating authority on a read. */
+export async function deriveExistingShopBlindIndexes(
+  prisma: ProtectedRecordClient,
+  values: readonly string[],
+  reference: Pick<ProtectedRecordReference, "recordType" | "field">,
+  options: Omit<ProtectedRecordOptions, "createIfMissing"> & {
+    normalize?: (value: string) => string;
+  } = {},
+): Promise<string[] | null> {
+  if (values.length === 0) return [];
+  const existing = await prisma.protectedKeyAuthority.findUnique({
+    where: { purpose: "shop-blind-index" },
+    select: { purpose: true },
+  });
+  if (!existing) return null;
+  return deriveShopBlindIndexes(prisma, values, reference, {
+    ...options,
+    createIfMissing: false,
+  });
 }
 
 /** Return the current contextual index without creating authority on a read. */
@@ -170,13 +206,11 @@ export async function deriveExistingShopBlindIndex(
     normalize?: (value: string) => string;
   } = {},
 ): Promise<string | null> {
-  const existing = await prisma.protectedKeyAuthority.findUnique({
-    where: { purpose: "shop-blind-index" },
-    select: { purpose: true },
-  });
-  if (!existing) return null;
-  return deriveShopBlindIndex(prisma, value, reference, {
-    ...options,
-    createIfMissing: false,
-  });
+  const indexes = await deriveExistingShopBlindIndexes(
+    prisma,
+    [value],
+    reference,
+    options,
+  );
+  return indexes?.[0] ?? null;
 }
