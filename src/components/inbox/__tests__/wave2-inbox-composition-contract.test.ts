@@ -7,16 +7,18 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("Class-AAA Inbox composition contract", () => {
-  it("uses the shared immersive workspace while replacing the rejected legacy composition", () => {
+  it("uses the live V3 immersive workspace while replacing the rejected legacy composition", () => {
     const page = read("src/app/(dashboard)/inbox/page.tsx");
-    const desk = read("src/components/inbox/inbox-operations-desk.tsx");
+    const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
     const foundation = read("src/app/phase5.css");
 
     expect(page).toContain('className="app-workspace-content flex flex-col"');
-    expect(page).toContain("InboxOperationsDesk");
+    expect(page).toContain("InboxV3Workspace");
+    expect(page).not.toContain("InboxOperationsDesk");
     expect(page).not.toContain("InboxDesktopPrimer");
-    expect(desk).toContain('data-inbox-workspace="v2"');
-    expect(desk).toContain('data-inbox-operations-desk="true"');
+    expect(workspace).toContain('data-inbox-workspace="v2"');
+    expect(workspace).toContain('data-inbox-version="v3"');
+    expect(workspace).toContain('data-inbox-operations-desk="true"');
     expect(foundation).not.toContain("data-inbox-operations-desk");
   });
 
@@ -96,7 +98,7 @@ describe("Class-AAA Inbox composition contract", () => {
   it("closes adversarial Inbox review gaps at their authority boundaries", () => {
     const queue = read("src/components/inbox/inbox-work-queue.tsx");
     const deskTypes = read("src/components/inbox/inbox-desk-types.ts");
-    const header = read("src/components/inbox/inbox-operations-header.tsx");
+    const header = read("src/components/inbox/inbox-v3-header.tsx");
     const panel = read("src/components/inbox/inbox-customer-work-panel.tsx");
     const collaboration = read(
       "src/components/inbox/conversation-collaboration-inline.tsx",
@@ -125,7 +127,7 @@ describe("Class-AAA Inbox composition contract", () => {
     );
     expect(deskTypes).toContain("id: transportId ?? result.id");
     expect(deskTypes).toContain("...(transportId ? { transportId } : {})");
-    expect(header).toContain('transport.status === "connected" ? (');
+    expect(header).toContain('if (transport.status === "connected" && transport.wsOpen)');
     expect(header).toContain('copy("transportConnected")');
   });
 });
