@@ -530,7 +530,6 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     $launch | Add-Member -NotePropertyName runtimePreparationMilliseconds `
         -NotePropertyValue $runtimePrepareMilliseconds
     $launch | Add-Member -NotePropertyName startupTrace -NotePropertyValue $startupTrace
-    $launch | Add-Member -NotePropertyName uiDiagnostic -NotePropertyValue $uiDiagnostic
 
     $endpointEvidence = Join-Path $evidenceRoot "runtime-endpoint-ui-launch-$attempt.json"
     $uiEvidence = Join-Path $evidenceRoot "runtime-ui-ready-launch-$attempt.json"
