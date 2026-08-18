@@ -1,5 +1,6 @@
 import "server-only";
 
+import { deriveExistingShopBlindIndex } from "@/lib/crypto/protected-record";
 import { db } from "@/lib/db";
 import { getDeliveryWorkbenchPage } from "@/lib/deliveries/delivery-workbench";
 import { trustedActionAllowed } from "@/lib/identity/authorization";
@@ -19,6 +20,8 @@ const MAX_RESULTS = 24;
 const PROTECTED_MATCH_BUDGET = 32;
 const CONVERSATION_SCAN_LIMIT = 350;
 const RECENT_MESSAGES_PER_CONVERSATION = 12;
+
+type BlindIndexClient = Parameters<typeof deriveExistingShopBlindIndex>[0];
 
 type RecordCandidate = UniversalSearchCandidate & {
   kind:
@@ -136,87 +139,104 @@ export async function searchUniversalRecords(
   const canConversations = allowed(actorContext, "conversations.read");
   const canDeliveries = allowed(actorContext, "deliveries.read");
 
-  const [customerRows, productRows, conversationRows, deliveryPage, returnPage] =
-    await Promise.all([
-      canCustomers && canReadContact
-        ? db.customer.findMany({
-            where: { deletedAt: null },
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-              wilaya: true,
-              commune: true,
-              updatedAt: true,
+  const [
+    customerRows,
+    productRows,
+    conversationRows,
+    deliveryPage,
+    returnPage,
+    orderPhoneBlindIndex,
+  ] = await Promise.all([
+    canCustomers && canReadContact
+      ? db.customer.findMany({
+          where: { deletedAt: null },
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            wilaya: true,
+            commune: true,
+            updatedAt: true,
+          },
+        })
+      : Promise.resolve([]),
+    canProducts
+      ? db.product.findMany({
+          where: {
+            deletedAt: null,
+            OR: [
+              { name: { contains: query } },
+              { sku: { contains: query } },
+            ],
+          },
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            updatedAt: true,
+          },
+          orderBy: { updatedAt: "desc" },
+          take: PROTECTED_MATCH_BUDGET,
+        })
+      : Promise.resolve([]),
+    canConversations
+      ? db.conversation.findMany({
+          select: {
+            id: true,
+            contactName: true,
+            contactPhone: true,
+            channel: true,
+            lastMessageAt: true,
+            updatedAt: true,
+            messages: {
+              orderBy: { timestamp: "desc" },
+              take: RECENT_MESSAGES_PER_CONVERSATION,
+              select: { body: true },
             },
-          })
-        : Promise.resolve([]),
-      canProducts
-        ? db.product.findMany({
-            where: {
-              deletedAt: null,
-              OR: [
-                { name: { contains: query } },
-                { sku: { contains: query } },
-              ],
-            },
-            select: {
-              id: true,
-              name: true,
-              sku: true,
-              updatedAt: true,
-            },
-            orderBy: { updatedAt: "desc" },
-            take: PROTECTED_MATCH_BUDGET,
-          })
-        : Promise.resolve([]),
-      canConversations
-        ? db.conversation.findMany({
-            select: {
-              id: true,
-              contactName: true,
-              contactPhone: true,
-              channel: true,
-              lastMessageAt: true,
-              updatedAt: true,
-              messages: {
-                orderBy: { timestamp: "desc" },
-                take: RECENT_MESSAGES_PER_CONVERSATION,
-                select: { body: true },
-              },
-            },
-            orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
-            take: CONVERSATION_SCAN_LIMIT,
-          })
-        : Promise.resolve([]),
-      canDeliveries
-        ? getDeliveryWorkbenchPage(actorContext, {
-            page: 1,
-            pageSize: 8,
-            q: query,
-          })
-        : Promise.resolve(null),
-      canOrders
-        ? getReturnWorkbenchPage(actorContext, {
-            page: 1,
-            pageSize: 8,
-            q: query,
-          })
-        : Promise.resolve(null),
-    ]);
+          },
+          orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
+          take: CONVERSATION_SCAN_LIMIT,
+        })
+      : Promise.resolve([]),
+    canDeliveries
+      ? getDeliveryWorkbenchPage(actorContext, {
+          page: 1,
+          pageSize: 8,
+          q: query,
+        })
+      : Promise.resolve(null),
+    canOrders
+      ? getReturnWorkbenchPage(actorContext, {
+          page: 1,
+          pageSize: 8,
+          q: query,
+        })
+      : Promise.resolve(null),
+    canOrders && canReadContact
+      ? deriveExistingShopBlindIndex(
+          db as unknown as BlindIndexClient,
+          query,
+          { recordType: "Order", field: "phone" },
+          { shopContext: actorContext.shop },
+        )
+      : Promise.resolve(null),
+  ]);
 
   const customers = customerCandidates(query, customerRows);
   const matchedCustomerIds = customers.map((candidate) =>
     candidate.id.slice("customer:".length),
   );
 
-  const orderRows = canOrders
+  const sourceOrderRows = canOrders
     ? await db.order.findMany({
         where: {
           deletedAt: null,
           OR: [
             { orderNumber: { contains: query } },
             { wilaya: { contains: query } },
+            ...(orderPhoneBlindIndex
+              ? [{ phoneBlindIndex: orderPhoneBlindIndex }]
+              : []),
             ...(canReadContact && matchedCustomerIds.length > 0
               ? [{ customerId: { in: matchedCustomerIds } }]
               : []),
@@ -225,6 +245,7 @@ export async function searchUniversalRecords(
         select: {
           id: true,
           orderNumber: true,
+          phone: canReadContact,
           wilaya: true,
           updatedAt: true,
           customer: canReadContact
@@ -236,21 +257,33 @@ export async function searchUniversalRecords(
       })
     : [];
 
+  const orderRows = sourceOrderRows as unknown as Array<{
+    id: string;
+    orderNumber: string;
+    phone?: string;
+    wilaya: string | null;
+    updatedAt: Date;
+    customer?: { name: string; phone: string } | null;
+  }>;
+
   const orders = rankUniversalSearchCandidates(
     query,
-    orderRows.map((order): RecordCandidate => {
-      const customer = "customer" in order ? order.customer : null;
-      return {
+    orderRows.map(
+      (order): RecordCandidate => ({
         id: `order:${order.id}`,
         kind: "order",
         label: order.orderNumber,
-        sublabel: customer?.name ?? order.wilaya,
+        sublabel: order.customer?.name ?? order.wilaya ?? undefined,
         href: `/orders/${order.id}`,
-        keywords: customer ? [customer.phone, order.wilaya] : [order.wilaya],
+        keywords: [
+          order.phone ?? "",
+          order.customer?.phone ?? "",
+          order.wilaya ?? "",
+        ],
         updatedAt: order.updatedAt,
         rankBoost: 12,
-      };
-    }),
+      }),
+    ),
     PROTECTED_MATCH_BUDGET,
   );
 
