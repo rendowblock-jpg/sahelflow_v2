@@ -146,6 +146,47 @@ async function neutralStructure(page: Page) {
   });
 }
 
+async function enableDarkMode(page: Page) {
+  await page.goto("/settings", { waitUntil: "domcontentloaded" });
+  await waitForHydration(page);
+  await page.locator("#settings-tab-appearance").click();
+  await page.locator('[data-theme-mode="dark"]').click();
+  await expect(page.locator("html")).toHaveClass(/\bdark\b/);
+}
+
+async function expectRenderedEChart(page: Page, selector: string) {
+  const surface = page.locator(selector).first();
+  await expect(surface).toBeVisible({ timeout: 30_000 });
+  await expect(surface).toHaveAttribute("tabindex", "0");
+  await expect(surface).toHaveAttribute(
+    "aria-keyshortcuts",
+    "ArrowLeft ArrowRight Home End Escape",
+  );
+  await expect(surface.locator("svg")).toBeVisible();
+
+  const maxPathHeight = await surface.evaluate((node) => {
+    return Array.from(node.querySelectorAll("svg path")).reduce((maximum, path) => {
+      try {
+        return Math.max(maximum, (path as SVGGraphicsElement).getBBox().height);
+      } catch {
+        return maximum;
+      }
+    }, 0);
+  });
+  expect(
+    maxPathHeight,
+    `${selector} must contain non-flat rendered analytical geometry`,
+  ).toBeGreaterThan(2);
+
+  await surface.focus();
+  await expect(surface).toBeFocused();
+  await surface.press("Home");
+  await surface.press("ArrowRight");
+  await surface.press("End");
+  await surface.press("Escape");
+  return surface;
+}
+
 test.describe.serial("Founder visual correction evidence", () => {
   test.beforeAll(async ({ browser, baseURL }) => {
     const context = await browser.newContext({
@@ -265,9 +306,6 @@ test.describe.serial("Founder visual correction evidence", () => {
     await expect(aiWorkspace).toHaveAttribute("data-ai-layout", "desktop");
     await expect(page.locator('[data-ai-review-evidence="true"]')).toHaveCount(0);
 
-    // Rich representative data always includes durable sessions with messages.
-    // Select the last seeded session explicitly so the screenshot proves the
-    // loaded decision canvas rather than a newly created empty analysis.
     const aiSessionRows = page.locator("[data-ai-session]");
     await expect(aiSessionRows.first()).toBeVisible({ timeout: 30_000 });
     await aiSessionRows.last().click();
@@ -317,8 +355,6 @@ test.describe.serial("Founder visual correction evidence", () => {
     await expectNoHorizontalOverflow(page);
     await shot(page, testInfo, "founder-rtl-storefront-studio");
 
-    // The rich seed owns a real storefront. Capture the actual saved Studio as
-    // Founder evidence too; first-run bootstrap alone cannot prove the editor.
     await page.goto("/storefronts", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
     const editLink = page.locator('a[href^="/storefronts/"][href$="/studio"]').first();
@@ -355,30 +391,67 @@ test.describe.serial("Founder visual correction evidence", () => {
     await shot(page, testInfo, "founder-rtl-storefront-saved-studio");
   });
 
-  test("Arabic analytics keeps the data plane stable and paints a real revenue curve", async ({
+  test("Arabic Class-AAA analytics renders real ECharts geometry and keyboard readouts", async ({
     page,
     context,
     baseURL,
   }, testInfo) => {
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
     await setLocale(context, baseURL, "ar");
+    await enableDarkMode(page);
     await page.goto("/analytics", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
     await expectRtlShellGeometry(page);
-    await expect(page.locator('[data-analytics-workspace="v2"]')).toBeVisible({
+    const workspace = page.locator('[data-analytics-workspace="v2"]');
+    await expect(workspace).toBeVisible({ timeout: 60_000 });
+    await expect(workspace).toHaveAttribute("data-analytics-generation", "class-aaa");
+
+    await expectRenderedEChart(
+      page,
+      '[data-analytics-section="headline"] [data-echarts-surface="true"]',
+    );
+    await expectNoHorizontalOverflow(page);
+    await shot(page, testInfo, "founder-rtl-analytics-class-aaa-headline");
+
+    for (const section of ["operations", "rankings", "timing", "trends", "returns"] as const) {
+      const target = page.locator(`[data-analytics-section="${section}"]`);
+      await target.scrollIntoViewIfNeeded();
+      await expect(target).toBeVisible();
+      await shot(page, testInfo, `founder-rtl-analytics-class-aaa-${section}`);
+    }
+  });
+
+  test("Arabic Risk and Accounting carry the same governed analytical system", async ({
+    page,
+    context,
+    baseURL,
+  }, testInfo) => {
+    test.setTimeout(150_000);
+    await setLocale(context, baseURL, "ar");
+    await enableDarkMode(page);
+
+    await page.goto("/risk?days=30&tab=overview", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+    await expectRtlShellGeometry(page);
+    await expect(page.locator('[data-risk-analytics-generation="class-aaa"]')).toBeVisible({
       timeout: 60_000,
     });
-
-    const curve = page.locator("path.recharts-area-curve").first();
-    await expect(curve).toBeVisible();
-    const curveBox = await curve.boundingBox();
-    expect(curveBox, "revenue curve should have measurable geometry").not.toBeNull();
-    expect(
-      curveBox?.height ?? 0,
-      "representative revenue data must not collapse into a zero-height RTL curve",
-    ).toBeGreaterThan(2);
-
+    await expectRenderedEChart(page, '[data-risk-analytics-generation="class-aaa"] [data-echarts-surface="true"]');
     await expectNoHorizontalOverflow(page);
-    await shot(page, testInfo, "founder-rtl-analytics-data-plane");
+    await shot(page, testInfo, "founder-rtl-risk-class-aaa-overview");
+
+    await page.goto("/risk?days=30&tab=analysis", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+    await expect(page.locator('[data-decision-viz="ranked-metrics"]')).toBeVisible({
+      timeout: 30_000,
+    });
+    await shot(page, testInfo, "founder-rtl-risk-class-aaa-analysis");
+
+    await page.goto("/accounting", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+    await expectRtlShellGeometry(page);
+    await expectRenderedEChart(page, '[data-chart-engine="echarts"] [data-echarts-surface="true"]');
+    await expectNoHorizontalOverflow(page);
+    await shot(page, testInfo, "founder-rtl-accounting-class-aaa");
   });
 });
