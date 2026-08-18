@@ -23,6 +23,10 @@ import {
 import { withProtectedNestedReads } from "@/lib/crypto/with-protected-nested";
 import { withProtectedPiiEncryption } from "@/lib/crypto/with-protected-pii";
 import { withProtectedRaceSafeUpserts } from "@/lib/crypto/with-protected-upserts";
+import {
+  isSearchProjectionModel,
+  publishSearchProjectionMutation,
+} from "@/lib/search/search-projection-events";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import { processShopContext, type ShopContext } from "@/lib/shops/context";
 
@@ -164,14 +168,19 @@ function withShopAuthority(
   return client.$extends({
     query: {
       $allModels: {
-        async $allOperations({ operation, args, query }) {
-          if (
-            process.env.NODE_ENV === "production" &&
-            SHOP_WRITE_OPERATIONS.has(operation)
-          ) {
+        async $allOperations({ model, operation, args, query }) {
+          const isWrite = SHOP_WRITE_OPERATIONS.has(operation);
+          if (process.env.NODE_ENV === "production" && isWrite) {
             assertProcessShopAuthority(context);
           }
-          return query(args);
+          const result = await query(args);
+          if (isWrite && isSearchProjectionModel(model)) {
+            publishSearchProjectionMutation({
+              shopId: context.shopId,
+              model,
+            });
+          }
+          return result;
         },
       },
     },
