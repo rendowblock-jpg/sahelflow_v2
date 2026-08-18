@@ -211,18 +211,23 @@ function Wait-ForAuthenticatedUi {
 
         $endpointItem = Get-Item -LiteralPath $runtimeEndpointPath -ErrorAction SilentlyContinue
         $uiItem = Get-Item -LiteralPath $runtimeUiReadyPath -ErrorAction SilentlyContinue
+        $uiDiagnosticItem = Get-Item -LiteralPath $runtimeUiDiagnosticPath -ErrorAction SilentlyContinue
         $endpoint = $null
         $uiReady = $null
+        $uiDiagnostic = $null
         $matching = $false
         if (
             $null -ne $endpointItem -and
             $null -ne $uiItem -and
+            $null -ne $uiDiagnosticItem -and
             $endpointItem.LastWriteTime -ge $StartedAt.AddSeconds(-2) -and
-            $uiItem.LastWriteTime -ge $StartedAt.AddSeconds(-2)
+            $uiItem.LastWriteTime -ge $StartedAt.AddSeconds(-2) -and
+            $uiDiagnosticItem.LastWriteTime -ge $StartedAt.AddSeconds(-2)
         ) {
             $endpoint = Read-JsonFile -Path $runtimeEndpointPath
             $uiReady = Read-JsonFile -Path $runtimeUiReadyPath
-            if ($null -ne $endpoint -and $null -ne $uiReady) {
+            $uiDiagnostic = Read-JsonFile -Path $runtimeUiDiagnosticPath
+            if ($null -ne $endpoint -and $null -ne $uiReady -and $null -ne $uiDiagnostic) {
                 $matching =
                     $endpoint.state -eq "ready" -and
                     $endpoint.appVersion -eq $expectedVersion -and
@@ -233,7 +238,12 @@ function Wait-ForAuthenticatedUi {
                     $uiReady.state -eq "ready" -and
                     $uiReady.appVersion -eq $expectedVersion -and
                     $uiReady.instanceId -eq $endpoint.instanceId -and
-                    $uiReady.pageUrl -match '^http://(127\.0\.0\.1|localhost):\d+$'
+                    $uiReady.pageUrl -match '^http://(127\.0\.0\.1|localhost):\d+$' -and
+                    [int]$uiDiagnostic.formatVersion -eq 1 -and
+                    $uiDiagnostic.state -eq "ready" -and
+                    $uiDiagnostic.code -eq "RUNTIME_UI_READY_PERSISTED" -and
+                    $uiDiagnostic.instanceId -eq $endpoint.instanceId -and
+                    $uiDiagnostic.appVersion -eq $expectedVersion
             }
         }
 
@@ -258,12 +268,27 @@ function Wait-ForAuthenticatedUi {
         } else {
             0
         }
+        $readinessPredatesWorkspaceVisibility =
+            $matching -and
+            $null -ne $workspaceVisibleAt -and
+            $null -ne $uiItem -and
+            $null -ne $uiDiagnosticItem -and
+            $uiItem.LastWriteTime -le $workspaceVisibleAt -and
+            $uiDiagnosticItem.LastWriteTime -le $workspaceVisibleAt
         $lastObservation = [pscustomobject]@{
             endpointMatched = [bool]$matching
             responding = [bool]$Process.Responding
             workspaceWindowCount = $workspaceWindows.Count
             workspaceVisibleBeforeEvidenceMilliseconds = $workspaceEvidenceLeadMilliseconds
+            readinessPredatesWorkspaceVisibility = [bool]$readinessPredatesWorkspaceVisibility
             visibleWindows = @($visibleWindows)
+        }
+        if (
+            $matching -and
+            $workspaceWindows.Count -ne 0 -and
+            -not $readinessPredatesWorkspaceVisibility
+        ) {
+            throw "${Phase}: workspace became visible before matching authenticated readiness evidence was durably written."
         }
         if (-not $matching) {
             if (
@@ -290,6 +315,7 @@ function Wait-ForAuthenticatedUi {
             visibleWindows = @($visibleWindows)
             endpoint = $endpoint
             uiReady = $uiReady
+            uiDiagnostic = $uiDiagnostic
             processTree = Get-SahelFlowProcesses
             elapsedMilliseconds = [int64]((Get-Date) - $StartedAt).TotalMilliseconds
         }
