@@ -64,6 +64,10 @@ function seriesColor(
   return resolveChartColor(requested, theme, index);
 }
 
+function resolvedAxis(current: ComposedSeries) {
+  return current.yAxis ?? (current.kind === "line" ? "right" : "left");
+}
+
 export function ComposedTrendChart({
   data,
   xKey,
@@ -84,27 +88,154 @@ export function ComposedTrendChart({
     () => resolveFormatter(formatRightY, locale),
     [formatRightY, locale],
   );
-  const hasRight = series.some(
-    (entry) =>
-      entry.yAxis === "right" ||
-      (entry.kind === "line" && entry.yAxis === undefined),
-  );
+  const hasRight = series.some((entry) => resolvedAxis(entry) === "right");
+  const hasLeft = series.some((entry) => resolvedAxis(entry) === "left");
+  const splitUnits = hasLeft && hasRight;
+  const resolvedHeight =
+    splitUnits && height === DEFAULT_CHART_HEIGHT
+      ? "clamp(19rem, 30vw, 22rem)"
+      : chartHeight;
 
   const option = React.useCallback(
     (theme: SahelChartTheme) => {
       const axis = cartesianAxisStyle(theme);
       const zoom = chartDataZoom(data.length, theme);
+      const categories = data.map((row) => String(row[xKey] ?? ""));
+      const leftLabels = series
+        .filter((entry) => resolvedAxis(entry) === "left")
+        .map((entry) => entry.label)
+        .join(" · ");
+      const rightLabels = series
+        .filter((entry) => resolvedAxis(entry) === "right")
+        .map((entry) => entry.label)
+        .join(" · ");
+
+      const linkedZoom = splitUnits
+        ? zoom?.map((entry) => ({ ...entry, xAxisIndex: [0, 1] }))
+        : zoom;
+
+      const xAxis = splitUnits
+        ? [
+            {
+              type: "category" as const,
+              gridIndex: 0,
+              boundaryGap: false,
+              data: categories,
+              axisLine: { show: false },
+              axisTick: { show: false },
+              axisPointer: { show: true, snap: true },
+              axisLabel: { show: false },
+            },
+            {
+              type: "category" as const,
+              gridIndex: 1,
+              boundaryGap: true,
+              data: categories,
+              axisLine: { show: false },
+              axisTick: { show: false },
+              axisPointer: { show: true, snap: true },
+              axisLabel: {
+                color: theme.mutedForeground,
+                fontSize: 12,
+                hideOverlap: true,
+                margin: 12,
+                formatter: (value: string) => isolate(value),
+              },
+            },
+          ]
+        : {
+            type: "category" as const,
+            boundaryGap: series.some((entry) => entry.kind === "bar"),
+            data: categories,
+            axisLine: { show: false },
+            axisTick: { show: false },
+            axisPointer: { show: true, snap: true },
+            axisLabel: {
+              color: theme.mutedForeground,
+              fontSize: 12,
+              hideOverlap: true,
+              margin: 12,
+              formatter: (value: string) => isolate(value),
+            },
+          };
+
+      const yAxis = splitUnits
+        ? [
+            {
+              type: "value" as const,
+              gridIndex: 0,
+              min: 0,
+              name: rightLabels,
+              nameLocation: "end" as const,
+              nameGap: 7,
+              nameTextStyle: {
+                color: theme.mutedForeground,
+                fontSize: 11,
+                fontWeight: 500,
+              },
+              ...axis,
+              axisLabel: {
+                ...axis.axisLabel,
+                formatter: (value: number) => isolate(fmtRight(value)),
+              },
+            },
+            {
+              type: "value" as const,
+              gridIndex: 1,
+              min: 0,
+              name: leftLabels,
+              nameLocation: "end" as const,
+              nameGap: 7,
+              nameTextStyle: {
+                color: theme.mutedForeground,
+                fontSize: 11,
+                fontWeight: 500,
+              },
+              ...axis,
+              axisLabel: {
+                ...axis.axisLabel,
+                formatter: (value: number) => isolate(fmtLeft(value)),
+              },
+            },
+          ]
+        : {
+            type: "value" as const,
+            min: 0,
+            ...axis,
+            axisLabel: {
+              ...axis.axisLabel,
+              formatter: (value: number) => isolate(fmtLeft(value)),
+            },
+          };
+
       return {
         color: series.map((current, index) =>
           seriesColor(config, current.key, theme, index),
         ),
-        grid: {
-          left: 8,
-          right: hasRight ? 14 : 8,
-          top: 16,
-          bottom: zoom ? 45 : 12,
-          containLabel: true,
-        },
+        grid: splitUnits
+          ? [
+              {
+                left: 8,
+                right: 12,
+                top: 20,
+                height: "39%",
+                containLabel: true,
+              },
+              {
+                left: 8,
+                right: 12,
+                top: "57%",
+                bottom: linkedZoom ? 45 : 10,
+                containLabel: true,
+              },
+            ]
+          : {
+              left: 8,
+              right: 8,
+              top: 16,
+              bottom: linkedZoom ? 45 : 12,
+              containLabel: true,
+            },
         tooltip: chartTooltip(theme, dir),
         axisPointer: {
           link: [{ xAxisIndex: "all" }],
@@ -116,71 +247,32 @@ export function ComposedTrendChart({
             padding: [4, 6],
           },
         },
-        xAxis: {
-          type: "category",
-          boundaryGap: true,
-          data: data.map((row) => String(row[xKey] ?? "")),
-          axisLine: { show: false },
-          axisTick: { show: false },
-          axisPointer: { show: true, snap: true },
-          axisLabel: {
-            color: theme.mutedForeground,
-            fontSize: 12,
-            hideOverlap: true,
-            margin: 12,
-            formatter: (value: string) => isolate(value),
-          },
-        },
-        yAxis: [
-          {
-            type: "value",
-            min: 0,
-            position: "left",
-            ...axis,
-            axisLabel: {
-              ...axis.axisLabel,
-              formatter: (value: number) => isolate(fmtLeft(value)),
-            },
-          },
-          ...(hasRight
-            ? [
-                {
-                  type: "value" as const,
-                  min: 0,
-                  position: "right" as const,
-                  ...axis,
-                  splitLine: { show: false },
-                  axisLabel: {
-                    ...axis.axisLabel,
-                    formatter: (value: number) => isolate(fmtRight(value)),
-                  },
-                },
-              ]
-            : []),
-        ],
-        dataZoom: zoom,
+        xAxis,
+        yAxis,
+        dataZoom: linkedZoom,
         series: series.map((current, index) => {
           const color = seriesColor(config, current.key, theme, index);
-          const currentAxis =
-            current.yAxis ?? (current.kind === "line" ? "right" : "left");
+          const currentAxis = resolvedAxis(current);
           const valueFormatter = current.format
             ? resolveFormatter(current.format, locale)
             : currentAxis === "right"
               ? fmtRight
               : fmtLeft;
+          const axisIndex = splitUnits ? (currentAxis === "right" ? 0 : 1) : 0;
           if (current.kind === "bar") {
             return {
               id: current.key,
               name: current.label,
               type: "bar" as const,
-              yAxisIndex: currentAxis === "right" && hasRight ? 1 : 0,
+              xAxisIndex: axisIndex,
+              yAxisIndex: axisIndex,
               data: data.map((row) => Number(row[current.key] ?? 0)),
               barMaxWidth: 28,
               barMinWidth: 5,
               itemStyle: {
                 color,
                 borderRadius: [6, 6, 2, 2],
-                opacity: 0.92,
+                opacity: 0.9,
               },
               emphasis: {
                 focus: "series" as const,
@@ -196,7 +288,8 @@ export function ComposedTrendChart({
             id: current.key,
             name: current.label,
             type: "line" as const,
-            yAxisIndex: currentAxis === "right" && hasRight ? 1 : 0,
+            xAxisIndex: axisIndex,
+            yAxisIndex: axisIndex,
             data: data.map((row) => Number(row[current.key] ?? 0)),
             smooth: 0.26,
             showSymbol: false,
@@ -204,6 +297,7 @@ export function ComposedTrendChart({
             symbolSize: 7,
             lineStyle: { color, width: 2.35 },
             itemStyle: { color, borderColor: theme.card, borderWidth: 2 },
+            areaStyle: splitUnits ? { color, opacity: 0.08 } : undefined,
             emphasis: {
               focus: "series" as const,
               scale: 1.15,
@@ -217,14 +311,24 @@ export function ComposedTrendChart({
         }),
       };
     },
-    [config, data, dir, fmtLeft, fmtRight, hasRight, locale, series, xKey],
+    [
+      config,
+      data,
+      dir,
+      fmtLeft,
+      fmtRight,
+      locale,
+      series,
+      splitUnits,
+      xKey,
+    ],
   );
 
   if (!data.length || !series.length) {
     return (
       <div
         className="flex w-full items-center justify-center text-sm text-muted-foreground"
-        style={{ height: chartHeight }}
+        style={{ height: resolvedHeight }}
       >
         {emptyMessage ?? "—"}
       </div>
@@ -235,7 +339,7 @@ export function ComposedTrendChart({
     <EChartSurface
       option={option}
       ariaLabel={t("charts.composedTrend")}
-      height={chartHeight}
+      height={resolvedHeight}
       className="aspect-auto"
     />
   );
