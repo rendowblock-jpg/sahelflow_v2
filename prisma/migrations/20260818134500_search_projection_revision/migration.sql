@@ -23,6 +23,11 @@ CREATE TABLE "SearchProjectionDirty" (
 CREATE INDEX "SearchProjectionDirty_family_idx"
 ON "SearchProjectionDirty"("family");
 
+-- Runtime refreshes newest committed mutations before the revision-zero upgrade
+-- backlog, so ordinary seller activity remains searchable while backfill drains.
+CREATE INDEX "SearchProjectionDirty_family_revision_entity_idx"
+ON "SearchProjectionDirty"("family", "revision" DESC, "entityId" ASC);
+
 INSERT INTO "SearchProjectionRevision" ("id", "revision") VALUES
   ('customer', 0),
   ('product', 0),
@@ -31,15 +36,19 @@ INSERT INTO "SearchProjectionRevision" ("id", "revision") VALUES
   ('return', 0),
   ('conversation', 0);
 
--- Existing protected customers are queued once for persistent keyed-token
--- backfill. Runtime refresh processes this queue in bounded batches and then
--- only touches entities whose search-relevant fields actually changed.
+-- Existing protected customers and orders are queued once for persistent
+-- keyed-token backfill. Runtime refresh processes bounded batches and continues
+-- serving whatever has already been indexed; the upgrade backlog never becomes
+-- a global availability prerequisite.
 INSERT OR IGNORE INTO "SearchProjectionDirty" ("family", "entityId", "revision")
 SELECT 'customer', "id", 0 FROM "Customer";
 
+INSERT OR IGNORE INTO "SearchProjectionDirty" ("family", "entityId", "revision")
+SELECT 'order', "id", 0 FROM "Order";
+
 -- Revisions and dirty rows are advanced by SQLite inside the authoritative
 -- transaction. A rollback therefore rolls both back; a committed mutation and
--- its projection generation become visible atomically to the cache authority.
+-- its projection generation become visible atomically to the search authority.
 CREATE TRIGGER "search_projection_customer_insert"
 AFTER INSERT ON "Customer"
 BEGIN
@@ -106,31 +115,69 @@ BEGIN
   UPDATE "SearchProjectionRevision" SET "revision" = "revision" + 1 WHERE "id" = 'product';
 END;
 
+-- Order-number search is persistent/incremental. Inserts, searchable-field
+-- updates, and deletes enqueue only the affected order instead of invalidating an
+-- in-memory full-table index. The same conflict-safe upsert avoids concurrent
+-- protected/order upsert races on (family, entityId).
 CREATE TRIGGER "search_projection_order_insert"
 AFTER INSERT ON "Order"
 BEGIN
-  UPDATE "SearchProjectionRevision" SET "revision" = "revision" + 1 WHERE "id" = 'order';
+  UPDATE "SearchProjectionRevision"
+  SET "revision" = "revision" + 1
+  WHERE "id" = 'order';
+  INSERT INTO "SearchProjectionDirty" ("family", "entityId", "revision")
+  VALUES (
+    'order',
+    NEW."id",
+    (SELECT "revision" FROM "SearchProjectionRevision" WHERE "id" = 'order')
+  )
+  ON CONFLICT("family", "entityId") DO UPDATE
+  SET "revision" = excluded."revision";
 END;
 
--- The order projection only indexes orderNumber/customerId/deletion state.
--- Delivery/return projections depend on the related orderNumber, so only that
--- column invalidates those two derived families.
 CREATE TRIGGER "search_projection_order_update"
-AFTER UPDATE OF "orderNumber", "customerId", "deletedAt" ON "Order"
+AFTER UPDATE OF "orderNumber", "deletedAt" ON "Order"
 BEGIN
-  UPDATE "SearchProjectionRevision" SET "revision" = "revision" + 1 WHERE "id" = 'order';
+  UPDATE "SearchProjectionRevision"
+  SET "revision" = "revision" + 1
+  WHERE "id" = 'order';
+  INSERT INTO "SearchProjectionDirty" ("family", "entityId", "revision")
+  VALUES (
+    'order',
+    NEW."id",
+    (SELECT "revision" FROM "SearchProjectionRevision" WHERE "id" = 'order')
+  )
+  ON CONFLICT("family", "entityId") DO UPDATE
+  SET "revision" = excluded."revision";
 END;
 
+-- Delivery and return search projections include the related order number, so
+-- only an actual order-number change invalidates those two derived families.
 CREATE TRIGGER "search_projection_order_number_update"
 AFTER UPDATE OF "orderNumber" ON "Order"
 BEGIN
-  UPDATE "SearchProjectionRevision" SET "revision" = "revision" + 1 WHERE "id" IN ('delivery', 'return');
+  UPDATE "SearchProjectionRevision"
+  SET "revision" = "revision" + 1
+  WHERE "id" IN ('delivery', 'return');
 END;
 
 CREATE TRIGGER "search_projection_order_delete"
 AFTER DELETE ON "Order"
 BEGIN
-  UPDATE "SearchProjectionRevision" SET "revision" = "revision" + 1 WHERE "id" IN ('order', 'delivery', 'return');
+  UPDATE "SearchProjectionRevision"
+  SET "revision" = "revision" + 1
+  WHERE "id" = 'order';
+  INSERT INTO "SearchProjectionDirty" ("family", "entityId", "revision")
+  VALUES (
+    'order',
+    OLD."id",
+    (SELECT "revision" FROM "SearchProjectionRevision" WHERE "id" = 'order')
+  )
+  ON CONFLICT("family", "entityId") DO UPDATE
+  SET "revision" = excluded."revision";
+  UPDATE "SearchProjectionRevision"
+  SET "revision" = "revision" + 1
+  WHERE "id" IN ('delivery', 'return');
 END;
 
 CREATE TRIGGER "search_projection_delivery_insert"
