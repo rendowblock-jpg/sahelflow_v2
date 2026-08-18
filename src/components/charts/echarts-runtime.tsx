@@ -8,6 +8,7 @@ import {
   DataZoomInsideComponent,
   DataZoomSliderComponent,
   GridComponent,
+  LegendComponent,
   MarkAreaComponent,
   MarkLineComponent,
   TooltipComponent,
@@ -28,6 +29,7 @@ use([
   BarChart,
   LineChart,
   GridComponent,
+  LegendComponent,
   TooltipComponent,
   AxisPointerComponent,
   DataZoomInsideComponent,
@@ -130,7 +132,9 @@ export function resolveChartColor(
   theme: SahelChartTheme,
   fallbackIndex = 0,
 ): string {
-  if (!value) return theme.chart[fallbackIndex % theme.chart.length] ?? theme.primary;
+  if (!value) {
+    return theme.chart[fallbackIndex % theme.chart.length] ?? theme.primary;
+  }
   const known: Record<string, string> = {
     "--color-chart-1": theme.chart[0],
     "--color-chart-2": theme.chart[1],
@@ -187,9 +191,11 @@ function withRuntimePolicy(
     animationEasingUpdate: "cubicOut",
     aria: {
       enabled: true,
-      show: true,
       description: ariaLabel,
-      decal: { show: true },
+      // SahelFlow uses semantic color + shape/line distinctions deliberately.
+      // Always-on decals make normal analytical views visually noisy, so they
+      // stay disabled unless a future explicit high-contrast mode opts in.
+      decal: { show: false },
       ...((option.aria as object | undefined) ?? {}),
     },
   };
@@ -225,6 +231,26 @@ export function chartTooltip(
       },
     },
     extraCssText: `direction:${dir};text-align:${dir === "rtl" ? "right" : "left"};unicode-bidi:isolate;border-radius:10px;box-shadow:0 12px 32px rgb(0 0 0 / 0.16);backdrop-filter:blur(12px);`,
+  };
+}
+
+export function chartLegend(
+  theme: SahelChartTheme,
+  dir: "ltr" | "rtl" = "ltr",
+) {
+  return {
+    top: 0,
+    [dir === "rtl" ? "left" : "right"]: 8,
+    itemWidth: 10,
+    itemHeight: 10,
+    itemGap: 16,
+    icon: "roundRect",
+    selectedMode: true,
+    textStyle: {
+      color: theme.mutedForeground,
+      fontSize: 12,
+      fontFamily: "ui-sans-serif, system-ui, sans-serif",
+    },
   };
 }
 
