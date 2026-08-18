@@ -23,6 +23,7 @@ import {
 import { SVGRenderer } from "echarts/renderers";
 
 import { cn } from "@/lib/utils";
+import { normalizeChartColor } from "./chart-color";
 import { useChartMotion } from "./chart-motion";
 
 registerEChartsModules([
@@ -62,7 +63,7 @@ export type SahelEChartOptionFactory = (
 
 function token(style: CSSStyleDeclaration, name: string, fallback: string) {
   const value = style.getPropertyValue(name).trim();
-  return value || fallback;
+  return normalizeChartColor(value || fallback);
 }
 
 export function readSahelChartTheme(): SahelChartTheme {
@@ -160,7 +161,7 @@ export function resolveChartColor(
   };
 
   const variable = value.match(/^var\((--[^,)]+)(?:,[^)]+)?\)$/)?.[1];
-  if (!variable) return value;
+  if (!variable) return normalizeChartColor(value);
 
   const knownColor = known[variable];
   if (knownColor) return knownColor;
@@ -168,12 +169,13 @@ export function resolveChartColor(
 
   const rootStyle = getComputedStyle(document.documentElement);
   const direct = rootStyle.getPropertyValue(variable).trim();
-  if (direct) return direct;
+  if (direct) return normalizeChartColor(direct);
 
   const normalized = variable.startsWith("--color-")
     ? `--${variable.slice("--color-".length)}`
     : variable;
-  return rootStyle.getPropertyValue(normalized).trim() || fallback;
+  const resolved = rootStyle.getPropertyValue(normalized).trim();
+  return resolved ? normalizeChartColor(resolved) : fallback;
 }
 
 function withRuntimePolicy(
