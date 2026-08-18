@@ -43,6 +43,7 @@ describe("Cartesian chart direction authority", () => {
     expect(arabicSystem).toContain("direction: ltr");
 
     expect(chartBridge).toContain("ChartConfig");
-    expect(chartBridge).not.toContain('from "recharts"');
+    expect(chartBridge).toContain("@/components/charts/chart-types");
+    expect(chartBridge).not.toContain("ResponsiveContainer");
   });
 });
