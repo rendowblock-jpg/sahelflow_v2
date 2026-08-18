@@ -470,6 +470,14 @@ function orderPersistentTokenKeys(row: OrderProjectionRow): string[] {
   return [...keys];
 }
 
+async function hasDirtyProjectionRows(family: string): Promise<boolean> {
+  const row = await db.searchProjectionDirty.findFirst({
+    where: { family },
+    select: { entityId: true },
+  });
+  return row !== null;
+}
+
 async function refreshCustomerProjectionBatch(): Promise<boolean> {
   const dirty: ProjectionDirtyRow[] = await db.searchProjectionDirty.findMany({
     where: { family: CUSTOMER_TOKEN_FAMILY },
@@ -550,11 +558,7 @@ async function refreshCustomerProjectionBatch(): Promise<boolean> {
     }
   });
 
-  return (
-    (await db.searchProjectionDirty.count({
-      where: { family: CUSTOMER_TOKEN_FAMILY },
-    })) === 0
-  );
+  return !(await hasDirtyProjectionRows(CUSTOMER_TOKEN_FAMILY));
 }
 
 async function refreshOrderProjectionBatch(): Promise<boolean> {
@@ -633,11 +637,7 @@ async function refreshOrderProjectionBatch(): Promise<boolean> {
     }
   });
 
-  return (
-    (await db.searchProjectionDirty.count({
-      where: { family: ORDER_TOKEN_FAMILY },
-    })) === 0
-  );
+  return !(await hasDirtyProjectionRows(ORDER_TOKEN_FAMILY));
 }
 
 async function warmCustomerProjection(): Promise<void> {
