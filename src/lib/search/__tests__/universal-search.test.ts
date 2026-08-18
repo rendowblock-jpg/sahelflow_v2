@@ -11,9 +11,11 @@ import {
 } from "../universal-search";
 
 describe("universal search normalization and ranking", () => {
-  it("normalizes Arabic digits, diacritics, tatweel and compatibility forms", () => {
+  it("normalizes Arabic/French marks, Arabic digits, tatweel and compatibility forms", () => {
     expect(normalizeSearchText("  طَــلَب ٠١٢٣  ")).toBe("طلب 0123");
     expect(normalizeSearchText("۱۲۳۴")).toBe("1234");
+    expect(normalizeSearchText("أَحْمَد")).toBe("احمد");
+    expect(normalizeSearchText("Béjaïa")).toBe("bejaia");
     expect(compactSearchText("0555 12-34-56")).toBe("0555123456");
   });
 
@@ -68,6 +70,30 @@ describe("universal search normalization and ranking", () => {
     expect(scoreUniversalSearchCandidate("٠٦٦٠٠٠١١١٤", customer)).toBeGreaterThan(0);
   });
 
+  it("matches Arabic and French names without requiring identical marks", () => {
+    const candidates: UniversalSearchCandidate[] = [
+      {
+        id: "arabic",
+        kind: "customer",
+        label: "أحمد بن علي",
+        href: "/customers/arabic",
+      },
+      {
+        id: "wilaya",
+        kind: "customer",
+        label: "Client Béjaïa",
+        href: "/customers/wilaya",
+      },
+    ];
+
+    expect(rankUniversalSearchCandidates("احمد", candidates, 2)[0]?.id).toBe(
+      "arabic",
+    );
+    expect(rankUniversalSearchCandidates("bejaia", candidates, 2)[0]?.id).toBe(
+      "wilaya",
+    );
+  });
+
   it("ranks one unified result set instead of giving every family equal position", () => {
     const candidates: UniversalSearchCandidate[] = [
       {
@@ -90,11 +116,11 @@ describe("universal search normalization and ranking", () => {
       },
     ];
 
-    expect(rankUniversalSearchCandidates("0001", candidates, 3).map((item) => item.id)).toEqual([
-      "order:exact",
-      "customer:weak",
-      "product:weak",
-    ]);
+    expect(
+      rankUniversalSearchCandidates("0001", candidates, 3).map(
+        (item) => item.id,
+      ),
+    ).toEqual(["order:exact", "customer:weak", "product:weak"]);
   });
 
   it("preserves the legacy family merge for non-command-center callers", () => {
