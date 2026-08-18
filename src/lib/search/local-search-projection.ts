@@ -15,6 +15,7 @@ import {
 const DEFAULT_CANDIDATE_LIMIT = 48;
 const MAX_PREFIX_LENGTH = 40;
 const GRAM_SIZE = 4;
+const CUSTOMER_PROJECTION_PAGE_SIZE = 400;
 
 type ProjectedCandidate = UniversalSearchCandidate & {
   entityId: string;
@@ -95,6 +96,14 @@ if (!globalSearchProjection.sahelflowLocalSearchProjectionSubscribed) {
   });
 }
 
+function emptyIndex(): SearchIndex {
+  return {
+    records: new Map(),
+    keys: new Map(),
+    byCustomerId: new Map(),
+  };
+}
+
 function addKey(index: SearchIndex, key: string, id: string): void {
   if (!key) return;
   const bucket = index.keys.get(key);
@@ -136,24 +145,21 @@ function indexValue(index: SearchIndex, id: string, rawValue: string): void {
   }
 }
 
-function createIndex(rows: readonly ProjectedCandidate[]): SearchIndex {
-  const index: SearchIndex = {
-    records: new Map(),
-    keys: new Map(),
-    byCustomerId: new Map(),
-  };
-
-  for (const row of rows) {
-    index.records.set(row.id, row);
-    indexValue(index, row.id, row.label);
-    if (row.sublabel) indexValue(index, row.id, row.sublabel);
-    for (const keyword of row.keywords ?? []) indexValue(index, row.id, keyword);
-    if (row.customerId) {
-      const bucket = index.byCustomerId.get(row.customerId);
-      if (bucket) bucket.add(row.id);
-      else index.byCustomerId.set(row.customerId, new Set([row.id]));
-    }
+function addCandidate(index: SearchIndex, row: ProjectedCandidate): void {
+  index.records.set(row.id, row);
+  indexValue(index, row.id, row.label);
+  if (row.sublabel) indexValue(index, row.id, row.sublabel);
+  for (const keyword of row.keywords ?? []) indexValue(index, row.id, keyword);
+  if (row.customerId) {
+    const bucket = index.byCustomerId.get(row.customerId);
+    if (bucket) bucket.add(row.id);
+    else index.byCustomerId.set(row.customerId, new Set([row.id]));
   }
+}
+
+function createIndex(rows: readonly ProjectedCandidate[]): SearchIndex {
+  const index = emptyIndex();
+  for (const row of rows) addCandidate(index, row);
   return index;
 }
 
@@ -213,29 +219,44 @@ function queryIndex(
 }
 
 async function buildCustomerIndex(): Promise<SearchIndex> {
-  const rows = await db.customer.findMany({
-    where: { deletedAt: null },
-    select: {
-      id: true,
-      name: true,
-      phone: true,
-      wilaya: true,
-      commune: true,
-      updatedAt: true,
-    },
-  });
-  return createIndex(
-    rows.map((customer) => ({
-      id: `customer:${customer.id}`,
-      entityId: customer.id,
-      kind: "customer" as const,
-      label: customer.name,
-      sublabel: customer.phone,
-      href: `/customers/${customer.id}`,
-      keywords: [customer.wilaya ?? "", customer.commune ?? ""],
-      updatedAt: customer.updatedAt,
-    })),
-  );
+  const index = emptyIndex();
+  let cursor: string | undefined;
+
+  while (true) {
+    const rows = await db.customer.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        wilaya: true,
+        commune: true,
+        updatedAt: true,
+      },
+      orderBy: { id: "asc" },
+      take: CUSTOMER_PROJECTION_PAGE_SIZE,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
+
+    for (const customer of rows) {
+      addCandidate(index, {
+        id: `customer:${customer.id}`,
+        entityId: customer.id,
+        kind: "customer",
+        label: customer.name,
+        sublabel: customer.phone,
+        href: `/customers/${customer.id}`,
+        keywords: [customer.wilaya ?? "", customer.commune ?? ""],
+        updatedAt: customer.updatedAt,
+      });
+    }
+
+    if (rows.length < CUSTOMER_PROJECTION_PAGE_SIZE) break;
+    cursor = rows.at(-1)?.id;
+    if (!cursor) break;
+  }
+
+  return index;
 }
 
 async function buildProductIndex(): Promise<SearchIndex> {
