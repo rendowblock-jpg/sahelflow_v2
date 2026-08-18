@@ -26,6 +26,13 @@ const CUSTOMER_TOKEN_REFERENCE = {
   recordType: "SearchProjection",
   field: "customer-token",
 } as const;
+const ORDER_DIRTY_BATCH_SIZE = 64;
+const ORDER_WARM_BATCH_LIMIT = 1_024;
+const ORDER_TOKEN_FAMILY = "order";
+const ORDER_TOKEN_REFERENCE = {
+  recordType: "SearchProjection",
+  field: "order-token",
+} as const;
 
 type BlindIndexClient = Parameters<typeof deriveShopBlindIndexes>[0];
 
@@ -42,12 +49,7 @@ interface SearchIndex {
   byCustomerId: Map<string, Set<string>>;
 }
 
-type ProjectionSlot =
-  | "product"
-  | "order"
-  | "delivery"
-  | "return"
-  | "conversation";
+type ProjectionSlot = "product" | "delivery" | "return" | "conversation";
 
 interface CachedProjection {
   revision: number;
@@ -56,7 +58,6 @@ interface CachedProjection {
 
 interface ShopProjectionCache {
   product?: CachedProjection;
-  order?: CachedProjection;
   delivery?: CachedProjection;
   return?: CachedProjection;
   conversation?: CachedProjection;
@@ -72,7 +73,15 @@ interface CustomerProjectionRow {
   deletedAt: Date | null;
 }
 
-interface CustomerDirtyRow {
+interface OrderProjectionRow {
+  id: string;
+  orderNumber: string;
+  customerId: string | null;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+interface ProjectionDirtyRow {
   entityId: string;
   revision: number;
 }
@@ -331,6 +340,121 @@ function addPersistentValueTokens(
   }
 }
 
+function persistentQueryKeys(rawQuery: string): {
+  exactKeys: string[];
+  prefixKeys: string[];
+  gramKeys: string[];
+} {
+  const query = normalizeSearchText(rawQuery);
+  const compact = compactSearchText(query);
+  return {
+    exactKeys: [
+      `primary-normalized:${query}`,
+      ...(compact.length >= 2 ? [`primary-compact:${compact}`] : []),
+      `exact-normalized:${query}`,
+      ...(compact.length >= 2 ? [`exact-compact:${compact}`] : []),
+    ],
+    prefixKeys: [
+      ...query
+        .split(/\s+/u)
+        .filter((token) => token.length >= 2)
+        .map((token) => `word-prefix:${token}`),
+      ...(compact.length >= 2 ? [`compact-prefix:${compact}`] : []),
+    ],
+    gramKeys:
+      compact.length >= GRAM_SIZE
+        ? grams(compact).map((gram) => `compact-gram:${gram}`)
+        : [],
+  };
+}
+
+async function queryTokenHashes(
+  keys: readonly string[],
+  reference: typeof CUSTOMER_TOKEN_REFERENCE | typeof ORDER_TOKEN_REFERENCE,
+  unavailableMessage: string,
+): Promise<Map<string, string>> {
+  const uniqueKeys = [...new Set(keys)];
+  const hashes = await deriveExistingShopBlindIndexes(
+    db as unknown as BlindIndexClient,
+    uniqueKeys,
+    reference,
+    { shopContext, normalize: (value) => value },
+  );
+  if (hashes === null) throw new Error(unavailableMessage);
+  return new Map(
+    uniqueKeys.map((key, index) => [key, hashes[index]!] as const),
+  );
+}
+
+async function idsForTokenHash(
+  family: string,
+  tokenHash: string,
+): Promise<Set<string>> {
+  const rows = await db.searchProjectionToken.findMany({
+    where: { family, tokenHash },
+    select: { entityId: true },
+    orderBy: { entityId: "asc" },
+    take: CANDIDATE_SCAN_BUDGET,
+  });
+  return new Set(rows.map((row) => row.entityId));
+}
+
+async function persistedIdsForQuery(
+  family: string,
+  reference: typeof CUSTOMER_TOKEN_REFERENCE | typeof ORDER_TOKEN_REFERENCE,
+  rawQuery: string,
+  unavailableMessage: string,
+): Promise<string[]> {
+  const query = normalizeSearchText(rawQuery);
+  if (query.length < 2) return [];
+  const { exactKeys, prefixKeys, gramKeys } = persistentQueryKeys(query);
+  const hashByKey = await queryTokenHashes(
+    [...exactKeys, ...prefixKeys, ...gramKeys],
+    reference,
+    unavailableMessage,
+  );
+  const selected = new Set<string>();
+
+  for (const key of exactKeys) {
+    const hash = hashByKey.get(key);
+    if (!hash) continue;
+    appendBounded(selected, await idsForTokenHash(family, hash));
+    if (selected.size >= CANDIDATE_SCAN_BUDGET) return [...selected];
+  }
+
+  if (prefixKeys.length > 0 && selected.size < CANDIDATE_SCAN_BUDGET) {
+    const buckets: Set<string>[] = [];
+    for (const key of prefixKeys) {
+      const hash = hashByKey.get(key);
+      if (!hash) continue;
+      const bucket = await idsForTokenHash(family, hash);
+      if (bucket.size > 0) buckets.push(bucket);
+    }
+    if (buckets.length > 0) {
+      let ids = new Set(buckets[0]);
+      for (const bucket of buckets.slice(1)) ids = intersect(ids, bucket);
+      appendBounded(selected, ids);
+    }
+  }
+
+  if (gramKeys.length > 0 && selected.size < CANDIDATE_SCAN_BUDGET) {
+    const buckets: Set<string>[] = [];
+    for (const key of gramKeys) {
+      const hash = hashByKey.get(key);
+      if (!hash) continue;
+      const bucket = await idsForTokenHash(family, hash);
+      if (bucket.size > 0) buckets.push(bucket);
+    }
+    if (buckets.length > 0) {
+      let ids = new Set(buckets[0]);
+      for (const bucket of buckets.slice(1)) ids = intersect(ids, bucket);
+      appendBounded(selected, ids);
+    }
+  }
+
+  return [...selected];
+}
+
 function customerPersistentTokenKeys(row: CustomerProjectionRow): string[] {
   const keys = new Set<string>();
   addPersistentValueTokens(keys, row.name, true);
@@ -340,11 +464,17 @@ function customerPersistentTokenKeys(row: CustomerProjectionRow): string[] {
   return [...keys];
 }
 
+function orderPersistentTokenKeys(row: OrderProjectionRow): string[] {
+  const keys = new Set<string>();
+  addPersistentValueTokens(keys, row.orderNumber, true);
+  return [...keys];
+}
+
 async function refreshCustomerProjectionBatch(): Promise<boolean> {
-  const dirty: CustomerDirtyRow[] = await db.searchProjectionDirty.findMany({
+  const dirty: ProjectionDirtyRow[] = await db.searchProjectionDirty.findMany({
     where: { family: CUSTOMER_TOKEN_FAMILY },
     select: { entityId: true, revision: true },
-    orderBy: { entityId: "asc" },
+    orderBy: [{ revision: "desc" }, { entityId: "asc" }],
     take: CUSTOMER_DIRTY_BATCH_SIZE,
   });
   if (dirty.length === 0) return true;
@@ -427,114 +557,111 @@ async function refreshCustomerProjectionBatch(): Promise<boolean> {
   );
 }
 
+async function refreshOrderProjectionBatch(): Promise<boolean> {
+  const dirty: ProjectionDirtyRow[] = await db.searchProjectionDirty.findMany({
+    where: { family: ORDER_TOKEN_FAMILY },
+    select: { entityId: true, revision: true },
+    orderBy: [{ revision: "desc" }, { entityId: "asc" }],
+    take: ORDER_DIRTY_BATCH_SIZE,
+  });
+  if (dirty.length === 0) return true;
+
+  const ids = dirty.map((entry) => entry.entityId);
+  const rows: OrderProjectionRow[] = await db.order.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      orderNumber: true,
+      customerId: true,
+      updatedAt: true,
+      deletedAt: true,
+    },
+  });
+  const rowsById = new Map(rows.map((row) => [row.id, row] as const));
+  const keysById = new Map<string, string[]>();
+  const allKeys = new Set<string>();
+
+  for (const dirtyRow of dirty) {
+    const order = rowsById.get(dirtyRow.entityId);
+    const keys =
+      order && order.deletedAt === null ? orderPersistentTokenKeys(order) : [];
+    keysById.set(dirtyRow.entityId, keys);
+    for (const key of keys) allKeys.add(key);
+  }
+
+  const uniqueKeys = [...allKeys];
+  const hashes = await deriveShopBlindIndexes(
+    db as unknown as BlindIndexClient,
+    uniqueKeys,
+    ORDER_TOKEN_REFERENCE,
+    { shopContext, normalize: (value) => value },
+  );
+  const hashByKey = new Map(
+    uniqueKeys.map((key, index) => [key, hashes[index]!] as const),
+  );
+
+  await db.$transaction(async (tx) => {
+    for (const dirtyRow of dirty) {
+      const claim = await tx.searchProjectionDirty.deleteMany({
+        where: {
+          family: ORDER_TOKEN_FAMILY,
+          entityId: dirtyRow.entityId,
+          revision: dirtyRow.revision,
+        },
+      });
+      if (claim.count !== 1) continue;
+
+      await tx.searchProjectionToken.deleteMany({
+        where: {
+          family: ORDER_TOKEN_FAMILY,
+          entityId: dirtyRow.entityId,
+        },
+      });
+
+      const tokenHashes = (keysById.get(dirtyRow.entityId) ?? [])
+        .map((key) => hashByKey.get(key))
+        .filter((hash): hash is string => Boolean(hash));
+      if (tokenHashes.length > 0) {
+        await tx.searchProjectionToken.createMany({
+          data: tokenHashes.map((tokenHash) => ({
+            family: ORDER_TOKEN_FAMILY,
+            entityId: dirtyRow.entityId,
+            tokenHash,
+          })),
+        });
+      }
+    }
+  });
+
+  return (
+    (await db.searchProjectionDirty.count({
+      where: { family: ORDER_TOKEN_FAMILY },
+    })) === 0
+  );
+}
+
 async function warmCustomerProjection(): Promise<void> {
   for (let batch = 0; batch < CUSTOMER_WARM_BATCH_LIMIT; batch += 1) {
     if (await refreshCustomerProjectionBatch()) return;
   }
-  throw new Error("Customer search projection backlog exceeded warmup budget");
 }
 
-async function customerQueryTokenHashes(
-  keys: readonly string[],
-): Promise<Map<string, string>> {
-  const uniqueKeys = [...new Set(keys)];
-  const hashes = await deriveExistingShopBlindIndexes(
-    db as unknown as BlindIndexClient,
-    uniqueKeys,
-    CUSTOMER_TOKEN_REFERENCE,
-    { shopContext, normalize: (value) => value },
-  );
-  if (hashes === null) {
-    throw new Error("Customer search blind-index authority is unavailable");
+async function warmOrderProjection(): Promise<void> {
+  for (let batch = 0; batch < ORDER_WARM_BATCH_LIMIT; batch += 1) {
+    if (await refreshOrderProjectionBatch()) return;
   }
-  return new Map(
-    uniqueKeys.map((key, index) => [key, hashes[index]!] as const),
-  );
-}
-
-async function customerIdsForTokenHash(tokenHash: string): Promise<Set<string>> {
-  const rows = await db.searchProjectionToken.findMany({
-    where: { family: CUSTOMER_TOKEN_FAMILY, tokenHash },
-    select: { entityId: true },
-    orderBy: { entityId: "asc" },
-    take: CANDIDATE_SCAN_BUDGET,
-  });
-  return new Set(rows.map((row) => row.entityId));
-}
-
-async function persistedCustomerIdsForQuery(rawQuery: string): Promise<string[]> {
-  const query = normalizeSearchText(rawQuery);
-  if (query.length < 2) return [];
-  const compact = compactSearchText(query);
-  const exactKeys = [
-    `primary-normalized:${query}`,
-    ...(compact.length >= 2 ? [`primary-compact:${compact}`] : []),
-    `exact-normalized:${query}`,
-    ...(compact.length >= 2 ? [`exact-compact:${compact}`] : []),
-  ];
-  const prefixKeys = [
-    ...query
-      .split(/\s+/u)
-      .filter((token) => token.length >= 2)
-      .map((token) => `word-prefix:${token}`),
-    ...(compact.length >= 2 ? [`compact-prefix:${compact}`] : []),
-  ];
-  const gramKeys =
-    compact.length >= GRAM_SIZE
-      ? grams(compact).map((gram) => `compact-gram:${gram}`)
-      : [];
-  const hashByKey = await customerQueryTokenHashes([
-    ...exactKeys,
-    ...prefixKeys,
-    ...gramKeys,
-  ]);
-  const selected = new Set<string>();
-
-  for (const key of exactKeys) {
-    const hash = hashByKey.get(key);
-    if (!hash) continue;
-    appendBounded(selected, await customerIdsForTokenHash(hash));
-    if (selected.size >= CANDIDATE_SCAN_BUDGET) return [...selected];
-  }
-
-  if (prefixKeys.length > 0 && selected.size < CANDIDATE_SCAN_BUDGET) {
-    const buckets: Set<string>[] = [];
-    for (const key of prefixKeys) {
-      const hash = hashByKey.get(key);
-      if (!hash) continue;
-      const bucket = await customerIdsForTokenHash(hash);
-      if (bucket.size > 0) buckets.push(bucket);
-    }
-    if (buckets.length > 0) {
-      let ids = new Set(buckets[0]);
-      for (const bucket of buckets.slice(1)) ids = intersect(ids, bucket);
-      appendBounded(selected, ids);
-    }
-  }
-
-  if (gramKeys.length > 0 && selected.size < CANDIDATE_SCAN_BUDGET) {
-    const buckets: Set<string>[] = [];
-    for (const key of gramKeys) {
-      const hash = hashByKey.get(key);
-      if (!hash) continue;
-      const bucket = await customerIdsForTokenHash(hash);
-      if (bucket.size > 0) buckets.push(bucket);
-    }
-    if (buckets.length > 0) {
-      let ids = new Set(buckets[0]);
-      for (const bucket of buckets.slice(1)) ids = intersect(ids, bucket);
-      appendBounded(selected, ids);
-    }
-  }
-
-  return [...selected];
 }
 
 async function queryPersistedCustomers(
   query: string,
   limit = DEFAULT_CANDIDATE_LIMIT,
 ): Promise<Array<ProjectedCandidate & { score: number }>> {
-  const ids = await persistedCustomerIdsForQuery(query);
+  const ids = await persistedIdsForQuery(
+    CUSTOMER_TOKEN_FAMILY,
+    CUSTOMER_TOKEN_REFERENCE,
+    query,
+    "Customer search blind-index authority is unavailable",
+  );
   if (ids.length === 0) return [];
   const rows = await db.customer.findMany({
     where: { id: { in: ids }, deletedAt: null },
@@ -560,6 +687,44 @@ async function queryPersistedCustomers(
         keywords: [customer.wilaya ?? "", customer.commune ?? ""],
         updatedAt: customer.updatedAt,
         rankBoost: CUSTOMER_RELEVANCE_BOOST,
+      }),
+    ),
+    limit,
+  );
+}
+
+async function queryPersistedOrders(
+  query: string,
+  limit = DEFAULT_CANDIDATE_LIMIT,
+): Promise<Array<ProjectedCandidate & { score: number }>> {
+  const ids = await persistedIdsForQuery(
+    ORDER_TOKEN_FAMILY,
+    ORDER_TOKEN_REFERENCE,
+    query,
+    "Order search blind-index authority is unavailable",
+  );
+  if (ids.length === 0) return [];
+  const rows = await db.order.findMany({
+    where: { id: { in: ids }, deletedAt: null },
+    select: {
+      id: true,
+      orderNumber: true,
+      customerId: true,
+      updatedAt: true,
+    },
+  });
+  return rankUniversalSearchCandidates(
+    query,
+    rows.map(
+      (order): ProjectedCandidate => ({
+        id: `order:${order.id}`,
+        entityId: order.id,
+        customerId: order.customerId ?? undefined,
+        kind: "order",
+        label: order.orderNumber,
+        href: `/orders/${order.id}`,
+        updatedAt: order.updatedAt,
+        rankBoost: 12,
       }),
     ),
     limit,
@@ -624,30 +789,6 @@ async function buildProductIndex(): Promise<SearchIndex> {
   );
 }
 
-async function buildOrderIndex(): Promise<SearchIndex> {
-  const rows = await db.order.findMany({
-    where: { deletedAt: null },
-    select: {
-      id: true,
-      orderNumber: true,
-      customerId: true,
-      updatedAt: true,
-    },
-  });
-  return createIndex(
-    rows.map((order) => ({
-      id: `order:${order.id}`,
-      entityId: order.id,
-      customerId: order.customerId,
-      kind: "order" as const,
-      label: order.orderNumber,
-      href: `/orders/${order.id}`,
-      updatedAt: order.updatedAt,
-      rankBoost: 12,
-    })),
-  );
-}
-
 async function buildDeliveryIndex(): Promise<SearchIndex> {
   const rows = await db.delivery.findMany({
     where: { deletedAt: null },
@@ -668,9 +809,10 @@ async function buildDeliveryIndex(): Promise<SearchIndex> {
         delivery.trackingNumber ??
         delivery.order.orderNumber ??
         delivery.id.slice(-8),
-      sublabel: [delivery.provider, delivery.order.orderNumber]
-        .filter(Boolean)
-        .join(" · "),
+      sublabel: delivery.order.orderNumber
+        ? `${delivery.provider} · \u2066${delivery.order.orderNumber}\u2069`
+        : delivery.provider,
+      keywords: [delivery.order.orderNumber ?? ""],
       href: `/deliveries/${delivery.id}`,
       updatedAt: delivery.updatedAt,
     })),
@@ -731,9 +873,7 @@ export async function searchProjectedCustomers(
   limit?: number,
 ) {
   assertBoundShop(shopId);
-  if (!(await refreshCustomerProjectionBatch())) {
-    throw new Error("Customer search projection is still warming");
-  }
+  await refreshCustomerProjectionBatch();
   return queryPersistedCustomers(query, limit);
 }
 
@@ -766,23 +906,42 @@ export async function searchProjectedOrders(
   query: string,
   limit?: number,
 ) {
-  return queryIndex(await cached(shopId, "order", buildOrderIndex), query, limit);
+  assertBoundShop(shopId);
+  await refreshOrderProjectionBatch();
+  return queryPersistedOrders(query, limit);
 }
 
 export async function projectedOrdersForCustomers(
   shopId: string,
   customerIds: readonly string[],
 ): Promise<ProjectedCandidate[]> {
-  if (customerIds.length === 0) return [];
-  const index = await cached(shopId, "order", buildOrderIndex);
-  const ids = new Set<string>();
-  for (const customerId of customerIds) {
-    for (const id of index.byCustomerId.get(customerId) ?? []) ids.add(id);
-  }
-  return [...ids]
-    .slice(0, DEFAULT_CANDIDATE_LIMIT * 2)
-    .map((id) => index.records.get(id))
-    .filter((row): row is ProjectedCandidate => Boolean(row));
+  assertBoundShop(shopId);
+  const uniqueCustomerIds = [...new Set(customerIds)];
+  if (uniqueCustomerIds.length === 0) return [];
+  const rows = await db.order.findMany({
+    where: {
+      customerId: { in: uniqueCustomerIds },
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      orderNumber: true,
+      customerId: true,
+      updatedAt: true,
+    },
+    orderBy: { updatedAt: "desc" },
+    take: DEFAULT_CANDIDATE_LIMIT * 2,
+  });
+  return rows.map((order) => ({
+    id: `order:${order.id}`,
+    entityId: order.id,
+    customerId: order.customerId ?? undefined,
+    kind: "order" as const,
+    label: order.orderNumber,
+    href: `/orders/${order.id}`,
+    updatedAt: order.updatedAt,
+    rankBoost: 12,
+  }));
 }
 
 export async function searchProjectedDeliveries(
@@ -820,7 +979,7 @@ export async function warmLocalSearchProjection(
     work.push(cached(shopId, "conversation", buildConversationIndex));
   }
   if (scope.product) work.push(cached(shopId, "product", buildProductIndex));
-  if (scope.order) work.push(cached(shopId, "order", buildOrderIndex));
+  if (scope.order) work.push(warmOrderProjection());
   if (scope.delivery) work.push(cached(shopId, "delivery", buildDeliveryIndex));
   if (scope.return) work.push(cached(shopId, "return", buildReturnIndex));
   await Promise.allSettled(work);
