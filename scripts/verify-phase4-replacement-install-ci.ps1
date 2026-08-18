@@ -12,9 +12,14 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $sourceScript = Join-Path $PSScriptRoot "verify-phase4-replacement-install.ps1"
 $patchedScript = Join-Path $env:RUNNER_TEMP "verify-phase4-replacement-install.licensed.ps1"
 $trialServerScript = Join-Path $PSScriptRoot "phase4-ci-trial-issuer.mjs"
+$committedAcceptanceTransportScript = Join-Path $PSScriptRoot "phase4-webview-committed-acceptance.ts"
 $trialKeyHex = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
 $trialKeyId = "ci-trial-key-v1"
 $trialServer = $null
+
+if (-not (Test-Path -LiteralPath $committedAcceptanceTransportScript -PathType Leaf)) {
+    throw "The Phase 4 committed WebView acceptance transport is missing."
+}
 
 try {
     $issuerSelfTest = @(& node $trialServerScript --self-test $trialKeyHex 2>&1)
@@ -158,6 +163,99 @@ $kit = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/bac
         throw "Replacement harness recovery-kit command anchor drifted."
     }
     $source = $source.Replace($kitCommand, $kitPrelude.TrimEnd())
+
+    # The committed-restore acceptance is the one historical trouble spot in
+    # this drill. A raw page-target ClientWebSocket can race WebView2 target
+    # rotation even after /json/list reports one exact-origin page. Replace only
+    # that CI-only function with Playwright's supported WebView2 browser-level
+    # CDP connection. The helper persists a no-secret dispatch guard before the
+    # mutating page.evaluate call, so pre-dispatch transport failures may retry
+    # but any ambiguous post-dispatch loss still fails closed.
+    $committedAcceptanceFunction = @'
+function Invoke-CommittedWebViewAcceptance {
+    param(
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [Parameter(Mandatory = $true)][string]$Pin,
+        [Parameter(Mandatory = $true)][string]$Phone,
+        [switch]$ActivateTrial
+    )
+
+    $transportScript = Join-Path $repositoryRoot "scripts\phase4-webview-committed-acceptance.ts"
+    if (-not (Test-Path -LiteralPath $transportScript -PathType Leaf)) {
+        throw "The committed WebView acceptance transport dependency is missing."
+    }
+    $inputJson = @{
+        pin = $Pin
+        phone = $Phone
+        activateTrial = [bool]$ActivateTrial
+    } | ConvertTo-Json -Depth 3 -Compress
+    $dispatchMarker = Join-Path $evidenceRoot "phase4-committed-webview-dispatch.json"
+    Remove-Item -LiteralPath $dispatchMarker -Force -ErrorAction SilentlyContinue
+    $deadline = (Get-Date).AddSeconds(60)
+    $lastTransportFailure = "none"
+
+    do {
+        $transportOutput = @(
+            $inputJson | & $bunCommand.Source $transportScript `
+                --debug-port $runtimeDebuggingPort `
+                --base-url $BaseUrl `
+                --dispatch-marker $dispatchMarker 2>&1
+        )
+        $transportExitCode = $LASTEXITCODE
+        $wire = $null
+        foreach ($line in @($transportOutput | Select-Object -Last 8)) {
+            try {
+                $candidate = ([string]$line).Trim() | ConvertFrom-Json
+                if ($null -ne $candidate.PSObject.Properties["ok"]) {
+                    $wire = $candidate
+                }
+            } catch {
+                # Bun may emit a non-JSON setup line. Keep only the helper's
+                # bounded privacy-safe wire result as transport evidence.
+            }
+        }
+
+        if (
+            $transportExitCode -eq 0 -and
+            $null -ne $wire -and
+            $wire.ok -eq $true -and
+            $null -ne $wire.result
+        ) {
+            return $wire.result
+        }
+
+        if ($null -ne $wire) {
+            $lastTransportFailure = "$($wire.stage)/$($wire.errorName)/$($wire.failureClass)"
+        } else {
+            $lastTransportFailure = "unclassified-helper-exit-$transportExitCode"
+        }
+
+        if (Test-Path -LiteralPath $dispatchMarker -PathType Leaf) {
+            throw "The installed WebView lost committed-restore acceptance transport after the mutation dispatch guard was persisted; the mutating journey was not retried (transport $lastTransportFailure)."
+        }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+
+    throw "The installed WebView did not complete the bounded committed-restore acceptance request (transport $lastTransportFailure)."
+}
+
+'@
+    $acceptanceStart = $source.IndexOf(
+        "function Invoke-CommittedWebViewAcceptance {",
+        [StringComparison]::Ordinal
+    )
+    $acceptanceEnd = $source.IndexOf(
+        "function Get-RuntimeCookieFromTarget {",
+        $acceptanceStart,
+        [StringComparison]::Ordinal
+    )
+    if ($acceptanceStart -lt 0 -or $acceptanceEnd -le $acceptanceStart) {
+        throw "Replacement harness committed-acceptance transport anchors drifted."
+    }
+    $source =
+        $source.Substring(0, $acceptanceStart) +
+        $committedAcceptanceFunction +
+        $source.Substring($acceptanceEnd)
 
     Set-Content -LiteralPath $patchedScript -Value $source -Encoding UTF8
 
