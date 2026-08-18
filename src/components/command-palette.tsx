@@ -3,16 +3,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  BarChart3,
   Hash,
-  LayoutDashboard,
   Loader2,
   MessageSquare,
   Package,
   RotateCcw,
   SearchX,
-  Settings,
-  ShoppingCart,
   Truck,
   Users,
 } from "lucide-react";
@@ -88,7 +84,10 @@ const RECORD_ICONS = {
   conversation: MessageSquare,
   delivery: Truck,
   return: RotateCcw,
-} as const satisfies Record<RecordKind, React.ComponentType<{ className?: string }>>;
+} as const satisfies Record<
+  RecordKind,
+  React.ComponentType<{ className?: string }>
+>;
 
 const KIND_COPY: Record<UniversalSearchKind, SearchCommandCopyKey> = {
   navigation: "typePage",
@@ -132,9 +131,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   }, [navigation, normalizedQuery]);
 
   const quickNavigation = React.useMemo(() => {
-    return QUICK_NAV_IDS.map((id) => navigation.find((item) => item.id === id)).filter(
-      (item): item is NonNullable<typeof item> => Boolean(item),
-    );
+    return QUICK_NAV_IDS.map((id) =>
+      navigation.find((item) => item.id === id),
+    ).filter((item): item is NonNullable<typeof item> => Boolean(item));
   }, [navigation]);
 
   React.useEffect(() => {
@@ -225,7 +224,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     router.push(href);
   }
 
-  const searching = normalizedQuery.length >= 2 && liveRecordState.searching;
+  const waitingForRequest =
+    normalizedQuery.length >= 2 && recordState.query !== normalizedQuery;
+  const searching =
+    normalizedQuery.length >= 2 &&
+    (waitingForRequest || liveRecordState.searching);
   const noResults =
     normalizedQuery.length > 0 && !searching && visibleResults.length === 0;
 
@@ -262,7 +265,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             ) : null}
           </div>
 
-          <CommandList className="max-h-[min(34rem,68dvh)] px-2 py-2">
+          <CommandList
+            className="max-h-[min(34rem,68dvh)] px-2 py-2"
+            aria-live="polite"
+          >
             {!normalizedQuery ? (
               <>
                 <div className="px-3 pb-2 pt-1">
@@ -338,16 +344,30 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             ) : null}
 
             {searching && visibleResults.length === 0 ? (
-              <div className="flex min-h-40 flex-col items-center justify-center px-6 text-center" role="status">
-                <Loader2 className="size-5 animate-spin text-primary" aria-hidden="true" />
+              <div
+                className="flex min-h-40 flex-col items-center justify-center px-6 text-center"
+                role="status"
+              >
+                <Loader2
+                  className="size-5 animate-spin text-primary"
+                  aria-hidden="true"
+                />
                 <p className="mt-3 text-sm font-medium">{copy("searching")}</p>
               </div>
             ) : null}
 
             {liveRecordState.failed && visibleResults.length === 0 ? (
-              <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center" role="status">
-                <SearchX className="size-6 text-muted-foreground" aria-hidden="true" />
-                <p className="mt-3 text-sm font-semibold">{copy("unavailable")}</p>
+              <div
+                className="flex min-h-44 flex-col items-center justify-center px-6 text-center"
+                role="status"
+              >
+                <SearchX
+                  className="size-6 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <p className="mt-3 text-sm font-semibold">
+                  {copy("unavailable")}
+                </p>
                 <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
                   {copy("unavailableHint")}
                 </p>
@@ -356,8 +376,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
             {noResults && !liveRecordState.failed ? (
               <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center">
-                <SearchX className="size-6 text-muted-foreground" aria-hidden="true" />
-                <p className="mt-3 text-sm font-semibold">{copy("noResults")}</p>
+                <SearchX
+                  className="size-6 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <p className="mt-3 text-sm font-semibold">
+                  {copy("noResults")}
+                </p>
                 <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
                   {copy("noResultsHint")}
                 </p>
@@ -367,15 +392,21 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
           <div className="flex min-h-10 items-center gap-2 border-t border-border/70 bg-muted/15 px-3.5 text-[10px] text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <kbd className="rounded-md border border-border/70 bg-background px-1.5 py-0.5 font-mono">↑↓</kbd>
+              <kbd className="rounded-md border border-border/70 bg-background px-1.5 py-0.5 font-mono">
+                ↑↓
+              </kbd>
               {copy("navigate")}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <kbd className="rounded-md border border-border/70 bg-background px-1.5 py-0.5 font-mono">↵</kbd>
+              <kbd className="rounded-md border border-border/70 bg-background px-1.5 py-0.5 font-mono">
+                ↵
+              </kbd>
               {copy("open")}
             </span>
             <span className="ms-auto inline-flex items-center gap-1.5">
-              <kbd className="rounded-md border border-border/70 bg-background px-1.5 py-0.5 font-mono">Esc</kbd>
+              <kbd className="rounded-md border border-border/70 bg-background px-1.5 py-0.5 font-mono">
+                Esc
+              </kbd>
               {copy("close")}
             </span>
           </div>
