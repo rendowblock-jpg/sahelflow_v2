@@ -13,6 +13,7 @@ import {
   TooltipComponent,
 } from "echarts/components";
 import {
+  getInstanceByDom,
   init,
   use,
   type ECharts,
@@ -124,6 +125,28 @@ function themeSignature(theme: SahelChartTheme) {
   ].join("|");
 }
 
+function withRuntimePolicy(
+  option: EChartsCoreOption,
+  ariaLabel: string,
+  reducedMotion: boolean,
+  baseDuration: number,
+): EChartsCoreOption {
+  return {
+    ...option,
+    animation: !reducedMotion,
+    animationDuration: reducedMotion ? 0 : baseDuration,
+    animationDurationUpdate: reducedMotion ? 0 : Math.min(baseDuration, 280),
+    animationEasing: "cubicOut",
+    animationEasingUpdate: "cubicOut",
+    aria: {
+      enabled: true,
+      description: ariaLabel,
+      decal: { show: true },
+      ...((option.aria as object | undefined) ?? {}),
+    },
+  };
+}
+
 export function chartTooltip(theme: SahelChartTheme) {
   return {
     trigger: "axis" as const,
@@ -137,7 +160,7 @@ export function chartTooltip(theme: SahelChartTheme) {
     textStyle: {
       color: theme.foreground,
       fontSize: 12,
-      fontFamily: "var(--font-inter), ui-sans-serif, system-ui, sans-serif",
+      fontFamily: "ui-sans-serif, system-ui, sans-serif",
     },
     axisPointer: {
       type: "line" as const,
@@ -254,22 +277,13 @@ export function EChartSurface({
     const render = () => {
       const theme = readSahelChartTheme();
       lastThemeSignature = themeSignature(theme);
-      const next = optionRef.current(theme);
       chart.setOption(
-        {
-          ...next,
-          animation: !reducedMotion,
-          animationDuration: reducedMotion ? 0 : baseDuration,
-          animationDurationUpdate: reducedMotion ? 0 : Math.min(baseDuration, 280),
-          animationEasing: "cubicOut",
-          animationEasingUpdate: "cubicOut",
-          aria: {
-            enabled: true,
-            description: ariaLabel,
-            decal: { show: true },
-            ...((next.aria as object | undefined) ?? {}),
-          },
-        },
+        withRuntimePolicy(
+          optionRef.current(theme),
+          ariaLabel,
+          reducedMotion,
+          baseDuration,
+        ),
         { notMerge: true, lazyUpdate: false },
       );
     };
@@ -288,11 +302,12 @@ export function EChartSurface({
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(render);
     });
-    themeObserver.observe(document.documentElement, {
+    const observerOptions: MutationObserverInit = {
       attributes: true,
-      subtree: true,
       attributeFilter: ["class", "style", "data-theme", "data-theme-preset"],
-    });
+    };
+    themeObserver.observe(document.documentElement, observerOptions);
+    if (document.body) themeObserver.observe(document.body, observerOptions);
 
     return () => {
       cancelAnimationFrame(frame);
@@ -305,23 +320,15 @@ export function EChartSurface({
   React.useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const chart = initExisting(container);
+    const chart = getInstanceByDom(container);
     if (!chart) return;
-    const theme = readSahelChartTheme();
-    const next = option(theme);
     chart.setOption(
-      {
-        ...next,
-        animation: !reducedMotion,
-        animationDuration: reducedMotion ? 0 : baseDuration,
-        animationDurationUpdate: reducedMotion ? 0 : Math.min(baseDuration, 280),
-        aria: {
-          enabled: true,
-          description: ariaLabel,
-          decal: { show: true },
-          ...((next.aria as object | undefined) ?? {}),
-        },
-      },
+      withRuntimePolicy(
+        option(readSahelChartTheme()),
+        ariaLabel,
+        reducedMotion,
+        baseDuration,
+      ),
       { notMerge: true, lazyUpdate: false },
     );
   }, [option, ariaLabel, baseDuration, reducedMotion]);
@@ -336,24 +343,4 @@ export function EChartSurface({
       aria-label={ariaLabel}
     />
   );
-}
-
-function initExisting(container: HTMLDivElement): ECharts | undefined {
-  const instance = container.getAttribute("_echarts_instance_");
-  if (!instance) return undefined;
-  return getInstance(container);
-}
-
-function getInstance(container: HTMLDivElement): ECharts | undefined {
-  // Importing getInstanceByDom through the tree-shaken core keeps lifecycle
-  // ownership in one module while avoiding a second chart initialization.
-  return getInstanceByDomCompat(container);
-}
-
-function getInstanceByDomCompat(container: HTMLDivElement): ECharts | undefined {
-  // ECharts stores the instance marker on the host. The official lookup is
-  // reached lazily to keep the public surface small and SSR-safe.
-  return (globalThis as typeof globalThis & {
-    __SAHELFLOW_ECHARTS_LOOKUP__?: (node: HTMLDivElement) => ECharts | undefined;
-  }).__SAHELFLOW_ECHARTS_LOOKUP__?.(container);
 }
