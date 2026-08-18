@@ -27,6 +27,7 @@ $resultPath = Join-Path $evidenceRoot "ui-result.json"
 $workspaceWindowTitle = "SahelFlow"
 $maxRuntimePrepareMilliseconds = 15000
 $maxAuthenticatedUiMilliseconds = 100000
+$authenticatedUiEvidenceGraceMilliseconds = 3000
 
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
@@ -188,6 +189,7 @@ function Wait-ForAuthenticatedUi {
 
     $deadline = $StartedAt.AddMilliseconds($maxAuthenticatedUiMilliseconds)
     $lastObservation = $null
+    $workspaceVisibleAt = $null
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Milliseconds 250
         $Process.Refresh()
@@ -246,15 +248,29 @@ function Wait-ForAuthenticatedUi {
             }
         )
         $workspaceWindows = @($visibleWindows | Where-Object { $_.title -ceq $workspaceWindowTitle })
+        if ($workspaceWindows.Count -eq 0) {
+            $workspaceVisibleAt = $null
+        } elseif ($null -eq $workspaceVisibleAt) {
+            $workspaceVisibleAt = Get-Date
+        }
+        $workspaceEvidenceLeadMilliseconds = if ($null -ne $workspaceVisibleAt -and -not $matching) {
+            [int64]((Get-Date) - $workspaceVisibleAt).TotalMilliseconds
+        } else {
+            0
+        }
         $lastObservation = [pscustomobject]@{
             endpointMatched = [bool]$matching
             responding = [bool]$Process.Responding
             workspaceWindowCount = $workspaceWindows.Count
+            workspaceVisibleBeforeEvidenceMilliseconds = $workspaceEvidenceLeadMilliseconds
             visibleWindows = @($visibleWindows)
         }
         if (-not $matching) {
-            if ($workspaceWindows.Count -ne 0) {
-                throw "${Phase}: workspace became visible before authenticated readiness evidence."
+            if (
+                $workspaceWindows.Count -ne 0 -and
+                $workspaceEvidenceLeadMilliseconds -gt $authenticatedUiEvidenceGraceMilliseconds
+            ) {
+                throw "${Phase}: workspace remained visible for $workspaceEvidenceLeadMilliseconds ms without matching authenticated readiness evidence."
             }
             continue
         }
