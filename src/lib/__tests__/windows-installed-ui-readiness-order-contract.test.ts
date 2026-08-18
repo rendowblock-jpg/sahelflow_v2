@@ -33,6 +33,10 @@ describe("installed Windows authenticated UI readiness ordering", () => {
     expect(harness).toContain(
       "-not $readinessPredatesWorkspaceVisibility",
     );
+    expect(harness).toContain("uiDiagnostic = $uiDiagnostic");
+    expect(harness).not.toContain(
+      "Add-Member -NotePropertyName uiDiagnostic",
+    );
 
     const firstVisibilityCapture = harness.indexOf(
       "if ($workspaceWindows.Count -ne 0 -and $null -eq $workspaceVisibleAt)",
