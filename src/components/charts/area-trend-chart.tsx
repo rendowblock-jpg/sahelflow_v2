@@ -43,6 +43,26 @@ export function AreaTrendChart({
   yDomain,
 }: AreaTrendChartProps) {
   const { t } = useI18n();
+  const primary = series.length === 1 ? series[0] : undefined;
+  const values = primary
+    ? data.map((row) => Number(row[primary.key] ?? 0)).filter(Number.isFinite)
+    : [];
+  const average = values.length
+    ? values.reduce((sum, value) => sum + value, 0) / values.length
+    : 0;
+  const resolvedReferenceLines =
+    referenceLines ??
+    (primary?.key === "revenue" && average > 0
+      ? [
+          {
+            value: average,
+            label: t("analytics.avgValue"),
+            color: "var(--muted-foreground)",
+            lineStyle: "dotted" as const,
+          },
+        ]
+      : undefined);
+
   return (
     <TimeSeriesChart
       data={data}
@@ -56,7 +76,7 @@ export function AreaTrendChart({
       emptyMessage={emptyMessage}
       mode="area"
       ariaLabel={t("charts.areaTrend")}
-      referenceLines={referenceLines}
+      referenceLines={resolvedReferenceLines}
       referenceBands={referenceBands}
       yDomain={yDomain}
     />
