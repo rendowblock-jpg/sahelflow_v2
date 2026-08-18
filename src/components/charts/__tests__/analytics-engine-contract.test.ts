@@ -46,4 +46,25 @@ describe("Class-AAA analytics engine boundary", () => {
       );
     }
   });
+
+  it("keeps the ECharts runtime tree-shaken and the stat-card sparkline lightweight", () => {
+    const runtime = readFileSync(
+      join(SOURCE_ROOT, "components", "charts", "echarts-runtime.tsx"),
+      "utf8",
+    );
+    const sparkline = readFileSync(
+      join(SOURCE_ROOT, "components", "charts", "sparkline.tsx"),
+      "utf8",
+    );
+
+    expect(runtime).toContain('from "echarts/core"');
+    expect(runtime).toContain('from "echarts/charts"');
+    expect(runtime).toContain('from "echarts/components"');
+    expect(runtime).toContain('from "echarts/renderers"');
+    expect(runtime).not.toContain('from "echarts"');
+    expect(runtime).toContain('renderer: "svg"');
+
+    expect(sparkline).toContain('data-chart-engine="native-svg"');
+    expect(sparkline).not.toContain("EChartSurface");
+  });
 });
