@@ -1,0 +1,14 @@
+.workspace {}
+
+:global(html[dir="rtl"]) .workspace :global([data-inbox-conversation]) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+:global(html[dir="rtl"])
+  .workspace
+  :global([data-inbox-conversation])
+  > :global(span:last-child) {
+  min-width: 0;
+  width: 100%;
+}
