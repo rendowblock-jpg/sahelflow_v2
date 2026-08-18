@@ -1,0 +1,4 @@
+model SearchProjectionRevision {
+  id       String @id
+  revision Int    @default(0)
+}
