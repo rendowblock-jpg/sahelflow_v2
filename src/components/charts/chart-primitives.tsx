@@ -8,13 +8,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { ChartConfig } from "@/components/ui/chart";
 import {
   cn,
   formatDZD,
   formatDZDShort,
   type SupportedLocale,
 } from "@/lib/utils";
+import type { ChartConfig } from "./chart-types";
 
 export type ChartFormatter =
   | "currency"
@@ -30,10 +30,10 @@ export const DEFAULT_CHART_EMPTY_HEIGHT: ChartHeight =
   "var(--sf-chart-empty-height, clamp(12rem, 22vw, 17.5rem))";
 
 /**
- * Wave 2 compatibility bridge for legacy analytical callers that still pass
- * 300/320px numeric canvases. Large numeric heights converge to the governed
- * fluid desktop range; deliberately compact visuals (for example 220px gauges)
- * and explicit CSS lengths remain exact.
+ * Compatibility bridge for analytical callers that still pass 300/320px
+ * numeric canvases. Large numeric heights converge to the governed fluid
+ * desktop range; deliberately compact visuals and explicit CSS lengths remain
+ * exact.
  */
 export function normalizeChartHeight(
   height: ChartHeight = DEFAULT_CHART_HEIGHT,
@@ -117,7 +117,7 @@ interface ChartCardProps {
   action?: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
-  /** Retained as the analytical-series contract; the child owns ChartContainer. */
+  /** Analytical-series metadata used for color/label authority. */
   config: ChartConfig;
   height?: ChartHeight;
   children: React.ReactNode;
@@ -128,10 +128,8 @@ interface ChartCardProps {
  *
  * A chart is not a decorative rectangle: it carries a readable title, optional
  * business context, visible summary, plot, and optional footer/action. ChartCard
- * intentionally does not create a ChartContainer/ResponsiveContainer: every
- * chart primitive owns exactly one responsive plot authority. This avoids nested
- * measurement canvases and keeps tooltips, legends and accessibility bound to the
- * chart that actually renders them.
+ * deliberately does not create a rendering engine; each visual primitive owns
+ * exactly one plot authority.
  */
 export function ChartCard({
   title,

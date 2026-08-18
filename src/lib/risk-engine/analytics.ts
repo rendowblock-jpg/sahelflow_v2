@@ -163,7 +163,7 @@ export async function getRiskAnalyticsReport(
     if (row.status === "returned") history.returnedCount += 1;
     if (row.status === "refused") history.refusedCount += 1;
     if (row.status === "cancelled") history.cancelledCount += 1;
-    if (!['cancelled', 'draft'].includes(row.status)) {
+    if (!["cancelled", "draft"].includes(row.status)) {
       history.totalSpent += row.totalPrice;
     }
     history.firstOrderDate ??= row.createdAt;
@@ -239,11 +239,21 @@ export async function getRiskAnalyticsReport(
   }));
 
   const confirmationByLevel = levels.map((level) => {
-    const levelOrders = assessments.filter((row) => row.assessment.level === level);
-    const delivered = levelOrders.filter((row) => row.status === "delivered").length;
-    const returned = levelOrders.filter((row) => row.status === "returned").length;
-    const refused = levelOrders.filter((row) => row.status === "refused").length;
-    const cancelled = levelOrders.filter((row) => row.status === "cancelled").length;
+    const levelOrders = assessments.filter(
+      (row) => row.assessment.level === level,
+    );
+    const delivered = levelOrders.filter(
+      (row) => row.status === "delivered",
+    ).length;
+    const returned = levelOrders.filter(
+      (row) => row.status === "returned",
+    ).length;
+    const refused = levelOrders.filter(
+      (row) => row.status === "refused",
+    ).length;
+    const cancelled = levelOrders.filter(
+      (row) => row.status === "cancelled",
+    ).length;
     const pending = levelOrders.filter((row) =>
       ["draft", "pending", "confirmed", "shipped"].includes(row.status),
     ).length;
@@ -273,18 +283,32 @@ export async function getRiskAnalyticsReport(
       const completed = data.statuses.filter((status) =>
         ["delivered", "returned", "refused"].includes(status),
       );
-      const delivered = data.statuses.filter((status) => status === "delivered").length;
+      const delivered = data.statuses.filter(
+        (status) => status === "delivered",
+      ).length;
       return {
         wilaya,
         orderCount: data.scores.length,
-        avgScore: Math.round(data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length),
-        confirmationRate: completed.length > 0 ? delivered / completed.length : 0,
+        avgScore: Math.round(
+          data.scores.reduce((sum, score) => sum + score, 0) /
+            data.scores.length,
+        ),
+        confirmationRate:
+          completed.length > 0 ? delivered / completed.length : 0,
       };
     })
-    .sort((left, right) => right.orderCount - left.orderCount)
+    .sort(
+      (left, right) =>
+        right.avgScore - left.avgScore ||
+        right.orderCount - left.orderCount ||
+        left.wilaya.localeCompare(right.wilaya),
+    )
     .slice(0, 10);
 
-  const factors = new Map<string, { count: number; points: number; labelKey: string }>();
+  const factors = new Map<
+    string,
+    { count: number; points: number; labelKey: string }
+  >();
   for (const row of assessments) {
     for (const factor of row.assessment.factors) {
       const current = factors.get(factor.id) ?? {
@@ -319,7 +343,10 @@ export async function getRiskAnalyticsReport(
     .map(([date, data]) => ({
       date,
       orderCount: data.scores.length,
-      avgScore: Math.round(data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length),
+      avgScore: Math.round(
+        data.scores.reduce((sum, score) => sum + score, 0) /
+          data.scores.length,
+      ),
       criticalCount: data.criticalCount,
     }))
     .sort((left, right) => left.date.localeCompare(right.date));
@@ -331,28 +358,31 @@ export async function getRiskAnalyticsReport(
     enabled: rule.enabled,
   }));
   const scores = assessments.map((row) => row.assessment.score);
-  const avgRiskScore = scores.length > 0
-    ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
-    : 0;
+  const avgRiskScore =
+    scores.length > 0
+      ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+      : 0;
   const completedOrders = assessments.filter((row) =>
     ["delivered", "returned", "refused"].includes(row.status),
   );
-  const deliveredCount = completedOrders.filter((row) => row.status === "delivered").length;
+  const deliveredCount = completedOrders.filter(
+    (row) => row.status === "delivered",
+  ).length;
   const returnedCount = completedOrders.filter(
     (row) => row.status === "returned" || row.status === "refused",
   ).length;
-  const confirmationRate = completedOrders.length > 0
-    ? deliveredCount / completedOrders.length
-    : 0;
-  const returnRate = completedOrders.length > 0
-    ? returnedCount / completedOrders.length
-    : 0;
+  const confirmationRate =
+    completedOrders.length > 0 ? deliveredCount / completedOrders.length : 0;
+  const returnRate =
+    completedOrders.length > 0 ? returnedCount / completedOrders.length : 0;
   const highRiskOrderCount = assessments.filter(
-    (row) => row.assessment.level === "high" || row.assessment.level === "critical",
+    (row) =>
+      row.assessment.level === "high" || row.assessment.level === "critical",
   ).length;
   const returnedHighRisk = assessments.filter(
     (row) =>
-      (row.assessment.level === "high" || row.assessment.level === "critical") &&
+      (row.assessment.level === "high" ||
+        row.assessment.level === "critical") &&
       (row.status === "returned" || row.status === "refused"),
   ).length;
 

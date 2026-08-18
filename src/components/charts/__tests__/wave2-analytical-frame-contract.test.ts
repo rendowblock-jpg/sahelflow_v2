@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
@@ -6,59 +6,54 @@ function source(relativeUrl: string): string {
   return readFileSync(new URL(relativeUrl, import.meta.url), "utf8");
 }
 
-describe("Wave 2 analytical frame contract", () => {
-  it("keeps exactly one responsive chart authority per rendered chart", () => {
+describe("Class-AAA analytical frame contract", () => {
+  it("keeps ChartCard as product chrome rather than a rendering engine", () => {
     const primitives = source("../chart-primitives.tsx");
 
     expect(primitives).toContain("children: React.ReactNode");
     expect(primitives).toContain('data-chart-plot="true"');
-    expect(primitives).not.toContain("<ChartContainer");
+    expect(primitives).not.toContain("ResponsiveContainer");
+    expect(primitives).not.toContain("EChartSurface");
   });
 
-  it("honors the existing chart accent contract in the analytical header", () => {
+  it("honors the chart accent contract in the analytical header", () => {
     const primitives = source("../chart-primitives.tsx");
 
     expect(primitives).toContain("accent,");
-    expect(primitives).toContain("accent,\n                )}");
+    expect(primitives).toContain("data-chart-header-icon");
   });
 
-  it("normalizes legacy large heights in every full-size shared chart", () => {
-    for (const file of [
-      "../area-trend-chart.tsx",
-      "../line-trend-chart.tsx",
-      "../horizontal-bar-chart.tsx",
-      "../composed-trend-chart.tsx",
-      "../donut-chart.tsx",
-      "../radial-gauge.tsx",
-      "../dual-bar-chart.tsx",
-    ]) {
-      expect(source(file)).toContain("normalizeChartHeight");
-    }
-  });
-
-  it("formats directional chart values under the active locale authority", () => {
-    for (const file of [
-      "../area-trend-chart.tsx",
-      "../line-trend-chart.tsx",
-      "../horizontal-bar-chart.tsx",
-      "../composed-trend-chart.tsx",
-    ]) {
-      const chart = source(file);
-      expect(chart).toContain("locale } = useI18n()");
-      expect(chart).toContain("locale)");
-    }
-
+  it("centralizes full-size height normalization and responsive rendering", () => {
+    const timeSeries = source("../time-series-chart.tsx");
+    const composed = source("../composed-trend-chart.tsx");
     const dual = source("../dual-bar-chart.tsx");
+    const runtime = source("../echarts-runtime.tsx");
+
+    for (const chart of [timeSeries, composed, dual]) {
+      expect(chart).toContain("normalizeChartHeight");
+      expect(chart).toContain("EChartSurface");
+    }
+    expect(runtime).toContain("new ResizeObserver");
+    expect(runtime).toContain("chart.resize()");
+  });
+
+  it("formats quantitative values under the active locale authority", () => {
+    const timeSeries = source("../time-series-chart.tsx");
+    const composed = source("../composed-trend-chart.tsx");
+    const dual = source("../dual-bar-chart.tsx");
+
+    expect(timeSeries).toContain("const { locale, dir } = useI18n()");
+    expect(timeSeries).toContain("resolveFormatter(current.format, locale)");
+    expect(composed).toContain("const { t, locale, dir } = useI18n()");
+    expect(composed).toContain("resolveFormatter(current.format, locale)");
     expect(dual).toContain("new Intl.NumberFormat(");
     expect(dual).toContain('locale === "ar" ? "ar-DZ"');
-    expect(dual).toContain("formatDZD(value, locale)");
+    expect(dual).toContain("formatDZD(Number(value ?? 0), locale)");
   });
 
   it("keeps quantitative and chronological coordinates stable when Arabic is active", () => {
     for (const file of [
-      "../area-trend-chart.tsx",
-      "../line-trend-chart.tsx",
-      "../horizontal-bar-chart.tsx",
+      "../time-series-chart.tsx",
       "../composed-trend-chart.tsx",
       "../dual-bar-chart.tsx",
     ]) {
@@ -68,45 +63,43 @@ describe("Wave 2 analytical frame contract", () => {
       expect(chart).not.toContain('orientation={isRtl ? "left" : "right"}');
     }
 
-    expect(source("../horizontal-bar-chart.tsx")).toContain('orientation="left"');
-    expect(source("../horizontal-bar-chart.tsx")).toContain('position="right"');
-    expect(source("../line-trend-chart.tsx")).toContain('orientation="left"');
-    expect(source("../area-trend-chart.tsx")).toContain('orientation="left"');
+    const timeSeries = source("../time-series-chart.tsx");
+    const composed = source("../composed-trend-chart.tsx");
+    expect(timeSeries).toContain("formatter: (value: string) => isolate(value)");
+    expect(composed).toContain("formatter: (value: string) => isolate(value)");
   });
 
-  it("uses container-relative polar geometry rather than fixed pixel radii", () => {
-    const donut = source("../donut-chart.tsx");
-    const radial = source("../radial-gauge.tsx");
-
-    expect(donut).toMatch(/innerRadius = "\d+%"/);
-    expect(donut).toMatch(/outerRadius = "\d+%"/);
-    expect(radial).toMatch(/innerRadius="\d+%"/);
-    expect(radial).toMatch(/outerRadius="\d+%"/);
-    expect(donut).not.toMatch(/innerRadius = \d+/);
-    expect(radial).not.toMatch(/innerRadius=\{\d+\}/);
-  });
-
-  it("governs chart motion and prevents spline overshoot outside observed data", () => {
-    for (const file of [
-      "../area-trend-chart.tsx",
-      "../line-trend-chart.tsx",
-      "../horizontal-bar-chart.tsx",
-      "../composed-trend-chart.tsx",
+  it("removes the rejected circular and generic ranking chart primitives", () => {
+    for (const relativeUrl of [
       "../donut-chart.tsx",
+      "../horizontal-bar-chart.tsx",
       "../radial-gauge.tsx",
+    ]) {
+      expect(existsSync(new URL(relativeUrl, import.meta.url))).toBe(false);
+    }
+  });
+
+  it("centralizes motion policy and keeps tiny stat-card trends renderer-light", () => {
+    const runtime = source("../echarts-runtime.tsx");
+    const sparkline = source("../sparkline.tsx");
+
+    expect(runtime).toContain("useChartMotion");
+    expect(runtime).toContain("animation: !reducedMotion");
+    expect(sparkline).toContain('data-chart-engine="native-svg"');
+    expect(sparkline).toContain("strokeLinejoin=\"round\"");
+    expect(sparkline).not.toContain("echarts");
+    expect(sparkline).not.toContain("recharts");
+  });
+
+  it("removes fixed ResponsiveContainer geometry from analytical charts", () => {
+    for (const file of [
+      "../time-series-chart.tsx",
+      "../composed-trend-chart.tsx",
       "../dual-bar-chart.tsx",
     ]) {
-      expect(source(file)).toContain("useChartMotion");
+      const chart = source(file);
+      expect(chart).not.toContain("ResponsiveContainer");
+      expect(chart).not.toContain('height={300}');
     }
-    const sparkline = source("../sparkline.tsx");
-    expect(sparkline).toContain('domain={["dataMin - 1", "dataMax + 1"]}');
-    expect(sparkline).toContain("isAnimationActive={false}");
-  });
-
-  it("removes the fixed 300px ResponsiveContainer from the legacy dual-bar chart", () => {
-    const dual = source("../dual-bar-chart.tsx");
-
-    expect(dual).toContain('height="100%"');
-    expect(dual).not.toContain('height={300}');
   });
 });

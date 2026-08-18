@@ -5,7 +5,7 @@ import {
   normalizeChartHeight,
 } from "../chart-primitives";
 
-describe("Wave 2 chart height normalization", () => {
+describe("Class-AAA chart height normalization", () => {
   it("converges legacy large numeric canvases onto the fluid shared height", () => {
     expect(normalizeChartHeight(260)).toBe(DEFAULT_CHART_HEIGHT);
     expect(normalizeChartHeight(300)).toBe(DEFAULT_CHART_HEIGHT);

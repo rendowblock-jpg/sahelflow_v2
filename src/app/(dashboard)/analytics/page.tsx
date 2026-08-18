@@ -7,11 +7,9 @@ import {
   BarChart3,
   Clock,
   DollarSign,
-  Gauge,
   MapPin,
   Minus,
   Package,
-  PieChart,
   RotateCcw,
   ShoppingCart,
   TrendingDown,
@@ -27,15 +25,13 @@ import {
 } from "@/components/charts/chart-primitives";
 import { ComposedTrendChart } from "@/components/charts/composed-trend-chart";
 import {
-  DonutChart,
-  type DonutDatum,
-} from "@/components/charts/donut-chart";
-import {
-  HorizontalBarChart,
-  type HBarDatum,
-} from "@/components/charts/horizontal-bar-chart";
+  OutcomeProgress,
+  RankedMetricList,
+  SegmentedBreakdown,
+  type BreakdownDatum,
+  type RankedMetricDatum,
+} from "@/components/charts/decision-visualizations";
 import { LineTrendChart } from "@/components/charts/line-trend-chart";
-import { RadialGauge } from "@/components/charts/radial-gauge";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -123,28 +119,21 @@ export default async function AnalyticsPage({
   const fmtSignedPercent = (value: number) =>
     signedPercentFormatter.format(value / 100);
 
-  const returnRateData: HBarDatum[] = returnRateByWilaya
+  const returnRateData: RankedMetricDatum[] = returnRateByWilaya
     .slice(0, 10)
     .map((wilaya) => ({
       key: wilaya.wilaya,
-      label:
-        wilaya.wilaya.length > 15
-          ? `${wilaya.wilaya.slice(0, 14)}…`
-          : wilaya.wilaya,
+      label: wilaya.wilaya,
       value: Math.round(wilaya.returnRate * 10) / 10,
+      displayValue: fmtPercent(wilaya.returnRate),
+      detail: `${integerFormatter.format(wilaya.returned)} ${t("analytics.returned")} / ${integerFormatter.format(wilaya.total)} ${t("analytics.ordersLabel")}`,
       color:
         wilaya.returnRate > 30
-          ? "var(--color-chart-4)"
+          ? "var(--color-destructive)"
           : wilaya.returnRate > 15
             ? "var(--color-chart-3)"
             : "var(--color-chart-2)",
     }));
-  const returnRateConfig: ChartConfig = {
-    value: {
-      label: t("analytics.returnRateLabel"),
-      color: "var(--color-chart-4)",
-    },
-  };
 
   const summary = report.summary;
   const revenueData = report.revenueTimeSeries.map((point) => ({
@@ -188,46 +177,39 @@ export default async function AnalyticsPage({
     },
   };
 
-  const donutData: DonutDatum[] = report.statusDistribution.map((status) => ({
-    key: status.key,
-    label: t(statusI18nKey(status.key)),
-    value: status.value,
-    color:
-      STATUS_CHART_COLORS[status.key as OrderStatus] ??
-      "var(--color-chart-1)",
-  }));
-  const donutConfig: ChartConfig = {};
-  for (const datum of donutData) {
-    donutConfig[datum.key] = { label: datum.label, color: datum.color };
-  }
-  const totalOrders = donutData.reduce((sum, datum) => sum + datum.value, 0);
+  const statusBreakdownData: BreakdownDatum[] = report.statusDistribution.map(
+    (status) => ({
+      key: status.key,
+      label: t(statusI18nKey(status.key)),
+      value: status.value,
+      color:
+        STATUS_CHART_COLORS[status.key as OrderStatus] ??
+        "var(--color-chart-1)",
+    }),
+  );
+  const totalOrders = statusBreakdownData.reduce(
+    (sum, datum) => sum + datum.value,
+    0,
+  );
 
-  const topProductsData: HBarDatum[] = report.topProducts.map((product) => ({
-    key: product.key,
-    label:
-      product.name.length > 20
-        ? `${product.name.slice(0, 19)}…`
-        : product.name,
-    value: product.revenue,
-  }));
-  const topProductsConfig: ChartConfig = {
-    value: {
-      label: t("analytics.revenueLabel"),
+  const topProductsData: RankedMetricDatum[] = report.topProducts.map(
+    (product) => ({
+      key: product.key,
+      label: product.name,
+      value: product.revenue,
+      displayValue: formatDZD(product.revenue, locale),
       color: "var(--color-chart-1)",
-    },
-  };
+    }),
+  );
 
-  const topWilayasData: HBarDatum[] = report.topWilayas.map((wilaya) => ({
+  const topWilayasData: RankedMetricDatum[] = report.topWilayas.map((wilaya) => ({
     key: wilaya.key,
     label: wilaya.name,
     value: wilaya.orders,
+    displayValue: integerFormatter.format(wilaya.orders),
+    detail: t("analytics.ordersLabel"),
+    color: "var(--color-chart-3)",
   }));
-  const topWilayasConfig: ChartConfig = {
-    value: {
-      label: t("analytics.ordersLabel"),
-      color: "var(--color-chart-3)",
-    },
-  };
 
   const hourData = report.salesByHour.map((bucket) => ({
     hour: fmtHour(bucket.hour),
@@ -246,12 +228,6 @@ export default async function AnalyticsPage({
   };
 
   const delivery = report.deliveryPerformance;
-  const gaugeConfig: ChartConfig = {
-    value: {
-      label: t("dashboard.deliveryRate"),
-      color: "var(--color-chart-2)",
-    },
-  };
 
   const comparisonStats = [
     {
@@ -281,7 +257,7 @@ export default async function AnalyticsPage({
   ] as const;
 
   return (
-    <div className="app-content page-sections" data-analytics-workspace="v2">
+    <div className="app-content page-sections" data-analytics-workspace="v2" data-analytics-generation="class-aaa">
       <PageHeader
         title={t("nav.analytics")}
         description={t("analytics.depth")}
@@ -376,67 +352,63 @@ export default async function AnalyticsPage({
         <ChartCard
           title={t("analytics.ordersByStatus")}
           summary={`${integerFormatter.format(totalOrders)} ${t("analytics.ordersLabel")}`}
-          icon={<PieChart />}
+          icon={<BarChart3 />}
           accent="bg-teal-500/10 dark:bg-teal-500/15"
-          config={donutConfig}
+          config={{}}
         >
-          <DonutChart
-            data={donutData}
-            config={donutConfig}
-            centerValue={integerFormatter.format(totalOrders)}
-            centerLabel={t("dashboard.totalOrders")}
-          />
+          {totalOrders > 0 ? (
+            <SegmentedBreakdown
+              data={statusBreakdownData}
+              total={totalOrders}
+              formatValue={(value) => integerFormatter.format(value)}
+              formatPercent={(fraction) => percentFormatter.format(fraction)}
+            />
+          ) : (
+            <ChartEmpty message={t("analytics.noData")} />
+          )}
         </ChartCard>
 
         <ChartCard
           title={t("analytics.deliveryPerformance")}
           summary={fmtPercent(delivery.deliveryRate)}
-          icon={<Gauge />}
+          icon={<Truck />}
           accent="bg-emerald-500/10 dark:bg-emerald-500/15"
-          config={gaugeConfig}
+          config={{}}
         >
-          <div className="flex flex-col items-center gap-4">
-            <RadialGauge
-              value={delivery.deliveryRate}
-              config={gaugeConfig}
-              height={220}
-              centerLabel={t("dashboard.deliveryRate")}
-            />
-            <div className="grid w-full grid-cols-2 gap-2 text-center sm:grid-cols-4">
-              <div className="rounded-lg border p-2">
-                <p className="text-xs text-muted-foreground">
-                  {t("analytics.delivered")}
-                </p>
-                <p className="text-base font-bold tabular-nums text-success">
-                  {integerFormatter.format(delivery.delivered)}
-                </p>
-              </div>
-              <div className="rounded-lg border p-2">
-                <p className="text-xs text-muted-foreground">
-                  {t("analytics.inTransit")}
-                </p>
-                <p className="text-base font-bold tabular-nums">
-                  {integerFormatter.format(delivery.inTransit)}
-                </p>
-              </div>
-              <div className="rounded-lg border p-2">
-                <p className="text-xs text-muted-foreground">
-                  {t("dashboard.pending")}
-                </p>
-                <p className="text-base font-bold tabular-nums">
-                  {integerFormatter.format(delivery.pending)}
-                </p>
-              </div>
-              <div className="rounded-lg border p-2">
-                <p className="text-xs text-muted-foreground">
-                  {t("analytics.returned")}
-                </p>
-                <p className="text-base font-bold tabular-nums text-destructive">
-                  {integerFormatter.format(delivery.returned)}
-                </p>
-              </div>
-            </div>
-          </div>
+          <OutcomeProgress
+            value={delivery.deliveryRate}
+            displayValue={fmtPercent(delivery.deliveryRate)}
+            label={t("dashboard.deliveryRate")}
+            color="var(--color-chart-2)"
+            outcomes={[
+              {
+                key: "delivered",
+                label: t("analytics.delivered"),
+                value: delivery.delivered,
+                displayValue: integerFormatter.format(delivery.delivered),
+                tone: "success",
+              },
+              {
+                key: "transit",
+                label: t("analytics.inTransit"),
+                value: delivery.inTransit,
+                displayValue: integerFormatter.format(delivery.inTransit),
+              },
+              {
+                key: "pending",
+                label: t("dashboard.pending"),
+                value: delivery.pending,
+                displayValue: integerFormatter.format(delivery.pending),
+              },
+              {
+                key: "returned",
+                label: t("analytics.returned"),
+                value: delivery.returned,
+                displayValue: integerFormatter.format(delivery.returned),
+                tone: "danger",
+              },
+            ]}
+          />
         </ChartCard>
       </section>
 
@@ -445,19 +417,15 @@ export default async function AnalyticsPage({
           title={t("analytics.topProductsByRevenue")}
           summary={
             topProductsData[0]
-              ? `${topProductsData[0].label} · ${formatDZD(topProductsData[0].value, locale)}`
+              ? `${String(topProductsData[0].label)} · ${String(topProductsData[0].displayValue)}`
               : undefined
           }
           icon={<BarChart3 />}
           accent="bg-teal-500/10 dark:bg-teal-500/15"
-          config={topProductsConfig}
+          config={{}}
         >
           {topProductsData.length > 0 ? (
-            <HorizontalBarChart
-              data={topProductsData}
-              config={topProductsConfig}
-              formatValue="currencyShort"
-            />
+            <RankedMetricList data={topProductsData} />
           ) : (
             <ChartEmpty message={t("analytics.noProductData")} />
           )}
@@ -467,19 +435,15 @@ export default async function AnalyticsPage({
           title={t("analytics.topWilayas")}
           summary={
             topWilayasData[0]
-              ? `${topWilayasData[0].label} · ${integerFormatter.format(topWilayasData[0].value)}`
+              ? `${String(topWilayasData[0].label)} · ${String(topWilayasData[0].displayValue)}`
               : undefined
           }
           icon={<MapPin />}
           accent="bg-amber-500/10 dark:bg-amber-500/15"
-          config={topWilayasConfig}
+          config={{}}
         >
           {topWilayasData.length > 0 ? (
-            <HorizontalBarChart
-              data={topWilayasData}
-              config={topWilayasConfig}
-              formatValue="number"
-            />
+            <RankedMetricList data={topWilayasData} />
           ) : (
             <ChartEmpty message={t("analytics.noWilayaData")} />
           )}
@@ -576,20 +540,16 @@ export default async function AnalyticsPage({
           title={t("analytics.returnRateByWilaya")}
           description={t("analytics.returnRateHint")}
           summary={
-            returnRateData[0]
-              ? `${returnRateData[0].label} · ${fmtPercent(returnRateData[0].value)}`
+            returnRateByWilaya[0]
+              ? `${returnRateByWilaya[0].wilaya} · ${fmtPercent(returnRateByWilaya[0].returnRate)} · ${integerFormatter.format(returnRateByWilaya[0].returned)}/${integerFormatter.format(returnRateByWilaya[0].total)} ${t("analytics.ordersLabel")}`
               : undefined
           }
           icon={<RotateCcw />}
           accent="bg-red-500/10 dark:bg-red-500/15"
-          config={returnRateConfig}
+          config={{}}
         >
           {returnRateData.length > 0 ? (
-            <HorizontalBarChart
-              data={returnRateData}
-              config={returnRateConfig}
-              formatValue="percent"
-            />
+            <RankedMetricList data={returnRateData} maxValue={100} />
           ) : (
             <ChartEmpty message={t("analytics.noReturnData")} />
           )}
