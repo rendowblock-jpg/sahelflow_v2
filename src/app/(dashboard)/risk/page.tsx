@@ -17,14 +17,13 @@ import {
   ChartCard,
   ChartEmpty,
 } from "@/components/charts/chart-primitives";
+import type { ChartConfig } from "@/components/charts/chart-types";
 import {
-  DonutChart,
-  type DonutDatum,
-} from "@/components/charts/donut-chart";
-import {
-  HorizontalBarChart,
-  type HBarDatum,
-} from "@/components/charts/horizontal-bar-chart";
+  RankedMetricList,
+  SegmentedBreakdown,
+  type BreakdownDatum,
+  type RankedMetricDatum,
+} from "@/components/charts/decision-visualizations";
 import { RiskBlacklistPanel } from "@/components/risk/risk-blacklist-panel";
 import { RiskControlPanel } from "@/components/risk/risk-control-panel";
 import { RiskLevelBadgeServer } from "@/components/risk/risk-badges";
@@ -42,7 +41,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { ChartConfig } from "@/components/ui/chart";
 import {
   Table,
   TableBody,
@@ -86,8 +84,8 @@ const RANGES = [
   { days: 90, labelKey: "risk.ranges.last90" },
 ] as const;
 const LEVEL_COLORS: Record<RiskLevel, string> = {
-  low: "var(--color-chart-2)",
-  medium: "var(--color-chart-3)",
+  low: "var(--color-success)",
+  medium: "var(--color-warning)",
   high: "var(--status-returned)",
   critical: "var(--color-destructive)",
 };
@@ -179,7 +177,7 @@ export default async function RiskPage({
   const savingsTone: StatCardTone =
     kpis.potentialSavingsDzd > 0 ? "accent" : "neutral";
 
-  const distributionData: DonutDatum[] = report.distribution.map((row) => ({
+  const distributionData: BreakdownDatum[] = report.distribution.map((row) => ({
     key: row.level,
     label: t(`risk.level.${row.level}`),
     value: row.count,
@@ -205,22 +203,74 @@ export default async function RiskPage({
       color: "var(--color-chart-1)",
     },
   };
-  const wilayaData: HBarDatum[] = report.riskByWilaya.map((row) => ({
-    key: row.wilaya,
-    label: row.wilaya,
-    value: row.avgScore,
-    color:
-      row.avgScore >= config.thresholds.high
-        ? LEVEL_COLORS.critical
-        : row.avgScore >= config.thresholds.medium
-          ? LEVEL_COLORS.high
-          : row.avgScore >= config.thresholds.low
-            ? LEVEL_COLORS.medium
-            : LEVEL_COLORS.low,
-  }));
+  const riskLevelForScore = (score: number): RiskLevel =>
+    score >= config.thresholds.high
+      ? "critical"
+      : score >= config.thresholds.medium
+        ? "high"
+        : score >= config.thresholds.low
+          ? "medium"
+          : "low";
+  const wilayaData: RankedMetricDatum[] = report.riskByWilaya.map((row) => {
+    const level = riskLevelForScore(row.avgScore);
+    return {
+      key: row.wilaya,
+      label: row.wilaya,
+      value: row.avgScore,
+      displayValue: `${integerFormatter.format(row.avgScore)}/100`,
+      detail: t(`risk.level.${level}`),
+      color: LEVEL_COLORS[level],
+    };
+  });
+  const riskReferenceLines = [
+    {
+      value: config.thresholds.low,
+      label: t("risk.level.low"),
+      color: LEVEL_COLORS.low,
+    },
+    {
+      value: config.thresholds.medium,
+      label: t("risk.level.medium"),
+      color: LEVEL_COLORS.medium,
+    },
+    {
+      value: config.thresholds.high,
+      label: t("risk.level.high"),
+      color: LEVEL_COLORS.critical,
+    },
+  ];
+  const riskReferenceBands = [
+    {
+      from: 0,
+      to: config.thresholds.low,
+      label: t("risk.level.low"),
+      color: LEVEL_COLORS.low,
+    },
+    {
+      from: config.thresholds.low,
+      to: config.thresholds.medium,
+      label: t("risk.level.medium"),
+      color: LEVEL_COLORS.medium,
+    },
+    {
+      from: config.thresholds.medium,
+      to: config.thresholds.high,
+      label: t("risk.level.high"),
+      color: LEVEL_COLORS.high,
+    },
+    {
+      from: config.thresholds.high,
+      to: 100,
+      label: t("risk.level.critical"),
+      color: LEVEL_COLORS.critical,
+    },
+  ];
 
   return (
-    <div className="app-content page-sections">
+    <div
+      className="app-content page-sections"
+      data-risk-analytics-generation="class-aaa"
+    >
       <PageHeader title={t("risk.title")} description={t("risk.subtitle")} />
 
       <div className="flex w-fit flex-wrap items-center gap-1 rounded-lg border bg-background p-1">
@@ -363,9 +413,13 @@ export default async function RiskPage({
               config={distributionConfig}
             >
               {distributionData.some((row) => row.value > 0) ? (
-                <DonutChart
+                <SegmentedBreakdown
                   data={distributionData}
-                  config={distributionConfig}
+                  total={report.totalOrders}
+                  formatValue={(value) => integerFormatter.format(value)}
+                  formatPercent={(fraction) =>
+                    percentFormatter.format(fraction)
+                  }
                 />
               ) : (
                 <ChartEmpty message="—" />
@@ -374,7 +428,7 @@ export default async function RiskPage({
             <ChartCard
               title={t("risk.trend.title")}
               description={t("risk.trend.subtitle")}
-              summary={`${t("risk.kpi.avgScore")}: ${integerFormatter.format(kpis.avgRiskScore)}`}
+              summary={`${t("risk.kpi.avgScore")}: ${integerFormatter.format(kpis.avgRiskScore)} · ${t("risk.confirmationByLevel.total")}: ${integerFormatter.format(report.totalOrders)}`}
               icon={<TrendingUp className="size-4" />}
               config={trendConfig}
             >
@@ -391,6 +445,9 @@ export default async function RiskPage({
                   ]}
                   config={trendConfig}
                   formatY="number"
+                  yDomain={[0, 100]}
+                  referenceLines={riskReferenceLines}
+                  referenceBands={riskReferenceBands}
                 />
               ) : (
                 <ChartEmpty message="—" />
@@ -470,11 +527,7 @@ export default async function RiskPage({
               config={{}}
             >
               {wilayaData.length > 0 ? (
-                <HorizontalBarChart
-                  data={wilayaData}
-                  config={{}}
-                  formatValue="number"
-                />
+                <RankedMetricList data={wilayaData} maxValue={100} />
               ) : (
                 <ChartEmpty message="—" />
               )}
