@@ -12,7 +12,7 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $sourceScript = Join-Path $PSScriptRoot "verify-phase4-replacement-install.ps1"
 $patchedScript = Join-Path $env:RUNNER_TEMP "verify-phase4-replacement-install.licensed.ps1"
 $trialServerScript = Join-Path $PSScriptRoot "phase4-ci-trial-issuer.mjs"
-$committedAcceptanceTransportScript = Join-Path $PSScriptRoot "phase4-webview-committed-acceptance.ts"
+$committedAcceptanceTransportScript = Join-Path $PSScriptRoot "phase4-webview-committed-acceptance.mjs"
 $trialKeyHex = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
 $trialKeyId = "ci-trial-key-v1"
 $trialServer = $null
@@ -168,9 +168,9 @@ $kit = Invoke-SahelFlowJson -Method POST -BaseUrl $sourceBaseUrl -Path "/api/bac
     # this drill. A raw page-target ClientWebSocket can race WebView2 target
     # rotation even after /json/list reports one exact-origin page. Replace only
     # that CI-only function with Playwright's supported WebView2 browser-level
-    # CDP connection. The helper persists a no-secret dispatch guard before the
-    # mutating page.evaluate call, so pre-dispatch transport failures may retry
-    # but any ambiguous post-dispatch loss still fails closed.
+    # CDP connection under Node. The helper persists a no-secret dispatch guard
+    # before the mutating page.evaluate call, so pre-dispatch transport failures
+    # may retry but any ambiguous post-dispatch loss still fails closed.
     $committedAcceptanceFunction = @'
 function Invoke-CommittedWebViewAcceptance {
     param(
@@ -180,7 +180,7 @@ function Invoke-CommittedWebViewAcceptance {
         [switch]$ActivateTrial
     )
 
-    $transportScript = Join-Path $repositoryRoot "scripts\phase4-webview-committed-acceptance.ts"
+    $transportScript = Join-Path $repositoryRoot "scripts\phase4-webview-committed-acceptance.mjs"
     if (-not (Test-Path -LiteralPath $transportScript -PathType Leaf)) {
         throw "The committed WebView acceptance transport dependency is missing."
     }
@@ -196,7 +196,7 @@ function Invoke-CommittedWebViewAcceptance {
 
     do {
         $transportOutput = @(
-            $inputJson | & $bunCommand.Source $transportScript `
+            $inputJson | & node $transportScript `
                 --debug-port $runtimeDebuggingPort `
                 --base-url $BaseUrl `
                 --dispatch-marker $dispatchMarker 2>&1
@@ -210,8 +210,8 @@ function Invoke-CommittedWebViewAcceptance {
                     $wire = $candidate
                 }
             } catch {
-                # Bun may emit a non-JSON setup line. Keep only the helper's
-                # bounded privacy-safe wire result as transport evidence.
+                # Node/Playwright may emit a non-JSON setup line. Keep only the
+                # helper's bounded privacy-safe wire result as transport evidence.
             }
         }
 
