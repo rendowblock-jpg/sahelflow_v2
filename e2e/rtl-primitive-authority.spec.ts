@@ -209,7 +209,7 @@ test.describe.serial("Arabic shared primitive direction authority", () => {
 
     const chartCard = page
       .locator(
-        '[data-chart-card="true"]:has([data-chart-header-icon="true"]):has([data-slot="chart"])',
+        '[data-chart-card="true"]:has([data-chart-header-icon="true"]):has([data-echarts-surface="true"])',
       )
       .first();
     await expect(chartCard).toBeVisible();
@@ -238,7 +238,7 @@ test.describe.serial("Arabic shared primitive direction authority", () => {
       "Arabic chart card leading icon must sit to the right of the title block",
     ).toBeGreaterThan(headerGeometry!.copyX);
 
-    const coordinatePlane = chartCard.locator('[data-slot="chart"]').first();
+    const coordinatePlane = chartCard.locator('[data-echarts-surface="true"]').first();
     await expect(coordinatePlane).toBeVisible();
     expect(await computedDirection(coordinatePlane)).toBe("ltr");
   });
