@@ -146,17 +146,19 @@ test("Founder Arabic command center is clean, relevant and finds protected recor
     const customer = dialog
       .locator('[data-slot="command-item"]')
       .filter({ hasText: "Ahmed Benali" })
+      .filter({ hasText: "عميل" })
       .first();
     await expect(customer).toBeVisible({ timeout: 10_000 });
-    await expect(customer).toContainText("عميل");
     await expect(customer).toContainText("0555123456");
 
-    // Arabic-Indic digits must resolve the same protected phone record. The
-    // production API cannot depend on NODE_ENV=test plaintext search behavior.
+    // Arabic-Indic digits must resolve the same protected customer. Related
+    // orders may also match the phone, but the direct customer result remains
+    // the primary contact result and carries the protected phone projection.
     await input.fill("٠٥٥٥١٢٣٤٥٦");
     const phoneMatch = dialog
       .locator('[data-slot="command-item"]')
       .filter({ hasText: "Ahmed Benali" })
+      .filter({ hasText: "عميل" })
       .first();
     await expect(phoneMatch).toBeVisible({ timeout: 10_000 });
     await expect(phoneMatch).toContainText("0555123456");
