@@ -102,12 +102,15 @@ export function WhatsAppPairingDialog({
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
-    void requestStatus(controller.signal);
+    const initial = window.setTimeout(() => {
+      void requestStatus(controller.signal);
+    }, 0);
     const timer = window.setInterval(() => {
       void requestStatus(controller.signal);
     }, 1_000);
     return () => {
       controller.abort();
+      window.clearTimeout(initial);
       window.clearInterval(timer);
     };
   }, [open, requestStatus]);
@@ -125,18 +128,6 @@ export function WhatsAppPairingDialog({
     }, 15_000);
     return () => window.clearInterval(timer);
   }, [open, phase]);
-
-  useEffect(() => {
-    if (!open) return;
-    setSnapshot((current) => ({
-      status: transport.status ?? current.status,
-      hasQr: transport.status === "qr" ? true : current.hasQr,
-      sidecarReachable:
-        transport.reachable === null
-          ? current.sidecarReachable
-          : transport.reachable,
-    }));
-  }, [open, transport.reachable, transport.status]);
 
   const beginPairing = async () => {
     setOpen(true);
