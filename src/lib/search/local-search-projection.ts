@@ -16,6 +16,7 @@ const DEFAULT_CANDIDATE_LIMIT = 48;
 const MAX_PREFIX_LENGTH = 40;
 const GRAM_SIZE = 4;
 const CUSTOMER_PROJECTION_PAGE_SIZE = 400;
+const CUSTOMER_RELEVANCE_BOOST = 64;
 
 type ProjectedCandidate = UniversalSearchCandidate & {
   entityId: string;
@@ -82,7 +83,15 @@ function invalidateDependentProjection(
   model: SearchProjectionModel,
 ): void {
   cache[projectionSlot(model)] = undefined;
-  if (model === "Order") {
+
+  if (model === "Customer") {
+    // Customer deletion cascades through orders and may consequently remove
+    // delivery/return rows. Keep every dependent derived projection fresh.
+    cache.order = undefined;
+    cache.delivery = undefined;
+    cache.return = undefined;
+  } else if (model === "Order") {
+    // Delivery/return projections carry order identifiers.
     cache.delivery = undefined;
     cache.return = undefined;
   }
@@ -248,6 +257,9 @@ async function buildCustomerIndex(): Promise<SearchIndex> {
         href: `/customers/${customer.id}`,
         keywords: [customer.wilaya ?? "", customer.commune ?? ""],
         updatedAt: customer.updatedAt,
+        // Direct contact matches should outrank related orders that inherit the
+        // same customer name/phone as contextual keywords.
+        rankBoost: CUSTOMER_RELEVANCE_BOOST,
       });
     }
 
@@ -334,6 +346,7 @@ async function buildDeliveryIndex(): Promise<SearchIndex> {
 
 async function buildReturnIndex(): Promise<SearchIndex> {
   const rows = await db.return.findMany({
+    where: { deletedAt: null },
     select: {
       id: true,
       type: true,
