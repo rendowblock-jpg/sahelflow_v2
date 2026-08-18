@@ -5,6 +5,8 @@ import { searchUniversalRecords } from "@/lib/search/universal-search-server";
 
 export const dynamic = "force-dynamic";
 
+const MAX_QUERY_LENGTH = 160;
+
 /**
  * GET /api/search?q=...&limit=...
  *
@@ -13,7 +15,10 @@ export const dynamic = "force-dynamic";
  * domain endpoint.
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
-  const query = req.nextUrl.searchParams.get("q") ?? "";
+  const query = (req.nextUrl.searchParams.get("q") ?? "").slice(
+    0,
+    MAX_QUERY_LENGTH,
+  );
   const requestedLimit = Number.parseInt(
     req.nextUrl.searchParams.get("limit") ?? "16",
     10,
