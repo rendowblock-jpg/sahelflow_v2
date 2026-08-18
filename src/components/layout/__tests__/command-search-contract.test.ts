@@ -7,59 +7,61 @@ function source(relativeUrl: string): string {
 }
 
 describe("universal command search contract", () => {
-  it("searches every primary operational record family through protected APIs", () => {
+  it("uses one cancellable browser request instead of six domain fan-out requests", () => {
     const palette = source("../../command-palette.tsx");
 
-    for (const endpoint of [
+    expect(palette).toContain("/api/search?q=");
+    expect(palette).toContain("new AbortController()");
+    expect(palette).toContain("controller.abort()");
+    for (const legacyEndpoint of [
       "/api/orders/search",
       "/api/customers/search",
       "/api/products/search",
       "/api/conversations/search",
-      "/api/delivery",
-      "/api/returns",
+      "/api/delivery?",
+      "/api/returns?",
     ]) {
-      expect(palette).toContain(endpoint);
+      expect(palette).not.toContain(legacyEndpoint);
     }
-    expect(palette).toContain("Promise.allSettled");
-    expect(palette).toContain("conversation:");
-    expect(palette).toContain("delivery:");
-    expect(palette).toContain("return:");
   });
 
-  it("balances matching record families before applying the global result budget", () => {
+  it("binds the command center to relevance ranking and seller-facing presentation", () => {
     const palette = source("../../command-palette.tsx");
 
-    expect(palette).toContain("mergeUniversalSearchFamilies");
-    expect(palette).toContain("orderResults");
-    expect(palette).toContain("conversationResults");
-    expect(palette).toContain("deliveryResults");
-    expect(palette).toContain("returnResults");
-    expect(palette).not.toContain("next.slice(0, 12)");
+    expect(palette).toContain("rankUniversalSearchCandidates");
+    expect(palette).toContain('data-universal-search="v2"');
+    expect(palette).toContain("bestMatches");
+    expect(palette).toContain("quickAccess");
+    expect(palette).toContain("KIND_COPY");
+    expect(palette).not.toContain("{item.href}");
   });
 
-  it("uses projected field access before emitting delivery or return detail links", () => {
-    const palette = source("../../command-palette.tsx");
+  it("keeps protected partial contact matching in authorized process memory", () => {
+    const server = source("../../../lib/search/universal-search-server.ts");
 
-    expect(palette).toContain("canOpenProtectedOperationalDetail");
-    expect(palette).toContain("deliveriesRes.value.fieldAccess");
-    expect(palette).toContain("returnsRes.value.fieldAccess");
-    expect(palette).toContain("contact: boolean");
-    expect(palette).toContain("financials: boolean");
+    expect(server).toContain('allowed(actorContext, "customers.read")');
+    expect(server).toContain('allowed(actorContext, "customers.contact.read")');
+    expect(server).toContain("db.customer.findMany");
+    expect(server).toContain("customerCandidates(query, customerRows)");
+    expect(server).not.toContain("customer: { name: { contains: query }");
+    expect(server).not.toContain("phone: { contains: query }");
   });
 
-  it("keeps delivery and return universal-search predicates on non-PII fields", () => {
-    const delivery = source("../../../lib/deliveries/delivery-workbench.ts");
-    const returns = source("../../../lib/returns/return-workbench.ts");
+  it("bounds recent message search instead of loading 500 × 50 messages per query", () => {
+    const server = source("../../../lib/search/universal-search-server.ts");
 
-    expect(delivery).toContain("deliverySearchWhere");
-    expect(delivery).toContain("trackingNumber");
-    expect(delivery).toContain("orderNumber");
-    expect(delivery).not.toContain("customer: { name: { contains: value }");
-    expect(delivery).not.toContain("phone: { contains: value }");
+    expect(server).toContain("CONVERSATION_SCAN_LIMIT = 350");
+    expect(server).toContain("RECENT_MESSAGES_PER_CONVERSATION = 12");
+    expect(server).toContain("take: CONVERSATION_SCAN_LIMIT");
+    expect(server).toContain("take: RECENT_MESSAGES_PER_CONVERSATION");
+  });
 
-    expect(returns).toContain("returnSearchWhere");
-    expect(returns).toContain("orderNumber");
-    expect(returns).not.toContain("reason: { contains: value }");
-    expect(returns).not.toContain("notes: { contains: value }");
+  it("exposes server timing for Phase 7 latency evidence", () => {
+    const route = source("../../../app/api/search/route.ts");
+
+    expect(route).toContain("searchUniversalRecords");
+    expect(route).toContain('"Server-Timing"');
+    expect(route).toContain("result.tookMs");
+    expect(route).toContain('"Cache-Control": "no-store"');
   });
 });
