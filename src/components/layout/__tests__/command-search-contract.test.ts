@@ -36,10 +36,12 @@ describe("universal command search contract", () => {
     expect(palette).not.toContain("{item.href}");
   });
 
-  it("uses an invalidated token projection instead of decrypting all customers per keystroke", () => {
+  it("uses revision-bound token projections instead of decrypting all customers per keystroke", () => {
     const server = source("../../../lib/search/universal-search-server.ts");
     const projection = source("../../../lib/search/local-search-projection.ts");
-    const db = source("../../../lib/db.ts");
+    const migration = source(
+      "../../../../prisma/migrations/20260818134500_search_projection_revision/migration.sql",
+    );
 
     expect(server).toContain('allowed(actorContext, "customers.read")');
     expect(server).toContain('allowed(actorContext, "customers.contact.read")');
@@ -48,25 +50,37 @@ describe("universal command search contract", () => {
     expect(projection).toContain("buildCustomerIndex");
     expect(projection).toContain("candidateIdsForQuery");
     expect(projection).toContain("index.keys.get");
-    expect(projection).toContain("subscribeSearchProjectionMutations");
-    expect(db).toContain("publishSearchProjectionMutation");
+    expect(projection).toContain("searchProjectionRevision.findUnique");
+    expect(projection).toContain("buildStableProjection");
+    expect(projection).not.toContain("subscribeSearchProjectionMutations");
+    expect(migration).toContain('CREATE TABLE "SearchProjectionRevision"');
+    expect(migration).toContain('AFTER UPDATE ON "Customer"');
+    expect(migration).toContain("'conversation'");
   });
 
-  it("never selects conversation contact fields without contact permission", () => {
+  it("indexes the full permitted conversation contact set while keeping recent message search bounded", () => {
+    const projection = source("../../../lib/search/local-search-projection.ts");
     const server = source("../../../lib/search/universal-search-server.ts");
 
-    expect(server).toContain("const rows = canReadContact");
-    expect(server).toContain("contactName: true");
-    expect(server).toContain("contactPhone: true");
-    expect(server).toContain("select: commonSelect");
+    expect(projection).toContain("buildConversationIndex");
+    expect(projection).toContain("contactName: true");
+    expect(projection).toContain("contactPhone: true");
+    expect(projection).toContain("take: PROJECTION_PAGE_SIZE");
+    expect(server).toContain("searchProjectedConversations");
+    expect(server).toContain("canConversations && canReadContact");
+    expect(server).toContain("recentConversationMessageCandidates");
+    expect(server).not.toContain("contactName: true");
+    expect(server).not.toContain("contactPhone: true");
   });
 
-  it("preserves formatting-insensitive technical identifiers in the same projection", () => {
+  it("preserves formatting-insensitive technical identifiers and exact candidates", () => {
     const projection = source("../../../lib/search/local-search-projection.ts");
 
     expect(projection).toContain("compactSearchText");
     expect(projection).toContain("MAX_PREFIX_LENGTH");
     expect(projection).toContain("GRAM_SIZE");
+    expect(projection).toContain("exactKeys");
+    expect(projection).toContain("appendBounded(selected, index.exactKeys");
     expect(projection).toContain("buildProductIndex");
     expect(projection).toContain("buildOrderIndex");
     expect(projection).toContain("buildDeliveryIndex");
@@ -81,21 +95,36 @@ describe("universal command search contract", () => {
     expect(server).not.toContain("phone: { contains: query }");
   });
 
-  it("keeps search families fault-isolated instead of failing one Promise.all authority", () => {
+  it("keeps search families fault-isolated and makes degraded empty results truthful", () => {
     const server = source("../../../lib/search/universal-search-server.ts");
+    const palette = source("../../command-palette.tsx");
 
     expect(server).toContain("safeFamily");
     expect(server).toContain("degradedFamilies");
     expect(server).toContain("search.universal.family-degraded");
+    expect(palette).toContain("degradedEmpty");
+    expect(palette).toContain('copy("degradedTitle")');
+    expect(palette).toContain("!degraded &&");
   });
 
-  it("bounds live recent-message search and keeps contact selection permission-aware", () => {
+  it("bounds live recent-message search independently from full contact lookup", () => {
     const server = source("../../../lib/search/universal-search-server.ts");
 
     expect(server).toContain("CONVERSATION_SCAN_LIMIT = 160");
     expect(server).toContain("RECENT_MESSAGES_PER_CONVERSATION = 8");
     expect(server).toContain("take: CONVERSATION_SCAN_LIMIT");
     expect(server).toContain("take: RECENT_MESSAGES_PER_CONVERSATION");
+  });
+
+  it("gates protected operational deep links on their real detail authority", () => {
+    const server = source("../../../lib/search/universal-search-server.ts");
+
+    expect(server).toContain('allowed(actorContext, "orders.financials.read")');
+    expect(server).toContain("canOpenProtectedOperationalDetail");
+    expect(server).toContain(
+      "canDeliveries && canOpenProtectedOperationalDetail",
+    );
+    expect(server).toContain("canOrders && canOpenProtectedOperationalDetail");
   });
 
   it("prewarms only permitted projections after the authenticated shell is usable", () => {
@@ -108,8 +137,8 @@ describe("universal command search contract", () => {
     expect(layout).toContain('fetch("/api/search"');
     expect(layout).toContain('method: "POST"');
     expect(server).toContain("customer: canCustomers && canReadContact");
+    expect(server).toContain("conversation: canConversations && canReadContact");
     expect(server).toContain("product: canProducts");
-    expect(server).toContain("delivery: canDeliveries");
   });
 
   it("exposes server timing for Phase 7 latency evidence", () => {
