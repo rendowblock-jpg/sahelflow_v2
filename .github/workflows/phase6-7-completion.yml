@@ -6,7 +6,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
-  group: phase6-7-completion-${{ github.ref }}
+  group: phase6-7-completion-v2-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
