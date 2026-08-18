@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { InboxOperationsDesk } from "@/components/inbox/inbox-operations-desk";
+import { InboxV3Workspace } from "@/components/inbox/inbox-v3-workspace";
 import { getI18n } from "@/lib/i18n-server";
 import {
   requireTrustedAction,
@@ -31,7 +31,7 @@ export default async function InboxPage() {
     <div className="app-workspace-content flex flex-col">
       <h1 className="sr-only">{t("metadata.title.inbox")}</h1>
       <div className="min-h-0 flex-1">
-        <InboxOperationsDesk
+        <InboxV3Workspace
           canViewIngress={canViewIngress}
           canRetryIngress={canRetryIngress}
         />

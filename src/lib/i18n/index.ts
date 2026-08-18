@@ -55,6 +55,28 @@ export function stabilizeBidiText(value: string, locale: Locale): string {
   return value.replace(LTR_INLINE_RUN, (run) => `${LRI}${run}${PDI}`);
 }
 
+/**
+ * Product history contains both modern `{{name}}` placeholders and a smaller
+ * legacy set using `{name}`. Treat both as the same interpolation contract so a
+ * seller never sees raw template syntax such as `تصنيفات {count}`.
+ */
+export function interpolateTranslation(
+  value: string,
+  params?: Record<string, string | number>,
+): string {
+  if (!params) return value;
+  let interpolated = value;
+  for (const [param, replacement] of Object.entries(params)) {
+    const resolved = String(replacement);
+    interpolated = interpolated
+      .split(`{{${param}}}`)
+      .join(resolved)
+      .split(`{${param}}`)
+      .join(resolved);
+  }
+  return interpolated;
+}
+
 /** Type-safe translation key lookup surface (dotted path: "orders.status.confirmed"). */
 export type TranslationKey = string;
 
@@ -67,6 +89,8 @@ export function getTranslations(locale: Locale): Record<string, string> {
 }
 
 /** Async compatibility surface retained for server/existing callers. */
-export async function loadTranslations(locale: Locale): Promise<Record<string, string>> {
+export async function loadTranslations(
+  locale: Locale,
+): Promise<Record<string, string>> {
   return getTranslations(locale);
 }
