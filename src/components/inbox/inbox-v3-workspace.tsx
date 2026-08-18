@@ -11,6 +11,7 @@ import type {
 import { InboxV3Header } from "@/components/inbox/inbox-v3-header";
 import { InboxV3Queue } from "@/components/inbox/inbox-v3-queue";
 import { InboxV3Thread } from "@/components/inbox/inbox-v3-thread";
+import styles from "@/components/inbox/inbox-v3-workspace.module.css";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { useMobile } from "@/hooks/use-mobile";
@@ -197,7 +198,7 @@ export function InboxV3Workspace({
         data-inbox-workspace="v2"
         data-inbox-version="v3"
         data-inbox-operations-desk="true"
-        className="flex h-full min-h-0 flex-col overflow-hidden bg-background"
+        className={`${styles.workspace} flex h-full min-h-0 flex-col overflow-hidden bg-background`}
       >
         <InboxV3Header
           workspace={workspace}
