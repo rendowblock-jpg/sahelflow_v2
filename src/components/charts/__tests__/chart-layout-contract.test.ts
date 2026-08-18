@@ -53,4 +53,24 @@ describe("shared chart layout authority", () => {
     expect(timeSeries).toContain("referenceBands.length === 0");
     expect(timeSeries).toContain("yDomain === undefined");
   });
+
+  it("preserves truthful zero baselines for additive area charts", () => {
+    const timeSeries = source("../time-series-chart.tsx");
+    expect(timeSeries).toContain(
+      'const preserveZeroBaseline = mode === "area" && yDomain === undefined',
+    );
+    expect(timeSeries).toContain(
+      "min: yDomain?.[0] ?? (preserveZeroBaseline ? 0 : undefined)",
+    );
+    expect(timeSeries).toContain(
+      "scale: yDomain === undefined && !preserveZeroBaseline",
+    );
+  });
+
+  it("shows the full selected long period before optional zooming", () => {
+    const timeSeries = source("../time-series-chart.tsx");
+    expect(timeSeries).toContain("chartDataZoom(data.length, theme)?.map");
+    expect(timeSeries).toContain("start: 0");
+    expect(timeSeries).toContain("end: 100");
+  });
 });
