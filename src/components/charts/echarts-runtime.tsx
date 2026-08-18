@@ -16,7 +16,7 @@ import {
 import {
   getInstanceByDom,
   init,
-  use,
+  use as registerEChartsModules,
   type ECharts,
   type EChartsCoreOption,
 } from "echarts/core";
@@ -25,7 +25,7 @@ import { SVGRenderer } from "echarts/renderers";
 import { cn } from "@/lib/utils";
 import { useChartMotion } from "./chart-motion";
 
-use([
+registerEChartsModules([
   BarChart,
   LineChart,
   GridComponent,
@@ -132,9 +132,10 @@ export function resolveChartColor(
   theme: SahelChartTheme,
   fallbackIndex = 0,
 ): string {
-  if (!value) {
-    return theme.chart[fallbackIndex % theme.chart.length] ?? theme.primary;
-  }
+  const fallback =
+    theme.chart[fallbackIndex % theme.chart.length] ?? theme.primary;
+  if (!value) return fallback;
+
   const known: Record<string, string> = {
     "--color-chart-1": theme.chart[0],
     "--color-chart-2": theme.chart[1],
@@ -157,23 +158,22 @@ export function resolveChartColor(
     "--color-info": theme.info,
     "--info": theme.info,
   };
+
   const variable = value.match(/^var\((--[^,)]+)(?:,[^)]+)?\)$/)?.[1];
   if (!variable) return value;
-  if (known[variable]) return known[variable]!;
-  if (typeof document === "undefined") {
-    return theme.chart[fallbackIndex % theme.chart.length] ?? theme.primary;
-  }
+
+  const knownColor = known[variable];
+  if (knownColor) return knownColor;
+  if (typeof document === "undefined") return fallback;
+
   const rootStyle = getComputedStyle(document.documentElement);
   const direct = rootStyle.getPropertyValue(variable).trim();
   if (direct) return direct;
+
   const normalized = variable.startsWith("--color-")
     ? `--${variable.slice("--color-".length)}`
     : variable;
-  return (
-    rootStyle.getPropertyValue(normalized).trim() ||
-    theme.chart[fallbackIndex % theme.chart.length] ||
-    theme.primary
-  );
+  return rootStyle.getPropertyValue(normalized).trim() || fallback;
 }
 
 function withRuntimePolicy(
@@ -192,9 +192,6 @@ function withRuntimePolicy(
     aria: {
       enabled: true,
       description: ariaLabel,
-      // SahelFlow uses semantic color + shape/line distinctions deliberately.
-      // Always-on decals make normal analytical views visually noisy, so they
-      // stay disabled unless a future explicit high-contrast mode opts in.
       decal: { show: false },
       ...((option.aria as object | undefined) ?? {}),
     },
@@ -278,6 +275,7 @@ export function cartesianAxisStyle(theme: SahelChartTheme) {
 
 export function chartDataZoom(pointCount: number, theme: SahelChartTheme) {
   if (pointCount <= 45) return undefined;
+
   return [
     {
       type: "inside" as const,
@@ -321,7 +319,7 @@ function chartPointCount(chart: ECharts): number {
   };
   return Math.max(
     0,
-    ...((option.series ?? []).map((entry) => entry.data?.length ?? 0)),
+    ...(option.series ?? []).map((entry) => entry.data?.length ?? 0),
   );
 }
 
@@ -348,8 +346,13 @@ export function EChartSurface({
   const keyboardIndexRef = React.useRef<number | null>(null);
   const { reducedMotion, baseDuration } = useChartMotion();
 
-  optionRef.current = option;
-  readyRef.current = onChartReady;
+  React.useEffect(() => {
+    optionRef.current = option;
+  }, [option]);
+
+  React.useEffect(() => {
+    readyRef.current = onChartReady;
+  }, [onChartReady]);
 
   React.useEffect(() => {
     const container = containerRef.current;
@@ -360,6 +363,7 @@ export function EChartSurface({
 
     let lastThemeSignature = "";
     let frame = 0;
+
     const render = () => {
       const theme = readSahelChartTheme();
       lastThemeSignature = themeSignature(theme);
@@ -372,6 +376,7 @@ export function EChartSurface({
         ),
         { notMerge: true, lazyUpdate: false },
       );
+
       const pointCount = chartPointCount(chart);
       if (
         keyboardIndexRef.current !== null &&
@@ -415,6 +420,7 @@ export function EChartSurface({
     if (!container) return;
     const chart = getInstanceByDom(container);
     if (!chart) return;
+
     chart.setOption(
       withRuntimePolicy(
         option(readSahelChartTheme()),
@@ -432,6 +438,7 @@ export function EChartSurface({
       if (!chart) return;
       const pointCount = chartPointCount(chart);
       if (pointCount <= 0) return;
+
       const index = keyboardIndexRef.current ?? pointCount - 1;
       keyboardIndexRef.current = index;
       showKeyboardPoint(chart, index);
