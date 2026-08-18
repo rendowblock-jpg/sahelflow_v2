@@ -126,7 +126,14 @@ export function TimeSeriesChart({
 
   const option = React.useCallback(
     (theme: SahelChartTheme) => {
-      const zoom = chartDataZoom(data.length, theme);
+      // Long periods remain fully visible by default so keyboard users can
+      // traverse the complete selected range. The controls still allow an
+      // intentional zoom after first render.
+      const zoom = chartDataZoom(data.length, theme)?.map((control) => ({
+        ...control,
+        start: 0,
+        end: 100,
+      }));
       const axis = cartesianAxisStyle(theme);
       const hasLegend = series.length > 1;
       const hasEndLabel =
