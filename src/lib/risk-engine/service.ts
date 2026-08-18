@@ -12,6 +12,7 @@ import "server-only";
 
 import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { normalizeRiskConfig } from "./config-normalization";
 import {
   DEFAULT_RISK_CONFIG,
   DEFAULT_RISK_RULES,
@@ -35,7 +36,7 @@ export async function getRiskConfig(context: ServiceContext): Promise<RiskEngine
   const row = await db.setting.findUnique({ where: { key: CONFIG_KEY } });
   if (!row) return DEFAULT_RISK_CONFIG;
   try {
-    return { ...DEFAULT_RISK_CONFIG, ...JSON.parse(row.value) };
+    return normalizeRiskConfig(JSON.parse(row.value));
   } catch {
     return DEFAULT_RISK_CONFIG;
   }
