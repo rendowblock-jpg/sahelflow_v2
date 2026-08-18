@@ -81,12 +81,14 @@ describe("Inbox final review invariants", () => {
   });
 
   it("waits for QR readiness and renders successful pairing instead of an endless loader", () => {
-    const header = source("src/components/inbox/inbox-operations-header.tsx");
+    const header = source("src/components/inbox/inbox-v3-header.tsx");
+    const pairing = source("src/components/inbox/whatsapp-pairing-dialog.tsx");
 
-    expect(header).toContain('transport.status === "qr" ? (');
-    expect(header).toContain('key={`${transport.status}:${qrKey}`}');
-    expect(header).toContain('transport.status === "connected" ? (');
-    expect(header).toContain('copy("transportConnected")');
+    expect(pairing).toContain('fetch("/api/whatsapp/status"');
+    expect(pairing).toContain('phase === "qr-ready" ? (');
+    expect(pairing).toContain('key={`${qrKey}:${qrRevision}`}');
+    expect(pairing).toContain('phase === "connected" ? (');
+    expect(pairing).toContain('pairingCopy("connectedTitle")');
     expect(header).toContain('copy("transportChecking")');
     expect(header).toContain("refreshQr();\n              void refreshChats();");
   });

@@ -7,6 +7,7 @@ import {
 
 const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
+const FOUNDER_DESKTOP = { width: 1600, height: 900 };
 
 async function waitForHydration(page: Page) {
   await page.locator('html[data-sf-hydrated="true"]').waitFor({
@@ -36,7 +37,9 @@ async function fetchUnreadAuthority(page: Page): Promise<{
     const response = await fetch("/api/whatsapp/chats?limit=100", {
       cache: "no-store",
     });
-    if (!response.ok) throw new Error(`inbox projection returned ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`inbox projection returned ${response.status}`);
+    }
     return (await response.json()) as {
       chats: Array<{ unread: number }>;
     };
@@ -44,7 +47,7 @@ async function fetchUnreadAuthority(page: Page): Promise<{
 }
 
 async function selectAllQueue(page: Page) {
-  const all = page.getByRole("button", { name: /Toutes/ });
+  const all = page.getByRole("button", { name: /Toutes|الكل|All/ }).first();
   await expect(all).toBeVisible({ timeout: 30_000 });
   await all.click();
   await expect(all).toHaveAttribute("aria-pressed", "true");
@@ -91,7 +94,9 @@ test.describe.serial("Inbox operational workspace evidence", () => {
       const response = await fetch("/api/whatsapp/chats?limit=100", {
         cache: "no-store",
       });
-      if (!response.ok) throw new Error(`inbox projection returned ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`inbox projection returned ${response.status}`);
+      }
       return (await response.json()) as {
         source: string;
         sidecarReachable: boolean;
@@ -105,6 +110,7 @@ test.describe.serial("Inbox operational workspace evidence", () => {
 
     const workspace = page.locator('[data-inbox-workspace="v2"]');
     await expect(workspace).toBeVisible();
+    await expect(workspace).toHaveAttribute("data-inbox-version", "v3");
     await selectAllQueue(page);
     const rows = page.locator("[data-inbox-conversation]");
     await expect(rows).toHaveCount(authority.chats.length);
@@ -113,9 +119,11 @@ test.describe.serial("Inbox operational workspace evidence", () => {
     if (!authority.sidecarReachable) {
       await expect(workspace).toContainText("Service WhatsApp indisponible");
       await rows.first().click();
-      await expect(page.locator('[data-inbox-thread="active"]')).toContainText(
+      const thread = page.locator('[data-inbox-thread="active"]');
+      await expect(thread).toContainText(
         "Les réponses sont disponibles lorsque WhatsApp est connecté",
       );
+      await expect(thread.locator("textarea")).toBeVisible();
     }
   });
 
@@ -124,9 +132,6 @@ test.describe.serial("Inbox operational workspace evidence", () => {
   }) => {
     await selectAllQueue(page);
 
-    // Desktop opens useful work immediately. Opening a thread acknowledges it
-    // through the explicit PATCH authority, so wait for that convergence before
-    // comparing durable unread state with the rendered work queue.
     const activeConversation = page.locator(
       '[data-inbox-conversation][aria-current="true"]',
     );
@@ -139,7 +144,9 @@ test.describe.serial("Inbox operational workspace evidence", () => {
 
     const authority = await fetchUnreadAuthority(page);
     expect(authority.chats.length).toBeGreaterThan(0);
-    const expectedUnread = authority.chats.filter((chat) => chat.unread > 0).length;
+    const expectedUnread = authority.chats.filter(
+      (chat) => chat.unread > 0,
+    ).length;
     expect(expectedUnread).toBeGreaterThan(0);
 
     const allRows = page.locator("[data-inbox-conversation]");
@@ -175,8 +182,6 @@ test.describe.serial("Inbox operational workspace evidence", () => {
     await expect(thread).toBeVisible();
     await expect(thread.getByRole("log")).toBeVisible();
 
-    // 1366px keeps the common path two-pane. Advanced Customer / Work / Order
-    // context is still one action away instead of consuming permanent width.
     const contextTrigger = page.getByRole("button", {
       name: "Contexte de la conversation",
     });
@@ -200,5 +205,63 @@ test.describe.serial("Inbox operational workspace evidence", () => {
     await back.click();
     await expect(page.locator('[data-inbox-queue="true"]')).toBeVisible();
     await expect(page.locator('[data-inbox-thread="active"]')).toHaveCount(0);
+  });
+
+  test("Founder 1600 Arabic V3 stays conversation-dominant and offline-compose capable", async ({
+    context,
+    page,
+    baseURL,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize(FOUNDER_DESKTOP);
+    await context.addCookies([
+      {
+        name: "sahelflow-locale",
+        value: "ar",
+        url: baseURL ?? "http://localhost:3000",
+      },
+    ]);
+    await page.goto("/inbox", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+    const workspace = page.locator('[data-inbox-workspace="v2"]');
+    await expect(workspace).toHaveAttribute("data-inbox-version", "v3");
+    await selectAllQueue(page);
+
+    const firstConversation = page.locator("[data-inbox-conversation]").first();
+    await expect(firstConversation).toBeVisible();
+    await firstConversation.click();
+
+    const queue = page.locator('[data-inbox-queue="true"]');
+    const thread = page.locator('[data-inbox-thread="active"]');
+    await expect(thread).toBeVisible();
+    await expect(page.locator('aside [data-inbox-context="true"]')).toHaveCount(0);
+
+    const [queueBox, threadBox] = await Promise.all([
+      queue.boundingBox(),
+      thread.boundingBox(),
+    ]);
+    expect(queueBox).not.toBeNull();
+    expect(threadBox).not.toBeNull();
+    expect(queueBox!.width).toBeGreaterThanOrEqual(310);
+    expect(queueBox!.width).toBeLessThanOrEqual(330);
+    expect(threadBox!.width).toBeGreaterThan(queueBox!.width * 2);
+
+    const transport = await page.evaluate(async () => {
+      const response = await fetch("/api/whatsapp/status", { cache: "no-store" });
+      return (await response.json()) as { sidecarReachable?: boolean };
+    });
+    if (transport.sidecarReachable === false) {
+      await expect(thread.locator("textarea")).toBeVisible();
+      await expect(
+        thread.getByRole("button", { name: /ربط واتساب|Connecter WhatsApp|Connect WhatsApp/ }).first(),
+      ).toBeVisible();
+    }
+
+    await page.screenshot({
+      path: testInfo.outputPath("inbox-v3-founder-ar-1600.png"),
+      fullPage: false,
+    });
   });
 });

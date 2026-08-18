@@ -6,15 +6,17 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("Inbox Class-AAA operations desk contract", () => {
-  it("routes Inbox through one cohesive operations desk with bounded recovery", () => {
+  it("routes Inbox through the live V3 workspace with bounded recovery", () => {
     const page = read("src/app/(dashboard)/inbox/page.tsx");
-    const desk = read("src/components/inbox/inbox-operations-desk.tsx");
-    const header = read("src/components/inbox/inbox-operations-header.tsx");
+    const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
+    const header = read("src/components/inbox/inbox-v3-header.tsx");
 
-    expect(page).toContain("InboxOperationsDesk");
+    expect(page).toContain("InboxV3Workspace");
+    expect(page).not.toContain("InboxOperationsDesk");
     expect(page).not.toContain("InboxDesktopPrimer");
-    expect(page).not.toContain("InboxWorkspace");
-    expect(desk).toContain('data-inbox-operations-desk="true"');
+    expect(workspace).toContain('data-inbox-workspace="v2"');
+    expect(workspace).toContain('data-inbox-version="v3"');
+    expect(workspace).toContain('data-inbox-operations-desk="true"');
     expect(header).toContain("WhatsAppIngressRecoveryDock");
     expect(header).toContain("canRetryIngress");
   });
