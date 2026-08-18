@@ -217,7 +217,6 @@ function candidateIdsForQuery(index: SearchIndex, rawQuery: string): string[] {
     const compactBucket = index.keys.get(`c:${compact}`);
     if (compactBucket) buckets.push(compactBucket);
   }
-
   if (buckets.length > 0 && selected.size < CANDIDATE_SCAN_BUDGET) {
     let ids = new Set(buckets[0]);
     for (const bucket of buckets.slice(1)) ids = intersect(ids, bucket);
@@ -441,18 +440,17 @@ async function cached(
   const existing = cache[slot];
   if (existing?.revision === revision) return existing.promise;
 
-  let entry: CachedProjection;
-  const pending = buildStableProjection(slot, build)
+  const pending: Promise<SearchIndex> = buildStableProjection(slot, build)
     .then(({ index, revision: stableRevision }) => {
-      if (cache[slot] === entry) entry.revision = stableRevision;
+      const current = cache[slot];
+      if (current?.promise === pending) current.revision = stableRevision;
       return index;
     })
     .catch((error) => {
-      if (cache[slot] === entry) cache[slot] = undefined;
+      if (cache[slot]?.promise === pending) cache[slot] = undefined;
       throw error;
     });
-  entry = { revision, promise: pending };
-  cache[slot] = entry;
+  cache[slot] = { revision, promise: pending };
   return pending;
 }
 
