@@ -29,7 +29,6 @@ export interface RankedUniversalSearchCandidate extends UniversalSearchCandidate
   score: number;
 }
 
-const ARABIC_DIACRITICS = /[\u0610-\u061a\u064b-\u065f\u0670\u06d6-\u06ed]/gu;
 const ARABIC_DIGITS: Record<string, string> = {
   "٠": "0",
   "١": "1",
@@ -55,16 +54,17 @@ const ARABIC_DIGITS: Record<string, string> = {
 
 /**
  * Normalize seller input consistently across Arabic, French, English and mixed
- * technical values. Search must not fail because the seller typed Arabic-Indic
- * digits, Arabic diacritics/tatweel, compatibility-width characters or repeated
- * whitespace.
+ * technical values. NFKD + mark removal deliberately makes French accents and
+ * Arabic hamza/diacritics search-insensitive while preserving the displayed
+ * source value. Search must also not fail because the seller typed Arabic-Indic
+ * digits, tatweel, compatibility-width characters or repeated whitespace.
  */
 export function normalizeSearchText(value: string): string {
   return value
-    .normalize("NFKC")
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
     .replace(/[٠-٩۰-۹]/gu, (digit) => ARABIC_DIGITS[digit] ?? digit)
     .replace(/ـ/gu, "")
-    .replace(ARABIC_DIACRITICS, "")
     .replace(/[’‘`´]/gu, "'")
     .toLocaleLowerCase()
     .trim()
