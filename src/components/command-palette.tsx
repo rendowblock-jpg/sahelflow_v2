@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   Hash,
   Loader2,
   MessageSquare,
@@ -51,12 +52,14 @@ type ApiRecordResult = UniversalSearchCandidate & {
 interface SearchResponse {
   query: string;
   results: ApiRecordResult[];
+  degradedFamilies: RecordKind[];
   tookMs: number;
 }
 
 interface RecordState {
   query: string;
   results: ApiRecordResult[];
+  degradedFamilies: RecordKind[];
   searching: boolean;
   failed: boolean;
 }
@@ -64,6 +67,7 @@ interface RecordState {
 const EMPTY_RECORD_STATE: RecordState = {
   query: "",
   results: [],
+  degradedFamilies: [],
   searching: false,
   failed: false,
 };
@@ -144,6 +148,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       setRecordState({
         query: normalizedQuery,
         results: [],
+        degradedFamilies: [],
         searching: true,
         failed: false,
       });
@@ -164,6 +169,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           setRecordState({
             query: normalizedQuery,
             results: response.results,
+            degradedFamilies: response.degradedFamilies ?? [],
             searching: false,
             failed: false,
           });
@@ -174,6 +180,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           setRecordState({
             query: normalizedQuery,
             results: [],
+            degradedFamilies: [],
             searching: false,
             failed: true,
           });
@@ -231,6 +238,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     (waitingForRequest || liveRecordState.searching);
   const noResults =
     normalizedQuery.length > 0 && !searching && visibleResults.length === 0;
+  const partiallyDegraded =
+    liveRecordState.degradedFamilies.length > 0 && visibleResults.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -302,6 +311,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   </div>
                 </CommandGroup>
               </>
+            ) : null}
+
+            {partiallyDegraded ? (
+              <div
+                className="mx-1 mb-2 flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2 text-[11px] leading-5 text-warning"
+                role="status"
+              >
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                <span>{copy("partialResults")}</span>
+              </div>
             ) : null}
 
             {normalizedQuery && visibleResults.length > 0 ? (
