@@ -315,6 +315,20 @@ export function chartDataZoom(pointCount: number, theme: SahelChartTheme) {
   ];
 }
 
+function chartPointCount(chart: ECharts): number {
+  const option = chart.getOption() as unknown as {
+    series?: Array<{ data?: unknown[] }>;
+  };
+  return Math.max(
+    0,
+    ...((option.series ?? []).map((entry) => entry.data?.length ?? 0)),
+  );
+}
+
+function showKeyboardPoint(chart: ECharts, dataIndex: number) {
+  chart.dispatchAction({ type: "showTip", seriesIndex: 0, dataIndex });
+}
+
 export function EChartSurface({
   option,
   ariaLabel,
@@ -331,6 +345,7 @@ export function EChartSurface({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const optionRef = React.useRef(option);
   const readyRef = React.useRef(onChartReady);
+  const keyboardIndexRef = React.useRef<number | null>(null);
   const { reducedMotion, baseDuration } = useChartMotion();
 
   optionRef.current = option;
@@ -357,6 +372,13 @@ export function EChartSurface({
         ),
         { notMerge: true, lazyUpdate: false },
       );
+      const pointCount = chartPointCount(chart);
+      if (
+        keyboardIndexRef.current !== null &&
+        keyboardIndexRef.current >= pointCount
+      ) {
+        keyboardIndexRef.current = pointCount > 0 ? pointCount - 1 : null;
+      }
     };
 
     render();
@@ -404,14 +426,82 @@ export function EChartSurface({
     );
   }, [option, ariaLabel, baseDuration, reducedMotion]);
 
+  const handleFocus = React.useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      const chart = getInstanceByDom(event.currentTarget);
+      if (!chart) return;
+      const pointCount = chartPointCount(chart);
+      if (pointCount <= 0) return;
+      const index = keyboardIndexRef.current ?? pointCount - 1;
+      keyboardIndexRef.current = index;
+      showKeyboardPoint(chart, index);
+    },
+    [],
+  );
+
+  const handleBlur = React.useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      const chart = getInstanceByDom(event.currentTarget);
+      chart?.dispatchAction({ type: "hideTip" });
+    },
+    [],
+  );
+
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const chart = getInstanceByDom(event.currentTarget);
+      if (!chart) return;
+      const pointCount = chartPointCount(chart);
+      if (pointCount <= 0) return;
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        chart.dispatchAction({ type: "hideTip" });
+        return;
+      }
+
+      const current = keyboardIndexRef.current ?? pointCount - 1;
+      let next: number | null = null;
+      switch (event.key) {
+        case "ArrowLeft":
+          next = Math.max(0, current - 1);
+          break;
+        case "ArrowRight":
+          next = Math.min(pointCount - 1, current + 1);
+          break;
+        case "Home":
+          next = 0;
+          break;
+        case "End":
+          next = pointCount - 1;
+          break;
+        default:
+          return;
+      }
+
+      event.preventDefault();
+      keyboardIndexRef.current = next;
+      showKeyboardPoint(chart, next);
+    },
+    [],
+  );
+
   return (
     <div
       ref={containerRef}
       data-echarts-surface="true"
-      className={cn("w-full min-w-0 outline-none", className)}
+      className={cn(
+        "w-full min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        className,
+      )}
       style={{ height }}
       role="img"
       aria-label={ariaLabel}
+      aria-keyshortcuts="ArrowLeft ArrowRight Home End Escape"
+      tabIndex={0}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
     />
   );
 }
