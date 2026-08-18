@@ -91,7 +91,13 @@ function mapBaileysStatus(status: unknown): string | null {
   const s = typeof status === "number" ? status : String(status).toUpperCase();
   if (s === 0 || s === "PENDING") return "sending";
   if (s === 1 || s === "SENT") return "sent";
-  if (s === 2 || s === "DELIVERY" || s === "DELIVERY_ACK" || s === "DELIVERED") return "delivered";
+  if (
+    s === 2 ||
+    s === "DELIVERY" ||
+    s === "DELIVERY_ACK" ||
+    s === "DELIVERED"
+  )
+    return "delivered";
   if (s === 3 || s === "READ") return "read";
   if (s === 4 || s === "PLAYED") return "read"; // treat PLAYED as READ
   return null;
@@ -151,7 +157,10 @@ export interface IncomingMessage {
     id: string;
     participant?: string;
   };
-  message: { conversation?: string; extendedTextMessage?: { text?: string } } & Record<string, unknown>;
+  message: {
+    conversation?: string;
+    extendedTextMessage?: { text?: string };
+  } & Record<string, unknown>;
   messageTimestamp: number;
   pushName?: string;
 }
@@ -160,7 +169,12 @@ export interface SidecarEvent {
   type: "status" | "qr" | "message" | "message-update";
   // Session 30 (AUDIT-6 I4): message-update now carries the actual updates
   // (was a hardcoded empty message object).
-  updates?: Array<{ jid: string; id: string; fromMe: boolean; update: Record<string, unknown> }>;
+  updates?: Array<{
+    jid: string;
+    id: string;
+    fromMe: boolean;
+    update: Record<string, unknown>;
+  }>;
   status?: ConnectionStatus;
   user?: WhatsAppUser;
   qr?: string;
@@ -169,7 +183,7 @@ export interface SidecarEvent {
 
 type Subscriber = (event: SidecarEvent) => void;
 
-class WhatsAppManager {
+export class WhatsAppManager {
   private sock: WASocket | null = null;
   private store: ReturnType<typeof makeInMemoryStore> | null = null;
   private status: ConnectionStatus = "disconnected";
@@ -200,7 +214,11 @@ class WhatsAppManager {
     user: WhatsAppUser | null;
     hasQr: boolean;
   } {
-    return { status: this.status, user: this.user, hasQr: this.currentQr !== null };
+    return {
+      status: this.status,
+      user: this.user,
+      hasQr: this.currentQr !== null,
+    };
   }
 
   /** The raw QR string (null if none / already connected). */
@@ -212,7 +230,14 @@ class WhatsAppManager {
   async start(): Promise<void> {
     if (this.connecting || this.sock) return;
     this.connecting = true;
-    await this.connect();
+    try {
+      await this.connect();
+    } finally {
+      // Initial setup can fail before Baileys creates a socket (for example
+      // version discovery/network failure). Never poison every later /connect
+      // attempt by leaving the singleton's startup guard stuck forever.
+      this.connecting = false;
+    }
   }
 
   private async connect(): Promise<void> {
@@ -252,7 +277,10 @@ class WhatsAppManager {
       markOnlineOnConnect: false,
       getMessage: async (key) => {
         if (this.store) {
-          const msg = await this.store.loadMessage(key.remoteJid ?? "", key.id ?? "");
+          const msg = await this.store.loadMessage(
+            key.remoteJid ?? "",
+            key.id ?? "",
+          );
           return (msg?.message ?? undefined) as proto.IMessage | undefined;
         }
         return undefined;
@@ -281,7 +309,11 @@ class WhatsAppManager {
         this.user = u
           ? { id: u.id ?? "", name: u.name ?? undefined }
           : null;
-        this.emit({ type: "status", status: "connected", user: this.user ?? undefined });
+        this.emit({
+          type: "status",
+          status: "connected",
+          user: this.user ?? undefined,
+        });
         logger.info({ user: this.user }, "connected");
       }
 
@@ -305,7 +337,10 @@ class WhatsAppManager {
           const delay = Math.min(2000 * this.reconnectAttempts, 15000);
           this.status = "connecting";
           this.emit({ type: "status", status: "connecting" });
-          logger.warn({ code, attempt: this.reconnectAttempts, delay }, "reconnecting");
+          logger.warn(
+            { code, attempt: this.reconnectAttempts, delay },
+            "reconnecting",
+          );
           setTimeout(() => void this.connect(), delay);
         } else {
           this.status = "disconnected";
@@ -339,7 +374,10 @@ class WhatsAppManager {
           update: (u.update ?? {}) as Record<string, unknown>,
         }));
       if (updateList.length) {
-        this.emit({ type: "message-update", updates: updateList } as SidecarEvent);
+        this.emit({
+          type: "message-update",
+          updates: updateList,
+        } as SidecarEvent);
       }
 
       // W3-12: persist delivery-ack updates (esp. failures) to the Next.js
@@ -352,7 +390,8 @@ class WhatsAppManager {
         if (!u.key.fromMe) continue;
         const upd = (u.update ?? {}) as Record<string, unknown>;
         const providerError = upd.error;
-        const hasError = providerError !== undefined && providerError !== null;
+        const hasError =
+          providerError !== undefined && providerError !== null;
         const mappedStatus = mapBaileysStatus(upd.status);
         if (hasError) {
           // Failure — always surface to the app for audit logging +
@@ -431,30 +470,29 @@ class WhatsAppManager {
   }> {
     if (!this.store) return [];
     const chats = this.store.chats.all();
-    return chats
-      .slice(0, limit)
-      .map((c) => {
-        const msgs = this.store?.messages[c.id]?.array ?? [];
-        const last = msgs[msgs.length - 1];
-        const lastText =
-          last?.message?.conversation ??
-          last?.message?.extendedTextMessage?.text ??
-          "";
-        return {
-          jid: c.id,
-          name: c.name ?? c.id,
-          lastMessage: last
-            ? {
-                text: lastText,
-                timestamp: typeof last.messageTimestamp === "number"
+    return chats.slice(0, limit).map((c) => {
+      const msgs = this.store?.messages[c.id]?.array ?? [];
+      const last = msgs[msgs.length - 1];
+      const lastText =
+        last?.message?.conversation ??
+        last?.message?.extendedTextMessage?.text ??
+        "";
+      return {
+        jid: c.id,
+        name: c.name ?? c.id,
+        lastMessage: last
+          ? {
+              text: lastText,
+              timestamp:
+                typeof last.messageTimestamp === "number"
                   ? (last.messageTimestamp as number)
                   : 0,
-                fromMe: last.key?.fromMe ?? false,
-              }
-            : undefined,
-          unread: c.unreadCount ?? 0,
-        };
-      });
+              fromMe: last.key?.fromMe ?? false,
+            }
+          : undefined,
+        unread: c.unreadCount ?? 0,
+      };
+    });
   }
 
   /** Get messages for a chat from the in-memory store. */
