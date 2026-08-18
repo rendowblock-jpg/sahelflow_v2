@@ -18,6 +18,7 @@ import type {
 import {
   cartesianAxisStyle,
   chartDataZoom,
+  chartLegend,
   chartTooltip,
   EChartSurface,
   resolveChartColor,
@@ -45,6 +46,12 @@ interface TimeSeriesChartProps {
   referenceLines?: ChartReferenceLine[];
   referenceBands?: ChartReferenceBand[];
   yDomain?: [number, number];
+  /**
+   * Long additive series with only a few non-zero observations are easier to
+   * read as discrete activity bars than as a mostly-flat interpolated area.
+   * Area charts opt in by default; bounded/reference-band charts never switch.
+   */
+  adaptiveSparseBars?: boolean;
 }
 
 function isolate(value: unknown): string {
@@ -86,6 +93,7 @@ export function TimeSeriesChart({
   referenceLines = [],
   referenceBands = [],
   yDomain,
+  adaptiveSparseBars,
 }: TimeSeriesChartProps) {
   const { locale, dir } = useI18n();
   const chartHeight = normalizeChartHeight(height);
@@ -93,17 +101,47 @@ export function TimeSeriesChart({
     () => resolveFormatter(formatY, locale),
     [formatY, locale],
   );
+  const meaningfulPointCount = React.useMemo(
+    () =>
+      data.filter((row) =>
+        series.some((current) => {
+          const value = Number(row[current.key] ?? 0);
+          return Number.isFinite(value) && Math.abs(value) > 0;
+        }),
+      ).length,
+    [data, series],
+  );
+  const allowSparseBars = adaptiveSparseBars ?? mode === "area";
+  const useSparseBars =
+    allowSparseBars &&
+    mode === "area" &&
+    series.length === 1 &&
+    referenceLines.length === 0 &&
+    referenceBands.length === 0 &&
+    yDomain === undefined &&
+    data.length >= 14 &&
+    meaningfulPointCount > 0 &&
+    meaningfulPointCount <= Math.max(4, Math.ceil(data.length * 0.16));
 
   const option = React.useCallback(
     (theme: SahelChartTheme) => {
       const zoom = chartDataZoom(data.length, theme);
       const axis = cartesianAxisStyle(theme);
-      const hasEndLabel = series.length === 1 && data.length > 1;
+      const hasLegend = series.length > 1;
+      const hasEndLabel =
+        !useSparseBars &&
+        series.length === 1 &&
+        data.length > 1 &&
+        meaningfulPointCount > 0;
       const chartSeries = series.map((current, index) => {
         const format = current.format
           ? resolveFormatter(current.format, locale)
           : fmtY;
         const color = configuredColor(config, current.key, theme, index);
+        const values = data.map((row) => {
+          const value = Number(row[current.key] ?? 0);
+          return Number.isFinite(value) ? value : 0;
+        });
         const markLine =
           index === 0 && referenceLines.length
             ? {
@@ -115,6 +153,11 @@ export function TimeSeriesChart({
                   fontSize: 11,
                   position: "insideEndTop",
                   formatter: (params: { name?: string }) => params.name ?? "",
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                  borderWidth: 1,
+                  borderRadius: 5,
+                  padding: [3, 6],
                 },
                 lineStyle: { width: 1, opacity: 0.75 },
                 data: referenceLines.map((reference) => ({
@@ -152,19 +195,50 @@ export function TimeSeriesChart({
                 ]),
               }
             : undefined;
+        const tooltip = {
+          valueFormatter: (value: unknown) => format(Number(value ?? 0)),
+        };
+
+        if (useSparseBars) {
+          return {
+            id: current.key,
+            name: current.label,
+            type: "bar" as const,
+            data: values,
+            barMaxWidth: 30,
+            barMinWidth: 4,
+            barMinHeight: 2,
+            itemStyle: {
+              color,
+              borderRadius: [6, 6, 2, 2],
+              opacity: 0.9,
+            },
+            emphasis: {
+              focus: "series" as const,
+              itemStyle: { opacity: 1 },
+            },
+            tooltip,
+            markLine,
+            markArea,
+          };
+        }
 
         return {
           id: current.key,
           name: current.label,
           type: "line" as const,
-          data: data.map((row) => Number(row[current.key] ?? 0)),
+          data: values,
           ...curveOptions(curve),
-          showSymbol: false,
+          showSymbol: data.length <= 12,
           symbol: "circle",
           symbolSize: 7,
           connectNulls: false,
           sampling: data.length > 120 ? ("lttb" as const) : undefined,
-          lineStyle: { color, width: mode === "area" ? 2.4 : 2.25 },
+          lineStyle: {
+            color,
+            width: mode === "area" ? 2.4 : 2.25,
+            cap: "round" as const,
+          },
           itemStyle: { color, borderColor: theme.card, borderWidth: 2 },
           areaStyle:
             mode === "area"
@@ -194,9 +268,7 @@ export function TimeSeriesChart({
                 padding: [3, 6],
               }
             : undefined,
-          tooltip: {
-            valueFormatter: (value: unknown) => format(Number(value ?? 0)),
-          },
+          tooltip,
           markLine,
           markArea,
         };
@@ -206,10 +278,11 @@ export function TimeSeriesChart({
         color: series.map((entry, index) =>
           configuredColor(config, entry.key, theme, index),
         ),
+        legend: hasLegend ? chartLegend(theme, dir) : undefined,
         grid: {
           left: 8,
           right: hasEndLabel ? 82 : 18,
-          top: 14,
+          top: hasLegend ? 38 : 14,
           bottom: zoom ? 45 : 12,
           containLabel: true,
         },
@@ -226,7 +299,7 @@ export function TimeSeriesChart({
         },
         xAxis: {
           type: "category",
-          boundaryGap: false,
+          boundaryGap: useSparseBars,
           data: data.map((row) => String(row[xKey] ?? "")),
           axisLine: { show: false },
           axisTick: { show: false },
@@ -241,9 +314,9 @@ export function TimeSeriesChart({
         },
         yAxis: {
           type: "value",
-          min: yDomain?.[0],
+          min: useSparseBars ? 0 : yDomain?.[0],
           max: yDomain?.[1],
-          scale: yDomain === undefined,
+          scale: useSparseBars ? false : yDomain === undefined,
           ...axis,
           splitLine: showGrid ? axis.splitLine : { show: false },
           axisLabel: {
@@ -262,11 +335,13 @@ export function TimeSeriesChart({
       dir,
       fmtY,
       locale,
+      meaningfulPointCount,
       mode,
       referenceBands,
       referenceLines,
       series,
       showGrid,
+      useSparseBars,
       xKey,
       yDomain,
     ],
