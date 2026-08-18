@@ -8,10 +8,10 @@ const read = (path: string) =>
 describe("Phase 4 committed WebView acceptance transport", () => {
   it("uses the supported browser-level WebView2 CDP connection and fails closed after dispatch", () => {
     const wrapper = read("scripts/verify-phase4-replacement-install-ci.ps1");
-    const transport = read("scripts/phase4-webview-committed-acceptance.ts");
+    const transport = read("scripts/phase4-webview-committed-acceptance.mjs");
 
     expect(wrapper).toContain(
-      'phase4-webview-committed-acceptance.ts',
+      "phase4-webview-committed-acceptance.mjs",
     );
     expect(wrapper).toContain(
       '"function Invoke-CommittedWebViewAcceptance {"',
@@ -20,10 +20,10 @@ describe("Phase 4 committed WebView acceptance transport", () => {
       '"function Get-RuntimeCookieFromTarget {"',
     );
     expect(wrapper).toContain(
-      "$inputJson | & $bunCommand.Source $transportScript",
+      "$inputJson | & node $transportScript",
     );
     expect(wrapper).toContain(
-      'phase4-committed-webview-dispatch.json',
+      "phase4-committed-webview-dispatch.json",
     );
     expect(wrapper).toContain(
       "the mutating journey was not retried",
@@ -31,12 +31,14 @@ describe("Phase 4 committed WebView acceptance transport", () => {
     expect(wrapper).not.toContain("preflight/recycle");
 
     expect(transport).toContain(
-      'import { chromium, type Page } from "@playwright/test"',
+      'import { chromium } from "@playwright/test"',
     );
     expect(transport).toContain("chromium.connectOverCDP(endpoint");
     expect(transport).toContain("headers: { Origin: endpoint }");
     expect(transport).toContain("browser.contexts()");
-    expect(transport).toContain(".filter((candidate) => isExactAppPage(candidate, baseUrl))");
+    expect(transport).toContain(
+      ".filter((candidate) => isExactAppPage(candidate, baseUrl))",
+    );
     expect(transport).toContain("candidate.port === baseUrl.port");
     expect(transport).toContain("isLoopback(candidate.hostname)");
     expect(transport).toContain("writeDispatchMarker(dispatchMarker)");
@@ -49,6 +51,6 @@ describe("Phase 4 committed WebView acceptance transport", () => {
     expect(transport).toContain('request("/api/secrets/gemini-key")');
     expect(transport).toContain("for await (const chunk of process.stdin)");
     expect(transport).not.toContain("console.log");
-    expect(transport).not.toContain("acceptedInput.pin)");
+    expect(transport).not.toContain("process.argv.join");
   });
 });
