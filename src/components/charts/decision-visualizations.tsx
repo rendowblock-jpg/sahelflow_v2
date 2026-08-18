@@ -59,24 +59,31 @@ export function SegmentedBreakdown({
   className?: string;
 }) {
   const visible = data.filter((entry) => entry.value > 0);
-  const denominator = total > 0 ? total : visible.reduce((sum, entry) => sum + entry.value, 0);
+  const denominator =
+    total > 0 ? total : visible.reduce((sum, entry) => sum + entry.value, 0);
 
   if (!visible.length || denominator <= 0) return null;
 
   return (
-    <div className={cn("space-y-5", className)} data-decision-viz="segmented-breakdown">
+    <div
+      className={cn("space-y-5", className)}
+      data-decision-viz="segmented-breakdown"
+    >
       <div
         className="flex h-3 w-full overflow-hidden rounded-full bg-muted/55 ring-1 ring-inset ring-border/70"
         dir="ltr"
         role="img"
         aria-label={visible
-          .map((entry) => `${String(entry.label)} ${String(formatPercent(entry.value / denominator))}`)
+          .map(
+            (entry) =>
+              `${String(entry.label)} ${String(formatPercent(entry.value / denominator))}`,
+          )
           .join(", ")}
       >
         {visible.map((entry) => (
           <span
             key={entry.key}
-            className="h-full min-w-1 transition-[width] duration-300 ease-out"
+            className="h-full transition-[width] duration-300 ease-out motion-reduce:transition-none"
             style={{
               width: `${clampPercent((entry.value / denominator) * 100)}%`,
               background: entry.color,
@@ -127,6 +134,18 @@ export function SegmentedBreakdown({
   );
 }
 
+function competitionRanks(data: RankedMetricDatum[]): number[] {
+  let previousValue: number | undefined;
+  let previousRank = 1;
+  return data.map((entry, index) => {
+    const rank =
+      index === 0 || entry.value !== previousValue ? index + 1 : previousRank;
+    previousValue = entry.value;
+    previousRank = rank;
+    return rank;
+  });
+}
+
 export function RankedMetricList({
   data,
   className,
@@ -136,20 +155,35 @@ export function RankedMetricList({
   className?: string;
   maxValue?: number;
 }) {
-  const resolvedMax = Math.max(maxValue ?? 0, ...data.map((entry) => Math.max(0, entry.value)), 1);
+  const resolvedMax = Math.max(
+    maxValue ?? 0,
+    ...data.map((entry) => Math.max(0, entry.value)),
+    1,
+  );
+  const positiveValues = data
+    .map((entry) => entry.value)
+    .filter((value) => Number.isFinite(value) && value > 0);
+  const hasMagnitudeVariance = new Set(positiveValues).size > 1;
+  const ranks = competitionRanks(data);
 
   return (
-    <div className={cn("space-y-1", className)} data-decision-viz="ranked-metrics">
+    <div
+      className={cn("space-y-1", className)}
+      data-decision-viz="ranked-metrics"
+      data-magnitude-variance={hasMagnitudeVariance ? "true" : "false"}
+    >
       {data.map((entry, index) => {
-        const width = clampPercent((Math.max(0, entry.value) / resolvedMax) * 100);
+        const width = clampPercent(
+          (Math.max(0, entry.value) / resolvedMax) * 100,
+        );
         return (
           <div
             key={entry.key}
-            className="group rounded-xl px-2 py-2.5 transition-colors hover:bg-muted/35 focus-within:bg-muted/35"
+            className="group rounded-xl px-2 py-2.5 transition-colors hover:bg-muted/35 focus-within:bg-muted/35 motion-reduce:transition-none"
           >
             <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-2.5">
               <span className="pt-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
-                {String(index + 1).padStart(2, "0")}
+                {String(ranks[index] ?? index + 1).padStart(2, "0")}
               </span>
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium text-foreground">
@@ -165,16 +199,21 @@ export function RankedMetricList({
                 {entry.displayValue}
               </div>
             </div>
-            <div className="mt-2.5 ms-[2.625rem] h-1.5 overflow-hidden rounded-full bg-muted/65" dir="ltr">
+            {hasMagnitudeVariance ? (
               <div
-                className="h-full rounded-full transition-[width] duration-300 ease-out"
-                style={{
-                  width: `${width}%`,
-                  background: entry.color ?? "var(--color-chart-1)",
-                }}
+                className="mt-2.5 ms-[2.625rem] h-1.5 overflow-hidden rounded-full bg-muted/65"
+                dir="ltr"
                 aria-hidden="true"
-              />
-            </div>
+              >
+                <div
+                  className="h-full rounded-full transition-[width] duration-300 ease-out motion-reduce:transition-none"
+                  style={{
+                    width: `${width}%`,
+                    background: entry.color ?? "var(--color-chart-1)",
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
         );
       })}
@@ -199,11 +238,14 @@ export function OutcomeProgress({
 }) {
   const percent = clampPercent(value);
   return (
-    <div className={cn("space-y-6", className)} data-decision-viz="outcome-progress">
+    <div
+      className={cn("space-y-6", className)}
+      data-decision-viz="outcome-progress"
+    >
       <div>
         <div className="flex items-end justify-between gap-4">
           <div>
-            <div className="text-3xl font-semibold tracking-tight tabular-nums text-foreground">
+            <div className="text-3xl font-semibold tracking-tight tabular-nums text-foreground rtl:tracking-normal">
               {displayValue}
             </div>
             <div className="mt-1 text-sm text-muted-foreground">{label}</div>
@@ -219,7 +261,7 @@ export function OutcomeProgress({
           dir="ltr"
         >
           <div
-            className="h-full rounded-full transition-[width] duration-300 ease-out"
+            className="h-full rounded-full transition-[width] duration-300 ease-out motion-reduce:transition-none"
             style={{ width: `${percent}%`, background: color }}
           />
         </div>
@@ -228,8 +270,15 @@ export function OutcomeProgress({
       <div className="grid grid-cols-2 gap-x-5 gap-y-1 sm:grid-cols-4">
         {outcomes.map((outcome) => (
           <div key={outcome.key} className="border-t border-border/70 py-3">
-            <div className="text-xs leading-4 text-muted-foreground">{outcome.label}</div>
-            <div className={cn("mt-1 text-lg font-semibold tabular-nums", toneClass(outcome.tone))}>
+            <div className="text-xs leading-4 text-muted-foreground">
+              {outcome.label}
+            </div>
+            <div
+              className={cn(
+                "mt-1 text-lg font-semibold tabular-nums",
+                toneClass(outcome.tone),
+              )}
+            >
               {outcome.displayValue ?? outcome.value}
             </div>
           </div>
