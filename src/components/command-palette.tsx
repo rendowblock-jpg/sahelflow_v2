@@ -116,6 +116,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     EMPTY_RECORD_STATE,
   );
   const normalizedQuery = normalizeSearchText(query);
+  const technicalQuery =
+    normalizedQuery.length > 0 && /^[0-9\s()+\-./]+$/u.test(normalizedQuery);
 
   const navigation = React.useMemo(
     () =>
@@ -262,6 +264,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <div className="relative">
             <CommandInput
               autoFocus
+              dir={technicalQuery ? "ltr" : "auto"}
+              className="[unicode-bidi:plaintext]"
               placeholder={copy("placeholder")}
               value={query}
               onValueChange={handleQueryChange}
@@ -318,7 +322,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 className="mx-1 mb-2 flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2 text-[11px] leading-5 text-warning"
                 role="status"
               >
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                <AlertTriangle
+                  className="mt-0.5 size-3.5 shrink-0"
+                  aria-hidden="true"
+                />
                 <span>{copy("partialResults")}</span>
               </div>
             ) : null}
