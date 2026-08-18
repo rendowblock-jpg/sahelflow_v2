@@ -45,6 +45,16 @@ type RecordCandidate = UniversalSearchCandidate & {
   customerId?: string;
 };
 
+type ConversationSearchRow = {
+  id: string;
+  channel: string;
+  lastMessageAt: Date | null;
+  updatedAt: Date;
+  messages: Array<{ body: string }>;
+  contactName?: string;
+  contactPhone?: string | null;
+};
+
 export interface UniversalRecordSearchResponse {
   query: string;
   results: Array<RecordCandidate & { score: number }>;
@@ -100,7 +110,7 @@ async function conversationCandidates(
     },
   };
 
-  const rows = canReadContact
+  const rows: ConversationSearchRow[] = canReadContact
     ? await db.conversation.findMany({
         select: {
           ...commonSelect,
@@ -118,28 +128,24 @@ async function conversationCandidates(
 
   return rankUniversalSearchCandidates(
     query,
-    rows.map((conversation): RecordCandidate => {
-      const contactName =
-        "contactName" in conversation ? conversation.contactName : undefined;
-      const contactPhone =
-        "contactPhone" in conversation ? conversation.contactPhone : undefined;
-      return {
+    rows.map(
+      (conversation): RecordCandidate => ({
         id: `conversation:${conversation.id}`,
         entityId: conversation.id,
         kind: "conversation",
         label:
-          canReadContact && contactName
-            ? contactName
+          canReadContact && conversation.contactName
+            ? conversation.contactName
             : `Inbox · ${conversation.id.slice(-6)}`,
         sublabel:
-          canReadContact && contactPhone
-            ? contactPhone
+          canReadContact && conversation.contactPhone
+            ? conversation.contactPhone
             : conversation.channel,
         href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
         keywords: conversation.messages.map((message) => message.body),
         updatedAt: conversation.lastMessageAt ?? conversation.updatedAt,
-      };
-    }),
+      }),
+    ),
     FAMILY_MATCH_BUDGET,
   );
 }
