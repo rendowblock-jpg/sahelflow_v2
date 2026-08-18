@@ -8,7 +8,7 @@ const harness = readFileSync(
 ).replace(/\r\n?/g, "\n");
 
 describe("installed Windows authenticated UI readiness ordering", () => {
-  it("allows observation grace only when durable matching readiness predates visibility", () => {
+  it("allows observation grace only when durable matching readiness predates the first visibility", () => {
     expect(harness).toContain(
       "$authenticatedUiEvidenceGraceMilliseconds = 3000",
     );
@@ -17,6 +17,12 @@ describe("installed Windows authenticated UI readiness ordering", () => {
     );
     expect(harness).toContain(
       '$uiDiagnostic.code -eq "RUNTIME_UI_READY_PERSISTED"',
+    );
+    expect(harness).toContain(
+      "if ($workspaceWindows.Count -ne 0 -and $null -eq $workspaceVisibleAt)",
+    );
+    expect(harness).not.toContain(
+      "$workspaceWindows.Count -eq 0) {\n            $workspaceVisibleAt = $null",
     );
     expect(harness).toContain(
       "$uiItem.LastWriteTime -le $workspaceVisibleAt",
@@ -28,6 +34,9 @@ describe("installed Windows authenticated UI readiness ordering", () => {
       "-not $readinessPredatesWorkspaceVisibility",
     );
 
+    const firstVisibilityCapture = harness.indexOf(
+      "if ($workspaceWindows.Count -ne 0 -and $null -eq $workspaceVisibleAt)",
+    );
     const strictOrderingFailure = harness.indexOf(
       "workspace became visible before matching authenticated readiness evidence was durably written",
     );
@@ -38,7 +47,8 @@ describe("installed Windows authenticated UI readiness ordering", () => {
       'outcome = "authenticated-ui-ready"',
     );
 
-    expect(strictOrderingFailure).toBeGreaterThan(-1);
+    expect(firstVisibilityCapture).toBeGreaterThan(-1);
+    expect(strictOrderingFailure).toBeGreaterThan(firstVisibilityCapture);
     expect(boundedObservationGrace).toBeGreaterThan(strictOrderingFailure);
     expect(acceptedOutcome).toBeGreaterThan(boundedObservationGrace);
   });
