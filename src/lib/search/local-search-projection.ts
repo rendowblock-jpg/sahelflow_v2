@@ -74,8 +74,6 @@ function invalidateDependentProjection(
 ): void {
   cache[projectionSlot(model)] = undefined;
   if (model === "Order") {
-    // Delivery/return projections carry the plain order number for search and
-    // must not retain a renamed/repaired order identifier.
     cache.delivery = undefined;
     cache.return = undefined;
   }
@@ -92,11 +90,8 @@ if (!globalSearchProjection.sahelflowLocalSearchProjectionSubscribed) {
 function addKey(index: SearchIndex, key: string, id: string): void {
   if (!key) return;
   const bucket = index.keys.get(key);
-  if (bucket) {
-    bucket.add(id);
-  } else {
-    index.keys.set(key, new Set([id]));
-  }
+  if (bucket) bucket.add(id);
+  else index.keys.set(key, new Set([id]));
 }
 
 function prefixes(value: string): string[] {
@@ -179,7 +174,9 @@ function candidateIdsForQuery(index: SearchIndex, rawQuery: string): string[] {
   if (buckets.length > 0) {
     let ids = new Set(buckets[0]);
     for (const bucket of buckets.slice(1)) ids = intersect(ids, bucket);
-    if (ids.size > 0) return [...ids].slice(0, DEFAULT_CANDIDATE_LIMIT * 4);
+    if (ids.size > 0) {
+      return [...ids].slice(0, DEFAULT_CANDIDATE_LIMIT * 4);
+    }
   }
 
   if (compact.length >= GRAM_SIZE) {
@@ -294,7 +291,9 @@ async function buildDeliveryIndex(): Promise<SearchIndex> {
       entityId: delivery.id,
       kind: "delivery" as const,
       label:
-        delivery.trackingNumber ?? delivery.order.orderNumber ?? delivery.id.slice(-8),
+        delivery.trackingNumber ??
+        delivery.order.orderNumber ??
+        delivery.id.slice(-8),
       sublabel: [delivery.provider, delivery.order.orderNumber]
         .filter(Boolean)
         .join(" · "),
@@ -348,7 +347,11 @@ export async function searchProjectedCustomers(
   query: string,
   limit?: number,
 ) {
-  return queryIndex(await cached(shopId, "customer", buildCustomerIndex), query, limit);
+  return queryIndex(
+    await cached(shopId, "customer", buildCustomerIndex),
+    query,
+    limit,
+  );
 }
 
 export async function searchProjectedProducts(
@@ -356,7 +359,11 @@ export async function searchProjectedProducts(
   query: string,
   limit?: number,
 ) {
-  return queryIndex(await cached(shopId, "product", buildProductIndex), query, limit);
+  return queryIndex(
+    await cached(shopId, "product", buildProductIndex),
+    query,
+    limit,
+  );
 }
 
 export async function searchProjectedOrders(
@@ -388,7 +395,11 @@ export async function searchProjectedDeliveries(
   query: string,
   limit?: number,
 ) {
-  return queryIndex(await cached(shopId, "delivery", buildDeliveryIndex), query, limit);
+  return queryIndex(
+    await cached(shopId, "delivery", buildDeliveryIndex),
+    query,
+    limit,
+  );
 }
 
 export async function searchProjectedReturns(
@@ -396,7 +407,11 @@ export async function searchProjectedReturns(
   query: string,
   limit?: number,
 ) {
-  return queryIndex(await cached(shopId, "return", buildReturnIndex), query, limit);
+  return queryIndex(
+    await cached(shopId, "return", buildReturnIndex),
+    query,
+    limit,
+  );
 }
 
 export async function warmLocalSearchProjection(
@@ -412,5 +427,5 @@ export async function warmLocalSearchProjection(
   if (options.includeProtectedCustomers) {
     work.push(cached(shopId, "customer", buildCustomerIndex));
   }
-  await Promise.all(work);
+  await Promise.allSettled(work);
 }
