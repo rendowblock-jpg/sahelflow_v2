@@ -10,6 +10,7 @@ import {
 import { logger } from "@/lib/logger";
 import {
   projectedOrdersForCustomers,
+  searchProjectedConversations,
   searchProjectedCustomers,
   searchProjectedDeliveries,
   searchProjectedOrders,
@@ -45,14 +46,12 @@ type RecordCandidate = UniversalSearchCandidate & {
   customerId?: string;
 };
 
-type ConversationSearchRow = {
+type RecentConversationSearchRow = {
   id: string;
   channel: string;
   lastMessageAt: Date | null;
   updatedAt: Date;
   messages: Array<{ body: string }>;
-  contactName?: string;
-  contactPhone?: string | null;
 };
 
 export interface UniversalRecordSearchResponse {
@@ -94,37 +93,27 @@ async function safeFamily<T>(
   }
 }
 
-async function conversationCandidates(
+async function recentConversationMessageCandidates(
   query: string,
-  canReadContact: boolean,
 ): Promise<Array<RecordCandidate & { score: number }>> {
-  const commonSelect = {
-    id: true,
-    channel: true,
-    lastMessageAt: true,
-    updatedAt: true,
-    messages: {
-      orderBy: { timestamp: "desc" as const },
-      take: RECENT_MESSAGES_PER_CONVERSATION,
-      select: { body: true },
+  // Message-body search remains a bounded live projection. Contact name/phone
+  // lookup is handled by the full revision-bound conversation index instead of
+  // discarding older conversations before matching.
+  const rows: RecentConversationSearchRow[] = await db.conversation.findMany({
+    select: {
+      id: true,
+      channel: true,
+      lastMessageAt: true,
+      updatedAt: true,
+      messages: {
+        orderBy: { timestamp: "desc" as const },
+        take: RECENT_MESSAGES_PER_CONVERSATION,
+        select: { body: true },
+      },
     },
-  };
-
-  const rows: ConversationSearchRow[] = canReadContact
-    ? await db.conversation.findMany({
-        select: {
-          ...commonSelect,
-          contactName: true,
-          contactPhone: true,
-        },
-        orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
-        take: CONVERSATION_SCAN_LIMIT,
-      })
-    : await db.conversation.findMany({
-        select: commonSelect,
-        orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
-        take: CONVERSATION_SCAN_LIMIT,
-      });
+    orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
+    take: CONVERSATION_SCAN_LIMIT,
+  });
 
   return rankUniversalSearchCandidates(
     query,
@@ -133,19 +122,43 @@ async function conversationCandidates(
         id: `conversation:${conversation.id}`,
         entityId: conversation.id,
         kind: "conversation",
-        label:
-          canReadContact && conversation.contactName
-            ? conversation.contactName
-            : `Inbox · ${conversation.id.slice(-6)}`,
-        sublabel:
-          canReadContact && conversation.contactPhone
-            ? conversation.contactPhone
-            : conversation.channel,
+        label: `Inbox · ${conversation.id.slice(-6)}`,
+        sublabel: conversation.channel,
         href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
         keywords: conversation.messages.map((message) => message.body),
         updatedAt: conversation.lastMessageAt ?? conversation.updatedAt,
       }),
     ),
+    FAMILY_MATCH_BUDGET,
+  );
+}
+
+function mergeConversationCandidates(
+  query: string,
+  contactRows: readonly RecordCandidate[],
+  recentRows: readonly RecordCandidate[],
+): Array<RecordCandidate & { score: number }> {
+  const combined = new Map<string, RecordCandidate>();
+
+  for (const candidate of contactRows) combined.set(candidate.id, candidate);
+  for (const candidate of recentRows) {
+    const existing = combined.get(candidate.id);
+    if (!existing) {
+      combined.set(candidate.id, candidate);
+      continue;
+    }
+    combined.set(candidate.id, {
+      ...existing,
+      keywords: [
+        ...(existing.keywords ?? []),
+        ...(candidate.keywords ?? []),
+      ],
+    });
+  }
+
+  return rankUniversalSearchCandidates(
+    query,
+    [...combined.values()],
     FAMILY_MATCH_BUDGET,
   );
 }
@@ -180,14 +193,20 @@ export async function warmUniversalSearchRecords(): Promise<void> {
   const canOrders = allowed(actorContext, "orders.read");
   const canCustomers = allowed(actorContext, "customers.read");
   const canReadContact = allowed(actorContext, "customers.contact.read");
+  const canReadFinancials = allowed(actorContext, "orders.financials.read");
   const canProducts = allowed(actorContext, "products.read");
+  const canConversations = allowed(actorContext, "conversations.read");
   const canDeliveries = allowed(actorContext, "deliveries.read");
+  const canOpenProtectedOperationalDetail =
+    canReadContact && canReadFinancials;
+
   await warmLocalSearchProjection(actorContext.shop.shopId, {
     customer: canCustomers && canReadContact,
+    conversation: canConversations && canReadContact,
     product: canProducts,
     order: canOrders,
-    delivery: canDeliveries,
-    return: canOrders,
+    delivery: canDeliveries && canOpenProtectedOperationalDetail,
+    return: canOrders && canOpenProtectedOperationalDetail,
   });
 }
 
@@ -212,45 +231,65 @@ export async function searchUniversalRecords(
   const canOrders = allowed(actorContext, "orders.read");
   const canCustomers = allowed(actorContext, "customers.read");
   const canReadContact = allowed(actorContext, "customers.contact.read");
+  const canReadFinancials = allowed(actorContext, "orders.financials.read");
   const canProducts = allowed(actorContext, "products.read");
   const canConversations = allowed(actorContext, "conversations.read");
   const canDeliveries = allowed(actorContext, "deliveries.read");
+  const canOpenProtectedOperationalDetail =
+    canReadContact && canReadFinancials;
   const degraded = new Set<RecordKind>();
 
-  const [customers, products, conversations, deliveries, returns] =
-    await Promise.all([
-      canCustomers && canReadContact
-        ? safeFamily("customer", [], degraded, () =>
-            searchProjectedCustomers(shopId, query, FAMILY_MATCH_BUDGET),
-          )
-        : Promise.resolve([]),
-      canProducts
-        ? safeFamily("product", [], degraded, () =>
-            searchProjectedProducts(shopId, query, FAMILY_MATCH_BUDGET),
-          )
-        : Promise.resolve([]),
-      canConversations
-        ? safeFamily("conversation", [], degraded, () =>
-            conversationCandidates(query, canReadContact),
-          )
-        : Promise.resolve([]),
-      canDeliveries
-        ? safeFamily("delivery", [], degraded, () =>
-            searchProjectedDeliveries(shopId, query, FAMILY_MATCH_BUDGET),
-          )
-        : Promise.resolve([]),
-      canOrders
-        ? safeFamily("return", [], degraded, () =>
-            searchProjectedReturns(shopId, query, FAMILY_MATCH_BUDGET),
-          )
-        : Promise.resolve([]),
-    ]);
+  const [
+    customers,
+    products,
+    contactConversations,
+    recentConversations,
+    deliveries,
+    returns,
+  ] = await Promise.all([
+    canCustomers && canReadContact
+      ? safeFamily("customer", [], degraded, () =>
+          searchProjectedCustomers(shopId, query, FAMILY_MATCH_BUDGET),
+        )
+      : Promise.resolve([]),
+    canProducts
+      ? safeFamily("product", [], degraded, () =>
+          searchProjectedProducts(shopId, query, FAMILY_MATCH_BUDGET),
+        )
+      : Promise.resolve([]),
+    canConversations && canReadContact
+      ? safeFamily("conversation", [], degraded, () =>
+          searchProjectedConversations(shopId, query, FAMILY_MATCH_BUDGET),
+        )
+      : Promise.resolve([]),
+    canConversations
+      ? safeFamily("conversation", [], degraded, () =>
+          recentConversationMessageCandidates(query),
+        )
+      : Promise.resolve([]),
+    canDeliveries && canOpenProtectedOperationalDetail
+      ? safeFamily("delivery", [], degraded, () =>
+          searchProjectedDeliveries(shopId, query, FAMILY_MATCH_BUDGET),
+        )
+      : Promise.resolve([]),
+    canOrders && canOpenProtectedOperationalDetail
+      ? safeFamily("return", [], degraded, () =>
+          searchProjectedReturns(shopId, query, FAMILY_MATCH_BUDGET),
+        )
+      : Promise.resolve([]),
+  ]);
 
   const customerRows = customers as RecordCandidate[];
   const customersById = new Map(
     customerRows
       .filter((candidate) => candidate.entityId)
       .map((candidate) => [candidate.entityId!, candidate] as const),
+  );
+
+  const conversationRows = mergeConversationCandidates(
+    query,
+    contactConversations as RecordCandidate[],
+    recentConversations as RecordCandidate[],
   );
 
   const orders = canOrders
@@ -339,7 +378,7 @@ export async function searchUniversalRecords(
       ...(orders as RecordCandidate[]),
       ...customerRows,
       ...(products as RecordCandidate[]),
-      ...(conversations as RecordCandidate[]),
+      ...conversationRows,
       ...(deliveries as RecordCandidate[]),
       ...(returns as RecordCandidate[]),
     ],
