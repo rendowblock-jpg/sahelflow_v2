@@ -184,6 +184,10 @@ async function expectRenderedEChart(page: Page, selector: string) {
   await surface.press("ArrowRight");
   await surface.press("End");
   await surface.press("Escape");
+  // Screenshot's `animations: disabled` settles CSS/Web Animations, but ECharts
+  // animates through ZRender. Wait just beyond SahelFlow's governed 420ms base
+  // chart duration so Founder evidence captures the final analytical geometry.
+  await page.waitForTimeout(520);
   return surface;
 }
 
