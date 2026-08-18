@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
-describe("Wave 2 analytics locale and hierarchy contract", () => {
+describe("Class-AAA analytics locale and hierarchy contract", () => {
   it("keeps seller-facing Analytics money under the active locale", () => {
     const analytics = read("src/app/(dashboard)/analytics/page.tsx");
 
@@ -28,7 +28,9 @@ describe("Wave 2 analytics locale and hierarchy contract", () => {
     expect(analytics).toContain("new Intl.NumberFormat(dateLocale");
     expect(analytics).toContain("percentFormatter.format(value / 100)");
     expect(analytics).toContain("hourFormatter.format(hour)");
-    expect(analytics).toContain('formatValue="percent"');
+    expect(analytics).toContain("displayValue: fmtPercent(wilaya.returnRate)");
+    expect(analytics).toContain("percentFormatter.format(fraction)");
+    expect(analytics).toContain("fmtPercent(delivery.deliveryRate)");
     expect(statCard).toContain("style: \"percent\"");
     expect(statCard).toContain("signDisplay: \"exceptZero\"");
     expect(statCard).not.toContain("trend.toFixed(1)");
@@ -63,6 +65,8 @@ describe("Wave 2 analytics locale and hierarchy contract", () => {
     ]) {
       expect(analytics).toContain(`data-analytics-section=\"${section}\"`);
     }
-    expect(analytics).toContain("xl:grid-cols-[minmax(0,1.15fr)_minmax(19rem,0.85fr)]");
+    expect(analytics).toContain(
+      "xl:grid-cols-[minmax(0,1.15fr)_minmax(19rem,0.85fr)]",
+    );
   });
 });
