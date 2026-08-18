@@ -287,7 +287,10 @@ export function Topbar({
         <span className="min-w-0 flex-1 truncate text-start">
           {t("topbar.searchPlaceholder")}
         </span>
-        <kbd className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-md border border-border/80 bg-background/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-sm">
+        <kbd
+          dir="ltr"
+          className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-md border border-border/80 bg-background/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-sm [unicode-bidi:isolate]"
+        >
           <span aria-hidden="true">Ctrl</span>
           <span aria-hidden="true">K</span>
         </kbd>
