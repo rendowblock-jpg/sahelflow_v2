@@ -35,6 +35,14 @@ interface ShopProjectionCache {
   return?: Promise<SearchIndex>;
 }
 
+export interface SearchProjectionWarmScope {
+  customer: boolean;
+  product: boolean;
+  order: boolean;
+  delivery: boolean;
+  return: boolean;
+}
+
 const globalSearchProjection = globalThis as unknown as {
   sahelflowLocalSearchProjection?: Map<string, ShopProjectionCache>;
   sahelflowLocalSearchProjectionSubscribed?: boolean;
@@ -416,16 +424,13 @@ export async function searchProjectedReturns(
 
 export async function warmLocalSearchProjection(
   shopId: string,
-  options: { includeProtectedCustomers: boolean },
+  scope: SearchProjectionWarmScope,
 ): Promise<void> {
-  const work: Promise<unknown>[] = [
-    cached(shopId, "product", buildProductIndex),
-    cached(shopId, "order", buildOrderIndex),
-    cached(shopId, "delivery", buildDeliveryIndex),
-    cached(shopId, "return", buildReturnIndex),
-  ];
-  if (options.includeProtectedCustomers) {
-    work.push(cached(shopId, "customer", buildCustomerIndex));
-  }
+  const work: Promise<unknown>[] = [];
+  if (scope.customer) work.push(cached(shopId, "customer", buildCustomerIndex));
+  if (scope.product) work.push(cached(shopId, "product", buildProductIndex));
+  if (scope.order) work.push(cached(shopId, "order", buildOrderIndex));
+  if (scope.delivery) work.push(cached(shopId, "delivery", buildDeliveryIndex));
+  if (scope.return) work.push(cached(shopId, "return", buildReturnIndex));
   await Promise.allSettled(work);
 }
