@@ -46,12 +46,14 @@ BEGIN
   UPDATE "SearchProjectionRevision"
   SET "revision" = "revision" + 1
   WHERE "id" = 'customer';
-  INSERT OR REPLACE INTO "SearchProjectionDirty" ("family", "entityId", "revision")
+  INSERT INTO "SearchProjectionDirty" ("family", "entityId", "revision")
   VALUES (
     'customer',
     NEW."id",
     (SELECT "revision" FROM "SearchProjectionRevision" WHERE "id" = 'customer')
-  );
+  )
+  ON CONFLICT("family", "entityId") DO UPDATE
+  SET "revision" = excluded."revision";
 END;
 
 CREATE TRIGGER "search_projection_customer_update"
@@ -60,12 +62,14 @@ BEGIN
   UPDATE "SearchProjectionRevision"
   SET "revision" = "revision" + 1
   WHERE "id" = 'customer';
-  INSERT OR REPLACE INTO "SearchProjectionDirty" ("family", "entityId", "revision")
+  INSERT INTO "SearchProjectionDirty" ("family", "entityId", "revision")
   VALUES (
     'customer',
     NEW."id",
     (SELECT "revision" FROM "SearchProjectionRevision" WHERE "id" = 'customer')
-  );
+  )
+  ON CONFLICT("family", "entityId") DO UPDATE
+  SET "revision" = excluded."revision";
 END;
 
 CREATE TRIGGER "search_projection_customer_delete"
@@ -74,12 +78,14 @@ BEGIN
   UPDATE "SearchProjectionRevision"
   SET "revision" = "revision" + 1
   WHERE "id" = 'customer';
-  INSERT OR REPLACE INTO "SearchProjectionDirty" ("family", "entityId", "revision")
+  INSERT INTO "SearchProjectionDirty" ("family", "entityId", "revision")
   VALUES (
     'customer',
     OLD."id",
     (SELECT "revision" FROM "SearchProjectionRevision" WHERE "id" = 'customer')
-  );
+  )
+  ON CONFLICT("family", "entityId") DO UPDATE
+  SET "revision" = excluded."revision";
 END;
 
 CREATE TRIGGER "search_projection_product_insert"
