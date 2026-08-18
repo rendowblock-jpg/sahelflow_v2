@@ -222,6 +222,7 @@ export function chartTooltip(
     axisPointer: {
       type: "line" as const,
       snap: true,
+      triggerEmphasis: false,
       lineStyle: {
         color: theme.mutedForeground,
         width: 1,
@@ -327,6 +328,11 @@ function chartPointCount(chart: ECharts): number {
 
 function showKeyboardPoint(chart: ECharts, dataIndex: number) {
   chart.dispatchAction({ type: "showTip", seriesIndex: 0, dataIndex });
+}
+
+function hideKeyboardPoint(chart: ECharts) {
+  chart.dispatchAction({ type: "hideTip" });
+  chart.dispatchAction({ type: "updateAxisPointer", currTrigger: "leave" });
 }
 
 export function EChartSurface({
@@ -451,7 +457,7 @@ export function EChartSurface({
   const handleBlur = React.useCallback(
     (event: React.FocusEvent<HTMLDivElement>) => {
       const chart = getInstanceByDom(event.currentTarget);
-      chart?.dispatchAction({ type: "hideTip" });
+      if (chart) hideKeyboardPoint(chart);
     },
     [],
   );
@@ -465,7 +471,7 @@ export function EChartSurface({
 
       if (event.key === "Escape") {
         event.preventDefault();
-        chart.dispatchAction({ type: "hideTip" });
+        hideKeyboardPoint(chart);
         return;
       }
 
