@@ -51,11 +51,11 @@ export default async function SettingsPage({
     team: can("members.read"),
     appearance: true,
     license: can("license.read"),
-    demo: profileManage,
+    demo: can("settings.manage"),
     aiKey: can("integrations.manage"),
-    aiConsent: profileManage,
+    aiConsent: can("settings.manage"),
     delivery: can("delivery.credentials.manage"),
-    reports: profileManage,
+    reports: can("settings.manage"),
     commerceRead: can("integrations.read"),
     commerceManage: can("integrations.manage"),
     commerceSync: canAll([
@@ -78,7 +78,7 @@ export default async function SettingsPage({
       "customers.contact.read",
       "orders.financials.read",
     ]),
-    dangerReset: profileManage && can("approvals.approve"),
+    dangerReset: can("settings.manage") && can("approvals.approve"),
   };
   const integrations = access.commerceRead || access.commerceManage
     ? await db.integration.findMany({
