@@ -35,6 +35,12 @@ export interface RiskAnalyticsReport {
     occurrenceCount: number;
     avgPoints: number;
   }>;
+  attentionFactors: Array<{
+    factorId: string;
+    labelKey: string;
+    occurrenceCount: number;
+    positivePoints: number;
+  }>;
   trend: Array<{
     date: string;
     orderCount: number;
@@ -307,29 +313,53 @@ export async function getRiskAnalyticsReport(
 
   const factors = new Map<
     string,
-    { count: number; points: number; labelKey: string }
+    { count: number; points: number; positivePoints: number; labelKey: string }
   >();
   for (const row of assessments) {
     for (const factor of row.assessment.factors) {
       const current = factors.get(factor.id) ?? {
         count: 0,
         points: 0,
+        positivePoints: 0,
         labelKey: factor.labelKey,
       };
       current.count += 1;
       current.points += factor.points;
+      current.positivePoints += Math.max(factor.points, 0);
       factors.set(factor.id, current);
     }
   }
-  const topFactors = [...factors.entries()]
-    .map(([factorId, data]) => ({
-      factorId,
-      labelKey: data.labelKey,
-      occurrenceCount: data.count,
-      avgPoints: data.count > 0 ? Math.round(data.points / data.count) : 0,
-    }))
+  const factorRows = [...factors.entries()].map(([factorId, data]) => ({
+    factorId,
+    labelKey: data.labelKey,
+    occurrenceCount: data.count,
+    avgPoints: data.count > 0 ? Math.round(data.points / data.count) : 0,
+    positivePoints: data.positivePoints,
+  }));
+  const topFactors = [...factorRows]
     .sort((left, right) => right.occurrenceCount - left.occurrenceCount)
-    .slice(0, 8);
+    .slice(0, 8)
+    .map((factor) => ({
+      factorId: factor.factorId,
+      labelKey: factor.labelKey,
+      occurrenceCount: factor.occurrenceCount,
+      avgPoints: factor.avgPoints,
+    }));
+  const attentionFactors = [...factorRows]
+    .filter((factor) => factor.positivePoints > 0)
+    .sort(
+      (left, right) =>
+        right.positivePoints - left.positivePoints ||
+        right.occurrenceCount - left.occurrenceCount ||
+        left.factorId.localeCompare(right.factorId),
+    )
+    .slice(0, 8)
+    .map((factor) => ({
+      factorId: factor.factorId,
+      labelKey: factor.labelKey,
+      occurrenceCount: factor.occurrenceCount,
+      positivePoints: factor.positivePoints,
+    }));
 
   const daily = new Map<string, { scores: number[]; criticalCount: number }>();
   for (const row of assessments) {
@@ -392,6 +422,7 @@ export async function getRiskAnalyticsReport(
     confirmationByLevel,
     riskByWilaya,
     topFactors,
+    attentionFactors,
     trend,
     ruleTriggers,
     kpis: {
