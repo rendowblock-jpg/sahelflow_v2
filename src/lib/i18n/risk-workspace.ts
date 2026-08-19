@@ -55,11 +55,12 @@ export function formatPositiveRiskPoints(
 
   if (locale === "ar") {
     switch (category) {
+      case "one":
+        return `نقطة خطر إيجابية واحدة (${formatted})`;
       case "two":
-        return `${formatted} نقطتا خطر إيجابيتان`;
+        return `نقطتا خطر إيجابيتان (${formatted})`;
       case "few":
         return `${formatted} نقاط خطر إيجابية`;
-      case "one":
       case "zero":
       case "many":
       case "other":
