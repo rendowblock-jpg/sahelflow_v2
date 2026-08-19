@@ -42,4 +42,16 @@ describe("Risk Engine seller workspace contract", () => {
     expect(page).toContain('TabsContent value="control"');
     expect(page).toContain('TabsContent value="rules"');
   });
+
+  it("uses dedicated seller-facing AR/FR/EN copy for the attention panel", () => {
+    const page = source("../../../app/(dashboard)/risk/page.tsx");
+    const copy = source("../../../lib/i18n/risk-workspace.ts");
+
+    expect(page).toContain("getRiskWorkspaceCopy");
+    expect(page).toContain('riskCopy("attentionTitle")');
+    expect(page).toContain('riskCopy("attentionDescription")');
+    expect(copy).toContain('attentionTitle: "What needs your attention"');
+    expect(copy).toContain('attentionTitle: "Ce qui mérite votre attention"');
+    expect(copy).toContain('attentionTitle: "ما يحتاج انتباهك الآن"');
+  });
 });
