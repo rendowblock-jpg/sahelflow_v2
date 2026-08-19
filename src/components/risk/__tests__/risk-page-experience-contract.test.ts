@@ -36,21 +36,22 @@ describe("Risk Engine seller workspace contract", () => {
     expect(page).not.toContain("referenceBands={");
   });
 
-  it("promotes only positive risk contributors in the seller attention panel", () => {
+  it("promotes exact positive risk impact in the seller attention panel", () => {
     const page = source("../../../app/(dashboard)/risk/page.tsx");
+    const analytics = source("../../../lib/risk-engine/analytics.ts");
 
-    expect(page).toContain(
-      ".filter((factor) => factor.avgPoints > 0)",
+    expect(page).toContain("report.attentionFactors[0]");
+    expect(analytics).toContain("positivePoints: number");
+    expect(analytics).toContain(
+      "current.positivePoints += Math.max(factor.points, 0)",
     );
-    expect(page).toContain(
-      "right.avgPoints * right.occurrenceCount",
+    expect(analytics).toContain(
+      ".filter((factor) => factor.positivePoints > 0)",
     );
-    expect(page).toContain(
-      "left.avgPoints * left.occurrenceCount",
+    expect(analytics).toContain(
+      "right.positivePoints - left.positivePoints",
     );
-    expect(page).not.toContain(
-      "right.occurrenceCount - left.occurrenceCount\n  )[0]",
-    );
+    expect(page).not.toContain("factor.avgPoints > 0");
   });
 
   it("separates seller signals from deeper analytical tables", () => {
