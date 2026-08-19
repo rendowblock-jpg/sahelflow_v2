@@ -72,8 +72,12 @@ describe("Risk Engine seller workspace contract", () => {
     expect(page).toContain("getRiskWorkspaceCopy");
     expect(page).toContain('riskCopy("attentionTitle")');
     expect(page).toContain('riskCopy("attentionDescription")');
+    expect(page).toContain('riskCopy("highestImpactFactor")');
     expect(copy).toContain('attentionTitle: "What needs your attention"');
     expect(copy).toContain('attentionTitle: "Ce qui mérite votre attention"');
     expect(copy).toContain('attentionTitle: "ما يحتاج انتباهك الآن"');
+    expect(copy).toContain('highestImpactFactor: "Highest-impact risk factor"');
+    expect(copy).toContain('highestImpactFactor: "Facteur de risque le plus impactant"');
+    expect(copy).toContain('highestImpactFactor: "عامل الخطر الأعلى تأثيرًا"');
   });
 });
