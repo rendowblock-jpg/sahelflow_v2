@@ -2,6 +2,7 @@
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
 > **Last updated:** 2026-08-19
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
 ## Current truth
@@ -40,7 +41,7 @@ Internal.22 product certification on `fa77ae32dc680f0d2854d10363dcaf06ba4e5229`:
 - Phase 6-7: `32200539919` — success;
 - CI: `32200540092` — success, including Windows installed closure.
 
-Internal.22 release-head PR #284 also passed source quality, native source, Tauri release, Windows standalone, Windows Rust parity, exact MSI build, installed launch/reopen, hydrated UI twice, replacement backup/restore/identity/rollback and the Required PR gate.
+PR #284 also passed source quality, native source, Tauri release, Windows standalone, Windows Rust parity, exact MSI build, installed launch/reopen, hydrated UI twice, replacement backup/restore/identity/rollback and the Required PR gate.
 
 Signed publication run `32205843573` proved the exact protected-main signed artifact, signature, install/reopen, hydrated UI twice, deterministic source rewrite boundary, candidate manifest, `latest.json`, exact tag and publication target before publishing.
 
@@ -52,7 +53,7 @@ Signed publication run `32205843573` proved the exact protected-main signed arti
 
 Retained WhatsApp evidence from #282 is separate from source certification: real phone QR render/scan/link, reconnect after reopen, one outbound message and one inbound persisted message on the current signed installation.
 
-## Immediate next outcome
+## Exact next-session order
 
 **Do not create a new product branch first.** Start with the installed Internal.22 evidence unless newer concrete GitHub state already supersedes this handoff.
 
@@ -64,6 +65,18 @@ Retained WhatsApp evidence from #282 is separate from source certification: real
 6. Record an explicit accept/reject result with exact build identity.
 7. If there is a concrete P0/P1 defect, create one fresh bounded repair branch from current protected `main`, map the root cause and affected siblings, repair once, then run consequence-selected evidence on one frozen SHA.
 8. If accepted, reconcile #221/current state and proceed only to the remaining launch/Beta/Stable dependencies; #230 stays independent until its external installed/network evidence is real.
+
+## Historical continuity anchors
+
+### Wave 4 — what is implemented
+
+The historical Wave 4 / Internal.16 Storefront line remains implemented history and must not be treated as a future task. Its downstream product evolution is already included in the Internal.22 protected product state.
+
+- Historical Phase 5 application-changing protected baseline: `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` / PR #220.
+- Historical Internal.15 signed run: `31657621918`.
+- Historical retained issue tuple: **#221, #226, #230**. Current state supersedes the old all-open interpretation: #226 is closed/completed; #221 and #230 remain open.
+
+These markers preserve audit continuity only. They do not change the current Internal.22 execution order above.
 
 ## Protected invariants
 
@@ -82,18 +95,7 @@ Never weaken these to make an evidence lane green or to accelerate acceptance:
 - shared RTL primitive/portal direction, logical geometry and technical-value bidi isolation;
 - updater signing/version/exact-protected-source guards.
 
-## Hard non-claims
-
-Internal.22 is **not**:
-
-- Founder whole-product acceptance;
-- real-phone WhatsApp provider certification;
-- customer-online trial certification;
-- Beta;
-- Stable;
-- permission to bump Internal.23 automatically.
-
-## Session discipline
+## Hard rules
 
 - One active application writer at a time.
 - No generic codebase audit unless a concrete new dependency requires it.
@@ -104,3 +106,14 @@ Internal.22 is **not**:
 - No release built from a branch-only source.
 - Founder-installed visual judgment outranks automation for whole-product acceptance.
 - Customer-online/Beta/Stable claims require their own evidence and explicit authority.
+
+## Hard non-claims
+
+Internal.22 is **not**:
+
+- Founder whole-product acceptance;
+- real-phone WhatsApp provider certification;
+- customer-online trial certification;
+- Beta;
+- Stable;
+- permission to bump Internal.23 automatically.
