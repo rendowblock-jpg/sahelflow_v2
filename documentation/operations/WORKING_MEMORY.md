@@ -14,68 +14,70 @@
 - Release mode: `founder-offline-only`.
 - Protected Internal.22 release source: `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348` / PR #284.
 - Signed updater run: `32205843573` — success.
-- Current protected product source after today’s bounded Founder repairs: `fbc6cf386ec11f178a930116b39705079c01e89d` / PR #287, tree `6ee775680459ef457bca9da060a1310e4de5f0fd`.
-- No open application PR existed before this docs-only reconciliation. Recheck live GitHub state at the start of the next session.
-- **Critical boundary:** current protected `main` is newer than signed Internal.22. PRs #286 and #287 are source-complete on `main` but are **not contained in the currently published Internal.22 installer**. Do not claim installed validation for those repairs until a separately authorized signed checkpoint is built and installed.
+- Current protected product source after the completed Founder repair batch: `39ffcc5d58e13699f74475579cd88bc511bceec4` / PR #290.
+- Current durable product tree: `d9866c210c13267608120eb85eede4efbcf82637`.
+- PR #290 frozen certified head: `997ebb96b28d4d222bc9c1ca9a56148562ef874a`; its tree is the same `d9866c210c13267608120eb85eede4efbcf82637`.
+- Exact-head #290 evidence: CI `32307890772` — success; Phase 5 Experience `32307890579` — success; Phase 6-7 Completion `32307890634` — success.
+- No open PR existed after #290 merged at this handoff. Recheck live GitHub state at the start of the next session.
+- **Critical boundary:** protected `main` is newer than signed Internal.22. PRs #286, #287, #289 and #290 are source-complete on `main` but are **not contained in the currently published Internal.22 installer**.
+- The Founder has now said this repair session is sufficient and wants the **next session to make the update**. That is the next observable outcome. Do not continue generic defect hunting before the release-authority step unless a release gate exposes a concrete deterministic defect.
 
-## Founder problem register — this session
+## Founder repair batch completed after Internal.22
 
-### Problem 1 — Windows sleep/resume + locale convergence
-
-Observed on the installed app after leaving it open through Windows sleep:
-
-- app resumed in Arabic mode but some routes initially rendered English until navigation away/back;
-- some pages showed a load failure until manual Refresh;
-- EN ↔ AR switching and returning did not feel atomic/smooth/professional.
+### Problems 1–2 — Windows sleep/resume, locale convergence and Universal Search
 
 Source repair: **PR #286** `fix: harden desktop resume and universal search`.
 
 - Frozen reviewed head: `46e94fc9f0cc00a65ec4bbfb3101f47221f9a68f`.
 - Protected merge: `34213d77e4fa3aee2f3ae38cd4d600e0f8adde67`.
-- Root-cause package includes Tauri desktop service-worker retirement/narrowing, long-gap resume detection, local Next+SQLite health recovery with persistent bounded retry, locale/direction convergence, current-tree refresh and visible page-error retry.
+- Repairs desktop sleep/resume recovery, stale service-worker ownership, locale/direction convergence, visible page-error retry, Search warmup/coalescing/parallelization and command-center presentation.
+- Protected permissions, stale-request cancellation, search authority and bidi isolation remain intact.
 - Source/browser evidence was green before merge.
-- **Installed acceptance remains pending** because Internal.22 predates this repair.
-
-### Problem 2 — Universal Search UI + latency
-
-Founder judged the installed Search/Command Center visually below the Class-AAA bar and too slow to find results.
-
-Also repaired in **PR #286**:
-
-- immediate local page/workspace matching;
-- shared projection warmup;
-- coalesced protected record searching;
-- parallel independent search families;
-- bounded recent-message work;
-- rebuilt RTL/LTR command-center hierarchy and interaction presentation;
-- protected permissions, stale-request cancellation and technical-value bidi isolation preserved.
-
-Source/browser evidence was green before merge. Installed feel/relevance/latency acceptance remains pending on a signed build containing #286.
+- Installed acceptance remains pending because Internal.22 predates this repair.
 
 ### Problem 3 — Risk Engine seller UX
-
-Founder rejected the installed Risk Engine overview because:
-
-- six independently colored KPI cards were too noisy;
-- the trend chart was cramped in a half-width layout and underused its container;
-- the page felt widget-oriented rather than seller-friendly/actionable.
 
 Source repair: **PR #287** `feat: rebuild Risk Engine as seller decision workspace`.
 
 - Frozen reviewed head: `e27c6ce884529cbc60e9bd69a261a1e8b114b41d`.
 - Protected merge: `fbc6cf386ec11f178a930116b39705079c01e89d`.
-- Durable merge tree: `6ee775680459ef457bca9da060a1310e4de5f0fd`, identical to the frozen head tree.
-- Final exact-head evidence:
-  - CI `32276464061` — success;
-  - Phase 5 Experience Gate `32276463348` — success;
-  - Phase 6-7 Completion Gate `32276463184` — success.
-- All review threads were resolved before merge.
-- Final product shape: four calm neutral top KPIs; dominant full-width Risk Trend; restrained semantic escalation guides without colored bands; seller-attention panel; detailed confirmation table moved to Analysis; exact positive-impact ranking separated from historical frequency analytics; count-aware AR/FR/EN impact copy; Blacklist/Control/Rules permissions and risk-scoring authority preserved.
-- **Installed visual acceptance remains pending** because Internal.22 predates #287.
+- Exact-head evidence: CI `32276464061` — success; Phase 5 `32276463348` — success; Phase 6-7 `32276463184` — success.
+- Final shape: calm KPI strip, dominant full-width Risk Trend, seller-attention signals, exact impact ranking and localized count-aware copy with risk-scoring/permission authority preserved.
+- Installed visual acceptance remains pending because Internal.22 predates #287.
+
+### Problem 4 — dashboard operations surfaces and delivery detail
+
+Source repair: **PR #289** `Founder.4: repair dashboard ops surfaces and delivery detail`.
+
+- Frozen head: `4f27c1712d72074b27a4f665d30b50de8d295a3f`.
+- Protected merge: `0b090a0306d6f35c2721651365fde5b8b6b77a25`.
+- Durable tree: `56bcda2c1a2e02f1421e62732f5744429023453c`, identical to the frozen head tree.
+- Exact-head evidence: CI `32297928096` — success; Phase 5 `32297927912` — success; Phase 6-7 `32297927906` — success.
+- Repairs the delivery detail RSC serialization crash, queue age presentation, RTL/LTR stock alignment/state treatment, and fills the dashboard operational column with a permission-gated 30-day Risk Watch using existing Risk Engine authority.
+- No version/release change and no installed claim were made.
+
+### Problem 5 — Arabic compact values, RTL controls, sidebar/Profile IA and annual demo
+
+Source repair: **PR #290** `Founder.5: repair RTL controls, navigation IA and annual demo`.
+
+- Frozen certified head: `997ebb96b28d4d222bc9c1ca9a56148562ef874a`.
+- Protected merge: `39ffcc5d58e13699f74475579cd88bc511bceec4`.
+- Frozen and merged tree: `d9866c210c13267608120eb85eede4efbcf82637`.
+- Final exact-head evidence: CI `32307890772` — success; Phase 5 `32307890579` — success; Phase 6-7 `32307890634` — success.
+- Both Codex P2 findings were repaired and review threads resolved before merge.
+- Product result:
+  - centralized Arabic compact numeric/bidi formatting for Accounting chart values;
+  - shared Input/Textarea/Select and scoped legacy native-control RTL empty-state behavior;
+  - Profile consolidated into Settings with `/profile` only as a compatibility alias;
+  - stable seller-priority sidebar IA with manual persisted ordering removed;
+  - one rolling deterministic 365-day Algerian demo workspace with coherent frozen clock authority and annual history.
+- No version/release change and no installed acceptance claim were made.
+
+PR #288 was a docs-only handoff between #287 and #289. It is historical continuity, not a product package.
 
 ## What is already finished — do not reopen generically
 
-Do **not** restart these programs or re-audit the whole repository without a concrete reason:
+Do **not** restart these programs or re-audit the whole repository without a concrete release failure or direct regression:
 
 - structural/semantic RTL foundation — PRs #273–#276;
 - Inbox Class-AAA reconstruction — #278;
@@ -86,51 +88,48 @@ Do **not** restart these programs or re-audit the whole repository without a con
 - original Universal Search / Command Center reconstruction — #283;
 - Internal.22 release authority + signed publication — #284;
 - sleep/resume + locale convergence + Search reliability/presentation repair — #286;
-- Risk Engine seller-workspace reconstruction — #287.
+- Risk Engine seller-workspace reconstruction — #287;
+- dashboard operations + delivery detail repair — #289;
+- RTL controls/navigation IA/annual demo repair — #290.
 
 Internal.20 rejection and the Internal.19 rollback remain historical evidence, not the active frontier.
 
 ## Current open evidence boundaries
 
-- **#221 OPEN:** Founder-installed whole-product visual/accessibility/interaction acceptance. This remains the immediate human product gate and now also carries the post-Internal.22 source-repair handoff.
+- **#221 OPEN:** Founder-installed whole-product visual/accessibility/interaction acceptance. Source repair closure does not close this human gate.
 - **#230 OPEN P1:** resilient customer trial activation on representative Algerian networks. It independently blocks customer-online/public-trial readiness.
 - **#226 CLOSED/completed:** retain its performance budgets as regression criteria; do not list it as an active blocker.
 - Real-phone WhatsApp QR/link/reopen/outbound/inbound persistence evidence remains separate from source certification.
 
-The historical retained issue tuple is **#221, #226, #230**. Current truth supersedes the old all-open interpretation: #226 is completed; #221 and #230 remain open.
+## Exact next-session order — make the update
 
-## Exact next-session order
+The Founder has explicitly chosen the **release/update path** for the next session. Start here; do not resume Problem #6 and do not start a generic audit first.
 
-The Founder is currently enumerating installed-product problems one at a time. **Continue from Problem #4; do not restart from Problem #1, do not re-explore the whole codebase, and do not automatically begin a release.**
-
-1. Resolve live protected `main`, open PRs and #221/#230 before writing. Expected handoff main is `fbc6cf386ec11f178a930116b39705079c01e89d`; treat it only as a checkpoint, never as a substitute for live GitHub truth.
-2. Read this Working Memory plus Current State/Workflow. Remember that Current State’s signed-release sections still correctly describe Internal.22, while this file records the newer post-release product-source repairs.
-3. If the Founder reports **Problem #4**, understand the observed installed behavior first, classify symptom vs likely root cause, inspect only the affected current-main layers, then create one bounded repair package if requested.
-4. Preserve the already-merged #286/#287 fixes and their contracts; do not regress them while addressing later problems.
-5. Continue collecting/repairing concrete Founder-installed defects against current `main` as bounded packages. Keep source/browser certification and installed acceptance distinct.
-6. Do **not** tell the Founder that #286/#287 are visible in the current installed Internal.22 build. They are not.
-7. When the Founder decides the current defect batch is sufficient, choose the next step explicitly:
-   - either continue with another installed problem;
-   - or, with explicit Founder authorization, reconcile release authority for a new signed Founder-offline checkpoint from exact protected `main` so #286/#287 and any later merged repairs can be tested on Windows.
-8. A new signed checkpoint must preserve AppData, registry/install identity, keys and shop databases and must be built only from exact protected `main` under normal release authority/evidence rules.
-9. Founder-installed acceptance after such a checkpoint should explicitly retest sleep/resume + EN/AR convergence, Universal Search real feel, Risk Engine seller UX, and any later repaired defects.
-10. Keep #230 and real-phone WhatsApp evidence independent; neither is satisfied merely by the product UI repairs.
-
-## Historical continuity anchors
-
-### Wave 4 — what is implemented
-
-The historical Wave 4 / Internal.16 Storefront line remains implemented history and must not be treated as a future task. Its downstream product evolution is already carried by later protected product source.
-
-- **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` / PR #220.
-- Historical Internal.15 signed run: `31657621918`.
-- Historical retained issue tuple: **#221, #226, #230**.
-
-These markers preserve semantic/audit continuity only. They do not change the current post-Internal.22 execution order above.
+1. Re-resolve live protected `main`, open PRs, #221 and #230. Expected source checkpoint at this handoff is `39ffcc5d58e13699f74475579cd88bc511bceec4`; live GitHub truth wins if it moved.
+2. Confirm there is still no unmerged application work and verify the protected tree still contains #286/#287/#289/#290.
+3. Read the current release authority from `sahelflow.version.json`. At this handoff it is still Internal.22 / FD-041; **no next version exists yet**.
+4. Create one bounded **release-authority-only** branch from exact protected `main`, using PR #284 as the release template. Do not mix new product/application changes into that PR.
+5. Reconcile the next sequential Founder-offline version consistently across the version authority surface. At minimum inspect/update the authority and all files enforced by `bun run sf-version`, including:
+   - `sahelflow.version.json`;
+   - `package.json`;
+   - `src-tauri/Cargo.toml`;
+   - `src-tauri/tauri.conf.json` app + WiX MSI versions;
+   - `scripts/sf-version.ts` Founder-offline version/decision allowlist;
+   - any other release/version source identified by `sf-version` / updater-contract checks.
+6. Do **not** invent or claim a new FD number merely from this handoff prose. The release-authority PR must explicitly bind the new version and its Founder decision/authority as one reviewed envelope. Do not reuse FD-041 for a different version.
+7. Keep release mode `founder-offline-only`, channel `internal`, `ownedHostSuffix: null`, current updater key/endpoint/install mode, runtime protocol and shop-registry formats unless a separate proven release consequence requires a change.
+8. Run the normal release-authority consequence gates on one exact frozen head: `sf-version`, updater contract, complete source quality, native/Rust release parity, Windows/MSI/install/reopen/preservation consequences and Required PR gate as selected by the repository workflows. Do not retry deterministic red without fixing its cause.
+9. Perform adversarial review on that same exact head. Repair all actionable P0/P1 and any relevant release P2 before merge.
+10. Merge with `expected_head_sha`, then re-fetch protected `main` and verify the durable source/tree before any signed publication claim.
+11. Allow/trigger only the protected-main release dispatcher required by the repository’s release authority. Build/sign/publish from **exact protected main**, never the branch head.
+12. Verify the signed update proves signature, staged runtime, exact source binding, MSI/updater install/reopen, authenticated hydrated UI, deterministic source rewrites, evidence manifest, `latest.json`, exact tag and publication target before calling the new Internal published.
+13. Update/install that exact signed checkpoint on the Founder Windows machine **in place**. Preserve AppData, registry/install identity, keys and shop databases.
+14. Retest the repaired Founder batch on the installed update: sleep/resume + EN/AR convergence, Search feel/latency, Risk Engine seller UX, dashboard/queue/product/delivery details, Arabic compact values, empty RTL controls, sidebar/Profile IA and the annual demo workspace.
+15. Keep #230 and real-phone WhatsApp evidence independent. A successful Founder-offline update does not establish customer-online, Beta or Stable.
 
 ## Protected invariants
 
-Never weaken these to make an evidence lane green or to accelerate acceptance:
+Never weaken these to accelerate the update or make a release lane green:
 
 - Golden COD idempotency/version/audit/event/outbox authority;
 - trusted actor/shop/session/permission boundaries;
@@ -147,26 +146,26 @@ Never weaken these to make an evidence lane green or to accelerate acceptance:
 
 ## Hard rules
 
-- One active application writer at a time.
-- No generic codebase audit when a concrete Founder defect is already known.
+- One active application/release writer at a time.
+- No generic codebase audit before the next release-authority step.
 - No generic RTL sweep unless direct regression evidence reopens a specific contract.
 - No cross-SHA evidence mixing.
 - No retry-away of deterministic red.
-- No full MSI/release loop after every small edit.
-- No release built from a branch-only source.
-- No automatic Internal.23/version bump merely because post-Internal.22 repairs exist.
+- No branch-only signed release.
+- No product changes hidden inside the release-authority PR.
+- No reuse of FD-041 for a different version.
+- No release claim before protected-main signed publication succeeds.
 - Founder-installed visual judgment outranks automation for whole-product acceptance.
 - Customer-online/Beta/Stable claims require their own evidence and explicit authority.
 
-## Hard non-claims
+## Hard non-claims at this handoff
 
-At this handoff:
-
-- Internal.22 does **not** contain PR #286 or PR #287;
-- PR #286/#287 source certification is **not** Founder-installed certification;
-- no new signed checkpoint has been authorized or published after Internal.22;
-- Founder whole-product acceptance remains open;
-- real-phone WhatsApp provider certification remains open;
-- customer-online trial certification remains open;
-- Beta is not established;
+- Internal.22 does **not** contain PR #286, #287, #289 or #290.
+- Source certification for those PRs is **not** Founder-installed certification.
+- No new signed checkpoint has been created or published after Internal.22.
+- No next Internal version/FD pair is established merely by this handoff.
+- Founder whole-product acceptance remains open under #221.
+- Real-phone WhatsApp provider certification remains open.
+- Customer-online trial certification remains open under #230.
+- Beta is not established.
 - Stable is not established.
