@@ -5,13 +5,14 @@
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** resolve from GitHub before action
 > **Current signed checkpoint:** Internal.22 / FD-041
-> **Current execution mode:** Founder-installed one-at-a-time defect/acceptance flow, bounded residual closure, then separately authorized signed retest before customer-online/Beta/Stable work
+> **Current protected product checkpoint:** `39ffcc5d58e13699f74475579cd88bc511bceec4` / PR #290, tree `d9866c210c13267608120eb85eede4efbcf82637`
+> **Current execution mode:** completed Founder Problems #1–#5 repair batch → next-session signed Founder-offline update preparation → installed retest → remaining provider/network/Beta/Stable gates
 
 This roadmap remains subordinate to the product contract, experience contract, architecture and newer explicit Founder decisions. It describes dependency order; it does not turn a green source tree into Founder acceptance or Stable readiness.
 
 ## Current position
 
-The major source/product replacement sequence that was future work in the 2026-08-16 roadmap is now complete, and two additional bounded Founder-observed repair packages have merged after Internal.22:
+The major product replacement and bounded Founder repair sequence is now:
 
 ```text
 Internal.20 Founder rejection
@@ -26,15 +27,20 @@ Internal.20 Founder rejection
 → Internal.22/FD-041 signed publication (#284)
 → sleep/resume + locale convergence + Search repair (#286)
 → Risk Engine seller decision workspace (#287)
+→ docs-only handoff (#288)
+→ dashboard operations + delivery-detail repair (#289)
+→ Arabic compact values + RTL controls + navigation IA + annual demo (#290)
 ```
 
 Internal.22 is published from protected source `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348`. The exact product certification source for that release is `fa77ae32dc680f0d2854d10363dcaf06ba4e5229`. Signed updater run `32205843573` completed successfully.
 
-Current post-release protected product source after #287 is `fbc6cf386ec11f178a930116b39705079c01e89d`, with product tree `6ee775680459ef457bca9da060a1310e4de5f0fd`.
+Current protected product source after #290 is `39ffcc5d58e13699f74475579cd88bc511bceec4`, with product tree `d9866c210c13267608120eb85eede4efbcf82637`. The final #290 frozen certified head `997ebb96b28d4d222bc9c1ca9a56148562ef874a` carries that same tree and passed CI `32307890772`, Phase 5 `32307890579` and Phase 6-7 `32307890634`.
 
-**Important release/source boundary:** PRs #286 and #287 are integrated source on protected `main` but are not part of the signed Internal.22 installer. They require a separately authorized later signed checkpoint before Founder-installed validation of those fixes is possible.
+**Important release/source boundary:** PRs #286, #287, #289 and #290 are integrated source on protected `main` but are not part of the signed Internal.22 installer. They require a separately authorized later signed checkpoint before Founder-installed validation of those fixes is possible.
 
-There is no standing instruction to start another broad Inbox/AI/Settings, RTL, chart, Search or Risk redesign. Those areas reopen only from concrete new evidence.
+The Founder has now said the repair batch is sufficient for this session and wants the **next session to make the update**. That makes release-authority preparation the immediate dependency. Do not resume generic defect enumeration first unless release evidence exposes a concrete deterministic defect.
+
+There is no standing instruction to restart broad Inbox/AI/Settings, RTL, chart, Search, Risk, dashboard or demo redesign. Those areas reopen only from concrete new evidence.
 
 ## Phase 0–2 and Phase 4 — protected foundations
 
@@ -45,52 +51,58 @@ The canonical foundation remains protected:
 - **Phase 2 — identity, authorization, licensing and multi-shop:** protected identity/shop/session/permission/native lifecycle authority remains intact.
 - **Phase 4 — data protection, recovery, migrations and security:** encryption, migration, backup/restore/replacement-install and recovery invariants remain protected.
 
-Do not reopen these phases because a presentation defect exists. Reopen one bounded contract only when a concrete source/security/recovery/compatibility defect requires it.
+Do not reopen these phases because a presentation or release packaging defect exists. Reopen one bounded contract only when concrete evidence requires it.
 
 ## Phase 3 — providers, inbox, AI and automations
 
 The durable provider/outbox/inbox/proposal authority remains protected from the Phase 3 closure line. Later Class-AAA Inbox/AI reconstruction changed product presentation and seller workflow without weakening the durable effect model.
 
-Live-provider certification remains distinct from source conformance. In particular, PR #282 source/browser pairing hardening does not by itself prove a real-phone WhatsApp pairing/message roundtrip on an applicable signed installation.
+Live-provider certification remains distinct from source conformance. PR #282 source/browser pairing hardening does not by itself prove a real-phone WhatsApp pairing/message roundtrip on an applicable signed installation.
 
 ## Phase 5 — whole-product AAA desktop experience
 
-PR #220 remains the historical Phase 5 application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` and **Phase 5 closure** evidence anchor. Later product packages supersede it as the current source head while retaining its proven evidence.
+PR #220 remains the historical Phase 5 application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` and Phase 5 closure evidence anchor. Later product packages supersede it as current source while retaining its proven evidence.
 
-Current source/browser product work has moved far beyond that baseline:
+Current source/browser product work includes:
 
 - shared design/RTL foundation repaired;
 - Inbox, AI Agents and Settings reconstructed;
 - analytics/decision visualization reconstructed;
 - Inbox V3/pairing UX hardened;
-- Universal Search reconstructed and later hardened for real Founder-observed latency/presentation in #286;
-- sleep/resume + locale convergence repaired in #286;
-- Risk Engine overview rebuilt around seller decisions in #287.
+- Universal Search reconstructed and later hardened for real Founder-observed latency/presentation;
+- sleep/resume + locale convergence repaired;
+- Risk Engine rebuilt around seller decisions;
+- dashboard operational composition, queue ages, product stock presentation and delivery-detail crash repaired;
+- Arabic compact-number/bidi handling and empty RTL controls repaired;
+- Profile/sidebar information architecture simplified into a stable seller-priority model;
+- Algerian demo upgraded to a deterministic rolling 365-day workspace.
 
 **Remaining Phase 5 truth is installed/human acceptance, not another generic source wave.**
 
-The Founder is currently enumerating installed defects one at a time. Problems #1–#3 have already produced source repairs #286/#287. The next resumable observation is **Problem #4**, not a return to the beginning of the acceptance sweep.
+The Founder has declared the current repair batch sufficient and chosen a signed update as the next session outcome. Exit for the next coherent signed checkpoint requires:
 
-Exit for the next coherent signed checkpoint requires:
-
-1. exact protected source containing the accepted bounded repair batch;
-2. explicit Founder authority for a new signed checkpoint—no automatic Internal.23;
-3. in-place install/update on the Founder reference Windows environment without destructive reset;
-4. representative whole-product inspection in EN/AR and relevant FR states;
-5. direct retest of sleep/resume + locale convergence, Search real feel and Risk Engine seller UX plus any later repaired defects;
-6. Arabic typography, semantic RTL/bidi, focus, responsive and interaction quality inspected on the installed product;
-7. no actionable installed P0/P1 or one bounded repair package for each demonstrated root cause;
-8. explicit Founder accept/reject evidence recorded under #221.
+1. exact protected source containing #286/#287/#289/#290;
+2. one explicit release-authority-only PR from exact protected `main`;
+3. the next sequential Internal version and its Founder-offline authority bound consistently across all version/update sources without reusing FD-041;
+4. exact-head source/native/Rust/Windows/MSI/install/preservation evidence and Required PR gate;
+5. expected-head merge and protected-main source verification before signing;
+6. signed publication from exact protected main only;
+7. in-place install/update on the Founder reference Windows environment without destructive reset;
+8. representative whole-product inspection in EN/AR and relevant FR states;
+9. direct retest of Problems #1–#5;
+10. Arabic typography, semantic RTL/bidi, focus, responsive and interaction quality inspected on the installed product;
+11. no actionable installed P0/P1 or one bounded repair package for each demonstrated root cause;
+12. explicit Founder accept/reject evidence recorded under #221.
 
 Issue **#221 is open** and owns this retained human gate.
 
 ## Phase 6 — Arabic, RTL and accessibility parity
 
-The shared source foundation established in #273–#276 is protected and must be preserved. Later workspace PRs also passed AR/FR/EN, RTL, reflow and accessibility evidence. Post-Internal.22 repairs #286/#287 preserved those contracts and passed their consequence-selected evidence.
+The shared source foundation established in #273–#276 is protected and must be preserved. Later workspace PRs also passed AR/FR/EN, RTL, reflow and accessibility evidence. Post-Internal.22 repairs #286/#287/#289/#290 preserved those contracts and passed consequence-selected evidence.
 
-The current unresolved distinction is human/installed product judgment on a signed artifact that actually contains the repaired source. The currently published Internal.22 can still reveal additional defects, but it cannot validate #286/#287 because it predates those merges.
+The unresolved distinction is now human/installed product judgment on a signed artifact that actually contains the repaired source. Internal.22 cannot validate #286/#287/#289/#290 because it predates them.
 
-Do not restart a generic RTL sweep. If the Founder reports Problem #4 or later, inspect only the demonstrated route/control and affected shared siblings/root cause.
+Do not restart a generic RTL sweep. Any failure discovered during the update or installed retest opens only the demonstrated shared root cause and affected siblings.
 
 ## Phase 7 — performance and reliability
 
@@ -135,7 +147,9 @@ A failure opens one bounded installed/provider repair. Do not relabel source con
 
 ## Phase 9 — release certification and launch readiness
 
-Internal.22 is an **Internal Founder-offline** checkpoint, not Beta or Stable. Post-release source repairs #286/#287 are also not a release by themselves.
+Internal.22 is an **Internal Founder-offline** checkpoint, not Beta or Stable. Post-release source repairs #286/#287/#289/#290 are also not a release by themselves.
+
+The immediate Phase 9-adjacent task is only the requested **next Founder-offline Internal update**, not customer-online or Stable promotion. That update must preserve the exact release discipline already proved by Internal.22.
 
 Before public Stable `1.0.0`, retain the applicable external/representative gates from FD-028/FD-029:
 
@@ -155,44 +169,46 @@ Internal confidence, CI counts or a signed Founder package cannot fabricate thos
 
 ## Immediate dependency order
 
-From the current post-Internal.22 state, execute in this order unless newer direct evidence changes the dependency:
+From the current post-#290 state, execute in this order unless newer direct evidence changes the dependency:
 
 ```text
 A. Re-resolve live protected main + open PR/issues
-B. Continue the Founder’s one-at-a-time installed review at Problem #4 if another concrete defect is reported
-C. For each demonstrated defect, create one bounded root-cause repair from fresh protected main and recertify affected consequences
-D. Preserve #286/#287 and do not claim their fixes are installed in Internal.22
-E. When the Founder decides the current defect batch is sufficient, explicitly choose whether to keep inspecting or authorize a new signed Founder checkpoint
-F. If authorized, reconcile release/version authority and build/sign/publish only from exact protected main
-G. Install that exact checkpoint in place and retest #286/#287 plus later repaired defects on Windows
-H. Perform real-phone WhatsApp QR/link/outbound/inbound/reopen evidence as a separate boundary
-I. Reconcile #221 acceptance evidence
-J. Close #230 with real customer-online/network trial evidence
-K. Representative beta + remaining live-provider/security/privacy/legal/compatibility/incident evidence
-L. Explicit Founder Beta/Stable decision
-M. Stable `1.0.0` only after every applicable gate is objectively satisfied
+B. Verify #286/#287/#289/#290 are all in the current protected product tree and no application PR is pending
+C. Create one release-authority-only branch from exact protected main using #284 as the release template
+D. Bind the next sequential Founder-offline Internal version consistently across sahelflow.version.json, package.json, Cargo.toml, tauri.conf.json/WiX, scripts/sf-version.ts and every updater/version authority identified by repository checks
+E. Do not reuse FD-041 and do not claim a new version/FD pair until the release-authority envelope explicitly establishes it
+F. Freeze one exact release head and run required source/native/Rust/Windows/MSI/install/preservation evidence plus Required PR gate
+G. Adversarial review; repair deterministic red/findings without adding unrelated product scope
+H. Expected-head merge and protected-main source/tree verification
+I. Protected-main signed dispatcher/build only; verify signature, exact source binding, signed install/reopen/hydrated UI, deterministic rewrites, evidence manifest, latest.json, tag and publication target
+J. Install/update that exact signed checkpoint in place on Founder Windows while preserving data/identity/keys
+K. Founder retests Problems #1–#5 and records #221 accept/reject evidence
+L. Real-phone WhatsApp QR/link/outbound/inbound/reopen evidence as a separate boundary
+M. Close #230 only with real customer-online/network trial evidence
+N. Representative beta + remaining live-provider/security/privacy/legal/compatibility/incident evidence
+O. Explicit Founder Beta/Stable decision
+P. Stable `1.0.0` only after every applicable gate is objectively satisfied
 ```
 
-Do not insert an automatic Internal.23. A new Internal version exists only when a coherent changed outcome requires a new signed checkpoint and explicit release authority.
+A new Internal version exists only after the explicit reviewed release-authority envelope. This handoff authorizes the next-session update workflow, but it does not fabricate the version/decision before that work is performed.
 
 ## Audit/review/merge discipline
 
-The durable workflow retains **complete reconnaissance** for the bounded package before material implementation, one Phase Problem Register when a phase/package requires a frozen audit, targeted checks during coding, one frozen review head, and an **expected-head merge** after every selected gate is green.
+The durable workflow retains **complete reconnaissance** for the bounded package before material implementation. For this already-scoped release-authority package, that means verifying the exact protected product/release/version surfaces and consequences without restarting generic product reconnaissance.
 
-For any future repair:
+For the upcoming release-authority package:
 
 1. branch from current verified protected `main`;
-2. keep one active application writer;
-3. map the concrete defect and affected authority before editing;
-4. use targeted checks while implementing;
+2. keep one active writer;
+3. keep the PR release/version/licensing-only—no unrelated product changes;
+4. use `bun run sf-version` and updater contract as immediate authority checks;
 5. freeze one exact head;
-6. run consequence-selected source/browser/native/Windows/installed gates;
+6. run consequence-selected complete release source/native/Windows/package evidence;
 7. resolve actionable review findings on that exact head;
 8. perform the expected-head merge with repository protection;
 9. re-fetch protected `main` and verify the durable result;
-10. only create a signed Internal release when separately authorized;
-11. build/publish only from exact protected-main authority;
-12. keep automated release proof separate from Founder-installed acceptance.
+10. build/publish only from exact protected-main authority;
+11. keep automated release proof separate from Founder-installed acceptance.
 
 No force merge, waiver, protection bypass, updater-key weakening, `--locked` weakening, AppData deletion or cross-SHA evidence mixing is authorized.
 
@@ -211,5 +227,7 @@ Retain these as chronology/evidence, not active next-step instructions:
 - Internal.22 signed publication: #284 / FD-041 / protected source `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348` / signed run `32205843573`.
 - post-Internal.22 sleep/resume + Search repair: #286 / merge `34213d77e4fa3aee2f3ae38cd4d600e0f8adde67`.
 - post-Internal.22 Risk Engine seller workspace: #287 / merge `fbc6cf386ec11f178a930116b39705079c01e89d`.
+- dashboard operations + delivery detail: #289 / merge `0b090a0306d6f35c2721651365fde5b8b6b77a25`.
+- RTL controls/navigation IA/annual demo: #290 / merge `39ffcc5d58e13699f74475579cd88bc511bceec4`.
 
 `documentation/archive/**` remains historical evidence only.
