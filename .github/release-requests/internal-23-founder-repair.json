@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.23 Founder Problems #1-#5 repair publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.23",
+  "windowsMsiVersion": "1.0.0.23",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-042",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "b030e31983b3d2bca464f676d27f0f29d46eed3d",
+    "phase5RunId": 32310696360,
+    "phase67RunId": 32310696369,
+    "ciRunId": 32310696742
+  },
+  "reason": "Publish the completed Founder Problems #1-#5 repair line from #286, #287, #289 and #290 after the exact #291 handoff tree. The release branch contains only version, licensing, release, installer and contract-test authority changes; fresh exact-head PR gates remain mandatory before merge. Founder-installed human acceptance remains separate under #221; customer-online networking/licensing readiness remains under #230; Beta and Stable remain out of scope."
+}
