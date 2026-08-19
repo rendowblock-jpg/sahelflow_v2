@@ -22,14 +22,35 @@ describe("Risk Engine seller workspace contract", () => {
     expect(page).not.toContain("savingsTone");
   });
 
-  it("gives the primary trend the full overview width and removes decorative risk bands", () => {
+  it("gives the primary trend the full overview width with every semantic threshold and no decorative bands", () => {
     const page = source("../../../app/(dashboard)/risk/page.tsx");
 
     expect(page).toContain('data-risk-primary-trend="true"');
+    expect(page).toContain('className="w-full"');
     expect(page).toContain('height="clamp(20rem, 30vw, 25rem)"');
     expect(page).toContain("referenceLines={riskReferenceLines}");
+    expect(page).toContain("value: config.thresholds.low");
+    expect(page).toContain("value: config.thresholds.medium");
+    expect(page).toContain("value: config.thresholds.high");
     expect(page).not.toContain("riskReferenceBands");
     expect(page).not.toContain("referenceBands={");
+  });
+
+  it("promotes only positive risk contributors in the seller attention panel", () => {
+    const page = source("../../../app/(dashboard)/risk/page.tsx");
+
+    expect(page).toContain(
+      ".filter((factor) => factor.avgPoints > 0)",
+    );
+    expect(page).toContain(
+      "right.avgPoints * right.occurrenceCount",
+    );
+    expect(page).toContain(
+      "left.avgPoints * left.occurrenceCount",
+    );
+    expect(page).not.toContain(
+      "right.occurrenceCount - left.occurrenceCount\n  )[0]",
+    );
   });
 
   it("separates seller signals from deeper analytical tables", () => {
