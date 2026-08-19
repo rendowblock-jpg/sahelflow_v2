@@ -52,9 +52,8 @@ describe("Risk Engine seller workspace contract", () => {
       "right.positivePoints - left.positivePoints",
     );
     expect(page).toContain(
-      "signedPointsFormatter.format(topFactor.positivePoints)",
+      "formatPositiveRiskPoints(locale, topFactor.positivePoints)",
     );
-    expect(page).toContain('riskCopy("positiveRiskPoints")');
     expect(page).not.toContain("factor.avgPoints > 0");
   });
 
@@ -69,23 +68,28 @@ describe("Risk Engine seller workspace contract", () => {
     expect(page).toContain('TabsContent value="rules"');
   });
 
-  it("uses dedicated seller-facing AR/FR/EN copy for the attention panel", () => {
+  it("uses complete count-aware AR/FR/EN copy for seller attention impact", () => {
     const page = source("../../../app/(dashboard)/risk/page.tsx");
     const copy = source("../../../lib/i18n/risk-workspace.ts");
 
     expect(page).toContain("getRiskWorkspaceCopy");
+    expect(page).toContain("formatPositiveRiskPoints");
     expect(page).toContain('riskCopy("attentionTitle")');
     expect(page).toContain('riskCopy("attentionDescription")');
     expect(page).toContain('riskCopy("highestImpactFactor")');
-    expect(page).toContain('riskCopy("positiveRiskPoints")');
     expect(copy).toContain('attentionTitle: "What needs your attention"');
     expect(copy).toContain('attentionTitle: "Ce qui mérite votre attention"');
     expect(copy).toContain('attentionTitle: "ما يحتاج انتباهك الآن"');
     expect(copy).toContain('highestImpactFactor: "Highest-impact risk factor"');
     expect(copy).toContain('highestImpactFactor: "Facteur de risque le plus impactant"');
     expect(copy).toContain('highestImpactFactor: "عامل الخطر الأعلى تأثيرًا"');
-    expect(copy).toContain('positiveRiskPoints: "positive risk points"');
-    expect(copy).toContain('positiveRiskPoints: "points de risque positifs"');
-    expect(copy).toContain('positiveRiskPoints: "نقطة خطر إيجابية"');
+    expect(copy).toContain("new Intl.PluralRules");
+    expect(copy).toContain("positive risk point`");
+    expect(copy).toContain("positive risk points`");
+    expect(copy).toContain("point de risque positif`");
+    expect(copy).toContain("points de risque positifs`");
+    expect(copy).toContain("نقطتا خطر إيجابيتان`");
+    expect(copy).toContain("نقاط خطر إيجابية`");
+    expect(copy).toContain("نقطة خطر إيجابية`");
   });
 });
