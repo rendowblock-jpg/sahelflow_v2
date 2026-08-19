@@ -12,6 +12,7 @@ import "./motion-system.css";
 import "./experience-system.css";
 import "./locale-transition-system.css";
 import { AppDirectionProvider } from "@/components/i18n/app-direction-provider";
+import { DesktopResumeRecovery } from "@/components/runtime/desktop-resume-recovery";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -133,6 +134,7 @@ export default async function RootLayout({
               >
                 <TooltipProvider delayDuration={300}>
                   {children}
+                  <DesktopResumeRecovery />
                   <ServiceWorkerRegister />
                   <UpdateChecker />
                   <Toaster
