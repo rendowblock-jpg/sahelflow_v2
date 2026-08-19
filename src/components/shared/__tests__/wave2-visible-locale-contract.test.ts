@@ -36,7 +36,7 @@ describe("Wave 2 visible locale and layout closure", () => {
 
     expect(dashboard).toContain('data-dashboard-operational-grid="true"');
     expect(dashboard).toContain("grid min-w-0 items-start gap-3");
-    expect(dashboard).toContain("self-start rounded-md");
+    expect(dashboard).toContain('className="grid min-w-0 gap-3"');
   });
 
   it("localizes Dashboard counts and rates without changing query authority", () => {
