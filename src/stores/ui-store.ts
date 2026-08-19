@@ -11,8 +11,9 @@
  * the returned Server Component tree before paint. A hard document reload is
  * recovery-only if server reconciliation cannot converge.
  *
- * Locale and active shop never persist in this Zustand storage. Sidebar collapse,
- * density and navigation domain order are presentation-only preferences.
+ * Locale and active shop never persist in this Zustand storage. Sidebar collapse
+ * and density are presentation-only preferences; navigation order is a stable
+ * product information-architecture decision and is intentionally not persisted.
  */
 import { create } from "zustand";
 import {
@@ -29,17 +30,6 @@ export const DEFAULT_UI_DENSITY: UiDensity = "comfortable";
 
 function isUiDensity(value: unknown): value is UiDensity {
   return value === "comfortable" || value === "compact";
-}
-
-function isNavigationOrder(value: unknown): value is string[] {
-  return (
-    Array.isArray(value) &&
-    value.length <= 32 &&
-    value.every(
-      (entry) =>
-        typeof entry === "string" && entry.length > 0 && entry.length <= 64,
-    )
-  );
 }
 
 /**
@@ -90,7 +80,6 @@ interface UIState {
   locale: Locale;
   sidebarCollapsed: boolean;
   density: UiDensity;
-  navigationDomainOrder: string[];
   activeShopId: string | null;
 
   /** Commit the live client locale and browser document boundary. */
@@ -98,8 +87,6 @@ interface UIState {
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setDensity: (density: UiDensity) => void;
-  setNavigationDomainOrder: (order: string[]) => void;
-  resetNavigationDomainOrder: () => void;
   setActiveShopId: (shopId: string | null) => void;
 }
 
@@ -129,7 +116,6 @@ export const useUIStore = create<UIState>()(
       locale: getCookieLocale() ?? "fr",
       sidebarCollapsed: false,
       density: DEFAULT_UI_DENSITY,
-      navigationDomainOrder: [],
       activeShopId: null,
 
       setLocale: (locale) => {
@@ -142,9 +128,6 @@ export const useUIStore = create<UIState>()(
         set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
       setDensity: (density) => set({ density }),
-      setNavigationDomainOrder: (order) =>
-        set({ navigationDomainOrder: [...order] }),
-      resetNavigationDomainOrder: () => set({ navigationDomainOrder: [] }),
       setActiveShopId: (shopId) => set({ activeShopId: shopId }),
     }),
     {
@@ -153,17 +136,15 @@ export const useUIStore = create<UIState>()(
       partialize: (state) => ({
         sidebarCollapsed: state.sidebarCollapsed,
         density: state.density,
-        navigationDomainOrder: state.navigationDomainOrder,
       }),
       // Persisted UI data is untrusted/stale input. Admit only bounded known
-      // preference shapes. Canonical navigation reconciliation happens against
-      // the live registry, so an older preference cannot hide new destinations.
+      // preference shapes. Historical navigationDomainOrder data is deliberately
+      // ignored and disappears on the next successful preference write.
       // Locale and active shop never come from this storage boundary.
       merge: (persistedState, currentState) => {
         const persisted = persistedState as {
           sidebarCollapsed?: unknown;
           density?: unknown;
-          navigationDomainOrder?: unknown;
         } | null;
         return {
           ...currentState,
@@ -174,11 +155,6 @@ export const useUIStore = create<UIState>()(
           density: isUiDensity(persisted?.density)
             ? persisted.density
             : DEFAULT_UI_DENSITY,
-          navigationDomainOrder: isNavigationOrder(
-            persisted?.navigationDomainOrder,
-          )
-            ? persisted.navigationDomainOrder
-            : [],
           locale: currentState.locale,
           activeShopId: currentState.activeShopId,
         };
