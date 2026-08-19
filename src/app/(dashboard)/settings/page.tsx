@@ -96,6 +96,7 @@ export default async function SettingsPage({
     <div className="app-content page-sections">
       <PageHeader title={t("nav.settings")} description={t("settings.subtitle")} />
       <SettingsWorkspace
+        key={initialGroup ?? "default"}
         access={access}
         initialGroup={initialGroup}
         integrations={integrations.map((integration) => ({
