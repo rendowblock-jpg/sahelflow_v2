@@ -2,7 +2,7 @@
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
 > **Last updated:** 2026-08-19
-> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity / Founder-installed acceptance
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
 ## Current truth
@@ -15,7 +15,7 @@
 - Protected Internal.22 release source: `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348` / PR #284.
 - Signed updater run: `32205843573` — success.
 - Current protected product source after today’s bounded Founder repairs: `fbc6cf386ec11f178a930116b39705079c01e89d` / PR #287, tree `6ee775680459ef457bca9da060a1310e4de5f0fd`.
-- At this handoff there are **no open pull requests**. Recheck at the start of the next session.
+- No open application PR existed before this docs-only reconciliation. Recheck live GitHub state at the start of the next session.
 - **Critical boundary:** current protected `main` is newer than signed Internal.22. PRs #286 and #287 are source-complete on `main` but are **not contained in the currently published Internal.22 installer**. Do not claim installed validation for those repairs until a separately authorized signed checkpoint is built and installed.
 
 ## Founder problem register — this session
@@ -97,6 +97,8 @@ Internal.20 rejection and the Internal.19 rollback remain historical evidence, n
 - **#226 CLOSED/completed:** retain its performance budgets as regression criteria; do not list it as an active blocker.
 - Real-phone WhatsApp QR/link/reopen/outbound/inbound persistence evidence remains separate from source certification.
 
+The historical retained issue tuple is **#221, #226, #230**. Current truth supersedes the old all-open interpretation: #226 is completed; #221 and #230 remain open.
+
 ## Exact next-session order
 
 The Founder is currently enumerating installed-product problems one at a time. **Continue from Problem #4; do not restart from Problem #1, do not re-explore the whole codebase, and do not automatically begin a release.**
@@ -113,6 +115,18 @@ The Founder is currently enumerating installed-product problems one at a time. *
 8. A new signed checkpoint must preserve AppData, registry/install identity, keys and shop databases and must be built only from exact protected `main` under normal release authority/evidence rules.
 9. Founder-installed acceptance after such a checkpoint should explicitly retest sleep/resume + EN/AR convergence, Universal Search real feel, Risk Engine seller UX, and any later repaired defects.
 10. Keep #230 and real-phone WhatsApp evidence independent; neither is satisfied merely by the product UI repairs.
+
+## Historical continuity anchors
+
+### Wave 4 — what is implemented
+
+The historical Wave 4 / Internal.16 Storefront line remains implemented history and must not be treated as a future task. Its downstream product evolution is already carried by later protected product source.
+
+- **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` / PR #220.
+- Historical Internal.15 signed run: `31657621918`.
+- Historical retained issue tuple: **#221, #226, #230**.
+
+These markers preserve semantic/audit continuity only. They do not change the current post-Internal.22 execution order above.
 
 ## Protected invariants
 
