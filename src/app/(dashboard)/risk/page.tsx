@@ -481,7 +481,7 @@ export default async function RiskPage({
                       </p>
                       {topFactor ? (
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {integerFormatter.format(topFactor.occurrenceCount)} {t("risk.topFactors.occurrences")}
+                          {signedPointsFormatter.format(topFactor.positivePoints)} {riskCopy("positiveRiskPoints")}
                         </p>
                       ) : null}
                     </div>
