@@ -1,3 +1,5 @@
+import "@/app/rtl-form-controls.css";
+
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { LicenseBoundary } from "@/components/license/license-boundary";
 import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
