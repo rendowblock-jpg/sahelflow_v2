@@ -7,7 +7,8 @@
 > **Protected Internal.22 release source:** `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348` / PR #284
 > **Certified Internal.22 product head:** `fa77ae32dc680f0d2854d10363dcaf06ba4e5229` / PR #283
 > **Signed publication run:** `32205843573` — success
-> **Human product acceptance:** open on the Founder-installed Internal.22 build
+> **Current post-release product source checkpoint:** `fbc6cf386ec11f178a930116b39705079c01e89d` / PR #287
+> **Human product acceptance:** open; Founder is enumerating installed-product defects one at a time
 
 This document distinguishes integrated source, automated evidence, signed publication and Founder-installed judgment. A lower evidence level never claims a higher one.
 
@@ -26,6 +27,8 @@ Current version authority is:
 - customer-online licensing: not authorized by this checkpoint.
 
 PR #284 merged the release-authority envelope to protected source `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348`. The protected-main dispatcher then launched signed updater run `32205843573` for that exact source and version. The run completed successfully on attempt 1 and published the verified Internal.22 release after exact tag/publication-target checks.
+
+**Internal.22 remains the latest signed/published artifact.** Later product-source merges do not retroactively change that installer and do not create a new release authority.
 
 ## 2. Internal.22 product source
 
@@ -46,9 +49,33 @@ The certified product includes the accumulated Class-AAA replacement line:
 
 The old “Inbox → AI Agents → Settings is the next execution frontier” wording is historical. Those packages have merged.
 
+## 2A. Post-Internal.22 integrated product source
+
+Founder review of the installed Internal.22 app exposed three concrete product defects. They were repaired as bounded post-release source packages and merged to protected `main`; **they are not contained in the signed Internal.22 installer**.
+
+### PR #286 — sleep/resume locale convergence + Universal Search
+
+- Founder Problem #1: after Windows sleep/resume, Arabic mode could temporarily render English routes, some pages required manual Refresh, and EN↔AR transitions did not feel atomic/professional.
+- Founder Problem #2: Universal Search presentation was below the intended Class-AAA bar and record discovery felt too slow.
+- Frozen reviewed head: `46e94fc9f0cc00a65ec4bbfb3101f47221f9a68f`.
+- Protected merge: `34213d77e4fa3aee2f3ae38cd4d600e0f8adde67`.
+- The repair narrows/removes stale service-worker ownership from Tauri navigation/RSC traffic, adds persistent local-runtime resume recovery plus locale/direction convergence and page-error retry, and rebuilds Search warmup/coalescing/parallel families/presentation while preserving protected permissions and bidi authority.
+- Source/browser certification completed before merge; installed acceptance remains unproven until a later signed build contains this source.
+
+### PR #287 — Risk Engine seller decision workspace
+
+- Founder Problem #3: six colorful KPI cards were noisy, the primary trend chart was cramped, and the overview was not seller-friendly/action-oriented.
+- Frozen reviewed head: `e27c6ce884529cbc60e9bd69a261a1e8b114b41d`.
+- Protected merge: `fbc6cf386ec11f178a930116b39705079c01e89d`.
+- Durable merge tree: `6ee775680459ef457bca9da060a1310e4de5f0fd`, identical to the frozen product tree.
+- Exact-head evidence: CI `32276464061` — success; Phase 5 `32276463348` — success; Phase 6-7 `32276463184` — success.
+- Final product shape: four calm neutral KPIs, dominant full-width Risk Trend, restrained semantic thresholds, seller-attention signals, deeper analysis separated from Overview, exact positive-impact ranking and count-aware AR/FR/EN impact copy while preserving risk-scoring and permission authority.
+
+At this reconciliation there was no open application PR after #287 merged. Always recheck live GitHub state before writing.
+
 ## 3. Universal Search / Command Center closure
 
-PR #283 replaced the old multi-endpoint client fan-out with one server authority and closed the source/evidence defect class that blocked publication.
+PR #283 replaced the old multi-endpoint client fan-out with one server authority and closed the source/evidence defect class that blocked Internal.22 publication.
 
 Current search authority includes:
 
@@ -63,6 +90,8 @@ Current search authority includes:
 - truthful quick actions, navigation and operational results;
 - RTL/bidi and Windows keyboard semantics;
 - Phase 7 search-performance evidence.
+
+PR #286 later hardened the real Founder-observed search presentation/latency path without weakening those authority contracts. The signed Internal.22 artifact still predates #286.
 
 The final #283 repair changed only a stale source-formatting assertion in the Phase 4 transport contract; it did not weaken the Playwright CDP transport or Search behavior.
 
@@ -101,7 +130,11 @@ After merge, signed updater run `32205843573` separately proved the signed artif
 
 Hosted Windows/CI installed evidence is necessary release proof but does not substitute for the Founder’s product judgment on the retained Windows reference environment. Issue #221 remains open.
 
-The next human checkpoint should record the exact installed version and inspect representative current-product states, especially:
+Founder review is now an active one-at-a-time problem register rather than a generic reconnaissance program. Problems #1–#3 have already produced bounded source repairs #286/#287. The next session should resume at **Problem #4** if the Founder supplies another installed defect; do not restart Problems #1–#3 or redo a whole-repository audit.
+
+The currently installed/signed Internal.22 can still be used to identify additional Founder-visible defects, but it cannot be used to validate #286/#287 because those repairs are newer than the release. To validate those fixes on Windows, a separately authorized new signed Founder checkpoint must eventually be built from exact protected `main` and installed.
+
+Representative Founder judgment continues to cover:
 
 - shell/navigation/theme/locale behavior;
 - Arabic typography, semantic RTL, portals and mixed bidi content;
@@ -110,15 +143,16 @@ The next human checkpoint should record the exact installed version and inspect 
 - Universal Search relevance, keyboard behavior and real operational results;
 - AI Agents decision workspace;
 - Settings control center;
+- Risk Engine seller decision flow;
 - responsive/1366×768 containment and ordinary interaction quality.
 
-No “Founder accepted” statement exists for Internal.22 until that observation is explicitly recorded.
+No “Founder accepted” statement exists until that observation is explicitly recorded against an exact installed build that contains the relevant repaired source.
 
 ## 6. WhatsApp installed/provider boundary
 
 PR #282 is source/browser certified for pairing state management and Inbox V3 behavior. It did **not** claim real-phone provider closure.
 
-Retained installed/provider evidence for the current signed build is:
+Retained installed/provider evidence for the applicable signed build is:
 
 1. contained runtime and WhatsApp sidecar start;
 2. QR visibly renders;
@@ -132,7 +166,7 @@ A failure here opens a bounded installed/provider defect. It does not erase the 
 
 ## 7. Issue state
 
-- **#221 — OPEN:** retained Founder-installed visual/accessibility/product acceptance.
+- **#221 — OPEN:** retained Founder-installed visual/accessibility/product acceptance and current one-at-a-time Founder defect register.
 - **#226 — CLOSED / completed in GitHub:** historical Phase 7 installed performance/reliability authority. Do not keep presenting it as an active open issue; preserve its budgets as regression criteria.
 - **#230 — OPEN P1:** resilient customer trial activation on representative Algerian networks. It still blocks customer-online/public-trial claims.
 
@@ -148,7 +182,7 @@ PR #220 remains the historical Phase 5 application-changing protected baseline `
 
 ### Active Phase 6 frontier
 
-The active product phase remains **Phase 6 — Arabic, RTL and accessibility parity** until the retained Founder-installed/human acceptance boundary is explicitly reconciled. Current execution inside that phase is the Internal.22 installed judgment, not another generic source sweep.
+The active product phase remains **Phase 6 — Arabic, RTL and accessibility parity** until the retained Founder-installed/human acceptance boundary is explicitly reconciled. Current execution inside that phase is the one-at-a-time Founder-installed defect/acceptance flow, with Problems #1–#3 source-repaired on protected `main` and Problem #4 as the next resumable observation—not another generic source sweep.
 
 ### Internal.14 publication evidence
 
@@ -175,14 +209,17 @@ Important human history remains valid:
 - PRs #273–#276 established the shared structural/semantic RTL foundation.
 - Internal.21 / FD-040 was a real signed Founder-offline checkpoint after Inbox/AI/Settings reconstruction.
 - Founder-installed review after Internal.21 exposed bounded remaining product classes, leading to analytics #281, Inbox V3 #282 and Universal Search #283 rather than another generic whole-app reset.
-- Internal.22 / FD-041 packages that accumulated repaired state.
+- Internal.22 / FD-041 packaged that accumulated repaired state.
+- Founder-installed review of Internal.22 then exposed bounded Problems #1–#3; source repairs #286 and #287 merged after the release while keeping release/version authority unchanged.
 
 Internal.20 rejection remains historical evidence; it is no longer the current release frontier.
 
 ## 10. Current non-claims
 
-The following are **not** established by Internal.22:
+The following are **not** established at this state:
 
+- Internal.22 containing PR #286 or PR #287;
+- Founder-installed validation of the #286/#287 repairs;
 - Founder-installed whole-product acceptance;
 - real-phone WhatsApp provider certification;
 - customer-online trial readiness;
@@ -196,18 +233,19 @@ The following are **not** established by Internal.22:
 
 There is no justification for another generic product reconnaissance pass.
 
-The next outcome is:
+The resumable next outcome is:
 
 ```text
-resolve live protected main / PR state
-→ install or update the Founder machine to exact signed Internal.22 while preserving data
-→ verify installed version/source identity
-→ perform Founder visual/interaction acceptance (#221)
-→ perform real-phone WhatsApp pairing/message-roundtrip evidence
-→ accept OR isolate concrete bounded defect(s)
-→ if defects exist, repair one root-cause package from fresh protected main and recertify affected consequences
+resolve live protected main / PR state and #221/#230
+→ continue Founder one-at-a-time installed review at Problem #4 if another defect is reported
+→ for each demonstrated defect, map only the affected current-main layers and repair one bounded root-cause package
+→ preserve #286/#287 contracts and keep source certification separate from installed acceptance
+→ when the Founder decides the defect batch is sufficient, explicitly choose whether to continue inspection or authorize a new signed Founder checkpoint from exact protected main
+→ if a new checkpoint is authorized, build/sign/publish only under normal release authority, then install it in place while preserving data/identity/keys
+→ retest sleep/resume + EN/AR convergence, Universal Search real feel, Risk Engine seller UX and later repaired defects on that exact installed build
+→ perform real-phone WhatsApp pairing/message-roundtrip evidence as a separate boundary
 → keep #230 separate until customer-online network/licensing evidence exists
 → only then advance toward representative Beta/Stable gates under explicit Founder authority
 ```
 
-Do not bump to Internal.23 merely because documentation is reconciled or because Internal.22 was published. A later version requires a coherent changed outcome and explicit release authority.
+Do not bump to Internal.23 merely because #286/#287 merged or because documentation is reconciled. A later version requires a coherent changed outcome and explicit release authority.

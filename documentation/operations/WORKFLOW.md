@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-19
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.22 / FD-041 is signed and published; Founder-installed acceptance remains separate
+> **Current checkpoint:** Internal.22 / FD-041 is signed and published; protected product source is newer after bounded Founder repairs #286/#287; Founder-installed acceptance remains separate
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -274,21 +274,30 @@ Do not publish from a branch head. Do not substitute a merge candidate for prote
 
 ## 12. Current post-Internal.22 mode
 
-Internal.22 / FD-041 is already signed and published from `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348`. Therefore the default next action is **not coding**.
+Internal.22 / FD-041 is already signed and published from `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348`. Protected product source is now newer after Founder-observed repairs #286 and #287. Those source fixes are **not** contained in Internal.22.
+
+The Founder is currently enumerating installed-product problems one at a time. Problems #1–#3 have already been mapped and source-repaired; the exact resumable observation is **Problem #4**.
 
 Current sequence is:
 
 ```text
-verify Founder installed version
-→ update/install Internal.22 in place if needed
-→ Founder whole-product visual/interaction judgment (#221)
-→ real-phone WhatsApp QR/link/reopen/outbound/inbound evidence
-→ accept OR open one bounded repair for demonstrated defects
+resolve live protected main + open PR/issues
+→ if the Founder reports Problem #4, understand the installed symptom first
+→ map only the affected current-main authority/consumers/tests and repair one bounded root-cause package if requested
+→ preserve #286/#287 contracts and do not restart generic RTL/Inbox/AI/Settings/analytics/Search/Risk programs
+→ continue one-at-a-time Founder defect closure until the Founder decides the batch is sufficient
+→ explicitly choose: continue inspection OR authorize a new signed Founder checkpoint
+→ if authorized, reconcile release/version authority and build/sign/publish only from exact protected main
+→ install that exact checkpoint in place with AppData/identity/keys/shop DB preservation
+→ Founder retests sleep/resume + EN/AR convergence, Universal Search real feel, Risk Engine seller UX and later repaired defects
+→ real-phone WhatsApp QR/link/reopen/outbound/inbound evidence remains a separate boundary
 → keep #230 separate until resilient customer-online trial evidence is real
 → representative Beta/Stable evidence and explicit Founder promotion later
 ```
 
-If a defect is found, the next coding session starts from fresh protected `main` and the exact observed reproduction. It must not restart the completed generic RTL, Inbox/AI/Settings, analytics or Search programs.
+The current Internal.22 installation may continue to reveal additional defects, but it cannot validate #286/#287 because it predates those merges. Do not claim those fixes installed until a later exact signed checkpoint actually contains them.
+
+Do not auto-create Internal.23. A new Internal release requires a coherent changed outcome and explicit Founder release authority.
 
 ## 13. Handoff rule
 
