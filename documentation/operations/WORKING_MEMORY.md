@@ -101,6 +101,18 @@ Internal.20 rejection and the Internal.19 rollback remain historical evidence, n
 - **#226 CLOSED/completed:** retain its performance budgets as regression criteria; do not list it as an active blocker.
 - Real-phone WhatsApp QR/link/reopen/outbound/inbound persistence evidence remains separate from source certification.
 
+## Historical continuity anchors
+
+### Wave 4 — what is implemented
+
+The historical Wave 4 / Internal.16 Storefront line remains implemented history and must not be treated as a future task. Its downstream product evolution is already carried by later protected product source.
+
+- **Phase 5 application-changing protected baseline:** `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` / PR #220.
+- Historical Internal.15 signed run: `31657621918`.
+- Historical retained issue tuple: **#221, #226, #230**. Current truth supersedes the old all-open interpretation: #226 is completed; #221 and #230 remain open.
+
+These markers preserve semantic/audit continuity only. They do not change the next-session update order below.
+
 ## Exact next-session order — make the update
 
 The Founder has explicitly chosen the **release/update path** for the next session. Start here; do not resume Problem #6 and do not start a generic audit first.
