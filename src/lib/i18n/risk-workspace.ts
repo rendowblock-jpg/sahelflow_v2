@@ -7,7 +7,6 @@ const COPY = {
     attentionDescription:
       "A focused read of the signals most likely to affect confirmations and returns.",
     highestImpactFactor: "Highest-impact risk factor",
-    positiveRiskPoints: "positive risk points",
     openAnalysis: "Open full risk analysis",
   },
   fr: {
@@ -15,7 +14,6 @@ const COPY = {
     attentionDescription:
       "Une lecture ciblée des signaux les plus susceptibles d’affecter les confirmations et les retours.",
     highestImpactFactor: "Facteur de risque le plus impactant",
-    positiveRiskPoints: "points de risque positifs",
     openAnalysis: "Ouvrir l’analyse complète des risques",
   },
   ar: {
@@ -23,14 +21,60 @@ const COPY = {
     attentionDescription:
       "ملخص مركز للإشارات الأكثر احتمالًا للتأثير على التأكيدات والمرتجعات.",
     highestImpactFactor: "عامل الخطر الأعلى تأثيرًا",
-    positiveRiskPoints: "نقطة خطر إيجابية",
     openAnalysis: "فتح تحليل المخاطر الكامل",
   },
 } as const;
+
+function numberLocale(locale: RiskWorkspaceLocale): string {
+  return locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-DZ" : "en-GB";
+}
 
 export function getRiskWorkspaceCopy(
   locale: RiskWorkspaceLocale,
   key: RiskWorkspaceCopyKey,
 ): string {
   return COPY[locale]?.[key] ?? COPY.en[key];
+}
+
+/**
+ * Complete localized impact message. Keep the number and noun agreement under
+ * one locale authority instead of concatenating a formatted number with an
+ * invariant unit fragment.
+ */
+export function formatPositiveRiskPoints(
+  locale: RiskWorkspaceLocale,
+  points: number,
+): string {
+  const safePoints = Number.isFinite(points) ? Math.max(0, points) : 0;
+  const resolvedLocale = numberLocale(locale);
+  const formatted = new Intl.NumberFormat(resolvedLocale, {
+    signDisplay: "exceptZero",
+    maximumFractionDigits: 1,
+  }).format(safePoints);
+  const category = new Intl.PluralRules(resolvedLocale).select(safePoints);
+
+  if (locale === "ar") {
+    switch (category) {
+      case "two":
+        return `${formatted} نقطتا خطر إيجابيتان`;
+      case "few":
+        return `${formatted} نقاط خطر إيجابية`;
+      case "one":
+      case "zero":
+      case "many":
+      case "other":
+      default:
+        return `${formatted} نقطة خطر إيجابية`;
+    }
+  }
+
+  if (locale === "fr") {
+    return category === "one"
+      ? `${formatted} point de risque positif`
+      : `${formatted} points de risque positifs`;
+  }
+
+  return category === "one"
+    ? `${formatted} positive risk point`
+    : `${formatted} positive risk points`;
 }
