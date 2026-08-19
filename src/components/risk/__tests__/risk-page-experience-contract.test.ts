@@ -51,6 +51,10 @@ describe("Risk Engine seller workspace contract", () => {
     expect(analytics).toContain(
       "right.positivePoints - left.positivePoints",
     );
+    expect(page).toContain(
+      "signedPointsFormatter.format(topFactor.positivePoints)",
+    );
+    expect(page).toContain('riskCopy("positiveRiskPoints")');
     expect(page).not.toContain("factor.avgPoints > 0");
   });
 
@@ -73,11 +77,15 @@ describe("Risk Engine seller workspace contract", () => {
     expect(page).toContain('riskCopy("attentionTitle")');
     expect(page).toContain('riskCopy("attentionDescription")');
     expect(page).toContain('riskCopy("highestImpactFactor")');
+    expect(page).toContain('riskCopy("positiveRiskPoints")');
     expect(copy).toContain('attentionTitle: "What needs your attention"');
     expect(copy).toContain('attentionTitle: "Ce qui mérite votre attention"');
     expect(copy).toContain('attentionTitle: "ما يحتاج انتباهك الآن"');
     expect(copy).toContain('highestImpactFactor: "Highest-impact risk factor"');
     expect(copy).toContain('highestImpactFactor: "Facteur de risque le plus impactant"');
     expect(copy).toContain('highestImpactFactor: "عامل الخطر الأعلى تأثيرًا"');
+    expect(copy).toContain('positiveRiskPoints: "positive risk points"');
+    expect(copy).toContain('positiveRiskPoints: "points de risque positifs"');
+    expect(copy).toContain('positiveRiskPoints: "نقطة خطر إيجابية"');
   });
 });
