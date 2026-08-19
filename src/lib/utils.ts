@@ -19,6 +19,9 @@ const DZD_SUFFIX: Record<SupportedLocale, string> = {
   en: " DA",
 };
 
+const LTR_ISOLATE = "\u2066";
+const POP_DIRECTIONAL_ISOLATE = "\u2069";
+
 function supportedLocale(locale: string): SupportedLocale {
   return locale === "ar" || locale === "en" ? locale : "fr";
 }
@@ -47,17 +50,39 @@ export function formatDZDBare(amount: number, locale: string = "fr"): string {
   }).format(amount);
 }
 
+/**
+ * Canonical compact numeric display for analytical/chart surfaces.
+ *
+ * Intl owns the localized compact unit (including Arabic ألف), while callers can
+ * place the resulting technical value inside one explicit LTR bidi isolate. That
+ * distinction matters in Arabic: FSI resolves a digit-leading label from its
+ * first strong character (the Arabic compact unit), which can reorder the number,
+ * sign and unit even though the value itself is a left-to-right technical run.
+ */
+export function formatCompactNumber(
+  amount: number,
+  locale: string = "fr",
+): string {
+  const resolved = supportedLocale(locale);
+  return new Intl.NumberFormat(LOCALE_MAP[resolved], {
+    notation: "compact",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(amount);
+}
+
+/** Keep a numeric/technical label stable inside surrounding RTL product chrome. */
+export function isolateLtr(value: string): string {
+  return `${LTR_ISOLATE}${value}${POP_DIRECTIONAL_ISOLATE}`;
+}
+
 /** Compact DZD display that preserves localized digits, compact units and suffix. */
 export function formatDZDShort(
   amount: number,
   locale: string = "fr",
 ): string {
   const resolved = supportedLocale(locale);
-  const compact = new Intl.NumberFormat(LOCALE_MAP[resolved], {
-    notation: "compact",
-    maximumFractionDigits: 1,
-  }).format(amount);
-  return `${compact}${DZD_SUFFIX[resolved]}`;
+  return `${formatCompactNumber(amount, resolved)}${DZD_SUFFIX[resolved]}`;
 }
 
 export function formatDate(
