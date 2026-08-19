@@ -2,13 +2,14 @@
 
 > **Status:** Active dependency/completion program
 > **Last reconciled:** 2026-08-19
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** resolve from GitHub before action
 > **Current signed checkpoint:** Internal.22 / FD-041
 > **Current execution mode:** installed Founder acceptance and bounded residual closure before customer-online/Beta/Stable work
 
 This roadmap remains subordinate to the product contract, experience contract, architecture and newer explicit Founder decisions. It describes dependency order; it does not turn a green source tree into Founder acceptance or Stable readiness.
 
-## 1. Current position
+## Current position
 
 The major source/product replacement sequence that was future work in the 2026-08-16 roadmap is now complete:
 
@@ -29,21 +30,28 @@ Internal.22 is published from protected source `e1199a8e63af7e04d3ef3cf8f3e705db
 
 There is no standing instruction to start another broad Inbox/AI/Settings, RTL, chart or Search redesign. Those areas reopen only from concrete new evidence.
 
-## 2. Phase 0–4 protected authority
+## Phase 0–2 and Phase 4 — protected foundations
 
 The canonical foundation remains protected:
 
 - **Phase 0 — authority and execution model:** complete enough to govern current work.
 - **Phase 1 — Golden COD business core:** canonical order/confirmation/stock/delivery/COD/refund authority remains protected.
 - **Phase 2 — identity, authorization, licensing and multi-shop:** protected identity/shop/session/permission/native lifecycle authority remains intact.
-- **Phase 3 — providers, Inbox, AI and automations:** durable provider/outbox/inbox/proposal authority remains protected; live-provider certification stays distinct from source conformance.
 - **Phase 4 — data protection, recovery, migrations and security:** encryption, migration, backup/restore/replacement-install and recovery invariants remain protected.
 
 Do not reopen these phases because a presentation defect exists. Reopen one bounded contract only when a concrete source/security/recovery/compatibility defect requires it.
 
-## 3. Phase 5 — whole-product Class-AAA experience
+## Phase 3 — providers, inbox, AI and automations
 
-Current source/browser product work has moved far beyond the old Phase 5 baseline:
+The durable provider/outbox/inbox/proposal authority remains protected from the Phase 3 closure line. Later Class-AAA Inbox/AI reconstruction changed product presentation and seller workflow without weakening the durable effect model.
+
+Live-provider certification remains distinct from source conformance. In particular, PR #282 source/browser pairing hardening does not by itself prove a real-phone WhatsApp pairing/message roundtrip on the current signed installation.
+
+## Phase 5 — whole-product AAA desktop experience
+
+PR #220 remains the historical Phase 5 application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734` and **Phase 5 closure** evidence anchor. Later product packages supersede it as the current source head while retaining its proven evidence.
+
+Current source/browser product work has moved far beyond that baseline:
 
 - shared design/RTL foundation repaired;
 - Inbox, AI Agents and Settings reconstructed;
@@ -64,7 +72,7 @@ Exit for the current checkpoint requires:
 
 Issue **#221 is open** and owns this retained human gate.
 
-## 4. Phase 6 — Arabic, RTL and accessibility
+## Phase 6 — Arabic, RTL and accessibility parity
 
 The shared source foundation established in #273–#276 is protected and must be preserved. Later workspace PRs also passed AR/FR/EN, RTL, reflow and accessibility evidence.
 
@@ -72,7 +80,7 @@ The current unresolved distinction is human/installed product judgment on the si
 
 Do not restart a generic RTL sweep unless installed Internal.22 demonstrates a concrete regression.
 
-## 5. Phase 7 — performance and reliability
+## Phase 7 — performance and reliability
 
 Issue **#226 is closed/completed in GitHub** and must no longer be shown as an open blocker.
 
@@ -80,7 +88,7 @@ Its budgets remain regression authority for future changes, including reference-
 
 PR #283 additionally proved bounded Universal Search latency/performance behavior in the current product package.
 
-## 6. Phase 8 — connected SahelFlow platform
+## Phase 8 — connected SahelFlow platform
 
 The connected-platform foundation was substantially implemented before the current experience-reset sequence, including desktop-authoritative remote commands/projections, Storefront V2, encrypted backup transport and bounded Cloudflare control-plane responsibilities.
 
@@ -97,7 +105,7 @@ The primary remaining customer-online boundary is issue **#230**, still open P1:
 
 Provider-owned hostnames or Founder-offline activation cannot substitute for this evidence.
 
-## 7. WhatsApp real-provider installed proof
+## WhatsApp real-provider installed proof
 
 PR #282 source/browser certification is complete, but current release truth still separates real-phone pairing from automation.
 
@@ -113,7 +121,7 @@ Before claiming the pairing defect closed in the shipped product, prove on the e
 
 A failure opens one bounded installed/provider repair. Do not relabel source conformance as live-provider certification.
 
-## 8. Phase 9 — certification, representative beta and Stable
+## Phase 9 — release certification and launch readiness
 
 Internal.22 is an **Internal Founder-offline** checkpoint, not Beta or Stable.
 
@@ -133,7 +141,7 @@ Before public Stable `1.0.0`, retain the applicable external/representative gate
 
 Internal confidence, CI counts or a signed Founder package cannot fabricate those external results.
 
-## 9. Immediate dependency order
+## Immediate dependency order
 
 From the current Internal.22 state, execute in this order unless newer direct evidence changes the dependency:
 
@@ -152,7 +160,9 @@ J. Stable `1.0.0` only after every applicable gate is objectively satisfied
 
 Do not insert an automatic Internal.23 between B and C. A new Internal version exists only when a coherent changed outcome requires a new signed checkpoint and explicit release authority.
 
-## 10. Merge and release discipline
+## Audit/review/merge discipline
+
+The durable workflow retains **complete reconnaissance** for the bounded package before material implementation, one Phase Problem Register when a phase/package requires a frozen audit, targeted checks during coding, one frozen review head, and an **expected-head merge** after every selected gate is green.
 
 For any future repair:
 
@@ -163,15 +173,15 @@ For any future repair:
 5. freeze one exact head;
 6. run consequence-selected source/browser/native/Windows/installed gates;
 7. resolve actionable review findings on that exact head;
-8. merge with expected-head protection;
-9. re-fetch protected `main` and verify the durable tree;
+8. perform the expected-head merge with repository protection;
+9. re-fetch protected `main` and verify the durable result;
 10. only create a signed Internal release when separately authorized;
 11. build/publish only from exact protected-main authority;
 12. keep automated release proof separate from Founder-installed acceptance.
 
 No force merge, waiver, protection bypass, updater-key weakening, `--locked` weakening, AppData deletion or cross-SHA evidence mixing is authorized.
 
-## 11. Historical anchors
+## Historical anchors
 
 Retain these as chronology/evidence, not active next-step instructions:
 
