@@ -74,7 +74,8 @@ export function resolveDashboardFieldAccess(
   const analytics = allowed(actorContext, "analytics.read");
   const customerContact = allowed(actorContext, "customers.contact.read");
   const customers = allowed(actorContext, "customers.read");
-  const orderFinancials = orders && allowed(actorContext, "orders.financials.read");
+  const canReadOrderFinancials = allowed(actorContext, "orders.financials.read");
+  const orderFinancials = orders && canReadOrderFinancials;
   return Object.freeze({
     orders,
     orderFinancials,
@@ -87,13 +88,13 @@ export function resolveDashboardFieldAccess(
     analyticsFinancials:
       analytics && allowed(actorContext, "analytics.financials.read"),
     // Risk analytics combines customer history/contact with order financials.
-    // Only expose the dashboard Risk Watch when the actor can see the exact
-    // underlying dataset used by the full Risk Engine.
+    // Match the full Risk Engine's assessment boundary exactly before running
+    // its underlying report on the dashboard.
     risk:
       allowed(actorContext, "risk.read") &&
       customers &&
       customerContact &&
-      orderFinancials,
+      canReadOrderFinancials,
   });
 }
 
