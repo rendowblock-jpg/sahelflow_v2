@@ -7,6 +7,7 @@ const COPY = {
     attentionDescription:
       "A focused read of the signals most likely to affect confirmations and returns.",
     highestImpactFactor: "Highest-impact risk factor",
+    positiveRiskPoints: "positive risk points",
     openAnalysis: "Open full risk analysis",
   },
   fr: {
@@ -14,6 +15,7 @@ const COPY = {
     attentionDescription:
       "Une lecture ciblée des signaux les plus susceptibles d’affecter les confirmations et les retours.",
     highestImpactFactor: "Facteur de risque le plus impactant",
+    positiveRiskPoints: "points de risque positifs",
     openAnalysis: "Ouvrir l’analyse complète des risques",
   },
   ar: {
@@ -21,6 +23,7 @@ const COPY = {
     attentionDescription:
       "ملخص مركز للإشارات الأكثر احتمالًا للتأثير على التأكيدات والمرتجعات.",
     highestImpactFactor: "عامل الخطر الأعلى تأثيرًا",
+    positiveRiskPoints: "نقطة خطر إيجابية",
     openAnalysis: "فتح تحليل المخاطر الكامل",
   },
 } as const;
