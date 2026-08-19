@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/tooltip";
 import type { Locale } from "@/lib/i18n";
 import {
-  orderedNavigationDomains,
   pathMatchesNavigation,
+  sellerSidebarNavigationItems,
   utilityNavigationItems,
   type NavigationItem,
 } from "./navigation";
@@ -103,11 +103,11 @@ function SidebarLink({
 }
 
 /**
- * Desktop navigation exposes seller destinations directly. Historical domain
- * relationships still power command/search and route context, but the sidebar no
- * longer hides ordinary pages behind active-domain dropdowns. Seller preference
- * changes only the daily domain blocks; genuine child routes remain attached to
- * their canonical parent and Profile/Settings stay fixed utilities.
+ * Stable seller-first desktop navigation. SahelFlow owns the hierarchy so daily
+ * destinations stay where sellers build muscle memory; the Settings appearance
+ * screen no longer acts as an information-architecture editor. Genuine child
+ * jobs remain visually subordinate, while every normal workspace is one click
+ * away and Profile lives inside Settings rather than occupying a fixed rail slot.
  */
 export function Sidebar({
   serverLocale: _serverLocale,
@@ -117,10 +117,6 @@ export function Sidebar({
   const { t } = useI18n();
   const collapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
-  const navigationDomainOrder = useUIStore(
-    (state) => state.navigationDomainOrder,
-  );
-  const domains = orderedNavigationDomains(navigationDomainOrder);
   const isRtl = serverDir === "rtl";
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
 
@@ -162,38 +158,26 @@ export function Sidebar({
           <nav
             className="flex flex-col gap-1 px-2.5 py-3"
             aria-label={t("nav.sidebarLabel")}
+            data-seller-navigation="fixed-priority"
           >
-            {domains.map((domain) => (
-              <div key={domain.id} className="space-y-1">
+            {sellerSidebarNavigationItems.map((item) => (
+              <div
+                key={item.href}
+                className={cn(
+                  item.sidebarNested &&
+                    !collapsed &&
+                    "ms-4 border-s border-sidebar-border ps-2",
+                )}
+              >
                 <SidebarLink
-                  item={domain}
-                  label={t(domain.labelKey)}
-                  selected={pathMatchesNavigation(pathname, domain.href)}
-                  current={pathname === domain.href}
+                  item={item}
+                  label={t(item.labelKey)}
+                  selected={pathMatchesNavigation(pathname, item.href)}
+                  current={pathname === item.href}
                   collapsed={collapsed}
                   isRtl={isRtl}
+                  nested={item.sidebarNested}
                 />
-
-                {domain.children?.map((child) => (
-                  <div
-                    key={child.href}
-                    className={cn(
-                      child.sidebarNested &&
-                        !collapsed &&
-                        "ms-4 border-s border-sidebar-border ps-2",
-                    )}
-                  >
-                    <SidebarLink
-                      item={child}
-                      label={t(child.labelKey)}
-                      selected={pathMatchesNavigation(pathname, child.href)}
-                      current={pathname === child.href}
-                      collapsed={collapsed}
-                      isRtl={isRtl}
-                      nested={child.sidebarNested}
-                    />
-                  </div>
-                ))}
               </div>
             ))}
           </nav>
