@@ -339,11 +339,9 @@ export function SettingsWorkspace({
 
   useEffect(() => {
     if (initialGroup !== "workspace") return;
-    const target = document.getElementById("settings-profile");
-    if (!target) return;
-    requestAnimationFrame(() => {
-      target.scrollIntoView({ block: "start" });
-    });
+    document
+      .getElementById("settings-profile")
+      ?.scrollIntoView({ block: "start" });
   }, [initialGroup]);
 
   const selectGroup = (group: SettingsWorkspaceGroup) => {
