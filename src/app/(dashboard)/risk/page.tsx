@@ -55,6 +55,7 @@ import {
 import { db, shopContext } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import {
+  formatPositiveRiskPoints,
   getRiskWorkspaceCopy,
   type RiskWorkspaceCopyKey,
 } from "@/lib/i18n/risk-workspace";
@@ -481,7 +482,7 @@ export default async function RiskPage({
                       </p>
                       {topFactor ? (
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {signedPointsFormatter.format(topFactor.positivePoints)} {riskCopy("positiveRiskPoints")}
+                          {formatPositiveRiskPoints(locale, topFactor.positivePoints)}
                         </p>
                       ) : null}
                     </div>
