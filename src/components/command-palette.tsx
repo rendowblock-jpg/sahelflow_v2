@@ -31,6 +31,7 @@ import {
   searchCommandCopy,
   type SearchCommandCopyKey,
 } from "@/lib/i18n/search-command-center";
+import { warmUniversalSearchClient } from "@/lib/search/universal-search-client";
 import {
   normalizeSearchText,
   rankUniversalSearchCandidates,
@@ -80,10 +81,11 @@ const EMPTY_RECORD_STATE: RecordState = {
   failed: false,
 };
 
-const SEARCH_DEBOUNCE_MS = 55;
-const SEARCH_WARM_DELAY_MS = 650;
+// Page/workspace matches are local and update on every keystroke. Record search
+// settles briefly so ordinary typing coalesces before we spend protected SQLite
+// projection work on the server. The server path itself is warm and parallel.
+const SEARCH_DEBOUNCE_MS = 160;
 const MAX_VISIBLE_RESULTS = 14;
-let searchProjectionWarmRequested = false;
 
 const QUICK_NAV_IDS = [
   "home",
@@ -168,25 +170,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     ).filter((item): item is NonNullable<typeof item> => Boolean(item));
   }, [navigation]);
 
-  // Build the permission-safe local projections shortly after the shell becomes
-  // interactive. This removes first-search cold work without blocking startup or
-  // opening the command center. A failed warmup is retriable on a later mount and
-  // never changes business data.
+  // Dashboard idle warmup and an immediately opened command center share one
+  // browser promise. If the shell has already started or completed warmup this is
+  // a no-op; if the seller opens Search immediately, this starts that same work
+  // early without issuing a duplicate projection rebuild.
   React.useEffect(() => {
-    if (searchProjectionWarmRequested) return;
-
-    const timer = window.setTimeout(() => {
-      if (searchProjectionWarmRequested) return;
-      searchProjectionWarmRequested = true;
-      void fetch("/api/search", {
-        method: "POST",
-        cache: "no-store",
-      }).catch(() => {
-        searchProjectionWarmRequested = false;
-      });
-    }, SEARCH_WARM_DELAY_MS);
-
-    return () => window.clearTimeout(timer);
+    void warmUniversalSearchClient().catch(() => {
+      // Warmup is only latency preparation. The live search remains authoritative
+      // and retries projection work itself if preparation was unavailable.
+    });
   }, []);
 
   React.useEffect(() => {
