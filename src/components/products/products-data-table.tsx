@@ -107,26 +107,25 @@ export function ProductsDataTable({
         const isLowStock =
           row.original.stock <= row.original.lowStockThreshold;
         return (
-          <span className="flex items-center justify-end gap-1.5 tabular-nums">
-            <span
-              className={
-                isLowStock
-                  ? "font-semibold text-destructive"
-                  : "font-medium"
-              }
-            >
-              {integerFormatter.format(row.original.stock)}
-            </span>
+          <span
+            className={
+              isLowStock
+                ? "inline-flex min-w-16 items-center justify-center gap-1.5 font-semibold tabular-nums text-destructive"
+                : "inline-flex min-w-16 items-center justify-center font-medium tabular-nums"
+            }
+            title={isLowStock ? t("products.lowStock") : undefined}
+          >
+            {integerFormatter.format(row.original.stock)}
             {isLowStock ? (
-              <Badge variant="destructive" className="gap-0.5 py-0">
-                <AlertTriangle className="size-3" aria-hidden="true" />
-                {t("products.low")}
-              </Badge>
+              <>
+                <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+                <span className="sr-only">{t("products.low")}</span>
+              </>
             ) : null}
           </span>
         );
       },
-      meta: { align: "end" },
+      meta: { align: "center", width: "w-28" },
     },
     {
       accessorKey: "isActive",

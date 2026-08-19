@@ -16,6 +16,7 @@ export type DashboardFieldAccess = Readonly<{
   products: boolean;
   analytics: boolean;
   analyticsFinancials: boolean;
+  risk: boolean;
 }>;
 
 type DashboardProjectionSource = Readonly<{
@@ -71,18 +72,29 @@ export function resolveDashboardFieldAccess(
   });
   const orders = allowed(actorContext, "orders.read");
   const analytics = allowed(actorContext, "analytics.read");
+  const customerContact = allowed(actorContext, "customers.contact.read");
+  const customers = allowed(actorContext, "customers.read");
+  const canReadOrderFinancials = allowed(actorContext, "orders.financials.read");
+  const orderFinancials = orders && canReadOrderFinancials;
   return Object.freeze({
     orders,
-    orderFinancials:
-      orders && allowed(actorContext, "orders.financials.read"),
-    customerContact: allowed(actorContext, "customers.contact.read"),
-    customers: allowed(actorContext, "customers.read"),
+    orderFinancials,
+    customerContact,
+    customers,
     conversations: allowed(actorContext, "conversations.read"),
     deliveries: allowed(actorContext, "deliveries.read"),
     products: allowed(actorContext, "products.read"),
     analytics,
     analyticsFinancials:
       analytics && allowed(actorContext, "analytics.financials.read"),
+    // Risk analytics combines customer history/contact with order financials.
+    // Match the full Risk Engine's assessment boundary exactly before running
+    // its underlying report on the dashboard.
+    risk:
+      allowed(actorContext, "risk.read") &&
+      customers &&
+      customerContact &&
+      canReadOrderFinancials,
   });
 }
 

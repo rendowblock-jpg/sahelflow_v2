@@ -1,8 +1,8 @@
 "use client";
 
-import type { ComponentType, ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Clock3 } from "lucide-react";
+import { ArrowUpRight, Clock3, Package, Truck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,14 +152,23 @@ export function EntityInspector({
   );
 }
 
+export type EntityTimelineIcon = "clock" | "package" | "truck";
+
 export interface EntityTimelineItem {
   id: string;
   title: ReactNode;
   timestamp?: ReactNode;
   description?: ReactNode;
-  icon?: ComponentType<{ className?: string }>;
+  /** Serializable icon token so Server Components can safely provide timeline data. */
+  icon?: EntityTimelineIcon;
   tone?: "neutral" | "success" | "warning" | "danger";
 }
+
+const TIMELINE_ICONS = {
+  clock: Clock3,
+  package: Package,
+  truck: Truck,
+} as const;
 
 const TONE_CLASS = {
   neutral: "border-border bg-muted text-muted-foreground",
@@ -175,7 +184,7 @@ export function EntityTimeline({ items }: { items: readonly EntityTimelineItem[]
   return (
     <ol className="space-y-3" aria-label={t("common.timeline")}>
       {items.map((item) => {
-        const Icon = item.icon ?? Clock3;
+        const Icon = TIMELINE_ICONS[item.icon ?? "clock"];
         const tone = item.tone ?? "neutral";
         return (
           <li key={item.id} className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">

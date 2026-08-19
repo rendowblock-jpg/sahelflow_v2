@@ -127,6 +127,78 @@ export function formatRelative(
   return formatDate(value, locale);
 }
 
+type OperationalAgeUnit = "minute" | "hour" | "day" | "week";
+
+function formatOperationalAgeUnit(
+  value: number,
+  unit: OperationalAgeUnit,
+  locale: SupportedLocale,
+): string {
+  return new Intl.NumberFormat(LOCALE_MAP[locale], {
+    style: "unit",
+    unit,
+    unitDisplay: "short",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+/**
+ * Compact seller-facing elapsed age with at most two meaningful units.
+ *
+ * Long-running queues must not degrade into debug-like values such as
+ * `1349h 9m`. The display promotes elapsed time through minutes, hours, days,
+ * and weeks while Intl owns each locale's number/unit grammar.
+ */
+export function formatOperationalAge(
+  totalMinutes: number,
+  locale: SupportedLocale = "fr",
+): string {
+  const minutes = Number.isFinite(totalMinutes)
+    ? Math.max(0, Math.floor(totalMinutes))
+    : 0;
+
+  if (minutes < 60) {
+    return formatOperationalAgeUnit(minutes, "minute", locale);
+  }
+
+  if (minutes < 24 * 60) {
+    const hours = Math.floor(minutes / 60);
+    const remainderMinutes = minutes % 60;
+    return [
+      formatOperationalAgeUnit(hours, "hour", locale),
+      remainderMinutes > 0
+        ? formatOperationalAgeUnit(remainderMinutes, "minute", locale)
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (minutes < 7 * 24 * 60) {
+    const days = Math.floor(minutes / (24 * 60));
+    const remainderHours = Math.floor((minutes % (24 * 60)) / 60);
+    return [
+      formatOperationalAgeUnit(days, "day", locale),
+      remainderHours > 0
+        ? formatOperationalAgeUnit(remainderHours, "hour", locale)
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  const weeks = Math.floor(minutes / (7 * 24 * 60));
+  const remainderDays = Math.floor((minutes % (7 * 24 * 60)) / (24 * 60));
+  return [
+    formatOperationalAgeUnit(weeks, "week", locale),
+    remainderDays > 0
+      ? formatOperationalAgeUnit(remainderDays, "day", locale)
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function generateOrderNumber(sequence: number): string {
   return `ORD-${String(sequence).padStart(4, "0")}`;
 }

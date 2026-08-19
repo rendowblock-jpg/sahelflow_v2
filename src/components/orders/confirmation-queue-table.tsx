@@ -12,7 +12,7 @@ import { StateSurface } from "@/components/shared/state-surface";
 import { Button } from "@/components/ui/button";
 import { useConfirmationQueue } from "@/hooks/swr/use-confirmation-queue";
 import { useI18n } from "@/hooks/use-i18n";
-import { formatDZD } from "@/lib/utils";
+import { formatDZD, formatOperationalAge } from "@/lib/utils";
 import type {
   ConfirmationQueueItem,
   ConfirmationQueueResponse,
@@ -127,7 +127,7 @@ export function ConfirmationQueueTable({
           {row.original.isStale ? (
             <AlertTriangle className="size-3" aria-hidden="true" />
           ) : null}
-          {row.original.ageLabel}
+          {formatOperationalAge(row.original.ageMinutes, locale)}
         </span>
       ),
       enableSorting: false,

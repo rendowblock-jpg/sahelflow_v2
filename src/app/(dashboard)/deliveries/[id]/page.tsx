@@ -55,7 +55,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
     id: status,
     title: t(`deliveries.status.${status}`),
     timestamp: index === 0 ? formatDate(delivery.createdAt, locale) : undefined,
-    icon: index === currentIdx ? Truck : Package,
+    icon: index === currentIdx ? ("truck" as const) : ("package" as const),
     tone:
       index === currentIdx
         ? terminalFailure
@@ -72,7 +72,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
     <div className="app-content page-sections">
       <Breadcrumbs
         items={[
-          { label: t("nav.deliveries"), href: "/deliveries" },
+          { label: t("nav.delivery"), href: "/deliveries" },
           { label: delivery.trackingNumber ?? delivery.order.orderNumber },
         ]}
       />
@@ -108,7 +108,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
 
       <div className="card-grid-4">
         <StatCard label={t("deliveries.table.status")} value={t(`deliveries.status.${delivery.status}`)} icon={<Package />} />
-        <StatCard label={t("deliveries.table.cost")} value={delivery.cost ? formatDZD(delivery.cost, locale) : "—"} icon={<Banknote />} />
+        <StatCard label={t("deliveries.table.cost")} value={delivery.cost == null ? "—" : formatDZD(delivery.cost, locale)} icon={<Banknote />} />
         <StatCard label={t("orders.total")} value={formatDZD(delivery.order.totalPrice, locale)} icon={<Banknote />} />
         <StatCard label={t("deliveries.estimatedDelivery")} value={delivery.estimatedDelivery ? formatDate(delivery.estimatedDelivery, locale) : "—"} icon={<Calendar />} />
       </div>

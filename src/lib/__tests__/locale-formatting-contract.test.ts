@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatDZD,
+  formatOperationalAge,
   formatRelative,
   intlLocale,
 } from "@/lib/utils";
@@ -16,6 +17,7 @@ const localeSensitiveUiFormatters = new Set([
   "formatDZDShort",
   "formatDate",
   "formatDateTime",
+  "formatOperationalAge",
   "formatRelative",
 ]);
 
@@ -120,6 +122,17 @@ describe("seller-facing locale formatting", () => {
       }).format(-30, "minute");
       expect(formatRelative(thirtyMinutesAgo, locale, now)).toBe(expected);
     }
+  });
+
+  it("promotes long operational ages instead of accumulating raw hours", () => {
+    expect(formatOperationalAge(47, "en")).toBe("47 mins");
+    expect(formatOperationalAge(135, "en")).toBe("2 hrs 15 mins");
+    expect(formatOperationalAge(3_180, "en")).toBe("2 days 5 hrs");
+    expect(formatOperationalAge(80_947, "en")).toBe("8 wks");
+
+    const arabicLongAge = formatOperationalAge(80_947, "ar");
+    expect(arabicLongAge).toContain("أسابيع");
+    expect(arabicLongAge).not.toMatch(/\d+h|\d+m/);
   });
 
   it("requires explicit locale adoption on every seller-facing formatter call", () => {
