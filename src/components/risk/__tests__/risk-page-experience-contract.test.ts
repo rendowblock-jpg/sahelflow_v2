@@ -2,8 +2,17 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { formatPositiveRiskPoints } from "@/lib/i18n/risk-workspace";
+
 function source(relativeUrl: string): string {
   return readFileSync(new URL(relativeUrl, import.meta.url), "utf8");
+}
+
+function signed(locale: string, points: number): string {
+  return new Intl.NumberFormat(locale, {
+    signDisplay: "exceptZero",
+    maximumFractionDigits: 1,
+  }).format(points);
 }
 
 describe("Risk Engine seller workspace contract", () => {
@@ -68,7 +77,7 @@ describe("Risk Engine seller workspace contract", () => {
     expect(page).toContain('TabsContent value="rules"');
   });
 
-  it("uses complete count-aware AR/FR/EN copy for seller attention impact", () => {
+  it("uses dedicated seller-facing AR/FR/EN copy for the attention panel", () => {
     const page = source("../../../app/(dashboard)/risk/page.tsx");
     const copy = source("../../../lib/i18n/risk-workspace.ts");
 
@@ -83,13 +92,36 @@ describe("Risk Engine seller workspace contract", () => {
     expect(copy).toContain('highestImpactFactor: "Highest-impact risk factor"');
     expect(copy).toContain('highestImpactFactor: "Facteur de risque le plus impactant"');
     expect(copy).toContain('highestImpactFactor: "عامل الخطر الأعلى تأثيرًا"');
-    expect(copy).toContain("new Intl.PluralRules");
-    expect(copy).toContain("positive risk point`");
-    expect(copy).toContain("positive risk points`");
-    expect(copy).toContain("point de risque positif`");
-    expect(copy).toContain("points de risque positifs`");
-    expect(copy).toContain("نقطتا خطر إيجابيتان`");
-    expect(copy).toContain("نقاط خطر إيجابية`");
-    expect(copy).toContain("نقطة خطر إيجابية`");
+  });
+
+  it("executes count-aware impact grammar across EN, FR and Arabic plural categories", () => {
+    expect(formatPositiveRiskPoints("en", 1)).toBe(
+      `${signed("en-GB", 1)} positive risk point`,
+    );
+    expect(formatPositiveRiskPoints("en", 2)).toBe(
+      `${signed("en-GB", 2)} positive risk points`,
+    );
+    expect(formatPositiveRiskPoints("fr", 1)).toBe(
+      `${signed("fr-DZ", 1)} point de risque positif`,
+    );
+    expect(formatPositiveRiskPoints("fr", 2)).toBe(
+      `${signed("fr-DZ", 2)} points de risque positifs`,
+    );
+
+    expect(formatPositiveRiskPoints("ar", 1)).toBe(
+      `نقطة خطر إيجابية واحدة (${signed("ar-DZ", 1)})`,
+    );
+    expect(formatPositiveRiskPoints("ar", 2)).toBe(
+      `نقطتا خطر إيجابيتان (${signed("ar-DZ", 2)})`,
+    );
+    expect(formatPositiveRiskPoints("ar", 3)).toBe(
+      `${signed("ar-DZ", 3)} نقاط خطر إيجابية`,
+    );
+    expect(formatPositiveRiskPoints("ar", 11)).toBe(
+      `${signed("ar-DZ", 11)} نقطة خطر إيجابية`,
+    );
+    expect(formatPositiveRiskPoints("ar", 100)).toBe(
+      `${signed("ar-DZ", 100)} نقطة خطر إيجابية`,
+    );
   });
 });
