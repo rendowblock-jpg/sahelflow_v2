@@ -163,11 +163,12 @@ describe("universal command search contract", () => {
     expect(server).toContain("take: RECENT_MESSAGES_PER_CONVERSATION");
   });
 
-  it("keeps the latency-sensitive search families parallel except for customer-linked orders", () => {
+  it("keeps the latency-sensitive search families parallel while coalescing ordinary typing", () => {
     const server = source("../../../lib/search/universal-search-server.ts");
     const palette = source("../../command-palette.tsx");
 
-    expect(palette).toContain("SEARCH_DEBOUNCE_MS = 55");
+    expect(palette).toContain("SEARCH_DEBOUNCE_MS = 160");
+    expect(palette).toContain("Page/workspace matches are local");
     expect(server).toContain("] = await Promise.all([");
     expect(server).toContain("technicalOrders");
     expect(server).toContain("exactPhoneOrders");
@@ -200,15 +201,23 @@ describe("universal command search contract", () => {
     expect(palette).toContain("hasTechnicalSublabel");
   });
 
-  it("prewarms only permitted projections after the authenticated shell is usable", () => {
+  it("prewarms only permitted projections through one shared browser promise", () => {
     const route = source("../../../app/api/search/route.ts");
     const layout = source("../dashboard-layout.tsx");
+    const palette = source("../../command-palette.tsx");
+    const client = source("../../../lib/search/universal-search-client.ts");
     const server = source("../../../lib/search/universal-search-server.ts");
 
     expect(route).toContain("warmUniversalSearchRecords");
     expect(route).toContain("POST /api/search");
-    expect(layout).toContain('fetch("/api/search"');
-    expect(layout).toContain('method: "POST"');
+    expect(layout).toContain("warmUniversalSearchClient");
+    expect(palette).toContain("warmUniversalSearchClient");
+    expect(layout).not.toContain('fetch("/api/search"');
+    expect(palette).not.toContain('method: "POST"');
+    expect(client).toContain("let warmupPromise");
+    expect(client).toContain('fetch("/api/search"');
+    expect(client).toContain('method: "POST"');
+    expect(client).toContain("warmupPromise = null");
     expect(server).toContain("customer: canCustomers && canReadContact");
     expect(server).toContain("conversation: canConversations && canReadContact");
     expect(server).toContain("product: canProducts");
