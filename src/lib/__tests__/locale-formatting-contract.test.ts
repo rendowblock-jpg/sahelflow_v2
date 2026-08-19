@@ -125,7 +125,7 @@ describe("seller-facing locale formatting", () => {
   });
 
   it("promotes long operational ages instead of accumulating raw hours", () => {
-    expect(formatOperationalAge(47, "en")).toBe("47 min");
+    expect(formatOperationalAge(47, "en")).toBe("47 mins");
     expect(formatOperationalAge(135, "en")).toBe("2 hrs 15 mins");
     expect(formatOperationalAge(3_180, "en")).toBe("2 days 5 hrs");
     expect(formatOperationalAge(80_947, "en")).toBe("8 wks 5 days");
