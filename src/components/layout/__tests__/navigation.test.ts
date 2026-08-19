@@ -63,7 +63,7 @@ describe("Phase 5 navigation authority", () => {
 
   it("keeps Profile inside Settings rather than as a fixed utility destination", () => {
     expect(utilityNavigationItems.map((item) => item.href)).toEqual(["/settings"]);
-    expect(navigationItemForPathname("/profile")).toBeNull();
+    expect(navigationItemForPathname("/profile")?.href).toBe("/settings");
     expect(navigationDomainForPathname("/settings")).toBeNull();
     expect(navigationDomainForPathname("/profile")).toBeNull();
   });
