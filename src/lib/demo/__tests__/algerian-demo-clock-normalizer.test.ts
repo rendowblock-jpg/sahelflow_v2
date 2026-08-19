@@ -10,16 +10,17 @@ import {
   clearAlgerianDemoData,
   seedAlgerianDemoData,
 } from "@/lib/demo/algerian-demo";
+import { algerianDemoReferenceNow } from "@/lib/demo/algerian-demo-clock";
 import { finalizeAlgerianDemoStory } from "@/lib/demo/algerian-demo-story";
 import {
   createTestPrisma,
   disconnectTestPrisma,
 } from "@/lib/data/__tests__/helpers";
 
-// Freeze well before the real CI wall clock and at the end of the reference day.
-// The demo contract is day-based ("through this day"), while individual sample
-// rows intentionally retain realistic business-hour timestamps within that day.
-const FROZEN_REFERENCE = "2026-02-01T23:59:00.000Z";
+// Freeze well before the real CI wall clock using the same date-only form that
+// evidence operators use. The clock interprets this as a completed business day
+// so realistic sample hours remain within the frozen authority.
+const FROZEN_REFERENCE = "2026-02-01";
 const MARKER_KEY = "demo_seed_created_at";
 
 let prisma: PrismaClient;
@@ -48,7 +49,7 @@ describe("Algerian demo reference clock", () => {
     await seedAlgerianDemoData(client());
     await finalizeAlgerianDemoStory(client());
 
-    const reference = new Date(FROZEN_REFERENCE);
+    const reference = algerianDemoReferenceNow();
     const [latestRecentOrder, latestMessage, latestExpense, marker] =
       await Promise.all([
         prisma.order.findFirst({
