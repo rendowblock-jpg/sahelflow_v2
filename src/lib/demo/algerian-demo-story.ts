@@ -1,6 +1,8 @@
 import "server-only";
 
 import { db, type DbClient } from "@/lib/db";
+import { algerianDemoReferenceNow } from "@/lib/demo/algerian-demo-clock";
+import { ensureAlgerianDemoAnnualHistory } from "@/lib/demo/algerian-demo-year";
 
 const FLAGSHIP_ORDER_ID = "demo-order-001";
 const FLAGSHIP_CUSTOMER_ID = "demo-customer-01";
@@ -19,26 +21,30 @@ const daysBefore = (value: Date, days: number) =>
 
 /**
  * Make the Founder walkthrough internally consistent across inbox, order,
- * delivery, COD and audit surfaces.
+ * delivery, COD, audit and the rolling annual business history.
  *
- * The broad generator intentionally varies quantities, products and states.
- * This idempotent finalizer reserves the first identity for one exact flagship
- * story: Fatima Zohra orders one mini printer for 5,900 DZD plus 450 DZD
- * delivery, the parcel is delivered by Yalidine and its COD is remitted.
+ * The recent generator intentionally varies quantities, products and states.
+ * The annual layer supplies the preceding eleven months, then this idempotent
+ * finalizer reserves the first identity for one exact recent flagship story:
+ * Fatima Zohra orders one mini printer for 5,900 DZD plus 450 DZD delivery, the
+ * parcel is delivered by Yalidine and its COD is remitted.
  */
 export async function finalizeAlgerianDemoStory(
   client: DbClient = db,
 ): Promise<void> {
+  const reference = algerianDemoReferenceNow();
+  await ensureAlgerianDemoAnnualHistory(client, reference);
+
   const order = await client.order.findUnique({
     where: { id: FLAGSHIP_ORDER_ID },
     select: { id: true },
   });
   if (!order) return;
 
-  // Anchor the completed walkthrough six days before seeding. The broad seed's
-  // first order is generated for today, which would otherwise put delivery and
-  // remittance several days in the future while already marking them complete.
-  const conversationStartedAt = daysBefore(new Date(), 6);
+  // Anchor the completed walkthrough six days before the shared reference day.
+  // This keeps the flagship operationally recent while the surrounding dataset
+  // spans the full preceding year and keeps every completed event out of future.
+  const conversationStartedAt = daysBefore(reference, 6);
   conversationStartedAt.setHours(8, 30, 0, 0);
   const messageTimes = [0, 15, 30, 45].map((minutes) =>
     minutesAfter(conversationStartedAt, minutes),
@@ -209,7 +215,7 @@ export async function finalizeAlgerianDemoStory(
     where: { id: "demo-ai-message-4" },
     data: {
       content:
-        "Le parcours DZ-DEMO-0001 est complet : confirmation WhatsApp en arabe, expédition Yalidine, livraison, collecte COD et remise REM-YAL-DEMO-001. Utilisez-le pour parcourir l'historique de bout en bout.",
+        "Le parcours DZ-DEMO-0001 est complet : confirmation WhatsApp en arabe, expédition Yalidine, livraison, collecte COD et remise REM-YAL-DEMO-001. Utilisez-le avec l'historique annuel pour parcourir l'activité récente et les tendances de fond.",
     },
   });
 }
