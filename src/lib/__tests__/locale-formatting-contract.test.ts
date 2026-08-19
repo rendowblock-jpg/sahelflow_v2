@@ -4,14 +4,17 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import {
+  formatCompactNumber,
   formatDZD,
   formatOperationalAge,
   formatRelative,
   intlLocale,
+  isolateLtr,
 } from "@/lib/utils";
 
 const root = process.cwd();
 const localeSensitiveUiFormatters = new Set([
+  "formatCompactNumber",
   "formatDZD",
   "formatDZDBare",
   "formatDZDShort",
@@ -105,6 +108,16 @@ describe("seller-facing locale formatting", () => {
     }).format(1_893_500);
 
     expect(formatDZD(1_893_500, "ar")).toBe(`${expectedNumber} دج`);
+  });
+
+  it("keeps Arabic compact chart units and signed values inside an explicit LTR technical isolate", () => {
+    const compact = formatCompactNumber(187_600, "ar");
+    const negative = formatCompactNumber(-50_000, "ar");
+
+    expect(compact).toContain("ألف");
+    expect(negative).toContain("ألف");
+    expect(isolateLtr(compact)).toBe(`\u2066${compact}\u2069`);
+    expect(isolateLtr(negative)).toBe(`\u2066${negative}\u2069`);
   });
 
   it("delegates relative-time grammar to Intl instead of concatenating translated fragments", () => {
