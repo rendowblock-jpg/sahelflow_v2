@@ -215,10 +215,21 @@ export default async function RiskPage({
   const highestRiskWilaya = [...report.riskByWilaya].sort(
     (left, right) => right.avgScore - left.avgScore,
   )[0];
-  const topFactor = [...report.topFactors].sort(
-    (left, right) => right.occurrenceCount - left.occurrenceCount,
-  )[0];
+  const topFactor = report.topFactors
+    .filter((factor) => factor.avgPoints > 0)
+    .sort(
+      (left, right) =>
+        right.avgPoints * right.occurrenceCount -
+          left.avgPoints * left.occurrenceCount ||
+        right.avgPoints - left.avgPoints ||
+        right.occurrenceCount - left.occurrenceCount,
+    )[0];
   const riskReferenceLines = [
+    {
+      value: config.thresholds.low,
+      label: t("risk.level.low"),
+      color: LEVEL_COLORS.low,
+    },
     {
       value: config.thresholds.medium,
       label: t("risk.level.medium"),
