@@ -339,7 +339,12 @@ export async function getRiskAnalyticsReport(
   const topFactors = [...factorRows]
     .sort((left, right) => right.occurrenceCount - left.occurrenceCount)
     .slice(0, 8)
-    .map(({ positivePoints: _positivePoints, ...factor }) => factor);
+    .map((factor) => ({
+      factorId: factor.factorId,
+      labelKey: factor.labelKey,
+      occurrenceCount: factor.occurrenceCount,
+      avgPoints: factor.avgPoints,
+    }));
   const attentionFactors = [...factorRows]
     .filter((factor) => factor.positivePoints > 0)
     .sort(
@@ -349,7 +354,12 @@ export async function getRiskAnalyticsReport(
         left.factorId.localeCompare(right.factorId),
     )
     .slice(0, 8)
-    .map(({ avgPoints: _avgPoints, ...factor }) => factor);
+    .map((factor) => ({
+      factorId: factor.factorId,
+      labelKey: factor.labelKey,
+      occurrenceCount: factor.occurrenceCount,
+      positivePoints: factor.positivePoints,
+    }));
 
   const daily = new Map<string, { scores: number[]; criticalCount: number }>();
   for (const row of assessments) {
