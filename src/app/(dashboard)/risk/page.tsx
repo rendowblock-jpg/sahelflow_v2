@@ -55,6 +55,10 @@ import {
 import { db, shopContext } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import {
+  getRiskWorkspaceCopy,
+  type RiskWorkspaceCopyKey,
+} from "@/lib/i18n/risk-workspace";
+import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
@@ -157,6 +161,8 @@ export default async function RiskPage({
       day: "numeric",
     });
   const pct = (value: number) => percentFormatter.format(value);
+  const riskCopy = (key: RiskWorkspaceCopyKey) =>
+    getRiskWorkspaceCopy(locale, key);
 
   const distributionData: BreakdownDatum[] = report.distribution.map((row) => ({
     key: row.level,
@@ -397,12 +403,19 @@ export default async function RiskPage({
               data-risk-seller-signals="true"
               className="border shadow-none"
             >
-              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-2">
-                <CardTitle className="text-base">{t("risk.analysis")}</CardTitle>
+              <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
+                <div className="min-w-0">
+                  <CardTitle className="text-base">
+                    {riskCopy("attentionTitle")}
+                  </CardTitle>
+                  <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                    {riskCopy("attentionDescription")}
+                  </p>
+                </div>
                 <Button asChild variant="ghost" size="icon-sm">
                   <Link
                     href={`/risk?days=${days}&tab=analysis`}
-                    aria-label={t("risk.analysis")}
+                    aria-label={riskCopy("openAnalysis")}
                   >
                     <ArrowRight
                       className="size-4 rtl:rotate-180"
