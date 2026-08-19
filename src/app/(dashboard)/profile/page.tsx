@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { ProfileEditor } from "@/components/profile/profile-editor";
-import { PageHeader } from "@/components/shared/page-header";
 import { getI18n } from "@/lib/i18n-server";
-import {
-  requireTrustedAction,
-  trustedActionAllowed,
-} from "@/lib/identity/authorization";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -14,19 +10,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const dynamic = "force-dynamic";
 
+/**
+ * Compatibility route for bookmarks, command results and historical deep links.
+ * Profile is now canonically owned by Settings, so this route never maintains a
+ * second copy of the account experience.
+ */
 export default async function ProfilePage() {
-  const actorContext = await requireTrustedAction("settings.read");
-  const { t } = await getI18n();
-  const canManage = trustedActionAllowed(
-    actorContext,
-    "settings.manage",
-    { shopId: actorContext.shop.shopId },
-  );
-
-  return (
-    <div className="app-content page-sections">
-      <PageHeader title={t("profile.title")} description={t("profile.description")} />
-      <ProfileEditor canManage={canManage} />
-    </div>
-  );
+  await requireTrustedAction("settings.read");
+  redirect("/settings?group=workspace#settings-profile");
 }
