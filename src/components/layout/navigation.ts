@@ -15,7 +15,6 @@ import {
   Store,
   Truck,
   Upload,
-  UserCircle,
   Users,
   Zap,
 } from "lucide-react";
@@ -63,9 +62,9 @@ function item(
 /**
  * Canonical application information architecture.
  *
- * Business-domain relationships remain available to command/search and route
- * context, but the desktop sidebar is intentionally shallow: seller destinations
- * are directly visible unless a route is genuinely subordinate to a parent job.
+ * Domain ownership remains stable for route context, command/search and
+ * permissions. The visible sidebar order is defined separately below so seller
+ * frequency/priority does not distort those semantic relationships.
  */
 export const navigationDomains: readonly NavigationDomain[] = [
   {
@@ -190,48 +189,49 @@ export const navigationDomains: readonly NavigationDomain[] = [
   },
 ] as const;
 
-/** Canonical order used whenever no valid seller preference exists. */
-export const DEFAULT_NAVIGATION_DOMAIN_ORDER: readonly NavigationDomainId[] =
-  navigationDomains.map((domain) => domain.id);
-
-/**
- * Apply a seller-owned ordering preference without mutating information
- * architecture. Unknown/duplicate historical IDs are discarded and newly added
- * canonical domains are appended, so an older persisted preference cannot hide a
- * destination after an upgrade.
- */
-export function orderedNavigationDomains(
-  preference: readonly string[] = [],
-): NavigationDomain[] {
-  const byId = new Map(navigationDomains.map((domain) => [domain.id, domain]));
-  const seen = new Set<NavigationDomainId>();
-  const ordered: NavigationDomain[] = [];
-
-  for (const candidate of preference) {
-    if (!byId.has(candidate as NavigationDomainId)) continue;
-    const id = candidate as NavigationDomainId;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    ordered.push(byId.get(id)!);
-  }
-
+function navigationItemById(id: string): NavigationItem {
   for (const domain of navigationDomains) {
-    if (seen.has(domain.id)) continue;
-    seen.add(domain.id);
-    ordered.push(domain);
+    if (domain.id === id) return domain;
+    const child = domain.children?.find((candidate) => candidate.id === id);
+    if (child) return child;
   }
-
-  return ordered;
+  throw new Error(`Unknown canonical navigation item: ${id}`);
 }
 
+/**
+ * Stable seller-first sidebar sequence.
+ *
+ * SahelFlow owns this hierarchy instead of making each seller design the product
+ * navigation. It prioritizes daily operations and moves Analytics into the
+ * regular decision loop, while occasional Import/Export work stays near the end.
+ * Genuine child jobs keep their visual nesting without hiding any destination.
+ */
+export const sellerSidebarNavigationItems: readonly NavigationItem[] = [
+  navigationItemById("home"),
+  navigationItemById("sell"),
+  navigationItemById("confirmation-queue"),
+  navigationItemById("inbox"),
+  navigationItemById("products"),
+  navigationItemById("customers"),
+  navigationItemById("fulfill"),
+  navigationItemById("returns"),
+  navigationItemById("grow"),
+  navigationItemById("money"),
+  navigationItemById("cod-reconciliation"),
+  navigationItemById("risk"),
+  navigationItemById("storefront"),
+  navigationItemById("automations"),
+  navigationItemById("agents"),
+  navigationItemById("imports"),
+] as const;
+
+/** Profile is now an Account/Profile section inside Settings, not primary nav. */
 export const utilityNavigationItems: readonly NavigationItem[] = [
-  item("profile", "nav.profile", "/profile", UserCircle, [
+  item("settings", "nav.settings", "/settings", Settings, [
+    "settings",
     "profile",
     "identity",
     "account",
-  ]),
-  item("settings", "nav.settings", "/settings", Settings, [
-    "settings",
     "shops",
     "team",
     "license",
