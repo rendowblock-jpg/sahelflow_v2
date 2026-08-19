@@ -2,6 +2,7 @@
 
 > **Status:** Source/evidence/release truth for the current execution frontier
 > **Last assessed:** 2026-08-19
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** resolve from GitHub before every action
 > **Protected Internal.22 release source:** `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348` / PR #284
 > **Certified Internal.22 product head:** `fa77ae32dc680f0d2854d10363dcaf06ba4e5229` / PR #283
@@ -137,7 +138,35 @@ A failure here opens a bounded installed/provider defect. It does not erase the 
 
 Issue #230 specifically requires SahelFlow-owned production trial ingress, a distinct resilient recovery/failover path, bounded diagnostics/timeouts, representative Algerian fixed/mobile network evidence and installed signed trial/recovery behavior. Internal.22 intentionally does not satisfy this boundary.
 
-## 8. Historical Founder feedback and repair chain
+## 8. Historical continuity required by active authority
+
+The following headings/markers preserve exact semantic continuity with already-certified work; they are historical anchors, not instructions to revert the frontier.
+
+### Phase 5 merged result and evidence
+
+PR #220 remains the historical Phase 5 application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Later Class-AAA product work supersedes it as current source while preserving its evidence.
+
+### Active Phase 6 frontier
+
+The active product phase remains **Phase 6 — Arabic, RTL and accessibility parity** until the retained Founder-installed/human acceptance boundary is explicitly reconciled. Current execution inside that phase is the Internal.22 installed judgment, not another generic source sweep.
+
+### Internal.14 publication evidence
+
+Internal.14 remains historical signed/installed evidence from the earlier Phase 5/6 checkpoint. It is not the current package and must not override Internal.22 release truth.
+
+### FD-031 exception boundary
+
+FD-031 remains the historical exact signed Internal.15 Founder-installed evidence exception. It did not create a reusable waiver for later versions.
+
+### FD-032 Founder-only offline checkpoint boundary
+
+FD-032 remains the historical version-bound Founder-only offline checkpoint authority used before later numbered Founder-offline releases. Later FD-034/FD-036–FD-041 checkpoints remain independently version-bound.
+
+The older retained evidence set included **issue #214** alongside later installed/human/network issues. Its historical role does not change the current #221/#226/#230 states recorded above.
+
+SahelFlow is **not yet a commercially certified Stable release**. Internal.22 is a signed Founder-offline checkpoint only.
+
+## 9. Historical Founder feedback and repair chain
 
 Important human history remains valid:
 
@@ -150,7 +179,7 @@ Important human history remains valid:
 
 Internal.20 rejection remains historical evidence; it is no longer the current release frontier.
 
-## 9. Current non-claims
+## 10. Current non-claims
 
 The following are **not** established by Internal.22:
 
@@ -163,7 +192,7 @@ The following are **not** established by Internal.22:
 - Beta promotion;
 - Stable `1.0.0` promotion.
 
-## 10. Exact next outcome
+## 11. Exact next outcome
 
 There is no justification for another generic product reconnaissance pass.
 
