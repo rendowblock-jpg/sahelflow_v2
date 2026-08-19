@@ -4,77 +4,103 @@ SahelFlow is a **Windows-first, local-first operations system for Algerian COD s
 
 ## Current repository truth
 
-- **Live protected `main`: resolve from GitHub before any write/review/release action.** Documentation SHAs are fixed evidence/product anchors, not a self-updating branch pointer.
-- Protected post-rollback product/source anchor: `c8a8155079260dc4065ff30767c45cde95c266d2` / PR #269.
-- **Completed structural/semantic RTL product/source anchor:** `133b9cf555e2250781bd5abbb53083e25314c185` / PR #276. Later docs-only commits may advance live `main` without changing this product tree.
-- Latest signed/published package remains **Internal.20**, `1.0.0-internal.20`, MSI `1.0.0.20`, FD-039, `founder-offline-only`, published from `7c794f72a545313a0cf6fe34c2fabd9c583357ec`.
-- Founder-installed Internal.20 result: **REJECTED**. The requested Arabic/RTL experience, Inbox, AI Agents, Settings and overall product quality were judged not delivered and worse than Internal.19.
-- Internal.19 remains the requested visual/comparison baseline: `1.0.0-internal.19`, MSI `1.0.0.19`, FD-038, published source `42e50f22f45bd524725300b3973ac45caffb6711`.
-- **Source rollback is complete; installed rollback is not proven by GitHub.** Verify the actual Founder Windows installation before package/installed acceptance claims.
-- Active product phase remains **Phase 6 — Arabic, RTL and accessibility parity**, but the Founder-authorized structural/semantic RTL wave is **complete for current source scope**.
-- Inbox, AI Agents and Settings remain **full Class-AAA replacement projects**, not cosmetic restyles. The next execution frontier begins with concrete English + Arabic replacement targets and Founder approval, starting with Inbox.
-- Independent retained obligations remain **#221**, **#226** and **#230**.
-- No Internal.21 was requested or published by the completed RTL wave.
+- **Live protected `main`: resolve from GitHub before every write/review/release action.** Fixed documentation SHAs are evidence/release/product anchors, not a self-updating branch pointer.
+- Latest signed/published package: **Internal.22** — `1.0.0-internal.22`, MSI `1.0.0.22`, FD-041, `founder-offline-only`.
+- Protected Internal.22 release source: `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348` / PR #284.
+- Signed updater run `32205843573` completed successfully and published the exact verified Internal.22 release.
+- Certified product source promoted to Internal.22: `fa77ae32dc680f0d2854d10363dcaf06ba4e5229` / PR #283.
+- PR #283 squash integration: `6cc1780b15e0a265f22e531c4b4ae9426db48eaf`; it carries the same certified product tree.
+- **Founder-installed whole-product acceptance of Internal.22 is still open** under issue #221. Automated signed/install evidence does not substitute for the Founder’s human product judgment.
+- Issue #226 is **closed/completed**; its performance budgets remain regression criteria rather than an active blocker.
+- Issue #230 remains **open P1** and blocks customer-online/public-trial readiness.
+- Customer-online, Beta and Stable remain unauthorized by Internal.22.
 
-## Why the product frontier changed
+## Product frontier completed since the Internal.20 reset
 
-Internal.20 passed selected technical, signed/runtime/install and publication gates, but technical correctness did not produce Founder-approved product quality. The Founder rejection exposed a design-process problem rather than a reason to weaken canonical business, data, native or release authority.
+Internal.20 was technically published but Founder-rejected for the intended product experience. The affected presentation layer was safely restored toward the Internal.19 comparison baseline, then the product advanced through a sequence of bounded root repairs rather than another generic styling loop:
 
-The 2026-08-16 Founder screenshot review exposed a deeper RTL engineering failure: shell placement and `html[dir="rtl"]` could be correct while component internals remained wrong. Examples included Arabic navigation whose sidebar was on the right while icon/label order was still LTR, Notifications whose portal content remained LTR/mixed, and analytical surfaces where RTL product chrome and chart internals used conflicting direction assumptions.
+- **#273–#276:** shared semantic RTL foundation — reactive primitive/portal direction, logical start/end geometry, directional controls and technical-value bidi isolation.
+- **#278:** Inbox Class-AAA operations desk reconstruction.
+- **#279:** AI Agents Class-AAA decision workspace reconstruction.
+- **#280:** Settings Class-AAA control center and signed Founder-offline **Internal.21 / FD-040** checkpoint.
+- **#281:** governed Apache ECharts Class-AAA analytics/decision-visualization system.
+- **#282:** Inbox V3 plus WhatsApp pairing/recovery hardening.
+- **#283:** Universal Search / Command Center reconstruction.
+- **#284:** Internal.22 / FD-041 release-authority promotion and signed publication.
 
-That systemic defect class has now been addressed serially in PRs #273–#276:
+The old documentation instruction to begin an Inbox → AI Agents → Settings reconstruction is therefore historical and must not be restarted.
 
-- #273: one reactive direction authority for shell/shared primitives/portals plus direct Arabic sidebar/Notifications/chart evidence;
-- #274: semantic logical start/end panel geometry and directional-control cleanup;
-- #275: shared bidi isolation for seller-facing technical values across orders/customers/deliveries/returns/products;
-- #276: semantic inline-start mobile navigation Sheet with real Arabic 640×768 runtime right-edge/direction evidence.
+## Universal Search / Command Center result
 
-The completed product/source RTL anchor is `133b9cf555e2250781bd5abbb53083e25314c185`. Final #276 validated head `3ded626b2e43aa29ce530430580a0f2681edebc6` passed Phase 5 run `31956729571`, CI/Required PR run `31956729669`, and Phase 6-7 run `31956729576`.
+The current Search system uses one permission/shop-scoped server authority rather than the old browser fan-out. It includes multilingual Arabic/French/English normalization, Arabic-Indic digit handling, exact/prefix/token/contains relevance, protected partial contact search, bounded local projection/conversation work, stale-request cancellation, truthful quick actions/navigation, RTL/bidi safety and Windows shortcut semantics.
 
-The current work therefore moves to the second path:
+Exact product-head certification on `fa77ae32dc680f0d2854d10363dcaf06ba4e5229`:
 
-**Inbox → AI Agents → Settings full replacement product design and reconstruction.** Preserve protected jobs/data/provider/AI authority, but do not beautify the rejected workspace concepts into permanence. Each workspace must receive a concrete Class-AAA English + Arabic target and Founder approval before broad production reconstruction.
+- Phase 5 `32200539921` — success;
+- Phase 6-7 `32200539919` — success;
+- CI `32200540092` — success, including exact-head Windows installed closure.
 
-Acceptance hierarchy remains:
+## Signed Internal.22 publication result
 
-**Founder-installed visual judgment > side-by-side screenshot comparison > real interaction behavior > automated technical gates.**
+PR #284 changed only the release/version/licensing authority envelope and passed fresh release consequences: source quality, Native source, Tauri release smoke, Windows standalone/runtime, Windows Rust parity, exact MSI build, installed launch/reopen, hydrated UI twice, replacement-install backup/restore/identity/rollback and the Required PR gate.
+
+After merge, signed updater run `32205843573` verified exact protected-main source/review ancestry, built and signed the updater/MSI, verified the signature and staged runtime, installed/reopened the signed app, proved authenticated hydrated WebView UI twice, verified deterministic build-source rewrites, generated the evidence manifest, verified `latest.json`, exact publication target and tag, then published the release.
+
+This is release certification, **not Founder acceptance**.
 
 ## Exact resume path
 
-1. Resolve live protected `main` and confirm there is no active application writer.
+1. Resolve live protected `main`, current PRs and issue state.
 2. Read `AGENTS.md`, `documentation/README.md`, `documentation/system/CURRENT_STATE.md`, `documentation/system/ROADMAP.md`, `documentation/operations/WORKFLOW.md` and `documentation/operations/WORKING_MEMORY.md`.
-3. **Do not restart generic codebase or RTL reconnaissance.** Treat PRs #273–#276 and product/source anchor `133b9cf555e2250781bd5abbb53083e25314c185` as the completed structural/semantic RTL wave unless newer direct regression evidence requires reopening a specific contract.
-4. Start the **Inbox** replacement program: map its protected jobs/actions/data/provider authority without preserving rejected layout assumptions.
-5. Define a concrete paired English + Arabic Class-AAA Inbox target: pane hierarchy, navigation, primary/secondary actions, operational context, states, density, typography, motion, interaction and RTL behavior.
-6. Obtain Founder approval before broad Inbox production reconstruction.
-7. Reconstruct Inbox serially with one application writer and inspect paired EN/AR states repeatedly while preserving the completed RTL contracts.
-8. Repeat the same target-approval/reconstruction process for **AI Agents**, then **Settings**.
-9. Do not create version/release churn while the replacement product direction is still being established.
-10. Freeze/certify/release only after the approved product direction is materially present and visually inspected. The next Founder-only internal MSI requires separate authorization.
+3. Do not restart generic codebase, RTL, Inbox/AI/Settings, analytics or Search reconnaissance.
+4. Verify which exact SahelFlow version is installed on the Founder Windows machine.
+5. Install/update exact signed Internal.22 in place if necessary while preserving AppData, registry/install identity, keys and shop databases.
+6. Perform Founder whole-product visual/interaction acceptance for representative EN/AR states, including RTL/bidi, analytics, Inbox V3, Search, AI Agents and Settings.
+7. Prove real-phone WhatsApp QR/link/reopen/outbound/inbound behavior on the same signed installation.
+8. If concrete P0/P1 defects appear, open one bounded root-cause repair branch from fresh protected `main` and recertify the affected consequences on one exact head.
+9. If accepted, record the human evidence under #221 and reconcile the current state.
+10. Keep #230 separate until SahelFlow-owned resilient customer trial ingress and representative Algerian-network installed evidence exist.
+11. Beta/Stable require remaining representative/external evidence and explicit Founder promotion.
+
+Do **not** bump to Internal.23 merely because Internal.22 is published. A later Internal checkpoint requires a coherent changed outcome and separate authority.
+
+## Historical semantic continuity
+
+These anchors are retained so newer repository truth stays connected to previously certified packages; they are not current-next-step instructions.
+
+- **Phase 5 closure:** PR #220 is the historical Phase 5 application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- The active product phase label remains **Phase 6 — Arabic, RTL and accessibility parity** until the retained installed/human acceptance boundary is reconciled.
+- The historical retained issue set was **issues #201, #214, #221, #226 and #230**. Current issue truth differs: #226 is closed/completed; #221 and #230 remain open.
+- Internal.15 historical publication authority is `1.0.0-internal.15`; its signed run was `31657621918`.
+- **Founder acceptance remains open** for the current Internal.22 whole-product checkpoint.
 
 ## Release and evidence discipline
 
 - Protected GitHub source and exact Actions/release artifacts outrank chat summaries.
-- Founder-installed observation is authority for whole-product visual/interaction acceptance.
 - A green source tree is not a signed release; a signed release is not Founder acceptance.
-- Current-source RTL closure does not mean future code can never regress; new workspace work must preserve the established logical geometry, portal direction, bidi and analytical direction contracts.
-- Browser/CI performance is regression evidence only; issue #226 still requires representative installed hardware evidence.
-- Customer-online/public-trial readiness remains separate under issue #230.
-- Do not retry away deterministic failures or combine materially different SHAs.
-- No force merge, waiver, branch-protection bypass, signing-key weakening or release-source substitution.
-- Internal.20 remains Founder/internal-lab only. Customer-online, Beta and Stable remain unauthorized until their separate evidence and Founder promotion gates are satisfied.
+- Source/browser provider conformance is not real-provider certification.
+- Hosted Windows installed proof is not the Founder’s human visual judgment.
+- Browser/CI performance remains regression evidence; measured regressions require bounded evidence-driven repair.
+- Customer-online/public-trial readiness remains separate under #230.
+- No cross-SHA evidence mixing, retry-away of deterministic red, force merge, waiver, protection bypass, signing-key weakening or release-source substitution.
+- Preserve the shared RTL/bidi authority established by #273–#276 in every future UI change.
+
+Acceptance hierarchy for whole-product experience remains:
+
+**Founder-installed visual judgment > side-by-side screenshot comparison > real interaction behavior > automated technical gates.**
 
 ## Historical continuity
 
-The canonical foundation and earlier internal checkpoints remain protected history. Relevant recent anchors include:
+Relevant recent anchors retained for audit:
 
-- **Phase 5 closure** remains historical technical continuity; its application-changing baseline is PR #220 / `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
-- The Phase 5 continuity register included **issues #201, #214, #221, #226 and #230**. Later source supersedes old implementations but does not erase those evidence anchors.
-- The Founder-only **`1.0.0-internal.15`** checkpoint and signed run **`31657621918`** remain historical audit continuity, not current release instructions.
-- **Founder acceptance remains open** on the current product-reset path: Internal.20 was explicitly rejected and no later signed package has been Founder-accepted.
-- Internal.19 product convergence: PR #262, published source `42e50f22f45bd524725300b3973ac45caffb6711`.
-- Internal.20 convergence/publication: PR #267 / published source `7c794f72a545313a0cf6fe34c2fabd9c583357ec`.
-- Internal.20 Founder rejection and safe source rollback: PR #269 / product-source anchor `c8a8155079260dc4065ff30767c45cde95c266d2`.
-- Structural/semantic RTL closure: PRs #273–#276 / completed product-source anchor `133b9cf555e2250781bd5abbb53083e25314c185`.
+- Internal.19 / FD-038 Founder convergence checkpoint.
+- Internal.20 / FD-039 published AAA attempt — Founder-rejected.
+- PR #269 safe affected-source rollback after that rejection.
+- PRs #273–#276 semantic RTL closure.
+- Internal.21 / FD-040 Settings/Inbox/AI Founder AAA checkpoint.
+- PR #281 analytics reconstruction.
+- PR #282 Inbox V3/pairing hardening.
+- PR #283 Universal Search reconstruction.
+- Internal.22 / FD-041 signed publication from `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348` via run `32205843573`.
 
 `documentation/archive/**` is historical evidence/context only. Active non-archive documentation plus live protected source/GitHub define the current execution truth.
