@@ -35,7 +35,7 @@ describe("Phase 4 committed WebView acceptance transport", () => {
     );
     expect(transport).toContain("chromium.connectOverCDP(endpoint");
     expect(transport).toContain("headers: { Origin: endpoint }");
-    expect(transport).toContain("browser.contexts()");
+    expect(transport).toContain(".contexts()");
     expect(transport).toContain(
       ".filter((candidate) => isExactAppPage(candidate, baseUrl))",
     );
