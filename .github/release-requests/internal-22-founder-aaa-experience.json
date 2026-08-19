@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.22 Founder AAA experience publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.22",
+  "windowsMsiVersion": "1.0.0.22",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-041",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "fa77ae32dc680f0d2854d10363dcaf06ba4e5229",
+    "phase5RunId": 32200539921,
+    "phase67RunId": 32200539919,
+    "ciRunId": 32200540092
+  },
+  "reason": "Publish the certified Internal.22 Inbox V3 and Universal Search / Command Center Class-AAA reconstruction from the exact certified product head, including multilingual protected partial search, stale-request cancellation, bounded search projection and performance evidence, and exact-head Windows installed closure. Founder-installed visual acceptance remains separate; customer-online, Beta, and Stable remain out of scope."
+}
