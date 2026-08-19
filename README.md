@@ -64,6 +64,16 @@ This is release certification, **not Founder acceptance**.
 
 Do **not** bump to Internal.23 merely because Internal.22 is published. A later Internal checkpoint requires a coherent changed outcome and separate authority.
 
+## Historical semantic continuity
+
+These anchors are retained so newer repository truth stays connected to previously certified packages; they are not current-next-step instructions.
+
+- **Phase 5 closure:** PR #220 is the historical Phase 5 application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- The active product phase label remains **Phase 6 — Arabic, RTL and accessibility parity** until the retained installed/human acceptance boundary is reconciled.
+- The historical retained issue set was **issues #201, #214, #221, #226 and #230**. Current issue truth differs: #226 is closed/completed; #221 and #230 remain open.
+- Internal.15 historical publication authority is `1.0.0-internal.15`; its signed run was `31657621918`.
+- **Founder acceptance remains open** for the current Internal.22 whole-product checkpoint.
+
 ## Release and evidence discipline
 
 - Protected GitHub source and exact Actions/release artifacts outrank chat summaries.
