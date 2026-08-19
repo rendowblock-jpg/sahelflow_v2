@@ -30,24 +30,25 @@ describe("Wave 2 metric hierarchy contract", () => {
     expect(card).toContain("toneStyle.icon");
   });
 
-  it("separates Risk operational signals from supporting context", () => {
+  it("keeps the Risk overview calm while separating primary decisions from supporting signals", () => {
     const risk = read("src/app/(dashboard)/risk/page.tsx");
 
-    expect(risk).toContain('data-risk-kpi-hierarchy="true"');
-    expect(risk).toContain('data-risk-kpi-primary="true"');
-    expect(risk).toContain('data-risk-kpi-supporting="true"');
-    expect(risk.match(/emphasis="primary"/g)?.length ?? 0).toBe(2);
-    expect(risk.match(/emphasis="supporting"/g)?.length ?? 0).toBe(4);
-    expect(risk).not.toContain('<div className="card-grid-3">');
+    expect(risk).toContain('data-risk-overview-kpis="true"');
+    expect(risk).toContain('data-risk-primary-trend="true"');
+    expect(risk).toContain('data-risk-seller-signals="true"');
+    expect(risk.match(/<StatCard/g)?.length ?? 0).toBe(4);
+    expect(risk.match(/emphasis="standard"/g)?.length ?? 0).toBe(4);
+    expect(risk.match(/tone="neutral"/g)?.length ?? 0).toBe(4);
+    expect(risk).not.toContain('data-risk-kpi-primary="true"');
+    expect(risk).not.toContain('data-risk-kpi-supporting="true"');
   });
 
-  it("makes blacklist navigation explicit and selected only when that tab is active", () => {
+  it("keeps blacklist navigation explicit without turning a KPI into tab state", () => {
     const risk = read("src/app/(dashboard)/risk/page.tsx");
 
-    expect(risk).toContain('selected={activeTab === "blacklist"}');
+    expect(risk).toContain('<TabsTrigger value="blacklist" asChild>');
     expect(risk).toContain('href={`/risk?days=${days}&tab=blacklist`}');
-    expect(risk).toMatch(
-      /aria-current=\{\s*activeTab === "blacklist"\s*\? "page"\s*:\s*undefined\s*\}/s,
-    );
+    expect(risk).toContain('data-risk-seller-signals="true"');
+    expect(risk).not.toContain('selected={activeTab === "blacklist"}');
   });
 });
