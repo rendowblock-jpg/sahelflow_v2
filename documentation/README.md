@@ -14,13 +14,14 @@ This directory is the active documentation authority for SahelFlow. `documentati
 
 1. `product/PRODUCT.md` — product promise, seller jobs, commercial boundaries and entitlements.
 2. `product/EXPERIENCE.md` — Class-AAA experience, accessibility, Arabic/RTL and interaction quality.
-3. `product/DECISIONS.md` — consolidated Founder decisions through FD-033; later exact numbered release/execution decisions FD-034–FD-041 are summarized in the active current-state/roadmap documents and enforced by protected release authority.
-4. `system/ARCHITECTURE.md` — canonical authority, data, cloud, native, security and recovery invariants.
-5. `system/CURRENT_STATE.md` — exact merged/released/installed truth and current non-claims.
-6. `system/ROADMAP.md` — remaining dependency/completion order.
-7. `operations/WORKFLOW.md` — research, implementation, review, CI, installed evidence and release process.
-8. `operations/WORKING_MEMORY.md` — compact resumable frontier for the next session.
-9. `research/RESEARCH.md` plus privacy/security inventories when relevant to the task.
+3. `product/DECISIONS.md` — consolidated Founder decisions FD-001–FD-033.
+4. `product/DECISIONS_FD034_FD041.md` — authoritative numbered continuation FD-034–FD-041; this continues the same register rather than creating a second policy system.
+5. `system/ARCHITECTURE.md` — canonical authority, data, cloud, native, security and recovery invariants.
+6. `system/CURRENT_STATE.md` — exact merged/released/installed truth and current non-claims.
+7. `system/ROADMAP.md` — remaining dependency/completion order.
+8. `operations/WORKFLOW.md` — research, implementation, review, CI, installed evidence and release process.
+9. `operations/WORKING_MEMORY.md` — compact resumable frontier for the next session.
+10. `research/RESEARCH.md` plus privacy/security inventories when relevant to the task.
 
 A newer explicit Founder decision outranks lower execution documents for the choice it changes. Protected GitHub source, Actions evidence and signed releases outrank stale chat summaries.
 
