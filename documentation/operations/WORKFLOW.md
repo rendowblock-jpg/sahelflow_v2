@@ -1,240 +1,296 @@
 # SahelFlow — Research, coding, review and delivery workflow
 
 > **Status:** Active operating contract
-> **Governing decisions:** FD-028, FD-029 and exact FD-033 Internal.16 completion convergence
-> **Execution mode:** one active application writer; audit-first; large implementation wave; targeted checks during coding; consequence-selected Level 1/2/3 gates; frozen whole-product certification
-> **Durable truth:** protected `main`, PRs/Actions/releases, active documentation authorities and named installed evidence
-> **Last consolidated:** 2026-08-13
+> **Last consolidated:** 2026-08-19
+> **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
+> **Execution mode:** one active application writer; exact-source work; bounded root-cause packages; consequence-selected evidence; protected-main releases only
+> **Current checkpoint:** Internal.22 / FD-041 is signed and published; Founder-installed acceptance remains separate
 
-Speed comes from complete reconnaissance, root-cause grouping, one coherent implementation wave and consolidated certification—not from weakening integrity, security, privacy, Arabic/RTL, accessibility, recovery, performance or evidence honesty.
+Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
-## 1. Internal.16 session sequence
+## 1. Session sequence
 
-Founder-installed discovery is closed and frozen at 17 P1 inputs.
+Every session begins from live GitHub truth, not a copied documentation SHA.
 
 ```text
-exact documentation-merged post-Internal.15 authority
-→ one exact-source whole-product reconnaissance
-→ merge source findings with frozen installed register
-→ consolidated Problem Register
-→ frozen contracts/non-goals/acceptance matrix
-→ one large dependency-correct implementation wave
-→ targeted cheap checks + consequence-selected gates while coding
-→ exact-head freeze
-→ whole-product certification + adversarial review
-→ consolidated repair batch
-→ affected proof + final complete certification
+resolve protected main + open PR/issues/releases
+→ read active authority
+→ identify the one current observable outcome
+→ map affected authority/consumers/tests/data/evidence
+→ research only where the decision is materially uncertain or current external authority is required
+→ implement one dependency-correct package
+→ targeted checks during coding
+→ freeze exact head
+→ consequence-selected source/browser/native/Windows evidence
+→ adversarial review / finding closure
 → expected-head merge
-→ protected-main verification of exact source/version/docs
-→ documentation/evidence reconciliation
-→ guarded signed release workflow from protected main when release authority applies
-→ post-release artifact/installed proof required by the selected evidence level
+→ verify protected-main durable tree
+→ reconcile current truth
+→ if separately authorized, build/sign/publish only from exact protected main
+→ perform installed/human/provider/external evidence that automation cannot prove
 ```
 
-Do not restart broad screenshot discovery. Do not run full MSI/replacement-install/eight-hour/whole-repository evidence after every tiny change. Do not skip focused checks that prevent hours of broken work, and do not use the large-wave cadence to defer a consequence-triggered Level 2/3 gate that is required before it is safe to continue. Never rerun an unchanged passing exact head. Never retry a deterministic failure until it becomes green without explaining/fixing the cause.
-
-A branch-only build or artifact is never the durable release source. Publication follows a proven expected-head merge and protected-main verification.
+Do not restart generic repository reconnaissance when a bounded current defect is already known. Do not rerun an unchanged passing exact head. Do not retry deterministic failures until they turn green without identifying and fixing the cause.
 
 ## 2. Authority and anti-drift
 
-- Founder controls product/commercial judgments and explicit Beta/Stable promotion.
-- One active application writer owns the Internal.16 implementation branch.
-- Protected `main` is integrated source truth; branches/PRs are proposed changes.
-- No direct protected-main application edits.
-- Phase 1–4 business/data/security/recovery authority remains protected.
-- No important decision remains only in chat.
-- Current State describes merged truth plus clearly labeled installed observations.
-- Working Memory owns resumable current frontier.
-- FD-033 owns the exact Internal.16 completion directive and frozen installed finding IDs.
-- New P0/P1 source findings are added to the consolidated register before its freeze, not turned into random micro-PR loops.
+Authority precedence is:
 
-## 3. Exact-source reconnaissance before implementation
+1. newer explicit Founder decision for the choice it changes;
+2. Product contract;
+3. Experience/capability/journey contract;
+4. Architecture and protected invariants;
+5. exact source/current-state/evidence truth;
+6. Roadmap;
+7. this Workflow;
+8. Working Memory;
+9. Research/archive.
 
-Inspect every applicable caller, route, component, service, model, migration, permission, provider effect, UI state, locale/RTL path, responsive composition, performance/resource path, diagnostics and tests. Group by root cause.
+Operational rules:
 
-For the frozen installed defect classes, the implementation agent owns exhaustive sibling discovery. The Founder does not need to screenshot every repeated wrong-side RTL element, untranslated key, accidental card grid, dead-space panel or weak chart.
+- protected `main` is integrated source truth;
+- one active application writer owns a product/runtime branch at a time;
+- no direct application edits on protected `main`;
+- Current State owns merged/release/non-claim truth;
+- Working Memory owns the compact resume point;
+- no important product/release decision remains only in chat;
+- issue bodies can retain evidence/work queues but do not replace active documentation authority;
+- source, signed artifact, hosted CI install, Founder install, live-provider evidence, representative beta and Stable are distinct truth levels.
 
-Reconnaissance also covers the already-approved Internal.16 scope beyond the installed findings: full Phase 8, EcoTrack replacement, AI extraction/tool benchmark, updater/release/recovery/licensing/cloud/privacy/security and retained #221/#226/#230 boundaries.
+## 3. Impact mapping before implementation
 
-At the end of reconnaissance, freeze one combined source+installed Problem Register, contracts/non-goals and acceptance matrix. Broad implementation begins only after that freeze.
+Before material code change, inspect every applicable:
 
-## 4. Targeted implementation checks
+- caller and route;
+- component and shared primitive;
+- service/domain authority;
+- permissions and trusted actor/shop/session boundary;
+- database model/query/migration;
+- protected field/encryption/index projection;
+- native/Tauri/runtime/process boundary;
+- provider/outbox/reconciliation path;
+- backup/restore/replacement-install consequence;
+- AR/FR/EN and RTL/bidi surface;
+- responsive/accessibility/state behavior;
+- performance/resource hot path;
+- direct and contract tests;
+- release/version/licensing consequence.
 
-During the large implementation wave, use the cheapest checks that can catch local breakage quickly:
+Group sibling manifestations under one root cause. Do not make the Founder enumerate repeated instances of a proven systemic class.
 
-- TypeScript/typecheck and ESLint for changed TS/React boundaries;
+## 4. Research rule
+
+Use current primary/official sources before a material choice that depends on changing standards, platform/provider behavior, law, security guidance or external APIs. Compare alternatives across correctness, security/privacy, recovery, Arabic/RTL/accessibility, performance, maintainability and continuity economics.
+
+Research is bounded. Once sufficient evidence exists for a safe SahelFlow-specific decision and measurable acceptance, implementation begins. Do not create a new permanent masterplan for each problem.
+
+## 5. Targeted implementation checks
+
+Use the cheapest checks that can catch the changed boundary quickly:
+
+- TypeScript and ESLint for TS/React work;
 - targeted Vitest/domain/database tests;
-- targeted Playwright for changed seller journeys, AR/FR/EN, RTL, keyboard, resize and transitions;
-- provider contract tests for courier/AI/cloud changes;
+- targeted Playwright for changed seller journeys, AR/FR/EN, RTL, keyboard, resize and state transitions;
+- provider contract/conformance tests for courier/WhatsApp/AI/cloud changes;
+- Prisma generation/validation/migration checks where data authority changes;
 - Rust format/check/tests for native changes;
-- focused bundle/performance measurements when chart/image/search/AI/runtime work changes hot paths.
+- focused bundle/query/performance measurement for hot-path changes;
+- exact PowerShell parsing/contracts for Windows installer/evidence scripts.
 
-These checks are fast feedback, not a replacement for the consequence-selected gate definitions below. Full release evidence normally waits for a coherent frozen candidate, but licensing/commercial authority, identity/cryptography, schema/migration, installer/updater/process supervisor, backup/restore/replacement install, destructive lifecycle and irreversible provider effects can require Level 3 proof at the affected boundary before dependent work continues.
+Targeted checks are fast feedback, not permission to skip the frozen consequence-selected gate before merge.
 
-## 5. Consequence-selected evidence gates
-
-FD-033 changes **cadence**, not the evidence tiers. Select gates from the consequence of the change, not from convenience or file extension. A UI-looking change that changes authority, schema, migration, secrets, licensing, native runtime, recovery or irreversible external effects inherits the corresponding higher gate.
+## 6. Evidence levels
 
 ### Level 1 — Task Gate
 
-Run after each coherent completed task/batch, not after every small edit. The applicable set includes:
+Run after a coherent completed task or repair batch. Applicable checks include:
 
-1. repository cleanliness and full diff check;
+1. complete diff and repository cleanliness;
 2. `bun run sf-version`;
 3. `bun run sf-audit`;
-4. Prisma generation/validation and migration status where applicable;
-5. TypeScript type checking;
+4. Prisma generation/migration validation where applicable;
+5. TypeScript;
 6. ESLint;
-7. complete Vitest suite or the repository’s complete selected task suite when CI classification proves an equivalent frozen set;
-8. production dependency audit when dependencies change or at selected source checkpoints;
-9. targeted Playwright for changed seller journeys;
-10. targeted provider contract/conformance tests for provider changes;
-11. Rust format/check/tests for `src-tauri/**` or native changes;
-12. Windows compile/package lane when consequence requires immediate platform proof.
+7. targeted plus required complete Vitest/source suite;
+8. production dependency audit where applicable;
+9. targeted browser journeys;
+10. provider contracts;
+11. Rust/native checks;
+12. focused Windows/package proof when the consequence requires it.
 
-The ordinary source/task gate must return the complete actionable failure set. It may not intentionally hide all but the first assertion, import/collection failure or file-level hook failure. Never rerun an unchanged passing exact head; retry only evidence-supported infrastructure failures.
+The gate must surface the complete actionable failure set. Do not intentionally hide later failures behind a first-failure-only loop when the repository’s normal diagnostics can report them safely.
 
-For the Internal.16 large wave, related Level 1 checks may be grouped around coherent dependency-correct batches so they catch breakage without turning every small edit into a release cycle.
+### Level 2 — Integrated Checkpoint
 
-### Level 2 — Phase Checkpoint
+Use when a subsystem or broad product boundary is declared source-complete or a later layer depends on the integrated result.
 
-Use a Level 2 checkpoint when a coherent phase/subsystem boundary is being declared source-complete, when several dependent packages have converged, or before a new layer depends on a broad authority that must be trusted as one integrated source head.
-
-Required checkpoint categories, as applicable:
+Typical requirements:
 
 - clean frozen dependency install;
-- documentation and version authority;
-- complete TypeScript, ESLint, unit, domain, integration and database suites;
-- migration deploy/status and required compatibility matrix;
+- version/documentation authority;
+- complete type/lint/unit/domain/integration/database suites;
+- migration status/compatibility where applicable;
 - production frontend build;
-- all checkpoint-affected Playwright journeys;
-- permission, revocation, stale-policy and exact-shop matrices;
-- duplicate, concurrency, restart, interruption and recovery tests;
-- AR/FR/EN, RTL and applicable visual-state evidence;
-- accessibility, zoom and reduced-motion checks;
-- phase/subsystem performance/resource measurements;
-- applicable Rust/native/Windows/package lanes;
-- complete unresolved-problem, stale-document and legacy-removal audit;
-- exact evidence bundle and checkpoint recommendation.
+- affected Playwright journeys;
+- permissions/revocation/shop isolation;
+- duplicate/concurrency/restart/recovery cases;
+- AR/FR/EN, RTL/bidi, accessibility/reflow and reduced-motion evidence;
+- performance/resource measurements;
+- applicable native/Windows/package lanes;
+- unresolved-problem/legacy/stale-document audit;
+- exact evidence bundle and recommendation.
 
-A phase/subsystem does not close merely because PRs merged, source compiles or many tests exist. Under FD-033, Phase 5/6/7 closure may converge with Phase 8 implementation on one Internal.16 branch, but a dependency may still require an earlier Level 2 checkpoint when consuming unproven integrated authority would create material rework or risk.
+A subsystem does not close because commits merged or test count is high. The defined seller/Founder outcome and all applicable P0/P1 must be proven.
 
-### Level 3 — Major Full Checkpoint
+### Level 3 — Installed/release-grade checkpoint
 
-Level 3 is the installed/release-grade proof boundary. Run it at final Internal.16 certification and immediately at an affected boundary when necessary for:
+Use for coherent signed Internal candidates and immediately at a boundary where failure can invalidate durable installed authority, including:
 
-- licensing and commercial authority;
-- identity, authorization and cryptography;
-- installer, updater and process supervisor;
+- licensing/commercial authority;
+- identity/authorization/cryptography;
+- installer/updater/process supervisor;
 - schema/migration authority;
-- backup, restore and replacement install;
-- provider effects involving money, inventory or irreversible external action;
-- destructive shop/data lifecycle;
-- another change whose failure could invalidate durable installed authority or preservation assumptions before dependent work proceeds.
+- backup/restore/replacement install;
+- destructive lifecycle;
+- irreversible money/stock/provider effects;
+- another change that materially affects preservation or signed runtime behavior.
 
-The major checkpoint includes, as applicable:
+Applicable proof includes:
 
-1. exact protected/frozen source and reviewed-tree binding;
-2. clean Windows release compilation;
-3. complete Rust release parity;
-4. signed MSI and updater contract;
+1. exact frozen/reviewed source binding;
+2. clean release compilation;
+3. Rust release parity;
+4. MSI/updater contract and signature;
 5. clean install;
-6. in-place upgrade from the previous checkpoint/release;
-7. first launch, authenticated readiness, close and reopen;
+6. in-place upgrade/replacement behavior;
+7. first launch/authenticated readiness/close/reopen;
 8. process containment and cleanup;
-9. preserved AppData, registry, databases and keys;
-10. migration interruption and forward repair;
-11. backup, corruption, restore and replacement-install recovery;
-12. complete browser/UI journey suite;
-13. visual regression and AR/RTL review;
-14. security, permission, shop/tenant-isolation matrices;
-15. T470/floor performance and long-session stability where scheduled;
+9. AppData/registry/database/key preservation;
+10. migration interruption/repair;
+11. backup/corruption/restore/replacement recovery;
+12. complete affected UI journeys;
+13. AR/FR/EN/RTL/accessibility evidence;
+14. permission/shop/tenant isolation;
+15. applicable reference-hardware/resource evidence;
 16. deterministic evidence manifest.
 
-The Internal.16 final candidate receives the complete applicable Level 3 proof regardless of which heavy lanes were intentionally deferred during safe implementation work.
+A signed release is built only after exact protected-main authority exists. Branch-only artifacts are evidence candidates, never durable release sources.
 
-## 6. Internal.16 frontend/experience proof matrix
+## 7. Experience / Arabic / RTL proof
 
-Every material route/workspace must prove happy/loading/empty/filtered-empty/permission/offline/stale/pending/conflict/error/retry/recovery states plus AR/FR/EN, RTL/mixed bidi, keyboard/focus/screen reader, 100–200% zoom, reduced motion and 1366×768/windowed/fullscreen behavior.
+For material UI work, prove the actual changed states rather than only component existence:
 
-Frozen installed proof additions:
+- happy, loading, empty, filtered-empty, permission, offline/degraded, stale, pending, conflict, error, retry and recovery states as applicable;
+- AR/FR/EN semantic parity;
+- Arabic joining/typography/reading flow;
+- semantic RTL child order and logical geometry;
+- portaled primitive direction;
+- mixed Arabic/Latin/numeric technical-value bidi isolation;
+- keyboard, focus entry/return/trap, accessible names/status/errors;
+- 100–200% zoom/reflow and 1366×768 containment;
+- reduced motion;
+- live resize where workspaces change composition;
+- low-end rendering and interaction budgets.
 
-- **RTL:** source audit plus installed geometry comparison across shell, panes, tables, dialogs, command palette and charts; no physical-side residue.
-- **Responsive:** exercise actual **application container width after sidebar**, not browser viewport alone; live resize; no `4→3+1` orphan primary card groups.
-- **Dead space:** inspect paired panels and chart cards for accidental stretch/fixed-canvas blank regions; content density should remain intentional.
-- **Charts:** each chart has a stated decision/job, correct chart type, locale-safe units, useful tooltip/context/legend/annotation/drill-down where applicable, accessible text/table equivalent, RTL semantics, responsive height/label density and low-end budget.
-- **Theme:** repeated rapid light/dark/system/preset switching across shell, cards, charts and portaled overlays; no mixed old/new token frame; reduced motion immediate.
-- **Locale:** AR↔FR↔EN current page + prefetched route + non-prefetched route + back/forward; after commit, no old-locale route frame or stale direction.
-- **Navigation order:** default workflow order plus user reorder preference; drag and keyboard moves, save/cancel/reset, stale preference normalization, RTL and collapsed-sidebar access; no permission/route authority drift.
-- **Universal search:** words/numbers/IDs across permitted entities, exact-match ranking, permission/shop isolation, cancellation of stale requests and Phase 7 latency.
-- **Inbox/AI:** wide/windowed/narrow adaptive layouts, large histories, no scroll fights, degraded provider behavior, long-session performance.
-- **Products:** image-row loading/fallback/density performance.
+The shared direction/geometry/bidi contracts from PRs #273–#276 are protected. Do not return to page-local `rtl ? left : right` patching without a demonstrable exceptional geometry contract.
 
-## 7. Startup/performance proof
+For analytical surfaces, product chrome follows locale direction while Cartesian chronology/quantitative geometry follows its governed analytical semantics; do not naively mirror data axes because the UI is Arabic.
 
-Do not optimize startup by deleting safety work. Instrument the installed sequence and retain stage durations for recovery/preflight, device/license authority, migration, runtime preparation/spawn, runtime readiness, first navigation, authenticated hydration and usable workspace.
+## 8. Performance and reliability
 
-Measure separately:
+Issue #226 is closed, but its budgets remain regression criteria. Performance work remains measurement-driven.
 
-- ordinary cold start;
-- first launch after Internal.15→Internal.16 update/migration;
-- warm/reopen.
+When a target regresses:
 
-T470 targets remain cold launch ≤8s p95, navigation ≤700ms p95, indexed search ≤350ms p95 and ordinary local mutation ≤500ms p95. Declared floor remains usable shell ≤15s SSD / ≤25s HDD, input ack ≤100ms, navigation ≤1.5s p95, indexed search ≤750ms p95, local mutation ≤1s p95, no ordinary freeze >200ms, steady working set ≤750MB with WhatsApp and no sustained eight-hour memory growth.
+1. record representative samples and trace/stage evidence;
+2. identify the largest measured root cause;
+3. repair that bounded cause;
+4. preserve canonical correctness/accessibility/recovery;
+5. rerun the affected metric and consequence-selected regressions on the exact repaired head.
 
-## 8. Frozen review and consolidated repair
+Do not raise a threshold merely to remove a red result. Do not add speculative caches/indexes/virtualization/worker deferral without measured evidence.
 
-After feature freeze:
+## 9. Review and repair
+
+Before merge of material work:
 
 1. author self-review;
 2. freeze exact head;
-3. one complete adversarial pass across every affected layer;
-4. deliver one consolidated P0–P3 finding set;
-5. repair dependency-correctly in one consolidated batch;
+3. complete one adversarial review across affected layers;
+4. classify findings P0–P3;
+5. repair dependency-correctly as one coherent set;
 6. re-review materially changed/unresolved areas;
-7. rerun affected evidence plus one final whole-product certification.
+7. rerun affected evidence plus the required final gate.
 
-P0: active loss/exposure/cross-shop/cross-tenant/corrupt recovery/irreversible money-stock damage. P1: required journey, authority, startup, recovery, provider effect, major experience/RTL/accessibility/performance defect that blocks candidate. P2: bounded hardening. P3: polish. P0/P1 cannot be waived by the 24-hour target.
+- **P0:** active data loss/exposure/cross-shop/cross-tenant/corrupt recovery/irreversible money-stock damage.
+- **P1:** required journey/authority/recovery/provider/major experience/RTL/accessibility/performance defect blocking the intended checkpoint.
+- **P2:** bounded hardening.
+- **P3:** polish.
 
-## 9. Protected merge and release evidence
+P0/P1 cannot be waived for schedule pressure.
 
-The frozen Internal.16 candidate must cover exact source/version/docs, type/lint/unit/integration/database/browser suites, permission/shop isolation, Golden COD, provider effects, AI/extraction/tools, EcoTrack conformance state, Phase 8 remote/storefront/PWA/control-plane/zero-knowledge backup, clean install, Internal.15→16 upgrade, close/reopen, AppData/key/database preservation, migration interruption, backup/restore/replacement-install, AR/FR/EN/RTL/accessibility, T470/floor budgets, eight-hour stability and deterministic evidence manifest.
+## 10. Protected merge discipline
 
-After the frozen branch head passes the selected final gates and review:
+Immediately before merge:
 
-1. re-fetch PR head, review-thread state and protected base;
-2. merge with expected-head protection so a moved head cannot be merged accidentally;
-3. fetch protected `main` and verify the resulting durable source, version, documentation and required post-merge authority;
-4. reconcile exact merge/evidence truth in the owning documentation/issue/PR without creating a new masterplan;
-5. only then invoke the guarded signed release workflow from protected `main` when an Internal.16 release is authorized;
-6. verify release artifact/signature/updater metadata and perform the required installed/update evidence against the released artifact before distribution claims.
+1. refetch PR head;
+2. refetch unresolved review threads;
+3. refetch protected base;
+4. ensure every required workflow belongs to the same exact head;
+5. merge with `expected_head_sha` protection using a repository-permitted merge method;
+6. refetch protected `main` and verify the durable result.
 
-Issue #230 remains the customer-online/public-trial boundary. Provider hostnames/mocks do not satisfy owned-domain/network proof. External provider/legal/security/privacy/representative-beta truth remains distinct from internal evidence. Stable requires applicable Phase 9 evidence and explicit Founder promotion.
+No force merge, protection bypass or cross-SHA evidence mix.
 
-## 10. Historical workflow continuity vocabulary
+## 11. Signed release discipline
 
-The Internal.16 cadence supersedes repeated micro-release loops but preserves the durable workflow concepts that earlier phases and audit authority depend on:
+A new Internal release requires explicit version/release authority. Ordinary product/source merges do not automatically bump versions.
 
-- **one active implementation agent; audit-first; batch remediation; tiered CI** remains the anti-conflict operating model;
-- **Complete phase/package audit** is now the exact-source whole-product reconnaissance for this convergence cycle;
-- the **Phase Problem Register** maps to the combined frozen source+installed Internal.16 Problem Register;
-- **Level 1 — Task Gate** remains targeted coherent-task validation rather than a full release cycle after every small edit;
-- **Frozen review and batch repair** maps to the exact-head adversarial review plus one consolidated repair batch;
-- **Level 2 — Phase Checkpoint** remains integrated source/phase proof when consequence/dependency requires it;
-- **Level 3 — Major Full Checkpoint** remains installed/release-grade proof and cannot be removed by schedule pressure;
-- the **Whole-product AAA frontend program** remains the governing experience-quality objective even though FD-033 converges its remaining work with later platform implementation.
+Release sequence:
 
-FD-033 changes when expensive evidence runs, not the existence, selection rules or integrity of these gates.
+```text
+certified product head
+→ bounded release-authority envelope
+→ exact-head Required PR/native/Windows/MSI evidence
+→ expected-head merge
+→ protected-main source verification
+→ protected dispatcher
+→ signed build into protected draft
+→ runtime/signature/install/UI/source-rewrite/evidence/latest.json checks
+→ exact tag + publication-target verification
+→ publish exact verified Internal release
+→ Founder-installed human/provider evidence remains separate
+```
 
-## 11. Branch, PR and session handoff rule
+Do not publish from a branch head. Do not substitute a merge candidate for protected-main source. Do not weaken updater keys, signature checks, `--locked` Rust proof or deterministic source guards.
 
-- Branch from current verified protected `main` and use one `agent/<observable-outcome>` owner branch.
-- Open a draft PR early for material implementation; push coherent batches rather than every tiny edit.
-- Freeze exact head before consolidated review; return a ready PR to draft during material repair.
-- Merge dependency-correct work only after selected gates and review pass.
-- Ordinary implementation does not bump application version until the coherent Internal milestone is selected.
-- A release is built/published only from the verified protected-main authority after the expected-head merge, never from a branch-only source.
+## 12. Current post-Internal.22 mode
 
-The next session starts from merged FD-033/Current State/Roadmap/Working Memory, creates or uses the one Internal.16 application branch, completes exact-source reconnaissance, freezes the combined Problem Register and then implements. It must not spend another session reconstructing Parts 1–3 from chat.
+Internal.22 / FD-041 is already signed and published from `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348`. Therefore the default next action is **not coding**.
 
-At closure, reconcile FD-033, Current State, Roadmap and Working Memory to exact merged source/evidence. Do not create another competing masterplan. Keep installed observations distinct from implemented/proven truth until evidence actually moves.
+Current sequence is:
+
+```text
+verify Founder installed version
+→ update/install Internal.22 in place if needed
+→ Founder whole-product visual/interaction judgment (#221)
+→ real-phone WhatsApp QR/link/reopen/outbound/inbound evidence
+→ accept OR open one bounded repair for demonstrated defects
+→ keep #230 separate until resilient customer-online trial evidence is real
+→ representative Beta/Stable evidence and explicit Founder promotion later
+```
+
+If a defect is found, the next coding session starts from fresh protected `main` and the exact observed reproduction. It must not restart the completed generic RTL, Inbox/AI/Settings, analytics or Search programs.
+
+## 13. Handoff rule
+
+At closure, reconcile Current State, Roadmap and Working Memory to exact durable truth. Do not create a competing permanent handoff/masterplan.
+
+A handoff must say explicitly:
+
+- live source must be re-resolved;
+- exact fixed evidence/release anchors;
+- what is complete;
+- what remains unproven;
+- one exact next observable outcome;
+- protected invariants and forbidden claims.
