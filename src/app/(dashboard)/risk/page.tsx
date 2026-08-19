@@ -474,7 +474,7 @@ export default async function RiskPage({
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-muted-foreground">
-                        {t("risk.topFactors.title")}
+                        {riskCopy("highestImpactFactor")}
                       </p>
                       <p className="mt-0.5 truncate text-sm font-semibold">
                         {topFactor ? t(topFactor.labelKey) : "—"}
