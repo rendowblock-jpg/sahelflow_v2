@@ -3,407 +3,492 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   Hash,
+  Loader2,
   MessageSquare,
   Package,
   RotateCcw,
+  SearchX,
   Truck,
   Users,
 } from "lucide-react";
 
+import { TechnicalValue } from "@/components/i18n/technical-value";
 import { flattenNavigationItems } from "@/components/layout/navigation";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useI18n } from "@/hooks/use-i18n";
 import {
-  canOpenProtectedOperationalDetail,
-  mergeUniversalSearchFamilies,
+  searchCommandCopy,
+  type SearchCommandCopyKey,
+} from "@/lib/i18n/search-command-center";
+import {
+  normalizeSearchText,
+  rankUniversalSearchCandidates,
+  type UniversalSearchCandidate,
+  type UniversalSearchKind,
 } from "@/lib/search/universal-search";
-import { fetcher } from "@/lib/swr/fetcher";
+import { cn } from "@/lib/utils";
 
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Retained for caller compatibility; Phase 5 exposes only executable commands. */
   onAction?: (action: string) => void;
 }
 
-interface RecordResult {
-  id: string;
-  label: string;
-  sublabel?: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
+type RecordKind = Exclude<UniversalSearchKind, "navigation" | "action">;
+
+type ApiRecordResult = UniversalSearchCandidate & {
+  kind: RecordKind;
+  score: number;
+};
+
+interface SearchResponse {
+  query: string;
+  results: ApiRecordResult[];
+  degradedFamilies: RecordKind[];
+  tookMs: number;
 }
 
-function normalized(value: string): string {
-  return value.trim().toLocaleLowerCase();
+interface RecordState {
+  query: string;
+  results: ApiRecordResult[];
+  degradedFamilies: RecordKind[];
+  searching: boolean;
+  failed: boolean;
 }
 
-/**
- * Universal SahelFlow navigation and operational-record search.
- *
- * Navigation destinations are derived from the canonical information
- * architecture instead of maintaining a second route list. Record search reuses
- * each domain's permission-aware/protected API authority: Orders, Customers,
- * Products, Conversations, Deliveries and Returns. One denied or degraded domain
- * cannot suppress results from the others. Search families are interleaved before
- * the global cap so one high-volume family cannot starve another matching family.
- * Results that require protected detail authority are emitted only when the API's
- * projected field-access contract proves that destination is executable.
- */
-export function CommandPalette({
-  open,
-  onOpenChange,
-}: CommandPaletteProps) {
+const EMPTY_RECORD_STATE: RecordState = {
+  query: "",
+  results: [],
+  degradedFamilies: [],
+  searching: false,
+  failed: false,
+};
+
+const QUICK_NAV_IDS = [
+  "home",
+  "sell",
+  "inbox",
+  "products",
+  "customers",
+  "grow",
+] as const;
+
+const RECORD_ICONS = {
+  order: Hash,
+  customer: Users,
+  product: Package,
+  conversation: MessageSquare,
+  delivery: Truck,
+  return: RotateCcw,
+} as const satisfies Record<
+  RecordKind,
+  React.ComponentType<{ className?: string }>
+>;
+
+const KIND_COPY: Record<UniversalSearchKind, SearchCommandCopyKey> = {
+  navigation: "typePage",
+  action: "typePage",
+  order: "typeOrder",
+  customer: "typeCustomer",
+  product: "typeProduct",
+  conversation: "typeConversation",
+  delivery: "typeDelivery",
+  return: "typeReturn",
+};
+
+function hasTechnicalLabel(kind: UniversalSearchKind): boolean {
+  return kind === "order" || kind === "delivery" || kind === "return";
+}
+
+function hasTechnicalSublabel(
+  kind: UniversalSearchKind,
+  value: string,
+): boolean {
+  if (kind === "customer" || kind === "product") return true;
+  if (kind !== "conversation") return false;
+  return /^[0-9\s()+\-./]+$/u.test(value);
+}
+
+export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const copy = React.useCallback(
+    (key: SearchCommandCopyKey) => searchCommandCopy(locale, key),
+    [locale],
+  );
   const [query, setQuery] = React.useState("");
-  const [records, setRecords] = React.useState<RecordResult[]>([]);
-  const [searching, setSearching] = React.useState(false);
-  const searchGeneration = React.useRef(0);
-
-  React.useEffect(() => {
-    if (!open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setQuery("");
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setRecords([]);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSearching(false);
-    }
-  }, [open]);
-
-  React.useEffect(() => {
-    const generation = ++searchGeneration.current;
-    if (!open) return;
-
-    const q = query.trim();
-    if (q.length < 2) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setRecords([]);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSearching(false);
-      return;
-    }
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSearching(true);
-    const timer = setTimeout(async () => {
-      try {
-        const [
-          ordersRes,
-          customersRes,
-          productsRes,
-          conversationsRes,
-          deliveriesRes,
-          returnsRes,
-        ] = await Promise.allSettled([
-          fetcher<{
-            orders: Array<{
-              id: string;
-              orderNumber: string;
-              customer?: { name: string | null };
-            }>;
-          }>(`/api/orders/search?q=${encodeURIComponent(q)}&limit=4`),
-          fetcher<{
-            customers: Array<{
-              id: string;
-              name: string | null;
-              phone: string | null;
-            }>;
-          }>(`/api/customers/search?q=${encodeURIComponent(q)}&limit=4`),
-          fetcher<{
-            products: Array<{
-              id: string;
-              name: string;
-              sku?: string | null;
-            }>;
-          }>(`/api/products/search?q=${encodeURIComponent(q)}&limit=4`),
-          fetcher<{
-            results: Array<{
-              id: string;
-              contactName: string | null;
-              contactPhone: string | null;
-              channel: string;
-            }>;
-          }>(`/api/conversations/search?q=${encodeURIComponent(q)}`),
-          fetcher<{
-            deliveries: Array<{
-              id: string;
-              provider: string;
-              trackingNumber: string | null;
-              order: { orderNumber: string } | null;
-            }>;
-            fieldAccess: {
-              contact: boolean;
-              financials: boolean;
-            };
-          }>(`/api/delivery?q=${encodeURIComponent(q)}&pageSize=4`),
-          fetcher<{
-            returns: Array<{
-              id: string;
-              status: string;
-              type: string;
-              order: { orderNumber: string };
-            }>;
-            fieldAccess: {
-              contact: boolean;
-              financials: boolean;
-            };
-          }>(`/api/returns?q=${encodeURIComponent(q)}&pageSize=4`),
-        ]);
-
-        const orderResults: RecordResult[] =
-          ordersRes.status === "fulfilled"
-            ? ordersRes.value.orders.map((order) => ({
-                id: `order:${order.id}`,
-                label: order.orderNumber,
-                sublabel: order.customer?.name ?? undefined,
-                href: `/orders/${order.id}`,
-                icon: Hash,
-              }))
-            : [];
-
-        const customerResults: RecordResult[] =
-          customersRes.status === "fulfilled"
-            ? customersRes.value.customers.map((customer) => ({
-                id: `customer:${customer.id}`,
-                label: customer.name ?? "—",
-                sublabel: customer.phone ?? undefined,
-                href: `/customers/${customer.id}`,
-                icon: Users,
-              }))
-            : [];
-
-        const productResults: RecordResult[] =
-          productsRes.status === "fulfilled"
-            ? productsRes.value.products.map((product) => ({
-                id: `product:${product.id}`,
-                label: product.name,
-                sublabel: product.sku ?? undefined,
-                href: `/products/${product.id}`,
-                icon: Package,
-              }))
-            : [];
-
-        const conversationResults: RecordResult[] =
-          conversationsRes.status === "fulfilled"
-            ? conversationsRes.value.results.slice(0, 4).map((conversation) => ({
-                id: `conversation:${conversation.id}`,
-                label:
-                  conversation.contactName ??
-                  `${t("nav.inbox")} · ${conversation.id.slice(-6)}`,
-                sublabel:
-                  conversation.contactPhone ?? conversation.channel,
-                // The Inbox consumes this canonical persisted ID directly. If the
-                // row is outside the live WhatsApp window it resolves through the
-                // permission-projected exact conversation read before selection.
-                href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
-                icon: MessageSquare,
-              }))
-            : [];
-
-        const deliveryResults: RecordResult[] =
-          deliveriesRes.status === "fulfilled" &&
-          canOpenProtectedOperationalDetail(deliveriesRes.value.fieldAccess)
-            ? deliveriesRes.value.deliveries.map((delivery) => ({
-                id: `delivery:${delivery.id}`,
-                label:
-                  delivery.trackingNumber ??
-                  delivery.order?.orderNumber ??
-                  delivery.id.slice(-8),
-                sublabel: [delivery.provider, delivery.order?.orderNumber]
-                  .filter(Boolean)
-                  .join(" · "),
-                href: `/deliveries/${delivery.id}`,
-                icon: Truck,
-              }))
-            : [];
-
-        const returnResults: RecordResult[] =
-          returnsRes.status === "fulfilled" &&
-          canOpenProtectedOperationalDetail(returnsRes.value.fieldAccess)
-            ? returnsRes.value.returns.map((returnRecord) => ({
-                id: `return:${returnRecord.id}`,
-                label: returnRecord.order.orderNumber,
-                sublabel: `${returnRecord.type} · ${returnRecord.status}`,
-                href: `/returns/${returnRecord.id}`,
-                icon: RotateCcw,
-              }))
-            : [];
-
-        const next = mergeUniversalSearchFamilies(
-          [
-            orderResults,
-            customerResults,
-            productResults,
-            conversationResults,
-            deliveryResults,
-            returnResults,
-          ],
-          12,
-        );
-
-        if (searchGeneration.current === generation) {
-          setRecords(next);
-        }
-      } catch {
-        if (searchGeneration.current === generation) {
-          setRecords([]);
-        }
-      } finally {
-        if (searchGeneration.current === generation) {
-          setSearching(false);
-        }
-      }
-    }, 220);
-
-    return () => clearTimeout(timer);
-  }, [query, open, t]);
+  const [recordState, setRecordState] = React.useState<RecordState>(
+    EMPTY_RECORD_STATE,
+  );
+  const normalizedQuery = normalizeSearchText(query);
+  const technicalQuery =
+    normalizedQuery.length > 0 && /^[0-9\s()+\-./]+$/u.test(normalizedQuery);
 
   const navigation = React.useMemo(
     () =>
       flattenNavigationItems().map((item) => ({
         ...item,
+        kind: "navigation" as const,
         label: t(item.labelKey),
+        sublabel: undefined,
+        updatedAt: null,
       })),
     [t],
   );
 
-  const visibleNavigation = React.useMemo(() => {
-    const q = normalized(query);
-    if (!q) return navigation;
-    return navigation.filter((item) => {
-      const searchable = normalized(
-        [item.label, item.href, ...item.keywords].join(" "),
-      );
-      return searchable.includes(q);
-    });
-  }, [navigation, query]);
+  const navigationMatches = React.useMemo(() => {
+    if (!normalizedQuery) return [];
+    return rankUniversalSearchCandidates(normalizedQuery, navigation, 8);
+  }, [navigation, normalizedQuery]);
 
-  function runAndClose(action: () => void) {
-    onOpenChange(false);
-    window.setTimeout(action, 80);
+  const quickNavigation = React.useMemo(() => {
+    return QUICK_NAV_IDS.map((id) =>
+      navigation.find((item) => item.id === id),
+    ).filter((item): item is NonNullable<typeof item> => Boolean(item));
+  }, [navigation]);
+
+  React.useEffect(() => {
+    if (!open || normalizedQuery.length < 2) return;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setRecordState({
+        query: normalizedQuery,
+        results: [],
+        degradedFamilies: [],
+        searching: true,
+        failed: false,
+      });
+
+      void fetch(
+        `/api/search?q=${encodeURIComponent(normalizedQuery)}&limit=16`,
+        {
+          cache: "no-store",
+          signal: controller.signal,
+        },
+      )
+        .then(async (response) => {
+          if (!response.ok) throw new Error(`Search returned ${response.status}`);
+          return (await response.json()) as SearchResponse;
+        })
+        .then((response) => {
+          if (controller.signal.aborted) return;
+          setRecordState({
+            query: normalizedQuery,
+            results: response.results,
+            degradedFamilies: response.degradedFamilies ?? [],
+            searching: false,
+            failed: false,
+          });
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          setRecordState({
+            query: normalizedQuery,
+            results: [],
+            degradedFamilies: [],
+            searching: false,
+            failed: true,
+          });
+        });
+    }, 120);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [normalizedQuery, open]);
+
+  const liveRecordState =
+    recordState.query === normalizedQuery ? recordState : EMPTY_RECORD_STATE;
+
+  const visibleResults = React.useMemo(() => {
+    if (!normalizedQuery) return [];
+    const records = liveRecordState.results.map((result) => ({
+      ...result,
+      icon: RECORD_ICONS[result.kind],
+    }));
+    const pages = navigationMatches.map((result) => ({
+      ...result,
+      icon: result.icon,
+    }));
+    return [...records, ...pages]
+      .sort((left, right) => right.score - left.score)
+      .slice(0, 18);
+  }, [liveRecordState.results, navigationMatches, normalizedQuery]);
+
+  function handleQueryChange(value: string) {
+    setQuery(value);
+    if (normalizeSearchText(value).length < 2) {
+      setRecordState(EMPTY_RECORD_STATE);
+    }
   }
 
-  const hasResults = records.length > 0 || visibleNavigation.length > 0;
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      setQuery("");
+      setRecordState(EMPTY_RECORD_STATE);
+    }
+    onOpenChange(nextOpen);
+  }
+
+  function openHref(href: string) {
+    handleOpenChange(false);
+    router.push(href);
+  }
+
+  const waitingForRequest =
+    normalizedQuery.length >= 2 && recordState.query !== normalizedQuery;
+  const searching =
+    normalizedQuery.length >= 2 &&
+    (waitingForRequest || liveRecordState.searching);
+  const degraded = liveRecordState.degradedFamilies.length > 0;
+  const partiallyDegraded = degraded && visibleResults.length > 0;
+  const degradedEmpty =
+    normalizedQuery.length > 0 &&
+    !searching &&
+    !liveRecordState.failed &&
+    degraded &&
+    visibleResults.length === 0;
+  const noResults =
+    normalizedQuery.length > 0 &&
+    !searching &&
+    !liveRecordState.failed &&
+    !degraded &&
+    visibleResults.length === 0;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="gap-0 overflow-hidden p-0 shadow-popover sm:max-w-xl"
+        data-universal-search="v2"
+        className="gap-0 overflow-hidden rounded-2xl border-border/80 bg-popover/98 p-0 shadow-[0_28px_80px_rgba(0,0,0,0.34)] backdrop-blur-xl sm:max-w-[44rem]"
         showCloseButton={false}
       >
-        <DialogTitle className="sr-only">
-          {t("command.searchPlaceholder")}
-        </DialogTitle>
+        <DialogTitle className="sr-only">{copy("title")}</DialogTitle>
+
         <Command
           shouldFilter={false}
-          className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:rounded-md [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5"
+          className={cn(
+            "rounded-2xl bg-transparent",
+            "[&_[data-slot=command-input-wrapper]]:h-14 [&_[data-slot=command-input-wrapper]]:gap-3 [&_[data-slot=command-input-wrapper]]:border-border/70 [&_[data-slot=command-input-wrapper]]:px-4",
+            "[&_[data-slot=command-input-wrapper]_svg]:size-[18px] [&_[data-slot=command-input-wrapper]_svg]:opacity-60",
+            "[&_[cmdk-input]]:h-14 [&_[cmdk-input]]:text-[15px] [&_[cmdk-input]]:font-medium",
+          )}
         >
-          <CommandInput
-            placeholder={t("command.searchPlaceholder")}
-            value={query}
-            onValueChange={setQuery}
-          />
-          <CommandList className="max-h-[min(440px,60dvh)] px-1.5 py-1.5">
-            {!hasResults ? (
-              <CommandEmpty>
-                {searching
-                  ? t("command.records.searching")
-                  : t("command.noResults", { search: query })}
-              </CommandEmpty>
+          <div className="relative">
+            <CommandInput
+              autoFocus
+              dir={technicalQuery ? "ltr" : "auto"}
+              className="[unicode-bidi:plaintext]"
+              placeholder={copy("placeholder")}
+              value={query}
+              onValueChange={handleQueryChange}
+            />
+            {searching ? (
+              <Loader2
+                className="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 animate-spin text-primary"
+                aria-hidden="true"
+              />
+            ) : null}
+          </div>
+
+          <CommandList
+            className="max-h-[min(34rem,68dvh)] px-2 py-2"
+            aria-live="polite"
+          >
+            {!normalizedQuery ? (
+              <>
+                <div className="px-3 pb-2 pt-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    {copy("startTitle")}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {copy("startHint")}
+                  </p>
+                </div>
+                <CommandGroup heading={copy("quickAccess")}>
+                  <div className="grid gap-1 sm:grid-cols-2">
+                    {quickNavigation.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <CommandItem
+                          key={item.id}
+                          value={`quick-${item.id}`}
+                          onSelect={() => openHref(item.href)}
+                          className="min-h-12 rounded-xl px-3 py-2.5 data-[selected=true]:bg-accent/80"
+                        >
+                          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/65 bg-background/70">
+                            <Icon className="size-4" aria-hidden="true" />
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
+                            {item.label}
+                          </span>
+                        </CommandItem>
+                      );
+                    })}
+                  </div>
+                </CommandGroup>
+              </>
             ) : null}
 
-            {records.length > 0 ? (
-              <CommandGroup heading={t("command.group.records")}>
-                {records.map((record) => {
-                  const Icon = record.icon;
+            {partiallyDegraded ? (
+              <div
+                className="mx-1 mb-2 flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2 text-[11px] leading-5 text-warning"
+                role="status"
+              >
+                <AlertTriangle
+                  className="mt-0.5 size-3.5 shrink-0"
+                  aria-hidden="true"
+                />
+                <span>{copy("partialResults")}</span>
+              </div>
+            ) : null}
+
+            {normalizedQuery && visibleResults.length > 0 ? (
+              <CommandGroup heading={copy("bestMatches")}>
+                {visibleResults.map((result) => {
+                  const Icon = result.icon;
                   return (
                     <CommandItem
-                      key={record.id}
-                      value={`${record.id}-${record.label}`}
-                      onSelect={() =>
-                        runAndClose(() => router.push(record.href))
-                      }
+                      key={result.id}
+                      value={`${result.kind}:${result.id}:${result.label}`}
+                      onSelect={() => openHref(result.href)}
+                      className="min-h-[3.4rem] rounded-xl px-3 py-2.5 data-[selected=true]:bg-accent/85"
                     >
-                      <Icon
-                        className="me-3 size-4 text-muted-foreground"
-                        aria-hidden="true"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">
-                          {record.label}
-                        </div>
-                        {record.sublabel ? (
-                          <div className="truncate text-xs text-muted-foreground">
-                            {record.sublabel}
-                          </div>
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/65 bg-background/75 shadow-sm">
+                        <Icon className="size-4" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        {hasTechnicalLabel(result.kind) ? (
+                          <TechnicalValue className="block truncate text-start text-[13px] font-semibold">
+                            {result.label}
+                          </TechnicalValue>
+                        ) : (
+                          <bdi
+                            dir="auto"
+                            className="block truncate text-start text-[13px] font-semibold [unicode-bidi:plaintext]"
+                          >
+                            {result.label}
+                          </bdi>
+                        )}
+                        {result.sublabel ? (
+                          hasTechnicalSublabel(result.kind, result.sublabel) ? (
+                            <TechnicalValue className="mt-0.5 block truncate text-start text-[11px] leading-4 text-muted-foreground">
+                              {result.sublabel}
+                            </TechnicalValue>
+                          ) : (
+                            <bdi
+                              dir="auto"
+                              className="mt-0.5 block truncate text-start text-[11px] leading-4 text-muted-foreground [unicode-bidi:plaintext]"
+                            >
+                              {result.sublabel}
+                            </bdi>
+                          )
                         ) : null}
-                      </div>
+                      </span>
+                      <span className="ms-2 shrink-0 rounded-full border border-border/60 bg-muted/35 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {copy(KIND_COPY[result.kind])}
+                      </span>
                     </CommandItem>
                   );
                 })}
               </CommandGroup>
             ) : null}
 
-            {visibleNavigation.length > 0 ? (
-              <CommandGroup heading={t("command.group.navigation")}>
-                {visibleNavigation.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <CommandItem
-                      key={item.id}
-                      value={`${item.id}-${item.label}`}
-                      onSelect={() =>
-                        runAndClose(() => router.push(item.href))
-                      }
-                    >
-                      <Icon
-                        className="me-3 size-4 text-muted-foreground"
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 flex-1 truncate text-sm">
-                        {item.label}
-                      </span>
-                      <span
-                        dir="ltr"
-                        className="ms-3 hidden max-w-44 truncate font-mono text-[10px] text-muted-foreground/70 sm:inline"
-                      >
-                        {item.href}
-                      </span>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
+            {searching && visibleResults.length === 0 ? (
+              <div
+                className="flex min-h-40 flex-col items-center justify-center px-6 text-center"
+                role="status"
+              >
+                <Loader2
+                  className="size-5 animate-spin text-primary"
+                  aria-hidden="true"
+                />
+                <p className="mt-3 text-sm font-medium">{copy("searching")}</p>
+              </div>
+            ) : null}
+
+            {liveRecordState.failed && visibleResults.length === 0 ? (
+              <div
+                className="flex min-h-44 flex-col items-center justify-center px-6 text-center"
+                role="status"
+              >
+                <SearchX
+                  className="size-6 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <p className="mt-3 text-sm font-semibold">
+                  {copy("unavailable")}
+                </p>
+                <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
+                  {copy("unavailableHint")}
+                </p>
+              </div>
+            ) : null}
+
+            {degradedEmpty ? (
+              <div
+                className="flex min-h-44 flex-col items-center justify-center px-6 text-center"
+                role="status"
+              >
+                <AlertTriangle
+                  className="size-6 text-warning"
+                  aria-hidden="true"
+                />
+                <p className="mt-3 text-sm font-semibold">
+                  {copy("degradedTitle")}
+                </p>
+                <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
+                  {copy("degradedHint")}
+                </p>
+              </div>
+            ) : null}
+
+            {noResults ? (
+              <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center">
+                <SearchX
+                  className="size-6 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <p className="mt-3 text-sm font-semibold">
+                  {copy("noResults")}
+                </p>
+                <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
+                  {copy("noResultsHint")}
+                </p>
+              </div>
             ) : null}
           </CommandList>
 
-          <div className="flex items-center gap-2 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
-            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono">
-              ↑↓
-            </kbd>
-            <span>{t("command.navigate")}</span>
-            <kbd className="ms-2 rounded border bg-muted px-1.5 py-0.5 font-mono">
-              ↵
-            </kbd>
-            <span>{t("command.select")}</span>
-            <kbd className="ms-auto rounded border bg-muted px-1.5 py-0.5 font-mono">
-              esc
-            </kbd>
-            <span>{t("command.close")}</span>
+          <div className="flex min-h-10 items-center gap-2 border-t border-border/70 bg-muted/15 px-3.5 text-[10px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <kbd className="rounded-md border border-border/70 bg-background px-1.5 py-0.5 font-mono">
+                ↑↓
+              </kbd>
+              {copy("navigate")}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <kbd className="rounded-md border border-border/70 bg-background px-1.5 py-0.5 font-mono">
+                ↵
+              </kbd>
+              {copy("open")}
+            </span>
+            <span className="ms-auto inline-flex items-center gap-1.5">
+              <kbd className="rounded-md border border-border/70 bg-background px-1.5 py-0.5 font-mono">
+                Esc
+              </kbd>
+              {copy("close")}
+            </span>
           </div>
         </Command>
       </DialogContent>

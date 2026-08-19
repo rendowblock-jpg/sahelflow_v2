@@ -15,6 +15,8 @@ const PERF_ROUTES = [
 const ROUTE_SAMPLES = 3;
 const ROUTE_MEDIAN_LIMIT_MS = 8_000;
 const SEARCH_P95_LIMIT_MS = 2_000;
+const UNIVERSAL_SEARCH_SERVER_P95_LIMIT_MS = 350;
+const UNIVERSAL_SEARCH_QUERY = "Ahmed B";
 
 function phase67ClientIp(): string {
   const info = test.info();
@@ -153,6 +155,7 @@ test("Phase 7 controlled performance trend uses repeatable route medians", async
     PERF_ROUTES.map((route) => [route, [] as number[]]),
   ) as Record<(typeof PERF_ROUTES)[number], number[]>;
   const searchDurationsMs: number[] = [];
+  const searchServerDurationsMs: number[] = [];
   let after = before;
 
   await session.send("Emulation.setCPUThrottlingRate", { rate: 4 });
@@ -165,25 +168,48 @@ test("Phase 7 controlled performance trend uses repeatable route medians", async
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await waitForWorkSurface(page, "/dashboard");
-    await page.evaluate(async () => {
-      const response = await fetch("/api/orders/search?q=DZ&limit=5", {
+    await page.evaluate(async (query) => {
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=8`, {
         cache: "no-store",
       });
       if (!response.ok) throw new Error(`search warmup returned ${response.status}`);
-      await response.json();
-    });
+      const body = (await response.json()) as {
+        results?: Array<{ kind?: string; label?: string }>;
+      };
+      if (
+        !body.results?.some(
+          (result) => result.kind === "customer" && result.label === "Ahmed Benali",
+        )
+      ) {
+        throw new Error("universal search warmup did not prove protected partial customer matching");
+      }
+    }, UNIVERSAL_SEARCH_QUERY);
 
     for (let index = 0; index < 8; index += 1) {
-      const duration = await page.evaluate(async () => {
+      const sample = await page.evaluate(async (query) => {
         const started = performance.now();
-        const response = await fetch("/api/orders/search?q=DZ&limit=5", {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=8`, {
           cache: "no-store",
         });
         if (!response.ok) throw new Error(`search returned ${response.status}`);
-        await response.json();
-        return performance.now() - started;
-      });
-      searchDurationsMs.push(duration);
+        const body = (await response.json()) as {
+          tookMs?: number;
+          results?: Array<{ kind?: string; label?: string }>;
+        };
+        if (
+          !body.results?.some(
+            (result) => result.kind === "customer" && result.label === "Ahmed Benali",
+          )
+        ) {
+          throw new Error("universal search lost protected partial customer matching");
+        }
+        return {
+          browserMs: performance.now() - started,
+          serverMs: body.tookMs ?? Number.POSITIVE_INFINITY,
+        };
+      }, UNIVERSAL_SEARCH_QUERY);
+      searchDurationsMs.push(sample.browserMs);
+      searchServerDurationsMs.push(sample.serverMs);
     }
     after = await session.send("Performance.getMetrics");
   } finally {
@@ -197,6 +223,7 @@ test("Phase 7 controlled performance trend uses repeatable route medians", async
     (left, right) => right[1] - left[1],
   )[0]!;
   const searchP95Ms = percentile95(searchDurationsMs);
+  const universalSearchServerP95Ms = percentile95(searchServerDurationsMs);
   const evidence = {
     environment:
       "controlled Chromium CI trend on Next dev with 4x renderer CPU throttling — not installed T470 certification",
@@ -206,9 +233,13 @@ test("Phase 7 controlled performance trend uses repeatable route medians", async
     worstRoute,
     worstRouteMedianMs,
     routeMedianLimitMs: ROUTE_MEDIAN_LIMIT_MS,
+    universalSearchQuery: UNIVERSAL_SEARCH_QUERY,
     searchDurationsMs,
     searchP95Ms,
     searchP95LimitMs: SEARCH_P95_LIMIT_MS,
+    searchServerDurationsMs,
+    universalSearchServerP95Ms,
+    universalSearchServerP95LimitMs: UNIVERSAL_SEARCH_SERVER_P95_LIMIT_MS,
     rendererMetricsBefore: selectMetrics(before.metrics, metricNames),
     rendererMetricsAfter: selectMetrics(after.metrics, metricNames),
   };
@@ -224,11 +255,13 @@ test("Phase 7 controlled performance trend uses repeatable route medians", async
     contentType: "application/json",
   });
 
-  // This remains a CI regression tripwire. Installed #226 certification keeps
-  // the materially tighter T470 navigation/search/mutation and reliability budgets.
   expect(
     worstRouteMedianMs,
     `${worstRoute} median under controlled 4x CPU throttling`,
   ).toBeLessThan(ROUTE_MEDIAN_LIMIT_MS);
   expect(searchP95Ms).toBeLessThan(SEARCH_P95_LIMIT_MS);
+  expect(
+    universalSearchServerP95Ms,
+    "universal search server p95 on the representative local shop",
+  ).toBeLessThan(UNIVERSAL_SEARCH_SERVER_P95_LIMIT_MS);
 });

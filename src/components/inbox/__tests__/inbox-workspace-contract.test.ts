@@ -66,11 +66,11 @@ describe("Inbox Class-AAA operations desk contract", () => {
   });
 
   it("opens search and command results through canonical persisted conversation ids", () => {
-    const palette = read("src/components/command-palette.tsx");
+    const search = read("src/lib/search/universal-search-server.ts");
     const hook = read("src/hooks/use-inbox-workspace.ts");
     const queue = read("src/components/inbox/inbox-work-queue.tsx");
 
-    expect(palette).toContain(
+    expect(search).toContain(
       'href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`',
     );
     expect(hook).toContain('searchParams.get("conversation")');

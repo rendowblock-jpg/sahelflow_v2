@@ -61,11 +61,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       : t("metadata.title.storefrontEdit")
     : null;
 
-  // Radix dialogs/popovers are portaled under <body>, outside the dashboard shell.
-  // Mirror the hydration-safe density to the document root before paint. The
-  // ordinary control-height follows density, while a separate root touch-target
-  // floor remains immune to shell-local density overrides and therefore also
-  // protects compact controls rendered inside the shell on coarse-pointer hardware.
   useLayoutEffect(() => {
     const root = document.documentElement;
     const coarsePointer = window.matchMedia("(pointer: coarse)");
@@ -89,9 +84,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     return () => {
       coarsePointer.removeEventListener("change", applyControlMetrics);
-      if (root.dataset.density === density) {
-        delete root.dataset.density;
-      }
+      if (root.dataset.density === density) delete root.dataset.density;
       root.style.removeProperty("--control-height");
       root.style.removeProperty("--sf-touch-target");
     };
@@ -107,6 +100,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (storefrontFocusMode) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void fetch("/api/search", {
+        method: "POST",
+        cache: "no-store",
+        signal: controller.signal,
+      }).catch(() => {
+        // Search remains lazy and self-healing if background projection warmup
+        // fails. Never disturb the seller's current work surface for cache work.
+      });
+    }, 900);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [storefrontFocusMode]);
 
   useEffect(() => {
     const previous = previousPath.current;

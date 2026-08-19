@@ -282,7 +282,13 @@ describe("installed Windows runtime contract", () => {
     expect(uiHarness).not.toContain("Wait-ForPromptVisibleWindow");
     expect(uiHarness).not.toContain("StartupWindowHandle");
     expect(uiHarness).toContain(
-      "workspace became visible before authenticated readiness evidence",
+      "$authenticatedUiEvidenceGraceMilliseconds = 3000",
+    );
+    expect(uiHarness).toContain(
+      "$workspaceEvidenceLeadMilliseconds -gt $authenticatedUiEvidenceGraceMilliseconds",
+    );
+    expect(uiHarness).toContain(
+      "workspace remained visible for $workspaceEvidenceLeadMilliseconds ms without matching authenticated readiness evidence",
     );
     expect(uiHarness).toContain("workspace-window-pending");
     expect(uiHarness).toContain("Wait-ForNodeCompileCache");
