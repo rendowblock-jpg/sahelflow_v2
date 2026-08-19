@@ -28,9 +28,11 @@ describe("Algerian Founder demo contract", () => {
     expect(demo).not.toMatch(/api[_-]?key\s*:/i);
   });
 
-  it("contains one coherent past-tense Arabic/French COD story", () => {
+  it("contains one coherent recent Arabic/French COD story inside deterministic annual history", () => {
     const demo = read("src/lib/demo/algerian-demo.ts");
     const story = read("src/lib/demo/algerian-demo-story.ts");
+    const annual = read("src/lib/demo/algerian-demo-year.ts");
+    const clock = read("src/lib/demo/algerian-demo-clock.ts");
     const lifecycle = read("src/lib/demo/algerian-demo-lifecycle.ts");
 
     expect(demo).toContain("Fatima Zohra Benamar");
@@ -44,11 +46,22 @@ describe("Algerian Founder demo contract", () => {
     expect(demo).toContain("client.conversation.create");
     expect(demo).toContain("client.storefrontConfig.create");
 
+    expect(clock).toContain("ALGERIAN_DEMO_HISTORY_DAYS = 365");
+    expect(clock).toContain("SF_DEMO_REFERENCE_NOW");
+    expect(annual).toContain(
+      'ALGERIAN_DEMO_WORKSPACE_VERSION =\n  "algerian-cod-founder-v2-annual"',
+    );
+    expect(annual).toContain("ensureAlgerianDemoAnnualHistory");
+    expect(annual).toContain("reconcileCustomerHistory");
+    expect(annual).toContain("expensePlan(reference)");
+
     expect(story).toContain('const FLAGSHIP_TOTAL = 6_350');
     expect(story).toContain('provider: "yalidine"');
     expect(story).toContain('codRemittanceRef: "REM-YAL-DEMO-001"');
     expect(story).toContain('remittanceRef: "REM-YAL-DEMO-001"');
-    expect(story).toContain("daysBefore(new Date(), 6)");
+    expect(story).toContain("algerianDemoReferenceNow()");
+    expect(story).toContain("daysBefore(reference, 6)");
+    expect(story).toContain("ensureAlgerianDemoAnnualHistory(client, reference)");
     expect(story).toContain("createdAt: orderCreatedAt");
     expect(story).toContain(
       "await client.orderChange.deleteMany({ where: { orderId: FLAGSHIP_ORDER_ID } })",
@@ -57,6 +70,7 @@ describe("Algerian Founder demo contract", () => {
     expect(story).toContain("data: { createdAt: confirmedAt }");
     expect(story).toContain('status: "delivered"');
     expect(lifecycle).toContain("await finalizeAlgerianDemoStory(tx)");
+    expect(lifecycle).toContain("isAlgerianDemoAnnualHistoryComplete");
   });
 
   it("uses an authenticated atomic and recoverable lifecycle", () => {
@@ -124,10 +138,11 @@ describe("Algerian Founder demo contract", () => {
     expect(panel).toContain('onConfirm={() => mutate("DELETE")}');
     expect(panel).not.toContain("window.confirm");
     expect(panel).toContain("Fatima Zohra WhatsApp message");
-    expect(panel).toContain("رسالة واتساب من فاطمة الزهراء");
+    expect(panel).toContain("رسالة واتساب حديثة من فاطمة الزهراء");
+    expect(panel).toContain("365 يومًا حتى اليوم");
 
     expect(settings).toContain(
-      'type Group =\n  | "workspace"\n  | "operations"\n  | "connections"\n  | "intelligence"\n  | "access"\n  | "data"',
+      'export type SettingsWorkspaceGroup =\n  | "workspace"\n  | "operations"\n  | "connections"\n  | "intelligence"\n  | "access"\n  | "data"',
     );
     expect(settings).toContain(
       "GROUPS.filter((group) => groupVisible(group.id, access))",
