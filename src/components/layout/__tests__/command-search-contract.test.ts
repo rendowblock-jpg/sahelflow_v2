@@ -30,9 +30,12 @@ describe("universal command search contract", () => {
 
     expect(palette).toContain("rankUniversalSearchCandidates");
     expect(palette).toContain('data-universal-search="v2"');
-    expect(palette).toContain("bestMatches");
+    expect(palette).toContain("recordResults");
+    expect(palette).toContain("pageResults");
     expect(palette).toContain("quickAccess");
+    expect(palette).toContain("quickHint");
     expect(palette).toContain("KIND_COPY");
+    expect(palette).toContain('dir={locale === "ar" ? "rtl" : "ltr"}');
     expect(palette).not.toContain("{item.href}");
   });
 
@@ -152,10 +155,25 @@ describe("universal command search contract", () => {
   it("bounds live recent-message search independently from full contact lookup", () => {
     const server = source("../../../lib/search/universal-search-server.ts");
 
-    expect(server).toContain("CONVERSATION_SCAN_LIMIT = 160");
-    expect(server).toContain("RECENT_MESSAGES_PER_CONVERSATION = 8");
+    expect(server).toContain("CONVERSATION_SCAN_LIMIT = 64");
+    expect(server).toContain("RECENT_MESSAGES_PER_CONVERSATION = 4");
+    expect(server).toContain("RECENT_MESSAGE_QUERY_MIN_LENGTH = 3");
+    expect(server).toContain("shouldSearchRecentMessages(query)");
     expect(server).toContain("take: CONVERSATION_SCAN_LIMIT");
     expect(server).toContain("take: RECENT_MESSAGES_PER_CONVERSATION");
+  });
+
+  it("keeps the latency-sensitive search families parallel while coalescing ordinary typing", () => {
+    const server = source("../../../lib/search/universal-search-server.ts");
+    const palette = source("../../command-palette.tsx");
+
+    expect(palette).toContain("SEARCH_DEBOUNCE_MS = 160");
+    expect(palette).toContain("Page/workspace matches are local");
+    expect(server).toContain("] = await Promise.all([");
+    expect(server).toContain("technicalOrders");
+    expect(server).toContain("exactPhoneOrders");
+    expect(server).toContain("const linkedOrders =");
+    expect(server).toContain("customersById.size > 0");
   });
 
   it("gates every protected operational deep link on its real detail authority", () => {
@@ -167,9 +185,11 @@ describe("universal command search contract", () => {
       "canDeliveries && canOpenProtectedOperationalDetail",
     );
     expect(server).toContain("canOrders && canOpenProtectedOperationalDetail");
+    expect(server).toContain("searchProjectedOrders(shopId, query, FAMILY_MATCH_BUDGET)");
     expect(server).toContain(
-      "const orders = canOrders && canOpenProtectedOperationalDetail",
+      "canOrders && canOpenProtectedOperationalDetail && canReadContact",
     );
+    expect(server).toContain("exactPhoneOrderCandidates(query, actorContext)");
   });
 
   it("uses the shared technical-value boundary for RTL-safe result identifiers", () => {
@@ -181,15 +201,23 @@ describe("universal command search contract", () => {
     expect(palette).toContain("hasTechnicalSublabel");
   });
 
-  it("prewarms only permitted projections after the authenticated shell is usable", () => {
+  it("prewarms only permitted projections through one shared browser promise", () => {
     const route = source("../../../app/api/search/route.ts");
     const layout = source("../dashboard-layout.tsx");
+    const palette = source("../../command-palette.tsx");
+    const client = source("../../../lib/search/universal-search-client.ts");
     const server = source("../../../lib/search/universal-search-server.ts");
 
     expect(route).toContain("warmUniversalSearchRecords");
     expect(route).toContain("POST /api/search");
-    expect(layout).toContain('fetch("/api/search"');
-    expect(layout).toContain('method: "POST"');
+    expect(layout).toContain("warmUniversalSearchClient");
+    expect(palette).toContain("warmUniversalSearchClient");
+    expect(layout).not.toContain('fetch("/api/search"');
+    expect(palette).not.toContain('method: "POST"');
+    expect(client).toContain("let warmupPromise");
+    expect(client).toContain('fetch("/api/search"');
+    expect(client).toContain('method: "POST"');
+    expect(client).toContain("warmupPromise = null");
     expect(server).toContain("customer: canCustomers && canReadContact");
     expect(server).toContain("conversation: canConversations && canReadContact");
     expect(server).toContain("product: canProducts");

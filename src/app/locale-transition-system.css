@@ -1,14 +1,14 @@
 /*
  * Locale reconciliation presentation.
  *
- * Client-owned shell geometry and copy switch immediately. Server-rendered route
- * fragments can arrive later through router.refresh(), so keep the already-correct
- * shell visible while temporarily occluding only the stale work surface. The
- * ServerLocaleProvider removes data-locale-transition in a layout effect once the
- * requested server tree is committed, before the reconciled route paints.
+ * Client-owned shell geometry/copy switch immediately. Server-rendered route
+ * fragments reconcile under the new locale through router.refresh(). Never show
+ * the old-language work surface under the new shell; present a short neutral
+ * workspace transition instead of a blank flash.
  */
 html[data-locale-transition="pending"] #main-content {
   position: relative;
+  isolation: isolate;
 }
 
 html[data-locale-transition="pending"] #main-content > * {
@@ -19,7 +19,33 @@ html[data-locale-transition="pending"] #main-content > * {
 html[data-locale-transition="pending"] #main-content::after {
   content: "";
   position: absolute;
+  z-index: 2;
   inset: 0;
   pointer-events: none;
-  background: var(--background);
+  background:
+    linear-gradient(
+      105deg,
+      transparent 0%,
+      transparent 36%,
+      color-mix(in srgb, var(--foreground) 4%, transparent) 48%,
+      transparent 60%,
+      transparent 100%
+    ) 100% 0 / 220% 100% no-repeat,
+    var(--background);
+  animation: sf-locale-reconcile 900ms ease-in-out infinite;
+}
+
+@keyframes sf-locale-reconcile {
+  from {
+    background-position: 100% 0, 0 0;
+  }
+  to {
+    background-position: -120% 0, 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-locale-transition="pending"] #main-content::after {
+    animation: none;
+  }
 }

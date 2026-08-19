@@ -6,6 +6,7 @@ import { AlertTriangle, RefreshCw, RotateCw } from "lucide-react";
 import { StateSurface } from "@/components/shared/state-surface";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/use-i18n";
+import { DESKTOP_RUNTIME_RECOVERED_EVENT } from "@/lib/runtime/desktop-recovery";
 
 interface PageErrorProps {
   error: Error & { digest?: string };
@@ -46,6 +47,23 @@ export function PageError({ error, reset, title, hideReload }: PageErrorProps) {
       console.error("[page-error] unexpected error:", error);
     }
   }, [error, expected]);
+
+  // A page that failed only because Windows suspended the bundled local runtime
+  // should heal as soon as the desktop resume controller has re-established app
+  // + database health. Genuine errors remain visible because this event is only
+  // emitted after an actual long resume gap and a successful local health probe.
+  useEffect(() => {
+    const retryAfterDesktopResume = () => reset();
+    window.addEventListener(
+      DESKTOP_RUNTIME_RECOVERED_EVENT,
+      retryAfterDesktopResume,
+    );
+    return () =>
+      window.removeEventListener(
+        DESKTOP_RUNTIME_RECOVERED_EVENT,
+        retryAfterDesktopResume,
+      );
+  }, [reset]);
 
   const resolvedTitle =
     title ?? (expected ? t("error.title") : t("error.unexpectedTitle"));

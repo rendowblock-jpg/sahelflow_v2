@@ -7,6 +7,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useI18n } from "@/hooks/use-i18n";
 import { useUiDensity } from "@/hooks/use-ui-density";
+import { warmUniversalSearchClient } from "@/lib/search/universal-search-client";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
@@ -103,21 +104,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   useEffect(() => {
     if (storefrontFocusMode) return;
-    const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      void fetch("/api/search", {
-        method: "POST",
-        cache: "no-store",
-        signal: controller.signal,
-      }).catch(() => {
+      void warmUniversalSearchClient().catch(() => {
         // Search remains lazy and self-healing if background projection warmup
         // fails. Never disturb the seller's current work surface for cache work.
       });
     }, 900);
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
+    return () => window.clearTimeout(timer);
   }, [storefrontFocusMode]);
 
   useEffect(() => {
