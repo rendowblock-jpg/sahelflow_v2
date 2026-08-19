@@ -15,7 +15,7 @@ This directory is the active documentation authority for SahelFlow. `documentati
 
 1. `product/PRODUCT.md` — product promise, seller jobs, commercial boundaries and entitlements.
 2. `product/EXPERIENCE.md` — Class-AAA experience, accessibility, Arabic/RTL and interaction quality.
-3. `product/DECISIONS.md` — consolidated Founder decisions through FD-033. Later exact release/execution decisions remain durable in their protected PR/release-request authority and are summarized by Current State/Roadmap; do not infer a new numbered decision from prose.
+3. `product/DECISIONS.md` — consolidated Founder decisions through FD-033. Later exact release/execution decisions remain durable in their protected PR/release-request authority and are summarized below; do not infer a new numbered decision from prose.
 4. `system/ARCHITECTURE.md` — canonical authority, data, cloud, native, security and recovery invariants.
 5. `system/CURRENT_STATE.md` — exact merged/released/installed truth and current non-claims.
 6. `system/ROADMAP.md` — remaining dependency/completion order.
@@ -97,6 +97,21 @@ These markers are intentionally preserved so the current documents remain connec
 - **Internal.16 / Wave 4 continuity:** PR #250, PR #251 and branch `agent/internal-16-wave-4` remain historical Storefront/implementation evidence; they are not the next branch to resume.
 - Historical 2026-08-16 issue statement retained verbatim for continuity: **Issues #221, #226 and #230 remain open**. Current truth supersedes that sentence: #226 is now closed/completed; #221 and #230 remain open.
 - The historical Phase 6 label remains **Phase 6 — Arabic, RTL and accessibility parity** and continues to own the installed Founder RTL/accessibility acceptance boundary even though its source implementation has advanced through Internal.22.
+
+## Founder decision continuity after FD-033
+
+`product/DECISIONS.md` remains the consolidated register through FD-033. The exact later numbered decisions are preserved in their durable PR/release authority and summarized here so the active ten-file documentation set does not lose the release/acceptance sequence:
+
+- **FD-034 — Internal.16 Founder-offline checkpoint.** Exact Internal.16 / MSI 1.0.0.16, version-bound Founder/internal-lab authority; customer-online/Beta/Stable remained separate.
+- **FD-035 — bounded Internal.17 source-correction authority.** Founder-installed Internal.16 rejection authorized one bounded correction of the reconfirmed RTL/theme/motion/charts/Inbox/AI experience classes; it was not release-signing authority.
+- **FD-036 — Internal.17 Founder-offline checkpoint.** Exact Internal.17 / MSI 1.0.0.17, Founder-offline-only; later versions required newer authority.
+- **FD-037 — Internal.18 Founder visual-correction checkpoint.** Exact Internal.18 / MSI 1.0.0.18 with the current Arabic/RTL/theme/motion/charts/Inbox/AI/Storefront correction line; Founder judgment remained separate from automation.
+- **FD-038 — Internal.19 Founder convergence checkpoint.** Exact Internal.19 / MSI 1.0.0.19; protected product convergence and version-bound Founder-offline release authority.
+- **FD-039 — Internal.20 AAA Founder checkpoint.** Exact Internal.20 / MSI 1.0.0.20. It was valid signed release authority but was later Founder-rejected for the intended product experience; that verdict does not erase historical technical evidence.
+- **FD-040 — Internal.21 Founder AAA experience checkpoint.** Exact Internal.21 / MSI 1.0.0.21, Founder-offline-only, built from the certified Inbox/AI/Settings reconstruction line. Founder-installed review remained separate and exposed bounded follow-up analytics/Inbox/Search work.
+- **FD-041 — Internal.22 Founder AAA experience checkpoint.** Exact Internal.22 / MSI 1.0.0.22, Founder-offline-only, certified product head `fa77ae32dc680f0d2854d10363dcaf06ba4e5229`, signed/published from protected source `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348` via run `32205843573`. Founder-installed acceptance, real-phone WhatsApp evidence, customer-online, Beta and Stable remain separate.
+
+No FD-042 or Internal.23 is implied by documentation reconciliation or the passage of time.
 
 ## Historical context that remains binding
 
