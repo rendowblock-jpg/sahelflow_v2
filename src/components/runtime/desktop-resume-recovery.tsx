@@ -8,6 +8,7 @@ import {
   DESKTOP_RUNTIME_RECOVERED_EVENT,
   isDesktopResumeGap,
   readRequestedLocaleCookie,
+  waitForDesktopRuntimeRecovery,
 } from "@/lib/runtime/desktop-recovery";
 import { useUIStore } from "@/stores/ui-store";
 
@@ -20,8 +21,12 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-async function localRuntimeHealthy(): Promise<boolean> {
+async function localRuntimeHealthy(
+  isCancelled: () => boolean,
+): Promise<boolean> {
   for (let attempt = 0; attempt < HEALTH_ATTEMPTS; attempt += 1) {
+    if (isCancelled()) return false;
+
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
     try {
@@ -32,11 +37,14 @@ async function localRuntimeHealthy(): Promise<boolean> {
       if (response.ok) return true;
     } catch {
       // The bundled Next process/database can need a short moment after Windows
-      // resumes. The retry budget below is deliberately local and bounded.
+      // resumes. Each probe batch is bounded; the outer recovery loop keeps
+      // trying with a capped backoff until health returns or this controller is
+      // disposed, so a slow resume never falls back to manual Refresh.
     } finally {
       window.clearTimeout(timeout);
     }
 
+    if (isCancelled()) return false;
     if (attempt < HEALTH_ATTEMPTS - 1) {
       await delay(HEALTH_RETRY_BASE_MS * (attempt + 1));
     }
@@ -49,10 +57,10 @@ async function localRuntimeHealthy(): Promise<boolean> {
  *
  * Browser focus changes are not enough to trigger recovery; the wall-clock gap
  * must exceed the resume threshold (or the page must return from bfcache). On a
- * genuine resume we restore the cookie-backed locale/document direction, wait
- * for the bundled local runtime + SQLite authority to answer its health probe,
- * then refresh the current RSC tree and ask any visible page error boundary to
- * retry. The seller never has to discover that manual Refresh is the repair.
+ * genuine resume we restore the cookie-backed locale/document direction, keep
+ * probing the bundled local runtime + SQLite authority until it is healthy, then
+ * refresh the current RSC tree and ask any visible page error boundary to retry.
+ * The seller never has to discover that manual Refresh is the repair.
  */
 export function DesktopResumeRecovery() {
   const router = useRouter();
@@ -74,7 +82,21 @@ export function DesktopResumeRecovery() {
           useUIStore.getState().setLocale(requestedLocale);
         }
 
-        if (!(await localRuntimeHealthy()) || disposed) return;
+        const healthy = await waitForDesktopRuntimeRecovery({
+          probe: () => localRuntimeHealthy(() => disposed),
+          wait: delay,
+          isCancelled: () => disposed,
+        });
+        if (!healthy || disposed) return;
+
+        // Re-read the durable locale immediately before the server-tree refresh.
+        // If the seller changed language while the runtime was recovering, the
+        // visible document and the refreshed RSC request converge on the newest
+        // cookie instead of the locale captured at resume time.
+        const latestLocale = readRequestedLocaleCookie();
+        if (latestLocale) {
+          useUIStore.getState().setLocale(latestLocale);
+        }
 
         router.refresh();
         window.dispatchEvent(new Event(DESKTOP_RUNTIME_RECOVERED_EVENT));
