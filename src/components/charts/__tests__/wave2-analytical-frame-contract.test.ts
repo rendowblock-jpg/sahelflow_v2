@@ -46,9 +46,10 @@ describe("Class-AAA analytical frame contract", () => {
     expect(timeSeries).toContain("resolveFormatter(current.format, locale)");
     expect(composed).toContain("const { t, locale, dir } = useI18n()");
     expect(composed).toContain("resolveFormatter(current.format, locale)");
-    expect(dual).toContain("new Intl.NumberFormat(");
-    expect(dual).toContain('locale === "ar" ? "ar-DZ"');
-    expect(dual).toContain("formatDZD(Number(value ?? 0), locale)");
+    expect(dual).toContain("formatCompactNumber");
+    expect(dual).toContain("isolateLtr(formatCompactNumber(value, locale))");
+    expect(dual).toContain("isolateLtr(formatDZD(value, locale))");
+    expect(dual).not.toContain("new Intl.NumberFormat(");
   });
 
   it("keeps quantitative and chronological coordinates stable when Arabic is active", () => {
@@ -65,8 +66,10 @@ describe("Class-AAA analytical frame contract", () => {
 
     const timeSeries = source("../time-series-chart.tsx");
     const composed = source("../composed-trend-chart.tsx");
+    const dual = source("../dual-bar-chart.tsx");
     expect(timeSeries).toContain("formatter: (value: string) => isolate(value)");
     expect(composed).toContain("formatter: (value: string) => isolate(value)");
+    expect(dual).toContain("formatter: (value: number) => compactValue(value)");
   });
 
   it("removes the rejected circular and generic ranking chart primitives", () => {
