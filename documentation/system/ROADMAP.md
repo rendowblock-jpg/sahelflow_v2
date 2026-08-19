@@ -194,6 +194,8 @@ A new Internal version exists only after the explicit reviewed release-authority
 
 ## Audit/review/merge discipline
 
+The durable workflow retains **complete reconnaissance** for the bounded package before material implementation. For this already-scoped release-authority package, that means verifying the exact protected product/release/version surfaces and consequences without restarting generic product reconnaissance.
+
 For the upcoming release-authority package:
 
 1. branch from current verified protected `main`;
