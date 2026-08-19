@@ -84,18 +84,18 @@ type Copy = {
 const COPY: Record<"ar" | "fr" | "en", Copy> = {
   ar: {
     eyebrow: "بيانات تجريبية احترافية",
-    title: "متجر جزائري واقعي للتجربة",
+    title: "سنة كاملة من متجر جزائري واقعي",
     description:
-      "حمّل مساحة تجريبية غنية تعرض المنتجات، الزبائن، الطلبات، التوصيل، تحصيل COD، المرتجعات، المصاريف ومحادثات واتساب بالعربية والفرنسية.",
+      "حمّل مساحة تجريبية غنية تمتد 365 يومًا حتى اليوم، مع منتجات وزبائن متكررين وطلبات وتوصيل وتحصيل COD ومرتجعات ومصاريف ومحادثات واتساب واقعية السياق بالعربية والفرنسية.",
     isolated: "لا يتم إرسال رسائل أو طلبات حقيقية إلى شركات التوصيل.",
     emptyOnly: "يمكن إضافة البيانات فقط عندما يكون المتجر الحالي فارغًا.",
-    loaded: "البيانات التجريبية محمّلة",
+    loaded: "البيانات التجريبية السنوية محمّلة",
     available: "جاهزة للتحميل",
     unavailable: "المتجر يحتوي على بيانات حقيقية",
     unavailableDescription:
       "لن يخلط SahelFlow البيانات التجريبية مع سجلات البائع. أنشئ متجرًا فارغًا أو استخدم متجرًا بدون عمليات.",
-    load: "تحميل المتجر التجريبي",
-    loading: "جارٍ إنشاء البيانات...",
+    load: "تحميل المتجر التجريبي السنوي",
+    loading: "جارٍ إنشاء سنة من البيانات...",
     remove: "حذف البيانات التجريبية",
     removing: "جارٍ الحذف...",
     openDashboard: "فتح لوحة التحكم",
@@ -109,26 +109,26 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     deliveries: "شحنة",
     conversations: "محادثة",
     expenses: "مصروف",
-    journeyTitle: "القصة الرئيسية",
+    journeyTitle: "القصة الرئيسية والسياق السنوي",
     journey:
-      "رسالة واتساب من فاطمة الزهراء ← استخراج ومراجعة الطلب ← التأكيد ← الشحن مع Yalidine ← التسليم ← تحصيل وتحويل COD مع سجل واضح.",
+      "سجل أعمال يمتد سنة كاملة مع مواسم نشاط مختلفة ← رسالة واتساب حديثة من فاطمة الزهراء ← استخراج ومراجعة الطلب ← التأكيد ← الشحن مع Yalidine ← التسليم ← تحصيل وتحويل COD مع سجل واضح.",
     note:
       "الأسماء والأرقام والطلبات خيالية ومخصصة للعرض. الأتمتة تعمل في وضع المحاكاة ولا تنفذ تأثيرات خارجية.",
   },
   fr: {
     eyebrow: "Données de démonstration professionnelles",
-    title: "Une boutique algérienne réaliste à explorer",
+    title: "Une année complète d'activité COD algérienne",
     description:
-      "Chargez un espace riche avec produits, clients, commandes, livraison, collecte COD, remises, retours, dépenses et conversations WhatsApp en arabe et en français.",
+      "Chargez 365 jours d'activité jusqu'à aujourd'hui : produits, clients récurrents, commandes, livraison, collecte et remise COD, retours, dépenses et conversations WhatsApp en arabe et en français.",
     isolated: "Aucun message ni ordre réel n'est envoyé à un transporteur.",
     emptyOnly: "Le jeu de données ne peut être ajouté qu'à une boutique vide.",
-    loaded: "Démonstration chargée",
+    loaded: "Démonstration annuelle chargée",
     available: "Prête à charger",
     unavailable: "Cette boutique contient déjà des données",
     unavailableDescription:
       "SahelFlow ne mélange jamais la démonstration avec les dossiers du vendeur. Utilisez une boutique vide pour l'évaluation.",
-    load: "Charger la boutique de démonstration",
-    loading: "Création des données...",
+    load: "Charger la démonstration annuelle",
+    loading: "Création d'une année de données...",
     remove: "Supprimer la démonstration",
     removing: "Suppression...",
     openDashboard: "Ouvrir le tableau de bord",
@@ -142,26 +142,26 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     deliveries: "livraisons",
     conversations: "conversations",
     expenses: "dépenses",
-    journeyTitle: "Scénario phare",
+    journeyTitle: "Scénario phare dans un historique annuel",
     journey:
-      "Message WhatsApp de Fatima Zohra → extraction et revue → confirmation → expédition Yalidine → livraison → collecte et remise COD avec historique explicite.",
+      "Douze mois d'activité avec des rythmes saisonniers → message WhatsApp récent de Fatima Zohra → extraction et revue → confirmation → expédition Yalidine → livraison → collecte et remise COD avec historique explicite.",
     note:
       "Les identités, téléphones et opérations sont fictifs. Les automatisations sont en simulation et n'exécutent aucun effet externe.",
   },
   en: {
     eyebrow: "Professional sample data",
-    title: "A realistic Algerian store to explore",
+    title: "A full year of realistic Algerian COD activity",
     description:
-      "Load a rich workspace with products, customers, orders, delivery, COD collection and remittance, returns, expenses, and Arabic/French WhatsApp conversations.",
+      "Load a rolling 365-day workspace through today with products, repeat customers, orders, delivery, COD collection and remittance, returns, expenses, and Arabic/French WhatsApp conversations.",
     isolated: "No real message, shipment, or provider action is sent.",
     emptyOnly: "The dataset can only be added to an empty shop.",
-    loaded: "Demo data loaded",
+    loaded: "Annual demo data loaded",
     available: "Ready to load",
     unavailable: "This shop already contains business data",
     unavailableDescription:
       "SahelFlow never mixes sample records with seller records. Use an empty shop for evaluation.",
-    load: "Load Algerian demo store",
-    loading: "Creating sample data...",
+    load: "Load annual Algerian demo store",
+    loading: "Creating one year of sample data...",
     remove: "Remove demo data",
     removing: "Removing...",
     openDashboard: "Open dashboard",
@@ -175,9 +175,9 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     deliveries: "deliveries",
     conversations: "conversations",
     expenses: "expenses",
-    journeyTitle: "Flagship story",
+    journeyTitle: "Flagship story inside annual history",
     journey:
-      "Fatima Zohra WhatsApp message → extraction and review → confirmation → Yalidine shipment → delivery → COD collection and remittance with a clear timeline.",
+      "Twelve months of varied operating history → recent Fatima Zohra WhatsApp message → extraction and review → confirmation → Yalidine shipment → delivery → COD collection and remittance with a clear timeline.",
     note:
       "Names, phone numbers, and operations are fictional. Automations run in dry-run mode and perform no external effects.",
   },
