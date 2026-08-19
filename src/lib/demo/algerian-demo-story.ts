@@ -2,6 +2,7 @@ import "server-only";
 
 import { db, type DbClient } from "@/lib/db";
 import { algerianDemoReferenceNow } from "@/lib/demo/algerian-demo-clock";
+import { normalizeAlgerianDemoRecentClock } from "@/lib/demo/algerian-demo-clock-normalizer";
 import { ensureAlgerianDemoAnnualHistory } from "@/lib/demo/algerian-demo-year";
 
 const FLAGSHIP_ORDER_ID = "demo-order-001";
@@ -33,6 +34,7 @@ export async function finalizeAlgerianDemoStory(
   client: DbClient = db,
 ): Promise<void> {
   const reference = algerianDemoReferenceNow();
+  await normalizeAlgerianDemoRecentClock(client, reference);
   await ensureAlgerianDemoAnnualHistory(client, reference);
 
   const order = await client.order.findUnique({
