@@ -3,7 +3,7 @@
 > **Status:** Active operating contract
 > **Last consolidated:** 2026-08-19
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
-> **Execution mode:** one active application writer; exact-source work; bounded root-cause packages; consequence-selected evidence; protected-main releases only
+> **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
 > **Current checkpoint:** Internal.22 / FD-041 is signed and published; Founder-installed acceptance remains separate
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
@@ -57,9 +57,9 @@ Operational rules:
 - issue bodies can retain evidence/work queues but do not replace active documentation authority;
 - source, signed artifact, hosted CI install, Founder install, live-provider evidence, representative beta and Stable are distinct truth levels.
 
-## 3. Impact mapping before implementation
+## 3. Complete phase/package audit
 
-Before material code change, inspect every applicable:
+Before a major phase/package or a materially uncertain bounded repair, perform the smallest **Complete phase/package audit** that makes the change safe. Inspect every applicable:
 
 - caller and route;
 - component and shared primitive;
@@ -75,6 +75,8 @@ Before material code change, inspect every applicable:
 - performance/resource hot path;
 - direct and contract tests;
 - release/version/licensing consequence.
+
+For a phase or broad package, freeze one **Phase Problem Register** before implementation so duplicate manifestations are grouped by root cause and P0/P1 are visible. For a small demonstrated defect, the reproduction plus bounded impacted-sibling inventory can serve as the register; do not create bureaucracy for its own sake.
 
 Group sibling manifestations under one root cause. Do not make the Founder enumerate repeated instances of a proven systemic class.
 
@@ -120,7 +122,11 @@ Run after a coherent completed task or repair batch. Applicable checks include:
 
 The gate must surface the complete actionable failure set. Do not intentionally hide later failures behind a first-failure-only loop when the repository’s normal diagnostics can report them safely.
 
-### Level 2 — Integrated Checkpoint
+### Frozen review and batch repair
+
+After a coherent implementation package, freeze one exact head and perform the adversarial review on that head. Batch all related P0/P1 fixes that share the same root cause and evidence consequence, then rerun the selected gate set once on the repaired frozen head. Do not bounce through a long chain of tiny review-fix-review commits when one coherent batch can close the same dependency safely.
+
+### Level 2 — Phase Checkpoint
 
 Use when a subsystem or broad product boundary is declared source-complete or a later layer depends on the integrated result.
 
@@ -142,7 +148,7 @@ Typical requirements:
 
 A subsystem does not close because commits merged or test count is high. The defined seller/Founder outcome and all applicable P0/P1 must be proven.
 
-### Level 3 — Installed/release-grade checkpoint
+### Level 3 — Major Full Checkpoint
 
 Use for coherent signed Internal candidates and immediately at a boundary where failure can invalidate durable installed authority, including:
 
@@ -176,9 +182,11 @@ Applicable proof includes:
 
 A signed release is built only after exact protected-main authority exists. Branch-only artifacts are evidence candidates, never durable release sources.
 
-## 7. Experience / Arabic / RTL proof
+## 7. Whole-product AAA frontend program
 
-For material UI work, prove the actual changed states rather than only component existence:
+The **Whole-product AAA frontend program** is the historical program that produced the shared semantic RTL foundation and the later Inbox/AI/Settings/analytics/Inbox-V3/Search reconstruction line. That broad program is not automatically reopened after Internal.22.
+
+For any material UI repair now, prove the actual changed states rather than only component existence:
 
 - happy, loading, empty, filtered-empty, permission, offline/degraded, stale, pending, conflict, error, retry and recovery states as applicable;
 - AR/FR/EN semantic parity;
