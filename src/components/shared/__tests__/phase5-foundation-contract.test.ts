@@ -146,7 +146,8 @@ describe("Phase 5 experience foundation source contract", () => {
     const sidebar = read("src/components/layout/sidebar.tsx");
     const navigation = read("src/components/layout/navigation.ts");
 
-    expect(sidebar).toContain("sellerSidebarNavigationItems.map((item) => (");
+    expect(sidebar).toContain("sellerSidebarNavigationItems.map((item) => {");
+    expect(sidebar).toContain("const selected = activeHref === item.href");
     expect(sidebar).toContain("nested={item.sidebarNested}");
     expect(sidebar).toContain('data-seller-navigation="fixed-priority"');
     expect(sidebar).toContain("group relative flex min-h-(--control-height) items-center");
