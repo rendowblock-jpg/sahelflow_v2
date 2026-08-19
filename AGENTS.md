@@ -31,7 +31,7 @@ The Founder-owned Windows installation is evidence-bearing state. Never reset/de
 
 No lower layer silently weakens a higher one.
 
-## Current frontier
+## Verified product frontier
 
 At the 2026-08-19 reconciliation:
 
@@ -78,18 +78,24 @@ Default next action is installed evidence, not a new application branch:
 1. resolve live protected `main` and PR state;
 2. verify the exact version installed on the Founder Windows machine;
 3. install/update exact signed Internal.22 in place if required, preserving AppData/registry/keys/shop databases;
-4. perform Founder whole-product visual/interaction acceptance under **#221**;
+4. perform Founder whole-product visual/interaction acceptance under **issue #221**;
 5. prove real-phone WhatsApp QR/link/reopen/outbound/inbound behavior retained from #282;
 6. if accepted, record exact evidence; if rejected, open one bounded repair branch for the demonstrated defect/root cause;
 7. keep **#230** separate until customer-online trial ingress/failover/Algerian-network evidence is real.
 
 Issue state at reconciliation:
 
-- **#221 open** — Founder-installed human acceptance;
+- **issue #221 open** — Founder-installed human acceptance;
 - **#226 closed/completed** — keep its performance budgets as regression criteria, not as an open blocker;
 - **#230 open P1** — customer-online trial/network blocker.
 
 Do not create Internal.23 merely because Internal.22 is published. A later signed checkpoint requires a coherent changed outcome and explicit authority.
+
+## Historical semantic continuity
+
+- PR #220 remains the historical Phase 5 application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`; later product heads supersede it as current source without erasing its evidence.
+- Phase 6 — Arabic, RTL and accessibility parity remains the active product-phase label until retained installed/human acceptance is reconciled.
+- When a concrete repair exists, run the **selected Level 1/2/3 gates** required by its consequences; do not force full release proof onto every edit and do not skip a selected gate.
 
 ## Protected boundaries
 
