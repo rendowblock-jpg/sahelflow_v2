@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Locale } from "@/lib/i18n";
 import {
-  pathMatchesNavigation,
+  navigationItemForPathname,
   sellerSidebarNavigationItems,
   utilityNavigationItems,
   type NavigationItem,
@@ -119,6 +119,7 @@ export function Sidebar({
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const isRtl = serverDir === "rtl";
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
+  const activeHref = navigationItemForPathname(pathname)?.href ?? null;
 
   return (
     <aside
@@ -160,26 +161,29 @@ export function Sidebar({
             aria-label={t("nav.sidebarLabel")}
             data-seller-navigation="fixed-priority"
           >
-            {sellerSidebarNavigationItems.map((item) => (
-              <div
-                key={item.href}
-                className={cn(
-                  item.sidebarNested &&
-                    !collapsed &&
-                    "ms-4 border-s border-sidebar-border ps-2",
-                )}
-              >
-                <SidebarLink
-                  item={item}
-                  label={t(item.labelKey)}
-                  selected={pathMatchesNavigation(pathname, item.href)}
-                  current={pathname === item.href}
-                  collapsed={collapsed}
-                  isRtl={isRtl}
-                  nested={item.sidebarNested}
-                />
-              </div>
-            ))}
+            {sellerSidebarNavigationItems.map((item) => {
+              const selected = activeHref === item.href;
+              return (
+                <div
+                  key={item.href}
+                  className={cn(
+                    item.sidebarNested &&
+                      !collapsed &&
+                      "ms-4 border-s border-sidebar-border ps-2",
+                  )}
+                >
+                  <SidebarLink
+                    item={item}
+                    label={t(item.labelKey)}
+                    selected={selected}
+                    current={selected}
+                    collapsed={collapsed}
+                    isRtl={isRtl}
+                    nested={item.sidebarNested}
+                  />
+                </div>
+              );
+            })}
           </nav>
         </TooltipProvider>
       </ScrollArea>
@@ -187,17 +191,20 @@ export function Sidebar({
       <div className="shrink-0 border-t border-sidebar-border p-2.5">
         <TooltipProvider delayDuration={0}>
           <div className="space-y-1">
-            {utilityNavigationItems.map((item) => (
-              <SidebarLink
-                key={item.href}
-                item={item}
-                label={t(item.labelKey)}
-                selected={pathMatchesNavigation(pathname, item.href)}
-                current={pathname === item.href}
-                collapsed={collapsed}
-                isRtl={isRtl}
-              />
-            ))}
+            {utilityNavigationItems.map((item) => {
+              const selected = activeHref === item.href;
+              return (
+                <SidebarLink
+                  key={item.href}
+                  item={item}
+                  label={t(item.labelKey)}
+                  selected={selected}
+                  current={selected}
+                  collapsed={collapsed}
+                  isRtl={isRtl}
+                />
+              );
+            })}
           </div>
         </TooltipProvider>
 
