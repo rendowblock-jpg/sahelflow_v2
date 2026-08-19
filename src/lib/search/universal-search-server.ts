@@ -27,8 +27,9 @@ import {
 
 const MAX_RESULTS = 24;
 const FAMILY_MATCH_BUDGET = 48;
-const CONVERSATION_SCAN_LIMIT = 160;
-const RECENT_MESSAGES_PER_CONVERSATION = 8;
+const CONVERSATION_SCAN_LIMIT = 64;
+const RECENT_MESSAGES_PER_CONVERSATION = 4;
+const RECENT_MESSAGE_QUERY_MIN_LENGTH = 3;
 
 type BlindIndexClient = Parameters<typeof deriveExistingShopBlindIndex>[0];
 
@@ -96,9 +97,10 @@ async function safeFamily<T>(
 async function recentConversationMessageCandidates(
   query: string,
 ): Promise<Array<RecordCandidate & { score: number }>> {
-  // Message-body search remains a bounded live projection. Contact name/phone
-  // lookup is handled by the full revision-bound conversation index instead of
-  // discarding older conversations before matching.
+  // Message-body matching is deliberately a small live tail. Contact name/phone
+  // lookup is handled by the revision-bound conversation projection. Keeping the
+  // live tail tight avoids decrypting a large inbox on every keystroke while
+  // retaining useful recent-message discovery.
   const rows: RecentConversationSearchRow[] = await db.conversation.findMany({
     select: {
       id: true,
@@ -168,6 +170,12 @@ function isLikelyPhoneQuery(query: string): boolean {
   return compact.length >= 6 && /^\d+$/u.test(compact);
 }
 
+function shouldSearchRecentMessages(query: string): boolean {
+  if (query.length < RECENT_MESSAGE_QUERY_MIN_LENGTH) return false;
+  const compact = compactSearchText(query);
+  return compact.length >= RECENT_MESSAGE_QUERY_MIN_LENGTH && !/^\d+$/u.test(compact);
+}
+
 function decorateOrderCandidates(
   rows: readonly RecordCandidate[],
   customersById: ReadonlyMap<string, RecordCandidate>,
@@ -186,6 +194,49 @@ function decorateOrderCandidates(
       ],
     };
   });
+}
+
+async function exactPhoneOrderCandidates(
+  query: string,
+  actorContext: TrustedActorContext,
+): Promise<RecordCandidate[]> {
+  if (!isLikelyPhoneQuery(query)) return [];
+
+  const phoneBlindIndex = await deriveExistingShopBlindIndex(
+    db as unknown as BlindIndexClient,
+    compactSearchText(query),
+    { recordType: "Order", field: "phone" },
+    { shopContext: actorContext.shop },
+  );
+  if (!phoneBlindIndex) return [];
+
+  const rows = await db.order.findMany({
+    where: { deletedAt: null, phoneBlindIndex },
+    select: {
+      id: true,
+      orderNumber: true,
+      wilaya: true,
+      customerId: true,
+      updatedAt: true,
+    },
+    orderBy: { updatedAt: "desc" },
+    take: FAMILY_MATCH_BUDGET,
+  });
+
+  return rows.map(
+    (order): RecordCandidate => ({
+      id: `order:${order.id}`,
+      entityId: order.id,
+      customerId: order.customerId,
+      kind: "order",
+      label: order.orderNumber,
+      sublabel: order.wilaya,
+      href: `/orders/${order.id}`,
+      keywords: [query],
+      updatedAt: order.updatedAt,
+      rankBoost: 12,
+    }),
+  );
 }
 
 export async function warmUniversalSearchRecords(): Promise<void> {
@@ -239,6 +290,9 @@ export async function searchUniversalRecords(
     canReadContact && canReadFinancials;
   const degraded = new Set<RecordKind>();
 
+  // Every query-independent family starts together. The previous implementation
+  // waited for all non-order families and only then began order search, adding an
+  // avoidable serial leg to the critical path.
   const [
     customers,
     products,
@@ -246,6 +300,8 @@ export async function searchUniversalRecords(
     recentConversations,
     deliveries,
     returns,
+    technicalOrders,
+    exactPhoneOrders,
   ] = await Promise.all([
     canCustomers && canReadContact
       ? safeFamily("customer", [], degraded, () =>
@@ -262,7 +318,7 @@ export async function searchUniversalRecords(
           searchProjectedConversations(shopId, query, FAMILY_MATCH_BUDGET),
         )
       : Promise.resolve([]),
-    canConversations
+    canConversations && shouldSearchRecentMessages(query)
       ? safeFamily("conversation", [], degraded, () =>
           recentConversationMessageCandidates(query),
         )
@@ -275,6 +331,16 @@ export async function searchUniversalRecords(
     canOrders && canOpenProtectedOperationalDetail
       ? safeFamily("return", [], degraded, () =>
           searchProjectedReturns(shopId, query, FAMILY_MATCH_BUDGET),
+        )
+      : Promise.resolve([]),
+    canOrders && canOpenProtectedOperationalDetail
+      ? safeFamily("order", [], degraded, () =>
+          searchProjectedOrders(shopId, query, FAMILY_MATCH_BUDGET),
+        )
+      : Promise.resolve([]),
+    canOrders && canOpenProtectedOperationalDetail && canReadContact
+      ? safeFamily("order", [], degraded, () =>
+          exactPhoneOrderCandidates(query, actorContext),
         )
       : Promise.resolve([]),
   ]);
@@ -292,90 +358,53 @@ export async function searchUniversalRecords(
     recentConversations as RecordCandidate[],
   );
 
-  const orders = canOrders && canOpenProtectedOperationalDetail
-    ? await safeFamily("order", [], degraded, async () => {
-        const technical = (await searchProjectedOrders(
-          shopId,
-          query,
-          FAMILY_MATCH_BUDGET,
-        )) as RecordCandidate[];
+  // Customer-linked orders are the only truly dependent leg: the customer ids
+  // must be known first. Skip the query entirely when customer search produced no
+  // ids, and preserve technical/exact-phone order results independently.
+  const linkedOrders =
+    canOrders &&
+    canOpenProtectedOperationalDetail &&
+    canReadContact &&
+    customersById.size > 0
+      ? await safeFamily("order", [], degraded, () =>
+          projectedOrdersForCustomers(shopId, [...customersById.keys()]),
+        )
+      : [];
 
-        const linked = canReadContact
-          ? ((await projectedOrdersForCustomers(
-              shopId,
-              [...customersById.keys()],
-            )) as RecordCandidate[])
-          : [];
+  const combinedOrders = new Map<string, RecordCandidate>();
+  for (const candidate of decorateOrderCandidates(
+    [
+      ...(technicalOrders as RecordCandidate[]),
+      ...(linkedOrders as RecordCandidate[]),
+      ...(exactPhoneOrders as RecordCandidate[]),
+    ],
+    customersById,
+  )) {
+    const existing = combinedOrders.get(candidate.id);
+    if (!existing) {
+      combinedOrders.set(candidate.id, candidate);
+      continue;
+    }
+    combinedOrders.set(candidate.id, {
+      ...existing,
+      ...candidate,
+      keywords: [
+        ...(existing.keywords ?? []),
+        ...(candidate.keywords ?? []),
+      ],
+    });
+  }
 
-        let exactPhone: RecordCandidate[] = [];
-        if (canReadContact && isLikelyPhoneQuery(query)) {
-          const phoneBlindIndex = await deriveExistingShopBlindIndex(
-            db as unknown as BlindIndexClient,
-            compactSearchText(query),
-            { recordType: "Order", field: "phone" },
-            { shopContext: actorContext.shop },
-          );
-          if (phoneBlindIndex) {
-            const rows = await db.order.findMany({
-              where: { deletedAt: null, phoneBlindIndex },
-              select: {
-                id: true,
-                orderNumber: true,
-                wilaya: true,
-                customerId: true,
-                updatedAt: true,
-              },
-              orderBy: { updatedAt: "desc" },
-              take: FAMILY_MATCH_BUDGET,
-            });
-            exactPhone = rows.map(
-              (order): RecordCandidate => ({
-                id: `order:${order.id}`,
-                entityId: order.id,
-                customerId: order.customerId,
-                kind: "order",
-                label: order.orderNumber,
-                sublabel: order.wilaya,
-                href: `/orders/${order.id}`,
-                keywords: [query],
-                updatedAt: order.updatedAt,
-                rankBoost: 12,
-              }),
-            );
-          }
-        }
-
-        const combined = new Map<string, RecordCandidate>();
-        for (const candidate of decorateOrderCandidates(
-          [...technical, ...linked, ...exactPhone],
-          customersById,
-        )) {
-          const existing = combined.get(candidate.id);
-          if (!existing) {
-            combined.set(candidate.id, candidate);
-            continue;
-          }
-          combined.set(candidate.id, {
-            ...existing,
-            ...candidate,
-            keywords: [
-              ...(existing.keywords ?? []),
-              ...(candidate.keywords ?? []),
-            ],
-          });
-        }
-        return rankUniversalSearchCandidates(
-          query,
-          [...combined.values()],
-          FAMILY_MATCH_BUDGET,
-        );
-      })
-    : [];
+  const orders = rankUniversalSearchCandidates(
+    query,
+    [...combinedOrders.values()],
+    FAMILY_MATCH_BUDGET,
+  );
 
   const results = rankUniversalSearchCandidates(
     query,
     [
-      ...(orders as RecordCandidate[]),
+      ...orders,
       ...customerRows,
       ...(products as RecordCandidate[]),
       ...conversationRows,
