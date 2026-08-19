@@ -2,6 +2,7 @@
 
 > **Status:** Active non-archive documentation entry point
 > **Last reconciled:** 2026-08-19
+> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
 > **Latest signed/published checkpoint:** Internal.22 / `1.0.0-internal.22` / MSI `1.0.0.22` / FD-041
 > **Latest protected release source:** `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348` / PR #284
@@ -14,14 +15,13 @@ This directory is the active documentation authority for SahelFlow. `documentati
 
 1. `product/PRODUCT.md` — product promise, seller jobs, commercial boundaries and entitlements.
 2. `product/EXPERIENCE.md` — Class-AAA experience, accessibility, Arabic/RTL and interaction quality.
-3. `product/DECISIONS.md` — consolidated Founder decisions FD-001–FD-033.
-4. `product/DECISIONS_FD034_FD041.md` — authoritative numbered continuation FD-034–FD-041; this continues the same register rather than creating a second policy system.
-5. `system/ARCHITECTURE.md` — canonical authority, data, cloud, native, security and recovery invariants.
-6. `system/CURRENT_STATE.md` — exact merged/released/installed truth and current non-claims.
-7. `system/ROADMAP.md` — remaining dependency/completion order.
-8. `operations/WORKFLOW.md` — research, implementation, review, CI, installed evidence and release process.
-9. `operations/WORKING_MEMORY.md` — compact resumable frontier for the next session.
-10. `research/RESEARCH.md` plus privacy/security inventories when relevant to the task.
+3. `product/DECISIONS.md` — consolidated Founder decisions through FD-033. Later exact release/execution decisions remain durable in their protected PR/release-request authority and are summarized by Current State/Roadmap; do not infer a new numbered decision from prose.
+4. `system/ARCHITECTURE.md` — canonical authority, data, cloud, native, security and recovery invariants.
+5. `system/CURRENT_STATE.md` — exact merged/released/installed truth and current non-claims.
+6. `system/ROADMAP.md` — remaining dependency/completion order.
+7. `operations/WORKFLOW.md` — research, implementation, review, CI, installed evidence and release process.
+8. `operations/WORKING_MEMORY.md` — compact resumable frontier for the next session.
+9. `research/RESEARCH.md` plus privacy/security inventories when relevant to the task.
 
 A newer explicit Founder decision outranks lower execution documents for the choice it changes. Protected GitHub source, Actions evidence and signed releases outrank stale chat summaries.
 
@@ -74,7 +74,7 @@ The current version authority remains:
 
 Automated source/browser/native/Windows evidence is green, but it does not manufacture the Founder’s human product verdict.
 
-The immediate remaining product gate is **Founder-installed visual/interaction judgment on the exact signed Internal.22 build**. Issue #221 remains open for that retained installed/human evidence. The Founder should install/update in place without deleting canonical AppData or shop databases and inspect the current product, including representative English/Arabic states, RTL, analytics, Inbox V3, Universal Search, AI Agents and Settings.
+The immediate remaining product gate inside **Phase 6 — Arabic, RTL and accessibility parity** is Founder-installed visual/interaction judgment on the exact signed Internal.22 build. Issue #221 remains open for that retained installed/human evidence. The Founder should install/update in place without deleting canonical AppData or shop databases and inspect the current product, including representative English/Arabic states, RTL, analytics, Inbox V3, Universal Search, AI Agents and Settings.
 
 WhatsApp pairing also retains a separate real-phone observation from PR #282: visibly render QR, scan/link a real phone, survive close/reopen, prove one outbound and one inbound message, and preserve durable saved history. Source certification must not be relabeled as real-provider certification.
 
@@ -87,6 +87,16 @@ If Founder-installed evidence exposes a concrete P0/P1 regression, open one boun
 - **#230 — open P1:** customer-online trial availability on representative Algerian networks remains a launch blocker. Internal.22 intentionally packages no customer-online licensing authority and does not satisfy #230.
 
 Customer-online, Beta and Stable remain separate claims. No Founder-only Internal package authorizes them automatically.
+
+## Historical continuity retained for authority audit
+
+These markers are intentionally preserved so the current documents remain connected to the already-proved historical packages. They are **not** current-frontier instructions.
+
+- **Phase 5 closure:** PR #220 remains the Phase 5 application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Later product work supersedes it as the current product head without erasing what PR #220 proved.
+- **Internal.15 historical release:** `1.0.0-internal.15`, signed run `31657621918`.
+- **Internal.16 / Wave 4 continuity:** PR #250, PR #251 and branch `agent/internal-16-wave-4` remain historical Storefront/implementation evidence; they are not the next branch to resume.
+- Historical 2026-08-16 issue statement retained verbatim for continuity: **Issues #221, #226 and #230 remain open**. Current truth supersedes that sentence: #226 is now closed/completed; #221 and #230 remain open.
+- The historical Phase 6 label remains **Phase 6 — Arabic, RTL and accessibility parity** and continues to own the installed Founder RTL/accessibility acceptance boundary even though its source implementation has advanced through Internal.22.
 
 ## Historical context that remains binding
 
