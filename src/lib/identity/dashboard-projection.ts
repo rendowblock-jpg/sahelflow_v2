@@ -16,6 +16,7 @@ export type DashboardFieldAccess = Readonly<{
   products: boolean;
   analytics: boolean;
   analyticsFinancials: boolean;
+  risk: boolean;
 }>;
 
 type DashboardProjectionSource = Readonly<{
@@ -71,18 +72,28 @@ export function resolveDashboardFieldAccess(
   });
   const orders = allowed(actorContext, "orders.read");
   const analytics = allowed(actorContext, "analytics.read");
+  const customerContact = allowed(actorContext, "customers.contact.read");
+  const customers = allowed(actorContext, "customers.read");
+  const orderFinancials = orders && allowed(actorContext, "orders.financials.read");
   return Object.freeze({
     orders,
-    orderFinancials:
-      orders && allowed(actorContext, "orders.financials.read"),
-    customerContact: allowed(actorContext, "customers.contact.read"),
-    customers: allowed(actorContext, "customers.read"),
+    orderFinancials,
+    customerContact,
+    customers,
     conversations: allowed(actorContext, "conversations.read"),
     deliveries: allowed(actorContext, "deliveries.read"),
     products: allowed(actorContext, "products.read"),
     analytics,
     analyticsFinancials:
       analytics && allowed(actorContext, "analytics.financials.read"),
+    // Risk analytics combines customer history/contact with order financials.
+    // Only expose the dashboard Risk Watch when the actor can see the exact
+    // underlying dataset used by the full Risk Engine.
+    risk:
+      allowed(actorContext, "risk.read") &&
+      customers &&
+      customerContact &&
+      orderFinancials,
   });
 }
 
