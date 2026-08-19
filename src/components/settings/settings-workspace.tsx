@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -11,9 +10,9 @@ import {
   Palette,
   PlugZap,
   ShieldCheck,
-  UserRound,
 } from "lucide-react";
 
+import { ProfileEditor } from "@/components/profile/profile-editor";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
 import { BackupRestorePanel } from "@/components/settings/backup-restore-panel";
@@ -43,6 +42,7 @@ import styles from "./settings-control-center.module.css";
 
 export type SettingsWorkspaceAccess = {
   profile: boolean;
+  profileManage: boolean;
   security: boolean;
   team: boolean;
   appearance: boolean;
@@ -64,7 +64,7 @@ export type SettingsWorkspaceAccess = {
   dangerReset: boolean;
 };
 
-type Group =
+export type SettingsWorkspaceGroup =
   | "workspace"
   | "operations"
   | "connections"
@@ -73,7 +73,7 @@ type Group =
   | "data";
 
 type GroupDefinition = {
-  id: Group;
+  id: SettingsWorkspaceGroup;
   icon: typeof Palette;
   descriptionKey: SettingsWorkspaceCopyKey;
 };
@@ -116,7 +116,10 @@ const GROUPS: GroupDefinition[] = [
   },
 ];
 
-function groupVisible(group: Group, access: SettingsWorkspaceAccess): boolean {
+function groupVisible(
+  group: SettingsWorkspaceGroup,
+  access: SettingsWorkspaceAccess,
+): boolean {
   switch (group) {
     case "workspace":
       return access.profile || access.appearance;
@@ -148,10 +151,10 @@ function SettingsDirectory({
   onSelect,
 }: {
   groups: GroupDefinition[];
-  active: Group;
+  active: SettingsWorkspaceGroup;
   copy: SettingsCopy;
   mobile: boolean;
-  onSelect: (group: Group) => void;
+  onSelect: (group: SettingsWorkspaceGroup) => void;
 }) {
   return (
     <nav
@@ -221,9 +224,11 @@ function SettingsDirectory({
 export function SettingsWorkspace({
   integrations,
   access,
+  initialGroup,
 }: {
   integrations: Array<{ platform: string; status: string }>;
   access: SettingsWorkspaceAccess;
+  initialGroup?: SettingsWorkspaceGroup;
 }) {
   const { locale: rawLocale } = useI18n();
   const locale = rawLocale as SettingsWorkspaceLocale;
@@ -233,11 +238,14 @@ export function SettingsWorkspace({
     () => GROUPS.filter((group) => groupVisible(group.id, access)),
     [access],
   );
-  const [active, setActive] = useState<Group>(
-    visibleGroups[0]?.id ?? "workspace",
-  );
+  const initialVisibleGroup =
+    initialGroup && visibleGroups.some((group) => group.id === initialGroup)
+      ? initialGroup
+      : visibleGroups[0]?.id ?? "workspace";
+  const [active, setActive] =
+    useState<SettingsWorkspaceGroup>(initialVisibleGroup);
   const [mobilePane, setMobilePane] = useState<"directory" | "detail">(
-    "directory",
+    initialGroup ? "detail" : "directory",
   );
   const [focusHandoffRevision, setFocusHandoffRevision] = useState(0);
   const directoryRef = useRef<HTMLElement | null>(null);
@@ -329,7 +337,14 @@ export function SettingsWorkspace({
     }
   }, [effectiveActive, focusHandoffRevision, mobile, mobilePane]);
 
-  const selectGroup = (group: Group) => {
+  useEffect(() => {
+    if (initialGroup !== "workspace") return;
+    document
+      .getElementById("settings-profile")
+      ?.scrollIntoView({ block: "start" });
+  }, [initialGroup]);
+
+  const selectGroup = (group: SettingsWorkspaceGroup) => {
     breakpointFocusSourceRef.current = null;
     setActive(group);
     setMobilePane("detail");
@@ -345,22 +360,9 @@ export function SettingsWorkspace({
   const renderWorkspace = () => (
     <div className={styles.stack} data-settings-domain-stack="workspace">
       {access.profile ? (
-        <section className="flex flex-wrap items-center justify-between gap-4 py-7">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-muted/30 text-muted-foreground">
-              <UserRound className="size-5" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold">{copy("profile")}</p>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-                {copy("profileDescription")}
-              </p>
-            </div>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/profile">{copy("openProfile")}</Link>
-          </Button>
-        </section>
+        <div id="settings-profile" className={styles.cardReset}>
+          <ProfileEditor canManage={access.profileManage} />
+        </div>
       ) : null}
       {access.appearance ? (
         <div

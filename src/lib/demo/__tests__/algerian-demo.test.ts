@@ -16,12 +16,14 @@ import {
   removeAlgerianDemoWorkspace,
 } from "@/lib/demo/algerian-demo-lifecycle";
 import { finalizeAlgerianDemoStory } from "@/lib/demo/algerian-demo-story";
+import { ALGERIAN_DEMO_WORKSPACE_VERSION } from "@/lib/demo/algerian-demo-year";
 import {
   createTestPrisma,
   disconnectTestPrisma,
 } from "@/lib/data/__tests__/helpers";
 
 let prisma: PrismaClient;
+const DEMO_REFERENCE_NOW = "2026-08-19T12:00:00.000Z";
 
 const demoClient = () => prisma as unknown as DbClient;
 
@@ -39,6 +41,7 @@ async function clearBusinessTruth(): Promise<void> {
 }
 
 beforeEach(async () => {
+  process.env.SF_DEMO_REFERENCE_NOW = DEMO_REFERENCE_NOW;
   prisma = await createTestPrisma();
   await clearBusinessTruth();
   await prisma.secret.deleteMany();
@@ -52,10 +55,11 @@ afterEach(async () => {
   await prisma.setting.deleteMany().catch(() => undefined);
   await prisma.customer.deleteMany().catch(() => undefined);
   await disconnectTestPrisma(prisma);
+  delete process.env.SF_DEMO_REFERENCE_NOW;
 });
 
 describe("Algerian demo data", () => {
-  it("seeds a deterministic empty shop, finalizes the flagship COD story, and cleans up", async () => {
+  it("seeds the rich recent story, annualizes it deterministically, and cleans up", async () => {
     const initial = await getAlgerianDemoStatus(demoClient());
     expect(initial).toMatchObject({
       loaded: false,
@@ -80,6 +84,41 @@ describe("Algerian demo data", () => {
     });
 
     await finalizeAlgerianDemoStory(demoClient());
+
+    const annualStatus = await getAlgerianDemoWorkspaceStatus(demoClient());
+    expect(annualStatus.version).toBe(ALGERIAN_DEMO_WORKSPACE_VERSION);
+    expect(annualStatus.loaded).toBe(true);
+    expect(annualStatus.counts.orders).toBeGreaterThanOrEqual(160);
+    expect(annualStatus.counts.expenses).toBeGreaterThanOrEqual(40);
+
+    const reference = new Date(DEMO_REFERENCE_NOW);
+    const [oldestOrder, newestOrder, oldestExpense] = await Promise.all([
+      prisma.order.findFirst({
+        where: { id: { startsWith: "demo-" } },
+        orderBy: { createdAt: "asc" },
+        select: { createdAt: true },
+      }),
+      prisma.order.findFirst({
+        where: { id: { startsWith: "demo-" } },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      }),
+      prisma.expense.findFirst({
+        where: { id: { startsWith: "demo-" } },
+        orderBy: { date: "asc" },
+        select: { date: true },
+      }),
+    ]);
+    const oldestOrderAge =
+      (reference.getTime() - (oldestOrder?.createdAt.getTime() ?? reference.getTime())) /
+      86_400_000;
+    const oldestExpenseAge =
+      (reference.getTime() - (oldestExpense?.date.getTime() ?? reference.getTime())) /
+      86_400_000;
+    expect(oldestOrderAge).toBeGreaterThanOrEqual(350);
+    expect(oldestOrderAge).toBeLessThanOrEqual(365);
+    expect(oldestExpenseAge).toBeGreaterThanOrEqual(320);
+    expect(newestOrder?.createdAt.getTime()).toBeLessThanOrEqual(reference.getTime());
 
     const flagship = await prisma.order.findUnique({
       where: { id: "demo-order-001" },
@@ -119,8 +158,7 @@ describe("Algerian demo data", () => {
       "cod_remitted",
     ]);
 
-    const now = Date.now();
-    expect(flagship?.createdAt.getTime()).toBeLessThan(now);
+    expect(flagship?.createdAt.getTime()).toBeLessThan(reference.getTime());
     expect(flagship?.confirmedAt?.getTime()).toBeGreaterThan(
       flagship?.createdAt.getTime() ?? 0,
     );
@@ -133,10 +171,12 @@ describe("Algerian demo data", () => {
     expect(flagship?.codRemittedAt?.getTime()).toBeGreaterThan(
       flagship?.deliveredAt?.getTime() ?? 0,
     );
-    expect(flagship?.codRemittedAt?.getTime()).toBeLessThanOrEqual(now);
+    expect(flagship?.codRemittedAt?.getTime()).toBeLessThanOrEqual(
+      reference.getTime(),
+    );
     expect(
       flagship?.orderChanges.every(
-        (change) => change.createdAt.getTime() <= now,
+        (change) => change.createdAt.getTime() <= reference.getTime(),
       ),
     ).toBe(true);
 
@@ -169,9 +209,10 @@ describe("Algerian demo data", () => {
     expect(await prisma.authSecret.count()).toBe(0);
     expect(await prisma.integration.count()).toBe(0);
 
+    const annualOrderCount = await prisma.order.count();
     const secondSeed = await seedAlgerianDemoData(demoClient());
-    expect(secondSeed.counts.orders).toBe(48);
-    expect(await prisma.order.count()).toBe(48);
+    expect(secondSeed.counts.orders).toBe(annualOrderCount);
+    expect(await prisma.order.count()).toBe(annualOrderCount);
 
     const cleared = await clearAlgerianDemoData(demoClient());
     expect(cleared).toMatchObject({
@@ -229,6 +270,7 @@ describe("Algerian demo data", () => {
     });
 
     await expect(loadAlgerianDemoWorkspace(demoClient())).resolves.toMatchObject({
+      version: ALGERIAN_DEMO_WORKSPACE_VERSION,
       loaded: true,
       canSeed: false,
     });

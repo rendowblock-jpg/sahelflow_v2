@@ -1,0 +1,21 @@
+/*
+ * Dashboard form-direction backstop.
+ *
+ * Shared Input/Textarea/Select own the normal control contract, but a few legacy
+ * workbenches still render native text controls directly. Empty native controls
+ * have no strong value to infer from, so keep natural-language fields anchored
+ * to the live shell direction and logical text start until those call sites are
+ * migrated. Explicit `dir` always wins, and technical input types are excluded.
+ */
+[data-sahelflow-shell="desktop"]
+  :where(
+    input:not([type]),
+    input[type="text"],
+    input[type="search"],
+    textarea,
+    select,
+    [contenteditable="true"]
+  ):not([dir]) {
+  direction: inherit;
+  text-align: start;
+}

@@ -3,7 +3,11 @@
 import * as React from "react";
 
 import { useI18n } from "@/hooks/use-i18n";
-import { formatDZD } from "@/lib/utils";
+import {
+  formatCompactNumber,
+  formatDZD,
+  isolateLtr,
+} from "@/lib/utils";
 import {
   DEFAULT_CHART_HEIGHT,
   normalizeChartHeight,
@@ -23,7 +27,8 @@ interface DualBarChartProps {
   height?: ChartHeight;
 }
 
-function isolate(value: unknown) {
+/** Category copy follows its own first strong character; numeric values do not. */
+function isolateNaturalText(value: unknown) {
   return `\u2068${String(value ?? "")}\u2069`;
 }
 
@@ -41,12 +46,12 @@ export function DualBarChart({
     [data],
   );
   const yMin = Math.min(0, ...netValues);
-  const axisFormatter = React.useMemo(
-    () =>
-      new Intl.NumberFormat(
-        locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ",
-        { notation: "compact", maximumFractionDigits: 1 },
-      ),
+  const compactValue = React.useCallback(
+    (value: number) => isolateLtr(formatCompactNumber(value, locale)),
+    [locale],
+  );
+  const moneyValue = React.useCallback(
+    (value: number) => isolateLtr(formatDZD(value, locale)),
     [locale],
   );
 
@@ -70,6 +75,12 @@ export function DualBarChart({
             color: theme.card,
             borderRadius: 5,
             padding: [4, 6],
+            formatter: (params: { value?: unknown }) => {
+              const numeric = Number(params.value);
+              return Number.isFinite(numeric)
+                ? compactValue(numeric)
+                : isolateNaturalText(params.value);
+            },
           },
         },
         xAxis: {
@@ -83,7 +94,7 @@ export function DualBarChart({
             fontSize: 12,
             margin: 12,
             hideOverlap: true,
-            formatter: (value: string) => isolate(value),
+            formatter: (value: string) => isolateNaturalText(value),
           },
         },
         yAxis: {
@@ -92,7 +103,7 @@ export function DualBarChart({
           ...axis,
           axisLabel: {
             ...axis.axisLabel,
-            formatter: (value: number) => isolate(axisFormatter.format(value)),
+            formatter: (value: number) => compactValue(value),
           },
         },
         series: [
@@ -116,13 +127,13 @@ export function DualBarChart({
               fontSize: 10,
               formatter: (params: { value?: unknown }) => {
                 const value = Number(params.value ?? 0);
-                return value > 0 ? axisFormatter.format(value) : "";
+                return value > 0 ? compactValue(value) : "";
               },
             },
             emphasis: { focus: "series" as const, itemStyle: { opacity: 1 } },
             tooltip: {
               valueFormatter: (value: unknown) =>
-                formatDZD(Number(value ?? 0), locale),
+                moneyValue(Number(value ?? 0)),
             },
           },
           {
@@ -145,13 +156,13 @@ export function DualBarChart({
               fontSize: 10,
               formatter: (params: { value?: unknown }) => {
                 const value = Number(params.value ?? 0);
-                return value > 0 ? axisFormatter.format(value) : "";
+                return value > 0 ? compactValue(value) : "";
               },
             },
             emphasis: { focus: "series" as const, itemStyle: { opacity: 1 } },
             tooltip: {
               valueFormatter: (value: unknown) =>
-                formatDZD(Number(value ?? 0), locale),
+                moneyValue(Number(value ?? 0)),
             },
           },
           {
@@ -189,18 +200,18 @@ export function DualBarChart({
             },
             tooltip: {
               valueFormatter: (value: unknown) =>
-                formatDZD(Number(value ?? 0), locale),
+                moneyValue(Number(value ?? 0)),
             },
           },
         ],
       };
     },
     [
-      axisFormatter,
+      compactValue,
       data,
       dir,
       expensesLabel,
-      locale,
+      moneyValue,
       netLabel,
       netValues,
       revenueLabel,
@@ -234,10 +245,7 @@ export function DualBarChart({
           {expensesLabel}
         </span>
         <span className="inline-flex items-center gap-2">
-          <span
-            className="h-px w-3 bg-foreground"
-            aria-hidden="true"
-          />
+          <span className="h-px w-3 bg-foreground" aria-hidden="true" />
           {netLabel}
         </span>
       </div>

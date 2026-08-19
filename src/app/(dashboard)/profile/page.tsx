@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
 
-import { ProfileEditor } from "@/components/profile/profile-editor";
-import { PageHeader } from "@/components/shared/page-header";
+import SettingsPage from "@/app/(dashboard)/settings/page";
 import { getI18n } from "@/lib/i18n-server";
-import {
-  requireTrustedAction,
-  trustedActionAllowed,
-} from "@/lib/identity/authorization";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -14,19 +9,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const dynamic = "force-dynamic";
 
+/**
+ * Compatibility alias for bookmarks and historical deep links.
+ *
+ * Profile has one implementation only: the Account/Profile area inside the
+ * Settings control center. Keeping this URL as an alias avoids breaking durable
+ * links and route-evidence contracts without restoring a separate Profile page
+ * or fixed sidebar destination.
+ */
 export default async function ProfilePage() {
-  const actorContext = await requireTrustedAction("settings.read");
-  const { t } = await getI18n();
-  const canManage = trustedActionAllowed(
-    actorContext,
-    "settings.manage",
-    { shopId: actorContext.shop.shopId },
-  );
-
-  return (
-    <div className="app-content page-sections">
-      <PageHeader title={t("profile.title")} description={t("profile.description")} />
-      <ProfileEditor canManage={canManage} />
-    </div>
-  );
+  return SettingsPage({
+    searchParams: Promise.resolve({ group: "workspace" }),
+  });
 }

@@ -120,12 +120,17 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(foundation).not.toContain(".sf-button-size-icon-sm");
   });
 
-  it("keeps user-authored search direction automatic and command chrome flow-relative", () => {
+  it("inherits locale direction for empty natural-language fields and keeps command chrome flow-relative", () => {
     const input = read("src/components/ui/input.tsx");
+    const textarea = read("src/components/ui/textarea.tsx");
     const command = read("src/components/ui/command.tsx");
 
     expect(input).not.toContain('  "search",');
-    expect(input).toContain('? "ltr" : "auto"');
+    expect(input).toContain('? "ltr" : undefined');
+    expect(input).not.toContain('? "ltr" : "auto"');
+    expect(input).toContain("text-start text-base");
+    expect(textarea).toContain("dir={dir}");
+    expect(textarea).not.toContain('dir={dir ?? "auto"}');
     expect(command).toContain("ms-auto text-xs tracking-widest");
     expect(command).not.toContain("ml-auto text-xs tracking-widest");
   });
@@ -141,13 +146,16 @@ describe("Phase 5 experience foundation source contract", () => {
     const sidebar = read("src/components/layout/sidebar.tsx");
     const navigation = read("src/components/layout/navigation.ts");
 
-    expect(sidebar).toContain("domain.children?.map((child) => (");
-    expect(sidebar).toContain("nested={child.sidebarNested}");
+    expect(sidebar).toContain("sellerSidebarNavigationItems.map((item) => {");
+    expect(sidebar).toContain("const selected = activeHref === item.href");
+    expect(sidebar).toContain("nested={item.sidebarNested}");
+    expect(sidebar).toContain('data-seller-navigation="fixed-priority"');
     expect(sidebar).toContain("group relative flex min-h-(--control-height) items-center");
     expect(sidebar).toContain("min-h-(--control-height) w-full text-muted-foreground");
     expect(sidebar).not.toContain("domainSelected && domain.children?.length");
     expect(sidebar).not.toContain("data-navigation-children={domain.id}");
     expect(navigation).toContain("sidebarNested?: boolean");
+    expect(navigation).toContain("sellerSidebarNavigationItems");
     expect(navigation).toContain('"confirmation-queue"');
     expect(navigation).toContain('"cod-reconciliation"');
   });

@@ -91,6 +91,7 @@ describe("Phase 5 whole-product completion contract", () => {
     const deliveryStatus = read("src/components/deliveries/delivery-status-badge.tsx");
     const returnStatus = read("src/components/returns/return-status-badge.tsx");
     const settings = read("src/app/(dashboard)/settings/page.tsx");
+    const workspace = read("src/components/settings/settings-workspace.tsx");
     const profile = read("src/app/(dashboard)/profile/page.tsx");
     expect(automations).toContain('"automations.manage"');
     expect(automations).toContain("canManage");
@@ -98,7 +99,10 @@ describe("Phase 5 whole-product completion contract", () => {
     expect(deliveryStatus).toContain("disabled || isPending");
     expect(returnStatus).toContain("disabled || isPending");
     expect(settings).toContain("SettingsWorkspaceAccess");
-    expect(profile).toContain("canManage");
+    expect(settings).toContain('const profileManage = can("settings.manage")');
+    expect(workspace).toContain("<ProfileEditor canManage={access.profileManage} />");
+    expect(profile).toContain('import SettingsPage from "@/app/(dashboard)/settings/page"');
+    expect(profile).not.toContain("<ProfileEditor");
   });
 
   it("gives every governed chart non-visual context", () => {

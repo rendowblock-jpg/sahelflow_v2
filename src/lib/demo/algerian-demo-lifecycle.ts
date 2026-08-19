@@ -9,6 +9,10 @@ import {
   type AlgerianDemoStatus,
 } from "@/lib/demo/algerian-demo";
 import {
+  ALGERIAN_DEMO_WORKSPACE_VERSION,
+  isAlgerianDemoAnnualHistoryComplete,
+} from "@/lib/demo/algerian-demo-year";
+import {
   dailyReportWouldBeEffectful,
   withDemoPolicyLock,
 } from "@/lib/demo/algerian-demo-policy";
@@ -258,18 +262,31 @@ async function clearDemoDerivedRecords(client: DbClient): Promise<void> {
   });
 }
 
+/**
+ * Resolve the complete in-product demo version, not merely the base recent seed.
+ * Old Founder-v1 demo footprints are intentionally treated as recoverable demo
+ * state: they can be rebuilt into the annual workspace without ever being
+ * mistaken for independently owned seller records.
+ */
 async function safeStatus(client: DbClient): Promise<AlgerianDemoStatus> {
   const [status, nonDemoState] = await Promise.all([
     getAlgerianDemoStatus(client),
     countNonDemoSellerState(client),
   ]);
+  const annualComplete = status.loaded
+    ? await isAlgerianDemoAnnualHistoryComplete(client)
+    : false;
+  const loaded = status.loaded && annualComplete;
 
   return {
     ...status,
-    canSeed: !status.loaded && nonDemoState === 0,
-    // An interrupted demo footprint is recoverable and must not masquerade as
-    // seller data. Only independently owned non-demo state blocks loading.
-    hasBusinessData: status.loaded || nonDemoState > 0,
+    version: ALGERIAN_DEMO_WORKSPACE_VERSION,
+    loaded,
+    canSeed: !loaded && nonDemoState === 0,
+    // An interrupted or historical demo footprint is recoverable and must not
+    // masquerade as seller data. Only independently owned non-demo state blocks
+    // loading/removal of the sample workspace.
+    hasBusinessData: loaded || nonDemoState > 0,
   };
 }
 
@@ -280,10 +297,10 @@ export async function getAlgerianDemoWorkspaceStatus(
 }
 
 /**
- * Atomically recover any interrupted demo footprint and create the complete
- * deterministic workspace. The shared policy lock serializes this operation
- * with report-setting writes and report sends; the database transaction gives
- * rollback if any seed/finalizer write fails.
+ * Atomically recover any interrupted/older demo footprint and create the full
+ * deterministic rolling annual workspace. The shared policy lock serializes this
+ * operation with report-setting writes and report sends; the database transaction
+ * gives rollback if any seed/finalizer write fails.
  */
 export async function loadAlgerianDemoWorkspace(
   client: DbClient = db,
@@ -302,8 +319,8 @@ export async function loadAlgerianDemoWorkspace(
         );
       }
 
-      // Recover a marker-less partial footprint from a previously interrupted
-      // version before starting the atomic seed.
+      // Recover a marker-less partial footprint or older v1 demo before starting
+      // the atomic annual rebuild.
       await clearDemoDerivedRecords(tx);
       await clearAlgerianDemoData(tx);
       await seedAlgerianDemoData(tx);

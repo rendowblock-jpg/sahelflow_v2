@@ -1,17 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  DEFAULT_NAVIGATION_DOMAIN_ORDER,
   flattenNavigationItems,
   navigationDomainForPathname,
   navigationDomains,
   navigationItemForPathname,
-  orderedNavigationDomains,
+  sellerSidebarNavigationItems,
   utilityNavigationItems,
 } from "../navigation";
 
 describe("Phase 5 navigation authority", () => {
-  it("exposes the eight daily business domains including Storefront Builder", () => {
+  it("preserves the eight semantic business domains including Storefront Builder", () => {
     expect(navigationDomains.map((domain) => domain.id)).toEqual([
       "home",
       "sell",
@@ -22,9 +21,6 @@ describe("Phase 5 navigation authority", () => {
       "storefront",
       "grow",
     ]);
-    expect(DEFAULT_NAVIGATION_DOMAIN_ORDER).toEqual(
-      navigationDomains.map((domain) => domain.id),
-    );
   });
 
   it("keeps every destination unique under one canonical registry", () => {
@@ -65,65 +61,44 @@ describe("Phase 5 navigation authority", () => {
     );
   });
 
-  it("keeps administration outside daily business domains", () => {
-    expect(utilityNavigationItems.map((item) => item.href)).toEqual([
-      "/profile",
-      "/settings",
-    ]);
+  it("keeps Profile inside Settings rather than as a fixed utility destination", () => {
+    expect(utilityNavigationItems.map((item) => item.href)).toEqual(["/settings"]);
+    expect(navigationItemForPathname("/profile")?.href).toBe("/settings");
     expect(navigationDomainForPathname("/settings")).toBeNull();
     expect(navigationDomainForPathname("/profile")).toBeNull();
   });
 
-  it("applies seller domain ordering without changing child ownership", () => {
-    const ordered = orderedNavigationDomains([
-      "inbox",
-      "storefront",
-      "sell",
-      "home",
-      "money",
-      "customers",
-      "fulfill",
-      "grow",
+  it("ships one stable seller-priority sidebar sequence", () => {
+    expect(sellerSidebarNavigationItems.map((item) => item.href)).toEqual([
+      "/dashboard",
+      "/orders",
+      "/orders/confirmation-queue",
+      "/inbox",
+      "/products",
+      "/customers",
+      "/deliveries",
+      "/returns",
+      "/analytics",
+      "/accounting",
+      "/accounting/cod-reconciliation",
+      "/risk",
+      "/storefronts",
+      "/automations",
+      "/agents",
+      "/imports",
     ]);
-    expect(ordered.map((domain) => domain.id)).toEqual([
-      "inbox",
-      "storefront",
-      "sell",
-      "home",
-      "money",
-      "customers",
-      "fulfill",
-      "grow",
-    ]);
+    expect(new Set(sellerSidebarNavigationItems.map((item) => item.href)).size).toBe(
+      sellerSidebarNavigationItems.length,
+    );
     expect(
-      ordered.find((domain) => domain.id === "sell")?.children?.map((child) =>
-        child.id,
-      ),
-    ).toContain("confirmation-queue");
+      sellerSidebarNavigationItems.find(
+        (item) => item.href === "/orders/confirmation-queue",
+      )?.sidebarNested,
+    ).toBe(true);
     expect(
-      ordered.find((domain) => domain.id === "money")?.children?.map((child) =>
-        child.id,
-      ),
-    ).toContain("cod-reconciliation");
-  });
-
-  it("fails open to the canonical registry when a stored preference is stale", () => {
-    const ordered = orderedNavigationDomains([
-      "inbox",
-      "removed-domain",
-      "inbox",
-      "sell",
-    ]);
-    expect(ordered.map((domain) => domain.id)).toEqual([
-      "inbox",
-      "sell",
-      "home",
-      "customers",
-      "fulfill",
-      "money",
-      "storefront",
-      "grow",
-    ]);
-    expect(new Set(ordered.map((domain) => domain.id)).size).toBe(8);
+      sellerSidebarNavigationItems.find(
+        (item) => item.href === "/accounting/cod-reconciliation",
+      )?.sidebarNested,
+    ).toBe(true);
   });
 });
