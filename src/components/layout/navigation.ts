@@ -242,6 +242,7 @@ export const utilityNavigationItems: readonly NavigationItem[] = [
 ] as const;
 
 export function pathMatchesNavigation(pathname: string, href: string): boolean {
+  if (href === "/settings" && pathname === "/profile") return true;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
