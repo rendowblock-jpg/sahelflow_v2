@@ -8,6 +8,22 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-08-19 — Internal.21/22 Class-AAA convergence and signed Internal.22 publication
+
+- PRs #278 and #279 completed the Class-AAA Inbox and AI Agents workspace reconstructions.
+- PR #280 completed the Settings Class-AAA control center and published the real Founder-offline **Internal.21** checkpoint: `1.0.0-internal.21`, MSI `1.0.0.21`, FD-040. Statements in older handoffs saying no Internal.21 existed are historical and superseded.
+- PR #281 replaced the rejected/simple analytics presentation with the governed Apache ECharts Class-AAA decision-visualization system.
+- PR #282 rebuilt Inbox V3 and hardened WhatsApp pairing/recovery behavior. Source/browser certification is complete; real-phone QR/link/reopen/outbound/inbound evidence remains a separate installed/provider observation.
+- PR #283 rebuilt Universal Search / Command Center. Exact certified product head `fa77ae32dc680f0d2854d10363dcaf06ba4e5229` passed Phase 5 `32200539921`, Phase 6-7 `32200539919` and CI `32200540092`, including exact-head Windows installed closure.
+- PR #284 promoted that certified product state to **Internal.22**: `1.0.0-internal.22`, MSI `1.0.0.22`, FD-041, `founder-offline-only`, protected release source `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348`.
+- Signed updater run `32205843573` completed successfully on the exact protected source and proved source/review binding, signing authority, signed MSI/updater build, staged runtime readiness, signature verification, signed install/reopen, authenticated hydrated WebView UI twice, deterministic source rewrites, evidence manifest, `latest.json`, exact tag/publication target and final publication.
+- Issue #221 remains open for Founder-installed whole-product visual/interaction acceptance of Internal.22. Hosted Windows/CI installed evidence does not substitute for the Founder’s human product verdict.
+- Issue #226 is closed/completed; its performance budgets remain regression criteria rather than an active blocker.
+- Issue #230 remains open P1 and blocks customer-online/public-trial readiness.
+- Customer-online, Beta and Stable remain unauthorized. No Internal.23 follows automatically from publication or documentation reconciliation.
+
+> Entries below retain milestone-time chronology. “Latest published”, “release pending” and similar statements describe the repository state when that entry was written, not the current frontier above.
+
 ### 2026-08-16 — Internal.20 rejection, Internal.19 product-source rollback and design reset
 
 - **Internal.20 remains the latest signed/published package:** `1.0.0-internal.20`, MSI `1.0.0.20`, FD-039, `founder-offline-only`, published from protected source `7c794f72a545313a0cf6fe34c2fabd9c583357ec`.
