@@ -22,6 +22,8 @@ describe("Founder RTL, navigation and annual demo contracts", () => {
     const input = read("src/components/ui/input.tsx");
     const textarea = read("src/components/ui/textarea.tsx");
     const select = read("src/components/ui/select.tsx");
+    const rawBackstop = read("src/app/rtl-form-controls.css");
+    const dashboardLayout = read("src/app/(dashboard)/layout.tsx");
 
     expect(input).toContain('? "ltr" : undefined');
     expect(input).not.toContain('? "ltr" : "auto"');
@@ -31,6 +33,12 @@ describe("Founder RTL, navigation and annual demo contracts", () => {
     expect(textarea).toContain("text-start text-base");
     expect(select).toContain('className={cn("min-w-0 flex-1 text-start", className)}');
     expect(select).toContain("data-[placeholder]:text-muted-foreground");
+    expect(rawBackstop).toContain('input[type="text"]');
+    expect(rawBackstop).toContain('input[type="search"]');
+    expect(rawBackstop).toContain('textarea,');
+    expect(rawBackstop).toContain('direction: inherit;');
+    expect(rawBackstop).toContain('text-align: start;');
+    expect(dashboardLayout).toContain('import "@/app/rtl-form-controls.css"');
   });
 
   it("uses one fixed seller-priority sidebar and retires custom reordering", () => {
@@ -42,6 +50,7 @@ describe("Founder RTL, navigation and annual demo contracts", () => {
     expect(navigation).toContain("sellerSidebarNavigationItems");
     expect(sidebar).toContain('data-seller-navigation="fixed-priority"');
     expect(sidebar).toContain("sellerSidebarNavigationItems.map");
+    expect(sidebar).toContain("const selected = activeHref === item.href");
     expect(appearance).not.toContain("data-navigation-preferences");
     expect(appearance).not.toContain("navigationMoveUp");
     expect(uiStore).not.toContain("navigationDomainOrder:");
@@ -55,6 +64,7 @@ describe("Founder RTL, navigation and annual demo contracts", () => {
     const topbar = read("src/components/layout/topbar.tsx");
 
     expect(navigation).not.toContain('item("profile", "nav.profile", "/profile"');
+    expect(navigation).toContain('href === "/settings" && pathname === "/profile"');
     expect(settings).toContain('<ProfileEditor canManage={access.profileManage} />');
     expect(settings).toContain('id="settings-profile"');
     expect(profile).toContain('import SettingsPage from "@/app/(dashboard)/settings/page"');
