@@ -13,17 +13,17 @@ This directory is the active documentation authority for SahelFlow. `documentati
 
 ## Mandatory reading order
 
-1. `product/PRODUCT.md` — product promise, seller jobs, commercial boundaries and entitlements.
-2. `product/EXPERIENCE.md` — Class-AAA experience, accessibility, Arabic/RTL and interaction quality.
-3. `product/DECISIONS.md` — consolidated Founder decisions through FD-033. Later exact release/execution decisions remain durable in their protected PR/release-request authority and are summarized below; do not infer a new numbered decision from prose.
-4. `system/ARCHITECTURE.md` — canonical authority, data, cloud, native, security and recovery invariants.
-5. `system/CURRENT_STATE.md` — exact merged/released/installed truth and current non-claims.
-6. `system/ROADMAP.md` — remaining dependency/completion order.
-7. `operations/WORKFLOW.md` — research, implementation, review, CI, installed evidence and release process.
-8. `operations/WORKING_MEMORY.md` — compact resumable frontier for the next session.
+1. `system/CURRENT_STATE.md` — exact merged/released/installed truth and current non-claims.
+2. `system/ROADMAP.md` — remaining dependency/completion order.
+3. `operations/WORKFLOW.md` — research, implementation, review, CI, installed evidence and release process.
+4. `operations/WORKING_MEMORY.md` — compact resumable frontier for the next session.
+5. `product/PRODUCT.md` — product promise, seller jobs, commercial boundaries and entitlements.
+6. `product/EXPERIENCE.md` — Class-AAA experience, accessibility, Arabic/RTL and interaction quality.
+7. `product/DECISIONS.md` — consolidated Founder decisions through FD-033. Later exact release/execution decisions remain durable in their protected PR/release-request authority and are summarized below; do not infer a new numbered decision from prose.
+8. `system/ARCHITECTURE.md` — canonical authority, data, cloud, native, security and recovery invariants.
 9. `research/RESEARCH.md` plus privacy/security inventories when relevant to the task.
 
-A newer explicit Founder decision outranks lower execution documents for the choice it changes. Protected GitHub source, Actions evidence and signed releases outrank stale chat summaries.
+Reading order is for session grounding; it does not change authority precedence. A newer explicit Founder decision outranks lower execution documents for the choice it changes. Protected GitHub source, Actions evidence and signed releases outrank stale chat summaries.
 
 ## Current repository truth
 
