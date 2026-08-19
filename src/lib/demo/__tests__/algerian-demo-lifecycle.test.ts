@@ -6,6 +6,7 @@ import {
   loadAlgerianDemoWorkspace,
   removeAlgerianDemoWorkspace,
 } from "@/lib/demo/algerian-demo-lifecycle";
+import { ALGERIAN_DEMO_WORKSPACE_VERSION } from "@/lib/demo/algerian-demo-year";
 import {
   assertDemoAllowsDailyReportSettings,
   withDemoPolicyLock,
@@ -19,6 +20,7 @@ import {
 let prisma: PrismaClient;
 const client = () => prisma as unknown as DbClient;
 const context = () => ({ prisma: client(), shop: {} as never });
+const DEMO_REFERENCE_NOW = "2026-08-19T12:00:00.000Z";
 
 async function resetLifecycleTables(): Promise<void> {
   await prisma.$transaction([
@@ -54,6 +56,7 @@ async function resetLifecycleTables(): Promise<void> {
 }
 
 beforeEach(async () => {
+  process.env.SF_DEMO_REFERENCE_NOW = DEMO_REFERENCE_NOW;
   prisma = await createTestPrisma();
   await resetLifecycleTables();
 });
@@ -61,16 +64,18 @@ beforeEach(async () => {
 afterEach(async () => {
   await resetLifecycleTables().catch(() => undefined);
   await disconnectTestPrisma(prisma);
+  delete process.env.SF_DEMO_REFERENCE_NOW;
 });
 
 describe("Algerian demo workspace lifecycle", () => {
-  it("recovers a marker-less partial footprint and seeds one complete atomic workspace", async () => {
+  it("recovers a marker-less partial footprint and seeds one complete atomic annual workspace", async () => {
     await prisma.category.create({
       data: { id: "demo-interrupted-category", name: "Interrupted demo" },
     });
 
     const recoverable = await getAlgerianDemoWorkspaceStatus(client());
     expect(recoverable).toMatchObject({
+      version: ALGERIAN_DEMO_WORKSPACE_VERSION,
       loaded: false,
       canSeed: true,
       hasBusinessData: false,
@@ -78,15 +83,31 @@ describe("Algerian demo workspace lifecycle", () => {
 
     const loaded = await loadAlgerianDemoWorkspace(client());
     expect(loaded).toMatchObject({
+      version: ALGERIAN_DEMO_WORKSPACE_VERSION,
       loaded: true,
       canSeed: false,
       counts: {
         categories: 5,
         products: 16,
         customers: 24,
-        orders: 48,
       },
     });
+    expect(loaded.counts.orders).toBeGreaterThanOrEqual(160);
+    expect(loaded.counts.expenses).toBeGreaterThanOrEqual(40);
+
+    const oldest = await prisma.order.findFirst({
+      where: { id: { startsWith: "demo-" } },
+      orderBy: { createdAt: "asc" },
+      select: { createdAt: true },
+    });
+    expect(oldest).not.toBeNull();
+    const reference = new Date(DEMO_REFERENCE_NOW);
+    const oldestAgeDays =
+      (reference.getTime() - (oldest?.createdAt.getTime() ?? reference.getTime())) /
+      86_400_000;
+    expect(oldestAgeDays).toBeGreaterThanOrEqual(350);
+    expect(oldestAgeDays).toBeLessThanOrEqual(365);
+
     expect(
       await prisma.category.findUnique({
         where: { id: "demo-interrupted-category" },
