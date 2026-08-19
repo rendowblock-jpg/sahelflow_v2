@@ -24,9 +24,11 @@ function Input({
   "aria-label": ariaLabel,
   ...props
 }: React.ComponentProps<"input">) {
-  // User-authored text, including search queries, follows its first strong
-  // character via dir="auto". Only structurally technical fields stay LTR.
-  const resolvedDir = dir ?? (type && TECHNICAL_INPUT_TYPES.has(type) ? "ltr" : "auto")
+  // Natural-language controls inherit the live application direction. `dir=auto`
+  // cannot resolve an empty value and therefore makes Arabic placeholders start
+  // from the LTR side before the user types. Structurally technical fields stay
+  // explicitly LTR; callers can still override either behavior with `dir`.
+  const resolvedDir = dir ?? (type && TECHNICAL_INPUT_TYPES.has(type) ? "ltr" : undefined)
   // Disabled explanatory fields cannot be reached to expose their placeholder.
   // Use that already-localized placeholder as a bounded accessible-name fallback
   // while keeping enabled form controls dependent on their explicit labels.
@@ -42,7 +44,7 @@ function Input({
       aria-label={resolvedAriaLabel}
       data-slot="input"
       className={cn(
-        "h-[var(--control-height)] w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30",
+        "h-[var(--control-height)] w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-start text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30",
         "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
         "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
         className
