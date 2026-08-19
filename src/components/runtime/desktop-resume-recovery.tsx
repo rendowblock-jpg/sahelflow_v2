@@ -6,7 +6,6 @@ import { isTauri } from "@tauri-apps/api/core";
 
 import {
   DESKTOP_RUNTIME_RECOVERED_EVENT,
-  DESKTOP_RESUME_GAP_MS,
   isDesktopResumeGap,
   readRequestedLocaleCookie,
 } from "@/lib/runtime/desktop-recovery";
