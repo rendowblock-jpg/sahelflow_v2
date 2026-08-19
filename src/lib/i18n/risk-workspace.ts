@@ -6,18 +6,21 @@ const COPY = {
     attentionTitle: "What needs your attention",
     attentionDescription:
       "A focused read of the signals most likely to affect confirmations and returns.",
+    highestImpactFactor: "Highest-impact risk factor",
     openAnalysis: "Open full risk analysis",
   },
   fr: {
     attentionTitle: "Ce qui mérite votre attention",
     attentionDescription:
       "Une lecture ciblée des signaux les plus susceptibles d’affecter les confirmations et les retours.",
+    highestImpactFactor: "Facteur de risque le plus impactant",
     openAnalysis: "Ouvrir l’analyse complète des risques",
   },
   ar: {
     attentionTitle: "ما يحتاج انتباهك الآن",
     attentionDescription:
       "ملخص مركز للإشارات الأكثر احتمالًا للتأثير على التأكيدات والمرتجعات.",
+    highestImpactFactor: "عامل الخطر الأعلى تأثيرًا",
     openAnalysis: "فتح تحليل المخاطر الكامل",
   },
 } as const;
