@@ -31,6 +31,7 @@ import {
   parseStoredAutomationDefinition,
   type CanonicalAutomationDefinition,
 } from "@/lib/automations/contracts";
+import { normalizeLegacyDemoAutomations } from "@/lib/automations/demo-normalization";
 import { listAutomationRunHistory } from "@/lib/automations/recovery";
 import { db, shopContext } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
@@ -96,6 +97,13 @@ export default async function AutomationsPage({
   const activeTab = ["my", "templates", "activity"].includes(params.tab ?? "")
     ? params.tab!
     : "my";
+
+  // The deterministic Founder demo predates the durable automation contract.
+  // Repair only its three exact known legacy IDs, and only for an actor who may
+  // manage automations. Seller-created rows are never rewritten here.
+  if (canManage) {
+    await normalizeLegacyDemoAutomations(db);
+  }
 
   const [automations, recentRunStats, recentRuns, recentLogs] = await Promise.all([
     db.automation.findMany({
@@ -358,6 +366,7 @@ export default async function AutomationsPage({
                 return (
                   <Card
                     key={automation.id}
+                    data-automation-card={automation.id}
                     className="overflow-hidden border-border/70 transition-colors hover:border-border"
                   >
                     <CardContent className="p-0">
@@ -390,7 +399,9 @@ export default async function AutomationsPage({
                                 ) : null}
                               </div>
                               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                                <span>{automation.runCount} {c("workspace.runs")}</span>
+                                <span>
+                                  {automation.runCount} {c("workspace.runs")}
+                                </span>
                                 <span className="flex items-center gap-1.5">
                                   <Clock3 className="size-3" />
                                   {automation.lastRunAt
@@ -410,18 +421,24 @@ export default async function AutomationsPage({
                                 </span>
                                 <span>{triggerLabel}</span>
                               </Badge>
-                              <span className="icon-rtl-flip text-muted-foreground">→</span>
+                              <span className="icon-rtl-flip text-muted-foreground">
+                                →
+                              </span>
                               <Badge variant="outline" className="gap-1.5">
                                 <span className="text-muted-foreground">
                                   {c("workspace.onlyIf")}
                                 </span>
                                 <span>
                                   {conditions > 0
-                                    ? c("builder.conditionCount", { count: conditions })
+                                    ? c("builder.conditionCount", {
+                                        count: conditions,
+                                      })
                                     : c("workspace.always")}
                                 </span>
                               </Badge>
-                              <span className="icon-rtl-flip text-muted-foreground">→</span>
+                              <span className="icon-rtl-flip text-muted-foreground">
+                                →
+                              </span>
                               <div className="flex flex-wrap gap-1.5">
                                 {actions.slice(0, 2).map((label, index) => (
                                   <Badge key={`${label}-${index}`} variant="secondary">
@@ -480,7 +497,10 @@ export default async function AutomationsPage({
                         <Sparkles className="size-4" />
                       </span>
                       {canManage ? (
-                        <AutomationActions variant="template" preset={template.preset} />
+                        <AutomationActions
+                          variant="template"
+                          preset={template.preset}
+                        />
                       ) : null}
                     </div>
                     <div>
@@ -491,9 +511,13 @@ export default async function AutomationsPage({
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <Badge variant="outline">
-                        {triggerSpec ? t(triggerSpec.labelKey) : template.preset.trigger}
+                        {triggerSpec
+                          ? t(triggerSpec.labelKey)
+                          : template.preset.trigger}
                       </Badge>
-                      <span className="icon-rtl-flip text-muted-foreground">→</span>
+                      <span className="icon-rtl-flip text-muted-foreground">
+                        →
+                      </span>
                       <Badge variant="secondary">
                         {actionSpec
                           ? c(actionSpec.copyKey as AutomationWorkspaceCopyKey)
@@ -514,7 +538,10 @@ export default async function AutomationsPage({
             <Card>
               <CardContent className="divide-y p-0">
                 {recentLogs.map((log) => (
-                  <div key={log.id} className="flex items-start justify-between gap-4 p-4">
+                  <div
+                    key={log.id}
+                    className="flex items-start justify-between gap-4 p-4"
+                  >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">
                         {log.automation.name}
