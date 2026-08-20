@@ -114,6 +114,30 @@ describe("seller automation write policy", () => {
     );
   });
 
+  it("rejects template variables that the selected event cannot provide", () => {
+    const definition = canonical({
+      name: "Shipped invalid template",
+      trigger: "order.shipped",
+      action: "send_whatsapp",
+      steps: [
+        {
+          action: "send_whatsapp",
+          onFailure: "stop",
+          config: { messageTemplate: "Hi {{customerName}}, {{orderNumber}} shipped" },
+        },
+      ],
+      conditions: null,
+      isActive: true,
+      dryRun: true,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+
+    expect(() => assertSellerAutomationWritePolicy(definition)).toThrowError(
+      /template variable/i,
+    );
+  });
+
   it("blocks legacy invisible notification definitions from new seller writes", () => {
     const definition = canonical({
       name: "Legacy notification",

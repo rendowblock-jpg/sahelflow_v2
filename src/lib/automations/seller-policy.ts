@@ -15,16 +15,30 @@ type CanonicalSellerWrite = AutomationMutation & {
   steps: AutomationStepDefinition[];
 };
 
+const TEMPLATE_TOKEN_PATTERN = /\{\{([A-Za-z0-9_.-]+)\}\}/g;
+
 function policyError(message: string, code: string): never {
   throw new SahelFlowError(message, code, 400);
+}
+
+function stepTemplate(step: AutomationStepDefinition): string | null {
+  switch (step.action) {
+    case "send_whatsapp":
+    case "send_notification":
+      return step.config.messageTemplate;
+    case "tag_customer":
+      return step.config.noteText;
+    case "update_status":
+      return null;
+  }
 }
 
 /**
  * Enforce the same seller-facing compatibility contract at the trusted write
  * boundary. The durable runtime intentionally remains capable of reading
  * historical definitions; new/edited definitions must not introduce an action
- * whose required payload is absent from its trigger or a condition field that
- * the selected trigger does not carry.
+ * whose required payload is absent from its trigger, a condition field that the
+ * selected trigger does not carry, or a template token that would render blank.
  */
 export function assertSellerAutomationWritePolicy(
   definition: CanonicalSellerWrite,
@@ -43,6 +57,19 @@ export function assertSellerAutomationWritePolicy(
         `Automation action '${step.action}' is not compatible with trigger '${definition.trigger}'`,
         "AUTOMATION_SELLER_ACTION_INCOMPATIBLE",
       );
+    }
+
+    const template = stepTemplate(step);
+    if (template) {
+      for (const match of template.matchAll(TEMPLATE_TOKEN_PATTERN)) {
+        const token = match[1];
+        if (token && !trigger.variables.includes(token)) {
+          policyError(
+            `Template variable '${token}' is not available on trigger '${definition.trigger}'`,
+            "AUTOMATION_SELLER_TEMPLATE_VARIABLE_UNAVAILABLE",
+          );
+        }
+      }
     }
   }
 
