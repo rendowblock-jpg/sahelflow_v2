@@ -120,8 +120,10 @@ export function StatCard({
     trendDirectionOnly ?? (hasTrend && Math.abs(trend) === 1);
   const actionable = action !== undefined && action !== null;
   const toneStyle = toneClasses[tone];
+  const last7DaysLabel = t("dashboard.last7Days");
   const resolvedSparkContext =
-    sparkContext ?? (spark?.length === 7 ? t("dashboard.last7Days") : null);
+    sparkContext ??
+    (spark?.length === 7 && subtitle !== last7DaysLabel ? last7DaysLabel : null);
   const trendText =
     hasTrend && !directionOnly
       ? new Intl.NumberFormat(
