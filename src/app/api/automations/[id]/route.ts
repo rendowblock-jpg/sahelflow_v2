@@ -12,6 +12,7 @@ import {
   automationTriggerSchema,
   canonicalizeAutomationMutation,
 } from "@/lib/automations/contracts";
+import { assertSellerAutomationWritePolicy } from "@/lib/automations/seller-policy";
 import { db, shopContext } from "@/lib/db";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { SahelFlowError } from "@/types/errors";
@@ -49,8 +50,8 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
     throw new SahelFlowError("Automation not found", "NOT_FOUND", 404);
   }
 
-  // A malformed historical definition may always be disabled. Re-enabling or
-  // editing it requires submitting one complete valid final definition.
+  // A malformed or retired historical definition may always be disabled. Any
+  // re-enable/edit must submit one complete seller-compatible final definition.
   const keys = Object.keys(input);
   if (keys.length === 1 && input.isActive === false) {
     const automation = await db.automation.update({
@@ -89,6 +90,7 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
     maxRetries: input.maxRetries ?? existing.maxRetries,
     retryDelayMs: input.retryDelayMs ?? existing.retryDelayMs,
   });
+  assertSellerAutomationWritePolicy(canonical);
 
   const automation = await db.automation.update({
     where: { id },
