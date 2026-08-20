@@ -326,7 +326,10 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                         </p>
                       ) : null}
                       {run.steps.map((step) => (
-                        <div key={`${step.id}-technical`} className="space-y-1 text-muted-foreground">
+                        <div
+                          key={`${step.id}-technical`}
+                          className="space-y-2 text-muted-foreground"
+                        >
                           <p dir="ltr" className="font-mono">
                             {t("automations.runtime.step", {
                               count: step.position + 1,
@@ -341,6 +344,38 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                             <p dir="ltr" className="break-all font-mono">
                               {t("automations.runtime.effect")}: {step.effectKey}
                             </p>
+                          ) : null}
+                          {step.attempts.length > 0 ? (
+                            <div className="space-y-1 border-s border-border/60 ps-3">
+                              <p className="font-medium">
+                                {t("automations.runtime.attempts")}
+                              </p>
+                              {step.attempts.map((attempt) => (
+                                <p
+                                  key={attempt.id}
+                                  className="flex flex-wrap items-center gap-1"
+                                >
+                                  <span dir="ltr" className="font-mono">
+                                    #{attempt.attemptNumber}
+                                  </span>
+                                  <span>·</span>
+                                  <span>
+                                    {t(`automations.runtime.state.${attempt.state}`)}
+                                  </span>
+                                  {attempt.errorCode ? (
+                                    <>
+                                      <span>·</span>
+                                      <span
+                                        dir="ltr"
+                                        className="break-all font-mono text-destructive"
+                                      >
+                                        {attempt.errorCode}
+                                      </span>
+                                    </>
+                                  ) : null}
+                                </p>
+                              ))}
+                            </div>
                           ) : null}
                         </div>
                       ))}

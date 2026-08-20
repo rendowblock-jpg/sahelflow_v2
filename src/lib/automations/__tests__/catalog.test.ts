@@ -31,10 +31,11 @@ describe("seller automation catalog", () => {
     );
   });
 
-  it("limits condition fields to data actually carried by the event", () => {
-    const orderFields = getSellerTriggerSpec("order.created")?.fields.map(
-      (field) => field.value,
-    );
+  it("limits condition fields and variables to data actually carried by each event", () => {
+    const orderCreated = getSellerTriggerSpec("order.created");
+    const orderShipped = getSellerTriggerSpec("order.shipped");
+    const orderFields = orderCreated?.fields.map((field) => field.value);
+    const shippedFields = orderShipped?.fields.map((field) => field.value);
     const messageFields = getSellerTriggerSpec("message.received")?.fields.map(
       (field) => field.value,
     );
@@ -43,7 +44,14 @@ describe("seller automation catalog", () => {
     );
 
     expect(orderFields).toContain("totalPrice");
+    expect(orderFields).toContain("customerName");
+    expect(orderCreated?.variables).toContain("customerName");
     expect(orderFields).not.toContain("messageText");
+
+    expect(shippedFields).toContain("customerPhone");
+    expect(shippedFields).not.toContain("customerName");
+    expect(orderShipped?.variables).not.toContain("customerName");
+
     expect(messageFields).toContain("messageText");
     expect(messageFields).not.toContain("totalPrice");
     expect(stockFields).toEqual([

@@ -86,6 +86,34 @@ describe("seller automation write policy", () => {
     );
   });
 
+  it("rejects customer-name conditions on order status events that do not carry the name", () => {
+    const definition = canonical({
+      name: "Shipped customer-name condition",
+      trigger: "order.shipped",
+      action: "send_whatsapp",
+      steps: [
+        {
+          action: "send_whatsapp",
+          onFailure: "stop",
+          config: { messageTemplate: "Order {{orderNumber}} shipped" },
+        },
+      ],
+      conditions: {
+        all: [
+          { field: "customerName", operator: "contains", value: "Ahmed" },
+        ],
+      },
+      isActive: true,
+      dryRun: true,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+
+    expect(() => assertSellerAutomationWritePolicy(definition)).toThrowError(
+      /not available/i,
+    );
+  });
+
   it("blocks legacy invisible notification definitions from new seller writes", () => {
     const definition = canonical({
       name: "Legacy notification",

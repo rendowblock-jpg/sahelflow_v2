@@ -141,7 +141,13 @@ const field = {
   },
 } as const satisfies Record<string, SellerConditionField>;
 
-const ORDER_FIELDS = [
+// `order.created` is emitted from the canonical create path and includes the
+// customer name. Status-transition events are emitted from the committed order
+// transition and intentionally carry IDs, phone, total and wilaya, but not the
+// customer name. Keep seller-visible fields/tokens aligned with those exact
+// payloads so the builder cannot offer a condition that never matches or a
+// template token that would render blank.
+const ORDER_CREATED_FIELDS = [
   field.wilaya,
   field.totalPrice,
   field.customerName,
@@ -149,8 +155,22 @@ const ORDER_FIELDS = [
   field.orderNumber,
 ] as const;
 
-const ORDER_VARIABLES = [
+const ORDER_CREATED_VARIABLES = [
   "customerName",
+  "customerPhone",
+  "orderNumber",
+  "totalPrice",
+  "wilaya",
+] as const;
+
+const ORDER_STATUS_FIELDS = [
+  field.wilaya,
+  field.totalPrice,
+  field.customerPhone,
+  field.orderNumber,
+] as const;
+
+const ORDER_STATUS_VARIABLES = [
   "customerPhone",
   "orderNumber",
   "totalPrice",
@@ -168,8 +188,8 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     value: "order.created",
     labelKey: "automations.triggers.orderCreated",
     group: "orders",
-    fields: ORDER_FIELDS,
-    variables: ORDER_VARIABLES,
+    fields: ORDER_CREATED_FIELDS,
+    variables: ORDER_CREATED_VARIABLES,
     actions: ORDER_ACTIONS,
     sellerReady: true,
   },
@@ -177,8 +197,8 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     value: "order.confirmed",
     labelKey: "automations.triggers.orderConfirmed",
     group: "orders",
-    fields: ORDER_FIELDS,
-    variables: ORDER_VARIABLES,
+    fields: ORDER_STATUS_FIELDS,
+    variables: ORDER_STATUS_VARIABLES,
     actions: ORDER_ACTIONS,
     sellerReady: true,
   },
@@ -186,8 +206,8 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     value: "order.shipped",
     labelKey: "automations.triggers.orderShipped",
     group: "orders",
-    fields: ORDER_FIELDS,
-    variables: ORDER_VARIABLES,
+    fields: ORDER_STATUS_FIELDS,
+    variables: ORDER_STATUS_VARIABLES,
     actions: ORDER_ACTIONS,
     sellerReady: true,
   },
@@ -195,8 +215,8 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     value: "order.delivered",
     labelKey: "automations.triggers.orderDelivered",
     group: "orders",
-    fields: ORDER_FIELDS,
-    variables: ORDER_VARIABLES,
+    fields: ORDER_STATUS_FIELDS,
+    variables: ORDER_STATUS_VARIABLES,
     actions: ORDER_ACTIONS,
     sellerReady: true,
   },
@@ -204,8 +224,8 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     value: "order.returned",
     labelKey: "automations.triggers.orderReturned",
     group: "orders",
-    fields: ORDER_FIELDS,
-    variables: ORDER_VARIABLES,
+    fields: ORDER_STATUS_FIELDS,
+    variables: ORDER_STATUS_VARIABLES,
     actions: ORDER_ACTIONS,
     sellerReady: true,
   },
@@ -213,8 +233,8 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     value: "order.refused",
     labelKey: "automations.triggers.orderRefused",
     group: "orders",
-    fields: ORDER_FIELDS,
-    variables: ORDER_VARIABLES,
+    fields: ORDER_STATUS_FIELDS,
+    variables: ORDER_STATUS_VARIABLES,
     actions: ORDER_ACTIONS,
     sellerReady: true,
   },
@@ -222,8 +242,8 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     value: "order.cancelled",
     labelKey: "automations.triggers.orderCancelled",
     group: "orders",
-    fields: ORDER_FIELDS,
-    variables: ORDER_VARIABLES,
+    fields: ORDER_STATUS_FIELDS,
+    variables: ORDER_STATUS_VARIABLES,
     actions: ORDER_ACTIONS,
     sellerReady: true,
   },

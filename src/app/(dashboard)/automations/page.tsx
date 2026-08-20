@@ -139,9 +139,9 @@ export default async function AutomationsPage({
     ].includes(run.status),
   );
   const successCount = terminalRuns.filter((run) => run.status === "succeeded").length;
-  const successRate = terminalRuns.length
-    ? Math.round((successCount / terminalRuns.length) * 100)
-    : 100;
+  const successRateValue = terminalRuns.length
+    ? `${Math.round((successCount / terminalRuns.length) * 100)}%`
+    : "—";
 
   const templateMessage = (kind: "confirm" | "shipped" | "thanks") => {
     if (locale === "ar") {
@@ -149,26 +149,26 @@ export default async function AutomationsPage({
         return "مرحباً {{customerName}}، استلمنا طلبك {{orderNumber}} وسنتواصل معك لتأكيده.";
       }
       if (kind === "shipped") {
-        return "مرحباً {{customerName}}، تم شحن طلبك {{orderNumber}} وهو في الطريق إليك.";
+        return "تم شحن طلبك {{orderNumber}} وهو في الطريق إليك.";
       }
-      return "شكراً {{customerName}}! نتمنى أن تكون راضياً عن طلبك {{orderNumber}}.";
+      return "شكراً لاختيارك متجرنا! نتمنى أن تكون راضياً عن طلبك {{orderNumber}}.";
     }
     if (locale === "fr") {
       if (kind === "confirm") {
         return "Bonjour {{customerName}}, nous avons bien reçu votre commande {{orderNumber}} et nous allons la confirmer avec vous.";
       }
       if (kind === "shipped") {
-        return "Bonjour {{customerName}}, votre commande {{orderNumber}} a été expédiée et est en route.";
+        return "Votre commande {{orderNumber}} a été expédiée et est en route.";
       }
-      return "Merci {{customerName}} ! Nous espérons que votre commande {{orderNumber}} vous satisfait.";
+      return "Merci pour votre confiance ! Nous espérons que votre commande {{orderNumber}} vous satisfait.";
     }
     if (kind === "confirm") {
       return "Hi {{customerName}}, we received your order {{orderNumber}} and will confirm it with you shortly.";
     }
     if (kind === "shipped") {
-      return "Hi {{customerName}}, your order {{orderNumber}} has shipped and is on its way.";
+      return "Your order {{orderNumber}} has shipped and is on its way.";
     }
-    return "Thank you {{customerName}}! We hope you are happy with order {{orderNumber}}.";
+    return "Thank you for choosing us! We hope you are happy with order {{orderNumber}}.";
   };
 
   const templates = [
@@ -280,21 +280,9 @@ export default async function AutomationsPage({
         />
         <StatCard
           label={c("workspace.successRate")}
-          value={`${successRate}%`}
+          value={successRateValue}
           icon={<CheckCircle2 />}
         />
-      </div>
-
-      <div className="flex items-start gap-3 rounded-xl border border-success/25 bg-success/[0.04] p-4">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
-          <CheckCircle2 className="size-4" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">{c("workspace.healthy")}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {c("workspace.healthyHint")}
-          </p>
-        </div>
       </div>
 
       <Tabs defaultValue={activeTab} className="w-full space-y-5">
