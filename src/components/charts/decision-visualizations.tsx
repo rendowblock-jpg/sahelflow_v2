@@ -193,26 +193,21 @@ export function RankedMetricList({
               <div className="min-w-0">
                 <div
                   className="truncate text-sm font-medium text-foreground"
-                  dir="auto"
                   data-ranked-label="true"
                 >
-                  {entry.label}
+                  <span dir="auto">{entry.label}</span>
                 </div>
                 {entry.detail ? (
-                  <div
-                    className="mt-0.5 truncate text-xs leading-4 text-muted-foreground"
-                    dir="auto"
-                  >
-                    {entry.detail}
+                  <div className="mt-0.5 truncate text-xs leading-4 text-muted-foreground">
+                    <span dir="auto">{entry.detail}</span>
                   </div>
                 ) : null}
               </div>
               <div
                 className="ps-3 text-end text-sm font-semibold tabular-nums text-foreground"
-                dir="auto"
                 data-ranked-value="true"
               >
-                {entry.displayValue}
+                <span dir="auto">{entry.displayValue}</span>
               </div>
             </div>
             {hasMagnitudeVariance ? (
