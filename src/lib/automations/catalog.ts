@@ -215,12 +215,11 @@ const TRIGGER_ORDER_STATUS: Partial<Record<SellerAutomationTrigger, OrderStatus>
   "order.cancelled": "cancelled",
 };
 
-// Runtime rendering accepts only the exact `{{token}}` grammar. Validation
-// deliberately scans broader `{{...}}` placeholders so common but unsupported
-// spaced forms such as `{{ customerName }}` are rejected instead of being
-// accepted and then sent literally to a customer.
-const TEMPLATE_PLACEHOLDER_PATTERN = /\{\{([^{}]+)\}\}/g;
-const TEMPLATE_TOKEN_NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
+// Runtime rendering accepts only this exact grammar. Validation removes every
+// exact token and treats any remaining brace as malformed template syntax. This
+// rejects spaced, nested, extra-brace and unclosed placeholders before a
+// customer-facing message can be saved.
+const TEMPLATE_TOKEN_PATTERN = /\{\{([A-Za-z0-9_.-]+)\}\}/g;
 
 export const SELLER_AUTOMATION_TRIGGERS = [
   {
@@ -385,9 +384,10 @@ export function getSellerStatusTargets(
 }
 
 /**
- * Return unique invalid/unsupported template tokens for the selected trigger.
- * The grammar intentionally mirrors runtime rendering: no whitespace is
- * accepted inside braces and token names are limited to the runtime path set.
+ * Return unique unsupported template variables for the selected trigger. The
+ * special `…` marker means brace syntax is malformed and would not be rendered
+ * by the runtime. The builder and trusted write policy share this function so
+ * they cannot disagree on what is safe to save.
  */
 export function unsupportedTemplateVariablesForTrigger(
   trigger: string,
@@ -397,13 +397,14 @@ export function unsupportedTemplateVariablesForTrigger(
   if (!spec) return [];
   const allowed = new Set(spec.variables);
   const unsupported = new Set<string>();
-  for (const match of template.matchAll(TEMPLATE_PLACEHOLDER_PATTERN)) {
-    const token = match[1];
-    if (!token) continue;
-    if (!TEMPLATE_TOKEN_NAME_PATTERN.test(token) || !allowed.has(token)) {
-      unsupported.add(token);
-    }
-  }
+  const scrubbed = template.replace(
+    TEMPLATE_TOKEN_PATTERN,
+    (_match, token: string) => {
+      if (!allowed.has(token)) unsupported.add(token);
+      return "";
+    },
+  );
+  if (/[{}]/.test(scrubbed)) unsupported.add("…");
   return [...unsupported];
 }
 

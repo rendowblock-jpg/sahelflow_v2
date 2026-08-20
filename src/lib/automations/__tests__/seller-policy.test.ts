@@ -161,6 +161,56 @@ describe("seller automation write policy", () => {
     );
   });
 
+  it("rejects condition values whose shape cannot be evaluated truthfully", () => {
+    const invalidNumber = canonical({
+      name: "Invalid numeric condition",
+      trigger: "order.created",
+      action: "send_whatsapp",
+      steps: [
+        {
+          action: "send_whatsapp",
+          onFailure: "stop",
+          config: { messageTemplate: "Order {{orderNumber}}" },
+        },
+      ],
+      conditions: {
+        all: [
+          { field: "totalPrice", operator: "greater_than", value: "invalid" },
+        ],
+      },
+      isActive: true,
+      dryRun: true,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+    const invalidList = canonical({
+      name: "Invalid list condition",
+      trigger: "order.created",
+      action: "send_whatsapp",
+      steps: [
+        {
+          action: "send_whatsapp",
+          onFailure: "stop",
+          config: { messageTemplate: "Order {{orderNumber}}" },
+        },
+      ],
+      conditions: {
+        all: [{ field: "wilaya", operator: "not_in", value: "Alger" }],
+      },
+      isActive: true,
+      dryRun: true,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+
+    expect(() => assertSellerAutomationWritePolicy(invalidNumber)).toThrowError(
+      /condition value/i,
+    );
+    expect(() => assertSellerAutomationWritePolicy(invalidList)).toThrowError(
+      /condition value/i,
+    );
+  });
+
   it("rejects customer-name conditions on order status events that do not carry the name", () => {
     const definition = canonical({
       name: "Shipped customer-name condition",
@@ -213,28 +263,34 @@ describe("seller automation write policy", () => {
     );
   });
 
-  it("rejects placeholder syntax the runtime renderer would otherwise leave literal", () => {
-    const definition = canonical({
-      name: "Spaced placeholder",
-      trigger: "order.created",
-      action: "send_whatsapp",
-      steps: [
-        {
-          action: "send_whatsapp",
-          onFailure: "stop",
-          config: { messageTemplate: "Hi {{ customerName }}" },
-        },
-      ],
-      conditions: null,
-      isActive: true,
-      dryRun: true,
-      maxRetries: 2,
-      retryDelayMs: 500,
-    });
+  it("rejects every malformed placeholder form the runtime renderer would leave literal", () => {
+    for (const messageTemplate of [
+      "Hi {{ customerName }}",
+      "Hi {{{customerName}}}",
+      "Hi {{customerName",
+    ]) {
+      const definition = canonical({
+        name: "Malformed placeholder",
+        trigger: "order.created",
+        action: "send_whatsapp",
+        steps: [
+          {
+            action: "send_whatsapp",
+            onFailure: "stop",
+            config: { messageTemplate },
+          },
+        ],
+        conditions: null,
+        isActive: true,
+        dryRun: true,
+        maxRetries: 2,
+        retryDelayMs: 500,
+      });
 
-    expect(() => assertSellerAutomationWritePolicy(definition)).toThrowError(
-      /template variable/i,
-    );
+      expect(() => assertSellerAutomationWritePolicy(definition)).toThrowError(
+        /placeholder syntax/i,
+      );
+    }
   });
 
   it("blocks legacy invisible notification definitions from new seller writes", () => {

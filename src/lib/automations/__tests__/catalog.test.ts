@@ -89,7 +89,7 @@ describe("seller automation catalog", () => {
     ]);
   });
 
-  it("identifies unsupported variables and rejects placeholder syntax the runtime does not render", () => {
+  it("identifies unsupported variables and all malformed placeholder delimiters", () => {
     expect(
       unsupportedTemplateVariablesForTrigger(
         "order.shipped",
@@ -107,7 +107,19 @@ describe("seller automation catalog", () => {
         "message.received",
         "Hi {{ customerName }}, thanks for your message",
       ),
-    ).toEqual([" customerName "]);
+    ).toEqual(["…"]);
+    expect(
+      unsupportedTemplateVariablesForTrigger(
+        "message.received",
+        "Hi {{{customerName}}}",
+      ),
+    ).toEqual(["…"]);
+    expect(
+      unsupportedTemplateVariablesForTrigger(
+        "message.received",
+        "Hi {{customerName",
+      ),
+    ).toEqual(["…"]);
   });
 
   it("normalizes in/not_in editor text into the arrays the condition engine expects", () => {

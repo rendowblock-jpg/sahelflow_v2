@@ -290,6 +290,7 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                             }))
                           }
                           maxLength={500}
+                          aria-label={t("automations.runtime.retryReason")}
                           placeholder={t("automations.runtime.retryReason")}
                         />
                         <Button
