@@ -180,37 +180,54 @@ export function RankedMetricList({
           <div
             key={entry.key}
             className="group rounded-xl px-2 py-2.5 transition-colors hover:bg-muted/35 focus-within:bg-muted/35 motion-reduce:transition-none"
+            data-ranked-row="true"
           >
             <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-2.5">
-              <span className="pt-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
+              <span
+                className="pt-0.5 text-xs font-semibold tabular-nums text-muted-foreground"
+                dir="ltr"
+                data-ranked-rank="true"
+              >
                 {String(ranks[index] ?? index + 1).padStart(2, "0")}
               </span>
               <div className="min-w-0">
-                <div className="truncate text-sm font-medium text-foreground">
+                <div
+                  className="truncate text-sm font-medium text-foreground"
+                  dir="auto"
+                  data-ranked-label="true"
+                >
                   {entry.label}
                 </div>
                 {entry.detail ? (
-                  <div className="mt-0.5 truncate text-xs leading-4 text-muted-foreground">
+                  <div
+                    className="mt-0.5 truncate text-xs leading-4 text-muted-foreground"
+                    dir="auto"
+                  >
                     {entry.detail}
                   </div>
                 ) : null}
               </div>
-              <div className="ps-3 text-end text-sm font-semibold tabular-nums text-foreground">
+              <div
+                className="ps-3 text-end text-sm font-semibold tabular-nums text-foreground"
+                dir="auto"
+                data-ranked-value="true"
+              >
                 {entry.displayValue}
               </div>
             </div>
             {hasMagnitudeVariance ? (
               <div
-                className="mt-2.5 ms-[2.625rem] h-1.5 overflow-hidden rounded-full bg-muted/65"
-                dir="ltr"
+                className="mt-2.5 ms-[2.625rem] flex h-1.5 overflow-hidden rounded-full bg-muted/65"
                 aria-hidden="true"
+                data-ranked-bar-track="logical"
               >
                 <div
-                  className="h-full rounded-full transition-[width] duration-300 ease-out motion-reduce:transition-none"
+                  className="h-full shrink-0 rounded-full transition-[inline-size] duration-300 ease-out motion-reduce:transition-none"
                   style={{
-                    width: `${width}%`,
+                    inlineSize: `${width}%`,
                     background: entry.color ?? "var(--color-chart-1)",
                   }}
+                  data-ranked-bar-fill="true"
                 />
               </div>
             ) : null}
