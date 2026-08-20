@@ -40,7 +40,10 @@ interface StatCardProps {
   subtitle?: React.ReactNode;
   spark?: Array<{ value: number }>;
   sparkColor?: string;
-  /** Optional explicit period/context copy for the small operational trend. */
+  /**
+   * Explicit period/context copy for the small operational trend. Sample count
+   * is not time metadata, so callers that know the period must provide it.
+   */
   sparkContext?: React.ReactNode;
   /** Count and money KPIs default to an honest zero baseline. */
   sparkZeroBaseline?: boolean;
@@ -111,7 +114,7 @@ export function StatCard({
   action,
   selected = false,
 }: StatCardProps) {
-  const { locale, t } = useI18n();
+  const { locale } = useI18n();
   const hasTrend =
     typeof trend === "number" && Number.isFinite(trend) && trend !== 0;
   const positive = hasTrend && trend > 0;
@@ -120,10 +123,6 @@ export function StatCard({
     trendDirectionOnly ?? (hasTrend && Math.abs(trend) === 1);
   const actionable = action !== undefined && action !== null;
   const toneStyle = toneClasses[tone];
-  const last7DaysLabel = t("dashboard.last7Days");
-  const resolvedSparkContext =
-    sparkContext ??
-    (spark?.length === 7 && subtitle !== last7DaysLabel ? last7DaysLabel : null);
   const trendText =
     hasTrend && !directionOnly
       ? new Intl.NumberFormat(
@@ -240,12 +239,12 @@ export function StatCard({
               zeroBaseline={sparkZeroBaseline}
             />
           </div>
-          {resolvedSparkContext ? (
+          {sparkContext ? (
             <div
               className="mt-1 flex items-center justify-between gap-2 text-[11px] leading-4 text-muted-foreground/80"
               data-stat-sparkline-context="true"
             >
-              <span>{resolvedSparkContext}</span>
+              <span>{sparkContext}</span>
               <span
                 className="inline-flex shrink-0 items-center gap-1.5"
                 dir="ltr"
