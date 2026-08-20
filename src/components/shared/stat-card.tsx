@@ -40,6 +40,10 @@ interface StatCardProps {
   subtitle?: React.ReactNode;
   spark?: Array<{ value: number }>;
   sparkColor?: string;
+  /** Optional explicit period/context copy for the small operational trend. */
+  sparkContext?: React.ReactNode;
+  /** Count and money KPIs default to an honest zero baseline. */
+  sparkZeroBaseline?: boolean;
   className?: string;
   style?: React.CSSProperties;
   tooltip?: string;
@@ -96,6 +100,8 @@ export function StatCard({
   subtitle,
   spark,
   sparkColor = "var(--color-chart-1)",
+  sparkContext,
+  sparkZeroBaseline = true,
   className,
   style,
   tooltip,
@@ -105,7 +111,7 @@ export function StatCard({
   action,
   selected = false,
 }: StatCardProps) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const hasTrend =
     typeof trend === "number" && Number.isFinite(trend) && trend !== 0;
   const positive = hasTrend && trend > 0;
@@ -114,6 +120,8 @@ export function StatCard({
     trendDirectionOnly ?? (hasTrend && Math.abs(trend) === 1);
   const actionable = action !== undefined && action !== null;
   const toneStyle = toneClasses[tone];
+  const resolvedSparkContext =
+    sparkContext ?? (spark?.length === 7 ? t("dashboard.last7Days") : null);
   const trendText =
     hasTrend && !directionOnly
       ? new Intl.NumberFormat(
@@ -221,8 +229,33 @@ export function StatCard({
       </div>
 
       {spark && spark.length > 1 ? (
-        <div className="mt-2.5 h-6 overflow-hidden opacity-80" aria-hidden="true">
-          <Sparkline data={spark} color={sparkColor} height={24} />
+        <div className="mt-2.5" data-stat-sparkline="true">
+          <div className="h-7 overflow-hidden opacity-90" aria-hidden="true">
+            <Sparkline
+              data={spark}
+              color={sparkColor}
+              height={28}
+              zeroBaseline={sparkZeroBaseline}
+            />
+          </div>
+          {resolvedSparkContext ? (
+            <div
+              className="mt-1 flex items-center justify-between gap-2 text-[11px] leading-4 text-muted-foreground/80"
+              data-stat-sparkline-context="true"
+            >
+              <span>{resolvedSparkContext}</span>
+              <span
+                className="inline-flex shrink-0 items-center gap-1.5"
+                dir="ltr"
+                aria-hidden="true"
+                data-stat-sparkline-direction="oldest-to-latest"
+              >
+                <span className="size-1 rounded-full bg-current opacity-45" />
+                <span className="h-px w-4 bg-current opacity-35" />
+                <span className="size-1.5 rounded-full bg-current opacity-85" />
+              </span>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>
