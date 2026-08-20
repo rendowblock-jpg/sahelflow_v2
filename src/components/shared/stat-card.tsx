@@ -40,6 +40,13 @@ interface StatCardProps {
   subtitle?: React.ReactNode;
   spark?: Array<{ value: number }>;
   sparkColor?: string;
+  /**
+   * Explicit period/context copy for the small operational trend. Sample count
+   * is not time metadata, so callers that know the period must provide it.
+   */
+  sparkContext?: React.ReactNode;
+  /** Opt in when zero is the honest floor for this metric's mini-trend. */
+  sparkZeroBaseline?: boolean;
   className?: string;
   style?: React.CSSProperties;
   tooltip?: string;
@@ -96,6 +103,8 @@ export function StatCard({
   subtitle,
   spark,
   sparkColor = "var(--color-chart-1)",
+  sparkContext,
+  sparkZeroBaseline = false,
   className,
   style,
   tooltip,
@@ -221,8 +230,33 @@ export function StatCard({
       </div>
 
       {spark && spark.length > 1 ? (
-        <div className="mt-2.5 h-6 overflow-hidden opacity-80" aria-hidden="true">
-          <Sparkline data={spark} color={sparkColor} height={24} />
+        <div className="mt-2.5" data-stat-sparkline="true">
+          <div className="h-7 overflow-hidden opacity-90" aria-hidden="true">
+            <Sparkline
+              data={spark}
+              color={sparkColor}
+              height={28}
+              zeroBaseline={sparkZeroBaseline}
+            />
+          </div>
+          {sparkContext ? (
+            <div
+              className="mt-1 flex items-center justify-between gap-2 text-[11px] leading-4 text-muted-foreground/80"
+              data-stat-sparkline-context="true"
+            >
+              <span>{sparkContext}</span>
+              <span
+                className="inline-flex shrink-0 items-center gap-1.5"
+                dir="ltr"
+                aria-hidden="true"
+                data-stat-sparkline-direction="oldest-to-latest"
+              >
+                <span className="size-1 rounded-full bg-current opacity-45" />
+                <span className="h-px w-4 bg-current opacity-35" />
+                <span className="size-1.5 rounded-full bg-current opacity-85" />
+              </span>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>

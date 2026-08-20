@@ -187,6 +187,8 @@ export default async function DashboardPage() {
           trendLabel={t("dashboard.vsYesterday")}
           spark={ordersSpark}
           sparkColor="var(--color-chart-1)"
+          sparkContext={t("dashboard.last7Days")}
+          sparkZeroBaseline
         />
         <StatCard
           label={t("dashboard.grossRevenue")}
@@ -210,6 +212,8 @@ export default async function DashboardPage() {
           tooltip={t("dashboard.grossRevenueTooltip")}
           spark={revenueSpark}
           sparkColor="var(--color-chart-2)"
+          sparkContext={t("dashboard.last7Days")}
+          sparkZeroBaseline
         />
         <StatCard
           label={t("dashboard.newCustomersToday")}
@@ -221,7 +225,8 @@ export default async function DashboardPage() {
           icon={<Users />}
           spark={customersSpark}
           sparkColor="var(--color-chart-3)"
-          subtitle={t("dashboard.last7Days")}
+          sparkContext={t("dashboard.last7Days")}
+          sparkZeroBaseline
         />
         <StatCard
           label={t("dashboard.deliveryRate")}
