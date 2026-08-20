@@ -87,6 +87,7 @@ describe("Class-AAA analytical frame contract", () => {
   it("centralizes motion policy and keeps tiny stat-card trends renderer-light", () => {
     const runtime = source("../echarts-runtime.tsx");
     const sparkline = source("../sparkline.tsx");
+    const statCard = source("../../shared/stat-card.tsx");
 
     expect(runtime).toContain("useChartMotion");
     expect(runtime).toContain("animation: !reducedMotion");
@@ -97,6 +98,11 @@ describe("Class-AAA analytical frame contract", () => {
     expect(sparkline).toContain('data-sparkline-latest="true"');
     expect(sparkline).not.toContain("echarts");
     expect(sparkline).not.toContain("recharts");
+
+    expect(statCard).toContain('t("dashboard.last7Days")');
+    expect(statCard).toContain('data-stat-sparkline-context="true"');
+    expect(statCard).toContain('data-stat-sparkline-direction="oldest-to-latest"');
+    expect(statCard).toContain("zeroBaseline={sparkZeroBaseline}");
   });
 
   it("keeps ranked horizontal metrics logical-direction aware", () => {
