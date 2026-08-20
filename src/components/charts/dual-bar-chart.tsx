@@ -3,11 +3,7 @@
 import * as React from "react";
 
 import { useI18n } from "@/hooks/use-i18n";
-import {
-  formatCompactNumber,
-  formatDZD,
-  isolateLtr,
-} from "@/lib/utils";
+import { formatDZD, formatDZDShort } from "@/lib/utils";
 import {
   DEFAULT_CHART_HEIGHT,
   normalizeChartHeight,
@@ -27,7 +23,11 @@ interface DualBarChartProps {
   height?: ChartHeight;
 }
 
-/** Category copy follows its own first strong character; numeric values do not. */
+/**
+ * Let each localized label resolve its own bidi direction inside the Cartesian
+ * LTR geometry domain. This matches the shared time-series currency formatter:
+ * Arabic compact units such as "ألف" and the DZD suffix stay one natural run.
+ */
 function isolateNaturalText(value: unknown) {
   return `\u2068${String(value ?? "")}\u2069`;
 }
@@ -46,12 +46,12 @@ export function DualBarChart({
     [data],
   );
   const yMin = Math.min(0, ...netValues);
-  const compactValue = React.useCallback(
-    (value: number) => isolateLtr(formatCompactNumber(value, locale)),
+  const compactMoneyValue = React.useCallback(
+    (value: number) => isolateNaturalText(formatDZDShort(value, locale)),
     [locale],
   );
   const moneyValue = React.useCallback(
-    (value: number) => isolateLtr(formatDZD(value, locale)),
+    (value: number) => isolateNaturalText(formatDZD(value, locale)),
     [locale],
   );
 
@@ -78,7 +78,7 @@ export function DualBarChart({
             formatter: (params: { value?: unknown }) => {
               const numeric = Number(params.value);
               return Number.isFinite(numeric)
-                ? compactValue(numeric)
+                ? compactMoneyValue(numeric)
                 : isolateNaturalText(params.value);
             },
           },
@@ -103,7 +103,7 @@ export function DualBarChart({
           ...axis,
           axisLabel: {
             ...axis.axisLabel,
-            formatter: (value: number) => compactValue(value),
+            formatter: (value: number) => compactMoneyValue(value),
           },
         },
         series: [
@@ -127,7 +127,7 @@ export function DualBarChart({
               fontSize: 10,
               formatter: (params: { value?: unknown }) => {
                 const value = Number(params.value ?? 0);
-                return value > 0 ? compactValue(value) : "";
+                return value > 0 ? compactMoneyValue(value) : "";
               },
             },
             emphasis: { focus: "series" as const, itemStyle: { opacity: 1 } },
@@ -156,7 +156,7 @@ export function DualBarChart({
               fontSize: 10,
               formatter: (params: { value?: unknown }) => {
                 const value = Number(params.value ?? 0);
-                return value > 0 ? compactValue(value) : "";
+                return value > 0 ? compactMoneyValue(value) : "";
               },
             },
             emphasis: { focus: "series" as const, itemStyle: { opacity: 1 } },
@@ -207,7 +207,7 @@ export function DualBarChart({
       };
     },
     [
-      compactValue,
+      compactMoneyValue,
       data,
       dir,
       expensesLabel,
