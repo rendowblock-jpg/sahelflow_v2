@@ -49,12 +49,15 @@ import {
   actionAllowedForTrigger,
   conditionValueForEditor,
   getSellerActionSpec,
+  getSellerStatusTargets,
   getSellerTriggerSpec,
   normalizeConditionValueForSubmit,
   sellerReadyTriggers,
+  unsupportedTemplateVariablesForTrigger,
   type SellerAutomationAction,
   type SellerAutomationTrigger,
   type SellerConditionOperator,
+  type SellerOrderStatusTarget,
 } from "@/lib/automations/catalog";
 import {
   getAutomationWorkspaceCopy,
@@ -67,7 +70,7 @@ type FailurePolicy = "stop" | "continue";
 type StepConfig = {
   messageTemplate?: string;
   noteText?: string;
-  targetStatus?: "shipped" | "delivered" | "returned" | "refused" | "cancelled";
+  targetStatus?: SellerOrderStatusTarget;
 };
 type BuilderStep = {
   action: SellerAutomationAction;
@@ -102,14 +105,6 @@ interface Props {
   children?: ReactNode;
 }
 
-const TARGET_STATUSES = [
-  "shipped",
-  "delivered",
-  "returned",
-  "refused",
-  "cancelled",
-] as const;
-
 function parseJson(raw: string | null | undefined): unknown {
   if (!raw) return undefined;
   try {
@@ -128,35 +123,113 @@ function isSellerAction(value: unknown): value is SellerAutomationAction {
   ].includes(String(value));
 }
 
-function defaultMessage(locale: string): string {
+function defaultMessage(trigger: string, locale: string): string {
   if (locale === "ar") {
-    return "مرحباً {{customerName}}، تم تحديث طلبك {{orderNumber}}.";
+    switch (trigger) {
+      case "order.created":
+        return "مرحباً {{customerName}}، استلمنا طلبك {{orderNumber}} وسنتواصل معك لتأكيده.";
+      case "order.confirmed":
+        return "تم تأكيد طلبك {{orderNumber}} بنجاح.";
+      case "order.shipped":
+        return "تم شحن طلبك {{orderNumber}} وهو في الطريق إليك.";
+      case "order.delivered":
+        return "تم تسليم طلبك {{orderNumber}}. شكراً لاختيارك متجرنا.";
+      case "order.returned":
+        return "تم تسجيل إرجاع الطلب {{orderNumber}}.";
+      case "order.refused":
+        return "تم تسجيل رفض الطلب {{orderNumber}}.";
+      case "order.cancelled":
+        return "تم إلغاء الطلب {{orderNumber}}.";
+      case "message.received":
+        return "مرحباً {{customerName}}، شكراً على رسالتك. سنرد عليك قريباً.";
+      default:
+        return "شكراً لتواصلك معنا.";
+    }
   }
   if (locale === "fr") {
-    return "Bonjour {{customerName}}, votre commande {{orderNumber}} a été mise à jour.";
+    switch (trigger) {
+      case "order.created":
+        return "Bonjour {{customerName}}, nous avons bien reçu votre commande {{orderNumber}} et nous allons la confirmer avec vous.";
+      case "order.confirmed":
+        return "Votre commande {{orderNumber}} est confirmée.";
+      case "order.shipped":
+        return "Votre commande {{orderNumber}} a été expédiée et est en route.";
+      case "order.delivered":
+        return "Votre commande {{orderNumber}} a été livrée. Merci pour votre confiance !";
+      case "order.returned":
+        return "Le retour de la commande {{orderNumber}} a été enregistré.";
+      case "order.refused":
+        return "Le refus de la commande {{orderNumber}} a été enregistré.";
+      case "order.cancelled":
+        return "La commande {{orderNumber}} a été annulée.";
+      case "message.received":
+        return "Bonjour {{customerName}}, merci pour votre message. Nous vous répondrons bientôt.";
+      default:
+        return "Merci de nous avoir contactés.";
+    }
   }
-  return "Hi {{customerName}}, your order {{orderNumber}} has been updated.";
+  switch (trigger) {
+    case "order.created":
+      return "Hi {{customerName}}, we received order {{orderNumber}} and will confirm it with you shortly.";
+    case "order.confirmed":
+      return "Your order {{orderNumber}} is confirmed.";
+    case "order.shipped":
+      return "Your order {{orderNumber}} has shipped and is on its way.";
+    case "order.delivered":
+      return "Your order {{orderNumber}} was delivered. Thank you for choosing us!";
+    case "order.returned":
+      return "The return for order {{orderNumber}} has been recorded.";
+    case "order.refused":
+      return "The refusal for order {{orderNumber}} has been recorded.";
+    case "order.cancelled":
+      return "Order {{orderNumber}} has been cancelled.";
+    case "message.received":
+      return "Hi {{customerName}}, thanks for your message. We’ll get back to you shortly.";
+    default:
+      return "Thanks for getting in touch.";
+  }
 }
 
-function defaultStep(action: SellerAutomationAction, locale: string): BuilderStep {
+function defaultNote(trigger: string, locale: string): string {
+  const variables = new Set(getSellerTriggerSpec(trigger)?.variables ?? []);
+  if (variables.has("orderNumber")) {
+    if (locale === "ar") return "ملاحظة أتمتة للطلب {{orderNumber}}";
+    if (locale === "fr") return "Note d’automatisation pour {{orderNumber}}";
+    return "Automation note for {{orderNumber}}";
+  }
+  if (variables.has("customerName")) {
+    if (locale === "ar") return "ملاحظة أتمتة للعميل {{customerName}}";
+    if (locale === "fr") return "Note d’automatisation pour {{customerName}}";
+    return "Automation note for {{customerName}}";
+  }
+  if (locale === "ar") return "ملاحظة أتمتة";
+  if (locale === "fr") return "Note d’automatisation";
+  return "Automation note";
+}
+
+function defaultStep(
+  action: SellerAutomationAction,
+  locale: string,
+  trigger: string,
+): BuilderStep {
   if (action === "send_whatsapp" || action === "send_notification") {
     return {
       action,
       onFailure: "stop",
-      config: { messageTemplate: defaultMessage(locale) },
+      config: { messageTemplate: defaultMessage(trigger, locale) },
     };
   }
   if (action === "tag_customer") {
     return {
       action,
       onFailure: "stop",
-      config: { noteText: "{{orderNumber}}" },
+      config: { noteText: defaultNote(trigger, locale) },
     };
   }
   return {
     action,
     onFailure: "stop",
-    config: { targetStatus: "shipped" },
+    config: { targetStatus: getSellerStatusTargets(trigger)[0] },
   };
 }
 
@@ -174,7 +247,7 @@ function parseStoredSteps(
       const config =
         object.config && typeof object.config === "object"
           ? (object.config as StepConfig)
-          : defaultStep(object.action, locale).config;
+          : defaultStep(object.action, locale, automation.trigger).config;
       return [
         {
           action: object.action,
@@ -195,7 +268,7 @@ function parseStoredSteps(
         config:
           config && typeof config === "object"
             ? (config as StepConfig)
-            : defaultStep(automation.action, locale).config,
+            : defaultStep(automation.action, locale, automation.trigger).config,
       },
     ];
   }
@@ -241,6 +314,23 @@ function stepComplete(step: BuilderStep): boolean {
     return Boolean(step.config.noteText?.trim());
   }
   return Boolean(step.config.targetStatus);
+}
+
+function stepCompatibleWithTrigger(trigger: string, step: BuilderStep): boolean {
+  if (!actionAllowedForTrigger(trigger, step.action)) return false;
+  if (step.action === "update_status") {
+    return Boolean(
+      step.config.targetStatus &&
+        getSellerStatusTargets(trigger).includes(step.config.targetStatus),
+    );
+  }
+  const template =
+    step.action === "tag_customer"
+      ? step.config.noteText
+      : step.config.messageTemplate;
+  return template
+    ? unsupportedTemplateVariablesForTrigger(trigger, template).length === 0
+    : true;
 }
 
 function conditionDrafts(value: SellerConditionGroupDraft): SellerConditionDraft[] {
@@ -303,7 +393,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
     initialSteps.length > 0
       ? initialSteps
       : firstAllowed
-        ? [defaultStep(firstAllowed, locale)]
+        ? [defaultStep(firstAllowed, locale, initialTrigger)]
         : [],
   );
   const [dryRun, setDryRun] = useState(automation?.dryRun ?? false);
@@ -328,7 +418,6 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
       (!getSellerTriggerSpec(automation.trigger) ||
         (!isSellerAction(automation.action) && parseStoredSteps(automation, locale).length === 0)),
   );
-  const legacyNotification = steps.some((step) => step.action === "send_notification");
 
   const conditionsValid = conditionDrafts(conditions).every((condition) => {
     const field = triggerSpec?.fields.find((item) => item.value === condition.field);
@@ -347,10 +436,8 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
     return true;
   });
 
-  const stepsCompatible = steps.every(
-    (step) =>
-      actionAllowedForTrigger(trigger, step.action) ||
-      (isEdit && step.action === "send_notification"),
+  const stepsCompatible = steps.every((step) =>
+    stepCompatibleWithTrigger(trigger, step),
   );
   const valid =
     !legacyInvalid &&
@@ -402,15 +489,20 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
     setTrigger(value);
     setConditions(null);
     const nextSpec = getSellerTriggerSpec(value);
-    const compatible = steps.filter((step) =>
-      nextSpec?.actions.includes(step.action),
-    );
+    const compatible = steps.flatMap((step): BuilderStep[] => {
+      if (!nextSpec?.actions.includes(step.action)) return [];
+      return [
+        stepCompatibleWithTrigger(value, step)
+          ? step
+          : defaultStep(step.action, locale, value),
+      ];
+    });
     if (compatible.length > 0) {
       setSteps(compatible);
       return;
     }
     const nextAction = nextSpec?.actions[0];
-    setSteps(nextAction ? [defaultStep(nextAction, locale)] : []);
+    setSteps(nextAction ? [defaultStep(nextAction, locale, value)] : []);
   };
 
   const insertVariable = (index: number, variable: string) => {
@@ -436,11 +528,13 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
     if (!valid) return;
     setLoading(true);
     try {
+      const firstStep = steps[0];
+      if (!firstStep) return;
       const payload = {
         name: name.trim(),
         trigger,
-        action: steps[0]!.action,
-        config: steps[0]!.config,
+        action: firstStep.action,
+        config: firstStep.config,
         steps,
         conditions: buildConditionsPayload(trigger, conditions),
         isActive: automation?.isActive ?? true,
@@ -449,7 +543,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
         retryDelayMs,
       };
       const response = isEdit
-        ? await fetch(`/api/automations/${automation!.id}`, {
+        ? await fetch(`/api/automations/${automation?.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -598,7 +692,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                       if (nextAction) {
                         setSteps((current) => [
                           ...current,
-                          defaultStep(nextAction, locale),
+                          defaultStep(nextAction, locale, trigger),
                         ]);
                       }
                     }}
@@ -626,6 +720,14 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                       const isWhatsApp = step.action === "send_whatsapp";
                       const isLegacyNotification =
                         step.action === "send_notification";
+                      const statusTargets = getSellerStatusTargets(trigger);
+                      const template =
+                        step.action === "tag_customer"
+                          ? step.config.noteText ?? ""
+                          : step.config.messageTemplate ?? "";
+                      const unsupportedVariables = template
+                        ? unsupportedTemplateVariablesForTrigger(trigger, template)
+                        : [];
 
                       return (
                         <article
@@ -695,6 +797,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                     ...defaultStep(
                                       value as SellerAutomationAction,
                                       locale,
+                                      trigger,
                                     ),
                                   })
                                 }
@@ -779,6 +882,15 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                   {c("builder.variablesHint")}
                                 </p>
                               </div>
+                              {unsupportedVariables.length > 0 ? (
+                                <p className="text-xs text-destructive">
+                                  {c("builder.variablesInvalid", {
+                                    variables: unsupportedVariables
+                                      .map((variable) => `{{${variable}}}`)
+                                      .join(", "),
+                                  })}
+                                </p>
+                              ) : null}
                               {isWhatsApp ? (
                                 <p className="text-xs text-muted-foreground">
                                   {c("builder.whatsappNeedsPhone")}
@@ -820,6 +932,15 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                   </button>
                                 ))}
                               </div>
+                              {unsupportedVariables.length > 0 ? (
+                                <p className="text-xs text-destructive">
+                                  {c("builder.variablesInvalid", {
+                                    variables: unsupportedVariables
+                                      .map((variable) => `{{${variable}}}`)
+                                      .join(", "),
+                                  })}
+                                </p>
+                              ) : null}
                             </div>
                           ) : null}
 
@@ -827,12 +948,11 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                             <div className="space-y-2">
                               <Label>{c("builder.orderStatus")}</Label>
                               <Select
-                                value={step.config.targetStatus ?? "shipped"}
-                                disabled={loading}
+                                value={step.config.targetStatus ?? statusTargets[0] ?? ""}
+                                disabled={loading || statusTargets.length === 0}
                                 onValueChange={(value) =>
                                   updateStepConfig(index, {
-                                    targetStatus:
-                                      value as StepConfig["targetStatus"],
+                                    targetStatus: value as SellerOrderStatusTarget,
                                   })
                                 }
                               >
@@ -840,7 +960,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {TARGET_STATUSES.map((status) => (
+                                  {statusTargets.map((status) => (
                                     <SelectItem key={status} value={status}>
                                       {t(`automations.status.${status}`)}
                                     </SelectItem>

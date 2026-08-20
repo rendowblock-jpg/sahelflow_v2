@@ -2,16 +2,25 @@ import { describe, expect, it } from "vitest";
 
 import {
   actionAllowedForTrigger,
+  getSellerStatusTargets,
   getSellerTriggerSpec,
   normalizeConditionValueForSubmit,
   sellerReadyTriggers,
+  unsupportedTemplateVariablesForTrigger,
 } from "../catalog";
 
 describe("seller automation catalog", () => {
-  it("exposes only actions whose required payload exists on the selected event", () => {
+  it("exposes only actions whose required payload and state are safe on the selected event", () => {
     expect(actionAllowedForTrigger("order.created", "send_whatsapp")).toBe(true);
-    expect(actionAllowedForTrigger("order.created", "update_status")).toBe(true);
+    expect(actionAllowedForTrigger("order.created", "update_status")).toBe(false);
     expect(actionAllowedForTrigger("order.created", "tag_customer")).toBe(true);
+
+    expect(actionAllowedForTrigger("order.confirmed", "update_status")).toBe(true);
+    expect(actionAllowedForTrigger("order.shipped", "update_status")).toBe(true);
+    expect(actionAllowedForTrigger("order.delivered", "update_status")).toBe(true);
+    expect(actionAllowedForTrigger("order.returned", "update_status")).toBe(false);
+    expect(actionAllowedForTrigger("order.refused", "update_status")).toBe(false);
+    expect(actionAllowedForTrigger("order.cancelled", "update_status")).toBe(false);
 
     expect(actionAllowedForTrigger("message.received", "send_whatsapp")).toBe(true);
     expect(actionAllowedForTrigger("message.received", "update_status")).toBe(false);
@@ -19,6 +28,25 @@ describe("seller automation catalog", () => {
 
     expect(actionAllowedForTrigger("stock.low", "send_whatsapp")).toBe(false);
     expect(actionAllowedForTrigger("stock.low", "update_status")).toBe(false);
+  });
+
+  it("derives seller status targets from the canonical order transition state machine", () => {
+    expect(getSellerStatusTargets("order.created")).toEqual([]);
+    expect(getSellerStatusTargets("order.confirmed")).toEqual([
+      "shipped",
+      "returned",
+      "refused",
+      "cancelled",
+    ]);
+    expect(getSellerStatusTargets("order.shipped")).toEqual([
+      "delivered",
+      "returned",
+      "refused",
+    ]);
+    expect(getSellerStatusTargets("order.delivered")).toEqual(["returned"]);
+    expect(getSellerStatusTargets("order.returned")).toEqual([]);
+    expect(getSellerStatusTargets("order.refused")).toEqual([]);
+    expect(getSellerStatusTargets("order.cancelled")).toEqual([]);
   });
 
   it("keeps stock-low readable without offering the legacy invisible notification as a new seller flow", () => {
@@ -59,6 +87,21 @@ describe("seller automation catalog", () => {
       "stockLevel",
       "lowStockThreshold",
     ]);
+  });
+
+  it("identifies template variables that the selected event cannot provide", () => {
+    expect(
+      unsupportedTemplateVariablesForTrigger(
+        "order.shipped",
+        "Hi {{customerName}}, order {{orderNumber}} shipped",
+      ),
+    ).toEqual(["customerName"]);
+    expect(
+      unsupportedTemplateVariablesForTrigger(
+        "message.received",
+        "Hi {{customerName}}, thanks for your message",
+      ),
+    ).toEqual([]);
   });
 
   it("normalizes in/not_in editor text into the arrays the condition engine expects", () => {

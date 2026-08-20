@@ -53,7 +53,7 @@ const DEFINITIONS: readonly DemoDefinition[] = [
         onFailure: "stop",
         config: {
           messageTemplate:
-            "Bonjour {{customerName}}, votre commande {{orderNumber}} a été expédiée et est en route.",
+            "Votre commande {{orderNumber}} a été expédiée et est en route.",
         },
       },
     ],
@@ -70,7 +70,7 @@ const DEFINITIONS: readonly DemoDefinition[] = [
         onFailure: "stop",
         config: {
           messageTemplate:
-            "Merci {{customerName}} ! Nous espérons que votre commande {{orderNumber}} vous satisfait.",
+            "Merci pour votre confiance ! Nous espérons que votre commande {{orderNumber}} vous satisfait.",
         },
       },
     ],

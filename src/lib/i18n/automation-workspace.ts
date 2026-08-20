@@ -62,6 +62,7 @@ const copy = {
     "builder.orderStatus": "New order status",
     "builder.variables": "Available variables",
     "builder.variablesHint": "These variables are guaranteed or supported for the selected event.",
+    "builder.variablesInvalid": "Remove unsupported variable(s): {{variables}}.",
     "builder.removeAction": "Remove action",
     "builder.moveUp": "Move up",
     "builder.moveDown": "Move down",
@@ -182,6 +183,7 @@ const copy = {
     "builder.orderStatus": "Nouveau statut de commande",
     "builder.variables": "Variables disponibles",
     "builder.variablesHint": "Ces variables sont garanties ou prises en charge par l’événement sélectionné.",
+    "builder.variablesInvalid": "Supprimez les variables non disponibles : {{variables}}.",
     "builder.removeAction": "Supprimer l’action",
     "builder.moveUp": "Monter",
     "builder.moveDown": "Descendre",
@@ -302,6 +304,7 @@ const copy = {
     "builder.orderStatus": "حالة الطلب الجديدة",
     "builder.variables": "المتغيرات المتاحة",
     "builder.variablesHint": "هذه المتغيرات متاحة أو مدعومة في الحدث المختار.",
+    "builder.variablesInvalid": "احذف المتغيرات غير المتاحة لهذا الحدث: {{variables}}.",
     "builder.removeAction": "حذف الإجراء",
     "builder.moveUp": "تحريك للأعلى",
     "builder.moveDown": "تحريك للأسفل",
@@ -370,7 +373,7 @@ export function getAutomationWorkspaceCopy(
   key: AutomationWorkspaceCopyKey,
   params?: Record<string, string | number>,
 ): string {
-  let value = copy[locale][key] ?? copy.en[key];
+  let value: string = copy[locale][key] ?? copy.en[key];
   if (!params) return value;
   for (const [name, replacement] of Object.entries(params)) {
     value = value.replaceAll(`{{${name}}}`, String(replacement));

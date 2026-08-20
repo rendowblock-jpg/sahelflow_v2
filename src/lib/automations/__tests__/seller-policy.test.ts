@@ -34,7 +34,29 @@ describe("seller automation write policy", () => {
     expect(() => assertSellerAutomationWritePolicy(definition)).not.toThrow();
   });
 
-  it("rejects actions whose required payload is absent from the trigger", () => {
+  it("accepts a reachable governed status transition", () => {
+    const definition = canonical({
+      name: "Ship confirmed orders",
+      trigger: "order.confirmed",
+      action: "update_status",
+      steps: [
+        {
+          action: "update_status",
+          onFailure: "stop",
+          config: { targetStatus: "shipped" },
+        },
+      ],
+      conditions: null,
+      isActive: true,
+      dryRun: true,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+
+    expect(() => assertSellerAutomationWritePolicy(definition)).not.toThrow();
+  });
+
+  it("rejects actions whose required payload or state is absent from the trigger", () => {
     const definition = canonical({
       name: "Impossible message rule",
       trigger: "message.received",
@@ -55,6 +77,30 @@ describe("seller automation write policy", () => {
 
     expect(() => assertSellerAutomationWritePolicy(definition)).toThrowError(
       /not compatible/i,
+    );
+  });
+
+  it("rejects order status targets that the canonical state machine cannot reach", () => {
+    const definition = canonical({
+      name: "Impossible shipped cancellation",
+      trigger: "order.shipped",
+      action: "update_status",
+      steps: [
+        {
+          action: "update_status",
+          onFailure: "stop",
+          config: { targetStatus: "cancelled" },
+        },
+      ],
+      conditions: null,
+      isActive: true,
+      dryRun: false,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+
+    expect(() => assertSellerAutomationWritePolicy(definition)).toThrowError(
+      /not reachable/i,
     );
   });
 

@@ -1,3 +1,6 @@
+import { ALLOWED_TRANSITIONS } from "@/lib/order-transitions";
+import type { OrderStatus } from "@/types/domain";
+
 export type SellerAutomationTrigger =
   | "order.created"
   | "order.confirmed"
@@ -15,6 +18,13 @@ export type SellerAutomationAction =
   | "update_status"
   | "tag_customer"
   | "send_notification";
+
+export type SellerOrderStatusTarget =
+  | "shipped"
+  | "delivered"
+  | "returned"
+  | "refused"
+  | "cancelled";
 
 export type SellerConditionOperator =
   | "equal"
@@ -177,11 +187,35 @@ const ORDER_STATUS_VARIABLES = [
   "wilaya",
 ] as const;
 
-const ORDER_ACTIONS = [
+const ORDER_EFFECT_ACTIONS = [
+  "send_whatsapp",
+  "tag_customer",
+] as const satisfies readonly SellerAutomationAction[];
+
+const ORDER_TRANSITION_ACTIONS = [
   "send_whatsapp",
   "update_status",
   "tag_customer",
 ] as const satisfies readonly SellerAutomationAction[];
+
+const SELLER_ORDER_STATUS_TARGETS = [
+  "shipped",
+  "delivered",
+  "returned",
+  "refused",
+  "cancelled",
+] as const satisfies readonly SellerOrderStatusTarget[];
+
+const TRIGGER_ORDER_STATUS: Partial<Record<SellerAutomationTrigger, OrderStatus>> = {
+  "order.confirmed": "confirmed",
+  "order.shipped": "shipped",
+  "order.delivered": "delivered",
+  "order.returned": "returned",
+  "order.refused": "refused",
+  "order.cancelled": "cancelled",
+};
+
+const TEMPLATE_TOKEN_PATTERN = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
 
 export const SELLER_AUTOMATION_TRIGGERS = [
   {
@@ -190,7 +224,10 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "orders",
     fields: ORDER_CREATED_FIELDS,
     variables: ORDER_CREATED_VARIABLES,
-    actions: ORDER_ACTIONS,
+    // Creation events can represent draft or pending orders. Because the exact
+    // current status is not encoded in the event, automatic status mutation is
+    // intentionally not offered from this trigger.
+    actions: ORDER_EFFECT_ACTIONS,
     sellerReady: true,
   },
   {
@@ -199,7 +236,7 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "orders",
     fields: ORDER_STATUS_FIELDS,
     variables: ORDER_STATUS_VARIABLES,
-    actions: ORDER_ACTIONS,
+    actions: ORDER_TRANSITION_ACTIONS,
     sellerReady: true,
   },
   {
@@ -208,7 +245,7 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "orders",
     fields: ORDER_STATUS_FIELDS,
     variables: ORDER_STATUS_VARIABLES,
-    actions: ORDER_ACTIONS,
+    actions: ORDER_TRANSITION_ACTIONS,
     sellerReady: true,
   },
   {
@@ -217,7 +254,7 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "orders",
     fields: ORDER_STATUS_FIELDS,
     variables: ORDER_STATUS_VARIABLES,
-    actions: ORDER_ACTIONS,
+    actions: ORDER_TRANSITION_ACTIONS,
     sellerReady: true,
   },
   {
@@ -226,7 +263,7 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "orders",
     fields: ORDER_STATUS_FIELDS,
     variables: ORDER_STATUS_VARIABLES,
-    actions: ORDER_ACTIONS,
+    actions: ORDER_EFFECT_ACTIONS,
     sellerReady: true,
   },
   {
@@ -235,7 +272,7 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "orders",
     fields: ORDER_STATUS_FIELDS,
     variables: ORDER_STATUS_VARIABLES,
-    actions: ORDER_ACTIONS,
+    actions: ORDER_EFFECT_ACTIONS,
     sellerReady: true,
   },
   {
@@ -244,7 +281,7 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "orders",
     fields: ORDER_STATUS_FIELDS,
     variables: ORDER_STATUS_VARIABLES,
-    actions: ORDER_ACTIONS,
+    actions: ORDER_EFFECT_ACTIONS,
     sellerReady: true,
   },
   {
@@ -329,11 +366,44 @@ export function actionAllowedForTrigger(
   return Boolean(spec?.actions.includes(action as SellerAutomationAction));
 }
 
+/**
+ * Return only order-status targets that the canonical order state machine can
+ * actually reach from the selected status-event trigger.
+ */
+export function getSellerStatusTargets(
+  trigger: string,
+): readonly SellerOrderStatusTarget[] {
+  const currentStatus = TRIGGER_ORDER_STATUS[trigger as SellerAutomationTrigger];
+  if (!currentStatus) return [];
+  const allowed = ALLOWED_TRANSITIONS[currentStatus] as readonly string[];
+  return SELLER_ORDER_STATUS_TARGETS.filter((status) => allowed.includes(status));
+}
+
+/**
+ * Return unique template tokens that are not supplied by the selected trigger.
+ * Used by both the builder and the trusted write policy so UX and server truth
+ * remain identical.
+ */
+export function unsupportedTemplateVariablesForTrigger(
+  trigger: string,
+  template: string,
+): string[] {
+  const spec = getSellerTriggerSpec(trigger);
+  if (!spec) return [];
+  const allowed = new Set(spec.variables);
+  const unsupported = new Set<string>();
+  for (const match of template.matchAll(TEMPLATE_TOKEN_PATTERN)) {
+    const token = match[1];
+    if (token && !allowed.has(token)) unsupported.add(token);
+  }
+  return [...unsupported];
+}
+
 export function normalizeConditionValueForSubmit(
   raw: string,
   operator: SellerConditionOperator,
   type: SellerConditionField["type"],
-): string | number | string[] | null {
+): string | number | string[] | number[] | null {
   if (operator === "is_empty" || operator === "is_not_empty") return null;
   if (operator === "in" || operator === "not_in") {
     const values = raw

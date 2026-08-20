@@ -3,8 +3,11 @@ import "server-only";
 import { SahelFlowError } from "@/types/errors";
 import {
   actionAllowedForTrigger,
+  getSellerStatusTargets,
   getSellerTriggerSpec,
+  unsupportedTemplateVariablesForTrigger,
   type SellerConditionOperator,
+  type SellerOrderStatusTarget,
 } from "./catalog";
 import type {
   AutomationMutation,
@@ -14,8 +17,6 @@ import type {
 type CanonicalSellerWrite = AutomationMutation & {
   steps: AutomationStepDefinition[];
 };
-
-const TEMPLATE_TOKEN_PATTERN = /\{\{([A-Za-z0-9_.-]+)\}\}/g;
 
 function policyError(message: string, code: string): never {
   throw new SahelFlowError(message, code, 400);
@@ -37,8 +38,9 @@ function stepTemplate(step: AutomationStepDefinition): string | null {
  * Enforce the same seller-facing compatibility contract at the trusted write
  * boundary. The durable runtime intentionally remains capable of reading
  * historical definitions; new/edited definitions must not introduce an action
- * whose required payload is absent from its trigger, a condition field that the
- * selected trigger does not carry, or a template token that would render blank.
+ * whose required payload is absent from its trigger, an unreachable governed
+ * order transition, a condition field that the selected trigger does not carry,
+ * or a template token that would render blank.
  */
 export function assertSellerAutomationWritePolicy(
   definition: CanonicalSellerWrite,
@@ -59,16 +61,28 @@ export function assertSellerAutomationWritePolicy(
       );
     }
 
+    if (step.action === "update_status") {
+      const target = step.config.targetStatus as SellerOrderStatusTarget;
+      const allowedTargets = getSellerStatusTargets(definition.trigger);
+      if (!allowedTargets.includes(target)) {
+        policyError(
+          `Order status '${target}' is not reachable from trigger '${definition.trigger}'`,
+          "AUTOMATION_SELLER_STATUS_TARGET_UNREACHABLE",
+        );
+      }
+    }
+
     const template = stepTemplate(step);
     if (template) {
-      for (const match of template.matchAll(TEMPLATE_TOKEN_PATTERN)) {
-        const token = match[1];
-        if (token && !trigger.variables.includes(token)) {
-          policyError(
-            `Template variable '${token}' is not available on trigger '${definition.trigger}'`,
-            "AUTOMATION_SELLER_TEMPLATE_VARIABLE_UNAVAILABLE",
-          );
-        }
+      const unsupported = unsupportedTemplateVariablesForTrigger(
+        definition.trigger,
+        template,
+      );
+      if (unsupported.length > 0) {
+        policyError(
+          `Template variable '${unsupported[0]}' is not available on trigger '${definition.trigger}'`,
+          "AUTOMATION_SELLER_TEMPLATE_VARIABLE_UNAVAILABLE",
+        );
       }
     }
   }

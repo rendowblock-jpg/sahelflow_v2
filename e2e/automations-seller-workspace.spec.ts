@@ -47,7 +47,7 @@ test.describe("Automations seller workspace", () => {
   }) => {
     const suffix = Date.now().toString().slice(-7);
     const name = `E2E Seller Automation ${suffix}`;
-    const message = `E2E {{customerName}} / {{orderNumber}} / ${suffix}`;
+    const message = `E2E {{orderNumber}} / {{totalPrice}} / ${suffix}`;
     const response = await page.request.post("/api/automations", {
       data: {
         name,
