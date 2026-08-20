@@ -436,9 +436,12 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
     return true;
   });
 
-  const stepsCompatible = steps.every((step) =>
-    stepCompatibleWithTrigger(trigger, step),
-  );
+  const statusMutationCount = steps.filter(
+    (step) => step.action === "update_status",
+  ).length;
+  const stepsCompatible =
+    statusMutationCount <= 1 &&
+    steps.every((step) => stepCompatibleWithTrigger(trigger, step));
   const valid =
     !legacyInvalid &&
     name.trim().length > 0 &&
@@ -715,7 +718,16 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                           ? (["send_notification"] as const)
                           : []),
                       ];
-                      const uniqueActions = [...new Set(availableActions)];
+                      const statusActionUsedElsewhere = steps.some(
+                        (candidate, position) =>
+                          position !== index && candidate.action === "update_status",
+                      );
+                      const uniqueActions = [...new Set(availableActions)].filter(
+                        (action) =>
+                          action !== "update_status" ||
+                          step.action === "update_status" ||
+                          !statusActionUsedElsewhere,
+                      );
                       const actionSpec = getSellerActionSpec(step.action);
                       const isWhatsApp = step.action === "send_whatsapp";
                       const isLegacyNotification =

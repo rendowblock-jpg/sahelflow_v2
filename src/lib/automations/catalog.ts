@@ -215,7 +215,12 @@ const TRIGGER_ORDER_STATUS: Partial<Record<SellerAutomationTrigger, OrderStatus>
   "order.cancelled": "cancelled",
 };
 
-const TEMPLATE_TOKEN_PATTERN = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
+// Runtime rendering accepts only the exact `{{token}}` grammar. Validation
+// deliberately scans broader `{{...}}` placeholders so common but unsupported
+// spaced forms such as `{{ customerName }}` are rejected instead of being
+// accepted and then sent literally to a customer.
+const TEMPLATE_PLACEHOLDER_PATTERN = /\{\{([^{}]+)\}\}/g;
+const TEMPLATE_TOKEN_NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
 export const SELLER_AUTOMATION_TRIGGERS = [
   {
@@ -380,9 +385,9 @@ export function getSellerStatusTargets(
 }
 
 /**
- * Return unique template tokens that are not supplied by the selected trigger.
- * Used by both the builder and the trusted write policy so UX and server truth
- * remain identical.
+ * Return unique invalid/unsupported template tokens for the selected trigger.
+ * The grammar intentionally mirrors runtime rendering: no whitespace is
+ * accepted inside braces and token names are limited to the runtime path set.
  */
 export function unsupportedTemplateVariablesForTrigger(
   trigger: string,
@@ -392,9 +397,12 @@ export function unsupportedTemplateVariablesForTrigger(
   if (!spec) return [];
   const allowed = new Set(spec.variables);
   const unsupported = new Set<string>();
-  for (const match of template.matchAll(TEMPLATE_TOKEN_PATTERN)) {
+  for (const match of template.matchAll(TEMPLATE_PLACEHOLDER_PATTERN)) {
     const token = match[1];
-    if (token && !allowed.has(token)) unsupported.add(token);
+    if (!token) continue;
+    if (!TEMPLATE_TOKEN_NAME_PATTERN.test(token) || !allowed.has(token)) {
+      unsupported.add(token);
+    }
   }
   return [...unsupported];
 }

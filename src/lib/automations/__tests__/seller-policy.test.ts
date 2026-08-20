@@ -56,6 +56,35 @@ describe("seller automation write policy", () => {
     expect(() => assertSellerAutomationWritePolicy(definition)).not.toThrow();
   });
 
+  it("rejects multiple status mutations before they can create a sequence-dependent dead letter", () => {
+    const definition = canonical({
+      name: "Impossible multi-status flow",
+      trigger: "order.confirmed",
+      action: "update_status",
+      steps: [
+        {
+          action: "update_status",
+          onFailure: "stop",
+          config: { targetStatus: "returned" },
+        },
+        {
+          action: "update_status",
+          onFailure: "stop",
+          config: { targetStatus: "shipped" },
+        },
+      ],
+      conditions: null,
+      isActive: true,
+      dryRun: false,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+
+    expect(() => assertSellerAutomationWritePolicy(definition)).toThrowError(
+      /only one order status mutation/i,
+    );
+  });
+
   it("rejects actions whose required payload or state is absent from the trigger", () => {
     const definition = canonical({
       name: "Impossible message rule",
@@ -170,6 +199,30 @@ describe("seller automation write policy", () => {
           action: "send_whatsapp",
           onFailure: "stop",
           config: { messageTemplate: "Hi {{customerName}}, {{orderNumber}} shipped" },
+        },
+      ],
+      conditions: null,
+      isActive: true,
+      dryRun: true,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+
+    expect(() => assertSellerAutomationWritePolicy(definition)).toThrowError(
+      /template variable/i,
+    );
+  });
+
+  it("rejects placeholder syntax the runtime renderer would otherwise leave literal", () => {
+    const definition = canonical({
+      name: "Spaced placeholder",
+      trigger: "order.created",
+      action: "send_whatsapp",
+      steps: [
+        {
+          action: "send_whatsapp",
+          onFailure: "stop",
+          config: { messageTemplate: "Hi {{ customerName }}" },
         },
       ],
       conditions: null,

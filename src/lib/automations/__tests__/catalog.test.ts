@@ -89,7 +89,7 @@ describe("seller automation catalog", () => {
     ]);
   });
 
-  it("identifies template variables that the selected event cannot provide", () => {
+  it("identifies unsupported variables and rejects placeholder syntax the runtime does not render", () => {
     expect(
       unsupportedTemplateVariablesForTrigger(
         "order.shipped",
@@ -102,6 +102,12 @@ describe("seller automation catalog", () => {
         "Hi {{customerName}}, thanks for your message",
       ),
     ).toEqual([]);
+    expect(
+      unsupportedTemplateVariablesForTrigger(
+        "message.received",
+        "Hi {{ customerName }}, thanks for your message",
+      ),
+    ).toEqual([" customerName "]);
   });
 
   it("normalizes in/not_in editor text into the arrays the condition engine expects", () => {

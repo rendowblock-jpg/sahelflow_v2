@@ -40,7 +40,12 @@ function stepTemplate(step: AutomationStepDefinition): string | null {
  * historical definitions; new/edited definitions must not introduce an action
  * whose required payload is absent from its trigger, an unreachable governed
  * order transition, a condition field that the selected trigger does not carry,
- * or a template token that would render blank.
+ * or a template token that would render blank/literally.
+ *
+ * Until a workflow owns a durable wait/re-check primitive, seller definitions
+ * may contain at most one status mutation. Allowing multiple immediate status
+ * writes would make their validity depend on prior steps and can drive an order
+ * through several lifecycle states in one worker tick.
  */
 export function assertSellerAutomationWritePolicy(
   definition: CanonicalSellerWrite,
@@ -50,6 +55,16 @@ export function assertSellerAutomationWritePolicy(
     policyError(
       "The selected automation trigger is not available for new seller workflows",
       "AUTOMATION_SELLER_TRIGGER_UNAVAILABLE",
+    );
+  }
+
+  const statusMutationCount = definition.steps.filter(
+    (step) => step.action === "update_status",
+  ).length;
+  if (statusMutationCount > 1) {
+    policyError(
+      "Seller automations may contain only one order status mutation",
+      "AUTOMATION_SELLER_MULTIPLE_STATUS_MUTATIONS",
     );
   }
 
