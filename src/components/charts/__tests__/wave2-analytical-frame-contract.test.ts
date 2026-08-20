@@ -88,6 +88,7 @@ describe("Class-AAA analytical frame contract", () => {
     const runtime = source("../echarts-runtime.tsx");
     const sparkline = source("../sparkline.tsx");
     const statCard = source("../../shared/stat-card.tsx");
+    const dashboard = source("../../../app/(dashboard)/dashboard/page.tsx");
 
     expect(runtime).toContain("useChartMotion");
     expect(runtime).toContain("animation: !reducedMotion");
@@ -99,11 +100,15 @@ describe("Class-AAA analytical frame contract", () => {
     expect(sparkline).not.toContain("echarts");
     expect(sparkline).not.toContain("recharts");
 
-    expect(statCard).toContain('const last7DaysLabel = t("dashboard.last7Days")');
-    expect(statCard).toContain("subtitle !== last7DaysLabel");
+    expect(statCard).toContain("sparkContext?: React.ReactNode");
+    expect(statCard).not.toContain("spark?.length === 7");
+    expect(statCard).not.toContain('t("dashboard.last7Days")');
     expect(statCard).toContain('data-stat-sparkline-context="true"');
     expect(statCard).toContain('data-stat-sparkline-direction="oldest-to-latest"');
     expect(statCard).toContain("zeroBaseline={sparkZeroBaseline}");
+    expect(
+      dashboard.match(/sparkContext=\{t\("dashboard\.last7Days"\)\}/g),
+    ).toHaveLength(3);
   });
 
   it("keeps ranked horizontal metrics logical-direction aware without changing copy alignment", () => {
