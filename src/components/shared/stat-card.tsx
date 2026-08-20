@@ -45,7 +45,7 @@ interface StatCardProps {
    * is not time metadata, so callers that know the period must provide it.
    */
   sparkContext?: React.ReactNode;
-  /** Count and money KPIs default to an honest zero baseline. */
+  /** Opt in when zero is the honest floor for this metric's mini-trend. */
   sparkZeroBaseline?: boolean;
   className?: string;
   style?: React.CSSProperties;
@@ -104,7 +104,7 @@ export function StatCard({
   spark,
   sparkColor = "var(--color-chart-1)",
   sparkContext,
-  sparkZeroBaseline = true,
+  sparkZeroBaseline = false,
   className,
   style,
   tooltip,
