@@ -103,12 +103,14 @@ describe("Class-AAA analytical frame contract", () => {
     expect(statCard).toContain("sparkContext?: React.ReactNode");
     expect(statCard).not.toContain("spark?.length === 7");
     expect(statCard).not.toContain('t("dashboard.last7Days")');
+    expect(statCard).toContain("sparkZeroBaseline = false");
     expect(statCard).toContain('data-stat-sparkline-context="true"');
     expect(statCard).toContain('data-stat-sparkline-direction="oldest-to-latest"');
     expect(statCard).toContain("zeroBaseline={sparkZeroBaseline}");
     expect(
       dashboard.match(/sparkContext=\{t\("dashboard\.last7Days"\)\}/g),
     ).toHaveLength(3);
+    expect(dashboard.match(/\bsparkZeroBaseline\b/g)).toHaveLength(3);
   });
 
   it("keeps ranked horizontal metrics logical-direction aware without changing copy alignment", () => {
