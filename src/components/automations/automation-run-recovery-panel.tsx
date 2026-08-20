@@ -328,7 +328,9 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                       {run.steps.map((step) => (
                         <div key={`${step.id}-technical`} className="space-y-1 text-muted-foreground">
                           <p dir="ltr" className="font-mono">
-                            step {step.position + 1}: {step.action} · {step.status}
+                            {t("automations.runtime.step", {
+                              count: step.position + 1,
+                            })}: {step.action} · {step.status}
                           </p>
                           {step.lastErrorCode ? (
                             <p dir="ltr" className="break-all font-mono text-destructive">
@@ -337,7 +339,7 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                           ) : null}
                           {step.effectKey ? (
                             <p dir="ltr" className="break-all font-mono">
-                              effect: {step.effectKey}
+                              {t("automations.runtime.effect")}: {step.effectKey}
                             </p>
                           ) : null}
                         </div>
