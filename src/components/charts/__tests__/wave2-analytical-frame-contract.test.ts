@@ -99,13 +99,14 @@ describe("Class-AAA analytical frame contract", () => {
     expect(sparkline).not.toContain("echarts");
     expect(sparkline).not.toContain("recharts");
 
-    expect(statCard).toContain('t("dashboard.last7Days")');
+    expect(statCard).toContain('const last7DaysLabel = t("dashboard.last7Days")');
+    expect(statCard).toContain("subtitle !== last7DaysLabel");
     expect(statCard).toContain('data-stat-sparkline-context="true"');
     expect(statCard).toContain('data-stat-sparkline-direction="oldest-to-latest"');
     expect(statCard).toContain("zeroBaseline={sparkZeroBaseline}");
   });
 
-  it("keeps ranked horizontal metrics logical-direction aware", () => {
+  it("keeps ranked horizontal metrics logical-direction aware without changing copy alignment", () => {
     const decision = source("../decision-visualizations.tsx");
 
     expect(decision).toContain('data-ranked-bar-track="logical"');
@@ -114,6 +115,8 @@ describe("Class-AAA analytical frame contract", () => {
     expect(decision).toContain('data-ranked-rank="true"');
     expect(decision).toContain('data-ranked-label="true"');
     expect(decision).toContain('data-ranked-value="true"');
+    expect(decision).toContain('<span dir="auto">{entry.label}</span>');
+    expect(decision).toContain('<span dir="auto">{entry.displayValue}</span>');
   });
 
   it("removes fixed ResponsiveContainer geometry from analytical charts", () => {
