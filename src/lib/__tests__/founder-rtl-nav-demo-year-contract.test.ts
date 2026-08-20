@@ -7,15 +7,17 @@ const read = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
 
 describe("Founder RTL, navigation and annual demo contracts", () => {
-  it("keeps compact Arabic chart values in an explicit LTR technical run", () => {
+  it("keeps compact Arabic chart money under the canonical DZD formatter", () => {
     const chart = read("src/components/charts/dual-bar-chart.tsx");
     const utils = read("src/lib/utils.ts");
 
-    expect(chart).toContain("formatCompactNumber");
-    expect(chart).toContain("isolateLtr(formatCompactNumber(value, locale))");
-    expect(chart).toContain("formatter: (value: number) => compactValue(value)");
-    expect(chart).not.toContain("isolate(axisFormatter.format(value))");
-    expect(utils).toContain('const LTR_ISOLATE = "\\u2066"');
+    expect(chart).toContain("formatDZDShort");
+    expect(chart).toContain("isolateNaturalText(formatDZDShort(value, locale))");
+    expect(chart).toContain("formatter: (value: number) => compactMoneyValue(value)");
+    expect(chart).toContain("isolateNaturalText(formatDZD(value, locale))");
+    expect(chart).not.toContain("formatCompactNumber");
+    expect(chart).not.toContain("isolateLtr(");
+    expect(utils).toContain("export function formatDZDShort(");
   });
 
   it("lets empty natural-language controls inherit live locale direction", () => {
