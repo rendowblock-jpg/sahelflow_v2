@@ -445,6 +445,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
   const valid =
     !legacyInvalid &&
     name.trim().length > 0 &&
+    name.trim().length <= 120 &&
     Boolean(triggerSpec) &&
     steps.length > 0 &&
     steps.length <= 20 &&
@@ -527,6 +528,26 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
     });
   };
 
+  const resetCreateState = () => {
+    if (isEdit) return;
+    const resetTrigger = preset?.trigger ?? "order.created";
+    const presetSteps = preset?.steps ?? [];
+    const resetFirstAllowed = getSellerTriggerSpec(resetTrigger)?.actions[0];
+    setName(preset?.name ?? "");
+    setTrigger(resetTrigger);
+    setConditions(preset?.conditions ?? null);
+    setSteps(
+      presetSteps.length > 0
+        ? presetSteps
+        : resetFirstAllowed
+          ? [defaultStep(resetFirstAllowed, locale, resetTrigger)]
+          : [],
+    );
+    setDryRun(false);
+    setMaxRetries(2);
+    setRetryDelayMs(500);
+  };
+
   const handleSubmit = async () => {
     if (!valid) return;
     setLoading(true);
@@ -567,6 +588,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
           ? t("automations.editor.updated")
           : t("automations.editor.created"),
       );
+      if (!isEdit) resetCreateState();
       setOpen(false);
       router.refresh();
     } catch (error) {
@@ -621,6 +643,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                 <Input
                   id="automation-name-v2"
                   value={name}
+                  maxLength={120}
                   disabled={loading}
                   onChange={(event) => setName(event.target.value)}
                   placeholder={c("builder.namePlaceholder")}
