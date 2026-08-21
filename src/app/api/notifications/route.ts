@@ -63,6 +63,10 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
     "deliveries.read",
   );
   const canReadProducts = trustedActionAllowed(actorContext, "products.read");
+  const canReadConversations = trustedActionAllowed(
+    actorContext,
+    "conversations.read",
+  );
   const canReadAutomations = trustedActionAllowed(
     actorContext,
     "automations.read",
@@ -133,12 +137,13 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
     },
   }) : [];
 
-  const automationNotifications = canReadAutomations
+  const automationNotificationCandidates = canReadAutomations
     ? await db.automationNotification.findMany({
         orderBy: { createdAt: "desc" },
         take: 8,
         select: {
           id: true,
+          runId: true,
           title: true,
           body: true,
           link: true,
@@ -147,6 +152,37 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
         },
       })
     : [];
+  const notificationRuns = automationNotificationCandidates.length
+    ? await db.automationRun.findMany({
+        where: {
+          id: {
+            in: automationNotificationCandidates.map((notification) => notification.runId),
+          },
+        },
+        select: { id: true, triggerType: true },
+      })
+    : [];
+  const triggerByRunId = new Map(
+    notificationRuns.map((run) => [run.id, run.triggerType]),
+  );
+  const automationNotifications = automationNotificationCandidates.filter(
+    (notification) => {
+      const triggerType = triggerByRunId.get(notification.runId);
+      if (!triggerType) return false;
+      if (triggerType.startsWith("order.")) {
+        // Order templates may contain customer contact and financial variables.
+        // Fail closed unless the actor can read every potentially rendered
+        // source field, rather than leaking data through a trusted automation.
+        return canReadOrders && canReadContacts && canReadFinancials;
+      }
+      if (triggerType === "customer.blacklisted") return canReadContacts;
+      if (triggerType === "message.received") {
+        return canReadConversations && canReadContacts;
+      }
+      if (triggerType === "stock.low") return canReadProducts;
+      return false;
+    },
+  );
 
   const staleThreshold = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const staleOrders = canReadOrders ? await db.order.count({
