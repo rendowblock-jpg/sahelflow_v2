@@ -47,8 +47,11 @@ const seededDemo03 = {
 };
 
 describe("normalizeLegacyDemoAutomations", () => {
-  it("repairs the exact untouched Founder demo seed", async () => {
-    const updates: Array<{ where: { id: string }; data: Record<string, unknown> }> = [];
+  it("repairs the exact untouched Founder demo seed with compare-and-swap writes", async () => {
+    const updates: Array<{
+      where: Record<string, unknown>;
+      data: Record<string, unknown>;
+    }> = [];
     const client = {
       automation: {
         findMany: vi.fn().mockResolvedValue([
@@ -56,9 +59,9 @@ describe("normalizeLegacyDemoAutomations", () => {
           seededDemo02,
           seededDemo03,
         ]),
-        update: vi.fn().mockImplementation(async (args) => {
+        updateMany: vi.fn().mockImplementation(async (args) => {
           updates.push(args);
-          return args.data;
+          return { count: 1 };
         }),
       },
     } as unknown as DbClient;
@@ -70,6 +73,9 @@ describe("normalizeLegacyDemoAutomations", () => {
       "demo-automation-02",
       "demo-automation-03",
     ]);
+    expect(updates[0]?.where).toMatchObject(seededDemo01);
+    expect(updates[1]?.where).toMatchObject(seededDemo02);
+    expect(updates[2]?.where).toMatchObject(seededDemo03);
     expect(updates[0]?.data).toMatchObject({
       name: "Marquer les commandes à forte valeur",
       trigger: "order.created",
@@ -106,12 +112,26 @@ describe("normalizeLegacyDemoAutomations", () => {
             }),
           },
         ]),
-        update: vi.fn(),
+        updateMany: vi.fn(),
       },
     } as unknown as DbClient;
 
     await expect(normalizeLegacyDemoAutomations(client)).resolves.toBe(0);
-    expect(client.automation.update).not.toHaveBeenCalled();
+    expect(client.automation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("preserves a concurrent seller edit that lands after the fingerprint read", async () => {
+    const client = {
+      automation: {
+        findMany: vi.fn().mockResolvedValue([seededDemo01]),
+        // A zero-count compare-and-swap means one of the fingerprint fields no
+        // longer matches: the seller won the race and their edit is preserved.
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+      },
+    } as unknown as DbClient;
+
+    await expect(normalizeLegacyDemoAutomations(client)).resolves.toBe(0);
+    expect(client.automation.updateMany).toHaveBeenCalledTimes(1);
   });
 
   it("is idempotent once an exact demo row already uses the canonical contract", async () => {
@@ -129,11 +149,11 @@ describe("normalizeLegacyDemoAutomations", () => {
             dryRun: true,
           },
         ]),
-        update: vi.fn(),
+        updateMany: vi.fn(),
       },
     } as unknown as DbClient;
 
     await expect(normalizeLegacyDemoAutomations(client)).resolves.toBe(0);
-    expect(client.automation.update).not.toHaveBeenCalled();
+    expect(client.automation.updateMany).not.toHaveBeenCalled();
   });
 });
