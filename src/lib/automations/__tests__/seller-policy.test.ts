@@ -85,10 +85,10 @@ describe("seller automation write policy", () => {
     );
   });
 
-  it("rejects actions whose required payload or state is absent from the trigger", () => {
+  it("rejects actions whose required payload or state is absent from a seller-ready trigger", () => {
     const definition = canonical({
-      name: "Impossible message rule",
-      trigger: "message.received",
+      name: "Impossible created-order status rule",
+      trigger: "order.created",
       action: "update_status",
       steps: [
         {
@@ -135,8 +135,8 @@ describe("seller automation write policy", () => {
 
   it("rejects condition fields that do not exist on the selected event", () => {
     const definition = canonical({
-      name: "Impossible message condition",
-      trigger: "message.received",
+      name: "Impossible order condition",
+      trigger: "order.created",
       action: "send_whatsapp",
       steps: [
         {
@@ -147,7 +147,7 @@ describe("seller automation write policy", () => {
       ],
       conditions: {
         all: [
-          { field: "totalPrice", operator: "greater_than", value: 7000 },
+          { field: "messageText", operator: "contains", value: "hello" },
         ],
       },
       isActive: true,
