@@ -401,6 +401,14 @@ export function actionAllowedForTrigger(
   return Boolean(spec?.actions.includes(action as SellerAutomationAction));
 }
 
+/** Return seller-supported governed targets reachable from one committed status. */
+export function getSellerStatusTargetsFromStatus(
+  currentStatus: SellerOrderCheckStatus,
+): readonly SellerOrderStatusTarget[] {
+  const allowed = ALLOWED_TRANSITIONS[currentStatus] as readonly string[];
+  return SELLER_ORDER_STATUS_TARGETS.filter((status) => allowed.includes(status));
+}
+
 /**
  * Return only order-status targets that the canonical order state machine can
  * actually reach from the selected status-event trigger.
@@ -409,9 +417,7 @@ export function getSellerStatusTargets(
   trigger: string,
 ): readonly SellerOrderStatusTarget[] {
   const currentStatus = TRIGGER_ORDER_STATUS[trigger as SellerAutomationTrigger];
-  if (!currentStatus) return [];
-  const allowed = ALLOWED_TRANSITIONS[currentStatus] as readonly string[];
-  return SELLER_ORDER_STATUS_TARGETS.filter((status) => allowed.includes(status));
+  return currentStatus ? getSellerStatusTargetsFromStatus(currentStatus) : [];
 }
 
 /** A live re-check reads the committed order, so every canonical status is valid. */
