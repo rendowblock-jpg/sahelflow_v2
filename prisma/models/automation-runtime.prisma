@@ -99,3 +99,23 @@ model AutomationStepAttempt {
   @@index([state, startedAt])
   @@index([stepRunId, startedAt])
 }
+
+// Visible seller notification emitted by one successful automation step. The
+// deterministic notificationKey/stepRunId pair makes the Bell effect exactly
+// once even if a worker lease expires and the step is replayed.
+model AutomationNotification {
+  id               String   @id
+  notificationKey  String   @unique
+  automationId     String
+  automationName   String
+  runId             String
+  stepRunId         String   @unique
+  title             String
+  body              String
+  link              String?
+  readAt            DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([readAt, createdAt])
+  @@index([automationId, createdAt])
+}
