@@ -19,8 +19,10 @@ const whatsAppContext = {
   ...context,
   whatsAppProviderAccountId: ACCOUNT_ID,
 };
+let recheckSequence = 0;
 
 async function clean(): Promise<void> {
+  await db.automationNotification.deleteMany();
   await db.automationStepAttempt.deleteMany();
   await db.automationStepRun.deleteMany();
   await db.automationRun.deleteMany();
@@ -35,6 +37,12 @@ async function clean(): Promise<void> {
   await db.automationLog.deleteMany();
   await db.automation.deleteMany();
   await db.auditLog.deleteMany();
+  await dbRaw.order.deleteMany({
+    where: { orderNumber: { startsWith: "ORD-AUTO-RECHECK-" } },
+  });
+  await dbRaw.customer.deleteMany({
+    where: { name: { startsWith: "Automation Recheck" } },
+  });
 }
 
 beforeEach(clean);
@@ -55,6 +63,35 @@ function orderPayload(overrides: Record<string, unknown> = {}) {
     wilaya: "Alger",
     ...overrides,
   };
+}
+
+async function seedRecheckOrder(status = "pending") {
+  recheckSequence += 1;
+  const suffix = `${Date.now().toString().slice(-7)}${recheckSequence}`;
+  const customer = await dbRaw.customer.create({
+    data: {
+      name: `Automation Recheck ${suffix}`,
+      phone: `0559${suffix}`,
+      nameBlindIndex: `automation-recheck-${suffix}`,
+      wilaya: "Alger",
+      commune: "Bab Ezzouar",
+      address: "1 Durable Automation Street",
+    },
+  });
+  return dbRaw.order.create({
+    data: {
+      orderNumber: `ORD-AUTO-RECHECK-${suffix}`,
+      status,
+      customerId: customer.id,
+      totalPrice: 4500,
+      deliveryCost: 500,
+      wilaya: "Alger",
+      commune: "Bab Ezzouar",
+      address: "1 Durable Automation Street",
+      phone: customer.phone,
+      source: "storefront",
+    },
+  });
 }
 
 async function createAutomation(input: {
@@ -107,8 +144,19 @@ async function drainRunsUntilIdle(
   throw new Error("automation run drain did not become idle");
 }
 
+async function forceWaitDue(): Promise<void> {
+  await db.automationStepRun.updateMany({
+    where: { status: "waiting" },
+    data: { nextAttemptAt: new Date(0) },
+  });
+  await db.automationRun.updateMany({
+    where: { status: "waiting" },
+    data: { nextAttemptAt: new Date(0) },
+  });
+}
+
 describe("durable automation runtime", () => {
-  it("stores one encrypted definition-bound run for exact trigger replay", async () => {
+  it("stores one encrypted definition-bound run and exactly one visible Bell notification for trigger replay", async () => {
     await createAutomation({
       name: "Notification",
       steps: [
@@ -160,6 +208,137 @@ describe("durable automation runtime", () => {
       succeededStepCount: 1,
       failedStepCount: 0,
     });
+    await expect(db.automationNotification.count()).resolves.toBe(1);
+    await expect(db.automationNotification.findFirstOrThrow()).resolves.toMatchObject({
+      automationName: "Notification",
+      body: "Order ORD-AUTO-1",
+      link: "/automations?tab=activity",
+    });
+
+    await expect(drainDueAutomationRuns(context, 10)).resolves.toEqual([]);
+    await expect(db.automationNotification.count()).resolves.toBe(1);
+  });
+
+  it("waits durably without hot-looping, then re-checks live state and continues when it still matches", async () => {
+    const order = await seedRecheckOrder("pending");
+    await createAutomation({
+      name: "Pending follow-up",
+      steps: [
+        {
+          action: "wait",
+          onFailure: "stop",
+          config: { delayMinutes: 1 },
+        },
+        {
+          action: "recheck_order_status",
+          onFailure: "stop",
+          config: { expectedStatus: "pending" },
+        },
+        {
+          action: "send_notification",
+          onFailure: "stop",
+          config: { messageTemplate: "Still pending {{orderNumber}}" },
+        },
+      ],
+    });
+    await materializeTrigger(
+      "order.created:wait-recheck-match",
+      orderPayload({
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerId: order.customerId,
+      }),
+    );
+
+    const first = await drainDueAutomationRuns(context, 10);
+    expect(first[0]).toMatchObject({ state: "waiting" });
+    const waitStep = await db.automationStepRun.findFirstOrThrow({
+      where: { position: 0 },
+    });
+    expect(waitStep.status).toBe("waiting");
+    expect(waitStep.attemptCount).toBe(1);
+    expect(waitStep.nextAttemptAt!.getTime()).toBeGreaterThan(Date.now());
+
+    await expect(drainDueAutomationRuns(context, 10)).resolves.toEqual([]);
+    await expect(
+      db.automationStepRun.findUniqueOrThrow({ where: { id: waitStep.id } }),
+    ).resolves.toMatchObject({ status: "waiting", attemptCount: 1 });
+
+    await forceWaitDue();
+    await drainRunsUntilIdle();
+
+    const run = await db.automationRun.findFirstOrThrow({
+      include: { steps: { orderBy: { position: "asc" } } },
+    });
+    expect(run.status).toBe("succeeded");
+    expect(run.succeededStepCount).toBe(3);
+    expect(run.failedStepCount).toBe(0);
+    expect(run.skippedStepCount).toBe(0);
+    expect(run.steps.map((step) => step.status)).toEqual([
+      "succeeded",
+      "succeeded",
+      "succeeded",
+    ]);
+    await expect(db.automationNotification.findFirstOrThrow()).resolves.toMatchObject({
+      body: `Still pending ${order.orderNumber}`,
+    });
+  });
+
+  it("neutral-skips downstream work when the live order state changed during the wait", async () => {
+    const order = await seedRecheckOrder("pending");
+    await createAutomation({
+      name: "Pending follow-up guard",
+      steps: [
+        {
+          action: "wait",
+          onFailure: "stop",
+          config: { delayMinutes: 1 },
+        },
+        {
+          action: "recheck_order_status",
+          onFailure: "stop",
+          config: { expectedStatus: "pending" },
+        },
+        {
+          action: "send_notification",
+          onFailure: "stop",
+          config: { messageTemplate: "Must not appear {{orderNumber}}" },
+        },
+      ],
+    });
+    await materializeTrigger(
+      "order.created:wait-recheck-mismatch",
+      orderPayload({
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerId: order.customerId,
+      }),
+    );
+
+    const first = await drainDueAutomationRuns(context, 10);
+    expect(first[0]).toMatchObject({ state: "waiting" });
+    await dbRaw.order.update({
+      where: { id: order.id },
+      data: { status: "confirmed" },
+    });
+    await forceWaitDue();
+    await drainRunsUntilIdle();
+
+    const run = await db.automationRun.findFirstOrThrow({
+      include: { steps: { orderBy: { position: "asc" } } },
+    });
+    expect(run.status).toBe("skipped");
+    expect(run.lastErrorCode).toBeNull();
+    expect(run.failedStepCount).toBe(0);
+    expect(run.skippedStepCount).toBe(2);
+    expect(run.steps.map((step) => step.status)).toEqual([
+      "succeeded",
+      "skipped",
+      "skipped",
+    ]);
+    expect(run.steps[1]!.lastErrorCode).toBe("AUTOMATION_GUARD_NOT_MATCHED");
+    expect(run.steps[2]!.lastErrorCode).toBe("AUTOMATION_GUARD_NOT_MATCHED");
+    await expect(db.automationNotification.count()).resolves.toBe(0);
   });
 
   it("stops after a required failed step and skips every downstream step", async () => {
