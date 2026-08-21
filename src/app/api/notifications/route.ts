@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -44,6 +45,15 @@ function formatRelativeTime(
 function intlLocale(locale: Locale): string {
   return locale === "ar" ? "ar-DZ" : locale === "en" ? "en-US" : "fr-FR";
 }
+
+type AutomationBellRow = {
+  id: string;
+  title: string;
+  body: string;
+  link: string | null;
+  readAt: Date | null;
+  createdAt: Date;
+};
 
 /** GET /api/notifications — compute operational + persisted automation notices. */
 export const GET = withErrorHandler(async (request?: NextRequest) => {
@@ -137,52 +147,46 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
     },
   }) : [];
 
-  const automationNotificationCandidates = canReadAutomations
-    ? await db.automationNotification.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 8,
-        select: {
-          id: true,
-          runId: true,
-          title: true,
-          body: true,
-          link: true,
-          readAt: true,
-          createdAt: true,
-        },
-      })
-    : [];
-  const notificationRuns = automationNotificationCandidates.length
-    ? await db.automationRun.findMany({
-        where: {
-          id: {
-            in: automationNotificationCandidates.map((notification) => notification.runId),
-          },
-        },
-        select: { id: true, triggerType: true },
-      })
-    : [];
-  const triggerByRunId = new Map(
-    notificationRuns.map((run) => [run.id, run.triggerType]),
-  );
-  const automationNotifications = automationNotificationCandidates.filter(
-    (notification) => {
-      const triggerType = triggerByRunId.get(notification.runId);
-      if (!triggerType) return false;
-      if (triggerType.startsWith("order.")) {
-        // Order templates may contain customer contact and financial variables.
-        // Fail closed unless the actor can read every potentially rendered
-        // source field, rather than leaking data through a trusted automation.
-        return canReadOrders && canReadContacts && canReadFinancials;
-      }
-      if (triggerType === "customer.blacklisted") return canReadContacts;
-      if (triggerType === "message.received") {
-        return canReadConversations && canReadContacts;
-      }
-      if (triggerType === "stock.low") return canReadProducts;
-      return false;
-    },
-  );
+  // Filter automation alerts by the underlying source authority *before* the
+  // Bell limit. This prevents newer notices the actor may not read from starving
+  // older authorized notices. The trigger list is derived only from trusted
+  // server permissions and bound as SQL parameters.
+  const allowedAutomationTriggers: string[] = [];
+  if (canReadOrders && canReadContacts && canReadFinancials) {
+    allowedAutomationTriggers.push(
+      "order.created",
+      "order.confirmed",
+      "order.shipped",
+      "order.delivered",
+      "order.returned",
+      "order.refused",
+      "order.cancelled",
+    );
+  }
+  if (canReadContacts) allowedAutomationTriggers.push("customer.blacklisted");
+  if (canReadConversations && canReadContacts) {
+    allowedAutomationTriggers.push("message.received");
+  }
+  if (canReadProducts) allowedAutomationTriggers.push("stock.low");
+
+  const automationNotifications =
+    canReadAutomations && allowedAutomationTriggers.length > 0
+      ? await db.$queryRaw<AutomationBellRow[]>(Prisma.sql`
+          SELECT
+            notification."id",
+            notification."title",
+            notification."body",
+            notification."link",
+            notification."readAt",
+            notification."createdAt"
+          FROM "AutomationNotification" AS notification
+          INNER JOIN "AutomationRun" AS run
+            ON run."id" = notification."runId"
+          WHERE run."triggerType" IN (${Prisma.join(allowedAutomationTriggers)})
+          ORDER BY notification."createdAt" DESC, notification."id" DESC
+          LIMIT 8
+        `)
+      : [];
 
   const staleThreshold = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const staleOrders = canReadOrders ? await db.order.count({
