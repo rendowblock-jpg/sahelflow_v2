@@ -17,7 +17,9 @@ export type SellerAutomationAction =
   | "send_whatsapp"
   | "update_status"
   | "tag_customer"
-  | "send_notification";
+  | "send_notification"
+  | "wait"
+  | "recheck_order_status";
 
 export type SellerOrderStatusTarget =
   | "shipped"
@@ -25,6 +27,8 @@ export type SellerOrderStatusTarget =
   | "returned"
   | "refused"
   | "cancelled";
+
+export type SellerOrderCheckStatus = OrderStatus;
 
 export type SellerConditionOperator =
   | "equal"
@@ -190,12 +194,18 @@ const ORDER_STATUS_VARIABLES = [
 const ORDER_EFFECT_ACTIONS = [
   "send_whatsapp",
   "tag_customer",
+  "send_notification",
+  "wait",
+  "recheck_order_status",
 ] as const satisfies readonly SellerAutomationAction[];
 
 const ORDER_TRANSITION_ACTIONS = [
   "send_whatsapp",
   "update_status",
   "tag_customer",
+  "send_notification",
+  "wait",
+  "recheck_order_status",
 ] as const satisfies readonly SellerAutomationAction[];
 
 const SELLER_ORDER_STATUS_TARGETS = [
@@ -205,6 +215,17 @@ const SELLER_ORDER_STATUS_TARGETS = [
   "refused",
   "cancelled",
 ] as const satisfies readonly SellerOrderStatusTarget[];
+
+export const SELLER_ORDER_CHECK_STATUSES = [
+  "draft",
+  "pending",
+  "confirmed",
+  "shipped",
+  "delivered",
+  "returned",
+  "refused",
+  "cancelled",
+] as const satisfies readonly SellerOrderCheckStatus[];
 
 const TRIGGER_ORDER_STATUS: Partial<Record<SellerAutomationTrigger, OrderStatus>> = {
   "order.confirmed": "confirmed",
@@ -228,9 +249,9 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "orders",
     fields: ORDER_CREATED_FIELDS,
     variables: ORDER_CREATED_VARIABLES,
-    // Creation events can represent draft or pending orders. Because the exact
-    // current status is not encoded in the event, automatic status mutation is
-    // intentionally not offered from this trigger.
+    // Creation events can represent draft or pending orders. Direct status
+    // mutation remains unavailable here, but a live re-check can safely inspect
+    // the committed order after a durable wait.
     actions: ORDER_EFFECT_ACTIONS,
     sellerReady: true,
   },
@@ -294,7 +315,7 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "customers",
     fields: [field.customerName, field.customerPhone],
     variables: ["customerName", "customerPhone"],
-    actions: ["send_whatsapp", "tag_customer"],
+    actions: ["send_whatsapp", "tag_customer", "send_notification", "wait"],
     sellerReady: true,
   },
   {
@@ -303,13 +324,10 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "messages",
     fields: [field.customerName, field.customerPhone, field.messageText],
     variables: ["customerName", "customerPhone", "messageText"],
-    // Inbound group/unsupported senders legitimately carry `customerPhone:null`.
-    // Do not promise a direct WhatsApp reply until the trigger guarantees a
-    // concrete reply destination. The event remains readable for historical
-    // definitions and becomes seller-ready once a destination-free action is
-    // available.
-    actions: [],
-    sellerReady: false,
+    // Inbound group/unsupported senders can carry `customerPhone:null`; the
+    // visible in-app notification is destination-free and therefore truthful.
+    actions: ["send_notification", "wait"],
+    sellerReady: true,
   },
   {
     value: "stock.low",
@@ -317,12 +335,8 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "inventory",
     fields: [field.productName, field.stockLevel, field.lowStockThreshold],
     variables: ["productName", "stockLevel", "lowStockThreshold"],
-    // The durable engine still understands the historical `send_notification`
-    // action, but it does not currently create one visible seller notification
-    // surface. Keep the trigger readable for old definitions without offering a
-    // new flow that would over-promise a user-visible effect.
-    actions: [],
-    sellerReady: false,
+    actions: ["send_notification", "wait"],
+    sellerReady: true,
   },
 ] as const satisfies readonly SellerTriggerSpec[];
 
@@ -347,9 +361,21 @@ export const SELLER_AUTOMATION_ACTIONS = [
   },
   {
     value: "send_notification",
-    copyKey: "action.legacyNotification",
+    copyKey: "action.sendNotification",
     requires: null,
-    legacyOnly: true,
+    legacyOnly: false,
+  },
+  {
+    value: "wait",
+    copyKey: "action.wait",
+    requires: null,
+    legacyOnly: false,
+  },
+  {
+    value: "recheck_order_status",
+    copyKey: "action.recheckOrderStatus",
+    requires: "orderId",
+    legacyOnly: false,
   },
 ] as const;
 
@@ -386,6 +412,13 @@ export function getSellerStatusTargets(
   if (!currentStatus) return [];
   const allowed = ALLOWED_TRANSITIONS[currentStatus] as readonly string[];
   return SELLER_ORDER_STATUS_TARGETS.filter((status) => allowed.includes(status));
+}
+
+/** A live re-check reads the committed order, so every canonical status is valid. */
+export function getSellerRecheckStatuses(
+  trigger: string,
+): readonly SellerOrderCheckStatus[] {
+  return trigger.startsWith("order.") ? SELLER_ORDER_CHECK_STATUSES : [];
 }
 
 /**
