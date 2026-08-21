@@ -78,6 +78,10 @@ type BuilderStep = {
   config: StepConfig;
 };
 
+const WHATSAPP_MESSAGE_MAX_LENGTH = 4_000;
+const NOTIFICATION_MESSAGE_MAX_LENGTH = 1_000;
+const CUSTOMER_NOTE_MAX_LENGTH = 500;
+
 export interface AutomationBuilderAutomation {
   id: string;
   name: string;
@@ -307,11 +311,17 @@ function parseStoredConditions(
 }
 
 function stepComplete(step: BuilderStep): boolean {
-  if (step.action === "send_whatsapp" || step.action === "send_notification") {
-    return Boolean(step.config.messageTemplate?.trim());
+  if (step.action === "send_whatsapp") {
+    const message = step.config.messageTemplate?.trim() ?? "";
+    return message.length > 0 && message.length <= WHATSAPP_MESSAGE_MAX_LENGTH;
+  }
+  if (step.action === "send_notification") {
+    const message = step.config.messageTemplate?.trim() ?? "";
+    return message.length > 0 && message.length <= NOTIFICATION_MESSAGE_MAX_LENGTH;
   }
   if (step.action === "tag_customer") {
-    return Boolean(step.config.noteText?.trim());
+    const note = step.config.noteText?.trim() ?? "";
+    return note.length > 0 && note.length <= CUSTOMER_NOTE_MAX_LENGTH;
   }
   return Boolean(step.config.targetStatus);
 }
@@ -900,6 +910,11 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                               <Textarea
                                 id={`automation-message-${index}`}
                                 value={step.config.messageTemplate ?? ""}
+                                maxLength={
+                                  isWhatsApp
+                                    ? WHATSAPP_MESSAGE_MAX_LENGTH
+                                    : NOTIFICATION_MESSAGE_MAX_LENGTH
+                                }
                                 disabled={loading}
                                 onChange={(event) =>
                                   updateStepConfig(index, {
@@ -961,6 +976,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                               <Textarea
                                 id={`automation-note-${index}`}
                                 value={step.config.noteText ?? ""}
+                                maxLength={CUSTOMER_NOTE_MAX_LENGTH}
                                 disabled={loading}
                                 onChange={(event) =>
                                   updateStepConfig(index, {
