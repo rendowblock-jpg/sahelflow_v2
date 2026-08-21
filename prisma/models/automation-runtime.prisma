@@ -102,8 +102,7 @@ model AutomationStepAttempt {
 
 // Visible seller notification emitted by one successful automation step. The
 // deterministic notificationKey/stepRunId pair makes the Bell effect exactly
-// once even if a worker lease expires and the step is replayed. triggerType is
-// retained so the Bell projection can enforce the source data's read authority.
+// once even if a worker lease expires and the step is replayed.
 model AutomationNotification {
   id               String   @id
   notificationKey  String   @unique
@@ -111,7 +110,6 @@ model AutomationNotification {
   automationName   String
   runId             String
   stepRunId         String   @unique
-  triggerType       String
   title             String
   body              String
   link              String?
@@ -120,5 +118,4 @@ model AutomationNotification {
 
   @@index([readAt, createdAt])
   @@index([automationId, createdAt])
-  @@index([triggerType, createdAt])
 }
