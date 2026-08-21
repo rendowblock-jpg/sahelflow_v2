@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -45,15 +44,6 @@ function formatRelativeTime(
 function intlLocale(locale: Locale): string {
   return locale === "ar" ? "ar-DZ" : locale === "en" ? "en-US" : "fr-FR";
 }
-
-type AutomationBellRow = {
-  id: string;
-  title: string;
-  body: string;
-  link: string | null;
-  readAt: Date | null;
-  createdAt: Date;
-};
 
 /** GET /api/notifications — compute operational + persisted automation notices. */
 export const GET = withErrorHandler(async (request?: NextRequest) => {
@@ -148,9 +138,9 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
   }) : [];
 
   // Filter automation alerts by the underlying source authority *before* the
-  // Bell limit. This prevents newer notices the actor may not read from starving
-  // older authorized notices. The trigger list is derived only from trusted
-  // server permissions and bound as SQL parameters.
+  // Bell limit. The run relation is canonical Prisma data access, so newer
+  // unauthorized notices cannot starve older authorized ones and no raw-client
+  // escape hatch is needed in application code.
   const allowedAutomationTriggers: string[] = [];
   if (canReadOrders && canReadContacts && canReadFinancials) {
     allowedAutomationTriggers.push(
@@ -171,21 +161,23 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
 
   const automationNotifications =
     canReadAutomations && allowedAutomationTriggers.length > 0
-      ? await db.$queryRaw<AutomationBellRow[]>(Prisma.sql`
-          SELECT
-            notification."id",
-            notification."title",
-            notification."body",
-            notification."link",
-            notification."readAt",
-            notification."createdAt"
-          FROM "AutomationNotification" AS notification
-          INNER JOIN "AutomationRun" AS run
-            ON run."id" = notification."runId"
-          WHERE run."triggerType" IN (${Prisma.join(allowedAutomationTriggers)})
-          ORDER BY notification."createdAt" DESC, notification."id" DESC
-          LIMIT 8
-        `)
+      ? await db.automationNotification.findMany({
+          where: {
+            run: {
+              triggerType: { in: allowedAutomationTriggers },
+            },
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          take: 8,
+          select: {
+            id: true,
+            title: true,
+            body: true,
+            link: true,
+            readAt: true,
+            createdAt: true,
+          },
+        })
       : [];
 
   const staleThreshold = new Date(now.getTime() - 2 * 60 * 60 * 1000);
