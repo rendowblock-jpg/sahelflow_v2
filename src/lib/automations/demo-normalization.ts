@@ -2,13 +2,6 @@ import "server-only";
 
 import type { DbClient } from "@/lib/db";
 
-const LEGACY_TRIGGERS = new Set(["order_created", "low_stock", "order_pending"]);
-const LEGACY_ACTIONS = new Set([
-  "assign_priority",
-  "notify_seller",
-  "draft_whatsapp_reply",
-]);
-
 type DemoDefinition = {
   id: string;
   name: string;
@@ -20,6 +13,30 @@ type DemoDefinition = {
     onFailure: "stop";
     config: { messageTemplate?: string; noteText?: string };
   }>;
+};
+
+type LegacyDemoFingerprint = {
+  name: string;
+  trigger: string;
+  action: string;
+};
+
+const LEGACY_FINGERPRINTS: Readonly<Record<string, LegacyDemoFingerprint>> = {
+  "demo-automation-01": {
+    name: "Prioriser les commandes WhatsApp à forte valeur",
+    trigger: "order_created",
+    action: "assign_priority",
+  },
+  "demo-automation-02": {
+    name: "Alerte stock faible",
+    trigger: "low_stock",
+    action: "notify_seller",
+  },
+  "demo-automation-03": {
+    name: "Relance confirmation après 2 heures",
+    trigger: "order_pending",
+    action: "draft_whatsapp_reply",
+  },
 };
 
 const DEFINITIONS: readonly DemoDefinition[] = [
@@ -77,16 +94,45 @@ const DEFINITIONS: readonly DemoDefinition[] = [
   },
 ];
 
+function isUntouchedLegacyDemo(row: {
+  id: string;
+  name: string;
+  trigger: string;
+  action: string;
+  config: string | null;
+  conditions: string | null;
+  steps: string | null;
+  dryRun: boolean;
+}): boolean {
+  const fingerprint = LEGACY_FINGERPRINTS[row.id];
+  if (!fingerprint) return false;
+
+  // Fail closed. The compatibility repair is allowed only for the exact seeded
+  // demo definition. A seller rename, trigger/action edit, condition, config or
+  // step customization makes the row ineligible and preserves it byte-for-byte.
+  return (
+    row.name === fingerprint.name &&
+    row.trigger === fingerprint.trigger &&
+    row.action === fingerprint.action &&
+    row.config === null &&
+    row.conditions === null &&
+    row.steps === null &&
+    row.dryRun === true
+  );
+}
+
 /**
  * One-time compatibility repair for the deterministic Founder demo rows that
  * predate the canonical durable automation contract.
  *
- * Only exact demo IDs with the known retired trigger/action vocabulary are
- * touched. Seller-created automations and demo rows that a seller has already
- * rebuilt are never rewritten. The replacement definitions intentionally use
- * only the current seller-ready event/action catalog; the old two-hour follow-up
- * sample is not faked because the durable engine does not yet own a state-aware
- * delay scheduler.
+ * The repair is deliberately fail-closed: an exact seed ID alone is never
+ * sufficient. The complete legacy seller-definition fingerprint must still be
+ * intact. Operational state such as run counters or active/inactive state is
+ * preserved, while any seller customization makes the row ineligible.
+ *
+ * Replacement definitions use only the current seller-ready event/action
+ * catalog. The old two-hour follow-up sample is not faked because the durable
+ * engine does not yet own a state-aware delay scheduler.
  */
 export async function normalizeLegacyDemoAutomations(
   client: DbClient,
@@ -95,17 +141,20 @@ export async function normalizeLegacyDemoAutomations(
     where: { id: { in: DEFINITIONS.map((definition) => definition.id) } },
     select: {
       id: true,
+      name: true,
       trigger: true,
       action: true,
+      config: true,
+      conditions: true,
+      steps: true,
       dryRun: true,
     },
   });
   let repaired = 0;
 
   for (const row of rows) {
-    if (!LEGACY_TRIGGERS.has(row.trigger) && !LEGACY_ACTIONS.has(row.action)) {
-      continue;
-    }
+    if (!isUntouchedLegacyDemo(row)) continue;
+
     const definition = DEFINITIONS.find((candidate) => candidate.id === row.id);
     if (!definition) continue;
     const first = definition.steps[0];
@@ -122,10 +171,6 @@ export async function normalizeLegacyDemoAutomations(
           : null,
         steps: JSON.stringify(definition.steps),
         config: JSON.stringify(first.config),
-        dryRun: true,
-        retryCount: 0,
-        maxRetries: 2,
-        retryDelayMs: 500,
         lastError: null,
         nextRunAt: null,
       },
