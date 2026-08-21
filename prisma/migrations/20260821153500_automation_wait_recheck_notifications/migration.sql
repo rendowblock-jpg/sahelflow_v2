@@ -15,7 +15,10 @@ CREATE TABLE "AutomationNotification" (
   "body" TEXT NOT NULL,
   "link" TEXT,
   "readAt" DATETIME,
-  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "AutomationNotification_runId_fkey"
+    FOREIGN KEY ("runId") REFERENCES "AutomationRun" ("id")
+    ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE UNIQUE INDEX "AutomationNotification_notificationKey_key"
@@ -26,3 +29,5 @@ CREATE INDEX "AutomationNotification_readAt_createdAt_idx"
   ON "AutomationNotification"("readAt", "createdAt");
 CREATE INDEX "AutomationNotification_automationId_createdAt_idx"
   ON "AutomationNotification"("automationId", "createdAt");
+CREATE INDEX "AutomationNotification_runId_idx"
+  ON "AutomationNotification"("runId");
