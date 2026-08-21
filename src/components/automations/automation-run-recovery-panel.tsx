@@ -80,7 +80,11 @@ function statusVariant(
   if (["failed", "dead_letter", "ambiguous"].includes(status)) {
     return "destructive";
   }
-  if (["queued", "processing", "retrying", "waiting_effect"].includes(status)) {
+  if (
+    ["queued", "processing", "retrying", "waiting", "waiting_effect"].includes(
+      status,
+    )
+  ) {
     return "secondary";
   }
   return "outline";
