@@ -5,6 +5,7 @@ import {
   actionAllowedForTrigger,
   getSellerRecheckStatuses,
   getSellerStatusTargets,
+  getSellerStatusTargetsFromStatus,
   getSellerTriggerSpec,
   unsupportedTemplateVariablesForTrigger,
   type SellerConditionField,
@@ -74,6 +75,11 @@ function conditionValueIsValid(
  * Durable waits are bounded by the contract; live order re-checks are limited
  * to canonical order events and statuses and stop downstream work neutrally
  * when the committed status no longer matches.
+ *
+ * A wait makes the original status-event authority stale for any later business
+ * status mutation. A later live re-check restores that authority for the exact
+ * checked status, and the target is then validated against the canonical state
+ * machine from that live status rather than from the old trigger event.
  */
 export function assertSellerAutomationWritePolicy(
   definition: CanonicalSellerWrite,
@@ -96,6 +102,9 @@ export function assertSellerAutomationWritePolicy(
     );
   }
 
+  let statusAuthorityStale = false;
+  let liveCheckedStatus: SellerOrderCheckStatus | null = null;
+
   for (const step of definition.steps) {
     if (!actionAllowedForTrigger(definition.trigger, step.action)) {
       policyError(
@@ -104,15 +113,9 @@ export function assertSellerAutomationWritePolicy(
       );
     }
 
-    if (step.action === "update_status") {
-      const target = step.config.targetStatus as SellerOrderStatusTarget;
-      const allowedTargets = getSellerStatusTargets(definition.trigger);
-      if (!allowedTargets.includes(target)) {
-        policyError(
-          `Order status '${target}' is not reachable from trigger '${definition.trigger}'`,
-          "AUTOMATION_SELLER_STATUS_TARGET_UNREACHABLE",
-        );
-      }
+    if (step.action === "wait") {
+      statusAuthorityStale = true;
+      liveCheckedStatus = null;
     }
 
     if (step.action === "recheck_order_status") {
@@ -121,6 +124,29 @@ export function assertSellerAutomationWritePolicy(
         policyError(
           `Order status '${expected}' cannot be re-checked from trigger '${definition.trigger}'`,
           "AUTOMATION_SELLER_RECHECK_STATUS_UNAVAILABLE",
+        );
+      }
+      liveCheckedStatus = expected;
+      statusAuthorityStale = false;
+    }
+
+    if (step.action === "update_status") {
+      if (statusAuthorityStale) {
+        policyError(
+          "A delayed order status change requires a live order-status check after the last wait",
+          "AUTOMATION_SELLER_STATUS_RECHECK_REQUIRED_AFTER_WAIT",
+        );
+      }
+      const target = step.config.targetStatus as SellerOrderStatusTarget;
+      const allowedTargets = liveCheckedStatus
+        ? getSellerStatusTargetsFromStatus(liveCheckedStatus)
+        : getSellerStatusTargets(definition.trigger);
+      if (!allowedTargets.includes(target)) {
+        policyError(
+          liveCheckedStatus
+            ? `Order status '${target}' is not reachable from live checked status '${liveCheckedStatus}'`
+            : `Order status '${target}' is not reachable from trigger '${definition.trigger}'`,
+          "AUTOMATION_SELLER_STATUS_TARGET_UNREACHABLE",
         );
       }
     }
