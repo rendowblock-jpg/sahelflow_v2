@@ -159,6 +159,9 @@ function isUntouchedLegacyDemo(row: {
  * intact. Operational state such as run counters, active state and timestamps
  * is preserved, while any seller customization makes the row ineligible.
  *
+ * The write itself repeats the full fingerprint as a compare-and-swap guard so
+ * a concurrent seller edit between the initial read and update is preserved.
+ *
  * Replacement definitions use only the current seller-ready event/action
  * catalog. The old two-hour follow-up sample is not faked because the durable
  * engine does not yet own a state-aware delay scheduler.
@@ -185,12 +188,22 @@ export async function normalizeLegacyDemoAutomations(
     if (!isUntouchedLegacyDemo(row)) continue;
 
     const definition = DEFINITIONS.find((candidate) => candidate.id === row.id);
-    if (!definition) continue;
+    const fingerprint = LEGACY_FINGERPRINTS[row.id];
+    if (!definition || !fingerprint) continue;
     const first = definition.steps[0];
     if (!first) continue;
 
-    await client.automation.update({
-      where: { id: row.id },
+    const updated = await client.automation.updateMany({
+      where: {
+        id: row.id,
+        name: fingerprint.name,
+        trigger: fingerprint.trigger,
+        action: fingerprint.action,
+        config: fingerprint.config,
+        conditions: fingerprint.conditions,
+        steps: fingerprint.steps,
+        dryRun: fingerprint.dryRun,
+      },
       data: {
         name: definition.name,
         trigger: definition.trigger,
@@ -204,7 +217,7 @@ export async function normalizeLegacyDemoAutomations(
         nextRunAt: null,
       },
     });
-    repaired += 1;
+    repaired += updated.count;
   }
 
   return repaired;
