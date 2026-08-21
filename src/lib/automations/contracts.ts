@@ -25,6 +25,8 @@ export const AUTOMATION_ACTIONS = [
   "send_notification",
   "tag_customer",
   "update_status",
+  "wait",
+  "recheck_order_status",
 ] as const;
 export const automationActionSchema = z.enum(AUTOMATION_ACTIONS);
 export type AutomationAction = z.infer<typeof automationActionSchema>;
@@ -94,6 +96,22 @@ const updateStatusConfigSchema = z
     ]),
   })
   .strict();
+const waitConfigSchema = z
+  .object({ delayMinutes: z.number().int().min(1).max(10_080) })
+  .strict();
+export const AUTOMATION_ORDER_CHECK_STATUSES = [
+  "draft",
+  "pending",
+  "confirmed",
+  "shipped",
+  "delivered",
+  "returned",
+  "refused",
+  "cancelled",
+] as const;
+const recheckOrderStatusConfigSchema = z
+  .object({ expectedStatus: z.enum(AUTOMATION_ORDER_CHECK_STATUSES) })
+  .strict();
 
 export const automationStepSchema = z.discriminatedUnion("action", [
   z
@@ -122,6 +140,20 @@ export const automationStepSchema = z.discriminatedUnion("action", [
       action: z.literal("update_status"),
       onFailure: automationFailurePolicySchema,
       config: updateStatusConfigSchema,
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("wait"),
+      onFailure: automationFailurePolicySchema,
+      config: waitConfigSchema,
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("recheck_order_status"),
+      onFailure: automationFailurePolicySchema,
+      config: recheckOrderStatusConfigSchema,
     })
     .strict(),
 ]);
