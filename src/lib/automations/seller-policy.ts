@@ -3,11 +3,13 @@ import "server-only";
 import { SahelFlowError } from "@/types/errors";
 import {
   actionAllowedForTrigger,
+  getSellerRecheckStatuses,
   getSellerStatusTargets,
   getSellerTriggerSpec,
   unsupportedTemplateVariablesForTrigger,
   type SellerConditionField,
   type SellerConditionOperator,
+  type SellerOrderCheckStatus,
   type SellerOrderStatusTarget,
 } from "./catalog";
 import type {
@@ -31,6 +33,8 @@ function stepTemplate(step: AutomationStepDefinition): string | null {
     case "tag_customer":
       return step.config.noteText;
     case "update_status":
+    case "wait":
+    case "recheck_order_status":
       return null;
   }
 }
@@ -65,16 +69,11 @@ function conditionValueIsValid(
 
 /**
  * Enforce the same seller-facing compatibility contract at the trusted write
- * boundary. The durable runtime intentionally remains capable of reading
- * historical definitions; new/edited definitions must not introduce an action
- * whose required payload is absent from its trigger, an unreachable governed
- * order transition, a condition whose field/operator/value shape cannot be
- * evaluated truthfully, or a template token that would render blank/literally.
- *
- * Until a workflow owns a durable wait/re-check primitive, seller definitions
- * may contain at most one status mutation. Allowing multiple immediate status
- * writes would make their validity depend on prior steps and can drive an order
- * through several lifecycle states in one worker tick.
+ * boundary. Historical definitions remain readable, while new/edited workflows
+ * may only use actions whose required payload exists on the selected trigger.
+ * Durable waits are bounded by the contract; live order re-checks are limited
+ * to canonical order events and statuses and stop downstream work neutrally
+ * when the committed status no longer matches.
  */
 export function assertSellerAutomationWritePolicy(
   definition: CanonicalSellerWrite,
@@ -112,6 +111,16 @@ export function assertSellerAutomationWritePolicy(
         policyError(
           `Order status '${target}' is not reachable from trigger '${definition.trigger}'`,
           "AUTOMATION_SELLER_STATUS_TARGET_UNREACHABLE",
+        );
+      }
+    }
+
+    if (step.action === "recheck_order_status") {
+      const expected = step.config.expectedStatus as SellerOrderCheckStatus;
+      if (!getSellerRecheckStatuses(definition.trigger).includes(expected)) {
+        policyError(
+          `Order status '${expected}' cannot be re-checked from trigger '${definition.trigger}'`,
+          "AUTOMATION_SELLER_RECHECK_STATUS_UNAVAILABLE",
         );
       }
     }
