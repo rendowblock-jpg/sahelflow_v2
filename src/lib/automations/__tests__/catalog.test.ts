@@ -22,7 +22,7 @@ describe("seller automation catalog", () => {
     expect(actionAllowedForTrigger("order.refused", "update_status")).toBe(false);
     expect(actionAllowedForTrigger("order.cancelled", "update_status")).toBe(false);
 
-    expect(actionAllowedForTrigger("message.received", "send_whatsapp")).toBe(true);
+    expect(actionAllowedForTrigger("message.received", "send_whatsapp")).toBe(false);
     expect(actionAllowedForTrigger("message.received", "update_status")).toBe(false);
     expect(actionAllowedForTrigger("message.received", "tag_customer")).toBe(false);
 
@@ -49,7 +49,15 @@ describe("seller automation catalog", () => {
     expect(getSellerStatusTargets("order.cancelled")).toEqual([]);
   });
 
-  it("keeps stock-low readable without offering the legacy invisible notification as a new seller flow", () => {
+  it("keeps destination-unsafe and invisible-effect triggers readable but unavailable for new seller flows", () => {
+    const messageReceived = getSellerTriggerSpec("message.received");
+    expect(messageReceived).toBeDefined();
+    expect(messageReceived?.sellerReady).toBe(false);
+    expect(messageReceived?.actions).toEqual([]);
+    expect(
+      sellerReadyTriggers().some((trigger) => trigger.value === "message.received"),
+    ).toBe(false);
+
     const stockLow = getSellerTriggerSpec("stock.low");
     expect(stockLow).toBeDefined();
     expect(stockLow?.sellerReady).toBe(false);
