@@ -823,7 +823,9 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
 
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div className="space-y-1.5">
-                              <Label>{c("builder.action")}</Label>
+                              <Label htmlFor={`automation-action-${index}`}>
+                                {c("builder.action")}
+                              </Label>
                               <Select
                                 value={step.action}
                                 disabled={loading}
@@ -837,7 +839,10 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                   })
                                 }
                               >
-                                <SelectTrigger className="w-full">
+                                <SelectTrigger
+                                  id={`automation-action-${index}`}
+                                  className="w-full"
+                                >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -857,7 +862,9 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                               </Select>
                             </div>
                             <div className="space-y-1.5">
-                              <Label>{c("builder.onFailure")}</Label>
+                              <Label htmlFor={`automation-failure-${index}`}>
+                                {c("builder.onFailure")}
+                              </Label>
                               <Select
                                 value={step.onFailure}
                                 disabled={loading}
@@ -867,7 +874,10 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                   })
                                 }
                               >
-                                <SelectTrigger className="w-full">
+                                <SelectTrigger
+                                  id={`automation-failure-${index}`}
+                                  className="w-full"
+                                >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -884,8 +894,11 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
 
                           {(isWhatsApp || isLegacyNotification) && (
                             <div className="space-y-2">
-                              <Label>{c("builder.message")}</Label>
+                              <Label htmlFor={`automation-message-${index}`}>
+                                {c("builder.message")}
+                              </Label>
                               <Textarea
+                                id={`automation-message-${index}`}
                                 value={step.config.messageTemplate ?? ""}
                                 disabled={loading}
                                 onChange={(event) =>
@@ -942,8 +955,11 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
 
                           {step.action === "tag_customer" ? (
                             <div className="space-y-2">
-                              <Label>{c("builder.customerNote")}</Label>
+                              <Label htmlFor={`automation-note-${index}`}>
+                                {c("builder.customerNote")}
+                              </Label>
                               <Textarea
+                                id={`automation-note-${index}`}
                                 value={step.config.noteText ?? ""}
                                 disabled={loading}
                                 onChange={(event) =>
@@ -981,7 +997,9 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
 
                           {step.action === "update_status" ? (
                             <div className="space-y-2">
-                              <Label>{c("builder.orderStatus")}</Label>
+                              <Label htmlFor={`automation-status-${index}`}>
+                                {c("builder.orderStatus")}
+                              </Label>
                               <Select
                                 value={step.config.targetStatus ?? statusTargets[0] ?? ""}
                                 disabled={loading || statusTargets.length === 0}
@@ -991,7 +1009,10 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                   })
                                 }
                               >
-                                <SelectTrigger className="w-full">
+                                <SelectTrigger
+                                  id={`automation-status-${index}`}
+                                  className="w-full"
+                                >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
