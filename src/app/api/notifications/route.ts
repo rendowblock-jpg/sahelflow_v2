@@ -45,7 +45,7 @@ function intlLocale(locale: Locale): string {
   return locale === "ar" ? "ar-DZ" : locale === "en" ? "en-US" : "fr-FR";
 }
 
-/** GET /api/notifications — compute real-time operational notifications. */
+/** GET /api/notifications — compute operational + persisted automation notices. */
 export const GET = withErrorHandler(async (request?: NextRequest) => {
   void request;
   const actorContext = await requireTrustedActor();
@@ -63,6 +63,10 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
     "deliveries.read",
   );
   const canReadProducts = trustedActionAllowed(actorContext, "products.read");
+  const canReadAutomations = trustedActionAllowed(
+    actorContext,
+    "automations.read",
+  );
   const { t, locale } = await getI18n();
   const numLocale = intlLocale(locale);
   const now = new Date();
@@ -129,6 +133,21 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
     },
   }) : [];
 
+  const automationNotifications = canReadAutomations
+    ? await db.automationNotification.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        select: {
+          id: true,
+          title: true,
+          body: true,
+          link: true,
+          readAt: true,
+          createdAt: true,
+        },
+      })
+    : [];
+
   const staleThreshold = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const staleOrders = canReadOrders ? await db.order.count({
     where: {
@@ -140,7 +159,7 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
 
   const notifications: Array<{
     id: string;
-    type: "alert" | "order" | "delivery" | "stock" | "return";
+    type: "alert" | "order" | "delivery" | "stock" | "return" | "info";
     title: string;
     body: string;
     time: string;
@@ -157,6 +176,25 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       time: t("notif.time.now"),
       read: false,
       link: "/orders/confirmation-queue",
+    });
+  }
+
+  for (const notification of automationNotifications) {
+    const minutesAgo = Math.max(
+      0,
+      Math.round((now.getTime() - notification.createdAt.getTime()) / 60_000),
+    );
+    notifications.push({
+      id: `automation-${notification.id}`,
+      type: "info",
+      title: notification.title,
+      body: notification.body,
+      time: formatRelativeTime(minutesAgo, t),
+      // The current Bell projection is age-based for operational notices too.
+      // Persist readAt for the future explicit read command while preventing an
+      // old automation alert from pinning the global unread badge forever.
+      read: Boolean(notification.readAt) || minutesAgo > 24 * 60,
+      link: notification.link ?? "/automations?tab=activity",
     });
   }
 
