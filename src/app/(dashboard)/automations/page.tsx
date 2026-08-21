@@ -64,7 +64,18 @@ function readDefinition(
   automation: Parameters<typeof parseStoredAutomationDefinition>[0],
 ): CanonicalAutomationDefinition | null {
   try {
-    return parseStoredAutomationDefinition(automation);
+    const definition = parseStoredAutomationDefinition(automation);
+    const trigger = getSellerTriggerSpec(definition.trigger);
+    if (!trigger?.sellerReady) return null;
+    if (
+      definition.steps.some(
+        (step) =>
+          !trigger.actions.includes(step.action as SellerAutomationAction),
+      )
+    ) {
+      return null;
+    }
+    return definition;
   } catch {
     return null;
   }
