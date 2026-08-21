@@ -170,6 +170,9 @@ export function SellerConditionBuilder({
             const valueVisible = hasValue(operator);
             const technical =
               currentField?.type === "number" || currentField?.type === "phone";
+            const fieldControlId = `automation-condition-${index}-field`;
+            const operatorControlId = `automation-condition-${index}-operator`;
+            const valueControlId = `automation-condition-${index}-value`;
 
             return (
               <div
@@ -177,7 +180,10 @@ export function SellerConditionBuilder({
                 className="grid gap-2 rounded-lg border border-border/60 bg-background p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)_auto] sm:items-end"
               >
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">
+                  <Label
+                    htmlFor={fieldControlId}
+                    className="text-xs text-muted-foreground"
+                  >
                     {c("condition.field")}
                   </Label>
                   <Select
@@ -194,7 +200,7 @@ export function SellerConditionBuilder({
                       });
                     }}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger id={fieldControlId} className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -208,7 +214,10 @@ export function SellerConditionBuilder({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">
+                  <Label
+                    htmlFor={operatorControlId}
+                    className="text-xs text-muted-foreground"
+                  >
                     {c("condition.operator")}
                   </Label>
                   <Select
@@ -220,7 +229,7 @@ export function SellerConditionBuilder({
                       })
                     }
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger id={operatorControlId} className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -234,12 +243,16 @@ export function SellerConditionBuilder({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">
-                    {c("condition.value")}
-                  </Label>
                   {valueVisible ? (
                     <>
+                      <Label
+                        htmlFor={valueControlId}
+                        className="text-xs text-muted-foreground"
+                      >
+                        {c("condition.value")}
+                      </Label>
                       <Input
+                        id={valueControlId}
                         value={conditionValueForEditor(condition.value)}
                         disabled={disabled}
                         dir={technical ? "ltr" : undefined}
@@ -255,9 +268,17 @@ export function SellerConditionBuilder({
                       )}
                     </>
                   ) : (
-                    <div className="flex h-9 items-center rounded-md border border-dashed px-3 text-xs text-muted-foreground">
-                      —
-                    </div>
+                    <>
+                      <span className="text-xs text-muted-foreground">
+                        {c("condition.value")}
+                      </span>
+                      <div
+                        aria-hidden="true"
+                        className="flex h-9 items-center rounded-md border border-dashed px-3 text-xs text-muted-foreground"
+                      >
+                        —
+                      </div>
+                    </>
                   )}
                 </div>
 
