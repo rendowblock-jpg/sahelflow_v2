@@ -19,23 +19,52 @@ type LegacyDemoFingerprint = {
   name: string;
   trigger: string;
   action: string;
+  config: string | null;
+  conditions: string | null;
+  steps: string | null;
+  dryRun: boolean;
 };
 
+// Exact seller-definition fields emitted by src/lib/demo/algerian-demo.ts.
+// Operational counters/timestamps are intentionally excluded: they may change
+// as the demo is exercised without meaning the seller customized the rule.
 const LEGACY_FINGERPRINTS: Readonly<Record<string, LegacyDemoFingerprint>> = {
   "demo-automation-01": {
     name: "Prioriser les commandes WhatsApp à forte valeur",
     trigger: "order_created",
     action: "assign_priority",
+    conditions: JSON.stringify({
+      all: [
+        { field: "source", op: "equal", value: "whatsapp" },
+        { field: "totalPrice", op: "greater_than", value: 7000 },
+      ],
+    }),
+    config: JSON.stringify({ priority: "high" }),
+    steps: null,
+    dryRun: true,
   },
   "demo-automation-02": {
     name: "Alerte stock faible",
     trigger: "low_stock",
     action: "notify_seller",
+    conditions: JSON.stringify({
+      all: [{ field: "available", op: "less_than_or_equal", value: 8 }],
+    }),
+    config: null,
+    steps: null,
+    dryRun: true,
   },
   "demo-automation-03": {
     name: "Relance confirmation après 2 heures",
     trigger: "order_pending",
     action: "draft_whatsapp_reply",
+    conditions: null,
+    config: JSON.stringify({
+      template: "demo_relance_confirmation",
+      delayMinutes: 120,
+    }),
+    steps: null,
+    dryRun: true,
   },
 };
 
@@ -107,17 +136,17 @@ function isUntouchedLegacyDemo(row: {
   const fingerprint = LEGACY_FINGERPRINTS[row.id];
   if (!fingerprint) return false;
 
-  // Fail closed. The compatibility repair is allowed only for the exact seeded
-  // demo definition. A seller rename, trigger/action edit, condition, config or
-  // step customization makes the row ineligible and preserves it byte-for-byte.
+  // Fail closed. Every seller-editable definition field must still match the
+  // canonical demo seed. A rename, condition/config/step change, trigger/action
+  // edit or dry-run change makes the row ineligible and preserves it verbatim.
   return (
     row.name === fingerprint.name &&
     row.trigger === fingerprint.trigger &&
     row.action === fingerprint.action &&
-    row.config === null &&
-    row.conditions === null &&
-    row.steps === null &&
-    row.dryRun === true
+    row.config === fingerprint.config &&
+    row.conditions === fingerprint.conditions &&
+    row.steps === fingerprint.steps &&
+    row.dryRun === fingerprint.dryRun
   );
 }
 
@@ -127,8 +156,8 @@ function isUntouchedLegacyDemo(row: {
  *
  * The repair is deliberately fail-closed: an exact seed ID alone is never
  * sufficient. The complete legacy seller-definition fingerprint must still be
- * intact. Operational state such as run counters or active/inactive state is
- * preserved, while any seller customization makes the row ineligible.
+ * intact. Operational state such as run counters, active state and timestamps
+ * is preserved, while any seller customization makes the row ineligible.
  *
  * Replacement definitions use only the current seller-ready event/action
  * catalog. The old two-hour follow-up sample is not faked because the durable
