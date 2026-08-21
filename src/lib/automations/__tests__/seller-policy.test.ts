@@ -165,6 +165,131 @@ describe("seller automation write policy", () => {
     expect(() => assertSellerAutomationWritePolicy(definition)).not.toThrow();
   });
 
+  it("rejects a delayed status mutation until a fresh live check occurs after the last wait", () => {
+    const definition = canonical({
+      name: "Unsafe delayed shipment",
+      trigger: "order.confirmed",
+      action: "wait",
+      steps: [
+        {
+          action: "wait",
+          onFailure: "stop",
+          config: { delayMinutes: 120 },
+        },
+        {
+          action: "update_status",
+          onFailure: "stop",
+          config: { targetStatus: "shipped" },
+        },
+      ],
+      conditions: null,
+      isActive: true,
+      dryRun: false,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+
+    expect(() => assertSellerAutomationWritePolicy(definition)).toThrowError(
+      /requires a live order-status check after the last wait/i,
+    );
+  });
+
+  it("validates a delayed status mutation from the live checked state, not the old trigger", () => {
+    const valid = canonical({
+      name: "Deliver if still shipped",
+      trigger: "order.confirmed",
+      action: "wait",
+      steps: [
+        {
+          action: "wait",
+          onFailure: "stop",
+          config: { delayMinutes: 120 },
+        },
+        {
+          action: "recheck_order_status",
+          onFailure: "stop",
+          config: { expectedStatus: "shipped" },
+        },
+        {
+          action: "update_status",
+          onFailure: "stop",
+          config: { targetStatus: "delivered" },
+        },
+      ],
+      conditions: null,
+      isActive: true,
+      dryRun: false,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+    const invalid = canonical({
+      name: "Cancel if already shipped",
+      trigger: "order.confirmed",
+      action: "wait",
+      steps: [
+        {
+          action: "wait",
+          onFailure: "stop",
+          config: { delayMinutes: 120 },
+        },
+        {
+          action: "recheck_order_status",
+          onFailure: "stop",
+          config: { expectedStatus: "shipped" },
+        },
+        {
+          action: "update_status",
+          onFailure: "stop",
+          config: { targetStatus: "cancelled" },
+        },
+      ],
+      conditions: null,
+      isActive: true,
+      dryRun: false,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+
+    expect(() => assertSellerAutomationWritePolicy(valid)).not.toThrow();
+    expect(() => assertSellerAutomationWritePolicy(invalid)).toThrowError(
+      /not reachable from live checked status 'shipped'/i,
+    );
+  });
+
+  it("treats a live check made before a later wait as stale for a status mutation", () => {
+    const definition = canonical({
+      name: "Stale pre-wait guard",
+      trigger: "order.confirmed",
+      action: "recheck_order_status",
+      steps: [
+        {
+          action: "recheck_order_status",
+          onFailure: "stop",
+          config: { expectedStatus: "confirmed" },
+        },
+        {
+          action: "wait",
+          onFailure: "stop",
+          config: { delayMinutes: 120 },
+        },
+        {
+          action: "update_status",
+          onFailure: "stop",
+          config: { targetStatus: "shipped" },
+        },
+      ],
+      conditions: null,
+      isActive: true,
+      dryRun: false,
+      maxRetries: 2,
+      retryDelayMs: 500,
+    });
+
+    expect(() => assertSellerAutomationWritePolicy(definition)).toThrowError(
+      /requires a live order-status check after the last wait/i,
+    );
+  });
+
   it("rejects multiple status mutations before they can create a sequence-dependent dead letter", () => {
     const definition = canonical({
       name: "Impossible multi-status flow",
