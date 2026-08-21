@@ -938,10 +938,7 @@ async function executeWaitStep(
   step: ClaimedStep,
   definition: Extract<AutomationStepDefinition, { action: "wait" }>,
 ): Promise<AutomationRunProcessingResult> {
-  if (
-    step.claimedFromStatus === "waiting" &&
-    step.effectState === AUTOMATION_WAIT_EFFECT_STATE
-  ) {
+  if (step.effectState === AUTOMATION_WAIT_EFFECT_STATE) {
     return markStepSucceeded(context, run, step, {
       delayMinutes: definition.config.delayMinutes,
       elapsed: true,
