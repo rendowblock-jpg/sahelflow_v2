@@ -303,8 +303,13 @@ export const SELLER_AUTOMATION_TRIGGERS = [
     group: "messages",
     fields: [field.customerName, field.customerPhone, field.messageText],
     variables: ["customerName", "customerPhone", "messageText"],
-    actions: ["send_whatsapp"],
-    sellerReady: true,
+    // Inbound group/unsupported senders legitimately carry `customerPhone:null`.
+    // Do not promise a direct WhatsApp reply until the trigger guarantees a
+    // concrete reply destination. The event remains readable for historical
+    // definitions and becomes seller-ready once a destination-free action is
+    // available.
+    actions: [],
+    sellerReady: false,
   },
   {
     value: "stock.low",
