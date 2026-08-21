@@ -61,6 +61,16 @@ const ATTENTION_STATES = new Set([
   "partially_completed",
 ]);
 
+function readStructuralDefinition(
+  automation: Parameters<typeof parseStoredAutomationDefinition>[0],
+): CanonicalAutomationDefinition | null {
+  try {
+    return parseStoredAutomationDefinition(automation);
+  } catch {
+    return null;
+  }
+}
+
 function readDefinition(
   automation: Parameters<typeof parseStoredAutomationDefinition>[0],
 ): CanonicalAutomationDefinition | null {
@@ -301,7 +311,7 @@ export default async function AutomationsPage({
         />
       </div>
 
-      <Tabs defaultValue={activeTab} className="w-full space-y-5">
+      <Tabs value={activeTab} className="w-full space-y-5">
         <div className="border-b border-border/70 pb-3">
           <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto sm:w-auto">
             <TabsTrigger value="my" asChild>
@@ -337,12 +347,13 @@ export default async function AutomationsPage({
           ) : (
             <div className="grid gap-3">
               {automations.map((automation) => {
+                const structuralDefinition = readStructuralDefinition(automation);
                 const definition = readDefinition(automation);
                 const repairRequired = !definition;
                 const trigger = definition?.trigger ?? automation.trigger;
                 const triggerSpec = getSellerTriggerSpec(trigger);
                 const triggerLabel = triggerSpec ? t(triggerSpec.labelKey) : trigger;
-                const steps = definition?.steps ?? [];
+                const steps = definition?.steps ?? structuralDefinition?.steps ?? [];
                 const visibleActions = steps.length
                   ? steps.map((step) => step.action)
                   : ([automation.action] as string[]);
@@ -352,8 +363,8 @@ export default async function AutomationsPage({
                     ? c(spec.copyKey as AutomationWorkspaceCopyKey)
                     : action;
                 });
-                const conditions = conditionCount(definition);
-                const builderAutomation = {
+                const conditions = conditionCount(definition ?? structuralDefinition);
+                const rawBuilderAutomation = {
                   id: automation.id,
                   name: automation.name,
                   trigger: automation.trigger,
@@ -366,6 +377,30 @@ export default async function AutomationsPage({
                   maxRetries: automation.maxRetries,
                   retryDelayMs: automation.retryDelayMs,
                 };
+                const repairNote =
+                  locale === "ar"
+                    ? "أعد بناء هذه الأتمتة باستخدام القواعد المدعومة"
+                    : locale === "fr"
+                      ? "Reconstruire cette automatisation avec les règles prises en charge"
+                      : "Rebuild this automation with supported rules";
+                const repairStep = {
+                  action: "tag_customer" as const,
+                  onFailure: "stop" as const,
+                  config: { noteText: repairNote },
+                };
+                const builderAutomation =
+                  repairRequired && !structuralDefinition
+                    ? {
+                        ...rawBuilderAutomation,
+                        trigger: "order.created",
+                        action: "tag_customer",
+                        isActive: false,
+                        conditions: null,
+                        config: JSON.stringify(repairStep.config),
+                        steps: JSON.stringify([repairStep]),
+                        dryRun: true,
+                      }
+                    : rawBuilderAutomation;
 
                 return (
                   <Card
@@ -463,15 +498,13 @@ export default async function AutomationsPage({
 
                         {canManage ? (
                           <div className="flex shrink-0 items-center gap-2 self-end lg:self-center">
-                            {!repairRequired ? (
-                              <AutomationActions
-                                variant="edit"
-                                automation={builderAutomation}
-                              />
-                            ) : null}
+                            <AutomationActions
+                              variant="edit"
+                              automation={builderAutomation}
+                            />
                             <AutomationActions
                               variant="menu"
-                              automation={builderAutomation}
+                              automation={rawBuilderAutomation}
                               repairRequired={repairRequired}
                             />
                           </div>
