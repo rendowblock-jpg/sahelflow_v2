@@ -33,6 +33,7 @@ import {
 } from "@/lib/automations/contracts";
 import { normalizeLegacyDemoAutomations } from "@/lib/automations/demo-normalization";
 import { listAutomationRunHistory } from "@/lib/automations/recovery";
+import { assertSellerAutomationWritePolicy } from "@/lib/automations/seller-policy";
 import { db, shopContext } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import {
@@ -65,16 +66,20 @@ function readDefinition(
 ): CanonicalAutomationDefinition | null {
   try {
     const definition = parseStoredAutomationDefinition(automation);
-    const trigger = getSellerTriggerSpec(definition.trigger);
-    if (!trigger?.sellerReady) return null;
-    if (
-      definition.steps.some(
-        (step) =>
-          !trigger.actions.includes(step.action as SellerAutomationAction),
-      )
-    ) {
-      return null;
-    }
+    const firstStep = definition.steps[0];
+    if (!firstStep) return null;
+    assertSellerAutomationWritePolicy({
+      name: definition.name,
+      trigger: definition.trigger,
+      action: firstStep.action,
+      config: firstStep.config,
+      isActive: definition.isActive,
+      dryRun: definition.dryRun,
+      conditions: definition.conditions,
+      steps: definition.steps,
+      maxRetries: definition.maxRetries,
+      retryDelayMs: definition.retryDelayMs,
+    });
     return definition;
   } catch {
     return null;
