@@ -49,6 +49,8 @@ interface AutomationActionsProps {
   repairRequired?: boolean;
 }
 
+const AUTOMATION_NAME_MAX_LENGTH = 120;
+
 function parseJson(raw: string | null | undefined): unknown {
   if (!raw) return undefined;
   try {
@@ -56,6 +58,13 @@ function parseJson(raw: string | null | undefined): unknown {
   } catch {
     return undefined;
   }
+}
+
+function duplicateAutomationName(name: string, suffixLabel: string): string {
+  const suffix = ` — ${suffixLabel}`;
+  const available = Math.max(1, AUTOMATION_NAME_MAX_LENGTH - suffix.length);
+  const base = name.trim().slice(0, available).trimEnd();
+  return `${base}${suffix}`.slice(0, AUTOMATION_NAME_MAX_LENGTH);
 }
 
 export function AutomationActions({
@@ -147,7 +156,10 @@ export function AutomationActions({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: `${automation.name} — ${c("workspace.duplicate")}`,
+          name: duplicateAutomationName(
+            automation.name,
+            c("workspace.duplicate"),
+          ),
           trigger: automation.trigger,
           action: automation.action,
           isActive: false,
