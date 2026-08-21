@@ -272,7 +272,7 @@ const copy = {
     "workspace.recentRuns": "عمليات حديثة",
     "workspace.successRate": "نسبة النجاح",
     "workspace.healthy": "محرك الأتمتة يعمل بشكل سليم",
-    "workspace.healthyHint": "يتم تنفيذ المهام بشكل دائم وآمن في الخلفية لهذه المتجر.",
+    "workspace.healthyHint": "يتم تنفيذ المهام بشكل دائم وآمن في الخلفية لهذا المتجر.",
     "workspace.noAutomations": "لا توجد أتمتة بعد",
     "workspace.noAutomationsHint": "ابدأ بقالب جاهز للتاجر أو أنشئ مساراً بسيطاً: عندما ← إذا ← نفّذ.",
     "workspace.new": "أتمتة جديدة",
