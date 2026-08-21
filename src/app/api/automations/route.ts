@@ -3,13 +3,17 @@ import type { NextRequest } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
-import { db, shopContext } from "@/lib/db";
 import { canonicalizeAutomationMutation } from "@/lib/automations/contracts";
+import { assertSellerAutomationWritePolicy } from "@/lib/automations/seller-policy";
+import { logAudit } from "@/lib/audit";
+import { db, shopContext } from "@/lib/db";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 
-/** POST — Create one fully validated automation definition. */
+/** POST — Create one fully validated, seller-compatible automation definition. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth("automations.manage");
+  const actorContext = await requireAuth("automations.manage");
   const input = canonicalizeAutomationMutation(await req.json());
+  assertSellerAutomationWritePolicy(input);
   const context = { prisma: db, shop: shopContext };
 
   const automation = await context.prisma.automation.create({
@@ -28,6 +32,20 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       lastError: null,
       nextRunAt: null,
       runCount: 0,
+    },
+  });
+
+  await logAudit(context, {
+    action: "automation.created",
+    entity: "automation",
+    entityId: automation.id,
+    actor: trustedActorAuditIdentity(actorContext.actor),
+    after: {
+      name: automation.name,
+      trigger: automation.trigger,
+      action: automation.action,
+      isActive: automation.isActive,
+      dryRun: automation.dryRun,
     },
   });
 
