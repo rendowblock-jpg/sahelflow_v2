@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   actionAllowedForTrigger,
+  getSellerRecheckStatuses,
   getSellerStatusTargets,
   getSellerTriggerSpec,
   normalizeConditionValueForSubmit,
@@ -14,6 +15,9 @@ describe("seller automation catalog", () => {
     expect(actionAllowedForTrigger("order.created", "send_whatsapp")).toBe(true);
     expect(actionAllowedForTrigger("order.created", "update_status")).toBe(false);
     expect(actionAllowedForTrigger("order.created", "tag_customer")).toBe(true);
+    expect(actionAllowedForTrigger("order.created", "send_notification")).toBe(true);
+    expect(actionAllowedForTrigger("order.created", "wait")).toBe(true);
+    expect(actionAllowedForTrigger("order.created", "recheck_order_status")).toBe(true);
 
     expect(actionAllowedForTrigger("order.confirmed", "update_status")).toBe(true);
     expect(actionAllowedForTrigger("order.shipped", "update_status")).toBe(true);
@@ -25,9 +29,14 @@ describe("seller automation catalog", () => {
     expect(actionAllowedForTrigger("message.received", "send_whatsapp")).toBe(false);
     expect(actionAllowedForTrigger("message.received", "update_status")).toBe(false);
     expect(actionAllowedForTrigger("message.received", "tag_customer")).toBe(false);
+    expect(actionAllowedForTrigger("message.received", "send_notification")).toBe(true);
+    expect(actionAllowedForTrigger("message.received", "wait")).toBe(true);
+    expect(actionAllowedForTrigger("message.received", "recheck_order_status")).toBe(false);
 
     expect(actionAllowedForTrigger("stock.low", "send_whatsapp")).toBe(false);
     expect(actionAllowedForTrigger("stock.low", "update_status")).toBe(false);
+    expect(actionAllowedForTrigger("stock.low", "send_notification")).toBe(true);
+    expect(actionAllowedForTrigger("stock.low", "wait")).toBe(true);
   });
 
   it("derives seller status targets from the canonical order transition state machine", () => {
@@ -49,21 +58,39 @@ describe("seller automation catalog", () => {
     expect(getSellerStatusTargets("order.cancelled")).toEqual([]);
   });
 
-  it("keeps destination-unsafe and invisible-effect triggers readable but unavailable for new seller flows", () => {
+  it("allows live order re-checks for every canonical order status and nowhere else", () => {
+    expect(getSellerRecheckStatuses("order.created")).toEqual([
+      "draft",
+      "pending",
+      "confirmed",
+      "shipped",
+      "delivered",
+      "returned",
+      "refused",
+      "cancelled",
+    ]);
+    expect(getSellerRecheckStatuses("order.delivered")).toEqual(
+      getSellerRecheckStatuses("order.created"),
+    );
+    expect(getSellerRecheckStatuses("message.received")).toEqual([]);
+    expect(getSellerRecheckStatuses("stock.low")).toEqual([]);
+  });
+
+  it("makes destination-free notification triggers seller-ready without exposing unsafe external effects", () => {
     const messageReceived = getSellerTriggerSpec("message.received");
     expect(messageReceived).toBeDefined();
-    expect(messageReceived?.sellerReady).toBe(false);
-    expect(messageReceived?.actions).toEqual([]);
+    expect(messageReceived?.sellerReady).toBe(true);
+    expect(messageReceived?.actions).toEqual(["send_notification", "wait"]);
     expect(
       sellerReadyTriggers().some((trigger) => trigger.value === "message.received"),
-    ).toBe(false);
+    ).toBe(true);
 
     const stockLow = getSellerTriggerSpec("stock.low");
     expect(stockLow).toBeDefined();
-    expect(stockLow?.sellerReady).toBe(false);
-    expect(stockLow?.actions).toEqual([]);
+    expect(stockLow?.sellerReady).toBe(true);
+    expect(stockLow?.actions).toEqual(["send_notification", "wait"]);
     expect(sellerReadyTriggers().some((trigger) => trigger.value === "stock.low")).toBe(
-      false,
+      true,
     );
   });
 
