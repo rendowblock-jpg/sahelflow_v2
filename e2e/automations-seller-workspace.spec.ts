@@ -104,4 +104,67 @@ test.describe("Automations seller workspace", () => {
       await page.request.delete(`/api/automations/${automation.id}`);
     }
   });
+
+  test("reopens a durable wait / live re-check / Bell alert flow without losing capability config", async ({
+    page,
+  }) => {
+    const suffix = Date.now().toString().slice(-7);
+    const name = `E2E Pending Follow-up ${suffix}`;
+    const message = `Still pending {{orderNumber}} / ${suffix}`;
+    const response = await page.request.post("/api/automations", {
+      data: {
+        name,
+        trigger: "order.created",
+        action: "wait",
+        config: { delayMinutes: 45 },
+        steps: [
+          {
+            action: "wait",
+            onFailure: "stop",
+            config: { delayMinutes: 45 },
+          },
+          {
+            action: "recheck_order_status",
+            onFailure: "stop",
+            config: { expectedStatus: "pending" },
+          },
+          {
+            action: "send_notification",
+            onFailure: "stop",
+            config: { messageTemplate: message },
+          },
+        ],
+        conditions: null,
+        isActive: true,
+        dryRun: true,
+        maxRetries: 2,
+        retryDelayMs: 500,
+      },
+    });
+    expect(response.ok()).toBeTruthy();
+    const automation = (await response.json()).automation as { id: string };
+
+    try {
+      await page.goto("/automations?tab=my");
+      await page.waitForLoadState("networkidle");
+
+      const card = page.locator(
+        `[data-automation-card="${automation.id}"]`,
+      );
+      await expect(card).toBeVisible();
+      await card.locator(`[data-automation-edit="${automation.id}"]`).click();
+
+      await expect(page.locator("#automation-name-v2")).toHaveValue(name);
+      await expect(page.locator("#automation-wait-0")).toHaveValue("45");
+      await expect(page.locator("#automation-recheck-1")).toBeVisible();
+      await expect(page.locator("#automation-message-2")).toHaveValue(message);
+
+      await page.locator("#automation-recheck-1").click();
+      await expect(
+        page.locator('[role="option"][data-state="checked"]'),
+      ).toBeVisible();
+    } finally {
+      await page.request.delete(`/api/automations/${automation.id}`);
+    }
+  });
 });
