@@ -9,6 +9,7 @@ import {
   AUTOMATION_TRIGGER_EFFECT_TYPE,
   type AutomationStepDefinition,
 } from "../contracts";
+import { openAutomationNotificationBody } from "../notification-codec";
 import { drainDueAutomationRuns } from "../run-processor";
 import { enqueueAutomationTrigger } from "../trigger-service";
 import { drainDueAutomationTriggers } from "../trigger-processor";
@@ -155,8 +156,17 @@ async function forceWaitDue(): Promise<void> {
   });
 }
 
+async function openStoredNotificationBody(): Promise<string> {
+  const notification = await db.automationNotification.findFirstOrThrow();
+  return openAutomationNotificationBody(context, {
+    notificationId: notification.id,
+    notificationKey: notification.notificationKey,
+    protectedBody: notification.body,
+  });
+}
+
 describe("durable automation runtime", () => {
-  it("stores one encrypted definition-bound run and exactly one visible Bell notification for trigger replay", async () => {
+  it("stores one encrypted definition-bound run and exactly one protected Bell notification for trigger replay", async () => {
     await createAutomation({
       name: "Notification",
       steps: [
@@ -209,11 +219,19 @@ describe("durable automation runtime", () => {
       failedStepCount: 0,
     });
     await expect(db.automationNotification.count()).resolves.toBe(1);
-    await expect(db.automationNotification.findFirstOrThrow()).resolves.toMatchObject({
+    const storedNotification = await db.automationNotification.findFirstOrThrow();
+    expect(storedNotification).toMatchObject({
       automationName: "Notification",
-      body: "Order ORD-AUTO-1",
       link: "/automations?tab=activity",
     });
+    expect(storedNotification.body).not.toContain("ORD-AUTO-1");
+    expect(storedNotification.body).not.toContain("Client Automation");
+    expect(JSON.parse(storedNotification.body)).toMatchObject({
+      format: "sahelflow-business-command-result",
+      version: 1,
+      algorithm: "aes-256-gcm",
+    });
+    await expect(openStoredNotificationBody()).resolves.toBe("Order ORD-AUTO-1");
 
     await expect(drainDueAutomationRuns(context, 10)).resolves.toEqual([]);
     await expect(db.automationNotification.count()).resolves.toBe(1);
@@ -279,9 +297,9 @@ describe("durable automation runtime", () => {
       "succeeded",
       "succeeded",
     ]);
-    await expect(db.automationNotification.findFirstOrThrow()).resolves.toMatchObject({
-      body: `Still pending ${order.orderNumber}`,
-    });
+    await expect(openStoredNotificationBody()).resolves.toBe(
+      `Still pending ${order.orderNumber}`,
+    );
   });
 
   it("neutral-skips downstream work when the live order state changed during the wait", async () => {
@@ -339,6 +357,102 @@ describe("durable automation runtime", () => {
     expect(run.steps[1]!.lastErrorCode).toBe("AUTOMATION_GUARD_NOT_MATCHED");
     expect(run.steps[2]!.lastErrorCode).toBe("AUTOMATION_GUARD_NOT_MATCHED");
     await expect(db.automationNotification.count()).resolves.toBe(0);
+  });
+
+  it("commits a status mutation when the live re-check still matches at mutation time", async () => {
+    const order = await seedRecheckOrder("confirmed");
+    await createAutomation({
+      name: "Guarded return",
+      steps: [
+        {
+          action: "recheck_order_status",
+          onFailure: "stop",
+          config: { expectedStatus: "confirmed" },
+        },
+        {
+          action: "update_status",
+          onFailure: "stop",
+          config: { targetStatus: "returned" },
+        },
+      ],
+    });
+    await materializeTrigger(
+      "order.created:guarded-update-match",
+      orderPayload({
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerId: order.customerId,
+      }),
+    );
+
+    await drainRunsUntilIdle();
+
+    await expect(
+      dbRaw.order.findUniqueOrThrow({ where: { id: order.id } }),
+    ).resolves.toMatchObject({ status: "returned" });
+    const run = await db.automationRun.findFirstOrThrow({
+      include: { steps: { orderBy: { position: "asc" } } },
+    });
+    expect(run.status).toBe("succeeded");
+    expect(run.steps.map((step) => step.status)).toEqual([
+      "succeeded",
+      "succeeded",
+    ]);
+  });
+
+  it("neutral-skips a guarded mutation if the order changes after a successful re-check", async () => {
+    const order = await seedRecheckOrder("confirmed");
+    await createAutomation({
+      name: "Guarded return race",
+      steps: [
+        {
+          action: "recheck_order_status",
+          onFailure: "stop",
+          config: { expectedStatus: "confirmed" },
+        },
+        {
+          action: "update_status",
+          onFailure: "stop",
+          config: { targetStatus: "returned" },
+        },
+      ],
+    });
+    await materializeTrigger(
+      "order.created:guarded-update-race",
+      orderPayload({
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerId: order.customerId,
+      }),
+    );
+
+    const recheck = await drainDueAutomationRuns(context, 1);
+    expect(recheck[0]).toMatchObject({ state: "queued" });
+    await expect(
+      db.automationStepRun.findFirstOrThrow({ where: { position: 0 } }),
+    ).resolves.toMatchObject({ status: "succeeded" });
+
+    await dbRaw.order.update({
+      where: { id: order.id },
+      data: { status: "shipped" },
+    });
+    await drainRunsUntilIdle();
+
+    await expect(
+      dbRaw.order.findUniqueOrThrow({ where: { id: order.id } }),
+    ).resolves.toMatchObject({ status: "shipped" });
+    const run = await db.automationRun.findFirstOrThrow({
+      include: { steps: { orderBy: { position: "asc" } } },
+    });
+    expect(run.status).toBe("skipped");
+    expect(run.lastErrorCode).toBeNull();
+    expect(run.failedStepCount).toBe(0);
+    expect(run.skippedStepCount).toBe(1);
+    expect(run.steps.map((step) => step.status)).toEqual([
+      "succeeded",
+      "skipped",
+    ]);
+    expect(run.steps[1]!.lastErrorCode).toBe("AUTOMATION_GUARD_NOT_MATCHED");
   });
 
   it("stops after a required failed step and skips every downstream step", async () => {

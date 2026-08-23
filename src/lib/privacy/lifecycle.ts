@@ -1,5 +1,6 @@
 import "server-only";
 
+import { openAutomationNotificationBody } from "@/lib/automations/notification-codec";
 import { db, shopContext } from "@/lib/db";
 import { withDemoPolicyLock } from "@/lib/demo/algerian-demo-policy";
 import { withPrivacyEraseTransaction } from "@/lib/maintenance/privacy-erase-transaction";
@@ -7,6 +8,7 @@ import { withPrivacyEraseTransaction } from "@/lib/maintenance/privacy-erase-tra
 const PRIVACY_EXPORT_FORMAT_VERSION = 2 as const;
 const PRIVACY_ERASE_RECEIPT_FORMAT_VERSION = 1 as const;
 const EXPORT_MAX_BYTES = 32 * 1024 * 1024;
+const privacyServiceContext = { prisma: db, shop: shopContext };
 
 const PRIVACY_EXPORT_EXCLUDED_MODELS = [
   "AuthSecret",
@@ -18,9 +20,11 @@ const PRIVACY_EXPORT_EXCLUDED_MODELS = [
 
 /**
  * Exact model-level export authority derived from the Phase 4 data inventory.
- * Every included model is loaded through the protected Prisma client so
- * contextual protected fields are opened only for this authorized response.
- * Setting values remain excluded; only their non-secret metadata is exported.
+ * Included models are loaded through the protected Prisma client. Durable Bell
+ * bodies use their dedicated authenticated business-envelope codec, so they are
+ * opened only for this authorized portability response rather than exposed as
+ * raw ciphertext. Setting values remain excluded; only non-secret metadata is
+ * exported.
  */
 const PRIVACY_EXPORT_MODEL_LOADERS = {
   AiActionApproval: () => db.aiActionApproval.findMany(),
@@ -31,6 +35,19 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
   AuditLog: () => db.auditLog.findMany(),
   Automation: () => db.automation.findMany(),
   AutomationLog: () => db.automationLog.findMany(),
+  AutomationNotification: async () => {
+    const notifications = await db.automationNotification.findMany();
+    return Promise.all(
+      notifications.map(async (notification) => ({
+        ...notification,
+        body: await openAutomationNotificationBody(privacyServiceContext, {
+          notificationId: notification.id,
+          notificationKey: notification.notificationKey,
+          protectedBody: notification.body,
+        }),
+      })),
+    );
+  },
   AutomationRun: () => db.automationRun.findMany(),
   AutomationStepAttempt: () => db.automationStepAttempt.findMany(),
   AutomationStepRun: () => db.automationStepRun.findMany(),
@@ -140,9 +157,9 @@ export interface PrivacyLifecycleReceipt {
 
 /**
  * Export every inventory-declared seller, subject, business and relevant
- * operational model through the protected Prisma client. Credential values,
- * key material, active-session authority and public reference data are excluded
- * exactly as declared by the Phase 4 privacy inventory.
+ * operational model through its canonical protected/opening boundary.
+ * Credential values, key material, active-session authority and public
+ * reference data are excluded exactly as declared by the Phase 4 inventory.
  */
 export async function createShopPrivacyExport(): Promise<Buffer> {
   const models = await loadPrivacyExportModels();
@@ -205,6 +222,8 @@ export async function executeShopErase(
       await tx.aiActionExecution.deleteMany({});
       await tx.aiActionProposal.deleteMany({});
 
+      // Durable notification effects precede their owning automation runs.
+      await tx.automationNotification.deleteMany({});
       // Durable automation attempts precede steps and runs.
       await tx.automationStepAttempt.deleteMany({});
       await tx.automationStepRun.deleteMany({});

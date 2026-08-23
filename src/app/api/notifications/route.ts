@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { db } from "@/lib/db";
+import { openAutomationNotificationBody } from "@/lib/automations/notification-codec";
+import { db, shopContext } from "@/lib/db";
 import { trustedActionAllowed } from "@/lib/identity/authorization";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 import type { Locale } from "@/lib/i18n";
@@ -75,6 +76,7 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
   const numLocale = intlLocale(locale);
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const notificationContext = { prisma: db, shop: shopContext };
 
   const recentOrders = canReadOrders ? await db.order.findMany({
     where: {
@@ -138,9 +140,9 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
   }) : [];
 
   // Filter automation alerts by the underlying source authority *before* the
-  // Bell limit. The run relation is canonical Prisma data access, so newer
-  // unauthorized notices cannot starve older authorized ones and no raw-client
-  // escape hatch is needed in application code.
+  // Bell limit and before opening their protected bodies. Newer unauthorized
+  // notices therefore cannot starve older authorized notices or cause PII to
+  // be decrypted for an actor who cannot read the originating business data.
   const allowedAutomationTriggers: string[] = [];
   if (canReadOrders && canReadContacts && canReadFinancials) {
     allowedAutomationTriggers.push(
@@ -159,7 +161,7 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
   }
   if (canReadProducts) allowedAutomationTriggers.push("stock.low");
 
-  const automationNotifications =
+  const storedAutomationNotifications =
     canReadAutomations && allowedAutomationTriggers.length > 0
       ? await db.automationNotification.findMany({
           where: {
@@ -171,6 +173,7 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
           take: 8,
           select: {
             id: true,
+            notificationKey: true,
             title: true,
             body: true,
             link: true,
@@ -179,6 +182,16 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
           },
         })
       : [];
+  const automationNotifications = await Promise.all(
+    storedAutomationNotifications.map(async (notification) => ({
+      ...notification,
+      body: await openAutomationNotificationBody(notificationContext, {
+        notificationId: notification.id,
+        notificationKey: notification.notificationKey,
+        protectedBody: notification.body,
+      }),
+    })),
+  );
 
   const staleThreshold = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const staleOrders = canReadOrders ? await db.order.count({

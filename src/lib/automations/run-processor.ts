@@ -22,6 +22,7 @@ import {
   type AutomationTriggerPayload,
   type CanonicalAutomationDefinition,
 } from "./contracts";
+import { sealAutomationNotificationBody } from "./notification-codec";
 
 const RUN_LEASE_MS = 90_000;
 const EFFECT_POLL_MS = 5_000;
@@ -88,6 +89,11 @@ interface ClaimedStep extends AutomationStepRow {
   claimedFromStatus: string;
 }
 
+interface LiveOrderStatusGuard {
+  position: number;
+  expectedStatus: string;
+}
+
 type StepSelection =
   | { kind: "none" }
   | {
@@ -140,6 +146,33 @@ function retryDelay(
     definition.retryDelayMs * Math.pow(2, Math.max(0, attemptNumber - 1)),
     MAX_STEP_RETRY_DELAY_MS,
   );
+}
+
+/**
+ * Return the latest live order-status authority that remains valid for the
+ * selected mutation step. A wait invalidates every earlier check; the trusted
+ * seller write policy guarantees at most one status mutation per definition.
+ */
+function liveOrderStatusGuardForStep(
+  definition: CanonicalAutomationDefinition,
+  currentPosition: number,
+): LiveOrderStatusGuard | null {
+  let guard: LiveOrderStatusGuard | null = null;
+  for (let position = 0; position < currentPosition; position += 1) {
+    const candidate = definition.steps[position];
+    if (!candidate) continue;
+    if (candidate.action === "wait") {
+      guard = null;
+      continue;
+    }
+    if (candidate.action === "recheck_order_status") {
+      guard = {
+        position,
+        expectedStatus: candidate.config.expectedStatus,
+      };
+    }
+  }
+  return guard;
 }
 
 function isRunTerminal(status: string): boolean {
@@ -774,6 +807,57 @@ async function markStepSucceeded(
   return finalizeOrScheduleRun(context, run);
 }
 
+async function markGuardNotMatchedInTx(
+  tx: AutomationTx,
+  step: ClaimedStep,
+  now: Date,
+  resultJson: string,
+  expectedStatus: string,
+  currentStatus: string,
+): Promise<void> {
+  const updated = await tx.automationStepRun.updateMany({
+    where: {
+      id: step.id,
+      status: "processing",
+      leaseToken: step.activeLeaseToken,
+    },
+    data: {
+      status: "skipped",
+      resultJson,
+      lastErrorCode: AUTOMATION_GUARD_NOT_MATCHED,
+      completedAt: now,
+      lockedAt: null,
+      leaseToken: null,
+      nextAttemptAt: null,
+    },
+  });
+  if (updated.count !== 1) {
+    throw new AutomationActionError(
+      "AUTOMATION_STEP_LEASE_LOST",
+      true,
+      "Automation step lease was lost before the guard outcome committed",
+    );
+  }
+  await tx.automationStepAttempt.updateMany({
+    where: {
+      id: step.attemptId,
+      state: "processing",
+      leaseToken: step.activeLeaseToken,
+    },
+    data: {
+      state: "skipped",
+      errorCode: AUTOMATION_GUARD_NOT_MATCHED,
+      detailJson: JSON.stringify({
+        matched: false,
+        expectedStatus,
+        currentStatus,
+      }),
+      completedAt: now,
+    },
+  });
+  await skipDownstreamSteps(tx, step, now, AUTOMATION_GUARD_NOT_MATCHED);
+}
+
 async function markGuardNotMatched(
   context: ServiceContext,
   run: ClaimedRun,
@@ -787,49 +871,16 @@ async function markGuardNotMatched(
     expectedStatus,
     currentStatus,
   });
-  await context.prisma.$transaction(async (tx) => {
-    const updated = await tx.automationStepRun.updateMany({
-      where: {
-        id: step.id,
-        status: "processing",
-        leaseToken: step.activeLeaseToken,
-      },
-      data: {
-        status: "skipped",
-        resultJson,
-        lastErrorCode: AUTOMATION_GUARD_NOT_MATCHED,
-        completedAt: now,
-        lockedAt: null,
-        leaseToken: null,
-        nextAttemptAt: null,
-      },
-    });
-    if (updated.count !== 1) {
-      throw new AutomationActionError(
-        "AUTOMATION_STEP_LEASE_LOST",
-        true,
-        "Automation step lease was lost before the live re-check committed",
-      );
-    }
-    await tx.automationStepAttempt.updateMany({
-      where: {
-        id: step.attemptId,
-        state: "processing",
-        leaseToken: step.activeLeaseToken,
-      },
-      data: {
-        state: "skipped",
-        errorCode: AUTOMATION_GUARD_NOT_MATCHED,
-        detailJson: JSON.stringify({
-          matched: false,
-          expectedStatus,
-          currentStatus,
-        }),
-        completedAt: now,
-      },
-    });
-    await skipDownstreamSteps(tx, step, now, AUTOMATION_GUARD_NOT_MATCHED);
-  });
+  await context.prisma.$transaction((tx) =>
+    markGuardNotMatchedInTx(
+      tx,
+      step,
+      now,
+      resultJson,
+      expectedStatus,
+      currentStatus,
+    ),
+  );
   return finalizeOrScheduleRun(context, run);
 }
 
@@ -1023,6 +1074,11 @@ async function executeVisibleNotificationStep(
 
   const notificationKey = `automation-notification:${step.stepKey}`;
   const notificationId = deterministicUuid(notificationKey);
+  const protectedBody = await sealAutomationNotificationBody(context, {
+    notificationId,
+    notificationKey,
+    body,
+  });
   const now = new Date();
   const resultJson = await sealStepResult(context, step, {
     notificationId,
@@ -1041,7 +1097,7 @@ async function executeVisibleNotificationStep(
         runId: run.id,
         stepRunId: step.id,
         title: run.automationName,
-        body,
+        body: protectedBody,
         link: "/automations?tab=activity",
       },
       update: {},
@@ -1138,6 +1194,7 @@ async function executeDatabaseStep(
   context: ServiceContext,
   run: ClaimedRun,
   step: ClaimedStep,
+  runDefinition: CanonicalAutomationDefinition,
   definition: Exclude<
     AutomationStepDefinition,
     { action: "send_whatsapp" }
@@ -1252,11 +1309,53 @@ async function executeDatabaseStep(
   }
   const { orderService } = await import("@/lib/data/order-service");
   const now = new Date();
+  const statusGuard = liveOrderStatusGuardForStep(runDefinition, step.position);
   const resultJson = await sealStepResult(context, step, {
     orderId,
     targetStatus: definition.config.targetStatus,
   });
-  const effects = await context.prisma.$transaction(async (tx) => {
+  const guardMismatchResultJson = statusGuard
+    ? await sealStepResult(context, step, {
+        matched: false,
+        expectedStatus: statusGuard.expectedStatus,
+        reason: "status_changed_before_mutation",
+      })
+    : null;
+  const outcome = await context.prisma.$transaction(async (tx) => {
+    if (statusGuard) {
+      const committedGuard = await tx.automationStepRun.findFirst({
+        where: {
+          runId: run.id,
+          position: statusGuard.position,
+        },
+        select: { status: true },
+      });
+      if (!committedGuard || committedGuard.status !== "succeeded") {
+        throw new AutomationActionError(
+          "AUTOMATION_STATUS_GUARD_NOT_COMMITTED",
+          false,
+          "Order status mutation requires a successfully committed live re-check",
+        );
+      }
+
+      const currentOrder = await tx.order.findFirst({
+        where: { id: orderId, deletedAt: null },
+        select: { status: true },
+      });
+      const currentStatus = currentOrder ? String(currentOrder.status) : "missing";
+      if (currentStatus !== statusGuard.expectedStatus) {
+        await markGuardNotMatchedInTx(
+          tx,
+          step,
+          now,
+          guardMismatchResultJson!,
+          statusGuard.expectedStatus,
+          currentStatus,
+        );
+        return { kind: "guard_not_matched" as const };
+      }
+    }
+
     const transition = await orderService.updateStatusInTx(
       tx,
       orderId,
@@ -1292,9 +1391,14 @@ async function executeDatabaseStep(
         completedAt: now,
       },
     });
-    return transition;
+    return { kind: "transition" as const, transition };
   });
-  await Promise.resolve(orderService.dispatchStatusTransition(context, effects));
+  if (outcome.kind === "guard_not_matched") {
+    return finalizeOrScheduleRun(context, run);
+  }
+  await Promise.resolve(
+    orderService.dispatchStatusTransition(context, outcome.transition),
+  );
   return finalizeOrScheduleRun(context, run);
 }
 
@@ -1496,6 +1600,7 @@ async function executeClaimedRun(
       context,
       run,
       step,
+      definition,
       stepDefinition,
       payload,
     );
