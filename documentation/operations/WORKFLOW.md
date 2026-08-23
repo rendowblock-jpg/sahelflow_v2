@@ -1,10 +1,10 @@
 # SahelFlow — Research, coding, review and delivery workflow
 
 > **Status:** Active operating contract
-> **Last consolidated:** 2026-08-19
+> **Last consolidated:** 2026-08-23
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.22 / FD-041 is signed and published; protected product source is newer through Founder repairs #286/#287/#289/#290; the next session is the separately authorized signed Founder-offline update path
+> **Current checkpoint:** Internal.24 / FD-043 is signed and published from protected `main@1037f125188cd93db992979090e156bf787fb54a`; the current observable outcome is Founder-installed human inspection under #221, not another automatic release
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -17,8 +17,8 @@ resolve protected main + open PR/issues/releases
 → read active authority
 → identify the one current observable outcome
 → map affected authority/consumers/tests/data/evidence
-→ research only where the decision is materially uncertain or current external authority is required
-→ implement one dependency-correct package
+→ research only where materially uncertain or external/current authority is required
+→ implement one dependency-correct bounded package when evidence requires code
 → targeted checks during coding
 → freeze exact head
 → consequence-selected source/browser/native/Windows evidence
@@ -31,6 +31,8 @@ resolve protected main + open PR/issues/releases
 ```
 
 Do not restart generic repository reconnaissance when a bounded current outcome is already known. Do not rerun an unchanged passing exact head. Do not retry deterministic failures until they turn green without identifying and fixing the cause.
+
+For the present frontier, the current observable outcome is the Founder-installed Internal.24 checkpoint. Repository-wide source reconnaissance is not the next step unless the installed observation demonstrates a bounded defect.
 
 ## 2. Authority and anti-drift
 
@@ -76,11 +78,11 @@ Before a major phase/package or a materially uncertain bounded repair, perform t
 - direct and contract tests;
 - release/version/licensing consequence.
 
-For a phase or broad package, freeze one **Phase Problem Register** before implementation so duplicate manifestations are grouped by root cause and P0/P1 are visible. For a small demonstrated defect, the reproduction plus bounded impacted-sibling inventory can serve as the register; do not create bureaucracy for its own sake.
+For a phase or broad package, freeze one **Phase Problem Register** before implementation so duplicate manifestations are grouped by root cause and P0/P1 are visible. For a small demonstrated defect, the reproduction plus bounded impacted-sibling inventory can serve as the register.
 
 Group sibling manifestations under one root cause. Do not make the Founder enumerate repeated instances of a proven systemic class.
 
-For the next-session update, the package is already defined: a **release-authority-only** envelope from exact protected `main`. Do not reopen product reconnaissance before it unless a release consequence demonstrates a concrete defect.
+The current Founder-installed Internal.24 inspection is evidence collection, not a pretext for a generic source audit. If it demonstrates a concrete defect, audit the bounded root cause and affected siblings before implementing the repair.
 
 ## 4. Research rule
 
@@ -164,48 +166,30 @@ Use for coherent signed Internal candidates and immediately at a boundary where 
 - irreversible money/stock/provider effects;
 - another change that materially affects preservation or signed runtime behavior.
 
-Applicable proof includes:
-
-1. exact frozen/reviewed source binding;
-2. clean release compilation;
-3. Rust release parity;
-4. MSI/updater contract and signature;
-5. clean install;
-6. in-place upgrade/replacement behavior;
-7. first launch/authenticated readiness/close/reopen;
-8. process containment and cleanup;
-9. AppData/registry/database/key preservation;
-10. migration interruption/repair;
-11. backup/corruption/restore/replacement recovery;
-12. complete affected UI journeys;
-13. AR/FR/EN/RTL/accessibility evidence;
-14. permission/shop/tenant isolation;
-15. applicable reference-hardware/resource evidence;
-16. deterministic evidence manifest.
+Applicable proof includes exact frozen/reviewed source binding, clean release compilation, Rust release parity, MSI/updater contract and signature, clean install, in-place upgrade/replacement behavior, first launch/authenticated readiness/close/reopen, process containment, AppData/registry/database/key preservation, migration/recovery cases, affected UI journeys, AR/FR/EN/RTL/accessibility proof and a deterministic evidence manifest.
 
 A signed release is built only after exact protected-main authority exists. Branch-only artifacts are evidence candidates, never durable release sources.
 
 ## 7. Whole-product AAA frontend program
 
-The **Whole-product AAA frontend program** is the historical program that produced the shared semantic RTL foundation and the later Inbox/AI/Settings/analytics/Inbox-V3/Search reconstruction line. That broad program is not automatically reopened after Internal.22 or the #286/#287/#289/#290 repairs.
+The **Whole-product AAA frontend program** is the historical program that produced the shared semantic RTL foundation and later Inbox/AI/Settings/analytics/Inbox-V3/Search/Risk/dashboard/chart/Automations reconstruction line. That broad program is not automatically reopened by an installed checkpoint.
 
 For any material UI repair later, prove the actual changed states rather than only component existence:
 
-- happy, loading, empty, filtered-empty, permission, offline/degraded, stale, pending, conflict, error, retry and recovery states as applicable;
+- happy/loading/empty/permission/offline/degraded/stale/pending/conflict/error/retry/recovery states as applicable;
 - AR/FR/EN semantic parity;
 - Arabic joining/typography/reading flow;
 - semantic RTL child order and logical geometry;
 - portaled primitive direction;
 - mixed Arabic/Latin/numeric technical-value bidi isolation;
-- keyboard, focus entry/return/trap, accessible names/status/errors;
+- keyboard/focus and accessible names/status/errors;
 - 100–200% zoom/reflow and 1366×768 containment;
-- reduced motion;
-- live resize where workspaces change composition;
+- reduced motion and live resize where applicable;
 - low-end rendering and interaction budgets.
 
-The shared direction/geometry/bidi contracts from PRs #273–#276 are protected. Do not return to page-local `rtl ? left : right` patching without a demonstrable exceptional geometry contract.
+The shared direction/geometry/bidi contracts from #273–#276 are protected. Do not return to page-local `rtl ? left : right` patching without a demonstrable exceptional geometry contract.
 
-For analytical surfaces, product chrome follows locale direction while Cartesian chronology/quantitative geometry follows its governed analytical semantics; do not naively mirror data axes because the UI is Arabic.
+For analytical surfaces, product chrome follows locale direction while Cartesian chronology/quantitative geometry follows governed analytical semantics; do not naively mirror data axes because the UI is Arabic.
 
 ## 8. Performance and reliability
 
@@ -219,7 +203,7 @@ When a target regresses:
 4. preserve canonical correctness/accessibility/recovery;
 5. rerun the affected metric and consequence-selected regressions on the exact repaired head.
 
-Do not raise a threshold merely to remove a red result. Do not add speculative caches/indexes/virtualization/worker deferral without measured evidence.
+Do not raise a threshold merely to remove a red result. The previously observed slow startup on the Founder low-end laptop remains deferred unless the Founder explicitly reopens it.
 
 ## 9. Review and repair
 
@@ -275,49 +259,47 @@ certified product head
 → Founder-installed human/provider evidence remains separate
 ```
 
-Do not publish from a branch head. Do not substitute a merge candidate for protected-main source. Do not weaken updater keys, signature checks, `--locked` Rust proof or deterministic source guards.
+Do not publish from a branch head. Do not substitute a merge candidate for protected-main source. Do not weaken updater keys, signature checks, Rust locking or deterministic source guards.
 
-For the upcoming update, PR #284 is the closest release-authority template. The next release-authority package must remain bounded to version/licensing/release-source consequences and must not smuggle unrelated product changes into the version bump.
+Internal.24 / FD-043 is already signed and published. **Do not create Internal.25 as a reflexive next step.** A later release-authority package exists only after a coherent new repair set and an explicit next-update decision. The current authority surface remains enforced by `sahelflow.version.json`, `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`/WiX, `scripts/sf-version.ts`, release requests and updater/release checks.
 
-The version authority is enforced across `sahelflow.version.json`, `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`/WiX and `scripts/sf-version.ts` plus updater-contract/release scripts. `bun run sf-version` is the immediate consistency check. A new Founder-offline version must receive its own explicit authority pair; **FD-041 cannot be reused for a different version**.
+## 12. Current Internal.24 installed checkpoint
 
-## 12. Current post-Internal.22 mode
+Current durable release truth:
 
-Internal.22 / FD-041 is already signed and published from `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348`. Protected product source is now newer through Founder repairs #286, #287, #289 and #290. Those source fixes are **not** contained in Internal.22.
-
-The current protected product checkpoint after #290 is `39ffcc5d58e13699f74475579cd88bc511bceec4`, tree `d9866c210c13267608120eb85eede4efbcf82637`. The final #290 certified head `997ebb96b28d4d222bc9c1ca9a56148562ef874a` carried the same tree and passed CI, Phase 5 and Phase 6-7 on that exact head before merge. No open application PR existed at the handoff.
-
-The Founder has said this repair session is sufficient and wants the **next session to make the update**. That is now the exact resumable outcome.
+- protected source: `1037f125188cd93db992979090e156bf787fb54a` / #296;
+- version: Internal.24 / MSI 1.0.0.24 / FD-043;
+- signed dispatcher: `32669450058` — success;
+- signed updater: `32669458022` — success;
+- automated signed install/reopen and hydrated WebView twice: success;
+- Founder human whole-product acceptance: still open under #221.
 
 Current sequence is:
 
 ```text
 resolve live protected main + open PR/issues
-→ verify the #286/#287/#289/#290 repair tree is still the protected product baseline
-→ create one release-authority-only branch from exact protected main
-→ use #284 as the release template and bind the next sequential Founder-offline Internal version across every sf-version/updater authority surface
-→ do not reuse FD-041 and do not claim a new version/decision before the explicit release envelope exists
-→ freeze exact release head
-→ run complete selected source/native/Rust/Windows/MSI/install/preservation evidence and Required PR gate
-→ adversarial review; repair deterministic failures/findings without unrelated product scope
-→ expected-head merge
-→ verify exact protected-main source/tree
-→ protected-main signed dispatcher/build only
-→ verify signature, staged runtime, exact source binding, signed install/reopen/hydrated UI, deterministic source rewrites, evidence manifest, latest.json, exact tag and publication target
-→ install/update that exact signed checkpoint in place while preserving AppData/identity/keys/shop DBs
-→ Founder retests Problems #1–#5 and records #221 accept/reject evidence
-→ real-phone WhatsApp QR/link/reopen/outbound/inbound evidence remains separate
+→ confirm Internal.24 remains latest signed authority
+→ update/install Internal.24 in place on Founder Windows
+→ preserve AppData / installation identity / keys / shop databases
+→ retest retained Problems #1–#5
+→ validate #293 chart repairs
+→ validate #294/#295 seller-first Automations V2 and Bell/recheck/recovery behavior
+→ inspect EN/FR/AR typography/density/theme/motion, locale convergence, Arabic RTL/bidi, keyboard/focus/reduced-motion/accessibility
+→ record explicit #221 accept/reject evidence
+→ if concrete installed P0/P1 exists, audit and repair only that bounded root cause
+→ use selected Level 1/2/3 gates on one exact frozen repair head
+→ expected-head merge after review/gates
+→ only if a later update is explicitly authorized, create its bounded release authority and sign from protected main
+→ real-phone WhatsApp evidence remains separate
 → keep #230 separate until resilient customer-online trial evidence is real
 → representative Beta/Stable evidence and explicit Founder promotion later
 ```
 
-Do **not** resume Problem #6 or another generic product audit before the release-authority step. If a release gate exposes a real deterministic defect, isolate and repair only that demonstrated release/product root cause, then return to the same update sequence.
-
-The handoff itself does not fabricate the next version or Founder-decision number. Those become durable truth only through the reviewed release-authority PR and protected-main publication sequence.
+Do not restart Problem enumeration or generic product audit before the installed Internal.24 checkpoint. A concrete installed failure is evidence for a bounded repair, not permission to reset already-certified product programs.
 
 ## 13. Handoff rule
 
-At closure, reconcile Current State, Roadmap, Workflow and Working Memory to exact durable truth. Do not create a competing permanent handoff/masterplan.
+At closure, reconcile Current State, Roadmap, Workflow and Working Memory plus mandatory repository/documentation entry points to exact durable truth. Do not create a competing permanent handoff/masterplan.
 
 A handoff must say explicitly:
 

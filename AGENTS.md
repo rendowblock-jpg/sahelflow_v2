@@ -13,9 +13,9 @@ The Founder-owned Windows installation is evidence-bearing state. Never reset/de
 5. Read `documentation/operations/WORKING_MEMORY.md`.
 6. Read governing Product, Experience, Founder Decisions and Architecture sections for the task.
 7. Re-fetch live protected `main`, open PRs and current issue states before any write.
-8. Resolve the live protected-main SHA again immediately before every merge, release-authority change or package action.
+8. Resolve live protected-main SHA again immediately before every merge, release-authority change or package action.
 
-**Do not restart a generic codebase audit, generic RTL sweep, the old Inbox → AI → Settings replacement plan, or another Founder defect-enumeration wave before the requested update.** Those source programs and the bounded Problems #1–#5 repair batch are complete through PR #290. Inspect only source roots implicated by the exact next outcome or direct regression evidence.
+Do not restart a generic codebase audit, generic RTL sweep, old Inbox → AI → Settings plan, or automatic release/version cycle when the current observable outcome is already known. Inspect only roots implicated by the exact installed defect, provider boundary or release consequence being worked.
 
 ## Authority precedence
 
@@ -33,78 +33,72 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-At the 2026-08-19 handoff:
+At the 2026-08-23 reconciliation:
 
-- latest signed/published checkpoint: **Internal.22**;
-- app: `1.0.0-internal.22`;
-- MSI: `1.0.0.22`;
-- authority: **FD-041**;
+- latest signed/published checkpoint: **Internal.24**;
+- app: `1.0.0-internal.24`;
+- MSI: `1.0.0.24`;
+- authority: **FD-043**;
 - mode: `founder-offline-only`;
-- protected Internal.22 release source: `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348` / PR #284;
-- signed updater run: `32205843573` — success;
-- certified Internal.22 product head: `fa77ae32dc680f0d2854d10363dcaf06ba4e5229` / PR #283;
-- current post-release protected product checkpoint: `39ffcc5d58e13699f74475579cd88bc511bceec4` / PR #290;
-- current post-release product tree: `d9866c210c13267608120eb85eede4efbcf82637`;
-- #290 frozen certified head: `997ebb96b28d4d222bc9c1ca9a56148562ef874a`, same product tree;
-- #290 exact-head CI `32307890772`, Phase 5 `32307890579` and Phase 6-7 `32307890634` — success;
-- no open application PR existed after #290; recheck live GitHub before acting.
+- protected release source: `1037f125188cd93db992979090e156bf787fb54a` / PR #296;
+- signed dispatcher run: `32669450058` — success;
+- signed updater run: `32669458022` — success;
+- retained updater artifact: `sahelflow-1.0.0-internal.24-windows-updater-32669458022`;
+- artifact digest: `sha256:9a5cca74e237037c578a66064381e4ce442c6749a39beb3c75f2a9c9b60543eb`;
+- #296 certified exact head: `4105caca81af138276e280c554094baeed5ce5d5`;
+- #296 exact-head Required PR, Phase 5, Phase 6-7, Native source, Windows runtime/Rust parity and exact installed MSI evidence: success;
+- #296 exact-head Codex review: no major issues; unresolved review threads: zero.
 
-Recent protected product line now complete:
+Current signed product lineage includes:
 
 - #273–#276 shared structural/semantic RTL foundation;
 - #278 Inbox Class-AAA operations desk;
 - #279 AI Agents Class-AAA decision workspace;
 - #280 Settings Class-AAA control center + Internal.21/FD-040;
-- #281 Class-AAA ECharts analytics system;
+- #281 governed ECharts analytics system;
 - #282 Inbox V3 + WhatsApp pairing/recovery hardening;
 - #283 Universal Search / Command Center;
-- #284 Internal.22/FD-041 signed release authority;
-- #286 sleep/resume + locale convergence + Search repair;
-- #287 Risk Engine seller decision workspace;
-- #289 dashboard operations + delivery-detail repair;
-- #290 Arabic compact values + RTL controls + navigation/Profile IA + annual demo.
+- #284 Internal.22/FD-041;
+- #286/#287/#289/#290 Founder Problems #1–#5 repair line;
+- #292 Internal.23/FD-042;
+- #293 chart clarity / Arabic compact DZD / RTL ranking repair;
+- #294 seller-first Automations V2 workspace/builder;
+- #295 durable Wait, live order-status rechecks, protected seller Bell effects, privacy lifecycle coverage and atomic status-guard correctness;
+- #296 Internal.24/FD-043 release authority and signed publication.
 
-PR #288 is docs-only continuity. Internal.22 does **not** contain #286/#287/#289/#290; those repairs need the next signed checkpoint before Founder-installed validation is possible.
-
-Statements in old handoffs saying Internal.20 is latest, no Internal.21 exists, Inbox/AI/Settings are still next, or installed Internal.22 review is the immediate default are superseded.
+The frozen #295 product head was `fd0b89c5a64ca741f72af96a6b68053ce4a818ae`; exact-head CI `32648447571`, Phase 5 `32648447458`, Phase 6-7 `32648447526` all succeeded and review was clean.
 
 ## Current evidence boundary
 
-Internal.22 product certification on `fa77ae32dc680f0d2854d10363dcaf06ba4e5229`:
+Internal.24 has strong automated source/native/Windows/signed-install proof. The signed workflow re-attested protected-main source/review identity, built and verified the signed MSI/updater, proved installed launch/reopen and authenticated hydrated WebView UI twice, and verified deterministic evidence, `latest.json`, tag and exact publication target.
 
-- Phase 5 `32200539921` — success;
-- Phase 6-7 `32200539919` — success;
-- CI `32200540092` — success, including exact-head Windows installed closure.
+Automation does **not** equal Founder product acceptance.
 
-PR #284 also passed complete release-head source/native/Windows/MSI-installed evidence. Signed run `32205843573` separately proved exact protected-main signed build, signature, install/reopen, authenticated hydrated UI twice, deterministic source rewrites, candidate manifest, `latest.json`, exact tag and publication.
+Issue state:
 
-The later #286/#287/#289/#290 source repairs are certified at source/browser consequence level but are not in Internal.22. Automation does **not** equal Founder product acceptance.
+- **issue #221 open** — Founder-installed human whole-product visual/accessibility/interaction acceptance;
+- **#226 closed/completed** — preserve its performance budgets as regression criteria;
+- **#230 open P1** — customer-online trial/network blocker;
+- real-phone WhatsApp pairing/message proof remains separate.
 
 ## Exact next outcome
 
-The Founder has explicitly chosen the **next signed Founder-offline update** as the next session outcome. Do not start Problem #6 or a generic application audit first.
+The exact next outcome is the **Founder-installed Internal.24 checkpoint**, not another version bump and not a generic application audit.
 
-1. resolve live protected `main`, open PRs, **issue #221** and #230;
-2. verify #286/#287/#289/#290 remain in the current protected product tree and no application PR is pending;
-3. confirm release authority is still Internal.22 / FD-041 before editing;
-4. create one release-authority-only branch from exact protected `main`, using PR #284 as the template;
-5. bind the next sequential Founder-offline Internal version consistently across `sahelflow.version.json`, `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`/WiX, `scripts/sf-version.ts` and any additional authority surfaced by `bun run sf-version` / updater-contract checks;
-6. do not reuse FD-041 for a different version and do not claim a new version/FD pair until the reviewed release envelope explicitly establishes it;
-7. freeze one exact release head and run the **selected Level 1/2/3 gates** required by release consequences, including source/native/Rust/Windows/MSI/install/preservation and Required PR evidence;
-8. resolve deterministic failures/review findings on that exact head, then merge with expected-head protection;
-9. verify exact protected-main source/tree and build/sign/publish only through the protected-main release path;
-10. verify signature, source binding, signed install/reopen/hydrated UI, deterministic rewrites, evidence manifest, `latest.json`, tag and publication target;
-11. update the Founder Windows installation in place while preserving AppData, registry/install identity, keys and shop databases;
-12. retest Problems #1–#5 and record the exact Founder accept/reject evidence under #221;
-13. keep real-phone WhatsApp evidence and **#230** customer-online/network evidence separate.
+1. Resolve live protected `main`, open PRs, **issue #221** and #230.
+2. Confirm Internal.24 / MSI 1.0.0.24 / FD-043 remains the latest signed Founder checkpoint.
+3. Do **not** create Internal.25 or a new FD decision merely from handoff prose or passage of time.
+4. Update/install Internal.24 in place on the Founder Windows machine while preserving AppData, registry/install identity, installation keys and shop databases.
+5. Retest the retained Problems #1–#5: sleep/resume + EN↔AR convergence, Universal Search real feel, Risk Engine seller UX, dashboard/queue/product/delivery behavior, Arabic compact values, RTL controls, sidebar/Profile IA and annual demo.
+6. Validate #293 dashboard/accounting/ranked chart repairs in EN/FR/AR and Arabic RTL.
+7. Validate #294/#295 Automations V2: seller-first builder/workspace, durable Wait, live status recheck/update behavior, recovery semantics and Bell notifications.
+8. Inspect whole-product typography/density/theme/motion, locale/theme transitions, Arabic RTL/bidi, keyboard/focus/reduced-motion/accessibility and representative 1366×768 containment.
+9. Record explicit Founder accept/reject evidence under #221.
+10. If a concrete installed P0/P1 exists, create one bounded repair package for the demonstrated root cause. Do not restart a generic repository sweep.
+11. Any repair/release package must run the **selected Level 1/2/3 gates** required by its consequences on one frozen head, then use expected-head merge discipline.
+12. Keep real-phone WhatsApp and **#230** customer-online/network evidence separate.
 
-Issue state at handoff:
-
-- **issue #221 open** — Founder-installed human acceptance;
-- **#226 closed/completed** — keep its performance budgets as regression criteria, not as an open blocker;
-- **#230 open P1** — customer-online trial/network blocker.
-
-No new signed checkpoint has been created in this handoff. Internal.22 remains latest until the next release-authority envelope passes, merges, and publishes from exact protected `main`.
+No new signed checkpoint beyond Internal.24 is authorized merely by this handoff.
 
 ## Historical semantic continuity
 
