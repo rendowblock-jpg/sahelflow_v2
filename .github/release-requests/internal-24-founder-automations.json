@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.24 Founder chart and Automations V2 publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.24",
+  "windowsMsiVersion": "1.0.0.24",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-043",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "fd0b89c5a64ca741f72af96a6b68053ce4a818ae",
+    "phase5RunId": 32648447458,
+    "phase67RunId": 32648447526,
+    "ciRunId": 32648447571
+  },
+  "reason": "Publish the certified post-Internal.23 Founder product line from #293, #294 and #295: chart clarity/RTL ranking repairs plus the seller-first Automations V2 workspace, durable waits, live order-status rechecks and protected Bell notifications. The release branch contains only version, licensing, release, installer and contract-test authority changes; fresh exact-head PR source/native/Rust/Windows/MSI/install and Required PR consequences remain mandatory before merge. Founder-installed human visual/product acceptance remains separate under #221; customer-online networking/licensing readiness remains under #230; real-provider WhatsApp evidence, Beta and Stable remain out of scope."
+}

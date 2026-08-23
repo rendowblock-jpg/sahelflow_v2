@@ -93,10 +93,11 @@ const founderOfflineCheckpoint =
     (authority.version === "1.0.0-internal.20" && authority.licensing?.authorityDecision === "FD-039") ||
     (authority.version === "1.0.0-internal.21" && authority.licensing?.authorityDecision === "FD-040") ||
     (authority.version === "1.0.0-internal.22" && authority.licensing?.authorityDecision === "FD-041") ||
-    (authority.version === "1.0.0-internal.23" && authority.licensing?.authorityDecision === "FD-042"));
+    (authority.version === "1.0.0-internal.23" && authority.licensing?.authorityDecision === "FD-042") ||
+    (authority.version === "1.0.0-internal.24" && authority.licensing?.authorityDecision === "FD-043"));
 if (authority.licensing?.releaseMode === "founder-offline-only") {
   if (!founderOfflineCheckpoint) {
-    console.error("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, Internal.18/FD-037, Internal.19/FD-038, Internal.20/FD-039, Internal.21/FD-040, Internal.22/FD-041, or Internal.23/FD-042 on the internal channel with no owned host suffix");
+    console.error("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, Internal.18/FD-037, Internal.19/FD-038, Internal.20/FD-039, Internal.21/FD-040, Internal.22/FD-041, Internal.23/FD-042, or Internal.24/FD-043 on the internal channel with no owned host suffix");
     failed = true;
   }
 } else if (authority.licensing?.releaseMode === "customer-online") {
