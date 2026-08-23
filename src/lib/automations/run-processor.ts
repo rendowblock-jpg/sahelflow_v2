@@ -22,14 +22,18 @@ import {
   type AutomationTriggerPayload,
   type CanonicalAutomationDefinition,
 } from "./contracts";
+import { sealAutomationNotificationBody } from "./notification-codec";
 
 const RUN_LEASE_MS = 90_000;
 const EFFECT_POLL_MS = 5_000;
 const MAX_STEP_RETRY_DELAY_MS = 300_000;
+const AUTOMATION_GUARD_NOT_MATCHED = "AUTOMATION_GUARD_NOT_MATCHED";
+const AUTOMATION_WAIT_EFFECT_STATE = "delay_scheduled";
 const NON_TERMINAL_STEP_STATES = [
   "queued",
   "retrying",
   "processing",
+  "waiting",
   "waiting_effect",
 ] as const;
 
@@ -82,6 +86,12 @@ interface ClaimedStep extends AutomationStepRow {
   attemptId: string;
   attemptNumber: number;
   activeLeaseToken: string;
+  claimedFromStatus: string;
+}
+
+interface LiveOrderStatusGuard {
+  position: number;
+  expectedStatus: string;
 }
 
 type StepSelection =
@@ -89,7 +99,7 @@ type StepSelection =
   | {
       kind: "blocked";
       step: AutomationStepRow;
-      state: "retrying";
+      state: "retrying" | "waiting";
       nextAttemptAt: Date;
     }
   | { kind: "waiting_effect"; step: AutomationStepRow }
@@ -99,6 +109,7 @@ interface RunCounts {
   succeeded: number;
   failed: number;
   skipped: number;
+  guardSkipped: number;
   ambiguous: number;
   deadLetter: number;
 }
@@ -135,6 +146,33 @@ function retryDelay(
     definition.retryDelayMs * Math.pow(2, Math.max(0, attemptNumber - 1)),
     MAX_STEP_RETRY_DELAY_MS,
   );
+}
+
+/**
+ * Return the latest live order-status authority that remains valid for the
+ * selected mutation step. A wait invalidates every earlier check; the trusted
+ * seller write policy guarantees at most one status mutation per definition.
+ */
+function liveOrderStatusGuardForStep(
+  definition: CanonicalAutomationDefinition,
+  currentPosition: number,
+): LiveOrderStatusGuard | null {
+  let guard: LiveOrderStatusGuard | null = null;
+  for (let position = 0; position < currentPosition; position += 1) {
+    const candidate = definition.steps[position];
+    if (!candidate) continue;
+    if (candidate.action === "wait") {
+      guard = null;
+      continue;
+    }
+    if (candidate.action === "recheck_order_status") {
+      guard = {
+        position,
+        expectedStatus: candidate.config.expectedStatus,
+      };
+    }
+  }
+  return guard;
 }
 
 function isRunTerminal(status: string): boolean {
@@ -188,6 +226,10 @@ async function claimRun(context: ServiceContext): Promise<ClaimedRun | null> {
           { status: "queued" },
           {
             status: "retrying",
+            OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+          },
+          {
+            status: "waiting",
             OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
           },
           {
@@ -354,14 +396,14 @@ async function claimNextStep(
         return { kind: "waiting_effect", step } as const;
       }
       if (
-        step.status === "retrying" &&
+        (step.status === "retrying" || step.status === "waiting") &&
         step.nextAttemptAt &&
         step.nextAttemptAt > now
       ) {
         return {
           kind: "blocked",
           step,
-          state: "retrying",
+          state: step.status as "retrying" | "waiting",
           nextAttemptAt: step.nextAttemptAt,
         } as const;
       }
@@ -423,6 +465,7 @@ async function claimNextStep(
           attemptId,
           attemptNumber,
           activeLeaseToken,
+          claimedFromStatus: step.status,
         },
       } as const;
     }
@@ -430,20 +473,31 @@ async function claimNextStep(
   });
 }
 
-function countsFromStatuses(statuses: string[]): RunCounts {
+function countsFromSteps(
+  steps: Array<{ status: string; lastErrorCode: string | null }>,
+): RunCounts {
   return {
-    succeeded: statuses.filter((status) => status === "succeeded").length,
-    failed: statuses.filter((status) => status === "failed").length,
-    skipped: statuses.filter((status) => status === "skipped").length,
-    ambiguous: statuses.filter((status) => status === "ambiguous").length,
-    deadLetter: statuses.filter((status) => status === "dead_letter").length,
+    succeeded: steps.filter((step) => step.status === "succeeded").length,
+    failed: steps.filter((step) => step.status === "failed").length,
+    skipped: steps.filter((step) => step.status === "skipped").length,
+    guardSkipped: steps.filter(
+      (step) =>
+        step.status === "skipped" &&
+        step.lastErrorCode === AUTOMATION_GUARD_NOT_MATCHED,
+    ).length,
+    ambiguous: steps.filter((step) => step.status === "ambiguous").length,
+    deadLetter: steps.filter((step) => step.status === "dead_letter").length,
   };
 }
 
 function terminalRunState(counts: RunCounts): string {
   if (counts.ambiguous > 0) return "ambiguous";
   if (counts.deadLetter > 0 && counts.succeeded === 0) return "dead_letter";
-  if (counts.failed > 0 || counts.deadLetter > 0 || counts.skipped > 0) {
+  if (counts.failed > 0 || counts.deadLetter > 0) {
+    return counts.succeeded > 0 ? "partially_completed" : "failed";
+  }
+  if (counts.skipped > 0) {
+    if (counts.guardSkipped === counts.skipped) return "skipped";
     return counts.succeeded > 0 ? "partially_completed" : "failed";
   }
   return "succeeded";
@@ -458,25 +512,29 @@ async function finalizeOrScheduleRun(
       where: { runId: run.id },
       orderBy: { position: "asc" },
     });
-    const counts = countsFromStatuses(steps.map((step) => step.status));
+    const counts = countsFromSteps(steps);
     const next = steps.find((step) => !isStepTerminal(step.status));
 
     if (next) {
       const state =
         next.status === "waiting_effect"
           ? "waiting_effect"
-          : next.status === "retrying" || next.status === "processing"
-            ? "retrying"
-            : "queued";
+          : next.status === "waiting"
+            ? "waiting"
+            : next.status === "retrying" || next.status === "processing"
+              ? "retrying"
+              : "queued";
       const nextAttemptAt =
         state === "waiting_effect"
           ? next.nextAttemptAt ?? new Date(Date.now() + EFFECT_POLL_MS)
-          : state === "retrying"
-            ? next.nextAttemptAt ??
-              (next.lockedAt
-                ? new Date(next.lockedAt.getTime() + RUN_LEASE_MS)
-                : new Date(Date.now() + 1_000))
-            : null;
+          : state === "waiting"
+            ? next.nextAttemptAt ?? new Date(Date.now() + 1_000)
+            : state === "retrying"
+              ? next.nextAttemptAt ??
+                (next.lockedAt
+                  ? new Date(next.lockedAt.getTime() + RUN_LEASE_MS)
+                  : new Date(Date.now() + 1_000))
+              : null;
       await tx.automationRun.updateMany({
         where: {
           id: run.id,
@@ -505,6 +563,7 @@ async function finalizeOrScheduleRun(
 
     const terminalState = terminalRunState(counts);
     const now = new Date();
+    const neutralTerminal = terminalState === "succeeded" || terminalState === "skipped";
     const updated = await tx.automationRun.updateMany({
       where: {
         id: run.id,
@@ -522,6 +581,7 @@ async function finalizeOrScheduleRun(
         lockedAt: null,
         leaseToken: null,
         nextAttemptAt: null,
+        lastErrorCode: neutralTerminal ? null : terminalState,
       },
     });
     if (updated.count === 1) {
@@ -530,7 +590,7 @@ async function finalizeOrScheduleRun(
         data: {
           runCount: { increment: 1 },
           lastRunAt: now,
-          lastError: terminalState === "succeeded" ? null : terminalState,
+          lastError: neutralTerminal ? null : terminalState,
           nextRunAt: null,
         },
       });
@@ -554,7 +614,7 @@ async function finalizeOrScheduleRun(
       state: terminalState,
       stepId: null,
       effectKey: null,
-      errorCode: terminalState === "succeeded" ? null : terminalState,
+      errorCode: neutralTerminal ? null : terminalState,
     };
   });
 }
@@ -562,7 +622,7 @@ async function finalizeOrScheduleRun(
 async function scheduleOwnedRun(
   context: ServiceContext,
   run: ClaimedRun,
-  state: "retrying" | "waiting_effect",
+  state: "retrying" | "waiting" | "waiting_effect",
   nextAttemptAt: Date,
   step: AutomationStepRow,
   lastErrorCode: string | null = null,
@@ -594,6 +654,7 @@ async function skipDownstreamSteps(
   tx: AutomationTx,
   step: AutomationStepRow,
   now: Date,
+  reason = "BLOCKED_BY_FAILED_STEP",
 ): Promise<void> {
   const downstream = await tx.automationStepRun.findMany({
     where: {
@@ -609,7 +670,7 @@ async function skipDownstreamSteps(
     where: { id: { in: ids } },
     data: {
       status: "skipped",
-      lastErrorCode: "BLOCKED_BY_FAILED_STEP",
+      lastErrorCode: reason,
       nextAttemptAt: null,
       lockedAt: null,
       leaseToken: null,
@@ -619,12 +680,12 @@ async function skipDownstreamSteps(
   await tx.automationStepAttempt.updateMany({
     where: {
       stepRunId: { in: ids },
-      state: { in: ["processing", "waiting_effect", "retrying"] },
+      state: { in: ["processing", "waiting", "waiting_effect", "retrying"] },
     },
     data: {
       state: "skipped",
-      errorCode: "BLOCKED_BY_FAILED_STEP",
-      detailJson: JSON.stringify({ blockedByStepId: step.id }),
+      errorCode: reason,
+      detailJson: JSON.stringify({ blockedByStepId: step.id, reason }),
       completedAt: now,
     },
   });
@@ -746,6 +807,83 @@ async function markStepSucceeded(
   return finalizeOrScheduleRun(context, run);
 }
 
+async function markGuardNotMatchedInTx(
+  tx: AutomationTx,
+  step: ClaimedStep,
+  now: Date,
+  resultJson: string,
+  expectedStatus: string,
+  currentStatus: string,
+): Promise<void> {
+  const updated = await tx.automationStepRun.updateMany({
+    where: {
+      id: step.id,
+      status: "processing",
+      leaseToken: step.activeLeaseToken,
+    },
+    data: {
+      status: "skipped",
+      resultJson,
+      lastErrorCode: AUTOMATION_GUARD_NOT_MATCHED,
+      completedAt: now,
+      lockedAt: null,
+      leaseToken: null,
+      nextAttemptAt: null,
+    },
+  });
+  if (updated.count !== 1) {
+    throw new AutomationActionError(
+      "AUTOMATION_STEP_LEASE_LOST",
+      true,
+      "Automation step lease was lost before the guard outcome committed",
+    );
+  }
+  await tx.automationStepAttempt.updateMany({
+    where: {
+      id: step.attemptId,
+      state: "processing",
+      leaseToken: step.activeLeaseToken,
+    },
+    data: {
+      state: "skipped",
+      errorCode: AUTOMATION_GUARD_NOT_MATCHED,
+      detailJson: JSON.stringify({
+        matched: false,
+        expectedStatus,
+        currentStatus,
+      }),
+      completedAt: now,
+    },
+  });
+  await skipDownstreamSteps(tx, step, now, AUTOMATION_GUARD_NOT_MATCHED);
+}
+
+async function markGuardNotMatched(
+  context: ServiceContext,
+  run: ClaimedRun,
+  step: ClaimedStep,
+  expectedStatus: string,
+  currentStatus: string,
+): Promise<AutomationRunProcessingResult> {
+  const now = new Date();
+  const resultJson = await sealStepResult(context, step, {
+    matched: false,
+    expectedStatus,
+    currentStatus,
+  });
+  await context.prisma.$transaction((tx) =>
+    markGuardNotMatchedInTx(
+      tx,
+      step,
+      now,
+      resultJson,
+      expectedStatus,
+      currentStatus,
+    ),
+  );
+  return finalizeOrScheduleRun(context, run);
+}
+
 async function markStepFailure(
   context: ServiceContext,
   run: ClaimedRun,
@@ -845,23 +983,246 @@ async function markStepFailure(
   return finalizeOrScheduleRun(context, run);
 }
 
+async function executeWaitStep(
+  context: ServiceContext,
+  run: ClaimedRun,
+  step: ClaimedStep,
+  definition: Extract<AutomationStepDefinition, { action: "wait" }>,
+): Promise<AutomationRunProcessingResult> {
+  if (step.effectState === AUTOMATION_WAIT_EFFECT_STATE) {
+    return markStepSucceeded(context, run, step, {
+      delayMinutes: definition.config.delayMinutes,
+      elapsed: true,
+    });
+  }
+
+  const now = new Date();
+  const nextAttemptAt = new Date(
+    now.getTime() + definition.config.delayMinutes * 60_000,
+  );
+  await context.prisma.$transaction(async (tx) => {
+    const updated = await tx.automationStepRun.updateMany({
+      where: {
+        id: step.id,
+        status: "processing",
+        leaseToken: step.activeLeaseToken,
+      },
+      data: {
+        status: "waiting",
+        effectState: AUTOMATION_WAIT_EFFECT_STATE,
+        nextAttemptAt,
+        lockedAt: null,
+        leaseToken: null,
+        lastErrorCode: null,
+      },
+    });
+    if (updated.count !== 1) {
+      throw new AutomationActionError(
+        "AUTOMATION_STEP_LEASE_LOST",
+        true,
+        "Automation step lease was lost before the wait was scheduled",
+      );
+    }
+    await tx.automationStepAttempt.updateMany({
+      where: {
+        id: step.attemptId,
+        state: "processing",
+        leaseToken: step.activeLeaseToken,
+      },
+      data: {
+        state: "waiting",
+        detailJson: JSON.stringify({
+          delayMinutes: definition.config.delayMinutes,
+          resumesAt: nextAttemptAt.toISOString(),
+        }),
+        completedAt: now,
+      },
+    });
+  });
+  return scheduleOwnedRun(
+    context,
+    run,
+    "waiting",
+    nextAttemptAt,
+    {
+      ...step,
+      status: "waiting",
+      nextAttemptAt,
+      effectState: AUTOMATION_WAIT_EFFECT_STATE,
+    },
+  );
+}
+
+async function executeVisibleNotificationStep(
+  context: ServiceContext,
+  run: ClaimedRun,
+  step: ClaimedStep,
+  definition: Extract<AutomationStepDefinition, { action: "send_notification" }>,
+  payload: AutomationTriggerPayload,
+): Promise<AutomationRunProcessingResult> {
+  const body = renderAutomationTemplate(
+    definition.config.messageTemplate,
+    payload,
+  ).trim();
+  if (!body) {
+    throw new AutomationActionError(
+      "AUTOMATION_NOTIFICATION_EMPTY",
+      false,
+      "Seller notification rendered an empty message",
+    );
+  }
+
+  const notificationKey = `automation-notification:${step.stepKey}`;
+  const notificationId = deterministicUuid(notificationKey);
+  const protectedBody = await sealAutomationNotificationBody(context, {
+    notificationId,
+    notificationKey,
+    body,
+  });
+  const now = new Date();
+  const resultJson = await sealStepResult(context, step, {
+    notificationId,
+    notificationKey,
+    visible: true,
+  });
+
+  await context.prisma.$transaction(async (tx) => {
+    await tx.automationNotification.upsert({
+      where: { notificationKey },
+      create: {
+        id: notificationId,
+        notificationKey,
+        automationId: run.automationId,
+        automationName: run.automationName,
+        runId: run.id,
+        stepRunId: step.id,
+        title: run.automationName,
+        body: protectedBody,
+        link: "/automations?tab=activity",
+      },
+      update: {},
+    });
+    const updated = await tx.automationStepRun.updateMany({
+      where: {
+        id: step.id,
+        status: "processing",
+        leaseToken: step.activeLeaseToken,
+      },
+      data: {
+        status: "succeeded",
+        resultJson,
+        completedAt: now,
+        lockedAt: null,
+        leaseToken: null,
+        lastErrorCode: null,
+      },
+    });
+    if (updated.count !== 1) {
+      throw new AutomationActionError(
+        "AUTOMATION_STEP_LEASE_LOST",
+        true,
+        "Automation step lease was lost before the Bell notification committed",
+      );
+    }
+    await tx.automationStepAttempt.updateMany({
+      where: {
+        id: step.attemptId,
+        state: "processing",
+        leaseToken: step.activeLeaseToken,
+      },
+      data: {
+        state: "succeeded",
+        detailJson: JSON.stringify({
+          notificationKey,
+          visible: true,
+          idempotent: true,
+        }),
+        completedAt: now,
+      },
+    });
+  });
+  return finalizeOrScheduleRun(context, run);
+}
+
+async function executeOrderRecheckStep(
+  context: ServiceContext,
+  run: ClaimedRun,
+  step: ClaimedStep,
+  definition: Extract<
+    AutomationStepDefinition,
+    { action: "recheck_order_status" }
+  >,
+  payload: AutomationTriggerPayload,
+): Promise<AutomationRunProcessingResult> {
+  const orderId = typeof payload.orderId === "string" ? payload.orderId : null;
+  if (!orderId) {
+    throw new AutomationActionError(
+      "AUTOMATION_ORDER_ID_MISSING",
+      false,
+      "Order status re-check requires orderId",
+    );
+  }
+  const order = await context.prisma.order.findFirst({
+    where: { id: orderId, deletedAt: null },
+    select: { status: true },
+  });
+  if (!order) {
+    throw new AutomationActionError(
+      "AUTOMATION_ORDER_NOT_FOUND",
+      false,
+      "Order re-check target no longer exists",
+    );
+  }
+  const currentStatus = String(order.status);
+  if (currentStatus !== definition.config.expectedStatus) {
+    return markGuardNotMatched(
+      context,
+      run,
+      step,
+      definition.config.expectedStatus,
+      currentStatus,
+    );
+  }
+  return markStepSucceeded(context, run, step, {
+    matched: true,
+    expectedStatus: definition.config.expectedStatus,
+    currentStatus,
+  });
+}
+
 async function executeDatabaseStep(
   context: ServiceContext,
   run: ClaimedRun,
   step: ClaimedStep,
+  runDefinition: CanonicalAutomationDefinition,
   definition: Exclude<
     AutomationStepDefinition,
     { action: "send_whatsapp" }
   >,
   payload: AutomationTriggerPayload,
 ): Promise<AutomationRunProcessingResult> {
+  if (definition.action === "wait") {
+    return executeWaitStep(context, run, step, definition);
+  }
+
+  if (definition.action === "recheck_order_status") {
+    return executeOrderRecheckStep(
+      context,
+      run,
+      step,
+      definition,
+      payload,
+    );
+  }
+
   if (definition.action === "send_notification") {
-    return markStepSucceeded(context, run, step, {
-      notification: renderAutomationTemplate(
-        definition.config.messageTemplate,
-        payload,
-      ),
-    });
+    return executeVisibleNotificationStep(
+      context,
+      run,
+      step,
+      definition,
+      payload,
+    );
   }
 
   if (definition.action === "tag_customer") {
@@ -948,11 +1309,53 @@ async function executeDatabaseStep(
   }
   const { orderService } = await import("@/lib/data/order-service");
   const now = new Date();
+  const statusGuard = liveOrderStatusGuardForStep(runDefinition, step.position);
   const resultJson = await sealStepResult(context, step, {
     orderId,
     targetStatus: definition.config.targetStatus,
   });
-  const effects = await context.prisma.$transaction(async (tx) => {
+  const guardMismatchResultJson = statusGuard
+    ? await sealStepResult(context, step, {
+        matched: false,
+        expectedStatus: statusGuard.expectedStatus,
+        reason: "status_changed_before_mutation",
+      })
+    : null;
+  const outcome = await context.prisma.$transaction(async (tx) => {
+    if (statusGuard) {
+      const committedGuard = await tx.automationStepRun.findFirst({
+        where: {
+          runId: run.id,
+          position: statusGuard.position,
+        },
+        select: { status: true },
+      });
+      if (!committedGuard || committedGuard.status !== "succeeded") {
+        throw new AutomationActionError(
+          "AUTOMATION_STATUS_GUARD_NOT_COMMITTED",
+          false,
+          "Order status mutation requires a successfully committed live re-check",
+        );
+      }
+
+      const currentOrder = await tx.order.findFirst({
+        where: { id: orderId, deletedAt: null },
+        select: { status: true },
+      });
+      const currentStatus = currentOrder ? String(currentOrder.status) : "missing";
+      if (currentStatus !== statusGuard.expectedStatus) {
+        await markGuardNotMatchedInTx(
+          tx,
+          step,
+          now,
+          guardMismatchResultJson!,
+          statusGuard.expectedStatus,
+          currentStatus,
+        );
+        return { kind: "guard_not_matched" as const };
+      }
+    }
+
     const transition = await orderService.updateStatusInTx(
       tx,
       orderId,
@@ -988,9 +1391,14 @@ async function executeDatabaseStep(
         completedAt: now,
       },
     });
-    return transition;
+    return { kind: "transition" as const, transition };
   });
-  await Promise.resolve(orderService.dispatchStatusTransition(context, effects));
+  if (outcome.kind === "guard_not_matched") {
+    return finalizeOrScheduleRun(context, run);
+  }
+  await Promise.resolve(
+    orderService.dispatchStatusTransition(context, outcome.transition),
+  );
   return finalizeOrScheduleRun(context, run);
 }
 
@@ -1192,6 +1600,7 @@ async function executeClaimedRun(
       context,
       run,
       step,
+      definition,
       stepDefinition,
       payload,
     );

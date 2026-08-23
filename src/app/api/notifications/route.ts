@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { db } from "@/lib/db";
+import { openAutomationNotificationBody } from "@/lib/automations/notification-codec";
+import { db, shopContext } from "@/lib/db";
 import { trustedActionAllowed } from "@/lib/identity/authorization";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 import type { Locale } from "@/lib/i18n";
@@ -45,7 +46,7 @@ function intlLocale(locale: Locale): string {
   return locale === "ar" ? "ar-DZ" : locale === "en" ? "en-US" : "fr-FR";
 }
 
-/** GET /api/notifications — compute real-time operational notifications. */
+/** GET /api/notifications — compute operational + persisted automation notices. */
 export const GET = withErrorHandler(async (request?: NextRequest) => {
   void request;
   const actorContext = await requireTrustedActor();
@@ -63,10 +64,19 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
     "deliveries.read",
   );
   const canReadProducts = trustedActionAllowed(actorContext, "products.read");
+  const canReadConversations = trustedActionAllowed(
+    actorContext,
+    "conversations.read",
+  );
+  const canReadAutomations = trustedActionAllowed(
+    actorContext,
+    "automations.read",
+  );
   const { t, locale } = await getI18n();
   const numLocale = intlLocale(locale);
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const notificationContext = { prisma: db, shop: shopContext };
 
   const recentOrders = canReadOrders ? await db.order.findMany({
     where: {
@@ -129,6 +139,60 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
     },
   }) : [];
 
+  // Filter automation alerts by the underlying source authority *before* the
+  // Bell limit and before opening their protected bodies. Newer unauthorized
+  // notices therefore cannot starve older authorized notices or cause PII to
+  // be decrypted for an actor who cannot read the originating business data.
+  const allowedAutomationTriggers: string[] = [];
+  if (canReadOrders && canReadContacts && canReadFinancials) {
+    allowedAutomationTriggers.push(
+      "order.created",
+      "order.confirmed",
+      "order.shipped",
+      "order.delivered",
+      "order.returned",
+      "order.refused",
+      "order.cancelled",
+    );
+  }
+  if (canReadContacts) allowedAutomationTriggers.push("customer.blacklisted");
+  if (canReadConversations && canReadContacts) {
+    allowedAutomationTriggers.push("message.received");
+  }
+  if (canReadProducts) allowedAutomationTriggers.push("stock.low");
+
+  const storedAutomationNotifications =
+    canReadAutomations && allowedAutomationTriggers.length > 0
+      ? await db.automationNotification.findMany({
+          where: {
+            run: {
+              triggerType: { in: allowedAutomationTriggers },
+            },
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          take: 8,
+          select: {
+            id: true,
+            notificationKey: true,
+            title: true,
+            body: true,
+            link: true,
+            readAt: true,
+            createdAt: true,
+          },
+        })
+      : [];
+  const automationNotifications = await Promise.all(
+    storedAutomationNotifications.map(async (notification) => ({
+      ...notification,
+      body: await openAutomationNotificationBody(notificationContext, {
+        notificationId: notification.id,
+        notificationKey: notification.notificationKey,
+        protectedBody: notification.body,
+      }),
+    })),
+  );
+
   const staleThreshold = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const staleOrders = canReadOrders ? await db.order.count({
     where: {
@@ -140,7 +204,7 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
 
   const notifications: Array<{
     id: string;
-    type: "alert" | "order" | "delivery" | "stock" | "return";
+    type: "alert" | "order" | "delivery" | "stock" | "return" | "info";
     title: string;
     body: string;
     time: string;
@@ -157,6 +221,25 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       time: t("notif.time.now"),
       read: false,
       link: "/orders/confirmation-queue",
+    });
+  }
+
+  for (const notification of automationNotifications) {
+    const minutesAgo = Math.max(
+      0,
+      Math.round((now.getTime() - notification.createdAt.getTime()) / 60_000),
+    );
+    notifications.push({
+      id: `automation-${notification.id}`,
+      type: "info",
+      title: notification.title,
+      body: notification.body,
+      time: formatRelativeTime(minutesAgo, t),
+      // The current Bell projection is age-based for operational notices too.
+      // Persist readAt for the future explicit read command while preventing an
+      // old automation alert from pinning the global unread badge forever.
+      read: Boolean(notification.readAt) || minutesAgo > 24 * 60,
+      link: notification.link ?? "/automations?tab=activity",
     });
   }
 

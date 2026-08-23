@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "authority": "Phase 4 data/privacy lifecycle",
   "fieldResolution": {
-    "rule": "Every scalar and relation field inherits its model group's classification and lifecycle unless an exact field override exists.",
+    "rule": "Every scalar and relation field inherits its model-group classification and lifecycle unless an exact field override exists.",
     "unclassifiedBehavior": "fail-closed"
   },
   "retentionClasses": {
@@ -50,13 +50,13 @@
     {
       "id": "personal-data",
       "models": [
-        "AiActionProposal", "AiChatMessage", "AiChatSession", "AuditLog",
+        "AiActionProposal", "AiChatMessage", "AiChatSession", "AuditLog", "AutomationNotification",
         "CollaborationAssignment", "CollaborationComment", "CollaborationHandover", "CollaborationMention",
         "CommerceSyncItem", "Conversation", "Customer", "Delivery", "Message", "Order", "OrderItem",
         "PhoneReputation", "ProviderIngressEvent", "Return", "ReturnNote", "StorefrontConfig"
       ],
       "classification": "personal-data",
-      "purpose": "Seller-authorized commerce, support, fulfillment, fraud prevention, AI assistance and accountability.",
+      "purpose": "Seller-authorized commerce, support, fulfillment, fraud prevention, AI assistance, seller notifications and accountability.",
       "retentionClass": "seller-record",
       "export": "included-through-protected-client-except-secrets",
       "encryptedBackup": "included-encrypted",
@@ -113,6 +113,7 @@
     "Conversation.contactName": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
     "Conversation.contactPhone": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
     "Message.body": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
+    "AutomationNotification.body": {"classification": "personal-data", "protection": "shop-local-business-envelope-aead", "export": "plaintext-through-authorized-notification-codec"},
     "Secret.ciphertext": {"classification": "credential-secret", "protection": "contextual-aead", "export": "excluded"},
     "AuthSecret.pinHash": {"classification": "credential-secret", "protection": "slow-password-hash", "export": "excluded"},
     "AuthSecret.secret": {"classification": "credential-secret", "protection": "local-auth-secret", "export": "excluded"},

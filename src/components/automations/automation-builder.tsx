@@ -49,7 +49,9 @@ import {
   actionAllowedForTrigger,
   conditionValueForEditor,
   getSellerActionSpec,
+  getSellerRecheckStatuses,
   getSellerStatusTargets,
+  getSellerStatusTargetsFromStatus,
   getSellerTriggerSpec,
   normalizeConditionValueForSubmit,
   sellerReadyTriggers,
@@ -57,6 +59,7 @@ import {
   type SellerAutomationAction,
   type SellerAutomationTrigger,
   type SellerConditionOperator,
+  type SellerOrderCheckStatus,
   type SellerOrderStatusTarget,
 } from "@/lib/automations/catalog";
 import {
@@ -71,6 +74,8 @@ type StepConfig = {
   messageTemplate?: string;
   noteText?: string;
   targetStatus?: SellerOrderStatusTarget;
+  delayMinutes?: number;
+  expectedStatus?: SellerOrderCheckStatus;
 };
 type BuilderStep = {
   action: SellerAutomationAction;
@@ -81,6 +86,8 @@ type BuilderStep = {
 const WHATSAPP_MESSAGE_MAX_LENGTH = 4_000;
 const NOTIFICATION_MESSAGE_MAX_LENGTH = 1_000;
 const CUSTOMER_NOTE_MAX_LENGTH = 500;
+const WAIT_MINUTES_MIN = 1;
+const WAIT_MINUTES_MAX = 10_080;
 
 export interface AutomationBuilderAutomation {
   id: string;
@@ -124,6 +131,8 @@ function isSellerAction(value: unknown): value is SellerAutomationAction {
     "update_status",
     "tag_customer",
     "send_notification",
+    "wait",
+    "recheck_order_status",
   ].includes(String(value));
 }
 
@@ -144,8 +153,6 @@ function defaultMessage(trigger: string, locale: string): string {
         return "تم تسجيل رفض الطلب {{orderNumber}}.";
       case "order.cancelled":
         return "تم إلغاء الطلب {{orderNumber}}.";
-      case "message.received":
-        return "مرحباً {{customerName}}، شكراً على رسالتك. سنرد عليك قريباً.";
       default:
         return "شكراً لتواصلك معنا.";
     }
@@ -166,8 +173,6 @@ function defaultMessage(trigger: string, locale: string): string {
         return "Le refus de la commande {{orderNumber}} a été enregistré.";
       case "order.cancelled":
         return "La commande {{orderNumber}} a été annulée.";
-      case "message.received":
-        return "Bonjour {{customerName}}, merci pour votre message. Nous vous répondrons bientôt.";
       default:
         return "Merci de nous avoir contactés.";
     }
@@ -187,11 +192,46 @@ function defaultMessage(trigger: string, locale: string): string {
       return "The refusal for order {{orderNumber}} has been recorded.";
     case "order.cancelled":
       return "Order {{orderNumber}} has been cancelled.";
-    case "message.received":
-      return "Hi {{customerName}}, thanks for your message. We’ll get back to you shortly.";
     default:
       return "Thanks for getting in touch.";
   }
+}
+
+function defaultNotificationMessage(trigger: string, locale: string): string {
+  if (locale === "ar") {
+    if (trigger === "stock.low") {
+      return "المخزون منخفض للمنتج {{productName}}: المتبقي {{stockLevel}}.";
+    }
+    if (trigger === "message.received") {
+      return "رسالة جديدة من {{customerName}}: {{messageText}}";
+    }
+    if (trigger.startsWith("order.")) {
+      return "الطلب {{orderNumber}} يحتاج انتباهك في ساهل فلو.";
+    }
+    return "تنبيه أتمتة يحتاج انتباهك.";
+  }
+  if (locale === "fr") {
+    if (trigger === "stock.low") {
+      return "Stock faible pour {{productName}} : {{stockLevel}} restant(s).";
+    }
+    if (trigger === "message.received") {
+      return "Nouveau message de {{customerName}} : {{messageText}}";
+    }
+    if (trigger.startsWith("order.")) {
+      return "La commande {{orderNumber}} nécessite votre attention dans SahelFlow.";
+    }
+    return "Une automatisation nécessite votre attention.";
+  }
+  if (trigger === "stock.low") {
+    return "Low stock for {{productName}}: {{stockLevel}} remaining.";
+  }
+  if (trigger === "message.received") {
+    return "New message from {{customerName}}: {{messageText}}";
+  }
+  if (trigger.startsWith("order.")) {
+    return "Order {{orderNumber}} needs your attention in SahelFlow.";
+  }
+  return "An automation needs your attention.";
 }
 
 function defaultNote(trigger: string, locale: string): string {
@@ -211,16 +251,42 @@ function defaultNote(trigger: string, locale: string): string {
   return "Automation note";
 }
 
+function defaultRecheckStatus(trigger: string): SellerOrderCheckStatus {
+  switch (trigger) {
+    case "order.confirmed":
+      return "confirmed";
+    case "order.shipped":
+      return "shipped";
+    case "order.delivered":
+      return "delivered";
+    case "order.returned":
+      return "returned";
+    case "order.refused":
+      return "refused";
+    case "order.cancelled":
+      return "cancelled";
+    default:
+      return "pending";
+  }
+}
+
 function defaultStep(
   action: SellerAutomationAction,
   locale: string,
   trigger: string,
 ): BuilderStep {
-  if (action === "send_whatsapp" || action === "send_notification") {
+  if (action === "send_whatsapp") {
     return {
       action,
       onFailure: "stop",
       config: { messageTemplate: defaultMessage(trigger, locale) },
+    };
+  }
+  if (action === "send_notification") {
+    return {
+      action,
+      onFailure: "stop",
+      config: { messageTemplate: defaultNotificationMessage(trigger, locale) },
     };
   }
   if (action === "tag_customer") {
@@ -228,6 +294,20 @@ function defaultStep(
       action,
       onFailure: "stop",
       config: { noteText: defaultNote(trigger, locale) },
+    };
+  }
+  if (action === "wait") {
+    return {
+      action,
+      onFailure: "stop",
+      config: { delayMinutes: 120 },
+    };
+  }
+  if (action === "recheck_order_status") {
+    return {
+      action,
+      onFailure: "stop",
+      config: { expectedStatus: defaultRecheckStatus(trigger) },
     };
   }
   return {
@@ -323,17 +403,72 @@ function stepComplete(step: BuilderStep): boolean {
     const note = step.config.noteText?.trim() ?? "";
     return note.length > 0 && note.length <= CUSTOMER_NOTE_MAX_LENGTH;
   }
+  if (step.action === "wait") {
+    return Boolean(
+      Number.isInteger(step.config.delayMinutes) &&
+        (step.config.delayMinutes ?? 0) >= WAIT_MINUTES_MIN &&
+        (step.config.delayMinutes ?? 0) <= WAIT_MINUTES_MAX,
+    );
+  }
+  if (step.action === "recheck_order_status") {
+    return Boolean(step.config.expectedStatus);
+  }
   return Boolean(step.config.targetStatus);
 }
 
-function stepCompatibleWithTrigger(trigger: string, step: BuilderStep): boolean {
-  if (!actionAllowedForTrigger(trigger, step.action)) return false;
+function statusTargetsForStep(
+  trigger: string,
+  steps: readonly BuilderStep[],
+  stepIndex: number,
+): readonly SellerOrderStatusTarget[] {
+  let statusAuthorityStale = false;
+  let liveCheckedStatus: SellerOrderCheckStatus | null = null;
+
+  for (let index = 0; index < stepIndex; index += 1) {
+    const prior = steps[index];
+    if (!prior) continue;
+    if (prior.action === "wait") {
+      statusAuthorityStale = true;
+      liveCheckedStatus = null;
+      continue;
+    }
+    if (
+      prior.action === "recheck_order_status" &&
+      prior.config.expectedStatus
+    ) {
+      statusAuthorityStale = false;
+      liveCheckedStatus = prior.config.expectedStatus;
+    }
+  }
+
+  if (statusAuthorityStale) return [];
+  return liveCheckedStatus
+    ? getSellerStatusTargetsFromStatus(liveCheckedStatus)
+    : getSellerStatusTargets(trigger);
+}
+
+function stepCompatibleWithSequence(
+  trigger: string,
+  steps: readonly BuilderStep[],
+  index: number,
+): boolean {
+  const step = steps[index];
+  if (!step || !actionAllowedForTrigger(trigger, step.action)) return false;
   if (step.action === "update_status") {
     return Boolean(
       step.config.targetStatus &&
-        getSellerStatusTargets(trigger).includes(step.config.targetStatus),
+        statusTargetsForStep(trigger, steps, index).includes(
+          step.config.targetStatus,
+        ),
     );
   }
+  if (step.action === "recheck_order_status") {
+    return Boolean(
+      step.config.expectedStatus &&
+        getSellerRecheckStatuses(trigger).includes(step.config.expectedStatus),
+    );
+  }
+  if (step.action === "wait") return true;
   const template =
     step.action === "tag_customer"
       ? step.config.noteText
@@ -341,6 +476,47 @@ function stepCompatibleWithTrigger(trigger: string, step: BuilderStep): boolean 
   return template
     ? unsupportedTemplateVariablesForTrigger(trigger, template).length === 0
     : true;
+}
+
+function normalizeStepsForTrigger(
+  trigger: SellerAutomationTrigger,
+  currentSteps: readonly BuilderStep[],
+  locale: string,
+): BuilderStep[] {
+  const spec = getSellerTriggerSpec(trigger);
+  if (!spec) return [];
+  const normalized: BuilderStep[] = [];
+
+  for (const step of currentSteps) {
+    if (!spec.actions.includes(step.action)) continue;
+
+    if (step.action === "update_status") {
+      const targets = statusTargetsForStep(trigger, normalized, normalized.length);
+      if (targets.length === 0) continue;
+      normalized.push(
+        step.config.targetStatus && targets.includes(step.config.targetStatus)
+          ? step
+          : {
+              ...step,
+              config: { ...step.config, targetStatus: targets[0] },
+            },
+      );
+      continue;
+    }
+
+    const candidateSteps = [...normalized, step];
+    normalized.push(
+      stepCompatibleWithSequence(
+        trigger,
+        candidateSteps,
+        candidateSteps.length - 1,
+      )
+        ? step
+        : defaultStep(step.action, locale, trigger),
+    );
+  }
+
+  return normalized;
 }
 
 function conditionDrafts(value: SellerConditionGroupDraft): SellerConditionDraft[] {
@@ -451,7 +627,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
   ).length;
   const stepsCompatible =
     statusMutationCount <= 1 &&
-    steps.every((step) => stepCompatibleWithTrigger(trigger, step));
+    steps.every((_, index) => stepCompatibleWithSequence(trigger, steps, index));
   const valid =
     !legacyInvalid &&
     name.trim().length > 0 &&
@@ -502,20 +678,12 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
   const setTriggerSafely = (value: SellerAutomationTrigger) => {
     setTrigger(value);
     setConditions(null);
-    const nextSpec = getSellerTriggerSpec(value);
-    const compatible = steps.flatMap((step): BuilderStep[] => {
-      if (!nextSpec?.actions.includes(step.action)) return [];
-      return [
-        stepCompatibleWithTrigger(value, step)
-          ? step
-          : defaultStep(step.action, locale, value),
-      ];
-    });
+    const compatible = normalizeStepsForTrigger(value, steps, locale);
     if (compatible.length > 0) {
       setSteps(compatible);
       return;
     }
-    const nextAction = nextSpec?.actions[0];
+    const nextAction = getSellerTriggerSpec(value)?.actions[0];
     setSteps(nextAction ? [defaultStep(nextAction, locale, value)] : []);
   };
 
@@ -529,6 +697,9 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
           step.config.noteText ? " " : ""
         }${token}`,
       });
+      return;
+    }
+    if (step.action !== "send_whatsapp" && step.action !== "send_notification") {
       return;
     }
     updateStepConfig(index, {
@@ -745,12 +916,12 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                 ) : (
                   <div className="space-y-3">
                     {steps.map((step, index) => {
-                      const availableActions = [
-                        ...(triggerSpec?.actions ?? []),
-                        ...(step.action === "send_notification"
-                          ? (["send_notification"] as const)
-                          : []),
-                      ];
+                      const statusTargets = statusTargetsForStep(
+                        trigger,
+                        steps,
+                        index,
+                      );
+                      const availableActions = [...(triggerSpec?.actions ?? [])];
                       const statusActionUsedElsewhere = steps.some(
                         (candidate, position) =>
                           position !== index && candidate.action === "update_status",
@@ -759,17 +930,19 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                         (action) =>
                           action !== "update_status" ||
                           step.action === "update_status" ||
-                          !statusActionUsedElsewhere,
+                          (!statusActionUsedElsewhere && statusTargets.length > 0),
                       );
                       const actionSpec = getSellerActionSpec(step.action);
                       const isWhatsApp = step.action === "send_whatsapp";
-                      const isLegacyNotification =
-                        step.action === "send_notification";
-                      const statusTargets = getSellerStatusTargets(trigger);
+                      const isNotification = step.action === "send_notification";
+                      const recheckStatuses = getSellerRecheckStatuses(trigger);
                       const template =
                         step.action === "tag_customer"
                           ? step.config.noteText ?? ""
-                          : step.config.messageTemplate ?? "";
+                          : step.action === "send_whatsapp" ||
+                              step.action === "send_notification"
+                            ? step.config.messageTemplate ?? ""
+                            : "";
                       const unsupportedVariables = template
                         ? unsupportedTemplateVariablesForTrigger(trigger, template)
                         : [];
@@ -839,15 +1012,22 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                               <Select
                                 value={step.action}
                                 disabled={loading}
-                                onValueChange={(value) =>
+                                onValueChange={(value) => {
+                                  const action = value as SellerAutomationAction;
+                                  if (action === "update_status") {
+                                    const targetStatus = statusTargets[0];
+                                    if (!targetStatus) return;
+                                    updateStep(index, {
+                                      action,
+                                      onFailure: "stop",
+                                      config: { targetStatus },
+                                    });
+                                    return;
+                                  }
                                   updateStep(index, {
-                                    ...defaultStep(
-                                      value as SellerAutomationAction,
-                                      locale,
-                                      trigger,
-                                    ),
-                                  })
-                                }
+                                    ...defaultStep(action, locale, trigger),
+                                  });
+                                }}
                               >
                                 <SelectTrigger
                                   id={`automation-action-${index}`}
@@ -902,7 +1082,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                             </div>
                           </div>
 
-                          {(isWhatsApp || isLegacyNotification) && (
+                          {(isWhatsApp || isNotification) && (
                             <div className="space-y-2">
                               <Label htmlFor={`automation-message-${index}`}>
                                 {c("builder.message")}
@@ -959,11 +1139,10 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                   {c("builder.whatsappNeedsPhone")}
                                 </p>
                               ) : null}
-                              {isLegacyNotification ? (
-                                <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-muted-foreground">
-                                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
-                                  <span>{c("builder.notificationLegacyHint")}</span>
-                                </div>
+                              {isNotification ? (
+                                <p className="text-xs text-muted-foreground">
+                                  {c("builder.notificationHint")}
+                                </p>
                               ) : null}
                             </div>
                           )}
@@ -1011,6 +1190,75 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                             </div>
                           ) : null}
 
+                          {step.action === "wait" ? (
+                            <div className="space-y-2">
+                              <Label htmlFor={`automation-wait-${index}`}>
+                                {c("builder.waitDuration")}
+                              </Label>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  id={`automation-wait-${index}`}
+                                  type="number"
+                                  min={WAIT_MINUTES_MIN}
+                                  max={WAIT_MINUTES_MAX}
+                                  step={1}
+                                  dir="ltr"
+                                  value={step.config.delayMinutes ?? 120}
+                                  disabled={loading}
+                                  onChange={(event) =>
+                                    updateStepConfig(index, {
+                                      delayMinutes: Number(event.target.value),
+                                    })
+                                  }
+                                />
+                                <span className="shrink-0 text-xs text-muted-foreground">
+                                  {c("builder.minutes")}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {c("builder.waitHint")}
+                              </p>
+                            </div>
+                          ) : null}
+
+                          {step.action === "recheck_order_status" ? (
+                            <div className="space-y-2">
+                              <Label htmlFor={`automation-recheck-${index}`}>
+                                {c("builder.recheckStatus")}
+                              </Label>
+                              <Select
+                                value={
+                                  step.config.expectedStatus ??
+                                  recheckStatuses[0] ??
+                                  ""
+                                }
+                                disabled={loading || recheckStatuses.length === 0}
+                                onValueChange={(value) =>
+                                  updateStepConfig(index, {
+                                    expectedStatus: value as SellerOrderCheckStatus,
+                                  })
+                                }
+                              >
+                                <SelectTrigger
+                                  id={`automation-recheck-${index}`}
+                                  className="w-full"
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {recheckStatuses.map((status) => (
+                                    <SelectItem key={status} value={status}>
+                                      {t(`automations.status.${status}`)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground">
+                                {c("builder.recheckHint")}
+                              </p>
+                            </div>
+                          ) : null}
+
                           {step.action === "update_status" ? (
                             <div className="space-y-2">
                               <Label htmlFor={`automation-status-${index}`}>
@@ -1039,6 +1287,12 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                   ))}
                                 </SelectContent>
                               </Select>
+                              {statusTargets.length === 0 ? (
+                                <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-muted-foreground">
+                                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+                                  <span>{c("builder.statusNeedsRecheck")}</span>
+                                </div>
+                              ) : null}
                               <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-muted-foreground">
                                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                                 <span>{c("builder.statusWarning")}</span>
