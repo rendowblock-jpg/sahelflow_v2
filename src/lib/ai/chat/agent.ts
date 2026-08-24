@@ -10,7 +10,7 @@ import {
   type GeminiProviderError,
   requestGemini,
 } from "@/lib/ai/gemini/provider";
-import { redactToolResult } from "@/lib/ai/redact";
+import { serializeToolResultForRemoteModel } from "@/lib/ai/redact";
 import { db, shopContext } from "@/lib/db";
 import { getSecret } from "@/lib/secrets";
 import {
@@ -84,7 +84,7 @@ type ToolExecutionResult = {
 };
 type Content = { role: string; parts: Array<Record<string, unknown>> };
 
-function historySafeToolResult(value: unknown): unknown {
+function historySafeToolResult(toolName: string, value: unknown): unknown {
   if (
     value &&
     typeof value === "object" &&
@@ -92,9 +92,9 @@ function historySafeToolResult(value: unknown): unknown {
   ) {
     const safe = { ...(value as Record<string, unknown>) };
     delete safe.proposalDigest;
-    return redactToolResult(safe);
+    return serializeToolResultForRemoteModel(toolName, safe);
   }
-  return redactToolResult(value);
+  return serializeToolResultForRemoteModel(toolName, value);
 }
 
 function renderHistory(history: AgentMessage[]): Content[] {
@@ -108,7 +108,7 @@ function renderHistory(history: AgentMessage[]): Content[] {
         parts.push({
           functionResponse: {
             name: call.name,
-            response: { result: historySafeToolResult(call.result) },
+            response: { result: historySafeToolResult(call.name, call.result) },
           },
         });
       }
@@ -138,7 +138,7 @@ async function execute(
     : { error: toolResult.error };
   if (isAiActionProposalToolResult(result)) {
     return {
-      result: historySafeToolResult(result),
+      result: historySafeToolResult(call.name, result),
       actionProposal: result,
     };
   }
@@ -242,7 +242,12 @@ export async function runAgent(
           {
             functionResponse: {
               name: functionCall.name,
-              response: { result: historySafeToolResult(executed.result) },
+              response: {
+                result: historySafeToolResult(
+                  functionCall.name,
+                  executed.result,
+                ),
+              },
             },
           },
         ],
@@ -440,7 +445,12 @@ export async function* runAgentStream(
           {
             functionResponse: {
               name: functionCall.name,
-              response: { result: historySafeToolResult(executed.result) },
+              response: {
+                result: historySafeToolResult(
+                  functionCall.name,
+                  executed.result,
+                ),
+              },
             },
           },
         ],
