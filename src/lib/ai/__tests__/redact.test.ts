@@ -305,13 +305,9 @@ describe("redactToolResult", () => {
     expect(out.contactEmail).toBe("amine@example.com");
   });
 
-  it("does NOT redact phones inside 'phone' field if value is not a string", () => {
-    // Edge case: the phone field check requires typeof value === "string".
-    // A number-typed phone (rare but possible) falls through to the else
-    // branch and is returned unchanged (numbers aren't strings, so
-    // redactToolResult returns them as-is).
-    const out = redactToolResult({ phone: 555123456 }) as { phone: number };
-    expect(out.phone).toBe(555123456);
+  it("fails closed for non-string phone field values", () => {
+    const out = redactToolResult({ phone: 555123456 }) as { phone: null };
+    expect(out.phone).toBeNull();
   });
 });
 
