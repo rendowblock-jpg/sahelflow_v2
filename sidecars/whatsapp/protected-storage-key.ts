@@ -29,6 +29,7 @@ const DOCUMENT_FILE = "whatsapp-sidecar-storage-authority.json";
 const CANDIDATE_FILE = "whatsapp-sidecar-storage-authority.candidate.json";
 const DEV_KEY_FILE = "whatsapp-sidecar-storage.dev.key";
 const MAX_DOCUMENT_BYTES = 64 * 1024;
+const DPAPI_PROCESS_TIMEOUT_MS = 30_000;
 const HEX_32 = /^[0-9a-f]{32}$/i;
 const HEX_64 = /^[0-9a-f]{64}$/i;
 
@@ -285,7 +286,7 @@ function dpapi(
       input,
       encoding: "utf8",
       windowsHide: true,
-      timeout: 10_000,
+      timeout: DPAPI_PROCESS_TIMEOUT_MS,
       maxBuffer: 64 * 1024,
     },
   );
