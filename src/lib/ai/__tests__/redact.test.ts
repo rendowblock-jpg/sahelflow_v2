@@ -3,13 +3,11 @@
  *
  * Coverage:
  *   - redactPhone: Algerian local + international formats, edge cases
- *   - redactPhonesInText: multiple phones, mixed with prose
+ *   - redactPhonesInText: contiguous/spaced phone formats in prose
  *   - redactToolResult: recursive object/array walking, address truncation,
  *     phone-field-specific redaction
- *   - Documented gaps (NOT redacted): 00213XXXXXXXXX prefix, Arabic-Indic
- *     digits, emails, names — these are limitations of the current impl,
- *     surfaced as explicit tests so a future fix updates both the impl
- *     AND the test (no silent regressions).
+ *   - Documented gaps (NOT redacted): Arabic-Indic digits, emails, names in
+ *     the generic sanitizer — customer names are handled by the tool-aware layer.
  *
  * The redact module imports "server-only" (a Next.js package that throws
  * on the client). vitest.config.ts aliases "server-only" to a no-op mock,
@@ -26,36 +24,28 @@ import {
 
 describe("redactPhone", () => {
   it("redacts a 10-digit Algerian local number (05XX...)", () => {
-    // 10 digits → "0" + 7 bullets + last 2 digits
     const out = redactPhone("0555123456");
     expect(out).toBe("0•••••••56");
     expect(out).toHaveLength(10);
-    // Last 2 digits preserved
     expect(out.endsWith("56")).toBe(true);
   });
 
   it("redacts a 10-digit Algerian local number (06XX...)", () => {
-    const out = redactPhone("0661789012");
-    expect(out).toBe("0•••••••12");
+    expect(redactPhone("0661789012")).toBe("0•••••••12");
   });
 
   it("redacts a 10-digit Algerian local number (07XX...)", () => {
-    const out = redactPhone("0770123456");
-    expect(out).toBe("0•••••••56");
+    expect(redactPhone("0770123456")).toBe("0•••••••56");
   });
 
   it("redacts a +213 international number (preserves last 2 digits)", () => {
-    // "+213555123456" → digits = "213555123456" (12 chars)
-    // → "0" + 9 bullets + "56"
     const out = redactPhone("+213555123456");
     expect(out).toBe("0•••••••••56");
     expect(out).toHaveLength(12);
   });
 
   it("strips spaces + dashes before redacting", () => {
-    // "0555 12 34 56" → digits = "0555123456" (10 chars) → same as 0555123456
     expect(redactPhone("0555 12 34 56")).toBe("0•••••••56");
-    // "+213 555 12 34 56" → digits = "213555123456" (12 chars)
     expect(redactPhone("+213 555 12 34 56")).toBe("0•••••••••56");
   });
 
@@ -66,32 +56,17 @@ describe("redactPhone", () => {
   });
 
   it("handles very short phone-like strings (exactly 4 digits)", () => {
-    // 4 digits → "0" + 1 bullet + last 2 digits = "0•34"
     expect(redactPhone("1234")).toBe("0•34");
   });
 
-  // ── Documented limitations ──────────────────────────────────────────────
-  // These tests pin the current behavior — if a future change adds support
-  // for these formats, the test should be updated to assert redaction.
-
-  it("does NOT recognize 00213 prefix as international (limitation)", () => {
-    // "00213555123456" → digits = "00213555123456" (14 chars)
-    // → "0" + 11 bullets + "56" — note: this is treated as a generic digit
-    // string, not specifically an Algerian international number. The
-    // function still redacts it (because it strips non-digits and applies
-    // the same formula), but the result is "0" + 11 bullets + "56".
+  it("redacts a 00213-prefixed value when called directly", () => {
     const out = redactPhone("00213555123456");
     expect(out).toBe("0•••••••••••56");
-    // Verify it still preserves last-2 + has bullets (not raw).
     expect(out).not.toBe("00213555123456");
   });
 
-  it("does NOT recognize Arabic-Indic digits (limitation: \\D strips them)", () => {
-    // "٠٥٥٥١٢٣٤٥٦" — Arabic-Indic digits for 0555123456.
-    // redactPhone strips \D (non-ASCII-digit), so Arabic-Indic digits are
-    // stripped to "" → length 0 → returns "••••".
-    const out = redactPhone("٠٥٥٥١٢٣٤٥٦");
-    expect(out).toBe("••••");
+  it("fails closed for Arabic-Indic digits when called directly", () => {
+    expect(redactPhone("٠٥٥٥١٢٣٤٥٦")).toBe("••••");
   });
 });
 
@@ -108,36 +83,37 @@ describe("redactPhonesInText", () => {
   it("redacts multiple phones in the same string", () => {
     const out = redactPhonesInText("First 0555123456, second 0770123456");
     expect(out).toContain("0•••••••56");
-    expect(out).toContain("0•••••••56");
     expect(out).not.toContain("0555123456");
     expect(out).not.toContain("0770123456");
   });
 
-  it("redacts an international +213 phone in prose", () => {
-    const out = redactPhonesInText("WhatsApp: +213555123456");
-    expect(out).toContain("0•••••••••56");
-    expect(out).not.toContain("+213555123456");
+  it("redacts contiguous and spaced local phone formats", () => {
+    const out = redactPhonesInText("Phones: 0555123456 and 0661 78 90 12");
+    expect(out).not.toContain("0555123456");
+    expect(out).not.toContain("0661 78 90 12");
+    expect(out).toContain("0•••••••56");
+    expect(out).toContain("0•••••••12");
   });
 
-  it("redacts +213 with a space after the prefix", () => {
-    const out = redactPhonesInText("Tel: +213 555123456 please");
-    // INTL_PHONE regex: /\+213\s?[5-7]\d{8}\b/ — matches "+213 555123456"
-    expect(out).not.toContain("+213 555123456");
-    expect(out).not.toContain("+213555123456");
+  it("redacts +213 international formats in prose", () => {
+    const contiguous = redactPhonesInText("WhatsApp: +213555123456");
+    const spaced = redactPhonesInText("Tel: +213 555 12 34 56 please");
+    expect(contiguous).not.toContain("+213555123456");
+    expect(spaced).not.toContain("+213 555 12 34 56");
   });
 
-  it("preserves non-phone numbers (too short to match the regex)", () => {
-    // 05XX + 7 digits = 9 chars total → won't match /\b0[5-7]\d{8}\b/ (needs 10)
+  it("redacts 00213 international formats in prose", () => {
+    const out = redactPhonesInText("Call 00213 555 12 34 56");
+    expect(out).not.toContain("00213 555 12 34 56");
+    expect(out).toContain("•");
+  });
+
+  it("preserves non-phone numbers that are too short", () => {
     const out = redactPhonesInText("Order 055512345 (9 digits) stays");
     expect(out).toContain("055512345");
   });
 
-  it("preserves order IDs that look like phone numbers but aren't (order CMD-0555123456)", () => {
-    // The regex uses \b word boundary. "CMD-0555123456" — the "-" before
-    // "0555..." is a non-word char, so \b matches between - and 0. The
-    // regex WILL match here. This is intentional (the redactor is
-    // conservative — better to over-redact a CMD-1234-looking string than
-    // to leak a real phone number).
+  it("conservatively redacts a phone-like suffix inside an order-looking token", () => {
     const out = redactPhonesInText("CMD-0555123456");
     expect(out).not.toContain("0555123456");
     expect(out).toContain("•");
@@ -154,25 +130,12 @@ describe("redactPhonesInText", () => {
 
   // ── Documented limitations ──────────────────────────────────────────────
 
-  it("does NOT redact 00213XXXXXXXXX international prefix (limitation)", () => {
-    // The INTL_PHONE regex only matches "+213", not "00213".
-    // "00213555123456" — the substring "0213555123456" is 13 chars; the
-    // ALGERIAN_PHONE regex /\b0[5-7]\d{8}\b/ requires the digit after the
-    // leading 0 to be 5/6/7. Here the second digit is 2, so no match.
-    // The full "00213555123456" itself starts with "00" so the ALGERIAN
-    // regex's \b0[5-7] won't match (it'd need 05/06/07 immediately).
-    const out = redactPhonesInText("Call 00213555123456");
-    // The raw phone is still present (limitation).
-    expect(out).toContain("00213555123456");
-  });
-
-  it("does NOT redact Arabic-Indic digits in phone numbers (limitation)", () => {
-    // "٠٥٥٥١٢٣٤٥٦" — the regexes use \d which is ASCII-only by default.
+  it("does NOT redact Arabic-Indic digits in free text", () => {
     const out = redactPhonesInText("Tel: ٠٥٥٥١٢٣٤٥٦");
     expect(out).toContain("٠٥٥٥١٢٣٤٥٦");
   });
 
-  it("does NOT redact emails (limitation: redact.ts has no email regex)", () => {
+  it("does NOT redact emails (generic sanitizer limitation)", () => {
     const out = redactPhonesInText("Contact: karim@example.com");
     expect(out).toContain("karim@example.com");
   });
@@ -185,6 +148,12 @@ describe("redactToolResult", () => {
     const out = redactToolResult("Customer phone: 0555123456") as string;
     expect(out).toContain("0•••••••56");
     expect(out).not.toContain("0555123456");
+  });
+
+  it("redacts spaced phones in arbitrary generic strings", () => {
+    const out = redactToolResult("Customer phone: 0555 12 34 56") as string;
+    expect(out).not.toContain("0555 12 34 56");
+    expect(out).toContain("0•••••••56");
   });
 
   it("redacts the 'phone' field of an object with redactPhone", () => {
@@ -223,7 +192,7 @@ describe("redactToolResult", () => {
         address: "123 Long Street Name, Algiers, Algeria",
       },
     }) as { customer: { name: string; phone: string; address: string } };
-    expect(out.customer.name).toBe("Karim"); // names are NOT redacted
+    expect(out.customer.name).toBe("Karim");
     expect(out.customer.phone).toBe("0•••••••56");
     expect(out.customer.address).not.toContain("Algiers");
   });
@@ -238,9 +207,6 @@ describe("redactToolResult", () => {
   });
 
   it("redacts phones inside arbitrary string values (not just phone fields)", () => {
-    // The else branch of the object loop calls redactToolResult(value),
-    // which for a string calls redactPhonesInText. So a "notes" field
-    // containing a phone number WILL be redacted.
     const out = redactToolResult({
       notes: "Customer called from 0555123456",
     }) as { notes: string };
@@ -279,15 +245,13 @@ describe("redactToolResult", () => {
       totalSpent: 12000,
     }) as Record<string, unknown>;
     expect(out.id).toBe("cust-123");
-    expect(out.name).toBe("Karim"); // names NOT redacted (limitation)
+    expect(out.name).toBe("Karim");
     expect(out.wilaya).toBe("Alger");
     expect(out.orderCount).toBe(5);
     expect(out.totalSpent).toBe(12000);
   });
 
-  // ── Documented limitations ──────────────────────────────────────────────
-
-  it("does NOT redact customer names (limitation: no name redaction logic)", () => {
+  it("does NOT redact customer names in the generic fallback", () => {
     const out = redactToolResult({
       customerName: "Karim Benali",
       name: "Amine Ould Ali",
@@ -296,7 +260,7 @@ describe("redactToolResult", () => {
     expect(out.name).toBe("Amine Ould Ali");
   });
 
-  it("does NOT redact email fields (limitation: no email regex)", () => {
+  it("does NOT redact email fields in the generic fallback", () => {
     const out = redactToolResult({
       email: "karim@example.com",
       contactEmail: "amine@example.com",
@@ -327,18 +291,10 @@ describe("redactPhonesInText — boundary cases", () => {
   });
 
   it("redacts a phone that IS the entire string", () => {
-    const out = redactPhonesInText("0555123456");
-    expect(out).toBe("0•••••••56");
+    expect(redactPhonesInText("0555123456")).toBe("0•••••••56");
   });
 
-  it("does NOT redact two adjacent 10-digit phones with no separator (limitation)", () => {
-    // \b is between a word char and a non-word char. Two 10-digit phones
-    // back-to-back form a 20-digit "word" with no internal word boundary.
-    // The ALGERIAN_PHONE regex /\b0[5-7]\d{8}\b/ starts matching at
-    // position 0 (leading \b at start-of-string), but the trailing \b
-    // fails because position 10 is mid-word (between "5" and "0", both
-    // word chars). So NO match — the entire 20-digit run is returned
-    // unchanged. This is a documented limitation.
+  it("does NOT redact two adjacent 10-digit phones with no separator", () => {
     const out = redactPhonesInText("05551234560770123456");
     expect(out).toBe("05551234560770123456");
   });

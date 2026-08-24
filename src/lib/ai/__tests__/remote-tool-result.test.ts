@@ -24,11 +24,13 @@ describe("redactCustomerName", () => {
     expect(redactCustomerName("  كريم بن علي  ")).toBe("كريم ع.");
   });
 
-  it("withholds phone-like display names without hiding a real adjacent name", () => {
+  it("fails closed for phone/email/address-like display-name values", () => {
     expect(redactCustomerName(PHONE)).toBe("••••");
     expect(redactCustomerName("0555 12 34 56")).toBe("••••");
     expect(redactCustomerName("+213 555 12 34 56")).toBe("••••");
     expect(redactCustomerName("213555123456")).toBe("••••");
+    expect(redactCustomerName("karim@example.com")).toBe("••••");
+    expect(redactCustomerName("12 Rue Didouche Mourad")).toBe("••••");
     expect(redactCustomerName(`Karim ${PHONE}`)).toBe("Karim");
   });
 });
@@ -63,7 +65,7 @@ describe("serializeToolResultForRemoteModel — customer/contact read tools", ()
   it("minimizes get_order_details without touching product names", () => {
     const output = serializeToolResultForRemoteModel("get_order_details", {
       id: "order-1",
-      orderNumber: "CMD-1001",
+      orderNumber: "ORD-1001",
       status: "confirmed",
       totalPrice: 18000,
       deliveryCost: 800,
@@ -108,7 +110,7 @@ describe("serializeToolResultForRemoteModel — customer/contact read tools", ()
   it("minimizes list_recent_orders", () => {
     const text = serialized("list_recent_orders", [
       {
-        orderNumber: "CMD-1002",
+        orderNumber: "ORD-1002",
         customerName: FULL_NAME,
         status: "shipped",
         totalPrice: 12000,
@@ -136,7 +138,7 @@ describe("serializeToolResultForRemoteModel — customer/contact read tools", ()
       createdAt: "2026-08-20T10:00:00.000Z",
       orders: [
         {
-          orderNumber: "CMD-77",
+          orderNumber: "ORD-0077",
           status: "delivered",
           totalPrice: 9000,
           createdAt: "2026-08-22T10:00:00.000Z",
@@ -183,7 +185,7 @@ describe("serializeToolResultForRemoteModel — customer/contact read tools", ()
         trackingNumber: "TRACK-8",
         shippingCost: 700,
         createdAt: "2026-08-24T10:00:00.000Z",
-        orderNumber: "CMD-8",
+        orderNumber: "ORD-0008",
         customerName: FULL_NAME,
         wilaya: "Blida",
       },
@@ -192,9 +194,9 @@ describe("serializeToolResultForRemoteModel — customer/contact read tools", ()
     expect(text).not.toContain(FULL_NAME);
   });
 
-  it("projects useful fixed conversation context without exporting raw message text", () => {
+  it("projects fixed conversation context without exporting raw text or raw references", () => {
     const rawBody =
-      "Karim Benali asks: where is delivery CMD-42? Call 0555123456 near 12 Rue Didouche Mourad";
+      "Karim Benali asks: where is delivery CMD-0555123456? Call 0555 12 34 56 near 12 Rue Didouche Mourad";
     const output = serializeToolResultForRemoteModel("get_conversation_messages", [
       {
         id: "msg-1",
@@ -208,8 +210,13 @@ describe("serializeToolResultForRemoteModel — customer/contact read tools", ()
     expect(output[0]).toEqual({
       id: "msg-1",
       direction: "inbound",
-      body: "question; topics=delivery,contact; order_refs=CMD-42",
+      body: null,
       bodyWithheld: true,
+      context: {
+        question: true,
+        intents: ["delivery", "contact"],
+        hasOrderReference: true,
+      },
       timestamp: "2026-08-24T10:00:00.000Z",
       extracted: false,
     });
@@ -217,13 +224,15 @@ describe("serializeToolResultForRemoteModel — customer/contact read tools", ()
     expect(text).not.toContain(rawBody);
     expect(text).not.toContain(FULL_NAME);
     expect(text).not.toContain(STREET);
-    expect(text).not.toContain(PHONE);
+    expect(text).not.toContain("0555123456");
+    expect(text).not.toContain("0555 12 34 56");
+    expect(text).not.toContain("CMD-0555123456");
   });
 
   it("minimizes search_orders customer identity", () => {
     const text = serialized("search_orders", [
       {
-        orderNumber: "CMD-900",
+        orderNumber: "ORD-0900",
         status: "confirmed",
         totalPrice: 25000,
         wilaya: "Setif",
@@ -255,6 +264,14 @@ describe("serializeToolResultForRemoteModel — negative controls and proposals"
     expect(JSON.stringify(products)).toContain("Atlas Premium Hoodie");
     expect(JSON.stringify(products)).toContain("Winter Collection");
     expect(JSON.stringify(topProducts)).toContain("Atlas Premium Hoodie");
+  });
+
+  it("normalizes generic-tool root errors to the stable marker", () => {
+    expect(
+      serializeToolResultForRemoteModel("search_products", {
+        error: `failed for 0555 12 34 56 near ${STREET}`,
+      }),
+    ).toEqual({ error: "Tool failed" });
   });
 
   it("minimizes customer proposal summaries while keeping full digest local", () => {

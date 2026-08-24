@@ -8,9 +8,9 @@
  * a generic `name` field is never treated as customer PII by accident.
  *
  * Strategy:
- *   - Phone numbers (0XXXXXXXXX, +213...) → "0X•••••XX" (last 2 digits visible)
+ *   - Phone numbers (0XXXXXXXXX, +213..., 00213...) → masked, last 2 digits visible
  *   - Customer/contact names → first name + family-name initial
- *   - Phone-like customer/contact names → withheld rather than treated as names
+ *   - Phone/email/address-like customer names → withheld rather than treated as names
  *   - Street-level address + free-text notes → content withheld; region kept
  *   - Free-form customer conversation bodies → fixed local context signals only
  *   - Product/category/store names → unchanged
@@ -22,11 +22,9 @@
  */
 import "server-only";
 
-const ALGERIAN_PHONE = /\b0[5-7]\d{8}\b/g;
-const INTL_PHONE = /\+213\s?[5-7]\d{8}\b/g;
 const FLEXIBLE_LOCAL_PHONE = /(?<!\d)0[5-7](?:[\s().-]*\d){8}(?!\d)/gu;
-const FLEXIBLE_INTL_PHONE = /(?:\+213|00213)[\s().-]*[5-7](?:[\s().-]*\d){8}(?!\d)/gu;
-const ORDER_REFERENCE = /\bCMD-\d{1,12}\b/giu;
+const FLEXIBLE_INTL_PHONE = /(?<!\d)(?:\+213|00213)[\s().-]*[5-7](?:[\s().-]*\d){8}(?!\d)/gu;
+const ORDER_REFERENCE_HINT = /\b(?:ORD|CMD|SYNC-(?:SHOPIFY|WOOCOMMERCE|YOUCAN))-[A-Z0-9-]{1,32}\b/iu;
 const PHONE_KEYS = new Set(["phone", "phone2", "customerPhone", "contactPhone"]);
 
 const CONVERSATION_CONTEXT_RULES = [
@@ -179,25 +177,19 @@ function mapAllowlistedRecords(
   });
 }
 
-function conversationContextSummary(value: unknown): string | null {
+function conversationContextProjection(value: unknown): JsonRecord | null {
   if (typeof value !== "string") return null;
   const normalized = value.normalize("NFKC").trim();
   if (!normalized) return null;
 
-  const topics = CONVERSATION_CONTEXT_RULES.flatMap(([tag, pattern]) =>
+  const intents = CONVERSATION_CONTEXT_RULES.flatMap(([tag, pattern]) =>
     pattern.test(normalized) ? [tag] : [],
   );
-  const orderReferences = [
-    ...new Set((normalized.match(ORDER_REFERENCE) ?? []).map((ref) => ref.toUpperCase())),
-  ].slice(0, 3);
-
-  const parts: string[] = [];
-  if (/[?؟]/u.test(normalized)) parts.push("question");
-  parts.push(`topics=${topics.length > 0 ? topics.join(",") : "other"}`);
-  if (orderReferences.length > 0) {
-    parts.push(`order_refs=${orderReferences.join(",")}`);
-  }
-  return parts.join("; ");
+  return {
+    question: /[?؟]/u.test(normalized),
+    intents: intents.length > 0 ? intents : ["other"],
+    hasOrderReference: ORDER_REFERENCE_HINT.test(normalized),
+  };
 }
 
 /** Redact a phone number, keeping only the last 2 digits. */
@@ -207,23 +199,38 @@ export function redactPhone(phone: string): string {
   return "0" + "•".repeat(digits.length - 3) + digits.slice(-2);
 }
 
-/** Redact all phone numbers in a string. */
+/** Redact Algerian local/international phone numbers in free text. */
 export function redactPhonesInText(text: string): string {
   return text
-    .replace(INTL_PHONE, (match) => redactPhone(match))
-    .replace(ALGERIAN_PHONE, (match) => redactPhone(match));
+    .replace(FLEXIBLE_INTL_PHONE, (match) => redactPhone(match))
+    .replace(FLEXIBLE_LOCAL_PHONE, (match) => redactPhone(match));
 }
 
 /** Keep only a customer's first name and family-name initial. */
 export function redactCustomerName(name: string): string {
-  const withoutPhoneLikeContent = name
-    .normalize("NFKC")
+  const normalized = name.normalize("NFKC").trim();
+  if (!normalized || normalized.length > 200) return "••••";
+
+  const withoutPhoneLikeContent = normalized
     .replace(FLEXIBLE_INTL_PHONE, " ")
-    .replace(FLEXIBLE_LOCAL_PHONE, " ");
-  const parts =
-    withoutPhoneLikeContent.match(/[\p{L}\p{M}]+(?:['’.-][\p{L}\p{M}]+)*/gu) ?? [];
-  if (parts.length === 0) return "••••";
-  if (parts.length === 1) return parts[0] ?? "••••";
+    .replace(FLEXIBLE_LOCAL_PHONE, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+  if (!withoutPhoneLikeContent) return "••••";
+
+  // A customer-name field is untrusted imported/provider text. After removing
+  // recognized phones, only a human-name-shaped value may be emitted. This
+  // rejects email/address/identifier-shaped values containing digits, @, /, etc.
+  if (
+    !/^[\p{L}\p{M}]+(?:[ '\u2019.-][\p{L}\p{M}]+)*$/u.test(
+      withoutPhoneLikeContent,
+    )
+  ) {
+    return "••••";
+  }
+
+  const parts = withoutPhoneLikeContent.split(/\s+/u).filter(Boolean);
+  if (parts.length <= 1) return parts[0] ?? "••••";
   const familyName = parts[parts.length - 1] ?? "";
   const initial = Array.from(familyName)[0] ?? "";
   return initial ? `${parts[0]} ${initial}.` : parts[0] ?? "••••";
@@ -410,8 +417,9 @@ function serializeConversationMessages(value: unknown): unknown {
   return mapAllowlistedRecords(value, (message) => ({
     id: safeString(message.id),
     direction: safeString(message.direction),
-    body: conversationContextSummary(message.body),
+    body: null,
     bodyWithheld: hasText(message.body),
+    context: conversationContextProjection(message.body),
     timestamp: safeTimestamp(message.timestamp),
     extracted: safeBoolean(message.extracted),
   }));
@@ -537,6 +545,9 @@ export function serializeToolResultForRemoteModel(
   if (!isKnownRemoteTool(toolName)) return null;
 
   const record = asRecord(result);
+  if (record && "error" in record) {
+    return { error: "Tool failed" };
+  }
   if (record?.pending_action_proposal === true) {
     return serializePendingActionProposal(toolName, result);
   }

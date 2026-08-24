@@ -77,7 +77,7 @@ describe("remote AI PII serializer shape drift", () => {
       {
         id: { address: STREET },
         name: "Karim",
-        phone: "0555123456",
+        phone: PHONE,
         wilaya: { rawPhone: PHONE },
         orderCount: { raw: 2, address: STREET },
         totalSpent: { raw: 12000, phone: PHONE },
@@ -97,7 +97,7 @@ describe("remote AI PII serializer shape drift", () => {
   it("canonicalizes parseable timestamps instead of returning comment-bearing input", () => {
     const output = serializeToolResultForRemoteModel("search_orders", [
       {
-        orderNumber: "CMD-1",
+        orderNumber: "ORD-0001",
         status: "confirmed",
         totalPrice: 1000,
         wilaya: "Alger",
@@ -112,8 +112,8 @@ describe("remote AI PII serializer shape drift", () => {
     expect(JSON.stringify(output)).not.toContain(PHONE);
   });
 
-  it("replaces free-form conversation text with deterministic context signals", () => {
-    const rawBody = `Karim Benali has a delivery question for CMD-77; call ${PHONE} near ${STREET}?`;
+  it("replaces free-form conversation text with fixed non-PII context signals", () => {
+    const rawBody = `Karim Benali has a delivery question for CMD-${PHONE}; call 0555 12 34 56 near ${STREET}?`;
     const output = serializeToolResultForRemoteModel("get_conversation_messages", [
       {
         id: "msg-wrapper",
@@ -124,14 +124,19 @@ describe("remote AI PII serializer shape drift", () => {
       },
     ]) as Array<Record<string, unknown>>;
 
-    expect(output[0]?.body).toBe(
-      "question; topics=delivery,contact; order_refs=CMD-77",
-    );
+    expect(output[0]?.body).toBeNull();
     expect(output[0]?.bodyWithheld).toBe(true);
-    expect(JSON.stringify(output)).not.toContain(rawBody);
-    expect(JSON.stringify(output)).not.toContain(FULL_NAME);
-    expect(JSON.stringify(output)).not.toContain(STREET);
-    expect(JSON.stringify(output)).not.toContain(PHONE);
+    expect(output[0]?.context).toEqual({
+      question: true,
+      intents: ["delivery", "contact"],
+      hasOrderReference: true,
+    });
+    const text = JSON.stringify(output);
+    expect(text).not.toContain(rawBody);
+    expect(text).not.toContain(FULL_NAME);
+    expect(text).not.toContain(STREET);
+    expect(text).not.toContain(PHONE);
+    expect(text).not.toContain(`CMD-${PHONE}`);
   });
 
   it("withholds non-string conversation bodies instead of serializing nested PII", () => {
@@ -147,6 +152,7 @@ describe("remote AI PII serializer shape drift", () => {
 
     expect(output[0]?.body).toBeNull();
     expect(output[0]?.bodyWithheld).toBe(false);
+    expect(output[0]?.context).toBeNull();
     expect(JSON.stringify(output)).not.toContain(PHONE);
   });
 
@@ -164,6 +170,16 @@ describe("remote AI PII serializer shape drift", () => {
     expect(output[0]?.address).toBeNull();
     expect(JSON.stringify(output)).not.toContain(PHONE);
     expect(JSON.stringify(output)).not.toContain(STREET);
+  });
+
+  it("normalizes root errors for reviewed generic tools before recursive serialization", () => {
+    const output = serializeToolResultForRemoteModel("search_products", {
+      error: `failed for 0555 12 34 56 near ${STREET}`,
+      name: FULL_NAME,
+    });
+    expect(output).toEqual({ error: "Tool failed" });
+    expect(JSON.stringify(output)).not.toContain(STREET);
+    expect(JSON.stringify(output)).not.toContain("0555 12 34 56");
   });
 
   it("preserves only a stable error marker on a mismatched PII result", () => {
