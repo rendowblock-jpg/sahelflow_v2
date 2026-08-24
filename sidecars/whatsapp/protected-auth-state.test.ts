@@ -24,6 +24,7 @@ const RECOGNIZABLE_SECRET = "WA-LINKED-DEVICE-PRIVATE-SECRET-DO-NOT-PERSIST-PLAI
 const RECOGNIZABLE_SECRET_BASE64 = Buffer.from(RECOGNIZABLE_SECRET, "utf8").toString(
   "base64",
 );
+const SENSITIVE_SIGNAL_ID = "device/213555123456:7@s.whatsapp.net";
 
 let sandbox = "";
 let previousDataDir: string | undefined;
@@ -104,6 +105,27 @@ describe("protected WhatsApp authentication state", () => {
 
     const reopened = await useProtectedWhatsAppAuthState();
     expect(reopened.state.creds.advSecretKey).toBe(RECOGNIZABLE_SECRET_BASE64);
+  });
+
+  it("does not persist Signal logical identifiers in filenames or envelopes", async () => {
+    const first = await useProtectedWhatsAppAuthState();
+    await first.state.keys.set({
+      "pre-key": {
+        [SENSITIVE_SIGNAL_ID]: {
+          private: Buffer.alloc(32, 11),
+          public: Buffer.alloc(32, 12),
+        },
+      },
+    });
+
+    const disk = `${readdirSync(protectedWhatsAppAuthDirectory()).join("\n")}\n${protectedFilesRaw()}`;
+    expect(disk).not.toContain(SENSITIVE_SIGNAL_ID);
+    expect(disk).not.toContain("213555123456");
+    expect(disk).not.toContain("s.whatsapp.net");
+
+    const reopened = await useProtectedWhatsAppAuthState();
+    const recovered = await reopened.state.keys.get("pre-key", [SENSITIVE_SIGNAL_ID]);
+    expect(recovered[SENSITIVE_SIGNAL_ID]).toBeTruthy();
   });
 
   it("fails closed when encrypted credentials are modified", async () => {
