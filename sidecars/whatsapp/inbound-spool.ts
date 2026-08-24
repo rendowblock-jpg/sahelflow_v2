@@ -177,7 +177,7 @@ export class WhatsAppInboundSpool {
     );
     this.encryptionKey = options.encryptionKey
       ? Buffer.from(options.encryptionKey)
-      : resolveWhatsAppInboundSpoolKey();
+      : resolveWhatsAppInboundSpoolKey(this.directory);
     if (this.encryptionKey.length !== 32) {
       throw new Error("WhatsApp inbound spool encryption key must be 32 bytes");
     }
