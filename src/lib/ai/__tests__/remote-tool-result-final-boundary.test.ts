@@ -110,14 +110,14 @@ describe("remote tool-result final privacy boundary", () => {
     expect(mismatch.commune).toBeNull();
   });
 
-  it("fails closed when one commune alias resolves to multiple canonical communes", () => {
-    const withWilaya = serializeToolResultForRemoteModel("get_order_details", {
+  it("fails closed when one commune label resolves to multiple commune identities", () => {
+    const ambiguousAlias = serializeToolResultForRemoteModel("get_order_details", {
       orderNumber: "ORD-5201",
       status: "confirmed",
       wilaya: "Tiaret",
       commune: "ملاكو",
     }) as Record<string, unknown>;
-    const withoutWilaya = serializeToolResultForRemoteModel(
+    const aliasWithoutWilaya = serializeToolResultForRemoteModel(
       "get_customer_details",
       {
         id: "customer-ambiguous-commune",
@@ -126,10 +126,21 @@ describe("remote tool-result final privacy boundary", () => {
         orders: [],
       },
     ) as Record<string, unknown>;
+    const duplicateFrenchName = serializeToolResultForRemoteModel(
+      "get_order_details",
+      {
+        orderNumber: "ORD-5202",
+        status: "confirmed",
+        wilaya: "Tébessa",
+        commune: "El Ogla",
+      },
+    ) as Record<string, unknown>;
 
-    expect(withWilaya.wilaya).toBe("Tiaret");
-    expect(withWilaya.commune).toBeNull();
-    expect(withoutWilaya.commune).toBeNull();
+    expect(ambiguousAlias.wilaya).toBe("Tiaret");
+    expect(ambiguousAlias.commune).toBeNull();
+    expect(aliasWithoutWilaya.commune).toBeNull();
+    expect(duplicateFrenchName.wilaya).toBe("Tébessa");
+    expect(duplicateFrenchName.commune).toBeNull();
   });
 
   it("canonicalizes or withholds location fields across customer-linked reads", () => {
