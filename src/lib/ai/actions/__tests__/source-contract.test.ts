@@ -98,7 +98,7 @@ describe("proposal-bound AI production source contract", () => {
     const agent = source("src/lib/ai/chat/agent.ts");
     expect(agent).toContain("historySafeToolResult");
     expect(agent).toContain("delete safe.proposalDigest");
-    expect(agent).toContain("historySafeToolResult(call.result)");
+    expect(agent).toContain("historySafeToolResult(call.name, call.result)");
   });
 
   it("keeps provider assignment blocked and hidden from Gemini", () => {
