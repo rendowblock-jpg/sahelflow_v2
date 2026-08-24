@@ -461,7 +461,7 @@ export async function useProtectedWhatsAppAuthState(): Promise<{
           if (type === "app-state-sync-key" && value) {
             value = proto.Message.AppStateSyncKeyData.fromObject(
               value as unknown as Record<string, unknown>,
-            ) as SignalDataTypeMap[typeof type];
+            ) as unknown as SignalDataTypeMap[typeof type];
           }
           if (value !== null) result[id] = value;
         }
