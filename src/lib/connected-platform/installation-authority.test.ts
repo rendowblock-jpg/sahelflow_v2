@@ -179,6 +179,22 @@ describe("connected installation authority protection", () => {
     ).rejects.toThrow("Connected installation authority authentication failed");
   });
 
+  it("keeps v1 authority untouched during a rotation dry run", async () => {
+    const oldRoot = configuredRoot();
+    const newRoot = randomBytes(32);
+    writeLegacy(oldRoot);
+    const before = readFileSync(authorityPath(LEGACY_FILE), "utf8");
+
+    await expect(
+      rotateConnectedInstallationAuthorityProtection(oldRoot, newRoot, true),
+    ).resolves.toBe("would-rotate");
+
+    expect(readFileSync(authorityPath(LEGACY_FILE), "utf8")).toBe(before);
+    expect(existsSync(authorityPath(CURRENT_FILE))).toBe(false);
+    oldRoot.fill(0);
+    newRoot.fill(0);
+  });
+
   it("rewraps authority protection with installation-root rotation and resumes idempotently", async () => {
     const oldRoot = configuredRoot();
     const newRoot = randomBytes(32);
