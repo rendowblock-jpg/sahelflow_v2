@@ -373,11 +373,15 @@ function serializePendingActionProposal(
   const root = asRecord(value);
   if (!root) return null;
   const proposal = asRecord(root.proposal);
+  const proposalDigest =
+    typeof root.proposalDigest === "string"
+      ? safeString(root.proposalDigest)
+      : null;
   if (!proposal) {
     return {
       pending_action_proposal: true,
       tool: safeString(root.tool),
-      proposalDigest: safeString(root.proposalDigest),
+      ...(proposalDigest !== null ? { proposalDigest } : {}),
     };
   }
 
@@ -401,7 +405,7 @@ function serializePendingActionProposal(
       executionState: safeString(proposal.executionState),
       lastErrorCode: safeString(proposal.lastErrorCode),
     },
-    proposalDigest: safeString(root.proposalDigest),
+    ...(proposalDigest !== null ? { proposalDigest } : {}),
   };
 }
 
