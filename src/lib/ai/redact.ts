@@ -11,7 +11,7 @@
  *   - Phone numbers (0XXXXXXXXX, +213..., 00213...) → masked, last 2 digits visible
  *   - Customer/contact names → first name + family-name initial
  *   - Phone/email/address-like customer names → withheld rather than treated as names
- *   - Street-level address + free-text notes → content withheld; region kept
+ *   - Street-level address + free-text notes → content withheld; region kept only when canonical
  *   - Free-form customer conversation bodies → fixed local semantic signals only
  *   - Product/category/store names → unchanged
  *   - Unclassified/future tools → fail closed until explicitly reviewed
@@ -38,12 +38,74 @@ const REMOTE_ORDER_STATUSES = new Set([
   "shipped",
   "in_transit",
   "delivered",
+  "refused",
   "cancelled",
   "canceled",
   "returned",
   "refunded",
   "failed",
 ]);
+
+const CANONICAL_WILAYA_NAMES = [
+  "Adrar",
+  "Chlef",
+  "Laghouat",
+  "Oum El Bouaghi",
+  "Batna",
+  "Béjaïa",
+  "Biskra",
+  "Béchar",
+  "Blida",
+  "Bouira",
+  "Tamanrasset",
+  "Tébessa",
+  "Tlemcen",
+  "Tiaret",
+  "Tizi Ouzou",
+  "Alger",
+  "Djelfa",
+  "Jijel",
+  "Sétif",
+  "Saïda",
+  "Skikda",
+  "Sidi Bel Abbès",
+  "Annaba",
+  "Guelma",
+  "Constantine",
+  "Médéa",
+  "Mostaganem",
+  "M'Sila",
+  "Mascara",
+  "Ouargla",
+  "Oran",
+  "El Bayadh",
+  "Illizi",
+  "Bordj Bou Arréridj",
+  "Boumerdès",
+  "El Tarf",
+  "Tindouf",
+  "Tissemsilt",
+  "El Oued",
+  "Khenchela",
+  "Souk Ahras",
+  "Tipaza",
+  "Mila",
+  "Aïn Defla",
+  "Naâma",
+  "Aïn Témouchent",
+  "Ghardaïa",
+  "Relizane",
+  "Timimoun",
+  "Bordj Badji Mokhtar",
+  "Ouled Djellal",
+  "Béni Abbès",
+  "In Salah",
+  "In Guezzam",
+  "Touggourt",
+  "Djanet",
+  "El M'Ghair",
+  "El Meniaa",
+] as const;
 
 const CONVERSATION_CONTEXT_RULES = [
   ["greeting", /(?:bonjour|salut|hello|salam|سلام|السلام عليكم)/iu],
@@ -196,6 +258,31 @@ function safeBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
 }
 
+function normalizeLocationKey(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+const CANONICAL_WILAYA_BY_KEY = new Map<string, string>(
+  CANONICAL_WILAYA_NAMES.map((name) => [normalizeLocationKey(name), name]),
+);
+
+function safeWilaya(value: unknown): string | null {
+  if (typeof value !== "string" || value.length > 80) return null;
+  const key = normalizeLocationKey(value.trim());
+  return key ? CANONICAL_WILAYA_BY_KEY.get(key) ?? null : null;
+}
+
+function safeCommune(value: unknown): string | null {
+  // There is no canonical commune authority in the current repository. Keep a
+  // fail-closed subset only: commune values that are themselves canonical
+  // wilaya names are safe known location tokens; everything else is withheld.
+  return safeWilaya(value);
+}
+
 function safeMessageDirection(value: unknown): "inbound" | "outbound" | null {
   if (typeof value !== "string") return null;
   switch (value.trim().toLowerCase()) {
@@ -211,7 +298,8 @@ function safeMessageDirection(value: unknown): "inbound" | "outbound" | null {
 function safeOrderReference(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
-  return ORDER_REFERENCE_EXACT.test(trimmed) ? trimmed : null;
+  if (!ORDER_REFERENCE_EXACT.test(trimmed)) return null;
+  return redactPhonesInText(trimmed) === trimmed ? trimmed : null;
 }
 
 function safeOrderStatus(value: unknown): string | null {
@@ -378,6 +466,10 @@ export function redactToolResult(result: unknown): unknown {
         out[key] = "Tool failed";
       } else if (PHONE_KEYS.has(key)) {
         out[key] = typeof value === "string" ? redactPhone(value) : null;
+      } else if (key === "wilaya") {
+        out[key] = safeWilaya(value);
+      } else if (key === "commune") {
+        out[key] = safeCommune(value);
       } else if (key === "address") {
         out[key] =
           typeof value === "string"
@@ -399,7 +491,7 @@ function serializeSearchCustomers(value: unknown): unknown {
     id: safeString(customer.id),
     name: maybeRedactCustomerName(customer.name),
     phone: maybeRedactPhone(customer.phone),
-    wilaya: safeString(customer.wilaya),
+    wilaya: safeWilaya(customer.wilaya),
     orderCount: safeNumber(customer.orderCount),
     totalSpent: safeNumber(customer.totalSpent),
   }));
@@ -433,8 +525,8 @@ function serializeOrderDetails(value: unknown): unknown {
     status: safeString(order.status),
     totalPrice: safeNumber(order.totalPrice),
     deliveryCost: safeNumber(order.deliveryCost),
-    wilaya: safeString(order.wilaya),
-    commune: safeString(order.commune),
+    wilaya: safeWilaya(order.wilaya),
+    commune: safeCommune(order.commune),
     phone: maybeRedactPhone(order.phone),
     hasNotes: hasText(order.notes),
     source: safeString(order.source),
@@ -466,7 +558,7 @@ function serializeRecentOrders(value: unknown): unknown {
     customerName: maybeRedactCustomerName(order.customerName),
     status: safeString(order.status),
     totalPrice: safeNumber(order.totalPrice),
-    wilaya: safeString(order.wilaya),
+    wilaya: safeWilaya(order.wilaya),
     createdAt: safeTimestamp(order.createdAt),
   }));
 }
@@ -496,8 +588,8 @@ function serializeCustomerDetails(value: unknown): unknown {
     name: maybeRedactCustomerName(customer.name),
     phone: maybeRedactPhone(customer.phone),
     phone2: maybeRedactPhone(customer.phone2),
-    wilaya: safeString(customer.wilaya),
-    commune: safeString(customer.commune),
+    wilaya: safeWilaya(customer.wilaya),
+    commune: safeCommune(customer.commune),
     hasStreetAddress: hasText(customer.address),
     hasNotes: hasText(customer.notes),
     orderCount: safeNumber(customer.orderCount),
@@ -509,14 +601,17 @@ function serializeCustomerDetails(value: unknown): unknown {
 }
 
 function serializeCustomerOrders(value: unknown): unknown {
-  return mapAllowlistedRecords(value, (order) => ({
-    orderNumber: safeOrderReference(order.orderNumber),
-    status: safeOrderStatus(order.status),
-    totalPrice: safeNumber(order.totalPrice),
-    wilaya: null,
-    wilayaWithheld: hasText(order.wilaya),
-    createdAt: safeTimestamp(order.createdAt),
-  }));
+  return mapAllowlistedRecords(value, (order) => {
+    const wilaya = safeWilaya(order.wilaya);
+    return {
+      orderNumber: safeOrderReference(order.orderNumber),
+      status: safeOrderStatus(order.status),
+      totalPrice: safeNumber(order.totalPrice),
+      wilaya,
+      wilayaWithheld: hasText(order.wilaya) && wilaya === null,
+      createdAt: safeTimestamp(order.createdAt),
+    };
+  });
 }
 
 function serializeConversations(value: unknown): unknown {
@@ -540,7 +635,7 @@ function serializePendingDeliveries(value: unknown): unknown {
     createdAt: safeTimestamp(delivery.createdAt),
     orderNumber: safeString(delivery.orderNumber),
     customerName: maybeRedactCustomerName(delivery.customerName),
-    wilaya: safeString(delivery.wilaya),
+    wilaya: safeWilaya(delivery.wilaya),
   }));
 }
 
@@ -561,7 +656,7 @@ function serializeSearchOrders(value: unknown): unknown {
     orderNumber: safeString(order.orderNumber),
     status: safeString(order.status),
     totalPrice: safeNumber(order.totalPrice),
-    wilaya: safeString(order.wilaya),
+    wilaya: safeWilaya(order.wilaya),
     createdAt: safeTimestamp(order.createdAt),
     customerName: maybeRedactCustomerName(order.customerName),
     customerPhone: maybeRedactPhone(order.customerPhone),
@@ -576,8 +671,8 @@ function serializeLegacyCreateCustomer(value: unknown): unknown {
     name: maybeRedactCustomerName(customer.name),
     phone: maybeRedactPhone(customer.phone),
     phone2: maybeRedactPhone(customer.phone2),
-    wilaya: safeString(customer.wilaya),
-    commune: safeString(customer.commune),
+    wilaya: safeWilaya(customer.wilaya),
+    commune: safeCommune(customer.commune),
   };
 }
 
@@ -600,7 +695,7 @@ function serializeProposalSummary(
         customerName: maybeRedactCustomerName(summary.customerName),
         itemCount: safeNumber(summary.itemCount),
         totalQuantity: safeNumber(summary.totalQuantity),
-        wilaya: safeString(summary.wilaya),
+        wilaya: safeWilaya(summary.wilaya),
       };
     case "create_customer":
       return {
@@ -609,7 +704,7 @@ function serializeProposalSummary(
           typeof summary.phoneLast4 === "string"
             ? `••${summary.phoneLast4.slice(-2)}`
             : null,
-        wilaya: safeString(summary.wilaya),
+        wilaya: safeWilaya(summary.wilaya),
       };
     case "update_customer_notes":
       return {
