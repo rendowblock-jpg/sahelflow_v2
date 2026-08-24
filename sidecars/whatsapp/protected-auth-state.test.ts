@@ -21,6 +21,9 @@ import {
 
 const STORAGE_ROOT = "41".repeat(32);
 const RECOGNIZABLE_SECRET = "WA-LINKED-DEVICE-PRIVATE-SECRET-DO-NOT-PERSIST-PLAINTEXT";
+const RECOGNIZABLE_SECRET_BASE64 = Buffer.from(RECOGNIZABLE_SECRET, "utf8").toString(
+  "base64",
+);
 
 let sandbox = "";
 let previousDataDir: string | undefined;
@@ -59,10 +62,7 @@ describe("protected WhatsApp authentication state", () => {
     const legacy = legacyWhatsAppAuthDirectory();
     mkdirSync(legacy, { recursive: true });
     const creds = initAuthCreds();
-    (creds as unknown as Record<string, unknown>).advSecretKey = Buffer.from(
-      RECOGNIZABLE_SECRET,
-      "utf8",
-    );
+    creds.advSecretKey = RECOGNIZABLE_SECRET_BASE64;
     writeFileSync(
       join(legacy, "creds.json"),
       `${JSON.stringify(creds, BufferJSON.replacer)}\n`,
@@ -76,26 +76,34 @@ describe("protected WhatsApp authentication state", () => {
       )}\n`,
       "utf8",
     );
+    // Baileys' multi-file helper canonicalizes '/' to '__' and ':' to '-'.
+    // Migration must keep that exact mapping when later reads use the raw ID.
+    writeFileSync(
+      join(legacy, "pre-key-device__abc-1.json"),
+      `${JSON.stringify(
+        { private: Buffer.alloc(32, 9), public: Buffer.alloc(32, 10) },
+        BufferJSON.replacer,
+      )}\n`,
+      "utf8",
+    );
 
     const first = await useProtectedWhatsAppAuthState();
-    expect(Buffer.from(first.state.creds.advSecretKey).toString("utf8")).toBe(
-      RECOGNIZABLE_SECRET,
-    );
+    expect(first.state.creds.advSecretKey).toBe(RECOGNIZABLE_SECRET_BASE64);
     expect(existsSync(legacy)).toBe(false);
     expect(existsSync(protectedWhatsAppAuthDirectory())).toBe(true);
 
     const disk = protectedFilesRaw();
     expect(disk).not.toContain(RECOGNIZABLE_SECRET);
-    expect(disk).not.toContain(Buffer.from(RECOGNIZABLE_SECRET).toString("base64"));
+    expect(disk).not.toContain(RECOGNIZABLE_SECRET_BASE64);
     expect(disk).not.toContain("recognizable-pre-key-private-material");
 
     const migratedKey = await first.state.keys.get("pre-key", ["42"]);
     expect(migratedKey["42"]).toBeTruthy();
+    const canonicalizedKey = await first.state.keys.get("pre-key", ["device/abc:1"]);
+    expect(canonicalizedKey["device/abc:1"]).toBeTruthy();
 
     const reopened = await useProtectedWhatsAppAuthState();
-    expect(Buffer.from(reopened.state.creds.advSecretKey).toString("utf8")).toBe(
-      RECOGNIZABLE_SECRET,
-    );
+    expect(reopened.state.creds.advSecretKey).toBe(RECOGNIZABLE_SECRET_BASE64);
   });
 
   it("fails closed when encrypted credentials are modified", async () => {
