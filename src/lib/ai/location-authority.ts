@@ -57,6 +57,15 @@ function canonicalWilaya(value: unknown): CanonicalWilaya | null {
   return key ? WILAYA_BY_KEY.get(key) ?? null : null;
 }
 
+function uniqueCommuneName(candidates: CanonicalCommune[]): string | null {
+  const distinct = new Map<string, CanonicalCommune>();
+  for (const candidate of candidates) {
+    distinct.set(`${candidate.wilayaCode}:${candidate.name}`, candidate);
+  }
+  if (distinct.size !== 1) return null;
+  return distinct.values().next().value?.name ?? null;
+}
+
 export function safeWilaya(value: unknown): string | null {
   return canonicalWilaya(value)?.name ?? null;
 }
@@ -75,15 +84,13 @@ export function safeCommune(
   if (wilayaValue !== undefined && wilayaValue !== null) {
     const wilaya = canonicalWilaya(wilayaValue);
     if (!wilaya) return null;
-    return (
-      candidates.find((candidate) => candidate.wilayaCode === wilaya.code)?.name ??
-      null
+    return uniqueCommuneName(
+      candidates.filter((candidate) => candidate.wilayaCode === wilaya.code),
     );
   }
 
-  // Without a wilaya discriminator, emit only a commune name that resolves to
-  // one canonical wilaya. Ambiguous commune names fail closed rather than being
-  // attributed to the wrong location.
-  const wilayaCodes = new Set(candidates.map((candidate) => candidate.wilayaCode));
-  return wilayaCodes.size === 1 ? candidates[0]?.name ?? null : null;
+  // Without a wilaya discriminator, emit a canonical commune only when the
+  // alias itself resolves to exactly one distinct commune. Ambiguous aliases
+  // fail closed even when all matches belong to the same wilaya.
+  return uniqueCommuneName(candidates);
 }
