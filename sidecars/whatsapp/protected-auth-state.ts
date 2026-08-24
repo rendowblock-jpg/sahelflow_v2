@@ -4,6 +4,7 @@ import {
   proto,
   type AuthenticationCreds,
   type AuthenticationState,
+  type SignalDataTypeMap,
 } from "@whiskeysockets/baileys";
 import {
   createCipheriv,
@@ -453,14 +454,14 @@ export async function useProtectedWhatsAppAuthState(): Promise<{
     creds,
     keys: {
       get: async (type, ids) => {
-        const result: Record<string, unknown> = {};
+        const result: { [id: string]: SignalDataTypeMap[typeof type] } = {};
         for (const id of ids) {
           const recordId = baileysFileName(`${String(type)}-${id}.json`);
-          let value = openRecord<unknown>(recordId, key);
-          if (String(type) === "app-state-sync-key" && value) {
+          let value = openRecord<SignalDataTypeMap[typeof type]>(recordId, key);
+          if (type === "app-state-sync-key" && value) {
             value = proto.Message.AppStateSyncKeyData.fromObject(
-              value as Record<string, unknown>,
-            );
+              value as unknown as Record<string, unknown>,
+            ) as SignalDataTypeMap[typeof type];
           }
           if (value !== null) result[id] = value;
         }
