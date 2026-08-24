@@ -82,6 +82,7 @@ describe("WhatsApp inbound spool protected key migration", () => {
     const protectedKey = resolveWhatsAppInboundSpoolKey(spoolDirectory);
 
     expect(existsSync(legacyKeyPath)).toBe(false);
+    expect(existsSync(`${legacyKeyPath}.retiring`)).toBe(false);
     const migrated = readFileSync(join(spoolDirectory, `${SPOOL_ID}.json`), "utf8");
     expect(openWhatsAppInboundSpoolRecord(migrated, SPOOL_ID, protectedKey)).toBe(
       MESSAGE,
@@ -146,6 +147,72 @@ describe("WhatsApp inbound spool protected key migration", () => {
       pendingRecord,
     );
     protectedKey.fill(0);
+  });
+
+  it("recovers a zeroed legacy-key remnant only after protected records authenticate", () => {
+    const spoolDirectory = join(sandbox, "whatsapp-inbound-spool");
+    const legacyKeyPath = join(sandbox, "whatsapp-inbound-spool.key");
+    mkdirSync(spoolDirectory, { recursive: true });
+
+    const protectedKey = resolveWhatsAppInboundSpoolKey(spoolDirectory);
+    writeFileSync(
+      join(spoolDirectory, `${SPOOL_ID}.json`),
+      sealWhatsAppInboundSpoolRecord(SPOOL_ID, MESSAGE, protectedKey),
+      "utf8",
+    );
+    // Reproduce the old crash window: overwrite completed, unlink did not.
+    writeFileSync(legacyKeyPath, Buffer.alloc(65));
+
+    const recoveredKey = resolveWhatsAppInboundSpoolKey(spoolDirectory);
+    expect(existsSync(legacyKeyPath)).toBe(false);
+    expect(recoveredKey.equals(protectedKey)).toBe(true);
+    expect(
+      openWhatsAppInboundSpoolRecord(
+        readFileSync(join(spoolDirectory, `${SPOOL_ID}.json`), "utf8"),
+        SPOOL_ID,
+        recoveredKey,
+      ),
+    ).toBe(MESSAGE);
+    protectedKey.fill(0);
+    recoveredKey.fill(0);
+  });
+
+  it("recovers an interrupted atomic retirement tombstone without parsing its contents", () => {
+    const spoolDirectory = join(sandbox, "whatsapp-inbound-spool");
+    const legacyKeyPath = join(sandbox, "whatsapp-inbound-spool.key");
+    const retirementPath = `${legacyKeyPath}.retiring`;
+    mkdirSync(spoolDirectory, { recursive: true });
+
+    const protectedKey = resolveWhatsAppInboundSpoolKey(spoolDirectory);
+    writeFileSync(
+      join(spoolDirectory, `${SPOOL_ID}.json`),
+      sealWhatsAppInboundSpoolRecord(SPOOL_ID, MESSAGE, protectedKey),
+      "utf8",
+    );
+    writeFileSync(retirementPath, `${LEGACY_KEY.toString("hex")}\n`, "utf8");
+
+    const recoveredKey = resolveWhatsAppInboundSpoolKey(spoolDirectory);
+    expect(existsSync(retirementPath)).toBe(false);
+    expect(recoveredKey.equals(protectedKey)).toBe(true);
+    protectedKey.fill(0);
+    recoveredKey.fill(0);
+  });
+
+  it("keeps an unreadable legacy remnant when queued records are not protected", () => {
+    const spoolDirectory = join(sandbox, "whatsapp-inbound-spool");
+    const legacyKeyPath = join(sandbox, "whatsapp-inbound-spool.key");
+    mkdirSync(spoolDirectory, { recursive: true });
+    writeFileSync(
+      join(spoolDirectory, `${SPOOL_ID}.json`),
+      sealWhatsAppInboundSpoolRecord(SPOOL_ID, MESSAGE, LEGACY_KEY),
+      "utf8",
+    );
+    writeFileSync(legacyKeyPath, Buffer.alloc(65));
+
+    expect(() => resolveWhatsAppInboundSpoolKey(spoolDirectory)).toThrow(
+      "Unreadable legacy WhatsApp inbound spool key cannot be retired safely",
+    );
+    expect(existsSync(legacyKeyPath)).toBe(true);
   });
 
   it("refuses raw spool-key escape hatches in packaged production", () => {
