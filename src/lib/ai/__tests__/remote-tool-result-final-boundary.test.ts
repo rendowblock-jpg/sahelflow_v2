@@ -39,6 +39,13 @@ describe("remote tool-result final privacy boundary", () => {
         wilaya: "Oran",
         createdAt: "2026-08-24T18:33:00.000Z",
       },
+      {
+        orderNumber: "ORD-4413",
+        status: "confirmed",
+        totalPrice: 7500,
+        wilaya: "Bordj Baji Mokhtar",
+        createdAt: "2026-08-24T18:34:00.000Z",
+      },
     ]) as Array<Record<string, unknown>>;
 
     expect(output[0]).toEqual({
@@ -61,6 +68,7 @@ describe("remote tool-result final privacy boundary", () => {
     });
     expect(output[3]?.orderNumber).toBeNull();
     expect(output[3]?.wilaya).toBe("Oran");
+    expect(output[4]?.wilaya).toBe("Bordj Baji Mokhtar");
 
     const serialized = JSON.stringify(output);
     expect(serialized).not.toContain(PRIVATE_NAME);
@@ -68,6 +76,38 @@ describe("remote tool-result final privacy boundary", () => {
     expect(serialized).not.toContain(PRIVATE_STREET);
     expect(serialized).not.toContain(maliciousWilaya);
     expect(serialized).not.toContain("CMD-0555123456");
+  });
+
+  it("uses canonical commune authority and validates commune/wilaya consistency", () => {
+    const orderDetails = serializeToolResultForRemoteModel("get_order_details", {
+      orderNumber: "ORD-5101",
+      status: "confirmed",
+      wilaya: "Alger",
+      commune: "Alger Centre",
+    }) as Record<string, unknown>;
+    const customerDetails = serializeToolResultForRemoteModel(
+      "get_customer_details",
+      {
+        id: "customer-1",
+        name: "Karim",
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        orders: [],
+      },
+    ) as Record<string, unknown>;
+    const mismatch = serializeToolResultForRemoteModel("get_order_details", {
+      orderNumber: "ORD-5102",
+      status: "confirmed",
+      wilaya: "Oran",
+      commune: "Bab Ezzouar",
+    }) as Record<string, unknown>;
+
+    expect(orderDetails.wilaya).toBe("Alger");
+    expect(orderDetails.commune).toBe("Alger Centre");
+    expect(customerDetails.wilaya).toBe("Alger");
+    expect(customerDetails.commune).toBe("Bab Ezzouar");
+    expect(mismatch.wilaya).toBe("Oran");
+    expect(mismatch.commune).toBeNull();
   });
 
   it("canonicalizes or withholds location fields across customer-linked reads", () => {
