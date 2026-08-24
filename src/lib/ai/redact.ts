@@ -42,6 +42,57 @@ const CONVERSATION_CONTEXT_RULES = [
   ["problem", /(?:\bprobl[eè]me\b|\bproblem\b|\bissue\b|مشكل|شكوى)/iu],
   ["confirmation", /(?:\boui\b|\byes\b|\bd['’]accord\b|\bok\b|نعم|موافق)/iu],
   ["negative", /(?:\bnon\b|\bno\b|لا)/iu],
+  [
+    "selection",
+    /(?:\b(?:want|prefer|choose|size|color|colour|taille|couleur)\b|\bje veux\b|\bje pr[ée]f[èe]re\b|أريد|اريد|أفضل|افضل|مقاس|لون)/iu,
+  ],
+] as const satisfies ReadonlyArray<readonly [string, RegExp]>;
+
+const CONVERSATION_COLOR_RULES = [
+  ["black", /\b(?:black|noir|noire)\b|(?:أسود|اسود|سوداء)/iu],
+  ["white", /\b(?:white|blanc|blanche)\b|(?:أبيض|ابيض|بيضاء)/iu],
+  ["red", /\b(?:red|rouge)\b|(?:أحمر|احمر|حمراء)/iu],
+  ["blue", /\b(?:blue|bleu|bleue)\b|(?:أزرق|ازرق|زرقاء)/iu],
+  ["green", /\b(?:green|vert|verte)\b|(?:أخضر|اخضر|خضراء)/iu],
+  ["yellow", /\b(?:yellow|jaune)\b|(?:أصفر|اصفر|صفراء)/iu],
+  ["orange", /\b(?:orange)\b|(?:برتقالي|برتقالية)/iu],
+  ["pink", /\b(?:pink|rose)\b|(?:وردي|وردية)/iu],
+  ["purple", /\b(?:purple|violet|violette)\b|(?:بنفسجي|بنفسجية)/iu],
+  ["gray", /\b(?:gray|grey|gris|grise)\b|(?:رمادي|رمادية)/iu],
+  ["brown", /\b(?:brown|marron|brun|brune)\b|(?:بني|بنية)/iu],
+  ["beige", /\b(?:beige)\b|(?:بيج)/iu],
+  ["navy", /\b(?:navy|bleu marine)\b|(?:كحلي|كحلية)/iu],
+] as const satisfies ReadonlyArray<readonly [string, RegExp]>;
+
+const CONVERSATION_SIZE_RULES = [
+  [
+    "XS",
+    /(?:^|[^\p{L}\p{N}])(?:XS|extra[- ]?small|tr[eè]s petit(?:e)?|صغير(?:ة)? جدًا|صغير(?:ة)? جدا)(?=$|[^\p{L}\p{N}])/iu,
+  ],
+  [
+    "S",
+    /(?:^|[^\p{L}\p{N}])(?:S|small|petit(?:e)?|صغير(?:ة)?)(?=$|[^\p{L}\p{N}])/iu,
+  ],
+  [
+    "M",
+    /(?:^|[^\p{L}\p{N}])(?:M|medium|moyen(?:ne)?|متوسط(?:ة)?)(?=$|[^\p{L}\p{N}])/iu,
+  ],
+  [
+    "L",
+    /(?:^|[^\p{L}\p{N}])(?:L|large|grand(?:e)?|كبير(?:ة)?)(?=$|[^\p{L}\p{N}])/iu,
+  ],
+  [
+    "XL",
+    /(?:^|[^\p{L}\p{N}])(?:XL|extra[- ]?large|tr[eè]s grand(?:e)?|كبير(?:ة)? جدًا|كبير(?:ة)? جدا)(?=$|[^\p{L}\p{N}])/iu,
+  ],
+  [
+    "XXL",
+    /(?:^|[^\p{L}\p{N}])(?:XXL|2XL|double[- ]?extra[- ]?large)(?=$|[^\p{L}\p{N}])/iu,
+  ],
+  [
+    "3XL",
+    /(?:^|[^\p{L}\p{N}])(?:3XL|XXXL)(?=$|[^\p{L}\p{N}])/iu,
+  ],
 ] as const satisfies ReadonlyArray<readonly [string, RegExp]>;
 
 const TOOL_AWARE_REMOTE_TOOL_NAMES = [
@@ -125,7 +176,7 @@ function safeNumber(value: unknown): number | null {
 }
 
 function safeBoolean(value: unknown): boolean | null {
-  return typeof value === "boolean" ? value : null;
+  return typeof value === "boolean" && typeof value === "boolean" ? value : null;
 }
 
 function safeTimestamp(value: unknown): string | null {
@@ -177,6 +228,15 @@ function mapAllowlistedRecords(
   });
 }
 
+function collectConversationAttributes(
+  value: string,
+  rules: ReadonlyArray<readonly [string, RegExp]>,
+): string[] {
+  return rules.flatMap(([canonical, pattern]) =>
+    pattern.test(value) ? [canonical] : [],
+  );
+}
+
 function conversationContextProjection(value: unknown): JsonRecord | null {
   if (typeof value !== "string") return null;
   const normalized = value.normalize("NFKC").trim();
@@ -185,10 +245,27 @@ function conversationContextProjection(value: unknown): JsonRecord | null {
   const intents = CONVERSATION_CONTEXT_RULES.flatMap(([tag, pattern]) =>
     pattern.test(normalized) ? [tag] : [],
   );
+  const colors = collectConversationAttributes(
+    normalized,
+    CONVERSATION_COLOR_RULES,
+  );
+  const sizes = collectConversationAttributes(
+    normalized,
+    CONVERSATION_SIZE_RULES,
+  );
+  const attributes =
+    colors.length > 0 || sizes.length > 0
+      ? {
+          ...(colors.length > 0 ? { colors } : {}),
+          ...(sizes.length > 0 ? { sizes } : {}),
+        }
+      : null;
+
   return {
     question: /[?؟]/u.test(normalized),
     intents: intents.length > 0 ? intents : ["other"],
     hasOrderReference: ORDER_REFERENCE_HINT.test(normalized),
+    ...(attributes ? { attributes } : {}),
   };
 }
 
