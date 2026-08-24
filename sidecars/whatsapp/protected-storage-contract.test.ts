@@ -41,13 +41,36 @@ describe("packaged WhatsApp protected-storage contract", () => {
     expect(storage).toContain("Packaged WhatsApp storage refuses raw key environment authority");
   });
 
-  it("migrates queued spool records before retiring the legacy plaintext key", () => {
+  it("migrates and verifies queued spool records before destructive legacy-key retirement", () => {
     const crypto = source("sidecars/whatsapp/inbound-spool-crypto.ts");
-    expect(crypto).toContain("migrateLegacySpoolRecords(directory, oldKey, key)");
-    expect(crypto).toContain("eraseLegacyKeyFile(legacyPath)");
-    expect(crypto.indexOf("migrateLegacySpoolRecords(directory, oldKey, key)")).toBeLessThan(
-      crypto.indexOf("eraseLegacyKeyFile(legacyPath)"),
+    const migrationStart = crypto.indexOf(
+      "migrateLegacySpoolRecords(directory, oldKey, key);",
     );
+    const retirementStart = crypto.indexOf(
+      "retireLegacyKeyFile(legacyPath, directory, key);",
+    );
+    expect(migrationStart).toBeGreaterThanOrEqual(0);
+    expect(retirementStart).toBeGreaterThanOrEqual(0);
+    expect(migrationStart).toBeLessThan(retirementStart);
+
+    const retirementBodyStart = crypto.indexOf("function retireLegacyKeyFile(");
+    const retirementBodyEnd = crypto.indexOf(
+      "function recoverInterruptedRetirement(",
+      retirementBodyStart,
+    );
+    expect(retirementBodyStart).toBeGreaterThanOrEqual(0);
+    expect(retirementBodyEnd).toBeGreaterThan(retirementBodyStart);
+    const retirementBody = crypto.slice(retirementBodyStart, retirementBodyEnd);
+    const verifyStart = retirementBody.indexOf(
+      "verifyProtectedSpoolRecords(directory, protectedKey);",
+    );
+    const eraseStart = retirementBody.indexOf(
+      "eraseLegacyKeyFile(retirementPath);",
+    );
+    expect(verifyStart).toBeGreaterThanOrEqual(0);
+    expect(eraseStart).toBeGreaterThanOrEqual(0);
+    expect(verifyStart).toBeLessThan(eraseStart);
+
     expect(crypto).toContain("Packaged WhatsApp inbound spool refuses raw key authority");
   });
 });
