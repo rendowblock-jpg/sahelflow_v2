@@ -8,7 +8,7 @@ import {
   randomUUID,
   timingSafeEqual,
 } from "node:crypto";
-import { mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { deriveInstallationKey } from "@/lib/crypto/key-hierarchy";
@@ -428,18 +428,21 @@ function parseStoredV2(raw: string, installationRoot: Buffer): AuthorityValue {
     );
   }
 
-  const iv = decodeCanonicalBase64(parsed.iv, "Connected authority IV", IV_BYTES);
-  const ciphertext = decodeCanonicalBase64(
-    parsed.ciphertext,
-    "Connected authority ciphertext",
-  );
-  const tag = decodeCanonicalBase64(
-    parsed.tag,
-    "Connected authority tag",
-    TAG_BYTES,
-  );
+  let iv: Buffer | null = null;
+  let ciphertext: Buffer | null = null;
+  let tag: Buffer | null = null;
   let plaintext: Buffer | null = null;
   try {
+    iv = decodeCanonicalBase64(parsed.iv, "Connected authority IV", IV_BYTES);
+    ciphertext = decodeCanonicalBase64(
+      parsed.ciphertext,
+      "Connected authority ciphertext",
+    );
+    tag = decodeCanonicalBase64(
+      parsed.tag,
+      "Connected authority tag",
+      TAG_BYTES,
+    );
     const decipher = createDecipheriv(ALGORITHM, derived.key, iv, {
       authTagLength: TAG_BYTES,
     });
@@ -459,7 +462,11 @@ function parseStoredV2(raw: string, installationRoot: Buffer): AuthorityValue {
       updatedAt: metadata.updatedAt,
     };
   } catch (error) {
-    if (error instanceof Error && error.message.includes("protected payload")) {
+    if (
+      error instanceof Error &&
+      (error.message.includes("protected payload") ||
+        error.message.startsWith("Connected authority "))
+    ) {
       throw error;
     }
     throw new Error("Connected installation authority authentication failed", {
@@ -467,9 +474,9 @@ function parseStoredV2(raw: string, installationRoot: Buffer): AuthorityValue {
     });
   } finally {
     plaintext?.fill(0);
-    iv.fill(0);
-    ciphertext.fill(0);
-    tag.fill(0);
+    iv?.fill(0);
+    ciphertext?.fill(0);
+    tag?.fill(0);
     derived.key.fill(0);
   }
 }
@@ -494,6 +501,22 @@ async function readOptionalFile(path: string): Promise<string | null> {
   }
 }
 
+async function syncDirectory(path: string): Promise<void> {
+  if (process.platform === "win32") return;
+  const handle = await open(path, "r");
+  try {
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+}
+
+async function retireLegacyAuthority(): Promise<void> {
+  const path = legacyAuthorityPath();
+  await rm(path, { force: true });
+  await syncDirectory(dirname(path));
+}
+
 async function readStored(
   installationRoot: Buffer = getMasterKey(),
 ): Promise<ReadAuthority | null> {
@@ -512,24 +535,29 @@ async function readStored(
   });
 }
 
-async function retireLegacyAuthority(): Promise<void> {
-  await rm(legacyAuthorityPath(), { force: true });
-}
-
 async function persist(
   value: AuthorityValue,
   installationRoot: Buffer = getMasterKey(),
 ): Promise<AuthorityValue> {
   const path = authorityPath();
-  await mkdir(dirname(path), { recursive: true });
+  const directory = dirname(path);
+  await mkdir(directory, { recursive: true });
   const stored = sealAuthority(value, installationRoot);
   const temp = `${path}.${process.pid}.${randomUUID()}.tmp`;
-  await writeFile(temp, `${JSON.stringify(stored)}\n`, {
-    encoding: "utf8",
-    mode: 0o600,
-    flag: "wx",
-  });
-  await rename(temp, path);
+  const handle = await open(temp, "wx", 0o600);
+  try {
+    await handle.writeFile(`${JSON.stringify(stored)}\n`, "utf8");
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+  try {
+    await rename(temp, path);
+    await syncDirectory(directory);
+  } catch (error) {
+    await rm(temp, { force: true });
+    throw error;
+  }
   await retireLegacyAuthority();
   return value;
 }
@@ -673,7 +701,7 @@ export async function rotateConnectedInstallationAuthorityProtection(
       } catch (oldError) {
         try {
           parseStoredV2(currentRaw, newInstallationRoot);
-          await retireLegacyAuthority();
+          if (!dryRun) await retireLegacyAuthority();
           return "already-current";
         } catch {
           throw oldError;
@@ -697,7 +725,7 @@ export async function rotateConnectedInstallationAuthorityProtection(
       }
       if (dryRun) return "would-rotate";
       await persist(value, newInstallationRoot);
-      return "already-current";
+      return "rotated";
     }
     if (dryRun) return "would-rotate";
     await persist(value, newInstallationRoot);
