@@ -24,6 +24,7 @@ import {
 import { connect } from "node:net";
 import { basename, isAbsolute, join, resolve } from "node:path";
 
+import { rotateConnectedInstallationAuthorityProtection } from "@/lib/connected-platform/installation-authority";
 import {
   decryptString,
   deriveBlindIndex,
@@ -104,6 +105,7 @@ type RotationStage =
   | "messages"
   | "secrets"
   | "database-disconnect"
+  | "connected-installation-authority"
   | "identity-authority"
   | "root-commit";
 
@@ -1188,6 +1190,15 @@ async function main(): Promise<void> {
       );
     }
 
+    stage = "connected-installation-authority";
+    const connectedAuthority =
+      await rotateConnectedInstallationAuthorityProtection(
+        oldKey,
+        newKey,
+        DRY_RUN,
+      );
+    console.log(`Connected installation authority: ${connectedAuthority}`);
+
     stage = "identity-authority";
     const identityAuthority = rotateIdentityAuthorityAuthentication(
       oldKey,
@@ -1213,7 +1224,7 @@ async function main(): Promise<void> {
         : `New keyfile: ${KEYFILE_PATH}`,
     );
     console.log(
-      "Every protected shop key was re-wrapped without changing seller ciphertext; remaining authenticated legacy values and installation identity were rotated before the shared root commit.",
+      "Every protected shop key was re-wrapped without changing seller ciphertext; remaining authenticated legacy values, connected installation authority protection, and installation identity were reconciled before the shared root commit.",
     );
   } catch (error) {
     console.error(

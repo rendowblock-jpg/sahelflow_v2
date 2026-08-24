@@ -25,6 +25,7 @@ export const INSTALLATION_KEY_PURPOSES = [
   "backup-recovery-key-wrap",
   "native-command-bridge",
   "identity-authority",
+  "connected-installation-authority",
 ] as const;
 
 export type InstallationKeyPurpose =
