@@ -13,6 +13,7 @@
  *   - Street-level address + free-text notes → content withheld; region kept
  *   - Free-form customer conversation bodies → withheld from the remote model
  *   - Product/category/store names → unchanged
+ *   - Unclassified/future tools → fail closed until explicitly reviewed
  *
  * This is a defense-in-depth layer, not a complete PII shield — the LLM still
  * sees the minimum business context needed for the request. For full privacy,
@@ -23,6 +24,54 @@ import "server-only";
 const ALGERIAN_PHONE = /\b0[5-7]\d{8}\b/g;
 const INTL_PHONE = /\+213\s?[5-7]\d{8}\b/g;
 const PHONE_KEYS = new Set(["phone", "phone2", "customerPhone", "contactPhone"]);
+
+const TOOL_AWARE_REMOTE_TOOL_NAMES = [
+  "search_customers",
+  "get_order_details",
+  "list_recent_orders",
+  "get_customer_details",
+  "search_conversations",
+  "get_pending_deliveries",
+  "get_conversation_messages",
+  "search_orders",
+  "create_customer",
+  "update_customer_notes",
+] as const;
+
+const REVIEWED_GENERIC_REMOTE_TOOL_NAMES = [
+  "search_products",
+  "get_stats",
+  "get_low_stock_products",
+  "get_revenue_report",
+  "get_delivery_status",
+  "get_top_products",
+  "get_wilaya_risk",
+  "get_product_details",
+  "get_customer_orders",
+  "get_returns_summary",
+  "get_sales_by_wilaya",
+  "estimate_delivery_cost",
+  "get_delivery_cost_comparison",
+  "create_order",
+  "update_order_status",
+  "update_product_stock",
+  "cancel_order",
+  "create_product",
+  "update_product_price",
+  "assign_order_to_delivery",
+] as const;
+
+const TOOL_AWARE_REMOTE_TOOL_SET = new Set<string>(TOOL_AWARE_REMOTE_TOOL_NAMES);
+const REVIEWED_GENERIC_REMOTE_TOOL_SET = new Set<string>(
+  REVIEWED_GENERIC_REMOTE_TOOL_NAMES,
+);
+
+export const AI_REMOTE_SERIALIZATION_TOOL_NAMES = Object.freeze(
+  [
+    ...TOOL_AWARE_REMOTE_TOOL_NAMES,
+    ...REVIEWED_GENERIC_REMOTE_TOOL_NAMES,
+  ].sort(),
+);
 
 const CUSTOMER_PROPOSAL_TOOLS = new Set([
   "create_order",
@@ -38,8 +87,18 @@ function asRecord(value: unknown): JsonRecord | null {
     : null;
 }
 
-function safeString(value: unknown): string | null {
-  return typeof value === "string" ? redactPhonesInText(value) : null;
+function isKnownRemoteTool(toolName: string): boolean {
+  return (
+    TOOL_AWARE_REMOTE_TOOL_SET.has(toolName) ||
+    REVIEWED_GENERIC_REMOTE_TOOL_SET.has(toolName)
+  );
+}
+
+function safeString(value: unknown, maxLength = 256): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > maxLength) return null;
+  return redactPhonesInText(trimmed);
 }
 
 function safeNumber(value: unknown): number | null {
@@ -51,11 +110,21 @@ function safeBoolean(value: unknown): boolean | null {
 }
 
 function safeTimestamp(value: unknown): string | null {
+  let date: Date;
   if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+    date = value;
+  } else if (typeof value === "string" && value.length <= 128) {
+    date = new Date(value);
+  } else {
+    return null;
   }
-  if (typeof value !== "string") return null;
-  return Number.isNaN(Date.parse(value)) ? null : value;
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function safeDigestPrefix(value: unknown): string | null {
+  return typeof value === "string" && /^[0-9a-f]{12}$/i.test(value)
+    ? value
+    : null;
 }
 
 function maybeRedactPhone(value: unknown): string | null {
@@ -373,27 +442,22 @@ function serializePendingActionProposal(
   const root = asRecord(value);
   if (!root) return null;
   const proposal = asRecord(root.proposal);
-  const proposalDigest =
-    typeof root.proposalDigest === "string"
-      ? safeString(root.proposalDigest)
-      : null;
   if (!proposal) {
     return {
       pending_action_proposal: true,
-      tool: safeString(root.tool),
-      ...(proposalDigest !== null ? { proposalDigest } : {}),
+      tool: toolName,
     };
   }
 
   const summary = asRecord(proposal.summary);
   return {
     pending_action_proposal: true,
-    tool: safeString(root.tool),
+    tool: toolName,
     proposal: {
       id: safeString(proposal.id),
-      toolName: safeString(proposal.toolName),
+      toolName,
       status: safeString(proposal.status),
-      proposalDigestPrefix: safeString(proposal.proposalDigestPrefix),
+      proposalDigestPrefix: safeDigestPrefix(proposal.proposalDigestPrefix),
       summary:
         summary && CUSTOMER_PROPOSAL_TOOLS.has(toolName)
           ? serializeProposalSummary(toolName, summary)
@@ -405,24 +469,25 @@ function serializePendingActionProposal(
       executionState: safeString(proposal.executionState),
       lastErrorCode: safeString(proposal.lastErrorCode),
     },
-    ...(proposalDigest !== null ? { proposalDigest } : {}),
   };
 }
 
 /**
  * Serialize one tool result for the remote model.
  *
- * Known customer/contact tools get explicit allowlisted projections. Every
- * projected field is type-checked before it crosses the remote boundary. This
- * protects against future shape growth and wrapper-object drift accidentally
- * exposing newly-added PII. Unexpected shapes fail closed except for a stable
- * generic error envelope. Unknown/non-PII tools retain the generic recursive
- * sanitizer so product/category/store names remain useful and unchanged.
+ * Every current tool must be explicitly classified as either tool-aware PII
+ * projection or reviewed generic-safe output. Unknown/future tools fail closed
+ * until they are reviewed and classified. Known customer/contact tools get
+ * explicit allowlisted projections and every projected field is type-checked
+ * before it crosses the remote boundary. Free-form customer message content and
+ * the full trusted proposal digest never cross this serializer.
  */
 export function serializeToolResultForRemoteModel(
   toolName: string,
   result: unknown,
 ): unknown {
+  if (!isKnownRemoteTool(toolName)) return null;
+
   const record = asRecord(result);
   if (record?.pending_action_proposal === true) {
     return serializePendingActionProposal(toolName, result);
@@ -450,6 +515,8 @@ export function serializeToolResultForRemoteModel(
     case "update_customer_notes":
       return serializeLegacyCustomerNotes(result);
     default:
-      return redactToolResult(result);
+      return REVIEWED_GENERIC_REMOTE_TOOL_SET.has(toolName)
+        ? redactToolResult(result)
+        : null;
   }
 }
