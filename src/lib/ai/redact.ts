@@ -178,6 +178,18 @@ function safeBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
 }
 
+function safeMessageDirection(value: unknown): "inbound" | "outbound" | null {
+  if (typeof value !== "string") return null;
+  switch (value.trim().toLowerCase()) {
+    case "inbound":
+      return "inbound";
+    case "outbound":
+      return "outbound";
+    default:
+      return null;
+  }
+}
+
 function safeTimestamp(value: unknown): string | null {
   let date: Date;
   if (value instanceof Date) {
@@ -492,7 +504,7 @@ function serializePendingDeliveries(value: unknown): unknown {
 function serializeConversationMessages(value: unknown): unknown {
   return mapAllowlistedRecords(value, (message) => ({
     id: safeString(message.id),
-    direction: safeString(message.direction),
+    direction: safeMessageDirection(message.direction),
     body: null,
     bodyWithheld: hasText(message.body),
     context: conversationContextProjection(message.body),
