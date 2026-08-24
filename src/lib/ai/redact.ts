@@ -11,6 +11,7 @@
  *   - Phone numbers (0XXXXXXXXX, +213...) → "0X•••••XX" (last 2 digits visible)
  *   - Customer/contact names → first name + family-name initial
  *   - Street-level address + free-text notes → content withheld; region kept
+ *   - Free-form customer conversation bodies → withheld from the remote model
  *   - Product/category/store names → unchanged
  *
  * This is a defense-in-depth layer, not a complete PII shield — the LLM still
@@ -37,6 +38,26 @@ function asRecord(value: unknown): JsonRecord | null {
     : null;
 }
 
+function safeString(value: unknown): string | null {
+  return typeof value === "string" ? redactPhonesInText(value) : null;
+}
+
+function safeNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function safeBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
+function safeTimestamp(value: unknown): string | null {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  }
+  if (typeof value !== "string") return null;
+  return Number.isNaN(Date.parse(value)) ? null : value;
+}
+
 function maybeRedactPhone(value: unknown): string | null {
   return typeof value === "string" ? redactPhone(value) : null;
 }
@@ -46,13 +67,13 @@ function maybeRedactCustomerName(value: unknown): string | null {
 }
 
 function hasText(value: unknown): boolean {
-  return typeof value === "string" ? value.trim().length > 0 : Boolean(value);
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 function safeErrorOrNull(value: unknown): unknown {
   const record = asRecord(value);
   if (record && "error" in record) {
-    return { error: redactToolResult(record.error) };
+    return { error: "Tool failed" };
   }
   return null;
 }
@@ -106,6 +127,9 @@ export function redactToolResult(result: unknown): unknown {
     return result.map(redactToolResult);
   }
   if (result !== null && typeof result === "object") {
+    if (result instanceof Date) {
+      return Number.isNaN(result.getTime()) ? null : result.toISOString();
+    }
     const out: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(result as Record<string, unknown>)) {
       if (PHONE_KEYS.has(key)) {
@@ -128,12 +152,12 @@ export function redactToolResult(result: unknown): unknown {
 
 function serializeSearchCustomers(value: unknown): unknown {
   return mapAllowlistedRecords(value, (customer) => ({
-    id: customer.id,
+    id: safeString(customer.id),
     name: maybeRedactCustomerName(customer.name),
     phone: maybeRedactPhone(customer.phone),
-    wilaya: customer.wilaya,
-    orderCount: customer.orderCount,
-    totalSpent: customer.totalSpent,
+    wilaya: safeString(customer.wilaya),
+    orderCount: safeNumber(customer.orderCount),
+    totalSpent: safeNumber(customer.totalSpent),
   }));
 }
 
@@ -148,10 +172,10 @@ function serializeOrderDetails(value: unknown): unknown {
         return item
           ? [
               {
-                productName: item.productName,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                total: item.total,
+                productName: safeString(item.productName),
+                quantity: safeNumber(item.quantity),
+                unitPrice: safeNumber(item.unitPrice),
+                total: safeNumber(item.total),
               },
             ]
           : [];
@@ -160,23 +184,23 @@ function serializeOrderDetails(value: unknown): unknown {
   const delivery = asRecord(order.delivery);
 
   return {
-    id: order.id,
-    orderNumber: order.orderNumber,
-    status: order.status,
-    totalPrice: order.totalPrice,
-    deliveryCost: order.deliveryCost,
-    wilaya: order.wilaya,
-    commune: order.commune,
+    id: safeString(order.id),
+    orderNumber: safeString(order.orderNumber),
+    status: safeString(order.status),
+    totalPrice: safeNumber(order.totalPrice),
+    deliveryCost: safeNumber(order.deliveryCost),
+    wilaya: safeString(order.wilaya),
+    commune: safeString(order.commune),
     phone: maybeRedactPhone(order.phone),
     hasNotes: hasText(order.notes),
-    source: order.source,
-    createdAt: order.createdAt,
-    confirmedAt: order.confirmedAt,
-    shippedAt: order.shippedAt,
-    deliveredAt: order.deliveredAt,
+    source: safeString(order.source),
+    createdAt: safeTimestamp(order.createdAt),
+    confirmedAt: safeTimestamp(order.confirmedAt),
+    shippedAt: safeTimestamp(order.shippedAt),
+    deliveredAt: safeTimestamp(order.deliveredAt),
     customer: customer
       ? {
-          id: customer.id,
+          id: safeString(customer.id),
           name: maybeRedactCustomerName(customer.name),
           phone: maybeRedactPhone(customer.phone),
         }
@@ -184,9 +208,9 @@ function serializeOrderDetails(value: unknown): unknown {
     items,
     delivery: delivery
       ? {
-          status: delivery.status,
-          provider: delivery.provider,
-          trackingNumber: delivery.trackingNumber,
+          status: safeString(delivery.status),
+          provider: safeString(delivery.provider),
+          trackingNumber: safeString(delivery.trackingNumber),
         }
       : null,
   };
@@ -194,12 +218,12 @@ function serializeOrderDetails(value: unknown): unknown {
 
 function serializeRecentOrders(value: unknown): unknown {
   return mapAllowlistedRecords(value, (order) => ({
-    orderNumber: order.orderNumber,
+    orderNumber: safeString(order.orderNumber),
     customerName: maybeRedactCustomerName(order.customerName),
-    status: order.status,
-    totalPrice: order.totalPrice,
-    wilaya: order.wilaya,
-    createdAt: order.createdAt,
+    status: safeString(order.status),
+    totalPrice: safeNumber(order.totalPrice),
+    wilaya: safeString(order.wilaya),
+    createdAt: safeTimestamp(order.createdAt),
   }));
 }
 
@@ -213,10 +237,10 @@ function serializeCustomerDetails(value: unknown): unknown {
         return order
           ? [
               {
-                orderNumber: order.orderNumber,
-                status: order.status,
-                totalPrice: order.totalPrice,
-                createdAt: order.createdAt,
+                orderNumber: safeString(order.orderNumber),
+                status: safeString(order.status),
+                totalPrice: safeNumber(order.totalPrice),
+                createdAt: safeTimestamp(order.createdAt),
               },
             ]
           : [];
@@ -224,67 +248,65 @@ function serializeCustomerDetails(value: unknown): unknown {
     : [];
 
   return {
-    id: customer.id,
+    id: safeString(customer.id),
     name: maybeRedactCustomerName(customer.name),
     phone: maybeRedactPhone(customer.phone),
     phone2: maybeRedactPhone(customer.phone2),
-    wilaya: customer.wilaya,
-    commune: customer.commune,
+    wilaya: safeString(customer.wilaya),
+    commune: safeString(customer.commune),
     hasStreetAddress: hasText(customer.address),
     hasNotes: hasText(customer.notes),
-    orderCount: customer.orderCount,
-    totalSpent: customer.totalSpent,
-    riskScore: customer.riskScore,
-    createdAt: customer.createdAt,
+    orderCount: safeNumber(customer.orderCount),
+    totalSpent: safeNumber(customer.totalSpent),
+    riskScore: safeNumber(customer.riskScore),
+    createdAt: safeTimestamp(customer.createdAt),
     orders,
   };
 }
 
 function serializeConversations(value: unknown): unknown {
   return mapAllowlistedRecords(value, (conversation) => ({
-    id: conversation.id,
-    channel: conversation.channel,
+    id: safeString(conversation.id),
+    channel: safeString(conversation.channel),
     contactName: maybeRedactCustomerName(conversation.contactName),
     contactPhone: maybeRedactPhone(conversation.contactPhone),
-    lastMessageAt: conversation.lastMessageAt,
-    unreadCount: conversation.unreadCount,
+    lastMessageAt: safeTimestamp(conversation.lastMessageAt),
+    unreadCount: safeNumber(conversation.unreadCount),
   }));
 }
 
 function serializePendingDeliveries(value: unknown): unknown {
   return mapAllowlistedRecords(value, (delivery) => ({
-    id: delivery.id,
-    provider: delivery.provider,
-    status: delivery.status,
-    trackingNumber: delivery.trackingNumber,
-    shippingCost: delivery.shippingCost,
-    createdAt: delivery.createdAt,
-    orderNumber: delivery.orderNumber,
+    id: safeString(delivery.id),
+    provider: safeString(delivery.provider),
+    status: safeString(delivery.status),
+    trackingNumber: safeString(delivery.trackingNumber),
+    shippingCost: safeNumber(delivery.shippingCost),
+    createdAt: safeTimestamp(delivery.createdAt),
+    orderNumber: safeString(delivery.orderNumber),
     customerName: maybeRedactCustomerName(delivery.customerName),
-    wilaya: delivery.wilaya,
+    wilaya: safeString(delivery.wilaya),
   }));
 }
 
 function serializeConversationMessages(value: unknown): unknown {
   return mapAllowlistedRecords(value, (message) => ({
-    id: message.id,
-    direction: message.direction,
-    body:
-      typeof message.body === "string"
-        ? redactPhonesInText(message.body)
-        : null,
-    timestamp: message.timestamp,
-    extracted: message.extracted,
+    id: safeString(message.id),
+    direction: safeString(message.direction),
+    body: null,
+    bodyWithheld: hasText(message.body),
+    timestamp: safeTimestamp(message.timestamp),
+    extracted: safeBoolean(message.extracted),
   }));
 }
 
 function serializeSearchOrders(value: unknown): unknown {
   return mapAllowlistedRecords(value, (order) => ({
-    orderNumber: order.orderNumber,
-    status: order.status,
-    totalPrice: order.totalPrice,
-    wilaya: order.wilaya,
-    createdAt: order.createdAt,
+    orderNumber: safeString(order.orderNumber),
+    status: safeString(order.status),
+    totalPrice: safeNumber(order.totalPrice),
+    wilaya: safeString(order.wilaya),
+    createdAt: safeTimestamp(order.createdAt),
     customerName: maybeRedactCustomerName(order.customerName),
     customerPhone: maybeRedactPhone(order.customerPhone),
   }));
@@ -294,12 +316,12 @@ function serializeLegacyCreateCustomer(value: unknown): unknown {
   const customer = asRecord(value);
   if (!customer || "error" in customer) return safeErrorOrNull(value);
   return {
-    id: customer.id,
+    id: safeString(customer.id),
     name: maybeRedactCustomerName(customer.name),
     phone: maybeRedactPhone(customer.phone),
     phone2: maybeRedactPhone(customer.phone2),
-    wilaya: customer.wilaya,
-    commune: customer.commune,
+    wilaya: safeString(customer.wilaya),
+    commune: safeString(customer.commune),
   };
 }
 
@@ -307,7 +329,7 @@ function serializeLegacyCustomerNotes(value: unknown): unknown {
   const result = asRecord(value);
   if (!result || "error" in result) return safeErrorOrNull(value);
   return {
-    customerId: result.customerId,
+    customerId: safeString(result.customerId),
     hasNotes: hasText(result.notes),
   };
 }
@@ -320,9 +342,9 @@ function serializeProposalSummary(
     case "create_order":
       return {
         customerName: maybeRedactCustomerName(summary.customerName),
-        itemCount: summary.itemCount,
-        totalQuantity: summary.totalQuantity,
-        wilaya: summary.wilaya,
+        itemCount: safeNumber(summary.itemCount),
+        totalQuantity: safeNumber(summary.totalQuantity),
+        wilaya: safeString(summary.wilaya),
       };
     case "create_customer":
       return {
@@ -331,13 +353,13 @@ function serializeProposalSummary(
           typeof summary.phoneLast4 === "string"
             ? `••${summary.phoneLast4.slice(-2)}`
             : null,
-        wilaya: summary.wilaya,
+        wilaya: safeString(summary.wilaya),
       };
     case "update_customer_notes":
       return {
         customerName: maybeRedactCustomerName(summary.customerName),
-        mode: summary.mode,
-        noteLength: summary.noteLength,
+        mode: safeString(summary.mode),
+        noteLength: safeNumber(summary.noteLength),
       };
     default:
       return redactToolResult(summary) as JsonRecord;
@@ -354,43 +376,44 @@ function serializePendingActionProposal(
   if (!proposal) {
     return {
       pending_action_proposal: true,
-      tool: root.tool,
-      proposalDigest: root.proposalDigest,
+      tool: safeString(root.tool),
+      proposalDigest: safeString(root.proposalDigest),
     };
   }
 
   const summary = asRecord(proposal.summary);
   return {
     pending_action_proposal: true,
-    tool: root.tool,
+    tool: safeString(root.tool),
     proposal: {
-      id: proposal.id,
-      toolName: proposal.toolName,
-      status: proposal.status,
-      proposalDigestPrefix: proposal.proposalDigestPrefix,
+      id: safeString(proposal.id),
+      toolName: safeString(proposal.toolName),
+      status: safeString(proposal.status),
+      proposalDigestPrefix: safeString(proposal.proposalDigestPrefix),
       summary:
         summary && CUSTOMER_PROPOSAL_TOOLS.has(toolName)
           ? serializeProposalSummary(toolName, summary)
           : summary
             ? (redactToolResult(summary) as JsonRecord)
             : null,
-      expiresAt: proposal.expiresAt,
-      createdAt: proposal.createdAt,
-      executionState: proposal.executionState,
-      lastErrorCode: proposal.lastErrorCode,
+      expiresAt: safeTimestamp(proposal.expiresAt),
+      createdAt: safeTimestamp(proposal.createdAt),
+      executionState: safeString(proposal.executionState),
+      lastErrorCode: safeString(proposal.lastErrorCode),
     },
-    proposalDigest: root.proposalDigest,
+    proposalDigest: safeString(root.proposalDigest),
   };
 }
 
 /**
  * Serialize one tool result for the remote model.
  *
- * Known customer/contact tools get explicit allowlisted projections. This
- * protects against future shape growth accidentally exposing a newly-added
- * PII field. Unexpected shapes fail closed except for the standard `error`
- * envelope. Unknown/non-PII tools retain the generic recursive sanitizer so
- * product/category/store names remain useful and unchanged.
+ * Known customer/contact tools get explicit allowlisted projections. Every
+ * projected field is type-checked before it crosses the remote boundary. This
+ * protects against future shape growth and wrapper-object drift accidentally
+ * exposing newly-added PII. Unexpected shapes fail closed except for a stable
+ * generic error envelope. Unknown/non-PII tools retain the generic recursive
+ * sanitizer so product/category/store names remain useful and unchanged.
  */
 export function serializeToolResultForRemoteModel(
   toolName: string,
