@@ -63,6 +63,9 @@ export interface ChatTool {
 
 const registry = new Map<string, ChatTool>();
 
+const REMOTE_CONVERSATION_MESSAGES_DESCRIPTION =
+  "Read privacy-safe context signals for recent conversation messages. Returns direction, timestamps, extraction flags, and bounded semantic tags/attributes. Verbatim message body text stays local and is not exposed to the remote model; use this for coarse context only, not exact-message summarization or drafting that requires the customer's original wording.";
+
 function legacyVitestHarness(): boolean {
   return (
     (process.env.NODE_ENV === "test" || process.env.VITEST === "true") &&
@@ -130,12 +133,22 @@ export function listTools(): ChatTool[] {
  * Get definitions exposed to Gemini. Blocked provider actions are omitted and
  * every registration must have a central policy entry. Legacy confirmation
  * metadata is stripped so current-message words can never become authority.
+ * Definitions whose local implementation returns privacy-sensitive fields are
+ * narrowed here to match the actual remote projection contract.
  */
 export function getAllToolDefinitions(): ToolDefinition[] {
   return listTools().flatMap((tool) => {
     const policy = getAiToolPolicy(tool.definition.name);
     if (policy.executionClass === "blocked") return [];
     const { requiresConfirmation: _legacy, ...definition } = tool.definition;
+    if (definition.name === "get_conversation_messages") {
+      return [
+        {
+          ...definition,
+          description: REMOTE_CONVERSATION_MESSAGES_DESCRIPTION,
+        },
+      ];
+    }
     return [definition];
   });
 }
