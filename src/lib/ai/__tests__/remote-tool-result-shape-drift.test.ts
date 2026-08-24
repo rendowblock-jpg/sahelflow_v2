@@ -1,12 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import { serializeToolResultForRemoteModel } from "../redact";
+import { EXPECTED_AI_TOOL_NAMES } from "../actions/contracts";
+import {
+  AI_REMOTE_SERIALIZATION_TOOL_NAMES,
+  serializeToolResultForRemoteModel,
+} from "../redact";
 
 const FULL_NAME = "Karim Benali";
 const PHONE = "0555123456";
 const STREET = "12 Rue Didouche Mourad, Alger Centre";
 
 describe("remote AI PII serializer shape drift", () => {
+  it("classifies every registered AI tool and fails closed for unknown tools", () => {
+    expect(AI_REMOTE_SERIALIZATION_TOOL_NAMES).toEqual(EXPECTED_AI_TOOL_NAMES);
+    expect(
+      serializeToolResultForRemoteModel("future_unclassified_tool", {
+        name: "Should not cross",
+      }),
+    ).toBeNull();
+  });
+
   it("fails closed when an array-shaped PII tool unexpectedly returns an object", () => {
     const output = serializeToolResultForRemoteModel("search_customers", {
       id: "cust-drift",
@@ -64,6 +77,24 @@ describe("remote AI PII serializer shape drift", () => {
     expect(JSON.stringify(output)).not.toContain(PHONE);
   });
 
+  it("canonicalizes parseable timestamps instead of returning comment-bearing input", () => {
+    const output = serializeToolResultForRemoteModel("search_orders", [
+      {
+        orderNumber: "CMD-1",
+        status: "confirmed",
+        totalPrice: 1000,
+        wilaya: "Alger",
+        createdAt: `Mon, 24 Aug 2026 19:00:00 GMT (${FULL_NAME} ${PHONE})`,
+        customerName: "Karim",
+        customerPhone: PHONE,
+      },
+    ]) as Array<Record<string, unknown>>;
+
+    expect(output[0]?.createdAt).toBe("2026-08-24T19:00:00.000Z");
+    expect(JSON.stringify(output)).not.toContain(FULL_NAME);
+    expect(JSON.stringify(output)).not.toContain(PHONE);
+  });
+
   it("withholds all free-form conversation bodies from the remote projection", () => {
     const output = serializeToolResultForRemoteModel("get_conversation_messages", [
       {
@@ -98,16 +129,18 @@ describe("remote AI PII serializer shape drift", () => {
     expect(JSON.stringify(output)).not.toContain(PHONE);
   });
 
-  it("fails closed for non-string generic phone and address wrappers", () => {
-    const output = serializeToolResultForRemoteModel("future_non_pii_tool", {
-      name: "Legitimate product name",
-      phone: { raw: PHONE },
-      address: { raw: STREET },
-    }) as Record<string, unknown>;
+  it("fails closed for non-string generic phone and address wrappers on reviewed safe tools", () => {
+    const output = serializeToolResultForRemoteModel("search_products", [
+      {
+        name: "Legitimate product name",
+        phone: { raw: PHONE },
+        address: { raw: STREET },
+      },
+    ]) as Array<Record<string, unknown>>;
 
-    expect(output.name).toBe("Legitimate product name");
-    expect(output.phone).toBeNull();
-    expect(output.address).toBeNull();
+    expect(output[0]?.name).toBe("Legitimate product name");
+    expect(output[0]?.phone).toBeNull();
+    expect(output[0]?.address).toBeNull();
     expect(JSON.stringify(output)).not.toContain(PHONE);
     expect(JSON.stringify(output)).not.toContain(STREET);
   });
@@ -124,7 +157,7 @@ describe("remote AI PII serializer shape drift", () => {
     expect(JSON.stringify(output)).not.toContain(STREET);
   });
 
-  it("allowlists the pending proposal envelope and customer summary", () => {
+  it("allowlists the pending proposal envelope while withholding full authority digest", () => {
     const output = serializeToolResultForRemoteModel("create_customer", {
       pending_action_proposal: true,
       tool: "create_customer",
@@ -156,13 +189,13 @@ describe("remote AI PII serializer shape drift", () => {
     expect(text).not.toContain(FULL_NAME);
     expect(text).not.toContain(PHONE);
     expect(text).not.toContain(STREET);
-    expect(output.proposalDigest).toBe("trusted-digest");
+    expect(output.proposalDigest).toBeUndefined();
   });
 
   it("withholds drifted PII and operational wrappers from proposal projections", () => {
     const output = serializeToolResultForRemoteModel("create_customer", {
       pending_action_proposal: true,
-      tool: "create_customer",
+      tool: { address: STREET },
       proposal: {
         id: { address: STREET },
         toolName: { phone: PHONE },
@@ -180,12 +213,16 @@ describe("remote AI PII serializer shape drift", () => {
       },
       proposalDigest: "trusted-digest",
     }) as {
+      tool?: unknown;
       proposal?: Record<string, unknown> & { summary?: Record<string, unknown> };
+      proposalDigest?: unknown;
     };
 
+    expect(output.tool).toBe("create_customer");
+    expect(output.proposalDigest).toBeUndefined();
     expect(output.proposal).toMatchObject({
       id: null,
-      toolName: null,
+      toolName: "create_customer",
       status: null,
       proposalDigestPrefix: null,
       expiresAt: null,

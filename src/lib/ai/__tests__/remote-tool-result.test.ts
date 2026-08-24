@@ -246,7 +246,7 @@ describe("serializeToolResultForRemoteModel — negative controls and proposals"
     expect(JSON.stringify(topProducts)).toContain("Atlas Premium Hoodie");
   });
 
-  it("minimizes customer proposal summaries without changing proposal authority fields", () => {
+  it("minimizes customer proposal summaries while keeping full digest local", () => {
     const output = serializeToolResultForRemoteModel("create_customer", {
       pending_action_proposal: true,
       tool: "create_customer",
@@ -265,7 +265,7 @@ describe("serializeToolResultForRemoteModel — negative controls and proposals"
         executionState: null,
         lastErrorCode: null,
       },
-      proposalDigest: "trusted-digest-kept-by-this-serializer",
+      proposalDigest: "trusted-digest-kept-local",
     }) as Record<string, unknown>;
 
     const proposal = output.proposal as Record<string, unknown>;
@@ -274,7 +274,7 @@ describe("serializeToolResultForRemoteModel — negative controls and proposals"
     expect(proposal.proposalDigestPrefix).toBe("abcdef123456");
     expect(summary.customerName).toBe("Karim B.");
     expect(summary.phoneLast4).toBe("••56");
-    expect(output.proposalDigest).toBe("trusted-digest-kept-by-this-serializer");
+    expect(output.proposalDigest).toBeUndefined();
   });
 
   it("sanitizes legacy create_customer and update_customer_notes history shapes", () => {
