@@ -25,6 +25,7 @@ export const INSTALLATION_KEY_PURPOSES = [
   "backup-recovery-key-wrap",
   "native-command-bridge",
   "identity-authority",
+  "connected-installation-authority",
 ] as const;
 
 export type InstallationKeyPurpose =
@@ -64,7 +65,7 @@ function assertContext(context: InstallationKeyContext): void {
   }
   if (!Number.isSafeInteger(context.version) || context.version < 1) {
     throw new TypeError(
-      "Installation key version must be a positive safe integer",
+      `${label} must be a positive safe integer`,
     );
   }
 }
