@@ -3,14 +3,13 @@
  *
  * Responsibilities:
  *   - Manage the WhatsApp Web socket connection (connect/reconnect/logout)
- *   - Persist auth creds to data/whatsapp-auth/ (survives restarts)
+ *   - Persist protected auth credentials across restarts
  *   - Maintain an in-memory chat + message store
  *   - Emit events to subscribers (the HTTP/WS layer subscribes)
  */
 
 import {
   makeWASocket,
-  useMultiFileAuthState,
   fetchLatestWaWebVersion,
   makeInMemoryStore,
   DisconnectReason,
@@ -19,12 +18,15 @@ import {
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import P from "pino";
-import { mkdirSync, rmSync, existsSync, chmodSync, readFileSync } from "fs";
-import { join, resolve } from "path";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { tmpdir } from "os";
 
-const DATA_DIR = process.env.SF_DATA_DIR ?? join(process.cwd(), "data");
-const AUTH_FOLDER = resolve(DATA_DIR, "whatsapp-auth");
+import {
+  clearProtectedWhatsAppAuthState,
+  useProtectedWhatsAppAuthState,
+} from "./protected-auth-state";
+
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
 
 const logger = P({ level: process.env.SF_LOG_LEVEL ?? "warn", name: "wa" });
@@ -204,16 +206,7 @@ export class WhatsAppManager {
     this.currentQr = null;
     this.emit({ type: "status", status: "connecting" });
 
-    if (!existsSync(AUTH_FOLDER)) {
-      mkdirSync(AUTH_FOLDER, { recursive: true, mode: 0o700 });
-    }
-    try {
-      chmodSync(AUTH_FOLDER, 0o700);
-    } catch {
-      // Best effort on platforms/filesystems where chmod cannot be tightened.
-    }
-
-    const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
+    const { state, saveCreds } = await useProtectedWhatsAppAuthState();
     const versionResult = await fetchLatestWaWebVersion({
       signal: AbortSignal.timeout(WA_VERSION_LOOKUP_TIMEOUT_MS),
     });
@@ -466,9 +459,7 @@ export class WhatsAppManager {
 
   private clearAuth(): void {
     try {
-      if (existsSync(AUTH_FOLDER)) {
-        rmSync(AUTH_FOLDER, { recursive: true, force: true });
-      }
+      clearProtectedWhatsAppAuthState();
     } catch {
       // best effort
     }
