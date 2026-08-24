@@ -42,6 +42,46 @@ describe("remote AI PII serializer shape drift", () => {
     expect(JSON.stringify(output)).not.toContain(PHONE);
   });
 
+  it("withholds wrapper objects from every nominally operational allowlisted field", () => {
+    const output = serializeToolResultForRemoteModel("search_customers", [
+      {
+        id: { address: STREET },
+        name: "Karim",
+        phone: "0555123456",
+        wilaya: { rawPhone: PHONE },
+        orderCount: { raw: 2, address: STREET },
+        totalSpent: { raw: 12000, phone: PHONE },
+      },
+    ]) as Array<Record<string, unknown>>;
+
+    expect(output[0]).toMatchObject({
+      id: null,
+      wilaya: null,
+      orderCount: null,
+      totalSpent: null,
+    });
+    expect(JSON.stringify(output)).not.toContain(STREET);
+    expect(JSON.stringify(output)).not.toContain(PHONE);
+  });
+
+  it("withholds all free-form conversation bodies from the remote projection", () => {
+    const output = serializeToolResultForRemoteModel("get_conversation_messages", [
+      {
+        id: "msg-wrapper",
+        direction: "inbound",
+        body: `Karim Benali lives at ${STREET}; call ${PHONE}`,
+        timestamp: "2026-08-24T19:00:00.000Z",
+        extracted: false,
+      },
+    ]) as Array<Record<string, unknown>>;
+
+    expect(output[0]?.body).toBeNull();
+    expect(output[0]?.bodyWithheld).toBe(true);
+    expect(JSON.stringify(output)).not.toContain(FULL_NAME);
+    expect(JSON.stringify(output)).not.toContain(STREET);
+    expect(JSON.stringify(output)).not.toContain(PHONE);
+  });
+
   it("withholds non-string conversation bodies instead of serializing nested PII", () => {
     const output = serializeToolResultForRemoteModel("get_conversation_messages", [
       {
@@ -54,6 +94,7 @@ describe("remote AI PII serializer shape drift", () => {
     ]) as Array<Record<string, unknown>>;
 
     expect(output[0]?.body).toBeNull();
+    expect(output[0]?.bodyWithheld).toBe(false);
     expect(JSON.stringify(output)).not.toContain(PHONE);
   });
 
@@ -71,14 +112,15 @@ describe("remote AI PII serializer shape drift", () => {
     expect(JSON.stringify(output)).not.toContain(STREET);
   });
 
-  it("preserves only the standard error envelope on a mismatched PII result", () => {
+  it("preserves only a stable error marker on a mismatched PII result", () => {
     const output = serializeToolResultForRemoteModel("search_customers", {
-      error: `Lookup failed for ${PHONE}`,
+      error: `Lookup failed for ${PHONE} near ${STREET}`,
       name: FULL_NAME,
       address: STREET,
     });
-    expect(output).toEqual({ error: "Lookup failed for 0•••••••56" });
+    expect(output).toEqual({ error: "Tool failed" });
     expect(JSON.stringify(output)).not.toContain(FULL_NAME);
+    expect(JSON.stringify(output)).not.toContain(PHONE);
     expect(JSON.stringify(output)).not.toContain(STREET);
   });
 
@@ -117,33 +159,47 @@ describe("remote AI PII serializer shape drift", () => {
     expect(output.proposalDigest).toBe("trusted-digest");
   });
 
-  it("withholds drifted PII wrappers from proposal summaries", () => {
+  it("withholds drifted PII and operational wrappers from proposal projections", () => {
     const output = serializeToolResultForRemoteModel("create_customer", {
       pending_action_proposal: true,
       tool: "create_customer",
       proposal: {
-        id: "aip-wrapper",
-        toolName: "create_customer",
-        status: "pending",
-        proposalDigestPrefix: "abcdef123456",
+        id: { address: STREET },
+        toolName: { phone: PHONE },
+        status: { raw: "pending", address: STREET },
+        proposalDigestPrefix: { phone: PHONE },
         summary: {
           customerName: { raw: FULL_NAME },
           phoneLast4: { raw: "3456", phone: PHONE },
-          wilaya: "Alger",
+          wilaya: { address: STREET },
         },
-        expiresAt: "2026-08-24T20:00:00.000Z",
-        createdAt: "2026-08-24T19:00:00.000Z",
-        executionState: null,
-        lastErrorCode: null,
+        expiresAt: { raw: "2026-08-24T20:00:00.000Z", phone: PHONE },
+        createdAt: { raw: "2026-08-24T19:00:00.000Z", address: STREET },
+        executionState: { address: STREET },
+        lastErrorCode: { phone: PHONE },
       },
       proposalDigest: "trusted-digest",
     }) as {
-      proposal?: { summary?: Record<string, unknown> };
+      proposal?: Record<string, unknown> & { summary?: Record<string, unknown> };
     };
 
-    expect(output.proposal?.summary?.customerName).toBeNull();
-    expect(output.proposal?.summary?.phoneLast4).toBeNull();
+    expect(output.proposal).toMatchObject({
+      id: null,
+      toolName: null,
+      status: null,
+      proposalDigestPrefix: null,
+      expiresAt: null,
+      createdAt: null,
+      executionState: null,
+      lastErrorCode: null,
+    });
+    expect(output.proposal?.summary).toMatchObject({
+      customerName: null,
+      phoneLast4: null,
+      wilaya: null,
+    });
     expect(JSON.stringify(output)).not.toContain(FULL_NAME);
     expect(JSON.stringify(output)).not.toContain(PHONE);
+    expect(JSON.stringify(output)).not.toContain(STREET);
   });
 });
