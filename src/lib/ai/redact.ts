@@ -22,6 +22,8 @@
  */
 import "server-only";
 
+import { safeCommune, safeWilaya } from "./location-authority";
+
 const FLEXIBLE_LOCAL_PHONE = /(?<!\d)0[5-7](?:[\p{Zs}\t.-]?\d){8}(?!\d)/gu;
 const FLEXIBLE_INTL_PHONE = /(?<!\d)(?:\+213|00213)[\p{Zs}\t.-]?[5-7](?:[\p{Zs}\t.-]?\d){8}(?!\d)/gu;
 const ORDER_REFERENCE_HINT = /\b(?:ORD|CMD|SYNC-(?:SHOPIFY|WOOCOMMERCE|YOUCAN))-[A-Z0-9-]{1,32}\b/iu;
@@ -45,67 +47,6 @@ const REMOTE_ORDER_STATUSES = new Set([
   "refunded",
   "failed",
 ]);
-
-const CANONICAL_WILAYA_NAMES = [
-  "Adrar",
-  "Chlef",
-  "Laghouat",
-  "Oum El Bouaghi",
-  "Batna",
-  "Béjaïa",
-  "Biskra",
-  "Béchar",
-  "Blida",
-  "Bouira",
-  "Tamanrasset",
-  "Tébessa",
-  "Tlemcen",
-  "Tiaret",
-  "Tizi Ouzou",
-  "Alger",
-  "Djelfa",
-  "Jijel",
-  "Sétif",
-  "Saïda",
-  "Skikda",
-  "Sidi Bel Abbès",
-  "Annaba",
-  "Guelma",
-  "Constantine",
-  "Médéa",
-  "Mostaganem",
-  "M'Sila",
-  "Mascara",
-  "Ouargla",
-  "Oran",
-  "El Bayadh",
-  "Illizi",
-  "Bordj Bou Arréridj",
-  "Boumerdès",
-  "El Tarf",
-  "Tindouf",
-  "Tissemsilt",
-  "El Oued",
-  "Khenchela",
-  "Souk Ahras",
-  "Tipaza",
-  "Mila",
-  "Aïn Defla",
-  "Naâma",
-  "Aïn Témouchent",
-  "Ghardaïa",
-  "Relizane",
-  "Timimoun",
-  "Bordj Badji Mokhtar",
-  "Ouled Djellal",
-  "Béni Abbès",
-  "In Salah",
-  "In Guezzam",
-  "Touggourt",
-  "Djanet",
-  "El M'Ghair",
-  "El Meniaa",
-] as const;
 
 const CONVERSATION_CONTEXT_RULES = [
   ["greeting", /(?:bonjour|salut|hello|salam|سلام|السلام عليكم)/iu],
@@ -256,31 +197,6 @@ function safeNumber(value: unknown): number | null {
 
 function safeBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
-}
-
-function normalizeLocationKey(value: string): string {
-  return value
-    .normalize("NFKD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, "");
-}
-
-const CANONICAL_WILAYA_BY_KEY = new Map<string, string>(
-  CANONICAL_WILAYA_NAMES.map((name) => [normalizeLocationKey(name), name]),
-);
-
-function safeWilaya(value: unknown): string | null {
-  if (typeof value !== "string" || value.length > 80) return null;
-  const key = normalizeLocationKey(value.trim());
-  return key ? CANONICAL_WILAYA_BY_KEY.get(key) ?? null : null;
-}
-
-function safeCommune(value: unknown): string | null {
-  // There is no canonical commune authority in the current repository. Keep a
-  // fail-closed subset only: commune values that are themselves canonical
-  // wilaya names are safe known location tokens; everything else is withheld.
-  return safeWilaya(value);
 }
 
 function safeMessageDirection(value: unknown): "inbound" | "outbound" | null {
@@ -460,8 +376,9 @@ export function redactToolResult(result: unknown): unknown {
     if (result instanceof Date) {
       return Number.isNaN(result.getTime()) ? null : result.toISOString();
     }
+    const record = result as Record<string, unknown>;
     const out: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(result as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(record)) {
       if (key === "error") {
         out[key] = "Tool failed";
       } else if (PHONE_KEYS.has(key)) {
@@ -469,7 +386,7 @@ export function redactToolResult(result: unknown): unknown {
       } else if (key === "wilaya") {
         out[key] = safeWilaya(value);
       } else if (key === "commune") {
-        out[key] = safeCommune(value);
+        out[key] = safeCommune(value, record.wilaya);
       } else if (key === "address") {
         out[key] =
           typeof value === "string"
@@ -526,7 +443,7 @@ function serializeOrderDetails(value: unknown): unknown {
     totalPrice: safeNumber(order.totalPrice),
     deliveryCost: safeNumber(order.deliveryCost),
     wilaya: safeWilaya(order.wilaya),
-    commune: safeCommune(order.commune),
+    commune: safeCommune(order.commune, order.wilaya),
     phone: maybeRedactPhone(order.phone),
     hasNotes: hasText(order.notes),
     source: safeString(order.source),
@@ -589,7 +506,7 @@ function serializeCustomerDetails(value: unknown): unknown {
     phone: maybeRedactPhone(customer.phone),
     phone2: maybeRedactPhone(customer.phone2),
     wilaya: safeWilaya(customer.wilaya),
-    commune: safeCommune(customer.commune),
+    commune: safeCommune(customer.commune, customer.wilaya),
     hasStreetAddress: hasText(customer.address),
     hasNotes: hasText(customer.notes),
     orderCount: safeNumber(customer.orderCount),
@@ -672,7 +589,7 @@ function serializeLegacyCreateCustomer(value: unknown): unknown {
     phone: maybeRedactPhone(customer.phone),
     phone2: maybeRedactPhone(customer.phone2),
     wilaya: safeWilaya(customer.wilaya),
-    commune: safeCommune(customer.commune),
+    commune: safeCommune(customer.commune, customer.wilaya),
   };
 }
 
