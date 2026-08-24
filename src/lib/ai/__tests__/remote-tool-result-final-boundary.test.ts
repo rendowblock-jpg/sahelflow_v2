@@ -110,6 +110,28 @@ describe("remote tool-result final privacy boundary", () => {
     expect(mismatch.commune).toBeNull();
   });
 
+  it("fails closed when one commune alias resolves to multiple canonical communes", () => {
+    const withWilaya = serializeToolResultForRemoteModel("get_order_details", {
+      orderNumber: "ORD-5201",
+      status: "confirmed",
+      wilaya: "Tiaret",
+      commune: "ملاكو",
+    }) as Record<string, unknown>;
+    const withoutWilaya = serializeToolResultForRemoteModel(
+      "get_customer_details",
+      {
+        id: "customer-ambiguous-commune",
+        name: "Karim",
+        commune: "ملاكو",
+        orders: [],
+      },
+    ) as Record<string, unknown>;
+
+    expect(withWilaya.wilaya).toBe("Tiaret");
+    expect(withWilaya.commune).toBeNull();
+    expect(withoutWilaya.commune).toBeNull();
+  });
+
   it("canonicalizes or withholds location fields across customer-linked reads", () => {
     const maliciousLocation = `${PRIVATE_NAME}, ${PRIVATE_STREET}`;
     const orderDetails = serializeToolResultForRemoteModel("get_order_details", {
