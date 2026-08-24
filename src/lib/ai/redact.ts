@@ -12,7 +12,7 @@
  *   - Customer/contact names → first name + family-name initial
  *   - Phone/email/address-like customer names → withheld rather than treated as names
  *   - Street-level address + free-text notes → content withheld; region kept
- *   - Free-form customer conversation bodies → fixed local context signals only
+ *   - Free-form customer conversation bodies → fixed local semantic signals only
  *   - Product/category/store names → unchanged
  *   - Unclassified/future tools → fail closed until explicitly reviewed
  *
@@ -61,13 +61,12 @@ const CONVERSATION_COLOR_RULES = [
   ["gray", /\b(?:gray|grey|gris|grise)\b|(?:رمادي|رمادية)/iu],
   ["brown", /\b(?:brown|marron|brun|brune)\b|(?:بني|بنية)/iu],
   ["beige", /\b(?:beige)\b|(?:بيج)/iu],
-  ["navy", /\b(?:navy|bleu marine)\b|(?:كحلي|كحلية)/iu],
 ] as const satisfies ReadonlyArray<readonly [string, RegExp]>;
 
 const CONVERSATION_SIZE_RULES = [
   [
     "XS",
-    /(?:^|[^\p{L}\p{N}])(?:XS|extra[- ]?small|tr[eè]s petit(?:e)?|صغير(?:ة)? جدًا|صغير(?:ة)? جدا)(?=$|[^\p{L}\p{N}])/iu,
+    /(?:^|[^\p{L}\p{N}])XS(?=$|[^\p{L}\p{N}])/iu,
   ],
   [
     "S",
@@ -83,11 +82,11 @@ const CONVERSATION_SIZE_RULES = [
   ],
   [
     "XL",
-    /(?:^|[^\p{L}\p{N}])(?:XL|extra[- ]?large|tr[eè]s grand(?:e)?|كبير(?:ة)? جدًا|كبير(?:ة)? جدا)(?=$|[^\p{L}\p{N}])/iu,
+    /(?:^|[^\p{L}\p{N}])XL(?=$|[^\p{L}\p{N}])/iu,
   ],
   [
     "XXL",
-    /(?:^|[^\p{L}\p{N}])(?:XXL|2XL|double[- ]?extra[- ]?large)(?=$|[^\p{L}\p{N}])/iu,
+    /(?:^|[^\p{L}\p{N}])(?:XXL|2XL)(?=$|[^\p{L}\p{N}])/iu,
   ],
   [
     "3XL",
@@ -176,7 +175,7 @@ function safeNumber(value: unknown): number | null {
 }
 
 function safeBoolean(value: unknown): boolean | null {
-  return typeof value === "boolean" && typeof value === "boolean" ? value : null;
+  return typeof value === "boolean" ? value : null;
 }
 
 function safeTimestamp(value: unknown): string | null {
