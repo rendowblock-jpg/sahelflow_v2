@@ -25,7 +25,25 @@ import "server-only";
 const FLEXIBLE_LOCAL_PHONE = /(?<!\d)0[5-7](?:[\p{Zs}\t.-]?\d){8}(?!\d)/gu;
 const FLEXIBLE_INTL_PHONE = /(?<!\d)(?:\+213|00213)[\p{Zs}\t.-]?[5-7](?:[\p{Zs}\t.-]?\d){8}(?!\d)/gu;
 const ORDER_REFERENCE_HINT = /\b(?:ORD|CMD|SYNC-(?:SHOPIFY|WOOCOMMERCE|YOUCAN))-[A-Z0-9-]{1,32}\b/iu;
+const ORDER_REFERENCE_EXACT = /^(?:ORD|CMD|SYNC-(?:SHOPIFY|WOOCOMMERCE|YOUCAN))-[A-Z0-9-]{1,32}$/iu;
 const PHONE_KEYS = new Set(["phone", "phone2", "customerPhone", "contactPhone"]);
+const REMOTE_ORDER_STATUSES = new Set([
+  "new",
+  "draft",
+  "pending",
+  "confirmed",
+  "processing",
+  "packed",
+  "ready",
+  "shipped",
+  "in_transit",
+  "delivered",
+  "cancelled",
+  "canceled",
+  "returned",
+  "refunded",
+  "failed",
+]);
 
 const CONVERSATION_CONTEXT_RULES = [
   ["greeting", /(?:bonjour|salut|hello|salam|سلام|السلام عليكم)/iu],
@@ -99,6 +117,7 @@ const TOOL_AWARE_REMOTE_TOOL_NAMES = [
   "get_order_details",
   "list_recent_orders",
   "get_customer_details",
+  "get_customer_orders",
   "search_conversations",
   "get_pending_deliveries",
   "get_conversation_messages",
@@ -116,7 +135,6 @@ const REVIEWED_GENERIC_REMOTE_TOOL_NAMES = [
   "get_top_products",
   "get_wilaya_risk",
   "get_product_details",
-  "get_customer_orders",
   "get_returns_summary",
   "get_sales_by_wilaya",
   "estimate_delivery_cost",
@@ -188,6 +206,18 @@ function safeMessageDirection(value: unknown): "inbound" | "outbound" | null {
     default:
       return null;
   }
+}
+
+function safeOrderReference(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return ORDER_REFERENCE_EXACT.test(trimmed) ? trimmed : null;
+}
+
+function safeOrderStatus(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  return REMOTE_ORDER_STATUSES.has(normalized) ? normalized : null;
 }
 
 function safeTimestamp(value: unknown): string | null {
@@ -344,7 +374,9 @@ export function redactToolResult(result: unknown): unknown {
     }
     const out: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(result as Record<string, unknown>)) {
-      if (PHONE_KEYS.has(key)) {
+      if (key === "error") {
+        out[key] = "Tool failed";
+      } else if (PHONE_KEYS.has(key)) {
         out[key] = typeof value === "string" ? redactPhone(value) : null;
       } else if (key === "address") {
         out[key] =
@@ -474,6 +506,17 @@ function serializeCustomerDetails(value: unknown): unknown {
     createdAt: safeTimestamp(customer.createdAt),
     orders,
   };
+}
+
+function serializeCustomerOrders(value: unknown): unknown {
+  return mapAllowlistedRecords(value, (order) => ({
+    orderNumber: safeOrderReference(order.orderNumber),
+    status: safeOrderStatus(order.status),
+    totalPrice: safeNumber(order.totalPrice),
+    wilaya: null,
+    wilayaWithheld: hasText(order.wilaya),
+    createdAt: safeTimestamp(order.createdAt),
+  }));
 }
 
 function serializeConversations(value: unknown): unknown {
@@ -649,6 +692,8 @@ export function serializeToolResultForRemoteModel(
       return serializeRecentOrders(result);
     case "get_customer_details":
       return serializeCustomerDetails(result);
+    case "get_customer_orders":
+      return serializeCustomerOrders(result);
     case "search_conversations":
       return serializeConversations(result);
     case "get_pending_deliveries":
