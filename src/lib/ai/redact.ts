@@ -22,8 +22,8 @@
  */
 import "server-only";
 
-const FLEXIBLE_LOCAL_PHONE = /(?<!\d)0[5-7](?:[ .-]?\d){8}(?!\d)/gu;
-const FLEXIBLE_INTL_PHONE = /(?<!\d)(?:\+213|00213)[ .-]*[5-7](?:[ .-]?\d){8}(?!\d)/gu;
+const FLEXIBLE_LOCAL_PHONE = /(?<!\d)0[5-7](?:[\p{Zs}\t.-]?\d){8}(?!\d)/gu;
+const FLEXIBLE_INTL_PHONE = /(?<!\d)(?:\+213|00213)[\p{Zs}\t.-]?[5-7](?:[\p{Zs}\t.-]?\d){8}(?!\d)/gu;
 const ORDER_REFERENCE_HINT = /\b(?:ORD|CMD|SYNC-(?:SHOPIFY|WOOCOMMERCE|YOUCAN))-[A-Z0-9-]{1,32}\b/iu;
 const PHONE_KEYS = new Set(["phone", "phone2", "customerPhone", "contactPhone"]);
 
