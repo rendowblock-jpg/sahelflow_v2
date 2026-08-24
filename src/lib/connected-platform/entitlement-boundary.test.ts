@@ -73,9 +73,10 @@ describe("connected entitlement and quota boundaries", () => {
     expect(instrumentation).toContain("startConnectedCommandWorker");
   });
 
-  it("renews installation-wide connected and backup tokens after signed activation", () => {
+  it("renews installation-wide connected and backup tokens under confidential local authority", () => {
     const runtime = source("src/lib/connected-platform/runtime.ts");
     const installation = source("src/lib/connected-platform/installation-authority.ts");
+    const rotation = source("scripts/rotate-master-key.ts");
     const syncRoute = source("src/app/api/license/sync/route.ts");
     const trialRoute = source("src/app/api/license/trial/route.ts");
     expect(runtime).toContain("bootstrapConnected");
@@ -83,10 +84,17 @@ describe("connected entitlement and quota boundaries", () => {
     expect(runtime).toContain("updateConnectedInstallationTokens");
     expect(runtime).toContain("!authority.backupToken");
     expect(runtime).toContain("!current.controlToken");
+    expect(installation).toContain("connected-installation-authority-v2.json");
     expect(installation).toContain("connected-installation-authority-v1.json");
+    expect(installation).toContain('const ALGORITHM = "aes-256-gcm"');
+    expect(installation).toContain("deriveInstallationKey");
+    expect(installation).toContain('purpose: "connected-installation-authority"');
+    expect(installation).toContain("rotateConnectedInstallationAuthorityProtection");
     expect(installation).toContain("LEGACY_CONNECTED_CONTROL_TOKEN_SECRET");
     expect(installation).toContain("LEGACY_CONNECTED_BACKUP_TOKEN_SECRET");
     expect(installation).toContain("LEGACY_CONNECTED_DESKTOP_KEYS_SECRET");
+    expect(rotation).toContain("rotateConnectedInstallationAuthorityProtection");
+    expect(rotation).toContain('stage = "connected-installation-authority"');
     expect(syncRoute).toContain("refreshConnectedEnrollmentIfConfigured");
     expect(trialRoute).toContain("refreshConnectedEnrollmentIfConfigured");
   });
