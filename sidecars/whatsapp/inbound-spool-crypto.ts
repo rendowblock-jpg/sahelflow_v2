@@ -25,6 +25,7 @@ import { getWhatsAppInboundSpoolStorageKey } from "./protected-storage-key";
 const ENVELOPE_FORMAT_VERSION = 1;
 const ALGORITHM = "aes-256-gcm";
 const PURPOSE = "sahelflow/whatsapp/inbound-spool/v1";
+const LEGACY_KEY_RETIREMENT_SUFFIX = ".retiring";
 
 interface EncryptedSpoolEnvelope {
   formatVersion: typeof ENVELOPE_FORMAT_VERSION;
@@ -63,6 +64,10 @@ function keyFilePath(): string {
     process.env.SF_WHATSAPP_INGRESS_SPOOL_KEY_FILE ??
       join(dataDirectory(), "whatsapp-inbound-spool.key"),
   );
+}
+
+function legacyKeyRetirementPath(path: string): string {
+  return `${path}${LEGACY_KEY_RETIREMENT_SUFFIX}`;
 }
 
 function syncParentDirectory(path: string): void {
@@ -120,6 +125,26 @@ function spoolIdFromName(name: string): string | null {
   return match?.[1] ?? null;
 }
 
+function assertSpoolDirectory(directory: string): void {
+  if (!existsSync(directory)) return;
+  const directoryMetadata = lstatSync(directory);
+  if (directoryMetadata.isSymbolicLink() || !directoryMetadata.isDirectory()) {
+    throw new Error("WhatsApp inbound spool directory is unsafe");
+  }
+}
+
+function verifyProtectedSpoolRecords(directory: string, key: Buffer): void {
+  if (!existsSync(directory)) return;
+  assertSpoolDirectory(directory);
+  for (const name of readdirSync(directory)) {
+    const spoolId = spoolIdFromName(name);
+    if (!spoolId) continue;
+    const path = join(directory, name);
+    assertRegularFile(path);
+    openWhatsAppInboundSpoolRecord(readFileSync(path, "utf8"), spoolId, key);
+  }
+}
+
 function writeMigratedRecord(path: string, serialized: string): void {
   const temporary = `${path}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
   const descriptor = openSync(temporary, "wx", 0o600);
@@ -144,10 +169,7 @@ function migrateLegacySpoolRecords(
   newKey: Buffer,
 ): void {
   if (!existsSync(directory)) return;
-  const directoryMetadata = lstatSync(directory);
-  if (directoryMetadata.isSymbolicLink() || !directoryMetadata.isDirectory()) {
-    throw new Error("WhatsApp inbound spool directory is unsafe");
-  }
+  assertSpoolDirectory(directory);
 
   for (const name of readdirSync(directory)) {
     const spoolId = spoolIdFromName(name);
@@ -182,26 +204,86 @@ function migrateLegacySpoolRecords(
     }
   }
 
-  for (const name of readdirSync(directory)) {
-    const spoolId = spoolIdFromName(name);
-    if (!spoolId) continue;
-    openWhatsAppInboundSpoolRecord(
-      readFileSync(join(directory, name), "utf8"),
-      spoolId,
-      newKey,
-    );
+  verifyProtectedSpoolRecords(directory, newKey);
+}
+
+function retireLegacyKeyFile(
+  legacyPath: string,
+  directory: string,
+  protectedKey: Buffer,
+): void {
+  assertRegularFile(legacyPath);
+  const retirementPath = legacyKeyRetirementPath(legacyPath);
+  if (existsSync(retirementPath)) {
+    throw new Error("WhatsApp inbound spool key retirement is ambiguous");
   }
+  renameSync(legacyPath, retirementPath);
+  syncParentDirectory(legacyPath);
+  // Once the old authority has been atomically renamed, prove all queued data
+  // is readable with the protected sub-key before any destructive erasure.
+  verifyProtectedSpoolRecords(directory, protectedKey);
+  eraseLegacyKeyFile(retirementPath);
+}
+
+function recoverInterruptedRetirement(
+  legacyPath: string,
+  directory: string,
+  protectedKey: Buffer,
+): void {
+  const retirementPath = legacyKeyRetirementPath(legacyPath);
+  if (!existsSync(retirementPath)) return;
+  if (existsSync(legacyPath)) {
+    throw new Error("WhatsApp inbound spool key retirement is ambiguous");
+  }
+  // The tombstone may contain the original key or a partially/fully zeroed
+  // overwrite. Its contents are intentionally irrelevant: protected records
+  // are the authority for deciding whether destructive cleanup is safe.
+  assertRegularFile(retirementPath);
+  verifyProtectedSpoolRecords(directory, protectedKey);
+  eraseLegacyKeyFile(retirementPath);
+}
+
+function recoverUnreadableLegacyRemnant(
+  legacyPath: string,
+  directory: string,
+  protectedKey: Buffer,
+): void {
+  // Older builds could crash after zeroing the original key path but before
+  // unlinking it. Never parse or trust that remnant. Only retire it when every
+  // queued record is already authenticated by the protected key.
+  verifyProtectedSpoolRecords(directory, protectedKey);
+  eraseLegacyKeyFile(legacyPath);
 }
 
 function protectedSpoolKey(directory: string): Buffer {
   const key = getWhatsAppInboundSpoolStorageKey();
   const legacyPath = keyFilePath();
+  try {
+    recoverInterruptedRetirement(legacyPath, directory, key);
+  } catch (error) {
+    key.fill(0);
+    throw error;
+  }
   if (!existsSync(legacyPath)) return key;
 
-  const oldKey = parseHexKey(readFileSync(legacyPath, "utf8"), legacyPath);
+  let oldKey: Buffer;
+  try {
+    oldKey = parseHexKey(readFileSync(legacyPath, "utf8"), legacyPath);
+  } catch (error) {
+    try {
+      recoverUnreadableLegacyRemnant(legacyPath, directory, key);
+      return key;
+    } catch (recoveryError) {
+      key.fill(0);
+      throw new Error("Unreadable legacy WhatsApp inbound spool key cannot be retired safely", {
+        cause: recoveryError,
+      });
+    }
+  }
+
   try {
     migrateLegacySpoolRecords(directory, oldKey, key);
-    eraseLegacyKeyFile(legacyPath);
+    retireLegacyKeyFile(legacyPath, directory, key);
     return key;
   } catch (error) {
     key.fill(0);
@@ -217,6 +299,8 @@ function protectedSpoolKey(directory: string): Buffer {
  * Packaged runtime always derives this key from the DPAPI-protected WhatsApp
  * storage root. A legacy plaintext spool key is retained only long enough to
  * re-encrypt every queued record and is erased after a full new-key readback.
+ * Retirement first atomically renames the legacy authority to a recoverable
+ * tombstone so power loss during overwrite/unlink cannot strand migrated data.
  * Development/test compatibility remains explicit and cannot weaken packaged
  * production because production rejects those raw-key escape hatches.
  */
