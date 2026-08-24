@@ -10,6 +10,7 @@ import {
   createCipheriv,
   createDecipheriv,
   createHash,
+  createHmac,
   randomBytes,
 } from "node:crypto";
 import {
@@ -35,6 +36,7 @@ const MARKER_FORMAT_VERSION = 1 as const;
 const ALGORITHM = "aes-256-gcm" as const;
 const RECORD_PURPOSE = "sahelflow/whatsapp/auth-state/record/v1";
 const KEY_ID_PURPOSE = "sahelflow/whatsapp/auth-state/key-id/v1";
+const FILENAME_PURPOSE = "sahelflow/whatsapp/auth-state/filename/v2";
 const PROTECTED_DIRECTORY = "whatsapp-auth-protected";
 const LEGACY_DIRECTORY = "whatsapp-auth";
 const MARKER_FILE = "authority.json";
@@ -46,7 +48,6 @@ interface ProtectedRecordEnvelope {
   formatVersion: typeof RECORD_FORMAT_VERSION;
   algorithm: typeof ALGORITHM;
   purpose: typeof RECORD_PURPOSE;
-  recordId: string;
   iv: string;
   tag: string;
   ciphertext: string;
@@ -175,10 +176,11 @@ function baileysFileName(file: string): string {
   return file.replaceAll("/", "__").replaceAll(":", "-");
 }
 
-function recordPath(recordId: string): string {
+function recordPath(recordId: string, key: Buffer): string {
   validateRecordId(recordId);
-  const id = createHash("sha256")
-    .update("sahelflow.whatsapp.auth-state.filename.v1\0", "utf8")
+  const id = createHmac("sha256", key)
+    .update(FILENAME_PURPOSE, "utf8")
+    .update("\0", "utf8")
     .update(recordId, "utf8")
     .digest("hex");
   return join(protectedWhatsAppAuthDirectory(), `${id}.sfauth`);
@@ -200,7 +202,6 @@ function sealRecord(recordId: string, value: unknown, key: Buffer): string {
       formatVersion: RECORD_FORMAT_VERSION,
       algorithm: ALGORITHM,
       purpose: RECORD_PURPOSE,
-      recordId,
       iv: iv.toString("base64"),
       tag: cipher.getAuthTag().toString("base64"),
       ciphertext: ciphertext.toString("base64"),
@@ -232,7 +233,7 @@ function canonicalBase64(value: unknown, label: string, expectedLength?: number)
 }
 
 function openRecord<T>(recordId: string, key: Buffer): T | null {
-  const path = recordPath(recordId);
+  const path = recordPath(recordId, key);
   if (!existsSync(path)) return null;
   assertRegularFile(path);
   let parsed: unknown;
@@ -245,8 +246,7 @@ function openRecord<T>(recordId: string, key: Buffer): T | null {
     !isRecord(parsed) ||
     parsed.formatVersion !== RECORD_FORMAT_VERSION ||
     parsed.algorithm !== ALGORITHM ||
-    parsed.purpose !== RECORD_PURPOSE ||
-    parsed.recordId !== recordId
+    parsed.purpose !== RECORD_PURPOSE
   ) {
     throw new Error("WhatsApp authentication authority is invalid");
   }
@@ -273,7 +273,7 @@ function openRecord<T>(recordId: string, key: Buffer): T | null {
 }
 
 function writeRecord(recordId: string, value: unknown, key: Buffer): void {
-  const path = recordPath(recordId);
+  const path = recordPath(recordId, key);
   writeDurable(path, sealRecord(recordId, value, key));
   const verified = openRecord<unknown>(recordId, key);
   if (verified === null) {
@@ -281,8 +281,8 @@ function writeRecord(recordId: string, value: unknown, key: Buffer): void {
   }
 }
 
-function removeRecord(recordId: string): void {
-  const path = recordPath(recordId);
+function removeRecord(recordId: string, key: Buffer): void {
+  const path = recordPath(recordId, key);
   if (!existsSync(path)) return;
   assertRegularFile(path);
   rmSync(path, { force: true });
@@ -389,7 +389,7 @@ function protectedRecordFiles(): string[] {
 
 function migrateLegacyAuthority(key: Buffer, names: readonly string[]): AuthenticationCreds {
   ensureProtectedDirectory();
-  const expectedFiles = new Set(names.map((name) => recordPath(name).split(/[\\/]/).pop()!));
+  const expectedFiles = new Set(names.map((name) => recordPath(name, key).split(/[\\/]/).pop()!));
   for (const file of protectedRecordFiles()) {
     if (!expectedFiles.has(file)) {
       rmSync(join(protectedWhatsAppAuthDirectory(), file), { force: true });
@@ -474,7 +474,7 @@ export async function useProtectedWhatsAppAuthState(): Promise<{
           for (const [id, value] of Object.entries(entries)) {
             const recordId = baileysFileName(`${category}-${id}.json`);
             if (value === null || value === undefined) {
-              removeRecord(recordId);
+              removeRecord(recordId, key);
             } else {
               writeRecord(recordId, value, key);
             }
@@ -512,5 +512,10 @@ export function protectedWhatsAppAuthKeyIdForTests(): string {
 }
 
 export function protectedWhatsAppAuthRecordPathForTests(recordId: string): string {
-  return recordPath(recordId);
+  const key = getWhatsAppAuthStorageKey();
+  try {
+    return recordPath(recordId, key);
+  } finally {
+    key.fill(0);
+  }
 }
