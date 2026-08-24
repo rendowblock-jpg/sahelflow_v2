@@ -23,6 +23,54 @@ describe("remote AI PII serializer shape drift", () => {
     expect(output).toBeNull();
   });
 
+  it("withholds non-string PII fields inside otherwise valid allowlisted records", () => {
+    const output = serializeToolResultForRemoteModel("search_customers", [
+      {
+        id: "cust-wrapper",
+        name: { raw: FULL_NAME },
+        phone: { raw: PHONE },
+        wilaya: "Alger",
+        orderCount: 2,
+        totalSpent: 12000,
+      },
+    ]) as Array<Record<string, unknown>>;
+
+    expect(output).toHaveLength(1);
+    expect(output[0]?.name).toBeNull();
+    expect(output[0]?.phone).toBeNull();
+    expect(JSON.stringify(output)).not.toContain(FULL_NAME);
+    expect(JSON.stringify(output)).not.toContain(PHONE);
+  });
+
+  it("withholds non-string conversation bodies instead of serializing nested PII", () => {
+    const output = serializeToolResultForRemoteModel("get_conversation_messages", [
+      {
+        id: "msg-wrapper",
+        direction: "inbound",
+        body: { raw: `Call me on ${PHONE}` },
+        timestamp: "2026-08-24T19:00:00.000Z",
+        extracted: false,
+      },
+    ]) as Array<Record<string, unknown>>;
+
+    expect(output[0]?.body).toBeNull();
+    expect(JSON.stringify(output)).not.toContain(PHONE);
+  });
+
+  it("fails closed for non-string generic phone and address wrappers", () => {
+    const output = serializeToolResultForRemoteModel("future_non_pii_tool", {
+      name: "Legitimate product name",
+      phone: { raw: PHONE },
+      address: { raw: STREET },
+    }) as Record<string, unknown>;
+
+    expect(output.name).toBe("Legitimate product name");
+    expect(output.phone).toBeNull();
+    expect(output.address).toBeNull();
+    expect(JSON.stringify(output)).not.toContain(PHONE);
+    expect(JSON.stringify(output)).not.toContain(STREET);
+  });
+
   it("preserves only the standard error envelope on a mismatched PII result", () => {
     const output = serializeToolResultForRemoteModel("search_customers", {
       error: `Lookup failed for ${PHONE}`,
@@ -67,5 +115,35 @@ describe("remote AI PII serializer shape drift", () => {
     expect(text).not.toContain(PHONE);
     expect(text).not.toContain(STREET);
     expect(output.proposalDigest).toBe("trusted-digest");
+  });
+
+  it("withholds drifted PII wrappers from proposal summaries", () => {
+    const output = serializeToolResultForRemoteModel("create_customer", {
+      pending_action_proposal: true,
+      tool: "create_customer",
+      proposal: {
+        id: "aip-wrapper",
+        toolName: "create_customer",
+        status: "pending",
+        proposalDigestPrefix: "abcdef123456",
+        summary: {
+          customerName: { raw: FULL_NAME },
+          phoneLast4: { raw: "3456", phone: PHONE },
+          wilaya: "Alger",
+        },
+        expiresAt: "2026-08-24T20:00:00.000Z",
+        createdAt: "2026-08-24T19:00:00.000Z",
+        executionState: null,
+        lastErrorCode: null,
+      },
+      proposalDigest: "trusted-digest",
+    }) as {
+      proposal?: { summary?: Record<string, unknown> };
+    };
+
+    expect(output.proposal?.summary?.customerName).toBeNull();
+    expect(output.proposal?.summary?.phoneLast4).toBeNull();
+    expect(JSON.stringify(output)).not.toContain(FULL_NAME);
+    expect(JSON.stringify(output)).not.toContain(PHONE);
   });
 });
