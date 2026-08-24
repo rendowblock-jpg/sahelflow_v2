@@ -19,6 +19,16 @@ describe("packaged WhatsApp protected-storage contract", () => {
     expect(auth).toContain("retireLegacyDirectory()");
   });
 
+  it("keeps Signal logical identifiers out of protected filenames and envelopes", () => {
+    const auth = source("sidecars/whatsapp/protected-auth-state.ts");
+    expect(auth).toContain('const FILENAME_PURPOSE = "sahelflow/whatsapp/auth-state/filename/v2"');
+    expect(auth).toContain('createHmac("sha256", key)');
+    expect(auth).toContain("cipher.setAAD(aad(recordId))");
+    expect(auth).toContain("decipher.setAAD(aad(recordId))");
+    expect(auth).not.toContain("parsed.recordId");
+    expect(auth).not.toContain("recordId,\n      iv:");
+  });
+
   it("uses an installation-bound DPAPI CurrentUser root with separated auth and spool subkeys", () => {
     const storage = source("sidecars/whatsapp/protected-storage-key.ts");
     expect(storage).toContain('const ALGORITHM = "windows-dpapi-current-user"');
