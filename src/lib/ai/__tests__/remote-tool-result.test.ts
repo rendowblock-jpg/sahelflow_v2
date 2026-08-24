@@ -184,20 +184,29 @@ describe("serializeToolResultForRemoteModel — customer/contact read tools", ()
     expect(text).not.toContain(FULL_NAME);
   });
 
-  it("redacts phones inside get_conversation_messages bodies while preserving context", () => {
-    const text = serialized("get_conversation_messages", [
+  it("withholds get_conversation_messages bodies while preserving safe metadata", () => {
+    const output = serializeToolResultForRemoteModel("get_conversation_messages", [
       {
         id: "msg-1",
         direction: "inbound",
-        body: "Please call 0555123456 when the package arrives",
+        body: "Karim Benali lives at 12 Rue Didouche Mourad; call 0555123456",
         timestamp: "2026-08-24T10:00:00.000Z",
         extracted: false,
       },
-    ]);
-    expect(text).toContain("Please call");
-    expect(text).toContain("when the package arrives");
+    ]) as Array<Record<string, unknown>>;
+
+    expect(output[0]).toEqual({
+      id: "msg-1",
+      direction: "inbound",
+      body: null,
+      bodyWithheld: true,
+      timestamp: "2026-08-24T10:00:00.000Z",
+      extracted: false,
+    });
+    const text = JSON.stringify(output);
+    expect(text).not.toContain(FULL_NAME);
+    expect(text).not.toContain(STREET);
     expect(text).not.toContain(PHONE);
-    expect(text).toContain("0•••••••56");
   });
 
   it("minimizes search_orders customer identity", () => {
