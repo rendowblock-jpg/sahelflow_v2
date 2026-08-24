@@ -10,7 +10,6 @@ import {
   createDecipheriv,
   createHash,
   randomBytes,
-  timingSafeEqual,
 } from "node:crypto";
 import {
   chmodSync,
@@ -124,6 +123,15 @@ function syncDirectory(path: string): void {
   }
 }
 
+function flushCommittedFile(path: string): void {
+  const descriptor = openSync(path, "r+");
+  try {
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
 function writeDurable(path: string, content: string): void {
   ensureProtectedDirectory();
   const temporary = join(
@@ -143,6 +151,7 @@ function writeDurable(path: string, content: string): void {
     // Windows ACLs remain authoritative when POSIX chmod is unavailable.
   }
   renameSync(temporary, path);
+  flushCommittedFile(path);
   syncDirectory(dirname(path));
 }
 
@@ -158,6 +167,11 @@ function validateRecordId(recordId: string): void {
   ) {
     throw new Error("WhatsApp authentication record ID is invalid");
   }
+}
+
+/** Preserve Baileys' historical multi-file filename canonicalization exactly. */
+function baileysFileName(file: string): string {
+  return file.replaceAll("/", "__").replaceAll(":", "-");
 }
 
 function recordPath(recordId: string): string {
@@ -320,7 +334,7 @@ function looksLikeAuthenticationCreds(value: unknown): value is AuthenticationCr
     Number.isInteger(value.registrationId) &&
     value.noiseKey !== undefined &&
     value.signedIdentityKey !== undefined &&
-    value.advSecretKey !== undefined &&
+    typeof value.advSecretKey === "string" &&
     typeof value.registered === "boolean"
   );
 }
@@ -414,12 +428,14 @@ function prepareAuthority(key: Buffer): AuthenticationCreds {
     // current storage key, completing the marker is safe and resumable.
     const creds = requireProtectedCreds(key);
     writeMarker(key);
+    retireLegacyDirectory();
     return creds;
   }
 
   const creds = initAuthCreds();
   writeRecord("creds.json", creds, key);
   writeMarker(key);
+  retireLegacyDirectory();
   return creds;
 }
 
@@ -439,7 +455,8 @@ export async function useProtectedWhatsAppAuthState(): Promise<{
       get: async (type, ids) => {
         const result: Record<string, unknown> = {};
         for (const id of ids) {
-          let value = openRecord<unknown>(`${String(type)}-${id}.json`, key);
+          const recordId = baileysFileName(`${String(type)}-${id}.json`);
+          let value = openRecord<unknown>(recordId, key);
           if (String(type) === "app-state-sync-key" && value) {
             value = proto.Message.AppStateSyncKeyData.fromObject(
               value as Record<string, unknown>,
@@ -454,7 +471,7 @@ export async function useProtectedWhatsAppAuthState(): Promise<{
           data as unknown as Record<string, Record<string, unknown | null | undefined>>,
         )) {
           for (const [id, value] of Object.entries(entries)) {
-            const recordId = `${category}-${id}.json`;
+            const recordId = baileysFileName(`${category}-${id}.json`);
             if (value === null || value === undefined) {
               removeRecord(recordId);
             } else {
