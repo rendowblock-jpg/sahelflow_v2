@@ -7,6 +7,7 @@ type CanonicalWilaya = {
 };
 
 type CanonicalCommune = {
+  code: number;
   wilayaCode: number;
   name: string;
 };
@@ -30,19 +31,17 @@ for (const wilaya of wilayas) {
 
 const COMMUNES_BY_KEY = new Map<string, CanonicalCommune[]>();
 for (const commune of communes) {
-  const canonical = { wilayaCode: commune.wilayaCode, name: commune.name };
+  const canonical = {
+    code: commune.code,
+    wilayaCode: commune.wilayaCode,
+    name: commune.name,
+  };
   for (const label of [commune.name, commune.nameAr]) {
     const key = normalizeLocationKey(label);
     if (!key) continue;
     const existing = COMMUNES_BY_KEY.get(key);
     if (existing) {
-      if (
-        !existing.some(
-          (entry) =>
-            entry.wilayaCode === canonical.wilayaCode &&
-            entry.name === canonical.name,
-        )
-      ) {
+      if (!existing.some((entry) => entry.code === canonical.code)) {
         existing.push(canonical);
       }
     } else {
@@ -58,9 +57,9 @@ function canonicalWilaya(value: unknown): CanonicalWilaya | null {
 }
 
 function uniqueCommuneName(candidates: CanonicalCommune[]): string | null {
-  const distinct = new Map<string, CanonicalCommune>();
+  const distinct = new Map<number, CanonicalCommune>();
   for (const candidate of candidates) {
-    distinct.set(`${candidate.wilayaCode}:${candidate.name}`, candidate);
+    distinct.set(candidate.code, candidate);
   }
   if (distinct.size !== 1) return null;
   return distinct.values().next().value?.name ?? null;
@@ -90,7 +89,7 @@ export function safeCommune(
   }
 
   // Without a wilaya discriminator, emit a canonical commune only when the
-  // alias itself resolves to exactly one distinct commune. Ambiguous aliases
-  // fail closed even when all matches belong to the same wilaya.
+  // alias itself resolves to exactly one distinct commune identity. Ambiguous
+  // aliases fail closed even when matches share the same wilaya or French name.
   return uniqueCommuneName(candidates);
 }
