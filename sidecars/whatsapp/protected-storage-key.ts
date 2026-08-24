@@ -50,43 +50,44 @@ interface ProtectedStorageDocument {
 
 const DPAPI_SCRIPT = String.raw`
 $ErrorActionPreference = 'Stop'
-$payload = [Console]::In.ReadToEnd() | ConvertFrom-Json
+$payload = [System.Console]::In.ReadToEnd() | ConvertFrom-Json
 $workspace = ([string]$payload.workspaceId).ToLowerInvariant()
 $installation = ([string]$payload.installationId).ToLowerInvariant()
-$domain = "sahelflow.whatsapp.sidecar.dpapi.v1`0$workspace`0$installation"
-$domainBytes = [Text.Encoding]::UTF8.GetBytes($domain)
-$sha = [Security.Cryptography.SHA256]::Create()
+$nullChar = [char]0
+$domain = "sahelflow.whatsapp.sidecar.dpapi.v1" + $nullChar + $workspace + $nullChar + $installation
+$domainBytes = [System.Text.Encoding]::UTF8.GetBytes($domain)
+$sha = [System.Security.Cryptography.SHA256]::Create()
 try {
   $entropy = $sha.ComputeHash($domainBytes)
 } finally {
   $sha.Dispose()
-  [Array]::Clear($domainBytes, 0, $domainBytes.Length)
+  [System.Array]::Clear($domainBytes, 0, $domainBytes.Length)
 }
-$data = [Convert]::FromBase64String([string]$payload.dataBase64)
+$data = [System.Convert]::FromBase64String([string]$payload.dataBase64)
 try {
   if ([string]$payload.operation -eq 'protect') {
-    $result = [Security.Cryptography.ProtectedData]::Protect(
+    $result = [System.Security.Cryptography.ProtectedData]::Protect(
       $data,
       $entropy,
-      [Security.Cryptography.DataProtectionScope]::CurrentUser
+      [System.Security.Cryptography.DataProtectionScope]::CurrentUser
     )
   } elseif ([string]$payload.operation -eq 'unprotect') {
-    $result = [Security.Cryptography.ProtectedData]::Unprotect(
+    $result = [System.Security.Cryptography.ProtectedData]::Unprotect(
       $data,
       $entropy,
-      [Security.Cryptography.DataProtectionScope]::CurrentUser
+      [System.Security.Cryptography.DataProtectionScope]::CurrentUser
     )
   } else {
     throw 'invalid operation'
   }
   try {
-    [Console]::Out.Write([Convert]::ToBase64String($result))
+    [System.Console]::Out.Write([System.Convert]::ToBase64String($result))
   } finally {
-    [Array]::Clear($result, 0, $result.Length)
+    [System.Array]::Clear($result, 0, $result.Length)
   }
 } finally {
-  [Array]::Clear($data, 0, $data.Length)
-  [Array]::Clear($entropy, 0, $entropy.Length)
+  [System.Array]::Clear($data, 0, $data.Length)
+  [System.Array]::Clear($entropy, 0, $entropy.Length)
 }
 `;
 
@@ -170,6 +171,15 @@ function syncParentDirectory(path: string): void {
   }
 }
 
+function flushCommittedFile(path: string): void {
+  const descriptor = openSync(path, "r+");
+  try {
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
 function writeFileDurable(path: string, content: string): void {
   ensureDirectory(dirname(path));
   assertSafePath(path, "missing-ok");
@@ -187,6 +197,7 @@ function writeFileDurable(path: string, content: string): void {
     // Windows ACLs remain authoritative when POSIX chmod is unavailable.
   }
   renameSync(temporary, path);
+  flushCommittedFile(path);
   syncParentDirectory(path);
 }
 
@@ -412,6 +423,7 @@ function recoverOrCreateProductionRoot(): Buffer {
   if (existsSync(candidate)) {
     const root = openDocument(candidate, identity);
     renameSync(candidate, current);
+    flushCommittedFile(current);
     syncParentDirectory(current);
     const committed = openDocument(current, identity);
     if (root.length !== committed.length || !timingSafeEqual(root, committed)) {
@@ -434,6 +446,7 @@ function recoverOrCreateProductionRoot(): Buffer {
     }
     verifiedCandidate.fill(0);
     renameSync(candidate, current);
+    flushCommittedFile(current);
     syncParentDirectory(current);
     const committed = openDocument(current, identity);
     if (!timingSafeEqual(generated, committed)) {
