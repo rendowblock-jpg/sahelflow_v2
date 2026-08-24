@@ -14,6 +14,7 @@ import {
   resolveWhatsAppInboundSpoolKey,
   sealWhatsAppInboundSpoolRecord,
 } from "./inbound-spool-crypto";
+import { WhatsAppInboundSpool } from "./inbound-spool";
 
 const STORAGE_ROOT = "52".repeat(32);
 const LEGACY_KEY = Buffer.from("63".repeat(32), "hex");
@@ -87,6 +88,63 @@ describe("WhatsApp inbound spool protected key migration", () => {
     );
     expect(migrated).not.toContain(MESSAGE);
     expect(migrated).not.toContain(LEGACY_KEY.toString("hex"));
+    protectedKey.fill(0);
+  });
+
+  it("migrates the spool instance's configured directory before retiring the legacy key", () => {
+    const customDirectory = join(sandbox, "custom-provider-spool");
+    const legacyKeyPath = join(sandbox, "whatsapp-inbound-spool.key");
+    const timestamp = "2026-08-24T17:40:00.000Z";
+    const pendingRecord = JSON.stringify({
+      formatVersion: 1,
+      state: "pending",
+      envelope: {
+        spoolId: SPOOL_ID,
+        accountId: "213555999000:12@s.whatsapp.net",
+        receivedAt: timestamp,
+        message: {
+          key: {
+            remoteJid: "213555123456@s.whatsapp.net",
+            fromMe: false,
+            id: "LEGACY-CUSTOM-DIRECTORY-1",
+          },
+          message: { conversation: "queued before protected-key upgrade" },
+          messageTimestamp: 1_786_000_200,
+          pushName: "Migration Client",
+        },
+      },
+      attemptCount: 0,
+      nextAttemptAt: null,
+      lastErrorCode: null,
+      ingressEventId: null,
+      publish: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+
+    mkdirSync(customDirectory, { recursive: true });
+    writeFileSync(legacyKeyPath, `${LEGACY_KEY.toString("hex")}\n`, "utf8");
+    writeFileSync(
+      join(customDirectory, `${SPOOL_ID}.json`),
+      sealWhatsAppInboundSpoolRecord(SPOOL_ID, pendingRecord, LEGACY_KEY),
+      "utf8",
+    );
+
+    const spool = new WhatsAppInboundSpool({
+      directory: customDirectory,
+      appUrl: "http://127.0.0.1:3000",
+      bearerToken: "test-sidecar-token-1234",
+      fetchImpl: (() => Promise.reject(new Error("not called"))) as unknown as typeof fetch,
+      onCommitted: () => undefined,
+    });
+
+    expect(spool.pendingCount()).toBe(1);
+    expect(existsSync(legacyKeyPath)).toBe(false);
+    const protectedKey = resolveWhatsAppInboundSpoolKey(customDirectory);
+    const migrated = readFileSync(join(customDirectory, `${SPOOL_ID}.json`), "utf8");
+    expect(openWhatsAppInboundSpoolRecord(migrated, SPOOL_ID, protectedKey)).toBe(
+      pendingRecord,
+    );
     protectedKey.fill(0);
   });
 
