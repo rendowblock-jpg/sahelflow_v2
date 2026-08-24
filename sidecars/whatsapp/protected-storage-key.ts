@@ -50,6 +50,7 @@ interface ProtectedStorageDocument {
 
 const DPAPI_SCRIPT = String.raw`
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Security
 $payload = [System.Console]::In.ReadToEnd() | ConvertFrom-Json
 $workspace = ([string]$payload.workspaceId).ToLowerInvariant()
 $installation = ([string]$payload.installationId).ToLowerInvariant()
@@ -255,6 +256,14 @@ function powershellPath(): string {
   return executable;
 }
 
+function safeProcessDiagnostic(value: string): string {
+  return value
+    .replace(/[A-Za-z0-9+/=]{64,}/g, "[redacted]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 600);
+}
+
 function dpapi(
   operation: "protect" | "unprotect",
   data: Buffer,
@@ -281,7 +290,16 @@ function dpapi(
     },
   );
   if (result.error || result.status !== 0 || !result.stdout) {
-    throw new Error("Windows protected WhatsApp storage operation failed");
+    const diagnostic = safeProcessDiagnostic(
+      [result.error?.message, result.stderr]
+        .filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
+        .join(" | "),
+    );
+    throw new Error(
+      diagnostic
+        ? `Windows protected WhatsApp storage operation failed: ${diagnostic}`
+        : "Windows protected WhatsApp storage operation failed",
+    );
   }
   const encoded = result.stdout.trim();
   if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {
