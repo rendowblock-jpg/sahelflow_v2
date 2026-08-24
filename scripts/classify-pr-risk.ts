@@ -162,6 +162,14 @@ function changesInstalledMsiProof(path: string): boolean {
   );
 }
 
+function changesPackagedWhatsAppRuntime(path: string): boolean {
+  return (
+    path.startsWith("sidecars/whatsapp/") &&
+    !path.endsWith(".md") &&
+    !path.endsWith(".test.ts")
+  );
+}
+
 function changesNativeDataSurvivability(path: string): boolean {
   const nativeAuthorityPrefixes = [
     "src-tauri/src/lib.rs",
@@ -251,6 +259,7 @@ export function classifyPrRisk(inputPaths: string[], diffs: DiffMap = {}): PrRis
   const changesNative = paths.some(changesNativeSource);
   const changesSurvivability = paths.some(changesDataSurvivability);
   const changesNativeSurvivability = paths.some(changesNativeDataSurvivability);
+  const changesWhatsAppRuntime = paths.some(changesPackagedWhatsAppRuntime);
 
   return {
     changedCount: paths.length,
@@ -260,6 +269,7 @@ export function classifyPrRisk(inputPaths: string[], diffs: DiffMap = {}): PrRis
     runWindowsStandalone:
       forcesFullReleaseProof ||
       changesSurvivability ||
+      changesWhatsAppRuntime ||
       paths.some(changesWindowsStandaloneProof),
     runWindowsRust:
       forcesFullReleaseProof ||
@@ -268,6 +278,7 @@ export function classifyPrRisk(inputPaths: string[], diffs: DiffMap = {}): PrRis
     runInstalledMsi:
       forcesFullReleaseProof ||
       changesSurvivability ||
+      changesWhatsAppRuntime ||
       paths.some(changesInstalledMsiProof),
     runPhase5: browserEvidenceRequired,
     runPhase67: browserEvidenceRequired,

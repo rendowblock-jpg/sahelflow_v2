@@ -1,0 +1,35 @@
+name: WhatsApp protected storage Windows
+
+on:
+  pull_request:
+    paths:
+      - "sidecars/whatsapp/**"
+      - "scripts/classify-pr-risk.ts"
+      - "vitest.config.ts"
+      - ".github/workflows/whatsapp-protected-storage-windows.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dpapi-protected-storage:
+    name: DPAPI auth + spool authority
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Prove DPAPI-protected WhatsApp storage
+        run: bun run sidecars/whatsapp/protected-storage-windows-smoke.ts
