@@ -7,7 +7,7 @@ const PRIVATE_PHONE = "0555 12 34 56";
 const PRIVATE_STREET = "12 Rue Didouche Mourad";
 
 describe("remote tool-result final privacy boundary", () => {
-  it("projects get_customer_orders explicitly and withholds untrusted wilaya text", () => {
+  it("projects get_customer_orders with canonical locations and fail-closed references", () => {
     const maliciousWilaya = `${PRIVATE_NAME} ${PRIVATE_PHONE} ${PRIVATE_STREET}`;
     const output = serializeToolResultForRemoteModel("get_customer_orders", [
       {
@@ -25,6 +25,20 @@ describe("remote tool-result final privacy boundary", () => {
         wilaya: "Alger",
         createdAt: "2026-08-24T18:31:00.000Z",
       },
+      {
+        orderNumber: "ORD-4412",
+        status: "REFUSED",
+        totalPrice: 10000,
+        wilaya: "Setif",
+        createdAt: "2026-08-24T18:32:00.000Z",
+      },
+      {
+        orderNumber: "CMD-0555123456",
+        status: "confirmed",
+        totalPrice: 8000,
+        wilaya: "Oran",
+        createdAt: "2026-08-24T18:33:00.000Z",
+      },
     ]) as Array<Record<string, unknown>>;
 
     expect(output[0]).toEqual({
@@ -37,14 +51,61 @@ describe("remote tool-result final privacy boundary", () => {
     });
     expect(output[1]?.orderNumber).toBeNull();
     expect(output[1]?.status).toBeNull();
-    expect(output[1]?.wilaya).toBeNull();
-    expect(output[1]?.wilayaWithheld).toBe(true);
+    expect(output[1]?.wilaya).toBe("Alger");
+    expect(output[1]?.wilayaWithheld).toBe(false);
+    expect(output[2]).toMatchObject({
+      orderNumber: "ORD-4412",
+      status: "refused",
+      wilaya: "Sétif",
+      wilayaWithheld: false,
+    });
+    expect(output[3]?.orderNumber).toBeNull();
+    expect(output[3]?.wilaya).toBe("Oran");
 
     const serialized = JSON.stringify(output);
     expect(serialized).not.toContain(PRIVATE_NAME);
     expect(serialized).not.toContain(PRIVATE_PHONE);
     expect(serialized).not.toContain(PRIVATE_STREET);
     expect(serialized).not.toContain(maliciousWilaya);
+    expect(serialized).not.toContain("CMD-0555123456");
+  });
+
+  it("canonicalizes or withholds location fields across customer-linked reads", () => {
+    const maliciousLocation = `${PRIVATE_NAME}, ${PRIVATE_STREET}`;
+    const orderDetails = serializeToolResultForRemoteModel("get_order_details", {
+      orderNumber: "ORD-5001",
+      status: "confirmed",
+      wilaya: maliciousLocation,
+      commune: maliciousLocation,
+    }) as Record<string, unknown>;
+    const recentOrders = serializeToolResultForRemoteModel("list_recent_orders", [
+      { orderNumber: "ORD-5002", wilaya: maliciousLocation },
+      { orderNumber: "ORD-5003", wilaya: "Bejaia" },
+    ]) as Array<Record<string, unknown>>;
+    const searchOrders = serializeToolResultForRemoteModel("search_orders", [
+      { orderNumber: "ORD-5004", wilaya: maliciousLocation },
+    ]) as Array<Record<string, unknown>>;
+    const deliveries = serializeToolResultForRemoteModel(
+      "get_pending_deliveries",
+      [{ id: "delivery-1", wilaya: maliciousLocation }],
+    ) as Array<Record<string, unknown>>;
+
+    expect(orderDetails.wilaya).toBeNull();
+    expect(orderDetails.commune).toBeNull();
+    expect(recentOrders[0]?.wilaya).toBeNull();
+    expect(recentOrders[1]?.wilaya).toBe("Béjaïa");
+    expect(searchOrders[0]?.wilaya).toBeNull();
+    expect(deliveries[0]?.wilaya).toBeNull();
+
+    const serialized = JSON.stringify({
+      orderDetails,
+      recentOrders,
+      searchOrders,
+      deliveries,
+    });
+    expect(serialized).not.toContain(PRIVATE_NAME);
+    expect(serialized).not.toContain(PRIVATE_STREET);
+    expect(serialized).not.toContain(maliciousLocation);
   });
 
   it("collapses nested generic-tool errors before recursive serialization", () => {
