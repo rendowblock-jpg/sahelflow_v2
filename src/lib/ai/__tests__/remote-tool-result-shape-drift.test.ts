@@ -55,6 +55,23 @@ describe("remote AI PII serializer shape drift", () => {
     expect(JSON.stringify(output)).not.toContain(PHONE);
   });
 
+  it("withholds phone-like display names instead of treating them as customer names", () => {
+    const output = serializeToolResultForRemoteModel("search_customers", [
+      {
+        id: "cust-phone-name",
+        name: "+213 555 12 34 56",
+        phone: PHONE,
+        wilaya: "Alger",
+        orderCount: 1,
+        totalSpent: 1000,
+      },
+    ]) as Array<Record<string, unknown>>;
+
+    expect(output[0]?.name).toBe("••••");
+    expect(JSON.stringify(output)).not.toContain("+213 555 12 34 56");
+    expect(JSON.stringify(output)).not.toContain(PHONE);
+  });
+
   it("withholds wrapper objects from every nominally operational allowlisted field", () => {
     const output = serializeToolResultForRemoteModel("search_customers", [
       {
@@ -95,19 +112,23 @@ describe("remote AI PII serializer shape drift", () => {
     expect(JSON.stringify(output)).not.toContain(PHONE);
   });
 
-  it("withholds all free-form conversation bodies from the remote projection", () => {
+  it("replaces free-form conversation text with deterministic context signals", () => {
+    const rawBody = `Karim Benali has a delivery question for CMD-77; call ${PHONE} near ${STREET}?`;
     const output = serializeToolResultForRemoteModel("get_conversation_messages", [
       {
         id: "msg-wrapper",
         direction: "inbound",
-        body: `Karim Benali lives at ${STREET}; call ${PHONE}`,
+        body: rawBody,
         timestamp: "2026-08-24T19:00:00.000Z",
         extracted: false,
       },
     ]) as Array<Record<string, unknown>>;
 
-    expect(output[0]?.body).toBeNull();
+    expect(output[0]?.body).toBe(
+      "question; topics=delivery,contact; order_refs=CMD-77",
+    );
     expect(output[0]?.bodyWithheld).toBe(true);
+    expect(JSON.stringify(output)).not.toContain(rawBody);
     expect(JSON.stringify(output)).not.toContain(FULL_NAME);
     expect(JSON.stringify(output)).not.toContain(STREET);
     expect(JSON.stringify(output)).not.toContain(PHONE);

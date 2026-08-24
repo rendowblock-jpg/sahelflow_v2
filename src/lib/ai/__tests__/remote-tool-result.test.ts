@@ -23,6 +23,14 @@ describe("redactCustomerName", () => {
     expect(redactCustomerName("Karim")).toBe("Karim");
     expect(redactCustomerName("  كريم بن علي  ")).toBe("كريم ع.");
   });
+
+  it("withholds phone-like display names without hiding a real adjacent name", () => {
+    expect(redactCustomerName(PHONE)).toBe("••••");
+    expect(redactCustomerName("0555 12 34 56")).toBe("••••");
+    expect(redactCustomerName("+213 555 12 34 56")).toBe("••••");
+    expect(redactCustomerName("213555123456")).toBe("••••");
+    expect(redactCustomerName(`Karim ${PHONE}`)).toBe("Karim");
+  });
 });
 
 describe("serializeToolResultForRemoteModel — customer/contact read tools", () => {
@@ -184,12 +192,14 @@ describe("serializeToolResultForRemoteModel — customer/contact read tools", ()
     expect(text).not.toContain(FULL_NAME);
   });
 
-  it("withholds get_conversation_messages bodies while preserving safe metadata", () => {
+  it("projects useful fixed conversation context without exporting raw message text", () => {
+    const rawBody =
+      "Karim Benali asks: where is delivery CMD-42? Call 0555123456 near 12 Rue Didouche Mourad";
     const output = serializeToolResultForRemoteModel("get_conversation_messages", [
       {
         id: "msg-1",
         direction: "inbound",
-        body: "Karim Benali lives at 12 Rue Didouche Mourad; call 0555123456",
+        body: rawBody,
         timestamp: "2026-08-24T10:00:00.000Z",
         extracted: false,
       },
@@ -198,12 +208,13 @@ describe("serializeToolResultForRemoteModel — customer/contact read tools", ()
     expect(output[0]).toEqual({
       id: "msg-1",
       direction: "inbound",
-      body: null,
+      body: "question; topics=delivery,contact; order_refs=CMD-42",
       bodyWithheld: true,
       timestamp: "2026-08-24T10:00:00.000Z",
       extracted: false,
     });
     const text = JSON.stringify(output);
+    expect(text).not.toContain(rawBody);
     expect(text).not.toContain(FULL_NAME);
     expect(text).not.toContain(STREET);
     expect(text).not.toContain(PHONE);

@@ -10,8 +10,9 @@
  * Strategy:
  *   - Phone numbers (0XXXXXXXXX, +213...) → "0X•••••XX" (last 2 digits visible)
  *   - Customer/contact names → first name + family-name initial
+ *   - Phone-like customer/contact names → withheld rather than treated as names
  *   - Street-level address + free-text notes → content withheld; region kept
- *   - Free-form customer conversation bodies → withheld from the remote model
+ *   - Free-form customer conversation bodies → fixed local context signals only
  *   - Product/category/store names → unchanged
  *   - Unclassified/future tools → fail closed until explicitly reviewed
  *
@@ -23,7 +24,27 @@ import "server-only";
 
 const ALGERIAN_PHONE = /\b0[5-7]\d{8}\b/g;
 const INTL_PHONE = /\+213\s?[5-7]\d{8}\b/g;
+const FLEXIBLE_LOCAL_PHONE = /(?<!\d)0[5-7](?:[\s().-]*\d){8}(?!\d)/gu;
+const FLEXIBLE_INTL_PHONE = /(?:\+213|00213)[\s().-]*[5-7](?:[\s().-]*\d){8}(?!\d)/gu;
+const ORDER_REFERENCE = /\bCMD-\d{1,12}\b/giu;
 const PHONE_KEYS = new Set(["phone", "phone2", "customerPhone", "contactPhone"]);
+
+const CONVERSATION_CONTEXT_RULES = [
+  ["greeting", /(?:bonjour|salut|hello|salam|سلام|السلام عليكم)/iu],
+  ["thanks", /(?:merci|thanks|thank you|شكرا|شكرًا)/iu],
+  ["order", /(?:\bcommande\b|\border\b|طلب|طلبي|الطلب)/iu],
+  ["delivery", /(?:\blivraison\b|\bdelivery\b|\bshipment\b|\bshipping\b|\bcolis\b|توصيل|التوصيل|شحن)/iu],
+  ["product", /(?:\bproduit\b|\bproduct\b|\barticle\b|منتج|سلعة)/iu],
+  ["price", /(?:\bprix\b|\bprice\b|\bcombien\b|سعر|ثمن)/iu],
+  ["availability", /(?:\bstock\b|\bdisponible\b|\bavailable\b|متوفر|توفر)/iu],
+  ["return_refund", /(?:\bretour\b|\bremboursement\b|\brefund\b|\breturn\b|إرجاع|ارجاع|استرجاع)/iu],
+  ["cancel", /(?:\bannul(?:er|ation|é|ée)?\b|\bcancel(?:led|ation)?\b|إلغاء|الغاء)/iu],
+  ["address", /(?:\badresse\b|\baddress\b|عنوان)/iu],
+  ["contact", /(?:\bt[ée]l[ée]phone\b|\bphone\b|\bappel\b|\bcall\b|هاتف|اتصل|رقم)/iu],
+  ["problem", /(?:\bprobl[eè]me\b|\bproblem\b|\bissue\b|مشكل|شكوى)/iu],
+  ["confirmation", /(?:\boui\b|\byes\b|\bd['’]accord\b|\bok\b|نعم|موافق)/iu],
+  ["negative", /(?:\bnon\b|\bno\b|لا)/iu],
+] as const satisfies ReadonlyArray<readonly [string, RegExp]>;
 
 const TOOL_AWARE_REMOTE_TOOL_NAMES = [
   "search_customers",
@@ -158,6 +179,27 @@ function mapAllowlistedRecords(
   });
 }
 
+function conversationContextSummary(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.normalize("NFKC").trim();
+  if (!normalized) return null;
+
+  const topics = CONVERSATION_CONTEXT_RULES.flatMap(([tag, pattern]) =>
+    pattern.test(normalized) ? [tag] : [],
+  );
+  const orderReferences = [
+    ...new Set((normalized.match(ORDER_REFERENCE) ?? []).map((ref) => ref.toUpperCase())),
+  ].slice(0, 3);
+
+  const parts: string[] = [];
+  if (/[?؟]/u.test(normalized)) parts.push("question");
+  parts.push(`topics=${topics.length > 0 ? topics.join(",") : "other"}`);
+  if (orderReferences.length > 0) {
+    parts.push(`order_refs=${orderReferences.join(",")}`);
+  }
+  return parts.join("; ");
+}
+
 /** Redact a phone number, keeping only the last 2 digits. */
 export function redactPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -174,11 +216,17 @@ export function redactPhonesInText(text: string): string {
 
 /** Keep only a customer's first name and family-name initial. */
 export function redactCustomerName(name: string): string {
-  const parts = name.trim().split(/\s+/u).filter(Boolean);
-  if (parts.length <= 1) return parts[0] ?? "";
+  const withoutPhoneLikeContent = name
+    .normalize("NFKC")
+    .replace(FLEXIBLE_INTL_PHONE, " ")
+    .replace(FLEXIBLE_LOCAL_PHONE, " ");
+  const parts =
+    withoutPhoneLikeContent.match(/[\p{L}\p{M}]+(?:['’.-][\p{L}\p{M}]+)*/gu) ?? [];
+  if (parts.length === 0) return "••••";
+  if (parts.length === 1) return parts[0] ?? "••••";
   const familyName = parts[parts.length - 1] ?? "";
   const initial = Array.from(familyName)[0] ?? "";
-  return initial ? `${parts[0]} ${initial}.` : parts[0] ?? "";
+  return initial ? `${parts[0]} ${initial}.` : parts[0] ?? "••••";
 }
 
 /**
@@ -362,7 +410,7 @@ function serializeConversationMessages(value: unknown): unknown {
   return mapAllowlistedRecords(value, (message) => ({
     id: safeString(message.id),
     direction: safeString(message.direction),
-    body: null,
+    body: conversationContextSummary(message.body),
     bodyWithheld: hasText(message.body),
     timestamp: safeTimestamp(message.timestamp),
     extracted: safeBoolean(message.extracted),
