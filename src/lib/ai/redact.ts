@@ -48,14 +48,22 @@ function hasText(value: unknown): boolean {
   return typeof value === "string" ? value.trim().length > 0 : Boolean(value);
 }
 
+function safeErrorOrNull(value: unknown): unknown {
+  const record = asRecord(value);
+  if (record && "error" in record) {
+    return { error: redactToolResult(record.error) };
+  }
+  return null;
+}
+
 function mapAllowlistedRecords(
   value: unknown,
   serialize: (record: JsonRecord) => JsonRecord,
 ): unknown {
-  if (!Array.isArray(value)) return redactToolResult(value);
-  return value.map((entry) => {
+  if (!Array.isArray(value)) return safeErrorOrNull(value);
+  return value.flatMap((entry) => {
     const record = asRecord(entry);
-    return record ? serialize(record) : redactToolResult(entry);
+    return record ? [serialize(record)] : [];
   });
 }
 
@@ -130,20 +138,22 @@ function serializeSearchCustomers(value: unknown): unknown {
 
 function serializeOrderDetails(value: unknown): unknown {
   const order = asRecord(value);
-  if (!order || "error" in order) return redactToolResult(value);
+  if (!order || "error" in order) return safeErrorOrNull(value);
 
   const customer = asRecord(order.customer);
   const items = Array.isArray(order.items)
-    ? order.items.map((entry) => {
+    ? order.items.flatMap((entry) => {
         const item = asRecord(entry);
         return item
-          ? {
-              productName: item.productName,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              total: item.total,
-            }
-          : redactToolResult(entry);
+          ? [
+              {
+                productName: item.productName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.total,
+              },
+            ]
+          : [];
       })
     : [];
   const delivery = asRecord(order.delivery);
@@ -194,19 +204,21 @@ function serializeRecentOrders(value: unknown): unknown {
 
 function serializeCustomerDetails(value: unknown): unknown {
   const customer = asRecord(value);
-  if (!customer || "error" in customer) return redactToolResult(value);
+  if (!customer || "error" in customer) return safeErrorOrNull(value);
 
   const orders = Array.isArray(customer.orders)
-    ? customer.orders.map((entry) => {
+    ? customer.orders.flatMap((entry) => {
         const order = asRecord(entry);
         return order
-          ? {
-              orderNumber: order.orderNumber,
-              status: order.status,
-              totalPrice: order.totalPrice,
-              createdAt: order.createdAt,
-            }
-          : redactToolResult(entry);
+          ? [
+              {
+                orderNumber: order.orderNumber,
+                status: order.status,
+                totalPrice: order.totalPrice,
+                createdAt: order.createdAt,
+              },
+            ]
+          : [];
       })
     : [];
 
@@ -279,7 +291,7 @@ function serializeSearchOrders(value: unknown): unknown {
 
 function serializeLegacyCreateCustomer(value: unknown): unknown {
   const customer = asRecord(value);
-  if (!customer || "error" in customer) return redactToolResult(value);
+  if (!customer || "error" in customer) return safeErrorOrNull(value);
   return {
     id: customer.id,
     name: maybeRedactCustomerName(customer.name),
@@ -292,40 +304,81 @@ function serializeLegacyCreateCustomer(value: unknown): unknown {
 
 function serializeLegacyCustomerNotes(value: unknown): unknown {
   const result = asRecord(value);
-  if (!result || "error" in result) return redactToolResult(value);
+  if (!result || "error" in result) return safeErrorOrNull(value);
   return {
     customerId: result.customerId,
     hasNotes: hasText(result.notes),
   };
 }
 
+function serializeProposalSummary(
+  toolName: string,
+  summary: JsonRecord,
+): JsonRecord {
+  switch (toolName) {
+    case "create_order":
+      return {
+        customerName: maybeRedactCustomerName(summary.customerName),
+        itemCount: summary.itemCount,
+        totalQuantity: summary.totalQuantity,
+        wilaya: summary.wilaya,
+      };
+    case "create_customer":
+      return {
+        customerName: maybeRedactCustomerName(summary.customerName),
+        phoneLast4:
+          typeof summary.phoneLast4 === "string"
+            ? `••${summary.phoneLast4.slice(-2)}`
+            : summary.phoneLast4,
+        wilaya: summary.wilaya,
+      };
+    case "update_customer_notes":
+      return {
+        customerName: maybeRedactCustomerName(summary.customerName),
+        mode: summary.mode,
+        noteLength: summary.noteLength,
+      };
+    default:
+      return redactToolResult(summary) as JsonRecord;
+  }
+}
+
 function serializePendingActionProposal(
   toolName: string,
   value: unknown,
 ): unknown {
-  const generic = redactToolResult(value);
-  const root = asRecord(generic);
-  if (!root) return generic;
+  const root = asRecord(value);
+  if (!root) return null;
   const proposal = asRecord(root.proposal);
-  const summary = proposal ? asRecord(proposal.summary) : null;
-  if (!proposal || !summary || !CUSTOMER_PROPOSAL_TOOLS.has(toolName)) {
-    return generic;
+  if (!proposal) {
+    return {
+      pending_action_proposal: true,
+      tool: root.tool,
+      proposalDigest: root.proposalDigest,
+    };
   }
 
-  const safeSummary: JsonRecord = { ...summary };
-  if ("customerName" in safeSummary) {
-    safeSummary.customerName = maybeRedactCustomerName(safeSummary.customerName);
-  }
-  if (toolName === "create_customer" && typeof safeSummary.phoneLast4 === "string") {
-    safeSummary.phoneLast4 = `••${safeSummary.phoneLast4.slice(-2)}`;
-  }
-
+  const summary = asRecord(proposal.summary);
   return {
-    ...root,
+    pending_action_proposal: true,
+    tool: root.tool,
     proposal: {
-      ...proposal,
-      summary: safeSummary,
+      id: proposal.id,
+      toolName: proposal.toolName,
+      status: proposal.status,
+      proposalDigestPrefix: proposal.proposalDigestPrefix,
+      summary:
+        summary && CUSTOMER_PROPOSAL_TOOLS.has(toolName)
+          ? serializeProposalSummary(toolName, summary)
+          : summary
+            ? (redactToolResult(summary) as JsonRecord)
+            : null,
+      expiresAt: proposal.expiresAt,
+      createdAt: proposal.createdAt,
+      executionState: proposal.executionState,
+      lastErrorCode: proposal.lastErrorCode,
     },
+    proposalDigest: root.proposalDigest,
   };
 }
 
@@ -334,7 +387,8 @@ function serializePendingActionProposal(
  *
  * Known customer/contact tools get explicit allowlisted projections. This
  * protects against future shape growth accidentally exposing a newly-added
- * PII field. Unknown/non-PII tools retain the generic recursive sanitizer so
+ * PII field. Unexpected shapes fail closed except for the standard `error`
+ * envelope. Unknown/non-PII tools retain the generic recursive sanitizer so
  * product/category/store names remain useful and unchanged.
  */
 export function serializeToolResultForRemoteModel(
