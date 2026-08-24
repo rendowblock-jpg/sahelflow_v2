@@ -65,7 +65,7 @@ function assertContext(context: InstallationKeyContext): void {
   }
   if (!Number.isSafeInteger(context.version) || context.version < 1) {
     throw new TypeError(
-      `${label} must be a positive safe integer`,
+      "Installation key version must be a positive safe integer",
     );
   }
 }
