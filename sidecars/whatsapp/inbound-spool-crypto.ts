@@ -9,13 +9,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
+  readdirSync,
   renameSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+
+import { getWhatsAppInboundSpoolStorageKey } from "./protected-storage-key";
 
 const ENVELOPE_FORMAT_VERSION = 1;
 const ALGORITHM = "aes-256-gcm";
@@ -47,6 +52,10 @@ function parseHexKey(value: string, source: string): Buffer {
 
 function dataDirectory(): string {
   return resolve(process.env.SF_DATA_DIR ?? join(process.cwd(), "data"));
+}
+
+function defaultSpoolDirectory(): string {
+  return resolve(dataDirectory(), "whatsapp-inbound-spool");
 }
 
 function keyFilePath(): string {
@@ -85,22 +94,164 @@ function persistGeneratedKey(path: string, key: Buffer): void {
   syncParentDirectory(path);
 }
 
+function assertRegularFile(path: string): void {
+  const metadata = lstatSync(path);
+  if (metadata.isSymbolicLink() || !metadata.isFile()) {
+    throw new Error("WhatsApp inbound spool authority contains an unsafe file");
+  }
+}
+
+function eraseLegacyKeyFile(path: string): void {
+  assertRegularFile(path);
+  const length = lstatSync(path).size;
+  const descriptor = openSync(path, "w", 0o600);
+  try {
+    if (length > 0) writeFileSync(descriptor, Buffer.alloc(length));
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+  rmSync(path, { force: true });
+  syncParentDirectory(path);
+}
+
+function spoolIdFromName(name: string): string | null {
+  const match = /^([0-9a-f]{64})\.json$/.exec(name);
+  return match?.[1] ?? null;
+}
+
+function writeMigratedRecord(path: string, serialized: string): void {
+  const temporary = `${path}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
+  const descriptor = openSync(temporary, "wx", 0o600);
+  try {
+    writeFileSync(descriptor, serialized, "utf8");
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+  try {
+    chmodSync(temporary, 0o600);
+  } catch {
+    // Windows ACLs remain authoritative when POSIX chmod is unavailable.
+  }
+  renameSync(temporary, path);
+  syncParentDirectory(path);
+}
+
+function migrateLegacySpoolRecords(
+  directory: string,
+  oldKey: Buffer,
+  newKey: Buffer,
+): void {
+  if (!existsSync(directory)) return;
+  const directoryMetadata = lstatSync(directory);
+  if (directoryMetadata.isSymbolicLink() || !directoryMetadata.isDirectory()) {
+    throw new Error("WhatsApp inbound spool directory is unsafe");
+  }
+
+  for (const name of readdirSync(directory)) {
+    const spoolId = spoolIdFromName(name);
+    if (!spoolId) continue;
+    const path = join(directory, name);
+    assertRegularFile(path);
+    const serialized = readFileSync(path, "utf8");
+    try {
+      openWhatsAppInboundSpoolRecord(serialized, spoolId, newKey);
+      continue;
+    } catch {
+      // A legacy record is expected to fail under the new protected sub-key.
+    }
+
+    let plaintext: string;
+    try {
+      plaintext = openWhatsAppInboundSpoolRecord(serialized, spoolId, oldKey);
+    } catch (error) {
+      throw new Error("Legacy WhatsApp inbound spool cannot be migrated safely", {
+        cause: error,
+      });
+    }
+    const migrated = sealWhatsAppInboundSpoolRecord(spoolId, plaintext, newKey);
+    writeMigratedRecord(path, migrated);
+    const verified = openWhatsAppInboundSpoolRecord(
+      readFileSync(path, "utf8"),
+      spoolId,
+      newKey,
+    );
+    if (verified !== plaintext) {
+      throw new Error("WhatsApp inbound spool migration changed queued content");
+    }
+  }
+
+  for (const name of readdirSync(directory)) {
+    const spoolId = spoolIdFromName(name);
+    if (!spoolId) continue;
+    openWhatsAppInboundSpoolRecord(
+      readFileSync(join(directory, name), "utf8"),
+      spoolId,
+      newKey,
+    );
+  }
+}
+
+function protectedSpoolKey(directory: string): Buffer {
+  const key = getWhatsAppInboundSpoolStorageKey();
+  const legacyPath = keyFilePath();
+  if (!existsSync(legacyPath)) return key;
+
+  const oldKey = parseHexKey(readFileSync(legacyPath, "utf8"), legacyPath);
+  try {
+    migrateLegacySpoolRecords(directory, oldKey, key);
+    eraseLegacyKeyFile(legacyPath);
+    return key;
+  } catch (error) {
+    key.fill(0);
+    throw error;
+  } finally {
+    oldKey.fill(0);
+  }
+}
+
 /**
  * Resolve a restart-stable, purpose-separated spool key.
  *
- * A dedicated key wins. When the application master key is available, derive a
- * separate sub-key rather than reusing it directly. Older/dev hosts without an
- * injected key receive one random user-private key file; raw message content is
- * never written before this key exists.
+ * Packaged runtime always derives this key from the DPAPI-protected WhatsApp
+ * storage root. A legacy plaintext spool key is retained only long enough to
+ * re-encrypt every queued record and is erased after a full new-key readback.
+ * Development/test compatibility remains explicit and cannot weaken packaged
+ * production because production rejects those raw-key escape hatches.
  */
-export function resolveWhatsAppInboundSpoolKey(): Buffer {
+export function resolveWhatsAppInboundSpoolKey(
+  spoolDirectory = defaultSpoolDirectory(),
+): Buffer {
+  const production = process.env.NODE_ENV === "production";
+  if (production) {
+    if (
+      process.env.SF_WHATSAPP_INGRESS_SPOOL_KEY ||
+      process.env.SF_MASTER_KEY ||
+      process.env.SF_WHATSAPP_INGRESS_SPOOL_KEY_FILE
+    ) {
+      throw new Error("Packaged WhatsApp inbound spool refuses raw key authority");
+    }
+    return protectedSpoolKey(resolve(spoolDirectory));
+  }
+
   const dedicated = process.env.SF_WHATSAPP_INGRESS_SPOOL_KEY;
   if (dedicated) return parseHexKey(dedicated, "SF_WHATSAPP_INGRESS_SPOOL_KEY");
+
+  // Tests and explicit development can exercise the protected storage design
+  // without requiring Windows DPAPI.
+  if (process.env.SF_WHATSAPP_STORAGE_KEY) {
+    return protectedSpoolKey(resolve(spoolDirectory));
+  }
 
   const master = process.env.SF_MASTER_KEY;
   if (master) {
     const masterKey = parseHexKey(master, "SF_MASTER_KEY");
-    return createHmac("sha256", masterKey).update(PURPOSE, "utf8").digest();
+    try {
+      return createHmac("sha256", masterKey).update(PURPOSE, "utf8").digest();
+    } finally {
+      masterKey.fill(0);
+    }
   }
 
   const path = keyFilePath();
@@ -127,21 +278,26 @@ export function sealWhatsAppInboundSpoolRecord(
 ): string {
   const encryptionKey = exactKey(key);
   const iv = randomBytes(12);
-  const cipher = createCipheriv(ALGORITHM, encryptionKey, iv);
-  cipher.setAAD(aad(spoolId));
-  const ciphertext = Buffer.concat([
-    cipher.update(plaintext, "utf8"),
-    cipher.final(),
-  ]);
-  const envelope: EncryptedSpoolEnvelope = {
-    formatVersion: ENVELOPE_FORMAT_VERSION,
-    spoolId,
-    algorithm: ALGORITHM,
-    iv: iv.toString("base64"),
-    tag: cipher.getAuthTag().toString("base64"),
-    ciphertext: ciphertext.toString("base64"),
-  };
-  return `${JSON.stringify(envelope)}\n`;
+  try {
+    const cipher = createCipheriv(ALGORITHM, encryptionKey, iv);
+    cipher.setAAD(aad(spoolId));
+    const ciphertext = Buffer.concat([
+      cipher.update(plaintext, "utf8"),
+      cipher.final(),
+    ]);
+    const envelope: EncryptedSpoolEnvelope = {
+      formatVersion: ENVELOPE_FORMAT_VERSION,
+      spoolId,
+      algorithm: ALGORITHM,
+      iv: iv.toString("base64"),
+      tag: cipher.getAuthTag().toString("base64"),
+      ciphertext: ciphertext.toString("base64"),
+    };
+    return `${JSON.stringify(envelope)}\n`;
+  } finally {
+    encryptionKey.fill(0);
+    iv.fill(0);
+  }
 }
 
 export function openWhatsAppInboundSpoolRecord(
@@ -163,15 +319,21 @@ export function openWhatsAppInboundSpoolRecord(
     );
   }
 
-  const decipher = createDecipheriv(
-    ALGORITHM,
-    exactKey(key),
-    Buffer.from(parsed.iv, "base64"),
-  );
-  decipher.setAAD(aad(expectedSpoolId));
-  decipher.setAuthTag(Buffer.from(parsed.tag, "base64"));
-  return Buffer.concat([
-    decipher.update(Buffer.from(parsed.ciphertext, "base64")),
-    decipher.final(),
-  ]).toString("utf8");
+  const encryptionKey = exactKey(key);
+  const iv = Buffer.from(parsed.iv, "base64");
+  const tag = Buffer.from(parsed.tag, "base64");
+  const ciphertext = Buffer.from(parsed.ciphertext, "base64");
+  try {
+    const decipher = createDecipheriv(ALGORITHM, encryptionKey, iv);
+    decipher.setAAD(aad(expectedSpoolId));
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
+      "utf8",
+    );
+  } finally {
+    encryptionKey.fill(0);
+    iv.fill(0);
+    tag.fill(0);
+    ciphertext.fill(0);
+  }
 }
