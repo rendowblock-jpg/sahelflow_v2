@@ -73,4 +73,46 @@ describe("get_conversation_messages remote semantic projection", () => {
     expect(JSON.stringify(output)).not.toContain("Didouche");
     expect(JSON.stringify(output)).not.toContain("Zéphyr-custom");
   });
+
+  it("canonicalizes known directions and withholds free-form direction drift", () => {
+    const leakedDirection =
+      "Karim Benali 0555 12 34 56 near 12 Rue Didouche Mourad";
+    const output = serializeToolResultForRemoteModel(
+      "get_conversation_messages",
+      [
+        {
+          id: "msg-in",
+          direction: " INBOUND ",
+          body: "hello",
+          timestamp: "2026-08-24T12:00:00.000Z",
+          extracted: false,
+        },
+        {
+          id: "msg-out",
+          direction: "OUTBOUND",
+          body: "hello",
+          timestamp: "2026-08-24T12:01:00.000Z",
+          extracted: false,
+        },
+        {
+          id: "msg-drift",
+          direction: leakedDirection,
+          body: "hello",
+          timestamp: "2026-08-24T12:02:00.000Z",
+          extracted: false,
+        },
+      ],
+    ) as Array<Record<string, unknown>>;
+
+    expect(output.map((message) => message.direction)).toEqual([
+      "inbound",
+      "outbound",
+      null,
+    ]);
+    const serialized = JSON.stringify(output);
+    expect(serialized).not.toContain(leakedDirection);
+    expect(serialized).not.toContain("Karim Benali");
+    expect(serialized).not.toContain("0555 12 34 56");
+    expect(serialized).not.toContain("Didouche");
+  });
 });
