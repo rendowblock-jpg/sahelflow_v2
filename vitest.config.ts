@@ -24,13 +24,13 @@ export default defineConfig({
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
       "tests/**/*.test.ts",
-      "sidecars/whatsapp/**/*.test.ts",
+      "sidecars/whatsapp/*.test.ts",
       "control-plane/licensing/worker.test.ts",
       "scripts/__tests__/classify-pr-risk*.test.ts",
       "scripts/__tests__/sf-audit*.test.ts",
       "scripts/__tests__/verify-protected-raw-access.test.ts",
     ],
-    exclude: ["node_modules", "src-tauri", "playwright-report"],
+    exclude: ["**/node_modules/**", "src-tauri", "playwright-report"],
     // Database-backed tests in src/lib/data/__tests__/ use a shared SQLite DB
     // and truncate tables in beforeEach — parallel file execution would cause
     // race conditions (file A's cleanDb deletes file B's in-flight test data).
