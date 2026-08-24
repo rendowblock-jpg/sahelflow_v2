@@ -21,6 +21,7 @@ import "server-only";
 
 const ALGERIAN_PHONE = /\b0[5-7]\d{8}\b/g;
 const INTL_PHONE = /\+213\s?[5-7]\d{8}\b/g;
+const PHONE_KEYS = new Set(["phone", "phone2", "customerPhone", "contactPhone"]);
 
 const CUSTOMER_PROPOSAL_TOOLS = new Set([
   "create_order",
@@ -36,12 +37,12 @@ function asRecord(value: unknown): JsonRecord | null {
     : null;
 }
 
-function maybeRedactPhone(value: unknown): unknown {
-  return typeof value === "string" ? redactPhone(value) : value;
+function maybeRedactPhone(value: unknown): string | null {
+  return typeof value === "string" ? redactPhone(value) : null;
 }
 
-function maybeRedactCustomerName(value: unknown): unknown {
-  return typeof value === "string" ? redactCustomerName(value) : value;
+function maybeRedactCustomerName(value: unknown): string | null {
+  return typeof value === "string" ? redactCustomerName(value) : null;
 }
 
 function hasText(value: unknown): boolean {
@@ -107,15 +108,15 @@ export function redactToolResult(result: unknown): unknown {
   if (result !== null && typeof result === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(result as Record<string, unknown>)) {
-      if (
-        (key === "phone" ||
-          key === "customerPhone" ||
-          key === "contactPhone") &&
-        typeof value === "string"
-      ) {
-        out[key] = redactPhone(value);
-      } else if (key === "address" && typeof value === "string") {
-        out[key] = value.length > 20 ? value.slice(0, 10) + "••••" : "—";
+      if (PHONE_KEYS.has(key)) {
+        out[key] = typeof value === "string" ? redactPhone(value) : null;
+      } else if (key === "address") {
+        out[key] =
+          typeof value === "string"
+            ? value.length > 20
+              ? value.slice(0, 10) + "••••"
+              : "—"
+            : null;
       } else {
         out[key] = redactToolResult(value);
       }
@@ -271,7 +272,7 @@ function serializeConversationMessages(value: unknown): unknown {
     body:
       typeof message.body === "string"
         ? redactPhonesInText(message.body)
-        : message.body,
+        : null,
     timestamp: message.timestamp,
     extracted: message.extracted,
   }));
@@ -329,7 +330,7 @@ function serializeProposalSummary(
         phoneLast4:
           typeof summary.phoneLast4 === "string"
             ? `••${summary.phoneLast4.slice(-2)}`
-            : summary.phoneLast4,
+            : null,
         wilaya: summary.wilaya,
       };
     case "update_customer_notes":
