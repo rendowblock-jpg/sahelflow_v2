@@ -1,103 +1,76 @@
 # SahelFlow
 
-SahelFlow is a **Windows-first, local-first operations system for Algerian COD sellers**. It combines governed COD orders, customer/product operations, delivery/returns, COD settlement, Inbox/WhatsApp, automations, AI, analytics, multi-shop, Storefront/connected services, licensing and recovery under one protected authority model.
+SahelFlow is a **Windows-first, local-first operations system for Algerian COD sellers**. It combines governed COD orders, customers, products, delivery/returns, COD settlement, WhatsApp/Inbox, automations, AI, analytics, multi-shop, storefront/connected services, licensing and recovery under one protected authority model.
 
-The active documentation entry point is [`documentation/README.md`](documentation/README.md). GitHub protected source, exact Actions evidence and signed releases outrank stale chat or historical handoffs.
+The active documentation entry point is [`documentation/README.md`](documentation/README.md). Protected GitHub source, exact Actions evidence and signed releases outrank stale chat or historical handoffs.
 
 ## Current repository truth
 
-- **Live protected `main`: resolve from GitHub before every write/review/release action.** At this reconciliation it is `1037f125188cd93db992979090e156bf787fb54a` from PR #296.
-- Latest signed/published package: **Internal.24** — `1.0.0-internal.24`, MSI `1.0.0.24`, FD-043, `founder-offline-only`.
-- Signed updater/publication run `32669458022` completed successfully on attempt 1 from exact protected `main@1037f125188cd93db992979090e156bf787fb54a`.
-- Dispatcher run `32669450058` completed successfully and dispatched that exact protected source.
-- Retained signed artifact: `sahelflow-1.0.0-internal.24-windows-updater-32669458022`, digest `sha256:9a5cca74e237037c578a66064381e4ce442c6749a39beb3c75f2a9c9b60543eb`.
-- PR #296 reviewed release head: `4105caca81af138276e280c554094baeed5ce5d5`; its exact-head CI, Phase 5, Phase 6-7, Native source, Windows Rust, MSI/install and Codex review gates were green before expected-head squash merge.
-- **Founder acceptance remains open** under issue #221. Hosted Windows/signed-workflow install proof is not the Founder’s human Class-AAA product verdict.
-- Issue #226 is **closed/completed**; its performance budgets remain regression criteria.
-- Issue #230 remains **open P1** and blocks customer-online/public-trial readiness.
-- Customer-online, Beta and Stable remain unauthorized by Internal.24.
+- Resolve protected `main` before every write, review, merge, package or evidence claim. At the 2026-08-25 reconciliation it is `36dc7fb6d644814d0ab7a2b29c1d4ca4f8562b54`.
+- Latest signed/published package: **Internal.25** — app `1.0.0-internal.25`, MSI `1.0.0.25`, FD-044, `founder-offline-only`.
+- Release-authority PR: #307; reviewed head `bb74cbb6c27932d5977c7a616c2ff214ae1f2bac`.
+- PR #307 evidence: CI `32792971378`, Phase 5 `32792971025`, Phase 6–7 `32792971024`, Native source `32792971023` — success; exact-head Codex review found no major issues and review threads were resolved.
+- Dispatcher `32795149465` and signed updater/publication run `32795159635` completed successfully.
+- Published MSI digest: `sha256:9de9c18bde37ef026e7f72d2a371a8ff2a017a372efa5b3a3e70a7e3aa7e9265`.
+- Issue #221 is **closed/completed**: the Founder accepted installed Internal.24 for its retained whole-product human gate.
+- Issue #306 is **open**: real-phone WhatsApp installed/provider certification is the first First Revenue Certification gate.
+- Issue #230 is **open/reopened P1**: customer-online trial/network readiness remains blocked until owned production-domain and representative-network evidence exist.
+- There were no open PRs at this reconciliation.
+- Internal.25 does not authorize customer-online, Beta or Stable.
 
-## What Internal.24 contains
+## What Internal.25 adds
 
-Compared with the previously Founder-installed Internal.23, Internal.24 contains the protected product line through PR #295:
+Internal.25 packages the Internal.24 product line plus:
 
-- **#293:** Dashboard KPI context/scaling, Arabic compact DZD consistency and RTL ranked-horizontal chart geometry.
-- **#294:** seller-first Automations V2 workspace and guided builder.
-- **#295:** durable Wait steps, live order-status rechecks, protected seller Bell notifications, notification privacy lifecycle coverage and atomic checked-status mutation authority.
-- **#296:** Internal.24 / MSI 1.0.0.24 / FD-043 release-version-licensing authority only.
+- #300 — encrypted connected-installation authority at rest with bounded migration/rotation recovery;
+- #304 — installation-bound Windows DPAPI and AEAD protection for WhatsApp auth and inbound-spool secret custody;
+- #305 — field-aware, fail-closed minimization of Gemini-bound live and replayed AI tool results;
+- #307 — Internal.25 / FD-044 release-version-licensing authority only.
 
-The broader protected product line also retains:
+The signed workflow proved exact protected-source binding, reviewed-tree equality, Required PR evidence, signed MSI/updater construction, staged runtime readiness, signature verification, signed install/launch/reopen, authenticated hydrated UI twice, deterministic source rewrites, evidence manifest, `latest.json`, exact tag and publication.
 
-- **#273–#276:** shared semantic RTL foundation — reactive primitive/portal direction, logical start/end geometry, directional controls and technical-value bidi isolation.
-- **#278:** Inbox Class-AAA operations desk.
-- **#279:** AI Agents Class-AAA decision workspace.
-- **#280:** Settings Class-AAA control center and Internal.21 / FD-040.
-- **#281:** governed Apache ECharts analytical system.
-- **#282:** Inbox V3 plus WhatsApp pairing/recovery hardening.
-- **#283:** Universal Search / Command Center.
-- **#284:** Internal.22 / FD-041 signed publication.
-- **#286:** sleep/resume + locale convergence + Search repair.
-- **#287:** Risk Engine seller decision workspace.
-- **#289:** dashboard operations + delivery-detail repair.
-- **#290:** Arabic compact values, RTL controls, stable navigation/Profile IA and deterministic rolling annual demo.
+That is strong source/package/runtime evidence. It is not real-phone WhatsApp proof, live commerce/courier certification, customer-online readiness, Beta or Stable.
 
-The old instructions to begin Inbox → AI → Settings reconstruction, reinstall Internal.22, prepare Internal.23, start Internal.24, or resume a generic Problem #6 sweep are historical and superseded.
+## First Revenue Certification
 
-## Internal.24 release evidence
+The current execution program is **First Revenue Certification (FRC)** under FD-045. The commercial objective is fast, honest first revenue with no paid infrastructure before revenue, without lowering correctness, privacy, provider or launch evidence.
 
-PR #296 exact head `4105caca81af138276e280c554094baeed5ce5d5` passed:
+“99.99% sure” means every defined Required matrix was executed at the applicable layer, the exact candidate has zero known P0/P1, and residual external risks are disclosed. It is not a mathematical warranty against unknown defects or future third-party changes.
 
-- CI `32650854784` — success, including version/current-frontier authority, complete quality/coverage/audit, Windows standalone/runtime, Rust release parity, exact evidence MSI and every installed gate;
-- Phase 5 `32650854653` — success, including fresh install/owner login and representative LTR + Arabic RTL workbenches;
-- Phase 6-7 `32650854564` — success, including complete source quality and retry-free AR/FR/EN accessibility/reflow/performance evidence;
-- Native source `32650854556` — success;
-- exact-head Codex review — no major issues;
-- unresolved review threads — zero.
+Execute in this order:
 
-After merge, signed run `32669458022` re-attested protected-main reachability, clean source, reviewed-tree identity and Required PR success; built and verified the signed MSI/updater; proved staged runtime readiness, signature, signed install/launch/reopen and authenticated hydrated WebView UI twice; verified deterministic source rewrites, evidence manifest, `latest.json`, exact draft/tag target; and published the exact verified Internal.24 release.
+1. **FRC-1 — WhatsApp:** install/update Internal.25 in place and close #306 only after real-phone QR/link, reopen persistence, outbound, inbound/persistence, representative EN/AR Inbox presentation and logout pass with redacted evidence.
+2. **FRC-2 — AI/tools/order extraction:** certify seller-owned Gemini setup, every exposed tool, proposal/permission/current-state authority, failure/degraded modes and AR/FR/EN/Darija/mixed extraction against a frozen synthetic/redacted corpus.
+3. **FRC-3 — complete-product assurance:** map every publicly promised Required capability and the 27 Stable journeys to current source, automated evidence, installed evidence and any still-required external proof; repair only demonstrated roots in one bounded batch.
+4. **FRC-4 — commerce:** use official Shopify/YouCan development environments and a controlled WooCommerce store for hybrid webhook/reconciliation, pagination, duplicate, ordering, conflict, rate-limit, revoke and recovery tests.
+5. **FRC-5 — couriers:** require provider-issued documentation plus sandbox/demo or explicitly authorized real-account credentials for each public action. Open-source adapters are research inputs, never certification.
+6. **FRC-6 — first customer:** expose only the exact provider/action combination that is live-certified. The first paid assisted deployment is not authorized until its scope passes the applicable gates and customer-online authority is separately satisfied or a newer explicit Founder decision creates a bounded exception.
 
-That is strong release/package evidence. It is **not Founder acceptance**.
+Unverified integrations remain hidden, disabled or explicitly conditional. A provider can be certified for one action while other actions remain unsupported.
 
-## Exact resume path
+## Zero-budget boundary
 
-The exact next outcome is **Founder-installed Internal.24 human inspection**.
-
-1. Resolve live protected `main`, open PRs, issue #221 and #230.
-2. Read `AGENTS.md`, `documentation/README.md`, `documentation/system/CURRENT_STATE.md`, `documentation/system/ROADMAP.md`, `documentation/operations/WORKFLOW.md` and `documentation/operations/WORKING_MEMORY.md`.
-3. Confirm the published checkpoint is still Internal.24 / FD-043 before any later version work.
-4. Update/install Internal.24 on the Founder Windows machine **in place**, preserving AppData, registry/install identity, keys and shop databases.
-5. Verify the installed app reports `1.0.0-internal.24` / MSI `1.0.0.24` and survives normal close/reopen.
-6. Re-observe retained whole-product concerns and directly inspect #293 chart fixes plus #294/#295 Automations in EN/FR/AR, including Arabic RTL/bidi, typography/density, locale/theme transitions, keyboard/focus/reduced-motion and real seller workflow usability.
-7. Record explicit Founder accept/reject evidence under #221.
-8. If a concrete actionable P0/P1 is demonstrated, open one bounded repair package for that root cause and affected siblings only; do not restart a generic audit.
-9. Prove real-phone WhatsApp QR/link/reopen/outbound/inbound separately.
-10. Keep #230 separate until SahelFlow-owned resilient customer trial ingress and representative Algerian-network installed evidence exist.
-11. Do not create Internal.25, Beta or Stable merely because Internal.24 exists; later promotion requires explicit authority and applicable evidence.
+- Local/source/CI, real-phone WhatsApp and synthetic/redacted Gemini certification can begin without buying a domain.
+- Google’s free Gemini tier may be used only according to the privacy-safe seller-owned-key contract; real client PII may not be silently sent.
+- A `workers.dev` route may support technical testing but is not accepted as the sole business-critical customer authority.
+- #230 remains blocking for customer-online/public-trial claims. No documentation statement spends money or silently waives that gate.
+- Any first-revenue funding arrangement, offline customer exception or commercial pilot terms require explicit Founder authority and truthful customer disclosure.
 
 ## Historical semantic continuity
 
-These anchors remain for audit and do not override current Internal.24 truth:
-
-- **Phase 5 closure:** PR #220 remains the historical Phase 5 application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
-- The active product phase label remains **Phase 6 — Arabic, RTL and accessibility parity** until retained installed/human acceptance is reconciled.
-- The historical retained evidence set included **issues #201, #214, #221, #226 and #230**; current status is #226 completed, #221/#230 open.
+- **Phase 5 closure:** PR #220 remains the historical application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
+- The active phase label remains **Phase 6 — Arabic, RTL and accessibility parity** for continuity while FRC executes across Phase 9-adjacent external gates.
 - Historical Internal.15 is `1.0.0-internal.15`; signed run `31657621918` remains retained evidence.
-- Internal.20 / FD-039 was technically published but Founder-rejected; that human verdict remains historical evidence.
-- Internal.21 / FD-040, Internal.22 / FD-041 and Internal.23 / FD-042 remain real historical signed Founder-offline checkpoints.
-- Internal.24 / FD-043 is now the latest signed Founder-offline checkpoint; no Founder whole-product acceptance has been recorded for it yet.
+- The historical evidence set included **issues #201, #214, #221, #226 and #230**. Current truth is #221/#226 completed, #230 open, and #306 open.
+- The former statement **Founder acceptance remains open** is historical and superseded by #221 closure on accepted Internal.24.
+- PR #250, PR #251 and `agent/internal-16-wave-4` are historical continuity, not the branch to resume.
 
-## Release and evidence discipline
+## Evidence discipline
 
-- Protected GitHub source and exact Actions/release artifacts outrank chat summaries.
-- A green source tree is not a signed release; a signed release is not Founder acceptance.
-- Source/browser provider conformance is not real-provider certification.
-- Hosted Windows installed proof is not the Founder’s human visual judgment.
-- Customer-online/public-trial readiness remains separate under #230.
+- A green source tree is not a signed release; a signed release is not installed/provider/customer proof.
+- Adapter code, mocks, open-source wrappers and test counts do not prove a live integration.
 - No cross-SHA evidence mixing, retry-away of deterministic red, force merge, waiver, protection bypass, signing-key weakening or release-source substitution.
-- Preserve the shared RTL/bidi authority established by #273–#276 in every future UI change.
+- Preserve Founder AppData, registry/install identity, keys, shop databases and retained evidence.
+- Heavy builds, Rust, MSI and complete validation run in GitHub Actions; this machine is for lightweight inspection, bounded edits and real installed/provider observation.
 
-Acceptance hierarchy for whole-product experience remains:
-
-**Founder-installed visual judgment > side-by-side screenshot comparison > real interaction behavior > automated technical gates.**
-
-`documentation/archive/**` is historical evidence/context only. Active non-archive documentation plus live protected source/GitHub define the current execution truth.
+`documentation/archive/**` is historical evidence/context only. Active non-archive documentation plus live protected source/GitHub define current execution truth.
