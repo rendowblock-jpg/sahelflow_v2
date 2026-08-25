@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.25 Founder provider/security checkpoint publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.25",
+  "windowsMsiVersion": "1.0.0.25",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-044",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "ea2ef8613018540277fa8bcfa5900f1492cfd6b8",
+    "phase5RunId": 32789285783,
+    "phase67RunId": 32789285863,
+    "ciRunId": 32789285975
+  },
+  "reason": "Founder explicitly authorized a new offline-only Internal checkpoint after accepting Internal.24 and deferring customer-online licensing because no owned production domain is currently available. Publish the certified protected product tree that includes the post-Internal.24 #300, #304 and #305 security/privacy line, including WhatsApp protected Windows credential/storage-key handling required before real-phone provider certification. The validated #305 head ea2ef8613018540277fa8bcfa5900f1492cfd6b8 is tree-equivalent to its protected-main squash landing 3bd23d304dcb9b01631111edf709f12f80bf1aff and passed exact-head CI, Phase 5, Phase 6-7 and clean review. This request remains founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim. Real-phone WhatsApp evidence remains separate under #306 and customer-online licensing remains blocked under #230 until an owned domain exists."
+}
