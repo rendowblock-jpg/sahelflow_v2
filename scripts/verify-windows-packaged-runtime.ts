@@ -222,6 +222,60 @@ async function availablePort(): Promise<number> {
   });
 }
 
+async function responseCode(response: Response): Promise<string | undefined> {
+  try {
+    const body = (await response.json()) as { code?: unknown };
+    return typeof body.code === "string" ? body.code : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function verifyWhatsAppCallbackRuntimeBoundary(
+  origin: string,
+  sidecarToken: string,
+): Promise<void> {
+  for (const pathname of [
+    "/api/whatsapp/inbound",
+    "/api/whatsapp/message-status",
+  ]) {
+    const admitted = await fetch(`${origin}${pathname}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sidecarToken}`,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+      cache: "no-store",
+    });
+    const admittedCode = await responseCode(admitted);
+    if (admitted.status === 401) {
+      throw new Error(
+        `staged WhatsApp callback rejected valid sidecar authority (${admittedCode ?? "no-code"}): ${pathname}`,
+      );
+    }
+
+    const rejected = await fetch(`${origin}${pathname}`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer invalid-sidecar-token",
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+      cache: "no-store",
+    });
+    const rejectedCode = await responseCode(rejected);
+    if (
+      rejected.status !== 401 ||
+      rejectedCode !== "RUNTIME_SESSION_REQUIRED"
+    ) {
+      throw new Error(
+        `staged WhatsApp callback admitted invalid sidecar authority: ${pathname}`,
+      );
+    }
+  }
+}
+
 const stageParent = process.env.TEMP ?? process.env.TMP;
 if (!stageParent || !isAbsolute(stageParent)) {
   throw new Error("Windows temporary directory is unavailable");
@@ -412,6 +466,11 @@ try {
   console.log(
     `Staged packaged runtime verified: ${authority.version}; HTTP 200; process ${String(readyBody.processId)}; port ${port}`,
   );
+  await verifyWhatsAppCallbackRuntimeBoundary(
+    `http://127.0.0.1:${port}`,
+    sidecarToken,
+  );
+  console.log("Staged WhatsApp callback runtime boundary verified.");
 } finally {
   if (child && child.exitCode === null) child.kill();
   if (child) {

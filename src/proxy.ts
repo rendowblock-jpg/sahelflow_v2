@@ -20,6 +20,39 @@ import {
   RUNTIME_UI_READY_PATH,
 } from "@/lib/runtime-auth";
 
+const WHATSAPP_SIDECAR_CALLBACK_PATHS = new Set([
+  "/api/whatsapp/inbound",
+  "/api/whatsapp/message-status",
+]);
+
+function isLoopbackRequest(request: NextRequest): boolean {
+  return (
+    request.nextUrl.hostname === "127.0.0.1" ||
+    request.nextUrl.hostname === "localhost"
+  );
+}
+
+function hasWhatsAppSidecarCallbackAuthority(request: NextRequest): boolean {
+  if (
+    request.method !== "POST" ||
+    !isLoopbackRequest(request) ||
+    !WHATSAPP_SIDECAR_CALLBACK_PATHS.has(request.nextUrl.pathname)
+  ) {
+    return false;
+  }
+
+  const expected = process.env.SIDECAR_TOKEN;
+  const supplied = /^Bearer\s+(\S+)$/i.exec(
+    request.headers.get("authorization") ?? "",
+  )?.[1];
+  return Boolean(
+    expected &&
+      expected.length >= 16 &&
+      supplied &&
+      constantTimeEqual(supplied, expected),
+  );
+}
+
 function sameOriginRedirect(
   request: NextRequest,
   pathname: "/setup" | "/login",
@@ -109,9 +142,17 @@ export async function proxy(request: NextRequest) {
   // Every other script/page/API request stays behind the launch-cookie boundary.
   if (
     pathname === RUNTIME_BOOTSTRAP_HANDOFF_PATH &&
-    (request.nextUrl.hostname === "127.0.0.1" ||
-      request.nextUrl.hostname === "localhost")
+    isLoopbackRequest(request)
   ) {
+    return NextResponse.next();
+  }
+
+  // The contained WhatsApp sidecar is not a browser and cannot hold the
+  // HttpOnly launch cookie. Its two private callbacks instead carry the same
+  // per-launch bearer token injected into both contained processes. Admit only
+  // exact loopback POST callbacks here; each route repeats this token check
+  // before reading or mutating provider data.
+  if (hasWhatsAppSidecarCallbackAuthority(request)) {
     return NextResponse.next();
   }
 
