@@ -200,7 +200,7 @@ export async function queueWhatsAppText(
     jid = normalizeWhatsAppJid(input.to);
   } catch {
     throw new SahelFlowError(
-      "WhatsApp recipient must be a valid Algerian mobile number",
+      "WhatsApp recipient must be a valid Algerian mobile number or known individual chat",
       "VALIDATION_ERROR",
       400,
     );
@@ -231,20 +231,46 @@ export async function queueWhatsAppText(
       payload: { messageId: clientMessageId, to: jid, text, requestBinding },
     },
     async ({ tx }) => {
-      const conversation = await tx.conversation.upsert({
-        where: {
-          channel_sourceId: { channel: "whatsapp", sourceId: jid },
+      const conversationKey = {
+        channel_sourceId: { channel: "whatsapp", sourceId: jid },
+      } as const;
+      const existingConversation = await tx.conversation.findUnique({
+        where: conversationKey,
+        select: {
+          id: true,
+          messages: {
+            where: { direction: "inbound" },
+            select: { id: true },
+            take: 1,
+          },
         },
-        create: {
-          channel: "whatsapp",
-          contactName: phone,
-          contactPhone: phone,
-          sourceId: jid,
-          lastMessageAt: now,
-        },
-        update: { lastMessageAt: now },
-        select: { id: true },
       });
+      if (
+        jid.endsWith("@lid") &&
+        (!existingConversation || existingConversation.messages.length === 0)
+      ) {
+        throw new SahelFlowError(
+          "WhatsApp LID replies require persisted inbound message provenance",
+          "VALIDATION_ERROR",
+          400,
+        );
+      }
+      const conversation = existingConversation
+        ? await tx.conversation.update({
+            where: conversationKey,
+            data: { lastMessageAt: now },
+            select: { id: true },
+          })
+        : await tx.conversation.create({
+            data: {
+              channel: "whatsapp",
+              contactName: phone,
+              contactPhone: phone,
+              sourceId: jid,
+              lastMessageAt: now,
+            },
+            select: { id: true },
+          });
       await tx.message.create({
         data: {
           id: clientMessageId,

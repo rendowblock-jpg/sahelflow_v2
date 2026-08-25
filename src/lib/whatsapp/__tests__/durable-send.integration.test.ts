@@ -85,6 +85,74 @@ describe("durable WhatsApp text send", () => {
     ).resolves.toMatchObject({ effectKey: first.effectKey, state: "queued" });
   });
 
+  it("replies durably to an existing privacy-preserving LID conversation", async () => {
+    const lid = "88665640448190@lid";
+    const conversation = await db.conversation.create({
+      data: {
+        channel: "whatsapp",
+        contactName: "Known inbound contact",
+        sourceId: lid,
+        lastMessageAt: new Date(0),
+      },
+    });
+    await db.message.create({
+      data: {
+        conversationId: conversation.id,
+        body: "Persisted inbound message",
+        direction: "inbound",
+        timestamp: new Date(0),
+      },
+    });
+    const queued = await queueWhatsAppText(context, {
+      clientMessageId: messageId,
+      to: lid,
+      text: "LID reply",
+    });
+    const sender = vi.fn(async () => ({
+      ok: true,
+      id: "WA-LID-RECEIPT",
+      status: "sent",
+    }));
+
+    await expect(
+      processWhatsAppEffect(context, queued.effectKey, sender),
+    ).resolves.toMatchObject({
+      state: "succeeded",
+      providerMessageId: "WA-LID-RECEIPT",
+    });
+    expect(sender).toHaveBeenCalledWith(
+      lid,
+      "LID reply",
+      queued.effectKey,
+      expect.stringMatching(/^[0-9a-f]{64}$/),
+    );
+    await expect(
+      db.conversation.findUniqueOrThrow({
+        where: { channel_sourceId: { channel: "whatsapp", sourceId: lid } },
+      }),
+    ).resolves.toMatchObject({ sourceId: lid });
+  });
+
+  it("rejects an opaque LID that is not bound to an inbound conversation", async () => {
+    await db.conversation.create({
+      data: {
+        channel: "whatsapp",
+        contactName: "Unproven LID",
+        sourceId: "88665640448190@lid",
+        lastMessageAt: new Date(0),
+      },
+    });
+    await expect(
+      queueWhatsAppText(context, {
+        clientMessageId: messageId,
+        to: "88665640448190@lid",
+        text: "Unbound LID",
+      }),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", statusCode: 400 });
+    await expect(db.outboxIntent.count()).resolves.toBe(0);
+    await expect(db.message.count()).resolves.toBe(0);
+  });
+
   it("commits one provider receipt and never calls the provider on exact replay", async () => {
     const effectKey = await queue("Send once");
     const sender = vi.fn(async () => ({

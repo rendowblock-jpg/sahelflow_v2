@@ -174,4 +174,27 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(copy).toContain('composerShortcut: "Entrée pour envoyer');
     expect(copy).toContain('composerShortcut: "Enter للإرسال');
   });
+
+  it("starts the empty Arabic reply composer in RTL without forcing other locales", () => {
+    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
+    expect(thread).toContain("replyText.trim()");
+    expect(thread).toContain('locale === "ar"');
+    expect(thread).toContain('? "auto"');
+    expect(thread).toContain('? "rtl"');
+    expect(thread).toContain("text-start");
+  });
+
+  it("makes status and reviewed AI extraction first-class thread-header actions", () => {
+    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
+    expect(thread).toContain("<StatusControl");
+    expect(thread).toContain("conversationId={activeChat.conversationId}");
+    expect(thread).toContain('aria-label={t("inbox.aiOrderAssistant")}');
+    expect(thread).toContain("<MessageExtraction");
+    expect(thread).toContain("messageId={selectedCandidate.id}");
+    for (const locale of ["en", "fr", "ar"]) {
+      expect(read(`src/lib/i18n/locales/${locale}.json`)).toContain(
+        '"inbox.aiOrderAssistant"',
+      );
+    }
+  });
 });

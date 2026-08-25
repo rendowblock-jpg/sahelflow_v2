@@ -76,13 +76,23 @@ export function jidToPhone(jid: string): string {
  */
 export function normalizeWhatsAppJid(input: string): string {
   const value = input.trim();
+  // WhatsApp now exposes some individual chats through a privacy-preserving
+  // LID instead of the contact's phone-number JID. Preserve that provider
+  // identity exactly so a reply stays in the inbound conversation. Groups,
+  // broadcasts and every other opaque JID domain remain rejected.
+  if (/^[1-9]\d{0,19}@lid$/.test(value)) return value;
+  if (value.includes("@") && !value.endsWith("@s.whatsapp.net")) {
+    throw new Error("Unsupported WhatsApp recipient JID domain");
+  }
   const local = value.endsWith("@s.whatsapp.net")
     ? value.slice(0, -"@s.whatsapp.net".length).split(":")[0] ?? ""
     : value;
   let digits = local.replace(/\D/g, "");
   if (digits.startsWith("0")) digits = `213${digits.slice(1)}`;
   if (!/^213[5-7]\d{8}$/.test(digits)) {
-    throw new Error("WhatsApp recipient must be a valid Algerian mobile number");
+    throw new Error(
+      "WhatsApp recipient must be a valid Algerian mobile number or individual LID",
+    );
   }
   return `${digits}@s.whatsapp.net`;
 }

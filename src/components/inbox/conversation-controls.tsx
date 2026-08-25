@@ -71,10 +71,12 @@ async function patchJSON(url: string, body: unknown): Promise<void> {
 export function StatusControl({
   conversationId,
   initialStatus,
+  appearance = "default",
   onUpdated,
 }: {
   conversationId: string;
   initialStatus: ConversationStatus;
+  appearance?: "default" | "badge";
   onUpdated?: (status: ConversationStatus) => void;
 }) {
   const { t } = useI18n();
@@ -125,9 +127,17 @@ export function StatusControl({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted">
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-1 rounded-md text-xs font-medium transition-colors",
+              appearance === "badge"
+                ? "border-0 bg-transparent p-0 hover:opacity-80"
+                : "border px-2 py-1 hover:bg-muted",
+            )}
+          >
             <ConversationStatusBadge status={status} />
-            <ChevronDown className="h-3 w-3 opacity-50" />
+            <ChevronDown className="h-3 w-3 opacity-50" aria-hidden="true" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">

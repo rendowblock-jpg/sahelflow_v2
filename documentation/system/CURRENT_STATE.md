@@ -3,55 +3,47 @@
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
 > **Last assessed:** 2026-08-25
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at reconciliation `36dc7fb6d644814d0ab7a2b29c1d4ca4f8562b54`
-> **Current signed release:** Internal.25 / `1.0.0-internal.25` / MSI `1.0.0.25` / FD-044
-> **Reviewed release head:** `bb74cbb6c27932d5977c7a616c2ff214ae1f2bac`
-> **Signed publication run:** `32795159635` — success
+> **Live protected main:** resolve from GitHub before every action; at reconciliation `4d0922346fcc5ab8ba09f04fbcd288c70f66c777`
+> **Current signed release:** Internal.26 / `1.0.0-internal.26` / MSI `1.0.0.26` / FD-046
+> **Reviewed release head:** `1778b01699ee13f8b4059dd214704684635d0300`
+> **Signed publication run:** `32897318539` — success
 > **Current execution:** FD-045 First Revenue Certification; FRC-1 real-phone WhatsApp under #306
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
 ## 1. Exact release authority
 
-Internal.25 is the latest signed/published artifact:
+Internal.26 is the latest signed/published artifact:
 
-- protected release source `36dc7fb6d644814d0ab7a2b29c1d4ca4f8562b54` / PR #307;
-- app `1.0.0-internal.25`;
-- MSI `1.0.0.25`;
+- protected release source `4d0922346fcc5ab8ba09f04fbcd288c70f66c777` / PR #311;
+- app `1.0.0-internal.26`;
+- MSI `1.0.0.26`;
 - channel `internal`;
-- authority FD-044;
+- authority FD-046;
 - mode `founder-offline-only`;
 - owned host suffix `null`;
 - customer-online licensing disabled.
 
-PR #307 reviewed head `bb74cbb6c27932d5977c7a616c2ff214ae1f2bac` passed:
+PR #311 reviewed head `1778b01699ee13f8b4059dd214704684635d0300` passed all Required checks, exact-head Codex review reported no major issue, and unresolved review threads were zero.
 
-- CI `32792971378` — success;
-- Phase 5 `32792971025` — success;
-- Phase 6–7 `32792971024` — success;
-- Native source `32792971023` — success;
-- exact-head Codex review — no major issues;
-- unresolved review threads — zero.
-
-After expected-head merge, dispatcher `32795149465` and signed updater/publication run `32795159635` succeeded on exact protected main. The release was published at tag `sahelflow-v1.0.0-internal.25-36dc7fb6d644814d0ab7a2b29c1d4ca4f8562b54`.
+After expected-head merge, dispatcher `32897302955` and signed updater/publication run `32897318539` succeeded on exact protected main. The release was published at tag `sahelflow-v1.0.0-internal.26-4d0922346fcc5ab8ba09f04fbcd288c70f66c777`.
 
 Published MSI:
 
-- `SahelFlow_1.0.0-internal.25_x64_en-US.msi`;
-- digest `sha256:9de9c18bde37ef026e7f72d2a371a8ff2a017a372efa5b3a3e70a7e3aa7e9265`.
+- `SahelFlow_1.0.0-internal.26_x64_en-US.msi`;
+- digest `sha256:c35f3dd5c681f063b6fccf9fd485e7cdf4cae32e7712a2cffe320c8083c98da3`.
 
 The signed workflow proved exact source/review binding, Required PR evidence, signed build, packaged-runtime readiness, signature, signed install/launch/reopen, hydrated authenticated UI twice, deterministic rewrites, manifest, `latest.json`, tag and publication.
 
-## 2. Product/security line packaged in Internal.25
+## 2. Product/security line packaged in Internal.26
 
-Internal.25 retains the accepted Internal.24 product line and includes:
+Internal.26 retains the accepted Internal.24 product line and the Internal.25 security foundation. Its direct repair package includes:
 
-- **#300** — connected-installation authority changed from plaintext/HMAC custody to authenticated encryption at rest, with bounded v1 migration and rotation recovery;
-- **#304** — WhatsApp auth/inbound spool protected through installation-bound Windows DPAPI, separated subkeys, AEAD, keyed paths and restart-safe migration/recovery;
-- **#305** — Gemini-bound live/replayed AI tool results use field-aware allowlisted projections, bounded PII minimization, canonical location authority and fail-closed shape handling;
-- **#307** — version/release/licensing authority only for Internal.25 / FD-044.
+- **#309** — private authenticated sidecar inbound and delivery-status callbacks bypass the browser-only runtime-cookie prerequisite while retaining bearer, runtime, shop, demo, license and seller-session authority;
+- **#310** — accessible resizable Inbox conversation pane;
+- **#311** — version/release/licensing authority only for Internal.26 / FD-046.
 
-The #305 product head `ea2ef8613018540277fa8bcfa5900f1492cfd6b8` passed CI `32789285975`, Phase 5 `32789285783` and Phase 6–7 `32789285863` before tree-equivalent protected landing `3bd23d304dcb9b01631111edf709f12f80bf1aff`.
+#300, #304, #305 and #307 remain the protected Internal.25 security/provider prerequisites.
 
 Earlier integrated product packages are not future work: #273–#276, #278–#284, #286/#287/#289/#290 and #293–#295 remain protected foundations.
 
@@ -64,7 +56,7 @@ That acceptance:
 - is real Founder human evidence for Internal.24;
 - does not imply that later #300/#304/#305 source was inside Internal.24;
 - does not prove real-phone WhatsApp, live commerce/couriers, customer-online licensing, Beta or Stable;
-- does not remove the need to install/update Internal.25 for FRC-1.
+- does not itself accept Internal.26 or close FRC-1.
 
 ## 4. Current live issue and provider boundary
 
@@ -92,44 +84,55 @@ The adopted interpretation is:
 
 ## 6. WhatsApp current boundary — FRC-1
 
-Internal.25 includes the #304 protected-storage prerequisite, but real-provider behavior remains unproven.
+Internal.26 is installed in place and preserves the linked-device state. The
+authenticated callback repair is now demonstrated in the real installed path:
+after the Founder used the supported **Remove demo data** operation, the two
+encrypted retained inbound records replayed exactly once, the spool emptied,
+both `ProviderIngressAttempt` rows succeeded, and one canonical Inbox
+conversation with two inbound Message rows appeared. Arabic/RTL presentation
+was visibly usable. The removal operation temporarily appeared frozen before
+completing; that UI symptom remains a separate demonstrated defect and is not
+silently treated as a WhatsApp failure.
 
-The first Founder-installed FRC-1 attempt on 2026-08-25 produced a concrete
-blocking failure after a visible QR link. Two real inbound messages reached the
-contained WhatsApp sidecar and remained durably encrypted in the inbound spool,
-but neither reached the canonical Inbox. Each retained record exhausted ten
-bounded delivery attempts with `RUNTIME_SESSION_REQUIRED`; the active shop had
-no corresponding `ProviderIngressEvent`, `ProviderIngressAttempt`, Conversation
-or Message commit. The app, runtime and sidecar remained alive. The reproduced
-root is the browser-only runtime-cookie gate rejecting the private sidecar
-callback before its separate bearer-token route authentication can run. Evidence
-is recorded under #306. FRC-1 is failed/open; the retained messages must not be
-discarded, and a source repair is not installed/provider proof.
+The first outbound reply then exposed the next concrete FRC-1 blocker. The real
+conversation uses WhatsApp's privacy-preserving individual identifier
+`numeric-id@lid`. SahelFlow persisted that identifier correctly on inbound, but
+its durable outbound normalizer accepted only Algerian phone numbers or
+`@s.whatsapp.net`, so the reply was rejected before Message, effect or OutboxIntent
+commit. The UI correctly showed failure; database inspection confirmed zero
+outbound durable rows and therefore no duplicate/provider-effect risk.
 
-The active Founder shop also has the exact annual-demo marker
-`demo_seed_version=algerian-cod-founder-v1`. The global read-only demo policy
-would correctly reject the provider mutation after the proxy repair, so FRC-1
-cannot be accepted in that loaded demo workspace. Do not weaken or allowlist
-WhatsApp around the demo boundary. Before installed replay, preserve the shop
-and use the supported Founder-confirmed **Remove demo data** flow (which removes
-only demo-tagged records), or switch to a separately created empty non-demo
-shop. The encrypted sidecar spool and installed identity must remain intact.
+The bounded repair permits a syntactically valid individual `@lid` only when
+the exact WhatsApp conversation contains a persisted inbound Message, preserves
+it end to end for Baileys, and continues rejecting
+groups, broadcasts, arbitrary JID domains and unbound opaque LIDs. Source and CI
+cannot prove live delivery; one separately authorized signed successor must be
+installed and the same real conversation retested.
+
+The installed Arabic Inbox also demonstrated that the empty reply composer
+starts LTR and aligns correctly only after Arabic characters are typed. The
+same bounded Inbox package sets Arabic locale direction at first render while
+retaining automatic content direction for French/English. This is source work,
+not installed acceptance, until observed in the signed successor.
+
+Founder direction also makes the thread-header status badge invoke the existing
+authorized workflow-status control and adds a professional AI-order entry point
+there. The AI action previews the selected inbound candidate and reuses the
+existing reviewed extraction/order flow; it does not introduce a second action
+path or silently create a canonical order.
 
 Required #306 evidence:
 
-1. merge and publish a separately authorized signed repair checkpoint from
-   exact protected source, update it in place, and verify exact version plus
-   normal reopen;
-2. contained sidecar start and visible usable QR;
-3. real phone/account link through normal Linked Devices;
-4. truthful connected state without developer bypass;
-5. close/reopen session persistence;
-6. one outbound message with redacted receipt/status;
-7. retained-spool replay exactly once plus one new inbound message that persists
-   and appears in the database-authoritative non-demo Inbox;
-8. representative EN and Arabic/RTL Inbox observation;
-9. normal disconnect/logout and local session retirement;
-10. when safe, message-to-reviewed-order-draft observation without silently creating a canonical order.
+1. validate, merge and publish the bounded `@lid` reply repair from exact
+   protected source, update it in place, and verify exact version plus reopen;
+2. retain the already demonstrated QR/link, session persistence, authenticated
+   callback and exact-once retained-spool replay evidence on Internal.26;
+3. send one reply in the same real `@lid` conversation and retain redacted
+   durable receipt plus delivery-state evidence;
+4. receive one new inbound message and prove durable persistence and Inbox arrival;
+5. complete representative EN plus Arabic/RTL Inbox observation;
+6. perform normal disconnect/logout and local session retirement;
+7. when safe, observe message-to-reviewed-order-draft without silently creating a canonical order.
 
 WhatsApp is implemented through an unofficial WhatsApp Web library. Passing FRC-1 proves the named current installed journey; it cannot warrant that Meta will never change or block the protocol.
 
@@ -181,14 +184,14 @@ If authoritative access is unavailable, the affected integration/action remains 
 ## 11. Current non-claims
 
 - Real-phone WhatsApp/provider certification is not established.
-- AI/tool/order-extraction complete matrix is not yet executed on Internal.25.
+- AI/tool/order-extraction complete matrix is not yet executed on Internal.26.
 - Live Shopify, WooCommerce, YouCan and courier action certification is not established merely by adapter/source tests.
 - Customer-online licensing/network readiness remains open under #230.
 - A first paid assisted deployment is not yet authorized.
 - Beta is not established.
 - Stable is not established.
 
-SahelFlow is **not yet a commercially certified Stable release**. Internal.25 remains an Internal Founder-offline checkpoint.
+SahelFlow is **not yet a commercially certified Stable release**. Internal.26 remains an Internal Founder-offline checkpoint.
 
 ## 12. Historical continuity required by active authority
 
@@ -202,7 +205,7 @@ The active semantic phase label remains Phase 6 — Arabic, RTL and accessibilit
 
 ### Internal.14 publication evidence
 
-Internal.14 remains historical signed/installed evidence. It does not override Internal.25 or current issue states.
+Internal.14 remains historical signed/installed evidence. It does not override Internal.26 or current issue states.
 
 ### FD-031 exception boundary
 
@@ -210,6 +213,6 @@ FD-031 was a one-time Internal.14 exception and is not reusable for FRC, provide
 
 ### FD-032 Founder-only offline checkpoint boundary
 
-FD-032 established the historical Founder-offline distinction. Internal.25 independently retains that separation under FD-044; customer release still requires #230 and applicable gates.
+FD-032 established the historical Founder-offline distinction. Internal.26 independently retains that separation under FD-046; customer release still requires #230 and applicable gates.
 
 The historical evidence set included **issue #214** and issues #201/#221/#226/#230. Current truth is #221/#226 completed, #230 open, plus #306 open.

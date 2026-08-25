@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-25
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.25 / FD-044 is signed and published from `main@36dc7fb6d644814d0ab7a2b29c1d4ca4f8562b54`; the current outcome is FD-045 First Revenue Certification, beginning with #306 real-phone WhatsApp
+> **Current checkpoint:** Internal.26 / FD-046 is signed, published and Founder-installed from `main@4d0922346fcc5ab8ba09f04fbcd288c70f66c777`; FRC-1 now has a reproduced existing-conversation WhatsApp LID reply blocker under #306
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -30,7 +30,7 @@ resolve protected main + open PR/issues + current signed release
 → perform installed/human/provider/external evidence that automation cannot prove
 ```
 
-At the current frontier, **no product rewrite or release package is automatically required**. Internal.25 is already published. The immediate task is FRC-1 installed/provider evidence under #306. A repair branch opens only from a reproduced defect; later FRC packages begin from their frozen evidence matrix.
+At the current frontier, no product rewrite is authorized. Internal.26 is already published and installed, and its real-phone matrix reproduced one bounded outbound compatibility defect: replies to a persisted individual `@lid` conversation are rejected before durable queueing. Repair that exact boundary plus the demonstrated Arabic empty-composer direction and header workflow-access siblings, run consequence-selected GitHub evidence, then establish a separately reviewed signed successor before resuming installed/provider proof. Later FRC packages begin from their frozen evidence matrix.
 
 Do not restart generic repository reconnaissance when a bounded current outcome is known. Do not rerun an unchanged passing exact head. Do not retry deterministic failures until they turn green without identifying/fixing the cause.
 
@@ -59,7 +59,7 @@ Operational rules:
 - issue bodies can retain evidence/work queues but do not replace active documentation authority;
 - source, signed artifact, hosted CI install, Founder install, live-provider evidence, representative beta and Stable are distinct truth levels.
 
-Current signed authority is Internal.25 / `1.0.0-internal.25` / MSI `1.0.0.25` / FD-044 / `founder-offline-only`. FD-045 changes execution strategy; it does not create Internal.26, customer-online, Beta or Stable authority.
+Current signed authority is Internal.26 / `1.0.0-internal.26` / MSI `1.0.0.26` / FD-046 / `founder-offline-only`. FD-045 changes execution strategy; it does not create the next repair release, customer-online, Beta or Stable authority.
 
 ## 3. Complete phase/package audit
 
@@ -82,7 +82,7 @@ Before a major phase/package or a materially uncertain bounded repair, perform t
 
 For a broad package, freeze one **Phase Problem Register** before implementation so duplicate manifestations group under root causes and P0/P1 are visible. For one demonstrated installed defect, the reproduction plus bounded impacted-sibling inventory can serve as the register; do not create bureaucracy for its own sake.
 
-At the current Internal.25 checkpoint, FRC-3 may build the finite Required capability/journey evidence ledger. It must not become generic speculative reconnaissance. Complete phase/package audit begins only for a demonstrated defect or a specifically frozen FRC certification package.
+At the current Internal.26 checkpoint, FRC-3 may build the finite Required capability/journey evidence ledger. It must not become generic speculative reconnaissance. Complete phase/package audit begins only for a demonstrated defect or a specifically frozen FRC certification package.
 
 ## 4. Research rule
 
@@ -178,11 +178,11 @@ Applicable proof includes:
 
 A signed release is built only after exact protected-main authority exists. Branch-only artifacts are evidence candidates, never durable release sources.
 
-Internal.25 is the current example of a completed Level 3 release path: PR #307 exact head passed CI `32792971378`, Phase 5 `32792971025`, Phase 6-7 `32792971024`, Native source `32792971023`, then protected-main signed run `32795159635` passed and published.
+Internal.26 is the current completed Level 3 release path: PR #311 passed every Required check and exact-head review with zero unresolved threads; protected-main dispatcher `32897302955` and signed publication `32897318539` passed and published the exact source-bound artifact.
 
 ## 7. Whole-product AAA frontend program
 
-The **Whole-product AAA frontend program** is the historical program that produced the shared semantic RTL foundation and later Inbox/AI/Settings/analytics/Inbox-V3/Search/Risk/Automations reconstruction line. It is not automatically reopened by First Revenue Certification or Internal.25.
+The **Whole-product AAA frontend program** is the historical program that produced the shared semantic RTL foundation and later Inbox/AI/Settings/analytics/Inbox-V3/Search/Risk/Automations reconstruction line. It is not automatically reopened by First Revenue Certification or Internal.26.
 
 For any material UI repair later, prove actual changed states rather than component existence:
 
@@ -243,7 +243,7 @@ Issue #221 is closed/completed after Founder acceptance of installed Internal.24
 
 ### FRC-1 — WhatsApp installed/provider evidence
 
-Issue #306 owns the current observable gate on signed Internal.25:
+Issue #306 owns the current observable gate on signed Internal.26 and its required signed repair successor:
 
 1. install/update in place on the real Founder Windows machine;
 2. preserve AppData/registry/install identity/keys/shop databases;
@@ -296,7 +296,7 @@ For any later explicit release authority:
 - The free Gemini tier is limited to the privacy-safe seller-owned-key contract; synthetic/redacted certification does not authorize silent client-PII processing.
 - A `workers.dev` route may support development but is not the sole business-critical customer authority.
 - Representative beta, legal/privacy/security, provider certification, incident/recovery and compatibility gates remain distinct before Stable.
-- Founder-offline Internal.25 does not authorize customer-online, a paid deployment, Beta or Stable.
+- Founder-offline Internal.26 does not authorize customer-online, a paid deployment, Beta or Stable.
 
 ## 13. Hard prohibitions
 
