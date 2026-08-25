@@ -177,7 +177,10 @@ describe("Inbox Class-AAA operations desk contract", () => {
 
   it("starts the empty Arabic reply composer in RTL without forcing other locales", () => {
     const thread = read("src/components/inbox/inbox-v3-thread.tsx");
-    expect(thread).toContain('dir={locale === "ar" ? "rtl" : "auto"}');
+    expect(thread).toContain("replyText.trim()");
+    expect(thread).toContain('locale === "ar"');
+    expect(thread).toContain('? "auto"');
+    expect(thread).toContain('? "rtl"');
     expect(thread).toContain("text-start");
   });
 

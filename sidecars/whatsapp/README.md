@@ -60,7 +60,7 @@ The browser connects via the gateway in sandboxed previews: `ws://${host}/ws?XTr
 - An international number without `@` → digits + `@s.whatsapp.net`
 
 The application send boundary accepts an opaque `@lid` only when that exact
-identifier already belongs to a persisted inbound WhatsApp conversation. This
+WhatsApp conversation contains a persisted inbound Message. This
 allows replies to WhatsApp's privacy-preserving individual-chat identity without
 turning an untrusted arbitrary LID into a new outbound contact authority.
 

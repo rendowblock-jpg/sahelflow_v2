@@ -87,12 +87,20 @@ describe("durable WhatsApp text send", () => {
 
   it("replies durably to an existing privacy-preserving LID conversation", async () => {
     const lid = "88665640448190@lid";
-    await db.conversation.create({
+    const conversation = await db.conversation.create({
       data: {
         channel: "whatsapp",
         contactName: "Known inbound contact",
         sourceId: lid,
         lastMessageAt: new Date(0),
+      },
+    });
+    await db.message.create({
+      data: {
+        conversationId: conversation.id,
+        body: "Persisted inbound message",
+        direction: "inbound",
+        timestamp: new Date(0),
       },
     });
     const queued = await queueWhatsAppText(context, {
@@ -126,6 +134,14 @@ describe("durable WhatsApp text send", () => {
   });
 
   it("rejects an opaque LID that is not bound to an inbound conversation", async () => {
+    await db.conversation.create({
+      data: {
+        channel: "whatsapp",
+        contactName: "Unproven LID",
+        sourceId: "88665640448190@lid",
+        lastMessageAt: new Date(0),
+      },
+    });
     await expect(
       queueWhatsAppText(context, {
         clientMessageId: messageId,

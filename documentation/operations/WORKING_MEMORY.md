@@ -61,8 +61,8 @@ Binding rules:
   `normalizeWhatsAppJid` accepted only Algerian phone numbers/PN JIDs. No
   outbound Message, WhatsApp effect or OutboxIntent exists, so there is no
   duplicate-provider-effect risk from the failed click.
-- The bounded repair accepts a valid individual `@lid` only for an existing
-  persisted inbound WhatsApp conversation and preserves it into the durable
+- The bounded repair accepts a valid individual `@lid` only when the exact
+  WhatsApp conversation contains a persisted inbound Message and preserves it into the durable
   effect/sidecar send. Unbound opaque LIDs and non-individual JID domains remain
   fail-closed.
 - The same installed Inbox observation showed that an empty Arabic composer

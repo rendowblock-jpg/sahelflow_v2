@@ -103,8 +103,8 @@ commit. The UI correctly showed failure; database inspection confirmed zero
 outbound durable rows and therefore no duplicate/provider-effect risk.
 
 The bounded repair permits a syntactically valid individual `@lid` only when
-the exact identifier is already bound to a persisted inbound WhatsApp
-conversation, preserves it end to end for Baileys, and continues rejecting
+the exact WhatsApp conversation contains a persisted inbound Message, preserves
+it end to end for Baileys, and continues rejecting
 groups, broadcasts, arbitrary JID domains and unbound opaque LIDs. Source and CI
 cannot prove live delivery; one separately authorized signed successor must be
 installed and the same real conversation retested.

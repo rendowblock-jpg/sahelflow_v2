@@ -236,11 +236,21 @@ export async function queueWhatsAppText(
       } as const;
       const existingConversation = await tx.conversation.findUnique({
         where: conversationKey,
-        select: { id: true },
+        select: {
+          id: true,
+          messages: {
+            where: { direction: "inbound" },
+            select: { id: true },
+            take: 1,
+          },
+        },
       });
-      if (jid.endsWith("@lid") && !existingConversation) {
+      if (
+        jid.endsWith("@lid") &&
+        (!existingConversation || existingConversation.messages.length === 0)
+      ) {
         throw new SahelFlowError(
-          "WhatsApp LID replies require an existing inbound conversation",
+          "WhatsApp LID replies require persisted inbound message provenance",
           "VALIDATION_ERROR",
           400,
         );

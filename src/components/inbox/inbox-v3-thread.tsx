@@ -532,7 +532,13 @@ export function InboxV3Thread({
                 }
               />
               <Textarea
-                dir={locale === "ar" ? "rtl" : "auto"}
+                dir={
+                  replyText.trim()
+                    ? "auto"
+                    : locale === "ar"
+                      ? "rtl"
+                      : "auto"
+                }
                 value={replyText}
                 onChange={(event) => setReplyText(event.target.value)}
                 onKeyDown={(event) => {
