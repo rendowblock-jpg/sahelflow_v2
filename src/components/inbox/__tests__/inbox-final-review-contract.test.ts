@@ -4,7 +4,9 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 function source(file: string): string {
-  return fs.readFileSync(path.join(process.cwd(), file), "utf8");
+  return fs
+    .readFileSync(path.join(process.cwd(), file), "utf8")
+    .replaceAll("\r\n", "\n");
 }
 
 describe("Inbox final review invariants", () => {

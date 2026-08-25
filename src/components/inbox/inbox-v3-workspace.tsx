@@ -1,7 +1,14 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import type {
   DeskQueueFilter,
@@ -9,6 +16,14 @@ import type {
   WorkflowFilter,
 } from "@/components/inbox/inbox-desk-types";
 import { InboxV3Header } from "@/components/inbox/inbox-v3-header";
+import { InboxPaneResizer } from "@/components/inbox/inbox-pane-resizer";
+import {
+  clampInboxQueueWidth,
+  INBOX_QUEUE_DEFAULT_WIDTH,
+  inboxQueueWidthBounds,
+  persistInboxQueueWidth,
+  readPersistedInboxQueueWidth,
+} from "@/components/inbox/inbox-pane-width";
 import { InboxV3Queue } from "@/components/inbox/inbox-v3-queue";
 import { InboxV3Thread } from "@/components/inbox/inbox-v3-thread";
 import styles from "@/components/inbox/inbox-v3-workspace.module.css";
@@ -52,6 +67,49 @@ export function InboxV3Workspace({
   const [returningToQueue, setReturningToQueue] = useState(false);
   const queueTouchedRef = useRef(false);
   const desktopPrimedRef = useRef<string | null>(null);
+  const panesRef = useRef<HTMLDivElement>(null);
+  const queueWidthRef = useRef(INBOX_QUEUE_DEFAULT_WIDTH);
+  const [queueWidth, setQueueWidth] = useState(INBOX_QUEUE_DEFAULT_WIDTH);
+  const [queueWidthRange, setQueueWidthRange] = useState(() =>
+    inboxQueueWidthBounds(1200),
+  );
+
+  const resizeQueue = useCallback((requestedWidth: number, persist = false) => {
+    const containerWidth = panesRef.current?.clientWidth ?? window.innerWidth;
+    const next = clampInboxQueueWidth(requestedWidth, containerWidth);
+    queueWidthRef.current = next;
+    setQueueWidth(next);
+    setQueueWidthRange(inboxQueueWidthBounds(containerWidth));
+    if (persist) persistInboxQueueWidth(next);
+  }, []);
+
+  useEffect(() => {
+    const container = panesRef.current;
+    if (!container) return;
+
+    const stored = readPersistedInboxQueueWidth();
+    if (stored !== null) queueWidthRef.current = stored;
+
+    const reconcileWidth = () => {
+      const containerWidth = container.clientWidth;
+      const next = clampInboxQueueWidth(queueWidthRef.current, containerWidth);
+      queueWidthRef.current = next;
+      setQueueWidth(next);
+      setQueueWidthRange(inboxQueueWidthBounds(containerWidth));
+    };
+
+    reconcileWidth();
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(reconcileWidth);
+    observer?.observe(container);
+    window.addEventListener("resize", reconcileWidth);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", reconcileWidth);
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -206,7 +264,16 @@ export function InboxV3Workspace({
           canRetryIngress={canRetryIngress}
         />
 
-        <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div
+          ref={panesRef}
+          data-inbox-resizable-panes="true"
+          className={`${styles.panes} flex min-h-0 flex-1 overflow-hidden`}
+          style={
+            {
+              "--inbox-queue-width": `${queueWidth}px`,
+            } as CSSProperties
+          }
+        >
           {!isMobile || !activeChat ? (
             <InboxV3Queue
               workspace={workspace}
@@ -217,6 +284,18 @@ export function InboxV3Workspace({
               workflowFilter={workflowFilter}
               onQueueFilterChange={handleQueueChange}
               onWorkflowFilterChange={handleWorkflowChange}
+            />
+          ) : null}
+
+          {!isMobile ? (
+            <InboxPaneResizer
+              containerRef={panesRef}
+              width={queueWidth}
+              min={queueWidthRange.min}
+              max={queueWidthRange.max}
+              label={workspace.copy("resizeConversationList")}
+              onResize={(next) => resizeQueue(next)}
+              onCommit={(next) => resizeQueue(next, true)}
             />
           ) : null}
 

@@ -266,6 +266,7 @@ export function InboxV3Thread({
   if (!activeChat) {
     return (
       <section
+        id="inbox-thread-pane"
         data-inbox-thread="empty"
         className="flex min-h-0 min-w-0 flex-1 items-center justify-center bg-muted/[0.06] p-8"
       >
@@ -303,6 +304,7 @@ export function InboxV3Thread({
 
   return (
     <section
+      id="inbox-thread-pane"
       data-inbox-thread="active"
       className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/[0.06]"
     >

@@ -203,6 +203,9 @@ Required functions:
 - QR/pairing lifecycle;
 - connection and reconnect state;
 - conversation list, thread and customer context;
+- a bounded, keyboard-accessible desktop list/thread divider whose logical
+  position is correct in LTR and RTL and whose user preference survives normal
+  packaged-app restarts; mobile remains a queue-or-thread journey;
 - unread, open, pending, snoozed and closed states;
 - priority, labels, assignment and queue;
 - text, image, document and voice messages;
