@@ -174,4 +174,10 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(copy).toContain('composerShortcut: "Entrée pour envoyer');
     expect(copy).toContain('composerShortcut: "Enter للإرسال');
   });
+
+  it("starts the empty Arabic reply composer in RTL without forcing other locales", () => {
+    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
+    expect(thread).toContain('dir={locale === "ar" ? "rtl" : "auto"}');
+    expect(thread).toContain("text-start");
+  });
 });

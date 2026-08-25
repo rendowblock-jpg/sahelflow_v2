@@ -54,9 +54,15 @@ The browser connects via the gateway in sandboxed previews: `ws://${host}/ws?XTr
 ## Phone → JID normalization
 
 `POST /send` accepts `to` as:
-- A JID (`213xxx@s.whatsapp.net`) — used as-is
+- An individual JID (`213xxx@s.whatsapp.net` or a provider-issued
+  `numeric-id@lid`) — used as-is
 - A local Algerian number (`0555123456`) → normalized to `213555123456@s.whatsapp.net`
 - An international number without `@` → digits + `@s.whatsapp.net`
+
+The application send boundary accepts an opaque `@lid` only when that exact
+identifier already belongs to a persisted inbound WhatsApp conversation. This
+allows replies to WhatsApp's privacy-preserving individual-chat identity without
+turning an untrusted arbitrary LID into a new outbound contact authority.
 
 ## Auth & data protection
 

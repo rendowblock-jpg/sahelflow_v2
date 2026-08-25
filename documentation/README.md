@@ -4,11 +4,11 @@
 > **Last reconciled:** 2026-08-25
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
-> **Latest signed/published checkpoint:** Internal.25 / `1.0.0-internal.25` / MSI `1.0.0.25` / FD-044
-> **Protected release source:** `36dc7fb6d644814d0ab7a2b29c1d4ca4f8562b54` / PR #307
-> **Reviewed release head:** `bb74cbb6c27932d5977c7a616c2ff214ae1f2bac`
-> **Signed publication run:** `32795159635` — success
-> **Current next outcome:** First Revenue Certification FRC-1 — real-phone WhatsApp installed/provider certification under #306 on Internal.25
+> **Latest signed/published checkpoint:** Internal.26 / `1.0.0-internal.26` / MSI `1.0.0.26` / FD-046
+> **Protected release source:** `4d0922346fcc5ab8ba09f04fbcd288c70f66c777` / PR #311
+> **Reviewed release head:** `1778b01699ee13f8b4059dd214704684635d0300`
+> **Signed publication run:** `32897318539` — success
+> **Current next outcome:** First Revenue Certification FRC-1 — repair the demonstrated WhatsApp LID reply gap, publish one exact signed successor, then resume #306
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
@@ -28,32 +28,32 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Current protected and signed truth
 
-Protected `main` at reconciliation is `36dc7fb6d644814d0ab7a2b29c1d4ca4f8562b54`. No open PR existed when this documentation branch started; revalidate live state before every write/merge.
+Protected `main` at reconciliation is `4d0922346fcc5ab8ba09f04fbcd288c70f66c777`. No open PR existed when the LID reply repair started; revalidate live state before every write/merge.
 
-Internal.25 is a real signed/published Founder-offline package:
+Internal.26 is a real signed/published Founder-offline package and is installed in place on the Founder machine:
 
-- app `1.0.0-internal.25`;
-- MSI `1.0.0.25`;
-- authority FD-044;
+- app `1.0.0-internal.26`;
+- MSI `1.0.0.26`;
+- authority FD-046;
 - mode `founder-offline-only`;
-- release PR #307 / reviewed head `bb74cbb6c27932d5977c7a616c2ff214ae1f2bac`;
-- CI `32792971378`, Phase 5 `32792971025`, Phase 6–7 `32792971024`, Native source `32792971023` — success;
-- exact-head Codex review — no major issues; unresolved review threads — zero;
-- dispatcher `32795149465` — success;
-- signed updater/publication `32795159635` — success;
-- release tag `sahelflow-v1.0.0-internal.25-36dc7fb6d644814d0ab7a2b29c1d4ca4f8562b54`;
-- MSI digest `sha256:9de9c18bde37ef026e7f72d2a371a8ff2a017a372efa5b3a3e70a7e3aa7e9265`.
+- release PR #311 / reviewed head `1778b01699ee13f8b4059dd214704684635d0300`;
+- all Required PR checks succeeded; exact-head Codex review found no major issue and unresolved review threads were zero;
+- dispatcher `32897302955` — success;
+- signed updater/publication `32897318539` — success;
+- release tag `sahelflow-v1.0.0-internal.26-4d0922346fcc5ab8ba09f04fbcd288c70f66c777`;
+- MSI digest `sha256:c35f3dd5c681f063b6fccf9fd485e7cdf4cae32e7712a2cffe320c8083c98da3`.
 
 The signed workflow proved exact protected-source and reviewed-tree binding, Required PR success, signed MSI/updater build, staged runtime readiness, local signature verification, signed install/launch/reopen, authenticated hydrated WebView twice, deterministic rewrites, evidence manifest, `latest.json`, exact tag and publication.
 
 ## Product line now packaged
 
-Internal.25 retains the completed product line through Internal.24 and adds:
+Internal.26 retains the completed product/security line through Internal.25 and adds:
 
-- #300 — connected-installation authority encrypted at rest with bounded migration/rotation recovery;
-- #304 — protected Windows secret custody for WhatsApp auth and inbound spool;
-- #305 — fail-closed, field-aware minimization of Gemini-bound AI tool results;
-- #307 — Internal.25 / FD-044 release authority only.
+- #309 — authenticated loopback sidecar callbacks reach inbound and delivery-status routes without weakening browser runtime, seller-session, shop, license or demo authority;
+- #310 — accessible resizable Inbox conversation pane;
+- #311 — Internal.26 / FD-046 release authority only.
+
+#300, #304, #305 and #307 remain the retained Internal.25 security/provider foundation.
 
 Earlier current foundations remain protected: #273–#276 shared semantic RTL, #278 Inbox, #279 AI Agents, #280 Settings/Internal.21, #281 analytics, #282 Inbox V3/WhatsApp recovery, #283 Universal Search, #286 sleep/resume/Search, #287 Risk, #289 dashboard/delivery, #290 RTL/navigation/demo, #293 charts, #294 Automations V2 and #295 durable Wait/recheck/Bell.
 
@@ -63,11 +63,11 @@ Do not restart those programs without direct regression evidence.
 
 - **#221 — closed/completed:** Founder accepted installed Internal.24 for the retained whole-product visual/product gate. That acceptance remains valid for Internal.24 and does not fabricate provider/customer proof.
 - **#226 — closed/completed:** retain its performance/reliability budgets as regression criteria.
-- **#306 — open:** real-phone WhatsApp QR/link/reopen/outbound/inbound/persistence/EN-AR Inbox/logout proof is not established by source or signed-workflow evidence.
+- **#306 — open:** Internal.26 was updated in place; the linked session persisted, the supported demo removal completed, and two encrypted retained inbound messages replayed exactly once into one canonical Inbox conversation. The first outbound reply then failed before durable queueing because its provider identity was `numeric-id@lid`, while the app accepted only Algerian phone-number JIDs. This reproduced P1 compatibility gap is the current bounded repair.
 - **#230 — open/reopened P1:** no owned production domain exists; customer-online trial/network readiness remains blocked.
 - Real commerce/courier account certification, representative beta, independent review and Stable remain unproven.
 
-Internal.25 is Founder-offline-only. It is not customer-online, Beta or Stable.
+Internal.26 is Founder-offline-only. It is not customer-online, Beta or Stable.
 
 ## FD-045 — First Revenue Certification strategy
 
@@ -83,7 +83,7 @@ The binding interpretation is:
 
 ### FRC execution packages
 
-1. **FRC-1 — WhatsApp installed/provider proof (#306).** Update/install signed Internal.25 in place; prove QR, real-phone link, reopen persistence, outbound, inbound persistence, representative EN/AR Inbox and logout with redacted evidence. Include message-to-reviewed-order-draft observation when safe.
+1. **FRC-1 — WhatsApp installed/provider proof (#306).** Repair the demonstrated existing-conversation `@lid` reply boundary, validate it in GitHub, authorize and install one exact signed successor, then resume outbound/delivery, new inbound, representative EN/AR Inbox, logout and safe message-to-reviewed-order-draft evidence.
 2. **FRC-2 — AI/tools/order extraction.** Freeze a tool/corpus matrix; test seller-owned Gemini setup, every model-exposed tool, proposal/permission/current-state checks, stop/retry/quota/offline/malformed behavior, privacy minimization and AR/FR/EN/Darija/mixed extraction. Core work and manual fallback remain functional without AI.
 3. **FRC-3 — complete-product assurance.** Map the Product Stable capability table, Experience page-completion contract and 27 Required journeys to source, automated, signed/installed, Founder and external evidence. Repair only demonstrated shared roots in one bounded batch.
 4. **FRC-4 — commerce live certification.** Use official Shopify/YouCan development environments and a controlled WooCommerce store. Prove authentication, webhook signatures, duplicates/order, pagination, reconciliation, conflicts, rate limits, revoked credentials, outage and recovery.
@@ -111,8 +111,8 @@ The binding interpretation is:
 ## Exact resume path
 
 1. Resolve live protected `main`, open PRs, #306 and #230.
-2. Read the mandatory authority set above and confirm Internal.25 / FD-044 remains latest signed.
-3. Resume FRC-1 exactly: install/update Internal.25 in place and execute the #306 real-phone matrix.
+2. Read the mandatory authority set above and confirm Internal.26 / FD-046 remains latest signed.
+3. Resume FRC-1 exactly: complete the bounded LID-reply/Arabic-composer repair, publish one separately reviewed signed successor, then execute the remaining #306 real-phone rows.
 4. Record redacted pass/fail evidence. If a concrete P0/P1 appears, open one bounded root-cause repair; otherwise close only the evidence actually passed.
 5. Continue FRC-2 through FRC-5 in dependency order, maintaining a capability-specific certification state.
 6. Do not expose or market an integration/action before its live certification record exists.

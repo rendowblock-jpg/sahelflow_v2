@@ -463,7 +463,7 @@ export function InboxV3Thread({
                 }
               />
               <Textarea
-                dir="auto"
+                dir={locale === "ar" ? "rtl" : "auto"}
                 value={replyText}
                 onChange={(event) => setReplyText(event.target.value)}
                 onKeyDown={(event) => {
@@ -476,7 +476,7 @@ export function InboxV3Thread({
                 placeholder={t("inbox.replyPlaceholder")}
                 disabled={sending}
                 rows={1}
-                className="max-h-32 min-h-10 flex-1 resize-none border-0 bg-transparent px-2 py-2 text-[14px] shadow-none focus-visible:ring-0"
+                className="max-h-32 min-h-10 flex-1 resize-none border-0 bg-transparent px-2 py-2 text-start text-[14px] shadow-none focus-visible:ring-0"
               />
               <Button
                 type="button"
