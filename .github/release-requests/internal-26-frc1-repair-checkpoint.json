@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.26 Founder FRC-1 repair checkpoint publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.26",
+  "windowsMsiVersion": "1.0.0.26",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-046",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "a861b071079aef4ee619b0cdb515bed4507a729d",
+    "phase5RunId": 32890388429,
+    "phase67RunId": 32890388421,
+    "ciRunId": 32890388800
+  },
+  "reason": "Founder explicitly authorized one new offline-only signed checkpoint to continue FRC-1 after the installed Internal.25 inbound failure. Publish the exact protected product tree containing #309, which repairs private loopback WhatsApp inbound and delivery-status callbacks without weakening route bearer authentication, demo read-only policy, seller session, shop, license or browser runtime boundaries, plus #310, which adds the requested accessible desktop Inbox pane resizer without changing mobile composition. The validated #310 head a861b071079aef4ee619b0cdb515bed4507a729d includes the merged #309 source and is tree-equivalent to protected main a59b6a44fa6180d81c12b707ba40c68033f09de3; it passed exact-head CI, Phase 5, Phase 6-7 and clean review, while #309 separately passed its packaged Windows callback consequence. This request remains founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim. Internal.26 is a repair candidate for continued real-phone evidence under #306, not proof that FRC-1 has passed; #230 remains independently blocked until an owned domain exists."
+}
