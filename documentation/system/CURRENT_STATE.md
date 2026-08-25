@@ -94,15 +94,39 @@ The adopted interpretation is:
 
 Internal.25 includes the #304 protected-storage prerequisite, but real-provider behavior remains unproven.
 
+The first Founder-installed FRC-1 attempt on 2026-08-25 produced a concrete
+blocking failure after a visible QR link. Two real inbound messages reached the
+contained WhatsApp sidecar and remained durably encrypted in the inbound spool,
+but neither reached the canonical Inbox. Each retained record exhausted ten
+bounded delivery attempts with `RUNTIME_SESSION_REQUIRED`; the active shop had
+no corresponding `ProviderIngressEvent`, `ProviderIngressAttempt`, Conversation
+or Message commit. The app, runtime and sidecar remained alive. The reproduced
+root is the browser-only runtime-cookie gate rejecting the private sidecar
+callback before its separate bearer-token route authentication can run. Evidence
+is recorded under #306. FRC-1 is failed/open; the retained messages must not be
+discarded, and a source repair is not installed/provider proof.
+
+The active Founder shop also has the exact annual-demo marker
+`demo_seed_version=algerian-cod-founder-v1`. The global read-only demo policy
+would correctly reject the provider mutation after the proxy repair, so FRC-1
+cannot be accepted in that loaded demo workspace. Do not weaken or allowlist
+WhatsApp around the demo boundary. Before installed replay, preserve the shop
+and use the supported Founder-confirmed **Remove demo data** flow (which removes
+only demo-tagged records), or switch to a separately created empty non-demo
+shop. The encrypted sidecar spool and installed identity must remain intact.
+
 Required #306 evidence:
 
-1. update/install Internal.25 in place and verify exact version plus normal reopen;
+1. merge and publish a separately authorized signed repair checkpoint from
+   exact protected source, update it in place, and verify exact version plus
+   normal reopen;
 2. contained sidecar start and visible usable QR;
 3. real phone/account link through normal Linked Devices;
 4. truthful connected state without developer bypass;
 5. close/reopen session persistence;
 6. one outbound message with redacted receipt/status;
-7. one inbound message that persists and appears in the database-authoritative Inbox;
+7. retained-spool replay exactly once plus one new inbound message that persists
+   and appears in the database-authoritative non-demo Inbox;
 8. representative EN and Arabic/RTL Inbox observation;
 9. normal disconnect/logout and local session retirement;
 10. when safe, message-to-reviewed-order-draft observation without silently creating a canonical order.

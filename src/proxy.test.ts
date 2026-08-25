@@ -6,6 +6,7 @@ import { proxy } from "./proxy";
 
 const RUNTIME_TOKEN = "e".repeat(64);
 const INSTANCE_ID = "a".repeat(32);
+const SIDECAR_TOKEN = "f".repeat(64);
 const AUTH_SECRET = "proxy-test-auth-secret";
 // Self-hosted Next middleware deliberately exposes its server-populated
 // canonical loopback hostname instead of trusting the request Host header. The
@@ -38,6 +39,7 @@ describe("runtime proxy boundary", () => {
     vi.stubEnv("SF_RUNTIME_APP_TOKEN", RUNTIME_TOKEN);
     vi.stubEnv("SF_RUNTIME_TOKEN", RUNTIME_TOKEN);
     vi.stubEnv("SF_RUNTIME_INSTANCE_ID", INSTANCE_ID);
+    vi.stubEnv("SIDECAR_TOKEN", SIDECAR_TOKEN);
     vi.stubEnv("SF_AUTH_MODE", "setup");
     vi.stubEnv("AUTH_SECRET", "");
   });
@@ -155,6 +157,57 @@ describe("runtime proxy boundary", () => {
       expect(rejected.status).toBe(401);
       await expect(rejected.json()).resolves.toMatchObject({
         code: "RUNTIME_SHUTDOWN_CREDENTIAL_REJECTED",
+      });
+    }
+  });
+
+  it("allows only exact loopback WhatsApp callbacks with sidecar authority", async () => {
+    process.env.SF_AUTH_MODE = "configured";
+    process.env.AUTH_SECRET = AUTH_SECRET;
+
+    for (const pathname of [
+      "/api/whatsapp/inbound",
+      "/api/whatsapp/message-status",
+    ]) {
+      const allowed = await proxy(
+        new NextRequest(`http://127.0.0.1:49152${pathname}`, {
+          method: "POST",
+          headers: { authorization: `Bearer ${SIDECAR_TOKEN}` },
+        }),
+      );
+      expect(allowed.status).toBe(200);
+      expect(allowed.headers.get("x-middleware-next")).toBe("1");
+    }
+
+    for (const candidate of [
+      new NextRequest("http://127.0.0.1:49152/api/whatsapp/inbound", {
+        method: "POST",
+      }),
+      new NextRequest("http://127.0.0.1:49152/api/whatsapp/inbound", {
+        method: "POST",
+        headers: { authorization: `Bearer ${"0".repeat(64)}` },
+      }),
+      new NextRequest("http://127.0.0.1:49152/api/whatsapp/inbound", {
+        method: "GET",
+        headers: { authorization: `Bearer ${SIDECAR_TOKEN}` },
+      }),
+      new NextRequest("http://192.0.2.10:49152/api/whatsapp/inbound", {
+        method: "POST",
+        headers: { authorization: `Bearer ${SIDECAR_TOKEN}` },
+      }),
+      new NextRequest("http://127.0.0.1:49152/api/whatsapp/inbound/replay", {
+        method: "POST",
+        headers: { authorization: `Bearer ${SIDECAR_TOKEN}` },
+      }),
+      new NextRequest("http://127.0.0.1:49152/api/orders", {
+        method: "POST",
+        headers: { authorization: `Bearer ${SIDECAR_TOKEN}` },
+      }),
+    ]) {
+      const rejected = await proxy(candidate);
+      expect(rejected.status).toBe(401);
+      await expect(rejected.json()).resolves.toMatchObject({
+        code: "RUNTIME_SESSION_REQUIRED",
       });
     }
   });

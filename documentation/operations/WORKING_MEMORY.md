@@ -45,23 +45,60 @@ Binding rules:
 - Zero budget changes order, never integrity/privacy/security/customer truth.
 - No paid deployment, online trial, Beta or Stable is authorized by this documentation alone.
 
+## Active FRC-1 failure and bounded repair
+
+- On 2026-08-25 signed Founder-installed Internal.25 reached visible QR-linked
+  state, then failed real inbound delivery.
+- Two real inbound messages are retained in the encrypted sidecar spool. Each
+  reached ten bounded retries with `RUNTIME_SESSION_REQUIRED`; zero provider
+  ingress attempts or canonical Inbox rows were committed.
+- Root: the packaged proxy applies the browser-only `sf_runtime` cookie boundary
+  before `/api/whatsapp/inbound` can perform its private sidecar bearer-token
+  authentication. The delivery-status callback is an affected sibling of the
+  same boundary.
+- Evidence is redacted under #306. Do not reconnect, logout, reset AppData,
+  clear auth or delete the spool to simplify the repair.
+- The active shop has exact annual-demo marker
+  `demo_seed_version=algerian-cod-founder-v1`. Its read-only mutation policy
+  would correctly block replay after the proxy repair. Do not allowlist or
+  weaken that boundary. Preserve the shop, then use the supported
+  Founder-confirmed **Remove demo data** operation or a separate empty non-demo
+  shop before installed replay; retain the encrypted spool and installation
+  identity.
+- Active isolated branch: `codex/frc1-whatsapp-runtime-session`, based on
+  `main@1380b00d788dc024d5ccbd8cbdd036f10b57dd7e`. The proposed source repair is
+  not merged, signed, installed or live-provider accepted.
+- Do not publish one update per symptom. Complete the demonstrated FRC-1 root
+  and affected siblings with fast targeted feedback, freeze one exact repair
+  head, run the consequence-selected GitHub gates, then create one separately
+  reviewed signed checkpoint and perform one complete installed phone matrix.
+
 ## Exact next-session order — FRC-1 WhatsApp
 
 1. Re-resolve protected `main`, open PRs, #306 and #230.
-2. Confirm signed latest is still Internal.25 / FD-044 and release assets bind to exact source.
-3. Close SahelFlow normally and update/install Internal.25 **in place** through the normal signed path.
-4. Preserve AppData, registry/install identity, keys and shop databases; no uninstall/reset/delete workaround.
-5. Verify installed `1.0.0-internal.25` / MSI `1.0.0.25`, normal launch and close/reopen.
-6. Open WhatsApp connection and obtain a visible usable QR.
-7. Link a real phone/account through normal Linked Devices and reach truthful connected state.
-8. Close/reopen SahelFlow and prove the linked session persists.
-9. Send one outbound message; retain only redacted receipt/status/timestamps.
-10. Send one inbound message; prove persistence and database-authoritative Inbox arrival.
-11. Inspect representative Inbox presentation in English and Arabic/RTL.
-12. Exercise normal disconnect/logout and verify local session retirement.
-13. When safe, observe message → reviewed order draft; do not silently create a canonical order.
-14. Record pass/fail under #306 without QR secrets, auth state, credentials or private content.
-15. On a concrete P0/P1, open one bounded repair for the demonstrated root and siblings; otherwise close only the passed provider evidence.
+2. Resume the isolated repair branch and preserve the Founder installation plus
+   the two encrypted pending messages unchanged.
+3. Complete the exact loopback/bearer callback repair for inbound and delivery
+   status without weakening browser runtime, seller-session or shop authority.
+4. Inspect only directly affected reconnect, retained-spool replay, outbound
+   receipt and close/reopen siblings; change them only from concrete evidence.
+5. Run fast targeted TypeScript/lint/Vitest/provider checks during coding.
+6. Freeze one exact repair head, open one PR and run selected Level 1/2/3 gates
+   in GitHub Actions, including the packaged/installed callback consequence.
+7. Perform adversarial review, resolve findings and merge with expected-head
+   protection; verify protected source/tree.
+8. Establish the next version/FD only through a separate reviewed
+   release-authority envelope; do not rename Internal.25 evidence.
+9. Before replay, preserve the Founder shop and use the supported confirmed demo
+   removal or a separate empty non-demo shop. Do not delete the encrypted spool,
+   reset AppData or weaken the demo mutation policy.
+10. Build/sign/publish only from exact protected `main`, update the Founder
+   installation once in place, and confirm the retained spool replays exactly
+   once into the canonical Inbox.
+11. Complete reopen persistence, outbound plus delivery state, a new inbound,
+    EN and Arabic/RTL presentation, normal logout/session retirement and safe
+    message-to-reviewed-order-draft observation.
+12. Record redacted pass/fail under #306. Close only evidence actually observed.
 
 ## Following FRC packages
 
@@ -73,7 +110,8 @@ Binding rules:
 
 ## Current hard blockers and dependencies
 
-- WhatsApp FRC-1 requires the Founder’s real phone/account and installed Internal.25.
+- WhatsApp FRC-1 requires the Founder’s real phone/account, a non-demo test
+  shop, and the next exact signed repair checkpoint installed in place.
 - Real Gemini minimal inference requires a seller-owned key; free-tier work uses synthetic/redacted inputs only.
 - Commerce requires development/test environments and HTTPS ingress for webhook tests.
 - Courier live certification requires provider sandbox/demo or authorized seller credentials.
