@@ -32,8 +32,7 @@ export function InboxPaneResizer({
   onCommit: (width: number) => void;
 }) {
   const activePointerRef = useRef<number | null>(null);
-  const liveWidthRef = useRef(width);
-  liveWidthRef.current = width;
+  const liveWidthRef = useRef<number | null>(null);
 
   const pointerWidth = (clientX: number): number | null => {
     const container = containerRef.current;
@@ -73,6 +72,8 @@ export function InboxPaneResizer({
         if (next !== null) {
           liveWidthRef.current = next;
           onResize(next);
+        } else {
+          liveWidthRef.current = width;
         }
         event.preventDefault();
       }}
@@ -91,12 +92,14 @@ export function InboxPaneResizer({
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId);
         }
-        onCommit(next ?? liveWidthRef.current);
+        onCommit(next ?? liveWidthRef.current ?? width);
+        liveWidthRef.current = null;
       }}
       onPointerCancel={(event) => {
         if (activePointerRef.current !== event.pointerId) return;
         activePointerRef.current = null;
-        onCommit(liveWidthRef.current);
+        onCommit(liveWidthRef.current ?? width);
+        liveWidthRef.current = null;
       }}
       onKeyDown={(event) => {
         if (
