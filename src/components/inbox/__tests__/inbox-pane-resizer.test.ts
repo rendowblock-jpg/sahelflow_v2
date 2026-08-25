@@ -77,9 +77,11 @@ describe("Inbox pane width contract", () => {
     const styles = source(
       "src/components/inbox/inbox-v3-workspace.module.css",
     );
+    const experience = source("src/app/experience-system.css");
 
     expect(workspace).toContain("!isMobile ? (");
     expect(workspace).toContain("<InboxPaneResizer");
+    expect(workspace).toContain('data-inbox-resizable-panes="true"');
     expect(workspace).toContain("persistInboxQueueWidth(next)");
     expect(resizer).toContain('role="separator"');
     expect(resizer).toContain('aria-orientation="vertical"');
@@ -89,5 +91,12 @@ describe("Inbox pane width contract", () => {
     expect(queue).not.toContain("md:w-[20.25rem]");
     expect(styles).toContain("inline-size: var(--inbox-queue-width)");
     expect(styles).toContain("min-inline-size: var(--inbox-queue-width)");
+    expect(experience).toContain(
+      '[data-inbox-resizable-panes="true"] > [data-inbox-pane-resizer="true"]',
+    );
+    expect(experience).toContain("width: var(--inbox-queue-width) !important");
+    expect(experience).toContain(
+      "min-width: var(--inbox-queue-width) !important",
+    );
   });
 });

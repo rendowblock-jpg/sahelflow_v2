@@ -266,6 +266,7 @@ export function InboxV3Workspace({
 
         <div
           ref={panesRef}
+          data-inbox-resizable-panes="true"
           className={`${styles.panes} flex min-h-0 flex-1 overflow-hidden`}
           style={
             {

@@ -114,6 +114,32 @@ html[dir="rtl"] [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="tru
   order: 1;
 }
 
+/* The V3 queue/thread splitter is a real flex item. Keep it physically between
+ * the panes even though the shared Inbox direction layer owns explicit order. */
+[data-inbox-workspace="v2"] [data-inbox-resizable-panes="true"] > [data-inbox-queue="true"] {
+  order: 1;
+}
+
+[data-inbox-workspace="v2"] [data-inbox-resizable-panes="true"] > [data-inbox-pane-resizer="true"] {
+  order: 2;
+}
+
+[data-inbox-workspace="v2"] [data-inbox-resizable-panes="true"] > [data-inbox-thread] {
+  order: 3;
+}
+
+html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-resizable-panes="true"] > [data-inbox-thread] {
+  order: 1;
+}
+
+html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-resizable-panes="true"] > [data-inbox-pane-resizer="true"] {
+  order: 2;
+}
+
+html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-resizable-panes="true"] > [data-inbox-queue="true"] {
+  order: 3;
+}
+
 @media (min-width: 768px) {
   [data-inbox-workspace="v2"] [data-inbox-queue="true"] {
     width: 19rem !important;
@@ -130,6 +156,17 @@ html[dir="rtl"] [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="tru
   [data-inbox-workspace="v2"] aside:has(> [data-inbox-context="true"]) {
     width: 17rem !important;
     min-width: 17rem !important;
+  }
+}
+
+/* Resizable V3 panes supersede the historical fixed queue minima above. These
+ * declarations intentionally match their !important authority so visible,
+ * persisted and ARIA widths describe the same geometry. */
+@media (min-width: 768px) {
+  [data-inbox-workspace="v2"] [data-inbox-resizable-panes="true"] > [data-inbox-queue="true"] {
+    width: var(--inbox-queue-width) !important;
+    min-width: var(--inbox-queue-width) !important;
+    max-width: var(--inbox-queue-width) !important;
   }
 }
 
