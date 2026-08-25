@@ -387,9 +387,10 @@ export function InboxV3Queue({
 
   return (
     <section
+      id="inbox-conversation-queue"
       data-inbox-queue="true"
       aria-label={copy("workQueue")}
-      className="flex min-h-0 w-full flex-1 flex-col bg-background md:w-[20.25rem] md:min-w-[20.25rem] md:flex-none md:border-e"
+      className="flex min-h-0 w-full flex-1 flex-col bg-background md:flex-none"
     >
       <div className="border-b border-border/60 px-3 py-2.5">
         <div className="relative">

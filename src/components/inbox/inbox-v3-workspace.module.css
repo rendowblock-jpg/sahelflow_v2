@@ -1,5 +1,18 @@
 .workspace {}
 
+.panes {
+  --inbox-queue-width: 20.25rem;
+}
+
+@media (min-width: 768px) {
+  .panes :global([data-inbox-queue="true"]) {
+    flex: 0 0 var(--inbox-queue-width);
+    inline-size: var(--inbox-queue-width);
+    min-inline-size: var(--inbox-queue-width);
+    max-inline-size: var(--inbox-queue-width);
+  }
+}
+
 :global(html[dir="rtl"]) .workspace :global([data-inbox-conversation]) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
