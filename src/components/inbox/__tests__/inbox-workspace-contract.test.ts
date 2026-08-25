@@ -180,4 +180,18 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(thread).toContain('dir={locale === "ar" ? "rtl" : "auto"}');
     expect(thread).toContain("text-start");
   });
+
+  it("makes status and reviewed AI extraction first-class thread-header actions", () => {
+    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
+    expect(thread).toContain("<StatusControl");
+    expect(thread).toContain("conversationId={activeChat.conversationId}");
+    expect(thread).toContain('aria-label={t("inbox.aiOrderAssistant")}');
+    expect(thread).toContain("<MessageExtraction");
+    expect(thread).toContain("messageId={selectedCandidate.id}");
+    for (const locale of ["en", "fr", "ar"]) {
+      expect(read(`src/lib/i18n/locales/${locale}.json`)).toContain(
+        '"inbox.aiOrderAssistant"',
+      );
+    }
+  });
 });

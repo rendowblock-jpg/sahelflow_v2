@@ -115,6 +115,12 @@ same bounded Inbox package sets Arabic locale direction at first render while
 retaining automatic content direction for French/English. This is source work,
 not installed acceptance, until observed in the signed successor.
 
+Founder direction also makes the thread-header status badge invoke the existing
+authorized workflow-status control and adds a professional AI-order entry point
+there. The AI action previews the selected inbound candidate and reuses the
+existing reviewed extraction/order flow; it does not introduce a second action
+path or silently create a canonical order.
+
 Required #306 evidence:
 
 1. validate, merge and publish the bounded `@lid` reply repair from exact

@@ -1039,6 +1039,7 @@
   "inbox.empty.title": "لا توجد محادثات بعد",
   "inbox.existingCustomerNotFound": "عميل موجود لكن لم يتم العثور عليه",
   "inbox.extractOrder": "استخراج الطلبية",
+  "inbox.aiOrderAssistant": "مساعد الطلبات بالذكاء الاصطناعي",
   "inbox.extractedItem": "منتج مستخرج",
   "inbox.extractionError": "حدث خطأ",
   "inbox.extractionFailed": "فشل استخراج الطلب",

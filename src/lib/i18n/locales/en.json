@@ -1039,6 +1039,7 @@
   "inbox.empty.title": "No conversations yet",
   "inbox.existingCustomerNotFound": "Existing customer but not found",
   "inbox.extractOrder": "Extract Order",
+  "inbox.aiOrderAssistant": "AI Order Assistant",
   "inbox.extractedItem": "Extracted Item",
   "inbox.extractionError": "An error occurred",
   "inbox.extractionFailed": "Order extraction failed",

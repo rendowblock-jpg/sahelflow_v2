@@ -22,10 +22,14 @@ import {
 } from "lucide-react";
 
 import { CannedResponsePicker } from "@/components/inbox/canned-response-picker";
-import { ActivityMessage } from "@/components/inbox/conversation-controls";
+import {
+  ActivityMessage,
+  StatusControl,
+} from "@/components/inbox/conversation-controls";
 import { ConversationStatusBadge } from "@/components/inbox/conversation-status-badge";
 import { InboxCustomerWorkPanel } from "@/components/inbox/inbox-customer-work-panel";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
+import { MessageExtraction } from "@/components/inbox/message-extraction";
 import { MessageStatus } from "@/components/inbox/message-status";
 import { WhatsAppPairingDialog } from "@/components/inbox/whatsapp-pairing-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -336,9 +340,19 @@ export function InboxV3Thread({
               <h3 dir="auto" className="truncate text-[13px] font-semibold">
                 {activeChat.name}
               </h3>
-              <ConversationStatusBadge
-                status={activeChat.workflow.status ?? "open"}
-              />
+              {canUpdateConversation ? (
+                <StatusControl
+                  key={`${activeChat.conversationId}:${activeChat.workflow.status ?? "open"}`}
+                  conversationId={activeChat.conversationId}
+                  initialStatus={activeChat.workflow.status ?? "open"}
+                  appearance="badge"
+                  onUpdated={() => void refreshChats()}
+                />
+              ) : (
+                <ConversationStatusBadge
+                  status={activeChat.workflow.status ?? "open"}
+                />
+              )}
             </div>
             <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
               {activeChat.phone ? (
@@ -354,31 +368,86 @@ export function InboxV3Thread({
           </div>
         </div>
 
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={copy("conversationContext")}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!selectedCandidate || !activeChat.transportId}
+                aria-label={t("inbox.aiOrderAssistant")}
+              >
+                <Sparkles className="size-4" aria-hidden="true" />
+                <span className="hidden xl:inline">
+                  {t("inbox.aiOrderAssistant")}
+                </span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="end"
+              className="w-[min(440px,94vw)] overflow-y-auto sm:max-w-none"
             >
-              <PanelRight
-                className="size-4 icon-rtl-flip"
-                aria-hidden="true"
-              />
-            </Button>
-          </SheetTrigger>
-          <SheetContent
-            side="end"
-            className="w-[min(400px,94vw)] p-0 sm:max-w-none"
-          >
-            <SheetHeader className="sr-only">
-              <SheetTitle>{copy("conversationContext")}</SheetTitle>
-              <SheetDescription>{activeChat.name}</SheetDescription>
-            </SheetHeader>
-            {renderContextPanel()}
-          </SheetContent>
-        </Sheet>
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <Sparkles className="size-4 text-primary" aria-hidden="true" />
+                  {t("inbox.aiOrderAssistant")}
+                </SheetTitle>
+                <SheetDescription>
+                  {copy("orderCandidateHint")}
+                </SheetDescription>
+              </SheetHeader>
+              {selectedCandidate && activeChat.transportId ? (
+                <div className="mt-5 space-y-4">
+                  <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {copy("orderCandidate")}
+                    </p>
+                    <p
+                      dir="auto"
+                      className="mt-2 line-clamp-4 whitespace-pre-wrap text-sm leading-6 [unicode-bidi:plaintext]"
+                    >
+                      {selectedCandidate.body}
+                    </p>
+                  </div>
+                  <MessageExtraction
+                    key={`${activeChat.conversationId}:${selectedCandidate.id}:header`}
+                    conversationId={activeChat.transportId}
+                    messageId={selectedCandidate.id}
+                    messageBody={selectedCandidate.body}
+                    knownPhone={activeChat.phone}
+                  />
+                </div>
+              ) : null}
+            </SheetContent>
+          </Sheet>
+
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={copy("conversationContext")}
+              >
+                <PanelRight
+                  className="size-4 icon-rtl-flip"
+                  aria-hidden="true"
+                />
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="end"
+              className="w-[min(400px,94vw)] p-0 sm:max-w-none"
+            >
+              <SheetHeader className="sr-only">
+                <SheetTitle>{copy("conversationContext")}</SheetTitle>
+                <SheetDescription>{activeChat.name}</SheetDescription>
+              </SheetHeader>
+              {renderContextPanel()}
+            </SheetContent>
+          </Sheet>
+        </div>
       </header>
 
       <ScrollArea className="min-h-0 flex-1">

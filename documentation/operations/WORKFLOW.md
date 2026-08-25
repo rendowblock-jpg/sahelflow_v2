@@ -30,7 +30,7 @@ resolve protected main + open PR/issues + current signed release
 → perform installed/human/provider/external evidence that automation cannot prove
 ```
 
-At the current frontier, no product rewrite is authorized. Internal.26 is already published and installed, and its real-phone matrix reproduced one bounded outbound compatibility defect: replies to a persisted individual `@lid` conversation are rejected before durable queueing. Repair that exact boundary plus the demonstrated Arabic empty-composer direction sibling, run consequence-selected GitHub evidence, then establish a separately reviewed signed successor before resuming installed/provider proof. Later FRC packages begin from their frozen evidence matrix.
+At the current frontier, no product rewrite is authorized. Internal.26 is already published and installed, and its real-phone matrix reproduced one bounded outbound compatibility defect: replies to a persisted individual `@lid` conversation are rejected before durable queueing. Repair that exact boundary plus the demonstrated Arabic empty-composer direction and header workflow-access siblings, run consequence-selected GitHub evidence, then establish a separately reviewed signed successor before resuming installed/provider proof. Later FRC packages begin from their frozen evidence matrix.
 
 Do not restart generic repository reconnaissance when a bounded current outcome is known. Do not rerun an unchanged passing exact head. Do not retry deterministic failures until they turn green without identifying/fixing the cause.
 

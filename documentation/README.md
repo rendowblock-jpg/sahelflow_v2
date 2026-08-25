@@ -63,7 +63,7 @@ Do not restart those programs without direct regression evidence.
 
 - **#221 — closed/completed:** Founder accepted installed Internal.24 for the retained whole-product visual/product gate. That acceptance remains valid for Internal.24 and does not fabricate provider/customer proof.
 - **#226 — closed/completed:** retain its performance/reliability budgets as regression criteria.
-- **#306 — open:** Internal.26 was updated in place; the linked session persisted, the supported demo removal completed, and two encrypted retained inbound messages replayed exactly once into one canonical Inbox conversation. The first outbound reply then failed before durable queueing because its provider identity was `numeric-id@lid`, while the app accepted only Algerian phone-number JIDs. This reproduced P1 compatibility gap is the current bounded repair.
+- **#306 — open:** Internal.26 was updated in place; the linked session persisted, the supported demo removal completed, and two encrypted retained inbound messages replayed exactly once into one canonical Inbox conversation. The first outbound reply then failed before durable queueing because its provider identity was `numeric-id@lid`, while the app accepted only Algerian phone-number JIDs. The bounded repair also closes the observed Arabic empty-composer direction defect and exposes the existing governed status/reviewed-extraction workflows directly in the thread header.
 - **#230 — open/reopened P1:** no owned production domain exists; customer-online trial/network readiness remains blocked.
 - Real commerce/courier account certification, representative beta, independent review and Stable remain unproven.
 

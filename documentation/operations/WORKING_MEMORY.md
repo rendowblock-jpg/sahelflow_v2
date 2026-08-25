@@ -69,6 +69,11 @@ Binding rules:
   starts LTR and moves right only after Arabic input. The package makes the
   Arabic-locale empty composer RTL from first render while retaining `auto` for
   French/English and mixed-direction content.
+- Founder direction adds two first-class thread-header entry points without new
+  mutation authority: the visible status badge opens the existing governed
+  Open/Pending/Resolved/Snoozed control, and a professional AI-order action
+  opens the existing candidate preview plus reviewed `MessageExtraction` flow.
+  Extraction never silently creates a canonical order.
 - Active isolated branch: `codex/frc1-whatsapp-lid-reply`, based on
   `main@4d0922346fcc5ab8ba09f04fbcd288c70f66c777`. It is not yet merged, signed,
   installed or live-provider accepted.
@@ -79,8 +84,8 @@ Binding rules:
 
 1. Re-resolve protected `main`, open PRs, #306 and #230.
 2. Complete the existing-conversation `@lid` normalization/authority repair and
-   exact tests plus the Arabic empty-composer direction fix; do not broaden the
-   provider boundary to groups, broadcasts or arbitrary JIDs.
+   exact tests plus the Arabic empty-composer and governed thread-header actions;
+   do not broaden the provider boundary to groups, broadcasts or arbitrary JIDs.
 3. Freeze one exact repair head, open one PR and run selected Level 1/2/3 gates
    in GitHub Actions; perform adversarial review and resolve every finding.
 4. Merge with expected-head
