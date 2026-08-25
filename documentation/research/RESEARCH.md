@@ -1,8 +1,8 @@
 # SahelFlow — Research and adopted findings
 
 > **Status:** Research reference and adopted-evidence index; not product, current-state or roadmap authority
-> **Last consolidated:** 2026-08-01
-> **Governing decision:** FD-028 — Final Completion Program and Research-First Quality Protocol
+> **Last consolidated:** 2026-08-25
+> **Governing decisions:** FD-028 — Research-First Quality Protocol; FD-045 — First Revenue Certification
 
 Research is mandatory before every major phase and material implementation.
 Research informs the owning product, experience, architecture, roadmap or
@@ -520,6 +520,34 @@ Research focus:
 - AI data minimization and typed tools;
 - exact proposal-bound human approval;
 - durable automation execution and partial-failure semantics.
+
+#### First Revenue Certification provider research — adopted 2026-08-25
+
+Exact question: what can SahelFlow truthfully certify at zero infrastructure budget before a first customer, and what still requires live provider authority?
+
+Primary/current findings:
+
+- [Baileys](https://github.com/WhiskeySockets/Baileys) is an unofficial WhatsApp Web library and is not affiliated with or authorized by WhatsApp/Meta. Its [security policy](https://github.com/WhiskeySockets/Baileys/security) treats auth state as long-lived sensitive credential material and supports the current major line only. SahelFlow may certify a named installed real-phone journey on a pinned current version; it may not promise permanent Meta protocol compatibility or absence of account/policy risk.
+- [Gemini function calling](https://ai.google.dev/gemini-api/docs/function-calling) returns structured calls for application execution; the application, not the model, remains responsible for authorization and effects. [Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing) currently exposes a limited free tier and states that free-tier content may be used to improve Google products. SahelFlow therefore uses synthetic/redacted free-tier certification and retains seller-owned keys, allowlisted projections, explicit approval and deterministic/manual fallback.
+- [Shopify webhook guidance](https://shopify.dev/docs/apps/build/webhooks) requires authenticated handling and supports duplicate-resistant processing; webhooks are notification, not sole canonical truth. SahelFlow retains hybrid webhook plus scheduled reconciliation and requires an official development/test shop before live certification.
+- [WooCommerce REST API documentation](https://developer.woocommerce.com/docs/apis/rest-api/) and [webhook documentation](https://developer.woocommerce.com/docs/apis/rest-api/v3/webhooks/) provide official credentials/signature contracts suitable for a controlled test store. A local adapter or mocked hook still does not prove a seller environment.
+- [YouCan developer documentation](https://developer.youcan.shop/) provides Partner/development-store and OAuth paths. Its [webhook contract](https://developer.youcan.shop/apps/webhooks) documents topic subscription, retry and delivery behavior. Certification still requires an official development store, current scopes and live reconciliation evidence.
+- [Cloudflare `workers.dev` guidance](https://developers.cloudflare.com/workers/configuration/routing/workers-dev/) describes the subdomain as useful for getting started and intended for personal/hobby, non-business-critical use; [Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/) require an owned Cloudflare zone. `workers.dev` can support technical tests but does not satisfy #230’s sole customer-production authority.
+
+Courier research boundary:
+
+- The bounded 2026-08-25 search did not establish complete authoritative public contracts/sandboxes for the intended Algerian Yalidine, Maystro or EcoTrack Pro action sets. ZR Express public material advertises API/e-commerce integration, but a complete current provider-issued contract and account remain required.
+- Open projects such as [`courier-dz`](https://github.com/cd0uze/courier-dz), [`feeefapp/yalidine`](https://github.com/feeefapp/yalidine) and [`shipping-dz`](https://github.com/tkawen/shipping-dz) are useful implementation/edge-case benchmarks. They are third-party evidence and cannot establish current provider policy, endpoint, status, fee, idempotency or live-account behavior.
+- If a provider does not supply usable current documentation plus sandbox/demo or an explicitly authorized real account, its affected actions remain hidden or disabled. First live use cannot be called pre-certified.
+
+Adopted standard:
+
+1. Official current provider documentation and provider-issued credentials are the contract authority.
+2. Certification is per provider, API version, environment and action—not per adapter name.
+3. Deterministic conformance precedes live testing; live testing never bypasses durable effect/idempotency/reconciliation architecture.
+4. Public support requires sanitized real-environment evidence for every advertised action and visible degraded/unsupported states.
+5. Research/open-source comparison cannot close live-provider evidence.
+6. Revalidate on provider version/policy change, security advisory, certification start or contradictory live evidence.
 
 ### Phase 4 — Data protection, recovery, migrations and security
 

@@ -1,11 +1,11 @@
 # SahelFlow 1.0 — Consolidated Founder Decisions
 
-> **Status:** Authoritative Founder-approved register through FD-033
+> **Status:** Authoritative consolidated product/execution register through FD-033 plus FD-045; version-bound FD-034–FD-044 remain in protected release authority
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-08-13
+> **Last amended:** 2026-08-25
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
-This register consolidates approved product and execution decisions through FD-033. Engineering
+This register consolidates approved product and execution decisions through FD-033 and the current FD-045 First Revenue Certification strategy. Version-bound FD-034–FD-044 remain durable in their protected release envelopes and are summarized by active current-state documentation. Engineering
 mechanisms remain subject to architecture, research, security review, provider
 certification and evidence gates, but engineering may not contradict these
 policies without a new numbered Founder decision.
@@ -684,6 +684,57 @@ Repeated manifestations of those classes do not reopen Founder screenshot discov
 ### Exact next-session boundary
 
 The installed inspection is closed. The next session reads live protected `main` plus this decision, Current State, Roadmap, Workflow and Working Memory; creates/uses the one Internal.16 application branch from exact documentation-merged main; performs one exact-source whole-product reconnaissance; freezes the combined Problem Register/contracts/acceptance matrix; then begins the large implementation wave. It must not spend another session reconstructing Parts 1–3 from chat.
+
+## FD-045 — Zero-budget First Revenue Certification and evidence-bounded public promises
+
+This decision records the Founder’s explicit 2026-08-25 direction after accepting installed Internal.24 and publishing the protected provider/security checkpoint Internal.25 / FD-044.
+
+### Commercial situation and objective
+
+- The Founder currently has no paid-infrastructure budget, including no budget for an owned production domain, and needs first revenue from SahelFlow as quickly as integrity permits.
+- Zero budget changes dependency order and bootstrap choices; it does not weaken correctness, security, privacy, recovery, provider, customer-truth or release evidence.
+- The first customer must not be used as an undisclosed experiment. SahelFlow may be sold only against an exact, written, evidence-backed scope.
+- This decision does not change the 35,000 DZD one-time Product price, authorize a discount/refundable reservation, define refund terms, or authorize customer distribution by itself. Those commercial choices require their own explicit decision and applicable review.
+
+### Assurance definition
+
+- “100% functional” means every publicly promised Required capability and journey has current applicable evidence and the exact candidate has zero known P0/P1. It does not mean unknown defects are mathematically impossible.
+- “99.99% sure” retains FD-033’s definition: execute every defined Required matrix at the applicable layer, preserve one exact evidence chain, disclose residual risk and never manufacture a warranty against future third-party/provider change.
+- Public claims are narrower than internal adapter inventory. Only an exact provider/action with current live certification may be exposed or marketed as supported.
+- An integration can be certified for tracking while create, edit, cancellation, label or other actions remain hidden/unsupported.
+- Open-source libraries and wrappers are research/comparison evidence only; they do not substitute for current provider-issued contracts or live authorized credentials.
+
+### First Revenue Certification sequence
+
+1. **FRC-1 — WhatsApp installed/provider evidence.** On signed Internal.25, close issue #306 only after normal installed QR, real-phone link, reopen persistence, outbound, inbound persistence/database-authoritative Inbox, representative EN/AR presentation and logout pass with redacted evidence. Include message-to-reviewed-order-draft observation when safe.
+2. **FRC-2 — AI, every exposed tool and order extraction.** Freeze the current tool/corpus matrix and execute current-model/key setup, minimal real inference, typed tool schemas, privacy minimization, proposal/permission/current-state authority, success/denial/stale/duplicate/partial/timeout/quota/offline/malformed cases, and AR/FR/EN/Darija/mixed extraction through human review to exactly-one canonical order.
+3. **FRC-3 — Required complete-product assurance.** Build one finite evidence ledger mapping the Product Stable capability table, Experience page-completion contract, all 27 Required journeys and Architecture invariants to exact source, automated, signed/installed, Founder and external evidence. Open repair scope only from demonstrated defects; batch related roots once and certify one frozen head.
+4. **FRC-4 — commerce live certification.** Use official current contracts and official development/test environments where available for Shopify, YouCan and WooCommerce. Prove signatures/auth, webhook and reconciliation convergence, pagination, duplicate/out-of-order events, conflicts, rate limits, credential revocation, outage and recovery per public action.
+5. **FRC-5 — courier live certification.** Require current provider-issued contract plus sandbox/demo or explicitly authorized real-account credentials through SahelFlow’s protected secret interface. Certify every public action independently, including ambiguity, idempotency, retry and reconciliation.
+6. **FRC-6 — first paid assisted deployment decision.** Select one seller whose actual commerce/courier path is certified. Do not distribute, start a public trial, call it Beta/Stable or create an offline-customer exception until customer-access authority passes or a newer explicit Founder decision establishes a transparent bounded exception.
+
+### AI, WhatsApp and external-provider boundaries
+
+- WhatsApp/Baileys is an unofficial-provider dependency. Current installed behavior can be strongly certified, monitored and recovered; SahelFlow cannot promise Meta will never change or restrict the protocol.
+- Free-tier Gemini certification uses synthetic/redacted inputs under the seller-owned-key privacy-safe contract. Real client PII, full WhatsApp histories, credentials, sensitive finance or raw records are never silently sent.
+- Core product operation and deterministic/manual fallback remain independent of AI availability.
+- Provider credentials never enter chat, source, tests, GitHub issues or evidence artifacts.
+- If an authoritative contract/test environment is unavailable, the affected provider/action remains disabled, hidden or explicitly conditional.
+
+### Domain, customer-online and first-revenue boundary
+
+- FRC-1, FRC-2 and local/source portions of FRC-3 can proceed without an owned domain.
+- A free development endpoint may support technical testing but does not satisfy business-critical customer authority.
+- Issue #230 remains open/reopened P1 until a SahelFlow-owned production hostname, resilient ingress/recovery, representative Algerian-network behavior and exact installed customer-trial evidence exist.
+- Internal.25 remains `founder-offline-only`. FD-045 does not authorize customer-online licensing, a paid deployment, Beta or Stable.
+- If no courier/provider offers a sandbox, first live-account proof must come from an explicitly informed and authorized representative operator; it can never be silently relabeled pre-certified.
+
+### Execution discipline and supersession
+
+- Heavy builds, Rust, MSI and full validation run in GitHub Actions. This machine is limited to lightweight inspection/edits and the real installed/provider observations that CI cannot prove.
+- A reproduced defect opens one bounded root-cause package and affected siblings, selected Level 1/2/3 gates, adversarial review and expected-head merge; deterministic failures are never retried away.
+- This decision supersedes FD-033’s historical Internal.16 exact-next-session sequence and any lower document that still says Founder Internal.24 inspection is next.
+- It preserves FD-030’s distinction between source conformance and live certification, FD-033’s assurance meaning, FD-044’s exact Internal.25 release authority, the Product/Experience/Architecture launch gates and every protected invariant.
 
 ---
 

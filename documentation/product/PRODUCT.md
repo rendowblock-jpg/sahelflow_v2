@@ -266,6 +266,8 @@ Unless separately amended and certified, the first release excludes:
 
 Every public statement must match verified behavior at a named release and commit. Historical plans, internal versions, prototypes, placeholders, adapter existence, or test counts cannot be converted into product claims without current evidence.
 
+Under FD-045 First Revenue Certification, public provider scope is capability-specific: only the exact provider/version/environment/action with current live evidence may be promised. A narrower fully certified first-customer scope is valid; advertising unverified integrations to make the product appear broader is not.
+
 ## 18. Stable capability contract
 
 Stable requires complete, integrated behavior for the following systems. The

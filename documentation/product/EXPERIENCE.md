@@ -279,8 +279,9 @@ Broadcast or bulk messaging may be included only when provider policy, consent, 
 - order-state synchronization;
 - delivery cost;
 - failed/refused/returned handling;
-- live certification for Yalidine, ZR Express and Maystro;
-- DHD and Procolis exposed only according to certified status.
+- candidate certification work may include Yalidine, ZR Express, Maystro and EcoTrack Pro according to current provider-issued contracts;
+- no courier name or action is exposed publicly until that exact capability is live-certified;
+- DHD, Procolis and every other adapter remain hidden, disabled or conditional according to current certified status.
 
 ## 11. Returns, exchanges and refunds
 
@@ -417,6 +418,8 @@ For Shopify, WooCommerce and YouCan:
 - manual resync and reconciliation;
 - disable/kill switch;
 - exact live-certification evidence.
+
+The presence of an adapter, mock, contract suite or open-source precedent is not public support. Each platform action remains hidden or conditional until its official development/test or authorized real-account matrix passes on the named version/environment.
 
 ## 16. Google Sheets and import/export
 
