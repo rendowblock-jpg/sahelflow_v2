@@ -21,9 +21,11 @@ import { cn } from "@/lib/utils";
 function ConnectionState({
   transport,
   copy,
+  onRetry,
 }: {
   transport: InboxTransportState;
   copy: ReturnType<typeof useInboxWorkspace>["copy"];
+  onRetry: () => void;
 }) {
   const base =
     "inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium";
@@ -61,15 +63,17 @@ function ConnectionState({
     (transport.status === "connected" && !transport.wsOpen)
   ) {
     return (
-      <span
+      <button
+        type="button"
+        onClick={onRetry}
         className={cn(
           base,
-          "border-warning/20 bg-warning/7 text-warning",
+          "border-warning/20 bg-warning/7 text-warning transition-colors hover:bg-warning/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         )}
       >
         <RefreshCw className="size-3.5 animate-spin" aria-hidden="true" />
         {copy("transportReconnecting")}
-      </span>
+      </button>
     );
   }
 
@@ -126,6 +130,7 @@ export function InboxV3Header({
     dataDegraded,
     refreshChats,
     refreshQr,
+    reconnect,
     canManageWhatsApp,
     setLogoutConfirmOpen,
   } = workspace;
@@ -150,12 +155,17 @@ export function InboxV3Header({
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
-          <ConnectionState transport={transport} copy={copy} />
+          <ConnectionState
+            transport={transport}
+            copy={copy}
+            onRetry={reconnect}
+          />
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
             onClick={() => {
+              reconnect();
               refreshQr();
               void refreshChats();
             }}

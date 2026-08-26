@@ -7,8 +7,8 @@
 
 ## Current truth
 
-- Protected `main` at handoff: `4e395b0149da447daab37ad2d01be5c8bf1d6bce`; live GitHub wins if moved.
-- Latest signed/published checkpoint: **Internal.27**. Latest Founder-installed checkpoint remains **Internal.26** until the normal updater completes.
+- Protected `main` at handoff: `c6b97634a24c27a088e466f00d6ed0b196e62454`; live GitHub wins if moved. Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`.
+- Latest signed/published and Founder-installed checkpoint: **Internal.27**.
 - App `1.0.0-internal.27`; MSI `1.0.0.27`; authority **FD-047**; mode `founder-offline-only`.
 - Product repair PR #312; release PR #313; reviewed release head `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`.
 - All Required PR checks succeeded; exact-head Codex review found no major issue; unresolved threads zero.
@@ -18,9 +18,9 @@
 - #226 closed/completed; retain its budgets.
 - #306 open — real-phone WhatsApp installed/provider certification.
 - #230 open/reopened P1 — customer-online trial/network blocker; no owned production domain.
-- No open PR existed before the current bounded repair branch.
+- No open PR existed when the current bounded repair branch `codex/frc1-whatsapp-live-push` began.
 - Current decision: **FD-045 First Revenue Certification**.
-- Exact next outcome: **update Internal.27 in place, reply exactly once in the retained real WhatsApp LID conversation, then complete FRC-1 / #306**.
+- Exact next outcome: **merge the proven dynamic-loopback live-push repair, package one signed successor if separately authorized, then prove new inbound appears without manual refresh before completing FRC-1 / #306**.
 
 ## What Internal.27 adds
 
@@ -45,52 +45,45 @@ Binding rules:
 
 ## Active FRC-1 evidence and bounded repair
 
-- Internal.26 was installed through the normal updater and reopened at exact
-  app `1.0.0-internal.26` / MSI `1.0.0.26`; app, runtime and contained sidecar
-  remained healthy and the linked WhatsApp state persisted.
-- The Founder-confirmed **Remove demo data** operation completed. It temporarily
-  appeared frozen, which is a separate demonstrated UI defect; the demo marker
-  and demo rows were removed without deleting installation or WhatsApp state.
-- The two encrypted retained inbound records then replayed exactly once: spool
-  empty, two successful `ProviderIngressAttempt` rows, two applied ingress
-  events, one canonical conversation and two inbound Message rows. Arabic/RTL
-  Inbox presentation was visibly usable.
-- The first outbound reply failed before durable queueing. Its exact persisted
-  provider identity is a WhatsApp privacy LID (`numeric-id@lid`), while
-  `normalizeWhatsAppJid` accepted only Algerian phone numbers/PN JIDs. No
-  outbound Message, WhatsApp effect or OutboxIntent exists, so there is no
-  duplicate-provider-effect risk from the failed click.
-- The bounded repair accepts a valid individual `@lid` only when the exact
-  WhatsApp conversation contains a persisted inbound Message and preserves it into the durable
-  effect/sidecar send. Unbound opaque LIDs and non-individual JID domains remain
-  fail-closed.
-- The same installed Inbox observation showed that an empty Arabic composer
-  starts LTR and moves right only after Arabic input. The package makes the
-  Arabic-locale empty composer RTL from first render while retaining `auto` for
-  French/English and mixed-direction content.
-- Founder direction adds two first-class thread-header entry points without new
-  mutation authority: the visible status badge opens the existing governed
-  Open/Pending/Resolved/Snoozed control, and a professional AI-order action
-  opens the existing candidate preview plus reviewed `MessageExtraction` flow.
-  Extraction never silently creates a canonical order.
-- The repair is merged through PR #312 and signed/published through PR #313 on
-  `main@4e395b0149da447daab37ad2d01be5c8bf1d6bce`. It is not yet
-  Founder-installed or live-provider accepted.
-- Do not reconnect, logout, reset AppData or clear protected auth before the
-  installed successor completes outbound, new inbound and reopen evidence.
+- Internal.27 was installed through the normal updater at exact app
+  `1.0.0-internal.27` / MSI `1.0.0.27`; installation/shop/WhatsApp state was
+  preserved and both real conversations survived a normal close/reopen.
+- The retained provenance-bound individual `@lid` reply passed exactly once:
+  one outbound Message, one WhatsApp OutboxIntent, attempt count one, provider
+  receipt present, succeeded state and linked-phone delivery with no duplicate.
+- A new real number produced one new conversation and one exact-once inbound
+  Message. All three installed ingress events/attempts were applied/succeeded
+  once and the encrypted spool was empty.
+- The new inbound did **not** project into the open Inbox automatically; the
+  Founder used the header refresh action. Durable ingestion/persistence passed,
+  while browser live push failed.
+- Installed diagnosis proved the shared root. Next and the sidecar use protected
+  ephemeral loopback ports (`65335`/`65336` in the observed launch), the installed
+  route minted the correct signed short-lived WebSocket grant, Node/sidecar token
+  fingerprints matched and a direct grant probe was accepted. The HTTP CSP still
+  allowed only WebSocket port `3001`, so WebView blocked the actual sidecar port.
+- `codex/frc1-whatsapp-live-push` aligns the response CSP with Tauri's existing
+  loopback-only ephemeral-port policy, adds a three-second visible-window durable
+  projection fallback while push is degraded, and makes the reconnect state plus
+  refresh action actually retry the socket. Heavy validation belongs in Actions.
+- The same package makes the thread AI-order trigger stars-only with localized
+  hover/focus copy while retaining its accessible name and reviewed extraction
+  sheet. It introduces no silent order mutation.
+- **Remove demo data** temporarily appeared frozen before completing. That is a
+  separate demonstrated UI defect and is not silently treated as WhatsApp failure.
+- Do not logout, reset AppData or clear protected auth before the signed live-push
+  successor proves automatic inbound and the remaining FRC-1 rows.
 
 ## Exact next-session order — FRC-1 WhatsApp
 
 1. Re-resolve protected `main`, open PRs, #306 and #230.
-2. Confirm Internal.27 / FD-047 remains the exact latest signed release and
-   update the Founder installation once in place through the normal updater.
-3. Verify app `1.0.0-internal.27`, MSI `1.0.0.27`, preserved installation/shop
-   state and normal close/reopen.
-4. Reply once in the same real LID conversation and prove durable/provider
-   receipt plus delivery state. Do not repeat an ambiguous effect.
-5. Complete a new inbound,
-    EN and Arabic/RTL presentation, normal logout/session retirement and safe
-    message-to-reviewed-order-draft observation.
+2. Merge the bounded live-push root repair only after selected exact-head gates.
+3. If separately authorized, establish and publish one new exact signed release
+   from protected main; update in place without clearing retained state.
+4. Send one new inbound from the real phone and prove it appears automatically
+   without header refresh; retain durable exact-once and reopen evidence.
+5. Complete EN and Arabic/RTL presentation, direct status control, safe
+   message-to-reviewed-order-draft observation, then normal logout/session retirement last.
 6. Record redacted pass/fail under #306. Close only evidence actually observed.
 
 ## Following FRC packages
@@ -104,7 +97,7 @@ Binding rules:
 ## Current hard blockers and dependencies
 
 - WhatsApp FRC-1 requires the Founder’s retained real phone/account/session and
-  the next exact signed LID-reply repair checkpoint installed in place.
+  one exact signed live-push successor installed in place.
 - Real Gemini minimal inference requires a seller-owned key; free-tier work uses synthetic/redacted inputs only.
 - Commerce requires development/test environments and HTTPS ingress for webhook tests.
 - Courier live certification requires provider sandbox/demo or authorized seller credentials.
@@ -151,7 +144,7 @@ Never weaken:
 
 ## Hard non-claims
 
-- Internal.27 real-phone WhatsApp certification remains open until the installed LID reply and remaining #306 rows pass.
+- Internal.27 passed the real `@lid` reply and durable new inbound, but WhatsApp certification remains open because automatic Inbox live push and remaining #306 rows have not passed.
 - Complete AI/tools/order-extraction certification is open.
 - Public commerce/courier live certification is not established by adapter source alone.
 - Customer-online trial readiness remains open under #230.

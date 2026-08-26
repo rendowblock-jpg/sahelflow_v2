@@ -92,7 +92,9 @@ describe("Inbox final review invariants", () => {
     expect(pairing).toContain('phase === "connected" ? (');
     expect(pairing).toContain('pairingCopy("connectedTitle")');
     expect(header).toContain('copy("transportChecking")');
-    expect(header).toContain("refreshQr();\n              void refreshChats();");
+    expect(header).toContain(
+      "reconnect();\n              refreshQr();\n              void refreshChats();",
+    );
   });
 
   it("localizes recent order status instead of rendering raw provider values", () => {

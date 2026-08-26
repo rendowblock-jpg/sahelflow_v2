@@ -25,16 +25,17 @@ import type { NextConfig } from "next";
  * for the dev workflow (browser at localhost:3000).
  */
 const securityHeaders = [
-  // CSP — slightly more permissive than the Tauri one because the dev server
-  // needs 'unsafe-eval' for HMR and 'unsafe-inline' for styled-jsx. In
-  // production (Tauri webview), the stricter Tauri CSP takes precedence.
+  // CSP — the dev server needs 'unsafe-eval' for HMR and 'unsafe-inline' for
+  // styled-jsx. The installed WebView enforces this response policy together
+  // with Tauri's CSP, so both must allow the native runtime's ephemeral
+  // loopback ports. No non-loopback WebSocket origin is permitted here.
   {
     key: "Content-Security-Policy",
     value:
       "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; " +
       "connect-src 'self' ipc: http://ipc.localhost https://generativelanguage.googleapis.com https://api.yalidine.app " +
       "https://api.youcan.shop https://*.myshopify.com https://backend.maystro-delivery.com " +
-      "https://b.maystro-delivery.com https://procolis.com ws://127.0.0.1:3001 ws://localhost:3001 " +
+      "https://b.maystro-delivery.com https://procolis.com ws://127.0.0.1:* ws://localhost:* " +
       "https://*.ingest.sentry.io https://*.sentry.io; " +  // T-H5: Sentry error reporting
       "img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; " +
       "object-src 'none'; base-uri 'self'; form-action 'self'",

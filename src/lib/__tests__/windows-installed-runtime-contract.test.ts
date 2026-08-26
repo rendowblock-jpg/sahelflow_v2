@@ -214,6 +214,8 @@ describe("installed Windows runtime contract", () => {
     expect(nextConfig).toContain(
       '"connect-src \'self\' ipc: http://ipc.localhost',
     );
+    expect(nextConfig).toContain("ws://127.0.0.1:* ws://localhost:*");
+    expect(nextConfig).not.toContain("ws://127.0.0.1:3001");
     expect(updater).toContain("isUpdaterAccessFailure(err)");
     expect(updater).toContain("isUpdaterTransientFailure(err)");
     expect(updater).toContain("!transientFailure && isUpdaterAccessFailure(err)");

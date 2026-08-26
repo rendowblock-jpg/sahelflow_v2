@@ -8,7 +8,7 @@
 > **Protected release source:** `4e395b0149da447daab37ad2d01be5c8bf1d6bce` / PR #313
 > **Reviewed release head:** `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`
 > **Signed publication run:** `32913445791` — success
-> **Current next outcome:** First Revenue Certification FRC-1 — update Internal.27 in place, then prove one reply in the retained real WhatsApp LID conversation and complete #306
+> **Current next outcome:** First Revenue Certification FRC-1 — repair installed dynamic-loopback live push, then prove automatic new inbound and complete the remaining #306 rows
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
@@ -28,9 +28,9 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Current protected and signed truth
 
-Protected `main` at reconciliation is `4e395b0149da447daab37ad2d01be5c8bf1d6bce`. No open PR existed after Internal.27 publication; revalidate live state before every write/merge.
+Protected `main` at reconciliation is `c6b97634a24c27a088e466f00d6ed0b196e62454`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`. No open PR existed when the bounded live-push repair began; revalidate live state before every write/merge.
 
-Internal.27 is the latest real signed/published Founder-offline package. Internal.26 remains the last Founder-installed checkpoint until the normal updater completes:
+Internal.27 is the latest real signed/published and Founder-installed offline package:
 
 - app `1.0.0-internal.27`;
 - MSI `1.0.0.27`;
@@ -62,7 +62,7 @@ Do not restart those programs without direct regression evidence.
 
 - **#221 — closed/completed:** Founder accepted installed Internal.24 for the retained whole-product visual/product gate. That acceptance remains valid for Internal.24 and does not fabricate provider/customer proof.
 - **#226 — closed/completed:** retain its performance/reliability budgets as regression criteria.
-- **#306 — open:** Internal.26 demonstrated persisted linking, exact-once inbound replay and the existing-conversation `numeric-id@lid` reply failure. Internal.27 now packages the bounded provenance-bound LID reply repair plus the observed composer/header siblings, but live delivery is not certified until the Founder updates in place and performs the one-effect retest.
+- **#306 — open:** Internal.27 passed preserved update/reopen, exactly-one real `numeric-id@lid` outbound with provider receipt/delivery, and exact-once durable inbound from a new number. The new inbound required manual Inbox refresh because the response CSP permits fixed WebSocket port `3001` while the installed sidecar uses a protected ephemeral loopback port. `codex/frc1-whatsapp-live-push` is the bounded root repair; automatic arrival and remaining UI/extraction/logout rows are not yet installed proof.
 - **#230 — open/reopened P1:** no owned production domain exists; customer-online trial/network readiness remains blocked.
 - Real commerce/courier account certification, representative beta, independent review and Stable remain unproven.
 
@@ -82,7 +82,7 @@ The binding interpretation is:
 
 ### FRC execution packages
 
-1. **FRC-1 — WhatsApp installed/provider proof (#306).** Update Internal.27 in place, verify exact version/reopen, reply exactly once in the retained real `@lid` conversation, then complete delivery state, new inbound, representative EN/AR Inbox, logout and safe message-to-reviewed-order-draft evidence.
+1. **FRC-1 — WhatsApp installed/provider proof (#306).** Merge and, if separately authorized, sign the dynamic-loopback live-push repair; update in place, prove no-refresh new inbound plus persistence/reopen, then complete representative EN/AR Inbox, governed status/reviewed extraction and logout evidence.
 2. **FRC-2 — AI/tools/order extraction.** Freeze a tool/corpus matrix; test seller-owned Gemini setup, every model-exposed tool, proposal/permission/current-state checks, stop/retry/quota/offline/malformed behavior, privacy minimization and AR/FR/EN/Darija/mixed extraction. Core work and manual fallback remain functional without AI.
 3. **FRC-3 — complete-product assurance.** Map the Product Stable capability table, Experience page-completion contract and 27 Required journeys to source, automated, signed/installed, Founder and external evidence. Repair only demonstrated shared roots in one bounded batch.
 4. **FRC-4 — commerce live certification.** Use official Shopify/YouCan development environments and a controlled WooCommerce store. Prove authentication, webhook signatures, duplicates/order, pagination, reconciliation, conflicts, rate limits, revoked credentials, outage and recovery.
@@ -111,7 +111,7 @@ The binding interpretation is:
 
 1. Resolve live protected `main`, open PRs, #306 and #230.
 2. Read the mandatory authority set above and confirm Internal.27 / FD-047 remains latest signed.
-3. Resume FRC-1 exactly: update Internal.27 once through the normal updater, verify version/reopen, then execute the remaining #306 real-phone rows without repeating an ambiguous provider effect.
+3. Resume FRC-1 exactly: finish the dynamic-loopback live-push repair, run selected Actions gates and merge expected-head; create a signed successor only under explicit release authority.
 4. Record redacted pass/fail evidence. If a concrete P0/P1 appears, open one bounded root-cause repair; otherwise close only the evidence actually passed.
 5. Continue FRC-2 through FRC-5 in dependency order, maintaining a capability-specific certification state.
 6. Do not expose or market an integration/action before its live certification record exists.

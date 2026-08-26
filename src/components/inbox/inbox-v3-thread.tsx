@@ -36,6 +36,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -370,20 +375,26 @@ export function InboxV3Thread({
 
         <div className="flex shrink-0 items-center gap-1.5">
           <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!selectedCandidate || !activeChat.transportId}
-                aria-label={t("inbox.aiOrderAssistant")}
-              >
-                <Sparkles className="size-4" aria-hidden="true" />
-                <span className="hidden xl:inline">
-                  {t("inbox.aiOrderAssistant")}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <SheetTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      disabled={!selectedCandidate || !activeChat.transportId}
+                      aria-label={t("inbox.extractOrderProfessionally")}
+                    >
+                      <Sparkles className="size-4" aria-hidden="true" />
+                    </Button>
+                  </SheetTrigger>
                 </span>
-              </Button>
-            </SheetTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={6}>
+                {t("inbox.extractOrderProfessionally")}
+              </TooltipContent>
+            </Tooltip>
             <SheetContent
               side="end"
               className="w-[min(440px,94vw)] overflow-y-auto sm:max-w-none"

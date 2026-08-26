@@ -22,6 +22,7 @@ import {
 import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
 
 const CHAT_REFRESH_COALESCE_MS = 500;
+const LIVE_RECOVERY_POLL_MS = 3_000;
 const MAX_DEEP_LINK_ID_LENGTH = 160;
 
 interface CanonicalChatResponse {
@@ -179,6 +180,7 @@ export function useInboxWorkspace() {
   const isNearBottomRef = useRef(true);
   const activeTransportIdRef = useRef<string | null>(null);
   const chatRefreshTimerRef = useRef<number | null>(null);
+  const activeChatRef = useRef<InboxChat | null>(null);
   const deepLinkAttemptRef = useRef<string | null>(null);
   const pinnedDeepLinkChatRef = useRef<InboxChat | null>(null);
 
@@ -209,13 +211,19 @@ export function useInboxWorkspace() {
     };
     setAllowedActions(data.authority?.allowedActions ?? []);
     const restrictedContact = copy("restrictedContact");
-    setChats(
-      mergePinnedDeepLink(
-        data.conversations.map((conversation) =>
-          mapConversationProjection(conversation, restrictedContact),
-        ),
+    const nextChats = mergePinnedDeepLink(
+      data.conversations.map((conversation) =>
+        mapConversationProjection(conversation, restrictedContact),
       ),
     );
+    const activeChat = activeChatRef.current;
+    if (activeChat) {
+      activeChatRef.current =
+        nextChats.find(
+          (chat) => chat.conversationId === activeChat.conversationId,
+        ) ?? activeChat;
+    }
+    setChats(nextChats);
   }, [copy, mergePinnedDeepLink]);
 
   const loadChats = useCallback(async () => {
@@ -231,34 +239,41 @@ export function useInboxWorkspace() {
           isWhatsAppStatus(data.sidecarStatus) ? data.sidecarStatus : null,
         );
         setDataDegraded(false);
-        setChats(
-          mergePinnedDeepLink(
-            data.chats.map((chat) => ({
-              id: chat.jid,
-              conversationId: chat.conversationId,
-              transportId: chat.jid,
-              name: chat.name,
-              phone: chat.phone ?? undefined,
-              channel: "whatsapp" as const,
-              lastMessageText: chat.lastMessage?.text,
-              lastMessageAt: chat.lastMessage
-                ? chat.lastMessage.timestamp * 1000
-                : undefined,
-              unread: chat.unread,
-              workflow: {
-                status: chat.workflow.status as ConversationWorkflowState["status"],
-                assigneeId: chat.workflow.assigneeId,
-                assignmentVersion: chat.workflow.assignmentVersion,
-                priority:
-                  chat.workflow.priority as ConversationWorkflowState["priority"],
-                labels: chat.workflow.labels,
-                snoozedUntil: chat.workflow.snoozedUntil,
-                waitingSince: chat.workflow.waitingSince,
-                firstReplyAt: chat.workflow.firstReplyAt,
-              },
-            })),
-          ),
+        const nextChats = mergePinnedDeepLink(
+          data.chats.map((chat) => ({
+            id: chat.jid,
+            conversationId: chat.conversationId,
+            transportId: chat.jid,
+            name: chat.name,
+            phone: chat.phone ?? undefined,
+            channel: "whatsapp" as const,
+            lastMessageText: chat.lastMessage?.text,
+            lastMessageAt: chat.lastMessage
+              ? chat.lastMessage.timestamp * 1000
+              : undefined,
+            unread: chat.unread,
+            workflow: {
+              status:
+                chat.workflow.status as ConversationWorkflowState["status"],
+              assigneeId: chat.workflow.assigneeId,
+              assignmentVersion: chat.workflow.assignmentVersion,
+              priority:
+                chat.workflow.priority as ConversationWorkflowState["priority"],
+              labels: chat.workflow.labels,
+              snoozedUntil: chat.workflow.snoozedUntil,
+              waitingSince: chat.workflow.waitingSince,
+              firstReplyAt: chat.workflow.firstReplyAt,
+            },
+          })),
         );
+        const activeChat = activeChatRef.current;
+        if (activeChat) {
+          activeChatRef.current =
+            nextChats.find(
+              (chat) => chat.conversationId === activeChat.conversationId,
+            ) ?? activeChat;
+        }
+        setChats(nextChats);
         return;
       }
 
@@ -315,9 +330,12 @@ export function useInboxWorkspace() {
   );
 
   const loadMessages = useCallback(
-    async (chat: InboxChat) => {
-      setLoadingMessages(true);
-      setSendError(null);
+    async (chat: InboxChat, options?: { background?: boolean }) => {
+      const background = options?.background === true;
+      if (!background) {
+        setLoadingMessages(true);
+        setSendError(null);
+      }
       try {
         if (chat.channel === "whatsapp" && chat.transportId) {
           const response = await fetch(
@@ -373,9 +391,9 @@ export function useInboxWorkspace() {
         );
         void markRead(chat);
       } catch {
-        setMessages([]);
+        if (!background) setMessages([]);
       } finally {
-        setLoadingMessages(false);
+        if (!background) setLoadingMessages(false);
       }
     },
     [markRead],
@@ -467,8 +485,32 @@ export function useInboxWorkspace() {
     };
   }, [loadChats]);
 
+  useEffect(() => {
+    const effectiveStatus = status ?? sidecarStatus;
+    if (wsOpen || effectiveStatus !== "connected") return;
+
+    let inFlight = false;
+    const refreshDurableProjection = async () => {
+      if (inFlight || document.visibilityState !== "visible") return;
+      inFlight = true;
+      try {
+        await loadChats();
+        const chat = activeChatRef.current;
+        if (chat) await loadMessages(chat, { background: true });
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void refreshDurableProjection();
+    }, LIVE_RECOVERY_POLL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [loadChats, loadMessages, sidecarStatus, status, wsOpen]);
+
   const selectChat = useCallback(
     (chat: InboxChat) => {
+      activeChatRef.current = chat;
       pinnedDeepLinkChatRef.current = chat;
       setChats((current) => {
         const index = current.findIndex(
@@ -500,6 +542,7 @@ export function useInboxWorkspace() {
   );
 
   const clearActiveChat = useCallback(() => {
+    activeChatRef.current = null;
     activeTransportIdRef.current = null;
     setActiveChatId(null);
     setMessages([]);

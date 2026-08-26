@@ -1039,6 +1039,7 @@
   "inbox.empty.title": "Aucune conversation pour le moment",
   "inbox.existingCustomerNotFound": "Client existant mais introuvable",
   "inbox.extractOrder": "Extraire la commande",
+  "inbox.extractOrderProfessionally": "Extraire la commande avec l’IA",
   "inbox.aiOrderAssistant": "Assistant commande IA",
   "inbox.extractedItem": "Article extrait",
   "inbox.extractionError": "Une erreur est survenue",

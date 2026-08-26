@@ -63,6 +63,9 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(assignment).toContain('FROM "BusinessAggregateVersion"');
     expect(hook).toContain("CHAT_REFRESH_COALESCE_MS");
     expect(hook).toContain("scheduleChatsRefresh");
+    expect(hook).toContain("LIVE_RECOVERY_POLL_MS");
+    expect(hook).toContain('effectiveStatus !== "connected"');
+    expect(hook).toContain("loadMessages(chat, { background: true })");
   });
 
   it("opens search and command results through canonical persisted conversation ids", () => {
@@ -162,6 +165,13 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(recovery).toContain("reason.trim().length < 3");
   });
 
+  it("makes a degraded live transport retryable while the durable projection recovers", () => {
+    const header = read("src/components/inbox/inbox-v3-header.tsx");
+    expect(header).toContain("onClick={onRetry}");
+    expect(header).toContain("onRetry={reconnect}");
+    expect(header).toContain("reconnect();\n              refreshQr();");
+  });
+
   it("keeps new desk copy governed in English French and Arabic", () => {
     const thread = read("src/components/inbox/inbox-thread-workbench.tsx");
     const copy = read("src/lib/i18n/inbox-workspace.ts");
@@ -188,12 +198,20 @@ describe("Inbox Class-AAA operations desk contract", () => {
     const thread = read("src/components/inbox/inbox-v3-thread.tsx");
     expect(thread).toContain("<StatusControl");
     expect(thread).toContain("conversationId={activeChat.conversationId}");
-    expect(thread).toContain('aria-label={t("inbox.aiOrderAssistant")}');
+    expect(thread).toContain('size="icon-sm"');
+    expect(thread).toContain(
+      'aria-label={t("inbox.extractOrderProfessionally")}',
+    );
+    expect(thread).toContain("<TooltipContent");
+    expect(thread).not.toContain('className="hidden xl:inline"');
     expect(thread).toContain("<MessageExtraction");
     expect(thread).toContain("messageId={selectedCandidate.id}");
     for (const locale of ["en", "fr", "ar"]) {
       expect(read(`src/lib/i18n/locales/${locale}.json`)).toContain(
         '"inbox.aiOrderAssistant"',
+      );
+      expect(read(`src/lib/i18n/locales/${locale}.json`)).toContain(
+        '"inbox.extractOrderProfessionally"',
       );
     }
   });
