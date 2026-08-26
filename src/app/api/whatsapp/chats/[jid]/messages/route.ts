@@ -8,6 +8,7 @@ import {
   requireTrustedAction,
 } from "@/lib/identity/authorization";
 import { WHATSAPP_MEDIA_FETCH_EFFECT_TYPE } from "@/lib/whatsapp/media-fetch-contract";
+import { projectInboxLocalMedia } from "@/lib/whatsapp/media-status-projection";
 import {
   sidecar,
   SidecarRequestError,
@@ -15,7 +16,6 @@ import {
 } from "@/lib/whatsapp/sidecar-client";
 import { openWhatsAppMessageAttachmentWithKey } from "@/lib/whatsapp/message-attachments";
 import type {
-  InboxLocalMediaProjection,
   IncomingMessage,
   ProjectedWhatsAppAttachment,
 } from "@/lib/whatsapp/types";
@@ -33,27 +33,6 @@ const BINARY_MEDIA_TYPES = new Set([
 
 function isOutboundDirection(direction: string): boolean {
   return direction === "outbound" || direction === "outgoing";
-}
-
-function mediaProjection(
-  messageId: string,
-  status: string | undefined,
-  outcomeState: string | undefined,
-): InboxLocalMediaProjection {
-  const encoded = encodeURIComponent(messageId);
-  const statusUrl = `/api/inbox/media/${encoded}/status`;
-  if (status === "succeeded" && outcomeState === "receipt") {
-    return {
-      state: "ready",
-      statusUrl,
-      readUrl: `/api/inbox/media/${encoded}`,
-      downloadUrl: `/api/inbox/media/${encoded}?download=1`,
-    };
-  }
-  if (status === "dead_letter" || status === "failed") {
-    return { state: "failed", statusUrl };
-  }
-  return { state: "pending", statusUrl };
 }
 
 export const GET = withErrorHandler(
@@ -190,7 +169,7 @@ export const GET = withErrorHandler(
           );
           attachment = {
             ...openedAttachment,
-            localMedia: mediaProjection(
+            localMedia: projectInboxLocalMedia(
               message.id,
               mediaIntent?.status,
               mediaIntent?.outcomeState,
