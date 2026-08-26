@@ -336,12 +336,11 @@ async function writeEncryptedChunks(
   let total = 0;
   let chunkCount = 0;
   let sniffed: string | null = null;
-  let textDecoder: TextDecoder | null = null;
+  const textDecoder = new TextDecoder("utf-8", { fatal: true });
   const limit = MEDIA_LIMITS[kind];
 
   const encryptChunk = (plaintext: Buffer) => {
     if (sniffed === "text/plain") {
-      textDecoder ??= new TextDecoder("utf-8", { fatal: true });
       assertSafeTextChunk(textDecoder, plaintext);
     }
     const nonce = randomBytes(12);
@@ -389,7 +388,7 @@ async function writeEncryptedChunks(
       }
     }
     if (pending.length) encryptChunk(Buffer.from(pending));
-    if (textDecoder) {
+    if (sniffed === "text/plain") {
       try {
         textDecoder.decode();
       } catch {
