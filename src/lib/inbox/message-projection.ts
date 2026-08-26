@@ -54,7 +54,14 @@ export function mergeInboxMessageProjection(
     if (liveMessage.outboxEffectKey) {
       liveIdByEffectKey.delete(liveMessage.outboxEffectKey);
     }
-    return liveMessage;
+    const deliveryStatus = mostAdvancedDeliveryStatus(
+      message.deliveryStatus,
+      liveMessage.deliveryStatus,
+    );
+    return {
+      ...liveMessage,
+      ...(deliveryStatus ? { deliveryStatus } : {}),
+    };
   });
 
   merged.push(...remainingLiveById.values());

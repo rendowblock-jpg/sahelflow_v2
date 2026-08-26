@@ -49,6 +49,32 @@ describe("Inbox live message projection reconciliation", () => {
     expect(result[0]?.deliveryStatus).toBe("delivered");
   });
 
+  it("keeps a more advanced persisted receipt over a stale live state", () => {
+    const result = mergeInboxMessageProjection(
+      [
+        message("outbound-1", 2, {
+          direction: "outbound",
+          deliveryStatus: "read",
+        }),
+      ],
+      [
+        message("outbound-1", 2, {
+          direction: "outbound",
+          deliveryStatus: "sent",
+          outboxState: "succeeded",
+        }),
+      ],
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "outbound-1",
+        deliveryStatus: "read",
+        outboxState: "succeeded",
+      }),
+    ]);
+  });
+
   it("reconciles a client id with its provider id through the stable effect key", () => {
     const result = mergeInboxMessageProjection(
       [
@@ -72,6 +98,35 @@ describe("Inbox live message projection reconciliation", () => {
       expect.objectContaining({
         id: "provider-id",
         deliveryStatus: "sent",
+        outboxEffectKey: "effect-1",
+        outboxState: "succeeded",
+      }),
+    ]);
+  });
+
+  it("keeps a persisted provider receipt while reconciling through an effect key", () => {
+    const result = mergeInboxMessageProjection(
+      [
+        message("provider-id", 2, {
+          direction: "outbound",
+          deliveryStatus: "delivered",
+          outboxEffectKey: "effect-1",
+        }),
+      ],
+      [
+        message("client-id", 2, {
+          direction: "outbound",
+          deliveryStatus: "sent",
+          outboxEffectKey: "effect-1",
+          outboxState: "succeeded",
+        }),
+      ],
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "client-id",
+        deliveryStatus: "delivered",
         outboxEffectKey: "effect-1",
         outboxState: "succeeded",
       }),
