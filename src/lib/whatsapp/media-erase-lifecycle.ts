@@ -14,9 +14,11 @@ import {
 import { dirname } from "node:path";
 
 const ERASE_STATE_KEY = Symbol.for("sahelflow.whatsapp.media-erase.v1");
+const ERASE_EPOCH_KEY = Symbol.for("sahelflow.whatsapp.media-erase-epoch.v1");
 
 type MediaEraseGlobal = typeof globalThis & {
   [ERASE_STATE_KEY]?: Set<string>;
+  [ERASE_EPOCH_KEY]?: Map<string, number>;
 };
 
 export interface WhatsAppMediaEraseStage {
@@ -37,6 +39,29 @@ function activeErases(): Set<string> {
   const eraseGlobal = globalThis as MediaEraseGlobal;
   eraseGlobal[ERASE_STATE_KEY] ??= new Set<string>();
   return eraseGlobal[ERASE_STATE_KEY];
+}
+
+function eraseEpochs(): Map<string, number> {
+  const eraseGlobal = globalThis as MediaEraseGlobal;
+  eraseGlobal[ERASE_EPOCH_KEY] ??= new Map<string, number>();
+  return eraseGlobal[ERASE_EPOCH_KEY];
+}
+
+/**
+ * Monotonic same-process generation for seller reads. A read that spans any
+ * destructive erase attempt is rejected even if that attempt commits (and
+ * removes its tombstone) or rolls back before the read's async continuation
+ * resumes.
+ */
+export function whatsAppMediaEraseEpoch(activePath: string): number {
+  return eraseEpochs().get(activePath) ?? 0;
+}
+
+function advanceEraseEpoch(activePath: string): void {
+  const epochs = eraseEpochs();
+  const current = epochs.get(activePath) ?? 0;
+  const next = current >= Number.MAX_SAFE_INTEGER ? 1 : current + 1;
+  epochs.set(activePath, next);
 }
 
 function tombstonePath(activePath: string): string {
@@ -93,6 +118,11 @@ export function stageWhatsAppMediaErase(activePath: string): WhatsAppMediaEraseS
   mkdirSync(parent, { recursive: true, mode: 0o700 });
   assertSafeExistingPath(activePath);
   assertSafeExistingPath(tombstone);
+
+  // Advance before any filesystem authority changes. From this point onward an
+  // already-started seller read belongs to an older generation and must fail
+  // closed, regardless of whether this erase later commits or rolls back.
+  advanceEraseEpoch(activePath);
 
   if (existsSync(tombstone)) {
     if (existsSync(activePath)) {
