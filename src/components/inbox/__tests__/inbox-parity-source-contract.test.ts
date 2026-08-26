@@ -140,7 +140,11 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(mediaUi).toContain('const response = await fetch(href, { cache: "no-store" })');
     expect(mediaUi).toContain("if (!response.ok) throw new Error");
     expect(mediaUi).toContain("URL.createObjectURL(blob)");
-    expect(mediaUi).toContain("setRuntimeFailed(true)");
+    expect(mediaUi).toContain("const [previewFailed, setPreviewFailed]");
+    expect(mediaUi).toContain("const [downloadFailed, setDownloadFailed]");
+    expect(mediaUi).toContain("onError={() => setPreviewFailed(true)}");
+    expect(mediaUi).toContain("onFailure={() => setDownloadFailed(true)}");
+    expect(mediaUi).not.toContain('local.state === "failed" || previewFailed');
     expect(mediaUi).not.toContain("<a");
   });
 });
