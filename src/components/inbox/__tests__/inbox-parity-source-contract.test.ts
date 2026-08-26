@@ -21,7 +21,9 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(route).toContain("data: { draftRevision: revision }");
     expect(route).toContain("data: { draftBody: normalized || null }");
     expect(route).toContain("draftRevision: { lt: revision }");
-    expect(route).toContain("revision: current?.draftRevision ?? revision");
+    expect(route).toContain("current?.draftRevision === revision");
+    expect(route).toContain("data: { draftRevision: promotedRevision }");
+    expect(route).toContain("return { applied: true, revision: promotedRevision }");
     expect(workspace).toContain("DRAFT_SAVE_DELAY_MS");
     expect(workspace).toContain("draftReadyConversationRef");
     expect(workspace).toContain("draftWriteQueueRef");

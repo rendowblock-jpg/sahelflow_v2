@@ -69,9 +69,35 @@ export const PUT = withErrorHandler(
           where: { id },
           select: { draftRevision: true },
         });
+        // Two trusted sessions can legitimately submit the same next revision.
+        // Promote exactly that equality collision atomically so a lifecycle
+        // keepalive does not require client code to survive page teardown.
+        // Lower revisions remain stale and are never promoted.
+        if (
+          current?.draftRevision === revision &&
+          revision < Number.MAX_SAFE_INTEGER
+        ) {
+          const promotedRevision = revision + 1;
+          const promoted = await tx.conversation.updateMany({
+            where: { id, draftRevision: revision },
+            data: { draftRevision: promotedRevision },
+          });
+          if (promoted.count === 1) {
+            await tx.conversation.update({
+              where: { id },
+              data: { draftBody: normalized || null },
+            });
+            return { applied: true, revision: promotedRevision };
+          }
+        }
+        const latest = await tx.conversation.findUnique({
+          where: { id },
+          select: { draftRevision: true },
+        });
         return {
           applied: false,
-          revision: current?.draftRevision ?? revision,
+          revision:
+            latest?.draftRevision ?? current?.draftRevision ?? revision,
         };
       }
       await tx.conversation.update({
