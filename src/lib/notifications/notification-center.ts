@@ -16,6 +16,7 @@ import type {
   NotificationPreferenceInput,
   NotificationQuery,
 } from "./contracts";
+import { sanitizeNativePreview } from "./preview-safety";
 
 const PROJECTION_BATCH = 500;
 const NATIVE_LEASE_MS = 2 * 60_000;
@@ -292,6 +293,7 @@ export async function listNotifications(
   return {
     notifications: page.map((row) => ({
       id: row.id,
+      durable: true,
       type: row.category === "inbox" ? "info" : row.category,
       category: row.category,
       severity: row.severity,
@@ -468,7 +470,12 @@ export async function claimNativeDelivery(
       where: { id: notification.event.sourceRecordId },
       select: { body: true, conversation: { select: { contactName: true } } },
     });
-    if (message) preview = { contactName: message.conversation.contactName, body: message.body };
+    if (message) {
+      preview = sanitizeNativePreview(
+        message.conversation.contactName,
+        message.body,
+      );
+    }
   }
   return {
     deliver: true,

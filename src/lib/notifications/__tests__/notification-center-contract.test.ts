@@ -97,4 +97,16 @@ describe("FRC notification center source contract", () => {
       for (const locale of locales) expect(locale[key]).toBeTruthy();
     }
   });
+
+  it("retains legacy operational alerts and hidden-window recovery", () => {
+    const route = source("src/app/api/notifications/route.ts");
+    const hook = source("src/hooks/use-notification-center.ts");
+    const native = source("src/lib/notifications/notification-center.ts");
+
+    expect(route).toContain("listLegacyOperationalNotifications");
+    expect(hook).toContain(
+      "const interval = window.setInterval(() => {\n      void reload();",
+    );
+    expect(native).toContain("sanitizeNativePreview");
+  });
 });

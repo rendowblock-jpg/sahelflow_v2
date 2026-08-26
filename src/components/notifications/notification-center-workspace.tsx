@@ -140,19 +140,19 @@ export function NotificationCenterWorkspace() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     {!item.read ? <span className="size-2 rounded-full bg-primary" aria-label={t("notifications.unread")} /> : null}
-                    <Link className="font-medium hover:underline" href={item.link} onClick={() => void mutateItem(item.id, "read")}>{item.title}</Link>
+                    <Link className="font-medium hover:underline" href={item.link} onClick={() => { if (item.durable) void mutateItem(item.id, "read"); }}>{item.title}</Link>
                     <Badge variant="secondary">{t("notifications.inboxCategory")}</Badge>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
                   <time className="mt-1 block text-xs text-muted-foreground" dateTime={item.createdAt}>{item.time}</time>
                 </div>
-                <div className="flex shrink-0 gap-1">
+                {item.durable ? <div className="flex shrink-0 gap-1">
                   {item.archived ? (
                     <Button variant="ghost" size="icon-sm" aria-label={t("notifications.recover")} onClick={() => void mutateItem(item.id, "recover")}><RotateCcw className="size-4" aria-hidden="true" /></Button>
                   ) : (
                     <Button variant="ghost" size="icon-sm" aria-label={t("notifications.archive")} onClick={() => void mutateItem(item.id, "archive")}><Archive className="size-4" aria-hidden="true" /></Button>
                   )}
-                </div>
+                </div> : null}
               </li>
             ))}
           </ul>

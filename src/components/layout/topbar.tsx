@@ -387,9 +387,11 @@ export function Topbar({
                     >
                       <Link
                         href={notification.link}
-                        onClick={() =>
-                          void applyLifecycle(notification.id, "read")
-                        }
+                        onClick={() => {
+                          if (notification.durable) {
+                            void applyLifecycle(notification.id, "read");
+                          }
+                        }}
                         className="flex w-full items-start gap-3 p-3"
                       >
                         {content}

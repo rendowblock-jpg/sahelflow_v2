@@ -4,6 +4,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { notificationQuerySchema } from "@/lib/notifications/contracts";
+import { listLegacyOperationalNotifications } from "@/lib/notifications/legacy-operational-feed";
 import { listNotifications } from "@/lib/notifications/notification-center";
 
 export const dynamic = "force-dynamic";
@@ -21,18 +22,54 @@ function relativeTime(
 }
 
 /** Durable, per-actor Notification Center projection with cursor pagination. */
-export const GET = withErrorHandler(async (request: NextRequest) => {
+export const GET = withErrorHandler(async (request?: NextRequest) => {
   const actorContext = await requireTrustedAction("conversations.read");
-  const query = notificationQuerySchema.parse(Object.fromEntries(request.nextUrl.searchParams.entries()));
-  const result = await listNotifications(actorContext, query);
+  const query = notificationQuerySchema.parse(
+    request
+      ? Object.fromEntries(request.nextUrl.searchParams.entries())
+      : {},
+  );
+  const [result, legacy] = await Promise.all([
+    listNotifications(actorContext, query),
+    query.cursor || query.category || query.severity || query.state === "archived"
+      ? Promise.resolve([])
+      : listLegacyOperationalNotifications(),
+  ]);
   const { t } = await getI18n();
+  const compatibleLegacy = legacy
+    .filter((notification) =>
+      query.state === "read"
+        ? notification.read
+        : query.state === "unread"
+          ? !notification.read
+          : true,
+    )
+    .map((notification) => ({
+      ...notification,
+      durable: false,
+      category: notification.type,
+      severity: notification.type === "alert"
+        ? "critical"
+        : notification.type === "stock"
+          ? "warning"
+          : "info",
+      archived: false,
+      createdAt: new Date().toISOString(),
+      nativePending: false,
+    }));
   return NextResponse.json({
     ...result,
-    notifications: result.notifications.map((notification) => ({
-      ...notification,
-      title: t(notification.titleKey),
-      body: t(notification.bodyKey),
-      time: relativeTime(notification.createdAt, t),
-    })),
+    notifications: [
+      ...result.notifications.map((notification) => ({
+        ...notification,
+        title: t(notification.titleKey),
+        body: t(notification.bodyKey),
+        time: relativeTime(notification.createdAt, t),
+      })),
+      ...compatibleLegacy,
+    ],
+    unreadCount:
+      result.unreadCount +
+      compatibleLegacy.filter((notification) => !notification.read).length,
   });
 }, "GET /api/notifications");

@@ -13,6 +13,7 @@ const RECOVERY_POLL_MS = 3_000;
 
 export interface NotificationCenterItem {
   id: string;
+  durable: boolean;
   type: "info";
   category: "inbox";
   severity: "info" | "warning" | "critical";
@@ -165,7 +166,7 @@ export function useNotificationCenter() {
   useEffect(() => {
     const initial = window.setTimeout(() => void reload(), 0);
     const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") void reload();
+      void reload();
     }, RECOVERY_POLL_MS);
     const onVisible = () => {
       if (document.visibilityState === "visible") void reload();
