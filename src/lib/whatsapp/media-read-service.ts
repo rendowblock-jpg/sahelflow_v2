@@ -24,6 +24,7 @@ import {
 import {
   readWhatsAppMediaObject,
   type WhatsAppMediaObjectProvenance,
+  type WhatsAppMediaPlaintextRange,
 } from "./media-object-provenance";
 
 const binaryKinds = new Set<WhatsAppBinaryMediaKind>([
@@ -55,7 +56,20 @@ export interface OpenedInboxWhatsAppMedia {
   mediaType: string;
   fileName: string;
   kind: WhatsAppBinaryMediaKind;
+  /** Total authenticated plaintext size, not just the returned range length. */
   sizeBytes: number;
+}
+
+export interface PreparedInboxWhatsAppMedia {
+  messageId: string;
+  kind: WhatsAppBinaryMediaKind;
+  sizeBytes: number;
+  mediaType: string;
+  fileName: string;
+  effectKey: string;
+  receipt: WhatsAppMediaObjectReceipt;
+  scopeRoot: string;
+  eraseEpoch: number;
 }
 
 function unavailable(message = "Saved WhatsApp media is not available"): SahelFlowError {
@@ -201,14 +215,14 @@ function assertSameReadableEpoch(scopeRoot: string, expectedEpoch: number): void
 }
 
 /**
- * Resolve one seller-visible media read entirely from canonical local truth.
- * Browser callers provide only a canonical Message ID; provider retrieval
- * secrets, object IDs and filesystem locations never cross the API boundary.
+ * Resolve canonical seller media metadata and the protected receipt without
+ * opening the encrypted object. This lets HTTP range parsing happen before any
+ * plaintext is materialized.
  */
-export async function openInboxWhatsAppMedia(
+export async function prepareInboxWhatsAppMedia(
   context: ServiceContext,
   messageId: string,
-): Promise<OpenedInboxWhatsAppMedia> {
+): Promise<PreparedInboxWhatsAppMedia> {
   const scopeRoot = whatsAppMediaRoot(context);
   const eraseEpoch = readEpoch(scopeRoot);
 
@@ -281,9 +295,45 @@ export async function openInboxWhatsAppMedia(
     key.fill(0);
   }
 
+  if (
+    attachment.sizeBytes !== null &&
+    attachment.sizeBytes !== receipt.sizeBytes
+  ) {
+    throw integrityFailure();
+  }
+
+  return {
+    messageId: message.id,
+    kind,
+    sizeBytes: receipt.sizeBytes,
+    mediaType: receipt.mediaType,
+    fileName: safeFileName(attachment, message.id, receipt.mediaType),
+    effectKey,
+    receipt,
+    scopeRoot,
+    eraseEpoch,
+  };
+}
+
+/**
+ * Authenticate every encrypted frame and the full object provenance while
+ * retaining only the requested plaintext interval. The final canonical/erase
+ * checks happen after all async evidence work and before bytes are returned.
+ */
+export async function openPreparedInboxWhatsAppMedia(
+  context: ServiceContext,
+  prepared: PreparedInboxWhatsAppMedia,
+  range?: WhatsAppMediaPlaintextRange,
+): Promise<OpenedInboxWhatsAppMedia> {
   let opened: Awaited<ReturnType<typeof readWhatsAppMediaObject>>;
   try {
-    opened = await readWhatsAppMediaObject(context, message.id, kind, receipt);
+    opened = await readWhatsAppMediaObject(
+      context,
+      prepared.messageId,
+      prepared.kind,
+      prepared.receipt,
+      range,
+    );
   } catch (error) {
     if (error instanceof WhatsAppMediaObjectError) throw integrityFailure();
     throw error;
@@ -294,7 +344,7 @@ export async function openInboxWhatsAppMedia(
       where: {
         action: "whatsapp.media.fetch_succeeded",
         entity: "message",
-        entityId: message.id,
+        entityId: prepared.messageId,
       },
       orderBy: { createdAt: "asc" },
       take: 2,
@@ -303,36 +353,36 @@ export async function openInboxWhatsAppMedia(
     if (audits.length !== 1) throw integrityFailure();
     assertAuditProvenance(
       audits[0]?.metadata ?? null,
-      effectKey,
-      receipt,
+      prepared.effectKey,
+      prepared.receipt,
       opened.provenance,
     );
-    if (
-      attachment.sizeBytes !== null &&
-      attachment.sizeBytes !== receipt.sizeBytes
-    ) {
-      throw integrityFailure();
-    }
 
-    // A destructive erase can stage, commit and remove its tombstone while this
-    // request is suspended in any await above. Re-check both canonical Message
-    // truth and the same-process erase generation before exposing plaintext.
     const stillCanonical = await context.prisma.message.findUnique({
-      where: { id: message.id },
+      where: { id: prepared.messageId },
       select: { id: true },
     });
     if (!stillCanonical) throw unavailable();
-    assertSameReadableEpoch(scopeRoot, eraseEpoch);
+    assertSameReadableEpoch(prepared.scopeRoot, prepared.eraseEpoch);
 
     return {
       bytes: opened.bytes,
       mediaType: opened.mediaType,
-      fileName: safeFileName(attachment, message.id, opened.mediaType),
-      kind,
-      sizeBytes: receipt.sizeBytes,
+      fileName: prepared.fileName,
+      kind: prepared.kind,
+      sizeBytes: prepared.sizeBytes,
     };
   } catch (error) {
     opened.bytes.fill(0);
     throw error;
   }
+}
+
+/** Backward-compatible full-object seller read used by integration contracts. */
+export async function openInboxWhatsAppMedia(
+  context: ServiceContext,
+  messageId: string,
+): Promise<OpenedInboxWhatsAppMedia> {
+  const prepared = await prepareInboxWhatsAppMedia(context, messageId);
+  return openPreparedInboxWhatsAppMedia(context, prepared);
 }
