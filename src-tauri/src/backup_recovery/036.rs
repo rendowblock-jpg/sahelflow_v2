@@ -68,6 +68,31 @@ fn validate_staged_restore(
             ));
         }
     }
+    if let Some(expected_media) = &staged.whatsapp_media {
+        if expected_media.object_count > MAX_WHATSAPP_MEDIA_OBJECTS
+            || !valid_lower_hex_64(&expected_media.tree_sha256)
+        {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "staged WhatsApp media evidence is malformed",
+            ));
+        }
+        let observed_media = whatsapp_media_tree_stats(
+            &staging.join(WHATSAPP_MEDIA_ROOT_NAME),
+            &target_registry,
+        )?;
+        if observed_media != *expected_media {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "staged WhatsApp media tree failed verification",
+            ));
+        }
+    } else if staging.join(WHATSAPP_MEDIA_ROOT_NAME).exists() {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "legacy staged restore unexpectedly contains WhatsApp media state",
+        ));
+    }
     let brk_path = safe_relative_path(staging, &staged.target_brk_authority_file)?;
     if !brk_path.is_file() {
         return Err(IoError::new(

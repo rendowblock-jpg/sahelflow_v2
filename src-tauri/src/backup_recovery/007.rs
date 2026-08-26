@@ -14,6 +14,8 @@ struct RescueManifest {
     identity_marker_file: Option<String>,
     identity_marker_sha256: Option<String>,
     databases: Vec<RescueDatabase>,
+    #[serde(default)]
+    whatsapp_media: Option<WhatsAppMediaTreeStats>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

@@ -191,15 +191,26 @@ describe("Settings Class-AAA control-center contract", () => {
     expect(service).toContain("For secret values");
   });
 
-  it("keeps destructive reset on trusted approval, recent PIN and lifecycle erase authority", () => {
+  it("keeps destructive reset on trusted approval, recent PIN and media-safe lifecycle erase authority", () => {
     const reset = read("src/app/api/settings/reset/route.ts");
+    const mediaErase = read("src/lib/privacy/erase-with-media.ts");
     const panel = read("src/components/settings/danger-zone-panel.tsx");
     expect(reset).toContain('requireTrustedAction("settings.manage")');
     expect(reset).toContain(
       'assertTrustedAction(actorContext, "approvals.approve")',
     );
     expect(reset).toContain("requireRecentReauthentication");
-    expect(reset).toContain('executeShopErase("business-reset")');
+    expect(reset).toContain('executeShopEraseWithMedia("business-reset")');
+    expect(mediaErase).toContain("stageWhatsAppMediaErase");
+    expect(mediaErase).toContain("receipt = await executeShopErase(mode)");
+    expect(mediaErase).toContain("rollbackWhatsAppMediaErase(stage)");
+    expect(mediaErase).toContain("commitWhatsAppMediaErase(stage)");
+    expect(mediaErase.indexOf("stageWhatsAppMediaErase")).toBeLessThan(
+      mediaErase.indexOf("receipt = await executeShopErase(mode)"),
+    );
+    expect(mediaErase.indexOf("receipt = await executeShopErase(mode)")).toBeLessThan(
+      mediaErase.indexOf("commitWhatsAppMediaErase(stage)"),
+    );
     expect(panel).toContain("REAUTHENTICATION_REQUIRED");
     expect(panel).toContain("/api/auth/reauthenticate");
     expect(panel).toContain('copy("ordersExport")');

@@ -13,6 +13,7 @@ import {
   fetchLatestWaWebVersion,
   makeInMemoryStore,
   DisconnectReason,
+  downloadMediaMessage,
   type WASocket,
   type proto,
 } from "@whiskeysockets/baileys";
@@ -397,6 +398,30 @@ export class WhatsAppManager {
       id: sent?.key?.id ?? "",
       status: String(sent?.status ?? "sent"),
     };
+  }
+
+  async downloadMedia(message: IncomingMessage): Promise<AsyncIterable<Uint8Array>> {
+    if (!this.sock || this.status !== "connected") {
+      throw new Error(`Not connected (status=${this.status})`);
+    }
+    if (message.key.fromMe || !message.key.remoteJid || !message.key.id) {
+      throw new Error("Media download requires an exact inbound WhatsApp message identity");
+    }
+    const activeSocket = this.sock;
+    const downloaded = await downloadMediaMessage(
+      message as proto.IWebMessageInfo,
+      "stream",
+      {},
+      {
+        logger,
+        reuploadRequest: (providerMessage) =>
+          activeSocket.updateMediaMessage(providerMessage),
+      },
+    );
+    if (Buffer.isBuffer(downloaded)) {
+      throw new Error("Baileys returned a buffer for a stream media request");
+    }
+    return downloaded as unknown as AsyncIterable<Uint8Array>;
   }
 
   listChats(limit = 50): Array<{

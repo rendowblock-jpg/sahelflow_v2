@@ -31,6 +31,9 @@ fn verify_staged_backup_objects(
                     }
                 }
                 "shop-database" => preflight_database(&target)?,
+                WHATSAPP_MEDIA_BACKUP_OBJECT_KIND => {
+                    validate_whatsapp_media_pack(&target, &manifest.registry)?;
+                }
                 _ => {
                     return Err(IoError::new(
                         ErrorKind::InvalidData,

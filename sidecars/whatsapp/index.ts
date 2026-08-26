@@ -16,7 +16,7 @@ import {
   findDurableSendReceipt,
   recordDurableSendReceipt,
 } from "./send-receipts";
-import { wa, type SidecarEvent } from "./whatsapp";
+import { wa, type IncomingMessage, type SidecarEvent } from "./whatsapp";
 
 const configuredPort = Number.parseInt(process.env.SIDECAR_PORT ?? "3001", 10);
 if (!Number.isInteger(configuredPort) || configuredPort < 1 || configuredPort > 65535) {
@@ -30,6 +30,7 @@ const APP_URL =
   process.env.SF_APP_URL ??
   process.env.NEXT_PUBLIC_APP_URL ??
   "http://localhost:3000";
+const MAX_MEDIA_REQUEST_BYTES = 512 * 1024;
 
 function resolveSidecarToken(): string {
   const fromEnv = process.env.SIDECAR_TOKEN;
@@ -65,6 +66,25 @@ function safeEqual(left: string, right: string): boolean {
 function checkRestAuth(req: Request): boolean {
   const match = /^Bearer\s+(.+)$/i.exec(req.headers.get("authorization") ?? "");
   return Boolean(match?.[1] && safeEqual(match[1], SIDECAR_REST_TOKEN));
+}
+
+function isInboundMediaRequest(message: unknown): message is IncomingMessage {
+  if (!message || typeof message !== "object") return false;
+  const candidate = message as Partial<IncomingMessage>;
+  return Boolean(
+    candidate.key &&
+      candidate.key.fromMe === false &&
+      typeof candidate.key.remoteJid === "string" &&
+      candidate.key.remoteJid.length > 0 &&
+      candidate.key.remoteJid.length <= 256 &&
+      typeof candidate.key.id === "string" &&
+      candidate.key.id.length > 0 &&
+      candidate.key.id.length <= 256 &&
+      candidate.message &&
+      typeof candidate.message === "object" &&
+      Number.isSafeInteger(candidate.messageTimestamp) &&
+      (candidate.messageTimestamp ?? -1) >= 0,
+  );
 }
 
 const app = new Hono();
@@ -117,6 +137,104 @@ app.get("/chats/:jid/messages", (context) => {
     : 100;
   const jid = decodeURIComponent(context.req.param("jid"));
   return context.json({ jid, messages: wa.getMessages(jid, limit) });
+});
+
+app.post("/media/download", async (context) => {
+  const declaredLength = Number.parseInt(
+    context.req.header("content-length") ?? "0",
+    10,
+  );
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_MEDIA_REQUEST_BYTES) {
+    return context.json(
+      {
+        error: "Media request is too large",
+        code: "INVALID_MEDIA_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      413,
+    );
+  }
+  const body = await context.req.json().catch(() => null);
+  if (
+    !body ||
+    typeof body !== "object" ||
+    JSON.stringify(body).length > MAX_MEDIA_REQUEST_BYTES ||
+    !isInboundMediaRequest((body as { message?: unknown }).message)
+  ) {
+    return context.json(
+      {
+        error: "Invalid inbound media request",
+        code: "INVALID_MEDIA_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
+  }
+
+  try {
+    const source = await wa.downloadMedia(
+      (body as { message: IncomingMessage }).message,
+    );
+    const iterator = source[Symbol.asyncIterator]();
+    const stream = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        try {
+          const next = await iterator.next();
+          if (next.done) controller.close();
+          else controller.enqueue(
+            next.value instanceof Uint8Array
+              ? next.value
+              : new Uint8Array(next.value),
+          );
+        } catch (error) {
+          controller.error(error);
+        }
+      },
+      async cancel() {
+        await iterator.return?.();
+      },
+    });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  } catch (error) {
+    const statusCode =
+      error &&
+      typeof error === "object" &&
+      "output" in error &&
+      (error as { output?: { statusCode?: unknown } }).output &&
+      typeof (error as { output?: { statusCode?: unknown } }).output?.statusCode === "number"
+        ? ((error as { output: { statusCode: number } }).output.statusCode)
+        : null;
+    const disconnected =
+      error instanceof Error && /Not connected/i.test(error.message);
+    const invalid =
+      error instanceof Error && /exact inbound WhatsApp message identity/i.test(error.message);
+    return context.json(
+      {
+        error: invalid
+          ? "Invalid inbound media identity"
+          : disconnected
+            ? "WhatsApp is not connected"
+            : "WhatsApp media is temporarily unavailable",
+        code: invalid
+          ? "INVALID_MEDIA_REQUEST"
+          : disconnected
+            ? "WHATSAPP_NOT_CONNECTED"
+            : "WHATSAPP_MEDIA_UNAVAILABLE",
+        retryable: !invalid,
+        ambiguous: false,
+        providerStatus: statusCode && statusCode >= 400 ? statusCode : undefined,
+      },
+      invalid ? 400 : disconnected ? 503 : 502,
+    );
+  }
 });
 
 const durableSendsInFlight = new Map<

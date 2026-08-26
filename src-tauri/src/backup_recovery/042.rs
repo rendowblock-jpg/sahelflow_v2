@@ -16,6 +16,8 @@ fn rollback_to_rescue(
     let manifest: RescueManifest =
         read_json_limited(&rescue.join("rescue-manifest.json"), MAX_JSON_BYTES)?;
     validate_rescue(app_data_dir, &rescue, &manifest, journal)?;
+    let rescue_registry: ShopRegistry =
+        read_json_limited(&rescue.join(&manifest.registry_file), MAX_JSON_BYTES)?;
 
     if observed_identity == target_identity {
         installation_identity_rebind::rebind_installation_root_identity(
@@ -53,6 +55,15 @@ fn rollback_to_rescue(
         remove_sqlite_sidecars(&target)?;
         preflight_database(&target)?;
     }
+    match &manifest.whatsapp_media {
+        Some(expected_media) => replace_whatsapp_media_tree(
+            &rescue.join(WHATSAPP_MEDIA_ROOT_NAME),
+            &whatsapp_media_root(app_data_dir),
+            &rescue_registry,
+            expected_media,
+        )?,
+        None => remove_whatsapp_media_tree_if_present(app_data_dir)?,
+    }
     replace_from_verified_source(
         &rescue.join(&manifest.registry_file),
         &app_data_dir.join(REGISTRY_FILE),
@@ -88,6 +99,21 @@ fn rollback_to_rescue(
         return Err(IoError::new(
             ErrorKind::InvalidData,
             "rollback registry failed identity verification",
+        ));
+    }
+    if let Some(expected_media) = &manifest.whatsapp_media {
+        if whatsapp_media_tree_stats(&whatsapp_media_root(app_data_dir), &registry)?
+            != *expected_media
+        {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "rollback WhatsApp media tree failed generation verification",
+            ));
+        }
+    } else if whatsapp_media_root(app_data_dir).exists() {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "legacy rollback left unexpected WhatsApp media state",
         ));
     }
     Ok(())

@@ -5,6 +5,8 @@ fn validate_manifest(
     descriptor: &BackupDescriptor,
     manifest: &BackupManifest,
 ) -> Result<(), IoError> {
+    let minimum_objects = descriptor.shop_count + 1;
+    let maximum_objects = minimum_objects + 1;
     if manifest.format_version != MANIFEST_FORMAT_VERSION
         || manifest.backup_id != descriptor.backup_id
         || manifest.created_at_unix_ms != descriptor.created_at_unix_ms
@@ -23,8 +25,8 @@ fn validate_manifest(
         || manifest.registry.workspace_id != manifest.workspace_id
         || manifest.registry.installation_id != manifest.source_installation_id
         || manifest.registry.shops.len() != descriptor.shop_count
-        || manifest.recovery_set != canonical_recovery_set()
-        || manifest.objects.len() != descriptor.shop_count + 1
+        || manifest.objects.len() < minimum_objects
+        || manifest.objects.len() > maximum_objects
         || manifest.objects.len() > MAX_BACKUP_OBJECTS
     {
         return Err(IoError::new(
@@ -36,6 +38,7 @@ fn validate_manifest(
     let mut names = BTreeSet::new();
     let mut shops = BTreeSet::new();
     let mut registry_count = 0_usize;
+    let mut media_count = 0_usize;
     let mut plaintext_bytes = 0_u64;
     for (index, object) in manifest.objects.iter().enumerate() {
         if !names.insert(object.name.clone())
@@ -75,7 +78,7 @@ fn validate_manifest(
             {
                 registry_count += 1;
             }
-            "shop-database" if index > 0 => {
+            "shop-database" if index > 0 && index <= descriptor.shop_count => {
                 let expected_index = index - 1;
                 let expected_shop = manifest.registry.shops.get(expected_index).ok_or_else(|| {
                     IoError::new(ErrorKind::InvalidData, "backup shop ordering is invalid")
@@ -95,6 +98,14 @@ fn validate_manifest(
                     ));
                 }
             }
+            WHATSAPP_MEDIA_BACKUP_OBJECT_KIND
+                if index == descriptor.shop_count + 1
+                    && object.shop_id.is_none()
+                    && object.name == WHATSAPP_MEDIA_BACKUP_OBJECT_NAME
+                    && object.file == WHATSAPP_MEDIA_BACKUP_OBJECT_FILE =>
+            {
+                media_count += 1;
+            }
             _ => {
                 return Err(IoError::new(
                     ErrorKind::InvalidData,
@@ -103,8 +114,15 @@ fn validate_manifest(
             }
         }
     }
-    if registry_count != 1
+    let expected_recovery_set = if media_count == 1 {
+        canonical_recovery_set()
+    } else {
+        legacy_recovery_set()
+    };
+    if manifest.recovery_set != expected_recovery_set
+        || registry_count != 1
         || shops.len() != manifest.registry.shops.len()
+        || media_count > 1
         || plaintext_bytes != descriptor.plaintext_bytes
     {
         return Err(IoError::new(

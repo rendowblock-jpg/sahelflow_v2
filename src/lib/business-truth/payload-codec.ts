@@ -10,6 +10,7 @@ import {
 export type BusinessPayloadKind =
   | "domain-event"
   | "outbox-intent"
+  | "outbox-intent-receipt"
   | "compensation-fact"
   | "financial-movement-detail"
   | "inventory-movement-detail"

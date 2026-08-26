@@ -45,6 +45,8 @@ struct StagedRestoreManifest {
     target_registry_file: String,
     target_brk_authority_file: String,
     staged_objects: Vec<StagedRestoreObject>,
+    #[serde(default)]
+    whatsapp_media: Option<WhatsAppMediaTreeStats>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

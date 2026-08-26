@@ -58,14 +58,42 @@ impl AcceptedMutation {
                 }
                 remove_sqlite_file_set(&path)?;
             }
-            RollbackAction::RestoreArchivedDatabase {
+            RollbackAction::RemoveRecoveredShop {
+                live_database,
+                live_media_scope,
+            } => {
+                if registry_changed {
+                    write_json_atomic(&registry_path, &restored)?;
+                }
+                remove_whatsapp_media_scope_if_present(&live_media_scope)?;
+                remove_sqlite_file_set(&live_database)?;
+            }
+            RollbackAction::RestoreArchivedShop {
                 archive_directory,
                 archive_database,
+                archive_media_scope,
                 live_database,
+                live_media_scope,
+                media_stats,
             } => {
                 if registry_changed || !live_database.exists() {
                     let _ = remove_sqlite_file_set(&live_database);
                     copy_database_exact(&archive_database, &live_database)?;
+                }
+                match media_stats.as_ref() {
+                    Some(expected) if live_media_scope.exists() => {
+                        verify_whatsapp_media_scope(&live_media_scope, expected)?;
+                    }
+                    Some(expected) => {
+                        restore_whatsapp_media_scope(
+                            &archive_media_scope,
+                            &live_media_scope,
+                            expected,
+                        )?;
+                    }
+                    None => {
+                        remove_whatsapp_media_scope_if_present(&live_media_scope)?;
+                    }
                 }
                 if registry_changed {
                     write_json_atomic(&registry_path, &restored)?;
@@ -80,6 +108,7 @@ impl AcceptedMutation {
         }
         self.finalize_archive = None;
         self.post_commit_remove = None;
+        self.post_commit_remove_media = None;
         self.registry_committed = false;
 
         let recovered = migration_coordinator::active_authority(

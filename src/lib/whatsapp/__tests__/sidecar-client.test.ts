@@ -151,4 +151,32 @@ describe("WhatsApp sidecar client", () => {
     expect(caught).toMatchObject({ ambiguous: true });
     vi.useRealTimers();
   });
+
+  it("keeps the media timeout active until the response body is consumed", async () => {
+    vi.useFakeTimers();
+    const request = { signal: null as AbortSignal | null };
+    fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+      request.signal = init.signal ?? null;
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          init.signal?.addEventListener("abort", () => {
+            controller.error(
+              Object.assign(new Error("aborted"), { name: "AbortError" }),
+            );
+          });
+        },
+      });
+      return Promise.resolve(new Response(body, { status: 200 }));
+    });
+
+    const media = await sidecar.downloadMedia({} as never);
+    expect(request.signal?.aborted).toBe(false);
+    const pendingRead = media.body!.getReader().read().catch((error) => error);
+    await vi.advanceTimersByTimeAsync(120_000);
+    const caught = await pendingRead;
+    expect(request.signal?.aborted).toBe(true);
+    expect(caught).toBeInstanceOf(SidecarUnavailableError);
+    expect(caught).toMatchObject({ ambiguous: true });
+    vi.useRealTimers();
+  });
 });

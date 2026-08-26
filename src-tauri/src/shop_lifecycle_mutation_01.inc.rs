@@ -5,6 +5,11 @@ use super::shop_lifecycle_command::{
     ShopLifecyclePayload,
 };
 
+use self::whatsapp_media_scope::{
+    reconcile_whatsapp_media_erase_tombstone, remove_whatsapp_media_scope_if_present,
+    restore_whatsapp_media_scope, snapshot_whatsapp_media_scope, verify_whatsapp_media_scope,
+    whatsapp_media_scope_path, WhatsAppMediaScopeStats,
+};
 use crate::migration_coordinator::{self, ActiveShopAuthority};
 
 use fs2::FileExt;
@@ -38,6 +43,8 @@ const CURRENT_JOURNAL_FILE: &str = "current.json";
 const ARCHIVE_DIRECTORY: &str = "shop-archives";
 
 const ARCHIVE_DATABASE_FILE: &str = "database.db";
+
+const ARCHIVE_WHATSAPP_MEDIA_DIRECTORY: &str = "whatsapp-media";
 
 const ARCHIVE_MANIFEST_FILE: &str = "manifest.json";
 
@@ -86,6 +93,8 @@ struct ArchiveState {
     status: ArchiveStatus,
     shop: ShopRecord,
     database_sha256: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    whatsapp_media: Option<WhatsAppMediaScopeStats>,
     archived_at_unix_ms: u64,
     source_registry_revision: u64,
     operation_id: String,
@@ -115,10 +124,17 @@ pub struct MutationCommit {
 enum RollbackAction {
     RegistryOnly,
     RemoveDatabase(PathBuf),
-    RestoreArchivedDatabase {
+    RemoveRecoveredShop {
+        live_database: PathBuf,
+        live_media_scope: PathBuf,
+    },
+    RestoreArchivedShop {
         archive_directory: PathBuf,
         archive_database: PathBuf,
+        archive_media_scope: PathBuf,
         live_database: PathBuf,
+        live_media_scope: PathBuf,
+        media_stats: Option<WhatsAppMediaScopeStats>,
     },
 }
 
@@ -137,6 +153,7 @@ pub struct AcceptedMutation {
     rollback: Option<RollbackPlan>,
     finalize_archive: Option<PathBuf>,
     post_commit_remove: Option<PathBuf>,
+    post_commit_remove_media: Option<PathBuf>,
     registry_committed: bool,
     committed: Option<MutationCommit>,
     _lifecycle_lock: FileLock,

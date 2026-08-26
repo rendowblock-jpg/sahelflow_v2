@@ -53,6 +53,7 @@ pub(crate) fn prepare_restore(
     }
     fs::create_dir(&staging)?;
     fs::create_dir(staging.join("shops"))?;
+    fs::create_dir(staging.join(WHATSAPP_MEDIA_ROOT_NAME))?;
 
     let preparation = (|| -> Result<RestorePreparationResult, IoError> {
         validate_target_registry(&opened.manifest.registry)?;
@@ -165,6 +166,35 @@ pub(crate) fn prepare_restore(
             });
         }
 
+        let staged_media_root = staging.join(WHATSAPP_MEDIA_ROOT_NAME);
+        let whatsapp_media = if let Some(media_object) = opened
+            .manifest
+            .objects
+            .iter()
+            .find(|object| object.kind == WHATSAPP_MEDIA_BACKUP_OBJECT_KIND)
+        {
+            let media_pack = staging.join("whatsapp-media.restore-pack");
+            decrypt_object_file(
+                &opened.path,
+                media_object,
+                &media_pack,
+                opened.dek.as_array(),
+                &opened.descriptor.backup_id,
+            )?;
+            let stats = extract_whatsapp_media_pack(
+                &media_pack,
+                &staged_media_root,
+                &target_registry,
+            )?;
+            fs::remove_file(&media_pack)?;
+            Some(stats)
+        } else {
+            Some(whatsapp_media_tree_stats(
+                &staged_media_root,
+                &target_registry,
+            )?)
+        };
+
         let staged_manifest = StagedRestoreManifest {
             restore_id: restore_id.clone(),
             backup_id: opened.descriptor.backup_id.clone(),
@@ -180,6 +210,7 @@ pub(crate) fn prepare_restore(
             target_registry_file,
             target_brk_authority_file,
             staged_objects,
+            whatsapp_media,
         };
         let staged_manifest_path = staging.join("restore-manifest.json");
         write_json_atomic(&staged_manifest_path, &staged_manifest)?;

@@ -54,68 +54,160 @@ export class SidecarRequestError extends Error {
   }
 }
 
+function authorizedHeaders(init?: RequestInit): Record<string, string> {
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (SIDECAR_REST_TOKEN) {
+    headers.Authorization = `Bearer ${SIDECAR_REST_TOKEN}`;
+  }
+  return headers;
+}
+
+function throwTransportError(error: unknown): never {
+  if (error instanceof SidecarRequestError) throw error;
+  if (error instanceof SidecarUnavailableError) throw error;
+  if (error instanceof Error && error.name === "AbortError") {
+    throw new SidecarUnavailableError("Sidecar request timed out", true);
+  }
+  if (
+    error instanceof TypeError ||
+    (error instanceof Error && /fetch failed|ECONNREFUSED/i.test(error.message))
+  ) {
+    const causeCode =
+      error instanceof Error &&
+      "cause" in error &&
+      error.cause &&
+      typeof error.cause === "object" &&
+      "code" in error.cause
+        ? String((error.cause as { code?: unknown }).code ?? "")
+        : "";
+    throw new SidecarUnavailableError(
+      "WhatsApp sidecar is not reachable",
+      causeCode !== "ECONNREFUSED",
+    );
+  }
+  throw error;
+}
+
+async function requireSuccessfulResponse(response: Response): Promise<Response> {
+  if (response.ok) return response;
+  const body = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    message?: string;
+    code?: string;
+    retryable?: boolean;
+    ambiguous?: boolean;
+  };
+  throw new SidecarRequestError(
+    body.error ?? body.message ?? `Sidecar HTTP ${response.status}`,
+    body.code ?? "SIDECAR_REJECTED",
+    body.retryable === true,
+    body.ambiguous !== false,
+    response.status,
+  );
+}
+
+async function sidecarRequest(
+  path: string,
+  init?: RequestInit,
+  timeoutMs = 8000,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await requireSuccessfulResponse(
+      await fetch(`${SIDECAR_URL}${path}`, {
+        ...init,
+        headers: authorizedHeaders(init),
+        signal: controller.signal,
+      }),
+    );
+  } catch (error) {
+    return throwTransportError(error);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Streaming requests keep their abort authority alive until EOF/cancel rather
+ * than clearing it as soon as response headers arrive. This prevents a stalled
+ * provider media body from monopolizing the single durable WhatsApp worker.
+ */
+async function sidecarStreamingRequest(
+  path: string,
+  init?: RequestInit,
+  timeoutMs = 120_000,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timeoutId);
+  };
+
+  try {
+    const response = await requireSuccessfulResponse(
+      await fetch(`${SIDECAR_URL}${path}`, {
+        ...init,
+        headers: authorizedHeaders(init),
+        signal: controller.signal,
+      }),
+    );
+    if (!response.body) {
+      finish();
+      return response;
+    }
+
+    const reader = response.body.getReader();
+    const body = new ReadableStream<Uint8Array>({
+      async pull(streamController) {
+        try {
+          const next = await reader.read();
+          if (next.done) {
+            finish();
+            streamController.close();
+            return;
+          }
+          streamController.enqueue(next.value);
+        } catch (error) {
+          finish();
+          try {
+            throwTransportError(error);
+          } catch (mapped) {
+            streamController.error(mapped);
+          }
+        }
+      },
+      async cancel(reason) {
+        finish();
+        controller.abort();
+        await reader.cancel(reason).catch(() => undefined);
+      },
+    });
+
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  } catch (error) {
+    finish();
+    return throwTransportError(error);
+  }
+}
+
 async function sidecarFetch<T>(
   path: string,
   init?: RequestInit,
   timeoutMs = 8000,
 ): Promise<T> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const headers: Record<string, string> = {
-      ...(init?.headers as Record<string, string> | undefined),
-    };
-    if (SIDECAR_REST_TOKEN) {
-      headers.Authorization = `Bearer ${SIDECAR_REST_TOKEN}`;
-    }
-    const response = await fetch(`${SIDECAR_URL}${path}`, {
-      ...init,
-      headers,
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      const body = (await response.json().catch(() => ({}))) as {
-        error?: string;
-        message?: string;
-        code?: string;
-        retryable?: boolean;
-        ambiguous?: boolean;
-      };
-      throw new SidecarRequestError(
-        body.error ?? body.message ?? `Sidecar HTTP ${response.status}`,
-        body.code ?? "SIDECAR_REJECTED",
-        body.retryable === true,
-        body.ambiguous !== false,
-        response.status,
-      );
-    }
-    return (await response.json()) as T;
-  } catch (error) {
-    if (error instanceof SidecarRequestError) throw error;
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new SidecarUnavailableError("Sidecar request timed out", true);
-    }
-    if (
-      error instanceof TypeError ||
-      (error instanceof Error && /fetch failed|ECONNREFUSED/i.test(error.message))
-    ) {
-      const causeCode =
-        error instanceof Error &&
-        "cause" in error &&
-        error.cause &&
-        typeof error.cause === "object" &&
-        "code" in error.cause
-          ? String((error.cause as { code?: unknown }).code ?? "")
-          : "";
-      throw new SidecarUnavailableError(
-        "WhatsApp sidecar is not reachable",
-        causeCode !== "ECONNREFUSED",
-      );
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  return (await sidecarRequest(path, init, timeoutMs).then((response) =>
+    response.json(),
+  )) as T;
 }
 
 export const sidecar = {
@@ -168,6 +260,19 @@ export const sidecar = {
     );
     return result.receipt ? { ok: true, ...result.receipt } : null;
   },
+
+  /**
+   * Private authenticated media read. Raw provider retrieval fields travel only
+   * over loopback for this request and are never returned to a browser or stored
+   * in the durable media-fetch outbox. The 120-second authority remains active
+   * through complete response-body consumption.
+   */
+  downloadMedia: (message: IncomingMessage) =>
+    sidecarStreamingRequest("/media/download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    }),
 
   connect: () =>
     sidecarFetch<{ ok: boolean } & SidecarStatus>("/connect", {
