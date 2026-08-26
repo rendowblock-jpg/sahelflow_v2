@@ -63,6 +63,44 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(assignment).toContain('FROM "BusinessAggregateVersion"');
     expect(hook).toContain("CHAT_REFRESH_COALESCE_MS");
     expect(hook).toContain("scheduleChatsRefresh");
+    expect(hook).toContain("chatLoadGenerationRef");
+    expect(hook).toContain("isLatestChatLoad");
+    expect(hook).toContain("loadFallbackProjection(loadGeneration)");
+    expect(hook).toContain("LIVE_RECOVERY_POLL_MS");
+    expect(hook).toContain('sidecarStatus !== "connected"');
+    expect(hook).toContain("sidecarReachable !== true");
+    expect(hook).toContain("loadMessages(chat, { background: true })");
+    expect(hook).toContain("const isCurrentConversation");
+    expect(hook).toContain("messageLoadGenerationRef");
+    expect(hook).toContain(
+      "messageLoadGenerationRef.current === messageLoadGeneration",
+    );
+    expect(hook).toContain("messageSelectionGenerationRef");
+    expect(hook).toContain("messageMutationGenerationRef");
+    expect(hook).toContain(
+      "messageMutationGenerationRef.current === mutationGeneration",
+    );
+    expect(hook).toContain("mergeInboxMessageProjection");
+    expect(hook).toContain(
+      "mergeInboxMessageProjection(loaded, messagesRef.current)",
+    );
+    expect(hook).toContain("sendingRef.current");
+    expect(hook).toContain("if (cancelled || sendingRef.current) return");
+    expect(hook).toContain("inboxMessagesEqual");
+    expect(hook).toContain(
+      "activeChatRef.current?.conversationId !== conversationId",
+    );
+    expect(hook).toContain("canApplyLoadedProjection");
+    expect(hook).toContain("!background &&");
+    expect(hook).toContain("canApplyLoadedProjection() &&");
+    expect(hook).toContain(
+      "activeChatRef.current?.conversationId === requestedConversationId",
+    );
+    const messageLoader = hook.slice(
+      hook.indexOf("const loadMessages"),
+      hook.indexOf("const handleStatusChange"),
+    );
+    expect(messageLoader).not.toContain("setSidecarReachable");
   });
 
   it("opens search and command results through canonical persisted conversation ids", () => {
@@ -162,6 +200,13 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(recovery).toContain("reason.trim().length < 3");
   });
 
+  it("makes a degraded live transport retryable while the durable projection recovers", () => {
+    const header = read("src/components/inbox/inbox-v3-header.tsx");
+    expect(header).toContain("onClick={onRetry}");
+    expect(header).toContain("onRetry={reconnect}");
+    expect(header).toContain("reconnect();\n              refreshQr();");
+  });
+
   it("keeps new desk copy governed in English French and Arabic", () => {
     const thread = read("src/components/inbox/inbox-thread-workbench.tsx");
     const copy = read("src/lib/i18n/inbox-workspace.ts");
@@ -188,12 +233,20 @@ describe("Inbox Class-AAA operations desk contract", () => {
     const thread = read("src/components/inbox/inbox-v3-thread.tsx");
     expect(thread).toContain("<StatusControl");
     expect(thread).toContain("conversationId={activeChat.conversationId}");
-    expect(thread).toContain('aria-label={t("inbox.aiOrderAssistant")}');
+    expect(thread).toContain('size="icon-sm"');
+    expect(thread).toContain(
+      'aria-label={t("inbox.extractOrderProfessionally")}',
+    );
+    expect(thread).toContain("<TooltipContent");
+    expect(thread).not.toContain('className="hidden xl:inline"');
     expect(thread).toContain("<MessageExtraction");
     expect(thread).toContain("messageId={selectedCandidate.id}");
     for (const locale of ["en", "fr", "ar"]) {
       expect(read(`src/lib/i18n/locales/${locale}.json`)).toContain(
         '"inbox.aiOrderAssistant"',
+      );
+      expect(read(`src/lib/i18n/locales/${locale}.json`)).toContain(
+        '"inbox.extractOrderProfessionally"',
       );
     }
   });

@@ -12,6 +12,10 @@ import type {
 import type { ConversationWorkflowState } from "@/components/inbox/conversation-controls";
 import { useI18n } from "@/hooks/use-i18n";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
+import {
+  mergeInboxMessageProjection,
+  reconcileInboxProviderMessage,
+} from "@/lib/inbox/message-projection";
 import { toast } from "@/lib/toast";
 import {
   messageText,
@@ -22,6 +26,7 @@ import {
 import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
 
 const CHAT_REFRESH_COALESCE_MS = 500;
+const LIVE_RECOVERY_POLL_MS = 3_000;
 const MAX_DEEP_LINK_ID_LENGTH = 160;
 
 interface CanonicalChatResponse {
@@ -145,6 +150,28 @@ function mapDeliveryStatus(
   return null;
 }
 
+function inboxMessagesEqual(
+  left: readonly InboxMessage[],
+  right: readonly InboxMessage[],
+): boolean {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+  return left.every((message, index) => {
+    const candidate = right[index];
+    return (
+      candidate !== undefined &&
+      message.id === candidate.id &&
+      message.body === candidate.body &&
+      message.direction === candidate.direction &&
+      message.timestamp === candidate.timestamp &&
+      message.messageType === candidate.messageType &&
+      message.deliveryStatus === candidate.deliveryStatus &&
+      message.outboxEffectKey === candidate.outboxEffectKey &&
+      message.outboxState === candidate.outboxState
+    );
+  });
+}
+
 export function useInboxWorkspace() {
   const searchParams = useSearchParams();
   const requestedConversationId = normalizeDeepLinkConversationId(
@@ -179,8 +206,38 @@ export function useInboxWorkspace() {
   const isNearBottomRef = useRef(true);
   const activeTransportIdRef = useRef<string | null>(null);
   const chatRefreshTimerRef = useRef<number | null>(null);
+  const chatLoadGenerationRef = useRef(0);
+  const activeChatRef = useRef<InboxChat | null>(null);
+  const messagesRef = useRef<InboxMessage[]>([]);
+  const foregroundMessageLoadRef = useRef(0);
+  const messageLoadGenerationRef = useRef(0);
+  const messageSelectionGenerationRef = useRef(0);
+  const messageMutationGenerationRef = useRef(0);
+  const sendingRef = useRef(false);
   const deepLinkAttemptRef = useRef<string | null>(null);
   const pinnedDeepLinkChatRef = useRef<InboxChat | null>(null);
+
+  const replaceMessages = useCallback((next: InboxMessage[]) => {
+    messagesRef.current = next;
+    setMessages(next);
+  }, []);
+
+  const mutateMessages = useCallback(
+    (
+      conversationId: string,
+      mutation: (current: InboxMessage[]) => InboxMessage[],
+    ) => {
+      if (activeChatRef.current?.conversationId !== conversationId) return;
+      const current = messagesRef.current;
+      const next = mutation(current);
+      if (inboxMessagesEqual(current, next)) return;
+      if (activeChatRef.current?.conversationId !== conversationId) return;
+      messageMutationGenerationRef.current += 1;
+      messagesRef.current = next;
+      setMessages(next);
+    },
+    [],
+  );
 
   const canUpdateConversation = allowedActions.includes("conversations.update");
   const canReply = allowedActions.includes("conversations.reply");
@@ -200,88 +257,108 @@ export function useInboxWorkspace() {
     return [pinned, ...nextChats];
   }, []);
 
-  const loadFallbackProjection = useCallback(async () => {
+  const loadFallbackProjection = useCallback(async (loadGeneration: number) => {
     const response = await fetch("/api/conversations", { cache: "no-store" });
     if (!response.ok) throw new Error(`Conversation projection failed: ${response.status}`);
     const data = (await response.json()) as {
       conversations: ConversationProjection[];
       authority?: { allowedActions: string[] };
     };
+    if (chatLoadGenerationRef.current !== loadGeneration) return;
     setAllowedActions(data.authority?.allowedActions ?? []);
     const restrictedContact = copy("restrictedContact");
-    setChats(
-      mergePinnedDeepLink(
-        data.conversations.map((conversation) =>
-          mapConversationProjection(conversation, restrictedContact),
-        ),
+    const nextChats = mergePinnedDeepLink(
+      data.conversations.map((conversation) =>
+        mapConversationProjection(conversation, restrictedContact),
       ),
     );
+    const activeChat = activeChatRef.current;
+    if (activeChat) {
+      activeChatRef.current =
+        nextChats.find(
+          (chat) => chat.conversationId === activeChat.conversationId,
+        ) ?? activeChat;
+    }
+    setChats(nextChats);
   }, [copy, mergePinnedDeepLink]);
 
   const loadChats = useCallback(async () => {
+    const loadGeneration = ++chatLoadGenerationRef.current;
+    const isLatestChatLoad = () =>
+      chatLoadGenerationRef.current === loadGeneration;
     try {
       const response = await fetch("/api/whatsapp/chats?limit=100", {
         cache: "no-store",
       });
       if (response.ok) {
         const data = (await response.json()) as CanonicalChatResponse;
+        if (!isLatestChatLoad()) return;
         setAllowedActions(data.authority?.allowedActions ?? []);
         setSidecarReachable(data.sidecarReachable);
         setSidecarStatus(
           isWhatsAppStatus(data.sidecarStatus) ? data.sidecarStatus : null,
         );
         setDataDegraded(false);
-        setChats(
-          mergePinnedDeepLink(
-            data.chats.map((chat) => ({
-              id: chat.jid,
-              conversationId: chat.conversationId,
-              transportId: chat.jid,
-              name: chat.name,
-              phone: chat.phone ?? undefined,
-              channel: "whatsapp" as const,
-              lastMessageText: chat.lastMessage?.text,
-              lastMessageAt: chat.lastMessage
-                ? chat.lastMessage.timestamp * 1000
-                : undefined,
-              unread: chat.unread,
-              workflow: {
-                status: chat.workflow.status as ConversationWorkflowState["status"],
-                assigneeId: chat.workflow.assigneeId,
-                assignmentVersion: chat.workflow.assignmentVersion,
-                priority:
-                  chat.workflow.priority as ConversationWorkflowState["priority"],
-                labels: chat.workflow.labels,
-                snoozedUntil: chat.workflow.snoozedUntil,
-                waitingSince: chat.workflow.waitingSince,
-                firstReplyAt: chat.workflow.firstReplyAt,
-              },
-            })),
-          ),
+        const nextChats = mergePinnedDeepLink(
+          data.chats.map((chat) => ({
+            id: chat.jid,
+            conversationId: chat.conversationId,
+            transportId: chat.jid,
+            name: chat.name,
+            phone: chat.phone ?? undefined,
+            channel: "whatsapp" as const,
+            lastMessageText: chat.lastMessage?.text,
+            lastMessageAt: chat.lastMessage
+              ? chat.lastMessage.timestamp * 1000
+              : undefined,
+            unread: chat.unread,
+            workflow: {
+              status:
+                chat.workflow.status as ConversationWorkflowState["status"],
+              assigneeId: chat.workflow.assigneeId,
+              assignmentVersion: chat.workflow.assignmentVersion,
+              priority:
+                chat.workflow.priority as ConversationWorkflowState["priority"],
+              labels: chat.workflow.labels,
+              snoozedUntil: chat.workflow.snoozedUntil,
+              waitingSince: chat.workflow.waitingSince,
+              firstReplyAt: chat.workflow.firstReplyAt,
+            },
+          })),
         );
+        const activeChat = activeChatRef.current;
+        if (activeChat) {
+          activeChatRef.current =
+            nextChats.find(
+              (chat) => chat.conversationId === activeChat.conversationId,
+            ) ?? activeChat;
+        }
+        setChats(nextChats);
         return;
       }
 
       // A field-restricted actor can still read the permission-filtered generic
       // conversation projection. Do not mislabel that durable data as demo data.
       if (response.status === 401 || response.status === 403) {
+        if (!isLatestChatLoad()) return;
         setSidecarReachable(null);
         setSidecarStatus(null);
         setDataDegraded(false);
-        await loadFallbackProjection();
+        await loadFallbackProjection(loadGeneration);
         return;
       }
 
       throw new Error(`Canonical inbox load failed: ${response.status}`);
     } catch {
+      if (!isLatestChatLoad()) return;
       setDataDegraded(true);
       try {
-        await loadFallbackProjection();
+        await loadFallbackProjection(loadGeneration);
       } catch {
-        setChats([]);
+        if (isLatestChatLoad()) setChats([]);
       }
     } finally {
-      setLoadingChats(false);
+      if (isLatestChatLoad()) setLoadingChats(false);
     }
   }, [loadFallbackProjection, mergePinnedDeepLink]);
 
@@ -315,9 +392,34 @@ export function useInboxWorkspace() {
   );
 
   const loadMessages = useCallback(
-    async (chat: InboxChat) => {
-      setLoadingMessages(true);
-      setSendError(null);
+    async (chat: InboxChat, options?: { background?: boolean }) => {
+      const background = options?.background === true;
+      const requestedConversationId = chat.conversationId;
+      const messageLoadGeneration = ++messageLoadGenerationRef.current;
+      const foregroundLoad = background
+        ? null
+        : ++foregroundMessageLoadRef.current;
+      const selectionGeneration = messageSelectionGenerationRef.current;
+      const mutationGeneration = messageMutationGenerationRef.current;
+      const isCurrentConversation = () =>
+        activeChatRef.current?.conversationId === requestedConversationId;
+      const canApplyLoadedProjection = () =>
+        isCurrentConversation() &&
+        messageLoadGenerationRef.current === messageLoadGeneration &&
+        messageSelectionGenerationRef.current === selectionGeneration;
+      const applyLoadedProjection = (loaded: InboxMessage[]) => {
+        if (!canApplyLoadedProjection()) return false;
+        replaceMessages(
+          messageMutationGenerationRef.current === mutationGeneration
+            ? loaded
+            : mergeInboxMessageProjection(loaded, messagesRef.current),
+        );
+        return true;
+      };
+      if (!background) {
+        setLoadingMessages(true);
+        setSendError(null);
+      }
       try {
         if (chat.channel === "whatsapp" && chat.transportId) {
           const response = await fetch(
@@ -327,13 +429,9 @@ export function useInboxWorkspace() {
           if (response.ok) {
             const data = (await response.json()) as {
               messages: Array<IncomingMessage & { messageType?: string }>;
-              sidecarReachable?: boolean;
             };
-            if (typeof data.sidecarReachable === "boolean") {
-              setSidecarReachable(data.sidecarReachable);
-            }
-            setMessages(
-              data.messages.map((message) => ({
+            const loadedMessages: InboxMessage[] = data.messages.map(
+              (message) => ({
                 id: message.key.id,
                 body: messageText(message.message),
                 direction: message.key.fromMe ? "outbound" : "inbound",
@@ -342,8 +440,9 @@ export function useInboxWorkspace() {
                 deliveryStatus: message.deliveryStatus,
                 outboxEffectKey: message.effectKey,
                 outboxState: message.effectState,
-              })),
+              }),
             );
+            if (!applyLoadedProjection(loadedMessages)) return;
             void markRead(chat);
             return;
           }
@@ -357,8 +456,8 @@ export function useInboxWorkspace() {
         const data = (await response.json()) as {
           conversation: { messages: SeededMessage[] };
         };
-        setMessages(
-          data.conversation.messages.map((message) => ({
+        const loadedMessages: InboxMessage[] = data.conversation.messages.map(
+          (message) => ({
             id: message.id,
             body: message.body,
             direction:
@@ -369,16 +468,28 @@ export function useInboxWorkspace() {
                   : "outbound",
             timestamp: new Date(message.timestamp).getTime(),
             messageType: message.messageType,
-          })),
+          }),
         );
+        if (!applyLoadedProjection(loadedMessages)) return;
         void markRead(chat);
       } catch {
-        setMessages([]);
+        if (
+          !background &&
+          canApplyLoadedProjection() &&
+          messageMutationGenerationRef.current === mutationGeneration
+        ) {
+          replaceMessages([]);
+        }
       } finally {
-        setLoadingMessages(false);
+        if (
+          foregroundLoad !== null &&
+          foregroundMessageLoadRef.current === foregroundLoad
+        ) {
+          setLoadingMessages(false);
+        }
       }
     },
-    [markRead],
+    [markRead, replaceMessages],
   );
 
   const handleStatusChange = useCallback(
@@ -393,8 +504,13 @@ export function useInboxWorkspace() {
   const handleMessage = useCallback(
     (message: IncomingMessage) => {
       const activeTransportId = activeTransportIdRef.current;
-      if (activeTransportId && activeTransportId === message.key.remoteJid) {
-        setMessages((current) => {
+      const activeConversationId = activeChatRef.current?.conversationId;
+      if (
+        activeConversationId &&
+        activeTransportId &&
+        activeTransportId === message.key.remoteJid
+      ) {
+        mutateMessages(activeConversationId, (current) => {
           if (current.some((entry) => entry.id === message.key.id)) return current;
           return [
             ...current,
@@ -412,7 +528,7 @@ export function useInboxWorkspace() {
       }
       scheduleChatsRefresh();
     },
-    [scheduleChatsRefresh],
+    [mutateMessages, scheduleChatsRefresh],
   );
 
   const handleMessageUpdate = useCallback(
@@ -425,12 +541,13 @@ export function useInboxWorkspace() {
       }>,
     ) => {
       const activeTransportId = activeTransportIdRef.current;
-      if (!activeTransportId) return;
+      const activeConversationId = activeChatRef.current?.conversationId;
+      if (!activeTransportId || !activeConversationId) return;
       const relevant = updates.filter(
         (update) => update.jid === activeTransportId && update.fromMe,
       );
       if (relevant.length === 0) return;
-      setMessages((current) => {
+      mutateMessages(activeConversationId, (current) => {
         let changed = false;
         const next = current.map((message) => {
           const update = relevant.find((entry) => entry.id === message.id);
@@ -445,7 +562,7 @@ export function useInboxWorkspace() {
         return changed ? next : current;
       });
     },
-    [],
+    [mutateMessages],
   );
 
   const { status, user, wsOpen, reconnect } = useWhatsAppSocket({
@@ -467,8 +584,51 @@ export function useInboxWorkspace() {
     };
   }, [loadChats]);
 
+  useEffect(() => {
+    if (
+      wsOpen ||
+      sidecarReachable !== true ||
+      sidecarStatus !== "connected" ||
+      sending
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    let inFlight = false;
+    const refreshDurableProjection = async () => {
+      if (
+        cancelled ||
+        inFlight ||
+        sendingRef.current ||
+        document.visibilityState !== "visible"
+      ) {
+        return;
+      }
+      inFlight = true;
+      try {
+        await loadChats();
+        if (cancelled || sendingRef.current) return;
+        const chat = activeChatRef.current;
+        if (chat) await loadMessages(chat, { background: true });
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void refreshDurableProjection();
+    }, LIVE_RECOVERY_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [loadChats, loadMessages, sending, sidecarReachable, sidecarStatus, wsOpen]);
+
   const selectChat = useCallback(
     (chat: InboxChat) => {
+      messageSelectionGenerationRef.current += 1;
+      activeChatRef.current = chat;
       pinnedDeepLinkChatRef.current = chat;
       setChats((current) => {
         const index = current.findIndex(
@@ -492,19 +652,21 @@ export function useInboxWorkspace() {
       });
       activeTransportIdRef.current = chat.transportId ?? null;
       setActiveChatId(chat.id);
-      setMessages([]);
+      replaceMessages([]);
       setReplyText("");
       void loadMessages(chat);
     },
-    [loadMessages],
+    [loadMessages, replaceMessages],
   );
 
   const clearActiveChat = useCallback(() => {
+    messageSelectionGenerationRef.current += 1;
+    activeChatRef.current = null;
     activeTransportIdRef.current = null;
     setActiveChatId(null);
-    setMessages([]);
+    replaceMessages([]);
     setReplyText("");
-  }, []);
+  }, [replaceMessages]);
 
   useEffect(() => {
     if (!requestedConversationId) {
@@ -616,7 +778,11 @@ export function useInboxWorkspace() {
   }, [status]);
 
   const monitorWhatsAppEffect = useCallback(
-    async (effectKey: string, localMessageId: string) => {
+    async (
+      conversationId: string,
+      effectKey: string,
+      localMessageId: string,
+    ) => {
       for (let attempt = 0; attempt < 120; attempt += 1) {
         await new Promise((resolve) =>
           setTimeout(resolve, attempt === 0 ? 1_000 : 3_000),
@@ -634,40 +800,51 @@ export function useInboxWorkspace() {
           };
           const state = data.effect.state;
           if (state === "succeeded") {
-            setMessages((current) =>
-              current.map((message) =>
-                message.id === localMessageId
-                  ? {
-                      ...message,
-                      id: data.effect.providerMessageId ?? message.id,
-                      deliveryStatus: "sent",
-                      outboxState: state,
-                    }
-                  : message,
+            mutateMessages(conversationId, (current) =>
+              reconcileInboxProviderMessage(
+                current,
+                localMessageId,
+                data.effect.providerMessageId,
+                {
+                  deliveryStatus: "sent",
+                  outboxEffectKey: effectKey,
+                  outboxState: state,
+                },
               ),
             );
             return;
           }
           if (state === "ambiguous" || state === "dead_letter") {
-            setMessages((current) =>
-              current.map((message) =>
-                message.id === localMessageId
-                  ? { ...message, deliveryStatus: "failed", outboxState: state }
-                  : message,
+            mutateMessages(conversationId, (current) =>
+              reconcileInboxProviderMessage(
+                current,
+                localMessageId,
+                data.effect.providerMessageId,
+                {
+                  deliveryStatus: "failed",
+                  outboxEffectKey: effectKey,
+                  outboxState: state,
+                },
               ),
             );
-            setSendError(
-              state === "ambiguous"
-                ? t("inbox.whatsappAmbiguous")
-                : t("inbox.sendFailed"),
-            );
+            if (activeChatRef.current?.conversationId === conversationId) {
+              setSendError(
+                state === "ambiguous"
+                  ? t("inbox.whatsappAmbiguous")
+                  : t("inbox.sendFailed"),
+              );
+            }
             return;
           }
-          setMessages((current) =>
-            current.map((message) =>
-              message.id === localMessageId
-                ? { ...message, outboxState: state }
-                : message,
+          mutateMessages(conversationId, (current) =>
+            reconcileInboxProviderMessage(
+              current,
+              localMessageId,
+              data.effect.providerMessageId,
+              {
+                outboxEffectKey: effectKey,
+                outboxState: state,
+              },
             ),
           );
         } catch {
@@ -675,19 +852,20 @@ export function useInboxWorkspace() {
         }
       }
     },
-    [t],
+    [mutateMessages, t],
   );
 
   const retryFailedMessage = useCallback(
     async (message: InboxMessage) => {
-      if (!message.outboxEffectKey) return;
+      const conversationId = activeChatRef.current?.conversationId;
+      if (!message.outboxEffectKey || !conversationId) return;
       const confirmMayDuplicate =
         message.outboxState === "ambiguous"
           ? window.confirm(t("inbox.whatsappAmbiguousRetryWarning"))
           : false;
       if (message.outboxState === "ambiguous" && !confirmMayDuplicate) return;
 
-      setMessages((current) =>
+      mutateMessages(conversationId, (current) =>
         current.map((entry) =>
           entry.id === message.id ? { ...entry, deliveryStatus: "sending" } : entry,
         ),
@@ -710,22 +888,26 @@ export function useInboxWorkspace() {
         };
         if (!data.effect) throw new Error(t("inbox.sendFailed"));
         if (data.effect.state === "succeeded") {
-          setMessages((current) =>
-            current.map((entry) =>
-              entry.id === message.id
-                ? {
-                    ...entry,
-                    id: data.effect?.providerMessageId ?? entry.id,
-                    deliveryStatus: "sent",
-                    outboxState: "succeeded",
-                  }
-                : entry,
+          mutateMessages(conversationId, (current) =>
+            reconcileInboxProviderMessage(
+              current,
+              message.id,
+              data.effect?.providerMessageId,
+              {
+                deliveryStatus: "sent",
+                outboxEffectKey: message.outboxEffectKey,
+                outboxState: "succeeded",
+              },
             ),
           );
           return;
         }
         if (response.status === 202) {
-          void monitorWhatsAppEffect(message.outboxEffectKey, message.id);
+          void monitorWhatsAppEffect(
+            conversationId,
+            message.outboxEffectKey,
+            message.id,
+          );
           return;
         }
         throw new Error(
@@ -734,19 +916,21 @@ export function useInboxWorkspace() {
             : t("inbox.sendFailed"),
         );
       } catch (error) {
-        setMessages((current) =>
+        mutateMessages(conversationId, (current) =>
           current.map((entry) =>
             entry.id === message.id
               ? { ...entry, deliveryStatus: "failed" }
               : entry,
           ),
         );
-        setSendError(
-          error instanceof Error ? error.message : t("inbox.sendFailed"),
-        );
+        if (activeChatRef.current?.conversationId === conversationId) {
+          setSendError(
+            error instanceof Error ? error.message : t("inbox.sendFailed"),
+          );
+        }
       }
     },
-    [monitorWhatsAppEffect, t],
+    [monitorWhatsAppEffect, mutateMessages, t],
   );
 
   const activeChat = useMemo(
@@ -770,6 +954,7 @@ export function useInboxWorkspace() {
       !chat.transportId ||
       effectiveStatus !== "connected" ||
       !canReply ||
+      sendingRef.current ||
       !replyText.trim()
     ) {
       return;
@@ -778,9 +963,10 @@ export function useInboxWorkspace() {
     const tempId = crypto.randomUUID();
     const body = replyText.trim();
     setReplyText("");
+    sendingRef.current = true;
     setSending(true);
     setSendError(null);
-    setMessages((current) => [
+    mutateMessages(chat.conversationId, (current) => [
       ...current,
       {
         id: tempId,
@@ -810,7 +996,7 @@ export function useInboxWorkspace() {
         requiresDuplicateConfirmation?: boolean;
       };
       if (response.status === 202 && data.accepted && data.effectKey) {
-        setMessages((current) =>
+        mutateMessages(chat.conversationId, (current) =>
           current.map((message) =>
             message.id === tempId
               ? {
@@ -821,11 +1007,15 @@ export function useInboxWorkspace() {
               : message,
           ),
         );
-        void monitorWhatsAppEffect(data.effectKey, tempId);
+        void monitorWhatsAppEffect(
+          chat.conversationId,
+          data.effectKey,
+          tempId,
+        );
         return;
       }
       if (!response.ok || !data.ok) {
-        setMessages((current) =>
+        mutateMessages(chat.conversationId, (current) =>
           current.map((message) =>
             message.id === tempId
               ? {
@@ -843,32 +1033,29 @@ export function useInboxWorkspace() {
             : t("inbox.sendFailed"),
         );
       }
-      setMessages((current) =>
-        current.map((message) =>
-          message.id === tempId
-            ? {
-                ...message,
-                deliveryStatus: "sent",
-                outboxEffectKey: data.effectKey,
-                outboxState: "succeeded",
-                ...(data.id ? { id: data.id } : {}),
-              }
-            : message,
-        ),
+      mutateMessages(chat.conversationId, (current) =>
+        reconcileInboxProviderMessage(current, tempId, data.id, {
+          deliveryStatus: "sent",
+          outboxEffectKey: data.effectKey,
+          outboxState: "succeeded",
+        }),
       );
       void loadChats();
     } catch (error) {
-      setMessages((current) =>
+      mutateMessages(chat.conversationId, (current) =>
         current.map((message) =>
           message.id === tempId
             ? { ...message, deliveryStatus: "failed" }
             : message,
         ),
       );
-      setSendError(
-        error instanceof Error ? error.message : t("inbox.sendFailed"),
-      );
+      if (activeChatRef.current?.conversationId === chat.conversationId) {
+        setSendError(
+          error instanceof Error ? error.message : t("inbox.sendFailed"),
+        );
+      }
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   }, [
@@ -878,6 +1065,7 @@ export function useInboxWorkspace() {
     effectiveStatus,
     loadChats,
     monitorWhatsAppEffect,
+    mutateMessages,
     replyText,
     t,
   ]);

@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-26
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.27 / FD-047 is signed and published from `main@4e395b0149da447daab37ad2d01be5c8bf1d6bce`; Internal.26 remains Founder-installed until the normal update; FRC-1 resumes the existing-conversation WhatsApp LID reply proof under #306
+> **Current checkpoint:** Internal.27 / FD-047 is signed, published and Founder-installed from release source `4e395b0149da447daab37ad2d01be5c8bf1d6bce`; the real LID reply and durable new inbound passed, while FRC-1 now owns the demonstrated dynamic-loopback live-push failure under #306
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -30,7 +30,7 @@ resolve protected main + open PR/issues + current signed release
 → perform installed/human/provider/external evidence that automation cannot prove
 ```
 
-At the current frontier, no product rewrite is authorized. Internal.26 reproduced one bounded outbound compatibility defect: replies to a persisted individual `@lid` conversation were rejected before durable queueing. PR #312 repaired that exact boundary plus the demonstrated Arabic empty-composer direction and header workflow-access siblings; PR #313 and signed publication run `32913445791` packaged it as Internal.27. Update once in place and resume installed/provider proof. Later FRC packages begin from their frozen evidence matrix.
+At the current frontier, no product rewrite is authorized. Internal.27 passed the exact-once real `@lid` outbound and durable new-number inbound. Automatic Inbox projection failed because the installed HTTP CSP allows only WebSocket port `3001` while native containment assigns the sidecar an ephemeral loopback port. Repair that shared root, retain a bounded durable polling fallback and real retry action, then resume installed/provider proof. Later FRC packages begin from their frozen evidence matrix.
 
 Do not restart generic repository reconnaissance when a bounded current outcome is known. Do not rerun an unchanged passing exact head. Do not retry deterministic failures until they turn green without identifying/fixing the cause.
 
@@ -245,10 +245,10 @@ Issue #221 is closed/completed after Founder acceptance of installed Internal.24
 
 Issue #306 owns the current observable gate on signed Internal.27:
 
-1. install/update in place on the real Founder Windows machine;
-2. preserve AppData/registry/install identity/keys/shop databases;
-3. verify `1.0.0-internal.27` / MSI `1.0.0.27` and normal close/reopen;
-4. retain already demonstrated QR/link/reopen/inbound evidence, then execute exactly one same-conversation LID reply → delivery state → new inbound/persistence → representative EN/AR Inbox → logout;
+1. retain the installed Internal.27 QR/link/reopen, exactly-one LID reply and durable new-number inbound evidence;
+2. repair the demonstrated loopback WebSocket CSP root without weakening containment;
+3. if separately authorized, sign and install one exact successor while preserving AppData/registry/install identity/keys/shop databases;
+4. prove no-refresh new inbound → durable persistence → normal reopen → representative EN/AR Inbox → governed status/reviewed extraction → logout;
 5. retain only redacted provider/message identifiers, timestamps and non-sensitive screenshots/observations;
 6. record the exact failure stage if any;
 7. open one bounded repair only for a reproduced root and affected siblings.

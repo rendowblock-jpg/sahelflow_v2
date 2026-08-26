@@ -3,7 +3,7 @@
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
 > **Last assessed:** 2026-08-26
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at reconciliation `4e395b0149da447daab37ad2d01be5c8bf1d6bce`
+> **Live protected main:** resolve from GitHub before every action; at reconciliation `c6b97634a24c27a088e466f00d6ed0b196e62454`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`
 > **Current signed release:** Internal.27 / `1.0.0-internal.27` / MSI `1.0.0.27` / FD-047
 > **Reviewed release head:** `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`
 > **Signed publication run:** `32913445791` — success
@@ -83,7 +83,7 @@ The adopted interpretation is:
 
 ## 6. WhatsApp current boundary — FRC-1
 
-Internal.26 remains installed in place and preserves the linked-device state. The
+Internal.27 is installed in place and preserves the linked-device state. The
 authenticated callback repair is now demonstrated in the real installed path:
 after the Founder used the supported **Remove demo data** operation, the two
 encrypted retained inbound records replayed exactly once, the spool emptied,
@@ -101,19 +101,19 @@ its durable outbound normalizer accepted only Algerian phone numbers or
 commit. The UI correctly showed failure; database inspection confirmed zero
 outbound durable rows and therefore no duplicate/provider-effect risk.
 
-Protected product repair PR #312 and signed Internal.27 now permit a
+Protected product repair PR #312 and signed Internal.27 permit a
 syntactically valid individual `@lid` only when
 the exact WhatsApp conversation contains a persisted inbound Message, preserves
 it end to end for Baileys, and continues rejecting
 groups, broadcasts, arbitrary JID domains and unbound opaque LIDs. Source and CI
-cannot prove live delivery; Internal.27 must be installed in place and the same
-real conversation retested exactly once before any provider pass claim.
+cannot prove live delivery. The same real conversation was retested exactly once
+on Internal.27 and passed with one outbound Message, one succeeded WhatsApp
+OutboxIntent, attempt count one, provider receipt/delivery state and no duplicate.
 
-The installed Arabic Inbox also demonstrated that the empty reply composer
-starts LTR and aligns correctly only after Arabic characters are typed. The
-same bounded Inbox package sets Arabic locale direction at first render while
-retaining automatic content direction for French/English. This is source work,
-not installed acceptance, until observed in the signed successor.
+The installed Internal.27 Arabic Inbox shows the empty composer RTL from first
+render while retaining automatic entered-content direction. The thread-header
+status and AI-order entry points are visibly present; their governed interactions
+remain in the physical FRC-1 matrix.
 
 Founder direction also makes the thread-header status badge invoke the existing
 authorized workflow-status control and adds a professional AI-order entry point
@@ -121,18 +121,27 @@ there. The AI action previews the selected inbound candidate and reuses the
 existing reviewed extraction/order flow; it does not introduce a second action
 path or silently create a canonical order.
 
+A new real phone number then produced a second conversation and one exact-once
+inbound Message. Ingress events and attempts were applied/succeeded once and the
+encrypted spool was empty, but the Inbox did not update until the Founder pressed
+refresh. Installed diagnosis proved that the signed grant route and sidecar grant
+verifier are healthy while the HTTP CSP permits only WebSocket port `3001`; the
+installed sidecar uses a protected ephemeral port (`65336` in the observed launch).
+WebView therefore blocks live push before the sidecar connection is established.
+The bounded `codex/frc1-whatsapp-live-push` repair aligns the response CSP with
+Tauri's loopback-only dynamic-port policy, adds durable-projection polling while
+push is degraded, and exposes a real retry action. This is not installed proof
+until a signed successor receives a new inbound without manual refresh.
+
 Required #306 evidence:
 
-1. update signed Internal.27 in place through the normal updater and verify
-   exact app/MSI version plus normal reopen;
-2. retain the already demonstrated QR/link, session persistence, authenticated
-   callback and exact-once retained-spool replay evidence on Internal.26;
-3. send one reply in the same real `@lid` conversation and retain redacted
-   durable receipt plus delivery-state evidence;
-4. receive one new inbound message and prove durable persistence and Inbox arrival;
-5. complete representative EN plus Arabic/RTL Inbox observation;
-6. perform normal disconnect/logout and local session retirement;
-7. when safe, observe message-to-reviewed-order-draft without silently creating a canonical order.
+1. merge and, if separately authorized, sign one exact live-push successor;
+2. update in place while preserving the demonstrated QR/link/session/outbound/inbound state;
+3. receive one new inbound and prove automatic Inbox arrival without refresh,
+   durable exact-once persistence and normal reopen;
+4. complete representative EN plus Arabic/RTL Inbox observation;
+5. exercise the direct governed status control and safe reviewed extraction flow;
+6. perform normal disconnect/logout and local session retirement last.
 
 WhatsApp is implemented through an unofficial WhatsApp Web library. Passing FRC-1 proves the named current installed journey; it cannot warrant that Meta will never change or block the protocol.
 

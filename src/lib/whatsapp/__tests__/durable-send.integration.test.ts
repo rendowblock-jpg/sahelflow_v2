@@ -175,6 +175,29 @@ describe("durable WhatsApp text send", () => {
     expect(sender).toHaveBeenCalledTimes(1);
   });
 
+  it("preserves a fast durable read receipt when send success commits later", async () => {
+    const effectKey = await queue("Fast read receipt");
+    await db.message.update({
+      where: { id: messageId },
+      data: { deliveryStatus: "read" },
+    });
+    const sender = vi.fn(async () => ({
+      ok: true,
+      id: "WA-FAST-READ-RECEIPT",
+      status: "sent",
+    }));
+
+    await expect(
+      processWhatsAppEffect(context, effectKey, sender),
+    ).resolves.toMatchObject({
+      state: "succeeded",
+      providerMessageId: "WA-FAST-READ-RECEIPT",
+    });
+    await expect(
+      db.message.findUniqueOrThrow({ where: { id: messageId } }),
+    ).resolves.toMatchObject({ deliveryStatus: "read" });
+  });
+
   it("requeues a lease that expired before dispatch without consuming provider budget", async () => {
     const effectKey = await queue("Recover before provider call");
     await db.outboxIntent.update({
