@@ -7,6 +7,8 @@ const COPY = {
     failed: "This media could not be saved. The message remains in your history.",
     download: "Download",
     openDocument: "Download document",
+    downloading: "Preparing secure download…",
+    downloadFailed: "This media could not be opened or downloaded. Your Inbox stayed unchanged.",
     previewUnavailable: "Preview unavailable",
   },
   fr: {
@@ -15,6 +17,8 @@ const COPY = {
     failed: "Ce média n’a pas pu être enregistré. Le message reste dans votre historique.",
     download: "Télécharger",
     openDocument: "Télécharger le document",
+    downloading: "Préparation du téléchargement sécurisé…",
+    downloadFailed: "Impossible d’ouvrir ou de télécharger ce média. Votre boîte de réception reste inchangée.",
     previewUnavailable: "Aperçu indisponible",
   },
   ar: {
@@ -23,6 +27,8 @@ const COPY = {
     failed: "تعذّر حفظ هذه الوسائط. تبقى الرسالة محفوظة في السجل.",
     download: "تنزيل",
     openDocument: "تنزيل المستند",
+    downloading: "جارٍ تجهيز التنزيل الآمن…",
+    downloadFailed: "تعذّر فتح هذه الوسائط أو تنزيلها. بقي صندوق الوارد دون تغيير.",
     previewUnavailable: "المعاينة غير متاحة",
   },
 } as const;
