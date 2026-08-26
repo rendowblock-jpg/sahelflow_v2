@@ -181,6 +181,7 @@ export function useInboxWorkspace() {
   const activeTransportIdRef = useRef<string | null>(null);
   const chatRefreshTimerRef = useRef<number | null>(null);
   const activeChatRef = useRef<InboxChat | null>(null);
+  const foregroundMessageLoadRef = useRef(0);
   const deepLinkAttemptRef = useRef<string | null>(null);
   const pinnedDeepLinkChatRef = useRef<InboxChat | null>(null);
 
@@ -332,6 +333,12 @@ export function useInboxWorkspace() {
   const loadMessages = useCallback(
     async (chat: InboxChat, options?: { background?: boolean }) => {
       const background = options?.background === true;
+      const requestedConversationId = chat.conversationId;
+      const foregroundLoad = background
+        ? null
+        : ++foregroundMessageLoadRef.current;
+      const isCurrentConversation = () =>
+        activeChatRef.current?.conversationId === requestedConversationId;
       if (!background) {
         setLoadingMessages(true);
         setSendError(null);
@@ -350,6 +357,7 @@ export function useInboxWorkspace() {
             if (typeof data.sidecarReachable === "boolean") {
               setSidecarReachable(data.sidecarReachable);
             }
+            if (!isCurrentConversation()) return;
             setMessages(
               data.messages.map((message) => ({
                 id: message.key.id,
@@ -375,6 +383,7 @@ export function useInboxWorkspace() {
         const data = (await response.json()) as {
           conversation: { messages: SeededMessage[] };
         };
+        if (!isCurrentConversation()) return;
         setMessages(
           data.conversation.messages.map((message) => ({
             id: message.id,
@@ -391,9 +400,14 @@ export function useInboxWorkspace() {
         );
         void markRead(chat);
       } catch {
-        if (!background) setMessages([]);
+        if (!background && isCurrentConversation()) setMessages([]);
       } finally {
-        if (!background) setLoadingMessages(false);
+        if (
+          foregroundLoad !== null &&
+          foregroundMessageLoadRef.current === foregroundLoad
+        ) {
+          setLoadingMessages(false);
+        }
       }
     },
     [markRead],

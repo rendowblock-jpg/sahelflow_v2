@@ -66,6 +66,10 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(hook).toContain("LIVE_RECOVERY_POLL_MS");
     expect(hook).toContain('effectiveStatus !== "connected"');
     expect(hook).toContain("loadMessages(chat, { background: true })");
+    expect(hook).toContain("const isCurrentConversation");
+    expect(hook).toContain(
+      "activeChatRef.current?.conversationId === requestedConversationId",
+    );
   });
 
   it("opens search and command results through canonical persisted conversation ids", () => {
