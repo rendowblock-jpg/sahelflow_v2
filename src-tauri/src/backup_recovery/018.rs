@@ -101,6 +101,154 @@ pub(crate) fn staged_backup_create_error_for_test(
         .expect_err("staged test error must remain an error")
 }
 
+const WHATSAPP_MEDIA_DATABASE_GENERATION_DOMAIN: &[u8] =
+    b"sahelflow.whatsapp.media-db-generation.v1\0";
+
+fn media_generation_sql_error(context: &'static str, error: rusqlite::Error) -> IoError {
+    IoError::other(format!("{context}: {error}"))
+}
+
+fn update_media_generation_field(digest: &mut Sha256, value: &str) {
+    digest.update((value.len() as u64).to_le_bytes());
+    digest.update(value.as_bytes());
+}
+
+/// Hash only canonical database state that can change the meaning of the
+/// external WhatsApp media tree. This lets unrelated order/accounting writes
+/// continue while a backup is captured, but refuses to certify a database/media
+/// pair if a media-bearing Message or media-fetch receipt changed between the
+/// SQLite snapshot and filesystem pack.
+fn whatsapp_media_database_generation(database_path: &Path) -> Result<String, IoError> {
+    let connection = Connection::open_with_flags(
+        database_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
+            | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|error| media_generation_sql_error("failed to open media-generation database", error))?;
+    let mut digest = Sha256::new();
+    digest.update(WHATSAPP_MEDIA_DATABASE_GENERATION_DOMAIN);
+
+    {
+        let mut statement = connection
+            .prepare(
+                r#"SELECT "id", "messageType", COALESCE("attachments", '')
+                   FROM "Message"
+                   WHERE "messageType" IN ('image', 'video', 'audio', 'document', 'sticker')
+                   ORDER BY "id" ASC"#,
+            )
+            .map_err(|error| {
+                media_generation_sql_error("failed to prepare canonical media Message scan", error)
+            })?;
+        let rows = statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            })
+            .map_err(|error| {
+                media_generation_sql_error("failed to scan canonical media Messages", error)
+            })?;
+        for row in rows {
+            let (id, message_type, attachments) = row.map_err(|error| {
+                media_generation_sql_error("failed to read canonical media Message", error)
+            })?;
+            digest.update(b"M");
+            update_media_generation_field(&mut digest, &id);
+            update_media_generation_field(&mut digest, &message_type);
+            update_media_generation_field(&mut digest, &attachments);
+        }
+    }
+
+    {
+        let mut statement = connection
+            .prepare(
+                r#"SELECT "effectKey", "status", COALESCE("outcomeState", ''), COALESCE("receiptJson", '')
+                   FROM "OutboxIntent"
+                   WHERE "effectType" = 'whatsapp.media.fetch.v1'
+                   ORDER BY "effectKey" ASC"#,
+            )
+            .map_err(|error| {
+                media_generation_sql_error("failed to prepare WhatsApp media outbox scan", error)
+            })?;
+        let rows = statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                ))
+            })
+            .map_err(|error| {
+                media_generation_sql_error("failed to scan WhatsApp media outbox", error)
+            })?;
+        for row in rows {
+            let (effect_key, status, outcome_state, receipt_json) = row.map_err(|error| {
+                media_generation_sql_error("failed to read WhatsApp media outbox", error)
+            })?;
+            digest.update(b"O");
+            update_media_generation_field(&mut digest, &effect_key);
+            update_media_generation_field(&mut digest, &status);
+            update_media_generation_field(&mut digest, &outcome_state);
+            update_media_generation_field(&mut digest, &receipt_json);
+        }
+    }
+
+    Ok(hex_encode(&digest.finalize()))
+}
+
+fn verify_whatsapp_media_database_generations(
+    app_data_dir: &Path,
+    registry: &ShopRegistry,
+    captured: &BTreeMap<String, String>,
+) -> Result<(), IoError> {
+    if captured.len() != registry.shops.len() {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "backup media database generation set is incomplete",
+        ));
+    }
+    for shop in &registry.shops {
+        let expected = captured.get(&shop.id).ok_or_else(|| {
+            IoError::new(
+                ErrorKind::InvalidData,
+                "backup media database generation is missing a registered shop",
+            )
+        })?;
+        let live = whatsapp_media_database_generation(
+            &app_data_dir.join("shops").join(&shop.database_file),
+        )?;
+        if &live != expected {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                format!(
+                    "shop {} changed WhatsApp media authority while backup generation was captured",
+                    shop.id
+                ),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn verify_whatsapp_media_filesystem_generation(
+    app_data_dir: &Path,
+    registry: &ShopRegistry,
+    captured: Option<&WhatsAppMediaTreeStats>,
+) -> Result<(), IoError> {
+    let live = whatsapp_media_tree_stats(&whatsapp_media_root(app_data_dir), registry)?;
+    match captured {
+        Some(expected) if &live == expected => Ok(()),
+        None if live.object_count == 0 => Ok(()),
+        _ => Err(IoError::new(
+            ErrorKind::InvalidData,
+            "WhatsApp media tree changed while backup generation was captured",
+        )),
+    }
+}
+
 pub(crate) fn create_backup(
     app_data_dir: &Path,
     download_dir: &Path,
@@ -209,6 +357,7 @@ pub(crate) fn create_backup(
 
         let snapshot_root = staging.join("snapshots");
         backup_create_stage(BackupCreateStage::Staging, fs::create_dir(&snapshot_root))?;
+        let mut media_database_generations = BTreeMap::new();
         for (index, shop) in registry.shops.iter().enumerate() {
             let source = app_data_dir.join("shops").join(&shop.database_file);
             let snapshot = snapshot_root.join(&shop.database_file);
@@ -220,6 +369,19 @@ pub(crate) fn create_backup(
                 BackupCreateStage::ShopSnapshot,
                 verify_database_migration_set(&snapshot, &authority.migration_set_sha256),
             )?;
+            let generation = backup_create_stage(
+                BackupCreateStage::ShopSnapshot,
+                whatsapp_media_database_generation(&snapshot),
+            )?;
+            if media_database_generations
+                .insert(shop.id.clone(), generation)
+                .is_some()
+            {
+                return Err(IoError::new(
+                    ErrorKind::InvalidData,
+                    "backup media database generation duplicated a shop identity",
+                ));
+            }
             let keys = backup_create_stage(
                 BackupCreateStage::ShopKeyExport,
                 export_shop_keys(
@@ -264,6 +426,14 @@ pub(crate) fn create_backup(
             BackupCreateStage::ObjectWrite,
             create_whatsapp_media_pack(app_data_dir, &registry, &media_pack),
         )?;
+        let captured_media_stats = if has_whatsapp_media {
+            Some(backup_create_stage(
+                BackupCreateStage::ObjectWrite,
+                validate_whatsapp_media_pack(&media_pack, &registry),
+            )?)
+        } else {
+            None
+        };
         if has_whatsapp_media {
             let media_object = staging.join(WHATSAPP_MEDIA_BACKUP_OBJECT_FILE);
             let stats = backup_create_stage(
@@ -289,6 +459,29 @@ pub(crate) fn create_backup(
             });
             backup_create_stage(BackupCreateStage::Commit, fs::remove_file(&media_pack))?;
         }
+
+        // A backup is one database+media generation, not two individually valid
+        // captures. Compare the media-relevant canonical state from the exact
+        // SQLite snapshots against live state after the pack is complete, then
+        // bind that to the authenticated live media-tree digest. Any mismatch
+        // aborts before a manifest/descrip­tor can certify the staging directory.
+        backup_create_stage(
+            BackupCreateStage::ShopSnapshot,
+            verify_whatsapp_media_database_generations(
+                app_data_dir,
+                &registry,
+                &media_database_generations,
+            ),
+        )?;
+        backup_create_stage(
+            BackupCreateStage::ObjectWrite,
+            verify_whatsapp_media_filesystem_generation(
+                app_data_dir,
+                &registry,
+                captured_media_stats.as_ref(),
+            ),
+        )?;
+
         backup_create_stage(BackupCreateStage::Commit, fs::remove_dir(&snapshot_root))?;
         if objects.len() > MAX_BACKUP_OBJECTS {
             return Err(IoError::new(
@@ -490,4 +683,72 @@ pub(crate) fn create_backup(
         let _ = fs::remove_dir_all(&staging);
     }
     result
+}
+
+#[cfg(test)]
+mod whatsapp_media_backup_generation_tests {
+    use super::*;
+
+    #[test]
+    fn database_generation_tracks_media_truth_but_not_unrelated_rows() {
+        let root = std::env::temp_dir().join(format!(
+            "sahelflow-media-db-generation-{}-{}",
+            std::process::id(),
+            random_hex(4).expect("random test suffix")
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create generation test root");
+        let database = root.join("shop.db");
+        let connection = Connection::open(&database).expect("open generation test database");
+        connection
+            .execute_batch(
+                r#"
+                CREATE TABLE "Message" (
+                    "id" TEXT PRIMARY KEY,
+                    "messageType" TEXT NOT NULL,
+                    "attachments" TEXT
+                );
+                CREATE TABLE "OutboxIntent" (
+                    "effectKey" TEXT PRIMARY KEY,
+                    "effectType" TEXT NOT NULL,
+                    "status" TEXT NOT NULL,
+                    "outcomeState" TEXT,
+                    "receiptJson" TEXT
+                );
+                CREATE TABLE "Other" ("id" INTEGER PRIMARY KEY, "value" TEXT);
+                "#,
+            )
+            .expect("create generation test schema");
+
+        let baseline = whatsapp_media_database_generation(&database).expect("baseline generation");
+        connection
+            .execute("INSERT INTO \"Other\" (\"value\") VALUES ('unrelated')", [])
+            .expect("write unrelated row");
+        let unrelated =
+            whatsapp_media_database_generation(&database).expect("unrelated generation");
+        assert_eq!(baseline, unrelated);
+
+        connection
+            .execute(
+                "INSERT INTO \"Message\" (\"id\", \"messageType\", \"attachments\") VALUES (?1, 'image', ?2)",
+                ("message-1", "protected-attachment"),
+            )
+            .expect("write media message");
+        let with_message =
+            whatsapp_media_database_generation(&database).expect("message generation");
+        assert_ne!(baseline, with_message);
+
+        connection
+            .execute(
+                "INSERT INTO \"OutboxIntent\" (\"effectKey\", \"effectType\", \"status\", \"outcomeState\", \"receiptJson\") VALUES (?1, 'whatsapp.media.fetch.v1', 'succeeded', 'receipt', ?2)",
+                ("whatsapp-media-fetch:message-1", "protected-receipt"),
+            )
+            .expect("write media receipt");
+        let with_receipt =
+            whatsapp_media_database_generation(&database).expect("receipt generation");
+        assert_ne!(with_message, with_receipt);
+
+        drop(connection);
+        let _ = fs::remove_dir_all(root);
+    }
 }
