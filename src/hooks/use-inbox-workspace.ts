@@ -417,7 +417,7 @@ export function useInboxWorkspace() {
         );
         void markRead(chat);
       } catch {
-        if (!background && isCurrentConversation()) setMessages([]);
+        if (!background && canApplyLoadedProjection()) setMessages([]);
       } finally {
         if (
           foregroundLoad !== null &&

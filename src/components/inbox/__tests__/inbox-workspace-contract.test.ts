@@ -72,6 +72,9 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(hook).toContain("messageMutationGenerationRef");
     expect(hook).toContain("canApplyLoadedProjection");
     expect(hook).toContain(
+      "if (!background && canApplyLoadedProjection()) setMessages([])",
+    );
+    expect(hook).toContain(
       "activeChatRef.current?.conversationId === requestedConversationId",
     );
   });
