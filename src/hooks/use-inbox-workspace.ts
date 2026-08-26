@@ -30,6 +30,7 @@ const LIVE_RECOVERY_POLL_MS = 3_000;
 const DRAFT_SAVE_DELAY_MS = 600;
 const DRAFT_LOAD_ATTEMPTS = 3;
 const DRAFT_LOAD_RETRY_MS = 500;
+const DRAFT_WRITE_ATTEMPTS = 3;
 const MAX_DEEP_LINK_ID_LENGTH = 160;
 
 interface CanonicalChatResponse {
@@ -444,6 +445,7 @@ export function useInboxWorkspace() {
     // remains held until the seller deliberately opens this thread again.
     explicitUnreadHoldRef.current.add(conversationId);
     messageLoadGenerationRef.current += 1;
+    chatLoadGenerationRef.current += 1;
     try {
       await readStateWriteQueueRef.current
         .get(conversationId)
@@ -456,6 +458,9 @@ export function useInboxWorkspace() {
         explicitUnreadHoldRef.current.delete(conversationId);
         return false;
       }
+      // Also invalidate a chat refresh that may have started while the unread
+      // mutation waited behind an in-flight read request.
+      chatLoadGenerationRef.current += 1;
       setChats((current) =>
         current.map((entry) =>
           entry.conversationId === conversationId
@@ -576,26 +581,52 @@ export function useInboxWorkspace() {
   const persistDraft = useCallback(
     async (conversationId: string, body: string) => {
       if (!canReply) return false;
-      const revision = (draftRevisionRef.current.get(conversationId) ?? 0) + 1;
+      let revision = (draftRevisionRef.current.get(conversationId) ?? 0) + 1;
       draftRevisionRef.current.set(conversationId, revision);
       const previous =
         draftWriteQueueRef.current.get(conversationId) ?? Promise.resolve(true);
       const write = previous.catch(() => false).then(async () => {
-        try {
-          const response = await fetch(
-            `/api/conversations/${encodeURIComponent(conversationId)}/draft`,
-            {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ body, revision }),
-            },
-          );
-          if (!response.ok) return false;
-          const data = (await response.json()) as { applied?: unknown };
-          return data.applied === true;
-        } catch {
-          return false;
+        for (let attempt = 0; attempt < DRAFT_WRITE_ATTEMPTS; attempt += 1) {
+          try {
+            const response = await fetch(
+              `/api/conversations/${encodeURIComponent(conversationId)}/draft`,
+              {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ body, revision }),
+              },
+            );
+            if (!response.ok) return false;
+            const data = (await response.json()) as {
+              applied?: unknown;
+              revision?: unknown;
+            };
+            if (
+              typeof data.revision !== "number" ||
+              !Number.isSafeInteger(data.revision) ||
+              data.revision < 0
+            ) {
+              return false;
+            }
+            draftRevisionRef.current.set(
+              conversationId,
+              Math.max(
+                data.revision,
+                draftRevisionRef.current.get(conversationId) ?? 0,
+              ),
+            );
+            if (data.applied === true) return true;
+            revision =
+              Math.max(
+                data.revision,
+                draftRevisionRef.current.get(conversationId) ?? 0,
+              ) + 1;
+            draftRevisionRef.current.set(conversationId, revision);
+          } catch {
+            return false;
+          }
         }
+        return false;
       });
       draftWriteQueueRef.current.set(conversationId, write);
       try {

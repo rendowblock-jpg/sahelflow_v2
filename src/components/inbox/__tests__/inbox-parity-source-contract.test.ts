@@ -17,17 +17,20 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(schema).toContain("draftBody     String?");
     expect(protectedFields).toContain('"draftBody"');
     expect(route).toContain('requireTrustedAction("conversations.reply")');
-    expect(route).toContain("const applied = await db.$transaction");
+    expect(route).toContain("const result = await db.$transaction");
     expect(route).toContain("data: { draftRevision: revision }");
     expect(route).toContain("data: { draftBody: normalized || null }");
     expect(route).toContain("draftRevision: { lt: revision }");
+    expect(route).toContain("revision: current?.draftRevision ?? revision");
     expect(workspace).toContain("DRAFT_SAVE_DELAY_MS");
     expect(workspace).toContain("draftReadyConversationRef");
     expect(workspace).toContain("draftWriteQueueRef");
     expect(workspace).toContain("draftRevisionRef");
     expect(workspace).toContain("DRAFT_LOAD_ATTEMPTS");
     expect(workspace).toContain("if (!response || !isCurrentDraft()) return");
-    expect(workspace).toContain("return data.applied === true");
+    expect(workspace).toContain("if (data.applied === true) return true");
+    expect(workspace).toContain("DRAFT_WRITE_ATTEMPTS");
+    expect(workspace).toContain("attempt < DRAFT_WRITE_ATTEMPTS");
     const draftLoader = workspace.slice(
       workspace.indexOf("const loadDraft"),
       workspace.indexOf("const handleStatusChange"),
@@ -81,6 +84,8 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(workspace).toContain("explicitUnreadHoldRef");
     expect(workspace).toContain("readStateWriteQueueRef");
     expect(workspace).toContain("messageLoadGenerationRef.current += 1");
+    expect(workspace.match(/chatLoadGenerationRef\.current \+= 1/g)?.length)
+      .toBeGreaterThanOrEqual(2);
     expect(workspace.indexOf("await readStateWriteQueueRef.current"))
       .toBeLessThan(workspace.indexOf('/unread`'));
   });
@@ -95,6 +100,9 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(route).toContain(
       "projectWhatsAppMessageAttachmentForContactAccess",
     );
+    expect(route).toContain("getBusinessEnvelopeKey(context)");
+    expect(route).toContain("openWhatsAppMessageAttachmentWithKey");
+    expect(route).toContain("attachmentKey?.fill(0)");
     expect(metadata).toContain("Provider URLs, media");
     expect(metadata).not.toContain("source.directPath");
     expect(inbound).toContain("normalizeWhatsAppMessageContent");

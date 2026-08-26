@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { resolveConversationIdForRead } from "@/lib/data/conversation-service";
 import { db, shopContext } from "@/lib/db";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { projectConversationForTrustedActor } from "@/lib/identity/conversation-projection";
 import { normalizeInboxMessageDirection } from "@/lib/inbox/message-direction";
 import {
-  openWhatsAppMessageAttachment,
+  openWhatsAppMessageAttachmentWithKey,
   projectWhatsAppMessageAttachmentForContactAccess,
 } from "@/lib/whatsapp/message-attachments";
 
@@ -46,24 +47,36 @@ export const GET = withErrorHandler(
       conversation,
       actorContext,
     );
-    const messages = await Promise.all(
-      projected.messages.map(async (message) => {
-        const attachment = await openWhatsAppMessageAttachment(
-          context,
-          message.id,
-          message.attachments,
-        );
-        return {
-          ...message,
-          direction: normalizeInboxMessageDirection(message.direction),
-          attachment: projectWhatsAppMessageAttachmentForContactAccess(
-            attachment,
-            projected.fieldAccess.contact,
-          ),
-          attachments: undefined,
-        };
-      }),
-    );
+    const attachmentKey = projected.messages.some(
+      (message) => message.attachments,
+    )
+      ? await getBusinessEnvelopeKey(context)
+      : null;
+    const messages = (() => {
+      try {
+        return projected.messages.map((message) => {
+          const attachment =
+            attachmentKey && message.attachments
+              ? openWhatsAppMessageAttachmentWithKey(
+                  message.id,
+                  message.attachments,
+                  attachmentKey,
+                )
+              : null;
+          return {
+            ...message,
+            direction: normalizeInboxMessageDirection(message.direction),
+            attachment: projectWhatsAppMessageAttachmentForContactAccess(
+              attachment,
+              projected.fieldAccess.contact,
+            ),
+            attachments: undefined,
+          };
+        });
+      } finally {
+        attachmentKey?.fill(0);
+      }
+    })();
 
     return NextResponse.json({
       conversation: {
