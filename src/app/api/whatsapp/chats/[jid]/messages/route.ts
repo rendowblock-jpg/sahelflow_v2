@@ -40,18 +40,20 @@ function mediaProjection(
   status: string | undefined,
   outcomeState: string | undefined,
 ): InboxLocalMediaProjection {
+  const encoded = encodeURIComponent(messageId);
+  const statusUrl = `/api/inbox/media/${encoded}/status`;
   if (status === "succeeded" && outcomeState === "receipt") {
-    const encoded = encodeURIComponent(messageId);
     return {
       state: "ready",
+      statusUrl,
       readUrl: `/api/inbox/media/${encoded}`,
       downloadUrl: `/api/inbox/media/${encoded}?download=1`,
     };
   }
   if (status === "dead_letter" || status === "failed") {
-    return { state: "failed" };
+    return { state: "failed", statusUrl };
   }
-  return { state: "pending" };
+  return { state: "pending", statusUrl };
 }
 
 export const GET = withErrorHandler(
