@@ -38,16 +38,19 @@ export function startWhatsAppOutboxWorker(): void {
           drainDueWhatsAppMediaFetches,
           reconcileQueuedWhatsAppMediaFetches,
         },
+        { reconcileAbandonedWhatsAppMediaTemps },
         { requireLicenseEntitlement },
       ] = await Promise.all([
         import("@/lib/db"),
         import("@/lib/whatsapp/durable-send"),
         import("@/lib/whatsapp/media-fetch-worker"),
+        import("@/lib/whatsapp/media-temp-reconciliation"),
         import("@/lib/license/license-authority"),
       ]);
       await requireLicenseEntitlement(undefined, shopContext);
       const context = { prisma: db, shop: shopContext } as const;
       await drainDueWhatsAppEffects(context, 10);
+      reconcileAbandonedWhatsAppMediaTemps(context);
       await reconcileQueuedWhatsAppMediaFetches(context, 24);
       await drainDueWhatsAppMediaFetches(context, 4);
     } catch {
