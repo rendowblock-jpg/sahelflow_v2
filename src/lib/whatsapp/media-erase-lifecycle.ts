@@ -98,14 +98,21 @@ export function stageWhatsAppMediaErase(activePath: string): WhatsAppMediaEraseS
 export function rollbackWhatsAppMediaErase(stage: WhatsAppMediaEraseStage): void {
   if (!stage.fresh || !existsSync(stage.tombstonePath)) return;
   assertSafeExistingPath(stage.tombstonePath);
+
+  // An empty-tree stage creates only a blocking marker. If a writer that had
+  // already passed its first preflight creates the active directory before the
+  // DB transaction fails, removing the marker is still the correct rollback:
+  // canonical DB truth remains intact, so the writer may safely continue.
+  if (!stage.hadActiveTree) {
+    rmSync(stage.tombstonePath, { recursive: true, force: true });
+    syncParent(stage.activePath);
+    return;
+  }
+
   if (existsSync(stage.activePath)) {
     throw new Error("Cannot roll back WhatsApp media erase over a live tree");
   }
-  if (stage.hadActiveTree) {
-    renameSync(stage.tombstonePath, stage.activePath);
-  } else {
-    rmSync(stage.tombstonePath, { recursive: true, force: true });
-  }
+  renameSync(stage.tombstonePath, stage.activePath);
   syncParent(stage.activePath);
 }
 
