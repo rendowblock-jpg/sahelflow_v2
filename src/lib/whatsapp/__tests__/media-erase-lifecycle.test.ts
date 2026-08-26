@@ -1,0 +1,73 @@
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import {
+  commitWhatsAppMediaErase,
+  rollbackWhatsAppMediaErase,
+  stageWhatsAppMediaErase,
+  whatsAppMediaErasePending,
+} from "../media-erase-lifecycle";
+
+let root = "";
+let active = "";
+
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), "sahelflow-media-erase-"));
+  active = join(root, "whatsapp-media", "a".repeat(64));
+});
+
+afterEach(() => {
+  rmSync(root, { recursive: true, force: true });
+});
+
+describe("WhatsApp media erase tombstones", () => {
+  it("hides and restores a fresh media tree when the DB erase fails", () => {
+    mkdirSync(active, { recursive: true });
+    writeFileSync(join(active, "private.sfmedia"), "ciphertext");
+
+    const stage = stageWhatsAppMediaErase(active);
+    expect(stage).toMatchObject({ fresh: true, hadActiveTree: true });
+    expect(existsSync(active)).toBe(false);
+    expect(whatsAppMediaErasePending(active)).toBe(true);
+
+    rollbackWhatsAppMediaErase(stage);
+    expect(whatsAppMediaErasePending(active)).toBe(false);
+    expect(readFileSync(join(active, "private.sfmedia"), "utf8")).toBe(
+      "ciphertext",
+    );
+  });
+
+  it("deletes the hidden tree only after the DB erase commits", () => {
+    mkdirSync(active, { recursive: true });
+    writeFileSync(join(active, "private.sfmedia"), "ciphertext");
+
+    const stage = stageWhatsAppMediaErase(active);
+    commitWhatsAppMediaErase(stage);
+
+    expect(existsSync(active)).toBe(false);
+    expect(existsSync(`${active}.erasing`)).toBe(false);
+  });
+
+  it("keeps a pre-existing crash tombstone hidden until a safe retry commits", () => {
+    mkdirSync(`${active}.erasing`, { recursive: true });
+    writeFileSync(join(`${active}.erasing`, "private.sfmedia"), "ciphertext");
+
+    const stage = stageWhatsAppMediaErase(active);
+    expect(stage.fresh).toBe(false);
+    rollbackWhatsAppMediaErase(stage);
+    expect(existsSync(active)).toBe(false);
+    expect(whatsAppMediaErasePending(active)).toBe(true);
+
+    commitWhatsAppMediaErase(stage);
+    expect(whatsAppMediaErasePending(active)).toBe(false);
+  });
+});
