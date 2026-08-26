@@ -11,6 +11,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 const draftSchema = z.object({
   body: z.string().max(10_000),
+  revision: z.number().int().positive().safe(),
 });
 
 async function conversationId(rawId: string): Promise<string | null> {
@@ -31,17 +32,20 @@ export const GET = withErrorHandler(
     }
     const conversation = await db.conversation.findUnique({
       where: { id },
-      select: { draftBody: true },
+      select: { draftBody: true, draftRevision: true },
     });
     if (!conversation) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
-    return NextResponse.json({ body: conversation.draftBody ?? "" });
+    return NextResponse.json({
+      body: conversation.draftBody ?? "",
+      revision: conversation.draftRevision,
+    });
   },
   "GET /api/conversations/[id]/draft",
 );
 
-/** Idempotent last-write-wins draft replacement; an empty body clears it. */
+/** Monotonic last-write-wins draft replacement; an empty body clears it. */
 export const PUT = withErrorHandler(
   async (request: NextRequest, { params }: RouteContext) => {
     await requireTrustedAction("conversations.reply");
@@ -50,14 +54,17 @@ export const PUT = withErrorHandler(
     if (!id) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
-    const { body } = draftSchema.parse(await request.json());
+    const { body, revision } = draftSchema.parse(await request.json());
     const normalized = body.replaceAll("\u0000", "");
-    await db.conversation.update({
-      where: { id },
-      data: { draftBody: normalized || null },
-      select: { id: true },
+    const updated = await db.conversation.updateMany({
+      where: { id, draftRevision: { lt: revision } },
+      data: { draftBody: normalized || null, draftRevision: revision },
     });
-    return NextResponse.json({ ok: true, body: normalized });
+    return NextResponse.json({
+      ok: true,
+      applied: updated.count === 1,
+      revision,
+    });
   },
   "PUT /api/conversations/[id]/draft",
 );

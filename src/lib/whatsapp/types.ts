@@ -53,16 +53,66 @@ export interface SidecarEvent {
   updates?: Array<{ jid: string; id: string; fromMe: boolean; update: Record<string, unknown> }>;
 }
 
+const MESSAGE_WRAPPER_FIELDS = [
+  "ephemeralMessage",
+  "viewOnceMessage",
+  "viewOnceMessageV2",
+  "viewOnceMessageV2Extension",
+  "documentWithCaptionMessage",
+  "editedMessage",
+] as const;
+
+function messageRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+/**
+ * Boundedly unwrap Baileys future-proof message containers before classifying,
+ * extracting text, or persisting attachment metadata. This never follows URLs
+ * or provider retrieval fields and stops on cycles or after eight wrappers.
+ */
+export function normalizeWhatsAppMessageContent(
+  message: IncomingMessage["message"],
+): IncomingMessage["message"] {
+  let current = message as Record<string, unknown>;
+  const seen = new Set<Record<string, unknown>>();
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (seen.has(current)) break;
+    seen.add(current);
+
+    let next: Record<string, unknown> | null = null;
+    for (const field of MESSAGE_WRAPPER_FIELDS) {
+      const wrapper = messageRecord(current[field]);
+      if (!wrapper) continue;
+      next = messageRecord(wrapper.message) ?? wrapper;
+      break;
+    }
+    if (!next) {
+      const protocol = messageRecord(current.protocolMessage);
+      next = messageRecord(protocol?.editedMessage);
+    }
+    if (!next) break;
+    current = next;
+  }
+  return current as IncomingMessage["message"];
+}
+
 /** Extract the readable text from a Baileys message object. */
 export function messageText(msg: IncomingMessage["message"]): string {
   if (!msg) return "";
+  msg = normalizeWhatsAppMessageContent(msg);
   if (msg.conversation) return msg.conversation;
   if (msg.extendedTextMessage?.text) return msg.extendedTextMessage.text;
-  // image/video/audio with caption
+  // media with caption
   const imageCaption = (msg as { imageMessage?: { caption?: string } }).imageMessage?.caption;
   if (imageCaption) return imageCaption;
   const videoCaption = (msg as { videoMessage?: { caption?: string } }).videoMessage?.caption;
   if (videoCaption) return videoCaption;
+  const documentCaption = (msg as { documentMessage?: { caption?: string } })
+    .documentMessage?.caption;
+  if (documentCaption) return documentCaption;
   return "";
 }
 

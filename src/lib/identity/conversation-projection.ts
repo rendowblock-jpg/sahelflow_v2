@@ -13,11 +13,13 @@ type ConversationContactFields = Readonly<{
   sourceId?: string | null;
   /** Storage-only protected composer state; projected only by the draft API. */
   draftBody?: string | null;
+  /** Storage-only composer ordering state; projected only by the draft API. */
+  draftRevision?: number;
 }>;
 
 type ProjectedConversationContactFields = Omit<
   ConversationContactFields,
-  "draftBody"
+  "draftBody" | "draftRevision"
 >;
 
 export type ConversationFieldAccess = Readonly<{
@@ -41,7 +43,10 @@ export function projectConversationForTrustedActor<
 >(
   conversation: T,
   actorContext: TrustedActorContext,
-): Omit<T, "contactName" | "contactPhone" | "sourceId" | "draftBody"> &
+): Omit<
+  T,
+  "contactName" | "contactPhone" | "sourceId" | "draftBody" | "draftRevision"
+> &
   ProjectedConversationContactFields &
   Readonly<{ fieldAccess: ConversationFieldAccess }> {
   const contact = trustedActionAllowed(
@@ -54,6 +59,7 @@ export function projectConversationForTrustedActor<
     contactPhone,
     sourceId,
     draftBody: _draftBody,
+    draftRevision: _draftRevision,
     ...rest
   } = conversation;
   return {

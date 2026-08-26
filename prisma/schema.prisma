@@ -285,6 +285,7 @@ model Conversation {
   snoozedUntil  DateTime?                        // auto-reopen date for snoozed convos
   labels        String?                          // JSON array of label strings
   draftBody     String?                          // protected persisted reply draft
+  draftRevision Int       @default(0)            // monotonic ordering for autosave/lifecycle races
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   messages      Message[]

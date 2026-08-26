@@ -17,7 +17,7 @@ import {
   extractWhatsAppMessageAttachment,
   sealWhatsAppMessageAttachmentWithKey,
 } from "./message-attachments";
-import { messageText } from "./types";
+import { messageText, normalizeWhatsAppMessageContent } from "./types";
 
 export const AUTOMATION_TRIGGER_EFFECT_TYPE = "automation.trigger.v1";
 const WHATSAPP_INGRESS_COMMAND_TYPE = "whatsapp_message.receive.v1";
@@ -99,8 +99,7 @@ function retryDelay(attemptNumber: number): number {
   );
 }
 
-function messageType(input: WhatsAppInboundEnvelope): string {
-  const payload = input.message.message as Record<string, unknown>;
+function messageType(payload: Record<string, unknown>): string {
   if (payload.conversation || payload.extendedTextMessage) return "text";
   if (payload.imageMessage) return "image";
   if (payload.videoMessage) return "video";
@@ -403,11 +402,10 @@ async function applyClaim(
   const contactPhone = jidPhone(sourceId);
   const contactName =
     input.message.pushName?.trim() || contactPhone || sourceId;
-  const body = messageText(input.message.message);
-  const canonicalMessageType = messageType(input);
-  const attachment = extractWhatsAppMessageAttachment(
-    input.message.message as Record<string, unknown>,
-  );
+  const messageContent = normalizeWhatsAppMessageContent(input.message.message);
+  const body = messageText(messageContent);
+  const canonicalMessageType = messageType(messageContent);
+  const attachment = extractWhatsAppMessageAttachment(messageContent);
   let protectedAttachment: string | null = null;
   if (attachment) {
     const envelopeKey = await getBusinessEnvelopeKey(context);

@@ -17,10 +17,22 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(schema).toContain("draftBody     String?");
     expect(protectedFields).toContain('"draftBody"');
     expect(route).toContain('requireTrustedAction("conversations.reply")');
-    expect(route).toContain("data: { draftBody: normalized || null }");
+    expect(route).toContain(
+      "data: { draftBody: normalized || null, draftRevision: revision }",
+    );
+    expect(route).toContain("draftRevision: { lt: revision }");
     expect(workspace).toContain("DRAFT_SAVE_DELAY_MS");
     expect(workspace).toContain("draftReadyConversationRef");
     expect(workspace).toContain("draftWriteQueueRef");
+    expect(workspace).toContain("draftRevisionRef");
+    expect(workspace).toContain(
+      "draftWriteQueueRef.current.get(chat.conversationId)",
+    );
+    expect(workspace).toContain('window.addEventListener("pagehide"');
+    expect(workspace).toContain(
+      'document.addEventListener("visibilitychange"',
+    );
+    expect(workspace).toContain("keepalive: true");
     const selectChat = workspace.indexOf("const selectChat");
     expect(
       workspace.indexOf("void persistDraft(", selectChat),
@@ -41,6 +53,7 @@ describe("WhatsApp Inbox parity source slice", () => {
 
   it("never projects raw attachment ciphertext or provider paths to the Inbox", () => {
     const route = source("src/app/api/conversations/[id]/route.ts");
+    const inbound = source("src/lib/whatsapp/inbound-processor.ts");
     const metadata = source("src/lib/whatsapp/message-attachments.ts");
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
 
@@ -50,6 +63,8 @@ describe("WhatsApp Inbox parity source slice", () => {
     );
     expect(metadata).toContain("Provider URLs, media");
     expect(metadata).not.toContain("source.directPath");
+    expect(inbound).toContain("normalizeWhatsAppMessageContent");
+    expect(inbound).toContain("extractWhatsAppMessageAttachment(messageContent)");
     expect(thread).toContain("https://www.openstreetmap.org/");
     expect(thread).toContain('rel="noopener noreferrer"');
   });

@@ -224,6 +224,7 @@ export function useInboxWorkspace() {
   const draftLoadGenerationRef = useRef(0);
   const draftReadyConversationRef = useRef<string | null>(null);
   const draftWriteQueueRef = useRef(new Map<string, Promise<boolean>>());
+  const draftRevisionRef = useRef(new Map<string, number>());
 
   const setReplyText = useCallback(
     (value: string | ((current: string) => string)) => {
@@ -538,6 +539,8 @@ export function useInboxWorkspace() {
   const persistDraft = useCallback(
     async (conversationId: string, body: string) => {
       if (!canReply) return false;
+      const revision = (draftRevisionRef.current.get(conversationId) ?? 0) + 1;
+      draftRevisionRef.current.set(conversationId, revision);
       const previous =
         draftWriteQueueRef.current.get(conversationId) ?? Promise.resolve(true);
       const write = previous.catch(() => false).then(async () => {
@@ -547,7 +550,7 @@ export function useInboxWorkspace() {
             {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ body }),
+              body: JSON.stringify({ body, revision }),
             },
           );
           return response.ok;
@@ -573,18 +576,50 @@ export function useInboxWorkspace() {
       const editGeneration = draftEditGenerationRef.current;
       if (!canReply) return;
       try {
-        const response = await fetch(
-          `/api/conversations/${encodeURIComponent(chat.conversationId)}/draft`,
-          { cache: "no-store" },
-        );
-        if (!response.ok) return;
-        const data = (await response.json()) as { body?: unknown };
+        // A rapid A -> B -> A switch can arrive here while A's switch flush is
+        // still queued behind an older autosave. Never install a database value
+        // until every write already queued for this conversation has settled.
+        let pendingWrite = draftWriteQueueRef.current.get(chat.conversationId);
+        while (pendingWrite) {
+          await pendingWrite.catch(() => false);
+          const nextWrite = draftWriteQueueRef.current.get(chat.conversationId);
+          if (!nextWrite || nextWrite === pendingWrite) break;
+          pendingWrite = nextWrite;
+        }
         if (
           generation !== draftLoadGenerationRef.current ||
           activeChatRef.current?.conversationId !== chat.conversationId
         ) {
           return;
         }
+        const response = await fetch(
+          `/api/conversations/${encodeURIComponent(chat.conversationId)}/draft`,
+          { cache: "no-store" },
+        );
+        if (!response.ok) return;
+        const data = (await response.json()) as {
+          body?: unknown;
+          revision?: unknown;
+        };
+        if (
+          generation !== draftLoadGenerationRef.current ||
+          activeChatRef.current?.conversationId !== chat.conversationId
+        ) {
+          return;
+        }
+        const serverRevision =
+          typeof data.revision === "number" &&
+          Number.isSafeInteger(data.revision) &&
+          data.revision >= 0
+            ? data.revision
+            : 0;
+        draftRevisionRef.current.set(
+          chat.conversationId,
+          Math.max(
+            serverRevision,
+            draftRevisionRef.current.get(chat.conversationId) ?? 0,
+          ),
+        );
         draftReadyConversationRef.current = chat.conversationId;
         if (draftEditGenerationRef.current === editGeneration) {
           const body = typeof data.body === "string" ? data.body : "";
@@ -1084,6 +1119,44 @@ export function useInboxWorkspace() {
     }, DRAFT_SAVE_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [activeChat, canReply, persistDraft, replyText]);
+
+  const flushDraftForLifecycle = useCallback(() => {
+    const chat = activeChatRef.current;
+    if (
+      !canReply ||
+      !chat ||
+      draftReadyConversationRef.current !== chat.conversationId
+    ) {
+      return;
+    }
+    const revision =
+      (draftRevisionRef.current.get(chat.conversationId) ?? 0) + 1;
+    draftRevisionRef.current.set(chat.conversationId, revision);
+    // `keepalive` lets the bounded JSON request survive SPA navigation,
+    // pagehide, and desktop WebView teardown after this hook unmounts.
+    void fetch(
+      `/api/conversations/${encodeURIComponent(chat.conversationId)}/draft`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: replyTextRef.current, revision }),
+        keepalive: true,
+      },
+    ).catch(() => undefined);
+  }, [canReply]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flushDraftForLifecycle();
+    };
+    window.addEventListener("pagehide", flushDraftForLifecycle);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", flushDraftForLifecycle);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      flushDraftForLifecycle();
+    };
+  }, [flushDraftForLifecycle]);
 
   const effectiveStatus = status ?? sidecarStatus;
   const transport: InboxTransportState = {

@@ -72,9 +72,21 @@ describe("conversation field projection", () => {
           contactName: "Amina",
           contactPhone: "0555000000",
           draftBody: "private unsent reply",
+          draftRevision: 17,
         },
         actorContext,
       ),
     ).not.toHaveProperty("draftBody");
+    expect(
+      projectConversationForTrustedActor(
+        {
+          id: "conversation-1",
+          contactName: "Amina",
+          contactPhone: "0555000000",
+          draftRevision: 17,
+        },
+        actorContext,
+      ),
+    ).not.toHaveProperty("draftRevision");
   });
 });
