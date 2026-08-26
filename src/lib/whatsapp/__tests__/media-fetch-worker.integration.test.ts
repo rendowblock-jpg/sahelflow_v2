@@ -31,7 +31,11 @@ import {
   removeWhatsAppMediaRoot,
   whatsAppMediaRoot,
 } from "../media-object-store";
-import { openInboxWhatsAppMedia } from "../media-read-service";
+import {
+  openInboxWhatsAppMedia,
+  openPreparedInboxWhatsAppMedia,
+  prepareInboxWhatsAppMedia,
+} from "../media-read-service";
 import { SidecarRequestError } from "../sidecar-client";
 
 const ACCOUNT_ID = "213555999000:12@s.whatsapp.net";
@@ -235,6 +239,45 @@ describe("durable WhatsApp inbound media fetch", () => {
     await expect(
       drainDueWhatsAppMediaFetches(context, 1, async () => mediaResponse(bytes)),
     ).resolves.toBe(0);
+  });
+
+  it("authenticates the full object while retaining only the requested seller range", async () => {
+    const bytes = jpeg();
+    const ingress = await persistWhatsAppInbound(
+      context,
+      envelope(bytes, "PROVIDER-INBOUND-MEDIA-RANGE"),
+    );
+    await processWhatsAppInbound(context, ingress.ingressEventId);
+    await reconcileQueuedWhatsAppMediaFetches(context);
+    await drainDueWhatsAppMediaFetches(
+      context,
+      1,
+      async () => mediaResponse(bytes),
+    );
+
+    const prepared = await prepareInboxWhatsAppMedia(
+      context,
+      ingress.ingressEventId,
+    );
+    const range = { start: 6, end: 15 };
+    const opened = await openPreparedInboxWhatsAppMedia(
+      context,
+      prepared,
+      range,
+    );
+    try {
+      expect(opened).toMatchObject({
+        mediaType: "image/jpeg",
+        kind: "image",
+        sizeBytes: bytes.length,
+      });
+      expect(opened.bytes).toHaveLength(range.end - range.start + 1);
+      expect(opened.bytes.equals(bytes.subarray(range.start, range.end + 1))).toBe(
+        true,
+      );
+    } finally {
+      opened.bytes.fill(0);
+    }
   });
 
   it("rejects seller reads when a completed ciphertext object is changed after success", async () => {
