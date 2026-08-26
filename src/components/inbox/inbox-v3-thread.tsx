@@ -29,6 +29,7 @@ import {
 } from "@/components/inbox/conversation-controls";
 import { ConversationStatusBadge } from "@/components/inbox/conversation-status-badge";
 import { InboxCustomerWorkPanel } from "@/components/inbox/inbox-customer-work-panel";
+import { InboxMediaAttachment } from "@/components/inbox/inbox-media-attachment";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
 import { MessageStatus } from "@/components/inbox/message-status";
@@ -160,6 +161,12 @@ function MessageBubble({
 
   const inbound = message.direction === "inbound";
   const media = isMediaMessage(message);
+  const binaryMedia = Boolean(
+    message.messageType &&
+      ["image", "video", "audio", "document", "sticker"].includes(
+        message.messageType,
+      ),
+  );
   const canExtract = inbound && message.body.trim().length > 10;
 
   return (
@@ -182,53 +189,59 @@ function MessageBubble({
                   : "border-primary/15 bg-background/55",
               )}
             >
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <MediaIcon type={message.messageType} />
-                <span>{mediaLabel(message.messageType, copy)}</span>
-              </div>
-              {message.attachment?.fileName ? (
-                <p className="mt-1.5 break-all text-xs" dir="auto">
-                  {message.attachment.fileName}
-                </p>
-              ) : null}
-              {message.attachment?.contact ? (
-                <p className="mt-1.5 text-xs" dir="auto">
-                  {message.attachment.contact.displayName}
-                </p>
-              ) : null}
-              {message.attachment?.location ? (
-                <a
-                  href={`https://www.openstreetmap.org/?mlat=${encodeURIComponent(message.attachment.location.latitude)}&mlon=${encodeURIComponent(message.attachment.location.longitude)}#map=17/${encodeURIComponent(message.attachment.location.latitude)}/${encodeURIComponent(message.attachment.location.longitude)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1.5 inline-flex min-h-8 items-center text-xs font-medium underline underline-offset-4"
-                >
-                  {message.attachment.location.name ??
-                    message.attachment.location.address ??
-                    copy("openLocation")}
-                </a>
-              ) : null}
-              {message.attachment &&
-              (message.attachment.mimeType ||
-                message.attachment.sizeBytes !== null) ? (
-                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
-                  {[
-                    message.attachment.mimeType,
-                    message.attachment.sizeBytes !== null
-                      ? formatBytes(message.attachment.sizeBytes, locale)
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
-              ) : null}
-              <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-                {message.attachment?.state === "rejected"
-                  ? copy("mediaRejected")
-                  : message.attachment?.state === "ready"
-                    ? copy("structuredAttachmentReady")
-                    : copy("mediaMetadataOnly")}
-              </p>
+              {binaryMedia ? (
+                <InboxMediaAttachment message={message} />
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <MediaIcon type={message.messageType} />
+                    <span>{mediaLabel(message.messageType, copy)}</span>
+                  </div>
+                  {message.attachment?.fileName ? (
+                    <p className="mt-1.5 break-all text-xs" dir="auto">
+                      {message.attachment.fileName}
+                    </p>
+                  ) : null}
+                  {message.attachment?.contact ? (
+                    <p className="mt-1.5 text-xs" dir="auto">
+                      {message.attachment.contact.displayName}
+                    </p>
+                  ) : null}
+                  {message.attachment?.location ? (
+                    <a
+                      href={`https://www.openstreetmap.org/?mlat=${encodeURIComponent(message.attachment.location.latitude)}&mlon=${encodeURIComponent(message.attachment.location.longitude)}#map=17/${encodeURIComponent(message.attachment.location.latitude)}/${encodeURIComponent(message.attachment.location.longitude)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1.5 inline-flex min-h-8 items-center text-xs font-medium underline underline-offset-4"
+                    >
+                      {message.attachment.location.name ??
+                        message.attachment.location.address ??
+                        copy("openLocation")}
+                    </a>
+                  ) : null}
+                  {message.attachment &&
+                  (message.attachment.mimeType ||
+                    message.attachment.sizeBytes !== null) ? (
+                    <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
+                      {[
+                        message.attachment.mimeType,
+                        message.attachment.sizeBytes !== null
+                          ? formatBytes(message.attachment.sizeBytes, locale)
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  ) : null}
+                  <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                    {message.attachment?.state === "rejected"
+                      ? copy("mediaRejected")
+                      : message.attachment?.state === "ready"
+                        ? copy("structuredAttachmentReady")
+                        : copy("mediaMetadataOnly")}
+                  </p>
+                </>
+              )}
             </div>
           ) : null}
 
