@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { db } from "@/lib/db";
+import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
+import { db, shopContext } from "@/lib/db";
 import {
   assertTrustedAction,
   requireTrustedAction,
@@ -11,6 +12,7 @@ import {
   SidecarRequestError,
   SidecarUnavailableError,
 } from "@/lib/whatsapp/sidecar-client";
+import { openWhatsAppMessageAttachmentWithKey } from "@/lib/whatsapp/message-attachments";
 import type { IncomingMessage } from "@/lib/whatsapp/types";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +51,7 @@ export const GET = withErrorHandler(
             timestamp: true,
             deliveryStatus: true,
             messageType: true,
+            attachments: true,
           },
         },
       },
@@ -97,8 +100,12 @@ export const GET = withErrorHandler(
       intents.map((intent) => [intent.effectKey, intent]),
     );
 
-    const messages: Array<IncomingMessage & { messageType?: string }> = rows
-      .map((message) => {
+    const attachmentKey = rows.some((message) => message.attachments)
+      ? await getBusinessEnvelopeKey({ prisma: db, shop: shopContext })
+      : null;
+    let messages: Array<IncomingMessage & { messageType?: string }>;
+    try {
+      messages = rows.map((message) => {
         const fromMe = isOutboundDirection(message.direction);
         const effect = fromMe ? effectByMessage.get(message.id) : undefined;
         const intent = effect ? intentByKey.get(effect.effectKey) : undefined;
@@ -123,9 +130,20 @@ export const GET = withErrorHandler(
             : undefined,
           effectKey: effect?.effectKey,
           effectState: effectState as IncomingMessage["effectState"],
+          attachment:
+            attachmentKey && message.attachments
+              ? openWhatsAppMessageAttachmentWithKey(
+                  message.id,
+                  message.attachments,
+                  attachmentKey,
+                )
+              : null,
         };
-      })
-      .reverse();
+      });
+    } finally {
+      attachmentKey?.fill(0);
+    }
+    messages.reverse();
 
     let sidecarReachable = true;
     try {

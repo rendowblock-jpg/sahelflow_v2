@@ -16,6 +16,7 @@ export type BusinessPayloadKind =
   | "order-change-detail"
   | "collaboration-comment"
   | "collaboration-handover-reason"
+  | "whatsapp-message-attachments"
   | "ai-action-arguments"
   | "ai-action-summary"
   | "ai-action-license-binding"

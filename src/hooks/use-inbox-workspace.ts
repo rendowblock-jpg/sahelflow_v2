@@ -27,6 +27,7 @@ import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
 
 const CHAT_REFRESH_COALESCE_MS = 500;
 const LIVE_RECOVERY_POLL_MS = 3_000;
+const DRAFT_SAVE_DELAY_MS = 600;
 const MAX_DEEP_LINK_ID_LENGTH = 160;
 
 interface CanonicalChatResponse {
@@ -75,6 +76,7 @@ interface SeededMessage {
   direction: string;
   timestamp: string;
   messageType?: string;
+  attachment?: IncomingMessage["attachment"];
 }
 
 function isWhatsAppStatus(value: unknown): value is WhatsAppStatus {
@@ -167,7 +169,8 @@ function inboxMessagesEqual(
       message.messageType === candidate.messageType &&
       message.deliveryStatus === candidate.deliveryStatus &&
       message.outboxEffectKey === candidate.outboxEffectKey &&
-      message.outboxState === candidate.outboxState
+      message.outboxState === candidate.outboxState &&
+      JSON.stringify(message.attachment) === JSON.stringify(candidate.attachment)
     );
   });
 }
@@ -195,7 +198,7 @@ export function useInboxWorkspace() {
   const [sidecarReachable, setSidecarReachable] = useState<boolean | null>(null);
   const [sidecarStatus, setSidecarStatus] = useState<WhatsAppStatus | null>(null);
   const [dataDegraded, setDataDegraded] = useState(false);
-  const [replyText, setReplyText] = useState("");
+  const [replyText, setReplyTextState] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
@@ -216,6 +219,22 @@ export function useInboxWorkspace() {
   const sendingRef = useRef(false);
   const deepLinkAttemptRef = useRef<string | null>(null);
   const pinnedDeepLinkChatRef = useRef<InboxChat | null>(null);
+  const replyTextRef = useRef("");
+  const draftEditGenerationRef = useRef(0);
+  const draftLoadGenerationRef = useRef(0);
+  const draftReadyConversationRef = useRef<string | null>(null);
+
+  const setReplyText = useCallback(
+    (value: string | ((current: string) => string)) => {
+      draftEditGenerationRef.current += 1;
+      setReplyTextState((current) => {
+        const next = typeof value === "function" ? value(current) : value;
+        replyTextRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
 
   const replaceMessages = useCallback((next: InboxMessage[]) => {
     messagesRef.current = next;
@@ -391,6 +410,27 @@ export function useInboxWorkspace() {
     [canUpdateConversation],
   );
 
+  const markUnread = useCallback(async (chat: InboxChat) => {
+    if (!canUpdateConversation) return false;
+    try {
+      const response = await fetch(
+        `/api/conversations/${encodeURIComponent(chat.conversationId)}/unread`,
+        { method: "PATCH" },
+      );
+      if (!response.ok) return false;
+      setChats((current) =>
+        current.map((entry) =>
+          entry.conversationId === chat.conversationId
+            ? { ...entry, unread: Math.max(1, entry.unread) }
+            : entry,
+        ),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }, [canUpdateConversation]);
+
   const loadMessages = useCallback(
     async (chat: InboxChat, options?: { background?: boolean }) => {
       const background = options?.background === true;
@@ -440,6 +480,7 @@ export function useInboxWorkspace() {
                 deliveryStatus: message.deliveryStatus,
                 outboxEffectKey: message.effectKey,
                 outboxState: message.effectState,
+                attachment: message.attachment,
               }),
             );
             if (!applyLoadedProjection(loadedMessages)) return;
@@ -468,6 +509,7 @@ export function useInboxWorkspace() {
                   : "outbound",
             timestamp: new Date(message.timestamp).getTime(),
             messageType: message.messageType,
+            attachment: message.attachment,
           }),
         );
         if (!applyLoadedProjection(loadedMessages)) return;
@@ -490,6 +532,64 @@ export function useInboxWorkspace() {
       }
     },
     [markRead, replaceMessages],
+  );
+
+  const persistDraft = useCallback(
+    async (conversationId: string, body: string) => {
+      if (!canReply) return false;
+      try {
+        const response = await fetch(
+          `/api/conversations/${encodeURIComponent(conversationId)}/draft`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ body }),
+          },
+        );
+        return response.ok;
+      } catch {
+        return false;
+      }
+    },
+    [canReply],
+  );
+
+  const loadDraft = useCallback(
+    async (chat: InboxChat) => {
+      const generation = ++draftLoadGenerationRef.current;
+      const editGeneration = draftEditGenerationRef.current;
+      if (!canReply) return;
+      try {
+        const response = await fetch(
+          `/api/conversations/${encodeURIComponent(chat.conversationId)}/draft`,
+          { cache: "no-store" },
+        );
+        if (!response.ok) return;
+        const data = (await response.json()) as { body?: unknown };
+        if (
+          generation !== draftLoadGenerationRef.current ||
+          activeChatRef.current?.conversationId !== chat.conversationId
+        ) {
+          return;
+        }
+        draftReadyConversationRef.current = chat.conversationId;
+        if (draftEditGenerationRef.current === editGeneration) {
+          const body = typeof data.body === "string" ? data.body : "";
+          replyTextRef.current = body;
+          setReplyTextState(body);
+        } else {
+          void persistDraft(chat.conversationId, replyTextRef.current);
+        }
+      } finally {
+        if (
+          generation === draftLoadGenerationRef.current &&
+          activeChatRef.current?.conversationId === chat.conversationId
+        ) {
+          draftReadyConversationRef.current = chat.conversationId;
+        }
+      }
+    },
+    [canReply, persistDraft],
   );
 
   const handleStatusChange = useCallback(
@@ -653,20 +753,24 @@ export function useInboxWorkspace() {
       activeTransportIdRef.current = chat.transportId ?? null;
       setActiveChatId(chat.id);
       replaceMessages([]);
+      draftReadyConversationRef.current = null;
       setReplyText("");
       void loadMessages(chat);
+      void loadDraft(chat);
     },
-    [loadMessages, replaceMessages],
+    [loadDraft, loadMessages, replaceMessages, setReplyText],
   );
 
   const clearActiveChat = useCallback(() => {
     messageSelectionGenerationRef.current += 1;
     activeChatRef.current = null;
     activeTransportIdRef.current = null;
+    draftLoadGenerationRef.current += 1;
+    draftReadyConversationRef.current = null;
     setActiveChatId(null);
     replaceMessages([]);
     setReplyText("");
-  }, [replaceMessages]);
+  }, [replaceMessages, setReplyText]);
 
   useEffect(() => {
     if (!requestedConversationId) {
@@ -938,6 +1042,22 @@ export function useInboxWorkspace() {
     [activeChatId, chats],
   );
 
+  useEffect(() => {
+    if (
+      !activeChat ||
+      !canReply ||
+      draftReadyConversationRef.current !== activeChat.conversationId
+    ) {
+      return;
+    }
+    const conversationId = activeChat.conversationId;
+    const body = replyText;
+    const timer = window.setTimeout(() => {
+      void persistDraft(conversationId, body);
+    }, DRAFT_SAVE_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [activeChat, canReply, persistDraft, replyText]);
+
   const effectiveStatus = status ?? sidecarStatus;
   const transport: InboxTransportState = {
     reachable: status !== null ? true : sidecarReachable,
@@ -962,7 +1082,6 @@ export function useInboxWorkspace() {
 
     const tempId = crypto.randomUUID();
     const body = replyText.trim();
-    setReplyText("");
     sendingRef.current = true;
     setSending(true);
     setSendError(null);
@@ -996,6 +1115,8 @@ export function useInboxWorkspace() {
         requiresDuplicateConfirmation?: boolean;
       };
       if (response.status === 202 && data.accepted && data.effectKey) {
+        setReplyText("");
+        void persistDraft(chat.conversationId, "");
         mutateMessages(chat.conversationId, (current) =>
           current.map((message) =>
             message.id === tempId
@@ -1040,6 +1161,8 @@ export function useInboxWorkspace() {
           outboxState: "succeeded",
         }),
       );
+      setReplyText("");
+      void persistDraft(chat.conversationId, "");
       void loadChats();
     } catch (error) {
       mutateMessages(chat.conversationId, (current) =>
@@ -1066,7 +1189,9 @@ export function useInboxWorkspace() {
     loadChats,
     monitorWhatsAppEffect,
     mutateMessages,
+    persistDraft,
     replyText,
+    setReplyText,
     t,
   ]);
 
@@ -1148,6 +1273,7 @@ export function useInboxWorkspace() {
     sendError,
     sendReply,
     retryFailedMessage,
+    markUnread,
     canUpdateConversation,
     canReply,
     canManageWhatsApp,

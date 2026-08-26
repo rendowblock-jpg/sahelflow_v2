@@ -177,7 +177,11 @@ export const ORDER_PII_FIELDS = ["phone", "address", "notes"] as const;
  * name/phone. If a future feature needs "find conversation by phone", it must
  * migrate to the blind-index pattern.
  */
-export const CONVERSATION_PII_FIELDS = ["contactName", "contactPhone"] as const;
+export const CONVERSATION_PII_FIELDS = [
+  "contactName",
+  "contactPhone",
+  "draftBody",
+] as const;
 
 /**
  * PII fields on the Message model (non-searchable, encrypted in place).

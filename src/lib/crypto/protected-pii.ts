@@ -35,6 +35,7 @@ export const ORDER_PROTECTED_FIELDS = ["phone", "address", "notes"] as const;
 export const CONVERSATION_PROTECTED_FIELDS = [
   "contactName",
   "contactPhone",
+  "draftBody",
 ] as const;
 export const MESSAGE_PROTECTED_FIELDS = ["body"] as const;
 

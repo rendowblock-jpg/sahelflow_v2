@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-26
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.27 / FD-047 remains latest signed/installed; PR #315 is source-merged at protected `main` `3e5375bf503025083dd1b6f448215717528d0d5d`; FD-048 now owns the #316 → #317 → FRC-2–5 source-first batch before one separately authorized successor
+> **Current checkpoint:** Internal.27 / FD-047 remains latest signed/installed; PR #315 and Notification Center PR #319 are source-merged at protected `main` `a3216a63b74ca2c33713f95f85df4ed6e2717567`; FD-048 now owns #317 → FRC-2–5 source-first work before one separately authorized successor
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 

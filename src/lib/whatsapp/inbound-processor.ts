@@ -13,6 +13,10 @@ import {
   whatsappInboundEnvelopeSchema,
   type WhatsAppInboundEnvelope,
 } from "./inbound-ingress";
+import {
+  extractWhatsAppMessageAttachment,
+  sealWhatsAppMessageAttachmentWithKey,
+} from "./message-attachments";
 import { messageText } from "./types";
 
 export const AUTOMATION_TRIGGER_EFFECT_TYPE = "automation.trigger.v1";
@@ -401,6 +405,22 @@ async function applyClaim(
     input.message.pushName?.trim() || contactPhone || sourceId;
   const body = messageText(input.message.message);
   const canonicalMessageType = messageType(input);
+  const attachment = extractWhatsAppMessageAttachment(
+    input.message.message as Record<string, unknown>,
+  );
+  let protectedAttachment: string | null = null;
+  if (attachment) {
+    const envelopeKey = await getBusinessEnvelopeKey(context);
+    try {
+      protectedAttachment = sealWhatsAppMessageAttachmentWithKey(
+        claim.id,
+        attachment,
+        envelopeKey,
+      );
+    } finally {
+      envelopeKey.fill(0);
+    }
+  }
   const commandContext = {
     ...context,
     businessPrincipal: providerBusinessPrincipal("whatsapp"),
@@ -478,6 +498,7 @@ async function applyClaim(
           timestamp: providerTimestamp,
           deliveryStatus: null,
           messageType: canonicalMessageType,
+          attachments: protectedAttachment,
         },
       });
 

@@ -3,11 +3,11 @@
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
 > **Last assessed:** 2026-08-26
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at reconciliation `3e5375bf503025083dd1b6f448215717528d0d5d`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`
+> **Live protected main:** resolve from GitHub before every action; at reconciliation `a3216a63b74ca2c33713f95f85df4ed6e2717567`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`
 > **Current signed release:** Internal.27 / `1.0.0-internal.27` / MSI `1.0.0.27` / FD-047
 > **Reviewed release head:** `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`
 > **Signed publication run:** `32913445791` — success
-> **Current execution:** FD-048 source-first batch; #316 then #317 then FRC-2–5 source/evidence preparation before one separately authorized successor
+> **Current execution:** FD-048 source-first batch; #316 is source-merged through PR #319, #317 is current, then FRC-2–5 source/evidence preparation before one separately authorized successor
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
@@ -62,10 +62,10 @@ That acceptance:
 - **#221 — CLOSED/completed:** Founder-installed whole-product visual/product gate accepted on Internal.24.
 - **#226 — CLOSED/completed:** performance/reliability budgets retained as regression authority.
 - **#306 — OPEN:** real-phone WhatsApp installed/provider proof.
-- **#316 — OPEN:** Class-AAA durable Notification Center and WhatsApp attention routing.
+- **#316 — OPEN:** Class-AAA durable Notification Center and WhatsApp attention routing is source-merged through PR #319; signed/installed/native evidence is pending.
 - **#317 — OPEN:** WhatsApp Inbox operational parity and certified message/media matrix.
 - **#230 — OPEN/reopened P1:** resilient customer trial activation on representative Algerian networks; no owned production domain exists.
-- PR #315 merged to protected `main` as `3e5375bf503025083dd1b6f448215717528d0d5d`; no open PR existed immediately after merge.
+- PR #315 remains protected source; PR #319 merged the #316 Notification Center to protected `main` as `a3216a63b74ca2c33713f95f85df4ed6e2717567`. No open PR existed immediately after #319.
 
 Source conformance and signed Windows proof do not close #306 or #230.
 
@@ -215,8 +215,9 @@ If authoritative access is unavailable, the affected integration/action remains 
 
 - Real-phone WhatsApp/provider certification is not established.
 - AI/tool/order-extraction complete matrix is not yet executed on Internal.27.
-- #316 Notification Center and #317 WhatsApp message/media parity are open and
-  are not established by their written contracts.
+- #316 Notification Center is source-merged through PR #319 but remains open for
+  signed/installed/native evidence. #317 WhatsApp message/media parity remains
+  incomplete; its capability ledger cannot promote missing media/provider proof.
 - Live Shopify, WooCommerce, YouCan and courier action certification is not established merely by adapter/source tests.
 - Customer-online licensing/network readiness remains open under #230.
 - A first paid assisted deployment is not yet authorized.

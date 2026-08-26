@@ -32,6 +32,8 @@ export interface IncomingMessage {
   /** Local durable effect identity/state; never supplied by the provider. */
   effectKey?: string;
   effectState?: "queued" | "processing" | "retrying" | "succeeded" | "ambiguous" | "dead_letter";
+  /** Protected canonical attachment projection supplied by the app, never raw provider paths. */
+  attachment?: import("./message-attachments").WhatsAppMessageAttachment | null;
 }
 
 export interface SidecarChat {

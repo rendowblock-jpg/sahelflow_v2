@@ -7,6 +7,7 @@ import {
   ImageIcon,
   Info,
   Loader2,
+  Mail,
   MapPin,
   MessageSquareText,
   Mic,
@@ -100,6 +101,16 @@ function isMediaMessage(message: InboxMessage): boolean {
   );
 }
 
+function formatBytes(value: number, locale: "ar" | "fr" | "en"): string {
+  if (value < 1_024) return `${value} B`;
+  const formatter = new Intl.NumberFormat(
+    locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB",
+    { maximumFractionDigits: 1 },
+  );
+  if (value < 1_024 * 1_024) return `${formatter.format(value / 1_024)} KB`;
+  return `${formatter.format(value / (1_024 * 1_024))} MB`;
+}
+
 function MessageBubble({
   message,
   locale,
@@ -149,6 +160,42 @@ function MessageBubble({
                 <MediaIcon type={message.messageType} />
                 <span>{mediaLabel(message.messageType, copy)}</span>
               </div>
+              {message.attachment?.fileName ? (
+                <p className="mt-1.5 break-all text-xs" dir="auto">
+                  {message.attachment.fileName}
+                </p>
+              ) : null}
+              {message.attachment?.contact ? (
+                <p className="mt-1.5 text-xs" dir="auto">
+                  {message.attachment.contact.displayName}
+                </p>
+              ) : null}
+              {message.attachment?.location ? (
+                <a
+                  href={`https://www.openstreetmap.org/?mlat=${encodeURIComponent(message.attachment.location.latitude)}&mlon=${encodeURIComponent(message.attachment.location.longitude)}#map=17/${encodeURIComponent(message.attachment.location.latitude)}/${encodeURIComponent(message.attachment.location.longitude)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1.5 inline-flex min-h-8 items-center text-xs font-medium underline underline-offset-4"
+                >
+                  {message.attachment.location.name ??
+                    message.attachment.location.address ??
+                    copy("openLocation")}
+                </a>
+              ) : null}
+              {message.attachment &&
+              (message.attachment.mimeType ||
+                message.attachment.sizeBytes !== null) ? (
+                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
+                  {[
+                    message.attachment.mimeType,
+                    message.attachment.sizeBytes !== null
+                      ? formatBytes(message.attachment.sizeBytes, locale)
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              ) : null}
               <p
                 className={cn(
                   "mt-1.5 text-xs leading-5",
@@ -157,7 +204,11 @@ function MessageBubble({
                     : "text-primary-foreground/75",
                 )}
               >
-                {copy("mediaMetadataOnly")}
+                {message.attachment?.state === "rejected"
+                  ? copy("mediaRejected")
+                  : message.attachment?.state === "ready"
+                    ? copy("structuredAttachmentReady")
+                    : copy("mediaMetadataOnly")}
               </p>
             </div>
           ) : null}
@@ -258,6 +309,7 @@ export function InboxThreadWorkbench({
     canUpdateConversation,
     transport,
     refreshChats,
+    markUnread,
   } = workspace;
 
   if (!activeChat) {
@@ -351,6 +403,23 @@ export function InboxThreadWorkbench({
             </div>
           </div>
 
+          <div className="flex items-center gap-1.5">
+            {canUpdateConversation ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={copy("markUnread")}
+                title={copy("markUnread")}
+                onClick={() => {
+                  void markUnread(activeChat).then((updated) => {
+                    if (updated) onBackToQueue();
+                  });
+                }}
+              >
+                <Mail className="size-4" aria-hidden="true" />
+              </Button>
+            ) : null}
           {!showContextRail ? (
             <Sheet>
               <SheetTrigger asChild>
@@ -378,6 +447,7 @@ export function InboxThreadWorkbench({
               </SheetContent>
             </Sheet>
           ) : null}
+          </div>
         </header>
 
         <ScrollArea className="min-h-0 flex-1">

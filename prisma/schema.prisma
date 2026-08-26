@@ -284,6 +284,7 @@ model Conversation {
   firstReplyAt  DateTime?                        // first response time metric
   snoozedUntil  DateTime?                        // auto-reopen date for snoozed convos
   labels        String?                          // JSON array of label strings
+  draftBody     String?                          // protected persisted reply draft
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   messages      Message[]
