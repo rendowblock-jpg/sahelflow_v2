@@ -80,9 +80,12 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(hook).toContain(
       "messageMutationGenerationRef.current === mutationGeneration",
     );
-    expect(hook).not.toContain(
-      "!background ||\n          messageMutationGenerationRef.current === mutationGeneration",
+    expect(hook).toContain("mergeInboxMessageProjection");
+    expect(hook).toContain(
+      "mergeInboxMessageProjection(loaded, messagesRef.current)",
     );
+    expect(hook).toContain("sendingRef.current");
+    expect(hook).toContain("if (cancelled || sendingRef.current) return");
     expect(hook).toContain("inboxMessagesEqual");
     expect(hook).toContain(
       "activeChatRef.current?.conversationId !== conversationId",

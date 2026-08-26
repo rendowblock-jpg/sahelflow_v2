@@ -168,6 +168,22 @@ function inboxMessagesEqual(
   });
 }
 
+function mergeInboxMessageProjection(
+  persisted: readonly InboxMessage[],
+  live: readonly InboxMessage[],
+): InboxMessage[] {
+  const liveById = new Map(live.map((message) => [message.id, message]));
+  const merged = persisted.map((message) => {
+    const liveMessage = liveById.get(message.id);
+    if (!liveMessage) return message;
+    liveById.delete(message.id);
+    return liveMessage;
+  });
+
+  merged.push(...liveById.values());
+  return merged.sort((left, right) => left.timestamp - right.timestamp);
+}
+
 export function useInboxWorkspace() {
   const searchParams = useSearchParams();
   const requestedConversationId = normalizeDeepLinkConversationId(
@@ -209,6 +225,7 @@ export function useInboxWorkspace() {
   const messageLoadGenerationRef = useRef(0);
   const messageSelectionGenerationRef = useRef(0);
   const messageMutationGenerationRef = useRef(0);
+  const sendingRef = useRef(false);
   const deepLinkAttemptRef = useRef<string | null>(null);
   const pinnedDeepLinkChatRef = useRef<InboxChat | null>(null);
 
@@ -401,8 +418,16 @@ export function useInboxWorkspace() {
       const canApplyLoadedProjection = () =>
         isCurrentConversation() &&
         messageLoadGenerationRef.current === messageLoadGeneration &&
-        messageSelectionGenerationRef.current === selectionGeneration &&
-        messageMutationGenerationRef.current === mutationGeneration;
+        messageSelectionGenerationRef.current === selectionGeneration;
+      const applyLoadedProjection = (loaded: InboxMessage[]) => {
+        if (!canApplyLoadedProjection()) return false;
+        replaceMessages(
+          messageMutationGenerationRef.current === mutationGeneration
+            ? loaded
+            : mergeInboxMessageProjection(loaded, messagesRef.current),
+        );
+        return true;
+      };
       if (!background) {
         setLoadingMessages(true);
         setSendError(null);
@@ -417,9 +442,8 @@ export function useInboxWorkspace() {
             const data = (await response.json()) as {
               messages: Array<IncomingMessage & { messageType?: string }>;
             };
-            if (!canApplyLoadedProjection()) return;
-            replaceMessages(
-              data.messages.map((message) => ({
+            const loadedMessages: InboxMessage[] = data.messages.map(
+              (message) => ({
                 id: message.key.id,
                 body: messageText(message.message),
                 direction: message.key.fromMe ? "outbound" : "inbound",
@@ -428,8 +452,9 @@ export function useInboxWorkspace() {
                 deliveryStatus: message.deliveryStatus,
                 outboxEffectKey: message.effectKey,
                 outboxState: message.effectState,
-              })),
+              }),
             );
+            if (!applyLoadedProjection(loadedMessages)) return;
             void markRead(chat);
             return;
           }
@@ -443,9 +468,8 @@ export function useInboxWorkspace() {
         const data = (await response.json()) as {
           conversation: { messages: SeededMessage[] };
         };
-        if (!canApplyLoadedProjection()) return;
-        replaceMessages(
-          data.conversation.messages.map((message) => ({
+        const loadedMessages: InboxMessage[] = data.conversation.messages.map(
+          (message) => ({
             id: message.id,
             body: message.body,
             direction:
@@ -456,11 +480,18 @@ export function useInboxWorkspace() {
                   : "outbound",
             timestamp: new Date(message.timestamp).getTime(),
             messageType: message.messageType,
-          })),
+          }),
         );
+        if (!applyLoadedProjection(loadedMessages)) return;
         void markRead(chat);
       } catch {
-        if (!background && canApplyLoadedProjection()) replaceMessages([]);
+        if (
+          !background &&
+          canApplyLoadedProjection() &&
+          messageMutationGenerationRef.current === mutationGeneration
+        ) {
+          replaceMessages([]);
+        }
       } finally {
         if (
           foregroundLoad !== null &&
@@ -575,12 +606,21 @@ export function useInboxWorkspace() {
       return;
     }
 
+    let cancelled = false;
     let inFlight = false;
     const refreshDurableProjection = async () => {
-      if (inFlight || document.visibilityState !== "visible") return;
+      if (
+        cancelled ||
+        inFlight ||
+        sendingRef.current ||
+        document.visibilityState !== "visible"
+      ) {
+        return;
+      }
       inFlight = true;
       try {
         await loadChats();
+        if (cancelled || sendingRef.current) return;
         const chat = activeChatRef.current;
         if (chat) await loadMessages(chat, { background: true });
       } finally {
@@ -591,7 +631,10 @@ export function useInboxWorkspace() {
     const intervalId = window.setInterval(() => {
       void refreshDurableProjection();
     }, LIVE_RECOVERY_POLL_MS);
-    return () => window.clearInterval(intervalId);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
   }, [loadChats, loadMessages, sending, sidecarReachable, sidecarStatus, wsOpen]);
 
   const selectChat = useCallback(
@@ -914,6 +957,7 @@ export function useInboxWorkspace() {
       !chat.transportId ||
       effectiveStatus !== "connected" ||
       !canReply ||
+      sendingRef.current ||
       !replyText.trim()
     ) {
       return;
@@ -922,6 +966,7 @@ export function useInboxWorkspace() {
     const tempId = crypto.randomUUID();
     const body = replyText.trim();
     setReplyText("");
+    sendingRef.current = true;
     setSending(true);
     setSendError(null);
     mutateMessages(chat.conversationId, (current) => [
@@ -1019,6 +1064,7 @@ export function useInboxWorkspace() {
         );
       }
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   }, [
