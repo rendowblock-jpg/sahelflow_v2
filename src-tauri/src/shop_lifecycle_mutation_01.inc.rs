@@ -5,7 +5,7 @@ use super::shop_lifecycle_command::{
     ShopLifecyclePayload,
 };
 
-use crate::backup_recovery::{
+use self::whatsapp_media_scope::{
     remove_whatsapp_media_scope_if_present, restore_whatsapp_media_scope,
     snapshot_whatsapp_media_scope, verify_whatsapp_media_scope, whatsapp_media_scope_path,
     WhatsAppMediaScopeStats,

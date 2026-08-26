@@ -1,3 +1,7 @@
+mod whatsapp_media_scope {
+    include!("whatsapp_media_scope.rs");
+}
+
 include!("shop_lifecycle_mutation_01.inc.rs");
 include!("shop_lifecycle_mutation_02.inc.rs");
 include!("shop_lifecycle_mutation_03.inc.rs");
