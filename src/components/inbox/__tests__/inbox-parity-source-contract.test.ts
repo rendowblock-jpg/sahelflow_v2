@@ -115,4 +115,25 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(thread).toContain("https://www.openstreetmap.org/");
     expect(thread).toContain('rel="noopener noreferrer"');
   });
+
+  it("keeps authenticated media ranges bounded and failed downloads inside Inbox", () => {
+    const route = source("src/app/api/inbox/media/[id]/route.ts");
+    const mediaObject = source("src/lib/whatsapp/media-object-provenance.ts");
+    const mediaUi = source("src/components/inbox/inbox-media-attachment.tsx");
+
+    expect(route.indexOf("prepareInboxWhatsAppMedia"))
+      .toBeLessThan(route.indexOf("parseRange(request.headers.get"));
+    expect(route.indexOf("parseRange(request.headers.get"))
+      .toBeLessThan(route.indexOf("openPreparedInboxWhatsAppMedia"));
+    expect(mediaObject).toContain("WhatsAppMediaPlaintextRange");
+    expect(mediaObject).toContain("const overlapStart = Math.max");
+    expect(mediaObject).toContain("const overlapEnd = Math.min");
+    expect(mediaObject).toContain("plaintextHash.update(plaintext)");
+    expect(mediaObject).toContain("ciphertextHash.update(ciphertext)");
+    expect(mediaUi).toContain('const response = await fetch(href, { cache: "no-store" })');
+    expect(mediaUi).toContain("if (!response.ok) throw new Error");
+    expect(mediaUi).toContain("URL.createObjectURL(blob)");
+    expect(mediaUi).toContain("setRuntimeFailed(true)");
+    expect(mediaUi).not.toContain("href={downloadUrl}");
+  });
 });
