@@ -181,7 +181,18 @@ describe("production licensing authority inventory", () => {
     expect(rootLayout).not.toContain("<LicenseBoundary>");
     expect(dashboardLayout).toContain("getLicenseAuthorityProjection");
     expect(dashboardLayout.indexOf("if (!licenseValid)")).toBeLessThan(dashboardLayout.indexOf("{children}"));
-    expect(whatsAppWorker.indexOf("requireLicenseEntitlement")).toBeLessThan(whatsAppWorker.indexOf("drainDueWhatsAppEffects({"));
+
+    const whatsAppEntitlement = whatsAppWorker.indexOf("requireLicenseEntitlement");
+    expect(whatsAppEntitlement).toBeGreaterThanOrEqual(0);
+    for (const effectMarker of [
+      "await drainDueWhatsAppEffects(context",
+      "await reconcileQueuedWhatsAppMediaFetches(context",
+      "await drainDueWhatsAppMediaFetches(context",
+    ]) {
+      const effectIndex = whatsAppWorker.indexOf(effectMarker);
+      expect(effectIndex).toBeGreaterThan(whatsAppEntitlement);
+    }
+
     expect(courierWorker.indexOf("requireLicenseEntitlement")).toBeLessThan(courierWorker.indexOf("drainDueCourierBookings({"));
   });
 });
