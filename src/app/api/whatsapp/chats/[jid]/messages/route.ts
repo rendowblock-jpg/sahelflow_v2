@@ -14,7 +14,11 @@ import {
   SidecarUnavailableError,
 } from "@/lib/whatsapp/sidecar-client";
 import { openWhatsAppMessageAttachmentWithKey } from "@/lib/whatsapp/message-attachments";
-import type { IncomingMessage } from "@/lib/whatsapp/types";
+import type {
+  InboxLocalMediaProjection,
+  IncomingMessage,
+  ProjectedWhatsAppAttachment,
+} from "@/lib/whatsapp/types";
 
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ jid: string }> };
@@ -29,6 +33,25 @@ const BINARY_MEDIA_TYPES = new Set([
 
 function isOutboundDirection(direction: string): boolean {
   return direction === "outbound" || direction === "outgoing";
+}
+
+function mediaProjection(
+  messageId: string,
+  status: string | undefined,
+  outcomeState: string | undefined,
+): InboxLocalMediaProjection {
+  if (status === "succeeded" && outcomeState === "receipt") {
+    const encoded = encodeURIComponent(messageId);
+    return {
+      state: "ready",
+      readUrl: `/api/inbox/media/${encoded}`,
+      downloadUrl: `/api/inbox/media/${encoded}?download=1`,
+    };
+  }
+  if (status === "dead_letter" || status === "failed") {
+    return { state: "failed" };
+  }
+  return { state: "pending" };
 }
 
 export const GET = withErrorHandler(
@@ -146,19 +169,32 @@ export const GET = withErrorHandler(
             ? "ambiguous"
             : intent.status
           : undefined;
-        const mediaIntent = !fromMe
-          ? mediaIntentByKey.get(`whatsapp-media-fetch:${message.id}`)
-          : undefined;
-        const mediaState: IncomingMessage["mediaState"] = mediaIntent
-          ? mediaIntent.status === "succeeded" &&
-            mediaIntent.outcomeState === "receipt"
-            ? "ready"
-            : mediaIntent.status === "dead_letter" || mediaIntent.status === "failed"
-              ? "failed"
-              : "pending"
-          : !fromMe && BINARY_MEDIA_TYPES.has(message.messageType)
-            ? "pending"
-            : undefined;
+        const openedAttachment =
+          attachmentKey && message.attachments
+            ? openWhatsAppMessageAttachmentWithKey(
+                message.id,
+                message.attachments,
+                attachmentKey,
+              )
+            : null;
+        let attachment: ProjectedWhatsAppAttachment | null = openedAttachment;
+        if (
+          openedAttachment &&
+          !fromMe &&
+          BINARY_MEDIA_TYPES.has(openedAttachment.kind)
+        ) {
+          const mediaIntent = mediaIntentByKey.get(
+            `whatsapp-media-fetch:${message.id}`,
+          );
+          attachment = {
+            ...openedAttachment,
+            localMedia: mediaProjection(
+              message.id,
+              mediaIntent?.status,
+              mediaIntent?.outcomeState,
+            ),
+          };
+        }
         return {
           key: {
             remoteJid: jid,
@@ -175,16 +211,7 @@ export const GET = withErrorHandler(
             : undefined,
           effectKey: effect?.effectKey,
           effectState: effectState as IncomingMessage["effectState"],
-          canonicalMessageId: message.id,
-          mediaState,
-          attachment:
-            attachmentKey && message.attachments
-              ? openWhatsAppMessageAttachmentWithKey(
-                  message.id,
-                  message.attachments,
-                  attachmentKey,
-                )
-              : null,
+          attachment,
         };
       });
     } finally {
