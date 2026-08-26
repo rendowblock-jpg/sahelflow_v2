@@ -15,6 +15,7 @@ import {
   reconcileWhatsAppMediaEraseAfterRestart,
   rollbackWhatsAppMediaErase,
   stageWhatsAppMediaErase,
+  whatsAppMediaEraseEpoch,
   whatsAppMediaErasePending,
 } from "../media-erase-lifecycle";
 
@@ -47,6 +48,20 @@ describe("WhatsApp media erase tombstones", () => {
     );
   });
 
+  it("advances the read generation even when a destructive erase later rolls back", () => {
+    mkdirSync(active, { recursive: true });
+    writeFileSync(join(active, "private.sfmedia"), "ciphertext");
+    const before = whatsAppMediaEraseEpoch(active);
+
+    const stage = stageWhatsAppMediaErase(active);
+    const staged = whatsAppMediaEraseEpoch(active);
+    expect(staged).not.toBe(before);
+
+    rollbackWhatsAppMediaErase(stage);
+    expect(whatsAppMediaEraseEpoch(active)).toBe(staged);
+    expect(whatsAppMediaErasePending(active)).toBe(false);
+  });
+
   it("rejects a second same-process erase owner before it can share the tombstone", () => {
     mkdirSync(active, { recursive: true });
     writeFileSync(join(active, "private.sfmedia"), "ciphertext");
@@ -70,10 +85,12 @@ describe("WhatsApp media erase tombstones", () => {
     writeFileSync(join(active, "private.sfmedia"), "ciphertext");
 
     const stage = stageWhatsAppMediaErase(active);
+    const stagedEpoch = whatsAppMediaEraseEpoch(active);
     commitWhatsAppMediaErase(stage);
 
     expect(existsSync(active)).toBe(false);
     expect(existsSync(`${active}.erasing`)).toBe(false);
+    expect(whatsAppMediaEraseEpoch(active)).toBe(stagedEpoch);
   });
 
   it("keeps a pre-existing crash tombstone hidden until a safe retry commits", () => {
