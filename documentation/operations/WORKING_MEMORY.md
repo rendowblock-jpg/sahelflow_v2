@@ -7,7 +7,7 @@
 
 ## Current truth
 
-- Protected `main` at handoff: `c6b97634a24c27a088e466f00d6ed0b196e62454`; live GitHub wins if moved. Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`.
+- Protected `main` at handoff: `3e5375bf503025083dd1b6f448215717528d0d5d`; live GitHub wins if moved. Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`.
 - Latest signed/published and Founder-installed checkpoint: **Internal.27**.
 - App `1.0.0-internal.27`; MSI `1.0.0.27`; authority **FD-047**; mode `founder-offline-only`.
 - Product repair PR #312; release PR #313; reviewed release head `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`.
@@ -17,10 +17,12 @@
 - #221 closed/completed after Founder acceptance of installed Internal.24.
 - #226 closed/completed; retain its budgets.
 - #306 open — real-phone WhatsApp installed/provider certification.
+- #316 open — Class-AAA durable Notification Center and WhatsApp attention routing.
+- #317 open — professional WhatsApp Inbox capability/message-media parity.
 - #230 open/reopened P1 — customer-online trial/network blocker; no owned production domain.
-- No open PR existed when the current bounded repair branch `codex/frc1-whatsapp-live-push` began.
-- Current decision: **FD-045 First Revenue Certification**.
-- Exact next outcome: **merge the proven dynamic-loopback live-push repair, package one signed successor if separately authorized, then prove new inbound appears without manual refresh before completing FRC-1 / #306**.
+- PR #315 merged by guarded squash as protected `main` `3e5375bf503025083dd1b6f448215717528d0d5d`; no open PR existed immediately afterward.
+- Current sequencing decision: **FD-048 batched source-first First Revenue Certification**, preserving FD-045’s evidence rules.
+- Exact next outcome after this docs package: **implement issue #316 from fresh protected main, then #317, then FRC-2–5 source/evidence work before one separately authorized signed successor**.
 
 ## What Internal.27 adds
 
@@ -62,29 +64,35 @@ Binding rules:
   route minted the correct signed short-lived WebSocket grant, Node/sidecar token
   fingerprints matched and a direct grant probe was accepted. The HTTP CSP still
   allowed only WebSocket port `3001`, so WebView blocked the actual sidecar port.
-- `codex/frc1-whatsapp-live-push` aligns the response CSP with Tauri's existing
-  loopback-only ephemeral-port policy, adds a three-second visible-window durable
-  projection fallback while push is degraded, and makes the reconnect state plus
-  refresh action actually retry the socket. Heavy validation belongs in Actions.
+- PR #315 aligns response CSP with Tauri's loopback-only ephemeral-port policy,
+  adds a three-second visible-window durable projection fallback and real socket
+  retry, and reconciles projection/outbox/receipt races through durable identity.
+  Exact head `ad9e00680f3690861ec9f6ade81e2eb616ac08b8` passed CI, Phase 5 and Phase 6–7,
+  clean exact-head review and zero unresolved threads before merge.
 - The same package makes the thread AI-order trigger stars-only with localized
   hover/focus copy while retaining its accessible name and reviewed extraction
   sheet. It introduces no silent order mutation.
 - **Remove demo data** temporarily appeared frozen before completing. That is a
   separate demonstrated UI defect and is not silently treated as WhatsApp failure.
-- Do not logout, reset AppData or clear protected auth before the signed live-push
-  successor proves automatic inbound and the remaining FRC-1 rows.
+- Do not logout, reset AppData or clear protected auth before the eventual
+  FD-048 combined signed successor proves automatic inbound and the remaining
+  FRC-1 rows.
 
-## Exact next-session order — FRC-1 WhatsApp
+## Exact next-session order — FD-048 source batch
 
-1. Re-resolve protected `main`, open PRs, #306 and #230.
-2. Merge the bounded live-push root repair only after selected exact-head gates.
-3. If separately authorized, establish and publish one new exact signed release
-   from protected main; update in place without clearing retained state.
-4. Send one new inbound from the real phone and prove it appears automatically
-   without header refresh; retain durable exact-once and reopen evidence.
-5. Complete EN and Arabic/RTL presentation, direct status control, safe
-   message-to-reviewed-order-draft observation, then normal logout/session retirement last.
-6. Record redacted pass/fail under #306. Close only evidence actually observed.
+1. Re-resolve protected `main`, open PRs, #306/#316/#317 and #230; confirm this
+   documentation package is merged and Internal.27 remains latest signed.
+2. Begin #316 only: freeze notification schema/dedupe, event atomicity,
+   actor/shop/read authority, deep links, Bell/native channels, privacy,
+   preferences, migration, scale and evidence matrix.
+3. Run targeted feedback during implementation, then one frozen exact-head
+   GitHub gate/review/expected-head merge. Do not build an MSI.
+4. Continue #317’s exact capability ledger and message/media waves without
+   rewriting the retained seller-grade Inbox operations.
+5. Continue FRC-2 through FRC-5 source, official contract and available
+   development/sandbox evidence in dependency order; preserve external blockers.
+6. Only after the combined source frontier is protected may a separate decision
+   authorize one signed successor and one preserved installed/live campaign.
 
 ## Following FRC packages
 
@@ -93,6 +101,10 @@ Binding rules:
 - **FRC-4:** Shopify/YouCan official development environments and controlled WooCommerce live contract/reconciliation evidence.
 - **FRC-5:** capability-specific courier certification from provider-issued contract plus sandbox/demo or protected authorized real-account evidence.
 - **FRC-6:** explicit decision for a certified first paid assisted deployment; no customer access exception is currently implied.
+- **#316:** one canonical per-actor notification domain with exact-once WhatsApp
+  attention routing, privacy-safe Windows delivery and database fallback.
+- **#317:** capability-specific WhatsApp message/media parity; provider-library
+  API presence never equals certification.
 
 ## Current hard blockers and dependencies
 
@@ -146,6 +158,7 @@ Never weaken:
 
 - Internal.27 passed the real `@lid` reply and durable new inbound, but WhatsApp certification remains open because automatic Inbox live push and remaining #306 rows have not passed.
 - Complete AI/tools/order-extraction certification is open.
+- Class-AAA Notifications and professional WhatsApp message/media parity are open.
 - Public commerce/courier live certification is not established by adapter source alone.
 - Customer-online trial readiness remains open under #230.
 - First paid assisted deployment is not yet authorized.

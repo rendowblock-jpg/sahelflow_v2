@@ -1,11 +1,11 @@
 # SahelFlow 1.0 — Consolidated Founder Decisions
 
-> **Status:** Authoritative consolidated product/execution register through FD-033 plus FD-045; version-bound FD-034–FD-044 remain in protected release authority
+> **Status:** Authoritative consolidated product/execution register through FD-033 plus FD-045 and FD-048; version-bound FD-034–FD-044 and FD-046–FD-047 remain in protected release authority
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-08-25
+> **Last amended:** 2026-08-26
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
-This register consolidates approved product and execution decisions through FD-033 and the current FD-045 First Revenue Certification strategy. Version-bound FD-034–FD-044 remain durable in their protected release envelopes and are summarized by active current-state documentation. Engineering
+This register consolidates approved product and execution decisions through FD-033, FD-045 First Revenue Certification and FD-048 source-first batching. Version-bound FD-034–FD-044 and FD-046–FD-047 remain durable in their protected release envelopes and are summarized by active current-state documentation. Engineering
 mechanisms remain subject to architecture, research, security review, provider
 certification and evidence gates, but engineering may not contradict these
 policies without a new numbered Founder decision.
@@ -735,6 +735,67 @@ This decision records the Founder’s explicit 2026-08-25 direction after accept
 - A reproduced defect opens one bounded root-cause package and affected siblings, selected Level 1/2/3 gates, adversarial review and expected-head merge; deterministic failures are never retried away.
 - This decision supersedes FD-033’s historical Internal.16 exact-next-session sequence and any lower document that still says Founder Internal.24 inspection is next.
 - It preserves FD-030’s distinction between source conformance and live certification, FD-033’s assurance meaning, FD-044’s exact Internal.25 release authority, the Product/Experience/Architecture launch gates and every protected invariant.
+
+## FD-048 — Batched source-first First Revenue Certification and one installed successor
+
+This decision records the Founder’s explicit 2026-08-26 sequencing direction
+after the Internal.27 real-phone observations and protected merge of PR #315.
+
+### Problem and objective
+
+- Rebuilding, signing, updating and physically certifying the Windows app after
+  every small Inbox repair is too slow for the zero-budget first-revenue goal.
+- Full certification remains required, but repeated complete MSI/installed
+  cycles are not the development feedback loop.
+- The objective is one coherent source frontier containing the known Required
+  notification, Inbox and First Revenue Certification work, followed by one
+  expressly authorized signed successor and one installed/provider evidence
+  campaign.
+
+### Binding execution order
+
+1. Reconcile active documentation after PR #315 and preserve its exact
+   source/CI/review evidence without claiming installed acceptance.
+2. Implement issue #316, the Class-AAA durable Notification Center and
+   WhatsApp attention-routing contract.
+3. Implement issue #317, the professional WhatsApp Inbox capability ledger and
+   certified message/media operational-parity waves.
+4. Complete FRC-2 through FRC-5 source, contract, deterministic conformance,
+   mock, official development/sandbox and available CI evidence in dependency
+   order. Missing provider authority remains an explicit external blocker, not
+   a fabricated pass.
+5. Freeze one combined exact protected-main candidate. Only under a separate
+   release-authority decision may SahelFlow build, sign and publish its next
+   Internal successor.
+6. Update the Founder installation once through the normal signed updater,
+   preserve AppData/registry/install identity/keys/shop databases, and execute
+   the applicable installed, real-phone and live-provider matrices on that
+   exact candidate.
+
+### Certification and release boundaries
+
+- PR #315 is source-complete only. FRC-1/#306 remains open until automatic
+  no-refresh inbound, persistence/reopen, representative EN/AR Inbox,
+  governed status/reviewed extraction and logout are observed on the eventual
+  signed successor.
+- Source, mocks, browser tests and CI can close deterministic implementation
+  rows but cannot close installed Windows, real-phone, live commerce/courier,
+  customer-online, Beta or Stable evidence.
+- #316 and #317 do not authorize broad WhatsApp feature claims. Each message,
+  media and provider action remains capability-specific and live-certified.
+- This batching decision is not release authority, does not authorize a first
+  customer or public trial, and does not weaken #230.
+- A demonstrated P0/P1 still opens a bounded dependency-correct repair.
+  Related findings are batched before one frozen exact-head gate; deterministic
+  red is never retried away and known blocking defects are never merged.
+
+### Supersession
+
+FD-048 changes FD-045’s immediate post-#315 execution order only: the next
+signed/installed FRC-1 successor is deferred until the #316/#317 and FRC-2–5
+source frontier is assembled. It preserves FD-045’s assurance definition,
+provider truth boundaries, zero-budget integrity rules and every Product,
+Experience, Architecture and release invariant.
 
 ---
 

@@ -4,7 +4,7 @@
 > **Product authority:** [`../product/PRODUCT.md`](../product/PRODUCT.md)
 > **Experience authority:** [`../product/EXPERIENCE.md`](../product/EXPERIENCE.md)
 > **Current-state authority:** [`CURRENT_STATE.md`](CURRENT_STATE.md)
-> **Last consolidated:** 2026-07-24
+> **Last consolidated:** 2026-08-26
 
 This document defines the final target and invariants. It does not claim the
 current implementation already satisfies them; source and evidence status
@@ -419,6 +419,27 @@ Every consequential command validates trusted context and transition rules,
 updates current state, writes required movements/audit/events and commits its
 outbox intent in one database transaction.
 
+### 8.7 Notification and attention-routing domain
+
+- A notification is a durable actor/shop-scoped projection of a canonical
+  event, not a transient dropdown row or an overloaded automation receipt.
+- Every notification has a deterministic event/dedupe key, category, severity,
+  target/deep-link contract, retention state and privacy classification.
+- Canonical event persistence and its notification marker commit atomically;
+  asynchronous delivery can retry from that marker without duplicating the
+  actor-visible notification.
+- Read, unread, archived/dismissed and preference state is per trusted actor.
+  Permission and field filtering is re-evaluated on query and deep-link open.
+- In-app Bell, native Windows delivery and future remote push are delivery
+  channels over one canonical notification record. Channel failure never loses
+  the Notification Center record or fabricates canonical success.
+- Native/lock-screen payloads are generic by default. Preview opt-in, quiet
+  hours, mute, action handling and revocation remain bounded by permission and
+  privacy policy.
+- Live updates use authenticated events with a bounded database-authoritative
+  polling fallback. Delivery attempts are observable without storing message
+  bodies, protected fields, secrets or raw diagnostics in logs.
+
 ## 9. Encrypted relay and PWA command protocol
 
 ### 9.1 Envelope
@@ -820,6 +841,7 @@ authority.
 | INV-041 | Founder control-plane access cannot expose seller operational plaintext or permanent signing material. |
 | INV-042 | Shared connected-service entitlements cannot become public before measured unit economics, quotas and alarms exist. |
 | INV-043 | The desktop executes the release-verified MSI-installed Node.js and standalone runtime from the protected installation; user-writable runtime copies and developer-PATH runtimes are not executable authority. |
+| INV-044 | Every operational notification is deduplicated from a canonical event, scoped and permission-filtered per shop/actor, and remains recoverable when any delivery channel fails. |
 
 Every invariant maps to automated tests, packaged/provider/device/recovery evidence and observable recovery in the implementation wave that introduces it.
 

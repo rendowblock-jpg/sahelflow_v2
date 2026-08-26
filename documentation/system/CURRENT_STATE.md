@@ -3,11 +3,11 @@
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
 > **Last assessed:** 2026-08-26
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at reconciliation `c6b97634a24c27a088e466f00d6ed0b196e62454`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`
+> **Live protected main:** resolve from GitHub before every action; at reconciliation `3e5375bf503025083dd1b6f448215717528d0d5d`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`
 > **Current signed release:** Internal.27 / `1.0.0-internal.27` / MSI `1.0.0.27` / FD-047
 > **Reviewed release head:** `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`
 > **Signed publication run:** `32913445791` — success
-> **Current execution:** FD-045 First Revenue Certification; FRC-1 real-phone WhatsApp under #306
+> **Current execution:** FD-048 source-first batch; #316 then #317 then FRC-2–5 source/evidence preparation before one separately authorized successor
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
@@ -62,8 +62,10 @@ That acceptance:
 - **#221 — CLOSED/completed:** Founder-installed whole-product visual/product gate accepted on Internal.24.
 - **#226 — CLOSED/completed:** performance/reliability budgets retained as regression authority.
 - **#306 — OPEN:** real-phone WhatsApp installed/provider proof.
+- **#316 — OPEN:** Class-AAA durable Notification Center and WhatsApp attention routing.
+- **#317 — OPEN:** WhatsApp Inbox operational parity and certified message/media matrix.
 - **#230 — OPEN/reopened P1:** resilient customer trial activation on representative Algerian networks; no owned production domain exists.
-- No open PR existed at the start of this documentation package.
+- PR #315 merged to protected `main` as `3e5375bf503025083dd1b6f448215717528d0d5d`; no open PR existed immediately after merge.
 
 Source conformance and signed Windows proof do not close #306 or #230.
 
@@ -80,6 +82,19 @@ The adopted interpretation is:
 - only exact live-certified provider actions may be public;
 - unverified provider actions remain hidden, disabled or conditional;
 - no customer is used as an undisclosed provider experiment.
+
+### FD-048 batching boundary
+
+The Founder explicitly changed the immediate execution order after PR #315:
+reconcile documentation, implement #316, implement #317, complete FRC-2–5
+source/contract/mock/official development-or-sandbox/available CI work, then
+freeze one combined protected-main candidate. A new signed successor and one
+preserved in-place Founder update require separate release authority and happen
+only after that source frontier is assembled.
+
+FD-048 does not close #306, convert source evidence into live certification,
+authorize a release/customer/Beta/Stable, or weaken #230. It reduces repeated
+build/install cycles while preserving one exact-candidate evidence chain.
 
 ## 6. WhatsApp current boundary — FRC-1
 
@@ -128,15 +143,21 @@ refresh. Installed diagnosis proved that the signed grant route and sidecar gran
 verifier are healthy while the HTTP CSP permits only WebSocket port `3001`; the
 installed sidecar uses a protected ephemeral port (`65336` in the observed launch).
 WebView therefore blocks live push before the sidecar connection is established.
-The bounded `codex/frc1-whatsapp-live-push` repair aligns the response CSP with
-Tauri's loopback-only dynamic-port policy, adds durable-projection polling while
-push is degraded, and exposes a real retry action. This is not installed proof
-until a signed successor receives a new inbound without manual refresh.
+PR #315 merged the bounded root repair to protected `main`: response CSP now
+matches Tauri's loopback-only dynamic-port policy; the Inbox has a
+database-authoritative visible-window polling fallback and real socket retry;
+message projections and durable outbox/receipt transitions reconcile by client
+ID, provider ID or stable effect key without delivery-state downgrade. Exact
+head `ad9e00680f3690861ec9f6ade81e2eb616ac08b8` passed CI, Phase 5 and Phase 6–7,
+received a clean exact-head Codex review and had zero unresolved threads before
+guarded squash merge. This remains source evidence, not installed proof.
 
 Required #306 evidence:
 
-1. merge and, if separately authorized, sign one exact live-push successor;
-2. update in place while preserving the demonstrated QR/link/session/outbound/inbound state;
+1. retain PR #315 as merged source evidence while FD-048 assembles #316/#317 and
+   FRC-2–5 source/evidence work;
+2. under later separate authority, sign one combined exact successor and update
+   in place while preserving the demonstrated QR/link/session/outbound/inbound state;
 3. receive one new inbound and prove automatic Inbox arrival without refresh,
    durable exact-once persistence and normal reopen;
 4. complete representative EN plus Arabic/RTL Inbox observation;
@@ -194,6 +215,8 @@ If authoritative access is unavailable, the affected integration/action remains 
 
 - Real-phone WhatsApp/provider certification is not established.
 - AI/tool/order-extraction complete matrix is not yet executed on Internal.27.
+- #316 Notification Center and #317 WhatsApp message/media parity are open and
+  are not established by their written contracts.
 - Live Shopify, WooCommerce, YouCan and courier action certification is not established merely by adapter/source tests.
 - Customer-online licensing/network readiness remains open under #230.
 - A first paid assisted deployment is not yet authorized.
