@@ -151,7 +151,8 @@ function DownloadButton({
 
 export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
   const { locale } = useI18n();
-  const [runtimeFailed, setRuntimeFailed] = useState(false);
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const [downloadFailed, setDownloadFailed] = useState(false);
   const attachment = message.attachment;
   if (!attachment) return null;
 
@@ -199,7 +200,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
     );
   }
 
-  if (local.state === "failed" || runtimeFailed) {
+  if (local.state === "failed" || downloadFailed) {
     return (
       <div className="space-y-1.5" role="status" aria-live="polite">
         <div className="flex items-center gap-2 text-sm font-medium">
@@ -212,7 +213,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
           </p>
         ) : null}
         <p className="text-xs leading-5 text-muted-foreground">
-          {runtimeFailed
+          {downloadFailed
             ? getInboxMediaCopy(locale, "downloadFailed")
             : getInboxMediaCopy(locale, "failed")}
         </p>
@@ -236,6 +237,8 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
     );
   }
 
+  const showInlinePreview = !previewFailed;
+
   return (
     <div className="space-y-2.5">
       <div className="flex items-center gap-2 text-sm font-medium">
@@ -243,7 +246,8 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
         <span>{label}</span>
       </div>
 
-      {message.messageType === "image" || message.messageType === "sticker" ? (
+      {showInlinePreview &&
+      (message.messageType === "image" || message.messageType === "sticker") ? (
         <div
           className={cn(
             "overflow-hidden rounded-xl border border-border/60 bg-muted/20",
@@ -257,7 +261,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
             alt={label}
             loading="lazy"
             decoding="async"
-            onError={() => setRuntimeFailed(true)}
+            onError={() => setPreviewFailed(true)}
             width={attachment.width ?? (message.messageType === "sticker" ? 192 : 640)}
             height={attachment.height ?? (message.messageType === "sticker" ? 192 : 480)}
             className={cn(
@@ -268,27 +272,33 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
         </div>
       ) : null}
 
-      {message.messageType === "video" ? (
+      {showInlinePreview && message.messageType === "video" ? (
         <video
           src={readUrl}
           controls
           playsInline
           preload="metadata"
-          onError={() => setRuntimeFailed(true)}
+          onError={() => setPreviewFailed(true)}
           aria-label={label}
           className="max-h-[28rem] w-full max-w-[34rem] rounded-xl border border-border/60 bg-black"
         />
       ) : null}
 
-      {message.messageType === "audio" ? (
+      {showInlinePreview && message.messageType === "audio" ? (
         <audio
           src={readUrl}
           controls
           preload="metadata"
-          onError={() => setRuntimeFailed(true)}
+          onError={() => setPreviewFailed(true)}
           aria-label={label}
           className="h-10 w-full min-w-[15rem] max-w-[30rem]"
         />
+      ) : null}
+
+      {previewFailed ? (
+        <p className="text-xs leading-5 text-muted-foreground" role="status">
+          {getInboxMediaCopy(locale, "previewUnavailable")}
+        </p>
       ) : null}
 
       {attachment.fileName ? (
@@ -307,7 +317,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
           href={downloadUrl}
           fallbackName={attachment.fileName ?? `whatsapp-${message.messageType ?? "media"}`}
           locale={locale}
-          onFailure={() => setRuntimeFailed(true)}
+          onFailure={() => setDownloadFailed(true)}
           label={
             message.messageType === "document"
               ? getInboxMediaCopy(locale, "openDocument")
