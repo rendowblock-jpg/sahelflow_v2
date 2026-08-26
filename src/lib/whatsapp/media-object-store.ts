@@ -23,6 +23,7 @@ import { basename, dirname, resolve } from "node:path";
 
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { whatsAppMediaErasePending } from "./media-erase-lifecycle";
 
 export type WhatsAppBinaryMediaKind =
   | "image"
@@ -104,6 +105,15 @@ function scopeDirectory(context: ServiceContext): string {
     .update(exactShopScope(context), "utf8")
     .digest("hex");
   return resolve(dataRoot(), "whatsapp-media", scope);
+}
+
+function assertMediaWriteAllowed(context: ServiceContext): void {
+  if (whatsAppMediaErasePending(scopeDirectory(context))) {
+    throw new WhatsAppMediaObjectError(
+      "WhatsApp media erase is in progress for this shop",
+      "MEDIA_OBJECT_IO_FAILED",
+    );
+  }
 }
 
 export function whatsAppMediaRoot(context: ServiceContext): string {
@@ -417,6 +427,7 @@ export async function writeWhatsAppMediaObject(
 ): Promise<WhatsAppMediaObjectReceipt> {
   const envelopeKey = await getBusinessEnvelopeKey(context);
   try {
+    assertMediaWriteAllowed(context);
     const reusable = await inspectExistingObject(
       context,
       input.messageId,
@@ -429,6 +440,7 @@ export async function writeWhatsAppMediaObject(
       await input.source.cancel().catch(() => undefined);
       return reusable;
     }
+    assertMediaWriteAllowed(context);
     const objectId = deriveObjectId(context, input.messageId, envelopeKey);
     const objectKey = deriveObjectKey(objectId, envelopeKey);
     const directory = scopeDirectory(context);
