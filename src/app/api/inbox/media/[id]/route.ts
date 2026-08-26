@@ -6,7 +6,10 @@ import {
   assertTrustedAction,
   requireTrustedAction,
 } from "@/lib/identity/authorization";
-import { openInboxWhatsAppMedia } from "@/lib/whatsapp/media-read-service";
+import {
+  openPreparedInboxWhatsAppMedia,
+  prepareInboxWhatsAppMedia,
+} from "@/lib/whatsapp/media-read-service";
 
 export const dynamic = "force-dynamic";
 
@@ -82,17 +85,18 @@ export const GET = withErrorHandler(
       return NextResponse.json({ error: "Media not found" }, { status: 404 });
     }
 
-    const opened = await openInboxWhatsAppMedia(
-      { prisma: db, shop: shopContext },
-      messageId,
+    const context = { prisma: db, shop: shopContext };
+    const prepared = await prepareInboxWhatsAppMedia(context, messageId);
+    const range = parseRange(request.headers.get("range"), prepared.sizeBytes);
+    if (range === "invalid") return invalidRange(prepared.sizeBytes);
+
+    const opened = await openPreparedInboxWhatsAppMedia(
+      context,
+      prepared,
+      range ?? undefined,
     );
     try {
-      const range = parseRange(request.headers.get("range"), opened.sizeBytes);
-      if (range === "invalid") return invalidRange(opened.sizeBytes);
-
-      const start = range?.start ?? 0;
-      const end = range?.end ?? opened.sizeBytes - 1;
-      const responseBody = Uint8Array.from(opened.bytes.subarray(start, end + 1));
+      const responseBody = Uint8Array.from(opened.bytes);
       const download =
         request.nextUrl.searchParams.get("download") === "1" ||
         opened.kind === "document";
