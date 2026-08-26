@@ -71,8 +71,18 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(hook).toContain("sidecarReachable !== true");
     expect(hook).toContain("loadMessages(chat, { background: true })");
     expect(hook).toContain("const isCurrentConversation");
+    expect(hook).toContain("messageLoadGenerationRef");
+    expect(hook).toContain(
+      "messageLoadGenerationRef.current === messageLoadGeneration",
+    );
     expect(hook).toContain("messageSelectionGenerationRef");
     expect(hook).toContain("messageMutationGenerationRef");
+    expect(hook).toContain(
+      "messageMutationGenerationRef.current === mutationGeneration",
+    );
+    expect(hook).not.toContain(
+      "!background ||\n          messageMutationGenerationRef.current === mutationGeneration",
+    );
     expect(hook).toContain("inboxMessagesEqual");
     expect(hook).toContain(
       "activeChatRef.current?.conversationId !== conversationId",
@@ -84,6 +94,11 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(hook).toContain(
       "activeChatRef.current?.conversationId === requestedConversationId",
     );
+    const messageLoader = hook.slice(
+      hook.indexOf("const loadMessages"),
+      hook.indexOf("const handleStatusChange"),
+    );
+    expect(messageLoader).not.toContain("setSidecarReachable");
   });
 
   it("opens search and command results through canonical persisted conversation ids", () => {

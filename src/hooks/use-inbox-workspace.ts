@@ -206,6 +206,7 @@ export function useInboxWorkspace() {
   const activeChatRef = useRef<InboxChat | null>(null);
   const messagesRef = useRef<InboxMessage[]>([]);
   const foregroundMessageLoadRef = useRef(0);
+  const messageLoadGenerationRef = useRef(0);
   const messageSelectionGenerationRef = useRef(0);
   const messageMutationGenerationRef = useRef(0);
   const deepLinkAttemptRef = useRef<string | null>(null);
@@ -389,6 +390,7 @@ export function useInboxWorkspace() {
     async (chat: InboxChat, options?: { background?: boolean }) => {
       const background = options?.background === true;
       const requestedConversationId = chat.conversationId;
+      const messageLoadGeneration = ++messageLoadGenerationRef.current;
       const foregroundLoad = background
         ? null
         : ++foregroundMessageLoadRef.current;
@@ -398,9 +400,9 @@ export function useInboxWorkspace() {
         activeChatRef.current?.conversationId === requestedConversationId;
       const canApplyLoadedProjection = () =>
         isCurrentConversation() &&
+        messageLoadGenerationRef.current === messageLoadGeneration &&
         messageSelectionGenerationRef.current === selectionGeneration &&
-        (!background ||
-          messageMutationGenerationRef.current === mutationGeneration);
+        messageMutationGenerationRef.current === mutationGeneration;
       if (!background) {
         setLoadingMessages(true);
         setSendError(null);
@@ -414,11 +416,7 @@ export function useInboxWorkspace() {
           if (response.ok) {
             const data = (await response.json()) as {
               messages: Array<IncomingMessage & { messageType?: string }>;
-              sidecarReachable?: boolean;
             };
-            if (typeof data.sidecarReachable === "boolean") {
-              setSidecarReachable(data.sidecarReachable);
-            }
             if (!canApplyLoadedProjection()) return;
             replaceMessages(
               data.messages.map((message) => ({
