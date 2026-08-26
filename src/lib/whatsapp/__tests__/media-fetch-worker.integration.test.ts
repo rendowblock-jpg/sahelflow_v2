@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { openBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
-import { db, dbRaw, shopContext } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import {
   persistWhatsAppInbound,
   type WhatsAppInboundEnvelope,
@@ -42,6 +42,12 @@ function jpeg(): Buffer {
     Buffer.from("private-media-payload", "utf8"),
     Buffer.from([0xff, 0xd9]),
   ]);
+}
+
+function mediaResponse(bytes: Buffer): Response {
+  const body = new Uint8Array(bytes.length);
+  body.set(bytes);
+  return new Response(body);
 }
 
 function envelope(bytes: Buffer, id = "PROVIDER-INBOUND-MEDIA-1"): WhatsAppInboundEnvelope {
@@ -128,9 +134,9 @@ describe("durable WhatsApp inbound media fetch", () => {
         transientProviderDescriptorSeen =
           raw.includes("private-provider-media") &&
           raw.includes("provider-media-secret-key");
-        return new Response(bytes, {
-          headers: { "Content-Type": "application/octet-stream" },
-        });
+        const response = mediaResponse(bytes);
+        response.headers.set("Content-Type", "application/octet-stream");
+        return response;
       }),
     ).resolves.toBe(1);
     expect(transientProviderDescriptorSeen).toBe(true);
@@ -186,7 +192,7 @@ describe("durable WhatsApp inbound media fetch", () => {
 
     await expect(reconcileQueuedWhatsAppMediaFetches(context)).resolves.toBe(0);
     await expect(
-      drainDueWhatsAppMediaFetches(context, 1, async () => new Response(bytes)),
+      drainDueWhatsAppMediaFetches(context, 1, async () => mediaResponse(bytes)),
     ).resolves.toBe(0);
   });
 
@@ -206,7 +212,7 @@ describe("durable WhatsApp inbound media fetch", () => {
     await drainDueWhatsAppMediaFetches(
       context,
       1,
-      async () => new Response(png),
+      async () => mediaResponse(png),
     );
     await expect(
       db.outboxIntent.findFirstOrThrow({
