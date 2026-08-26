@@ -19,13 +19,16 @@ const ARCHIVE_KEY_DOMAIN = Buffer.from(
   "utf8",
 );
 const ARCHIVE_MAC_DOMAIN = Buffer.from("sahelflow.shop-archive.v1", "utf8");
+const ARCHIVE_MEDIA_FRAME = "whatsapp-media-archive-scope-v1";
 const ARCHIVE_DIRECTORY = "shop-archives";
 const MANIFEST_FILE = "manifest.json";
 const MAX_MANIFEST_BYTES = 128 * 1024;
+const MAX_MEDIA_OBJECTS = 50_000;
 
 const exactId = z.string().regex(/^[0-9a-f]{32}$/);
 const shopId = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
 const databaseFile = z.string().regex(/^[a-z0-9][a-z0-9-]*\.db$/);
+const sha256Hex = z.string().regex(/^[0-9a-f]{64}$/);
 
 const shopSchema = z
   .object({
@@ -38,6 +41,14 @@ const shopSchema = z
   })
   .strict();
 
+const whatsappMediaSchema = z
+  .object({
+    objectCount: z.number().int().nonnegative().max(MAX_MEDIA_OBJECTS).safe(),
+    ciphertextBytes: z.number().int().nonnegative().safe(),
+    scopeSha256: sha256Hex,
+  })
+  .strict();
+
 const archiveStateSchema = z
   .object({
     formatVersion: z.literal(1),
@@ -46,7 +57,8 @@ const archiveStateSchema = z
     installationId: exactId,
     status: z.enum(["archived", "deleted-rescue"]),
     shop: shopSchema,
-    databaseSha256: z.string().regex(/^[0-9a-f]{64}$/),
+    databaseSha256: sha256Hex,
+    whatsappMedia: whatsappMediaSchema.optional(),
     archivedAtUnixMs: z.number().int().positive().safe(),
     sourceRegistryRevision: z.number().int().positive().safe(),
     operationId: exactId,
@@ -58,7 +70,7 @@ const archiveEnvelopeSchema = z
     formatVersion: z.literal(1),
     keyId: z.literal("installation-root-shop-archive-hmac-v1"),
     state: archiveStateSchema,
-    mac: z.string().regex(/^[0-9a-f]{64}$/),
+    mac: sha256Hex,
   })
   .strict();
 
@@ -134,6 +146,12 @@ function archiveMessage(state: NativeShopArchive): Buffer {
   writer.optionalString(state.shop.icon);
   writer.string(state.shop.createdAt);
   writer.string(state.databaseSha256);
+  if (state.whatsappMedia) {
+    writer.string(ARCHIVE_MEDIA_FRAME);
+    writer.u64(state.whatsappMedia.objectCount);
+    writer.u64(state.whatsappMedia.ciphertextBytes);
+    writer.string(state.whatsappMedia.scopeSha256);
+  }
   writer.u64(state.archivedAtUnixMs);
   writer.u64(state.sourceRegistryRevision);
   writer.string(state.operationId);
@@ -148,7 +166,10 @@ function verifyArchiveEnvelope(input: unknown): NativeShopArchive {
       .update(archiveMessage(envelope.state))
       .digest();
     const supplied = Buffer.from(envelope.mac, "hex");
-    if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) {
+    if (
+      expected.length !== supplied.length ||
+      !timingSafeEqual(expected, supplied)
+    ) {
       throw archiveError("Shop archive manifest authentication failed");
     }
   } finally {
@@ -191,7 +212,11 @@ export function getNativeShopArchive(archiveId: string): NativeShopArchive {
     input = JSON.parse(readFileSync(safeManifestPath(archiveId), "utf8"));
   } catch (error) {
     if (error instanceof SahelFlowError) throw error;
-    throw archiveError("Shop archive manifest is missing or unreadable", "SHOP_ARCHIVE_NOT_FOUND", 404);
+    throw archiveError(
+      "Shop archive manifest is missing or unreadable",
+      "SHOP_ARCHIVE_NOT_FOUND",
+      404,
+    );
   }
   const archive = verifyArchiveEnvelope(input);
   if (archive.archiveId !== archiveId) {
@@ -205,7 +230,9 @@ export function listNativeShopArchives(): readonly NativeShopArchive[] {
   let entries: string[];
   try {
     entries = readdirSync(root, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && /^[0-9a-f]{32}$/.test(entry.name))
+      .filter(
+        (entry) => entry.isDirectory() && /^[0-9a-f]{32}$/.test(entry.name),
+      )
       .map((entry) => entry.name)
       .sort();
   } catch {

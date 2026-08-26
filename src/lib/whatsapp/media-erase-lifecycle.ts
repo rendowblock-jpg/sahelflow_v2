@@ -79,8 +79,15 @@ export function whatsAppMediaErasePending(activePath: string): boolean {
  * Hide the exact shop media tree before destructive DB work. A deterministic
  * sibling tombstone is also created for an empty tree so concurrent media
  * writers fail closed instead of recreating live state during the erase.
+ *
+ * Only one same-process owner may stage a scope. A crash-left tombstone has no
+ * process owner after restart and remains eligible for deterministic recovery.
  */
 export function stageWhatsAppMediaErase(activePath: string): WhatsAppMediaEraseStage {
+  if (activeErases().has(activePath)) {
+    throw new Error("WhatsApp media erase is already active for this shop");
+  }
+
   const tombstone = tombstonePath(activePath);
   const parent = dirname(activePath);
   mkdirSync(parent, { recursive: true, mode: 0o700 });

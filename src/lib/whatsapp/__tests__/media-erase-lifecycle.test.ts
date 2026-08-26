@@ -47,6 +47,24 @@ describe("WhatsApp media erase tombstones", () => {
     );
   });
 
+  it("rejects a second same-process erase owner before it can share the tombstone", () => {
+    mkdirSync(active, { recursive: true });
+    writeFileSync(join(active, "private.sfmedia"), "ciphertext");
+
+    const first = stageWhatsAppMediaErase(active);
+    expect(() => stageWhatsAppMediaErase(active)).toThrow(
+      "erase is already active",
+    );
+    expect(existsSync(active)).toBe(false);
+    expect(whatsAppMediaErasePending(active)).toBe(true);
+
+    rollbackWhatsAppMediaErase(first);
+    expect(readFileSync(join(active, "private.sfmedia"), "utf8")).toBe(
+      "ciphertext",
+    );
+    expect(whatsAppMediaErasePending(active)).toBe(false);
+  });
+
   it("deletes the hidden tree only after the DB erase commits", () => {
     mkdirSync(active, { recursive: true });
     writeFileSync(join(active, "private.sfmedia"), "ciphertext");
