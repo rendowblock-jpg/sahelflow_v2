@@ -1,11 +1,44 @@
+fn whatsapp_media_lifecycle_state_exists(
+    scope_root: &Path,
+) -> Result<bool, MutationAuthorityError> {
+    let scope_name = scope_root
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| {
+            MutationAuthorityError::InvalidRegistry(
+                "WhatsApp media shop scope identity is not UTF-8".to_string(),
+            )
+        })?;
+    let tombstone = scope_root.with_file_name(format!("{scope_name}.erasing"));
+    Ok(scope_root.exists() || tombstone.exists())
+}
+
 fn canonical_whatsapp_message_count(
     database_path: &Path,
+    media_scope: &Path,
 ) -> Result<u64, MutationAuthorityError> {
     let connection = Connection::open_with_flags(
         database_path,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
             | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )?;
+    let has_message_table: i64 = connection.query_row(
+        r#"SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'Message')"#,
+        [],
+        |row| row.get(0),
+    )?;
+    if has_message_table == 0 {
+        if whatsapp_media_lifecycle_state_exists(media_scope)? {
+            return Err(MutationAuthorityError::InvalidRegistry(
+                "shop has WhatsApp media lifecycle state but no canonical Message table"
+                    .to_string(),
+            ));
+        }
+        // Pre-media lifecycle fixtures and legitimate legacy shop databases may
+        // not contain the canonical Message table. With no live/tombstoned media
+        // state there is nothing to reconcile, so preserve legacy compatibility.
+        return Ok(0);
+    }
     let count: i64 = connection.query_row(r#"SELECT COUNT(*) FROM "Message""#, [], |row| {
         row.get(0)
     })?;
@@ -53,10 +86,11 @@ impl AcceptedMutation {
         // while privacy erase had hidden the media tree, SQLite has now either
         // committed the erase (zero Message rows) or rolled it back (rows
         // remain). Reconcile that deterministic tombstone before deciding what
-        // belongs in the authenticated archive.
+        // belongs in the authenticated archive. Legacy databases without the
+        // Message table remain valid only when no media lifecycle state exists.
         reconcile_whatsapp_media_erase_tombstone(
             &live_media_scope,
-            canonical_whatsapp_message_count(&live_database)?,
+            canonical_whatsapp_message_count(&live_database, &live_media_scope)?,
         )?;
 
         ensure_directory(&archive_directory)?;
