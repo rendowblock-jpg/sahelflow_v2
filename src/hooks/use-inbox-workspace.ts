@@ -182,6 +182,7 @@ export function useInboxWorkspace() {
   const chatRefreshTimerRef = useRef<number | null>(null);
   const activeChatRef = useRef<InboxChat | null>(null);
   const foregroundMessageLoadRef = useRef(0);
+  const messageSelectionGenerationRef = useRef(0);
   const messageMutationGenerationRef = useRef(0);
   const deepLinkAttemptRef = useRef<string | null>(null);
   const pinnedDeepLinkChatRef = useRef<InboxChat | null>(null);
@@ -346,11 +347,13 @@ export function useInboxWorkspace() {
       const foregroundLoad = background
         ? null
         : ++foregroundMessageLoadRef.current;
+      const selectionGeneration = messageSelectionGenerationRef.current;
       const mutationGeneration = messageMutationGenerationRef.current;
       const isCurrentConversation = () =>
         activeChatRef.current?.conversationId === requestedConversationId;
       const canApplyLoadedProjection = () =>
         isCurrentConversation() &&
+        messageSelectionGenerationRef.current === selectionGeneration &&
         (!background ||
           messageMutationGenerationRef.current === mutationGeneration);
       if (!background) {
@@ -544,6 +547,7 @@ export function useInboxWorkspace() {
 
   const selectChat = useCallback(
     (chat: InboxChat) => {
+      messageSelectionGenerationRef.current += 1;
       activeChatRef.current = chat;
       pinnedDeepLinkChatRef.current = chat;
       setChats((current) => {
@@ -576,6 +580,7 @@ export function useInboxWorkspace() {
   );
 
   const clearActiveChat = useCallback(() => {
+    messageSelectionGenerationRef.current += 1;
     activeChatRef.current = null;
     activeTransportIdRef.current = null;
     setActiveChatId(null);

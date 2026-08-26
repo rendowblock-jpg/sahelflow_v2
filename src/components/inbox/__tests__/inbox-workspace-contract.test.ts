@@ -68,6 +68,7 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(hook).toContain("sidecarReachable !== true");
     expect(hook).toContain("loadMessages(chat, { background: true })");
     expect(hook).toContain("const isCurrentConversation");
+    expect(hook).toContain("messageSelectionGenerationRef");
     expect(hook).toContain("messageMutationGenerationRef");
     expect(hook).toContain("canApplyLoadedProjection");
     expect(hook).toContain(
