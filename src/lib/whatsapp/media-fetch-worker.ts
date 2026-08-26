@@ -42,6 +42,7 @@ import type { IncomingMessage } from "./types";
 const MAX_ATTEMPTS = 8;
 const LEASE_MS = 120_000;
 const RETRY_DELAYS_MS = [5_000, 30_000, 120_000, 600_000, 1_800_000, 7_200_000] as const;
+const MAX_RETRY_DELAY_MS = 7_200_000;
 const BINARY_KINDS = new Set<WhatsAppBinaryMediaKind>([
   "image",
   "video",
@@ -75,7 +76,7 @@ function effectKey(messageId: string): string {
 function retryDelay(attemptCount: number): number {
   return RETRY_DELAYS_MS[
     Math.min(Math.max(0, attemptCount - 1), RETRY_DELAYS_MS.length - 1)
-  ] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
+  ] ?? MAX_RETRY_DELAY_MS;
 }
 
 function binaryKind(
