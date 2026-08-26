@@ -20,7 +20,7 @@ describe("Inbox local WhatsApp media status projection", () => {
   });
 
   it("projects terminal media fetch failures without read authority", () => {
-    expect(projectInboxLocalMedia("message/1", "dead_letter", null as never)).toEqual({
+    expect(projectInboxLocalMedia("message/1", "dead_letter", undefined)).toEqual({
       state: "failed",
       statusUrl: "/api/inbox/media/message%2F1/status",
     });
