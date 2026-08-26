@@ -45,6 +45,12 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(workspace).toContain("keepalive: true");
     const selectChat = workspace.indexOf("const selectChat");
     expect(
+      workspace.indexOf(
+        "previousChat?.conversationId === chat.conversationId",
+        selectChat,
+      ),
+    ).toBeLessThan(workspace.indexOf("void persistDraft(", selectChat));
+    expect(
       workspace.indexOf("void persistDraft(", selectChat),
     ).toBeLessThan(workspace.indexOf("activeChatRef.current = chat", selectChat));
     const sendReply = workspace.indexOf("const sendReply");

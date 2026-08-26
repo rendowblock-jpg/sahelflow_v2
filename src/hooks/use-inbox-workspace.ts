@@ -829,10 +829,8 @@ export function useInboxWorkspace() {
   const selectChat = useCallback(
     (chat: InboxChat) => {
       const previousChat = activeChatRef.current;
-      if (
-        previousChat &&
-        previousChat.conversationId !== chat.conversationId
-      ) {
+      if (previousChat?.conversationId === chat.conversationId) return;
+      if (previousChat) {
         void persistDraft(
           previousChat.conversationId,
           replyTextRef.current,
