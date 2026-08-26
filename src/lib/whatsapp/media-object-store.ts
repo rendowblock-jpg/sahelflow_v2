@@ -467,6 +467,7 @@ export async function writeWhatsAppMediaObject(
       fsyncSync(descriptor);
       closeSync(descriptor);
       closed = true;
+      assertMediaWriteAllowed(context);
       renameSync(temporary, target);
       syncDirectory(directory);
       try {
