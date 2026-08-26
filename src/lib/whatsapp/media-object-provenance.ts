@@ -1,12 +1,7 @@
 import "server-only";
 
 import { createDecipheriv, createHash, createHmac } from "node:crypto";
-import {
-  closeSync,
-  fstatSync,
-  openSync,
-  readSync,
-} from "node:fs";
+import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
@@ -39,8 +34,13 @@ export interface WhatsAppMediaObjectProvenance {
   ciphertextBytes: number;
 }
 
+export interface WhatsAppMediaPlaintextRange {
+  start: number;
+  end: number;
+}
+
 export interface OpenedWhatsAppMediaObject {
-  /** Authenticated plaintext. The caller owns this Buffer and must wipe it. */
+  /** Authenticated plaintext interval. The caller owns this Buffer and must wipe it. */
   bytes: Buffer;
   mediaType: string;
   provenance: WhatsAppMediaObjectProvenance;
@@ -193,26 +193,21 @@ function expectedCiphertextBytes(receipt: WhatsAppMediaObjectReceipt): number {
   return value;
 }
 
-function readBoundedCiphertext(path: string, expectedBytes: number): Buffer {
-  const descriptor = openSync(path, "r");
-  let output: Buffer | null = null;
+function readExact(
+  descriptor: number,
+  length: number,
+  position: number,
+): Buffer {
+  const output = Buffer.allocUnsafe(length);
+  let offset = 0;
   try {
-    const before = fstatSync(descriptor);
-    if (!before.isFile() || before.size !== expectedBytes) {
-      throw new WhatsAppMediaObjectError(
-        "Media object ciphertext length does not match its receipt",
-        "MEDIA_OBJECT_CORRUPT",
-      );
-    }
-    output = Buffer.allocUnsafe(expectedBytes);
-    let offset = 0;
-    while (offset < expectedBytes) {
+    while (offset < length) {
       const read = readSync(
         descriptor,
         output,
         offset,
-        expectedBytes - offset,
-        offset,
+        length - offset,
+        position + offset,
       );
       if (read <= 0) {
         throw new WhatsAppMediaObjectError(
@@ -222,6 +217,190 @@ function readBoundedCiphertext(path: string, expectedBytes: number): Buffer {
       }
       offset += read;
     }
+    return output;
+  } catch (error) {
+    output.fill(0);
+    throw error;
+  }
+}
+
+function normalizeRequestedRange(
+  receipt: WhatsAppMediaObjectReceipt,
+  requestedRange: WhatsAppMediaPlaintextRange | null,
+): WhatsAppMediaPlaintextRange | null {
+  if (!requestedRange) return null;
+  const { start, end } = requestedRange;
+  if (
+    !Number.isSafeInteger(start) ||
+    !Number.isSafeInteger(end) ||
+    start < 0 ||
+    end < start ||
+    end >= receipt.sizeBytes
+  ) {
+    throw new WhatsAppMediaObjectError(
+      "Requested media range is outside the authenticated plaintext",
+      "MEDIA_OBJECT_CORRUPT",
+    );
+  }
+  return { start, end };
+}
+
+function authenticateOpenedObject(
+  descriptor: number,
+  kind: WhatsAppBinaryMediaKind,
+  receipt: WhatsAppMediaObjectReceipt,
+  objectKey: Buffer,
+  requestedRange: WhatsAppMediaPlaintextRange | null,
+): {
+  bytes: Buffer | null;
+  provenance: WhatsAppMediaObjectProvenance;
+} {
+  const limit = MEDIA_LIMITS[kind];
+  const expectedBytes = expectedCiphertextBytes(receipt);
+  if (
+    receipt.sizeBytes <= 0 ||
+    receipt.sizeBytes > limit ||
+    receipt.chunkCount <= 0 ||
+    receipt.chunkCount > Math.ceil(limit / OBJECT_CHUNK_BYTES)
+  ) {
+    throw new WhatsAppMediaObjectError(
+      "Media object receipt exceeds the bounded read contract",
+      "MEDIA_OBJECT_CORRUPT",
+    );
+  }
+
+  const range = normalizeRequestedRange(receipt, requestedRange);
+  const retained = range
+    ? Buffer.allocUnsafe(range.end - range.start + 1)
+    : null;
+  let retainedBytes = 0;
+  let prefix = Buffer.alloc(0);
+  const plaintextHash = createHash("sha256");
+  const ciphertextHash = createHash("sha256");
+  let fileOffset = 0;
+  let plaintextOffset = 0;
+  let frameIndex = 0;
+
+  try {
+    const before = fstatSync(descriptor);
+    if (!before.isFile() || before.size !== expectedBytes) {
+      throw new WhatsAppMediaObjectError(
+        "Media object ciphertext length does not match its receipt",
+        "MEDIA_OBJECT_CORRUPT",
+      );
+    }
+
+    const header = readExact(descriptor, HEADER_BYTES, fileOffset);
+    try {
+      ciphertextHash.update(header);
+      if (
+        !header.subarray(0, 4).equals(OBJECT_MAGIC) ||
+        header.readUInt8(4) !== OBJECT_FORMAT_VERSION ||
+        header.readUInt32LE(5) !== OBJECT_CHUNK_BYTES
+      ) {
+        throw new WhatsAppMediaObjectError(
+          "Media object header is invalid",
+          "MEDIA_OBJECT_CORRUPT",
+        );
+      }
+    } finally {
+      header.fill(0);
+    }
+    fileOffset += HEADER_BYTES;
+
+    while (fileOffset < expectedBytes) {
+      const frameHeader = readExact(
+        descriptor,
+        FRAME_OVERHEAD_BYTES,
+        fileOffset,
+      );
+      let ciphertext: Buffer | null = null;
+      let plaintext: Buffer | null = null;
+      try {
+        ciphertextHash.update(frameHeader);
+        const plaintextBytes = frameHeader.readUInt32LE(0);
+        const nonce = frameHeader.subarray(4, 16);
+        const tag = frameHeader.subarray(16, 32);
+        if (
+          plaintextBytes === 0 ||
+          plaintextBytes > OBJECT_CHUNK_BYTES ||
+          plaintextOffset + plaintextBytes > limit ||
+          fileOffset + FRAME_OVERHEAD_BYTES + plaintextBytes > expectedBytes
+        ) {
+          throw new WhatsAppMediaObjectError(
+            "Media object frame length is invalid",
+            "MEDIA_OBJECT_CORRUPT",
+          );
+        }
+
+        ciphertext = readExact(
+          descriptor,
+          plaintextBytes,
+          fileOffset + FRAME_OVERHEAD_BYTES,
+        );
+        ciphertextHash.update(ciphertext);
+
+        const decipher = createDecipheriv("aes-256-gcm", objectKey, nonce);
+        decipher.setAAD(
+          chunkAad(receipt.objectId, kind, frameIndex, plaintextBytes),
+        );
+        decipher.setAuthTag(tag);
+        try {
+          plaintext = Buffer.concat([
+            decipher.update(ciphertext),
+            decipher.final(),
+          ]);
+        } catch {
+          throw new WhatsAppMediaObjectError(
+            "Media object authentication failed",
+            "MEDIA_OBJECT_CORRUPT",
+          );
+        }
+        if (plaintext.length !== plaintextBytes) {
+          throw new WhatsAppMediaObjectError(
+            "Media object plaintext frame length changed during authentication",
+            "MEDIA_OBJECT_CORRUPT",
+          );
+        }
+
+        if (prefix.length < 4096) {
+          const nextPrefix = Buffer.concat([
+            prefix,
+            plaintext.subarray(0, 4096 - prefix.length),
+          ]);
+          prefix.fill(0);
+          prefix = nextPrefix;
+        }
+        plaintextHash.update(plaintext);
+
+        if (range && retained) {
+          const frameStart = plaintextOffset;
+          const frameEnd = plaintextOffset + plaintextBytes - 1;
+          const overlapStart = Math.max(frameStart, range.start);
+          const overlapEnd = Math.min(frameEnd, range.end);
+          if (overlapStart <= overlapEnd) {
+            const sourceStart = overlapStart - frameStart;
+            const sourceEnd = overlapEnd - frameStart + 1;
+            const copied = plaintext.copy(
+              retained,
+              overlapStart - range.start,
+              sourceStart,
+              sourceEnd,
+            );
+            retainedBytes += copied;
+          }
+        }
+
+        plaintextOffset += plaintextBytes;
+        frameIndex += 1;
+        fileOffset += FRAME_OVERHEAD_BYTES + plaintextBytes;
+      } finally {
+        plaintext?.fill(0);
+        ciphertext?.fill(0);
+        frameHeader.fill(0);
+      }
+    }
+
     const after = fstatSync(descriptor);
     if (!after.isFile() || after.size !== expectedBytes) {
       throw new WhatsAppMediaObjectError(
@@ -229,150 +408,35 @@ function readBoundedCiphertext(path: string, expectedBytes: number): Buffer {
         "MEDIA_OBJECT_CORRUPT",
       );
     }
-    const result = output;
-    output = null;
-    return result;
-  } finally {
-    output?.fill(0);
-    closeSync(descriptor);
-  }
-}
-
-function openExactObjectBytes(
-  bytes: Buffer,
-  objectId: string,
-  kind: WhatsAppBinaryMediaKind,
-  receipt: WhatsAppMediaObjectReceipt,
-  objectKey: Buffer,
-  retainPlaintext: boolean,
-): Buffer | null {
-  const limit = MEDIA_LIMITS[kind];
-  if (
-    receipt.sizeBytes <= 0 ||
-    receipt.sizeBytes > limit ||
-    receipt.chunkCount <= 0 ||
-    receipt.chunkCount > Math.ceil(limit / OBJECT_CHUNK_BYTES) ||
-    bytes.length !== expectedCiphertextBytes(receipt)
-  ) {
-    throw new WhatsAppMediaObjectError(
-      "Media object receipt exceeds the bounded read contract",
-      "MEDIA_OBJECT_CORRUPT",
-    );
-  }
-  if (
-    bytes.length < HEADER_BYTES ||
-    !bytes.subarray(0, 4).equals(OBJECT_MAGIC) ||
-    bytes.readUInt8(4) !== OBJECT_FORMAT_VERSION ||
-    bytes.readUInt32LE(5) !== OBJECT_CHUNK_BYTES
-  ) {
-    throw new WhatsAppMediaObjectError(
-      "Media object header is invalid",
-      "MEDIA_OBJECT_CORRUPT",
-    );
-  }
-
-  let offset = HEADER_BYTES;
-  let index = 0;
-  let total = 0;
-  let prefix = Buffer.alloc(0);
-  const plaintextHash = createHash("sha256");
-  let retainedOutput: Buffer | null = retainPlaintext
-    ? Buffer.allocUnsafe(receipt.sizeBytes)
-    : null;
-  try {
-    while (offset < bytes.length) {
-      if (offset + FRAME_OVERHEAD_BYTES > bytes.length) {
-        throw new WhatsAppMediaObjectError(
-          "Media object frame is truncated",
-          "MEDIA_OBJECT_CORRUPT",
-        );
-      }
-      const plaintextBytes = bytes.readUInt32LE(offset);
-      const nonce = bytes.subarray(offset + 4, offset + 16);
-      const tag = bytes.subarray(offset + 16, offset + 32);
-      const ciphertextStart = offset + FRAME_OVERHEAD_BYTES;
-      const ciphertextEnd = ciphertextStart + plaintextBytes;
-      if (
-        plaintextBytes === 0 ||
-        plaintextBytes > OBJECT_CHUNK_BYTES ||
-        ciphertextEnd > bytes.length ||
-        total + plaintextBytes > limit
-      ) {
-        throw new WhatsAppMediaObjectError(
-          "Media object frame length is invalid",
-          "MEDIA_OBJECT_CORRUPT",
-        );
-      }
-
-      const decipher = createDecipheriv("aes-256-gcm", objectKey, nonce);
-      decipher.setAAD(chunkAad(objectId, kind, index, plaintextBytes));
-      decipher.setAuthTag(tag);
-      let plaintext: Buffer;
-      try {
-        plaintext = Buffer.concat([
-          decipher.update(bytes.subarray(ciphertextStart, ciphertextEnd)),
-          decipher.final(),
-        ]);
-      } catch {
-        throw new WhatsAppMediaObjectError(
-          "Media object authentication failed",
-          "MEDIA_OBJECT_CORRUPT",
-        );
-      }
-      if (plaintext.length !== plaintextBytes) {
-        plaintext.fill(0);
-        throw new WhatsAppMediaObjectError(
-          "Media object plaintext frame length changed during authentication",
-          "MEDIA_OBJECT_CORRUPT",
-        );
-      }
-      if (prefix.length < 4096) {
-        const nextPrefix = Buffer.concat([
-          prefix,
-          plaintext.subarray(0, 4096 - prefix.length),
-        ]);
-        prefix.fill(0);
-        prefix = nextPrefix;
-      }
-      plaintextHash.update(plaintext);
-      if (retainedOutput) plaintext.copy(retainedOutput, total);
-      plaintext.fill(0);
-      total += plaintextBytes;
-      index += 1;
-      offset = ciphertextEnd;
-    }
 
     const mediaType = sniffMediaType(kind, prefix);
     if (
       !mediaType ||
-      total === 0 ||
-      index !== receipt.chunkCount ||
-      total !== receipt.sizeBytes ||
+      plaintextOffset !== receipt.sizeBytes ||
+      frameIndex !== receipt.chunkCount ||
       plaintextHash.digest("hex") !== receipt.sha256 ||
-      mediaType !== receipt.mediaType
+      mediaType !== receipt.mediaType ||
+      (retained && retainedBytes !== retained.length)
     ) {
       throw new WhatsAppMediaObjectError(
         "Media object integrity receipt does not match encrypted bytes",
         "MEDIA_OBJECT_CORRUPT",
       );
     }
-    if (!retainedOutput) return null;
-    const opened = retainedOutput;
-    retainedOutput = null;
-    return opened;
+
+    return {
+      bytes: retained,
+      provenance: {
+        ciphertextSha256: ciphertextHash.digest("hex"),
+        ciphertextBytes: expectedBytes,
+      },
+    };
   } catch (error) {
-    retainedOutput?.fill(0);
+    retained?.fill(0);
     throw error;
   } finally {
     prefix.fill(0);
   }
-}
-
-function ciphertextProvenance(bytes: Buffer): WhatsAppMediaObjectProvenance {
-  return {
-    ciphertextSha256: createHash("sha256").update(bytes).digest("hex"),
-    ciphertextBytes: bytes.length,
-  };
 }
 
 async function authenticateMediaObject(
@@ -380,9 +444,13 @@ async function authenticateMediaObject(
   messageId: string,
   kind: WhatsAppBinaryMediaKind,
   receipt: WhatsAppMediaObjectReceipt,
-  retainPlaintext: boolean,
-): Promise<{ plaintext: Buffer | null; provenance: WhatsAppMediaObjectProvenance }> {
+  requestedRange: WhatsAppMediaPlaintextRange | null,
+): Promise<{
+  plaintext: Buffer | null;
+  provenance: WhatsAppMediaObjectProvenance;
+}> {
   const envelopeKey = await getBusinessEnvelopeKey(context);
+  let descriptor: number | null = null;
   try {
     const expectedId = deriveObjectId(context, messageId, envelopeKey);
     if (receipt.objectId !== expectedId) {
@@ -392,29 +460,31 @@ async function authenticateMediaObject(
       );
     }
     const objectKey = deriveObjectKey(receipt.objectId, envelopeKey);
-    const objectPath = resolve(
-      whatsAppMediaRoot(context),
-      `${receipt.objectId}.sfmedia`,
-    );
-    const ciphertext = readBoundedCiphertext(
-      objectPath,
-      expectedCiphertextBytes(receipt),
-    );
     try {
-      const plaintext = openExactObjectBytes(
-        ciphertext,
-        receipt.objectId,
+      const objectPath = resolve(
+        whatsAppMediaRoot(context),
+        `${receipt.objectId}.sfmedia`,
+      );
+      descriptor = openSync(objectPath, "r");
+      const authenticated = authenticateOpenedObject(
+        descriptor,
         kind,
         receipt,
         objectKey,
-        retainPlaintext,
+        requestedRange,
       );
       return {
-        plaintext,
-        provenance: ciphertextProvenance(ciphertext),
+        plaintext: authenticated.bytes,
+        provenance: authenticated.provenance,
       };
+    } catch (error) {
+      if (error instanceof WhatsAppMediaObjectError) throw error;
+      throw new WhatsAppMediaObjectError(
+        "WhatsApp media object could not be read",
+        "MEDIA_OBJECT_IO_FAILED",
+      );
     } finally {
-      ciphertext.fill(0);
+      if (descriptor !== null) closeSync(descriptor);
       objectKey.fill(0);
     }
   } finally {
@@ -433,7 +503,7 @@ export async function verifyWhatsAppMediaObjectWithProvenance(
     messageId,
     kind,
     receipt,
-    false,
+    null,
   );
   return authenticated.provenance;
 }
@@ -443,13 +513,18 @@ export async function readWhatsAppMediaObject(
   messageId: string,
   kind: WhatsAppBinaryMediaKind,
   receipt: WhatsAppMediaObjectReceipt,
+  range?: WhatsAppMediaPlaintextRange,
 ): Promise<OpenedWhatsAppMediaObject> {
+  const requestedRange = range ?? {
+    start: 0,
+    end: receipt.sizeBytes - 1,
+  };
   const authenticated = await authenticateMediaObject(
     context,
     messageId,
     kind,
     receipt,
-    true,
+    requestedRange,
   );
   if (!authenticated.plaintext) {
     throw new WhatsAppMediaObjectError(
