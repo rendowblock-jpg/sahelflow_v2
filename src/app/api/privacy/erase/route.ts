@@ -10,8 +10,7 @@ import {
   requireTrustedAction,
   trustedActorAuditIdentity,
 } from "@/lib/identity/authorization";
-import { executeShopErase } from "@/lib/privacy/lifecycle";
-import { removeWhatsAppMediaRoot } from "@/lib/whatsapp/media-object-store";
+import { executeShopEraseWithMedia } from "@/lib/privacy/erase-with-media";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +33,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  const receipt = await executeShopErase("privacy-erase");
-  await removeWhatsAppMediaRoot({ prisma: db, shop: shopContext });
+  const receipt = await executeShopEraseWithMedia("privacy-erase");
   await logAudit(
     { prisma: db, shop: shopContext },
     {
