@@ -1,3 +1,5 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 fn whatsapp_media_lifecycle_state_exists(
     scope_root: &Path,
 ) -> Result<bool, MutationAuthorityError> {
@@ -49,6 +51,191 @@ fn canonical_whatsapp_message_count(
     })
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CompletedWhatsAppArchiveObjectEvidence {
+    ciphertext_sha256: String,
+    ciphertext_bytes: u64,
+}
+
+fn lifecycle_table_exists(
+    connection: &Connection,
+    table_name: &str,
+) -> Result<bool, MutationAuthorityError> {
+    let exists: i64 = connection.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?1)",
+        [table_name],
+        |row| row.get(0),
+    )?;
+    Ok(exists != 0)
+}
+
+fn valid_media_provenance_hex(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+fn canonical_completed_whatsapp_archive_objects(
+    database_path: &Path,
+) -> Result<BTreeMap<String, CompletedWhatsAppArchiveObjectEvidence>, MutationAuthorityError> {
+    let connection = Connection::open_with_flags(
+        database_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
+            | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )?;
+    if !lifecycle_table_exists(&connection, "OutboxIntent")? {
+        return Ok(BTreeMap::new());
+    }
+    let completed_count: i64 = connection.query_row(
+        r#"SELECT COUNT(*)
+           FROM "OutboxIntent"
+           WHERE "effectType" = 'whatsapp.media.fetch.v1'
+             AND "status" = 'succeeded'
+             AND "outcomeState" = 'receipt'
+             AND "receiptJson" IS NOT NULL"#,
+        [],
+        |row| row.get(0),
+    )?;
+    if completed_count == 0 {
+        return Ok(BTreeMap::new());
+    }
+    if !lifecycle_table_exists(&connection, "AuditLog")? {
+        return Err(MutationAuthorityError::Archive(
+            "completed WhatsApp media authority has no success audit table".to_string(),
+        ));
+    }
+
+    let mut statement = connection.prepare(
+        r#"SELECT o."effectKey", a."metadata"
+           FROM "OutboxIntent" o
+           LEFT JOIN "AuditLog" a
+             ON a."action" = 'whatsapp.media.fetch_succeeded'
+            AND a."entity" = 'message'
+            AND ('whatsapp-media-fetch:' || a."entityId") = o."effectKey"
+           WHERE o."effectType" = 'whatsapp.media.fetch.v1'
+             AND o."status" = 'succeeded'
+             AND o."outcomeState" = 'receipt'
+             AND o."receiptJson" IS NOT NULL
+           ORDER BY o."effectKey" ASC"#,
+    )?;
+    let rows = statement.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, Option<String>>(1)?,
+        ))
+    })?;
+    let mut seen_effects = BTreeSet::new();
+    let mut objects = BTreeMap::new();
+    for row in rows {
+        let (effect_key, metadata) = row?;
+        if !seen_effects.insert(effect_key.clone()) {
+            return Err(MutationAuthorityError::Archive(
+                "completed WhatsApp media intent has duplicate success audit authority".to_string(),
+            ));
+        }
+        let metadata = metadata.ok_or_else(|| {
+            MutationAuthorityError::Archive(
+                "completed WhatsApp media intent is missing success audit authority".to_string(),
+            )
+        })?;
+        let decoded: serde_json::Value = serde_json::from_str(&metadata).map_err(|error| {
+            MutationAuthorityError::Archive(format!(
+                "completed WhatsApp media audit metadata is invalid: {error}"
+            ))
+        })?;
+        if decoded.get("effectKey").and_then(|value| value.as_str())
+            != Some(effect_key.as_str())
+        {
+            return Err(MutationAuthorityError::Archive(
+                "completed WhatsApp media audit effect identity does not match".to_string(),
+            ));
+        }
+        let object_id = decoded
+            .get("objectId")
+            .and_then(|value| value.as_str())
+            .ok_or_else(|| {
+                MutationAuthorityError::Archive(
+                    "completed WhatsApp media audit omitted canonical object identity".to_string(),
+                )
+            })?;
+        let ciphertext_sha256 = decoded
+            .get("objectCiphertextSha256")
+            .and_then(|value| value.as_str())
+            .ok_or_else(|| {
+                MutationAuthorityError::Archive(
+                    "completed WhatsApp media audit omitted authenticated ciphertext digest"
+                        .to_string(),
+                )
+            })?;
+        let ciphertext_bytes = decoded
+            .get("objectCiphertextBytes")
+            .and_then(|value| value.as_u64())
+            .filter(|value| *value > 0)
+            .ok_or_else(|| {
+                MutationAuthorityError::Archive(
+                    "completed WhatsApp media audit omitted authenticated ciphertext byte length"
+                        .to_string(),
+                )
+            })?;
+        if !valid_media_provenance_hex(object_id)
+            || !valid_media_provenance_hex(ciphertext_sha256)
+        {
+            return Err(MutationAuthorityError::Archive(
+                "completed WhatsApp media audit contains invalid object provenance".to_string(),
+            ));
+        }
+        if objects
+            .insert(
+                object_id.to_owned(),
+                CompletedWhatsAppArchiveObjectEvidence {
+                    ciphertext_sha256: ciphertext_sha256.to_owned(),
+                    ciphertext_bytes,
+                },
+            )
+            .is_some()
+        {
+            return Err(MutationAuthorityError::Archive(
+                "completed WhatsApp media audit contains duplicate object identity".to_string(),
+            ));
+        }
+    }
+    Ok(objects)
+}
+
+fn verify_archived_whatsapp_media_provenance(
+    archive_database: &Path,
+    archive_media_scope: &Path,
+) -> Result<(), MutationAuthorityError> {
+    let expected = canonical_completed_whatsapp_archive_objects(archive_database)?;
+    if expected.is_empty() {
+        return Ok(());
+    }
+    if !archive_media_scope.exists() {
+        return Err(MutationAuthorityError::Archive(
+            "completed WhatsApp media authority is missing its archived media scope".to_string(),
+        ));
+    }
+    for (object_id, evidence) in expected {
+        let path = archive_media_scope.join(format!("{object_id}.sfmedia"));
+        let metadata = fs::symlink_metadata(&path).map_err(|error| {
+            MutationAuthorityError::Archive(format!(
+                "completed WhatsApp media object is missing from lifecycle archive: {error}"
+            ))
+        })?;
+        if !metadata.is_file()
+            || metadata.len() != evidence.ciphertext_bytes
+            || sha256_file(&path)? != evidence.ciphertext_sha256
+        {
+            return Err(MutationAuthorityError::Archive(
+                "completed WhatsApp media object does not match GCM-verified ciphertext provenance"
+                    .to_string(),
+            ));
+        }
+    }
+    Ok(())
+}
+
 impl AcceptedMutation {
     fn archive_target(
         &mut self,
@@ -82,12 +269,6 @@ impl AcceptedMutation {
             &target.incarnation_id,
         )?;
 
-        // The runtime is stopped before mutation commit. If it was terminated
-        // while privacy erase had hidden the media tree, SQLite has now either
-        // committed the erase (zero Message rows) or rolled it back (rows
-        // remain). Reconcile that deterministic tombstone before deciding what
-        // belongs in the authenticated archive. Legacy databases without the
-        // Message table remain valid only when no media lifecycle state exists.
         reconcile_whatsapp_media_erase_tombstone(
             &live_media_scope,
             canonical_whatsapp_message_count(&live_database, &live_media_scope)?,
@@ -108,6 +289,14 @@ impl AcceptedMutation {
             if let Some(expected) = media_stats.as_ref() {
                 verify_whatsapp_media_scope(&archive_media_scope, expected)?;
             }
+            // The archive database and media scope are one authority. Before
+            // authenticating the archive manifest, prove that every succeeded
+            // media intent in the exact SQLite snapshot maps to the same
+            // ciphertext bytes that previously passed GCM verification.
+            verify_archived_whatsapp_media_provenance(
+                &archive_database,
+                &archive_media_scope,
+            )?;
             let state = ArchiveState {
                 format_version: 1,
                 archive_id: self.journal.journal.request.operation_id.clone(),
@@ -233,4 +422,74 @@ pub fn accept_mutation(
         _lifecycle_lock: lifecycle_lock,
         _migration_lock: migration_lock,
     })
+}
+
+#[cfg(test)]
+mod whatsapp_media_archive_provenance_tests {
+    use super::*;
+
+    #[test]
+    fn lifecycle_archive_rejects_missing_or_changed_completed_media() {
+        let root = std::env::temp_dir().join(format!(
+            "sahelflow-lifecycle-media-provenance-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create lifecycle provenance root");
+        let database = root.join("database.db");
+        let media_scope = root.join("whatsapp-media");
+        fs::create_dir(&media_scope).expect("create lifecycle media scope");
+        let connection = Connection::open(&database).expect("open lifecycle provenance database");
+        connection
+            .execute_batch(
+                r#"
+                CREATE TABLE "OutboxIntent" (
+                    "effectKey" TEXT PRIMARY KEY,
+                    "effectType" TEXT NOT NULL,
+                    "status" TEXT NOT NULL,
+                    "outcomeState" TEXT,
+                    "receiptJson" TEXT
+                );
+                CREATE TABLE "AuditLog" (
+                    "action" TEXT NOT NULL,
+                    "entity" TEXT,
+                    "entityId" TEXT,
+                    "metadata" TEXT
+                );
+                INSERT INTO "OutboxIntent" ("effectKey", "effectType", "status", "outcomeState", "receiptJson")
+                VALUES ('whatsapp-media-fetch:message-1', 'whatsapp.media.fetch.v1', 'succeeded', 'receipt', 'protected');
+                "#,
+            )
+            .expect("create lifecycle provenance schema");
+        assert!(verify_archived_whatsapp_media_provenance(&database, &media_scope).is_err());
+
+        let object_id = "a".repeat(64);
+        let object_path = media_scope.join(format!("{object_id}.sfmedia"));
+        fs::write(&object_path, b"authenticated-ciphertext").expect("write archived object");
+        let ciphertext_sha256 = sha256_file(&object_path).expect("hash archived object");
+        let ciphertext_bytes = fs::metadata(&object_path)
+            .expect("stat archived object")
+            .len();
+        let audit = serde_json::json!({
+            "effectKey": "whatsapp-media-fetch:message-1",
+            "objectId": object_id,
+            "objectCiphertextSha256": ciphertext_sha256,
+            "objectCiphertextBytes": ciphertext_bytes,
+        })
+        .to_string();
+        connection
+            .execute(
+                "INSERT INTO \"AuditLog\" (\"action\", \"entity\", \"entityId\", \"metadata\") VALUES ('whatsapp.media.fetch_succeeded', 'message', 'message-1', ?1)",
+                [audit],
+            )
+            .expect("write lifecycle success audit");
+        verify_archived_whatsapp_media_provenance(&database, &media_scope)
+            .expect("matching archived provenance");
+
+        fs::write(&object_path, b"changed-ciphertext").expect("tamper archived object");
+        assert!(verify_archived_whatsapp_media_provenance(&database, &media_scope).is_err());
+
+        drop(connection);
+        let _ = fs::remove_dir_all(root);
+    }
 }
