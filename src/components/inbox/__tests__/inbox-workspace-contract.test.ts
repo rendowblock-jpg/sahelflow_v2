@@ -63,6 +63,9 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(assignment).toContain('FROM "BusinessAggregateVersion"');
     expect(hook).toContain("CHAT_REFRESH_COALESCE_MS");
     expect(hook).toContain("scheduleChatsRefresh");
+    expect(hook).toContain("chatLoadGenerationRef");
+    expect(hook).toContain("isLatestChatLoad");
+    expect(hook).toContain("loadFallbackProjection(loadGeneration)");
     expect(hook).toContain("LIVE_RECOVERY_POLL_MS");
     expect(hook).toContain('sidecarStatus !== "connected"');
     expect(hook).toContain("sidecarReachable !== true");
@@ -70,9 +73,13 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(hook).toContain("const isCurrentConversation");
     expect(hook).toContain("messageSelectionGenerationRef");
     expect(hook).toContain("messageMutationGenerationRef");
+    expect(hook).toContain("inboxMessagesEqual");
+    expect(hook).toContain(
+      "activeChatRef.current?.conversationId !== conversationId",
+    );
     expect(hook).toContain("canApplyLoadedProjection");
     expect(hook).toContain(
-      "if (!background && canApplyLoadedProjection()) setMessages([])",
+      "if (!background && canApplyLoadedProjection()) replaceMessages([])",
     );
     expect(hook).toContain(
       "activeChatRef.current?.conversationId === requestedConversationId",
