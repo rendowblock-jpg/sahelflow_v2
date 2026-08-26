@@ -14,8 +14,8 @@ const RECOVERY_POLL_MS = 3_000;
 export interface NotificationCenterItem {
   id: string;
   durable: boolean;
-  type: "info";
-  category: "inbox";
+  type: "info" | "alert" | "order" | "delivery" | "stock" | "return";
+  category: "inbox" | "alert" | "order" | "delivery" | "stock" | "return";
   severity: "info" | "warning" | "critical";
   title: string;
   body: string;

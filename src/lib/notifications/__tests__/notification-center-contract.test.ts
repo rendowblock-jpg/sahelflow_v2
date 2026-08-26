@@ -102,11 +102,13 @@ describe("FRC notification center source contract", () => {
     const route = source("src/app/api/notifications/route.ts");
     const hook = source("src/hooks/use-notification-center.ts");
     const native = source("src/lib/notifications/notification-center.ts");
+    const topbar = source("src/components/layout/topbar.tsx");
 
     expect(route).toContain("listLegacyOperationalNotifications");
     expect(hook).toContain(
       "const interval = window.setInterval(() => {\n      void reload();",
     );
     expect(native).toContain("sanitizeNativePreview");
+    expect(topbar).toContain("DEFAULT_NOTIFICATION_PRESENTATION");
   });
 });

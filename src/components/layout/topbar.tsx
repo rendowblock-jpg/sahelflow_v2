@@ -56,14 +56,18 @@ interface TopbarProps {
   serverDir: "ltr" | "rtl";
 }
 
-const NOTIFICATION_PRESENTATION: Record<
+const NOTIFICATION_PRESENTATION: Partial<Record<
   NotificationCenterItem["type"],
   {
     icon: typeof Bell;
     className: string;
   }
-> = {
+>> = {
   info: { icon: Bell, className: "bg-muted text-muted-foreground" },
+};
+const DEFAULT_NOTIFICATION_PRESENTATION = {
+  icon: Bell,
+  className: "bg-muted text-muted-foreground",
 };
 
 /**
@@ -346,7 +350,8 @@ export function Topbar({
               ) : (
                 notifications.slice(0, 6).map((notification) => {
                   const presentation =
-                    NOTIFICATION_PRESENTATION[notification.type];
+                    NOTIFICATION_PRESENTATION[notification.type] ??
+                    DEFAULT_NOTIFICATION_PRESENTATION;
                   const Icon = presentation.icon;
                   const content = (
                     <>
