@@ -32,8 +32,6 @@ export interface InboxChat {
 
 export interface InboxMessage {
   id: string;
-  /** Canonical local Message.id; provider message IDs remain in `id` when needed for transport reconciliation. */
-  canonicalMessageId?: string;
   body: string;
   direction: "inbound" | "outbound" | "system";
   timestamp: number;
@@ -48,7 +46,6 @@ export interface InboxMessage {
     | "ambiguous"
     | "dead_letter";
   attachment?: IncomingMessage["attachment"];
-  mediaState?: IncomingMessage["mediaState"];
 }
 
 export interface InboxTransportState {
