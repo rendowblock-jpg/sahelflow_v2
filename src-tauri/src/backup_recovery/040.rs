@@ -48,6 +48,31 @@ fn validate_rescue(
             ));
         }
     }
+    if let Some(expected_media) = &manifest.whatsapp_media {
+        if expected_media.object_count > MAX_WHATSAPP_MEDIA_OBJECTS
+            || !valid_lower_hex_64(&expected_media.tree_sha256)
+        {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "rescue WhatsApp media evidence is malformed",
+            ));
+        }
+        let observed_media = whatsapp_media_tree_stats(
+            &rescue.join(WHATSAPP_MEDIA_ROOT_NAME),
+            &registry,
+        )?;
+        if observed_media != *expected_media {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "rescue WhatsApp media tree digest does not match",
+            ));
+        }
+    } else if rescue.join(WHATSAPP_MEDIA_ROOT_NAME).exists() {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "legacy rescue unexpectedly contains WhatsApp media state",
+        ));
+    }
     match (&manifest.brk_authority_file, &manifest.brk_authority_sha256) {
         (Some(file), Some(digest)) if file == "backup-recovery-key.current.json" => {
             if sha256_file(&rescue.join(file))? != *digest {
