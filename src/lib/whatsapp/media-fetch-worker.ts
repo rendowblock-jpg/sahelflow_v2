@@ -139,11 +139,6 @@ async function queueMediaFetch(
   );
 }
 
-/**
- * Crash-safe synthesis of media fetch intents from already-committed canonical
- * truth. ProviderIngressEvent.id is the canonical inbound Message.id, so no
- * provider URL/media key ever enters the durable media outbox payload.
- */
 export async function reconcileQueuedWhatsAppMediaFetches(
   context: ServiceContext,
   limit = 24,
@@ -422,6 +417,7 @@ async function markSucceeded(
         metadata: JSON.stringify({
           effectKey: row.effectKey,
           mediaKind: kind,
+          objectId: receipt.objectId,
           sizeBytes: receipt.sizeBytes,
         }),
       },
