@@ -6,7 +6,10 @@ import { db, shopContext } from "@/lib/db";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { projectConversationForTrustedActor } from "@/lib/identity/conversation-projection";
 import { normalizeInboxMessageDirection } from "@/lib/inbox/message-direction";
-import { openWhatsAppMessageAttachment } from "@/lib/whatsapp/message-attachments";
+import {
+  openWhatsAppMessageAttachment,
+  projectWhatsAppMessageAttachmentForContactAccess,
+} from "@/lib/whatsapp/message-attachments";
 
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
@@ -44,16 +47,22 @@ export const GET = withErrorHandler(
       actorContext,
     );
     const messages = await Promise.all(
-      projected.messages.map(async (message) => ({
-        ...message,
-        direction: normalizeInboxMessageDirection(message.direction),
-        attachment: await openWhatsAppMessageAttachment(
+      projected.messages.map(async (message) => {
+        const attachment = await openWhatsAppMessageAttachment(
           context,
           message.id,
           message.attachments,
-        ),
-        attachments: undefined,
-      })),
+        );
+        return {
+          ...message,
+          direction: normalizeInboxMessageDirection(message.direction),
+          attachment: projectWhatsAppMessageAttachmentForContactAccess(
+            attachment,
+            projected.fieldAccess.contact,
+          ),
+          attachments: undefined,
+        };
+      }),
     );
 
     return NextResponse.json({

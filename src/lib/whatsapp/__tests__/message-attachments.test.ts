@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractWhatsAppMessageAttachment,
   openWhatsAppMessageAttachmentWithKey,
+  projectWhatsAppMessageAttachmentForContactAccess,
   sealWhatsAppMessageAttachmentWithKey,
 } from "../message-attachments";
 
@@ -90,6 +91,44 @@ describe("WhatsApp protected attachment metadata", () => {
       state: "ready",
       contact: { displayName: "Client Test" },
     });
+  });
+
+  it("redacts structured contact and location values without contact authority", () => {
+    const location = extractWhatsAppMessageAttachment({
+      locationMessage: {
+        degreesLatitude: 36.7538,
+        degreesLongitude: 3.0588,
+        name: "Client address",
+        address: "Alger",
+      },
+    });
+    const contact = extractWhatsAppMessageAttachment({
+      contactMessage: {
+        displayName: "Client Test",
+        vcard: "BEGIN:VCARD\nVERSION:3.0\nFN:Client Test\nEND:VCARD",
+      },
+    });
+
+    expect(
+      projectWhatsAppMessageAttachmentForContactAccess(location, false),
+    ).toMatchObject({
+      kind: "location",
+      state: "metadata-only",
+      location: null,
+      contact: null,
+    });
+    expect(
+      projectWhatsAppMessageAttachmentForContactAccess(contact, false),
+    ).toMatchObject({
+      kind: "contact",
+      state: "metadata-only",
+      fileName: null,
+      sizeBytes: null,
+      contact: null,
+    });
+    expect(
+      projectWhatsAppMessageAttachmentForContactAccess(contact, true),
+    ).toEqual(contact);
   });
 
   it("authenticates attachment metadata to the canonical Message identity", () => {

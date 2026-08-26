@@ -223,6 +223,7 @@ export function useInboxWorkspace() {
   const draftEditGenerationRef = useRef(0);
   const draftLoadGenerationRef = useRef(0);
   const draftReadyConversationRef = useRef<string | null>(null);
+  const draftWriteQueueRef = useRef(new Map<string, Promise<boolean>>());
 
   const setReplyText = useCallback(
     (value: string | ((current: string) => string)) => {
@@ -537,18 +538,30 @@ export function useInboxWorkspace() {
   const persistDraft = useCallback(
     async (conversationId: string, body: string) => {
       if (!canReply) return false;
+      const previous =
+        draftWriteQueueRef.current.get(conversationId) ?? Promise.resolve(true);
+      const write = previous.catch(() => false).then(async () => {
+        try {
+          const response = await fetch(
+            `/api/conversations/${encodeURIComponent(conversationId)}/draft`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ body }),
+            },
+          );
+          return response.ok;
+        } catch {
+          return false;
+        }
+      });
+      draftWriteQueueRef.current.set(conversationId, write);
       try {
-        const response = await fetch(
-          `/api/conversations/${encodeURIComponent(conversationId)}/draft`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ body }),
-          },
-        );
-        return response.ok;
-      } catch {
-        return false;
+        return await write;
+      } finally {
+        if (draftWriteQueueRef.current.get(conversationId) === write) {
+          draftWriteQueueRef.current.delete(conversationId);
+        }
       }
     },
     [canReply],
@@ -727,6 +740,16 @@ export function useInboxWorkspace() {
 
   const selectChat = useCallback(
     (chat: InboxChat) => {
+      const previousChat = activeChatRef.current;
+      if (
+        previousChat &&
+        previousChat.conversationId !== chat.conversationId
+      ) {
+        void persistDraft(
+          previousChat.conversationId,
+          replyTextRef.current,
+        );
+      }
       messageSelectionGenerationRef.current += 1;
       activeChatRef.current = chat;
       pinnedDeepLinkChatRef.current = chat;
@@ -758,10 +781,14 @@ export function useInboxWorkspace() {
       void loadMessages(chat);
       void loadDraft(chat);
     },
-    [loadDraft, loadMessages, replaceMessages, setReplyText],
+    [loadDraft, loadMessages, persistDraft, replaceMessages, setReplyText],
   );
 
   const clearActiveChat = useCallback(() => {
+    const previousChat = activeChatRef.current;
+    if (previousChat) {
+      void persistDraft(previousChat.conversationId, replyTextRef.current);
+    }
     messageSelectionGenerationRef.current += 1;
     activeChatRef.current = null;
     activeTransportIdRef.current = null;
@@ -770,7 +797,7 @@ export function useInboxWorkspace() {
     setActiveChatId(null);
     replaceMessages([]);
     setReplyText("");
-  }, [replaceMessages, setReplyText]);
+  }, [persistDraft, replaceMessages, setReplyText]);
 
   useEffect(() => {
     if (!requestedConversationId) {

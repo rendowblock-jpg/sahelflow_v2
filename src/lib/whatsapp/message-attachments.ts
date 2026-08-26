@@ -76,6 +76,33 @@ export type WhatsAppMessageAttachment = z.infer<
   typeof whatsAppAttachmentSchema
 >;
 
+/**
+ * Structured contact cards and exact locations are customer-contact data, not
+ * ordinary conversation metadata. Keep the attachment kind visible to actors
+ * without contact authority, but remove every structured value that could
+ * identify or locate the customer.
+ */
+export function projectWhatsAppMessageAttachmentForContactAccess(
+  attachment: WhatsAppMessageAttachment | null,
+  contactAllowed: boolean,
+): WhatsAppMessageAttachment | null {
+  if (
+    !attachment ||
+    contactAllowed ||
+    (attachment.kind !== "contact" && attachment.kind !== "location")
+  ) {
+    return attachment;
+  }
+  return {
+    ...attachment,
+    state: attachment.state === "rejected" ? "rejected" : "metadata-only",
+    fileName: null,
+    sizeBytes: null,
+    location: null,
+    contact: null,
+  };
+}
+
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)

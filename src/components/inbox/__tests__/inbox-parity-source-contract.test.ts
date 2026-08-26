@@ -20,6 +20,11 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(route).toContain("data: { draftBody: normalized || null }");
     expect(workspace).toContain("DRAFT_SAVE_DELAY_MS");
     expect(workspace).toContain("draftReadyConversationRef");
+    expect(workspace).toContain("draftWriteQueueRef");
+    const selectChat = workspace.indexOf("const selectChat");
+    expect(
+      workspace.indexOf("void persistDraft(", selectChat),
+    ).toBeLessThan(workspace.indexOf("activeChatRef.current = chat", selectChat));
     expect(workspace.indexOf('setReplyText("");', workspace.indexOf("const sendReply")))
       .toBeGreaterThan(workspace.indexOf('fetch("/api/whatsapp/send"'));
   });
@@ -40,6 +45,9 @@ describe("WhatsApp Inbox parity source slice", () => {
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
 
     expect(route).toContain("attachments: undefined");
+    expect(route).toContain(
+      "projectWhatsAppMessageAttachmentForContactAccess",
+    );
     expect(metadata).toContain("Provider URLs, media");
     expect(metadata).not.toContain("source.directPath");
     expect(thread).toContain("https://www.openstreetmap.org/");
