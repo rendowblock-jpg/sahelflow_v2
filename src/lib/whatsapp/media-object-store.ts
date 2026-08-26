@@ -19,7 +19,7 @@ import {
   rmSync,
   writeSync,
 } from "node:fs";
-import { resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import type { ServiceContext } from "@/lib/data/service-base";
@@ -69,18 +69,33 @@ export interface WhatsAppMediaObjectReceipt {
   mediaType: string;
 }
 
+/**
+ * Business-media identity survives a legitimate replacement install. The
+ * installation ID protects local key wrapping/runtime authority, while durable
+ * seller content remains bound to workspace + shop + shop incarnation.
+ */
 function exactShopScope(context: ServiceContext): string {
   if (!context.shop) throw new Error("WhatsApp media requires exact ShopContext");
   return JSON.stringify([
     context.shop.workspaceId,
-    context.shop.installationId,
     context.shop.shopId,
     context.shop.shopIncarnationId,
   ]);
 }
 
 function dataRoot(): string {
-  return resolve(process.env.SF_DATA_DIR ?? resolve(process.cwd(), "data"));
+  const configured = process.env.SF_DATA_DIR;
+  if (configured) return resolve(configured);
+
+  const databaseUrl = process.env.DATABASE_URL;
+  if (databaseUrl?.startsWith("file:")) {
+    const databasePath = resolve(databaseUrl.slice("file:".length));
+    const databaseDirectory = dirname(databasePath);
+    if (basename(databaseDirectory).toLowerCase() === "shops") {
+      return dirname(databaseDirectory);
+    }
+  }
+  return resolve(process.cwd(), "data");
 }
 
 function scopeDirectory(context: ServiceContext): string {

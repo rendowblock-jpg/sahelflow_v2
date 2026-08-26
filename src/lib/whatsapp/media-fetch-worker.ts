@@ -134,7 +134,7 @@ async function queueMediaFetch(
         },
       ],
       projectionInvalidations: [`inbox.message:${messageId}`],
-    })),
+    }),
   );
 }
 
