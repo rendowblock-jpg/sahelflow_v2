@@ -123,7 +123,8 @@ describe("WhatsApp encrypted media objects", () => {
       readdirSync(whatsAppMediaRoot(context))[0]!,
     );
     const tampered = readFileSync(file);
-    tampered[tampered.length - 1] ^= 0x01;
+    const lastIndex = tampered.length - 1;
+    tampered[lastIndex] = tampered[lastIndex]! ^ 0x01;
     writeFileSync(file, tampered);
 
     await expect(
