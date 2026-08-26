@@ -34,6 +34,10 @@ export interface IncomingMessage {
   effectState?: "queued" | "processing" | "retrying" | "succeeded" | "ambiguous" | "dead_letter";
   /** Protected canonical attachment projection supplied by the app, never raw provider paths. */
   attachment?: import("./message-attachments").WhatsAppMessageAttachment | null;
+  /** Canonical local Message.id. Provider transport IDs remain in key.id. */
+  canonicalMessageId?: string;
+  /** Local media-fetch projection; never supplied by the provider. */
+  mediaState?: "pending" | "ready" | "failed";
 }
 
 export interface SidecarChat {
