@@ -84,7 +84,7 @@ The binding interpretation is:
 
 ### FRC execution packages
 
-1. **FRC-1 — WhatsApp installed/provider proof (#306).** Merge and, if separately authorized, sign the dynamic-loopback live-push repair; update in place, prove no-refresh new inbound plus persistence/reopen, then complete representative EN/AR Inbox, governed status/reviewed extraction and logout evidence.
+1. **FRC-1 — WhatsApp installed/provider proof (#306).** Retain PR #315 as source-merged repair and preserve the Internal.27 real-phone evidence. Do not open a successor yet; after #316/#317 and FRC-2–5 source work, separately authorize one combined signed candidate and prove no-refresh new inbound plus persistence/reopen, representative EN/AR Inbox, governed status/reviewed extraction and logout.
 2. **FRC-2 — AI/tools/order extraction.** Freeze a tool/corpus matrix; test seller-owned Gemini setup, every model-exposed tool, proposal/permission/current-state checks, stop/retry/quota/offline/malformed behavior, privacy minimization and AR/FR/EN/Darija/mixed extraction. Core work and manual fallback remain functional without AI.
 3. **FRC-3 — complete-product assurance.** Map the Product Stable capability table, Experience page-completion contract and 27 Required journeys to source, automated, signed/installed, Founder and external evidence. Repair only demonstrated shared roots in one bounded batch.
 4. **FRC-4 — commerce live certification.** Use official Shopify/YouCan development environments and a controlled WooCommerce store. Prove authentication, webhook signatures, duplicates/order, pagination, reconciliation, conflicts, rate limits, revoked credentials, outage and recovery.

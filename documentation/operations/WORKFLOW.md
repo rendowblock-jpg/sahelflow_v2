@@ -239,16 +239,26 @@ Do not merge known applicable P0/P1. A release/package/security P2 may also be b
 
 ## 10. First Revenue Certification workflow
 
-Issue #221 is closed/completed after Founder acceptance of installed Internal.24. FD-045 now owns the First Revenue Certification sequence.
+Issue #221 is closed/completed after Founder acceptance of installed
+Internal.24. FD-045 owns First Revenue Certification integrity and evidence;
+FD-048 owns the current source-first execution order.
 
 ### FRC-1 — WhatsApp installed/provider evidence
 
-Issue #306 owns the current observable gate on signed Internal.27:
+Issue #306 retains the WhatsApp installed/provider gate. Its remaining rows are
+deferred to the one FD-048 combined successor rather than executed as the next
+package:
 
 1. retain the installed Internal.27 QR/link/reopen, exactly-one LID reply and durable new-number inbound evidence;
-2. repair the demonstrated loopback WebSocket CSP root without weakening containment;
-3. if separately authorized, sign and install one exact successor while preserving AppData/registry/install identity/keys/shop databases;
-4. prove no-refresh new inbound → durable persistence → normal reopen → representative EN/AR Inbox → governed status/reviewed extraction → logout;
+2. retain PR #315 as the protected source repair for the demonstrated loopback
+   root, polling/retry fallback and receipt/identity reconciliation; do not
+   reopen it without direct regression evidence;
+3. complete #316, #317 and the planned FRC-2–5 source frontier before opening
+   separate authority for one exact signed successor;
+4. on that successor, preserve AppData/registry/install identity/keys/shop
+   databases and prove no-refresh new inbound → durable persistence → normal
+   reopen → representative EN/AR Inbox → governed status/reviewed extraction
+   → logout;
 5. retain only redacted provider/message identifiers, timestamps and non-sensitive screenshots/observations;
 6. record the exact failure stage if any;
 7. open one bounded repair only for a reproduced root and affected siblings.
