@@ -250,9 +250,14 @@ policy-, abuse- and live-certified.
 
 ### Notification Center and attention routing
 
-- one durable notification per canonical event with deterministic deduplication;
-- WhatsApp inbound attention created atomically with the canonical message or
-  through an explicit recoverable projection marker;
+- one durable actor-visible notification per canonical event, notification kind,
+  shop and eligible recipient actor, with that full identity forming the
+  deterministic deduplication key;
+- a canonical event may project to multiple eligible recipients, but mutable
+  read/archive state is never shared between actors;
+- WhatsApp inbound attention fan-out is created atomically with the canonical
+  message or through an explicit recoverable projection marker whose
+  per-recipient rows are idempotent;
 - exact shop scope, trusted-actor permission filtering and per-actor read state;
 - unread count, mark one/all read, dismiss/archive with recovery, category and
   severity filters, pagination, retention and useful loading/empty/error states;

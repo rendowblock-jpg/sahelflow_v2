@@ -423,16 +423,20 @@ outbox intent in one database transaction.
 
 - A notification is a durable actor/shop-scoped projection of a canonical
   event, not a transient dropdown row or an overloaded automation receipt.
-- Every notification has a deterministic event/dedupe key, category, severity,
-  target/deep-link contract, retention state and privacy classification.
-- Canonical event persistence and its notification marker commit atomically;
-  asynchronous delivery can retry from that marker without duplicating the
-  actor-visible notification.
+- Every actor-visible notification has a deterministic identity comprising the
+  canonical event, notification kind, shop and recipient actor, plus category,
+  severity, target/deep-link contract, retention state and privacy
+  classification. One event can therefore notify multiple eligible actors
+  without sharing mutable lifecycle state.
+- Canonical event persistence and its notification fan-out marker commit
+  atomically; per-recipient projection and asynchronous delivery can retry from
+  that marker without duplicating any recipient's actor-visible notification.
 - Read, unread, archived/dismissed and preference state is per trusted actor.
   Permission and field filtering is re-evaluated on query and deep-link open.
 - In-app Bell, native Windows delivery and future remote push are delivery
-  channels over one canonical notification record. Channel failure never loses
-  the Notification Center record or fabricates canonical success.
+  channels over the recipient-scoped durable notification record. Channel
+  failure never loses the Notification Center record or fabricates canonical
+  success.
 - Native/lock-screen payloads are generic by default. Preview opt-in, quiet
   hours, mute, action handling and revocation remain bounded by permission and
   privacy policy.
@@ -841,7 +845,7 @@ authority.
 | INV-041 | Founder control-plane access cannot expose seller operational plaintext or permanent signing material. |
 | INV-042 | Shared connected-service entitlements cannot become public before measured unit economics, quotas and alarms exist. |
 | INV-043 | The desktop executes the release-verified MSI-installed Node.js and standalone runtime from the protected installation; user-writable runtime copies and developer-PATH runtimes are not executable authority. |
-| INV-044 | Every operational notification is deduplicated from a canonical event, scoped and permission-filtered per shop/actor, and remains recoverable when any delivery channel fails. |
+| INV-044 | Every operational notification is deduplicated by canonical event, notification kind, shop and recipient actor; recipient lifecycle state remains isolated and the projection remains recoverable when any delivery channel fails. |
 
 Every invariant maps to automated tests, packaged/provider/device/recovery evidence and observable recovery in the implementation wave that introduces it.
 
