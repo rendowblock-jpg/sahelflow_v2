@@ -173,13 +173,19 @@ function sniffMediaType(
   return "text/plain";
 }
 
+/**
+ * Authenticate exact object bytes. Read paths may retain the plaintext chunks;
+ * provenance-only paths deliberately wipe each authenticated chunk immediately
+ * so media-fetch completion never needs a second full plaintext copy in memory.
+ */
 function openExactObjectBytes(
   bytes: Buffer,
   objectId: string,
   kind: WhatsAppBinaryMediaKind,
   receipt: WhatsAppMediaObjectReceipt,
   objectKey: Buffer,
-): Buffer {
+  retainPlaintext: boolean,
+): Buffer | null {
   const limit = MEDIA_LIMITS[kind];
   if (
     receipt.sizeBytes <= 0 ||
@@ -209,7 +215,7 @@ function openExactObjectBytes(
   let total = 0;
   let prefix = Buffer.alloc(0);
   const plaintextHash = createHash("sha256");
-  const chunks: Buffer[] = [];
+  const retained: Buffer[] = [];
   try {
     while (offset < bytes.length) {
       if (offset + 32 > bytes.length) {
@@ -266,8 +272,9 @@ function openExactObjectBytes(
         prefix = nextPrefix;
       }
       plaintextHash.update(plaintext);
-      chunks.push(plaintext);
-      total += plaintext.length;
+      if (retainPlaintext) retained.push(plaintext);
+      else plaintext.fill(0);
+      total += plaintextBytes;
       index += 1;
       offset = ciphertextEnd;
     }
@@ -286,12 +293,13 @@ function openExactObjectBytes(
         "MEDIA_OBJECT_CORRUPT",
       );
     }
-    const opened = Buffer.concat(chunks, total);
-    for (const chunk of chunks) chunk.fill(0);
-    chunks.length = 0;
+    if (!retainPlaintext) return null;
+    const opened = Buffer.concat(retained, total);
+    for (const chunk of retained) chunk.fill(0);
+    retained.length = 0;
     return opened;
   } catch (error) {
-    for (const chunk of chunks) chunk.fill(0);
+    for (const chunk of retained) chunk.fill(0);
     throw error;
   } finally {
     prefix.fill(0);
@@ -305,12 +313,13 @@ function ciphertextProvenance(bytes: Buffer): WhatsAppMediaObjectProvenance {
   };
 }
 
-async function openAuthenticatedMediaObject(
+async function authenticateMediaObject(
   context: ServiceContext,
   messageId: string,
   kind: WhatsAppBinaryMediaKind,
   receipt: WhatsAppMediaObjectReceipt,
-): Promise<{ plaintext: Buffer; provenance: WhatsAppMediaObjectProvenance }> {
+  retainPlaintext: boolean,
+): Promise<{ plaintext: Buffer | null; provenance: WhatsAppMediaObjectProvenance }> {
   const envelopeKey = await getBusinessEnvelopeKey(context);
   try {
     const expectedId = deriveObjectId(context, messageId, envelopeKey);
@@ -331,6 +340,7 @@ async function openAuthenticatedMediaObject(
         kind,
         receipt,
         objectKey,
+        retainPlaintext,
       );
       return {
         plaintext,
@@ -357,17 +367,14 @@ export async function verifyWhatsAppMediaObjectWithProvenance(
   kind: WhatsAppBinaryMediaKind,
   receipt: WhatsAppMediaObjectReceipt,
 ): Promise<WhatsAppMediaObjectProvenance> {
-  const opened = await openAuthenticatedMediaObject(
+  const authenticated = await authenticateMediaObject(
     context,
     messageId,
     kind,
     receipt,
+    false,
   );
-  try {
-    return opened.provenance;
-  } finally {
-    opened.plaintext.fill(0);
-  }
+  return authenticated.provenance;
 }
 
 /**
@@ -384,15 +391,22 @@ export async function readWhatsAppMediaObject(
   kind: WhatsAppBinaryMediaKind,
   receipt: WhatsAppMediaObjectReceipt,
 ): Promise<OpenedWhatsAppMediaObject> {
-  const opened = await openAuthenticatedMediaObject(
+  const authenticated = await authenticateMediaObject(
     context,
     messageId,
     kind,
     receipt,
+    true,
   );
+  if (!authenticated.plaintext) {
+    throw new WhatsAppMediaObjectError(
+      "Authenticated media read did not retain plaintext",
+      "MEDIA_OBJECT_CORRUPT",
+    );
+  }
   return {
-    bytes: opened.plaintext,
+    bytes: authenticated.plaintext,
     mediaType: receipt.mediaType,
-    provenance: opened.provenance,
+    provenance: authenticated.provenance,
   };
 }
