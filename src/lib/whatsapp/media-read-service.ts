@@ -7,6 +7,10 @@ import { openBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { SahelFlowError } from "@/types/errors";
 import {
+  whatsAppMediaEraseEpoch,
+  whatsAppMediaErasePending,
+} from "./media-erase-lifecycle";
+import {
   openWhatsAppMessageAttachment,
   type WhatsAppMessageAttachment,
 } from "./message-attachments";
@@ -15,6 +19,7 @@ import {
   type WhatsAppBinaryMediaKind,
   WhatsAppMediaObjectError,
   type WhatsAppMediaObjectReceipt,
+  whatsAppMediaRoot,
 } from "./media-object-store";
 import {
   readWhatsAppMediaObject,
@@ -171,6 +176,30 @@ function assertAuditProvenance(
   }
 }
 
+function readEpoch(scopeRoot: string): number {
+  try {
+    if (whatsAppMediaErasePending(scopeRoot)) throw unavailable();
+    return whatsAppMediaEraseEpoch(scopeRoot);
+  } catch (error) {
+    if (error instanceof SahelFlowError) throw error;
+    throw integrityFailure();
+  }
+}
+
+function assertSameReadableEpoch(scopeRoot: string, expectedEpoch: number): void {
+  try {
+    if (
+      whatsAppMediaEraseEpoch(scopeRoot) !== expectedEpoch ||
+      whatsAppMediaErasePending(scopeRoot)
+    ) {
+      throw unavailable();
+    }
+  } catch (error) {
+    if (error instanceof SahelFlowError) throw error;
+    throw integrityFailure();
+  }
+}
+
 /**
  * Resolve one seller-visible media read entirely from canonical local truth.
  * Browser callers provide only a canonical Message ID; provider retrieval
@@ -180,6 +209,9 @@ export async function openInboxWhatsAppMedia(
   context: ServiceContext,
   messageId: string,
 ): Promise<OpenedInboxWhatsAppMedia> {
+  const scopeRoot = whatsAppMediaRoot(context);
+  const eraseEpoch = readEpoch(scopeRoot);
+
   const message = await context.prisma.message.findUnique({
     where: { id: messageId },
     select: {
@@ -191,11 +223,16 @@ export async function openInboxWhatsAppMedia(
   });
   if (!message || message.direction !== "inbound") throw unavailable();
 
-  const attachment = await openWhatsAppMessageAttachment(
-    context,
-    message.id,
-    message.attachments,
-  );
+  let attachment: WhatsAppMessageAttachment | null;
+  try {
+    attachment = await openWhatsAppMessageAttachment(
+      context,
+      message.id,
+      message.attachments,
+    );
+  } catch {
+    throw integrityFailure();
+  }
   const kind = binaryKind(attachment);
   if (
     !attachment ||
@@ -276,6 +313,17 @@ export async function openInboxWhatsAppMedia(
     ) {
       throw integrityFailure();
     }
+
+    // A destructive erase can stage, commit and remove its tombstone while this
+    // request is suspended in any await above. Re-check both canonical Message
+    // truth and the same-process erase generation before exposing plaintext.
+    const stillCanonical = await context.prisma.message.findUnique({
+      where: { id: message.id },
+      select: { id: true },
+    });
+    if (!stillCanonical) throw unavailable();
+    assertSameReadableEpoch(scopeRoot, eraseEpoch);
+
     return {
       bytes: opened.bytes,
       mediaType: opened.mediaType,
