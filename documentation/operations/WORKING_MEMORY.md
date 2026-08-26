@@ -1,34 +1,33 @@
 # SahelFlow — Working Memory
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
-> **Last updated:** 2026-08-25
+> **Last updated:** 2026-08-26
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
 ## Current truth
 
-- Protected `main` at handoff: `4d0922346fcc5ab8ba09f04fbcd288c70f66c777`; live GitHub wins if moved.
-- Latest signed/published and Founder-installed checkpoint: **Internal.26**.
-- App `1.0.0-internal.26`; MSI `1.0.0.26`; authority **FD-046**; mode `founder-offline-only`.
-- Release PR #311; reviewed head `1778b01699ee13f8b4059dd214704684635d0300`.
+- Protected `main` at handoff: `4e395b0149da447daab37ad2d01be5c8bf1d6bce`; live GitHub wins if moved.
+- Latest signed/published checkpoint: **Internal.27**. Latest Founder-installed checkpoint remains **Internal.26** until the normal updater completes.
+- App `1.0.0-internal.27`; MSI `1.0.0.27`; authority **FD-047**; mode `founder-offline-only`.
+- Product repair PR #312; release PR #313; reviewed release head `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`.
 - All Required PR checks succeeded; exact-head Codex review found no major issue; unresolved threads zero.
-- Dispatcher `32897302955`; signed updater/publication `32897318539` — success.
-- MSI digest `sha256:c35f3dd5c681f063b6fccf9fd485e7cdf4cae32e7712a2cffe320c8083c98da3`.
+- Dispatcher `32913436865`; signed updater/publication `32913445791` — success.
+- MSI digest `sha256:64865032b4a59b8cf4f36d1e6b23e6251e817044c90f78ee3bc673822b803756`.
 - #221 closed/completed after Founder acceptance of installed Internal.24.
 - #226 closed/completed; retain its budgets.
 - #306 open — real-phone WhatsApp installed/provider certification.
 - #230 open/reopened P1 — customer-online trial/network blocker; no owned production domain.
 - No open PR existed before the current bounded repair branch.
 - Current decision: **FD-045 First Revenue Certification**.
-- Exact next outcome: **repair the demonstrated existing-conversation WhatsApp LID reply gap, publish one exact signed successor, then resume FRC-1 / #306**.
+- Exact next outcome: **update Internal.27 in place, reply exactly once in the retained real WhatsApp LID conversation, then complete FRC-1 / #306**.
 
-## What Internal.26 adds
+## What Internal.27 adds
 
-- #309 — authenticated sidecar inbound and delivery-status callbacks without weakening browser/runtime/shop/license/demo authority.
-- #310 — accessible resizable Inbox conversation pane.
-- #311 — Internal.26 / FD-046 release authority only.
+- #312 — provenance-bound individual WhatsApp `numeric@lid` replies, Arabic empty-composer RTL with automatic entered-content direction, direct governed status control and reviewed AI order extraction from the thread header.
+- #313 — Internal.27 / FD-047 release authority only.
 
-Internal.26 retains the complete prior product/security line, including #300/#304/#305/#307. Do not restart #273–#295 programs without direct regression evidence.
+Internal.27 retains the complete prior product/security line, including #309/#310/#311 and #300/#304/#305/#307. Do not restart #273–#295 programs without direct regression evidence.
 
 ## FD-045 First Revenue Certification
 
@@ -74,32 +73,25 @@ Binding rules:
   Open/Pending/Resolved/Snoozed control, and a professional AI-order action
   opens the existing candidate preview plus reviewed `MessageExtraction` flow.
   Extraction never silently creates a canonical order.
-- Active isolated branch: `codex/frc1-whatsapp-lid-reply`, based on
-  `main@4d0922346fcc5ab8ba09f04fbcd288c70f66c777`. It is not yet merged, signed,
-  installed or live-provider accepted.
+- The repair is merged through PR #312 and signed/published through PR #313 on
+  `main@4e395b0149da447daab37ad2d01be5c8bf1d6bce`. It is not yet
+  Founder-installed or live-provider accepted.
 - Do not reconnect, logout, reset AppData or clear protected auth before the
   installed successor completes outbound, new inbound and reopen evidence.
 
 ## Exact next-session order — FRC-1 WhatsApp
 
 1. Re-resolve protected `main`, open PRs, #306 and #230.
-2. Complete the existing-conversation `@lid` normalization/authority repair and
-   exact tests plus the Arabic empty-composer and governed thread-header actions;
-   do not broaden the provider boundary to groups, broadcasts or arbitrary JIDs.
-3. Freeze one exact repair head, open one PR and run selected Level 1/2/3 gates
-   in GitHub Actions; perform adversarial review and resolve every finding.
-4. Merge with expected-head
-   protection; verify protected source/tree.
-5. Establish the next version/FD only through a separate reviewed
-   release-authority envelope; do not rename Internal.26 evidence.
-6. Build/sign/publish only from exact protected `main`, update the Founder
-   installation once in place, and verify exact version plus normal reopen.
-7. Reply once in the same real LID conversation and prove durable/provider
+2. Confirm Internal.27 / FD-047 remains the exact latest signed release and
+   update the Founder installation once in place through the normal updater.
+3. Verify app `1.0.0-internal.27`, MSI `1.0.0.27`, preserved installation/shop
+   state and normal close/reopen.
+4. Reply once in the same real LID conversation and prove durable/provider
    receipt plus delivery state. Do not repeat an ambiguous effect.
-8. Complete a new inbound,
+5. Complete a new inbound,
     EN and Arabic/RTL presentation, normal logout/session retirement and safe
     message-to-reviewed-order-draft observation.
-9. Record redacted pass/fail under #306. Close only evidence actually observed.
+6. Record redacted pass/fail under #306. Close only evidence actually observed.
 
 ## Following FRC packages
 
@@ -153,13 +145,13 @@ Never weaken:
 - No branch-only signed release or hidden product change in release authority.
 - No live-provider claim from source, mock, wrapper or test count.
 - No credential in chat/source/test/issues/evidence.
-- No customer-online/Beta/Stable claim from Founder-offline Internal.26.
+- No customer-online/Beta/Stable claim from Founder-offline Internal.27.
 - No first customer as an undisclosed experiment.
 - Use selected Level 1/2/3 gates and expected-head merge for any repair.
 
 ## Hard non-claims
 
-- Internal.26 real-phone WhatsApp certification is partially demonstrated but remains open on the LID reply and remaining #306 rows.
+- Internal.27 real-phone WhatsApp certification remains open until the installed LID reply and remaining #306 rows pass.
 - Complete AI/tools/order-extraction certification is open.
 - Public commerce/courier live certification is not established by adapter source alone.
 - Customer-online trial readiness remains open under #230.
