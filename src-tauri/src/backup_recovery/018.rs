@@ -127,17 +127,28 @@ pub(crate) fn create_backup(
         recovery_kit_root(document_dir),
     )?;
     backup_create_stage(BackupCreateStage::Preflight, remove_stale_staging(&root))?;
-    let estimated_plaintext = backup_create_stage(
+    let estimated_database_plaintext = backup_create_stage(
         BackupCreateStage::Preflight,
         registry.shops.iter().try_fold(
             fs::metadata(app_data_dir.join(REGISTRY_FILE))?.len(),
             |total, shop| {
-                Ok::<u64, IoError>(total.saturating_add(
-                    fs::metadata(app_data_dir.join("shops").join(&shop.database_file))?.len(),
-                ))
+                total
+                    .checked_add(
+                        fs::metadata(app_data_dir.join("shops").join(&shop.database_file))?.len(),
+                    )
+                    .ok_or_else(|| {
+                        IoError::new(ErrorKind::InvalidData, "backup source size overflowed")
+                    })
             },
         ),
     )?;
+    let estimated_media_plaintext = backup_create_stage(
+        BackupCreateStage::Preflight,
+        estimate_whatsapp_media_pack_plaintext_bytes(app_data_dir, &registry),
+    )?;
+    let estimated_plaintext = estimated_database_plaintext
+        .checked_add(estimated_media_plaintext)
+        .ok_or_else(|| IoError::new(ErrorKind::InvalidData, "backup source size overflowed"))?;
     let required = estimated_plaintext
         .saturating_mul(2)
         .saturating_add(RESTORE_RESERVE_BYTES);
@@ -170,7 +181,7 @@ pub(crate) fn create_backup(
     )?;
 
     let result = (|| -> Result<BackupSummary, IoError> {
-        let mut objects = Vec::with_capacity(registry.shops.len() + 1);
+        let mut objects = Vec::with_capacity(registry.shops.len() + 2);
         let mut shop_keys = BTreeMap::new();
         let registry_source = app_data_dir.join(REGISTRY_FILE);
         let registry_object = staging.join(OBJECTS_DIRECTORY).join("registry.sfo");
@@ -247,6 +258,37 @@ pub(crate) fn create_backup(
             });
             backup_create_stage(BackupCreateStage::Commit, fs::remove_file(&snapshot))?;
         }
+
+        let media_pack = snapshot_root.join("whatsapp-media.pack");
+        let has_whatsapp_media = backup_create_stage(
+            BackupCreateStage::ObjectWrite,
+            create_whatsapp_media_pack(app_data_dir, &registry, &media_pack),
+        )?;
+        if has_whatsapp_media {
+            let media_object = staging.join(WHATSAPP_MEDIA_BACKUP_OBJECT_FILE);
+            let stats = backup_create_stage(
+                BackupCreateStage::ObjectWrite,
+                encrypt_object_file(
+                    &media_pack,
+                    &media_object,
+                    dek.as_array(),
+                    &backup_id,
+                    WHATSAPP_MEDIA_BACKUP_OBJECT_NAME,
+                ),
+            )?;
+            objects.push(BackupObject {
+                name: WHATSAPP_MEDIA_BACKUP_OBJECT_NAME.to_owned(),
+                kind: WHATSAPP_MEDIA_BACKUP_OBJECT_KIND.to_owned(),
+                shop_id: None,
+                file: WHATSAPP_MEDIA_BACKUP_OBJECT_FILE.to_owned(),
+                plaintext_sha256: stats.plaintext_sha256,
+                ciphertext_sha256: stats.ciphertext_sha256,
+                plaintext_bytes: stats.plaintext_bytes,
+                encrypted_bytes: stats.encrypted_bytes,
+                chunk_count: stats.chunk_count,
+            });
+            backup_create_stage(BackupCreateStage::Commit, fs::remove_file(&media_pack))?;
+        }
         backup_create_stage(BackupCreateStage::Commit, fs::remove_dir(&snapshot_root))?;
         if objects.len() > MAX_BACKUP_OBJECTS {
             return Err(IoError::new(
@@ -273,7 +315,11 @@ pub(crate) fn create_backup(
             schema_epoch: 1,
             migration_set_sha256: authority.migration_set_sha256.clone(),
             registry: registry.clone(),
-            recovery_set: canonical_recovery_set(),
+            recovery_set: if has_whatsapp_media {
+                canonical_recovery_set()
+            } else {
+                legacy_recovery_set()
+            },
             objects,
             shop_keys,
         };
