@@ -113,11 +113,6 @@ fn update_media_generation_field(digest: &mut Sha256, value: &str) {
     digest.update(value.as_bytes());
 }
 
-/// Hash only canonical database state that can change the meaning of the
-/// external WhatsApp media tree. This lets unrelated order/accounting writes
-/// continue while a backup is captured, but refuses to certify a database/media
-/// pair if a media-bearing Message or media-fetch receipt changed between the
-/// SQLite snapshot and filesystem pack.
 fn whatsapp_media_database_generation(database_path: &Path) -> Result<String, IoError> {
     let connection = Connection::open_with_flags(
         database_path,
@@ -199,6 +194,89 @@ fn whatsapp_media_database_generation(database_path: &Path) -> Result<String, Io
     Ok(hex_encode(&digest.finalize()))
 }
 
+fn canonical_completed_media_object_ids(database_path: &Path) -> Result<BTreeSet<String>, IoError> {
+    let connection = Connection::open_with_flags(
+        database_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
+            | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|error| media_generation_sql_error("failed to open completed-media database", error))?;
+    let mut statement = connection
+        .prepare(
+            r#"SELECT o."effectKey", a."metadata"
+               FROM "OutboxIntent" o
+               LEFT JOIN "AuditLog" a
+                 ON a."action" = 'whatsapp.media.fetch_succeeded'
+                AND a."entity" = 'message'
+                AND ('whatsapp-media-fetch:' || a."entityId") = o."effectKey"
+               WHERE o."effectType" = 'whatsapp.media.fetch.v1'
+                 AND o."status" = 'succeeded'
+                 AND o."outcomeState" = 'receipt'
+                 AND o."receiptJson" IS NOT NULL
+               ORDER BY o."effectKey" ASC"#,
+        )
+        .map_err(|error| {
+            media_generation_sql_error("failed to prepare completed WhatsApp media scan", error)
+        })?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, Option<String>>(1)?,
+            ))
+        })
+        .map_err(|error| {
+            media_generation_sql_error("failed to scan completed WhatsApp media", error)
+        })?;
+    let mut seen_effects = BTreeSet::new();
+    let mut object_ids = BTreeSet::new();
+    for row in rows {
+        let (effect_key, metadata) = row.map_err(|error| {
+            media_generation_sql_error("failed to read completed WhatsApp media row", error)
+        })?;
+        if !seen_effects.insert(effect_key.clone()) {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "completed WhatsApp media intent has duplicate success audit authority",
+            ));
+        }
+        let metadata = metadata.ok_or_else(|| {
+            IoError::new(
+                ErrorKind::InvalidData,
+                "completed WhatsApp media intent is missing success audit authority",
+            )
+        })?;
+        let decoded: serde_json::Value = serde_json::from_str(&metadata).map_err(|error| {
+            IoError::new(
+                ErrorKind::InvalidData,
+                format!("completed WhatsApp media audit metadata is invalid: {error}"),
+            )
+        })?;
+        if decoded.get("effectKey").and_then(|value| value.as_str()) != Some(effect_key.as_str()) {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "completed WhatsApp media audit effect identity does not match",
+            ));
+        }
+        let object_id = decoded
+            .get("objectId")
+            .and_then(|value| value.as_str())
+            .ok_or_else(|| {
+                IoError::new(
+                    ErrorKind::InvalidData,
+                    "completed WhatsApp media audit omitted canonical object identity",
+                )
+            })?;
+        if !valid_lower_hex_64(object_id) || !object_ids.insert(object_id.to_owned()) {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "completed WhatsApp media audit contains invalid or duplicate object identity",
+            ));
+        }
+    }
+    Ok(object_ids)
+}
+
 fn verify_whatsapp_media_database_generations(
     app_data_dir: &Path,
     registry: &ShopRegistry,
@@ -238,15 +316,46 @@ fn verify_whatsapp_media_filesystem_generation(
     registry: &ShopRegistry,
     captured: Option<&WhatsAppMediaTreeStats>,
 ) -> Result<(), IoError> {
-    let live = whatsapp_media_tree_stats(&whatsapp_media_root(app_data_dir), registry)?;
+    let root = whatsapp_media_root(app_data_dir);
+    let entries = whatsapp_media_tree_entries(&root, registry)?;
+    let live = whatsapp_media_tree_stats(&root, registry)?;
     match captured {
-        Some(expected) if &live == expected => Ok(()),
-        None if live.object_count == 0 => Ok(()),
-        _ => Err(IoError::new(
-            ErrorKind::InvalidData,
-            "WhatsApp media tree changed while backup generation was captured",
-        )),
+        Some(expected) if &live == expected => {}
+        None if live.object_count == 0 => {}
+        _ => {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "WhatsApp media tree changed while backup generation was captured",
+            ))
+        }
     }
+
+    let available = entries
+        .into_iter()
+        .map(|entry| (entry.scope, entry.object_id))
+        .collect::<BTreeSet<_>>();
+    for shop in &registry.shops {
+        let scope = whatsapp_media_scope_hash(
+            &registry.workspace_id,
+            &shop.id,
+            &shop.incarnation_id,
+        )?;
+        let expected = canonical_completed_media_object_ids(
+            &app_data_dir.join("shops").join(&shop.database_file),
+        )?;
+        for object_id in expected {
+            if !available.contains(&(scope.clone(), object_id)) {
+                return Err(IoError::new(
+                    ErrorKind::InvalidData,
+                    format!(
+                        "shop {} has completed WhatsApp media authority without its authenticated object",
+                        shop.id
+                    ),
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn create_backup(
@@ -460,11 +569,6 @@ pub(crate) fn create_backup(
             backup_create_stage(BackupCreateStage::Commit, fs::remove_file(&media_pack))?;
         }
 
-        // A backup is one database+media generation, not two individually valid
-        // captures. Compare the media-relevant canonical state from the exact
-        // SQLite snapshots against live state after the pack is complete, then
-        // bind that to the authenticated live media-tree digest. Any mismatch
-        // aborts before a manifest/descrip­tor can certify the staging directory.
         backup_create_stage(
             BackupCreateStage::ShopSnapshot,
             verify_whatsapp_media_database_generations(
@@ -747,6 +851,59 @@ mod whatsapp_media_backup_generation_tests {
         let with_receipt =
             whatsapp_media_database_generation(&database).expect("receipt generation");
         assert_ne!(with_message, with_receipt);
+
+        drop(connection);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn completed_media_requires_audited_object_identity() {
+        let root = std::env::temp_dir().join(format!(
+            "sahelflow-completed-media-{}-{}",
+            std::process::id(),
+            random_hex(4).expect("random test suffix")
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create completed-media test root");
+        let database = root.join("shop.db");
+        let connection = Connection::open(&database).expect("open completed-media database");
+        connection
+            .execute_batch(
+                r#"
+                CREATE TABLE "OutboxIntent" (
+                    "effectKey" TEXT PRIMARY KEY,
+                    "effectType" TEXT NOT NULL,
+                    "status" TEXT NOT NULL,
+                    "outcomeState" TEXT,
+                    "receiptJson" TEXT
+                );
+                CREATE TABLE "AuditLog" (
+                    "action" TEXT NOT NULL,
+                    "entity" TEXT,
+                    "entityId" TEXT,
+                    "metadata" TEXT
+                );
+                INSERT INTO "OutboxIntent" ("effectKey", "effectType", "status", "outcomeState", "receiptJson")
+                VALUES ('whatsapp-media-fetch:message-1', 'whatsapp.media.fetch.v1', 'succeeded', 'receipt', 'protected');
+                "#,
+            )
+            .expect("create completed-media schema");
+        assert!(canonical_completed_media_object_ids(&database).is_err());
+
+        let object_id = "a".repeat(64);
+        connection
+            .execute(
+                "INSERT INTO \"AuditLog\" (\"action\", \"entity\", \"entityId\", \"metadata\") VALUES ('whatsapp.media.fetch_succeeded', 'message', 'message-1', ?1)",
+                [serde_json::json!({
+                    "effectKey": "whatsapp-media-fetch:message-1",
+                    "objectId": object_id,
+                })
+                .to_string()],
+            )
+            .expect("write completed-media audit");
+        let observed = canonical_completed_media_object_ids(&database)
+            .expect("completed media object identities");
+        assert_eq!(observed, BTreeSet::from(["a".repeat(64)]));
 
         drop(connection);
         let _ = fs::remove_dir_all(root);
