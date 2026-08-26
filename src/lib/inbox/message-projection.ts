@@ -26,10 +26,14 @@ function resolveProjectedDeliveryStatus(
   live: InboxMessage["deliveryStatus"],
 ): InboxMessage["deliveryStatus"] {
   // Failure is a terminal outbox outcome, not a lower delivery receipt. A
-  // live failure must survive an older request snapshot so the retry action
-  // remains visible. Conversely, a live retry/success supersedes a persisted
-  // failure. Only successful delivery receipts are monotonically ranked.
-  if (live === "failed") return "failed";
+  // live failure supersedes only pre-delivery snapshots; durable delivered/read
+  // receipts prove the provider committed and must suppress duplicate-prone
+  // retry UI. Conversely, a live retry/success supersedes a persisted failure.
+  if (live === "failed") {
+    return persisted === "delivered" || persisted === "read"
+      ? persisted
+      : "failed";
+  }
   if (persisted === "failed") return live ?? "failed";
   return mostAdvancedDeliveryStatus(persisted, live);
 }

@@ -112,7 +112,7 @@ describe("Inbox live message projection reconciliation", () => {
     },
   );
 
-  it.each(progressiveDeliveryStates)(
+  it.each(["sending", "sent"] as const)(
     "preserves a live terminal failure over persisted %s",
     (persistedStatus) => {
       const result = mergeInboxMessageProjection(
@@ -136,6 +136,37 @@ describe("Inbox live message projection reconciliation", () => {
         expect.objectContaining({
           deliveryStatus: "failed",
           outboxState: "dead_letter",
+        }),
+      ]);
+    },
+  );
+
+  it.each(["delivered", "read"] as const)(
+    "keeps authoritative persisted %s over a transient live failure",
+    (persistedStatus) => {
+      const result = mergeInboxMessageProjection(
+        [
+          message("outbound-1", 2, {
+            direction: "outbound",
+            deliveryStatus: persistedStatus,
+            outboxState: "succeeded",
+          }),
+        ],
+        [
+          message("outbound-1", 2, {
+            direction: "outbound",
+            deliveryStatus: "failed",
+            outboxEffectKey: "effect-1",
+            outboxState: "ambiguous",
+          }),
+        ],
+      );
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          deliveryStatus: persistedStatus,
+          outboxEffectKey: "effect-1",
+          outboxState: "ambiguous",
         }),
       ]);
     },
