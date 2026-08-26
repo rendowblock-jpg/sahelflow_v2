@@ -25,6 +25,16 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(workspace).toContain("draftReadyConversationRef");
     expect(workspace).toContain("draftWriteQueueRef");
     expect(workspace).toContain("draftRevisionRef");
+    expect(workspace).toContain("DRAFT_LOAD_ATTEMPTS");
+    expect(workspace).toContain("if (!response || !isCurrentDraft()) return");
+    expect(workspace).toContain("return data.applied === true");
+    const draftLoader = workspace.slice(
+      workspace.indexOf("const loadDraft"),
+      workspace.indexOf("const handleStatusChange"),
+    );
+    expect(draftLoader).not.toContain("finally");
+    expect(draftLoader.indexOf("await response.json()"))
+      .toBeLessThan(draftLoader.indexOf("draftReadyConversationRef.current ="));
     expect(workspace).toContain(
       "draftWriteQueueRef.current.get(chat.conversationId)",
     );
@@ -37,7 +47,19 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(
       workspace.indexOf("void persistDraft(", selectChat),
     ).toBeLessThan(workspace.indexOf("activeChatRef.current = chat", selectChat));
-    expect(workspace.indexOf('setReplyText("");', workspace.indexOf("const sendReply")))
+    const sendReply = workspace.indexOf("const sendReply");
+    const clearAcceptedDraft = workspace.indexOf(
+      "const clearAcceptedDraft",
+      sendReply,
+    );
+    expect(clearAcceptedDraft).toBeGreaterThan(sendReply);
+    expect(
+      workspace.indexOf(
+        "activeChatRef.current?.conversationId === chat.conversationId",
+        clearAcceptedDraft,
+      ),
+    ).toBeGreaterThan(clearAcceptedDraft);
+    expect(workspace.indexOf("clearAcceptedDraft();", sendReply))
       .toBeGreaterThan(workspace.indexOf('fetch("/api/whatsapp/send"'));
   });
 

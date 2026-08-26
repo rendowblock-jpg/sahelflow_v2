@@ -28,6 +28,8 @@ import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
 const CHAT_REFRESH_COALESCE_MS = 500;
 const LIVE_RECOVERY_POLL_MS = 3_000;
 const DRAFT_SAVE_DELAY_MS = 600;
+const DRAFT_LOAD_ATTEMPTS = 3;
+const DRAFT_LOAD_RETRY_MS = 500;
 const MAX_DEEP_LINK_ID_LENGTH = 160;
 
 interface CanonicalChatResponse {
@@ -588,7 +590,9 @@ export function useInboxWorkspace() {
               body: JSON.stringify({ body, revision }),
             },
           );
-          return response.ok;
+          if (!response.ok) return false;
+          const data = (await response.json()) as { applied?: unknown };
+          return data.applied === true;
         } catch {
           return false;
         }
@@ -610,66 +614,73 @@ export function useInboxWorkspace() {
       const generation = ++draftLoadGenerationRef.current;
       const editGeneration = draftEditGenerationRef.current;
       if (!canReply) return;
-      try {
-        // A rapid A -> B -> A switch can arrive here while A's switch flush is
-        // still queued behind an older autosave. Never install a database value
-        // until every write already queued for this conversation has settled.
-        let pendingWrite = draftWriteQueueRef.current.get(chat.conversationId);
-        while (pendingWrite) {
-          await pendingWrite.catch(() => false);
-          const nextWrite = draftWriteQueueRef.current.get(chat.conversationId);
-          if (!nextWrite || nextWrite === pendingWrite) break;
-          pendingWrite = nextWrite;
+      const isCurrentDraft = () =>
+        generation === draftLoadGenerationRef.current &&
+        activeChatRef.current?.conversationId === chat.conversationId;
+
+      // A rapid A -> B -> A switch can arrive here while A's switch flush is
+      // still queued behind an older autosave. Never install a database value
+      // until every write already queued for this conversation has settled.
+      let pendingWrite = draftWriteQueueRef.current.get(chat.conversationId);
+      while (pendingWrite) {
+        await pendingWrite.catch(() => false);
+        const nextWrite = draftWriteQueueRef.current.get(chat.conversationId);
+        if (!nextWrite || nextWrite === pendingWrite) break;
+        pendingWrite = nextWrite;
+      }
+      if (!isCurrentDraft()) return;
+
+      let response: Response | null = null;
+      for (let attempt = 0; attempt < DRAFT_LOAD_ATTEMPTS; attempt += 1) {
+        if (!isCurrentDraft()) return;
+        try {
+          const candidate = await fetch(
+            `/api/conversations/${encodeURIComponent(chat.conversationId)}/draft`,
+            { cache: "no-store" },
+          );
+          if (candidate.ok) {
+            response = candidate;
+            break;
+          }
+        } catch {
+          // A bounded retry keeps writes disabled until the server revision is
+          // known; it never guesses revision zero after an unavailable read.
         }
-        if (
-          generation !== draftLoadGenerationRef.current ||
-          activeChatRef.current?.conversationId !== chat.conversationId
-        ) {
-          return;
+        if (!isCurrentDraft()) return;
+        if (attempt + 1 < DRAFT_LOAD_ATTEMPTS) {
+          await new Promise((resolve) =>
+            window.setTimeout(resolve, DRAFT_LOAD_RETRY_MS),
+          );
         }
-        const response = await fetch(
-          `/api/conversations/${encodeURIComponent(chat.conversationId)}/draft`,
-          { cache: "no-store" },
-        );
-        if (!response.ok) return;
-        const data = (await response.json()) as {
-          body?: unknown;
-          revision?: unknown;
-        };
-        if (
-          generation !== draftLoadGenerationRef.current ||
-          activeChatRef.current?.conversationId !== chat.conversationId
-        ) {
-          return;
-        }
-        const serverRevision =
-          typeof data.revision === "number" &&
-          Number.isSafeInteger(data.revision) &&
-          data.revision >= 0
-            ? data.revision
-            : 0;
-        draftRevisionRef.current.set(
-          chat.conversationId,
-          Math.max(
-            serverRevision,
-            draftRevisionRef.current.get(chat.conversationId) ?? 0,
-          ),
-        );
-        draftReadyConversationRef.current = chat.conversationId;
-        if (draftEditGenerationRef.current === editGeneration) {
-          const body = typeof data.body === "string" ? data.body : "";
-          replyTextRef.current = body;
-          setReplyTextState(body);
-        } else {
-          void persistDraft(chat.conversationId, replyTextRef.current);
-        }
-      } finally {
-        if (
-          generation === draftLoadGenerationRef.current &&
-          activeChatRef.current?.conversationId === chat.conversationId
-        ) {
-          draftReadyConversationRef.current = chat.conversationId;
-        }
+      }
+      if (!response || !isCurrentDraft()) return;
+
+      const data = (await response.json()) as {
+        body?: unknown;
+        revision?: unknown;
+      };
+      if (
+        !isCurrentDraft() ||
+        typeof data.body !== "string" ||
+        typeof data.revision !== "number" ||
+        !Number.isSafeInteger(data.revision) ||
+        data.revision < 0
+      ) {
+        return;
+      }
+      draftRevisionRef.current.set(
+        chat.conversationId,
+        Math.max(
+          data.revision,
+          draftRevisionRef.current.get(chat.conversationId) ?? 0,
+        ),
+      );
+      draftReadyConversationRef.current = chat.conversationId;
+      if (draftEditGenerationRef.current === editGeneration) {
+        replyTextRef.current = data.body;
+        setReplyTextState(data.body);
+      } else {
+        void persistDraft(chat.conversationId, replyTextRef.current);
       }
     },
     [canReply, persistDraft],
@@ -1225,6 +1236,12 @@ export function useInboxWorkspace() {
 
     const tempId = crypto.randomUUID();
     const body = replyText.trim();
+    const clearAcceptedDraft = () => {
+      if (activeChatRef.current?.conversationId === chat.conversationId) {
+        setReplyText("");
+      }
+      void persistDraft(chat.conversationId, "");
+    };
     sendingRef.current = true;
     setSending(true);
     setSendError(null);
@@ -1258,8 +1275,7 @@ export function useInboxWorkspace() {
         requiresDuplicateConfirmation?: boolean;
       };
       if (response.status === 202 && data.accepted && data.effectKey) {
-        setReplyText("");
-        void persistDraft(chat.conversationId, "");
+        clearAcceptedDraft();
         mutateMessages(chat.conversationId, (current) =>
           current.map((message) =>
             message.id === tempId
@@ -1304,8 +1320,7 @@ export function useInboxWorkspace() {
           outboxState: "succeeded",
         }),
       );
-      setReplyText("");
-      void persistDraft(chat.conversationId, "");
+      clearAcceptedDraft();
       void loadChats();
     } catch (error) {
       mutateMessages(chat.conversationId, (current) =>
