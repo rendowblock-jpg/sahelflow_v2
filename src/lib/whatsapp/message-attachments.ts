@@ -156,9 +156,17 @@ function numberValue(value: unknown): number | null {
   if (
     typeof low === "number" &&
     Number.isInteger(low) &&
-    (high === undefined || high === 0)
+    low >= -0x8000_0000 &&
+    low <= 0xffff_ffff &&
+    (high === undefined ||
+      (typeof high === "number" &&
+        Number.isInteger(high) &&
+        high >= -0x8000_0000 &&
+        high <= 0xffff_ffff))
   ) {
-    return low >>> 0;
+    const combined =
+      (high === undefined ? 0 : high >>> 0) * 0x1_0000_0000 + (low >>> 0);
+    return Number.isSafeInteger(combined) ? combined : null;
   }
   return null;
 }
@@ -206,6 +214,9 @@ function extractMedia(
   source: Record<string, unknown>,
 ): WhatsAppMessageAttachment {
   const metadata = mediaMetadata(kind, source);
+  if (source.fileLength != null && metadata.sizeBytes === null) {
+    return rejected(kind, source, "DECLARED_SIZE_LIMIT");
+  }
   if (
     metadata.sizeBytes !== null &&
     metadata.sizeBytes > MEDIA_LIMITS[kind]

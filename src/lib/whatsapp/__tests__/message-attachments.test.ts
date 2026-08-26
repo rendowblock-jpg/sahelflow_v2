@@ -56,6 +56,32 @@ describe("WhatsApp protected attachment metadata", () => {
         },
       }),
     ).toMatchObject({ state: "rejected", failureCode: "UNSUPPORTED_MIME_TYPE" });
+
+    expect(
+      extractWhatsAppMessageAttachment({
+        imageMessage: {
+          mimetype: "image/jpeg",
+          fileLength: { low: 0, high: 1 },
+        },
+      }),
+    ).toMatchObject({
+      sizeBytes: 4_294_967_296,
+      state: "rejected",
+      failureCode: "DECLARED_SIZE_LIMIT",
+    });
+
+    expect(
+      extractWhatsAppMessageAttachment({
+        imageMessage: {
+          mimetype: "image/jpeg",
+          fileLength: { low: 0, high: 0x20_0000 },
+        },
+      }),
+    ).toMatchObject({
+      sizeBytes: null,
+      state: "rejected",
+      failureCode: "DECLARED_SIZE_LIMIT",
+    });
   });
 
   it("accepts the bounded Baileys Opus voice-note MIME parameter", () => {
