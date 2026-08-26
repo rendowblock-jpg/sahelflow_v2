@@ -19,6 +19,8 @@ export interface SidecarStatus {
 
 export interface InboxLocalMediaProjection {
   state: "pending" | "ready" | "failed";
+  /** Same-origin canonical Message status projection used only while pending. */
+  statusUrl?: string;
   readUrl?: string;
   downloadUrl?: string;
 }
