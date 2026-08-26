@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, FileText, ImageIcon, Loader2, Mic, Video } from "lucide-react";
 
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { useI18n } from "@/hooks/use-i18n";
 import { getInboxMediaCopy } from "@/lib/i18n/inbox-media";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
+import type { InboxLocalMediaProjection } from "@/lib/whatsapp/types";
 import { cn } from "@/lib/utils";
+
+const PENDING_MEDIA_POLL_MS = 3_000;
 
 function localeCode(locale: "ar" | "fr" | "en"): string {
   return locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
@@ -149,14 +152,112 @@ function DownloadButton({
   );
 }
 
+function validPolledProjection(
+  value: unknown,
+): InboxLocalMediaProjection | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const candidate = value as Record<string, unknown>;
+  if (
+    candidate.state !== "pending" &&
+    candidate.state !== "ready" &&
+    candidate.state !== "failed"
+  ) {
+    return null;
+  }
+  if (candidate.statusUrl !== undefined && typeof candidate.statusUrl !== "string") {
+    return null;
+  }
+  if (candidate.readUrl !== undefined && typeof candidate.readUrl !== "string") {
+    return null;
+  }
+  if (
+    candidate.downloadUrl !== undefined &&
+    typeof candidate.downloadUrl !== "string"
+  ) {
+    return null;
+  }
+  if (
+    candidate.state === "ready" &&
+    (typeof candidate.readUrl !== "string" ||
+      typeof candidate.downloadUrl !== "string")
+  ) {
+    return null;
+  }
+  return candidate as InboxLocalMediaProjection;
+}
+
 export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
   const { locale } = useI18n();
+  const projectedLocal = message.attachment?.localMedia;
+  const [resolvedLocal, setResolvedLocal] =
+    useState<InboxLocalMediaProjection | undefined>(projectedLocal);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
+
+  useEffect(() => {
+    if (!projectedLocal) {
+      setResolvedLocal(undefined);
+      return;
+    }
+    setResolvedLocal((current) => {
+      if (projectedLocal.state !== "pending") return projectedLocal;
+      if (current?.state === "ready" || current?.state === "failed") {
+        return current;
+      }
+      return projectedLocal;
+    });
+  }, [projectedLocal]);
+
+  const local = resolvedLocal ?? projectedLocal;
+  const pendingStatusUrl =
+    local?.state === "pending" ? local.statusUrl : undefined;
+
+  useEffect(() => {
+    if (!pendingStatusUrl) return;
+    let cancelled = false;
+    let inFlight = false;
+
+    const refresh = async () => {
+      if (
+        cancelled ||
+        inFlight ||
+        document.visibilityState !== "visible"
+      ) {
+        return;
+      }
+      inFlight = true;
+      try {
+        const response = await fetch(pendingStatusUrl, { cache: "no-store" });
+        if (cancelled) return;
+        if (response.status === 401 || response.status === 403 || response.status === 404) {
+          setResolvedLocal({ state: "failed", statusUrl: pendingStatusUrl });
+          return;
+        }
+        if (!response.ok) return;
+        const data = (await response.json()) as { localMedia?: unknown };
+        const next = validPolledProjection(data.localMedia);
+        if (!next || cancelled) return;
+        setResolvedLocal(next);
+      } catch {
+        // The intent is durable. Keep the bounded poll while this visible row is pending.
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    void refresh();
+    const intervalId = window.setInterval(() => {
+      void refresh();
+    }, PENDING_MEDIA_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [pendingStatusUrl]);
+
   const attachment = message.attachment;
   if (!attachment) return null;
 
-  const local = attachment.localMedia;
   const label = mediaLabel(message.messageType, locale);
   const metadata = [
     attachment.mimeType,
