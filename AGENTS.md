@@ -40,6 +40,7 @@ At the 2026-08-26 reconciliation:
 - Internal.27 release source: `4e395b0149da447daab37ad2d01be5c8bf1d6bce`;
 - Internal.27 demonstrated exact-once real `@lid` outbound and durable new-number inbound, while automatic Inbox live-push still required manual refresh;
 - PR #315 source-merged the dynamic-loopback live-push root repair plus bounded polling/retry and durable receipt/identity reconciliation; it is not yet signed or installed evidence;
+- issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint;
 - issues #306 and #230 remain open for real-phone WhatsApp certification and customer-online readiness;
 - issues #316 and #317 are open for Class-AAA Notifications and professional WhatsApp Inbox parity;
 - no open PR existed immediately after PR #315 merged.
