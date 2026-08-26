@@ -184,11 +184,32 @@ describe("durable WhatsApp inbound media fetch", () => {
 
     const objectFiles = readdirSync(whatsAppMediaRoot(context));
     expect(objectFiles).toHaveLength(1);
+    const objectFile = objectFiles[0]!;
     const objectBytes = readFileSync(
-      join(whatsAppMediaRoot(context), objectFiles[0]!),
+      join(whatsAppMediaRoot(context), objectFile),
     );
     expect(objectBytes.includes(bytes)).toBe(false);
     expect(objectBytes.includes(Buffer.from("private-media-payload"))).toBe(false);
+
+    const successAudit = await db.auditLog.findFirstOrThrow({
+      where: {
+        action: "whatsapp.media.fetch_succeeded",
+        entity: "message",
+        entityId: ingress.ingressEventId,
+      },
+      select: { metadata: true },
+    });
+    expect(successAudit.metadata).not.toBeNull();
+    expect(JSON.parse(successAudit.metadata!)).toMatchObject({
+      effectKey: succeeded.effectKey,
+      mediaKind: "image",
+      objectId: objectFile.replace(/\.sfmedia$/, ""),
+      objectCiphertextSha256: createHash("sha256")
+        .update(objectBytes)
+        .digest("hex"),
+      objectCiphertextBytes: objectBytes.length,
+      sizeBytes: bytes.length,
+    });
 
     await expect(reconcileQueuedWhatsAppMediaFetches(context)).resolves.toBe(0);
     await expect(
