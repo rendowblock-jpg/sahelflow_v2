@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { resolveConversationIdForRead } from "@/lib/data/conversation-service";
 import { db, shopContext } from "@/lib/db";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { projectConversationForTrustedActor } from "@/lib/identity/conversation-projection";
 import { normalizeInboxMessageDirection } from "@/lib/inbox/message-direction";
+import {
+  openWhatsAppMessageAttachmentWithKey,
+  projectWhatsAppMessageAttachmentForContactAccess,
+} from "@/lib/whatsapp/message-attachments";
 
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
@@ -42,14 +47,41 @@ export const GET = withErrorHandler(
       conversation,
       actorContext,
     );
+    const attachmentKey = projected.messages.some(
+      (message) => message.attachments,
+    )
+      ? await getBusinessEnvelopeKey(context)
+      : null;
+    const messages = (() => {
+      try {
+        return projected.messages.map((message) => {
+          const attachment =
+            attachmentKey && message.attachments
+              ? openWhatsAppMessageAttachmentWithKey(
+                  message.id,
+                  message.attachments,
+                  attachmentKey,
+                )
+              : null;
+          return {
+            ...message,
+            direction: normalizeInboxMessageDirection(message.direction),
+            attachment: projectWhatsAppMessageAttachmentForContactAccess(
+              attachment,
+              projected.fieldAccess.contact,
+            ),
+            attachments: undefined,
+          };
+        });
+      } finally {
+        attachmentKey?.fill(0);
+      }
+    })();
 
     return NextResponse.json({
       conversation: {
         ...projected,
-        messages: projected.messages.map((message) => ({
-          ...message,
-          direction: normalizeInboxMessageDirection(message.direction),
-        })),
+        messages,
       },
       source: "persisted",
     });

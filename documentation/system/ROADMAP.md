@@ -3,7 +3,7 @@
 > **Status:** Active dependency/completion program
 > **Last reconciled:** 2026-08-26
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before action; at reconciliation `3e5375bf503025083dd1b6f448215717528d0d5d`
+> **Live protected main:** resolve from GitHub before action; at reconciliation `a3216a63b74ca2c33713f95f85df4ed6e2717567`
 > **Current signed checkpoint:** Internal.27 / FD-047
 > **Current execution mode:** FD-048 batched source-first First Revenue Certification
 
@@ -22,9 +22,9 @@ completed product/experience reconstruction
 → FD-045 First Revenue Certification
 → Internal.27 real LID outbound + durable inbound; manual-refresh live-push defect
 → PR #315 dynamic-loopback/polling/receipt-identity source repair merged
-→ FD-048 source-first batch  ← current
-→ #316 Class-AAA durable Notifications
-→ #317 professional WhatsApp Inbox parity/certification ledger
+→ FD-048 source-first batch
+→ #316 Class-AAA durable Notifications source merge / PR #319
+→ #317 professional WhatsApp Inbox parity/certification ledger  ← current
 → FRC-2 AI/tools/order extraction source/evidence matrix
 → FRC-3 Required capability/journey assurance ledger and demonstrated repairs
 → FRC-4 commerce official dev/test certification work
@@ -37,12 +37,12 @@ completed product/experience reconstruction
 → explicit Stable promotion
 ```
 
-There were no open PRs immediately after PR #315 merged. Re-fetch before acting.
+There were no open PRs immediately after Notification Center PR #319 merged. Re-fetch before acting.
 
 ## FD-048 batched source-first order
 
-The next development session begins with issue #316, not a release branch.
-Complete the #316 and #317 source packages, then FRC-2 through FRC-5
+The current development package is issue #317, not a release branch.
+#316 is source-merged through PR #319. Complete #317, then FRC-2 through FRC-5
 deterministic/source and available official environment evidence. Keep every
 row classified by evidence level and preserve external blockers.
 

@@ -1,9 +1,11 @@
 import "server-only";
 
 import { openAutomationNotificationBody } from "@/lib/automations/notification-codec";
+import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { db, shopContext } from "@/lib/db";
 import { withDemoPolicyLock } from "@/lib/demo/algerian-demo-policy";
 import { withPrivacyEraseTransaction } from "@/lib/maintenance/privacy-erase-transaction";
+import { openWhatsAppMessageAttachmentWithKey } from "@/lib/whatsapp/message-attachments";
 
 const PRIVACY_EXPORT_FORMAT_VERSION = 2 as const;
 const PRIVACY_ERASE_RECEIPT_FORMAT_VERSION = 1 as const;
@@ -97,7 +99,23 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
   Integration: () => db.integration.findMany(),
   InventoryMovement: () => db.inventoryMovement.findMany(),
   InventoryReservation: () => db.inventoryReservation.findMany(),
-  Message: () => db.message.findMany(),
+  Message: async () => {
+    const messages = await db.message.findMany();
+    const key = messages.some((message) => message.attachments)
+      ? await getBusinessEnvelopeKey(privacyServiceContext)
+      : null;
+    try {
+      return messages.map(({ attachments, ...message }) => ({
+        ...message,
+        attachment:
+          key && attachments
+            ? openWhatsAppMessageAttachmentWithKey(message.id, attachments, key)
+            : null,
+      }));
+    } finally {
+      key?.fill(0);
+    }
+  },
   NotificationDeliveryAttempt: () =>
     db.notificationDeliveryAttempt.findMany(),
   NotificationEvent: () => db.notificationEvent.findMany(),

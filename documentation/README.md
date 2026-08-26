@@ -8,7 +8,7 @@
 > **Protected release source:** `4e395b0149da447daab37ad2d01be5c8bf1d6bce` / PR #313
 > **Reviewed release head:** `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`
 > **Signed publication run:** `32913445791` — success
-> **Current next outcome:** FD-048 source-first batch — documentation reconciliation, then #316 Notifications, #317 professional Inbox parity and FRC-2–5 source/certification preparation before one separately authorized signed successor
+> **Current next outcome:** FD-048 source-first batch — #316 Notifications is source-merged; execute #317 professional Inbox parity, then FRC-2–5 source/certification preparation before one separately authorized signed successor
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
@@ -18,17 +18,18 @@ This directory is the active documentation authority for SahelFlow. `documentati
 2. `system/ROADMAP.md` — First Revenue Certification dependency/completion order.
 3. `operations/WORKFLOW.md` — research, implementation, review, CI, installed/provider evidence and release process.
 4. `operations/WORKING_MEMORY.md` — single compact resumable frontier.
-5. `product/PRODUCT.md` — product promise, seller jobs, commercial boundaries and entitlements.
-6. `product/EXPERIENCE.md` — Class-AAA experience, capabilities and Required journeys.
-7. `product/DECISIONS.md` — consolidated Founder decisions, including FD-045 First Revenue Certification.
-8. `system/ARCHITECTURE.md` — canonical authority, provider, AI, native, security and recovery invariants.
-9. `research/RESEARCH.md` plus privacy/security inventories when relevant.
+5. `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` — active issue #317 message/media evidence ledger when Inbox or provider work is in scope.
+6. `product/PRODUCT.md` — product promise, seller jobs, commercial boundaries and entitlements.
+7. `product/EXPERIENCE.md` — Class-AAA experience, capabilities and Required journeys.
+8. `product/DECISIONS.md` — consolidated Founder decisions, including FD-045 First Revenue Certification.
+9. `system/ARCHITECTURE.md` — canonical authority, provider, AI, native, security and recovery invariants.
+10. `research/RESEARCH.md` plus privacy/security inventories when relevant.
 
 Reading order does not change authority precedence. A newer explicit Founder decision outranks lower execution documents for the choice it changes. Protected GitHub source, exact Actions evidence and signed releases outrank stale chat summaries.
 
 ## Current protected and signed truth
 
-Protected `main` at reconciliation is `3e5375bf503025083dd1b6f448215717528d0d5d`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`. PR #315 is source-merged; no open PR existed immediately after that merge. Revalidate live state before every write/merge.
+Protected `main` at reconciliation is `a3216a63b74ca2c33713f95f85df4ed6e2717567`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`. PR #315 and Notification Center PR #319 are source-merged; no open PR existed immediately after #319. Revalidate live state before every write/merge.
 
 Internal.27 is the latest real signed/published and Founder-installed offline package:
 
@@ -63,7 +64,7 @@ Do not restart those programs without direct regression evidence.
 - **#221 — closed/completed:** Founder accepted installed Internal.24 for the retained whole-product visual/product gate. That acceptance remains valid for Internal.24 and does not fabricate provider/customer proof.
 - **#226 — closed/completed:** retain its performance/reliability budgets as regression criteria.
 - **#306 — open:** Internal.27 passed preserved update/reopen, exactly-one real `numeric-id@lid` outbound with provider receipt/delivery, and exact-once durable inbound from a new number. The new inbound required manual Inbox refresh. PR #315 is now protected source for loopback dynamic-port live push, durable polling/retry fallback and receipt/outbox identity races; automatic arrival and remaining UI/extraction/logout rows are not yet signed/installed proof.
-- **#316 — open:** Class-AAA durable Notification Center and WhatsApp attention routing.
+- **#316 — open:** Class-AAA durable Notification Center and WhatsApp attention routing is source-merged through PR #319; signed/installed/native evidence is pending.
 - **#317 — open:** professional WhatsApp Inbox capability ledger and certified message/media operational parity.
 - **#230 — open/reopened P1:** no owned production domain exists; customer-online trial/network readiness remains blocked.
 - Real commerce/courier account certification, representative beta, independent review and Stable remain unproven.
@@ -138,8 +139,8 @@ Beta or Stable is authorized by FD-048.
 
 1. Resolve live protected `main`, open PRs, #306/#316/#317 and #230.
 2. Read the mandatory authority set above and confirm Internal.27 / FD-047 remains latest signed and FD-048 owns sequencing.
-3. Begin #316 from a fresh protected-main branch. Freeze its notification-domain authority, migration, actor/shop/read-state, channel/privacy and installed-evidence matrix before implementation.
-4. Continue #317, then FRC-2 through FRC-5 source/evidence work in the FD-048 order. Maintain capability-specific certification states and explicit external blockers.
+3. Continue #317 from fresh protected main using `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md`; retain the #319 Notification Center source without claiming installed closure.
+4. Continue FRC-2 through FRC-5 source/evidence work in the FD-048 order. Maintain capability-specific certification states and explicit external blockers.
 5. Do not create or install a successor until the combined source frontier is frozen and a separate release-authority decision exists.
 6. Do not expose or market an integration/action before its live certification record exists.
 7. Keep #306 installed proof, #230/customer-online, commercial deployment, Beta and Stable as separate explicit gates.

@@ -11,7 +11,16 @@ type ConversationContactFields = Readonly<{
   contactName: string | null;
   contactPhone: string | null;
   sourceId?: string | null;
+  /** Storage-only protected composer state; projected only by the draft API. */
+  draftBody?: string | null;
+  /** Storage-only composer ordering state; projected only by the draft API. */
+  draftRevision?: number;
 }>;
+
+type ProjectedConversationContactFields = Omit<
+  ConversationContactFields,
+  "draftBody" | "draftRevision"
+>;
 
 export type ConversationFieldAccess = Readonly<{
   contact: boolean;
@@ -34,14 +43,25 @@ export function projectConversationForTrustedActor<
 >(
   conversation: T,
   actorContext: TrustedActorContext,
-): Omit<T, "contactName" | "contactPhone" | "sourceId"> &
-  ConversationContactFields & Readonly<{ fieldAccess: ConversationFieldAccess }> {
+): Omit<
+  T,
+  "contactName" | "contactPhone" | "sourceId" | "draftBody" | "draftRevision"
+> &
+  ProjectedConversationContactFields &
+  Readonly<{ fieldAccess: ConversationFieldAccess }> {
   const contact = trustedActionAllowed(
     actorContext,
     "customers.contact.read",
     { shopId: actorContext.shop.shopId },
   );
-  const { contactName, contactPhone, sourceId, ...rest } = conversation;
+  const {
+    contactName,
+    contactPhone,
+    sourceId,
+    draftBody: _draftBody,
+    draftRevision: _draftRevision,
+    ...rest
+  } = conversation;
   return {
     ...rest,
     contactName: contact ? contactName : null,

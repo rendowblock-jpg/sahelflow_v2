@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeWhatsAppJid } from "../types";
+import {
+  messageText,
+  normalizeWhatsAppJid,
+  normalizeWhatsAppMessageContent,
+} from "../types";
 
 describe("WhatsApp individual recipient normalization", () => {
   it("normalizes Algerian mobile numbers and PN device JIDs", () => {
@@ -27,5 +31,57 @@ describe("WhatsApp individual recipient normalization", () => {
     "88665640448190:2@lid",
   ])("rejects non-individual or non-canonical JID %s", (jid) => {
     expect(() => normalizeWhatsAppJid(jid)).toThrow();
+  });
+});
+
+describe("WhatsApp provider message normalization", () => {
+  it("boundedly unwraps nested future-proof media containers", () => {
+    const normalized = normalizeWhatsAppMessageContent({
+      ephemeralMessage: {
+        message: {
+          viewOnceMessageV2: {
+            message: {
+              imageMessage: {
+                mimetype: "image/jpeg",
+                caption: "Photo commande",
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(normalized).toEqual({
+      imageMessage: {
+        mimetype: "image/jpeg",
+        caption: "Photo commande",
+      },
+    });
+    expect(messageText(normalized)).toBe("Photo commande");
+  });
+
+  it("unwraps protocol edited content without following provider retrieval data", () => {
+    const normalized = normalizeWhatsAppMessageContent({
+      protocolMessage: {
+        editedMessage: {
+          documentWithCaptionMessage: {
+            message: {
+              documentMessage: {
+                mimetype: "application/pdf",
+                fileName: "commande.pdf",
+                directPath: "/provider/private",
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(normalized).toMatchObject({
+      documentMessage: {
+        mimetype: "application/pdf",
+        fileName: "commande.pdf",
+      },
+    });
   });
 });

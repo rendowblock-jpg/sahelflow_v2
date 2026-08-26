@@ -1,5 +1,9 @@
 import type { ConversationWorkflowState } from "@/components/inbox/conversation-controls";
-import type { WhatsAppStatus, WhatsAppUser } from "@/lib/whatsapp/types";
+import type {
+  IncomingMessage,
+  WhatsAppStatus,
+  WhatsAppUser,
+} from "@/lib/whatsapp/types";
 
 export type InboxQueueFilter =
   | "all"
@@ -41,6 +45,7 @@ export interface InboxMessage {
     | "succeeded"
     | "ambiguous"
     | "dead_letter";
+  attachment?: IncomingMessage["attachment"];
 }
 
 export interface InboxTransportState {

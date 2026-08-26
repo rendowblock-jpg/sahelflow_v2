@@ -505,7 +505,7 @@ async function migrateConversations(
   stats: MutableStats,
 ): Promise<void> {
   const rows = await prisma.conversation.findMany({
-    select: { id: true, contactName: true, contactPhone: true },
+    select: { id: true, contactName: true, contactPhone: true, draftBody: true },
   });
   stats.conversations = rows.length;
   for (const row of rows) {
@@ -523,10 +523,24 @@ async function migrateConversations(
       options,
       stats,
     );
-    if (options.mode === "apply" && (name.changed || phone.changed)) {
+    const draft = await migrateField(
+      prisma,
+      row.draftBody,
+      { recordType: "Conversation", recordId: row.id, field: "draftBody" },
+      options,
+      stats,
+    );
+    if (
+      options.mode === "apply" &&
+      (name.changed || phone.changed || draft.changed)
+    ) {
       await prisma.conversation.update({
         where: { id: row.id },
-        data: { contactName: name.stored!, contactPhone: phone.stored },
+        data: {
+          contactName: name.stored!,
+          contactPhone: phone.stored,
+          draftBody: draft.stored,
+        },
       });
     }
   }

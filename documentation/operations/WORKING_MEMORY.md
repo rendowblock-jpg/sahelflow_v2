@@ -7,7 +7,7 @@
 
 ## Current truth
 
-- Protected `main` at handoff: `3e5375bf503025083dd1b6f448215717528d0d5d`; live GitHub wins if moved. Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`.
+- Protected `main` at handoff: `a3216a63b74ca2c33713f95f85df4ed6e2717567`; live GitHub wins if moved. Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`.
 - Latest signed/published and Founder-installed checkpoint: **Internal.27**.
 - App `1.0.0-internal.27`; MSI `1.0.0.27`; authority **FD-047**; mode `founder-offline-only`.
 - Product repair PR #312; release PR #313; reviewed release head `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`.
@@ -17,12 +17,12 @@
 - #221 closed/completed after Founder acceptance of installed Internal.24.
 - #226 closed/completed; retain its budgets.
 - #306 open — real-phone WhatsApp installed/provider certification.
-- #316 open — Class-AAA durable Notification Center and WhatsApp attention routing.
+- #316 open — Class-AAA durable Notification Center and WhatsApp attention routing is source-merged through PR #319; signed/installed/native evidence is pending.
 - #317 open — professional WhatsApp Inbox capability/message-media parity.
 - #230 open/reopened P1 — customer-online trial/network blocker; no owned production domain.
-- PR #315 merged by guarded squash as protected `main` `3e5375bf503025083dd1b6f448215717528d0d5d`; no open PR existed immediately afterward.
+- PR #315 remains protected source. PR #319 merged #316 by expected-head guarded squash as protected `main` `a3216a63b74ca2c33713f95f85df4ed6e2717567`; no open PR existed immediately afterward.
 - Current sequencing decision: **FD-048 batched source-first First Revenue Certification**, preserving FD-045’s evidence rules.
-- Exact next outcome after this docs package: **implement issue #316 from fresh protected main, then #317, then FRC-2–5 source/evidence work before one separately authorized signed successor**.
+- Exact next outcome: **execute issue #317 from fresh protected main using the active capability ledger, then FRC-2–5 source/evidence work before one separately authorized signed successor**.
 
 ## What Internal.27 adds
 
@@ -82,13 +82,12 @@ Binding rules:
 
 1. Re-resolve protected `main`, open PRs, #306/#316/#317 and #230; confirm this
    documentation package is merged and Internal.27 remains latest signed.
-2. Begin #316 only: freeze notification schema/dedupe, event atomicity,
-   actor/shop/read authority, deep links, Bell/native channels, privacy,
-   preferences, migration, scale and evidence matrix.
-3. Run targeted feedback during implementation, then one frozen exact-head
-   GitHub gate/review/expected-head merge. Do not build an MSI.
-4. Continue #317’s exact capability ledger and message/media waves without
+2. Treat #316/PR #319 as source-merged only; do not fabricate signed/installed
+   Notification Center evidence.
+3. Execute #317’s exact capability ledger and bounded message/media waves without
    rewriting the retained seller-grade Inbox operations.
+4. Run targeted feedback during implementation, then one frozen exact-head
+   GitHub gate/review/expected-head merge. Do not build an MSI.
 5. Continue FRC-2 through FRC-5 source, official contract and available
    development/sandbox evidence in dependency order; preserve external blockers.
 6. Only after the combined source frontier is protected may a separate decision

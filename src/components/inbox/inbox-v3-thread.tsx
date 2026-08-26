@@ -8,6 +8,7 @@ import {
   ImageIcon,
   Info,
   Loader2,
+  Mail,
   MapPin,
   MessageSquareText,
   Mic,
@@ -127,6 +128,15 @@ function isMediaMessage(message: InboxMessage): boolean {
   );
 }
 
+function formatBytes(value: number, locale: "ar" | "fr" | "en"): string {
+  if (value < 1_024) return `${value} B`;
+  const formatter = new Intl.NumberFormat(localeCode(locale), {
+    maximumFractionDigits: 1,
+  });
+  if (value < 1_024 * 1_024) return `${formatter.format(value / 1_024)} KB`;
+  return `${formatter.format(value / (1_024 * 1_024))} MB`;
+}
+
 function MessageBubble({
   message,
   locale,
@@ -176,8 +186,48 @@ function MessageBubble({
                 <MediaIcon type={message.messageType} />
                 <span>{mediaLabel(message.messageType, copy)}</span>
               </div>
+              {message.attachment?.fileName ? (
+                <p className="mt-1.5 break-all text-xs" dir="auto">
+                  {message.attachment.fileName}
+                </p>
+              ) : null}
+              {message.attachment?.contact ? (
+                <p className="mt-1.5 text-xs" dir="auto">
+                  {message.attachment.contact.displayName}
+                </p>
+              ) : null}
+              {message.attachment?.location ? (
+                <a
+                  href={`https://www.openstreetmap.org/?mlat=${encodeURIComponent(message.attachment.location.latitude)}&mlon=${encodeURIComponent(message.attachment.location.longitude)}#map=17/${encodeURIComponent(message.attachment.location.latitude)}/${encodeURIComponent(message.attachment.location.longitude)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1.5 inline-flex min-h-8 items-center text-xs font-medium underline underline-offset-4"
+                >
+                  {message.attachment.location.name ??
+                    message.attachment.location.address ??
+                    copy("openLocation")}
+                </a>
+              ) : null}
+              {message.attachment &&
+              (message.attachment.mimeType ||
+                message.attachment.sizeBytes !== null) ? (
+                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
+                  {[
+                    message.attachment.mimeType,
+                    message.attachment.sizeBytes !== null
+                      ? formatBytes(message.attachment.sizeBytes, locale)
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              ) : null}
               <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-                {copy("mediaMetadataOnly")}
+                {message.attachment?.state === "rejected"
+                  ? copy("mediaRejected")
+                  : message.attachment?.state === "ready"
+                    ? copy("structuredAttachmentReady")
+                    : copy("mediaMetadataOnly")}
               </p>
             </div>
           ) : null}
@@ -270,6 +320,7 @@ export function InboxV3Thread({
     canUpdateConversation,
     transport,
     refreshChats,
+    markUnread,
   } = workspace;
 
   if (!activeChat) {
@@ -374,6 +425,28 @@ export function InboxV3Thread({
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          {canUpdateConversation ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={copy("markUnread")}
+                  onClick={() => {
+                    void markUnread(activeChat).then((updated) => {
+                      if (updated) onBackToQueue();
+                    });
+                  }}
+                >
+                  <Mail className="size-4" aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={6}>
+                {copy("markUnread")}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
           <Sheet>
             <Tooltip>
               <TooltipTrigger asChild>
