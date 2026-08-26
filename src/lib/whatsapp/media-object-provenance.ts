@@ -1,7 +1,12 @@
 import "server-only";
 
 import { createDecipheriv, createHash, createHmac } from "node:crypto";
-import { readFileSync } from "node:fs";
+import {
+  closeSync,
+  fstatSync,
+  openSync,
+  readSync,
+} from "node:fs";
 import { resolve } from "node:path";
 
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
@@ -17,6 +22,7 @@ const OBJECT_MAGIC = Buffer.from("SFM1", "ascii");
 const OBJECT_FORMAT_VERSION = 1;
 const OBJECT_CHUNK_BYTES = 1024 * 1024;
 const HEADER_BYTES = 9;
+const FRAME_OVERHEAD_BYTES = 32;
 const ID_PURPOSE = "sahelflow/whatsapp/media-object-id/v1";
 const KEY_PURPOSE = "sahelflow/whatsapp/media-object-key/v1";
 const CHUNK_AAD_PURPOSE = "sahelflow/whatsapp/media-object-chunk/v1";
@@ -173,6 +179,70 @@ function sniffMediaType(
   return "text/plain";
 }
 
+function expectedCiphertextBytes(receipt: WhatsAppMediaObjectReceipt): number {
+  const value =
+    HEADER_BYTES +
+    receipt.sizeBytes +
+    receipt.chunkCount * FRAME_OVERHEAD_BYTES;
+  if (!Number.isSafeInteger(value) || value <= HEADER_BYTES) {
+    throw new WhatsAppMediaObjectError(
+      "Media object receipt has an invalid ciphertext size",
+      "MEDIA_OBJECT_CORRUPT",
+    );
+  }
+  return value;
+}
+
+/**
+ * Read exactly the receipt-bounded ciphertext length from one already-open file
+ * descriptor. This prevents a replaced/oversized local object from forcing an
+ * unbounded allocation before cryptographic frame validation runs.
+ */
+function readBoundedCiphertext(path: string, expectedBytes: number): Buffer {
+  const descriptor = openSync(path, "r");
+  let output: Buffer | null = null;
+  try {
+    const before = fstatSync(descriptor);
+    if (!before.isFile() || before.size !== expectedBytes) {
+      throw new WhatsAppMediaObjectError(
+        "Media object ciphertext length does not match its receipt",
+        "MEDIA_OBJECT_CORRUPT",
+      );
+    }
+    output = Buffer.allocUnsafe(expectedBytes);
+    let offset = 0;
+    while (offset < expectedBytes) {
+      const read = readSync(
+        descriptor,
+        output,
+        offset,
+        expectedBytes - offset,
+        offset,
+      );
+      if (read <= 0) {
+        throw new WhatsAppMediaObjectError(
+          "Media object ciphertext was truncated during read",
+          "MEDIA_OBJECT_CORRUPT",
+        );
+      }
+      offset += read;
+    }
+    const after = fstatSync(descriptor);
+    if (!after.isFile() || after.size !== expectedBytes) {
+      throw new WhatsAppMediaObjectError(
+        "Media object ciphertext changed during read",
+        "MEDIA_OBJECT_CORRUPT",
+      );
+    }
+    const result = output;
+    output = null;
+    return result;
+  } finally {
+    output?.fill(0);
+    closeSync(descriptor);
+  }
+}
+
 /**
  * Authenticate exact object bytes. Read paths may retain the plaintext chunks;
  * provenance-only paths deliberately wipe each authenticated chunk immediately
@@ -191,7 +261,8 @@ function openExactObjectBytes(
     receipt.sizeBytes <= 0 ||
     receipt.sizeBytes > limit ||
     receipt.chunkCount <= 0 ||
-    receipt.chunkCount > Math.ceil(limit / OBJECT_CHUNK_BYTES)
+    receipt.chunkCount > Math.ceil(limit / OBJECT_CHUNK_BYTES) ||
+    bytes.length !== expectedCiphertextBytes(receipt)
   ) {
     throw new WhatsAppMediaObjectError(
       "Media object receipt exceeds the bounded read contract",
@@ -218,7 +289,7 @@ function openExactObjectBytes(
   const retained: Buffer[] = [];
   try {
     while (offset < bytes.length) {
-      if (offset + 32 > bytes.length) {
+      if (offset + FRAME_OVERHEAD_BYTES > bytes.length) {
         throw new WhatsAppMediaObjectError(
           "Media object frame is truncated",
           "MEDIA_OBJECT_CORRUPT",
@@ -227,7 +298,7 @@ function openExactObjectBytes(
       const plaintextBytes = bytes.readUInt32LE(offset);
       const nonce = bytes.subarray(offset + 4, offset + 16);
       const tag = bytes.subarray(offset + 16, offset + 32);
-      const ciphertextStart = offset + 32;
+      const ciphertextStart = offset + FRAME_OVERHEAD_BYTES;
       const ciphertextEnd = ciphertextStart + plaintextBytes;
       if (
         plaintextBytes === 0 ||
@@ -330,8 +401,13 @@ async function authenticateMediaObject(
       );
     }
     const objectKey = deriveObjectKey(receipt.objectId, envelopeKey);
-    const ciphertext = readFileSync(
-      resolve(whatsAppMediaRoot(context), `${receipt.objectId}.sfmedia`),
+    const objectPath = resolve(
+      whatsAppMediaRoot(context),
+      `${receipt.objectId}.sfmedia`,
+    );
+    const ciphertext = readBoundedCiphertext(
+      objectPath,
+      expectedCiphertextBytes(receipt),
     );
     try {
       const plaintext = openExactObjectBytes(
