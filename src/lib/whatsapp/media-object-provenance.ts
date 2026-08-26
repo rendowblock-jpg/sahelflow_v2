@@ -172,7 +172,7 @@ function sniffMediaType(
   if (
     prefix
       .subarray(0, 8)
-      .equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]))
+      .equals(Buffer.from([0xd0, 0xcf, 0x11, 0xa1, 0xe0, 0xb1, 0x1a, 0xe1]))
   ) {
     return "application/x-ole-storage";
   }
@@ -193,11 +193,6 @@ function expectedCiphertextBytes(receipt: WhatsAppMediaObjectReceipt): number {
   return value;
 }
 
-/**
- * Read exactly the receipt-bounded ciphertext length from one already-open file
- * descriptor. This prevents a replaced/oversized local object from forcing an
- * unbounded allocation before cryptographic frame validation runs.
- */
 function readBoundedCiphertext(path: string, expectedBytes: number): Buffer {
   const descriptor = openSync(path, "r");
   let output: Buffer | null = null;
@@ -243,11 +238,6 @@ function readBoundedCiphertext(path: string, expectedBytes: number): Buffer {
   }
 }
 
-/**
- * Authenticate exact object bytes. Read paths may retain the plaintext chunks;
- * provenance-only paths deliberately wipe each authenticated chunk immediately
- * so media-fetch completion never needs a second full plaintext copy in memory.
- */
 function openExactObjectBytes(
   bytes: Buffer,
   objectId: string,
@@ -286,7 +276,9 @@ function openExactObjectBytes(
   let total = 0;
   let prefix = Buffer.alloc(0);
   const plaintextHash = createHash("sha256");
-  const retained: Buffer[] = [];
+  let retainedOutput: Buffer | null = retainPlaintext
+    ? Buffer.allocUnsafe(receipt.sizeBytes)
+    : null;
   try {
     while (offset < bytes.length) {
       if (offset + FRAME_OVERHEAD_BYTES > bytes.length) {
@@ -343,8 +335,8 @@ function openExactObjectBytes(
         prefix = nextPrefix;
       }
       plaintextHash.update(plaintext);
-      if (retainPlaintext) retained.push(plaintext);
-      else plaintext.fill(0);
+      if (retainedOutput) plaintext.copy(retainedOutput, total);
+      plaintext.fill(0);
       total += plaintextBytes;
       index += 1;
       offset = ciphertextEnd;
@@ -364,13 +356,12 @@ function openExactObjectBytes(
         "MEDIA_OBJECT_CORRUPT",
       );
     }
-    if (!retainPlaintext) return null;
-    const opened = Buffer.concat(retained, total);
-    for (const chunk of retained) chunk.fill(0);
-    retained.length = 0;
+    if (!retainedOutput) return null;
+    const opened = retainedOutput;
+    retainedOutput = null;
     return opened;
   } catch (error) {
-    for (const chunk of retained) chunk.fill(0);
+    retainedOutput?.fill(0);
     throw error;
   } finally {
     prefix.fill(0);
@@ -431,12 +422,6 @@ async function authenticateMediaObject(
   }
 }
 
-/**
- * Read the object once, authenticate every GCM frame from that immutable Buffer,
- * and only then return provenance for those exact bytes. This intentionally does
- * not trust a path-level verify/read/verify sequence, which can be raced by a
- * same-name filesystem replacement between independent opens.
- */
 export async function verifyWhatsAppMediaObjectWithProvenance(
   context: ServiceContext,
   messageId: string,
@@ -453,14 +438,6 @@ export async function verifyWhatsAppMediaObjectWithProvenance(
   return authenticated.provenance;
 }
 
-/**
- * Open one canonical media object for an authenticated seller read. Plaintext
- * exists only in memory, is bounded by the same per-kind limits as ingestion,
- * and is returned only after every GCM frame plus the encrypted integrity
- * receipt has been verified against the exact message/shop identity.
- *
- * The caller owns `bytes` and must wipe it after copying the response payload.
- */
 export async function readWhatsAppMediaObject(
   context: ServiceContext,
   messageId: string,
