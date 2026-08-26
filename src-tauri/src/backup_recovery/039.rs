@@ -42,6 +42,11 @@ fn create_rescue(app_data_dir: &Path, journal: &RestoreJournal) -> Result<(), Io
             sha256: sha256_file(&target)?,
         });
     }
+    let whatsapp_media = Some(copy_whatsapp_media_tree(
+        &whatsapp_media_root(app_data_dir),
+        &rescue.join(WHATSAPP_MEDIA_ROOT_NAME),
+        &registry,
+    )?);
     let (brk_authority_file, brk_authority_sha256) = {
         let source = brk_authority_path(app_data_dir);
         if source.exists() {
@@ -77,6 +82,7 @@ fn create_rescue(app_data_dir: &Path, journal: &RestoreJournal) -> Result<(), Io
         identity_marker_file,
         identity_marker_sha256,
         databases,
+        whatsapp_media,
     };
     write_json_atomic(&rescue.join("rescue-manifest.json"), &manifest)?;
     sync_tree(&rescue)
