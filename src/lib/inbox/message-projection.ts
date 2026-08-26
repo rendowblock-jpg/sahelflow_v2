@@ -21,6 +21,19 @@ function mostAdvancedDeliveryStatus(
   }, undefined);
 }
 
+function resolveProjectedDeliveryStatus(
+  persisted: InboxMessage["deliveryStatus"],
+  live: InboxMessage["deliveryStatus"],
+): InboxMessage["deliveryStatus"] {
+  // Failure is a terminal outbox outcome, not a lower delivery receipt. A
+  // live failure must survive an older request snapshot so the retry action
+  // remains visible. Conversely, a live retry/success supersedes a persisted
+  // failure. Only successful delivery receipts are monotonically ranked.
+  if (live === "failed") return "failed";
+  if (persisted === "failed") return live ?? "failed";
+  return mostAdvancedDeliveryStatus(persisted, live);
+}
+
 /**
  * Restores persisted history without erasing live mutations that landed while
  * the projection request was in flight. Outbox effect keys remain stable when
@@ -54,7 +67,7 @@ export function mergeInboxMessageProjection(
     if (liveMessage.outboxEffectKey) {
       liveIdByEffectKey.delete(liveMessage.outboxEffectKey);
     }
-    const deliveryStatus = mostAdvancedDeliveryStatus(
+    const deliveryStatus = resolveProjectedDeliveryStatus(
       message.deliveryStatus,
       liveMessage.deliveryStatus,
     );

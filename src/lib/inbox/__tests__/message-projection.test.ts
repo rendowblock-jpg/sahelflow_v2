@@ -21,6 +21,21 @@ function message(
 }
 
 describe("Inbox live message projection reconciliation", () => {
+  const progressiveDeliveryStates = [
+    "sending",
+    "sent",
+    "delivered",
+    "read",
+  ] as const;
+  const progressiveDeliveryMatrix = progressiveDeliveryStates.flatMap(
+    (persistedStatus, persistedRank) =>
+      progressiveDeliveryStates.map((liveStatus, liveRank) => [
+        persistedStatus,
+        liveStatus,
+        progressiveDeliveryStates[Math.max(persistedRank, liveRank)],
+      ] as const),
+  );
+
   it("restores persisted history and retains a later live arrival in order", () => {
     const result = mergeInboxMessageProjection(
       [message("history-1", 1), message("history-2", 2)],
@@ -74,6 +89,121 @@ describe("Inbox live message projection reconciliation", () => {
       }),
     ]);
   });
+
+  it.each(progressiveDeliveryMatrix)(
+    "merges progressive receipt %s with live %s as %s",
+    (persistedStatus, liveStatus, expectedStatus) => {
+      const result = mergeInboxMessageProjection(
+        [
+          message("outbound-1", 2, {
+            direction: "outbound",
+            deliveryStatus: persistedStatus,
+          }),
+        ],
+        [
+          message("outbound-1", 2, {
+            direction: "outbound",
+            deliveryStatus: liveStatus,
+          }),
+        ],
+      );
+
+      expect(result[0]?.deliveryStatus).toBe(expectedStatus);
+    },
+  );
+
+  it.each(progressiveDeliveryStates)(
+    "preserves a live terminal failure over persisted %s",
+    (persistedStatus) => {
+      const result = mergeInboxMessageProjection(
+        [
+          message("outbound-1", 2, {
+            direction: "outbound",
+            deliveryStatus: persistedStatus,
+            outboxState: "processing",
+          }),
+        ],
+        [
+          message("outbound-1", 2, {
+            direction: "outbound",
+            deliveryStatus: "failed",
+            outboxState: "dead_letter",
+          }),
+        ],
+      );
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          deliveryStatus: "failed",
+          outboxState: "dead_letter",
+        }),
+      ]);
+    },
+  );
+
+  it("preserves an ambiguous live failure and its retry authority", () => {
+    const result = mergeInboxMessageProjection(
+      [
+        message("outbound-1", 2, {
+          direction: "outbound",
+          deliveryStatus: "sent",
+          outboxState: "processing",
+        }),
+      ],
+      [
+        message("outbound-1", 2, {
+          direction: "outbound",
+          deliveryStatus: "failed",
+          outboxEffectKey: "effect-1",
+          outboxState: "ambiguous",
+        }),
+      ],
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        deliveryStatus: "failed",
+        outboxEffectKey: "effect-1",
+        outboxState: "ambiguous",
+      }),
+    ]);
+  });
+
+  it.each([
+    ["sending", "queued"],
+    ["sending", "processing"],
+    ["sending", "retrying"],
+    ["sent", "succeeded"],
+  ] as const)(
+    "allows live %s/%s to supersede a persisted terminal failure",
+    (liveStatus, liveOutboxState) => {
+      const result = mergeInboxMessageProjection(
+        [
+          message("outbound-1", 2, {
+            direction: "outbound",
+            deliveryStatus: "failed",
+            outboxEffectKey: "effect-1",
+            outboxState: "dead_letter",
+          }),
+        ],
+        [
+          message("outbound-1", 2, {
+            direction: "outbound",
+            deliveryStatus: liveStatus,
+            outboxEffectKey: "effect-1",
+            outboxState: liveOutboxState,
+          }),
+        ],
+      );
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          deliveryStatus: liveStatus,
+          outboxState: liveOutboxState,
+        }),
+      ]);
+    },
+  );
 
   it("reconciles a client id with its provider id through the stable effect key", () => {
     const result = mergeInboxMessageProjection(
