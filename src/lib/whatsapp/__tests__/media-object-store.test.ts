@@ -4,6 +4,7 @@ process.env.SF_MASTER_KEY =
 
 import { randomUUID } from "node:crypto";
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -15,6 +16,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { db, shopContext } from "@/lib/db";
+import { stageWhatsAppMediaErase } from "../media-erase-lifecycle";
 import {
   removeWhatsAppMediaRoot,
   verifyWhatsAppMediaObject,
@@ -157,5 +159,34 @@ describe("WhatsApp encrypted media objects", () => {
         source: stream(png),
       }),
     ).rejects.toMatchObject({ code: "MEDIA_CONTENT_TYPE_MISMATCH" });
+  });
+
+  it("refuses object promotion when privacy erase starts mid-stream", async () => {
+    const bytes = jpeg("erase-race-secret");
+    const mediaRoot = whatsAppMediaRoot(context);
+    let staged = false;
+    const racingStream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (!staged) {
+          stageWhatsAppMediaErase(mediaRoot);
+          staged = true;
+          controller.enqueue(bytes);
+          controller.close();
+        }
+      },
+    });
+
+    await expect(
+      writeWhatsAppMediaObject(context, {
+        messageId: randomUUID(),
+        kind: "image",
+        declaredSize: bytes.length,
+        declaredMime: "image/jpeg",
+        source: racingStream,
+      }),
+    ).rejects.toMatchObject({ code: "MEDIA_OBJECT_IO_FAILED" });
+
+    expect(existsSync(mediaRoot)).toBe(false);
+    expect(existsSync(`${mediaRoot}.erasing`)).toBe(true);
   });
 });
