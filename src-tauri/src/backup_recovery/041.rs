@@ -56,6 +56,16 @@ fn apply_staged_restore(
         remove_sqlite_file_set(&shops_dir.join(obsolete))?;
     }
 
+    match &staged.whatsapp_media {
+        Some(expected_media) => replace_whatsapp_media_tree(
+            &staging.join(WHATSAPP_MEDIA_ROOT_NAME),
+            &whatsapp_media_root(app_data_dir),
+            &target_registry,
+            expected_media,
+        )?,
+        None => remove_whatsapp_media_tree_if_present(app_data_dir)?,
+    }
+
     write_json_atomic(&app_data_dir.join(REGISTRY_FILE), &target_registry)?;
     replace_from_verified_source(
         &staging.join(&staged.target_brk_authority_file),
@@ -88,6 +98,21 @@ fn apply_staged_restore(
                 "restored database changed during cutover",
             ));
         }
+    }
+    if let Some(expected_media) = &staged.whatsapp_media {
+        if whatsapp_media_tree_stats(&whatsapp_media_root(app_data_dir), &observed)?
+            != *expected_media
+        {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "restored WhatsApp media tree changed during cutover",
+            ));
+        }
+    } else if whatsapp_media_root(app_data_dir).exists() {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "legacy restore left unexpected WhatsApp media state",
+        ));
     }
     let _ = journal;
     sync_directory(&shops_dir)?;
