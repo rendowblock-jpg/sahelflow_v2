@@ -38,17 +38,30 @@ export function startWhatsAppOutboxWorker(): void {
           drainDueWhatsAppMediaFetches,
           reconcileQueuedWhatsAppMediaFetches,
         },
+        { reconcileWhatsAppMediaEraseAfterRestart },
+        { whatsAppMediaRoot },
         { reconcileAbandonedWhatsAppMediaTemps },
         { requireLicenseEntitlement },
       ] = await Promise.all([
         import("@/lib/db"),
         import("@/lib/whatsapp/durable-send"),
         import("@/lib/whatsapp/media-fetch-worker"),
+        import("@/lib/whatsapp/media-erase-lifecycle"),
+        import("@/lib/whatsapp/media-object-store"),
         import("@/lib/whatsapp/media-temp-reconciliation"),
         import("@/lib/license/license-authority"),
       ]);
-      await requireLicenseEntitlement(undefined, shopContext);
       const context = { prisma: db, shop: shopContext } as const;
+
+      // Local crash recovery is not a provider effect and must not be blocked by
+      // an expired entitlement. Resolve a stale privacy tombstone before any
+      // licensed WhatsApp work can observe it as a permanent write barrier.
+      reconcileWhatsAppMediaEraseAfterRestart(
+        whatsAppMediaRoot(context),
+        await db.message.count(),
+      );
+
+      await requireLicenseEntitlement(undefined, shopContext);
       await drainDueWhatsAppEffects(context, 10);
       reconcileAbandonedWhatsAppMediaTemps(context);
       await reconcileQueuedWhatsAppMediaFetches(context, 24);
