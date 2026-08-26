@@ -12,7 +12,10 @@ import type {
 import type { ConversationWorkflowState } from "@/components/inbox/conversation-controls";
 import { useI18n } from "@/hooks/use-i18n";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
-import { mergeInboxMessageProjection } from "@/lib/inbox/message-projection";
+import {
+  mergeInboxMessageProjection,
+  reconcileInboxProviderMessage,
+} from "@/lib/inbox/message-projection";
 import { toast } from "@/lib/toast";
 import {
   messageText,
@@ -798,15 +801,11 @@ export function useInboxWorkspace() {
           const state = data.effect.state;
           if (state === "succeeded") {
             mutateMessages(conversationId, (current) =>
-              current.map((message) =>
-                message.id === localMessageId
-                  ? {
-                      ...message,
-                      id: data.effect.providerMessageId ?? message.id,
-                      deliveryStatus: "sent",
-                      outboxState: state,
-                    }
-                  : message,
+              reconcileInboxProviderMessage(
+                current,
+                localMessageId,
+                data.effect.providerMessageId,
+                { deliveryStatus: "sent", outboxState: state },
               ),
             );
             return;
@@ -877,15 +876,11 @@ export function useInboxWorkspace() {
         if (!data.effect) throw new Error(t("inbox.sendFailed"));
         if (data.effect.state === "succeeded") {
           mutateMessages(conversationId, (current) =>
-            current.map((entry) =>
-              entry.id === message.id
-                ? {
-                    ...entry,
-                    id: data.effect?.providerMessageId ?? entry.id,
-                    deliveryStatus: "sent",
-                    outboxState: "succeeded",
-                  }
-                : entry,
+            reconcileInboxProviderMessage(
+              current,
+              message.id,
+              data.effect?.providerMessageId,
+              { deliveryStatus: "sent", outboxState: "succeeded" },
             ),
           );
           return;
@@ -1022,17 +1017,11 @@ export function useInboxWorkspace() {
         );
       }
       mutateMessages(chat.conversationId, (current) =>
-        current.map((message) =>
-          message.id === tempId
-            ? {
-                ...message,
-                deliveryStatus: "sent",
-                outboxEffectKey: data.effectKey,
-                outboxState: "succeeded",
-                ...(data.id ? { id: data.id } : {}),
-              }
-            : message,
-        ),
+        reconcileInboxProviderMessage(current, tempId, data.id, {
+          deliveryStatus: "sent",
+          outboxEffectKey: data.effectKey,
+          outboxState: "succeeded",
+        }),
       );
       void loadChats();
     } catch (error) {

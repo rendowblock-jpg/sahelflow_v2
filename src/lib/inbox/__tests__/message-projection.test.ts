@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
-import { mergeInboxMessageProjection } from "@/lib/inbox/message-projection";
+import {
+  mergeInboxMessageProjection,
+  reconcileInboxProviderMessage,
+} from "@/lib/inbox/message-projection";
 
 function message(
   id: string,
@@ -87,5 +90,47 @@ describe("Inbox live message projection reconciliation", () => {
     );
 
     expect(result.map((entry) => entry.id)).toEqual(["history-1", "temp-2"]);
+  });
+
+  it("collapses a socket-push copy when the send receipt assigns its provider id", () => {
+    const result = reconcileInboxProviderMessage(
+      [
+        message("temp-2", 2, {
+          direction: "outbound",
+          deliveryStatus: "sending",
+        }),
+        message("provider-2", 2, {
+          direction: "outbound",
+          deliveryStatus: "sent",
+        }),
+      ],
+      "temp-2",
+      "provider-2",
+      { deliveryStatus: "sent", outboxState: "succeeded" },
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "provider-2",
+        deliveryStatus: "sent",
+        outboxState: "succeeded",
+      }),
+    ]);
+  });
+
+  it("updates the provider row when it is already the only visible copy", () => {
+    const result = reconcileInboxProviderMessage(
+      [message("provider-2", 2, { direction: "outbound" })],
+      "temp-2",
+      "provider-2",
+      { deliveryStatus: "delivered" },
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "provider-2",
+        deliveryStatus: "delivered",
+      }),
+    ]);
   });
 });

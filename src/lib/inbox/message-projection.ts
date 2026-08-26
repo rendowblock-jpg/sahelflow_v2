@@ -39,3 +39,37 @@ export function mergeInboxMessageProjection(
   merged.push(...remainingLiveById.values());
   return merged.sort((left, right) => left.timestamp - right.timestamp);
 }
+
+/**
+ * Applies a provider receipt to the optimistic row and removes an earlier
+ * socket-push copy of that same provider message if it raced the HTTP result.
+ */
+export function reconcileInboxProviderMessage(
+  current: readonly InboxMessage[],
+  localMessageId: string,
+  providerMessageId: string | null | undefined,
+  patch: Partial<InboxMessage>,
+): InboxMessage[] {
+  const providerIndex = providerMessageId
+    ? current.findIndex((message) => message.id === providerMessageId)
+    : -1;
+  const localIndex = current.findIndex(
+    (message) => message.id === localMessageId,
+  );
+  const targetIndex = localIndex >= 0 ? localIndex : providerIndex;
+  if (targetIndex < 0) return [...current];
+
+  const target = current[targetIndex];
+  if (!target) return [...current];
+  const reconciled: InboxMessage = {
+    ...target,
+    ...patch,
+    id: providerMessageId ?? target.id,
+  };
+
+  return current.flatMap((message, index) => {
+    if (index === targetIndex) return [reconciled];
+    if (providerMessageId && message.id === providerMessageId) return [];
+    return [message];
+  });
+}
