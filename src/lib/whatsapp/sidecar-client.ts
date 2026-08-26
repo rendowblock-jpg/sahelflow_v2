@@ -54,11 +54,11 @@ export class SidecarRequestError extends Error {
   }
 }
 
-async function sidecarFetch<T>(
+async function sidecarRequest(
   path: string,
   init?: RequestInit,
   timeoutMs = 8000,
-): Promise<T> {
+): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -89,7 +89,7 @@ async function sidecarFetch<T>(
         response.status,
       );
     }
-    return (await response.json()) as T;
+    return response;
   } catch (error) {
     if (error instanceof SidecarRequestError) throw error;
     if (error instanceof Error && error.name === "AbortError") {
@@ -116,6 +116,16 @@ async function sidecarFetch<T>(
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+async function sidecarFetch<T>(
+  path: string,
+  init?: RequestInit,
+  timeoutMs = 8000,
+): Promise<T> {
+  return (await sidecarRequest(path, init, timeoutMs).then((response) =>
+    response.json(),
+  )) as T;
 }
 
 export const sidecar = {
@@ -168,6 +178,22 @@ export const sidecar = {
     );
     return result.receipt ? { ok: true, ...result.receipt } : null;
   },
+
+  /**
+   * Private authenticated media read. Raw provider retrieval fields travel only
+   * over loopback for this request and are never returned to a browser or stored
+   * in the durable media-fetch outbox.
+   */
+  downloadMedia: (message: IncomingMessage) =>
+    sidecarRequest(
+      "/media/download",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      },
+      120_000,
+    ),
 
   connect: () =>
     sidecarFetch<{ ok: boolean } & SidecarStatus>("/connect", {

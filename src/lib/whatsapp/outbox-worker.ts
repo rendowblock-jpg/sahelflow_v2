@@ -34,14 +34,22 @@ export function startWhatsAppOutboxWorker(): void {
       const [
         { db, shopContext },
         { drainDueWhatsAppEffects },
+        {
+          drainDueWhatsAppMediaFetches,
+          reconcileQueuedWhatsAppMediaFetches,
+        },
         { requireLicenseEntitlement },
       ] = await Promise.all([
         import("@/lib/db"),
         import("@/lib/whatsapp/durable-send"),
+        import("@/lib/whatsapp/media-fetch-worker"),
         import("@/lib/license/license-authority"),
       ]);
       await requireLicenseEntitlement(undefined, shopContext);
-      await drainDueWhatsAppEffects({ prisma: db, shop: shopContext }, 10);
+      const context = { prisma: db, shop: shopContext } as const;
+      await drainDueWhatsAppEffects(context, 10);
+      await reconcileQueuedWhatsAppMediaFetches(context, 24);
+      await drainDueWhatsAppMediaFetches(context, 4);
     } catch {
       // Durable queued/retrying/ambiguous state remains authoritative. The next
       // bounded tick retries safe work; provider payload/error text is not logged.
