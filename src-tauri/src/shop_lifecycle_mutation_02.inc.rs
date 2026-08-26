@@ -98,14 +98,52 @@ impl AcceptedMutation {
                 }
                 let archive_database = archive_directory.join(ARCHIVE_DATABASE_FILE);
                 verify_archive_database(&archive_database, &archive.database_sha256)?;
+                let archive_media_scope =
+                    archive_directory.join(ARCHIVE_WHATSAPP_MEDIA_DIRECTORY);
+                if let Some(expected) = archive.whatsapp_media.as_ref() {
+                    verify_whatsapp_media_scope(&archive_media_scope, expected)?;
+                } else if archive_media_scope.exists() {
+                    return Err(MutationAuthorityError::Archive(
+                        "legacy shop archive contains unauthenticated WhatsApp media".to_string(),
+                    ));
+                }
+
                 let live_database = self
                     .app_data_dir
                     .join("shops")
                     .join(&archive.shop.database_file);
+                let live_media_scope = whatsapp_media_scope_path(
+                    &self.app_data_dir,
+                    &registry.workspace_id,
+                    &archive.shop.id,
+                    &archive.shop.incarnation_id,
+                )?;
                 copy_database_exact(&archive_database, &live_database)?;
+                let media_restore = (|| -> Result<(), MutationAuthorityError> {
+                    if let Some(expected) = archive.whatsapp_media.as_ref() {
+                        restore_whatsapp_media_scope(
+                            &archive_media_scope,
+                            &live_media_scope,
+                            expected,
+                        )?;
+                    } else if live_media_scope.exists() {
+                        return Err(MutationAuthorityError::Archive(
+                            "legacy recovery target already contains WhatsApp media".to_string(),
+                        ));
+                    }
+                    Ok(())
+                })();
+                if let Err(error) = media_restore {
+                    let _ = remove_sqlite_file_set(&live_database);
+                    return Err(error);
+                }
+
                 registry.shops.push(archive.shop);
                 self.finalize_archive = Some(archive_directory);
-                RollbackAction::RemoveDatabase(live_database)
+                RollbackAction::RemoveRecoveredShop {
+                    live_database,
+                    live_media_scope,
+                }
             }
             ShopLifecyclePayload::Switch => {
                 return Err(MutationAuthorityError::UnsupportedOperation)
@@ -122,9 +160,14 @@ impl AcceptedMutation {
         });
         write_json_atomic(&registry_path, &registry)?;
         self.registry_committed = true;
-        if let Some(database_path) = self.post_commit_remove.take() {
-            remove_sqlite_file_set(&database_path)?;
+        if let Some(database_path) = self.post_commit_remove.as_ref() {
+            remove_sqlite_file_set(database_path)?;
         }
+        if let Some(media_scope) = self.post_commit_remove_media.as_ref() {
+            remove_whatsapp_media_scope_if_present(media_scope)?;
+        }
+        self.post_commit_remove = None;
+        self.post_commit_remove_media = None;
 
         let target_authority = migration_coordinator::active_authority(
             &self.app_data_dir,

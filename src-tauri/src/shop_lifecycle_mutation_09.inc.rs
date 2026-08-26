@@ -89,7 +89,7 @@ fn read_archive(
 }
 
 fn archive_message(state: &ArchiveState) -> Vec<u8> {
-    let mut output = Vec::with_capacity(512);
+    let mut output = Vec::with_capacity(768);
     push_string(&mut output, std::str::from_utf8(ARCHIVE_MAC_DOMAIN).unwrap_or(""));
     output.push(0);
     output.push(state.format_version);
@@ -107,6 +107,15 @@ fn archive_message(state: &ArchiveState) -> Vec<u8> {
     push_optional_string(&mut output, state.shop.icon.as_deref());
     push_string(&mut output, &state.shop.created_at);
     push_string(&mut output, &state.database_sha256);
+    // Backward compatibility: old format-v1 archives had no media field in the
+    // authenticated message. Appending this extension only when present keeps
+    // those exact MAC bytes valid while authenticating every new media archive.
+    if let Some(media) = state.whatsapp_media.as_ref() {
+        push_string(&mut output, "whatsapp-media-archive-scope-v1");
+        push_u64(&mut output, media.object_count);
+        push_u64(&mut output, media.ciphertext_bytes);
+        push_string(&mut output, &media.scope_sha256);
+    }
     push_u64(&mut output, state.archived_at_unix_ms);
     push_u64(&mut output, state.source_registry_revision);
     push_string(&mut output, &state.operation_id);

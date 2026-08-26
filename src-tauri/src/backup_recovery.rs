@@ -55,4 +55,5 @@ include!("backup_recovery/053.rs");
 include!("backup_recovery/055.rs");
 include!("backup_recovery/056.rs");
 include!("backup_recovery/057.rs");
+include!("backup_recovery/058.rs");
 include!("backup_recovery/054.rs");

@@ -46,6 +46,15 @@ fn committed_outcome_matches(
                 &archive_directory.join(ARCHIVE_DATABASE_FILE),
                 &archive.database_sha256,
             )?;
+            let archive_media_scope =
+                archive_directory.join(ARCHIVE_WHATSAPP_MEDIA_DIRECTORY);
+            if let Some(expected) = archive.whatsapp_media.as_ref() {
+                verify_whatsapp_media_scope(&archive_media_scope, expected)?;
+            } else if archive_media_scope.exists() {
+                return Err(MutationAuthorityError::ManualRecoveryRequired(
+                    "shop archive contains unauthenticated WhatsApp media".to_string(),
+                ));
+            }
             target_absent
                 && archive.status == expected_status
                 && archive.workspace_id == registry.workspace_id
@@ -56,7 +65,7 @@ fn committed_outcome_matches(
                 && Some(archive.shop.incarnation_id.as_str())
                     == request.target_shop_incarnation_id.as_deref()
         }
-        ShopLifecyclePayload::Recover { .. } => {
+        ShopLifecyclePayload::Recover { archive_id } => {
             let Some(shop) = registry.shops.iter().find(|shop| {
                 Some(shop.id.as_str()) == request.target_shop_id.as_deref()
                     && Some(shop.incarnation_id.as_str())
@@ -65,6 +74,22 @@ fn committed_outcome_matches(
                 return Ok(false);
             };
             preflight_database(&app_data_dir.join("shops").join(&shop.database_file))?;
+            let archive_directory = app_data_dir.join(ARCHIVE_DIRECTORY).join(archive_id);
+            if archive_directory.exists() {
+                let (_, archive) = read_archive(app_data_dir, archive_id, installation_root)?;
+                validate_recovery_target(&archive, request)?;
+                let live_media_scope = whatsapp_media_scope_path(
+                    app_data_dir,
+                    &registry.workspace_id,
+                    &shop.id,
+                    &shop.incarnation_id,
+                )?;
+                match archive.whatsapp_media.as_ref() {
+                    Some(expected) => verify_whatsapp_media_scope(&live_media_scope, expected)?,
+                    None if live_media_scope.exists() => return Ok(false),
+                    None => {}
+                }
+            }
             true
         }
     })
@@ -101,10 +126,26 @@ fn finalize_committed_artifacts(
                 &archive_directory.join(ARCHIVE_DATABASE_FILE),
                 &archive.database_sha256,
             )?;
+            let archive_media_scope =
+                archive_directory.join(ARCHIVE_WHATSAPP_MEDIA_DIRECTORY);
+            if let Some(expected) = archive.whatsapp_media.as_ref() {
+                verify_whatsapp_media_scope(&archive_media_scope, expected)?;
+            } else if archive_media_scope.exists() {
+                return Err(MutationAuthorityError::ManualRecoveryRequired(
+                    "committed archive contains unauthenticated WhatsApp media".to_string(),
+                ));
+            }
             let live_database = app_data_dir.join("shops").join(&archive.shop.database_file);
+            let live_media_scope = whatsapp_media_scope_path(
+                app_data_dir,
+                &archive.workspace_id,
+                &archive.shop.id,
+                &archive.shop.incarnation_id,
+            )?;
             if live_database.exists() {
                 remove_sqlite_file_set(&live_database)?;
             }
+            remove_whatsapp_media_scope_if_present(&live_media_scope)?;
         }
         ShopLifecyclePayload::Recover { archive_id } => {
             let expected_directory = app_data_dir.join(ARCHIVE_DIRECTORY).join(archive_id);
@@ -116,6 +157,21 @@ fn finalize_committed_artifacts(
                     &archive_directory.join(ARCHIVE_DATABASE_FILE),
                     &archive.database_sha256,
                 )?;
+                let live_media_scope = whatsapp_media_scope_path(
+                    app_data_dir,
+                    &archive.workspace_id,
+                    &archive.shop.id,
+                    &archive.shop.incarnation_id,
+                )?;
+                match archive.whatsapp_media.as_ref() {
+                    Some(expected) => verify_whatsapp_media_scope(&live_media_scope, expected)?,
+                    None if live_media_scope.exists() => {
+                        return Err(MutationAuthorityError::ManualRecoveryRequired(
+                            "legacy recovered shop unexpectedly contains WhatsApp media".to_string(),
+                        ))
+                    }
+                    None => {}
+                }
                 fs::remove_dir_all(&archive_directory)?;
             }
         }
@@ -148,6 +204,13 @@ fn cleanup_uncommitted_artifacts(
                     remove_sqlite_file_set(
                         &app_data_dir.join("shops").join(&archive.shop.database_file),
                     )?;
+                    let live_media_scope = whatsapp_media_scope_path(
+                        app_data_dir,
+                        &archive.workspace_id,
+                        &archive.shop.id,
+                        &archive.shop.incarnation_id,
+                    )?;
+                    remove_whatsapp_media_scope_if_present(&live_media_scope)?;
                 }
                 Ok(_) | Err(_) => {}
             }
@@ -168,6 +231,29 @@ fn cleanup_uncommitted_artifacts(
                             &archive_directory.join(ARCHIVE_DATABASE_FILE),
                             &live,
                         )?;
+                    }
+                    let live_media_scope = whatsapp_media_scope_path(
+                        app_data_dir,
+                        &archive.workspace_id,
+                        &archive.shop.id,
+                        &archive.shop.incarnation_id,
+                    )?;
+                    let archive_media_scope =
+                        archive_directory.join(ARCHIVE_WHATSAPP_MEDIA_DIRECTORY);
+                    match archive.whatsapp_media.as_ref() {
+                        Some(expected) if live_media_scope.exists() => {
+                            verify_whatsapp_media_scope(&live_media_scope, expected)?;
+                        }
+                        Some(expected) => {
+                            restore_whatsapp_media_scope(
+                                &archive_media_scope,
+                                &live_media_scope,
+                                expected,
+                            )?;
+                        }
+                        None => {
+                            remove_whatsapp_media_scope_if_present(&live_media_scope)?;
+                        }
                     }
                 }
                 fs::remove_dir_all(archive_directory)?;

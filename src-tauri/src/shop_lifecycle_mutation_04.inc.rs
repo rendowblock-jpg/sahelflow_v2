@@ -23,35 +23,63 @@ impl AcceptedMutation {
         ensure_directory(&archive_directory)?;
         let live_database = self.app_data_dir.join("shops").join(&target.database_file);
         let archive_database = archive_directory.join(ARCHIVE_DATABASE_FILE);
-        snapshot_database(&live_database, &archive_database)?;
-        let digest = sha256_file(&archive_database)?;
-        let state = ArchiveState {
-            format_version: 1,
-            archive_id: self.journal.journal.request.operation_id.clone(),
-            workspace_id: registry.workspace_id.clone(),
-            installation_id: registry.installation_id.clone(),
-            status,
-            shop: target.clone(),
-            database_sha256: digest,
-            archived_at_unix_ms: now_unix_ms,
-            source_registry_revision: registry.revision,
-            operation_id: self.journal.journal.request.operation_id.clone(),
-        };
-        write_archive_manifest(
-            &archive_directory.join(ARCHIVE_MANIFEST_FILE),
-            state,
-            &self.installation_root,
+        let live_media_scope = whatsapp_media_scope_path(
+            &self.app_data_dir,
+            &registry.workspace_id,
+            &target.id,
+            &target.incarnation_id,
         )?;
+        let archive_media_scope = archive_directory.join(ARCHIVE_WHATSAPP_MEDIA_DIRECTORY);
+
+        let prepared = (|| -> Result<(String, Option<WhatsAppMediaScopeStats>), MutationAuthorityError> {
+            snapshot_database(&live_database, &archive_database)?;
+            let digest = sha256_file(&archive_database)?;
+            let media_stats =
+                snapshot_whatsapp_media_scope(&live_media_scope, &archive_media_scope)?;
+            if let Some(expected) = media_stats.as_ref() {
+                verify_whatsapp_media_scope(&archive_media_scope, expected)?;
+            }
+            let state = ArchiveState {
+                format_version: 1,
+                archive_id: self.journal.journal.request.operation_id.clone(),
+                workspace_id: registry.workspace_id.clone(),
+                installation_id: registry.installation_id.clone(),
+                status,
+                shop: target.clone(),
+                database_sha256: digest.clone(),
+                whatsapp_media: media_stats.clone(),
+                archived_at_unix_ms: now_unix_ms,
+                source_registry_revision: registry.revision,
+                operation_id: self.journal.journal.request.operation_id.clone(),
+            };
+            write_archive_manifest(
+                &archive_directory.join(ARCHIVE_MANIFEST_FILE),
+                state,
+                &self.installation_root,
+            )?;
+            Ok((digest, media_stats))
+        })();
+        let (_, media_stats) = match prepared {
+            Ok(value) => value,
+            Err(error) => {
+                let _ = fs::remove_dir_all(&archive_directory);
+                return Err(error);
+            }
+        };
 
         registry.shops.retain(|shop| shop.id != target.id);
         if registry.active_shop_id.as_deref() == Some(target.id.as_str()) {
             registry.active_shop_id = registry.shops.first().map(|shop| shop.id.clone());
         }
         self.post_commit_remove = Some(live_database.clone());
-        Ok(RollbackAction::RestoreArchivedDatabase {
+        self.post_commit_remove_media = Some(live_media_scope.clone());
+        Ok(RollbackAction::RestoreArchivedShop {
             archive_directory,
             archive_database,
+            archive_media_scope,
             live_database,
+            live_media_scope,
+            media_stats,
         })
     }
 }
@@ -130,6 +158,7 @@ pub fn accept_mutation(
         rollback: None,
         finalize_archive: None,
         post_commit_remove: None,
+        post_commit_remove_media: None,
         registry_committed: false,
         committed: None,
         _lifecycle_lock: lifecycle_lock,
