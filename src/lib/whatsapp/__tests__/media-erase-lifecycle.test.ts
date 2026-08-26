@@ -70,4 +70,16 @@ describe("WhatsApp media erase tombstones", () => {
     commitWhatsAppMediaErase(stage);
     expect(whatsAppMediaErasePending(active)).toBe(false);
   });
+
+  it("unblocks an empty-scope rollback when a racing writer created the live directory", () => {
+    const stage = stageWhatsAppMediaErase(active);
+    expect(stage).toMatchObject({ fresh: true, hadActiveTree: false });
+    expect(whatsAppMediaErasePending(active)).toBe(true);
+
+    mkdirSync(active, { recursive: true });
+    rollbackWhatsAppMediaErase(stage);
+
+    expect(existsSync(active)).toBe(true);
+    expect(whatsAppMediaErasePending(active)).toBe(false);
+  });
 });
