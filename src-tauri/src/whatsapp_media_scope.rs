@@ -47,6 +47,19 @@ pub(super) fn whatsapp_media_scope_path(
         .join(hex_encode(&digest.finalize())))
 }
 
+fn erase_tombstone_path(scope_root: &Path) -> Result<PathBuf, IoError> {
+    let name = scope_root
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| {
+            IoError::new(
+                ErrorKind::InvalidData,
+                "WhatsApp media shop scope identity is not UTF-8",
+            )
+        })?;
+    Ok(scope_root.with_file_name(format!("{name}.erasing")))
+}
+
 fn valid_lower_hex_64(value: &str) -> bool {
     value.len() == 64
         && value
@@ -161,7 +174,10 @@ fn validate_media_object_file(path: &Path) -> Result<(), IoError> {
             remaining -= take;
         }
         chunk_count = chunk_count.checked_add(1).ok_or_else(|| {
-            IoError::new(ErrorKind::InvalidData, "WhatsApp media object has too many chunks")
+            IoError::new(
+                ErrorKind::InvalidData,
+                "WhatsApp media object has too many chunks",
+            )
         })?;
     }
     scratch.fill(0);
@@ -186,18 +202,25 @@ fn scope_entries(scope_root: &Path) -> Result<Vec<MediaScopeEntry>, IoError> {
     let mut entries = Vec::new();
     for entry in fs::read_dir(scope_root)? {
         let entry = entry?;
-        let name = entry.file_name().to_str().ok_or_else(|| {
-            IoError::new(
-                ErrorKind::InvalidData,
-                "WhatsApp media object name is not UTF-8",
-            )
-        })?.to_owned();
-        let object_id = name.strip_suffix(".sfmedia").ok_or_else(|| {
-            IoError::new(
-                ErrorKind::InvalidData,
-                "WhatsApp media scope contains a temporary or unsupported file",
-            )
-        })?.to_owned();
+        let name = entry
+            .file_name()
+            .to_str()
+            .ok_or_else(|| {
+                IoError::new(
+                    ErrorKind::InvalidData,
+                    "WhatsApp media object name is not UTF-8",
+                )
+            })?
+            .to_owned();
+        let object_id = name
+            .strip_suffix(".sfmedia")
+            .ok_or_else(|| {
+                IoError::new(
+                    ErrorKind::InvalidData,
+                    "WhatsApp media scope contains a temporary or unsupported file",
+                )
+            })?
+            .to_owned();
         if !valid_lower_hex_64(&object_id) {
             return Err(IoError::new(
                 ErrorKind::InvalidData,
@@ -230,7 +253,9 @@ fn scope_entries(scope_root: &Path) -> Result<Vec<MediaScopeEntry>, IoError> {
     Ok(entries)
 }
 
-fn scope_stats_from_entries(entries: &[MediaScopeEntry]) -> Result<WhatsAppMediaScopeStats, IoError> {
+fn scope_stats_from_entries(
+    entries: &[MediaScopeEntry],
+) -> Result<WhatsAppMediaScopeStats, IoError> {
     let mut digest = Sha256::new();
     digest.update(MEDIA_ARCHIVE_SCOPE_DIGEST_DOMAIN);
     digest.update((entries.len() as u64).to_le_bytes());
@@ -357,6 +382,48 @@ fn copy_scope_exact(
     Ok(expected)
 }
 
+pub(super) fn reconcile_whatsapp_media_erase_tombstone(
+    scope_root: &Path,
+    canonical_message_count: u64,
+) -> Result<(), IoError> {
+    let tombstone = erase_tombstone_path(scope_root)?;
+    reject_symlink_if_present(scope_root)?;
+    reject_symlink_if_present(&tombstone)?;
+    if !tombstone.exists() {
+        return Ok(());
+    }
+    if scope_root.exists() {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "WhatsApp media lifecycle found both active and erase-tombstone scopes",
+        ));
+    }
+    let metadata = fs::symlink_metadata(&tombstone)?;
+    if path_is_link(&metadata) || !metadata.is_dir() {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "WhatsApp media erase tombstone is not a contained directory",
+        ));
+    }
+
+    if canonical_message_count == 0 {
+        fs::remove_dir_all(&tombstone)?;
+        return sync_parent(&tombstone);
+    }
+
+    let has_hidden_entries = fs::read_dir(&tombstone)?.next().transpose()?.is_some();
+    if !has_hidden_entries {
+        fs::remove_dir(&tombstone)?;
+        return sync_parent(&tombstone);
+    }
+
+    // Validate the hidden tree before re-exposing it to a shop whose canonical
+    // message rows survived the interrupted erase.
+    scope_entries(&tombstone)?;
+    fs::rename(&tombstone, scope_root)?;
+    sync_parent(scope_root)
+}
+
 pub(super) fn snapshot_whatsapp_media_scope(
     source_scope: &Path,
     archive_scope: &Path,
@@ -435,7 +502,7 @@ mod tests {
     #[test]
     fn snapshot_restore_and_digest_are_exact() {
         let root = std::env::temp_dir().join(format!(
-            "sahelflow-media-scope-{}",
+            "sahelflow-media-scope-{}-snapshot",
             std::process::id()
         ));
         let _ = fs::remove_dir_all(&root);
@@ -456,6 +523,38 @@ mod tests {
         )
         .expect("tamper restored object");
         assert!(verify_whatsapp_media_scope(&restored, &expected).is_err());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn reconciles_crash_left_erase_tombstones_from_canonical_truth() {
+        let root = std::env::temp_dir().join(format!(
+            "sahelflow-media-scope-{}-erase",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create test root");
+        let live = root.join("a".repeat(64));
+        let tombstone = erase_tombstone_path(&live).expect("tombstone path");
+
+        fs::create_dir(&tombstone).expect("create rollback tombstone");
+        write_test_object(&tombstone.join(format!("{}.sfmedia", "b".repeat(64))));
+        reconcile_whatsapp_media_erase_tombstone(&live, 1).expect("restore rolled-back erase");
+        assert!(live.is_dir());
+        assert!(!tombstone.exists());
+
+        fs::rename(&live, &tombstone).expect("stage committed tombstone");
+        reconcile_whatsapp_media_erase_tombstone(&live, 0).expect("finish committed erase");
+        assert!(!live.exists());
+        assert!(!tombstone.exists());
+
+        fs::create_dir(&tombstone).expect("create empty rollback marker");
+        reconcile_whatsapp_media_erase_tombstone(&live, 1).expect("remove empty marker");
+        assert!(!tombstone.exists());
+
+        fs::create_dir(&live).expect("create ambiguous live scope");
+        fs::create_dir(&tombstone).expect("create ambiguous tombstone");
+        assert!(reconcile_whatsapp_media_erase_tombstone(&live, 1).is_err());
         let _ = fs::remove_dir_all(root);
     }
 }

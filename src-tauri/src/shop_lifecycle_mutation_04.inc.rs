@@ -1,3 +1,21 @@
+fn canonical_whatsapp_message_count(
+    database_path: &Path,
+) -> Result<u64, MutationAuthorityError> {
+    let connection = Connection::open_with_flags(
+        database_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
+            | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )?;
+    let count: i64 = connection.query_row(r#"SELECT COUNT(*) FROM "Message""#, [], |row| {
+        row.get(0)
+    })?;
+    u64::try_from(count).map_err(|_| {
+        MutationAuthorityError::InvalidRegistry(
+            "canonical WhatsApp message count is negative".to_string(),
+        )
+    })
+}
+
 impl AcceptedMutation {
     fn archive_target(
         &mut self,
@@ -20,18 +38,35 @@ impl AcceptedMutation {
                 "archive operation identity already exists".to_string(),
             ));
         }
-        ensure_directory(&archive_directory)?;
-        let live_database = self.app_data_dir.join("shops").join(&target.database_file);
-        let archive_database = archive_directory.join(ARCHIVE_DATABASE_FILE);
+        let live_database = self
+            .app_data_dir
+            .join("shops")
+            .join(&target.database_file);
         let live_media_scope = whatsapp_media_scope_path(
             &self.app_data_dir,
             &registry.workspace_id,
             &target.id,
             &target.incarnation_id,
         )?;
+
+        // The runtime is stopped before mutation commit. If it was terminated
+        // while privacy erase had hidden the media tree, SQLite has now either
+        // committed the erase (zero Message rows) or rolled it back (rows
+        // remain). Reconcile that deterministic tombstone before deciding what
+        // belongs in the authenticated archive.
+        reconcile_whatsapp_media_erase_tombstone(
+            &live_media_scope,
+            canonical_whatsapp_message_count(&live_database)?,
+        )?;
+
+        ensure_directory(&archive_directory)?;
+        let archive_database = archive_directory.join(ARCHIVE_DATABASE_FILE);
         let archive_media_scope = archive_directory.join(ARCHIVE_WHATSAPP_MEDIA_DIRECTORY);
 
-        let prepared = (|| -> Result<(String, Option<WhatsAppMediaScopeStats>), MutationAuthorityError> {
+        let prepared = (|| -> Result<
+            (String, Option<WhatsAppMediaScopeStats>),
+            MutationAuthorityError,
+        > {
             snapshot_database(&live_database, &archive_database)?;
             let digest = sha256_file(&archive_database)?;
             let media_stats =
