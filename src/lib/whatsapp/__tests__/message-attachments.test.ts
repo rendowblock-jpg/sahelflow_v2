@@ -58,6 +58,36 @@ describe("WhatsApp protected attachment metadata", () => {
     ).toMatchObject({ state: "rejected", failureCode: "UNSUPPORTED_MIME_TYPE" });
   });
 
+  it("accepts the bounded Baileys Opus voice-note MIME parameter", () => {
+    expect(
+      extractWhatsAppMessageAttachment({
+        audioMessage: {
+          mimetype: "audio/ogg; codecs=opus",
+          fileLength: 8192,
+          seconds: 12,
+          ptt: true,
+        },
+      }),
+    ).toMatchObject({
+      kind: "audio",
+      state: "metadata-only",
+      mimeType: "audio/ogg; codecs=opus",
+      voiceMessage: true,
+      failureCode: null,
+    });
+    expect(
+      extractWhatsAppMessageAttachment({
+        audioMessage: {
+          mimetype: "audio/ogg; codecs=vorbis",
+          ptt: true,
+        },
+      }),
+    ).toMatchObject({
+      state: "rejected",
+      failureCode: "UNSUPPORTED_MIME_TYPE",
+    });
+  });
+
   it("retains validated location and contact content as structured metadata", () => {
     expect(
       extractWhatsAppMessageAttachment({

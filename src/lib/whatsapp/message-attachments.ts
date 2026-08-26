@@ -29,6 +29,26 @@ const SAFE_MEDIA_TYPES = {
   sticker: /^(image\/webp)$/i,
 } as const;
 
+function safeMediaMimeType(
+  kind: keyof typeof MEDIA_LIMITS,
+  value: string,
+): boolean {
+  const [rawMediaType, ...rawParameters] = value.split(";");
+  const mediaType = rawMediaType?.trim().toLowerCase() ?? "";
+  if (!SAFE_MEDIA_TYPES[kind].test(mediaType)) return false;
+  if (rawParameters.length === 0) return true;
+
+  // Baileys represents a WhatsApp PTT voice note as
+  // `audio/ogg; codecs=opus`. Keep parameters fail-closed and accept only the
+  // one provider form required by the bounded voice-message contract.
+  return (
+    kind === "audio" &&
+    mediaType === "audio/ogg" &&
+    rawParameters.length === 1 &&
+    /^\s*codecs\s*=\s*(?:"opus"|opus)\s*$/i.test(rawParameters[0] ?? "")
+  );
+}
+
 export const whatsAppAttachmentSchema = z.object({
   formatVersion: z.literal(1),
   kind: z.enum([
@@ -194,7 +214,7 @@ function extractMedia(
   }
   if (
     metadata.mimeType !== null &&
-    !SAFE_MEDIA_TYPES[kind].test(metadata.mimeType)
+    !safeMediaMimeType(kind, metadata.mimeType)
   ) {
     return rejected(kind, source, "UNSUPPORTED_MIME_TYPE");
   }

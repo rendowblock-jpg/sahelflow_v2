@@ -17,9 +17,9 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(schema).toContain("draftBody     String?");
     expect(protectedFields).toContain('"draftBody"');
     expect(route).toContain('requireTrustedAction("conversations.reply")');
-    expect(route).toContain(
-      "data: { draftBody: normalized || null, draftRevision: revision }",
-    );
+    expect(route).toContain("const applied = await db.$transaction");
+    expect(route).toContain("data: { draftRevision: revision }");
+    expect(route).toContain("data: { draftBody: normalized || null }");
     expect(route).toContain("draftRevision: { lt: revision }");
     expect(workspace).toContain("DRAFT_SAVE_DELAY_MS");
     expect(workspace).toContain("draftReadyConversationRef");
@@ -44,11 +44,17 @@ describe("WhatsApp Inbox parity source slice", () => {
   it("marks unread without reducing an existing inbound unread count", () => {
     const route = source("src/app/api/conversations/[id]/unread/route.ts");
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
+    const workspace = source("src/hooks/use-inbox-workspace.ts");
 
     expect(route).toContain("where: { id, unreadCount: 0 }");
     expect(route).toContain("data: { unreadCount: { increment: 1 } }");
     expect(thread).toContain('copy("markUnread")');
     expect(thread).toContain("if (updated) onBackToQueue()");
+    expect(workspace).toContain("explicitUnreadHoldRef");
+    expect(workspace).toContain("readStateWriteQueueRef");
+    expect(workspace).toContain("messageLoadGenerationRef.current += 1");
+    expect(workspace.indexOf("await readStateWriteQueueRef.current"))
+      .toBeLessThan(workspace.indexOf('/unread`'));
   });
 
   it("never projects raw attachment ciphertext or provider paths to the Inbox", () => {
@@ -65,6 +71,9 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(metadata).not.toContain("source.directPath");
     expect(inbound).toContain("normalizeWhatsAppMessageContent");
     expect(inbound).toContain("extractWhatsAppMessageAttachment(messageContent)");
+    expect(source("src/hooks/use-inbox-workspace.ts")).toContain(
+      "void loadMessages(activeChat, { background: true })",
+    );
     expect(thread).toContain("https://www.openstreetmap.org/");
     expect(thread).toContain('rel="noopener noreferrer"');
   });

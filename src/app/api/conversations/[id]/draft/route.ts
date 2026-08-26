@@ -56,13 +56,24 @@ export const PUT = withErrorHandler(
     }
     const { body, revision } = draftSchema.parse(await request.json());
     const normalized = body.replaceAll("\u0000", "");
-    const updated = await db.conversation.updateMany({
-      where: { id, draftRevision: { lt: revision } },
-      data: { draftBody: normalized || null, draftRevision: revision },
+    const applied = await db.$transaction(async (tx) => {
+      // Claim the monotonic revision without touching protected data. The
+      // protected client intentionally blocks protected updateMany writes
+      // because their ciphertext must be authenticated to one record ID.
+      const claimed = await tx.conversation.updateMany({
+        where: { id, draftRevision: { lt: revision } },
+        data: { draftRevision: revision },
+      });
+      if (claimed.count !== 1) return false;
+      await tx.conversation.update({
+        where: { id },
+        data: { draftBody: normalized || null },
+      });
+      return true;
     });
     return NextResponse.json({
       ok: true,
-      applied: updated.count === 1,
+      applied,
       revision,
     });
   },

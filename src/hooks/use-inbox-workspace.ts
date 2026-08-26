@@ -216,6 +216,8 @@ export function useInboxWorkspace() {
   const messageLoadGenerationRef = useRef(0);
   const messageSelectionGenerationRef = useRef(0);
   const messageMutationGenerationRef = useRef(0);
+  const readStateWriteQueueRef = useRef(new Map<string, Promise<void>>());
+  const explicitUnreadHoldRef = useRef(new Set<string>());
   const sendingRef = useRef(false);
   const deepLinkAttemptRef = useRef<string | null>(null);
   const pinnedDeepLinkChatRef = useRef<InboxChat | null>(null);
@@ -393,20 +395,40 @@ export function useInboxWorkspace() {
 
   const markRead = useCallback(
     async (chat: InboxChat) => {
-      if (!canUpdateConversation || chat.unread <= 0) return;
+      const conversationId = chat.conversationId;
+      if (
+        !canUpdateConversation ||
+        chat.unread <= 0 ||
+        explicitUnreadHoldRef.current.has(conversationId)
+      ) {
+        return;
+      }
+      const previous =
+        readStateWriteQueueRef.current.get(conversationId) ?? Promise.resolve();
+      const write = previous.catch(() => undefined).then(async () => {
+        if (explicitUnreadHoldRef.current.has(conversationId)) return;
+        try {
+          const response = await fetch(
+            `/api/conversations/${encodeURIComponent(conversationId)}/read`,
+            { method: "PATCH" },
+          );
+          if (!response.ok) return;
+          setChats((current) =>
+            current.map((entry) =>
+              entry.id === chat.id ? { ...entry, unread: 0 } : entry,
+            ),
+          );
+        } catch {
+          // Read state is explicit but never blocks thread access.
+        }
+      });
+      readStateWriteQueueRef.current.set(conversationId, write);
       try {
-        const response = await fetch(
-          `/api/conversations/${encodeURIComponent(chat.conversationId)}/read`,
-          { method: "PATCH" },
-        );
-        if (!response.ok) return;
-        setChats((current) =>
-          current.map((entry) =>
-            entry.id === chat.id ? { ...entry, unread: 0 } : entry,
-          ),
-        );
-      } catch {
-        // Read state is an explicit mutation but never blocks thread access.
+        await write;
+      } finally {
+        if (readStateWriteQueueRef.current.get(conversationId) === write) {
+          readStateWriteQueueRef.current.delete(conversationId);
+        }
       }
     },
     [canUpdateConversation],
@@ -414,21 +436,34 @@ export function useInboxWorkspace() {
 
   const markUnread = useCallback(async (chat: InboxChat) => {
     if (!canUpdateConversation) return false;
+    const conversationId = chat.conversationId;
+    // Stop a selected-thread load from scheduling a later /read mutation, then
+    // wait for any read request already in flight. The explicit unread intent
+    // remains held until the seller deliberately opens this thread again.
+    explicitUnreadHoldRef.current.add(conversationId);
+    messageLoadGenerationRef.current += 1;
     try {
+      await readStateWriteQueueRef.current
+        .get(conversationId)
+        ?.catch(() => undefined);
       const response = await fetch(
-        `/api/conversations/${encodeURIComponent(chat.conversationId)}/unread`,
+        `/api/conversations/${encodeURIComponent(conversationId)}/unread`,
         { method: "PATCH" },
       );
-      if (!response.ok) return false;
+      if (!response.ok) {
+        explicitUnreadHoldRef.current.delete(conversationId);
+        return false;
+      }
       setChats((current) =>
         current.map((entry) =>
-          entry.conversationId === chat.conversationId
+          entry.conversationId === conversationId
             ? { ...entry, unread: Math.max(1, entry.unread) }
             : entry,
         ),
       );
       return true;
     } catch {
+      explicitUnreadHoldRef.current.delete(conversationId);
       return false;
     }
   }, [canUpdateConversation]);
@@ -652,8 +687,10 @@ export function useInboxWorkspace() {
   const handleMessage = useCallback(
     (message: IncomingMessage) => {
       const activeTransportId = activeTransportIdRef.current;
-      const activeConversationId = activeChatRef.current?.conversationId;
+      const activeChat = activeChatRef.current;
+      const activeConversationId = activeChat?.conversationId;
       if (
+        activeChat &&
         activeConversationId &&
         activeTransportId &&
         activeTransportId === message.key.remoteJid
@@ -673,10 +710,15 @@ export function useInboxWorkspace() {
             },
           ];
         });
+        // The sidecar publishes only after the application has committed the
+        // canonical message. Reload that durable projection immediately so a
+        // live media event receives its protected messageType and attachment
+        // instead of remaining a caption-only raw provider frame.
+        void loadMessages(activeChat, { background: true });
       }
       scheduleChatsRefresh();
     },
-    [mutateMessages, scheduleChatsRefresh],
+    [loadMessages, mutateMessages, scheduleChatsRefresh],
   );
 
   const handleMessageUpdate = useCallback(
@@ -786,6 +828,7 @@ export function useInboxWorkspace() {
         );
       }
       messageSelectionGenerationRef.current += 1;
+      explicitUnreadHoldRef.current.delete(chat.conversationId);
       activeChatRef.current = chat;
       pinnedDeepLinkChatRef.current = chat;
       setChats((current) => {
