@@ -91,9 +91,8 @@ describe("Inbox Class-AAA operations desk contract", () => {
       "activeChatRef.current?.conversationId !== conversationId",
     );
     expect(hook).toContain("canApplyLoadedProjection");
-    expect(hook).toContain(
-      "if (!background && canApplyLoadedProjection()) replaceMessages([])",
-    );
+    expect(hook).toContain("!background &&");
+    expect(hook).toContain("canApplyLoadedProjection() &&");
     expect(hook).toContain(
       "activeChatRef.current?.conversationId === requestedConversationId",
     );

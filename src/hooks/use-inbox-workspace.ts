@@ -12,6 +12,7 @@ import type {
 import type { ConversationWorkflowState } from "@/components/inbox/conversation-controls";
 import { useI18n } from "@/hooks/use-i18n";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
+import { mergeInboxMessageProjection } from "@/lib/inbox/message-projection";
 import { toast } from "@/lib/toast";
 import {
   messageText,
@@ -166,22 +167,6 @@ function inboxMessagesEqual(
       message.outboxState === candidate.outboxState
     );
   });
-}
-
-function mergeInboxMessageProjection(
-  persisted: readonly InboxMessage[],
-  live: readonly InboxMessage[],
-): InboxMessage[] {
-  const liveById = new Map(live.map((message) => [message.id, message]));
-  const merged = persisted.map((message) => {
-    const liveMessage = liveById.get(message.id);
-    if (!liveMessage) return message;
-    liveById.delete(message.id);
-    return liveMessage;
-  });
-
-  merged.push(...liveById.values());
-  return merged.sort((left, right) => left.timestamp - right.timestamp);
 }
 
 export function useInboxWorkspace() {
