@@ -1,0 +1,87 @@
+/// PII-free recoverable marker written in the same transaction as the
+/// canonical event that should become visible in the Notification Center.
+model NotificationEvent {
+  id             String   @id
+  eventKey       String   @unique
+  eventType      String
+  category       String
+  severity       String
+  requiredAction String
+  targetType     String
+  targetId       String
+  sourceRecordId String
+  link           String
+  occurredAt     DateTime
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  notifications OperationalNotification[]
+
+  @@index([category, occurredAt, id])
+  @@index([requiredAction, occurredAt, id])
+  @@index([expiresAt])
+}
+
+/// One durable lifecycle projection per eligible actor and canonical event.
+/// The database file is already scoped to one exact shop.
+model OperationalNotification {
+  id                String    @id
+  dedupeKey         String    @unique
+  eventId           String
+  recipientMemberId String
+  category          String
+  severity          String
+  titleKey          String
+  bodyKey           String
+  link              String
+  readAt             DateTime?
+  archivedAt         DateTime?
+  lastRecoveredAt    DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now()) @updatedAt
+
+  event      NotificationEvent           @relation(fields: [eventId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  deliveries NotificationDeliveryAttempt[]
+
+  @@unique([eventId, recipientMemberId])
+  @@index([recipientMemberId, archivedAt, createdAt, id])
+  @@index([recipientMemberId, readAt, createdAt, id])
+  @@index([recipientMemberId, category, severity, createdAt, id])
+}
+
+/// Per-actor, per-shop controls. Preview is fail-closed and native delivery is
+/// opt-in so an OS permission prompt is always caused by an explicit choice.
+model NotificationPreference {
+  recipientMemberId String   @id
+  categorySettings  String   @default("{\"inbox\":true}")
+  nativeEnabled     Boolean  @default(false)
+  soundEnabled      Boolean  @default(false)
+  previewEnabled    Boolean  @default(false)
+  quietStartMinute  Int?
+  quietEndMinute    Int?
+  mutedUntil        DateTime?
+  retentionDays     Int      @default(90)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+}
+
+/// PII-free channel evidence. A unique attempt key prevents duplicate native
+/// delivery across WebView refresh/restart recovery.
+model NotificationDeliveryAttempt {
+  id             String    @id
+  attemptKey     String    @unique
+  notificationId String
+  channel        String
+  state          String
+  reasonCode     String?
+  retryCount     Int       @default(0)
+  nextAttemptAt  DateTime?
+  attemptedAt    DateTime  @default(now())
+  completedAt    DateTime?
+
+  notification OperationalNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([notificationId, channel, state])
+  @@index([state, attemptedAt])
+  @@index([state, nextAttemptAt])
+}

@@ -4,7 +4,7 @@ version = "1.0.0-internal.27"
 description = "AI-powered back-office for Algerian COD sellers"
 authors = ["SahelFlow"]
 edition = "2021"
-rust-version = "1.77"
+rust-version = "1.77.2"
 
 [lib]
 name = "sahelflow_lib"
@@ -20,6 +20,7 @@ tauri-plugin-shell = "2"
 tauri-plugin-store = "2"
 tauri-plugin-os = "2"
 tauri-plugin-process = "2"
+tauri-plugin-notification = "2.3.3"
 tauri-plugin-updater = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-stronghold = "2"
