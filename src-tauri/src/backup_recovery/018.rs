@@ -194,7 +194,15 @@ fn whatsapp_media_database_generation(database_path: &Path) -> Result<String, Io
     Ok(hex_encode(&digest.finalize()))
 }
 
-fn canonical_completed_media_object_ids(database_path: &Path) -> Result<BTreeSet<String>, IoError> {
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CompletedWhatsAppMediaObjectEvidence {
+    ciphertext_sha256: String,
+    ciphertext_bytes: u64,
+}
+
+fn canonical_completed_media_objects(
+    database_path: &Path,
+) -> Result<BTreeMap<String, CompletedWhatsAppMediaObjectEvidence>, IoError> {
     let connection = Connection::open_with_flags(
         database_path,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
@@ -229,7 +237,7 @@ fn canonical_completed_media_object_ids(database_path: &Path) -> Result<BTreeSet
             media_generation_sql_error("failed to scan completed WhatsApp media", error)
         })?;
     let mut seen_effects = BTreeSet::new();
-    let mut object_ids = BTreeSet::new();
+    let mut objects = BTreeMap::new();
     for row in rows {
         let (effect_key, metadata) = row.map_err(|error| {
             media_generation_sql_error("failed to read completed WhatsApp media row", error)
@@ -267,14 +275,48 @@ fn canonical_completed_media_object_ids(database_path: &Path) -> Result<BTreeSet
                     "completed WhatsApp media audit omitted canonical object identity",
                 )
             })?;
-        if !valid_lower_hex_64(object_id) || !object_ids.insert(object_id.to_owned()) {
+        let ciphertext_sha256 = decoded
+            .get("objectCiphertextSha256")
+            .and_then(|value| value.as_str())
+            .ok_or_else(|| {
+                IoError::new(
+                    ErrorKind::InvalidData,
+                    "completed WhatsApp media audit omitted authenticated ciphertext digest",
+                )
+            })?;
+        let ciphertext_bytes = decoded
+            .get("objectCiphertextBytes")
+            .and_then(|value| value.as_u64())
+            .filter(|value| *value > 0)
+            .ok_or_else(|| {
+                IoError::new(
+                    ErrorKind::InvalidData,
+                    "completed WhatsApp media audit omitted authenticated ciphertext byte length",
+                )
+            })?;
+        if !valid_lower_hex_64(object_id) || !valid_lower_hex_64(ciphertext_sha256) {
             return Err(IoError::new(
                 ErrorKind::InvalidData,
-                "completed WhatsApp media audit contains invalid or duplicate object identity",
+                "completed WhatsApp media audit contains invalid object provenance",
+            ));
+        }
+        if objects
+            .insert(
+                object_id.to_owned(),
+                CompletedWhatsAppMediaObjectEvidence {
+                    ciphertext_sha256: ciphertext_sha256.to_owned(),
+                    ciphertext_bytes,
+                },
+            )
+            .is_some()
+        {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "completed WhatsApp media audit contains duplicate object identity",
             ));
         }
     }
-    Ok(object_ids)
+    Ok(objects)
 }
 
 fn verify_whatsapp_media_database_generations(
@@ -315,6 +357,7 @@ fn verify_whatsapp_media_filesystem_generation(
     app_data_dir: &Path,
     registry: &ShopRegistry,
     captured: Option<&WhatsAppMediaTreeStats>,
+    completed_media: &BTreeMap<String, BTreeMap<String, CompletedWhatsAppMediaObjectEvidence>>,
 ) -> Result<(), IoError> {
     let root = whatsapp_media_root(app_data_dir);
     let entries = whatsapp_media_tree_entries(&root, registry)?;
@@ -330,25 +373,57 @@ fn verify_whatsapp_media_filesystem_generation(
         }
     }
 
-    let available = entries
-        .into_iter()
-        .map(|entry| (entry.scope, entry.object_id))
-        .collect::<BTreeSet<_>>();
+    if completed_media.len() != registry.shops.len() {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            "backup completed-media provenance set is incomplete",
+        ));
+    }
+    let mut available = BTreeMap::new();
+    for entry in entries {
+        if available
+            .insert(
+                (entry.scope, entry.object_id),
+                CompletedWhatsAppMediaObjectEvidence {
+                    ciphertext_sha256: entry.sha256,
+                    ciphertext_bytes: entry.bytes,
+                },
+            )
+            .is_some()
+        {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                "WhatsApp media tree contains duplicate object authority",
+            ));
+        }
+    }
     for shop in &registry.shops {
         let scope = whatsapp_media_scope_hash(
             &registry.workspace_id,
             &shop.id,
             &shop.incarnation_id,
         )?;
-        let expected = canonical_completed_media_object_ids(
-            &app_data_dir.join("shops").join(&shop.database_file),
-        )?;
-        for object_id in expected {
-            if !available.contains(&(scope.clone(), object_id)) {
-                return Err(IoError::new(
+        let expected = completed_media.get(&shop.id).ok_or_else(|| {
+            IoError::new(
+                ErrorKind::InvalidData,
+                "backup completed-media provenance is missing a registered shop",
+            )
+        })?;
+        for (object_id, evidence) in expected {
+            let actual = available.get(&(scope.clone(), object_id.clone())).ok_or_else(|| {
+                IoError::new(
                     ErrorKind::InvalidData,
                     format!(
                         "shop {} has completed WhatsApp media authority without its authenticated object",
+                        shop.id
+                    ),
+                )
+            })?;
+            if actual != evidence {
+                return Err(IoError::new(
+                    ErrorKind::InvalidData,
+                    format!(
+                        "shop {} completed WhatsApp media object does not match GCM-verified ciphertext provenance",
                         shop.id
                     ),
                 ));
@@ -467,6 +542,7 @@ pub(crate) fn create_backup(
         let snapshot_root = staging.join("snapshots");
         backup_create_stage(BackupCreateStage::Staging, fs::create_dir(&snapshot_root))?;
         let mut media_database_generations = BTreeMap::new();
+        let mut completed_media_evidence = BTreeMap::new();
         for (index, shop) in registry.shops.iter().enumerate() {
             let source = app_data_dir.join("shops").join(&shop.database_file);
             let snapshot = snapshot_root.join(&shop.database_file);
@@ -489,6 +565,19 @@ pub(crate) fn create_backup(
                 return Err(IoError::new(
                     ErrorKind::InvalidData,
                     "backup media database generation duplicated a shop identity",
+                ));
+            }
+            let completed = backup_create_stage(
+                BackupCreateStage::ShopSnapshot,
+                canonical_completed_media_objects(&snapshot),
+            )?;
+            if completed_media_evidence
+                .insert(shop.id.clone(), completed)
+                .is_some()
+            {
+                return Err(IoError::new(
+                    ErrorKind::InvalidData,
+                    "backup completed-media provenance duplicated a shop identity",
                 ));
             }
             let keys = backup_create_stage(
@@ -583,6 +672,7 @@ pub(crate) fn create_backup(
                 app_data_dir,
                 &registry,
                 captured_media_stats.as_ref(),
+                &completed_media_evidence,
             ),
         )?;
 
@@ -857,7 +947,7 @@ mod whatsapp_media_backup_generation_tests {
     }
 
     #[test]
-    fn completed_media_requires_audited_object_identity() {
+    fn completed_media_requires_audited_ciphertext_provenance() {
         let root = std::env::temp_dir().join(format!(
             "sahelflow-completed-media-{}-{}",
             std::process::id(),
@@ -888,22 +978,34 @@ mod whatsapp_media_backup_generation_tests {
                 "#,
             )
             .expect("create completed-media schema");
-        assert!(canonical_completed_media_object_ids(&database).is_err());
+        assert!(canonical_completed_media_objects(&database).is_err());
 
         let object_id = "a".repeat(64);
+        let ciphertext_sha256 = "b".repeat(64);
         connection
             .execute(
                 "INSERT INTO \"AuditLog\" (\"action\", \"entity\", \"entityId\", \"metadata\") VALUES ('whatsapp.media.fetch_succeeded', 'message', 'message-1', ?1)",
                 [serde_json::json!({
                     "effectKey": "whatsapp-media-fetch:message-1",
                     "objectId": object_id,
+                    "objectCiphertextSha256": ciphertext_sha256,
+                    "objectCiphertextBytes": 123u64,
                 })
                 .to_string()],
             )
             .expect("write completed-media audit");
-        let observed = canonical_completed_media_object_ids(&database)
-            .expect("completed media object identities");
-        assert_eq!(observed, BTreeSet::from(["a".repeat(64)]));
+        let observed = canonical_completed_media_objects(&database)
+            .expect("completed media ciphertext provenance");
+        assert_eq!(
+            observed,
+            BTreeMap::from([(
+                "a".repeat(64),
+                CompletedWhatsAppMediaObjectEvidence {
+                    ciphertext_sha256: "b".repeat(64),
+                    ciphertext_bytes: 123,
+                },
+            )])
+        );
 
         drop(connection);
         let _ = fs::remove_dir_all(root);
