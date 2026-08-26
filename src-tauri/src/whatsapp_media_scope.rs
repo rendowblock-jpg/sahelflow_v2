@@ -312,7 +312,13 @@ fn sync_scope(scope_root: &Path) -> Result<(), IoError> {
     for entry in fs::read_dir(scope_root)? {
         let path = entry?.path();
         if path.is_file() {
-            File::open(path)?.sync_all()?;
+            // FlushFileBuffers on Windows requires a writable file handle. The
+            // media object remains immutable; this handle exists only to make
+            // the already-written copy durable before the scope is published.
+            #[cfg(windows)]
+            OpenOptions::new().write(true).open(&path)?.sync_all()?;
+            #[cfg(not(windows))]
+            File::open(&path)?.sync_all()?;
         }
     }
     #[cfg(not(windows))]
