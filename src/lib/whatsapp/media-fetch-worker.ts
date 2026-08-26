@@ -1,6 +1,8 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { z } from "zod";
 
 import { executeBusinessCommand } from "@/lib/business-truth/command-kernel";
@@ -30,6 +32,7 @@ import {
   WhatsAppMediaObjectError,
   type WhatsAppMediaObjectReceipt,
   verifyWhatsAppMediaObject,
+  whatsAppMediaRoot,
   writeWhatsAppMediaObject,
 } from "./media-object-store";
 import {
@@ -377,6 +380,22 @@ async function markSucceeded(
   receipt: WhatsAppMediaObjectReceipt,
 ): Promise<void> {
   await verifyWhatsAppMediaObject(context, messageId, kind, receipt);
+  const objectFile = resolve(
+    whatsAppMediaRoot(context),
+    `${receipt.objectId}.sfmedia`,
+  );
+  const ciphertext = readFileSync(objectFile);
+  const objectCiphertextSha256 = createHash("sha256")
+    .update(ciphertext)
+    .digest("hex");
+  const objectCiphertextBytes = ciphertext.length;
+  ciphertext.fill(0);
+  // Bracket the provenance read with full GCM verification so the audit binds
+  // one exact ciphertext representation that was authenticated against the
+  // canonical message/object identity. Any later corruption or replacement
+  // changes this digest and is rejected by native backup certification.
+  await verifyWhatsAppMediaObject(context, messageId, kind, receipt);
+
   const key = await getBusinessEnvelopeKey(context);
   let protectedReceipt: string;
   try {
@@ -418,6 +437,8 @@ async function markSucceeded(
           effectKey: row.effectKey,
           mediaKind: kind,
           objectId: receipt.objectId,
+          objectCiphertextSha256,
+          objectCiphertextBytes,
           sizeBytes: receipt.sizeBytes,
         }),
       },
