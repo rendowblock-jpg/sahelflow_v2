@@ -101,7 +101,7 @@ describe("Inbox live message projection reconciliation", () => {
         }),
         message("provider-2", 2, {
           direction: "outbound",
-          deliveryStatus: "sent",
+          deliveryStatus: "read",
         }),
       ],
       "temp-2",
@@ -112,7 +112,7 @@ describe("Inbox live message projection reconciliation", () => {
     expect(result).toEqual([
       expect.objectContaining({
         id: "provider-2",
-        deliveryStatus: "sent",
+        deliveryStatus: "read",
         outboxState: "succeeded",
       }),
     ]);

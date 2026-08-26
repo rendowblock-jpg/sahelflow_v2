@@ -1,5 +1,26 @@
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 
+const DELIVERY_STATUS_RANK: Partial<
+  Record<NonNullable<InboxMessage["deliveryStatus"]>, number>
+> = {
+  sending: 0,
+  sent: 1,
+  delivered: 2,
+  read: 3,
+};
+
+function mostAdvancedDeliveryStatus(
+  ...statuses: Array<InboxMessage["deliveryStatus"]>
+): InboxMessage["deliveryStatus"] {
+  return statuses.reduce<InboxMessage["deliveryStatus"]>((advanced, status) => {
+    if (!status) return advanced;
+    if (!advanced) return status;
+    const advancedRank = DELIVERY_STATUS_RANK[advanced] ?? -1;
+    const statusRank = DELIVERY_STATUS_RANK[status] ?? -1;
+    return statusRank > advancedRank ? status : advanced;
+  }, undefined);
+}
+
 /**
  * Restores persisted history without erasing live mutations that landed while
  * the projection request was in flight. Outbox effect keys remain stable when
@@ -61,10 +82,18 @@ export function reconcileInboxProviderMessage(
 
   const target = current[targetIndex];
   if (!target) return [...current];
+  const providerMessage =
+    providerIndex >= 0 ? current[providerIndex] : undefined;
+  const deliveryStatus = mostAdvancedDeliveryStatus(
+    target.deliveryStatus,
+    providerMessage?.deliveryStatus,
+    patch.deliveryStatus,
+  );
   const reconciled: InboxMessage = {
     ...target,
     ...patch,
     id: providerMessageId ?? target.id,
+    ...(deliveryStatus ? { deliveryStatus } : {}),
   };
 
   return current.flatMap((message, index) => {
