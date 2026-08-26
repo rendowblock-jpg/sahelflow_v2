@@ -1,7 +1,6 @@
 
 
-
-fn canonical_recovery_set() -> RecoverySetClassification {
+fn legacy_recovery_set() -> RecoverySetClassification {
     RecoverySetClassification {
         included: vec![
             "shop-registry".to_owned(),
@@ -25,6 +24,14 @@ fn canonical_recovery_set() -> RecoverySetClassification {
             "live-runtime-credentials".to_owned(),
         ],
     }
+}
+
+fn canonical_recovery_set() -> RecoverySetClassification {
+    let mut recovery = legacy_recovery_set();
+    recovery
+        .included
+        .push("encrypted-whatsapp-media-objects".to_owned());
+    recovery
 }
 
 fn prepare_replacement_identity_reenrollment(database_path: &Path) -> Result<(), IoError> {
