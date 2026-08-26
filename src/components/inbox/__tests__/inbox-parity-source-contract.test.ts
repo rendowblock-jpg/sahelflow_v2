@@ -120,11 +120,18 @@ describe("WhatsApp Inbox parity source slice", () => {
     const route = source("src/app/api/inbox/media/[id]/route.ts");
     const mediaObject = source("src/lib/whatsapp/media-object-provenance.ts");
     const mediaUi = source("src/components/inbox/inbox-media-attachment.tsx");
+    const handler = route.slice(route.indexOf("export const GET"));
+    const prepareCall = handler.indexOf(
+      "const prepared = await prepareInboxWhatsAppMedia",
+    );
+    const rangeParse = handler.indexOf('parseRange(request.headers.get("range")');
+    const openCall = handler.indexOf(
+      "const opened = await openPreparedInboxWhatsAppMedia",
+    );
 
-    expect(route.indexOf("prepareInboxWhatsAppMedia"))
-      .toBeLessThan(route.indexOf("parseRange(request.headers.get"));
-    expect(route.indexOf("parseRange(request.headers.get"))
-      .toBeLessThan(route.indexOf("openPreparedInboxWhatsAppMedia"));
+    expect(prepareCall).toBeGreaterThanOrEqual(0);
+    expect(rangeParse).toBeGreaterThan(prepareCall);
+    expect(openCall).toBeGreaterThan(rangeParse);
     expect(mediaObject).toContain("WhatsAppMediaPlaintextRange");
     expect(mediaObject).toContain("const overlapStart = Math.max");
     expect(mediaObject).toContain("const overlapEnd = Math.min");
