@@ -116,9 +116,16 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(thread).toContain('rel="noopener noreferrer"');
   });
 
-  it("keeps authenticated media ranges bounded and failed downloads inside Inbox", () => {
+  it("keeps authenticated media ranges bounded and pending media live", () => {
     const route = source("src/app/api/inbox/media/[id]/route.ts");
+    const statusRoute = source("src/app/api/inbox/media/[id]/status/route.ts");
+    const messageRoute = source(
+      "src/app/api/whatsapp/chats/[jid]/messages/route.ts",
+    );
     const mediaObject = source("src/lib/whatsapp/media-object-provenance.ts");
+    const mediaProjection = source(
+      "src/lib/whatsapp/media-status-projection.ts",
+    );
     const mediaUi = source("src/components/inbox/inbox-media-attachment.tsx");
     const handler = route.slice(route.indexOf("export const GET"));
     const prepareCall = handler.indexOf(
@@ -137,6 +144,24 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(mediaObject).toContain("const overlapEnd = Math.min");
     expect(mediaObject).toContain("plaintextHash.update(plaintext)");
     expect(mediaObject).toContain("ciphertextHash.update(ciphertext)");
+
+    expect(statusRoute).toContain('requireTrustedAction("conversations.read")');
+    expect(statusRoute).toContain('"customers.contact.read"');
+    expect(statusRoute).toContain("WHATSAPP_MEDIA_FETCH_EFFECT_TYPE");
+    expect(statusRoute).toContain("projectInboxLocalMedia(");
+    expect(mediaProjection).toContain(
+      "`/api/inbox/media/${encoded}/status`",
+    );
+    expect(messageRoute).toContain("projectInboxLocalMedia(");
+
+    expect(mediaUi).toContain("PENDING_MEDIA_POLL_MS = 3_000");
+    expect(mediaUi).toContain('local?.state === "pending" ? local.statusUrl');
+    expect(mediaUi).toContain(
+      'fetch(pendingStatusUrl, { cache: "no-store" })',
+    );
+    expect(mediaUi).toContain("window.setInterval");
+    expect(mediaUi).toContain("setResolvedLocal(next)");
+
     expect(mediaUi).toContain('const response = await fetch(href, { cache: "no-store" })');
     expect(mediaUi).toContain("if (!response.ok) throw new Error");
     expect(mediaUi).toContain("URL.createObjectURL(blob)");
