@@ -141,6 +141,6 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(mediaUi).toContain("if (!response.ok) throw new Error");
     expect(mediaUi).toContain("URL.createObjectURL(blob)");
     expect(mediaUi).toContain("setRuntimeFailed(true)");
-    expect(mediaUi).not.toContain("href={downloadUrl}");
+    expect(mediaUi).not.toContain("<a");
   });
 });
