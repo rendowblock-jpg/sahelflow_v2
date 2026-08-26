@@ -86,8 +86,8 @@ export function mergeInboxMessageProjection(
 }
 
 /**
- * Applies a provider receipt to the optimistic row and removes an earlier
- * socket-push copy of that same provider message if it raced the HTTP result.
+ * Reconciles a durable outbox transition through client ID, provider ID, or
+ * stable effect key and collapses any socket-push copy of the same message.
  */
 export function reconcileInboxProviderMessage(
   current: readonly InboxMessage[],
@@ -101,16 +101,31 @@ export function reconcileInboxProviderMessage(
   const localIndex = current.findIndex(
     (message) => message.id === localMessageId,
   );
-  const targetIndex = localIndex >= 0 ? localIndex : providerIndex;
+  const effectIndex = patch.outboxEffectKey
+    ? current.findIndex(
+        (message) => message.outboxEffectKey === patch.outboxEffectKey,
+      )
+    : -1;
+  const targetIndex =
+    localIndex >= 0
+      ? localIndex
+      : providerIndex >= 0
+        ? providerIndex
+        : effectIndex;
   if (targetIndex < 0) return [...current];
 
   const target = current[targetIndex];
   if (!target) return [...current];
   const providerMessage =
     providerIndex >= 0 ? current[providerIndex] : undefined;
-  const deliveryStatus = mostAdvancedDeliveryStatus(
+  const effectMessage = effectIndex >= 0 ? current[effectIndex] : undefined;
+  const currentDeliveryStatus = mostAdvancedDeliveryStatus(
     target.deliveryStatus,
     providerMessage?.deliveryStatus,
+    effectMessage?.deliveryStatus,
+  );
+  const deliveryStatus = resolveProjectedDeliveryStatus(
+    currentDeliveryStatus,
     patch.deliveryStatus,
   );
   const reconciled: InboxMessage = {
@@ -122,7 +137,13 @@ export function reconcileInboxProviderMessage(
 
   return current.flatMap((message, index) => {
     if (index === targetIndex) return [reconciled];
-    if (providerMessageId && message.id === providerMessageId) return [];
+    if (
+      index === providerIndex ||
+      index === effectIndex ||
+      (providerMessageId && message.id === providerMessageId)
+    ) {
+      return [];
+    }
     return [message];
   });
 }

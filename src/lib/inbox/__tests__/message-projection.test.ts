@@ -349,4 +349,119 @@ describe("Inbox live message projection reconciliation", () => {
       }),
     ]);
   });
+
+  it("applies terminal failure after projection replaced the local id", () => {
+    const result = reconcileInboxProviderMessage(
+      [
+        message("provider-2", 2, {
+          direction: "outbound",
+          deliveryStatus: "sent",
+          outboxEffectKey: "effect-2",
+          outboxState: "processing",
+        }),
+      ],
+      "temp-2",
+      "provider-2",
+      {
+        deliveryStatus: "failed",
+        outboxEffectKey: "effect-2",
+        outboxState: "dead_letter",
+      },
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "provider-2",
+        deliveryStatus: "failed",
+        outboxEffectKey: "effect-2",
+        outboxState: "dead_letter",
+      }),
+    ]);
+  });
+
+  it("finds a projected terminal row by effect key without a provider receipt id", () => {
+    const result = reconcileInboxProviderMessage(
+      [
+        message("provider-2", 2, {
+          direction: "outbound",
+          deliveryStatus: "sending",
+          outboxEffectKey: "effect-2",
+          outboxState: "processing",
+        }),
+      ],
+      "temp-2",
+      null,
+      {
+        deliveryStatus: "failed",
+        outboxEffectKey: "effect-2",
+        outboxState: "ambiguous",
+      },
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "provider-2",
+        deliveryStatus: "failed",
+        outboxEffectKey: "effect-2",
+        outboxState: "ambiguous",
+      }),
+    ]);
+  });
+
+  it("applies an active monitor state by effect key after id replacement", () => {
+    const result = reconcileInboxProviderMessage(
+      [
+        message("provider-2", 2, {
+          direction: "outbound",
+          deliveryStatus: "sending",
+          outboxEffectKey: "effect-2",
+          outboxState: "queued",
+        }),
+      ],
+      "temp-2",
+      null,
+      {
+        outboxEffectKey: "effect-2",
+        outboxState: "retrying",
+      },
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "provider-2",
+        deliveryStatus: "sending",
+        outboxEffectKey: "effect-2",
+        outboxState: "retrying",
+      }),
+    ]);
+  });
+
+  it("keeps a durable read receipt when a terminal monitor result arrives", () => {
+    const result = reconcileInboxProviderMessage(
+      [
+        message("provider-2", 2, {
+          direction: "outbound",
+          deliveryStatus: "read",
+          outboxEffectKey: "effect-2",
+          outboxState: "succeeded",
+        }),
+      ],
+      "temp-2",
+      "provider-2",
+      {
+        deliveryStatus: "failed",
+        outboxEffectKey: "effect-2",
+        outboxState: "ambiguous",
+      },
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "provider-2",
+        deliveryStatus: "read",
+        outboxEffectKey: "effect-2",
+        outboxState: "ambiguous",
+      }),
+    ]);
+  });
 });

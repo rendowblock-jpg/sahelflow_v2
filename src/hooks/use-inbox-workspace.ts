@@ -805,17 +805,26 @@ export function useInboxWorkspace() {
                 current,
                 localMessageId,
                 data.effect.providerMessageId,
-                { deliveryStatus: "sent", outboxState: state },
+                {
+                  deliveryStatus: "sent",
+                  outboxEffectKey: effectKey,
+                  outboxState: state,
+                },
               ),
             );
             return;
           }
           if (state === "ambiguous" || state === "dead_letter") {
             mutateMessages(conversationId, (current) =>
-              current.map((message) =>
-                message.id === localMessageId
-                  ? { ...message, deliveryStatus: "failed", outboxState: state }
-                  : message,
+              reconcileInboxProviderMessage(
+                current,
+                localMessageId,
+                data.effect.providerMessageId,
+                {
+                  deliveryStatus: "failed",
+                  outboxEffectKey: effectKey,
+                  outboxState: state,
+                },
               ),
             );
             if (activeChatRef.current?.conversationId === conversationId) {
@@ -828,10 +837,14 @@ export function useInboxWorkspace() {
             return;
           }
           mutateMessages(conversationId, (current) =>
-            current.map((message) =>
-              message.id === localMessageId
-                ? { ...message, outboxState: state }
-                : message,
+            reconcileInboxProviderMessage(
+              current,
+              localMessageId,
+              data.effect.providerMessageId,
+              {
+                outboxEffectKey: effectKey,
+                outboxState: state,
+              },
             ),
           );
         } catch {
@@ -880,7 +893,11 @@ export function useInboxWorkspace() {
               current,
               message.id,
               data.effect?.providerMessageId,
-              { deliveryStatus: "sent", outboxState: "succeeded" },
+              {
+                deliveryStatus: "sent",
+                outboxEffectKey: message.outboxEffectKey,
+                outboxState: "succeeded",
+              },
             ),
           );
           return;
