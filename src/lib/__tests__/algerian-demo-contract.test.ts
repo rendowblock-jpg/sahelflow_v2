@@ -154,6 +154,7 @@ describe("Algerian Founder demo contract", () => {
   it("serializes settings, erase and report effects with demo lifecycle authority", () => {
     const settingsRoute = read("src/app/api/settings/route.ts");
     const resetRoute = read("src/app/api/settings/reset/route.ts");
+    const mediaErase = read("src/lib/privacy/erase-with-media.ts");
     const privacyLifecycle = read("src/lib/privacy/lifecycle.ts");
     const reportRoute = read("src/app/api/reports/daily/route.ts");
 
@@ -178,7 +179,17 @@ describe("Algerian Founder demo contract", () => {
       reportRoute.indexOf("queueDailyWhatsAppReport(context"),
     );
 
-    expect(resetRoute).toContain('executeShopErase("business-reset")');
+    expect(resetRoute).toContain('executeShopEraseWithMedia("business-reset")');
+    expect(mediaErase).toContain("stageWhatsAppMediaErase");
+    expect(mediaErase).toContain("receipt = await executeShopErase(mode)");
+    expect(mediaErase).toContain("rollbackWhatsAppMediaErase(stage)");
+    expect(mediaErase).toContain("commitWhatsAppMediaErase(stage)");
+    expect(mediaErase.indexOf("stageWhatsAppMediaErase")).toBeLessThan(
+      mediaErase.indexOf("receipt = await executeShopErase(mode)"),
+    );
+    expect(mediaErase.indexOf("receipt = await executeShopErase(mode)")).toBeLessThan(
+      mediaErase.indexOf("commitWhatsAppMediaErase(stage)"),
+    );
     expect(privacyLifecycle).toContain("await withDemoPolicyLock(() =>");
     expect(privacyLifecycle).toContain("await tx.returnNote.deleteMany({})");
     expect(privacyLifecycle).toContain(
