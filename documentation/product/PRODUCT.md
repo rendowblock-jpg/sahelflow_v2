@@ -1,7 +1,7 @@
 # SahelFlow 1.0 — Product Contract
 
 > **Status:** Founder-approved product baseline
-> **Last consolidated:** 2026-07-24
+> **Last consolidated:** 2026-08-26
 > **Public release:** SahelFlow 1.0 / app version 1.0.0
 > **Commercial edition:** One complete edition
 
@@ -284,6 +284,7 @@ capability detail and journey/state requirements are owned by
 | Customers and risk | Search, history, duplicate handling, blacklist/risk factors, protected PII and audit |
 | Orders | Manual, WhatsApp, storefront, commerce and import intake; confirmation, explicit state machines, stock effects, idempotency and history |
 | WhatsApp | Connection, inbox/history, extraction review, sending, delivery states, reconnect/recovery and bounded resource use |
+| Notifications and attention | Durable per-actor Notification Center, exact-once event routing, unread/read/archive lifecycle, privacy-safe native alerts, quiet hours, deep links and degraded recovery |
 | AI | Seller-owned Gemini key, privacy-safe policy, typed results, explicit approvals, health/error states and deterministic/manual fallbacks |
 | Delivery and returns | Certified shipment lifecycle, tracking, cancellation, delivery failure, physical return, exchange/refund compensation and audit |
 | COD and accounting | Collected/remitted state, carrier receivables, fees, discrepancies, expenses, corrections, realized economics and export |
@@ -396,6 +397,9 @@ named certification gate passes:
   remains capability-based);
 - ARM64 Windows and Wine/Linux builds;
 - sensitive-data Gemini mode using a seller-owned paid project;
+- WhatsApp reactions, edit/delete, forward, contact/location send, typing,
+  presence, groups, broadcast, calls and Status until each exact action is
+  policy-safe and live-certified;
 - automated remote wipe where platform capabilities are insufficient;
 - any AI model replacing the currently certified default.
 

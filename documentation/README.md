@@ -8,7 +8,7 @@
 > **Protected release source:** `4e395b0149da447daab37ad2d01be5c8bf1d6bce` / PR #313
 > **Reviewed release head:** `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`
 > **Signed publication run:** `32913445791` — success
-> **Current next outcome:** First Revenue Certification FRC-1 — repair installed dynamic-loopback live push, then prove automatic new inbound and complete the remaining #306 rows
+> **Current next outcome:** FD-048 source-first batch — documentation reconciliation, then #316 Notifications, #317 professional Inbox parity and FRC-2–5 source/certification preparation before one separately authorized signed successor
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
@@ -28,7 +28,7 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Current protected and signed truth
 
-Protected `main` at reconciliation is `c6b97634a24c27a088e466f00d6ed0b196e62454`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`. No open PR existed when the bounded live-push repair began; revalidate live state before every write/merge.
+Protected `main` at reconciliation is `3e5375bf503025083dd1b6f448215717528d0d5d`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`. PR #315 is source-merged; no open PR existed immediately after that merge. Revalidate live state before every write/merge.
 
 Internal.27 is the latest real signed/published and Founder-installed offline package:
 
@@ -62,7 +62,9 @@ Do not restart those programs without direct regression evidence.
 
 - **#221 — closed/completed:** Founder accepted installed Internal.24 for the retained whole-product visual/product gate. That acceptance remains valid for Internal.24 and does not fabricate provider/customer proof.
 - **#226 — closed/completed:** retain its performance/reliability budgets as regression criteria.
-- **#306 — open:** Internal.27 passed preserved update/reopen, exactly-one real `numeric-id@lid` outbound with provider receipt/delivery, and exact-once durable inbound from a new number. The new inbound required manual Inbox refresh because the response CSP permits fixed WebSocket port `3001` while the installed sidecar uses a protected ephemeral loopback port. `codex/frc1-whatsapp-live-push` is the bounded root repair; automatic arrival and remaining UI/extraction/logout rows are not yet installed proof.
+- **#306 — open:** Internal.27 passed preserved update/reopen, exactly-one real `numeric-id@lid` outbound with provider receipt/delivery, and exact-once durable inbound from a new number. The new inbound required manual Inbox refresh. PR #315 is now protected source for loopback dynamic-port live push, durable polling/retry fallback and receipt/outbox identity races; automatic arrival and remaining UI/extraction/logout rows are not yet signed/installed proof.
+- **#316 — open:** Class-AAA durable Notification Center and WhatsApp attention routing.
+- **#317 — open:** professional WhatsApp Inbox capability ledger and certified message/media operational parity.
 - **#230 — open/reopened P1:** no owned production domain exists; customer-online trial/network readiness remains blocked.
 - Real commerce/courier account certification, representative beta, independent review and Stable remain unproven.
 
@@ -82,12 +84,37 @@ The binding interpretation is:
 
 ### FRC execution packages
 
-1. **FRC-1 — WhatsApp installed/provider proof (#306).** Merge and, if separately authorized, sign the dynamic-loopback live-push repair; update in place, prove no-refresh new inbound plus persistence/reopen, then complete representative EN/AR Inbox, governed status/reviewed extraction and logout evidence.
+1. **FRC-1 — WhatsApp installed/provider proof (#306).** Retain PR #315 as source-merged repair and preserve the Internal.27 real-phone evidence. Do not open a successor yet; after #316/#317 and FRC-2–5 source work, separately authorize one combined signed candidate and prove no-refresh new inbound plus persistence/reopen, representative EN/AR Inbox, governed status/reviewed extraction and logout.
 2. **FRC-2 — AI/tools/order extraction.** Freeze a tool/corpus matrix; test seller-owned Gemini setup, every model-exposed tool, proposal/permission/current-state checks, stop/retry/quota/offline/malformed behavior, privacy minimization and AR/FR/EN/Darija/mixed extraction. Core work and manual fallback remain functional without AI.
 3. **FRC-3 — complete-product assurance.** Map the Product Stable capability table, Experience page-completion contract and 27 Required journeys to source, automated, signed/installed, Founder and external evidence. Repair only demonstrated shared roots in one bounded batch.
 4. **FRC-4 — commerce live certification.** Use official Shopify/YouCan development environments and a controlled WooCommerce store. Prove authentication, webhook signatures, duplicates/order, pagination, reconciliation, conflicts, rate limits, revoked credentials, outage and recovery.
 5. **FRC-5 — courier live certification.** For every public courier/action require current provider-issued contract plus sandbox/demo or explicitly authorized real-account evidence for credential test, service areas/fees, create, label, track, status map, edit/cancel/return where supported, idempotency, ambiguity, rate limit, outage and reconciliation.
 6. **FRC-6 — first paid assisted deployment.** Scope the first seller to a certified commerce/courier combination. Do not authorize customer distribution, public trial, Beta or Stable until customer-access authority and all applicable gates pass or a newer explicit Founder decision defines a transparent bounded exception.
+
+## FD-048 — source-first batch before one installed successor
+
+The Founder’s 2026-08-26 sequencing decision defers the next signed/installed
+FRC-1 successor until one coherent source frontier is ready:
+
+```text
+PR #315 source merge
+→ active documentation reconciliation
+→ #316 durable Class-AAA Notifications
+→ #317 professional WhatsApp Inbox parity/certification ledger
+→ FRC-2 AI/tools/extraction source and evidence matrix
+→ FRC-3 Required capability/journey ledger and demonstrated repairs
+→ FRC-4 commerce official dev/test certification work
+→ FRC-5 courier contract/sandbox or authorized-account certification work
+→ freeze one exact protected-main candidate
+→ separate release authority
+→ one signed successor, one preserved in-place update and one installed/live campaign
+```
+
+This batching changes cadence, not evidence. #315 remains source-complete only;
+#306 remains open. Source/mock/CI rows may be closed before release, while
+installed Windows, real-phone and live-provider rows remain pending until the
+exact eventual candidate is observed. No release, first customer, online trial,
+Beta or Stable is authorized by FD-048.
 
 ## Zero-budget and external-service rules
 
@@ -109,13 +136,13 @@ The binding interpretation is:
 
 ## Exact resume path
 
-1. Resolve live protected `main`, open PRs, #306 and #230.
-2. Read the mandatory authority set above and confirm Internal.27 / FD-047 remains latest signed.
-3. Resume FRC-1 exactly: finish the dynamic-loopback live-push repair, run selected Actions gates and merge expected-head; create a signed successor only under explicit release authority.
-4. Record redacted pass/fail evidence. If a concrete P0/P1 appears, open one bounded root-cause repair; otherwise close only the evidence actually passed.
-5. Continue FRC-2 through FRC-5 in dependency order, maintaining a capability-specific certification state.
+1. Resolve live protected `main`, open PRs, #306/#316/#317 and #230.
+2. Read the mandatory authority set above and confirm Internal.27 / FD-047 remains latest signed and FD-048 owns sequencing.
+3. Begin #316 from a fresh protected-main branch. Freeze its notification-domain authority, migration, actor/shop/read-state, channel/privacy and installed-evidence matrix before implementation.
+4. Continue #317, then FRC-2 through FRC-5 source/evidence work in the FD-048 order. Maintain capability-specific certification states and explicit external blockers.
+5. Do not create or install a successor until the combined source frontier is frozen and a separate release-authority decision exists.
 6. Do not expose or market an integration/action before its live certification record exists.
-7. Keep #230/customer-online, commercial deployment, Beta and Stable as separate explicit gates.
+7. Keep #306 installed proof, #230/customer-online, commercial deployment, Beta and Stable as separate explicit gates.
 
 Acceptance hierarchy for whole-product experience remains:
 

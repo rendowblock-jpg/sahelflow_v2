@@ -6,44 +6,44 @@ The active documentation entry point is [`documentation/README.md`](documentatio
 
 ## Current repository truth
 
-- Resolve protected `main` before every write, review, merge, package or evidence claim. At the 2026-08-25 reconciliation it is `36dc7fb6d644814d0ab7a2b29c1d4ca4f8562b54`.
-- Latest signed/published package: **Internal.25** — app `1.0.0-internal.25`, MSI `1.0.0.25`, FD-044, `founder-offline-only`.
-- Release-authority PR: #307; reviewed head `bb74cbb6c27932d5977c7a616c2ff214ae1f2bac`.
-- PR #307 evidence: CI `32792971378`, Phase 5 `32792971025`, Phase 6–7 `32792971024`, Native source `32792971023` — success; exact-head Codex review found no major issues and review threads were resolved.
-- Dispatcher `32795149465` and signed updater/publication run `32795159635` completed successfully.
-- Published MSI digest: `sha256:9de9c18bde37ef026e7f72d2a371a8ff2a017a372efa5b3a3e70a7e3aa7e9265`.
+- Resolve protected `main` before every write, review, merge, package or evidence claim. At the 2026-08-26 reconciliation it is `3e5375bf503025083dd1b6f448215717528d0d5d` after PR #315.
+- Latest signed/published and Founder-installed package: **Internal.27** — app `1.0.0-internal.27`, MSI `1.0.0.27`, FD-047, `founder-offline-only`.
+- Internal.27 release authority is PR #313; protected release source `4e395b0149da447daab37ad2d01be5c8bf1d6bce`; reviewed release head `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`.
+- Signed updater/publication run `32913445791` completed successfully.
+- Published MSI digest: `sha256:64865032b4a59b8cf4f36d1e6b23e6251e817044c90f78ee3bc673822b803756`.
 - Issue #221 is **closed/completed**: the Founder accepted installed Internal.24 for its retained whole-product human gate.
-- Issue #306 is **open**: real-phone WhatsApp installed/provider certification is the first First Revenue Certification gate.
+- Issue #306 is **open**: Internal.27 passed real `@lid` outbound and durable new-number inbound, but automatic Inbox arrival required manual refresh. PR #315 is the newer source-only repair, not signed/installed proof.
+- Issues #316 and #317 are **open** for Class-AAA Notifications and professional WhatsApp Inbox parity.
 - Issue #230 is **open/reopened P1**: customer-online trial/network readiness remains blocked until owned production-domain and representative-network evidence exist.
-- There were no open PRs at this reconciliation.
-- Internal.25 does not authorize customer-online, Beta or Stable.
+- No open PR existed immediately after PR #315 merged.
+- Internal.27 and the newer protected source do not authorize customer-online, Beta or Stable.
 
-## What Internal.25 adds
+## What Internal.27 adds
 
-Internal.25 packages the Internal.24 product line plus:
+Internal.27 retains the completed product/security line through Internal.26 and adds:
 
-- #300 — encrypted connected-installation authority at rest with bounded migration/rotation recovery;
-- #304 — installation-bound Windows DPAPI and AEAD protection for WhatsApp auth and inbound-spool secret custody;
-- #305 — field-aware, fail-closed minimization of Gemini-bound live and replayed AI tool results;
-- #307 — Internal.25 / FD-044 release-version-licensing authority only.
+- #312 — provenance-bound individual WhatsApp `numeric@lid` replies, Arabic empty-composer RTL with automatic entered-content direction, direct governed status control and reviewed AI order extraction from the thread header;
+- #313 — Internal.27 / FD-047 release authority only.
+
+#309/#310/#311 remain the retained Internal.26 callback, resizable-Inbox and release foundation; #300/#304/#305/#307 remain the earlier security/provider foundation.
 
 The signed workflow proved exact protected-source binding, reviewed-tree equality, Required PR evidence, signed MSI/updater construction, staged runtime readiness, signature verification, signed install/launch/reopen, authenticated hydrated UI twice, deterministic source rewrites, evidence manifest, `latest.json`, exact tag and publication.
 
-That is strong source/package/runtime evidence. It is not real-phone WhatsApp proof, live commerce/courier certification, customer-online readiness, Beta or Stable.
+That is strong source/package/runtime evidence. PR #315 is newer source authority only. Neither proves automatic live push on a signed successor, complete message/media parity, live commerce/courier certification, customer-online readiness, Beta or Stable.
 
 ## First Revenue Certification
 
-The current execution program is **First Revenue Certification (FRC)** under FD-045. The commercial objective is fast, honest first revenue with no paid infrastructure before revenue, without lowering correctness, privacy, provider or launch evidence.
+The current execution program is **First Revenue Certification (FRC)** under FD-045, with FD-048 controlling the immediate source-first order. The commercial objective is fast, honest first revenue with no paid infrastructure before revenue, without lowering correctness, privacy, provider or launch evidence.
 
 “99.99% sure” means every defined Required matrix was executed at the applicable layer, the exact candidate has zero known P0/P1, and residual external risks are disclosed. It is not a mathematical warranty against unknown defects or future third-party changes.
 
 Execute in this order:
 
-1. **FRC-1 — WhatsApp:** install/update Internal.25 in place and close #306 only after real-phone QR/link, reopen persistence, outbound, inbound/persistence, representative EN/AR Inbox presentation and logout pass with redacted evidence.
-2. **FRC-2 — AI/tools/order extraction:** certify seller-owned Gemini setup, every exposed tool, proposal/permission/current-state authority, failure/degraded modes and AR/FR/EN/Darija/mixed extraction against a frozen synthetic/redacted corpus.
-3. **FRC-3 — complete-product assurance:** map every publicly promised Required capability and the 27 Stable journeys to current source, automated evidence, installed evidence and any still-required external proof; repair only demonstrated roots in one bounded batch.
-4. **FRC-4 — commerce:** use official Shopify/YouCan development environments and a controlled WooCommerce store for hybrid webhook/reconciliation, pagination, duplicate, ordering, conflict, rate-limit, revoke and recovery tests.
-5. **FRC-5 — couriers:** require provider-issued documentation plus sandbox/demo or explicitly authorized real-account credentials for each public action. Open-source adapters are research inputs, never certification.
+1. **#316 — Notifications:** implement the durable Class-AAA Notification Center and WhatsApp attention-routing contract.
+2. **#317 — professional Inbox:** implement the exact WhatsApp capability ledger and message/media operational-parity waves without inventing provider support.
+3. **FRC-2 through FRC-5 source/evidence preparation:** complete AI/tools/order-extraction, Required capability/journey, commerce and courier contracts plus mocks and official development/sandbox evidence available before installation.
+4. **One combined exact candidate:** freeze only after those packages are protected-main complete; then open separate release authority.
+5. **One signed successor and one installed/live campaign:** update in place and prove the remaining #306 automatic-arrival/persistence/UI/extraction/logout rows plus #316/#317 native and real-phone rows and every applicable live-provider matrix.
 6. **FRC-6 — first customer:** expose only the exact provider/action combination that is live-certified. The first paid assisted deployment is not authorized until its scope passes the applicable gates and customer-online authority is separately satisfied or a newer explicit Founder decision creates a bounded exception.
 
 Unverified integrations remain hidden, disabled or explicitly conditional. A provider can be certified for one action while other actions remain unsupported.

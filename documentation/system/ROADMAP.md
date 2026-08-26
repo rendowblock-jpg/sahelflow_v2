@@ -1,11 +1,11 @@
 # SahelFlow — Final Roadmap
 
 > **Status:** Active dependency/completion program
-> **Last reconciled:** 2026-08-25
+> **Last reconciled:** 2026-08-26
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before action; at reconciliation `36dc7fb6d644814d0ab7a2b29c1d4ca4f8562b54`
-> **Current signed checkpoint:** Internal.25 / FD-044
-> **Current execution mode:** FD-045 First Revenue Certification
+> **Live protected main:** resolve from GitHub before action; at reconciliation `3e5375bf503025083dd1b6f448215717528d0d5d`
+> **Current signed checkpoint:** Internal.27 / FD-047
+> **Current execution mode:** FD-048 batched source-first First Revenue Certification
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 
@@ -20,18 +20,38 @@ completed product/experience reconstruction
 → Gemini-bound tool-result privacy minimization (#305)
 → Internal.25 / FD-044 signed publication (#307)
 → FD-045 First Revenue Certification
-→ FRC-1 real-phone WhatsApp (#306)  ← current
-→ FRC-2 AI/tools/order extraction
-→ FRC-3 Required capability/journey assurance
-→ FRC-4 commerce live certification
-→ FRC-5 courier live certification
+→ Internal.27 real LID outbound + durable inbound; manual-refresh live-push defect
+→ PR #315 dynamic-loopback/polling/receipt-identity source repair merged
+→ FD-048 source-first batch  ← current
+→ #316 Class-AAA durable Notifications
+→ #317 professional WhatsApp Inbox parity/certification ledger
+→ FRC-2 AI/tools/order extraction source/evidence matrix
+→ FRC-3 Required capability/journey assurance ledger and demonstrated repairs
+→ FRC-4 commerce official dev/test certification work
+→ FRC-5 courier contract/sandbox or authorized-account certification work
+→ one separately authorized signed successor + one installed/live campaign
+→ close only exact FRC-1–5 evidence actually observed
 → FRC-6 certified first paid assisted deployment decision
 → #230 customer-online/network closure
 → representative Beta and remaining external gates
 → explicit Stable promotion
 ```
 
-There were no open PRs at reconciliation. Re-fetch before acting.
+There were no open PRs immediately after PR #315 merged. Re-fetch before acting.
+
+## FD-048 batched source-first order
+
+The next development session begins with issue #316, not a release branch.
+Complete the #316 and #317 source packages, then FRC-2 through FRC-5
+deterministic/source and available official environment evidence. Keep every
+row classified by evidence level and preserve external blockers.
+
+Only after the combined source frontier is frozen may a newer explicit release
+decision authorize one signed successor. Install it once through the normal
+updater and execute the retained #306 FRC-1 rows plus applicable AI,
+notification, Inbox and live-provider rows on that exact candidate. This avoids
+repeating complete MSI certification after small edits without weakening the
+final evidence bar.
 
 ## First Revenue Certification definition
 
@@ -47,20 +67,21 @@ Completion confidence means:
 
 ## FRC-1 — real-phone WhatsApp installed/provider proof
 
-Owner: issue #306. Candidate: signed Internal.25.
+Owner: issue #306. Retained installed evidence: signed Internal.27. Eventual
+candidate: the later FD-048 combined successor, only after separate authority.
 
 Required sequence:
 
-1. verify live protected main/release and install/update Internal.25 in place;
-2. preserve AppData, install/registry identity, keys and shop databases;
-3. verify exact installed version, normal launch and reopen;
-4. visible QR and normal real-phone link;
-5. truthful connected state and close/reopen persistence;
-6. outbound message and redacted delivery/status evidence;
-7. inbound message, durable persistence and database-authoritative Inbox arrival;
-8. representative English and Arabic/RTL Inbox observation;
-9. normal disconnect/logout and local session retirement;
-10. safe message-to-reviewed-order-draft observation where feasible.
+1. retain Internal.27 QR/link/reopen, exact LID outbound and durable inbound evidence;
+2. retain PR #315 as source-complete while the FD-048 source batch proceeds;
+3. after separate release authority, verify exact combined protected main and update in place;
+4. preserve AppData, install/registry identity, keys and shop databases;
+5. verify exact installed version, normal launch and reopen;
+6. prove automatic no-refresh inbound, durable exact-once persistence and reopen;
+7. complete representative English and Arabic/RTL Inbox observation;
+8. exercise governed status and safe message-to-reviewed-order-draft behavior;
+9. validate #316/#317 installed/native/real-phone rows applicable to the candidate;
+10. normal disconnect/logout and local session retirement last.
 
 Exit only with no actionable P0/P1. One reproduced failure opens one bounded repair root plus affected siblings; do not restart a broad WhatsApp/Inbox audit.
 
@@ -176,7 +197,7 @@ A `workers.dev` endpoint can support development but does not satisfy the sole p
 
 ## Phase 9 — release certification and launch readiness
 
-Internal.25 is an Internal Founder-offline checkpoint, not Beta or Stable.
+Internal.25 / FD-044 is a historical Internal Founder-offline checkpoint, not Beta or Stable. Internal.27 / FD-047 is the current signed/installed checkpoint and is also not Beta or Stable.
 
 Stable still requires:
 
@@ -215,4 +236,4 @@ No force merge, waiver, protection bypass, updater-key weakening, Rust `--locked
 - Historical retained evidence set: issues #201, #214, #221, #226 and #230.
 - PR #250, PR #251 and `agent/internal-16-wave-4` remain history.
 - Internal.24 / FD-043 is the Founder-accepted installed checkpoint.
-- Internal.25 / FD-044 is the current signed provider/security checkpoint.
+- Internal.25 / FD-044 is the historical provider/security checkpoint superseded for current signed/installed authority by Internal.27 / FD-047.

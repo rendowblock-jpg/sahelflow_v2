@@ -1,7 +1,7 @@
 # SahelFlow 1.0 — Experience and Capability Contract
 
 > **Status:** Active experience authority
-> **Last consolidated:** 2026-07-24
+> **Last consolidated:** 2026-08-26
 > **Purpose:** Define every required capability, journey, operational state and
 > AAA user-experience standard in one place.
 
@@ -222,6 +222,57 @@ Required functions:
 - bounded reconnect and visible failure;
 - export/support diagnostics without secret or PII leakage;
 - unofficial-provider risk disclosed and monitored.
+
+Every message-native function has a capability ledger with one of:
+`certified`, `implemented-unproven`, `metadata-only`, `missing`,
+`conditional-provider` or `intentionally-unsupported`. The ledger separately
+records source state, automated evidence, signed/installed evidence and
+real-phone/provider certification. Provider-library API presence is never
+presented as user support.
+
+The professional Inbox completion waves are:
+
+1. protected inbound image, video, document, voice/audio, sticker, contact and
+   location truth with safe type/size/path handling, view/open/play/download,
+   expiry, retry and failure states;
+2. certified text and media sending with progress, pre-effect cancellation,
+   durable outbox identity, ambiguous-result handling and receipts;
+3. quoted replies, persisted drafts, mark unread, safe copy/download/link
+   handling, keyboard/paste/drag-drop and mobile/RTL parity;
+4. reactions, edit/delete, forward, contact/location send, typing/presence and
+   sync only where the exact dependency and live provider evidence permit;
+5. retention of SahelFlow queue, assignment, labels, priority, snooze/status,
+   search, canned replies, internal notes, customer/order context, reviewed
+   extraction and privacy-safe diagnostics as first-class seller operations.
+
+Groups, broadcast/bulk, calls and Status remain hidden unless separately
+policy-, abuse- and live-certified.
+
+### Notification Center and attention routing
+
+- one durable actor-visible notification per canonical event, notification kind,
+  shop and eligible recipient actor, with that full identity forming the
+  deterministic deduplication key;
+- a canonical event may project to multiple eligible recipients, but mutable
+  read/archive state is never shared between actors;
+- WhatsApp inbound attention fan-out is created atomically with the canonical
+  message or through an explicit recoverable projection marker whose
+  per-recipient rows are idempotent;
+- exact shop scope, trusted-actor permission filtering and per-actor read state;
+- unread count, mark one/all read, dismiss/archive with recovery, category and
+  severity filters, pagination, retention and useful loading/empty/error states;
+- exact conversation/record deep links preserved through foreground and normal
+  startup;
+- live Bell updates with a bounded database-authoritative polling fallback;
+- installed Windows notifications through the official Tauri notification
+  capability with explicit permission, safe click handling and graceful denial;
+- privacy-safe generic lock-screen copy by default; protected previews are
+  explicit opt-in and never contain secrets or diagnostics;
+- category/native-alert/sound/preview/quiet-hours/temporary-mute preferences;
+- AR/FR/EN, RTL logical geometry, keyboard/screen-reader, reduced-motion and
+  200 ms interaction-budget evidence;
+- privacy-safe observability, bounded degraded/retry behavior and indexed scale
+  proof to 100,000 operational notifications.
 
 Broadcast or bulk messaging may be included only when provider policy, consent, rate limits and abuse controls are certified.
 

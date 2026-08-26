@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-26
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.27 / FD-047 is signed, published and Founder-installed from release source `4e395b0149da447daab37ad2d01be5c8bf1d6bce`; the real LID reply and durable new inbound passed, while FRC-1 now owns the demonstrated dynamic-loopback live-push failure under #306
+> **Current checkpoint:** Internal.27 / FD-047 remains latest signed/installed; PR #315 is source-merged at protected `main` `3e5375bf503025083dd1b6f448215717528d0d5d`; FD-048 now owns the #316 → #317 → FRC-2–5 source-first batch before one separately authorized successor
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -30,7 +30,7 @@ resolve protected main + open PR/issues + current signed release
 → perform installed/human/provider/external evidence that automation cannot prove
 ```
 
-At the current frontier, no product rewrite is authorized. Internal.27 passed the exact-once real `@lid` outbound and durable new-number inbound. Automatic Inbox projection failed because the installed HTTP CSP allows only WebSocket port `3001` while native containment assigns the sidecar an ephemeral loopback port. Repair that shared root, retain a bounded durable polling fallback and real retry action, then resume installed/provider proof. Later FRC packages begin from their frozen evidence matrix.
+At the current frontier, no product rewrite is authorized. Internal.27 passed the exact-once real `@lid` outbound and durable new-number inbound. PR #315 merged the demonstrated dynamic-loopback live-push root plus bounded polling/retry and durable receipt/identity reconciliation. It is source-complete, not signed/installed proof. Under FD-048, the next implementation package is #316, followed by #317 and FRC-2–5 source/evidence work before one combined successor is separately authorized.
 
 Do not restart generic repository reconnaissance when a bounded current outcome is known. Do not rerun an unchanged passing exact head. Do not retry deterministic failures until they turn green without identifying/fixing the cause.
 
@@ -239,16 +239,26 @@ Do not merge known applicable P0/P1. A release/package/security P2 may also be b
 
 ## 10. First Revenue Certification workflow
 
-Issue #221 is closed/completed after Founder acceptance of installed Internal.24. FD-045 now owns the First Revenue Certification sequence.
+Issue #221 is closed/completed after Founder acceptance of installed
+Internal.24. FD-045 owns First Revenue Certification integrity and evidence;
+FD-048 owns the current source-first execution order.
 
 ### FRC-1 — WhatsApp installed/provider evidence
 
-Issue #306 owns the current observable gate on signed Internal.27:
+Issue #306 retains the WhatsApp installed/provider gate. Its remaining rows are
+deferred to the one FD-048 combined successor rather than executed as the next
+package:
 
 1. retain the installed Internal.27 QR/link/reopen, exactly-one LID reply and durable new-number inbound evidence;
-2. repair the demonstrated loopback WebSocket CSP root without weakening containment;
-3. if separately authorized, sign and install one exact successor while preserving AppData/registry/install identity/keys/shop databases;
-4. prove no-refresh new inbound → durable persistence → normal reopen → representative EN/AR Inbox → governed status/reviewed extraction → logout;
+2. retain PR #315 as the protected source repair for the demonstrated loopback
+   root, polling/retry fallback and receipt/identity reconciliation; do not
+   reopen it without direct regression evidence;
+3. complete #316, #317 and the planned FRC-2–5 source frontier before opening
+   separate authority for one exact signed successor;
+4. on that successor, preserve AppData/registry/install identity/keys/shop
+   databases and prove no-refresh new inbound → durable persistence → normal
+   reopen → representative EN/AR Inbox → governed status/reviewed extraction
+   → logout;
 5. retain only redacted provider/message identifiers, timestamps and non-sensitive screenshots/observations;
 6. record the exact failure stage if any;
 7. open one bounded repair only for a reproduced root and affected siblings.
@@ -273,6 +283,25 @@ No deployment is authorized until its exact promised scope is certified and cust
 
 All heavy builds, Rust, MSI and complete suites run in GitHub Actions. The Founder machine performs lightweight inspection and the real installed/provider observations automation cannot prove.
 
+### FD-048 source-first batching workflow
+
+```text
+protected #315 source
+→ reconcile active docs
+→ #316 notification-domain package
+→ #317 Inbox capability-ledger/message-media package
+→ FRC-2–5 deterministic and available official-environment evidence
+→ freeze one combined protected-main candidate
+→ separate release authority
+→ one signed successor and one preserved installed/live campaign
+```
+
+Each package still receives targeted feedback, one frozen exact head,
+consequence-selected Actions, adversarial review and expected-head merge. The
+batch does not accumulate known P0/P1, mix evidence across SHAs or claim live
+certification from source. It changes when Level 3 MSI/installed proof runs,
+not whether that proof is required.
+
 ## 11. Release/publication discipline
 
 For any later explicit release authority:
@@ -287,6 +316,11 @@ For any later explicit release authority:
 - build/sign/publish only from exact protected main;
 - verify signature, install/reopen/hydrated UI, deterministic rewrites, manifest, `latest.json`, tag and publication target;
 - keep Founder-installed acceptance and customer-online/provider evidence separate.
+
+FD-048 specifically prohibits opening the next release-authority package until
+#316, #317 and the planned FRC-2–5 source frontier are reconciled on protected
+main. Documentation and implementation packages do not infer the next Internal
+version or decision number.
 
 ## 12. External/provider boundaries
 
