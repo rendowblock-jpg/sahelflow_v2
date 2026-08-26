@@ -163,11 +163,46 @@ async function setMessageDeliveryByEffect(
     select: { messageId: true },
   });
   if (effect) {
-    await tx.message.updateMany({
-      where: { id: effect.messageId },
-      data: { deliveryStatus },
-    });
+    await setMessageDeliveryWithoutDowngrade(
+      tx,
+      effect.messageId,
+      deliveryStatus,
+    );
   }
+}
+
+async function setMessageDeliveryWithoutDowngrade(
+  tx: Parameters<Parameters<ServiceContext["prisma"]["$transaction"]>[0]>[0],
+  messageId: string,
+  deliveryStatus: string,
+): Promise<boolean> {
+  const protectedStatuses =
+    deliveryStatus === "sending"
+      ? ["sent", "delivered", "read"]
+      : deliveryStatus === "sent" || deliveryStatus === "failed"
+        ? ["delivered", "read"]
+        : [];
+  const updated = await tx.message.updateMany({
+    where: {
+      id: messageId,
+      ...(protectedStatuses.length
+        ? {
+            OR: [
+              { deliveryStatus: null },
+              { deliveryStatus: { notIn: protectedStatuses } },
+            ],
+          }
+        : {}),
+    },
+    data: { deliveryStatus },
+  });
+  if (updated.count === 1) return true;
+
+  const existing = await tx.message.findUnique({
+    where: { id: messageId },
+    select: { id: true },
+  });
+  return existing !== null;
 }
 
 async function openClaimedPayload(
@@ -711,11 +746,12 @@ async function markSucceeded(
           "WhatsApp receipt has no matching durable effect row",
         );
       }
-      const message = await tx.message.updateMany({
-        where: { id: payload.messageId },
-        data: { deliveryStatus: "sent" },
-      });
-      if (message.count !== 1) {
+      const messageExists = await setMessageDeliveryWithoutDowngrade(
+        tx,
+        payload.messageId,
+        "sent",
+      );
+      if (!messageExists) {
         throw new ConflictError(
           "WhatsApp provider receipt has no matching local message",
         );
