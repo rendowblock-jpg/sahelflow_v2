@@ -4,21 +4,17 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  AlertCircle,
   Bell,
   Check,
+  CheckCheck,
   ChevronDown,
   Globe,
   HelpCircle,
   LogOut,
   Menu,
-  Package,
-  RotateCcw,
   Search,
   Settings,
-  ShoppingCart,
   Store,
-  Truck,
   User,
 } from "lucide-react";
 
@@ -37,6 +33,10 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/hooks/use-i18n";
+import {
+  useNotificationCenter,
+  type NotificationCenterItem,
+} from "@/hooks/use-notification-center";
 import type { Locale } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import { logoutAndRedirect } from "@/lib/auth/logout-client";
@@ -56,29 +56,18 @@ interface TopbarProps {
   serverDir: "ltr" | "rtl";
 }
 
-interface Notification {
-  id: string;
-  type: "order" | "delivery" | "stock" | "info" | "return" | "alert";
-  title: string;
-  body?: string;
-  time: string;
-  read: boolean;
-  link?: string;
-}
-
-const NOTIFICATION_PRESENTATION: Record<
-  Notification["type"],
+const NOTIFICATION_PRESENTATION: Partial<Record<
+  NotificationCenterItem["type"],
   {
-    icon: typeof ShoppingCart;
+    icon: typeof Bell;
     className: string;
   }
-> = {
-  order: { icon: ShoppingCart, className: "bg-primary/10 text-primary" },
-  delivery: { icon: Truck, className: "bg-success/10 text-success" },
-  stock: { icon: Package, className: "bg-warning/10 text-warning" },
+>> = {
   info: { icon: Bell, className: "bg-muted text-muted-foreground" },
-  return: { icon: RotateCcw, className: "bg-warning/10 text-warning" },
-  alert: { icon: AlertCircle, className: "bg-destructive/10 text-destructive" },
+};
+const DEFAULT_NOTIFICATION_PRESENTATION = {
+  icon: Bell,
+  className: "bg-muted text-muted-foreground",
 };
 
 /**
@@ -107,40 +96,14 @@ export function Topbar({
   const setActiveShop = useShopStore((state) => state.setActiveShop);
   const loadShops = useShopStore((state) => state.loadShops);
 
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { notifications, unreadCount, applyLifecycle, readAll } =
+    useNotificationCenter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     void loadShops();
   }, [loadShops]);
 
-  const loadNotifications = useCallback(async () => {
-    try {
-      const response = await fetch("/api/notifications");
-      if (!response.ok) return;
-      const payload = (await response.json()) as {
-        notifications?: Notification[];
-      };
-      setNotifications(payload.notifications ?? []);
-    } catch {
-      // Notifications are a projection. Their failure must not block work.
-    }
-  }, []);
-
-  useEffect(() => {
-    const initial = window.setTimeout(() => void loadNotifications(), 0);
-    const interval = window.setInterval(
-      () => void loadNotifications(),
-      60_000,
-    );
-    return () => {
-      window.clearTimeout(initial);
-      window.clearInterval(interval);
-    };
-  }, [loadNotifications]);
-
-  const unreadCount = notifications.filter((notification) => !notification.read)
-    .length;
   const activeShop = shops.find((shop) => shop.id === activeShopId) ?? null;
   const switchTarget =
     shops.find((shop) => shop.id === switchTargetId) ?? null;
@@ -387,7 +350,8 @@ export function Topbar({
               ) : (
                 notifications.slice(0, 6).map((notification) => {
                   const presentation =
-                    NOTIFICATION_PRESENTATION[notification.type];
+                    NOTIFICATION_PRESENTATION[notification.type] ??
+                    DEFAULT_NOTIFICATION_PRESENTATION;
                   const Icon = presentation.icon;
                   const content = (
                     <>
@@ -428,6 +392,11 @@ export function Topbar({
                     >
                       <Link
                         href={notification.link}
+                        onClick={() => {
+                          if (notification.durable) {
+                            void applyLifecycle(notification.id, "read");
+                          }
+                        }}
                         className="flex w-full items-start gap-3 p-3"
                       >
                         {content}
@@ -444,6 +413,25 @@ export function Topbar({
                 })
               )}
             </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <div className="flex items-center justify-between gap-2 p-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs"
+                disabled={unreadCount === 0}
+                onClick={() => void readAll()}
+              >
+                <CheckCheck className="me-1.5 size-3.5" aria-hidden="true" />
+                {t("notifications.readAll")}
+              </Button>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
+                <Link href="/notifications">
+                  {t("topbar.viewAllNotifications")}
+                </Link>
+              </Button>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
 

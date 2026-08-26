@@ -98,6 +98,11 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
   InventoryMovement: () => db.inventoryMovement.findMany(),
   InventoryReservation: () => db.inventoryReservation.findMany(),
   Message: () => db.message.findMany(),
+  NotificationDeliveryAttempt: () =>
+    db.notificationDeliveryAttempt.findMany(),
+  NotificationEvent: () => db.notificationEvent.findMany(),
+  NotificationPreference: () => db.notificationPreference.findMany(),
+  OperationalNotification: () => db.operationalNotification.findMany(),
   Order: () => db.order.findMany(),
   OrderChange: () => db.orderChange.findMany(),
   OrderItem: () => db.orderItem.findMany(),
@@ -224,6 +229,10 @@ export async function executeShopErase(
 
       // Durable notification effects precede their owning automation runs.
       await tx.automationNotification.deleteMany({});
+      await tx.notificationDeliveryAttempt.deleteMany({});
+      await tx.operationalNotification.deleteMany({});
+      await tx.notificationPreference.deleteMany({});
+      await tx.notificationEvent.deleteMany({});
       // Durable automation attempts precede steps and runs.
       await tx.automationStepAttempt.deleteMany({});
       await tx.automationStepRun.deleteMany({});

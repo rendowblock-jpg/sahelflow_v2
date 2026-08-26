@@ -481,6 +481,31 @@ async function applyClaim(
         },
       });
 
+      // This PII-free marker is committed atomically with the canonical
+      // message. Per-actor projection is idempotent and may safely recover on
+      // the next Bell/API read after a process interruption.
+      const notificationEventKey = `whatsapp-message-received:${claim.ingressKey}`;
+      await tx.notificationEvent.upsert({
+        where: { eventKey: notificationEventKey },
+        create: {
+          id: `notification-event:${claim.id}`,
+          eventKey: notificationEventKey,
+          eventType: "whatsapp.message.received.v1",
+          category: "inbox",
+          severity: "info",
+          requiredAction: "conversations.read",
+          targetType: "conversation",
+          targetId: conversation.id,
+          sourceRecordId: claim.id,
+          link: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
+          occurredAt: providerTimestamp,
+          expiresAt: new Date(
+            providerTimestamp.getTime() + 365 * 24 * 60 * 60 * 1_000,
+          ),
+        },
+        update: {},
+      });
+
       const applied = await tx.providerIngressEvent.updateMany({
         where: {
           id: claim.id,

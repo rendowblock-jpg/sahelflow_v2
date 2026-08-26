@@ -16,6 +16,10 @@
     "shell:allow-open",
     "store:default",
     "os:default",
+    "notification:allow-is-permission-granted",
+    "notification:allow-request-permission",
+    "notification:allow-notify",
+    "notification:allow-register-listener",
     "stronghold:default",
     "updater:default"
   ]
