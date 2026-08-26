@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.27 Founder FRC-1 LID reply checkpoint publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.27",
+  "windowsMsiVersion": "1.0.0.27",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-047",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "45974c24b947e8812a5366d2c0138fa6ffa42152",
+    "phase5RunId": 32908875243,
+    "phase67RunId": 32908875191,
+    "ciRunId": 32908875417
+  },
+  "reason": "Founder explicitly authorized Internal.27 / FD-047 as the next offline-only signed FRC-1 repair checkpoint after #312 merged. Publish only the exact protected product tree containing #312: replies to a syntactically valid individual WhatsApp LID require persisted inbound Message provenance and preserve the provider identity through the durable send path; unbound opaque LIDs and non-individual JID domains remain fail-closed. The same package starts an empty Arabic composer RTL while restoring automatic first-strong direction for entered French, English or mixed content, and exposes the existing governed conversation-status and reviewed AI order-extraction flows in the thread header without introducing silent order creation or new mutation authority. The validated #312 head 45974c24b947e8812a5366d2c0138fa6ffa42152 is tree-equivalent to protected main 9dbcc1430e61676b42f37d8c601dc05306a1e44b and passed exact-head CI, Phase 5, Phase 6-7 and review with zero unresolved threads. This request remains founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim. Internal.27 is a repair candidate for continued real-phone evidence under #306; source, CI and publication do not prove live outbound delivery, WebSocket push health or complete FRC-1, and #230 remains independently blocked until an owned domain exists."
+}
