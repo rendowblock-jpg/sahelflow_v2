@@ -33,36 +33,33 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-At the 2026-08-25 reconciliation:
+At the 2026-08-26 reconciliation:
 
-- protected `main`: `36dc7fb6d644814d0ab7a2b29c1d4ca4f8562b54` / PR #307; re-resolve live before acting;
-- signed/published checkpoint: **Internal.25**;
-- app `1.0.0-internal.25`; MSI `1.0.0.25`; authority **FD-044**; mode `founder-offline-only`;
-- reviewed release head `bb74cbb6c27932d5977c7a616c2ff214ae1f2bac`;
-- CI `32792971378`, Phase 5 `32792971025`, Phase 6–7 `32792971024`, Native source `32792971023` — success;
-- dispatcher `32795149465` and signed updater/publication `32795159635` — success;
-- MSI digest `sha256:9de9c18bde37ef026e7f72d2a371a8ff2a017a372efa5b3a3e70a7e3aa7e9265`;
-- issue #221 closed/completed on Founder acceptance of installed Internal.24;
-- issue #306 open for real-phone WhatsApp installed/provider certification;
-- issue #230 open/reopened P1 for customer-online trial/network readiness;
-- no open PR existed at reconciliation.
+- protected `main`: `3e5375bf503025083dd1b6f448215717528d0d5d` / PR #315; re-resolve live before acting;
+- latest signed/installed checkpoint: **Internal.27** / **FD-047**, mode `founder-offline-only`;
+- Internal.27 release source: `4e395b0149da447daab37ad2d01be5c8bf1d6bce`;
+- Internal.27 demonstrated exact-once real `@lid` outbound and durable new-number inbound, while automatic Inbox live-push still required manual refresh;
+- PR #315 source-merged the dynamic-loopback live-push root repair plus bounded polling/retry and durable receipt/identity reconciliation; it is not yet signed or installed evidence;
+- issues #306 and #230 remain open for real-phone WhatsApp certification and customer-online readiness;
+- issues #316 and #317 are open for Class-AAA Notifications and professional WhatsApp Inbox parity;
+- no open PR existed immediately after PR #315 merged.
 
-Internal.25 packages the accepted Internal.24 product line plus #300 connected-installation secret protection, #304 WhatsApp protected Windows storage, #305 Gemini-bound tool-result minimization and #307 release authority.
+Internal.27 remains the signed/installed authority. Protected `main` is newer source authority only; do not describe PR #315 or later source work as released, installed, live-provider-certified or Founder-accepted.
 
 ## Exact next outcome
 
-Execute **First Revenue Certification** under FD-045. The first observable outcome is **FRC-1 / issue #306 on signed Internal.25**.
+Execute the **FD-048 source-first First Revenue Certification batch** while preserving every FD-045 evidence rule.
 
-1. Re-resolve protected `main`, open PRs, #306 and #230.
-2. Confirm signed latest remains Internal.25 / FD-044 and the release assets bind to exact protected source.
-3. Update/install Internal.25 in place through the normal signed updater/installer; preserve AppData, registry/install identity, keys and shop databases.
-4. Prove normal launch/reopen and exact installed version.
-5. Run QR → real-phone link → reopen persistence → outbound → inbound/persistence → representative EN/AR Inbox → logout with redacted evidence.
-6. Include message-to-reviewed-order-draft observation when safe; the complete extraction/action matrix belongs to FRC-2.
-7. If a concrete failure appears, open one bounded repair package for that root and affected siblings only; run selected Level 1/2/3 gates and expected-head merge discipline.
-8. After FRC-1, execute FRC-2 AI/tools/order extraction, FRC-3 Required capability/journey assurance, FRC-4 commerce and FRC-5 courier certification in dependency order.
+1. Re-resolve protected `main`, open PRs and issues #306/#316/#317/#230.
+2. Confirm Internal.27 / FD-047 remains the latest signed/installed checkpoint and protected `main` is newer source authority only.
+3. Reconcile the active documentation after PR #315.
+4. Implement issue #316, the durable Class-AAA Notification Center and WhatsApp attention-routing package.
+5. Implement issue #317, the professional WhatsApp Inbox capability ledger and message/media operational-parity package.
+6. Complete FRC-2 through FRC-5 source/contracts/mock/official-development-or-sandbox evidence available before installation, in dependency order.
+7. Freeze one combined exact candidate only after those source packages are protected-main complete.
+8. Open a separate release-authority package; only then publish one signed successor and perform one in-place Founder update plus installed/live-provider campaign.
 9. Publicly promise only exact live-certified provider/actions. Unverified providers stay hidden, disabled or conditional.
-10. Keep #230, customer-online, paid deployment, Beta and Stable separate. No offline customer exception is implied.
+10. Keep #306, #230, customer-online, paid deployment, Beta and Stable separate until their own evidence and authority close them.
 
 ## First Revenue Certification rules
 

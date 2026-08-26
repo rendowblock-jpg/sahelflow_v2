@@ -197,7 +197,7 @@ A `workers.dev` endpoint can support development but does not satisfy the sole p
 
 ## Phase 9 — release certification and launch readiness
 
-Internal.25 is an Internal Founder-offline checkpoint, not Beta or Stable.
+Internal.25 / FD-044 is a historical Internal Founder-offline checkpoint, not Beta or Stable. Internal.27 / FD-047 is the current signed/installed checkpoint and is also not Beta or Stable.
 
 Stable still requires:
 
@@ -236,4 +236,4 @@ No force merge, waiver, protection bypass, updater-key weakening, Rust `--locked
 - Historical retained evidence set: issues #201, #214, #221, #226 and #230.
 - PR #250, PR #251 and `agent/internal-16-wave-4` remain history.
 - Internal.24 / FD-043 is the Founder-accepted installed checkpoint.
-- Internal.25 / FD-044 is the current signed provider/security checkpoint.
+- Internal.25 / FD-044 is the historical provider/security checkpoint superseded for current signed/installed authority by Internal.27 / FD-047.
