@@ -128,20 +128,49 @@ function extensionFor(mediaType: string): string {
   }
 }
 
+function safeExtension(
+  attachment: WhatsAppMessageAttachment,
+  verifiedMediaType: string,
+): string {
+  const declared = attachment.mimeType?.split(";", 1)[0]?.trim().toLowerCase();
+  switch (declared) {
+    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      return ".docx";
+    case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+      return ".xlsx";
+    case "application/msword":
+      return ".doc";
+    case "application/vnd.ms-excel":
+      return ".xls";
+    case "text/csv":
+      return ".csv";
+    case "text/plain":
+      return ".txt";
+    default:
+      return extensionFor(verifiedMediaType);
+  }
+}
+
 function safeFileName(
   attachment: WhatsAppMessageAttachment,
   messageId: string,
   mediaType: string,
 ): string {
+  const extension = safeExtension(attachment, mediaType);
   const candidate = attachment.fileName
     ?.replace(/[\u0000-\u001f\u007f]/g, " ")
     .replaceAll("\\", "/")
     .split("/")
     .at(-1)
     ?.trim();
-  if (candidate) return candidate.slice(0, 180);
   const suffix = messageId.replace(/[^a-zA-Z0-9_-]/g, "").slice(-24) || "media";
-  return `whatsapp-${attachment.kind}-${suffix}${extensionFor(mediaType)}`;
+  const fallbackStem = `whatsapp-${attachment.kind}-${suffix}`;
+  const candidateStem = candidate
+    ?.replace(/\.[^.]*$/, "")
+    .replace(/[. ]+$/g, "")
+    .trim();
+  const stem = candidateStem || fallbackStem;
+  return `${stem.slice(0, Math.max(1, 180 - extension.length))}${extension}`;
 }
 
 function openReceipt(
@@ -214,11 +243,7 @@ function assertSameReadableEpoch(scopeRoot: string, expectedEpoch: number): void
   }
 }
 
-/**
- * Resolve canonical seller media metadata and the protected receipt without
- * opening the encrypted object. This lets HTTP range parsing happen before any
- * plaintext is materialized.
- */
+/** Resolve canonical seller media metadata and receipt before object decryption. */
 export async function prepareInboxWhatsAppMedia(
   context: ServiceContext,
   messageId: string,
@@ -315,11 +340,7 @@ export async function prepareInboxWhatsAppMedia(
   };
 }
 
-/**
- * Authenticate every encrypted frame and the full object provenance while
- * retaining only the requested plaintext interval. The final canonical/erase
- * checks happen after all async evidence work and before bytes are returned.
- */
+/** Authenticate the full object while retaining only the requested interval. */
 export async function openPreparedInboxWhatsAppMedia(
   context: ServiceContext,
   prepared: PreparedInboxWhatsAppMedia,
