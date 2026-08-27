@@ -15,6 +15,34 @@ import {
 } from "./lifecycle";
 
 const context = { prisma: db, shop: shopContext } as const;
+type MediaEraseContext = Parameters<typeof whatsAppMediaRoot>[0];
+
+/**
+ * Shared local lifecycle coordinator for destructive DB + WhatsApp media work.
+ *
+ * Production passes the governed `executeShopErase` operation below. Focused
+ * integration tests may pass a test-scoped DB deletion while still exercising
+ * this exact lease/tombstone/commit boundary; this avoids running an all-shop
+ * destructive erase inside Vitest's shared canonical database.
+ */
+export async function coordinateShopEraseWithMedia<T>(
+  eraseContext: MediaEraseContext,
+  eraseDatabase: () => Promise<T>,
+): Promise<T> {
+  const mediaRoot = whatsAppMediaRoot(eraseContext);
+  return withWhatsAppMediaLifecycleLease(mediaRoot, async () => {
+    const stage = stageWhatsAppMediaErase(mediaRoot);
+    let receipt: T;
+    try {
+      receipt = await eraseDatabase();
+    } catch (error) {
+      rollbackWhatsAppMediaErase(stage);
+      throw error;
+    }
+    commitWhatsAppMediaErase(stage);
+    return receipt;
+  });
+}
 
 /**
  * Destructive privacy authority across SQLite + filesystem media.
@@ -32,17 +60,5 @@ const context = { prisma: db, shop: shopContext } as const;
 export async function executeShopEraseWithMedia(
   mode: PrivacyEraseMode,
 ): Promise<PrivacyLifecycleReceipt> {
-  const mediaRoot = whatsAppMediaRoot(context);
-  return withWhatsAppMediaLifecycleLease(mediaRoot, async () => {
-    const stage = stageWhatsAppMediaErase(mediaRoot);
-    let receipt: PrivacyLifecycleReceipt;
-    try {
-      receipt = await executeShopErase(mode);
-    } catch (error) {
-      rollbackWhatsAppMediaErase(stage);
-      throw error;
-    }
-    commitWhatsAppMediaErase(stage);
-    return receipt;
-  });
+  return coordinateShopEraseWithMedia(context, () => executeShopErase(mode));
 }
