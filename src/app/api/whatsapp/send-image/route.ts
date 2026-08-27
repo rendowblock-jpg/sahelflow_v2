@@ -47,6 +47,14 @@ function imageRequestTooLarge(): SahelFlowError {
   );
 }
 
+function invalidImageMultipart(): SahelFlowError {
+  return new SahelFlowError(
+    "WhatsApp image multipart body is invalid",
+    "VALIDATION_ERROR",
+    400,
+  );
+}
+
 /**
  * Consume multipart bytes through an explicit ceiling before invoking the
  * platform form-data parser. This keeps chunked/no-Content-Length requests from
@@ -87,9 +95,13 @@ async function readBoundedImageForm(req: NextRequest): Promise<FormData> {
     reader.releaseLock();
   }
 
-  return new Response(bounded.subarray(0, offset), {
-    headers: { "Content-Type": contentType },
-  }).formData();
+  try {
+    return await new Response(bounded.subarray(0, offset), {
+      headers: { "Content-Type": contentType },
+    }).formData();
+  } catch {
+    throw invalidImageMultipart();
+  }
 }
 
 /**
