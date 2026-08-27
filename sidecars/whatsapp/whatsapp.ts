@@ -458,6 +458,51 @@ export class WhatsAppManager {
     };
   }
 
+  async sendDocument(
+    to: string,
+    document: Uint8Array,
+    mimetype: string,
+    fileName: string,
+    caption: string,
+    messageId?: string,
+  ): Promise<{ id: string; status: string }> {
+    if (!this.sock || this.status !== "connected") {
+      throw new Error(`Not connected (status=${this.status})`);
+    }
+    // The media type is the authenticated sniffed classification from the
+    // encrypted storage authority; the title is the bounded safe file name.
+    const normalizedType = mimetype.toLowerCase();
+    if (
+      !/^(application\/(?:pdf|zip|x-ole-storage)|text\/plain)$/.test(
+        normalizedType,
+      ) ||
+      document.byteLength <= 0 ||
+      !fileName ||
+      fileName.length > 180
+    ) {
+      throw new Error("Document send requires bounded classified bytes and a file name");
+    }
+    const jid = this.toJid(to);
+    const sent = await this.sock.sendMessage(
+      jid,
+      {
+        document: Buffer.from(
+          document.buffer,
+          document.byteOffset,
+          document.byteLength,
+        ),
+        mimetype: normalizedType,
+        fileName,
+        ...(caption ? { caption } : {}),
+      },
+      messageId ? { messageId } : undefined,
+    );
+    return {
+      id: sent?.key?.id ?? "",
+      status: String(sent?.status ?? "sent"),
+    };
+  }
+
   async downloadMedia(message: IncomingMessage): Promise<AsyncIterable<Uint8Array>> {
     if (!this.sock || this.status !== "connected") {
       throw new Error(`Not connected (status=${this.status})`);

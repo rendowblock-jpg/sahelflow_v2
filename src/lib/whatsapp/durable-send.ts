@@ -32,6 +32,7 @@ import { normalizeWhatsAppJid } from "./types";
 export const WHATSAPP_TEXT_EFFECT_TYPE = "whatsapp.text.send.v1";
 export const WHATSAPP_IMAGE_EFFECT_TYPE = "whatsapp.image.send.v1";
 export const WHATSAPP_VIDEO_EFFECT_TYPE = "whatsapp.video.send.v1";
+export const WHATSAPP_DOCUMENT_EFFECT_TYPE = "whatsapp.document.send.v1";
 const MAX_ATTEMPTS = 6;
 const TEXT_LEASE_MS = 90_000;
 // Image dispatch has a 120-second sidecar timeout. Keep recovery outside that
@@ -40,6 +41,9 @@ const IMAGE_LEASE_MS = 150_000;
 // Video dispatch has a 180-second sidecar timeout. As with image effects, the
 // recovery lease must remain outside the active provider window.
 const VIDEO_LEASE_MS = 210_000;
+// Document dispatch shares the video provider window: both allow up to 64 MiB
+// of authenticated bytes to upload before the receipt is expected.
+const DOCUMENT_LEASE_MS = 210_000;
 const RETRY_DELAYS_MS = [5_000, 30_000, 120_000, 600_000, 1_800_000] as const;
 const RECONCILIATION_DEFERRED = "RECEIPT_RECONCILIATION_DEFERRED";
 
@@ -57,6 +61,18 @@ const imageMediaReceiptSchema = mediaReceiptBaseSchema.extend({
 
 const videoMediaReceiptSchema = mediaReceiptBaseSchema.extend({
   mediaType: z.literal("video/mp4"),
+});
+
+// Receipt media types are the sniffed classifications from the encrypted
+// storage authority, not browser declarations: OOXML/legacy-Office containers
+// arrive as zip/OLE storage and text/csv arrives as text/plain.
+const documentMediaReceiptSchema = mediaReceiptBaseSchema.extend({
+  mediaType: z.enum([
+    "application/pdf",
+    "application/zip",
+    "application/x-ole-storage",
+    "text/plain",
+  ]),
 });
 
 const queuedTextPayloadSchema = z.object({
@@ -87,10 +103,26 @@ const queuedVideoPayloadSchema = z.object({
   requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
 });
 
+const queuedDocumentPayloadSchema = z.object({
+  messageId: z.string().uuid(),
+  to: z.string().min(1).max(256),
+  caption: z.string().max(4000),
+  // Documents always carry a non-empty safe file name: WhatsApp renders it as
+  // the recipient-visible document title and the provider call requires it.
+  fileName: z.string().min(1).max(180),
+  media: documentMediaReceiptSchema,
+  requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
+});
+
 type QueuedTextPayload = z.infer<typeof queuedTextPayloadSchema>;
 type QueuedImagePayload = z.infer<typeof queuedImagePayloadSchema>;
 type QueuedVideoPayload = z.infer<typeof queuedVideoPayloadSchema>;
-type QueuedPayload = QueuedTextPayload | QueuedImagePayload | QueuedVideoPayload;
+type QueuedDocumentPayload = z.infer<typeof queuedDocumentPayloadSchema>;
+type QueuedPayload =
+  | QueuedTextPayload
+  | QueuedImagePayload
+  | QueuedVideoPayload
+  | QueuedDocumentPayload;
 
 type TrustedWhatsAppCommandContext = BusinessPrincipalContext & {
   readonly businessPrincipal: TrustedBusinessPrincipal;
@@ -113,6 +145,16 @@ export interface QueueWhatsAppImageInput {
 }
 
 export interface QueueWhatsAppVideoInput {
+  clientMessageId: string;
+  to: string;
+  caption?: string;
+  fileName?: string | null;
+  declaredMime: string | null;
+  declaredSize: number;
+  source: ReadableStream<Uint8Array>;
+}
+
+export interface QueueWhatsAppDocumentInput {
   clientMessageId: string;
   to: string;
   caption?: string;
@@ -191,6 +233,16 @@ export type WhatsAppVideoEffectSender = (
   requestBinding: string,
 ) => Promise<SendReceipt>;
 
+export type WhatsAppDocumentEffectSender = (
+  to: string,
+  document: Buffer,
+  mediaType: string,
+  fileName: string,
+  caption: string,
+  effectKey: string,
+  requestBinding: string,
+) => Promise<SendReceipt>;
+
 export type WhatsAppEffectReceiptLookup = (
   effectKey: string,
   requestBinding: string,
@@ -200,7 +252,8 @@ function supportedEffectType(value: string): boolean {
   return (
     value === WHATSAPP_TEXT_EFFECT_TYPE ||
     value === WHATSAPP_IMAGE_EFFECT_TYPE ||
-    value === WHATSAPP_VIDEO_EFFECT_TYPE
+    value === WHATSAPP_VIDEO_EFFECT_TYPE ||
+    value === WHATSAPP_DOCUMENT_EFFECT_TYPE
   );
 }
 
@@ -331,6 +384,9 @@ async function openClaimedPayload(
     }
     if (claimed.effectType === WHATSAPP_VIDEO_EFFECT_TYPE) {
       return queuedVideoPayloadSchema.parse(opened);
+    }
+    if (claimed.effectType === WHATSAPP_DOCUMENT_EFFECT_TYPE) {
+      return queuedDocumentPayloadSchema.parse(opened);
     }
     return queuedTextPayloadSchema.parse(opened);
   } finally {
@@ -964,6 +1020,228 @@ export async function queueWhatsAppVideo(
   return { ...execution.result, replayed: execution.replayed };
 }
 
+function documentFallbackName(mediaType: string): string {
+  switch (mediaType) {
+    case "application/pdf":
+      return "document.pdf";
+    case "application/zip":
+      return "document.docx";
+    case "application/x-ole-storage":
+      return "document.doc";
+    default:
+      return "document.txt";
+  }
+}
+
+export async function queueWhatsAppDocument(
+  context: TrustedWhatsAppCommandContext,
+  input: QueueWhatsAppDocumentInput,
+): Promise<{ effectKey: string; messageId: string; replayed: boolean }> {
+  const clientMessageId = z.string().uuid().parse(input.clientMessageId);
+  const caption = z.string().max(4000).parse(input.caption?.trim() ?? "");
+  const declaredSize = z.number().int().positive().max(64 * 1024 * 1024).parse(input.declaredSize);
+  const declaredMime = z
+    .enum([
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "text/plain",
+      "text/csv",
+    ])
+    .parse(input.declaredMime?.split(";", 1)[0]?.trim().toLowerCase());
+  const fileName = safeOutboundFileName(input.fileName);
+  const jid = normalizeRecipient(input.to);
+
+  let media: z.infer<typeof documentMediaReceiptSchema>;
+  try {
+    media = documentMediaReceiptSchema.parse(
+      await writeWhatsAppMediaObject(context, {
+        messageId: clientMessageId,
+        kind: "document",
+        declaredSize,
+        declaredMime,
+        source: input.source,
+        strictSourceIdentity: true,
+      }),
+    );
+  } catch (error) {
+    if (
+      error instanceof WhatsAppMediaObjectError &&
+      error.code === "MEDIA_OBJECT_CONFLICT"
+    ) {
+      throw new ConflictError(
+        "This WhatsApp client message ID is already bound to different document content",
+      );
+    }
+    throw error;
+  }
+  // Documents are presented to the recipient by name; a missing or generic
+  // browser name falls back to the authenticated content classification.
+  const outboundFileName = fileName ?? documentFallbackName(media.mediaType);
+
+  const contentBinding = JSON.stringify({
+    caption,
+    fileName: outboundFileName,
+    sha256: media.sha256,
+    sizeBytes: media.sizeBytes,
+    mediaType: media.mediaType,
+  });
+  const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
+    context,
+    "document",
+    clientMessageId,
+    jid,
+    contentBinding,
+  ).catch(stagedMediaGuard(context, clientMessageId));
+  const attachmentKey = await getBusinessEnvelopeKey(context);
+  let protectedAttachment: string;
+  try {
+    protectedAttachment = sealWhatsAppMessageAttachmentWithKey(
+      clientMessageId,
+      {
+        formatVersion: 1,
+        kind: "document",
+        state: "ready",
+        mimeType: media.mediaType,
+        fileName: outboundFileName,
+        sizeBytes: media.sizeBytes,
+        durationSeconds: null,
+        width: null,
+        height: null,
+        voiceMessage: false,
+        location: null,
+        contact: null,
+        failureCode: null,
+      },
+      attachmentKey,
+    );
+  } catch (error) {
+    await discardStagedMediaIfUnreferenced(context, clientMessageId);
+    throw error;
+  } finally {
+    attachmentKey.fill(0);
+  }
+
+  const phone = jid.slice(0, jid.indexOf("@"));
+  const now = new Date();
+  const payload = {
+    messageId: clientMessageId,
+    to: jid,
+    caption,
+    fileName: outboundFileName,
+    media,
+    requestBinding,
+  } satisfies QueuedDocumentPayload;
+
+  const execution = await executeBusinessCommand(
+    context,
+    {
+      idempotencyKey: effectKey,
+      commandType: "whatsapp_document.queue.v1",
+      aggregate: {
+        type: "whatsapp-message",
+        id: clientMessageId,
+        expectedVersion: 0,
+      },
+      actor: context.businessPrincipal.auditActor,
+      correlationId: clientMessageId,
+      payload,
+    },
+    async ({ tx }) => {
+      const conversationKey = {
+        channel_sourceId: { channel: "whatsapp", sourceId: jid },
+      } as const;
+      const existingConversation = await tx.conversation.findUnique({
+        where: conversationKey,
+        select: {
+          id: true,
+          messages: {
+            where: { direction: "inbound" },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      });
+      if (
+        jid.endsWith("@lid") &&
+        (!existingConversation || existingConversation.messages.length === 0)
+      ) {
+        throw new SahelFlowError(
+          "WhatsApp LID replies require persisted inbound message provenance",
+          "VALIDATION_ERROR",
+          400,
+        );
+      }
+      const conversation = existingConversation
+        ? await tx.conversation.update({
+            where: conversationKey,
+            data: { lastMessageAt: now },
+            select: { id: true },
+          })
+        : await tx.conversation.create({
+            data: {
+              channel: "whatsapp",
+              contactName: phone,
+              contactPhone: phone,
+              sourceId: jid,
+              lastMessageAt: now,
+            },
+            select: { id: true },
+          });
+      await tx.message.create({
+        data: {
+          id: clientMessageId,
+          conversationId: conversation.id,
+          body: caption,
+          direction: "outbound",
+          timestamp: now,
+          deliveryStatus: "sending",
+          messageType: "document",
+          attachments: protectedAttachment,
+        },
+      });
+      await tx.whatsAppOutboundEffect.create({
+        data: { effectKey, messageId: clientMessageId },
+      });
+      return {
+        result: { effectKey, messageId: clientMessageId },
+        audit: {
+          action: "whatsapp.document.queued",
+          entity: "message",
+          entityId: clientMessageId,
+          metadata: {
+            effectKey,
+            conversationId: conversation.id,
+            mediaType: media.mediaType,
+            sizeBytes: media.sizeBytes,
+            fileName: outboundFileName,
+            sha256: media.sha256,
+          },
+        },
+        events: [
+          {
+            key: `${effectKey}:queued`,
+            type: "whatsapp.document.queued.v1",
+            payload: { messageId: clientMessageId, conversationId: conversation.id },
+          },
+        ],
+        outbox: [
+          {
+            effectKey,
+            effectType: WHATSAPP_DOCUMENT_EFFECT_TYPE,
+            payload,
+          },
+        ],
+        projectionInvalidations: [`conversation:${conversation.id}`, "inbox"],
+      };
+    },
+  ).catch(stagedMediaGuard(context, clientMessageId));
+
+  return { ...execution.result, replayed: execution.replayed };
+}
+
 async function recoverPreEffectLease(
   context: ServiceContext,
   row: OutboxRow,
@@ -1090,6 +1368,10 @@ async function recoverExpiredLeases(
           effectType: WHATSAPP_VIDEO_EFFECT_TYPE,
           lockedAt: { lt: new Date(now.getTime() - VIDEO_LEASE_MS) },
         },
+        {
+          effectType: WHATSAPP_DOCUMENT_EFFECT_TYPE,
+          lockedAt: { lt: new Date(now.getTime() - DOCUMENT_LEASE_MS) },
+        },
       ],
     },
   })) as OutboxRow[];
@@ -1154,6 +1436,7 @@ async function claimIntent(
           WHATSAPP_TEXT_EFFECT_TYPE,
           WHATSAPP_IMAGE_EFFECT_TYPE,
           WHATSAPP_VIDEO_EFFECT_TYPE,
+          WHATSAPP_DOCUMENT_EFFECT_TYPE,
         ],
       },
       ...(effectKey ? { effectKey } : {}),
@@ -1429,6 +1712,7 @@ async function executeClaimed(
   sender: WhatsAppEffectSender,
   imageSender: WhatsAppImageEffectSender,
   videoSender: WhatsAppVideoEffectSender,
+  documentSender: WhatsAppDocumentEffectSender,
 ): Promise<WhatsAppEffectStatus> {
   let payload: QueuedPayload;
   try {
@@ -1440,15 +1724,22 @@ async function executeClaimed(
   let mediaBytes: Buffer | null = null;
   if (
     claimed.effectType === WHATSAPP_IMAGE_EFFECT_TYPE ||
-    claimed.effectType === WHATSAPP_VIDEO_EFFECT_TYPE
+    claimed.effectType === WHATSAPP_VIDEO_EFFECT_TYPE ||
+    claimed.effectType === WHATSAPP_DOCUMENT_EFFECT_TYPE
   ) {
     try {
+      const kind =
+        claimed.effectType === WHATSAPP_IMAGE_EFFECT_TYPE
+          ? "image"
+          : claimed.effectType === WHATSAPP_VIDEO_EFFECT_TYPE
+            ? "video"
+            : "document";
       const mediaPayload =
         claimed.effectType === WHATSAPP_IMAGE_EFFECT_TYPE
           ? queuedImagePayloadSchema.parse(payload)
-          : queuedVideoPayloadSchema.parse(payload);
-      const kind =
-        claimed.effectType === WHATSAPP_IMAGE_EFFECT_TYPE ? "image" : "video";
+          : claimed.effectType === WHATSAPP_VIDEO_EFFECT_TYPE
+            ? queuedVideoPayloadSchema.parse(payload)
+            : queuedDocumentPayloadSchema.parse(payload);
       mediaBytes = (
         await readWhatsAppMediaObject(
           context,
@@ -1492,6 +1783,17 @@ async function executeClaimed(
         started.effectKey,
         videoPayload.requestBinding,
       );
+    } else if (started.effectType === WHATSAPP_DOCUMENT_EFFECT_TYPE) {
+      const documentPayload = payload as QueuedDocumentPayload;
+      receipt = await documentSender(
+        documentPayload.to,
+        mediaBytes!,
+        documentPayload.media.mediaType,
+        documentPayload.fileName,
+        documentPayload.caption,
+        started.effectKey,
+        documentPayload.requestBinding,
+      );
     } else {
       const textPayload = payload as QueuedTextPayload;
       receipt = await sender(
@@ -1516,10 +1818,18 @@ export async function processWhatsAppEffect(
   receiptLookup: WhatsAppEffectReceiptLookup = sidecar.receipt,
   imageSender: WhatsAppImageEffectSender = sidecar.sendImage,
   videoSender: WhatsAppVideoEffectSender = sidecar.sendVideo,
+  documentSender: WhatsAppDocumentEffectSender = sidecar.sendDocument,
 ): Promise<WhatsAppEffectStatus> {
   const claimed = await claimIntent(context, effectKey, receiptLookup);
   if (!claimed) return getWhatsAppEffectStatus(context, effectKey);
-  return executeClaimed(context, claimed, sender, imageSender, videoSender);
+  return executeClaimed(
+    context,
+    claimed,
+    sender,
+    imageSender,
+    videoSender,
+    documentSender,
+  );
 }
 
 export async function drainDueWhatsAppEffects(
@@ -1529,6 +1839,7 @@ export async function drainDueWhatsAppEffects(
   receiptLookup: WhatsAppEffectReceiptLookup = sidecar.receipt,
   imageSender: WhatsAppImageEffectSender = sidecar.sendImage,
   videoSender: WhatsAppVideoEffectSender = sidecar.sendVideo,
+  documentSender: WhatsAppDocumentEffectSender = sidecar.sendDocument,
 ): Promise<WhatsAppEffectStatus[]> {
   const bounded = Math.max(1, Math.min(limit, 25));
   const results: WhatsAppEffectStatus[] = [];
@@ -1536,7 +1847,14 @@ export async function drainDueWhatsAppEffects(
     const claimed = await claimIntent(context, undefined, receiptLookup);
     if (!claimed) break;
     results.push(
-      await executeClaimed(context, claimed, sender, imageSender, videoSender),
+      await executeClaimed(
+        context,
+        claimed,
+        sender,
+        imageSender,
+        videoSender,
+        documentSender,
+      ),
     );
   }
   return results;
@@ -1590,6 +1908,18 @@ export async function openQueuedWhatsAppVideoReceipt(
   return payload.media as WhatsAppMediaObjectReceipt;
 }
 
+export async function openQueuedWhatsAppDocumentReceipt(
+  context: ServiceContext,
+  effectKey: string,
+): Promise<WhatsAppMediaObjectReceipt> {
+  const row = await readRow(context, effectKey);
+  if (row.effectType !== WHATSAPP_DOCUMENT_EFFECT_TYPE) {
+    throw new SahelFlowError("WhatsApp document send intent not found", "NOT_FOUND", 404);
+  }
+  const payload = queuedDocumentPayloadSchema.parse(await openClaimedPayload(context, row));
+  return payload.media as WhatsAppMediaObjectReceipt;
+}
+
 export async function retryWhatsAppEffect(
   context: TrustedWhatsAppCommandContext,
   effectKey: string,
@@ -1598,6 +1928,7 @@ export async function retryWhatsAppEffect(
   receiptLookup: WhatsAppEffectReceiptLookup = sidecar.receipt,
   imageSender: WhatsAppImageEffectSender = sidecar.sendImage,
   videoSender: WhatsAppVideoEffectSender = sidecar.sendVideo,
+  documentSender: WhatsAppDocumentEffectSender = sidecar.sendDocument,
 ): Promise<WhatsAppEffectStatus> {
   const row = await readRow(context, effectKey);
   const ambiguous = row.status === "failed" && row.outcomeState === "ambiguous";
@@ -1658,5 +1989,6 @@ export async function retryWhatsAppEffect(
     receiptLookup,
     imageSender,
     videoSender,
+    documentSender,
   );
 }

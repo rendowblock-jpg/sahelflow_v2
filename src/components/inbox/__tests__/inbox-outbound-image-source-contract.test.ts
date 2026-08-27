@@ -165,9 +165,9 @@ describe("WhatsApp outbound image source boundary", () => {
     const sidecar = source("sidecars/whatsapp/index.ts");
 
     expect(effectAuthority).toContain(
-      '"text" | "image" | "video" | "daily-report"',
+      '"text" | "image" | "video" | "document" | "daily-report"',
     );
-    expect(authTokens).toContain("(text|image|video|daily-report)");
+    expect(authTokens).toContain("(text|image|video|document|daily-report)");
     expect(sidecarClient).toContain("form.set(");
     expect(sidecarClient).toContain('"image",');
     expect(sidecarClient).toContain("new Blob(");

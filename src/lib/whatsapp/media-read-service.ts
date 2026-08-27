@@ -7,6 +7,7 @@ import { openBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { SahelFlowError } from "@/types/errors";
 import {
+  openQueuedWhatsAppDocumentReceipt,
   openQueuedWhatsAppImageReceipt,
   openQueuedWhatsAppVideoReceipt,
 } from "./durable-send";
@@ -147,10 +148,34 @@ function extensionFor(mediaType: string): string {
   }
 }
 
+// Outbound document attachments seal the sniffed classification (zip/OLE
+// storage/text) rather than the seller's original Office/CSV declaration, so
+// the recipient-visible file name is the only safe source for its extension.
+const DOCUMENT_NAME_EXTENSIONS = new Set([
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".txt",
+  ".csv",
+]);
+
 function safeExtension(
   attachment: WhatsAppMessageAttachment,
   verifiedMediaType: string,
 ): string {
+  if (attachment.kind === "document" && attachment.fileName) {
+    const leaf = attachment.fileName
+      .replaceAll("\\", "/")
+      .split("/")
+      .at(-1)
+      ?.trim();
+    const extension = /\.[A-Za-z0-9]{2,7}$/.exec(leaf ?? "")?.[0].toLowerCase();
+    if (extension && DOCUMENT_NAME_EXTENSIONS.has(extension)) {
+      return extension;
+    }
+  }
   const declared = attachment.mimeType?.split(";", 1)[0]?.trim().toLowerCase();
   switch (declared) {
     case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -302,7 +327,9 @@ export async function prepareInboxWhatsAppMedia(
   }
 
   if (message.direction === "outbound") {
-    if (kind !== "image" && kind !== "video") throw unavailable();
+    if (kind !== "image" && kind !== "video" && kind !== "document") {
+      throw unavailable();
+    }
     const effect = await context.prisma.whatsAppOutboundEffect.findUnique({
       where: { messageId: message.id },
       select: { effectKey: true },
@@ -314,7 +341,9 @@ export async function prepareInboxWhatsAppMedia(
       receipt = mediaReceiptSchema.parse(
         kind === "image"
           ? await openQueuedWhatsAppImageReceipt(context, effect.effectKey)
-          : await openQueuedWhatsAppVideoReceipt(context, effect.effectKey),
+          : kind === "video"
+            ? await openQueuedWhatsAppVideoReceipt(context, effect.effectKey)
+            : await openQueuedWhatsAppDocumentReceipt(context, effect.effectKey),
       );
     } catch {
       throw integrityFailure();

@@ -93,8 +93,9 @@ describe("WhatsApp outbound video source boundary", () => {
       durable.indexOf("export async function processWhatsAppEffect"),
     );
 
-    expect(execute).toContain('kind =');
-    expect(execute).toContain('"image" : "video"');
+    expect(execute).toContain('claimed.effectType === WHATSAPP_IMAGE_EFFECT_TYPE');
+    expect(execute).toContain('claimed.effectType === WHATSAPP_VIDEO_EFFECT_TYPE');
+    expect(execute).toContain('claimed.effectType === WHATSAPP_DOCUMENT_EFFECT_TYPE');
     expect(execute).toContain("await readWhatsAppMediaObject(");
     expect(execute.indexOf("await readWhatsAppMediaObject(")).toBeLessThan(
       execute.indexOf("await markEffectStarted(context, claimed)"),
