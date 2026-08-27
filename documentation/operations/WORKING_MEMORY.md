@@ -22,7 +22,7 @@
 - #230 open/reopened P1 — customer-online trial/network blocker; no owned production domain.
 - PR #315 remains protected source. PR #319 merged #316 by expected-head guarded squash as protected `main` `a3216a63b74ca2c33713f95f85df4ed6e2717567`; no open PR existed immediately afterward.
 - Current sequencing decision: **FD-048 batched source-first First Revenue Certification**, preserving FD-045’s evidence rules.
-- Exact next outcome: **execute issue #317 from fresh protected main using the active capability ledger, then FRC-2–5 source/evidence work before one separately authorized signed successor**.
+- Exact next outcome: **execute issue #317 from fresh protected main using the active capability ledger; under FD-049, one combined signed successor (Internal.28) is then authorized for Founder-installed testing before FRC-2–5 resume**.
 
 ## What Internal.27 adds
 
@@ -90,8 +90,9 @@ Binding rules:
    GitHub gate/review/expected-head merge. Do not build an MSI.
 5. Continue FRC-2 through FRC-5 source, official contract and available
    development/sandbox evidence in dependency order; preserve external blockers.
-6. Only after the combined source frontier is protected may a separate decision
-   authorize one signed successor and one preserved installed/live campaign.
+6. Only after #317 is complete may FD-049 authorize one signed successor
+   (Internal.28) and one preserved installed/live Founder campaign; FRC-2–5
+   resume after that installed observation.
 
 ## Following FRC packages
 

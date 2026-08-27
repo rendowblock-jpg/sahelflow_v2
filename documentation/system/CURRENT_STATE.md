@@ -92,6 +92,8 @@ freeze one combined protected-main candidate. A new signed successor and one
 preserved in-place Founder update require separate release authority and happen
 only after that source frontier is assembled.
 
+FD-049 (2026-08-27) supersedes FD-048's timing for the next checkpoint: once #317 completes on protected `main`, one signed successor (Internal.28) is authorized for Founder-installed testing before FRC-2–5 resume.
+
 FD-048 does not close #306, convert source evidence into live certification,
 authorize a release/customer/Beta/Stable, or weaken #230. It reduces repeated
 build/install cycles while preserving one exact-candidate evidence chain.

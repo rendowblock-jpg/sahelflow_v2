@@ -111,6 +111,10 @@ PR #315 source merge
 → one signed successor, one preserved in-place update and one installed/live campaign
 ```
 
+FD-049 (2026-08-27) later fixed one more cadence point: after #317 completes,
+one signed successor (Internal.28) is authorized for Founder-installed testing
+before FRC-2–5 resume.
+
 This batching changes cadence, not evidence. #315 remains source-complete only;
 #306 remains open. Source/mock/CI rows may be closed before release, while
 installed Windows, real-phone and live-provider rows remain pending until the
@@ -141,7 +145,7 @@ Beta or Stable is authorized by FD-048.
 2. Read the mandatory authority set above and confirm Internal.27 / FD-047 remains latest signed and FD-048 owns sequencing.
 3. Continue #317 from fresh protected main using `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md`; retain the #319 Notification Center source without claiming installed closure.
 4. Continue FRC-2 through FRC-5 source/evidence work in the FD-048 order. Maintain capability-specific certification states and explicit external blockers.
-5. Do not create or install a successor until the combined source frontier is frozen and a separate release-authority decision exists.
+5. Do not create or install a successor until #317 is complete and the FD-049 release-authority package exists; FRC-2–5 resume after that installed Founder observation.
 6. Do not expose or market an integration/action before its live certification record exists.
 7. Keep #306 installed proof, #230/customer-online, commercial deployment, Beta and Stable as separate explicit gates.
 

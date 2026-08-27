@@ -56,8 +56,8 @@ Execute the **FD-048 source-first First Revenue Certification batch** while pres
 3. Reconcile the active documentation after PR #315.
 4. Implement issue #316, the durable Class-AAA Notification Center and WhatsApp attention-routing package.
 5. Implement issue #317, the professional WhatsApp Inbox capability ledger and message/media operational-parity package.
-6. Complete FRC-2 through FRC-5 source/contracts/mock/official-development-or-sandbox evidence available before installation, in dependency order.
-7. Freeze one combined exact candidate only after those source packages are protected-main complete.
+6. After #317 is protected-main complete, execute the FD-049 release-authority package for one combined signed successor (Internal.28) so the Founder can install and test the retained work.
+7. Resume FRC-2 through FRC-5 source/contracts/mock/official-development-or-sandbox work after that installed Founder observation, in dependency order.
 8. Open a separate release-authority package; only then publish one signed successor and perform one in-place Founder update plus installed/live-provider campaign.
 9. Publicly promise only exact live-certified provider/actions. Unverified providers stay hidden, disabled or conditional.
 10. Keep #306, #230, customer-online, paid deployment, Beta and Stable separate until their own evidence and authority close them.
