@@ -21,6 +21,7 @@ import { createWhatsAppEffectAuthority } from "./effect-authority";
 import { sealWhatsAppMessageAttachmentWithKey } from "./message-attachments";
 import { readWhatsAppMediaObject } from "./media-object-provenance";
 import {
+  WhatsAppMediaObjectError,
   type WhatsAppMediaObjectReceipt,
   writeWhatsAppMediaObject,
 } from "./media-object-store";
@@ -29,7 +30,10 @@ import { normalizeWhatsAppJid } from "./types";
 export const WHATSAPP_TEXT_EFFECT_TYPE = "whatsapp.text.send.v1";
 export const WHATSAPP_IMAGE_EFFECT_TYPE = "whatsapp.image.send.v1";
 const MAX_ATTEMPTS = 6;
-const LEASE_MS = 90_000;
+const TEXT_LEASE_MS = 90_000;
+// Image dispatch has a 120-second sidecar timeout. Keep recovery outside that
+// active provider window so a second worker cannot reclaim an in-flight send.
+const IMAGE_LEASE_MS = 150_000;
 const RETRY_DELAYS_MS = [5_000, 30_000, 120_000, 600_000, 1_800_000] as const;
 const RECONCILIATION_DEFERRED = "RECEIPT_RECONCILIATION_DEFERRED";
 
@@ -432,15 +436,29 @@ export async function queueWhatsAppImage(
   const fileName = safeOutboundFileName(input.fileName);
   const jid = normalizeRecipient(input.to);
 
-  const media = mediaReceiptSchema.parse(
-    await writeWhatsAppMediaObject(context, {
-      messageId: clientMessageId,
-      kind: "image",
-      declaredSize,
-      declaredMime,
-      source: input.source,
-    }),
-  );
+  let media: z.infer<typeof mediaReceiptSchema>;
+  try {
+    media = mediaReceiptSchema.parse(
+      await writeWhatsAppMediaObject(context, {
+        messageId: clientMessageId,
+        kind: "image",
+        declaredSize,
+        declaredMime,
+        source: input.source,
+        strictSourceIdentity: true,
+      }),
+    );
+  } catch (error) {
+    if (
+      error instanceof WhatsAppMediaObjectError &&
+      error.code === "MEDIA_OBJECT_CONFLICT"
+    ) {
+      throw new ConflictError(
+        "This WhatsApp client message ID is already bound to different image content",
+      );
+    }
+    throw error;
+  }
   const contentBinding = JSON.stringify({
     caption,
     fileName,
@@ -710,9 +728,17 @@ async function recoverExpiredLeases(
 ): Promise<void> {
   const expired = (await context.prisma.outboxIntent.findMany({
     where: {
-      effectType: { in: [WHATSAPP_TEXT_EFFECT_TYPE, WHATSAPP_IMAGE_EFFECT_TYPE] },
       status: "processing",
-      lockedAt: { lt: new Date(now.getTime() - LEASE_MS) },
+      OR: [
+        {
+          effectType: WHATSAPP_TEXT_EFFECT_TYPE,
+          lockedAt: { lt: new Date(now.getTime() - TEXT_LEASE_MS) },
+        },
+        {
+          effectType: WHATSAPP_IMAGE_EFFECT_TYPE,
+          lockedAt: { lt: new Date(now.getTime() - IMAGE_LEASE_MS) },
+        },
+      ],
     },
   })) as OutboxRow[];
 
