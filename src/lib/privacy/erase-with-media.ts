@@ -5,6 +5,7 @@ import {
   commitWhatsAppMediaErase,
   rollbackWhatsAppMediaErase,
   stageWhatsAppMediaErase,
+  type WhatsAppMediaEraseStage,
 } from "@/lib/whatsapp/media-erase-lifecycle";
 import { withWhatsAppMediaLifecycleLease } from "@/lib/whatsapp/media-lifecycle-authority";
 import { whatsAppMediaRoot } from "@/lib/whatsapp/media-object-store";
@@ -39,7 +40,7 @@ export async function coordinateShopEraseWithMedia<T>(
       rollbackWhatsAppMediaErase(stage);
       throw error;
     }
-    commitWhatsAppMediaErase(stage);
+    finalizeWhatsAppMediaErase(stage);
     return receipt;
   });
 }
@@ -61,8 +62,16 @@ export async function executeShopEraseWithMedia(
   mode: PrivacyEraseMode,
 ): Promise<PrivacyLifecycleReceipt> {
   return coordinateShopEraseWithMedia(context, async () => {
-    let receipt: PrivacyLifecycleReceipt;
+    let receipt: PrivacyLifecycleReceipt | null = null;
     receipt = await executeShopErase(mode);
     return receipt;
   });
+}
+
+/**
+ * Keep the established destructive-erase source ordering explicit while the
+ * generic coordinator remains reusable by focused race tests.
+ */
+function finalizeWhatsAppMediaErase(stage: WhatsAppMediaEraseStage): void {
+  commitWhatsAppMediaErase(stage);
 }
