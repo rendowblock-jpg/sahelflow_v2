@@ -60,5 +60,9 @@ export async function coordinateShopEraseWithMedia<T>(
 export async function executeShopEraseWithMedia(
   mode: PrivacyEraseMode,
 ): Promise<PrivacyLifecycleReceipt> {
-  return coordinateShopEraseWithMedia(context, () => executeShopErase(mode));
+  return coordinateShopEraseWithMedia(context, async () => {
+    let receipt: PrivacyLifecycleReceipt;
+    receipt = await executeShopErase(mode);
+    return receipt;
+  });
 }
