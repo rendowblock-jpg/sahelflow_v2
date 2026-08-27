@@ -119,6 +119,7 @@ describe("WhatsApp Inbox parity source slice", () => {
   it("keeps authenticated media ranges bounded and pending media live", () => {
     const route = source("src/app/api/inbox/media/[id]/route.ts");
     const statusRoute = source("src/app/api/inbox/media/[id]/status/route.ts");
+    const batchStatusRoute = source("src/app/api/inbox/media/status/route.ts");
     const messageRoute = source(
       "src/app/api/whatsapp/chats/[jid]/messages/route.ts",
     );
@@ -154,15 +155,25 @@ describe("WhatsApp Inbox parity source slice", () => {
     );
     expect(messageRoute).toContain("projectInboxLocalMedia(");
 
+    expect(batchStatusRoute).toContain("MAX_PENDING_MEDIA_BATCH = 200");
+    expect(batchStatusRoute).toContain('requireTrustedAction("conversations.read")');
+    expect(batchStatusRoute).toContain('"customers.contact.read"');
+    expect(batchStatusRoute).toContain("db.message.findMany");
+    expect(batchStatusRoute).toContain("db.outboxIntent.findMany");
+    expect(batchStatusRoute).toContain("effectKey: { in: effectKeys }");
+    expect(batchStatusRoute).toContain("projectInboxLocalMedia(");
+
     expect(mediaUi).toContain("PENDING_MEDIA_POLL_MS = 3_000");
-    expect(mediaUi).toContain('local?.state === "pending" ? local.statusUrl');
+    expect(mediaUi).toContain("MAX_PENDING_MEDIA_BATCH = 200");
     expect(mediaUi).toContain(
-      'fetch(pendingStatusUrl, { cache: "no-store" })',
+      'PENDING_MEDIA_BATCH_URL = "/api/inbox/media/status"',
     );
-    expect(mediaUi).toContain("window.setInterval");
-    expect(mediaUi).toContain(
-      "setPolledLocal({ statusUrl: pendingStatusUrl, projection: next })",
-    );
+    expect(mediaUi).toContain("pendingMediaListeners = new Map");
+    expect(mediaUi).toContain("pendingMediaPollTimer");
+    expect(mediaUi).toContain("pollPendingMediaBatch");
+    expect(mediaUi).toContain("body: JSON.stringify({ messageIds })");
+    expect(mediaUi).toContain("subscribePendingMedia");
+    expect(mediaUi).not.toContain("fetch(pendingStatusUrl");
 
     expect(mediaUi).toContain('const response = await fetch(href, { cache: "no-store" })');
     expect(mediaUi).toContain("if (!response.ok) throw new Error");
