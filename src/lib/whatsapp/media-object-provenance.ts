@@ -1,8 +1,9 @@
 import "server-only";
 
-import { createDecipheriv, createHash, createHmac } from "node:crypto";
-import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { createHash, createHmac, webcrypto } from "node:crypto";
+import { open, type FileHandle } from "node:fs/promises";
 import { resolve } from "node:path";
+import { setImmediate as yieldToEventLoop } from "node:timers/promises";
 
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import type { ServiceContext } from "@/lib/data/service-base";
@@ -193,29 +194,28 @@ function expectedCiphertextBytes(receipt: WhatsAppMediaObjectReceipt): number {
   return value;
 }
 
-function readExact(
-  descriptor: number,
+async function readExact(
+  descriptor: FileHandle,
   length: number,
   position: number,
-): Buffer {
+): Promise<Buffer> {
   const output = Buffer.allocUnsafe(length);
   let offset = 0;
   try {
     while (offset < length) {
-      const read = readSync(
-        descriptor,
+      const { bytesRead } = await descriptor.read(
         output,
         offset,
         length - offset,
         position + offset,
       );
-      if (read <= 0) {
+      if (bytesRead <= 0) {
         throw new WhatsAppMediaObjectError(
           "Media object ciphertext was truncated during read",
           "MEDIA_OBJECT_CORRUPT",
         );
       }
-      offset += read;
+      offset += bytesRead;
     }
     return output;
   } catch (error) {
@@ -245,16 +245,60 @@ function normalizeRequestedRange(
   return { start, end };
 }
 
-function authenticateOpenedObject(
-  descriptor: number,
+async function decryptFrame(
+  cryptoKey: CryptoKey,
+  objectId: string,
+  kind: WhatsAppBinaryMediaKind,
+  frameIndex: number,
+  plaintextBytes: number,
+  nonce: Buffer,
+  tag: Buffer,
+  ciphertext: Buffer,
+): Promise<Buffer> {
+  const iv = new Uint8Array(nonce.length);
+  iv.set(nonce);
+  const aadBytes = chunkAad(objectId, kind, frameIndex, plaintextBytes);
+  const additionalData = new Uint8Array(aadBytes.length);
+  additionalData.set(aadBytes);
+  const authenticatedCiphertext = new Uint8Array(ciphertext.length + tag.length);
+  authenticatedCiphertext.set(ciphertext, 0);
+  authenticatedCiphertext.set(tag, ciphertext.length);
+
+  try {
+    const decrypted = await webcrypto.subtle.decrypt(
+      {
+        name: "AES-GCM",
+        iv,
+        additionalData,
+        tagLength: 128,
+      },
+      cryptoKey,
+      authenticatedCiphertext,
+    );
+    return Buffer.from(decrypted);
+  } catch {
+    throw new WhatsAppMediaObjectError(
+      "Media object authentication failed",
+      "MEDIA_OBJECT_CORRUPT",
+    );
+  } finally {
+    iv.fill(0);
+    additionalData.fill(0);
+    authenticatedCiphertext.fill(0);
+    aadBytes.fill(0);
+  }
+}
+
+async function authenticateOpenedObject(
+  descriptor: FileHandle,
   kind: WhatsAppBinaryMediaKind,
   receipt: WhatsAppMediaObjectReceipt,
-  objectKey: Buffer,
+  cryptoKey: CryptoKey,
   requestedRange: WhatsAppMediaPlaintextRange | null,
-): {
+): Promise<{
   bytes: Buffer | null;
   provenance: WhatsAppMediaObjectProvenance;
-} {
+}> {
   const limit = MEDIA_LIMITS[kind];
   const expectedBytes = expectedCiphertextBytes(receipt);
   if (
@@ -282,7 +326,7 @@ function authenticateOpenedObject(
   let frameIndex = 0;
 
   try {
-    const before = fstatSync(descriptor);
+    const before = await descriptor.stat();
     if (!before.isFile() || before.size !== expectedBytes) {
       throw new WhatsAppMediaObjectError(
         "Media object ciphertext length does not match its receipt",
@@ -290,7 +334,7 @@ function authenticateOpenedObject(
       );
     }
 
-    const header = readExact(descriptor, HEADER_BYTES, fileOffset);
+    const header = await readExact(descriptor, HEADER_BYTES, fileOffset);
     try {
       ciphertextHash.update(header);
       if (
@@ -309,7 +353,7 @@ function authenticateOpenedObject(
     fileOffset += HEADER_BYTES;
 
     while (fileOffset < expectedBytes) {
-      const frameHeader = readExact(
+      const frameHeader = await readExact(
         descriptor,
         FRAME_OVERHEAD_BYTES,
         fileOffset,
@@ -333,29 +377,23 @@ function authenticateOpenedObject(
           );
         }
 
-        ciphertext = readExact(
+        ciphertext = await readExact(
           descriptor,
           plaintextBytes,
           fileOffset + FRAME_OVERHEAD_BYTES,
         );
         ciphertextHash.update(ciphertext);
 
-        const decipher = createDecipheriv("aes-256-gcm", objectKey, nonce);
-        decipher.setAAD(
-          chunkAad(receipt.objectId, kind, frameIndex, plaintextBytes),
+        plaintext = await decryptFrame(
+          cryptoKey,
+          receipt.objectId,
+          kind,
+          frameIndex,
+          plaintextBytes,
+          nonce,
+          tag,
+          ciphertext,
         );
-        decipher.setAuthTag(tag);
-        try {
-          plaintext = Buffer.concat([
-            decipher.update(ciphertext),
-            decipher.final(),
-          ]);
-        } catch {
-          throw new WhatsAppMediaObjectError(
-            "Media object authentication failed",
-            "MEDIA_OBJECT_CORRUPT",
-          );
-        }
         if (plaintext.length !== plaintextBytes) {
           throw new WhatsAppMediaObjectError(
             "Media object plaintext frame length changed during authentication",
@@ -399,9 +437,13 @@ function authenticateOpenedObject(
         ciphertext?.fill(0);
         frameHeader.fill(0);
       }
+
+      // Hashing/sniffing stays chunked; explicitly yield between 1 MiB frames so
+      // a large authenticated seek cannot monopolize the contained server loop.
+      await yieldToEventLoop();
     }
 
-    const after = fstatSync(descriptor);
+    const after = await descriptor.stat();
     if (!after.isFile() || after.size !== expectedBytes) {
       throw new WhatsAppMediaObjectError(
         "Media object ciphertext changed during read",
@@ -450,7 +492,7 @@ async function authenticateMediaObject(
   provenance: WhatsAppMediaObjectProvenance;
 }> {
   const envelopeKey = await getBusinessEnvelopeKey(context);
-  let descriptor: number | null = null;
+  let objectKey: Buffer | null = null;
   try {
     const expectedId = deriveObjectId(context, messageId, envelopeKey);
     if (receipt.objectId !== expectedId) {
@@ -459,36 +501,60 @@ async function authenticateMediaObject(
         "MEDIA_OBJECT_CORRUPT",
       );
     }
-    const objectKey = deriveObjectKey(receipt.objectId, envelopeKey);
-    try {
-      const objectPath = resolve(
-        whatsAppMediaRoot(context),
-        `${receipt.objectId}.sfmedia`,
-      );
-      descriptor = openSync(objectPath, "r");
-      const authenticated = authenticateOpenedObject(
-        descriptor,
-        kind,
-        receipt,
-        objectKey,
-        requestedRange,
-      );
-      return {
-        plaintext: authenticated.bytes,
-        provenance: authenticated.provenance,
-      };
-    } catch (error) {
-      if (error instanceof WhatsAppMediaObjectError) throw error;
-      throw new WhatsAppMediaObjectError(
-        "WhatsApp media object could not be read",
-        "MEDIA_OBJECT_IO_FAILED",
-      );
-    } finally {
-      if (descriptor !== null) closeSync(descriptor);
-      objectKey.fill(0);
-    }
+    objectKey = deriveObjectKey(receipt.objectId, envelopeKey);
   } finally {
     envelopeKey.fill(0);
+  }
+
+  if (!objectKey) {
+    throw new WhatsAppMediaObjectError(
+      "WhatsApp media object key could not be derived",
+      "MEDIA_OBJECT_IO_FAILED",
+    );
+  }
+
+  const rawKey = new Uint8Array(objectKey.length);
+  rawKey.set(objectKey);
+  objectKey.fill(0);
+  let cryptoKey: CryptoKey;
+  try {
+    cryptoKey = await webcrypto.subtle.importKey(
+      "raw",
+      rawKey,
+      { name: "AES-GCM" },
+      false,
+      ["decrypt"],
+    );
+  } finally {
+    rawKey.fill(0);
+  }
+
+  let descriptor: FileHandle | null = null;
+  try {
+    const objectPath = resolve(
+      whatsAppMediaRoot(context),
+      `${receipt.objectId}.sfmedia`,
+    );
+    descriptor = await open(objectPath, "r");
+    const authenticated = await authenticateOpenedObject(
+      descriptor,
+      kind,
+      receipt,
+      cryptoKey,
+      requestedRange,
+    );
+    return {
+      plaintext: authenticated.bytes,
+      provenance: authenticated.provenance,
+    };
+  } catch (error) {
+    if (error instanceof WhatsAppMediaObjectError) throw error;
+    throw new WhatsAppMediaObjectError(
+      "WhatsApp media object could not be read",
+      "MEDIA_OBJECT_IO_FAILED",
+    );
+  } finally {
+    if (descriptor) await descriptor.close().catch(() => undefined);
   }
 }
 
