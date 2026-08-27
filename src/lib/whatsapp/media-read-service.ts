@@ -6,6 +6,7 @@ import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { openBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { SahelFlowError } from "@/types/errors";
+import { openQueuedWhatsAppImageReceipt } from "./durable-send";
 import {
   whatsAppMediaEraseEpoch,
   whatsAppMediaErasePending,
@@ -71,6 +72,8 @@ export interface PreparedInboxWhatsAppMedia {
   receipt: WhatsAppMediaObjectReceipt;
   scopeRoot: string;
   eraseEpoch: number;
+  /** Inbound provider downloads require the immutable fetch-success provenance audit. */
+  requiresFetchAudit: boolean;
 }
 
 function unavailable(message = "Saved WhatsApp media is not available"): SahelFlowError {
@@ -273,7 +276,7 @@ export async function prepareInboxWhatsAppMedia(
       attachments: true,
     },
   });
-  if (!message || message.direction !== "inbound") throw unavailable();
+  if (!message) throw unavailable();
 
   let attachment: WhatsAppMessageAttachment | null;
   try {
@@ -295,6 +298,45 @@ export async function prepareInboxWhatsAppMedia(
     throw unavailable();
   }
 
+  if (message.direction === "outbound") {
+    if (kind !== "image") throw unavailable();
+    const effect = await context.prisma.whatsAppOutboundEffect.findUnique({
+      where: { messageId: message.id },
+      select: { effectKey: true },
+    });
+    if (!effect) throw unavailable();
+
+    let receipt: WhatsAppMediaObjectReceipt;
+    try {
+      receipt = mediaReceiptSchema.parse(
+        await openQueuedWhatsAppImageReceipt(context, effect.effectKey),
+      );
+    } catch {
+      throw integrityFailure();
+    }
+    if (
+      (attachment.sizeBytes !== null && attachment.sizeBytes !== receipt.sizeBytes) ||
+      (attachment.mimeType !== null &&
+        attachment.mimeType.split(";", 1)[0]?.trim().toLowerCase() !==
+          receipt.mediaType.toLowerCase())
+    ) {
+      throw integrityFailure();
+    }
+    return {
+      messageId: message.id,
+      kind,
+      sizeBytes: receipt.sizeBytes,
+      mediaType: receipt.mediaType,
+      fileName: safeFileName(attachment, message.id, receipt.mediaType),
+      effectKey: effect.effectKey,
+      receipt,
+      scopeRoot,
+      eraseEpoch,
+      requiresFetchAudit: false,
+    };
+  }
+
+  if (message.direction !== "inbound") throw unavailable();
   const effectKey = `whatsapp-media-fetch:${message.id}`;
   const intent = await context.prisma.outboxIntent.findFirst({
     where: { effectKey },
@@ -350,6 +392,7 @@ export async function prepareInboxWhatsAppMedia(
     receipt,
     scopeRoot,
     eraseEpoch,
+    requiresFetchAudit: true,
   };
 }
 
@@ -379,24 +422,26 @@ export async function openPreparedInboxWhatsAppMedia(
 
   try {
     assertRequestActive(signal);
-    const audits = await context.prisma.auditLog.findMany({
-      where: {
-        action: "whatsapp.media.fetch_succeeded",
-        entity: "message",
-        entityId: prepared.messageId,
-      },
-      orderBy: { createdAt: "asc" },
-      take: 2,
-      select: { metadata: true },
-    });
-    assertRequestActive(signal);
-    if (audits.length !== 1) throw integrityFailure();
-    assertAuditProvenance(
-      audits[0]?.metadata ?? null,
-      prepared.effectKey,
-      prepared.receipt,
-      opened.provenance,
-    );
+    if (prepared.requiresFetchAudit) {
+      const audits = await context.prisma.auditLog.findMany({
+        where: {
+          action: "whatsapp.media.fetch_succeeded",
+          entity: "message",
+          entityId: prepared.messageId,
+        },
+        orderBy: { createdAt: "asc" },
+        take: 2,
+        select: { metadata: true },
+      });
+      assertRequestActive(signal);
+      if (audits.length !== 1) throw integrityFailure();
+      assertAuditProvenance(
+        audits[0]?.metadata ?? null,
+        prepared.effectKey,
+        prepared.receipt,
+        opened.provenance,
+      );
+    }
 
     const stillCanonical = await context.prisma.message.findUnique({
       where: { id: prepared.messageId },
