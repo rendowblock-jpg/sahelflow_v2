@@ -243,6 +243,37 @@ export const sidecar = {
       ),
     }),
 
+  /**
+   * Dispatch one already-authenticated local image to the loopback sidecar.
+   * Bytes exist only in bounded process memory for this provider call; they are
+   * never converted to base64, written to a loose plaintext file or exposed to
+   * the browser as a provider/storage identifier.
+   */
+  sendImage: (
+    to: string,
+    image: Buffer,
+    mediaType: string,
+    caption: string,
+    effectKey: string,
+    requestBinding: string,
+  ) => {
+    const form = new FormData();
+    form.set("to", to);
+    form.set("effectKey", effectKey);
+    form.set("requestBinding", requestBinding);
+    form.set("caption", caption);
+    form.set(
+      "image",
+      new Blob([new Uint8Array(image)], { type: mediaType }),
+      "image",
+    );
+    return sidecarFetch<{ ok: boolean; id: string; status: string }>(
+      "/send-image",
+      { method: "POST", body: form },
+      120_000,
+    );
+  },
+
   receipt: async (
     effectKey: string,
     requestBinding: string,
