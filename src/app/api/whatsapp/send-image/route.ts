@@ -12,6 +12,8 @@ import {
   processWhatsAppEffect,
   queueWhatsAppImage,
 } from "@/lib/whatsapp/durable-send";
+import { sidecar } from "@/lib/whatsapp/sidecar-client";
+import { normalizeWhatsAppJid } from "@/lib/whatsapp/types";
 import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +26,18 @@ const metaSchema = z.object({
   to: z.string().min(1).max(256),
   caption: z.string().max(4000).default(""),
 });
+
+function normalizeRecipient(value: string): string {
+  try {
+    return normalizeWhatsAppJid(value);
+  } catch {
+    throw new SahelFlowError(
+      "WhatsApp recipient must be a valid Algerian mobile number or known individual chat",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+}
 
 /**
  * POST /api/whatsapp/send-image
@@ -54,6 +68,27 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
+  // Avoid committing a durable encrypted staging object when the paired account
+  // is already unavailable. queueWhatsAppImage revalidates the exact account
+  // authority again after staging, so this is only an early reliability gate.
+  let providerStatus: Awaited<ReturnType<typeof sidecar.status>>;
+  try {
+    providerStatus = await sidecar.status();
+  } catch {
+    throw new SahelFlowError(
+      "WhatsApp account identity could not be verified",
+      "WHATSAPP_ACCOUNT_UNAVAILABLE",
+      503,
+    );
+  }
+  if (providerStatus.status !== "connected" || !providerStatus.user?.id) {
+    throw new SahelFlowError(
+      "WhatsApp account identity is unavailable",
+      "WHATSAPP_ACCOUNT_UNAVAILABLE",
+      409,
+    );
+  }
+
   const form = await req.formData();
   const image = form.get("image");
   if (!(image instanceof File)) {
@@ -81,6 +116,33 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     to: form.get("to"),
     caption: form.get("caption") ?? "",
   });
+  const jid = normalizeRecipient(input.to);
+
+  // LID sends are allowed only when this exact chat already has durable inbound
+  // provenance. Check before staging so a rejected reply cannot leave an
+  // unowned encrypted object; the durable queue repeats this check in-transaction.
+  if (jid.endsWith("@lid")) {
+    const conversation = await db.conversation.findUnique({
+      where: {
+        channel_sourceId: { channel: "whatsapp", sourceId: jid },
+      },
+      select: {
+        messages: {
+          where: { direction: "inbound" },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+    if (!conversation || conversation.messages.length === 0) {
+      throw new SahelFlowError(
+        "WhatsApp LID replies require persisted inbound message provenance",
+        "VALIDATION_ERROR",
+        400,
+      );
+    }
+  }
+
   const context = {
     prisma: db,
     shop: actorContext.shop,
@@ -88,6 +150,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   };
   const queued = await queueWhatsAppImage(context, {
     ...input,
+    to: jid,
     fileName: image.name,
     declaredMime: mediaType,
     declaredSize: image.size,
