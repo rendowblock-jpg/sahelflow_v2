@@ -3,7 +3,7 @@
 > **Status:** Active FD-048 / issue #317 evidence ledger
 > **Scope:** Individual WhatsApp conversations in the Founder-offline desktop product
 > **Snapshot date:** 2026-08-27
-> **Source baseline:** protected `main` `f3f57bb10df9` after merged PR #325 (durable outbound video sending)
+> **Source baseline:** protected `main` `de0252f0d4b7` after merged PR #327 (durable outbound document sending)
 > **Signed/installed baseline:** Internal.27 / FD-047
 
 This ledger is the first required deliverable for issue #317. It separates what
@@ -65,7 +65,8 @@ pass. “Not applicable” is used only where a function has no provider effect.
 | Retry and ambiguous-result handling | implemented-unproven | Explicit failed/ambiguous UI and duplicate-warning path exist | Automated durable effect tests | Installed failure matrix incomplete | None | Offline/provider ambiguity real exercise |
 | Image sending | implemented-unproven | Merged PR #324 owns the image picker → bounded multipart route → encrypted `.sfmedia` authority → canonical Message/outbox effect → account-bound deterministic receipt journal → Baileys image dispatch; retries authenticate local bytes before provider-effect start and preview/download stays Message-bound | Exact-head Quality, Phase 5, Phase 6–7, protected-storage Windows, database/standalone/contained launcher and ephemeral installed gates passed before guarded merge | Ephemeral installed evidence exists, but no signed/Founder-installed successor after Internal.27 | None | Carry into the separately authorized signed candidate, then one representative real-phone image send/receipt/reopen exercise |
 | Video sending | implemented-unproven | Merged PR #325 owns the MP4-only outbound video action: 64 MiB request/object ceilings, authenticated video-track metadata, positive-or-truthful-null duration (silent video-only containers), encrypted staging, canonical video Message/outbox, dedicated provider lease, deterministic account-bound sidecar receipt, guarded staged-object reclamation and Message-only local playback | Exact-head Quality/review and required gates passed before guarded merge | No signed/Founder-installed successor after Internal.27 | None | Carry into the FD-049 signed candidate, then one representative real-phone video send/receipt/reopen exercise |
-| Document/voice sending | missing | No outbound provider action is exposed for these media kinds | None | None | None | Extend the proven media-send pattern separately for document, then voice/audio, with capability-specific limits/evidence |
+| Document sending | implemented-unproven | Merged PR #327 owns the bounded business-document outbound action: PDF/Word/Excel/text/CSV declarations under the 64 MiB object ceiling, sniffed-content authentication (PDF/zip/OLE-storage/text), encrypted staging, canonical document Message/outbox, dedicated provider lease, deterministic account-bound sidecar receipt with a required safe file name, guarded staged-object reclamation and Message-bound document reads/downloads that preserve document file-name extensions | Exact-head Quality/review and required gates passed before guarded merge | No signed/Founder-installed successor after Internal.27 | None | Carry into the FD-049 signed candidate, then one representative real-phone document send/receipt/reopen exercise |
+| Voice/PTT sending | missing | No outbound provider action is exposed for voice/audio media kinds | None | None | None | Extend the proven media-send pattern for voice/audio with capability-specific limits/evidence |
 | Upload progress and pre-effect cancellation | missing | Image upload is bounded and staged durably, but no truthful byte-progress UI or post-selection cancellation command exists | Bounded request/source contracts only | None | None | Add a durable staged-upload/progress/cancel authority only when cancellation semantics can be guaranteed |
 | Quoted replies with visible context | missing | No quote model, composer state or provider context binding exists | None | None | None | Source, replay and real-provider quoted-reply evidence |
 | Persisted protected drafts | implemented-unproven | Protected per-conversation draft and debounced idempotent replacement are merged source | Targeted API/UI/crypto tests | No signed successor after Internal.27 | Not applicable | Eventual signed reopen/switch observation |
@@ -128,10 +129,16 @@ The remaining gate is therefore split deliberately:
    byte, video-track/duration authentication, provider-lease, canonical projection
    and playback contracts without combining document or voice/audio work. It is
    protected source plus automated evidence, not signed/installed or live-certified.
-5. **Still missing:** bounded thumbnail generation/cache authority, outbound
-   document/voice, truthful upload progress/cancellation, and the remaining
+5. **Merged outbound-document authority:** the bounded business-document extension
+   (#327) reuses the same encrypted object authority for PDF/Office/text/CSV
+   declarations with sniffed-content authentication, a required safe file name,
+   provider-lease, canonical projection and Message-bound document read/download
+   contracts. It is protected source plus automated evidence, not signed/installed
+   or live-certified.
+6. **Still missing:** bounded thumbnail generation/cache authority, outbound
+   voice/PTT, truthful upload progress/cancellation, and the remaining
    conversation-native work in issue #317.
-6. **Still higher-evidence work:** a separately authorized signed Windows candidate
+7. **Still higher-evidence work:** a separately authorized signed Windows candidate
    and exact representative real-phone/provider media matrix before any public
    certified-media claim.
 
