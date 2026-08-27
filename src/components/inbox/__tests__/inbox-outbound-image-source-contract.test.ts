@@ -51,6 +51,20 @@ describe("WhatsApp outbound image source boundary", () => {
     expect(route).not.toContain("await req.formData()");
   });
 
+  it("bounds sidecar multipart bytes before parsing even without Content-Length", () => {
+    const sidecar = source("sidecars/whatsapp/index.ts");
+
+    expect(sidecar).toContain("MAX_OUTBOUND_IMAGE_FORM_BYTES");
+    expect(sidecar).toContain("request.body.getReader()");
+    expect(sidecar).toContain(
+      "offset + next.value.byteLength >\n        MAX_OUTBOUND_IMAGE_FORM_BYTES",
+    );
+    expect(sidecar).toContain("await reader.cancel().catch(() => undefined)");
+    expect(sidecar).toContain("bounded.subarray(0, offset)");
+    expect(sidecar).toContain("readBoundedImageForm(context.req.raw)");
+    expect(sidecar).not.toContain("context.req.raw.formData()");
+  });
+
   it("stages encrypted bytes before the provider-effect boundary", () => {
     const route = source("src/app/api/whatsapp/send-image/route.ts");
     const durable = source("src/lib/whatsapp/durable-send.ts");
