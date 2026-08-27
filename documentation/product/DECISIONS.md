@@ -799,6 +799,27 @@ Experience, Architecture and release invariant.
 
 ---
 
+## FD-049 — One signed/installed successor after #317, before FRC-2
+
+The Founder's 2026-08-27 direction supersedes the FD-048 batching boundary for
+the timing of the next installed checkpoint: once the #317 professional
+WhatsApp Inbox parity package is complete on protected `main`, one combined
+signed successor (Internal.28) is authorized so the Founder can install and
+test the retained Inbox/media work in place. FRC-2 through FRC-5 resume only
+after that installed Founder observation.
+
+Binding boundaries:
+
+- The successor packages exactly the protected-main frontier that exists when
+  #317 completes; no speculative FRC work is bundled.
+- FD-045 evidence rules are unchanged: release-authority PR, exact-head review,
+  required gates, expected-head merge, signed run, in-place preserved install.
+- The installed campaign still executes the retained #306 real-phone rows
+  (automatic no-refresh inbound, reopen, EN/AR observation, governed status,
+  reviewed extraction, logout last) plus applicable #316/#317 native rows.
+- No customer-online, Beta, Stable or paid-deployment authority is created.
+  #230 and the zero-budget boundary are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

@@ -3,7 +3,7 @@
 > **Status:** Active FD-048 / issue #317 evidence ledger
 > **Scope:** Individual WhatsApp conversations in the Founder-offline desktop product
 > **Snapshot date:** 2026-08-27
-> **Source baseline:** protected `main` `8a7f718297ccd06d633c5fa04896e48e3da1ba85` after merged PR #324; the current outbound-video candidate starts from that exact SHA
+> **Source baseline:** protected `main` `f3f57bb10df9` after merged PR #325 (durable outbound video sending)
 > **Signed/installed baseline:** Internal.27 / FD-047
 
 This ledger is the first required deliverable for issue #317. It separates what
@@ -64,7 +64,7 @@ pass. “Not applicable” is used only where a function has no provider effect.
 | Delivery/read receipts | certified | Monotonic persisted status projection exists | Status and durable-send tests | Internal.27 | Delivery observed for exact outbound | Real read receipt remains capability-specific |
 | Retry and ambiguous-result handling | implemented-unproven | Explicit failed/ambiguous UI and duplicate-warning path exist | Automated durable effect tests | Installed failure matrix incomplete | None | Offline/provider ambiguity real exercise |
 | Image sending | implemented-unproven | Merged PR #324 owns the image picker → bounded multipart route → encrypted `.sfmedia` authority → canonical Message/outbox effect → account-bound deterministic receipt journal → Baileys image dispatch; retries authenticate local bytes before provider-effect start and preview/download stays Message-bound | Exact-head Quality, Phase 5, Phase 6–7, protected-storage Windows, database/standalone/contained launcher and ephemeral installed gates passed before guarded merge | Ephemeral installed evidence exists, but no signed/Founder-installed successor after Internal.27 | None | Carry into the separately authorized signed candidate, then one representative real-phone image send/receipt/reopen exercise |
-| Video sending | implemented-unproven | Current candidate extends #324 with one MP4-only picker/action: 64 MiB request/object ceilings, authenticated positive duration, encrypted staging, canonical video Message/outbox, dedicated provider lease, deterministic account-bound sidecar receipt and Message-only local playback | Targeted duration/staging/dispatch/playback and source-boundary coverage is present on the branch; exact-head required gates/review remain outstanding | None; branch work is not signed/installed authority | None | Freeze exact candidate, run selected gates/review, merge, then signed Windows and representative real-phone video evidence |
+| Video sending | implemented-unproven | Merged PR #325 owns the MP4-only outbound video action: 64 MiB request/object ceilings, authenticated video-track metadata, positive-or-truthful-null duration (silent video-only containers), encrypted staging, canonical video Message/outbox, dedicated provider lease, deterministic account-bound sidecar receipt, guarded staged-object reclamation and Message-only local playback | Exact-head Quality/review and required gates passed before guarded merge | No signed/Founder-installed successor after Internal.27 | None | Carry into the FD-049 signed candidate, then one representative real-phone video send/receipt/reopen exercise |
 | Document/voice sending | missing | No outbound provider action is exposed for these media kinds | None | None | None | Extend the proven media-send pattern separately for document, then voice/audio, with capability-specific limits/evidence |
 | Upload progress and pre-effect cancellation | missing | Image upload is bounded and staged durably, but no truthful byte-progress UI or post-selection cancellation command exists | Bounded request/source contracts only | None | None | Add a durable staged-upload/progress/cancel authority only when cancellation semantics can be guaranteed |
 | Quoted replies with visible context | missing | No quote model, composer state or provider context binding exists | None | None | None | Source, replay and real-provider quoted-reply evidence |
@@ -124,9 +124,10 @@ The remaining gate is therefore split deliberately:
    binding, deterministic receipt journal, safe retry/ambiguity model and local
    Message-bound preview/read path. PR #324 is protected source plus automated and
    ephemeral installed evidence, not signed/Founder-installed or live-certified.
-4. **Current outbound-video candidate:** one MP4-only extension adds its own byte,
-   duration, provider-lease, canonical projection and playback contracts without
-   combining document or voice/audio work.
+4. **Merged outbound-video authority:** the MP4-only extension (#325) adds its own
+   byte, video-track/duration authentication, provider-lease, canonical projection
+   and playback contracts without combining document or voice/audio work. It is
+   protected source plus automated evidence, not signed/installed or live-certified.
 5. **Still missing:** bounded thumbnail generation/cache authority, outbound
    document/voice, truthful upload progress/cancellation, and the remaining
    conversation-native work in issue #317.

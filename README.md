@@ -42,7 +42,7 @@ Execute in this order:
 1. **#316 — Notifications:** implement the durable Class-AAA Notification Center and WhatsApp attention-routing contract.
 2. **#317 — professional Inbox:** implement the exact WhatsApp capability ledger and message/media operational-parity waves without inventing provider support.
 3. **FRC-2 through FRC-5 source/evidence preparation:** complete AI/tools/order-extraction, Required capability/journey, commerce and courier contracts plus mocks and official development/sandbox evidence available before installation.
-4. **One combined exact candidate:** freeze only after those packages are protected-main complete; then open separate release authority.
+4. **One combined exact candidate (FD-049):** when #317 completes, freeze one candidate and open the release-authority package so the Founder can install and test Internal.28 before FRC-2–5 resume.
 5. **One signed successor and one installed/live campaign:** update in place and prove the remaining #306 automatic-arrival/persistence/UI/extraction/logout rows plus #316/#317 native and real-phone rows and every applicable live-provider matrix.
 6. **FRC-6 — first customer:** expose only the exact provider/action combination that is live-certified. The first paid assisted deployment is not authorized until its scope passes the applicable gates and customer-online authority is separately satisfied or a newer explicit Founder decision creates a bounded exception.
 

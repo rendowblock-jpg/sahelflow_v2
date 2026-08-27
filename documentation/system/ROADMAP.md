@@ -46,8 +46,11 @@ The current development package is issue #317, not a release branch.
 deterministic/source and available official environment evidence. Keep every
 row classified by evidence level and preserve external blockers.
 
-Only after the combined source frontier is frozen may a newer explicit release
-decision authorize one signed successor. Install it once through the normal
+FD-049 (2026-08-27) supersedes this cadence for the next checkpoint: once #317
+is complete on protected `main`, one signed successor (Internal.28) is
+authorized for Founder-installed testing before FRC-2–5 resume. Only after the
+combined source frontier is frozen may a newer explicit release decision
+authorize one signed successor. Install it once through the normal
 updater and execute the retained #306 FRC-1 rows plus applicable AI,
 notification, Inbox and live-provider rows on that exact candidate. This avoids
 repeating complete MSI certification after small edits without weakening the
