@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { testAuthenticatedOwnerBusinessPrincipal } from "@/lib/business-truth/principal";
 import { db, shopContext } from "@/lib/db";
-import { executeShopEraseWithMedia } from "@/lib/privacy/erase-with-media";
+import { coordinateShopEraseWithMedia } from "@/lib/privacy/erase-with-media";
 import { whatsAppMediaErasePending } from "../media-erase-lifecycle";
 import { whatsAppMediaRoot } from "../media-object-store";
 import { queueWhatsAppImage } from "../outbound-image-queue";
@@ -47,23 +47,31 @@ function stream(bytes: Buffer): ReadableStream<Uint8Array> {
   return body;
 }
 
-function heldStream(
-  bytes: Buffer,
-): { source: ReadableStream<Uint8Array>; release: () => void } {
+function heldStream(bytes: Buffer): {
+  source: ReadableStream<Uint8Array>;
+  started: Promise<void>;
+  release: () => void;
+} {
   let release!: () => void;
+  let markStarted!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;
+  });
+  const started = new Promise<void>((resolve) => {
+    markStarted = resolve;
   });
   const first = bytes.subarray(0, Math.min(16, bytes.length));
   const rest = bytes.subarray(first.length);
   let step = 0;
   return {
     release,
+    started,
     source: new ReadableStream<Uint8Array>({
       async pull(controller) {
         if (step === 0) {
           controller.enqueue(first);
           step = 1;
+          markStarted();
           return;
         }
         if (step === 1) {
@@ -87,6 +95,32 @@ async function clean(): Promise<void> {
   await db.businessCommand.deleteMany();
   await db.businessAggregateVersion.deleteMany();
   await db.auditLog.deleteMany();
+}
+
+async function eraseOnlyOwnedImageState(): Promise<{ mode: "privacy-erase" }> {
+  const effect = await db.whatsAppOutboundEffect.findUnique({
+    where: { messageId: MESSAGE_ID },
+    select: { effectKey: true },
+  });
+  if (!effect) return { mode: "privacy-erase" };
+
+  const message = await db.message.findUnique({
+    where: { id: MESSAGE_ID },
+    select: { conversationId: true },
+  });
+  await db.whatsAppOutboundEffect.deleteMany({
+    where: { messageId: MESSAGE_ID },
+  });
+  await db.outboxIntent.deleteMany({
+    where: { effectKey: effect.effectKey },
+  });
+  await db.message.deleteMany({ where: { id: MESSAGE_ID } });
+  if (message) {
+    await db.conversation.deleteMany({
+      where: { id: message.conversationId },
+    });
+  }
+  return { mode: "privacy-erase" };
 }
 
 beforeEach(async () => {
@@ -117,30 +151,42 @@ describe("outbound image queue vs privacy erase", () => {
       source: held.source,
     });
 
-    // Let the queue acquire the lifecycle lease and begin consuming bytes.
-    await Promise.resolve();
-    await Promise.resolve();
-    const erase = executeShopEraseWithMedia("privacy-erase");
-    await Promise.resolve();
+    // The first media read occurs only after the outbound queue owns the exact
+    // shop lifecycle lease, so this is a deterministic concurrency boundary.
+    await held.started;
+    const erase = coordinateShopEraseWithMedia(
+      context,
+      eraseOnlyOwnedImageState,
+    );
     await Promise.resolve();
 
-    // Erase must still be queued behind the active image lifecycle operation;
-    // it cannot tombstone the media tree while staging is incomplete.
+    // Erase must remain queued behind the active image lifecycle operation; it
+    // cannot tombstone the media tree while staging/DB commit is incomplete.
     expect(whatsAppMediaErasePending(mediaRoot)).toBe(false);
 
     held.release();
-    await expect(queue).resolves.toMatchObject({ messageId: MESSAGE_ID });
-    await expect(erase).resolves.toMatchObject({ mode: "privacy-erase" });
+    const queued = await queue;
+    await expect(erase).resolves.toEqual({ mode: "privacy-erase" });
 
     expect(await db.message.count({ where: { id: MESSAGE_ID } })).toBe(0);
-    expect(await db.outboxIntent.count()).toBe(0);
+    expect(
+      await db.outboxIntent.count({ where: { effectKey: queued.effectKey } }),
+    ).toBe(0);
+    expect(
+      await db.whatsAppOutboundEffect.count({
+        where: { messageId: MESSAGE_ID },
+      }),
+    ).toBe(0);
     expect(existsSync(mediaRoot)).toBe(false);
     expect(existsSync(`${mediaRoot}.erasing`)).toBe(false);
   });
 
   it("queues a complete post-erase Message and encrypted media pair when erase owns the lease first", async () => {
     const mediaRoot = whatsAppMediaRoot(context);
-    const erase = executeShopEraseWithMedia("privacy-erase");
+    const erase = coordinateShopEraseWithMedia(
+      context,
+      eraseOnlyOwnedImageState,
+    );
     const bytes = jpeg("erase-first-race");
     const queue = queueWhatsAppImage(context, {
       clientMessageId: MESSAGE_ID,
@@ -152,8 +198,8 @@ describe("outbound image queue vs privacy erase", () => {
       source: stream(bytes),
     });
 
-    await expect(erase).resolves.toMatchObject({ mode: "privacy-erase" });
-    await expect(queue).resolves.toMatchObject({ messageId: MESSAGE_ID });
+    await expect(erase).resolves.toEqual({ mode: "privacy-erase" });
+    const queued = await queue;
 
     await expect(
       db.message.findUniqueOrThrow({ where: { id: MESSAGE_ID } }),
@@ -163,7 +209,14 @@ describe("outbound image queue vs privacy erase", () => {
       deliveryStatus: "sending",
       body: "Queue after erase",
     });
-    expect(await db.outboxIntent.count()).toBe(1);
+    expect(
+      await db.outboxIntent.count({ where: { effectKey: queued.effectKey } }),
+    ).toBe(1);
+    expect(
+      await db.whatsAppOutboundEffect.count({
+        where: { messageId: MESSAGE_ID },
+      }),
+    ).toBe(1);
     expect(existsSync(mediaRoot)).toBe(true);
     expect(
       readdirSync(mediaRoot).filter((name) => name.endsWith(".sfmedia")),
