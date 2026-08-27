@@ -23,6 +23,21 @@ describe("WhatsApp outbound image source boundary", () => {
     expect(workspace).toContain("await loadMessages(chat, { background: true })");
   });
 
+  it("rejects unavailable account and invalid LID provenance before staging", () => {
+    const route = source("src/app/api/whatsapp/send-image/route.ts");
+    const providerPreflight = route.indexOf("providerStatus = await sidecar.status()");
+    const lidPreflight = route.indexOf('if (jid.endsWith("@lid"))');
+    const stageCall = route.indexOf("const queued = await queueWhatsAppImage");
+
+    expect(providerPreflight).toBeGreaterThanOrEqual(0);
+    expect(lidPreflight).toBeGreaterThan(providerPreflight);
+    expect(stageCall).toBeGreaterThan(lidPreflight);
+    expect(route).toContain("conversation.messages.length === 0");
+    expect(route).toContain(
+      "WhatsApp LID replies require persisted inbound message provenance",
+    );
+  });
+
   it("stages encrypted bytes before the provider-effect boundary", () => {
     const route = source("src/app/api/whatsapp/send-image/route.ts");
     const durable = source("src/lib/whatsapp/durable-send.ts");
