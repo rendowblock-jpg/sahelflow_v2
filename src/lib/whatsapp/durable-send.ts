@@ -720,7 +720,10 @@ export async function queueWhatsAppVideo(
   try {
     durationSeconds = await inspectOutboundVideoDuration(metadataSource, declaredSize);
   } catch (error) {
-    await storageSource.cancel().catch(() => undefined);
+    await Promise.allSettled([
+      metadataSource.cancel(),
+      storageSource.cancel(),
+    ]);
     throw error;
   }
 
