@@ -967,12 +967,12 @@ async function markEffectStarted(
   const effectStartedAt = new Date();
   const marked = await context.prisma.outboxIntent.updateMany({
     where: { id: row.id, status: "processing", leaseToken: row.leaseToken },
-    data: { effectStartedAt },
+    data: { effectStartedAt, lockedAt: effectStartedAt },
   });
   if (marked.count !== 1) {
     throw new ConflictError("WhatsApp send intent lease changed before dispatch");
   }
-  return { ...row, effectStartedAt };
+  return { ...row, effectStartedAt, lockedAt: effectStartedAt };
 }
 
 async function markSucceeded(
