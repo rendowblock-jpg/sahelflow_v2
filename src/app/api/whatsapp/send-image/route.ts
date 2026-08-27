@@ -8,10 +8,8 @@ import {
   assertTrustedAction,
   requireTrustedAction,
 } from "@/lib/identity/authorization";
-import {
-  processWhatsAppEffect,
-  queueWhatsAppImage,
-} from "@/lib/whatsapp/durable-send";
+import { processWhatsAppEffect } from "@/lib/whatsapp/durable-send";
+import { queueWhatsAppImage } from "@/lib/whatsapp/outbound-image-queue";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
 import { normalizeWhatsAppJid } from "@/lib/whatsapp/types";
 import { SahelFlowError } from "@/types/errors";
