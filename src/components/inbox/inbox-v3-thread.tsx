@@ -315,6 +315,7 @@ export function InboxV3Thread({
 }) {
   const isMobile = useMobile();
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
   const {
     activeChat,
     messages,
@@ -330,6 +331,7 @@ export function InboxV3Thread({
     sendError,
     sendReply,
     sendImage,
+    sendVideo,
     retryFailedMessage,
     canReply,
     canUpdateConversation,
@@ -689,6 +691,47 @@ export function InboxV3Thread({
                     .catch(() => void sendImage(file));
                 }}
               />
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/mp4"
+                aria-label={copy("mediaVideo")}
+                className="sr-only"
+                tabIndex={-1}
+                data-inbox-video-input="true"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0] ?? null;
+                  event.currentTarget.value = "";
+                  if (!file) return;
+                  const declaredType =
+                    file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+                  if (
+                    declaredType &&
+                    declaredType !== "application/octet-stream"
+                  ) {
+                    void sendVideo(file);
+                    return;
+                  }
+                  void file
+                    .slice(0, 12)
+                    .arrayBuffer()
+                    .then((buffer) => {
+                      const bytes = new Uint8Array(buffer);
+                      const fileType = String.fromCharCode(...bytes.slice(4, 8));
+                      if (bytes.length < 12 || fileType !== "ftyp") {
+                        void sendVideo(file);
+                        return;
+                      }
+                      void sendVideo(
+                        new File([file], file.name, {
+                          type: "video/mp4",
+                          lastModified: file.lastModified,
+                        }),
+                      );
+                    })
+                    .catch(() => void sendVideo(file));
+                }}
+              />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -705,6 +748,24 @@ export function InboxV3Thread({
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={6}>
                   {copy("mediaImage")}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={sending || !canSend}
+                    aria-label={copy("mediaVideo")}
+                    data-inbox-video-picker="true"
+                    onClick={() => videoInputRef.current?.click()}
+                  >
+                    <Video className="size-4" aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={6}>
+                  {copy("mediaVideo")}
                 </TooltipContent>
               </Tooltip>
               <CannedResponsePicker

@@ -155,7 +155,7 @@ describe("WhatsApp outbound image source boundary", () => {
     expect(execute).toContain("await markEffectStarted(context, claimed)");
     expect(execute.indexOf("await readWhatsAppMediaObject("))
       .toBeLessThan(execute.indexOf("await markEffectStarted(context, claimed)"));
-    expect(execute).toContain("imageBytes?.fill(0)");
+    expect(execute).toContain("mediaBytes?.fill(0)");
   });
 
   it("keeps provider dispatch account-bound, deterministic and non-base64", () => {
@@ -164,8 +164,10 @@ describe("WhatsApp outbound image source boundary", () => {
     const sidecarClient = source("src/lib/whatsapp/sidecar-client.ts");
     const sidecar = source("sidecars/whatsapp/index.ts");
 
-    expect(effectAuthority).toContain('"text" | "image" | "daily-report"');
-    expect(authTokens).toContain("(text|image|daily-report)");
+    expect(effectAuthority).toContain(
+      '"text" | "image" | "video" | "daily-report"',
+    );
+    expect(authTokens).toContain("(text|image|video|daily-report)");
     expect(sidecarClient).toContain("form.set(");
     expect(sidecarClient).toContain('"image",');
     expect(sidecarClient).toContain("new Blob(");
@@ -184,7 +186,7 @@ describe("WhatsApp outbound image source boundary", () => {
     const mediaRead = source("src/lib/whatsapp/media-read-service.ts");
     const route = source("src/app/api/inbox/media/[id]/route.ts");
 
-    expect(projection).toContain('fromMe && openedAttachment.kind === "image"');
+    expect(projection).toContain('openedAttachment.kind === "image"');
     expect(projection).toContain('"succeeded"');
     expect(projection).toContain('"receipt"');
     expect(mediaRead).toContain('message.direction === "outbound"');

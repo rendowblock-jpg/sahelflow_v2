@@ -429,6 +429,35 @@ export class WhatsAppManager {
     };
   }
 
+  async sendVideo(
+    to: string,
+    video: Uint8Array,
+    mimetype: string,
+    caption: string,
+    messageId?: string,
+  ): Promise<{ id: string; status: string }> {
+    if (!this.sock || this.status !== "connected") {
+      throw new Error(`Not connected (status=${this.status})`);
+    }
+    if (mimetype.toLowerCase() !== "video/mp4" || video.byteLength <= 0) {
+      throw new Error("Video send requires bounded MP4 bytes");
+    }
+    const jid = this.toJid(to);
+    const sent = await this.sock.sendMessage(
+      jid,
+      {
+        video: Buffer.from(video.buffer, video.byteOffset, video.byteLength),
+        mimetype: "video/mp4",
+        ...(caption ? { caption } : {}),
+      },
+      messageId ? { messageId } : undefined,
+    );
+    return {
+      id: sent?.key?.id ?? "",
+      status: String(sent?.status ?? "sent"),
+    };
+  }
+
   async downloadMedia(message: IncomingMessage): Promise<AsyncIterable<Uint8Array>> {
     if (!this.sock || this.status !== "connected") {
       throw new Error(`Not connected (status=${this.status})`);

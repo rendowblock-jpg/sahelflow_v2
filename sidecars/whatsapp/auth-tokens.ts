@@ -11,7 +11,7 @@ export const SIDECAR_WS_GRANT_TTL_MS = 30_000;
 const MIN_TTL_MS = 5_000;
 const MAX_TTL_MS = 60_000;
 const DURABLE_EFFECT_PATTERN =
-  /^wa:[0-9a-f]{32}:([0-9a-f]{64}):(text|image|daily-report):[A-Za-z0-9_-]{1,80}$/;
+  /^wa:[0-9a-f]{32}:([0-9a-f]{64}):(text|image|video|daily-report):[A-Za-z0-9_-]{1,80}$/;
 
 interface WebSocketGrantPayload {
   v: 1;

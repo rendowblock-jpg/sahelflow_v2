@@ -49,7 +49,7 @@ export async function coordinateShopEraseWithMedia<T>(
  * Destructive privacy authority across SQLite + filesystem media.
  *
  * The exact shop lifecycle lease serializes this destructive sequence with
- * outbound image staging + durable Message/outbox commit in the same process.
+ * outbound media staging + durable Message/outbox commit in the same process.
  * Crash-left safety still belongs to the tombstone/epoch protocol below.
  *
  * The media tree is hidden first. If the transactional DB erase fails, only a

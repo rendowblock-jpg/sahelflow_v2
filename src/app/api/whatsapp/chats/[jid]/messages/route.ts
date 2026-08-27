@@ -160,8 +160,12 @@ export const GET = withErrorHandler(
             : null;
         let attachment: ProjectedWhatsAppAttachment | null = openedAttachment;
         if (openedAttachment && BINARY_MEDIA_TYPES.has(openedAttachment.kind)) {
-          if (fromMe && openedAttachment.kind === "image") {
-            // Outbound image bytes are already canonical encrypted local state
+          if (
+            fromMe &&
+            (openedAttachment.kind === "image" ||
+              openedAttachment.kind === "video")
+          ) {
+            // Outbound media bytes are already canonical encrypted local state
             // before provider dispatch, so local preview/download stays truthful
             // even while delivery is queued, retrying or failed.
             attachment = {

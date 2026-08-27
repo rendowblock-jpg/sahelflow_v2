@@ -29,6 +29,7 @@ const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 const REQUEST_BINDING = "ab".repeat(32);
 const EFFECT_KEY = `wa:${"11".repeat(16)}:${"22".repeat(32)}:text:id`;
+const VIDEO_EFFECT_KEY = `wa:${"11".repeat(16)}:${"22".repeat(32)}:video:id`;
 
 function response(status: number, body: unknown): Response {
   return {
@@ -84,6 +85,35 @@ describe("WhatsApp sidecar client", () => {
         requestBinding: REQUEST_BINDING,
       }),
     );
+  });
+
+  it("sends staged video bytes as bounded multipart rather than base64", async () => {
+    fetchMock.mockResolvedValue(
+      response(200, { ok: true, id: "WA-VIDEO-1", status: "sent" }),
+    );
+    const bytes = Buffer.from("video-bytes", "utf8");
+
+    await expect(
+      sidecar.sendVideo(
+        "213555000111",
+        bytes,
+        "video/mp4",
+        "Demo",
+        VIDEO_EFFECT_KEY,
+        REQUEST_BINDING,
+      ),
+    ).resolves.toEqual({ ok: true, id: "WA-VIDEO-1", status: "sent" });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${TEST_URL}/send-video`);
+    expect(init.method).toBe("POST");
+    const form = init.body as FormData;
+    expect(form.get("to")).toBe("213555000111");
+    expect(form.get("effectKey")).toBe(VIDEO_EFFECT_KEY);
+    expect(form.get("requestBinding")).toBe(REQUEST_BINDING);
+    expect(form.get("caption")).toBe("Demo");
+    const video = form.get("video");
+    expect(video).toBeInstanceOf(Blob);
+    expect((video as Blob).type).toBe("video/mp4");
   });
 
   it("reads a durable receipt without invoking another provider send", async () => {

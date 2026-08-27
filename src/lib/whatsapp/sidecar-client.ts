@@ -274,6 +274,32 @@ export const sidecar = {
     );
   },
 
+  /** Dispatch one authenticated staged MP4 through the loopback sidecar. */
+  sendVideo: (
+    to: string,
+    video: Buffer,
+    mediaType: string,
+    caption: string,
+    effectKey: string,
+    requestBinding: string,
+  ) => {
+    const form = new FormData();
+    form.set("to", to);
+    form.set("effectKey", effectKey);
+    form.set("requestBinding", requestBinding);
+    form.set("caption", caption);
+    form.set(
+      "video",
+      new Blob([new Uint8Array(video)], { type: mediaType }),
+      "video.mp4",
+    );
+    return sidecarFetch<{ ok: boolean; id: string; status: string }>(
+      "/send-video",
+      { method: "POST", body: form },
+      180_000,
+    );
+  },
+
   receipt: async (
     effectKey: string,
     requestBinding: string,
