@@ -12,6 +12,7 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  linkSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -53,6 +54,7 @@ export class WhatsAppMediaObjectError extends Error {
     public readonly code:
       | "MEDIA_SIZE_LIMIT"
       | "MEDIA_CONTENT_TYPE_MISMATCH"
+      | "MEDIA_OBJECT_CONFLICT"
       | "MEDIA_OBJECT_CORRUPT"
       | "MEDIA_OBJECT_IO_FAILED",
   ) {
@@ -331,6 +333,27 @@ async function inspectExistingObject(
   }
 }
 
+function isAlreadyExistsError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    (error as NodeJS.ErrnoException).code === "EEXIST"
+  );
+}
+
+function sameMediaReceiptContent(
+  left: WhatsAppMediaObjectReceipt,
+  right: WhatsAppMediaObjectReceipt,
+): boolean {
+  return (
+    left.objectId === right.objectId &&
+    left.sha256 === right.sha256 &&
+    left.sizeBytes === right.sizeBytes &&
+    left.chunkCount === right.chunkCount &&
+    left.mediaType === right.mediaType
+  );
+}
+
 async function writeEncryptedChunks(
   descriptor: number,
   objectId: string,
@@ -423,22 +446,30 @@ export async function writeWhatsAppMediaObject(
     declaredSize: number | null;
     declaredMime: string | null;
     source: ReadableStream<Uint8Array>;
+    /**
+     * Outbound effects must consume and bind the exact caller bytes even when a
+     * deterministic object already exists. This prevents two contenders using
+     * one client message ID from replacing or silently reusing different media.
+     */
+    strictSourceIdentity?: boolean;
   },
 ): Promise<WhatsAppMediaObjectReceipt> {
   const envelopeKey = await getBusinessEnvelopeKey(context);
   try {
     assertMediaWriteAllowed(context);
-    const reusable = await inspectExistingObject(
-      context,
-      input.messageId,
-      input.kind,
-      input.declaredSize,
-      input.declaredMime,
-      envelopeKey,
-    );
-    if (reusable) {
-      await input.source.cancel().catch(() => undefined);
-      return reusable;
+    if (!input.strictSourceIdentity) {
+      const reusable = await inspectExistingObject(
+        context,
+        input.messageId,
+        input.kind,
+        input.declaredSize,
+        input.declaredMime,
+        envelopeKey,
+      );
+      if (reusable) {
+        await input.source.cancel().catch(() => undefined);
+        return reusable;
+      }
     }
     assertMediaWriteAllowed(context);
     const objectId = deriveObjectId(context, input.messageId, envelopeKey);
@@ -468,14 +499,48 @@ export async function writeWhatsAppMediaObject(
       closeSync(descriptor);
       closed = true;
       assertMediaWriteAllowed(context);
-      renameSync(temporary, target);
+      const candidate: WhatsAppMediaObjectReceipt = {
+        formatVersion: 1,
+        objectId,
+        ...stats,
+      };
+
+      if (input.strictSourceIdentity) {
+        try {
+          // Temporary and target live in the same directory/filesystem. A hard
+          // link is an atomic no-clobber publish: exactly one contender can win.
+          linkSync(temporary, target);
+          rmSync(temporary, { force: true });
+        } catch (error) {
+          if (!isAlreadyExistsError(error)) throw error;
+          const existing = await inspectExistingObject(
+            context,
+            input.messageId,
+            input.kind,
+            input.declaredSize,
+            input.declaredMime,
+            envelopeKey,
+          );
+          if (!existing || !sameMediaReceiptContent(existing, candidate)) {
+            throw new WhatsAppMediaObjectError(
+              "Media object identity is already bound to different content",
+              "MEDIA_OBJECT_CONFLICT",
+            );
+          }
+          rmSync(temporary, { force: true });
+          return existing;
+        }
+      } else {
+        renameSync(temporary, target);
+      }
+
       syncDirectory(directory);
       try {
         chmodSync(target, 0o600);
       } catch {
         // Windows ACLs remain authoritative when POSIX chmod is unavailable.
       }
-      return { formatVersion: 1, objectId, ...stats };
+      return candidate;
     } catch (error) {
       if (!closed) {
         try {
