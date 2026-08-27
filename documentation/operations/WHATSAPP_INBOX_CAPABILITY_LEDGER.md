@@ -2,8 +2,8 @@
 
 > **Status:** Active FD-048 / issue #317 evidence ledger
 > **Scope:** Individual WhatsApp conversations in the Founder-offline desktop product
-> **Snapshot date:** 2026-08-26
-> **Source baseline:** protected `main` `a5efc0b662fcebe39b21fbd07468a7ae7492d3e2` after merged PR #321; the current media-read candidate starts from that exact SHA
+> **Snapshot date:** 2026-08-27
+> **Source baseline:** protected `main` `117320359dd453f7f51f44fe34d54159a0e62cd0` after merged PR #322; the current outbound-image candidate starts from that exact SHA
 > **Signed/installed baseline:** Internal.27 / FD-047
 
 This ledger is the first required deliverable for issue #317. It separates what
@@ -52,8 +52,8 @@ pass. “Not applicable” is used only where a function has no provider effect.
 | Multi-contact array content | metadata-only | The first bounded contact is retained as honest metadata; the full array is not claimed complete | Targeted extractor coverage | None | None | Canonical bounded array schema plus real-phone multi-contact evidence |
 | Location content | implemented-unproven | Validated coordinates/name/address are sealed; UI derives a fixed OpenStreetMap URL rather than trusting provider links | Targeted extractor/codec/UI coverage retained | None beyond Internal.27 line | None | Real-phone location observation on eventual candidate |
 | Durable protected image/video/document/audio/sticker bytes | implemented-unproven | Merged #321 owns shop/incarnation-bound AES-256-GCM chunk objects, exact encrypted receipts/provenance, crash reuse, lifecycle/backup/restore/privacy erase and bounded byte/type enforcement | #321 exact-head Quality, native, Windows Rust, backup/replacement and ephemeral installed gates all passed before guarded merge | Source is later than signed Internal.27; CI-installed evidence is not a signed/Founder acceptance claim | None | Carry the exact source frontier into the separately authorized signed candidate and real-phone matrix |
-| Thumbnail generation | missing | Canonical protected bytes now exist, but no thumbnail object/generator/cache authority exists | None | None | None | Add bounded authenticated thumbnails without plaintext cache leakage |
-| View/play/open/download binary media | implemented-unproven | Current #317 media-read candidate resolves canonical Message → protected attachment → succeeded encrypted receipt/audit, GCM-verifies bounded plaintext in memory and serves same-origin no-store range/download responses; Inbox renders image/sticker/video/audio/document states without storage paths | Candidate adds exact byte round-trip and post-success ciphertext-tamper rejection; full exact-head PR gates remain required before merge | None; branch work is not signed/installed authority | None | Exact-head review/gates, merge, then eventual signed Windows and representative real media observation |
+| Thumbnail generation | missing | Canonical protected bytes exist, but no thumbnail object/generator/cache authority exists | None | None | None | Add bounded authenticated thumbnails without plaintext cache leakage |
+| View/play/open/download binary media | implemented-unproven | Merged #322 resolves canonical Message → protected attachment → encrypted receipt/provenance, GCM-verifies bounded plaintext in memory and serves same-origin no-store range/download responses; Inbox renders image/sticker/video/audio/document states without storage paths | #322 exact seller-read byte round-trip, tamper rejection and required exact-head gates passed before merge | No signed successor after Internal.27 | None | Eventual signed Windows plus representative real media observation |
 | Media expiry/re-download/failure recovery | implemented-unproven | Merged #321 has bounded retry/dead-letter, crash reuse and sidecar bounded reupload support; successful objects are durable local authority | #321 retry/content/storage integration and exact-head native/Windows gates passed | No signed successor after Internal.27 | No expired-media live matrix | Add seller recovery UX as needed and prove expired/provider-unavailable cases on real phone |
 
 ## Sending and conversation-native interaction
@@ -63,8 +63,9 @@ pass. “Not applicable” is used only where a function has no provider effect.
 | Text sending | certified | Durable Message, OutboxIntent, stable effect key, receipt reconciliation and ambiguity path | Durable-send/retry/receipt integration tests | Internal.27 | Exactly-one LID outbound and delivery passed | Re-run on eventual candidate |
 | Delivery/read receipts | certified | Monotonic persisted status projection exists | Status and durable-send tests | Internal.27 | Delivery observed for exact outbound | Real read receipt remains capability-specific |
 | Retry and ambiguous-result handling | implemented-unproven | Explicit failed/ambiguous UI and duplicate-warning path exist | Automated durable effect tests | Installed failure matrix incomplete | None | Offline/provider ambiguity real exercise |
-| Image/video/document/voice sending | missing | Composer and sidecar `/send` accept text only | None | None | None | Add each media action separately after inbound object authority and live certification |
-| Upload progress and pre-effect cancellation | missing | No media upload command exists | None | None | None | Durable staged upload command and cancellation boundary |
+| Image sending | implemented-unproven | PR #324 candidate uses the image picker → bounded multipart route → existing encrypted `.sfmedia` object authority → protected canonical Message/outbox effect → account-bound deterministic sidecar receipt journal → Baileys image dispatch; retries reopen authenticated local bytes before provider-effect start and outbound preview/download stays Message-bound | Candidate adds encrypted-at-rest/plaintext-dispatch round-trip, pre-effect ciphertext-corruption rejection, browser-independent retry and source-boundary contracts; full exact-head Quality/review is still required before merge | None; branch work is not signed/installed authority | None | Exact-head Quality/adversarial review, merge, then signed Windows and one representative real-phone image send/receipt/reopen exercise |
+| Video/document/voice sending | missing | No outbound provider action is exposed for these media kinds | None | None | None | Extend the proven image pattern one media action at a time with capability-specific limits/evidence |
+| Upload progress and pre-effect cancellation | missing | Image upload is bounded and staged durably, but no truthful byte-progress UI or post-selection cancellation command exists | Bounded request/source contracts only | None | None | Add a durable staged-upload/progress/cancel authority only when cancellation semantics can be guaranteed |
 | Quoted replies with visible context | missing | No quote model, composer state or provider context binding exists | None | None | None | Source, replay and real-provider quoted-reply evidence |
 | Persisted protected drafts | implemented-unproven | Protected per-conversation draft and debounced idempotent replacement are merged source | Targeted API/UI/crypto tests | No signed successor after Internal.27 | Not applicable | Eventual signed reopen/switch observation |
 | Explicit mark read | implemented-unproven | Authorized mutation clears unread; GET remains read-only | Route/workspace tests exist | Present in installed product line | Not applicable | Retain regression evidence |
@@ -73,7 +74,7 @@ pass. “Not applicable” is used only where a function has no provider effect.
 | Safe message copy | missing | No explicit message copy control exists | None | None | Not applicable | Permission-preserving clipboard UX and browser failure state |
 | Arbitrary link previews | conditional-provider | Plain message text is rendered; remote previews are not fetched | Existing user-content rendering tests | No preview claim | None | Privacy/SSRF policy plus exact preview provider decision |
 | Keyboard text send | implemented-unproven | Enter sends; Shift+Enter creates a line | Inbox UI contracts | Present in installed product line | Not applicable | Retain AR/FR/EN and IME regression evidence |
-| Paste/drag-drop media | missing | No media composer exists | None | None | None | Implement after durable media staging authority |
+| Paste/drag-drop media | missing | The bounded image picker exists in the #324 candidate; paste and drag-drop media ingestion are not implemented | None | None | None | Reuse the same validated encrypted staging path without bypassing picker limits or permissions |
 
 ## Conditional provider actions
 
@@ -103,24 +104,29 @@ pass. “Not applicable” is used only where a function has no provider effect.
 ## Binary media architecture gate
 
 Merged #321 moved binary media out of the old metadata-only architecture. The
-protected source now owns shop/incarnation-scoped encrypted objects, authenticated
+protected source owns shop/incarnation-scoped encrypted objects, authenticated
 ciphertext provenance, crash-safe fetch completion, backup/replacement restore,
-shop archive/recover/remove, privacy erase and corruption checks. The current
-media-read candidate adds seller-facing authenticated reads without making the
-browser an object-storage authority.
+shop archive/recover/remove, privacy erase and corruption checks. Merged #322
+adds seller-facing authenticated reads without making the browser an
+object-storage authority.
 
 The remaining gate is therefore split deliberately:
 
 1. **Merged protected byte authority:** AES-256-GCM object identity, replay-safe
    canonical Message/fetch receipt binding, containment-safe paths, MIME sniffing,
    byte ceilings, backup/lifecycle/privacy survivability and corruption rejection.
-2. **Current source read candidate:** same-origin permission-checked Inbox reads,
+2. **Merged protected read authority:** same-origin permission-checked Inbox reads,
    no-store responses, safe content disposition, bounded single-range playback,
    in-memory verified plaintext only, and image/sticker/video/audio/document UX.
-3. **Still missing:** bounded thumbnail generation/cache authority, outbound media
-   staging/send/progress/cancel, and the remaining conversation-native work in
-   issue #317.
-4. **Still higher-evidence work:** a separately authorized signed Windows candidate
+3. **Current outbound-image candidate:** one bounded image action reuses the same
+   encrypted object authority, canonical Message/outbox identity, provider-account
+   binding, deterministic receipt journal, safe retry/ambiguity model and local
+   Message-bound preview/read path. It remains source-only until exact-head review,
+   merge and higher evidence actually pass.
+4. **Still missing:** bounded thumbnail generation/cache authority, outbound
+   video/document/voice, truthful upload progress/cancellation, and the remaining
+   conversation-native work in issue #317.
+5. **Still higher-evidence work:** a separately authorized signed Windows candidate
    and exact representative real-phone/provider media matrix before any public
    certified-media claim.
 
