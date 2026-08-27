@@ -1,0 +1,102 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+function source(path: string): string {
+  return readFileSync(resolve(process.cwd(), path), "utf8");
+}
+
+describe("WhatsApp outbound image source boundary", () => {
+  it("exposes only the bounded image picker and reuses the durable send monitor", () => {
+    const thread = source("src/components/inbox/inbox-v3-thread.tsx");
+    const workspace = source("src/hooks/use-inbox-workspace.ts");
+
+    expect(thread).toContain('accept="image/jpeg,image/png,image/webp"');
+    expect(thread).toContain('data-inbox-image-picker="true"');
+    expect(thread).toContain("if (file) void sendImage(file)");
+    expect(thread).toContain("disabled={sending || !canSend}");
+    expect(workspace).toContain("MAX_OUTBOUND_IMAGE_BYTES = 20 * 1024 * 1024");
+    expect(workspace).toContain('fetch("/api/whatsapp/send-image"');
+    expect(workspace).toContain('form.set("image", file');
+    expect(workspace).toContain("void monitorWhatsAppEffect(");
+    expect(workspace).toContain("await loadMessages(chat, { background: true })");
+  });
+
+  it("stages encrypted bytes before the provider-effect boundary", () => {
+    const route = source("src/app/api/whatsapp/send-image/route.ts");
+    const durable = source("src/lib/whatsapp/durable-send.ts");
+    const mediaStore = source("src/lib/whatsapp/media-object-store.ts");
+
+    expect(route).toContain('requireTrustedAction("conversations.reply")');
+    expect(route).toContain('"customers.contact.read"');
+    expect(route).toContain("source: image.stream()");
+    expect(route).toContain("queueWhatsAppImage(context");
+    expect(route).toContain("processWhatsAppEffect(context, queued.effectKey)");
+
+    const queueImage = durable.indexOf("export async function queueWhatsAppImage");
+    const stageBytes = durable.indexOf("await writeWhatsAppMediaObject", queueImage);
+    const effectAuthority = durable.indexOf(
+      "await createWhatsAppEffectAuthority",
+      queueImage,
+    );
+    expect(queueImage).toBeGreaterThanOrEqual(0);
+    expect(stageBytes).toBeGreaterThan(queueImage);
+    expect(effectAuthority).toBeGreaterThan(stageBytes);
+    expect(durable).toContain('effectType: WHATSAPP_IMAGE_EFFECT_TYPE');
+    expect(durable).toContain('messageType: "image"');
+    expect(durable).toContain("sealWhatsAppMessageAttachmentWithKey");
+    expect(mediaStore).toContain("createCipheriv");
+    expect(mediaStore).toContain('image: 20 * 1024 * 1024');
+  });
+
+  it("authenticates staged media before marking the provider call as started", () => {
+    const durable = source("src/lib/whatsapp/durable-send.ts");
+    const execute = durable.slice(
+      durable.indexOf("async function executeClaimed"),
+      durable.indexOf("export async function processWhatsAppEffect"),
+    );
+
+    expect(execute).toContain("await readWhatsAppMediaObject(");
+    expect(execute).toContain('"OUTBOX_MEDIA_INVALID"');
+    expect(execute).toContain("await markEffectStarted(context, claimed)");
+    expect(execute.indexOf("await readWhatsAppMediaObject("))
+      .toBeLessThan(execute.indexOf("await markEffectStarted(context, claimed)"));
+    expect(execute).toContain("imageBytes?.fill(0)");
+  });
+
+  it("keeps provider dispatch account-bound, deterministic and non-base64", () => {
+    const effectAuthority = source("src/lib/whatsapp/effect-authority.ts");
+    const authTokens = source("sidecars/whatsapp/auth-tokens.ts");
+    const sidecarClient = source("src/lib/whatsapp/sidecar-client.ts");
+    const sidecar = source("sidecars/whatsapp/index.ts");
+
+    expect(effectAuthority).toContain('"text" | "image" | "daily-report"');
+    expect(authTokens).toContain("(text|image|daily-report)");
+    expect(sidecarClient).toContain('form.set("image"');
+    expect(sidecarClient).toContain('"/send-image"');
+    expect(sidecarClient).not.toContain("image.toString(\"base64\")");
+    expect(sidecar).toContain('app.post("/send-image"');
+    expect(sidecar).toContain("effectKeyMatchesWhatsAppAccount(effectKey, status.user.id)");
+    expect(sidecar).toContain("deterministicWhatsAppMessageId(effectKey)");
+    expect(sidecar).toContain("bytes.fill(0)");
+  });
+
+  it("serves outbound staged image reads only through canonical Message identity", () => {
+    const projection = source(
+      "src/app/api/whatsapp/chats/[jid]/messages/route.ts",
+    );
+    const mediaRead = source("src/lib/whatsapp/media-read-service.ts");
+    const route = source("src/app/api/inbox/media/[id]/route.ts");
+
+    expect(projection).toContain('fromMe && openedAttachment.kind === "image"');
+    expect(projection).toContain('"succeeded"');
+    expect(projection).toContain('"receipt"');
+    expect(mediaRead).toContain('message.direction === "outbound"');
+    expect(mediaRead).toContain("openQueuedWhatsAppImageReceipt");
+    expect(mediaRead).toContain("requiresFetchAudit: false");
+    expect(route).toContain("prepareInboxWhatsAppMedia(context, id)");
+    expect(route).not.toContain("objectId");
+    expect(route).not.toContain("filesystem");
+  });
+});
