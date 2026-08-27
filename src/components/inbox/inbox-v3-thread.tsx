@@ -316,6 +316,7 @@ export function InboxV3Thread({
   const isMobile = useMobile();
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
   const {
     activeChat,
     messages,
@@ -332,6 +333,7 @@ export function InboxV3Thread({
     sendReply,
     sendImage,
     sendVideo,
+    sendDocument,
     retryFailedMessage,
     canReply,
     canUpdateConversation,
@@ -732,6 +734,21 @@ export function InboxV3Thread({
                     .catch(() => void sendVideo(file));
                 }}
               />
+              <input
+                ref={documentInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/plain,text/csv"
+                aria-label={copy("mediaDocument")}
+                className="sr-only"
+                tabIndex={-1}
+                data-inbox-document-input="true"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0] ?? null;
+                  event.currentTarget.value = "";
+                  if (!file) return;
+                  void sendDocument(file);
+                }}
+              />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -766,6 +783,24 @@ export function InboxV3Thread({
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={6}>
                   {copy("mediaVideo")}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={sending || !canSend}
+                    aria-label={copy("mediaDocument")}
+                    data-inbox-document-picker="true"
+                    onClick={() => documentInputRef.current?.click()}
+                  >
+                    <FileText className="size-4" aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={6}>
+                  {copy("mediaDocument")}
                 </TooltipContent>
               </Tooltip>
               <CannedResponsePicker

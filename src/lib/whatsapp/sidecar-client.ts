@@ -300,6 +300,38 @@ export const sidecar = {
     );
   },
 
+  /**
+   * Dispatch one authenticated staged document through the loopback sidecar.
+   * The media type is the sniffed classification from the encrypted storage
+   * authority; the recipient-visible title travels as the bounded file name.
+   */
+  sendDocument: (
+    to: string,
+    document: Buffer,
+    mediaType: string,
+    fileName: string,
+    caption: string,
+    effectKey: string,
+    requestBinding: string,
+  ) => {
+    const form = new FormData();
+    form.set("to", to);
+    form.set("effectKey", effectKey);
+    form.set("requestBinding", requestBinding);
+    form.set("caption", caption);
+    form.set("fileName", fileName);
+    form.set(
+      "document",
+      new Blob([new Uint8Array(document)], { type: mediaType }),
+      "document",
+    );
+    return sidecarFetch<{ ok: boolean; id: string; status: string }>(
+      "/send-document",
+      { method: "POST", body: form },
+      180_000,
+    );
+  },
+
   receipt: async (
     effectKey: string,
     requestBinding: string,

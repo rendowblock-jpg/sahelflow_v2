@@ -12,7 +12,8 @@ import { sidecar } from "./sidecar-client";
 const EFFECT_SCOPE_PURPOSE = "sahelflow/whatsapp/effect-scope/v1";
 const REQUEST_BINDING_PURPOSE = "sahelflow/whatsapp/request-binding/v1";
 
-export type WhatsAppEffectKind = "text" | "image" | "video" | "daily-report";
+// prettier-ignore
+export type WhatsAppEffectKind = "text" | "image" | "video" | "document" | "daily-report";
 
 export interface WhatsAppEffectAuthority {
   effectKey: string;
