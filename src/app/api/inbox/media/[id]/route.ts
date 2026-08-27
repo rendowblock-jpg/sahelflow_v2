@@ -94,6 +94,7 @@ export const GET = withErrorHandler(
       context,
       prepared,
       range ?? undefined,
+      request.signal,
     );
     try {
       const responseBody = Uint8Array.from(opened.bytes);
