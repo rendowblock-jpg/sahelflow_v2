@@ -15,13 +15,29 @@ describe("WhatsApp outbound image source boundary", () => {
     expect(thread).toContain('accept="image/jpeg,image/png,image/webp"');
     expect(thread).toContain('data-inbox-image-picker="true"');
     expect(thread).toContain('aria-label={copy("mediaImage")}');
-    expect(thread).toContain("if (file) void sendImage(file)");
+    expect(thread).toContain("void sendImage(file)");
     expect(thread).toContain("disabled={sending || !canSend}");
     expect(workspace).toContain("MAX_OUTBOUND_IMAGE_BYTES = 20 * 1024 * 1024");
     expect(workspace).toContain('fetch("/api/whatsapp/send-image"');
     expect(workspace).toContain('form.set("image", file');
     expect(workspace).toContain("void monitorWhatsAppEffect(");
     expect(workspace).toContain("await loadMessages(chat, { background: true })");
+  });
+
+  it("treats missing or generic browser MIME as a hint while keeping byte authority", () => {
+    const thread = source("src/components/inbox/inbox-v3-thread.tsx");
+    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    const mediaStore = source("src/lib/whatsapp/media-object-store.ts");
+
+    expect(thread).toContain('declaredType !== "application/octet-stream"');
+    expect(thread).toContain(".slice(0, 12)");
+    expect(thread).toContain('sniffedType = "image/jpeg"');
+    expect(thread).toContain('sniffedType = "image/png"');
+    expect(thread).toContain('sniffedType = "image/webp"');
+    expect(thread).toContain("new File([file], file.name");
+    expect(workspace).toContain("!SAFE_OUTBOUND_IMAGE_TYPES.has(mediaType)");
+    expect(mediaStore).toContain("sniffMediaType(kind");
+    expect(mediaStore).toContain("MEDIA_CONTENT_TYPE_MISMATCH");
   });
 
   it("removes only unqueued optimistic images and reloads canonical messages", () => {
