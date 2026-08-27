@@ -17,6 +17,7 @@ import { SahelFlowError } from "@/types/errors";
 export const dynamic = "force-dynamic";
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const MAX_IMAGE_FORM_BYTES = MAX_IMAGE_BYTES + 256 * 1024;
 const SAFE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const metaSchema = z.object({
   clientMessageId: z.string().uuid(),
@@ -37,6 +38,21 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   assertTrustedAction(actorContext, "customers.contact.read", {
     shopId: actorContext.shop.shopId,
   });
+
+  const declaredLength = Number.parseInt(
+    req.headers.get("content-length") ?? "0",
+    10,
+  );
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > MAX_IMAGE_FORM_BYTES
+  ) {
+    throw new SahelFlowError(
+      "WhatsApp image upload is larger than the accepted request boundary",
+      "VALIDATION_ERROR",
+      413,
+    );
+  }
 
   const form = await req.formData();
   const image = form.get("image");
