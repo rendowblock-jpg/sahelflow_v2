@@ -115,4 +115,74 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(thread).toContain("https://www.openstreetmap.org/");
     expect(thread).toContain('rel="noopener noreferrer"');
   });
+
+  it("keeps authenticated media ranges bounded and pending media live", () => {
+    const route = source("src/app/api/inbox/media/[id]/route.ts");
+    const statusRoute = source("src/app/api/inbox/media/[id]/status/route.ts");
+    const batchStatusRoute = source("src/app/api/inbox/media/status/route.ts");
+    const messageRoute = source(
+      "src/app/api/whatsapp/chats/[jid]/messages/route.ts",
+    );
+    const mediaObject = source("src/lib/whatsapp/media-object-provenance.ts");
+    const mediaProjection = source(
+      "src/lib/whatsapp/media-status-projection.ts",
+    );
+    const mediaUi = source("src/components/inbox/inbox-media-attachment.tsx");
+    const handler = route.slice(route.indexOf("export const GET"));
+    const prepareCall = handler.indexOf(
+      "const prepared = await prepareInboxWhatsAppMedia",
+    );
+    const rangeParse = handler.indexOf('parseRange(request.headers.get("range")');
+    const openCall = handler.indexOf(
+      "const opened = await openPreparedInboxWhatsAppMedia",
+    );
+
+    expect(prepareCall).toBeGreaterThanOrEqual(0);
+    expect(rangeParse).toBeGreaterThan(prepareCall);
+    expect(openCall).toBeGreaterThan(rangeParse);
+    expect(mediaObject).toContain("WhatsAppMediaPlaintextRange");
+    expect(mediaObject).toContain("const overlapStart = Math.max");
+    expect(mediaObject).toContain("const overlapEnd = Math.min");
+    expect(mediaObject).toContain("plaintextHash.update(plaintext)");
+    expect(mediaObject).toContain("ciphertextHash.update(ciphertext)");
+
+    expect(statusRoute).toContain('requireTrustedAction("conversations.read")');
+    expect(statusRoute).toContain('"customers.contact.read"');
+    expect(statusRoute).toContain("WHATSAPP_MEDIA_FETCH_EFFECT_TYPE");
+    expect(statusRoute).toContain("projectInboxLocalMedia(");
+    expect(mediaProjection).toContain(
+      "`/api/inbox/media/${encoded}/status`",
+    );
+    expect(messageRoute).toContain("projectInboxLocalMedia(");
+
+    expect(batchStatusRoute).toContain("MAX_PENDING_MEDIA_BATCH = 200");
+    expect(batchStatusRoute).toContain('requireTrustedAction("conversations.read")');
+    expect(batchStatusRoute).toContain('"customers.contact.read"');
+    expect(batchStatusRoute).toContain("db.message.findMany");
+    expect(batchStatusRoute).toContain("db.outboxIntent.findMany");
+    expect(batchStatusRoute).toContain("effectKey: { in: effectKeys }");
+    expect(batchStatusRoute).toContain("projectInboxLocalMedia(");
+
+    expect(mediaUi).toContain("PENDING_MEDIA_POLL_MS = 3_000");
+    expect(mediaUi).toContain("MAX_PENDING_MEDIA_BATCH = 200");
+    expect(mediaUi).toContain(
+      'PENDING_MEDIA_BATCH_URL = "/api/inbox/media/status"',
+    );
+    expect(mediaUi).toContain("pendingMediaListeners = new Map");
+    expect(mediaUi).toContain("pendingMediaPollTimer");
+    expect(mediaUi).toContain("pollPendingMediaBatch");
+    expect(mediaUi).toContain("body: JSON.stringify({ messageIds })");
+    expect(mediaUi).toContain("subscribePendingMedia");
+    expect(mediaUi).not.toContain("fetch(pendingStatusUrl");
+
+    expect(mediaUi).toContain('const response = await fetch(href, { cache: "no-store" })');
+    expect(mediaUi).toContain("if (!response.ok) throw new Error");
+    expect(mediaUi).toContain("URL.createObjectURL(blob)");
+    expect(mediaUi).toContain("const [previewFailed, setPreviewFailed]");
+    expect(mediaUi).toContain("const [downloadFailed, setDownloadFailed]");
+    expect(mediaUi).toContain("onError={() => setPreviewFailed(true)}");
+    expect(mediaUi).toContain("onFailure={() => setDownloadFailed(true)}");
+    expect(mediaUi).not.toContain('local.state === "failed" || previewFailed');
+    expect(mediaUi).not.toContain("<a ");
+  });
 });

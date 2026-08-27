@@ -3,7 +3,13 @@ process.env.SF_MASTER_KEY =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -25,6 +31,11 @@ import {
   removeWhatsAppMediaRoot,
   whatsAppMediaRoot,
 } from "../media-object-store";
+import {
+  openInboxWhatsAppMedia,
+  openPreparedInboxWhatsAppMedia,
+  prepareInboxWhatsAppMedia,
+} from "../media-read-service";
 import { SidecarRequestError } from "../sidecar-client";
 
 const ACCOUNT_ID = "213555999000:12@s.whatsapp.net";
@@ -211,10 +222,92 @@ describe("durable WhatsApp inbound media fetch", () => {
       sizeBytes: bytes.length,
     });
 
+    const opened = await openInboxWhatsAppMedia(context, ingress.ingressEventId);
+    try {
+      expect(opened).toMatchObject({
+        mediaType: "image/jpeg",
+        kind: "image",
+        sizeBytes: bytes.length,
+      });
+      expect(opened.bytes.equals(bytes)).toBe(true);
+      expect(opened.fileName).toMatch(/\.(jpg|jpeg)$/i);
+    } finally {
+      opened.bytes.fill(0);
+    }
+
     await expect(reconcileQueuedWhatsAppMediaFetches(context)).resolves.toBe(0);
     await expect(
       drainDueWhatsAppMediaFetches(context, 1, async () => mediaResponse(bytes)),
     ).resolves.toBe(0);
+  });
+
+  it("authenticates the full object while retaining only the requested seller range", async () => {
+    const bytes = jpeg();
+    const ingress = await persistWhatsAppInbound(
+      context,
+      envelope(bytes, "PROVIDER-INBOUND-MEDIA-RANGE"),
+    );
+    await processWhatsAppInbound(context, ingress.ingressEventId);
+    await reconcileQueuedWhatsAppMediaFetches(context);
+    await drainDueWhatsAppMediaFetches(
+      context,
+      1,
+      async () => mediaResponse(bytes),
+    );
+
+    const prepared = await prepareInboxWhatsAppMedia(
+      context,
+      ingress.ingressEventId,
+    );
+    const range = { start: 6, end: 15 };
+    const opened = await openPreparedInboxWhatsAppMedia(
+      context,
+      prepared,
+      range,
+    );
+    try {
+      expect(opened).toMatchObject({
+        mediaType: "image/jpeg",
+        kind: "image",
+        sizeBytes: bytes.length,
+      });
+      expect(opened.bytes).toHaveLength(range.end - range.start + 1);
+      expect(opened.bytes.equals(bytes.subarray(range.start, range.end + 1))).toBe(
+        true,
+      );
+    } finally {
+      opened.bytes.fill(0);
+    }
+  });
+
+  it("rejects seller reads when a completed ciphertext object is changed after success", async () => {
+    const bytes = jpeg();
+    const ingress = await persistWhatsAppInbound(
+      context,
+      envelope(bytes, "PROVIDER-INBOUND-MEDIA-TAMPERED"),
+    );
+    await processWhatsAppInbound(context, ingress.ingressEventId);
+    await reconcileQueuedWhatsAppMediaFetches(context);
+    await drainDueWhatsAppMediaFetches(
+      context,
+      1,
+      async () => mediaResponse(bytes),
+    );
+
+    const objectFiles = readdirSync(whatsAppMediaRoot(context));
+    expect(objectFiles).toHaveLength(1);
+    const objectPath = join(whatsAppMediaRoot(context), objectFiles[0]!);
+    const ciphertext = readFileSync(objectPath);
+    ciphertext[ciphertext.length - 1] = (ciphertext[ciphertext.length - 1]! ^ 0x01) & 0xff;
+    writeFileSync(objectPath, ciphertext);
+    ciphertext.fill(0);
+
+    await expect(
+      openInboxWhatsAppMedia(context, ingress.ingressEventId),
+    ).rejects.toMatchObject({
+      code: "WHATSAPP_MEDIA_INTEGRITY",
+      statusCode: 409,
+    });
   });
 
   it("dead-letters a MIME/content mismatch without repeated provider reads", async () => {

@@ -7,16 +7,29 @@ import {
   assertTrustedAction,
   requireTrustedAction,
 } from "@/lib/identity/authorization";
+import { WHATSAPP_MEDIA_FETCH_EFFECT_TYPE } from "@/lib/whatsapp/media-fetch-contract";
+import { projectInboxLocalMedia } from "@/lib/whatsapp/media-status-projection";
 import {
   sidecar,
   SidecarRequestError,
   SidecarUnavailableError,
 } from "@/lib/whatsapp/sidecar-client";
 import { openWhatsAppMessageAttachmentWithKey } from "@/lib/whatsapp/message-attachments";
-import type { IncomingMessage } from "@/lib/whatsapp/types";
+import type {
+  IncomingMessage,
+  ProjectedWhatsAppAttachment,
+} from "@/lib/whatsapp/types";
 
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ jid: string }> };
+
+const BINARY_MEDIA_TYPES = new Set([
+  "image",
+  "video",
+  "audio",
+  "document",
+  "sticker",
+]);
 
 function isOutboundDirection(direction: string): boolean {
   return direction === "outbound" || direction === "outgoing";
@@ -62,7 +75,14 @@ export const GET = withErrorHandler(
     const outboundIds = rows
       .filter((message) => isOutboundDirection(message.direction))
       .map((message) => message.id);
-    const [effects, inboundEvents] = await Promise.all([
+    const mediaEffectKeys = rows
+      .filter(
+        (message) =>
+          !isOutboundDirection(message.direction) &&
+          BINARY_MEDIA_TYPES.has(message.messageType),
+      )
+      .map((message) => `whatsapp-media-fetch:${message.id}`);
+    const [effects, inboundEvents, mediaIntents] = await Promise.all([
       outboundIds.length
         ? db.whatsAppOutboundEffect.findMany({
             where: { messageId: { in: outboundIds } },
@@ -79,6 +99,19 @@ export const GET = withErrorHandler(
             select: { messageId: true, providerEventId: true },
           })
         : [],
+      mediaEffectKeys.length
+        ? db.outboxIntent.findMany({
+            where: {
+              effectKey: { in: mediaEffectKeys },
+              effectType: WHATSAPP_MEDIA_FETCH_EFFECT_TYPE,
+            },
+            select: {
+              effectKey: true,
+              status: true,
+              outcomeState: true,
+            },
+          })
+        : [],
     ]);
 
     const effectByMessage = new Map(
@@ -88,6 +121,9 @@ export const GET = withErrorHandler(
       inboundEvents.flatMap((event) =>
         event.messageId ? [[event.messageId, event.providerEventId] as const] : [],
       ),
+    );
+    const mediaIntentByKey = new Map(
+      mediaIntents.map((intent) => [intent.effectKey, intent]),
     );
     const effectKeys = effects.map((effect) => effect.effectKey);
     const intents = effectKeys.length
@@ -114,6 +150,32 @@ export const GET = withErrorHandler(
             ? "ambiguous"
             : intent.status
           : undefined;
+        const openedAttachment =
+          attachmentKey && message.attachments
+            ? openWhatsAppMessageAttachmentWithKey(
+                message.id,
+                message.attachments,
+                attachmentKey,
+              )
+            : null;
+        let attachment: ProjectedWhatsAppAttachment | null = openedAttachment;
+        if (
+          openedAttachment &&
+          !fromMe &&
+          BINARY_MEDIA_TYPES.has(openedAttachment.kind)
+        ) {
+          const mediaIntent = mediaIntentByKey.get(
+            `whatsapp-media-fetch:${message.id}`,
+          );
+          attachment = {
+            ...openedAttachment,
+            localMedia: projectInboxLocalMedia(
+              message.id,
+              mediaIntent?.status,
+              mediaIntent?.outcomeState,
+            ),
+          };
+        }
         return {
           key: {
             remoteJid: jid,
@@ -130,14 +192,7 @@ export const GET = withErrorHandler(
             : undefined,
           effectKey: effect?.effectKey,
           effectState: effectState as IncomingMessage["effectState"],
-          attachment:
-            attachmentKey && message.attachments
-              ? openWhatsAppMessageAttachmentWithKey(
-                  message.id,
-                  message.attachments,
-                  attachmentKey,
-                )
-              : null,
+          attachment,
         };
       });
     } finally {

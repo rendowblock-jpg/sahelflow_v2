@@ -3,13 +3,14 @@
 > **Status:** Active FD-048 / issue #317 evidence ledger
 > **Scope:** Individual WhatsApp conversations in the Founder-offline desktop product
 > **Snapshot date:** 2026-08-26
-> **Source baseline:** protected `main` `a3216a63b74ca2c33713f95f85df4ed6e2717567`; re-resolve before merge or evidence claims
+> **Source baseline:** protected `main` `a5efc0b662fcebe39b21fbd07468a7ae7492d3e2` after merged PR #321; the current media-read candidate starts from that exact SHA
 > **Signed/installed baseline:** Internal.27 / FD-047
 
 This ledger is the first required deliverable for issue #317. It separates what
 the source can do from automated, signed/installed and real-phone/provider
-evidence. A provider library API, a mock or a branch implementation never
-upgrades a live-provider state by itself.
+evidence. A provider library API, a mock, an ephemeral CI install or a branch
+implementation never upgrades a signed/installed or live-provider state by
+itself.
 
 ## State vocabulary
 
@@ -42,18 +43,18 @@ pass. “Not applicable” is used only where a function has no provider effect.
 
 | Capability | Current state | Source truth | Automated evidence | Signed / installed evidence | Live-provider evidence | Remaining gate |
 |---|---|---|---|---|---|---|
-| Image classification and bounded metadata | implemented-unproven | #317 candidate seals type, MIME, name, dimensions and declared size; unsafe declarations are rejected | Targeted extractor/codec tests required on exact PR head | None | None | Merge, signed install, representative real image |
-| Video classification and bounded metadata | implemented-unproven | Same protected metadata boundary with 64 MiB declared-size ceiling | Targeted extractor/codec tests required | None | None | Merge, signed install, representative real video |
-| Document classification and bounded metadata | implemented-unproven | Safe filename leaf, allowlisted MIME and declared-size ceiling | Targeted extractor/codec tests required | None | None | Merge, signed install, safe open/download implementation and real document |
-| Voice/audio classification and bounded metadata | implemented-unproven | Protected duration, MIME, size and voice/PTT flag | Targeted extractor/codec tests required | None | None | Merge, signed install, durable bytes/player and real voice/audio |
-| Sticker classification and bounded metadata | implemented-unproven | Protected WebP metadata and 4 MiB declared-size ceiling | Targeted extractor/codec tests required | None | None | Merge, durable bytes/thumbnail and real sticker |
-| Single-contact content | implemented-unproven | Bounded vCard and display name are sealed in the Message attachment envelope; raw provider paths are excluded | Targeted extractor/codec/privacy-export tests required | None | None | Merge and real-phone contact observation |
-| Multi-contact array content | metadata-only | The first bounded contact is retained as honest metadata; the full array is not claimed complete | Targeted extractor test required | None | None | Canonical bounded array schema plus real-phone multi-contact evidence |
-| Location content | implemented-unproven | Validated coordinates/name/address are sealed; UI derives a fixed OpenStreetMap URL rather than trusting provider links | Targeted extractor/codec/UI tests required | None | None | Merge and real-phone location observation |
-| Durable protected image/video/document/audio/sticker bytes | missing | Provider ingress retains encrypted recovery evidence, but no canonical external media artifact exists | None | None | None | Design shop-scoped encrypted object storage with backup/restore/archive/privacy erase before implementation |
-| Thumbnail generation | missing | No canonical media bytes exist | None | None | None | Implement only after durable media object authority |
-| View/play/open/download binary media | missing | UI remains honest metadata-only for binary media | None | None | None | Authenticated range/download endpoints, safe disposition and exact media tests |
-| Media expiry/re-download/failure recovery | missing | Ingress retry exists; media-object expiry/recovery does not | None | None | None | Durable media state machine and real expired-media evidence |
+| Image classification and bounded metadata | implemented-unproven | Protected main seals type, MIME, name, dimensions and declared size; unsafe declarations are rejected | #321 retained extractor/codec/integration coverage and exact-head required gates | No signed successor after Internal.27 | None | Eventual signed install plus representative real image |
+| Video classification and bounded metadata | implemented-unproven | Protected metadata boundary includes a 64 MiB declared-size ceiling | #321 exact-head source/native/Windows gates passed | No signed successor after Internal.27 | None | Eventual signed install plus representative real video |
+| Document classification and bounded metadata | implemented-unproven | Safe filename leaf, allowlisted MIME and declared-size ceiling are protected source | #321 exact-head gates passed | No signed successor after Internal.27 | None | Eventual signed install plus representative real document |
+| Voice/audio classification and bounded metadata | implemented-unproven | Protected duration, MIME, size and voice/PTT flag are canonical metadata | #321 exact-head gates passed | No signed successor after Internal.27 | None | Eventual signed install plus representative voice/audio |
+| Sticker classification and bounded metadata | implemented-unproven | Protected WebP metadata and 4 MiB declared-size ceiling are canonical source | #321 exact-head gates passed | No signed successor after Internal.27 | None | Eventual signed install plus representative real sticker |
+| Single-contact content | implemented-unproven | Bounded vCard and display name are sealed in the Message attachment envelope; raw provider paths are excluded | Targeted extractor/codec/privacy-export coverage retained | None beyond Internal.27 line | None | Real-phone contact observation on eventual candidate |
+| Multi-contact array content | metadata-only | The first bounded contact is retained as honest metadata; the full array is not claimed complete | Targeted extractor coverage | None | None | Canonical bounded array schema plus real-phone multi-contact evidence |
+| Location content | implemented-unproven | Validated coordinates/name/address are sealed; UI derives a fixed OpenStreetMap URL rather than trusting provider links | Targeted extractor/codec/UI coverage retained | None beyond Internal.27 line | None | Real-phone location observation on eventual candidate |
+| Durable protected image/video/document/audio/sticker bytes | implemented-unproven | Merged #321 owns shop/incarnation-bound AES-256-GCM chunk objects, exact encrypted receipts/provenance, crash reuse, lifecycle/backup/restore/privacy erase and bounded byte/type enforcement | #321 exact-head Quality, native, Windows Rust, backup/replacement and ephemeral installed gates all passed before guarded merge | Source is later than signed Internal.27; CI-installed evidence is not a signed/Founder acceptance claim | None | Carry the exact source frontier into the separately authorized signed candidate and real-phone matrix |
+| Thumbnail generation | missing | Canonical protected bytes now exist, but no thumbnail object/generator/cache authority exists | None | None | None | Add bounded authenticated thumbnails without plaintext cache leakage |
+| View/play/open/download binary media | implemented-unproven | Current #317 media-read candidate resolves canonical Message → protected attachment → succeeded encrypted receipt/audit, GCM-verifies bounded plaintext in memory and serves same-origin no-store range/download responses; Inbox renders image/sticker/video/audio/document states without storage paths | Candidate adds exact byte round-trip and post-success ciphertext-tamper rejection; full exact-head PR gates remain required before merge | None; branch work is not signed/installed authority | None | Exact-head review/gates, merge, then eventual signed Windows and representative real media observation |
+| Media expiry/re-download/failure recovery | implemented-unproven | Merged #321 has bounded retry/dead-letter, crash reuse and sidecar bounded reupload support; successful objects are durable local authority | #321 retry/content/storage integration and exact-head native/Windows gates passed | No signed successor after Internal.27 | No expired-media live matrix | Add seller recovery UX as needed and prove expired/provider-unavailable cases on real phone |
 
 ## Sending and conversation-native interaction
 
@@ -65,10 +66,10 @@ pass. “Not applicable” is used only where a function has no provider effect.
 | Image/video/document/voice sending | missing | Composer and sidecar `/send` accept text only | None | None | None | Add each media action separately after inbound object authority and live certification |
 | Upload progress and pre-effect cancellation | missing | No media upload command exists | None | None | None | Durable staged upload command and cancellation boundary |
 | Quoted replies with visible context | missing | No quote model, composer state or provider context binding exists | None | None | None | Source, replay and real-provider quoted-reply evidence |
-| Persisted protected drafts | implemented-unproven | #317 candidate adds protected per-conversation draft and debounced idempotent replacement | Targeted API/UI/crypto tests required | None | Not applicable | Merge, reopen/switch test and eventual installed observation |
+| Persisted protected drafts | implemented-unproven | Protected per-conversation draft and debounced idempotent replacement are merged source | Targeted API/UI/crypto tests | No signed successor after Internal.27 | Not applicable | Eventual signed reopen/switch observation |
 | Explicit mark read | implemented-unproven | Authorized mutation clears unread; GET remains read-only | Route/workspace tests exist | Present in installed product line | Not applicable | Retain regression evidence |
-| Explicit mark unread | implemented-unproven | #317 candidate increments only a zero count and returns to queue so background read does not erase intent | Targeted route/UI tests required | None | Not applicable | Merge and installed observation |
-| Safe location link | implemented-unproven | Coordinates create a fixed HTTPS OpenStreetMap URL with `noopener noreferrer` | Targeted UI contract required | None | Not applicable | Merge and installed RTL/mobile observation |
+| Explicit mark unread | implemented-unproven | Explicit unread increments only a zero count and returns to queue so background read does not erase intent | Targeted route/UI tests | No signed successor after Internal.27 | Not applicable | Eventual installed observation |
+| Safe location link | implemented-unproven | Coordinates create a fixed HTTPS OpenStreetMap URL with `noopener noreferrer` | Targeted UI contract | No signed successor after Internal.27 | Not applicable | Installed RTL/mobile observation |
 | Safe message copy | missing | No explicit message copy control exists | None | None | Not applicable | Permission-preserving clipboard UX and browser failure state |
 | Arbitrary link previews | conditional-provider | Plain message text is rendered; remote previews are not fetched | Existing user-content rendering tests | No preview claim | None | Privacy/SSRF policy plus exact preview provider decision |
 | Keyboard text send | implemented-unproven | Enter sends; Shift+Enter creates a line | Inbox UI contracts | Present in installed product line | Not applicable | Retain AR/FR/EN and IME regression evidence |
@@ -101,17 +102,29 @@ pass. “Not applicable” is used only where a function has no provider effect.
 
 ## Binary media architecture gate
 
-Binary media must not be added as base64 in `Message.attachments` or as an
-untracked plaintext file. Before that slice can move from **missing**, the source
-package must prove all of the following together:
+Merged #321 moved binary media out of the old metadata-only architecture. The
+protected source now owns shop/incarnation-scoped encrypted objects, authenticated
+ciphertext provenance, crash-safe fetch completion, backup/replacement restore,
+shop archive/recover/remove, privacy erase and corruption checks. The current
+media-read candidate adds seller-facing authenticated reads without making the
+browser an object-storage authority.
 
-1. shop/incarnation-scoped encrypted object identity and authenticated metadata;
-2. atomic or recoverably staged Message/object commit with replay-safe provider identity;
-3. containment-safe paths, MIME sniffing, byte ceilings and download disposition;
-4. backup, replacement restore, shop archive/recover/remove and privacy erase;
-5. orphan reconciliation, disk-full and corruption handling;
-6. thumbnails and range playback without plaintext cache leakage;
-7. exact installed Windows and real-phone evidence per public media type.
+The remaining gate is therefore split deliberately:
 
-Until then, binary media remains **metadata-only** in the UI and must not be
-marketed as viewable, playable, downloadable or sendable.
+1. **Merged protected byte authority:** AES-256-GCM object identity, replay-safe
+   canonical Message/fetch receipt binding, containment-safe paths, MIME sniffing,
+   byte ceilings, backup/lifecycle/privacy survivability and corruption rejection.
+2. **Current source read candidate:** same-origin permission-checked Inbox reads,
+   no-store responses, safe content disposition, bounded single-range playback,
+   in-memory verified plaintext only, and image/sticker/video/audio/document UX.
+3. **Still missing:** bounded thumbnail generation/cache authority, outbound media
+   staging/send/progress/cancel, and the remaining conversation-native work in
+   issue #317.
+4. **Still higher-evidence work:** a separately authorized signed Windows candidate
+   and exact representative real-phone/provider media matrix before any public
+   certified-media claim.
+
+Do not regress media into base64 `Message.attachments`, loose plaintext files or
+provider in-memory state. Do not describe branch/source functionality as signed,
+Founder-installed or live-provider certified until those distinct evidence layers
+actually pass.

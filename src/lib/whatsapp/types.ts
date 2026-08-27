@@ -17,6 +17,20 @@ export interface SidecarStatus {
   hasQr: boolean;
 }
 
+export interface InboxLocalMediaProjection {
+  state: "pending" | "ready" | "failed";
+  /** Same-origin canonical Message status projection used only while pending. */
+  statusUrl?: string;
+  readUrl?: string;
+  downloadUrl?: string;
+}
+
+export type ProjectedWhatsAppAttachment =
+  import("./message-attachments").WhatsAppMessageAttachment & {
+    /** Local-only seller read authority. Never populated by the provider. */
+    localMedia?: InboxLocalMediaProjection;
+  };
+
 export interface IncomingMessage {
   key: {
     remoteJid: string;
@@ -33,7 +47,7 @@ export interface IncomingMessage {
   effectKey?: string;
   effectState?: "queued" | "processing" | "retrying" | "succeeded" | "ambiguous" | "dead_letter";
   /** Protected canonical attachment projection supplied by the app, never raw provider paths. */
-  attachment?: import("./message-attachments").WhatsAppMessageAttachment | null;
+  attachment?: ProjectedWhatsAppAttachment | null;
 }
 
 export interface SidecarChat {
