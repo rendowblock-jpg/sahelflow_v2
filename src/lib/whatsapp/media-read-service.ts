@@ -23,6 +23,7 @@ import {
 } from "./media-object-store";
 import {
   readWhatsAppMediaObject,
+  WhatsAppMediaReadAbortedError,
   type WhatsAppMediaObjectProvenance,
   type WhatsAppMediaPlaintextRange,
 } from "./media-object-provenance";
@@ -82,6 +83,18 @@ function integrityFailure(): SahelFlowError {
     "WHATSAPP_MEDIA_INTEGRITY",
     409,
   );
+}
+
+function requestAborted(): SahelFlowError {
+  return new SahelFlowError(
+    "WhatsApp media request was canceled",
+    "WHATSAPP_MEDIA_REQUEST_ABORTED",
+    499,
+  );
+}
+
+function assertRequestActive(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) throw requestAborted();
 }
 
 function binaryKind(
@@ -345,7 +358,9 @@ export async function openPreparedInboxWhatsAppMedia(
   context: ServiceContext,
   prepared: PreparedInboxWhatsAppMedia,
   range?: WhatsAppMediaPlaintextRange,
+  signal?: AbortSignal,
 ): Promise<OpenedInboxWhatsAppMedia> {
+  assertRequestActive(signal);
   let opened: Awaited<ReturnType<typeof readWhatsAppMediaObject>>;
   try {
     opened = await readWhatsAppMediaObject(
@@ -354,13 +369,16 @@ export async function openPreparedInboxWhatsAppMedia(
       prepared.kind,
       prepared.receipt,
       range,
+      signal,
     );
   } catch (error) {
+    if (error instanceof WhatsAppMediaReadAbortedError) throw requestAborted();
     if (error instanceof WhatsAppMediaObjectError) throw integrityFailure();
     throw error;
   }
 
   try {
+    assertRequestActive(signal);
     const audits = await context.prisma.auditLog.findMany({
       where: {
         action: "whatsapp.media.fetch_succeeded",
@@ -371,6 +389,7 @@ export async function openPreparedInboxWhatsAppMedia(
       take: 2,
       select: { metadata: true },
     });
+    assertRequestActive(signal);
     if (audits.length !== 1) throw integrityFailure();
     assertAuditProvenance(
       audits[0]?.metadata ?? null,
@@ -383,6 +402,7 @@ export async function openPreparedInboxWhatsAppMedia(
       where: { id: prepared.messageId },
       select: { id: true },
     });
+    assertRequestActive(signal);
     if (!stillCanonical) throw unavailable();
     assertSameReadableEpoch(prepared.scopeRoot, prepared.eraseEpoch);
 
