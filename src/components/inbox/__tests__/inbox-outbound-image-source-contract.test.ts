@@ -88,7 +88,9 @@ describe("WhatsApp outbound image source boundary", () => {
 
     expect(effectAuthority).toContain('"text" | "image" | "daily-report"');
     expect(authTokens).toContain("(text|image|daily-report)");
-    expect(sidecarClient).toContain('form.set("image"');
+    expect(sidecarClient).toContain("form.set(");
+    expect(sidecarClient).toContain('"image",');
+    expect(sidecarClient).toContain("new Blob(");
     expect(sidecarClient).toContain('"/send-image"');
     expect(sidecarClient).not.toContain("image.toString(\"base64\")");
     expect(sidecar).toContain('app.post("/send-image"');
@@ -110,7 +112,9 @@ describe("WhatsApp outbound image source boundary", () => {
     expect(mediaRead).toContain('message.direction === "outbound"');
     expect(mediaRead).toContain("openQueuedWhatsAppImageReceipt");
     expect(mediaRead).toContain("requiresFetchAudit: false");
-    expect(route).toContain("prepareInboxWhatsAppMedia(context, id)");
+    expect(route).toContain(
+      "prepareInboxWhatsAppMedia(context, messageId)",
+    );
     expect(route).not.toContain("objectId");
     expect(route).not.toContain("filesystem");
   });
