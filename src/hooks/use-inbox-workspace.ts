@@ -1398,6 +1398,7 @@ export function useInboxWorkspace() {
 
       const tempId = crypto.randomUUID();
       const caption = replyText.trim();
+      let knownEffectKey: string | null = null;
       const clearAcceptedDraft = () => {
         if (activeChatRef.current?.conversationId === chat.conversationId) {
           setReplyText("");
@@ -1452,6 +1453,7 @@ export function useInboxWorkspace() {
           state?: InboxMessage["outboxState"];
           requiresDuplicateConfirmation?: boolean;
         };
+        knownEffectKey = data.effectKey ?? null;
 
         if (response.status === 202 && data.accepted && data.effectKey) {
           clearAcceptedDraft();
@@ -1510,13 +1512,20 @@ export function useInboxWorkspace() {
         await loadMessages(chat, { background: true });
         void loadChats();
       } catch (error) {
-        mutateMessages(chat.conversationId, (current) =>
-          current.map((message) =>
-            message.id === tempId
-              ? { ...message, deliveryStatus: "failed" }
-              : message,
-          ),
-        );
+        if (knownEffectKey) {
+          mutateMessages(chat.conversationId, (current) =>
+            current.map((message) =>
+              message.id === tempId
+                ? { ...message, deliveryStatus: "failed" }
+                : message,
+            ),
+          );
+        } else {
+          mutateMessages(chat.conversationId, (current) =>
+            current.filter((message) => message.id !== tempId),
+          );
+          await loadMessages(chat, { background: true });
+        }
         if (activeChatRef.current?.conversationId === chat.conversationId) {
           setSendError(
             error instanceof Error ? error.message : t("inbox.sendFailed"),
