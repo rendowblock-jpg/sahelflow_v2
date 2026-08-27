@@ -38,6 +38,19 @@ describe("WhatsApp outbound image source boundary", () => {
     );
   });
 
+  it("bounds multipart bytes before form-data materialization", () => {
+    const route = source("src/app/api/whatsapp/send-image/route.ts");
+
+    expect(route).toContain("MAX_IMAGE_FORM_BYTES");
+    expect(route).toContain("req.body.getReader()");
+    expect(route).toContain(
+      "offset + next.value.byteLength > MAX_IMAGE_FORM_BYTES",
+    );
+    expect(route).toContain("await reader.cancel().catch(() => undefined)");
+    expect(route).toContain("bounded.subarray(0, offset)");
+    expect(route).not.toContain("await req.formData()");
+  });
+
   it("stages encrypted bytes before the provider-effect boundary", () => {
     const route = source("src/app/api/whatsapp/send-image/route.ts");
     const durable = source("src/lib/whatsapp/durable-send.ts");
@@ -58,11 +71,27 @@ describe("WhatsApp outbound image source boundary", () => {
     expect(queueImage).toBeGreaterThanOrEqual(0);
     expect(stageBytes).toBeGreaterThan(queueImage);
     expect(effectAuthority).toBeGreaterThan(stageBytes);
+    expect(durable).toContain("strictSourceIdentity: true");
     expect(durable).toContain('effectType: WHATSAPP_IMAGE_EFFECT_TYPE');
     expect(durable).toContain('messageType: "image"');
     expect(durable).toContain("sealWhatsAppMessageAttachmentWithKey");
     expect(mediaStore).toContain("createCipheriv");
     expect(mediaStore).toContain('image: 20 * 1024 * 1024');
+    expect(mediaStore).toContain("linkSync(temporary, target)");
+    expect(mediaStore).toContain('"MEDIA_OBJECT_CONFLICT"');
+  });
+
+  it("keeps the image provider timeout inside a dedicated recovery lease", () => {
+    const durable = source("src/lib/whatsapp/durable-send.ts");
+    const sidecarClient = source("src/lib/whatsapp/sidecar-client.ts");
+    const sendImageStart = sidecarClient.indexOf("sendImage: (");
+    const sendImageEnd = sidecarClient.indexOf("receipt: async", sendImageStart);
+    const sendImage = sidecarClient.slice(sendImageStart, sendImageEnd);
+
+    expect(durable).toContain("const TEXT_LEASE_MS = 90_000");
+    expect(durable).toContain("const IMAGE_LEASE_MS = 150_000");
+    expect(durable).toContain("lockedAt: { lt: new Date(now.getTime() - IMAGE_LEASE_MS) }");
+    expect(sendImage).toContain("120_000");
   });
 
   it("authenticates staged media before marking the provider call as started", () => {
