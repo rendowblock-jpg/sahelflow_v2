@@ -31,6 +31,13 @@ const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ??
   "http://localhost:3000";
 const MAX_MEDIA_REQUEST_BYTES = 512 * 1024;
+const MAX_OUTBOUND_IMAGE_BYTES = 20 * 1024 * 1024;
+const MAX_OUTBOUND_IMAGE_FORM_BYTES = MAX_OUTBOUND_IMAGE_BYTES + 256 * 1024;
+const SAFE_OUTBOUND_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 function resolveSidecarToken(): string {
   const fromEnv = process.env.SIDECAR_TOKEN;
@@ -85,6 +92,10 @@ function isInboundMediaRequest(message: unknown): message is IncomingMessage {
       Number.isSafeInteger(candidate.messageTimestamp) &&
       (candidate.messageTimestamp ?? -1) >= 0,
   );
+}
+
+function imageEffectKey(value: string): boolean {
+  return /:image:[A-Za-z0-9_-]{1,80}$/.test(value) && Boolean(getWhatsAppEffectAccountHash(value));
 }
 
 const app = new Hono();
@@ -247,9 +258,8 @@ const durableSendsInFlight = new Map<
 
 async function executeDurableSend(
   effectKey: string,
-  to: string,
-  text: string,
   requestBinding: string,
+  dispatch: () => Promise<{ id: string; status: string }>,
 ): Promise<{ id: string; status: string; replayed: boolean }> {
   const existing = findDurableSendReceipt(effectKey, requestBinding);
   if (existing) return { id: existing.id, status: existing.status, replayed: true };
@@ -265,11 +275,7 @@ async function executeDurableSend(
   const promise = (async () => {
     const recheck = findDurableSendReceipt(effectKey, requestBinding);
     if (recheck) return { id: recheck.id, status: recheck.status, replayed: true };
-    const result = await wa.sendMessage(
-      to,
-      text,
-      deterministicWhatsAppMessageId(effectKey),
-    );
+    const result = await dispatch();
     if (!result.id) throw new Error("WhatsApp returned no message receipt");
     recordDurableSendReceipt(effectKey, {
       requestBinding,
@@ -423,7 +429,9 @@ app.post("/send", async (context) => {
       }
       return context.json({
         ok: true,
-        ...(await executeDurableSend(effectKey, to, text, requestBinding!)),
+        ...(await executeDurableSend(effectKey, requestBinding!, () =>
+          wa.sendMessage(to, text, deterministicWhatsAppMessageId(effectKey)),
+        )),
       });
     }
 
@@ -444,6 +452,130 @@ app.post("/send", async (context) => {
       },
       conflict ? 409 : 502,
     );
+  }
+});
+
+app.post("/send-image", async (context) => {
+  const declaredLength = Number.parseInt(
+    context.req.header("content-length") ?? "0",
+    10,
+  );
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > MAX_OUTBOUND_IMAGE_FORM_BYTES
+  ) {
+    return context.json(
+      {
+        error: "Image send request is too large",
+        code: "INVALID_IMAGE_SEND_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      413,
+    );
+  }
+
+  const form = await context.req.raw.formData().catch(() => null);
+  const to = form?.get("to");
+  const caption = form?.get("caption");
+  const effectKey = form?.get("effectKey");
+  const requestBinding = form?.get("requestBinding");
+  const image = form?.get("image");
+  if (
+    typeof to !== "string" ||
+    !to ||
+    to.length > 256 ||
+    typeof caption !== "string" ||
+    caption.length > 4000 ||
+    typeof effectKey !== "string" ||
+    !imageEffectKey(effectKey) ||
+    typeof requestBinding !== "string" ||
+    !/^[0-9a-f]{64}$/.test(requestBinding) ||
+    !(image instanceof File) ||
+    image.size <= 0 ||
+    image.size > MAX_OUTBOUND_IMAGE_BYTES ||
+    !SAFE_OUTBOUND_IMAGE_TYPES.has(image.type.toLowerCase())
+  ) {
+    return context.json(
+      {
+        error: "Invalid durable image send request",
+        code: "INVALID_IMAGE_SEND_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
+  }
+
+  const status = wa.getStatus();
+  if (status.status !== "connected") {
+    return context.json(
+      {
+        ok: false,
+        error: "WhatsApp is not connected",
+        code: "WHATSAPP_NOT_CONNECTED",
+        retryable: true,
+        ambiguous: false,
+      },
+      503,
+    );
+  }
+  if (!status.user?.id) {
+    return context.json(
+      {
+        ok: false,
+        error: "WhatsApp account identity is unavailable",
+        code: "WHATSAPP_ACCOUNT_UNAVAILABLE",
+        retryable: true,
+        ambiguous: false,
+      },
+      503,
+    );
+  }
+  if (!effectKeyMatchesWhatsAppAccount(effectKey, status.user.id)) {
+    return context.json(
+      {
+        ok: false,
+        error: "The paired WhatsApp account changed after this send was queued",
+        code: "WHATSAPP_ACCOUNT_CHANGED",
+        retryable: false,
+        ambiguous: false,
+      },
+      409,
+    );
+  }
+
+  const bytes = Buffer.from(await image.arrayBuffer());
+  try {
+    return context.json({
+      ok: true,
+      ...(await executeDurableSend(effectKey, requestBinding, () =>
+        wa.sendImage(
+          to,
+          bytes,
+          image.type,
+          caption,
+          deterministicWhatsAppMessageId(effectKey),
+        ),
+      )),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Image send failed";
+    const conflict = /already bound to different content/i.test(message);
+    return context.json(
+      {
+        ok: false,
+        error: conflict
+          ? message
+          : "WhatsApp image send outcome requires reconciliation",
+        code: conflict ? "EFFECT_KEY_CONFLICT" : "WHATSAPP_SEND_AMBIGUOUS",
+        retryable: false,
+        ambiguous: !conflict,
+      },
+      conflict ? 409 : 502,
+    );
+  } finally {
+    bytes.fill(0);
   }
 });
 
