@@ -11,6 +11,15 @@ import type { InboxLocalMediaProjection } from "@/lib/whatsapp/types";
 import { cn } from "@/lib/utils";
 
 const PENDING_MEDIA_POLL_MS = 3_000;
+const MAX_PENDING_MEDIA_BATCH = 200;
+const PENDING_MEDIA_BATCH_URL = "/api/inbox/media/status";
+
+type PendingMediaListener = (projection: InboxLocalMediaProjection) => void;
+
+const pendingMediaListeners = new Map<string, Set<PendingMediaListener>>();
+let pendingMediaPollTimer: number | null = null;
+let pendingMediaInitialTimer: number | null = null;
+let pendingMediaPollInFlight = false;
 
 function localeCode(locale: "ar" | "fr" | "en"): string {
   return locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
@@ -197,71 +206,157 @@ function validPolledProjection(
   };
 }
 
+function messageIdFromStatusUrl(statusUrl: string | undefined): string | null {
+  if (!statusUrl) return null;
+  const match = /^\/api\/inbox\/media\/([^/?#]+)\/status$/.exec(statusUrl);
+  if (!match?.[1]) return null;
+  try {
+    const messageId = decodeURIComponent(match[1]).trim();
+    return messageId &&
+      messageId.length <= 256 &&
+      !/[\u0000-\u001f\u007f]/.test(messageId)
+      ? messageId
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function notifyPendingMedia(
+  messageId: string,
+  projection: InboxLocalMediaProjection,
+): void {
+  for (const listener of pendingMediaListeners.get(messageId) ?? []) {
+    listener(projection);
+  }
+}
+
+function stopSharedPendingMediaPollIfIdle(): void {
+  if (pendingMediaListeners.size !== 0) return;
+  if (pendingMediaInitialTimer !== null) {
+    window.clearTimeout(pendingMediaInitialTimer);
+    pendingMediaInitialTimer = null;
+  }
+  if (pendingMediaPollTimer !== null) {
+    window.clearInterval(pendingMediaPollTimer);
+    pendingMediaPollTimer = null;
+  }
+}
+
+async function pollPendingMediaBatch(): Promise<void> {
+  if (
+    pendingMediaPollInFlight ||
+    pendingMediaListeners.size === 0 ||
+    document.visibilityState !== "visible"
+  ) {
+    return;
+  }
+  const messageIds = Array.from(pendingMediaListeners.keys()).slice(
+    0,
+    MAX_PENDING_MEDIA_BATCH,
+  );
+  if (messageIds.length === 0) return;
+
+  pendingMediaPollInFlight = true;
+  try {
+    const response = await fetch(PENDING_MEDIA_BATCH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageIds }),
+      cache: "no-store",
+    });
+    if (response.status === 401 || response.status === 403) {
+      for (const messageId of messageIds) {
+        notifyPendingMedia(messageId, { state: "failed" });
+      }
+      return;
+    }
+    if (!response.ok) return;
+
+    const data = (await response.json()) as {
+      media?: unknown;
+      missing?: unknown;
+    };
+    const media =
+      data.media && typeof data.media === "object" && !Array.isArray(data.media)
+        ? (data.media as Record<string, unknown>)
+        : {};
+    const missing = new Set(
+      Array.isArray(data.missing)
+        ? data.missing.filter((value): value is string => typeof value === "string")
+        : [],
+    );
+
+    for (const messageId of messageIds) {
+      if (missing.has(messageId)) {
+        notifyPendingMedia(messageId, { state: "failed" });
+        continue;
+      }
+      const next = validPolledProjection(media[messageId]);
+      if (next) notifyPendingMedia(messageId, next);
+    }
+  } catch {
+    // Durable intent truth remains authoritative. Retry on the shared interval.
+  } finally {
+    pendingMediaPollInFlight = false;
+  }
+}
+
+function ensureSharedPendingMediaPoll(): void {
+  if (pendingMediaPollTimer !== null) return;
+  pendingMediaInitialTimer = window.setTimeout(() => {
+    pendingMediaInitialTimer = null;
+    void pollPendingMediaBatch();
+  }, 0);
+  pendingMediaPollTimer = window.setInterval(() => {
+    void pollPendingMediaBatch();
+  }, PENDING_MEDIA_POLL_MS);
+}
+
+function subscribePendingMedia(
+  messageId: string,
+  listener: PendingMediaListener,
+): () => void {
+  const listeners = pendingMediaListeners.get(messageId) ?? new Set();
+  listeners.add(listener);
+  pendingMediaListeners.set(messageId, listeners);
+  ensureSharedPendingMediaPoll();
+
+  return () => {
+    const current = pendingMediaListeners.get(messageId);
+    current?.delete(listener);
+    if (current?.size === 0) pendingMediaListeners.delete(messageId);
+    stopSharedPendingMediaPollIfIdle();
+  };
+}
+
 export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
   const { locale } = useI18n();
   const projectedLocal = message.attachment?.localMedia;
+  const pendingMessageId =
+    projectedLocal?.state === "pending"
+      ? messageIdFromStatusUrl(projectedLocal.statusUrl)
+      : null;
   const [polledLocal, setPolledLocal] = useState<{
-    statusUrl: string;
+    messageId: string;
     projection: InboxLocalMediaProjection;
   } | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
 
+  useEffect(() => {
+    if (!pendingMessageId) return;
+    return subscribePendingMedia(pendingMessageId, (projection) => {
+      setPolledLocal({ messageId: pendingMessageId, projection });
+    });
+  }, [pendingMessageId]);
+
   const local =
     projectedLocal?.state === "pending" &&
-    typeof projectedLocal.statusUrl === "string" &&
-    polledLocal?.statusUrl === projectedLocal.statusUrl
+    pendingMessageId &&
+    polledLocal?.messageId === pendingMessageId
       ? polledLocal.projection
       : projectedLocal;
-  const pendingStatusUrl =
-    local?.state === "pending" ? local.statusUrl : undefined;
-
-  useEffect(() => {
-    if (!pendingStatusUrl) return;
-    let cancelled = false;
-    let inFlight = false;
-
-    const refresh = async () => {
-      if (
-        cancelled ||
-        inFlight ||
-        document.visibilityState !== "visible"
-      ) {
-        return;
-      }
-      inFlight = true;
-      try {
-        const response = await fetch(pendingStatusUrl, { cache: "no-store" });
-        if (cancelled) return;
-        if (response.status === 401 || response.status === 403 || response.status === 404) {
-          setPolledLocal({
-            statusUrl: pendingStatusUrl,
-            projection: { state: "failed", statusUrl: pendingStatusUrl },
-          });
-          return;
-        }
-        if (!response.ok) return;
-        const data = (await response.json()) as { localMedia?: unknown };
-        const next = validPolledProjection(data.localMedia);
-        if (!next || cancelled) return;
-        setPolledLocal({ statusUrl: pendingStatusUrl, projection: next });
-      } catch {
-        // The intent is durable. Keep the bounded poll while this visible row is pending.
-      } finally {
-        inFlight = false;
-      }
-    };
-
-    void refresh();
-    const intervalId = window.setInterval(() => {
-      void refresh();
-    }, PENDING_MEDIA_POLL_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [pendingStatusUrl]);
-
   const attachment = message.attachment;
   if (!attachment) return null;
 
