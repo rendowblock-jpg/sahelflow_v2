@@ -6,7 +6,10 @@ import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { openBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { SahelFlowError } from "@/types/errors";
-import { openQueuedWhatsAppImageReceipt } from "./durable-send";
+import {
+  openQueuedWhatsAppImageReceipt,
+  openQueuedWhatsAppVideoReceipt,
+} from "./durable-send";
 import {
   whatsAppMediaEraseEpoch,
   whatsAppMediaErasePending,
@@ -299,7 +302,7 @@ export async function prepareInboxWhatsAppMedia(
   }
 
   if (message.direction === "outbound") {
-    if (kind !== "image") throw unavailable();
+    if (kind !== "image" && kind !== "video") throw unavailable();
     const effect = await context.prisma.whatsAppOutboundEffect.findUnique({
       where: { messageId: message.id },
       select: { effectKey: true },
@@ -309,7 +312,9 @@ export async function prepareInboxWhatsAppMedia(
     let receipt: WhatsAppMediaObjectReceipt;
     try {
       receipt = mediaReceiptSchema.parse(
-        await openQueuedWhatsAppImageReceipt(context, effect.effectKey),
+        kind === "image"
+          ? await openQueuedWhatsAppImageReceipt(context, effect.effectKey)
+          : await openQueuedWhatsAppVideoReceipt(context, effect.effectKey),
       );
     } catch {
       throw integrityFailure();

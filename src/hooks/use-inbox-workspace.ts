@@ -38,6 +38,7 @@ const SAFE_OUTBOUND_IMAGE_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
+const MAX_OUTBOUND_VIDEO_BYTES = 64 * 1024 * 1024;
 
 interface CanonicalChatResponse {
   chats: Array<{
@@ -1552,6 +1553,185 @@ export function useInboxWorkspace() {
     ],
   );
 
+  const sendVideo = useCallback(
+    async (file: File) => {
+      const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
+      const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+      if (
+        !chat ||
+        chat.channel !== "whatsapp" ||
+        !chat.transportId ||
+        effectiveStatus !== "connected" ||
+        !canReply ||
+        sendingRef.current
+      ) {
+        return;
+      }
+      if (
+        file.size <= 0 ||
+        file.size > MAX_OUTBOUND_VIDEO_BYTES ||
+        mediaType !== "video/mp4"
+      ) {
+        setSendError(t("inbox.sendFailed"));
+        return;
+      }
+
+      const tempId = crypto.randomUUID();
+      const caption = replyText.trim();
+      let knownEffectKey: string | null = null;
+      const clearAcceptedDraft = () => {
+        if (activeChatRef.current?.conversationId === chat.conversationId) {
+          setReplyText("");
+        }
+        void persistDraft(chat.conversationId, "");
+      };
+      sendingRef.current = true;
+      setSending(true);
+      setSendError(null);
+      mutateMessages(chat.conversationId, (current) => [
+        ...current,
+        {
+          id: tempId,
+          body: caption,
+          direction: "outbound",
+          timestamp: Date.now(),
+          messageType: "video",
+          deliveryStatus: "sending",
+          attachment: {
+            formatVersion: 1,
+            kind: "video",
+            state: "ready",
+            mimeType: mediaType,
+            fileName: file.name || null,
+            sizeBytes: file.size,
+            durationSeconds: null,
+            width: null,
+            height: null,
+            voiceMessage: false,
+            location: null,
+            contact: null,
+            failureCode: null,
+          },
+        },
+      ]);
+
+      try {
+        const form = new FormData();
+        form.set("clientMessageId", tempId);
+        form.set("to", chat.transportId);
+        form.set("caption", caption);
+        form.set("video", file, file.name || "video.mp4");
+        const response = await fetch("/api/whatsapp/send-video", {
+          method: "POST",
+          body: form,
+        });
+        const data = (await response.json()) as {
+          ok: boolean;
+          accepted?: boolean;
+          id?: string | null;
+          effectKey?: string;
+          state?: InboxMessage["outboxState"];
+          requiresDuplicateConfirmation?: boolean;
+        };
+        knownEffectKey = data.effectKey ?? null;
+
+        if (response.status === 202 && data.accepted && data.effectKey) {
+          clearAcceptedDraft();
+          mutateMessages(chat.conversationId, (current) =>
+            current.map((message) =>
+              message.id === tempId
+                ? {
+                    ...message,
+                    outboxEffectKey: data.effectKey,
+                    outboxState: data.state,
+                  }
+                : message,
+            ),
+          );
+          await loadMessages(chat, { background: true });
+          void monitorWhatsAppEffect(
+            chat.conversationId,
+            data.effectKey,
+            tempId,
+          );
+          void loadChats();
+          return;
+        }
+
+        if (!response.ok || !data.ok) {
+          mutateMessages(chat.conversationId, (current) =>
+            current.map((message) =>
+              message.id === tempId
+                ? {
+                    ...message,
+                    deliveryStatus: "failed",
+                    outboxEffectKey: data.effectKey,
+                    outboxState: data.state,
+                  }
+                : message,
+            ),
+          );
+          if (data.effectKey) {
+            await loadMessages(chat, { background: true });
+          }
+          throw new Error(
+            data.requiresDuplicateConfirmation
+              ? t("inbox.whatsappAmbiguous")
+              : t("inbox.sendFailed"),
+          );
+        }
+
+        mutateMessages(chat.conversationId, (current) =>
+          reconcileInboxProviderMessage(current, tempId, data.id, {
+            deliveryStatus: "sent",
+            outboxEffectKey: data.effectKey,
+            outboxState: "succeeded",
+          }),
+        );
+        clearAcceptedDraft();
+        await loadMessages(chat, { background: true });
+        void loadChats();
+      } catch (error) {
+        if (knownEffectKey) {
+          mutateMessages(chat.conversationId, (current) =>
+            current.map((message) =>
+              message.id === tempId
+                ? { ...message, deliveryStatus: "failed" }
+                : message,
+            ),
+          );
+        } else {
+          mutateMessages(chat.conversationId, (current) =>
+            current.filter((message) => message.id !== tempId),
+          );
+          await loadMessages(chat, { background: true });
+        }
+        if (activeChatRef.current?.conversationId === chat.conversationId) {
+          setSendError(
+            error instanceof Error ? error.message : t("inbox.sendFailed"),
+          );
+        }
+      } finally {
+        sendingRef.current = false;
+        setSending(false);
+      }
+    },
+    [
+      activeChatId,
+      canReply,
+      chats,
+      effectiveStatus,
+      loadChats,
+      loadMessages,
+      monitorWhatsAppEffect,
+      mutateMessages,
+      persistDraft,
+      replyText,
+      setReplyText,
+      t,
+    ],
+  );
+
   const connectWhatsApp = useCallback(async () => {
     try {
       const response = await fetch("/api/whatsapp/connect", { method: "POST" });
@@ -1630,6 +1810,7 @@ export function useInboxWorkspace() {
     sendError,
     sendReply,
     sendImage,
+    sendVideo,
     retryFailedMessage,
     markUnread,
     canUpdateConversation,

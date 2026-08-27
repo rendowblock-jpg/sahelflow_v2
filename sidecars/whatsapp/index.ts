@@ -38,6 +38,8 @@ const SAFE_OUTBOUND_IMAGE_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
+const MAX_OUTBOUND_VIDEO_BYTES = 64 * 1024 * 1024;
+const MAX_OUTBOUND_VIDEO_FORM_BYTES = MAX_OUTBOUND_VIDEO_BYTES + 256 * 1024;
 
 function resolveSidecarToken(): string {
   const fromEnv = process.env.SIDECAR_TOKEN;
@@ -98,6 +100,10 @@ function imageEffectKey(value: string): boolean {
   return /:image:[A-Za-z0-9_-]{1,80}$/.test(value) && Boolean(getWhatsAppEffectAccountHash(value));
 }
 
+function videoEffectKey(value: string): boolean {
+  return /:video:[A-Za-z0-9_-]{1,80}$/.test(value) && Boolean(getWhatsAppEffectAccountHash(value));
+}
+
 async function readBoundedImageForm(
   request: Request,
 ): Promise<FormData | "too_large" | null> {
@@ -116,6 +122,47 @@ async function readBoundedImageForm(
       if (
         offset + next.value.byteLength >
         MAX_OUTBOUND_IMAGE_FORM_BYTES
+      ) {
+        await reader.cancel().catch(() => undefined);
+        return "too_large";
+      }
+      bounded.set(next.value, offset);
+      offset += next.value.byteLength;
+    }
+  } catch {
+    await reader.cancel().catch(() => undefined);
+    return null;
+  } finally {
+    reader.releaseLock();
+  }
+
+  try {
+    return await new Response(bounded.subarray(0, offset), {
+      headers: { "Content-Type": contentType },
+    }).formData();
+  } catch {
+    return null;
+  }
+}
+
+async function readBoundedVideoForm(
+  request: Request,
+): Promise<FormData | "too_large" | null> {
+  const contentType = request.headers.get("content-type")?.trim() ?? "";
+  if (!/^multipart\/form-data(?:;|$)/i.test(contentType) || !request.body) {
+    return null;
+  }
+
+  const reader = request.body.getReader();
+  const bounded = new Uint8Array(MAX_OUTBOUND_VIDEO_FORM_BYTES);
+  let offset = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      if (
+        offset + next.value.byteLength >
+        MAX_OUTBOUND_VIDEO_FORM_BYTES
       ) {
         await reader.cancel().catch(() => undefined);
         return "too_large";
@@ -620,6 +667,141 @@ app.post("/send-image", async (context) => {
         error: conflict
           ? message
           : "WhatsApp image send outcome requires reconciliation",
+        code: conflict ? "EFFECT_KEY_CONFLICT" : "WHATSAPP_SEND_AMBIGUOUS",
+        retryable: false,
+        ambiguous: !conflict,
+      },
+      conflict ? 409 : 502,
+    );
+  } finally {
+    bytes.fill(0);
+  }
+});
+
+app.post("/send-video", async (context) => {
+  const declaredLength = Number.parseInt(
+    context.req.header("content-length") ?? "0",
+    10,
+  );
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > MAX_OUTBOUND_VIDEO_FORM_BYTES
+  ) {
+    return context.json(
+      {
+        error: "Video send request is too large",
+        code: "INVALID_VIDEO_SEND_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      413,
+    );
+  }
+
+  const form = await readBoundedVideoForm(context.req.raw);
+  if (form === "too_large") {
+    return context.json(
+      {
+        error: "Video send request is too large",
+        code: "INVALID_VIDEO_SEND_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      413,
+    );
+  }
+  const to = form?.get("to");
+  const caption = form?.get("caption");
+  const effectKey = form?.get("effectKey");
+  const requestBinding = form?.get("requestBinding");
+  const video = form?.get("video");
+  if (
+    typeof to !== "string" ||
+    !to ||
+    to.length > 256 ||
+    typeof caption !== "string" ||
+    caption.length > 4000 ||
+    typeof effectKey !== "string" ||
+    !videoEffectKey(effectKey) ||
+    typeof requestBinding !== "string" ||
+    !/^[0-9a-f]{64}$/.test(requestBinding) ||
+    !(video instanceof File) ||
+    video.size <= 0 ||
+    video.size > MAX_OUTBOUND_VIDEO_BYTES ||
+    video.type.toLowerCase() !== "video/mp4"
+  ) {
+    return context.json(
+      {
+        error: "Invalid durable video send request",
+        code: "INVALID_VIDEO_SEND_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
+  }
+
+  const status = wa.getStatus();
+  if (status.status !== "connected") {
+    return context.json(
+      {
+        ok: false,
+        error: "WhatsApp is not connected",
+        code: "WHATSAPP_NOT_CONNECTED",
+        retryable: true,
+        ambiguous: false,
+      },
+      503,
+    );
+  }
+  if (!status.user?.id) {
+    return context.json(
+      {
+        ok: false,
+        error: "WhatsApp account identity is unavailable",
+        code: "WHATSAPP_ACCOUNT_UNAVAILABLE",
+        retryable: true,
+        ambiguous: false,
+      },
+      503,
+    );
+  }
+  if (!effectKeyMatchesWhatsAppAccount(effectKey, status.user.id)) {
+    return context.json(
+      {
+        ok: false,
+        error: "The paired WhatsApp account changed after this send was queued",
+        code: "WHATSAPP_ACCOUNT_CHANGED",
+        retryable: false,
+        ambiguous: false,
+      },
+      409,
+    );
+  }
+
+  const bytes = Buffer.from(await video.arrayBuffer());
+  try {
+    return context.json({
+      ok: true,
+      ...(await executeDurableSend(effectKey, requestBinding, () =>
+        wa.sendVideo(
+          to,
+          bytes,
+          video.type,
+          caption,
+          deterministicWhatsAppMessageId(effectKey),
+        ),
+      )),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Video send failed";
+    const conflict = /already bound to different content/i.test(message);
+    return context.json(
+      {
+        ok: false,
+        error: conflict
+          ? message
+          : "WhatsApp video send outcome requires reconciliation",
         code: conflict ? "EFFECT_KEY_CONFLICT" : "WHATSAPP_SEND_AMBIGUOUS",
         retryable: false,
         ambiguous: !conflict,
