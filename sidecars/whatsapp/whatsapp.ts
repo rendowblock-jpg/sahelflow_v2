@@ -400,6 +400,35 @@ export class WhatsAppManager {
     };
   }
 
+  async sendImage(
+    to: string,
+    image: Uint8Array,
+    mimetype: string,
+    caption: string,
+    messageId?: string,
+  ): Promise<{ id: string; status: string }> {
+    if (!this.sock || this.status !== "connected") {
+      throw new Error(`Not connected (status=${this.status})`);
+    }
+    if (!/^(image\/(?:jpeg|png|webp))$/i.test(mimetype) || image.byteLength <= 0) {
+      throw new Error("Image send requires bounded JPEG, PNG or WebP bytes");
+    }
+    const jid = this.toJid(to);
+    const sent = await this.sock.sendMessage(
+      jid,
+      {
+        image: Buffer.from(image.buffer, image.byteOffset, image.byteLength),
+        mimetype: mimetype.toLowerCase(),
+        ...(caption ? { caption } : {}),
+      },
+      messageId ? { messageId } : undefined,
+    );
+    return {
+      id: sent?.key?.id ?? "",
+      status: String(sent?.status ?? "sent"),
+    };
+  }
+
   async downloadMedia(message: IncomingMessage): Promise<AsyncIterable<Uint8Array>> {
     if (!this.sock || this.status !== "connected") {
       throw new Error(`Not connected (status=${this.status})`);

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useRef } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -314,6 +314,7 @@ export function InboxV3Thread({
   onSelectCandidate: (messageId: string) => void;
 }) {
   const isMobile = useMobile();
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const {
     activeChat,
     messages,
@@ -328,6 +329,7 @@ export function InboxV3Thread({
     sending,
     sendError,
     sendReply,
+    sendImage,
     retryFailedMessage,
     canReply,
     canUpdateConversation,
@@ -620,6 +622,91 @@ export function InboxV3Thread({
             ) : null}
 
             <div className="flex items-end gap-2 rounded-2xl border border-border/75 bg-muted/15 p-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/15">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                aria-label={copy("mediaImage")}
+                className="sr-only"
+                tabIndex={-1}
+                data-inbox-image-input="true"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0] ?? null;
+                  event.currentTarget.value = "";
+                  if (!file) return;
+                  const declaredType =
+                    file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+                  if (
+                    declaredType &&
+                    declaredType !== "application/octet-stream"
+                  ) {
+                    void sendImage(file);
+                    return;
+                  }
+                  void file
+                    .slice(0, 12)
+                    .arrayBuffer()
+                    .then((buffer) => {
+                      const bytes = new Uint8Array(buffer);
+                      const ascii = (start: number, end: number) =>
+                        String.fromCharCode(...bytes.slice(start, end));
+                      let sniffedType = "";
+                      if (
+                        bytes.length >= 3 &&
+                        bytes[0] === 0xff &&
+                        bytes[1] === 0xd8 &&
+                        bytes[2] === 0xff
+                      ) {
+                        sniffedType = "image/jpeg";
+                      } else if (
+                        bytes.length >= 8 &&
+                        bytes[0] === 0x89 &&
+                        ascii(1, 4) === "PNG" &&
+                        bytes[4] === 0x0d &&
+                        bytes[5] === 0x0a &&
+                        bytes[6] === 0x1a &&
+                        bytes[7] === 0x0a
+                      ) {
+                        sniffedType = "image/png";
+                      } else if (
+                        bytes.length >= 12 &&
+                        ascii(0, 4) === "RIFF" &&
+                        ascii(8, 12) === "WEBP"
+                      ) {
+                        sniffedType = "image/webp";
+                      }
+                      if (!sniffedType) {
+                        void sendImage(file);
+                        return;
+                      }
+                      void sendImage(
+                        new File([file], file.name, {
+                          type: sniffedType,
+                          lastModified: file.lastModified,
+                        }),
+                      );
+                    })
+                    .catch(() => void sendImage(file));
+                }}
+              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={sending || !canSend}
+                    aria-label={copy("mediaImage")}
+                    data-inbox-image-picker="true"
+                    onClick={() => imageInputRef.current?.click()}
+                  >
+                    <ImageIcon className="size-4" aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={6}>
+                  {copy("mediaImage")}
+                </TooltipContent>
+              </Tooltip>
               <CannedResponsePicker
                 disabled={sending}
                 onSelect={(text) =>

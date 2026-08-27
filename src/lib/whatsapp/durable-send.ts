@@ -18,20 +18,53 @@ import {
   SidecarUnavailableError,
 } from "./sidecar-client";
 import { createWhatsAppEffectAuthority } from "./effect-authority";
+import { sealWhatsAppMessageAttachmentWithKey } from "./message-attachments";
+import { readWhatsAppMediaObject } from "./media-object-provenance";
+import {
+  WhatsAppMediaObjectError,
+  type WhatsAppMediaObjectReceipt,
+  writeWhatsAppMediaObject,
+} from "./media-object-store";
 import { normalizeWhatsAppJid } from "./types";
 
 export const WHATSAPP_TEXT_EFFECT_TYPE = "whatsapp.text.send.v1";
+export const WHATSAPP_IMAGE_EFFECT_TYPE = "whatsapp.image.send.v1";
 const MAX_ATTEMPTS = 6;
-const LEASE_MS = 90_000;
+const TEXT_LEASE_MS = 90_000;
+// Image dispatch has a 120-second sidecar timeout. Keep recovery outside that
+// active provider window so a second worker cannot reclaim an in-flight send.
+const IMAGE_LEASE_MS = 150_000;
 const RETRY_DELAYS_MS = [5_000, 30_000, 120_000, 600_000, 1_800_000] as const;
 const RECONCILIATION_DEFERRED = "RECEIPT_RECONCILIATION_DEFERRED";
 
-const queuedPayloadSchema = z.object({
+const mediaReceiptSchema = z.object({
+  formatVersion: z.literal(1),
+  objectId: z.string().regex(/^[0-9a-f]{64}$/),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  sizeBytes: z.number().int().positive().safe(),
+  chunkCount: z.number().int().positive().safe(),
+  mediaType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+});
+
+const queuedTextPayloadSchema = z.object({
   messageId: z.string().uuid(),
   to: z.string().min(1).max(256),
   text: z.string().min(1).max(4000),
   requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
 });
+
+const queuedImagePayloadSchema = z.object({
+  messageId: z.string().uuid(),
+  to: z.string().min(1).max(256),
+  caption: z.string().max(4000),
+  fileName: z.string().max(180).nullable(),
+  media: mediaReceiptSchema,
+  requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
+});
+
+type QueuedTextPayload = z.infer<typeof queuedTextPayloadSchema>;
+type QueuedImagePayload = z.infer<typeof queuedImagePayloadSchema>;
+type QueuedPayload = QueuedTextPayload | QueuedImagePayload;
 
 type TrustedWhatsAppCommandContext = BusinessPrincipalContext & {
   readonly businessPrincipal: TrustedBusinessPrincipal;
@@ -41,6 +74,16 @@ export interface QueueWhatsAppTextInput {
   clientMessageId: string;
   to: string;
   text: string;
+}
+
+export interface QueueWhatsAppImageInput {
+  clientMessageId: string;
+  to: string;
+  caption?: string;
+  fileName?: string | null;
+  declaredMime: string | null;
+  declaredSize: number;
+  source: ReadableStream<Uint8Array>;
 }
 
 interface OutboxRow {
@@ -94,10 +137,23 @@ export type WhatsAppEffectSender = (
   requestBinding: string,
 ) => Promise<SendReceipt>;
 
+export type WhatsAppImageEffectSender = (
+  to: string,
+  image: Buffer,
+  mediaType: string,
+  caption: string,
+  effectKey: string,
+  requestBinding: string,
+) => Promise<SendReceipt>;
+
 export type WhatsAppEffectReceiptLookup = (
   effectKey: string,
   requestBinding: string,
 ) => Promise<SendReceipt | null>;
+
+function supportedEffectType(value: string): boolean {
+  return value === WHATSAPP_TEXT_EFFECT_TYPE || value === WHATSAPP_IMAGE_EFFECT_TYPE;
+}
 
 function safeReceipt(receiptJson: string | null): { id?: string } {
   if (!receiptJson) return {};
@@ -137,7 +193,7 @@ function publicState(row: OutboxRow, messageId: string | null): WhatsAppEffectSt
 
 async function readRow(context: ServiceContext, effectKey: string): Promise<OutboxRow> {
   const row = await context.prisma.outboxIntent.findUnique({ where: { effectKey } });
-  if (!row || row.effectType !== WHATSAPP_TEXT_EFFECT_TYPE) {
+  if (!row || !supportedEffectType(row.effectType)) {
     throw new SahelFlowError("WhatsApp send intent not found", "NOT_FOUND", 404);
   }
   return row as OutboxRow;
@@ -208,10 +264,10 @@ async function setMessageDeliveryWithoutDowngrade(
 async function openClaimedPayload(
   context: ServiceContext,
   claimed: OutboxRow,
-): Promise<z.infer<typeof queuedPayloadSchema>> {
+): Promise<QueuedPayload> {
   const envelopeKey = await getBusinessEnvelopeKey(context);
-  return queuedPayloadSchema.parse(
-    openBusinessPayloadWithKey(
+  try {
+    const opened = openBusinessPayloadWithKey(
       claimed.payloadJson,
       {
         kind: "outbox-intent",
@@ -220,8 +276,35 @@ async function openClaimedPayload(
         commandId: claimed.commandId,
       },
       envelopeKey,
-    ),
-  );
+    );
+    return claimed.effectType === WHATSAPP_IMAGE_EFFECT_TYPE
+      ? queuedImagePayloadSchema.parse(opened)
+      : queuedTextPayloadSchema.parse(opened);
+  } finally {
+    envelopeKey.fill(0);
+  }
+}
+
+function normalizeRecipient(input: string): string {
+  try {
+    return normalizeWhatsAppJid(input);
+  } catch {
+    throw new SahelFlowError(
+      "WhatsApp recipient must be a valid Algerian mobile number or known individual chat",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+}
+
+function safeOutboundFileName(value: string | null | undefined): string | null {
+  const candidate = value
+    ?.replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replaceAll("\\", "/")
+    .split("/")
+    .at(-1)
+    ?.trim();
+  return candidate ? candidate.slice(0, 180) : null;
 }
 
 export async function queueWhatsAppText(
@@ -230,16 +313,7 @@ export async function queueWhatsAppText(
 ): Promise<{ effectKey: string; messageId: string; replayed: boolean }> {
   const clientMessageId = z.string().uuid().parse(input.clientMessageId);
   const text = z.string().trim().min(1).max(4000).parse(input.text);
-  let jid: string;
-  try {
-    jid = normalizeWhatsAppJid(input.to);
-  } catch {
-    throw new SahelFlowError(
-      "WhatsApp recipient must be a valid Algerian mobile number or known individual chat",
-      "VALIDATION_ERROR",
-      400,
-    );
-  }
+  const jid = normalizeRecipient(input.to);
 
   const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
     context,
@@ -339,6 +413,199 @@ export async function queueWhatsAppText(
             effectKey,
             effectType: WHATSAPP_TEXT_EFFECT_TYPE,
             payload: { messageId: clientMessageId, to: jid, text, requestBinding },
+          },
+        ],
+        projectionInvalidations: [`conversation:${conversation.id}`, "inbox"],
+      };
+    },
+  );
+
+  return { ...execution.result, replayed: execution.replayed };
+}
+
+export async function queueWhatsAppImage(
+  context: TrustedWhatsAppCommandContext,
+  input: QueueWhatsAppImageInput,
+): Promise<{ effectKey: string; messageId: string; replayed: boolean }> {
+  const clientMessageId = z.string().uuid().parse(input.clientMessageId);
+  const caption = z.string().max(4000).parse(input.caption?.trim() ?? "");
+  const declaredSize = z.number().int().positive().max(20 * 1024 * 1024).parse(input.declaredSize);
+  const declaredMime = z
+    .enum(["image/jpeg", "image/png", "image/webp"])
+    .parse(input.declaredMime?.split(";", 1)[0]?.trim().toLowerCase());
+  const fileName = safeOutboundFileName(input.fileName);
+  const jid = normalizeRecipient(input.to);
+
+  let media: z.infer<typeof mediaReceiptSchema>;
+  try {
+    media = mediaReceiptSchema.parse(
+      await writeWhatsAppMediaObject(context, {
+        messageId: clientMessageId,
+        kind: "image",
+        declaredSize,
+        declaredMime,
+        source: input.source,
+        strictSourceIdentity: true,
+      }),
+    );
+  } catch (error) {
+    if (
+      error instanceof WhatsAppMediaObjectError &&
+      error.code === "MEDIA_OBJECT_CONFLICT"
+    ) {
+      throw new ConflictError(
+        "This WhatsApp client message ID is already bound to different image content",
+      );
+    }
+    throw error;
+  }
+  const contentBinding = JSON.stringify({
+    caption,
+    fileName,
+    sha256: media.sha256,
+    sizeBytes: media.sizeBytes,
+    mediaType: media.mediaType,
+  });
+  const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
+    context,
+    "image",
+    clientMessageId,
+    jid,
+    contentBinding,
+  );
+  const attachmentKey = await getBusinessEnvelopeKey(context);
+  let protectedAttachment: string;
+  try {
+    protectedAttachment = sealWhatsAppMessageAttachmentWithKey(
+      clientMessageId,
+      {
+        formatVersion: 1,
+        kind: "image",
+        state: "ready",
+        mimeType: media.mediaType,
+        fileName,
+        sizeBytes: media.sizeBytes,
+        durationSeconds: null,
+        width: null,
+        height: null,
+        voiceMessage: false,
+        location: null,
+        contact: null,
+        failureCode: null,
+      },
+      attachmentKey,
+    );
+  } finally {
+    attachmentKey.fill(0);
+  }
+
+  const phone = jid.slice(0, jid.indexOf("@"));
+  const now = new Date();
+  const payload = {
+    messageId: clientMessageId,
+    to: jid,
+    caption,
+    fileName,
+    media,
+    requestBinding,
+  } satisfies QueuedImagePayload;
+
+  const execution = await executeBusinessCommand(
+    context,
+    {
+      idempotencyKey: effectKey,
+      commandType: "whatsapp_image.queue.v1",
+      aggregate: {
+        type: "whatsapp-message",
+        id: clientMessageId,
+        expectedVersion: 0,
+      },
+      actor: context.businessPrincipal.auditActor,
+      correlationId: clientMessageId,
+      payload,
+    },
+    async ({ tx }) => {
+      const conversationKey = {
+        channel_sourceId: { channel: "whatsapp", sourceId: jid },
+      } as const;
+      const existingConversation = await tx.conversation.findUnique({
+        where: conversationKey,
+        select: {
+          id: true,
+          messages: {
+            where: { direction: "inbound" },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      });
+      if (
+        jid.endsWith("@lid") &&
+        (!existingConversation || existingConversation.messages.length === 0)
+      ) {
+        throw new SahelFlowError(
+          "WhatsApp LID replies require persisted inbound message provenance",
+          "VALIDATION_ERROR",
+          400,
+        );
+      }
+      const conversation = existingConversation
+        ? await tx.conversation.update({
+            where: conversationKey,
+            data: { lastMessageAt: now },
+            select: { id: true },
+          })
+        : await tx.conversation.create({
+            data: {
+              channel: "whatsapp",
+              contactName: phone,
+              contactPhone: phone,
+              sourceId: jid,
+              lastMessageAt: now,
+            },
+            select: { id: true },
+          });
+      await tx.message.create({
+        data: {
+          id: clientMessageId,
+          conversationId: conversation.id,
+          body: caption,
+          direction: "outbound",
+          timestamp: now,
+          deliveryStatus: "sending",
+          messageType: "image",
+          attachments: protectedAttachment,
+        },
+      });
+      await tx.whatsAppOutboundEffect.create({
+        data: { effectKey, messageId: clientMessageId },
+      });
+      return {
+        result: { effectKey, messageId: clientMessageId },
+        audit: {
+          action: "whatsapp.image.queued",
+          entity: "message",
+          entityId: clientMessageId,
+          metadata: {
+            effectKey,
+            conversationId: conversation.id,
+            mediaType: media.mediaType,
+            sizeBytes: media.sizeBytes,
+            sha256: media.sha256,
+          },
+        },
+        events: [
+          {
+            key: `${effectKey}:queued`,
+            type: "whatsapp.image.queued.v1",
+            payload: { messageId: clientMessageId, conversationId: conversation.id },
+          },
+        ],
+        outbox: [
+          {
+            effectKey,
+            effectType: WHATSAPP_IMAGE_EFFECT_TYPE,
+            payload,
           },
         ],
         projectionInvalidations: [`conversation:${conversation.id}`, "inbox"],
@@ -461,9 +728,17 @@ async function recoverExpiredLeases(
 ): Promise<void> {
   const expired = (await context.prisma.outboxIntent.findMany({
     where: {
-      effectType: WHATSAPP_TEXT_EFFECT_TYPE,
       status: "processing",
-      lockedAt: { lt: new Date(now.getTime() - LEASE_MS) },
+      OR: [
+        {
+          effectType: WHATSAPP_TEXT_EFFECT_TYPE,
+          lockedAt: { lt: new Date(now.getTime() - TEXT_LEASE_MS) },
+        },
+        {
+          effectType: WHATSAPP_IMAGE_EFFECT_TYPE,
+          lockedAt: { lt: new Date(now.getTime() - IMAGE_LEASE_MS) },
+        },
+      ],
     },
   })) as OutboxRow[];
 
@@ -473,7 +748,7 @@ async function recoverExpiredLeases(
       continue;
     }
 
-    let payload: z.infer<typeof queuedPayloadSchema>;
+    let payload: QueuedPayload;
     try {
       payload = await openClaimedPayload(context, row);
     } catch {
@@ -522,7 +797,7 @@ async function claimIntent(
   await recoverExpiredLeases(context, now, receiptLookup);
   const candidate = await context.prisma.outboxIntent.findFirst({
     where: {
-      effectType: WHATSAPP_TEXT_EFFECT_TYPE,
+      effectType: { in: [WHATSAPP_TEXT_EFFECT_TYPE, WHATSAPP_IMAGE_EFFECT_TYPE] },
       ...(effectKey ? { effectKey } : {}),
       OR: [
         { status: "queued" },
@@ -644,7 +919,10 @@ async function markFailure(
 async function markPreEffectFailure(
   context: ServiceContext,
   row: OutboxRow,
-  errorCode: "OUTBOX_PAYLOAD_INVALID" | "OUTBOX_EFFECT_START_FAILED",
+  errorCode:
+    | "OUTBOX_PAYLOAD_INVALID"
+    | "OUTBOX_EFFECT_START_FAILED"
+    | "OUTBOX_MEDIA_INVALID",
 ): Promise<WhatsAppEffectStatus> {
   await context.prisma.$transaction(async (tx) => {
     const marked = await tx.outboxIntent.updateMany({
@@ -689,18 +967,18 @@ async function markEffectStarted(
   const effectStartedAt = new Date();
   const marked = await context.prisma.outboxIntent.updateMany({
     where: { id: row.id, status: "processing", leaseToken: row.leaseToken },
-    data: { effectStartedAt },
+    data: { effectStartedAt, lockedAt: effectStartedAt },
   });
   if (marked.count !== 1) {
     throw new ConflictError("WhatsApp send intent lease changed before dispatch");
   }
-  return { ...row, effectStartedAt };
+  return { ...row, effectStartedAt, lockedAt: effectStartedAt };
 }
 
 async function markSucceeded(
   context: ServiceContext,
   row: OutboxRow,
-  payload: z.infer<typeof queuedPayloadSchema>,
+  payload: QueuedPayload,
   receipt: SendReceipt,
 ): Promise<WhatsAppEffectStatus> {
   const providerMessageId = receipt.id.trim();
@@ -766,6 +1044,7 @@ async function markSucceeded(
             effectKey: row.effectKey,
             providerMessageId,
             attemptCount: row.attemptCount,
+            effectType: row.effectType,
           }),
         },
       });
@@ -790,28 +1069,62 @@ async function executeClaimed(
   context: ServiceContext,
   claimed: OutboxRow,
   sender: WhatsAppEffectSender,
+  imageSender: WhatsAppImageEffectSender,
 ): Promise<WhatsAppEffectStatus> {
-  let payload: z.infer<typeof queuedPayloadSchema>;
+  let payload: QueuedPayload;
   try {
     payload = await openClaimedPayload(context, claimed);
   } catch {
     return markPreEffectFailure(context, claimed, "OUTBOX_PAYLOAD_INVALID");
   }
+
+  let imageBytes: Buffer | null = null;
+  if (claimed.effectType === WHATSAPP_IMAGE_EFFECT_TYPE) {
+    try {
+      const imagePayload = queuedImagePayloadSchema.parse(payload);
+      imageBytes = (
+        await readWhatsAppMediaObject(
+          context,
+          imagePayload.messageId,
+          "image",
+          imagePayload.media as WhatsAppMediaObjectReceipt,
+        )
+      ).bytes;
+    } catch {
+      return markPreEffectFailure(context, claimed, "OUTBOX_MEDIA_INVALID");
+    }
+  }
+
   let started: OutboxRow;
   try {
     started = await markEffectStarted(context, claimed);
   } catch {
+    imageBytes?.fill(0);
     return markPreEffectFailure(context, claimed, "OUTBOX_EFFECT_START_FAILED");
   }
+
   try {
-    return markSucceeded(
-      context,
-      started,
-      payload,
-      await sender(payload.to, payload.text, started.effectKey, payload.requestBinding),
-    );
+    const receipt =
+      started.effectType === WHATSAPP_IMAGE_EFFECT_TYPE
+        ? await imageSender(
+            (payload as QueuedImagePayload).to,
+            imageBytes!,
+            (payload as QueuedImagePayload).media.mediaType,
+            (payload as QueuedImagePayload).caption,
+            started.effectKey,
+            (payload as QueuedImagePayload).requestBinding,
+          )
+        : await sender(
+            (payload as QueuedTextPayload).to,
+            (payload as QueuedTextPayload).text,
+            started.effectKey,
+            (payload as QueuedTextPayload).requestBinding,
+          );
+    return markSucceeded(context, started, payload, receipt);
   } catch (error) {
     return markFailure(context, started, error);
+  } finally {
+    imageBytes?.fill(0);
   }
 }
 
@@ -820,10 +1133,11 @@ export async function processWhatsAppEffect(
   effectKey: string,
   sender: WhatsAppEffectSender = sidecar.send,
   receiptLookup: WhatsAppEffectReceiptLookup = sidecar.receipt,
+  imageSender: WhatsAppImageEffectSender = sidecar.sendImage,
 ): Promise<WhatsAppEffectStatus> {
   const claimed = await claimIntent(context, effectKey, receiptLookup);
   if (!claimed) return getWhatsAppEffectStatus(context, effectKey);
-  return executeClaimed(context, claimed, sender);
+  return executeClaimed(context, claimed, sender, imageSender);
 }
 
 export async function drainDueWhatsAppEffects(
@@ -831,13 +1145,14 @@ export async function drainDueWhatsAppEffects(
   limit = 10,
   sender: WhatsAppEffectSender = sidecar.send,
   receiptLookup: WhatsAppEffectReceiptLookup = sidecar.receipt,
+  imageSender: WhatsAppImageEffectSender = sidecar.sendImage,
 ): Promise<WhatsAppEffectStatus[]> {
   const bounded = Math.max(1, Math.min(limit, 25));
   const results: WhatsAppEffectStatus[] = [];
   for (let index = 0; index < bounded; index += 1) {
     const claimed = await claimIntent(context, undefined, receiptLookup);
     if (!claimed) break;
-    results.push(await executeClaimed(context, claimed, sender));
+    results.push(await executeClaimed(context, claimed, sender, imageSender));
   }
   return results;
 }
@@ -866,12 +1181,25 @@ export async function findWhatsAppEffectByMessageId(
   return getWhatsAppEffectStatus(context, effect.effectKey);
 }
 
+export async function openQueuedWhatsAppImageReceipt(
+  context: ServiceContext,
+  effectKey: string,
+): Promise<WhatsAppMediaObjectReceipt> {
+  const row = await readRow(context, effectKey);
+  if (row.effectType !== WHATSAPP_IMAGE_EFFECT_TYPE) {
+    throw new SahelFlowError("WhatsApp image send intent not found", "NOT_FOUND", 404);
+  }
+  const payload = queuedImagePayloadSchema.parse(await openClaimedPayload(context, row));
+  return payload.media as WhatsAppMediaObjectReceipt;
+}
+
 export async function retryWhatsAppEffect(
   context: TrustedWhatsAppCommandContext,
   effectKey: string,
   confirmMayDuplicate: boolean,
   sender: WhatsAppEffectSender = sidecar.send,
   receiptLookup: WhatsAppEffectReceiptLookup = sidecar.receipt,
+  imageSender: WhatsAppImageEffectSender = sidecar.sendImage,
 ): Promise<WhatsAppEffectStatus> {
   const row = await readRow(context, effectKey);
   const ambiguous = row.status === "failed" && row.outcomeState === "ambiguous";
@@ -920,9 +1248,16 @@ export async function retryWhatsAppEffect(
           effectKey,
           previousOutcome: ambiguous ? "ambiguous" : "dead_letter",
           duplicateRiskConfirmed: ambiguous,
+          effectType: row.effectType,
         }),
       },
     });
   });
-  return processWhatsAppEffect(context, effectKey, sender, receiptLookup);
+  return processWhatsAppEffect(
+    context,
+    effectKey,
+    sender,
+    receiptLookup,
+    imageSender,
+  );
 }

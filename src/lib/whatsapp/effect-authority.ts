@@ -12,7 +12,7 @@ import { sidecar } from "./sidecar-client";
 const EFFECT_SCOPE_PURPOSE = "sahelflow/whatsapp/effect-scope/v1";
 const REQUEST_BINDING_PURPOSE = "sahelflow/whatsapp/request-binding/v1";
 
-export type WhatsAppEffectKind = "text" | "daily-report";
+export type WhatsAppEffectKind = "text" | "image" | "daily-report";
 
 export interface WhatsAppEffectAuthority {
   effectKey: string;
@@ -72,7 +72,7 @@ async function resolveProviderAccountId(
  * The stable shop-local envelope key scopes the effect to the exact workspace,
  * installation, shop and shop incarnation. A SHA-256 provider-account hash is
  * also embedded, so logout/re-pair cannot replay or dispatch the effect under a
- * different WhatsApp account. Recipient, message and account plaintext never
+ * different WhatsApp account. Recipient, content and account plaintext never
  * enter the key or receipt journal.
  */
 export function deriveWhatsAppEffectAuthority(
@@ -82,7 +82,7 @@ export function deriveWhatsAppEffectAuthority(
   kind: WhatsAppEffectKind,
   localEffectId: string,
   to: string,
-  text: string,
+  contentBinding: string,
 ): WhatsAppEffectAuthority {
   const scope = canonicalScope(shop);
   const scopeId = createHmac("sha256", envelopeKey)
@@ -102,7 +102,7 @@ export function deriveWhatsAppEffectAuthority(
     .update("\0")
     .update(to)
     .update("\0")
-    .update(text)
+    .update(contentBinding)
     .digest("hex");
   return { effectKey, requestBinding };
 }
@@ -112,7 +112,7 @@ export async function createWhatsAppEffectAuthority(
   kind: WhatsAppEffectKind,
   localEffectId: string,
   to: string,
-  text: string,
+  contentBinding: string,
 ): Promise<WhatsAppEffectAuthority> {
   if (!context.shop) {
     throw new SahelFlowError(
@@ -128,6 +128,6 @@ export async function createWhatsAppEffectAuthority(
     kind,
     localEffectId,
     to,
-    text,
+    contentBinding,
   );
 }

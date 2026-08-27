@@ -32,6 +32,12 @@ const DRAFT_LOAD_ATTEMPTS = 3;
 const DRAFT_LOAD_RETRY_MS = 500;
 const DRAFT_WRITE_ATTEMPTS = 3;
 const MAX_DEEP_LINK_ID_LENGTH = 160;
+const MAX_OUTBOUND_IMAGE_BYTES = 20 * 1024 * 1024;
+const SAFE_OUTBOUND_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 interface CanonicalChatResponse {
   chats: Array<{
@@ -363,8 +369,6 @@ export function useInboxWorkspace() {
         return;
       }
 
-      // A field-restricted actor can still read the permission-filtered generic
-      // conversation projection. Do not mislabel that durable data as demo data.
       if (response.status === 401 || response.status === 403) {
         if (!isLatestChatLoad()) return;
         setSidecarReachable(null);
@@ -422,7 +426,6 @@ export function useInboxWorkspace() {
             ),
           );
         } catch {
-          // Read state is explicit but never blocks thread access.
         }
       });
       readStateWriteQueueRef.current.set(conversationId, write);
@@ -440,9 +443,6 @@ export function useInboxWorkspace() {
   const markUnread = useCallback(async (chat: InboxChat) => {
     if (!canUpdateConversation) return false;
     const conversationId = chat.conversationId;
-    // Stop a selected-thread load from scheduling a later /read mutation, then
-    // wait for any read request already in flight. The explicit unread intent
-    // remains held until the seller deliberately opens this thread again.
     explicitUnreadHoldRef.current.add(conversationId);
     messageLoadGenerationRef.current += 1;
     chatLoadGenerationRef.current += 1;
@@ -458,8 +458,6 @@ export function useInboxWorkspace() {
         explicitUnreadHoldRef.current.delete(conversationId);
         return false;
       }
-      // Also invalidate a chat refresh that may have started while the unread
-      // mutation waited behind an in-flight read request.
       chatLoadGenerationRef.current += 1;
       setChats((current) =>
         current.map((entry) =>
@@ -649,9 +647,6 @@ export function useInboxWorkspace() {
         generation === draftLoadGenerationRef.current &&
         activeChatRef.current?.conversationId === chat.conversationId;
 
-      // A rapid A -> B -> A switch can arrive here while A's switch flush is
-      // still queued behind an older autosave. Never install a database value
-      // until every write already queued for this conversation has settled.
       let pendingWrite = draftWriteQueueRef.current.get(chat.conversationId);
       while (pendingWrite) {
         await pendingWrite.catch(() => false);
@@ -674,8 +669,6 @@ export function useInboxWorkspace() {
             break;
           }
         } catch {
-          // A bounded retry keeps writes disabled until the server revision is
-          // known; it never guesses revision zero after an unavailable read.
         }
         if (!isCurrentDraft()) return;
         if (attempt + 1 < DRAFT_LOAD_ATTEMPTS) {
@@ -752,10 +745,6 @@ export function useInboxWorkspace() {
             },
           ];
         });
-        // The sidecar publishes only after the application has committed the
-        // canonical message. Reload that durable projection immediately so a
-        // live media event receives its protected messageType and attachment
-        // instead of remaining a caption-only raw provider frame.
         void loadMessages(activeChat, { background: true });
       }
       scheduleChatsRefresh();
@@ -862,10 +851,7 @@ export function useInboxWorkspace() {
       const previousChat = activeChatRef.current;
       if (previousChat?.conversationId === chat.conversationId) return;
       if (previousChat) {
-        void persistDraft(
-          previousChat.conversationId,
-          replyTextRef.current,
-        );
+        void persistDraft(previousChat.conversationId, replyTextRef.current);
       }
       messageSelectionGenerationRef.current += 1;
       explicitUnreadHoldRef.current.delete(chat.conversationId);
@@ -1061,6 +1047,10 @@ export function useInboxWorkspace() {
                 },
               ),
             );
+            const active = activeChatRef.current;
+            if (active?.conversationId === conversationId) {
+              void loadMessages(active, { background: true });
+            }
             return;
           }
           if (state === "ambiguous" || state === "dead_letter") {
@@ -1097,11 +1087,10 @@ export function useInboxWorkspace() {
             ),
           );
         } catch {
-          // The intent is durable. Polling can continue while this view is open.
         }
       }
     },
-    [mutateMessages, t],
+    [loadMessages, mutateMessages, t],
   );
 
   const retryFailedMessage = useCallback(
@@ -1149,6 +1138,10 @@ export function useInboxWorkspace() {
               },
             ),
           );
+          const active = activeChatRef.current;
+          if (active?.conversationId === conversationId) {
+            void loadMessages(active, { background: true });
+          }
           return;
         }
         if (response.status === 202) {
@@ -1179,7 +1172,7 @@ export function useInboxWorkspace() {
         }
       }
     },
-    [monitorWhatsAppEffect, mutateMessages, t],
+    [loadMessages, monitorWhatsAppEffect, mutateMessages, t],
   );
 
   const activeChat = useMemo(
@@ -1215,8 +1208,6 @@ export function useInboxWorkspace() {
     const revision =
       (draftRevisionRef.current.get(chat.conversationId) ?? 0) + 1;
     draftRevisionRef.current.set(chat.conversationId, revision);
-    // `keepalive` lets the bounded JSON request survive SPA navigation,
-    // pagehide, and desktop WebView teardown after this hook unmounts.
     void fetch(
       `/api/conversations/${encodeURIComponent(chat.conversationId)}/draft`,
       {
@@ -1382,6 +1373,185 @@ export function useInboxWorkspace() {
     t,
   ]);
 
+  const sendImage = useCallback(
+    async (file: File) => {
+      const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
+      const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+      if (
+        !chat ||
+        chat.channel !== "whatsapp" ||
+        !chat.transportId ||
+        effectiveStatus !== "connected" ||
+        !canReply ||
+        sendingRef.current
+      ) {
+        return;
+      }
+      if (
+        file.size <= 0 ||
+        file.size > MAX_OUTBOUND_IMAGE_BYTES ||
+        !SAFE_OUTBOUND_IMAGE_TYPES.has(mediaType)
+      ) {
+        setSendError(t("inbox.sendFailed"));
+        return;
+      }
+
+      const tempId = crypto.randomUUID();
+      const caption = replyText.trim();
+      let knownEffectKey: string | null = null;
+      const clearAcceptedDraft = () => {
+        if (activeChatRef.current?.conversationId === chat.conversationId) {
+          setReplyText("");
+        }
+        void persistDraft(chat.conversationId, "");
+      };
+      sendingRef.current = true;
+      setSending(true);
+      setSendError(null);
+      mutateMessages(chat.conversationId, (current) => [
+        ...current,
+        {
+          id: tempId,
+          body: caption,
+          direction: "outbound",
+          timestamp: Date.now(),
+          messageType: "image",
+          deliveryStatus: "sending",
+          attachment: {
+            formatVersion: 1,
+            kind: "image",
+            state: "ready",
+            mimeType: mediaType,
+            fileName: file.name || null,
+            sizeBytes: file.size,
+            durationSeconds: null,
+            width: null,
+            height: null,
+            voiceMessage: false,
+            location: null,
+            contact: null,
+            failureCode: null,
+          },
+        },
+      ]);
+
+      try {
+        const form = new FormData();
+        form.set("clientMessageId", tempId);
+        form.set("to", chat.transportId);
+        form.set("caption", caption);
+        form.set("image", file, file.name || "image");
+        const response = await fetch("/api/whatsapp/send-image", {
+          method: "POST",
+          body: form,
+        });
+        const data = (await response.json()) as {
+          ok: boolean;
+          accepted?: boolean;
+          id?: string | null;
+          effectKey?: string;
+          state?: InboxMessage["outboxState"];
+          requiresDuplicateConfirmation?: boolean;
+        };
+        knownEffectKey = data.effectKey ?? null;
+
+        if (response.status === 202 && data.accepted && data.effectKey) {
+          clearAcceptedDraft();
+          mutateMessages(chat.conversationId, (current) =>
+            current.map((message) =>
+              message.id === tempId
+                ? {
+                    ...message,
+                    outboxEffectKey: data.effectKey,
+                    outboxState: data.state,
+                  }
+                : message,
+            ),
+          );
+          await loadMessages(chat, { background: true });
+          void monitorWhatsAppEffect(
+            chat.conversationId,
+            data.effectKey,
+            tempId,
+          );
+          void loadChats();
+          return;
+        }
+
+        if (!response.ok || !data.ok) {
+          mutateMessages(chat.conversationId, (current) =>
+            current.map((message) =>
+              message.id === tempId
+                ? {
+                    ...message,
+                    deliveryStatus: "failed",
+                    outboxEffectKey: data.effectKey,
+                    outboxState: data.state,
+                  }
+                : message,
+            ),
+          );
+          if (data.effectKey) {
+            await loadMessages(chat, { background: true });
+          }
+          throw new Error(
+            data.requiresDuplicateConfirmation
+              ? t("inbox.whatsappAmbiguous")
+              : t("inbox.sendFailed"),
+          );
+        }
+
+        mutateMessages(chat.conversationId, (current) =>
+          reconcileInboxProviderMessage(current, tempId, data.id, {
+            deliveryStatus: "sent",
+            outboxEffectKey: data.effectKey,
+            outboxState: "succeeded",
+          }),
+        );
+        clearAcceptedDraft();
+        await loadMessages(chat, { background: true });
+        void loadChats();
+      } catch (error) {
+        if (knownEffectKey) {
+          mutateMessages(chat.conversationId, (current) =>
+            current.map((message) =>
+              message.id === tempId
+                ? { ...message, deliveryStatus: "failed" }
+                : message,
+            ),
+          );
+        } else {
+          mutateMessages(chat.conversationId, (current) =>
+            current.filter((message) => message.id !== tempId),
+          );
+          await loadMessages(chat, { background: true });
+        }
+        if (activeChatRef.current?.conversationId === chat.conversationId) {
+          setSendError(
+            error instanceof Error ? error.message : t("inbox.sendFailed"),
+          );
+        }
+      } finally {
+        sendingRef.current = false;
+        setSending(false);
+      }
+    },
+    [
+      activeChatId,
+      canReply,
+      chats,
+      effectiveStatus,
+      loadChats,
+      loadMessages,
+      monitorWhatsAppEffect,
+      mutateMessages,
+      persistDraft,
+      replyText,
+      setReplyText,
+      t,
+    ],
+  );
+
   const connectWhatsApp = useCallback(async () => {
     try {
       const response = await fetch("/api/whatsapp/connect", { method: "POST" });
@@ -1459,6 +1629,7 @@ export function useInboxWorkspace() {
     sending,
     sendError,
     sendReply,
+    sendImage,
     retryFailedMessage,
     markUnread,
     canUpdateConversation,
