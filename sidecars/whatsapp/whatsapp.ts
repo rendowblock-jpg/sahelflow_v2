@@ -29,6 +29,8 @@ import {
 } from "./protected-auth-state";
 
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
+// Voice/audio outbound shares the 32 MiB encrypted-storage audio ceiling.
+const MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024;
 
 const logger = P({ level: process.env.SF_LOG_LEVEL ?? "warn", name: "wa" });
 
@@ -494,6 +496,52 @@ export class WhatsAppManager {
         mimetype: normalizedType,
         fileName,
         ...(caption ? { caption } : {}),
+      },
+      messageId ? { messageId } : undefined,
+    );
+    return {
+      id: sent?.key?.id ?? "",
+      status: String(sent?.status ?? "sent"),
+    };
+  }
+
+  async sendVoice(
+    to: string,
+    audio: Uint8Array,
+    mimetype: string,
+    voiceMessage: boolean,
+    durationSeconds: number | null,
+    messageId?: string,
+  ): Promise<{ id: string; status: string }> {
+    if (!this.sock || this.status !== "connected") {
+      throw new Error(`Not connected (status=${this.status})`);
+    }
+    // The media type is the authenticated sniffed classification from the
+    // encrypted storage authority. A WhatsApp voice note (PTT) is only ever
+    // the canonical OGG/Opus provider form; every other authenticated audio
+    // container is sent as a plain audio attachment.
+    const normalizedType = mimetype.toLowerCase();
+    if (
+      !/^audio\/(?:ogg|wav|mpeg|aac|mp4)$/.test(normalizedType) ||
+      audio.byteLength <= 0 ||
+      audio.byteLength > MAX_OUTBOUND_VOICE_BYTES
+    ) {
+      throw new Error("Voice send requires bounded classified audio bytes");
+    }
+    if (voiceMessage && normalizedType !== "audio/ogg") {
+      throw new Error("WhatsApp voice notes require authenticated OGG/Opus audio");
+    }
+    const jid = this.toJid(to);
+    const sent = await this.sock.sendMessage(
+      jid,
+      {
+        audio: Buffer.from(audio.buffer, audio.byteOffset, audio.byteLength),
+        mimetype: voiceMessage ? "audio/ogg; codecs=opus" : normalizedType,
+        ptt: voiceMessage,
+        // Baileys forwards this as the provider `seconds` field; a
+        // value authenticated from the staged bytes keeps recipient
+        // duration display truthful.
+        ...(durationSeconds ? { seconds: durationSeconds } : {}),
       },
       messageId ? { messageId } : undefined,
     );

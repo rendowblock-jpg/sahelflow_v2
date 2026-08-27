@@ -49,6 +49,19 @@ const SAFE_OUTBOUND_DOCUMENT_TYPES = new Set([
   "text/plain",
   "text/csv",
 ]);
+// Outbound voice shares the 32 MiB encrypted-storage audio ceiling. The
+// PTT voice-note form is decided from authenticated content on the server,
+// never from the browser declaration.
+const MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024;
+const SAFE_OUTBOUND_VOICE_TYPES = new Set([
+  "audio/ogg",
+  "audio/opus",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/aac",
+  "audio/wav",
+  "audio/x-wav",
+]);
 
 interface CanonicalChatResponse {
   chats: Array<{
@@ -1921,6 +1934,174 @@ export function useInboxWorkspace() {
     ],
   );
 
+  const sendVoice = useCallback(
+    async (file: File) => {
+      const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
+      const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+      if (
+        !chat ||
+        chat.channel !== "whatsapp" ||
+        !chat.transportId ||
+        effectiveStatus !== "connected" ||
+        !canReply ||
+        sendingRef.current
+      ) {
+        return;
+      }
+      if (
+        file.size <= 0 ||
+        file.size > MAX_OUTBOUND_VOICE_BYTES ||
+        !SAFE_OUTBOUND_VOICE_TYPES.has(mediaType)
+      ) {
+        setSendError(t("inbox.sendFailed"));
+        return;
+      }
+
+      const tempId = crypto.randomUUID();
+      let knownEffectKey: string | null = null;
+      sendingRef.current = true;
+      setSending(true);
+      setSendError(null);
+      // WhatsApp audio carries no caption: the composer draft is left intact
+      // and the canonical Message body is empty.
+      mutateMessages(chat.conversationId, (current) => [
+        ...current,
+        {
+          id: tempId,
+          body: "",
+          direction: "outbound",
+          timestamp: Date.now(),
+          messageType: "audio",
+          deliveryStatus: "sending",
+          attachment: {
+            formatVersion: 1,
+            kind: "audio",
+            state: "ready",
+            mimeType: mediaType,
+            fileName: null,
+            sizeBytes: file.size,
+            durationSeconds: null,
+            width: null,
+            height: null,
+            voiceMessage: false,
+            location: null,
+            contact: null,
+            failureCode: null,
+          },
+        },
+      ]);
+
+      try {
+        const form = new FormData();
+        form.set("clientMessageId", tempId);
+        form.set("to", chat.transportId);
+        form.set("audio", file, file.name || "audio");
+        const response = await fetch("/api/whatsapp/send-voice", {
+          method: "POST",
+          body: form,
+        });
+        const data = (await response.json()) as {
+          ok: boolean;
+          accepted?: boolean;
+          id?: string | null;
+          effectKey?: string;
+          state?: InboxMessage["outboxState"];
+          requiresDuplicateConfirmation?: boolean;
+        };
+        knownEffectKey = data.effectKey ?? null;
+
+        if (response.status === 202 && data.accepted && data.effectKey) {
+          mutateMessages(chat.conversationId, (current) =>
+            current.map((message) =>
+              message.id === tempId
+                ? {
+                    ...message,
+                    outboxEffectKey: data.effectKey,
+                    outboxState: data.state,
+                  }
+                : message,
+            ),
+          );
+          await loadMessages(chat, { background: true });
+          void monitorWhatsAppEffect(
+            chat.conversationId,
+            data.effectKey,
+            tempId,
+          );
+          void loadChats();
+          return;
+        }
+
+        if (!response.ok || !data.ok) {
+          mutateMessages(chat.conversationId, (current) =>
+            current.map((message) =>
+              message.id === tempId
+                ? {
+                    ...message,
+                    deliveryStatus: "failed",
+                    outboxEffectKey: data.effectKey,
+                    outboxState: data.state,
+                  }
+                : message,
+            ),
+          );
+          if (data.effectKey) {
+            await loadMessages(chat, { background: true });
+          }
+          throw new Error(
+            data.requiresDuplicateConfirmation
+              ? t("inbox.whatsappAmbiguous")
+              : t("inbox.sendFailed"),
+          );
+        }
+
+        mutateMessages(chat.conversationId, (current) =>
+          reconcileInboxProviderMessage(current, tempId, data.id, {
+            deliveryStatus: "sent",
+            outboxEffectKey: data.effectKey,
+            outboxState: "succeeded",
+          }),
+        );
+        await loadMessages(chat, { background: true });
+        void loadChats();
+      } catch (error) {
+        if (knownEffectKey) {
+          mutateMessages(chat.conversationId, (current) =>
+            current.map((message) =>
+              message.id === tempId
+                ? { ...message, deliveryStatus: "failed" }
+                : message,
+            ),
+          );
+        } else {
+          mutateMessages(chat.conversationId, (current) =>
+            current.filter((message) => message.id !== tempId),
+          );
+          await loadMessages(chat, { background: true });
+        }
+        if (activeChatRef.current?.conversationId === chat.conversationId) {
+          setSendError(
+            error instanceof Error ? error.message : t("inbox.sendFailed"),
+          );
+        }
+      } finally {
+        sendingRef.current = false;
+        setSending(false);
+      }
+    },
+    [
+      activeChatId,
+      canReply,
+      chats,
+      effectiveStatus,
+      loadChats,
+      loadMessages,
+      monitorWhatsAppEffect,
+      mutateMessages,
+      t,
+    ],
+  );
+
   const connectWhatsApp = useCallback(async () => {
     try {
       const response = await fetch("/api/whatsapp/connect", { method: "POST" });
@@ -2001,6 +2182,7 @@ export function useInboxWorkspace() {
     sendImage,
     sendVideo,
     sendDocument,
+    sendVoice,
     retryFailedMessage,
     markUnread,
     canUpdateConversation,

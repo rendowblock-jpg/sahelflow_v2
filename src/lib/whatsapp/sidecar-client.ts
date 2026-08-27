@@ -332,6 +332,39 @@ export const sidecar = {
     );
   },
 
+  /**
+   * Dispatch one authenticated staged audio through the loopback sidecar. The
+   * media type is the sniffed classification from the encrypted storage
+   * authority; `voiceMessage` marks an authenticated OGG/Opus voice note and
+   * the duration was verified from the same staged bytes.
+   */
+  sendVoice: (
+    to: string,
+    audio: Buffer,
+    mediaType: string,
+    voiceMessage: boolean,
+    durationSeconds: number | null,
+    effectKey: string,
+    requestBinding: string,
+  ) => {
+    const form = new FormData();
+    form.set("to", to);
+    form.set("effectKey", effectKey);
+    form.set("requestBinding", requestBinding);
+    form.set("voiceMessage", voiceMessage ? "true" : "false");
+    form.set("seconds", durationSeconds ? String(durationSeconds) : "");
+    form.set(
+      "audio",
+      new Blob([new Uint8Array(audio)], { type: mediaType }),
+      "audio",
+    );
+    return sidecarFetch<{ ok: boolean; id: string; status: string }>(
+      "/send-voice",
+      { method: "POST", body: form },
+      180_000,
+    );
+  },
+
   receipt: async (
     effectKey: string,
     requestBinding: string,

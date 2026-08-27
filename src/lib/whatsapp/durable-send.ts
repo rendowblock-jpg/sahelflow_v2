@@ -33,6 +33,7 @@ export const WHATSAPP_TEXT_EFFECT_TYPE = "whatsapp.text.send.v1";
 export const WHATSAPP_IMAGE_EFFECT_TYPE = "whatsapp.image.send.v1";
 export const WHATSAPP_VIDEO_EFFECT_TYPE = "whatsapp.video.send.v1";
 export const WHATSAPP_DOCUMENT_EFFECT_TYPE = "whatsapp.document.send.v1";
+export const WHATSAPP_VOICE_EFFECT_TYPE = "whatsapp.voice.send.v1";
 const MAX_ATTEMPTS = 6;
 const TEXT_LEASE_MS = 90_000;
 // Image dispatch has a 120-second sidecar timeout. Keep recovery outside that
@@ -44,6 +45,10 @@ const VIDEO_LEASE_MS = 210_000;
 // Document dispatch shares the video provider window: both allow up to 64 MiB
 // of authenticated bytes to upload before the receipt is expected.
 const DOCUMENT_LEASE_MS = 210_000;
+// Voice dispatch shares the same recovery window. The 32 MiB audio ceiling is
+// smaller than video, but the lease must stay outside the active provider call
+// so a crashed dispatch can never double-send a voice note.
+const VOICE_LEASE_MS = 210_000;
 const RETRY_DELAYS_MS = [5_000, 30_000, 120_000, 600_000, 1_800_000] as const;
 const RECONCILIATION_DEFERRED = "RECEIPT_RECONCILIATION_DEFERRED";
 
@@ -72,6 +77,20 @@ const documentMediaReceiptSchema = mediaReceiptBaseSchema.extend({
     "application/zip",
     "application/x-ole-storage",
     "text/plain",
+  ]),
+});
+
+// Voice receipts keep the sniffed audio classifications that can be
+// metadata-authenticated; AMR is never queued because its container cannot
+// be verified. OGG is the only container eligible for the PTT voice-note
+// form and only when its codec authenticates as Opus.
+const voiceMediaReceiptSchema = mediaReceiptBaseSchema.extend({
+  mediaType: z.enum([
+    "audio/ogg",
+    "audio/wav",
+    "audio/mpeg",
+    "audio/aac",
+    "audio/mp4",
   ]),
 });
 
@@ -114,15 +133,32 @@ const queuedDocumentPayloadSchema = z.object({
   requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
 });
 
+const queuedVoicePayloadSchema = z.object({
+  messageId: z.string().uuid(),
+  to: z.string().min(1).max(256),
+  // WhatsApp audio and voice notes carry no caption and no file name; both
+  // fields stay out of the bounded contract entirely.
+  // Null is truthful when the authenticated container does not expose a
+  // positive duration through the metadata reader.
+  durationSeconds: z.number().int().positive().safe().nullable(),
+  // True only for authenticated OGG/Opus content dispatched as a PTT voice
+  // note; every other accepted container is a plain audio attachment.
+  voiceMessage: z.boolean(),
+  media: voiceMediaReceiptSchema,
+  requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
+});
+
 type QueuedTextPayload = z.infer<typeof queuedTextPayloadSchema>;
 type QueuedImagePayload = z.infer<typeof queuedImagePayloadSchema>;
 type QueuedVideoPayload = z.infer<typeof queuedVideoPayloadSchema>;
 type QueuedDocumentPayload = z.infer<typeof queuedDocumentPayloadSchema>;
+type QueuedVoicePayload = z.infer<typeof queuedVoicePayloadSchema>;
 type QueuedPayload =
   | QueuedTextPayload
   | QueuedImagePayload
   | QueuedVideoPayload
-  | QueuedDocumentPayload;
+  | QueuedDocumentPayload
+  | QueuedVoicePayload;
 
 type TrustedWhatsAppCommandContext = BusinessPrincipalContext & {
   readonly businessPrincipal: TrustedBusinessPrincipal;
@@ -159,6 +195,14 @@ export interface QueueWhatsAppDocumentInput {
   to: string;
   caption?: string;
   fileName?: string | null;
+  declaredMime: string | null;
+  declaredSize: number;
+  source: ReadableStream<Uint8Array>;
+}
+
+export interface QueueWhatsAppVoiceInput {
+  clientMessageId: string;
+  to: string;
   declaredMime: string | null;
   declaredSize: number;
   source: ReadableStream<Uint8Array>;
@@ -243,6 +287,16 @@ export type WhatsAppDocumentEffectSender = (
   requestBinding: string,
 ) => Promise<SendReceipt>;
 
+export type WhatsAppVoiceEffectSender = (
+  to: string,
+  audio: Buffer,
+  mediaType: string,
+  voiceMessage: boolean,
+  durationSeconds: number | null,
+  effectKey: string,
+  requestBinding: string,
+) => Promise<SendReceipt>;
+
 export type WhatsAppEffectReceiptLookup = (
   effectKey: string,
   requestBinding: string,
@@ -253,7 +307,8 @@ function supportedEffectType(value: string): boolean {
     value === WHATSAPP_TEXT_EFFECT_TYPE ||
     value === WHATSAPP_IMAGE_EFFECT_TYPE ||
     value === WHATSAPP_VIDEO_EFFECT_TYPE ||
-    value === WHATSAPP_DOCUMENT_EFFECT_TYPE
+    value === WHATSAPP_DOCUMENT_EFFECT_TYPE ||
+    value === WHATSAPP_VOICE_EFFECT_TYPE
   );
 }
 
@@ -387,6 +442,9 @@ async function openClaimedPayload(
     }
     if (claimed.effectType === WHATSAPP_DOCUMENT_EFFECT_TYPE) {
       return queuedDocumentPayloadSchema.parse(opened);
+    }
+    if (claimed.effectType === WHATSAPP_VOICE_EFFECT_TYPE) {
+      return queuedVoicePayloadSchema.parse(opened);
     }
     return queuedTextPayloadSchema.parse(opened);
   } finally {
@@ -1242,6 +1300,306 @@ export async function queueWhatsAppDocument(
   return { ...execution.result, replayed: execution.replayed };
 }
 
+interface OutboundVoiceMetadata {
+  durationSeconds: number | null;
+  voiceMessage: boolean;
+}
+
+/**
+ * Authenticate the audio container from the same bounded byte stream that will
+ * be encrypted. A voice note (PTT) is only ever authenticated OGG/Opus; OGG
+ * with any other codec is rejected because WhatsApp clients would render it as
+ * a broken voice note. Non-OGG containers are sent as plain audio attachments.
+ */
+async function inspectOutboundVoiceMetadata(
+  source: ReadableStream<Uint8Array>,
+  declaredSize: number,
+): Promise<OutboundVoiceMetadata> {
+  let metadata: Awaited<ReturnType<typeof parseWebStream>>;
+  try {
+    metadata = await parseWebStream(
+      source,
+      { size: declaredSize },
+      { duration: true, skipCovers: true },
+    );
+  } catch {
+    throw new SahelFlowError(
+      "WhatsApp audio metadata could not be authenticated",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+  const container = metadata.format.container?.toLowerCase() ?? "";
+  const codec = metadata.format.codec?.toLowerCase() ?? "";
+  // Mirror of the video gate: MP4 files that actually contain a video track
+  // are refused so video content can never masquerade as an audio attachment.
+  if (metadata.format.hasVideo === true) {
+    throw new SahelFlowError(
+      "WhatsApp audio must not contain a video track",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+  if (container.includes("ogg")) {
+    if (!codec.includes("opus")) {
+      throw new SahelFlowError(
+        "WhatsApp voice notes must contain Opus audio",
+        "VALIDATION_ERROR",
+        400,
+      );
+    }
+  } else if (!container) {
+    // The metadata reader authenticates every accepted container; an
+    // unrecognized stream is refused before any staged object exists.
+    throw new SahelFlowError(
+      "WhatsApp audio could not be authenticated",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+  const duration = metadata.format.duration;
+  if (duration === undefined) return { durationSeconds: null, voiceMessage: false };
+  const rounded = Math.ceil(duration);
+  if (!Number.isSafeInteger(rounded) || rounded <= 0) {
+    throw new SahelFlowError(
+      "WhatsApp audio must have a verified positive duration",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+  return {
+    durationSeconds: rounded,
+    voiceMessage: container.includes("ogg") && codec.includes("opus"),
+  };
+}
+
+export async function queueWhatsAppVoice(
+  context: TrustedWhatsAppCommandContext,
+  input: QueueWhatsAppVoiceInput,
+): Promise<{ effectKey: string; messageId: string; replayed: boolean }> {
+  const clientMessageId = z.string().uuid().parse(input.clientMessageId);
+  const declaredSize = z
+    .number()
+    .int()
+    .positive()
+    .max(32 * 1024 * 1024)
+    .parse(input.declaredSize);
+  const declaredMime = z
+    .enum([
+      "audio/ogg",
+      "audio/opus",
+      "audio/mpeg",
+      "audio/mp4",
+      "audio/aac",
+      "audio/wav",
+      "audio/x-wav",
+    ])
+    .parse(input.declaredMime?.split(";", 1)[0]?.trim().toLowerCase() ?? null);
+  const jid = normalizeRecipient(input.to);
+
+  // Parse metadata from the same bounded byte stream that will be encrypted.
+  // The storage branch is not consumed until metadata succeeds, so rejected
+  // audio cannot leave an unowned staged object.
+  const [metadataSource, storageSource] = input.source.tee();
+  let outboundMetadata: OutboundVoiceMetadata;
+  try {
+    outboundMetadata = await inspectOutboundVoiceMetadata(
+      metadataSource,
+      declaredSize,
+    );
+  } catch (error) {
+    await Promise.allSettled([
+      metadataSource.cancel(),
+      storageSource.cancel(),
+    ]);
+    throw error;
+  }
+
+  let media: z.infer<typeof voiceMediaReceiptSchema>;
+  try {
+    media = voiceMediaReceiptSchema.parse(
+      await writeWhatsAppMediaObject(context, {
+        messageId: clientMessageId,
+        kind: "audio",
+        declaredSize,
+        declaredMime,
+        source: storageSource,
+        strictSourceIdentity: true,
+      }),
+    );
+  } catch (error) {
+    if (
+      error instanceof WhatsAppMediaObjectError &&
+      error.code === "MEDIA_OBJECT_CONFLICT"
+    ) {
+      throw new ConflictError(
+        "This WhatsApp client message ID is already bound to different audio content",
+      );
+    }
+    throw error;
+  }
+
+  const contentBinding = JSON.stringify({
+    durationSeconds: outboundMetadata.durationSeconds,
+    voiceMessage: outboundMetadata.voiceMessage,
+    sha256: media.sha256,
+    sizeBytes: media.sizeBytes,
+    mediaType: media.mediaType,
+  });
+  const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
+    context,
+    "voice",
+    clientMessageId,
+    jid,
+    contentBinding,
+  ).catch(stagedMediaGuard(context, clientMessageId));
+  const attachmentKey = await getBusinessEnvelopeKey(context);
+  let protectedAttachment: string;
+  try {
+    protectedAttachment = sealWhatsAppMessageAttachmentWithKey(
+      clientMessageId,
+      {
+        formatVersion: 1,
+        kind: "audio",
+        state: "ready",
+        mimeType: media.mediaType,
+        fileName: null,
+        sizeBytes: media.sizeBytes,
+        durationSeconds: outboundMetadata.durationSeconds,
+        width: null,
+        height: null,
+        voiceMessage: outboundMetadata.voiceMessage,
+        location: null,
+        contact: null,
+        failureCode: null,
+      },
+      attachmentKey,
+    );
+  } catch (error) {
+    await discardStagedMediaIfUnreferenced(context, clientMessageId);
+    throw error;
+  } finally {
+    attachmentKey.fill(0);
+  }
+
+  const phone = jid.slice(0, jid.indexOf("@"));
+  const now = new Date();
+  const payload = {
+    messageId: clientMessageId,
+    to: jid,
+    durationSeconds: outboundMetadata.durationSeconds,
+    voiceMessage: outboundMetadata.voiceMessage,
+    media,
+    requestBinding,
+  } satisfies QueuedVoicePayload;
+
+  const execution = await executeBusinessCommand(
+    context,
+    {
+      idempotencyKey: effectKey,
+      commandType: "whatsapp_voice.queue.v1",
+      aggregate: {
+        type: "whatsapp-message",
+        id: clientMessageId,
+        expectedVersion: 0,
+      },
+      actor: context.businessPrincipal.auditActor,
+      correlationId: clientMessageId,
+      payload,
+    },
+    async ({ tx }) => {
+      const conversationKey = {
+        channel_sourceId: { channel: "whatsapp", sourceId: jid },
+      } as const;
+      const existingConversation = await tx.conversation.findUnique({
+        where: conversationKey,
+        select: {
+          id: true,
+          messages: {
+            where: { direction: "inbound" },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      });
+      if (
+        jid.endsWith("@lid") &&
+        (!existingConversation || existingConversation.messages.length === 0)
+      ) {
+        throw new SahelFlowError(
+          "WhatsApp LID replies require persisted inbound message provenance",
+          "VALIDATION_ERROR",
+          400,
+        );
+      }
+      const conversation = existingConversation
+        ? await tx.conversation.update({
+            where: conversationKey,
+            data: { lastMessageAt: now },
+            select: { id: true },
+          })
+        : await tx.conversation.create({
+            data: {
+              channel: "whatsapp",
+              contactName: phone,
+              contactPhone: phone,
+              sourceId: jid,
+              lastMessageAt: now,
+            },
+            select: { id: true },
+          });
+      await tx.message.create({
+        data: {
+          id: clientMessageId,
+          conversationId: conversation.id,
+          body: "",
+          direction: "outbound",
+          timestamp: now,
+          deliveryStatus: "sending",
+          messageType: "audio",
+          attachments: protectedAttachment,
+        },
+      });
+      await tx.whatsAppOutboundEffect.create({
+        data: { effectKey, messageId: clientMessageId },
+      });
+      return {
+        result: { effectKey, messageId: clientMessageId },
+        audit: {
+          action: "whatsapp.voice.queued",
+          entity: "message",
+          entityId: clientMessageId,
+          metadata: {
+            effectKey,
+            conversationId: conversation.id,
+            mediaType: media.mediaType,
+            sizeBytes: media.sizeBytes,
+            voiceMessage: outboundMetadata.voiceMessage,
+            sha256: media.sha256,
+          },
+        },
+        events: [
+          {
+            key: `${effectKey}:queued`,
+            type: "whatsapp.voice.queued.v1",
+            payload: { messageId: clientMessageId, conversationId: conversation.id },
+          },
+        ],
+        outbox: [
+          {
+            effectKey,
+            effectType: WHATSAPP_VOICE_EFFECT_TYPE,
+            payload,
+          },
+        ],
+        projectionInvalidations: [`conversation:${conversation.id}`, "inbox"],
+      };
+    },
+  ).catch(stagedMediaGuard(context, clientMessageId));
+
+  return { ...execution.result, replayed: execution.replayed };
+}
+
 async function recoverPreEffectLease(
   context: ServiceContext,
   row: OutboxRow,
@@ -1372,6 +1730,10 @@ async function recoverExpiredLeases(
           effectType: WHATSAPP_DOCUMENT_EFFECT_TYPE,
           lockedAt: { lt: new Date(now.getTime() - DOCUMENT_LEASE_MS) },
         },
+        {
+          effectType: WHATSAPP_VOICE_EFFECT_TYPE,
+          lockedAt: { lt: new Date(now.getTime() - VOICE_LEASE_MS) },
+        },
       ],
     },
   })) as OutboxRow[];
@@ -1437,6 +1799,7 @@ async function claimIntent(
           WHATSAPP_IMAGE_EFFECT_TYPE,
           WHATSAPP_VIDEO_EFFECT_TYPE,
           WHATSAPP_DOCUMENT_EFFECT_TYPE,
+          WHATSAPP_VOICE_EFFECT_TYPE,
         ],
       },
       ...(effectKey ? { effectKey } : {}),
@@ -1713,6 +2076,7 @@ async function executeClaimed(
   imageSender: WhatsAppImageEffectSender,
   videoSender: WhatsAppVideoEffectSender,
   documentSender: WhatsAppDocumentEffectSender,
+  voiceSender: WhatsAppVoiceEffectSender,
 ): Promise<WhatsAppEffectStatus> {
   let payload: QueuedPayload;
   try {
@@ -1725,7 +2089,8 @@ async function executeClaimed(
   if (
     claimed.effectType === WHATSAPP_IMAGE_EFFECT_TYPE ||
     claimed.effectType === WHATSAPP_VIDEO_EFFECT_TYPE ||
-    claimed.effectType === WHATSAPP_DOCUMENT_EFFECT_TYPE
+    claimed.effectType === WHATSAPP_DOCUMENT_EFFECT_TYPE ||
+    claimed.effectType === WHATSAPP_VOICE_EFFECT_TYPE
   ) {
     try {
       const kind =
@@ -1733,13 +2098,17 @@ async function executeClaimed(
           ? "image"
           : claimed.effectType === WHATSAPP_VIDEO_EFFECT_TYPE
             ? "video"
-            : "document";
+            : claimed.effectType === WHATSAPP_DOCUMENT_EFFECT_TYPE
+              ? "document"
+              : "audio";
       const mediaPayload =
         claimed.effectType === WHATSAPP_IMAGE_EFFECT_TYPE
           ? queuedImagePayloadSchema.parse(payload)
           : claimed.effectType === WHATSAPP_VIDEO_EFFECT_TYPE
             ? queuedVideoPayloadSchema.parse(payload)
-            : queuedDocumentPayloadSchema.parse(payload);
+            : claimed.effectType === WHATSAPP_DOCUMENT_EFFECT_TYPE
+              ? queuedDocumentPayloadSchema.parse(payload)
+              : queuedVoicePayloadSchema.parse(payload);
       mediaBytes = (
         await readWhatsAppMediaObject(
           context,
@@ -1794,6 +2163,17 @@ async function executeClaimed(
         started.effectKey,
         documentPayload.requestBinding,
       );
+    } else if (started.effectType === WHATSAPP_VOICE_EFFECT_TYPE) {
+      const voicePayload = payload as QueuedVoicePayload;
+      receipt = await voiceSender(
+        voicePayload.to,
+        mediaBytes!,
+        voicePayload.media.mediaType,
+        voicePayload.voiceMessage,
+        voicePayload.durationSeconds,
+        started.effectKey,
+        voicePayload.requestBinding,
+      );
     } else {
       const textPayload = payload as QueuedTextPayload;
       receipt = await sender(
@@ -1819,6 +2199,7 @@ export async function processWhatsAppEffect(
   imageSender: WhatsAppImageEffectSender = sidecar.sendImage,
   videoSender: WhatsAppVideoEffectSender = sidecar.sendVideo,
   documentSender: WhatsAppDocumentEffectSender = sidecar.sendDocument,
+  voiceSender: WhatsAppVoiceEffectSender = sidecar.sendVoice,
 ): Promise<WhatsAppEffectStatus> {
   const claimed = await claimIntent(context, effectKey, receiptLookup);
   if (!claimed) return getWhatsAppEffectStatus(context, effectKey);
@@ -1829,6 +2210,7 @@ export async function processWhatsAppEffect(
     imageSender,
     videoSender,
     documentSender,
+    voiceSender,
   );
 }
 
@@ -1840,6 +2222,7 @@ export async function drainDueWhatsAppEffects(
   imageSender: WhatsAppImageEffectSender = sidecar.sendImage,
   videoSender: WhatsAppVideoEffectSender = sidecar.sendVideo,
   documentSender: WhatsAppDocumentEffectSender = sidecar.sendDocument,
+  voiceSender: WhatsAppVoiceEffectSender = sidecar.sendVoice,
 ): Promise<WhatsAppEffectStatus[]> {
   const bounded = Math.max(1, Math.min(limit, 25));
   const results: WhatsAppEffectStatus[] = [];
@@ -1854,6 +2237,7 @@ export async function drainDueWhatsAppEffects(
         imageSender,
         videoSender,
         documentSender,
+        voiceSender,
       ),
     );
   }
@@ -1920,6 +2304,18 @@ export async function openQueuedWhatsAppDocumentReceipt(
   return payload.media as WhatsAppMediaObjectReceipt;
 }
 
+export async function openQueuedWhatsAppVoiceReceipt(
+  context: ServiceContext,
+  effectKey: string,
+): Promise<WhatsAppMediaObjectReceipt> {
+  const row = await readRow(context, effectKey);
+  if (row.effectType !== WHATSAPP_VOICE_EFFECT_TYPE) {
+    throw new SahelFlowError("WhatsApp voice send intent not found", "NOT_FOUND", 404);
+  }
+  const payload = queuedVoicePayloadSchema.parse(await openClaimedPayload(context, row));
+  return payload.media as WhatsAppMediaObjectReceipt;
+}
+
 export async function retryWhatsAppEffect(
   context: TrustedWhatsAppCommandContext,
   effectKey: string,
@@ -1929,6 +2325,7 @@ export async function retryWhatsAppEffect(
   imageSender: WhatsAppImageEffectSender = sidecar.sendImage,
   videoSender: WhatsAppVideoEffectSender = sidecar.sendVideo,
   documentSender: WhatsAppDocumentEffectSender = sidecar.sendDocument,
+  voiceSender: WhatsAppVoiceEffectSender = sidecar.sendVoice,
 ): Promise<WhatsAppEffectStatus> {
   const row = await readRow(context, effectKey);
   const ambiguous = row.status === "failed" && row.outcomeState === "ambiguous";
@@ -1990,5 +2387,6 @@ export async function retryWhatsAppEffect(
     imageSender,
     videoSender,
     documentSender,
+    voiceSender,
   );
 }
