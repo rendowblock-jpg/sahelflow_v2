@@ -513,12 +513,16 @@ export async function writeWhatsAppMediaObject(
           rmSync(temporary, { force: true });
         } catch (error) {
           if (!isAlreadyExistsError(error)) throw error;
+          // The existing object owns this deterministic Message identity. First
+          // authenticate it on its own terms, then compare receipts. A valid
+          // different contender is a normal idempotency conflict, not evidence
+          // that the already-published ciphertext is corrupt.
           const existing = await inspectExistingObject(
             context,
             input.messageId,
             input.kind,
-            input.declaredSize,
-            input.declaredMime,
+            null,
+            null,
             envelopeKey,
           );
           if (!existing || !sameMediaReceiptContent(existing, candidate)) {
