@@ -98,6 +98,47 @@ function imageEffectKey(value: string): boolean {
   return /:image:[A-Za-z0-9_-]{1,80}$/.test(value) && Boolean(getWhatsAppEffectAccountHash(value));
 }
 
+async function readBoundedImageForm(
+  request: Request,
+): Promise<FormData | "too_large" | null> {
+  const contentType = request.headers.get("content-type")?.trim() ?? "";
+  if (!/^multipart\/form-data(?:;|$)/i.test(contentType) || !request.body) {
+    return null;
+  }
+
+  const reader = request.body.getReader();
+  const bounded = new Uint8Array(MAX_OUTBOUND_IMAGE_FORM_BYTES);
+  let offset = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      if (
+        offset + next.value.byteLength >
+        MAX_OUTBOUND_IMAGE_FORM_BYTES
+      ) {
+        await reader.cancel().catch(() => undefined);
+        return "too_large";
+      }
+      bounded.set(next.value, offset);
+      offset += next.value.byteLength;
+    }
+  } catch {
+    await reader.cancel().catch(() => undefined);
+    return null;
+  } finally {
+    reader.releaseLock();
+  }
+
+  try {
+    return await new Response(bounded.subarray(0, offset), {
+      headers: { "Content-Type": contentType },
+    }).formData();
+  } catch {
+    return null;
+  }
+}
+
 const app = new Hono();
 app.use("*", async (context, next) => {
   if (context.req.path === "/") return next();
@@ -475,7 +516,18 @@ app.post("/send-image", async (context) => {
     );
   }
 
-  const form = await context.req.raw.formData().catch(() => null);
+  const form = await readBoundedImageForm(context.req.raw);
+  if (form === "too_large") {
+    return context.json(
+      {
+        error: "Image send request is too large",
+        code: "INVALID_IMAGE_SEND_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      413,
+    );
+  }
   const to = form?.get("to");
   const caption = form?.get("caption");
   const effectKey = form?.get("effectKey");
