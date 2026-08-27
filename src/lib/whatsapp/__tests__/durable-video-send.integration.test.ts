@@ -15,7 +15,9 @@ import { parseWebStream } from "music-metadata";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("music-metadata", () => ({
-  parseWebStream: vi.fn(async () => ({ format: { duration: 12.25 } })),
+  parseWebStream: vi.fn(async () => ({
+    format: { duration: 12.25, hasVideo: true },
+  })),
 }));
 
 import { testAuthenticatedOwnerBusinessPrincipal } from "@/lib/business-truth/principal";
@@ -106,6 +108,56 @@ describe("durable WhatsApp outbound video send", () => {
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
 
     expect(existsSync(whatsAppMediaRoot(context))).toBe(false);
+    expect(await db.message.count()).toBe(0);
+    expect(await db.outboxIntent.count()).toBe(0);
+  });
+
+  it("rejects audio-only containers before staging any encrypted object", async () => {
+    vi.mocked(parseWebStream).mockResolvedValueOnce({
+      format: { duration: 30, hasVideo: false },
+    } as never);
+    const bytes = mp4();
+
+    await expect(
+      queueWhatsAppVideo(context, {
+        clientMessageId: MESSAGE_ID,
+        to: "0555000111",
+        caption: "Audio only",
+        fileName: "voice-note.mp4",
+        declaredMime: "video/mp4",
+        declaredSize: bytes.length,
+        source: stream(bytes),
+      }),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+
+    expect(existsSync(whatsAppMediaRoot(context))).toBe(false);
+    expect(await db.message.count()).toBe(0);
+    expect(await db.outboxIntent.count()).toBe(0);
+  });
+
+  it("removes the staged object when the durable commit rejects and no message references it", async () => {
+    const bytes = mp4();
+
+    // An individual @lid recipient without persisted inbound provenance is
+    // rejected inside the canonical command transaction, after staging.
+    await expect(
+      queueWhatsAppVideo(context, {
+        clientMessageId: MESSAGE_ID,
+        to: "213555000111@lid",
+        caption: "Unbound lid",
+        fileName: "unbound-lid.mp4",
+        declaredMime: "video/mp4",
+        declaredSize: bytes.length,
+        source: stream(bytes),
+      }),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+
+    const mediaFiles = existsSync(whatsAppMediaRoot(context))
+      ? readdirSync(whatsAppMediaRoot(context)).filter((name) =>
+          name.endsWith(".sfmedia"),
+        )
+      : [];
+    expect(mediaFiles).toHaveLength(0);
     expect(await db.message.count()).toBe(0);
     expect(await db.outboxIntent.count()).toBe(0);
   });

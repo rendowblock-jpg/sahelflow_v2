@@ -24,6 +24,7 @@ import { readWhatsAppMediaObject } from "./media-object-provenance";
 import {
   WhatsAppMediaObjectError,
   type WhatsAppMediaObjectReceipt,
+  removeWhatsAppMediaObject,
   writeWhatsAppMediaObject,
 } from "./media-object-store";
 import { normalizeWhatsAppJid } from "./types";
@@ -473,6 +474,40 @@ export async function queueWhatsAppText(
   return { ...execution.result, replayed: execution.replayed };
 }
 
+/**
+ * Best-effort post-stage hygiene. If queueing fails after the encrypted object
+ * was staged but before the canonical command committed, the object would be
+ * unreachable customer media retained on disk. Removal is skipped whenever a
+ * canonical Message already references the object (for example an earlier
+ * attempt of the same client message ID committed), so idempotent retries can
+ * never destroy reachable media. A genuine retry restages the same bytes.
+ */
+async function discardStagedMediaIfUnreferenced(
+  context: TrustedWhatsAppCommandContext,
+  messageId: string,
+): Promise<void> {
+  try {
+    const referenced = await context.prisma.message.findUnique({
+      where: { id: messageId },
+      select: { id: true },
+    });
+    if (referenced) return;
+    await removeWhatsAppMediaObject(context, messageId);
+  } catch {
+    // Hygiene must never mask the original queue failure.
+  }
+}
+
+function stagedMediaGuard(
+  context: TrustedWhatsAppCommandContext,
+  messageId: string,
+): (error: unknown) => Promise<never> {
+  return async (error: unknown): Promise<never> => {
+    await discardStagedMediaIfUnreferenced(context, messageId);
+    throw error;
+  };
+}
+
 export async function queueWhatsAppImage(
   context: TrustedWhatsAppCommandContext,
   input: QueueWhatsAppImageInput,
@@ -522,7 +557,7 @@ export async function queueWhatsAppImage(
     clientMessageId,
     jid,
     contentBinding,
-  );
+  ).catch(stagedMediaGuard(context, clientMessageId));
   const attachmentKey = await getBusinessEnvelopeKey(context);
   let protectedAttachment: string;
   try {
@@ -545,6 +580,9 @@ export async function queueWhatsAppImage(
       },
       attachmentKey,
     );
+  } catch (error) {
+    await discardStagedMediaIfUnreferenced(context, clientMessageId);
+    throw error;
   } finally {
     attachmentKey.fill(0);
   }
@@ -661,7 +699,7 @@ export async function queueWhatsAppImage(
         projectionInvalidations: [`conversation:${conversation.id}`, "inbox"],
       };
     },
-  );
+  ).catch(stagedMediaGuard(context, clientMessageId));
 
   return { ...execution.result, replayed: execution.replayed };
 }
@@ -692,6 +730,13 @@ async function inspectOutboundVideoDuration(
   ) {
     throw new SahelFlowError(
       "WhatsApp videos must have a verified positive duration",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+  if (metadata.format.hasVideo !== true) {
+    throw new SahelFlowError(
+      "WhatsApp videos must contain a video track",
       "VALIDATION_ERROR",
       400,
     );
@@ -765,7 +810,7 @@ export async function queueWhatsAppVideo(
     clientMessageId,
     jid,
     contentBinding,
-  );
+  ).catch(stagedMediaGuard(context, clientMessageId));
   const attachmentKey = await getBusinessEnvelopeKey(context);
   let protectedAttachment: string;
   try {
@@ -788,6 +833,9 @@ export async function queueWhatsAppVideo(
       },
       attachmentKey,
     );
+  } catch (error) {
+    await discardStagedMediaIfUnreferenced(context, clientMessageId);
+    throw error;
   } finally {
     attachmentKey.fill(0);
   }
@@ -906,7 +954,7 @@ export async function queueWhatsAppVideo(
         projectionInvalidations: [`conversation:${conversation.id}`, "inbox"],
       };
     },
-  );
+  ).catch(stagedMediaGuard(context, clientMessageId));
 
   return { ...execution.result, replayed: execution.replayed };
 }

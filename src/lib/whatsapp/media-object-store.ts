@@ -594,3 +594,20 @@ export async function verifyWhatsAppMediaObject(
 export async function removeWhatsAppMediaRoot(context: ServiceContext): Promise<void> {
   rmSync(scopeDirectory(context), { recursive: true, force: true });
 }
+
+/**
+ * Removes the single deterministic staged media object bound to one client
+ * message ID. Used only as best-effort hygiene when outbound queueing fails
+ * after staging but before the canonical Message/OutboxIntent commit, so no
+ * unreachable customer media is retained. The object identity is deterministic
+ * from the client message ID, so a later legitimate retry simply restages the
+ * same authenticated bytes.
+ */
+export async function removeWhatsAppMediaObject(
+  context: ServiceContext,
+  messageId: string,
+): Promise<void> {
+  const envelopeKey = await getBusinessEnvelopeKey(context);
+  const objectId = deriveObjectId(context, messageId, envelopeKey);
+  rmSync(objectPath(context, objectId), { force: true });
+}
