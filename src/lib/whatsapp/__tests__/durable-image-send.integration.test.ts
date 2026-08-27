@@ -18,7 +18,6 @@ import { db, shopContext } from "@/lib/db";
 import {
   processWhatsAppEffect,
   queueWhatsAppImage,
-  retryWhatsAppEffect,
 } from "../durable-send";
 import {
   removeWhatsAppMediaRoot,
@@ -50,7 +49,9 @@ function jpeg(): Buffer {
 function stream(bytes: Buffer): ReadableStream<Uint8Array> {
   const copy = new Uint8Array(bytes.length);
   copy.set(bytes);
-  return new Response(copy).body!;
+  const body = new Response(copy).body;
+  if (!body) throw new Error("ReadableStream unavailable");
+  return body;
 }
 
 async function clean(): Promise<void> {
@@ -122,8 +123,10 @@ describe("durable WhatsApp outbound image send", () => {
       name.endsWith(".sfmedia"),
     );
     expect(mediaFiles).toHaveLength(1);
+    const mediaFile = mediaFiles[0];
+    if (!mediaFile) throw new Error("Expected staged WhatsApp media object");
     const ciphertext = readFileSync(
-      join(whatsAppMediaRoot(context), mediaFiles[0]!),
+      join(whatsAppMediaRoot(context), mediaFile),
     );
     expect(ciphertext.includes(bytes)).toBe(false);
 
@@ -186,10 +189,13 @@ describe("durable WhatsApp outbound image send", () => {
     const mediaFile = readdirSync(mediaRoot).find((name) =>
       name.endsWith(".sfmedia"),
     );
-    expect(mediaFile).toBeTruthy();
-    const objectPath = join(mediaRoot, mediaFile!);
+    if (!mediaFile) throw new Error("Expected staged WhatsApp media object");
+    const objectPath = join(mediaRoot, mediaFile);
     const corrupted = readFileSync(objectPath);
-    corrupted[corrupted.length - 1] ^= 0xff;
+    const lastIndex = corrupted.length - 1;
+    const lastByte = corrupted[lastIndex];
+    if (lastByte === undefined) throw new Error("Expected non-empty staged media");
+    corrupted[lastIndex] = lastByte ^ 0xff;
     writeFileSync(objectPath, corrupted);
 
     const imageSender = vi.fn(async () => ({
