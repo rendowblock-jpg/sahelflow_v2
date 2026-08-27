@@ -183,32 +183,36 @@ function validPolledProjection(
   ) {
     return null;
   }
-  return candidate as InboxLocalMediaProjection;
+  return {
+    state: candidate.state,
+    ...(typeof candidate.statusUrl === "string"
+      ? { statusUrl: candidate.statusUrl }
+      : {}),
+    ...(typeof candidate.readUrl === "string"
+      ? { readUrl: candidate.readUrl }
+      : {}),
+    ...(typeof candidate.downloadUrl === "string"
+      ? { downloadUrl: candidate.downloadUrl }
+      : {}),
+  };
 }
 
 export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
   const { locale } = useI18n();
   const projectedLocal = message.attachment?.localMedia;
-  const [resolvedLocal, setResolvedLocal] =
-    useState<InboxLocalMediaProjection | undefined>(projectedLocal);
+  const [polledLocal, setPolledLocal] = useState<{
+    statusUrl: string;
+    projection: InboxLocalMediaProjection;
+  } | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
 
-  useEffect(() => {
-    if (!projectedLocal) {
-      setResolvedLocal(undefined);
-      return;
-    }
-    setResolvedLocal((current) => {
-      if (projectedLocal.state !== "pending") return projectedLocal;
-      if (current?.state === "ready" || current?.state === "failed") {
-        return current;
-      }
-      return projectedLocal;
-    });
-  }, [projectedLocal]);
-
-  const local = resolvedLocal ?? projectedLocal;
+  const local =
+    projectedLocal?.state === "pending" &&
+    typeof projectedLocal.statusUrl === "string" &&
+    polledLocal?.statusUrl === projectedLocal.statusUrl
+      ? polledLocal.projection
+      : projectedLocal;
   const pendingStatusUrl =
     local?.state === "pending" ? local.statusUrl : undefined;
 
@@ -230,14 +234,17 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
         const response = await fetch(pendingStatusUrl, { cache: "no-store" });
         if (cancelled) return;
         if (response.status === 401 || response.status === 403 || response.status === 404) {
-          setResolvedLocal({ state: "failed", statusUrl: pendingStatusUrl });
+          setPolledLocal({
+            statusUrl: pendingStatusUrl,
+            projection: { state: "failed", statusUrl: pendingStatusUrl },
+          });
           return;
         }
         if (!response.ok) return;
         const data = (await response.json()) as { localMedia?: unknown };
         const next = validPolledProjection(data.localMedia);
         if (!next || cancelled) return;
-        setResolvedLocal(next);
+        setPolledLocal({ statusUrl: pendingStatusUrl, projection: next });
       } catch {
         // The intent is durable. Keep the bounded poll while this visible row is pending.
       } finally {
