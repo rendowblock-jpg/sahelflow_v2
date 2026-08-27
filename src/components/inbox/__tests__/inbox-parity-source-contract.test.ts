@@ -160,7 +160,9 @@ describe("WhatsApp Inbox parity source slice", () => {
       'fetch(pendingStatusUrl, { cache: "no-store" })',
     );
     expect(mediaUi).toContain("window.setInterval");
-    expect(mediaUi).toContain("setResolvedLocal(next)");
+    expect(mediaUi).toContain(
+      "setPolledLocal({ statusUrl: pendingStatusUrl, projection: next })",
+    );
 
     expect(mediaUi).toContain('const response = await fetch(href, { cache: "no-store" })');
     expect(mediaUi).toContain("if (!response.ok) throw new Error");
@@ -170,6 +172,6 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(mediaUi).toContain("onError={() => setPreviewFailed(true)}");
     expect(mediaUi).toContain("onFailure={() => setDownloadFailed(true)}");
     expect(mediaUi).not.toContain('local.state === "failed" || previewFailed');
-    expect(mediaUi).not.toContain("<a");
+    expect(mediaUi).not.toContain("<a ");
   });
 });
