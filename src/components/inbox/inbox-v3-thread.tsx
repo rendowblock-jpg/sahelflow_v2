@@ -626,6 +626,7 @@ export function InboxV3Thread({
                 ref={imageInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                aria-label={copy("mediaImage")}
                 className="sr-only"
                 tabIndex={-1}
                 data-inbox-image-input="true"
