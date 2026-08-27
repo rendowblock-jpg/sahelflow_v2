@@ -80,7 +80,9 @@ const queuedVideoPayloadSchema = z.object({
   to: z.string().min(1).max(256),
   caption: z.string().max(4000),
   fileName: z.string().max(180).nullable(),
-  durationSeconds: z.number().int().positive().safe(),
+  // Null is truthful for a verified video-only container whose movie header
+  // does not expose a duration through the authenticated metadata reader.
+  durationSeconds: z.number().int().positive().safe().nullable(),
   media: videoMediaReceiptSchema,
   requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
 });
@@ -707,7 +709,7 @@ export async function queueWhatsAppImage(
 async function inspectOutboundVideoDuration(
   source: ReadableStream<Uint8Array>,
   declaredSize: number,
-): Promise<number> {
+): Promise<number | null> {
   let metadata: Awaited<ReturnType<typeof parseWebStream>>;
   try {
     metadata = await parseWebStream(
@@ -722,21 +724,24 @@ async function inspectOutboundVideoDuration(
       400,
     );
   }
-  const duration = metadata.format.duration;
-  const rounded = duration === undefined ? Number.NaN : Math.ceil(duration);
-  if (
-    !Number.isSafeInteger(rounded) ||
-    rounded <= 0
-  ) {
+  // The authenticated container must expose a real video track. This rejects
+  // audio-only MP4/M4A content regardless of any declared duration.
+  if (metadata.format.hasVideo !== true) {
     throw new SahelFlowError(
-      "WhatsApp videos must have a verified positive duration",
+      "WhatsApp videos must contain a video track",
       "VALIDATION_ERROR",
       400,
     );
   }
-  if (metadata.format.hasVideo !== true) {
+  // The MP4 reader derives format.duration from audio tracks only, so a valid
+  // silent video-only recording may not expose one. Null stays truthful for
+  // that exact case; a present duration must still authenticate as positive.
+  const duration = metadata.format.duration;
+  if (duration === undefined) return null;
+  const rounded = Math.ceil(duration);
+  if (!Number.isSafeInteger(rounded) || rounded <= 0) {
     throw new SahelFlowError(
-      "WhatsApp videos must contain a video track",
+      "WhatsApp videos must have a verified positive duration",
       "VALIDATION_ERROR",
       400,
     );
@@ -761,7 +766,7 @@ export async function queueWhatsAppVideo(
   // The storage branch is not consumed until metadata succeeds, so rejected
   // videos cannot leave an unowned staged object.
   const [metadataSource, storageSource] = input.source.tee();
-  let durationSeconds: number;
+  let durationSeconds: number | null;
   try {
     durationSeconds = await inspectOutboundVideoDuration(metadataSource, declaredSize);
   } catch (error) {

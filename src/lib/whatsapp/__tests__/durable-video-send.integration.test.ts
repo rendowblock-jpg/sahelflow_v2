@@ -135,6 +135,57 @@ describe("durable WhatsApp outbound video send", () => {
     expect(await db.outboxIntent.count()).toBe(0);
   });
 
+  it("accepts a verified silent video-only container with a truthful null duration", async () => {
+    vi.mocked(parseWebStream).mockResolvedValueOnce({
+      format: { hasVideo: true },
+    } as never);
+    const bytes = mp4();
+    const queued = await queueWhatsAppVideo(context, {
+      clientMessageId: MESSAGE_ID,
+      to: "0555000111",
+      caption: "Silent demo",
+      fileName: "silent-demo.mp4",
+      declaredMime: "video/mp4",
+      declaredSize: bytes.length,
+      source: stream(bytes),
+    });
+
+    const message = await db.message.findUniqueOrThrow({
+      where: { id: MESSAGE_ID },
+    });
+    const attachment = await openWhatsAppMessageAttachment(
+      context,
+      MESSAGE_ID,
+      message.attachments,
+    );
+    expect(attachment).toMatchObject({
+      kind: "video",
+      mimeType: "video/mp4",
+      durationSeconds: null,
+      sizeBytes: bytes.length,
+    });
+    expect(queued.effectKey).toMatch(
+      /^wa:[0-9a-f]{32}:[0-9a-f]{64}:video:/,
+    );
+
+    const videoSender = vi.fn(async () => ({
+      ok: true,
+      id: "WA-SILENT-VIDEO",
+      status: "sent",
+    }));
+    await expect(
+      processWhatsAppEffect(
+        context,
+        queued.effectKey,
+        vi.fn(async () => ({ ok: true, id: "X", status: "sent" })),
+        vi.fn(async () => null),
+        vi.fn(async () => ({ ok: true, id: "X", status: "sent" })),
+        videoSender,
+      ),
+    ).resolves.toMatchObject({ state: "succeeded", attemptCount: 1 });
+    expect(videoSender).toHaveBeenCalledTimes(1);
+  });
+
   it("removes the staged object when the durable commit rejects and no message references it", async () => {
     const bytes = mp4();
 
