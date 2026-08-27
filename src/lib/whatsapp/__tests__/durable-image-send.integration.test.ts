@@ -37,13 +37,17 @@ const context = {
 const MESSAGE_ID = "22222222-2222-4222-8222-222222222222";
 let testRoot = "";
 
-function jpeg(): Buffer {
+function jpegWithPayload(payload: string): Buffer {
   return Buffer.concat([
     Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]),
     Buffer.from("JFIF\0", "binary"),
-    Buffer.from("durable-outbound-image-payload", "utf8"),
+    Buffer.from(payload, "utf8"),
     Buffer.from([0xff, 0xd9]),
   ]);
+}
+
+function jpeg(): Buffer {
+  return jpegWithPayload("durable-outbound-image-payload");
 }
 
 function stream(bytes: Buffer): ReadableStream<Uint8Array> {
@@ -145,6 +149,14 @@ describe("durable WhatsApp outbound image send", () => {
         effectKey: string,
         requestBinding: string,
       ) => {
+        const inFlight = await db.outboxIntent.findUniqueOrThrow({
+          where: { effectKey: queued.effectKey },
+        });
+        expect(inFlight.effectStartedAt).not.toBeNull();
+        expect(inFlight.lockedAt).not.toBeNull();
+        expect(inFlight.lockedAt?.getTime()).toBe(
+          inFlight.effectStartedAt?.getTime(),
+        );
         expect(to).toBe("213555000111@s.whatsapp.net");
         expect(image.equals(bytes)).toBe(true);
         expect(mediaType).toBe("image/jpeg");
@@ -178,6 +190,69 @@ describe("durable WhatsApp outbound image send", () => {
       expect(opened.mediaType).toBe("image/jpeg");
       expect(opened.fileName).toBe("customer-product.jpg");
       expect(opened.bytes.equals(bytes)).toBe(true);
+    } finally {
+      opened.bytes.fill(0);
+    }
+  });
+
+  it("keeps one canonical staged object when same-id image contenders race", async () => {
+    const firstBytes = jpegWithPayload("first-racing-image");
+    const secondBytes = jpegWithPayload(
+      "second-racing-image-with-a-different-byte-length",
+    );
+    const contenders = [
+      {
+        caption: "First contender",
+        fileName: "first.jpg",
+        bytes: firstBytes,
+      },
+      {
+        caption: "Second contender",
+        fileName: "second.jpg",
+        bytes: secondBytes,
+      },
+    ] as const;
+
+    const results = await Promise.allSettled(
+      contenders.map((contender) =>
+        queueWhatsAppImage(context, {
+          clientMessageId: MESSAGE_ID,
+          to: "0555000111",
+          caption: contender.caption,
+          fileName: contender.fileName,
+          declaredMime: "image/jpeg",
+          declaredSize: contender.bytes.length,
+          source: stream(contender.bytes),
+        }),
+      ),
+    );
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    const rejected = results.find((result) => result.status === "rejected");
+    if (!rejected || rejected.status !== "rejected") {
+      throw new Error("Expected one conflicting same-id image contender");
+    }
+    expect(rejected.reason).toBeInstanceOf(Error);
+    expect((rejected.reason as Error).message).toContain(
+      "already bound to different image content",
+    );
+
+    const message = await db.message.findUniqueOrThrow({
+      where: { id: MESSAGE_ID },
+    });
+    expect(["First contender", "Second contender"]).toContain(message.body);
+    const winner = contenders.find((candidate) => candidate.caption === message.body);
+    if (!winner) throw new Error("Expected canonical contender message");
+
+    const mediaFiles = readdirSync(whatsAppMediaRoot(context)).filter((name) =>
+      name.endsWith(".sfmedia"),
+    );
+    expect(mediaFiles).toHaveLength(1);
+    const opened = await openInboxWhatsAppMedia(context, MESSAGE_ID);
+    try {
+      expect(opened.bytes.equals(winner.bytes)).toBe(true);
+      expect(opened.fileName).toBe(winner.fileName);
     } finally {
       opened.bytes.fill(0);
     }
