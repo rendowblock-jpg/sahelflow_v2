@@ -39,6 +39,59 @@ function normalizeRecipient(value: string): string {
   }
 }
 
+function imageRequestTooLarge(): SahelFlowError {
+  return new SahelFlowError(
+    "WhatsApp image upload is larger than the accepted request boundary",
+    "VALIDATION_ERROR",
+    413,
+  );
+}
+
+/**
+ * Consume multipart bytes through an explicit ceiling before invoking the
+ * platform form-data parser. This keeps chunked/no-Content-Length requests from
+ * materializing an unbounded body in the contained Next.js process.
+ */
+async function readBoundedImageForm(req: NextRequest): Promise<FormData> {
+  const contentType = req.headers.get("content-type")?.trim() ?? "";
+  if (!/^multipart\/form-data(?:;|$)/i.test(contentType)) {
+    throw new SahelFlowError(
+      "WhatsApp image send requires multipart form data",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+  if (!req.body) {
+    throw new SahelFlowError(
+      "Choose a JPEG, PNG or WebP image to send",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+
+  const reader = req.body.getReader();
+  const bounded = new Uint8Array(MAX_IMAGE_FORM_BYTES);
+  let offset = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      if (offset + next.value.byteLength > MAX_IMAGE_FORM_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw imageRequestTooLarge();
+      }
+      bounded.set(next.value, offset);
+      offset += next.value.byteLength;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return new Response(bounded.subarray(0, offset), {
+    headers: { "Content-Type": contentType },
+  }).formData();
+}
+
 /**
  * POST /api/whatsapp/send-image
  *
@@ -61,11 +114,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     Number.isFinite(declaredLength) &&
     declaredLength > MAX_IMAGE_FORM_BYTES
   ) {
-    throw new SahelFlowError(
-      "WhatsApp image upload is larger than the accepted request boundary",
-      "VALIDATION_ERROR",
-      413,
-    );
+    throw imageRequestTooLarge();
   }
 
   // Avoid committing a durable encrypted staging object when the paired account
@@ -89,7 +138,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  const form = await req.formData();
+  const form = await readBoundedImageForm(req);
   const image = form.get("image");
   if (!(image instanceof File)) {
     throw new SahelFlowError(
