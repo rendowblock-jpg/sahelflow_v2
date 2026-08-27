@@ -159,22 +159,32 @@ export const GET = withErrorHandler(
               )
             : null;
         let attachment: ProjectedWhatsAppAttachment | null = openedAttachment;
-        if (
-          openedAttachment &&
-          !fromMe &&
-          BINARY_MEDIA_TYPES.has(openedAttachment.kind)
-        ) {
-          const mediaIntent = mediaIntentByKey.get(
-            `whatsapp-media-fetch:${message.id}`,
-          );
-          attachment = {
-            ...openedAttachment,
-            localMedia: projectInboxLocalMedia(
-              message.id,
-              mediaIntent?.status,
-              mediaIntent?.outcomeState,
-            ),
-          };
+        if (openedAttachment && BINARY_MEDIA_TYPES.has(openedAttachment.kind)) {
+          if (fromMe && openedAttachment.kind === "image") {
+            // Outbound image bytes are already canonical encrypted local state
+            // before provider dispatch, so local preview/download stays truthful
+            // even while delivery is queued, retrying or failed.
+            attachment = {
+              ...openedAttachment,
+              localMedia: projectInboxLocalMedia(
+                message.id,
+                "succeeded",
+                "receipt",
+              ),
+            };
+          } else if (!fromMe) {
+            const mediaIntent = mediaIntentByKey.get(
+              `whatsapp-media-fetch:${message.id}`,
+            );
+            attachment = {
+              ...openedAttachment,
+              localMedia: projectInboxLocalMedia(
+                message.id,
+                mediaIntent?.status,
+                mediaIntent?.outcomeState,
+              ),
+            };
+          }
         }
         return {
           key: {
