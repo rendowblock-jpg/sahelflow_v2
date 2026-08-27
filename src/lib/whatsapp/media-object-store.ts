@@ -608,6 +608,10 @@ export async function removeWhatsAppMediaObject(
   messageId: string,
 ): Promise<void> {
   const envelopeKey = await getBusinessEnvelopeKey(context);
-  const objectId = deriveObjectId(context, messageId, envelopeKey);
-  rmSync(objectPath(context, objectId), { force: true });
+  try {
+    const objectId = deriveObjectId(context, messageId, envelopeKey);
+    rmSync(objectPath(context, objectId), { force: true });
+  } finally {
+    envelopeKey.fill(0);
+  }
 }
