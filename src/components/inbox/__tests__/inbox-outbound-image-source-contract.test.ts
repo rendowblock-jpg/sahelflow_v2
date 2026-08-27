@@ -14,6 +14,7 @@ describe("WhatsApp outbound image source boundary", () => {
 
     expect(thread).toContain('accept="image/jpeg,image/png,image/webp"');
     expect(thread).toContain('data-inbox-image-picker="true"');
+    expect(thread).toContain('aria-label={copy("mediaImage")}');
     expect(thread).toContain("if (file) void sendImage(file)");
     expect(thread).toContain("disabled={sending || !canSend}");
     expect(workspace).toContain("MAX_OUTBOUND_IMAGE_BYTES = 20 * 1024 * 1024");
@@ -21,6 +22,24 @@ describe("WhatsApp outbound image source boundary", () => {
     expect(workspace).toContain('form.set("image", file');
     expect(workspace).toContain("void monitorWhatsAppEffect(");
     expect(workspace).toContain("await loadMessages(chat, { background: true })");
+  });
+
+  it("removes only unqueued optimistic images and reloads canonical messages", () => {
+    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    const sendImageStart = workspace.indexOf("const sendImage = useCallback");
+    const sendImageEnd = workspace.indexOf("const connectWhatsApp", sendImageStart);
+    const sendImage = workspace.slice(sendImageStart, sendImageEnd);
+
+    expect(sendImage).toContain("let knownEffectKey: string | null = null");
+    expect(sendImage).toContain("knownEffectKey = data.effectKey ?? null");
+    expect(sendImage).toContain("if (knownEffectKey)");
+    expect(sendImage).toContain(
+      "current.filter((message) => message.id !== tempId)",
+    );
+    expect(sendImage).toContain("await loadMessages(chat, { background: true })");
+    expect(sendImage.indexOf("if (knownEffectKey)")).toBeLessThan(
+      sendImage.indexOf("current.filter((message) => message.id !== tempId)"),
+    );
   });
 
   it("rejects unavailable account and invalid LID provenance before staging", () => {
