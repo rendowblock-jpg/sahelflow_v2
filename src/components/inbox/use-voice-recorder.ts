@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { remuxWebmOpusToOgg } from "@/components/inbox/voice-webm-ogg";
+
 /**
  * In-composer WhatsApp voice recording (#329 follow-up, founder-installed
  * Internal.28 campaign). The mic button previously only opened the audio
@@ -10,14 +12,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * hands the finished take to the exact same durable `sendVoice` path the
  * picker uses — limits, provenance and PTT truth stay server-enforced.
  *
- * WhatsApp voice notes (PTT) must be OGG/Opus. WebView2 (evergreen
- * Chromium) exposes `audio/ogg;codecs=opus` through MediaRecorder; if a
- * runtime ever lacks it, recording fails closed with an honest message
- * instead of uploading a container the server would have to reject.
+ * WhatsApp voice notes (PTT) must be OGG/Opus (RFC 7845). Evergreen
+ * Chromium — WebView2 included — cannot record OGG through MediaRecorder;
+ * its only Opus container is `audio/webm;codecs=opus`. The recorder
+ * therefore prefers native OGG when a runtime offers it, records WebM/Opus
+ * otherwise, and re-muxes the finished take into a spec-compliant Ogg Opus
+ * stream (`voice-webm-ogg.ts`) before it enters the durable send path. A
+ * take that cannot be authenticated fails closed with an honest message
+ * instead of uploading a foreign container the server would reject.
  */
 const VOICE_RECORDING_MIME_CANDIDATES = [
   "audio/ogg;codecs=opus",
   "audio/ogg",
+  "audio/webm;codecs=opus",
+  "audio/webm",
 ] as const;
 
 /** Hard ceiling identical in spirit to the server's 32 MiB audio bound. */
@@ -33,6 +41,7 @@ interface UseVoiceRecorderInput {
   copy: {
     micUnavailable: string;
     recordingUnsupported: string;
+    processingFailed: string;
   };
 }
 
@@ -189,9 +198,27 @@ export function useVoiceRecorder({
       }
       const blob = new Blob(chunks, { type });
       if (blob.size === 0) return;
-      onCompleteRef.current(
-        new File([blob], voiceNoteFileName(new Date()), { type }),
-      );
+      if (type.startsWith("audio/ogg")) {
+        onCompleteRef.current(
+          new File([blob], voiceNoteFileName(new Date()), { type }),
+        );
+        return;
+      }
+      // WebM/Opus take (every evergreen Chromium/WebView2 runtime): re-mux
+      // losslessly to RFC 7845 Ogg Opus before the durable send path sees it.
+      void blob
+        .arrayBuffer()
+        .then((buffer) => {
+          const ogg = remuxWebmOpusToOgg(new Uint8Array(buffer));
+          onCompleteRef.current(
+            new File([ogg], voiceNoteFileName(new Date()), {
+              type: "audio/ogg",
+            }),
+          );
+        })
+        .catch(() => {
+          onErrorRef.current(copyRef.current.processingFailed);
+        });
     };
     startedAtRef.current = Date.now();
     setElapsedMs(0);
