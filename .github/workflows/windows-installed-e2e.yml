@@ -221,14 +221,24 @@ jobs:
           # per-launch HttpOnly authority as the installed WebView. Give only
           # this disposable evidence MSI a loopback CDP endpoint; release builds
           # continue to use the checked-in Tauri configuration unchanged.
+          # Checked-in browser args are preserved (the packaged window now
+          # carries the WebView2 media-permission flags), and the evidence-only
+          # CDP endpoint is appended on top; -Force lets this drift-proof
+          # injection overwrite the property whenever it already exists.
           $evidenceConfig = Get-Content -LiteralPath 'src-tauri/tauri.conf.json' -Raw |
             ConvertFrom-Json
+          $checkedInArgs = $evidenceConfig.app.windows[0].additionalBrowserArgs
+          $baseArgs = if ([string]::IsNullOrWhiteSpace($checkedInArgs)) {
+            "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
+          } else {
+            "$($checkedInArgs.Trim())"
+          }
           $browserArguments =
-            "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection " +
+            "$baseArgs " +
             "--remote-debugging-port=$webViewDebugPort " +
             "--remote-allow-origins=http://127.0.0.1:$webViewDebugPort"
           $evidenceConfig.app.windows[0] |
-            Add-Member -NotePropertyName additionalBrowserArgs -NotePropertyValue $browserArguments
+            Add-Member -NotePropertyName additionalBrowserArgs -NotePropertyValue $browserArguments -Force
           $evidenceConfig.bundle.createUpdaterArtifacts = $false
           $evidenceConfig |
             ConvertTo-Json -Depth 100 |
