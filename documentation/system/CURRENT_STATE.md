@@ -1,46 +1,53 @@
 # SahelFlow — Current State
 
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
-> **Last assessed:** 2026-08-26
+> **Last assessed:** 2026-08-28
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at reconciliation `a3216a63b74ca2c33713f95f85df4ed6e2717567`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`
-> **Current signed release:** Internal.27 / `1.0.0-internal.27` / MSI `1.0.0.27` / FD-047
-> **Reviewed release head:** `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`
-> **Signed publication run:** `32913445791` — success
-> **Current execution:** FD-048 source-first batch; #316 is source-merged through PR #319, #317 is current, then FRC-2–5 source/evidence preparation before one separately authorized successor
+> **Live protected main:** resolve from GitHub before every action; at reconciliation `d104da72dcfb7950df0b437ce279377b28e7df4b` after release PR #333
+> **Current signed release:** Internal.28 / `1.0.0-internal.28` / MSI `1.0.0.28` / FD-049 (published; Founder installation pending)
+> **Reviewed release head:** `d48cd1cf26110743b44a72dff734dd7f4bcbc637`
+> **Signed publication run:** `33136814065` — success
+> **Current execution:** FD-049 installed Founder campaign — the Founder applies the in-place Internal.28 update, executes the retained #306 real-phone rows plus applicable #316/#317 native rows, evidence is reconciled, then FRC-2–5 resume
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
 ## 1. Exact release authority
 
-Internal.27 is the latest signed/published artifact:
+Internal.28 is the latest signed/published artifact:
 
-- protected release source `4e395b0149da447daab37ad2d01be5c8bf1d6bce` / PR #313;
-- app `1.0.0-internal.27`;
-- MSI `1.0.0.27`;
+- protected release source `d104da72dcfb7950df0b437ce279377b28e7df4b` / release PR #333 (equals protected `main`);
+- app `1.0.0-internal.28`;
+- MSI `1.0.0.28`;
 - channel `internal`;
-- authority FD-047;
+- authority FD-049;
 - mode `founder-offline-only`;
 - owned host suffix `null`;
 - customer-online licensing disabled.
 
-PR #313 reviewed head `ef6a06c3a1b24127eea9e635796c42818f4c7d4e` passed all Required checks, exact-head Codex review reported no major issue, and unresolved review threads were zero. Its release tree packages product repair PR #312 from protected source.
+PR #333 reviewed head `d48cd1cf26110743b44a72dff734dd7f4bcbc637` passed all 21 Required checks with zero failed and zero unresolved review threads. Its release tree packages the product source through #331 from protected source; the certified product head is `9ed2fa15c2a9571d8a7f0c1f02e39052f18a0f80` (CI `33132059574`, Phase 5 `33132059464`, Phase 6-7 `33132059457`), product-tree-equivalent to the pre-release protected main.
 
-After expected-head merge, dispatcher `32913436865` and signed updater/publication run `32913445791` succeeded on exact protected main. The release was published at tag `sahelflow-v1.0.0-internal.27-4e395b0149da447daab37ad2d01be5c8bf1d6bce`.
+After expected-head merge, dispatcher `33136807451`, signed updater/publication run `33136814065` and release observer `33136822222` succeeded on exact protected main. The release was published at tag `sahelflow-v1.0.0-internal.28-d104da72dcfb7950df0b437ce279377b28e7df4b`.
 
 Published MSI:
 
-- `SahelFlow_1.0.0-internal.27_x64_en-US.msi`;
-- digest `sha256:64865032b4a59b8cf4f36d1e6b23e6251e817044c90f78ee3bc673822b803756`.
+- `SahelFlow_1.0.0-internal.28_x64_en-US.msi`;
+- digest `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64`.
 
-The signed workflow proved exact source/review binding, Required PR evidence, signed build, packaged-runtime readiness, signature, signed install/launch/reopen, hydrated authenticated UI twice, deterministic rewrites, manifest, `latest.json`, tag and publication.
+The Founder has **not yet installed** Internal.28; the latest Founder-installed checkpoint remains Internal.27 (dispatcher `32913436865`, signed run `32913445791`, tag `sahelflow-v1.0.0-internal.27-4e395b0149da447daab37ad2d01be5c8bf1d6bce`, MSI digest `sha256:64865032b4a59b8cf4f36d1e6b23e6251e817044c90f78ee3bc673822b803756`). Preserve that installation state until the in-place update and campaign.
 
-## 2. Product/security line packaged in Internal.27
+## 2. Product/security line packaged in Internal.28
 
-Internal.27 retains the accepted Internal.24 product line and the Internal.25/26 security/provider foundation. Its direct package includes:
+Internal.28 retains the accepted Internal.24 product line and the Internal.25/26/27 security/provider/product foundation. Its direct package includes:
 
-- **#312** — individual WhatsApp `numeric@lid` replies only when the exact conversation has persisted inbound provenance, Arabic empty-composer RTL with automatic entered-content direction, direct governed status control and reviewed AI order extraction from the thread header;
-- **#313** — version/release/licensing authority only for Internal.27 / FD-047.
+- **#315** — response CSP aligned with Tauri's loopback-only ephemeral-port policy, durable-projection fallback and socket retry for the demonstrated live-push root;
+- **#319** — #316 Class-AAA durable Notification Center and WhatsApp attention routing;
+- **#324/#325/#327/#329** — durable outbound image, MP4 video, document and voice/PTT sending with encrypted staging, canonical Message/outbox authority and deterministic account-bound receipts;
+- **#331** — professional Inbox interaction parity: durable quoted replies with queue-time provenance resolution, safe message copy, upload progress with in-flight cancellation, JPEG thumbnails with fail-closed fallback, and paste/drop composition;
+- **#333** — version/release/licensing authority only for Internal.28 / FD-049.
+
+## 2a. Product/security line packaged in Internal.27 (retained history)
+
+Internal.27's direct package was #312 individual WhatsApp `numeric@lid` replies with persisted inbound provenance, Arabic empty-composer RTL with automatic entered-content direction, governed status control and reviewed AI order extraction, plus #313 version/release/licensing authority for Internal.27 / FD-047. That line remains inside Internal.28.
 
 #309/#310/#311 remain the protected Internal.26 callback, resizable-Inbox and release foundation. #300/#304/#305/#307 remain the protected Internal.25 security/provider prerequisites.
 
@@ -226,7 +233,7 @@ If authoritative access is unavailable, the affected integration/action remains 
 - Beta is not established.
 - Stable is not established.
 
-SahelFlow is **not yet a commercially certified Stable release**. Internal.27 remains an Internal Founder-offline checkpoint.
+SahelFlow is **not yet a commercially certified Stable release**. Internal.28 is the current Internal Founder-offline checkpoint (published, not yet Founder-installed); Internal.27 remains a retained prior checkpoint.
 
 ## 12. Historical continuity required by active authority
 

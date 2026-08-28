@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-26
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.27 / FD-047 remains latest signed/installed; PR #315 and Notification Center PR #319 are source-merged at protected `main` `a3216a63b74ca2c33713f95f85df4ed6e2717567`; FD-048 now owns #317 → FRC-2–5 source-first work before one separately authorized successor
+> **Current checkpoint:** Internal.28 / FD-049 is latest signed/published (Founder installation pending; Internal.27 remains latest installed); #316/#317 are source-complete and packaged in Internal.28; next is the in-place update plus installed real-phone campaign, then FRC-2–5 resume
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -30,7 +30,7 @@ resolve protected main + open PR/issues + current signed release
 → perform installed/human/provider/external evidence that automation cannot prove
 ```
 
-At the current frontier, no product rewrite is authorized. Internal.27 passed the exact-once real `@lid` outbound and durable new-number inbound. PR #315 merged the demonstrated dynamic-loopback live-push root plus bounded polling/retry and durable receipt/identity reconciliation. It is source-complete, not signed/installed proof. Under FD-048, the next implementation package is #316, followed by #317 and FRC-2–5 source/evidence work before one combined successor is separately authorized.
+At the current frontier, no product rewrite is authorized. Internal.27 passed the exact-once real `@lid` outbound and durable new-number inbound; its demonstrated live-push root is repaired by PR #315 (dynamic-loopback CSP, bounded polling/retry, durable receipt/identity reconciliation). #316 and #317 completed in source through #319/#324/#325/#327/#329/#331, and everything is packaged inside published Internal.28 (FD-049). The next implementation-level action is not source: it is the Founder's in-place Internal.28 update, the installed real-phone campaign over the retained #306 rows plus applicable #316/#317 native rows, evidence reconciliation, and only then FRC-2–5 source/evidence work.
 
 Do not restart generic repository reconnaissance when a bounded current outcome is known. Do not rerun an unchanged passing exact head. Do not retry deterministic failures until they turn green without identifying/fixing the cause.
 
@@ -59,7 +59,7 @@ Operational rules:
 - issue bodies can retain evidence/work queues but do not replace active documentation authority;
 - source, signed artifact, hosted CI install, Founder install, live-provider evidence, representative beta and Stable are distinct truth levels.
 
-Current signed authority is Internal.27 / `1.0.0-internal.27` / MSI `1.0.0.27` / FD-047 / `founder-offline-only`. FD-045 changes execution strategy; it does not create customer-online, Beta or Stable authority.
+Current signed authority is Internal.28 / `1.0.0-internal.28` / MSI `1.0.0.28` / FD-049 / `founder-offline-only` (published; Founder installation pending). FD-045/FD-049 change execution strategy and timing only; they do not create customer-online, Beta or Stable authority.
 
 ## 3. Complete phase/package audit
 
@@ -82,7 +82,7 @@ Before a major phase/package or a materially uncertain bounded repair, perform t
 
 For a broad package, freeze one **Phase Problem Register** before implementation so duplicate manifestations group under root causes and P0/P1 are visible. For one demonstrated installed defect, the reproduction plus bounded impacted-sibling inventory can serve as the register; do not create bureaucracy for its own sake.
 
-At the current Internal.27 checkpoint, FRC-3 may build the finite Required capability/journey evidence ledger. It must not become generic speculative reconnaissance. Complete phase/package audit begins only for a demonstrated defect or a specifically frozen FRC certification package.
+At the current Internal.28 checkpoint, FRC-3 may build the finite Required capability/journey evidence ledger. It must not become generic speculative reconnaissance. Complete phase/package audit begins only for a demonstrated defect or a specifically frozen FRC certification package.
 
 ## 4. Research rule
 
@@ -178,7 +178,7 @@ Applicable proof includes:
 
 A signed release is built only after exact protected-main authority exists. Branch-only artifacts are evidence candidates, never durable release sources.
 
-Internal.27 is the current completed Level 3 release path: product PR #312 and release PR #313 passed every Required check and exact-head review with zero unresolved threads; protected-main dispatcher `32913436865` and signed publication `32913445791` passed and published the exact source-bound artifact.
+Internal.28 is the current completed Level 3 release path: release PR #333 passed every Required check (21 success, 0 failed) and exact-head review with zero unresolved threads; protected-main dispatcher `33136807451`, signed publication `33136814065` and release observer `33136822222` passed and published the exact source-bound artifact. Internal.27's #312/#313 path (dispatcher `32913436865`, signed publication `32913445791`) remains the retained prior precedent.
 
 ## 7. Whole-product AAA frontend program
 
@@ -330,7 +330,7 @@ version or decision number.
 - The free Gemini tier is limited to the privacy-safe seller-owned-key contract; synthetic/redacted certification does not authorize silent client-PII processing.
 - A `workers.dev` route may support development but is not the sole business-critical customer authority.
 - Representative beta, legal/privacy/security, provider certification, incident/recovery and compatibility gates remain distinct before Stable.
-- Founder-offline Internal.27 does not authorize customer-online, a paid deployment, Beta or Stable.
+- Founder-offline Internal.28 does not authorize customer-online, a paid deployment, Beta or Stable.
 
 ## 13. Hard prohibitions
 

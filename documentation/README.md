@@ -1,14 +1,14 @@
 # SahelFlow documentation authority
 
 > **Status:** Active non-archive documentation entry point
-> **Last reconciled:** 2026-08-26
+> **Last reconciled:** 2026-08-28
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
-> **Latest signed/published checkpoint:** Internal.27 / `1.0.0-internal.27` / MSI `1.0.0.27` / FD-047
-> **Protected release source:** `4e395b0149da447daab37ad2d01be5c8bf1d6bce` / PR #313
-> **Reviewed release head:** `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`
-> **Signed publication run:** `32913445791` — success
-> **Current next outcome:** FD-048 source-first batch — #316 Notifications is source-merged; execute #317 professional Inbox parity, then FRC-2–5 source/certification preparation before one separately authorized signed successor
+> **Latest signed/published checkpoint:** Internal.28 / `1.0.0-internal.28` / MSI `1.0.0.28` / FD-049 (Founder installation pending; Internal.27 remains latest installed)
+> **Protected release source:** `d104da72dcfb7950df0b437ce279377b28e7df4b` / PR #333
+> **Reviewed release head:** `d48cd1cf26110743b44a72dff734dd7f4bcbc637`
+> **Signed publication run:** `33136814065` — success
+> **Current next outcome:** FD-049 installed Founder campaign — the Founder applies the in-place Internal.28 update, executes the retained #306 real-phone rows plus applicable #316/#317 native rows, evidence is reconciled into the ledger, then FRC-2–5 resume
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
@@ -29,29 +29,36 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Current protected and signed truth
 
-Protected `main` at reconciliation is `a3216a63b74ca2c33713f95f85df4ed6e2717567`; Internal.27 release source remains `4e395b0149da447daab37ad2d01be5c8bf1d6bce`. PR #315 and Notification Center PR #319 are source-merged; no open PR existed immediately after #319. Revalidate live state before every write/merge.
+Protected `main` at reconciliation is `d104da72dcfb7950df0b437ce279377b28e7df4b` after release PR #333; no open PR existed immediately after #333. Revalidate live state before every write/merge.
 
-Internal.27 is the latest real signed/published and Founder-installed offline package:
+Internal.28 is the latest real signed/published offline package:
 
-- app `1.0.0-internal.27`;
-- MSI `1.0.0.27`;
-- authority FD-047;
+- app `1.0.0-internal.28`;
+- MSI `1.0.0.28`;
+- authority FD-049;
 - mode `founder-offline-only`;
-- product repair PR #312 / release PR #313 / reviewed release head `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`;
-- all Required PR checks succeeded; exact-head Codex review found no major issue and unresolved review threads were zero;
-- dispatcher `32913436865` — success;
-- signed updater/publication `32913445791` — success;
-- release tag `sahelflow-v1.0.0-internal.27-4e395b0149da447daab37ad2d01be5c8bf1d6bce`;
-- MSI digest `sha256:64865032b4a59b8cf4f36d1e6b23e6251e817044c90f78ee3bc673822b803756`.
+- release PR #333 / reviewed release head `d48cd1cf26110743b44a72dff734dd7f4bcbc637`;
+- all 21 Required checks succeeded (0 failed); exact-head review had zero unresolved threads;
+- dispatcher `33136807451` — success;
+- signed updater/publication `33136814065` and release observer `33136822222` — success;
+- release tag `sahelflow-v1.0.0-internal.28-d104da72dcfb7950df0b437ce279377b28e7df4b`;
+- MSI digest `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64`.
+
+The Founder has **not yet installed** Internal.28. The latest Founder-installed checkpoint remains Internal.27 (FD-047, dispatcher `32913436865`, signed run `32913445791`, tag `sahelflow-v1.0.0-internal.27-4e395b0149da447daab37ad2d01be5c8bf1d6bce`, MSI digest `sha256:64865032b4a59b8cf4f36d1e6b23e6251e817044c90f78ee3bc673822b803756`); preserve that installation state until the in-place update and campaign.
 
 The signed workflow proved exact protected-source and reviewed-tree binding, Required PR success, signed MSI/updater build, staged runtime readiness, local signature verification, signed install/launch/reopen, authenticated hydrated WebView twice, deterministic rewrites, evidence manifest, `latest.json`, exact tag and publication.
 
 ## Product line now packaged
 
-Internal.27 retains the completed product/security line through Internal.26 and adds:
+Internal.28 retains the completed product/security line through Internal.27 and adds:
 
-- #312 — provenance-bound individual WhatsApp `numeric@lid` replies, Arabic empty-composer RTL with automatic entered-content direction, direct governed status control and reviewed AI order extraction from the thread header;
-- #313 — Internal.27 / FD-047 release authority only.
+- #315 — response CSP aligned with Tauri's loopback-only ephemeral-port policy, durable-projection fallback and socket retry for the demonstrated live-push root;
+- #319 — #316 Class-AAA durable Notification Center and WhatsApp attention routing;
+- #324/#325/#327/#329 — durable outbound image, MP4 video, document and voice/PTT sending with encrypted staging, canonical Message authority and deterministic account-bound receipts;
+- #331 — professional Inbox interaction parity: durable quoted replies, safe message copy, upload progress with in-flight cancellation, JPEG thumbnails with fail-closed fallback, and paste/drop composition;
+- #333 — Internal.28 / FD-049 release authority only.
+
+Internal.27 had added #312 provenance-bound individual `numeric@lid` replies, Arabic empty-composer RTL, governed status control and reviewed thread-header extraction, plus #313 release authority; that line remains inside Internal.28.
 
 #309/#310/#311 remain the retained Internal.26 callback, resizable-Inbox and release foundation; #300/#304/#305/#307 remain the earlier security/provider foundation.
 
@@ -142,10 +149,10 @@ Beta or Stable is authorized by FD-048.
 ## Exact resume path
 
 1. Resolve live protected `main`, open PRs, #306/#316/#317 and #230.
-2. Read the mandatory authority set above and confirm Internal.27 / FD-047 remains latest signed and FD-048 owns sequencing.
-3. Continue #317 from fresh protected main using `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md`; retain the #319 Notification Center source without claiming installed closure.
-4. Continue FRC-2 through FRC-5 source/evidence work in the FD-048 order. Maintain capability-specific certification states and explicit external blockers.
-5. Do not create or install a successor until #317 is complete and the FD-049 release-authority package exists; FRC-2–5 resume after that installed Founder observation.
+2. Read the mandatory authority set above and confirm Internal.28 / FD-049 remains latest signed/published and the Founder installation is the next evidence action.
+3. After the Founder applies the in-place Internal.28 update, execute the retained #306 rows plus applicable #316/#317 native rows using `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md`; convert rows only where installed evidence exists.
+4. Reconcile the ledger and current-state documentation with the campaign results, then continue FRC-2 through FRC-5 source/evidence work in dependency order. Maintain capability-specific certification states and explicit external blockers.
+5. Do not create or install a further successor, and do not repeat the installed campaign, without a newer explicit Founder decision; FRC-2–5 resume after the Internal.28 installed observation.
 6. Do not expose or market an integration/action before its live certification record exists.
 7. Keep #306 installed proof, #230/customer-online, commercial deployment, Beta and Stable as separate explicit gates.
 
