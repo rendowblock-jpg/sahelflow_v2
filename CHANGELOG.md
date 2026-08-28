@@ -8,6 +8,16 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-08-28 — #316/#317 source completion and signed Internal.28 publication (FD-049)
+
+- #317 professional WhatsApp Inbox parity completed in source: PRs #324 (durable outbound images), #325 (MP4 video), #327 (documents), #329 (voice/PTT) and #331 (interaction parity: durable quoted replies, safe message copy, upload progress with in-flight cancellation, JPEG thumbnails with fail-closed fallback, paste/drop). Ledger reconciles #326/#328/#330/#332 kept `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` exact; after #332 no `missing` source rows remained.
+- #316 Class-AAA Notification Center remained source-complete from PR #319 and is packaged in this successor.
+- FD-049 (recorded in `documentation/product/DECISIONS.md`) authorized one combined signed successor (Internal.28) once #317 completed, before FRC-2–5 resume.
+- Release PR #333: head `d48cd1cf26110743b44a72dff734dd7f4bcbc637`, all 21 Required checks success / 0 failed, zero unresolved review threads; expected-head guarded squash merge to protected main `d104da72dcfb7950df0b437ce279377b28e7df4b`. Certified product head `9ed2fa15c2a9571d8a7f0c1f02e39052f18a0f80` (CI `33132059574`, Phase 5 `33132059464`, Phase 6-7 `33132059457`).
+- Dispatcher `33136807451`, signed updater/publication run `33136814065` and release observer `33136822222` succeeded on exact protected main; published tag `sahelflow-v1.0.0-internal.28-d104da72dcfb7950df0b437ce279377b28e7df4b` with `SahelFlow_1.0.0-internal.28_x64_en-US.msi` (digest `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64`), `.sig` and `latest.json` on the internal updater endpoint.
+- App `1.0.0-internal.28`, MSI `1.0.0.28`, authority FD-049, mode `founder-offline-only`. Internal.27 remains the latest Founder-installed checkpoint until the in-place update.
+- Issues #316/#317 and #306 remain open for installed/real-phone evidence only; the FD-049 installed campaign is the next evidence action. Customer-online, Beta and Stable remain unauthorized; #230 stays independently blocked until an owned domain exists.
+
 ### 2026-08-19 — Internal.21/22 Class-AAA convergence and signed Internal.22 publication
 
 - PRs #278 and #279 completed the Class-AAA Inbox and AI Agents workspace reconstructions.

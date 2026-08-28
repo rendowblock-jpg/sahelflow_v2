@@ -1,11 +1,11 @@
 # SahelFlow 1.0 — Consolidated Founder Decisions
 
-> **Status:** Authoritative consolidated product/execution register through FD-033 plus FD-045 and FD-048; version-bound FD-034–FD-044 and FD-046–FD-047 remain in protected release authority
+> **Status:** Authoritative consolidated product/execution register through FD-033 plus FD-045, FD-048 and FD-049; version-bound FD-034–FD-044 and FD-046–FD-047 remain in protected release authority
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-08-26
+> **Last amended:** 2026-08-28
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
-This register consolidates approved product and execution decisions through FD-033, FD-045 First Revenue Certification and FD-048 source-first batching. Version-bound FD-034–FD-044 and FD-046–FD-047 remain durable in their protected release envelopes and are summarized by active current-state documentation. Engineering
+This register consolidates approved product and execution decisions through FD-033, FD-045 First Revenue Certification, FD-048 source-first batching and FD-049 post-#317 signed successor authority. Version-bound FD-034–FD-044 and FD-046–FD-047 remain durable in their protected release envelopes and are summarized by active current-state documentation. Engineering
 mechanisms remain subject to architecture, research, security review, provider
 certification and evidence gates, but engineering may not contradict these
 policies without a new numbered Founder decision.

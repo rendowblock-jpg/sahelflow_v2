@@ -33,34 +33,32 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-At the 2026-08-26 reconciliation:
+At the 2026-08-28 reconciliation:
 
-- protected `main`: `3e5375bf503025083dd1b6f448215717528d0d5d` / PR #315; re-resolve live before acting;
-- latest signed/installed checkpoint: **Internal.27** / **FD-047**, mode `founder-offline-only`;
-- Internal.27 release source: `4e395b0149da447daab37ad2d01be5c8bf1d6bce`;
+- protected `main`: `d104da72dcfb7950df0b437ce279377b28e7df4b` / release PR #333; re-resolve live before acting;
+- latest signed/published checkpoint: **Internal.28** / **FD-049**, mode `founder-offline-only`; the latest **Founder-installed** checkpoint remains Internal.27 until the in-place update;
+- Internal.28 release source: `d104da72dcfb7950df0b437ce279377b28e7df4b` (equals protected `main`); Internal.27 release source `4e395b0149da447daab37ad2d01be5c8bf1d6bce` remains retained history;
 - Internal.27 demonstrated exact-once real `@lid` outbound and durable new-number inbound, while automatic Inbox live-push still required manual refresh;
-- PR #315 source-merged the dynamic-loopback live-push root repair plus bounded polling/retry and durable receipt/identity reconciliation; it is not yet signed or installed evidence;
+- PR #315 through #319/#324/#325/#327/#329/#331 (live-push repair, Notification Center, image/video/document/voice-PTT sending, interaction parity) are packaged inside published Internal.28; installed proof is still pending;
 - issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint;
 - issues #306 and #230 remain open for real-phone WhatsApp certification and customer-online readiness;
-- issues #316 and #317 are open for Class-AAA Notifications and professional WhatsApp Inbox parity;
-- no open PR existed immediately after PR #315 merged.
+- issues #316 and #317 remain open only for installed/real-phone evidence; their source is complete and packaged in Internal.28;
+- no open PR existed immediately after release PR #333 merged.
 
-Internal.27 remains the signed/installed authority. Protected `main` is newer source authority only; do not describe PR #315 or later source work as released, installed, live-provider-certified or Founder-accepted.
+Internal.28 is the signed/published authority; the Founder has not yet installed it. Do not describe Internal.28 or any source work as installed, live-provider-certified or Founder-accepted until the in-place update and real-phone campaign produce that evidence. Preserve the Founder's Internal.27 installation state until that campaign.
 
 ## Exact next outcome
 
-Execute the **FD-048 source-first First Revenue Certification batch** while preserving every FD-045 evidence rule.
+Execute the **FD-049 installed Founder campaign** while preserving every FD-045 evidence rule.
 
 1. Re-resolve protected `main`, open PRs and issues #306/#316/#317/#230.
-2. Confirm Internal.27 / FD-047 remains the latest signed/installed checkpoint and protected `main` is newer source authority only.
-3. Reconcile the active documentation after PR #315.
-4. Implement issue #316, the durable Class-AAA Notification Center and WhatsApp attention-routing package.
-5. Implement issue #317, the professional WhatsApp Inbox capability ledger and message/media operational-parity package.
-6. After #317 is protected-main complete, execute the FD-049 release-authority package for one combined signed successor (Internal.28) so the Founder can install and test the retained work.
-7. Resume FRC-2 through FRC-5 source/contracts/mock/official-development-or-sandbox work after that installed Founder observation, in dependency order.
-8. Open a separate release-authority package; only then publish one signed successor and perform one in-place Founder update plus installed/live-provider campaign.
-9. Publicly promise only exact live-certified provider/actions. Unverified providers stay hidden, disabled or conditional.
-10. Keep #306, #230, customer-online, paid deployment, Beta and Stable separate until their own evidence and authority close them.
+2. Confirm Internal.28 / FD-049 remains the latest signed/published checkpoint (release PR #333, signed run `33136814065`) and that the Founder has not yet installed it.
+3. The Founder applies the in-place Internal.28 update through the normal updater without logging out, resetting AppData or clearing protected auth.
+4. On the installed Internal.28 candidate, execute the retained #306 real-phone rows (automatic no-refresh inbound, reopen persistence, EN/AR observation, governed status, reviewed extraction, logout last) plus applicable #316/#317 native rows and representative media/parity exercises.
+5. Reconcile the capability ledger and current-state documentation with the installed evidence; convert `implemented-unproven` rows only where the campaign actually proved them.
+6. Resume FRC-2 through FRC-5 source/contracts/mock/official-development-or-sandbox work after that installed Founder observation, in dependency order.
+7. Publicly promise only exact live-certified provider/actions. Unverified providers stay hidden, disabled or conditional.
+8. Keep #306, #230, customer-online, paid deployment, Beta and Stable separate until their own evidence and authority close them.
 
 ## First Revenue Certification rules
 
