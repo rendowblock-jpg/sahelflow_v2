@@ -3,12 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Check,
   CheckCircle2,
   Flag,
+  ListChecks,
   Loader2,
   MessageSquareText,
   Search,
+  Trash2,
   UserMinus,
+  X,
 } from "lucide-react";
 
 import type {
@@ -18,7 +22,18 @@ import type {
 } from "@/components/inbox/inbox-desk-types";
 import { searchResultToChat } from "@/components/inbox/inbox-desk-types";
 import type { InboxChat } from "@/components/inbox/inbox-workspace-types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
@@ -125,14 +140,20 @@ function ConversationRow({
   locale,
   t,
   copy,
+  selectMode,
+  checked,
   onSelect,
+  onToggle,
 }: {
   chat: InboxChat;
   active: boolean;
   locale: "ar" | "fr" | "en";
   t: ReturnType<typeof useInboxWorkspace>["t"];
   copy: ReturnType<typeof useInboxWorkspace>["copy"];
+  selectMode: boolean;
+  checked: boolean;
   onSelect: () => void;
+  onToggle: () => void;
 }) {
   const status = chat.workflow.status ?? "open";
   const priority = chat.workflow.priority;
@@ -144,14 +165,33 @@ function ConversationRow({
       data-inbox-conversation={chat.id}
       data-inbox-unread={chat.unread > 0 ? "true" : "false"}
       data-inbox-status={status}
-      onClick={onSelect}
-      aria-current={active ? "true" : undefined}
+      data-inbox-selected={selectMode && checked ? "true" : "false"}
+      onClick={selectMode ? onToggle : onSelect}
+      aria-current={!selectMode && active ? "true" : undefined}
+      aria-pressed={selectMode ? checked : undefined}
       className={cn(
         "group relative flex min-h-[4.75rem] w-full items-start gap-2.5 overflow-hidden border-b border-border/55 px-3 py-2.5 text-start outline-none transition-colors last:border-b-0 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        active ? "bg-primary/[0.055]" : "bg-background hover:bg-muted/35",
+        selectMode && checked
+          ? "bg-primary/[0.07]"
+          : active
+            ? "bg-primary/[0.055]"
+            : "bg-background hover:bg-muted/35",
       )}
     >
-      {active ? (
+      {selectMode ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
+            checked
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border/80 bg-background",
+          )}
+        >
+          {checked ? <Check className="size-3" /> : null}
+        </span>
+      ) : null}
+      {active && !selectMode ? (
         <span className="absolute inset-block-2 start-0 w-0.5 rounded-full bg-primary" />
       ) : null}
 
@@ -259,13 +299,28 @@ export function InboxV3Queue({
   onWorkflowFilterChange: (filter: WorkflowFilter) => void;
 }) {
   const router = useRouter();
-  const { copy, t, locale, selectChat, loadingChats } = workspace;
+  const {
+    copy,
+    t,
+    locale,
+    selectChat,
+    loadingChats,
+    canDeleteChats,
+    deleteChats,
+  } = workspace;
   const [query, setQuery] = useState("");
   const [searchState, setSearchState] = useState<{
     query: string;
     loading: boolean;
     results: InboxChat[];
   }>({ query: "", loading: false, results: [] });
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const queueCounts = useMemo(
     () => ({
@@ -380,6 +435,47 @@ export function InboxV3Queue({
     );
   };
 
+  const selectableIds = useMemo(
+    () => new Set(rows.map((chat) => chat.conversationId)),
+    [rows],
+  );
+  const effectiveSelected = useMemo(
+    () => [...selectedIds].filter((id) => selectableIds.has(id)),
+    [selectableIds, selectedIds],
+  );
+
+  const toggleSelected = (conversationId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(conversationId)) {
+        next.delete(conversationId);
+      } else {
+        next.add(conversationId);
+      }
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+    setDeleteError(null);
+    setDeleteDialogOpen(false);
+  };
+
+  const performDelete = async () => {
+    if (effectiveSelected.length === 0) return;
+    setDeleting(true);
+    setDeleteError(null);
+    const ok = await deleteChats([...effectiveSelected]);
+    setDeleting(false);
+    if (!ok) {
+      setDeleteError(copy("deleteChatsFailed"));
+      return;
+    }
+    exitSelectMode();
+  };
+
   const unreadEmpty =
     queueFilter === "unread" && queueCounts.unread === 0 && !normalizedQuery;
   const workflowSelectLabel = (filter: WorkflowFilter) =>
@@ -411,6 +507,63 @@ export function InboxV3Queue({
           ) : null}
         </div>
 
+        {selectMode ? (
+          <div
+            className="mt-2 flex flex-wrap items-center gap-1.5"
+            data-inbox-select-toolbar="true"
+          >
+            <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-foreground">
+              {copy("selectedCount", { count: effectiveSelected.length })}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={deleting}
+              data-inbox-chat-select-all="true"
+              onClick={() => {
+                const allSelected =
+                  rows.length > 0 &&
+                  effectiveSelected.length === rows.length;
+                setSelectedIds(allSelected ? new Set() : new Set(selectableIds));
+              }}
+            >
+              {copy("selectAll")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={effectiveSelected.length === 0 || deleting}
+              data-inbox-chat-delete="true"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              {deleting ? (
+                <Loader2
+                  className="size-3.5 animate-spin"
+                  aria-hidden="true"
+                />
+              ) : (
+                <Trash2 className="size-3.5" aria-hidden="true" />
+              )}
+              {copy("deleteChats")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={copy("cancelSelection")}
+              disabled={deleting}
+              onClick={exitSelectMode}
+            >
+              <X className="size-4" aria-hidden="true" />
+            </Button>
+            {deleteError ? (
+              <p className="w-full text-[11px] text-destructive">{deleteError}</p>
+            ) : null}
+          </div>
+        ) : (
+          <>
         <div className="mt-2 flex items-center gap-1.5">
           <div
             className="flex min-w-0 flex-1 gap-1 rounded-full bg-muted/25 p-0.5"
@@ -462,6 +615,21 @@ export function InboxV3Queue({
             <UserMinus className="size-3.5" aria-hidden="true" />
             <span className="sr-only">{queueCounts.unassigned}</span>
           </button>
+
+          {canDeleteChats && chats.length > 0 ? (
+            <button
+              type="button"
+              aria-label={copy("selectChats")}
+              title={copy("selectChats")}
+              data-inbox-chat-select-mode="true"
+              onClick={() => {
+                setSelectMode(true);
+              }}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ListChecks className="size-3.5" aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
 
         <select
@@ -479,6 +647,8 @@ export function InboxV3Queue({
             </option>
           ))}
         </select>
+          </>
+        )}
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
@@ -535,12 +705,54 @@ export function InboxV3Queue({
                 locale={locale}
                 t={t}
                 copy={copy}
+                selectMode={selectMode}
+                checked={selectedIds.has(chat.conversationId)}
                 onSelect={() => openChat(chat)}
+                onToggle={() => toggleSelected(chat.conversationId)}
               />
             ))}
           </div>
         )}
       </ScrollArea>
+
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (deleting) return;
+          setDeleteDialogOpen(open);
+          if (!open) setDeleteError(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {copy("deleteChatsTitle", { count: effectiveSelected.length })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {copy("deleteChatsDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              disabled={deleting || effectiveSelected.length === 0}
+              data-inbox-chat-delete-confirm="true"
+              onClick={(event) => {
+                event.preventDefault();
+                void performDelete();
+              }}
+            >
+              {deleting ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : null}
+              {copy("deleteChatsConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

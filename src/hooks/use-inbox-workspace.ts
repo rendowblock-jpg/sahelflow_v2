@@ -375,6 +375,7 @@ export function useInboxWorkspace() {
 
   const canUpdateConversation = allowedActions.includes("conversations.update");
   const canReply = allowedActions.includes("conversations.reply");
+  const canDeleteChats = allowedActions.includes("conversations.delete");
   const canManageWhatsApp = allowedActions.includes("whatsapp.connection.manage");
 
   const mergePinnedDeepLink = useCallback((nextChats: InboxChat[]) => {
@@ -1004,6 +1005,42 @@ export function useInboxWorkspace() {
     replaceMessages([]);
     setReplyText("");
   }, [persistDraft, replaceMessages, setReplyText]);
+
+  /**
+   * Permanent multi-select chat deletion (founder-confirmed contract).
+   * Server removes messages, effects, ingress events and local media; the
+   * queue refreshes and an open deleted chat is dropped without persisting
+   * its draft back to the now-deleted conversation.
+   */
+  const deleteChats = useCallback(
+    async (conversationIds: string[]): Promise<boolean> => {
+      if (!canDeleteChats || conversationIds.length === 0) return false;
+      try {
+        const response = await fetch("/api/whatsapp/chats/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: conversationIds }),
+        });
+        if (!response.ok) return false;
+        const active = activeChatRef.current;
+        if (active && conversationIds.includes(active.conversationId)) {
+          messageSelectionGenerationRef.current += 1;
+          activeChatRef.current = null;
+          activeTransportIdRef.current = null;
+          draftLoadGenerationRef.current += 1;
+          draftReadyConversationRef.current = null;
+          setActiveChatId(null);
+          replaceMessages([]);
+          setReplyText("");
+        }
+        await loadChats();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [canDeleteChats, loadChats, replaceMessages, setReplyText],
+  );
 
   useEffect(() => {
     if (!requestedConversationId) {
@@ -2378,6 +2415,8 @@ export function useInboxWorkspace() {
     markUnread,
     canUpdateConversation,
     canReply,
+    canDeleteChats,
+    deleteChats,
     canManageWhatsApp,
     transport,
     dataDegraded,
